@@ -60,6 +60,8 @@ public class Distincts {
         int gatherBatchSize,
         MiruSolutionLog solutionLog,
         TermIdStream termIdStream) throws Exception {
+        byte[] primitiveBuffer = new byte[8];
+
         log.debug("Gather distincts for query={}", query);
 
         int fieldId = requestContext.getSchema().getFieldId(query.gatherDistinctsForField);
@@ -77,7 +79,8 @@ public class Distincts {
                     }
                 }
 
-                requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary).streamTermIdsForField(fieldId, ranges, termIdStream);
+                requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary)
+                    .streamTermIdsForField(fieldId, ranges, termIdStream, primitiveBuffer);
             } else {
                 long start = System.currentTimeMillis();
                 final byte[][] prefixesAsBytes;
@@ -94,12 +97,12 @@ public class Distincts {
                 List<BM> ands = Lists.newArrayList();
                 BM constrained = bitmaps.create();
                 aggregateUtil.filter(bitmaps, requestContext.getSchema(), termComposer, requestContext.getFieldIndexProvider(), query.constraintsFilter,
-                    solutionLog, constrained, null, requestContext.getActivityIndex().lastId(), -1);
+                    solutionLog, constrained, null, requestContext.getActivityIndex().lastId(primitiveBuffer), -1, primitiveBuffer);
                 ands.add(constrained);
 
                 if (!MiruTimeRange.ALL_TIME.equals(query.timeRange)) {
                     MiruTimeRange timeRange = query.timeRange;
-                    ands.add(bitmaps.buildTimeRangeMask(requestContext.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp));
+                    ands.add(bitmaps.buildTimeRangeMask(requestContext.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp, primitiveBuffer));
                 }
 
                 BM result;
@@ -114,7 +117,7 @@ public class Distincts {
                 start = System.currentTimeMillis();
                 Set<MiruTermId> termIds = Sets.newHashSet();
                 //TODO expose batch size to query?
-                aggregateUtil.gather(bitmaps, requestContext, result, fieldId, gatherBatchSize, solutionLog, termIds);
+                aggregateUtil.gather(bitmaps, requestContext, result, fieldId, gatherBatchSize, solutionLog, termIds, primitiveBuffer);
                 solutionLog.log(MiruSolutionLogLevel.INFO, "distincts gatherDirect: gather {} ms.", System.currentTimeMillis() - start);
 
                 if (prefixesAsBytes.length > 0) {

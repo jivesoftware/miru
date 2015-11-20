@@ -56,8 +56,8 @@ public class IndexTestUtil {
 
         MiruSchemaProvider schemaProvider = new SingleSchemaProvider(
             new MiruSchema.Builder("test", 1)
-                .setFieldDefinitions(DefaultMiruSchemaDefinition.FIELDS)
-                .build());
+            .setFieldDefinitions(DefaultMiruSchemaDefinition.FIELDS)
+            .build());
         MiruTermComposer termComposer = new MiruTermComposer(Charsets.UTF_8);
         MiruActivityInternExtern activityInternExtern = new MiruActivityInternExtern(Interners.<MiruIBA>newWeakInterner(),
             Interners.<MiruTermId>newWeakInterner(),
@@ -86,9 +86,9 @@ public class IndexTestUtil {
             termComposer,
             activityInternExtern,
             ImmutableMap.<MiruBackingStorage, MiruChunkAllocator>builder()
-                .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
-                .put(MiruBackingStorage.disk, onDiskChunkAllocator)
-                .build(),
+            .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
+            .put(MiruBackingStorage.disk, onDiskChunkAllocator)
+            .build(),
             new RCVSSipIndexMarshaller(),
             new MiruTempDirectoryResourceLocator(),
             MiruBackingStorage.memory,
@@ -103,12 +103,14 @@ public class IndexTestUtil {
     }
 
     public static <BM> MiruContext<BM, ?> buildInMemoryContext(int numberOfChunkStores, MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord) throws Exception {
-        return factory(numberOfChunkStores).allocate(bitmaps, coord, MiruBackingStorage.memory);
+        byte[] primitiveBuffer = new byte[8];
+        return factory(numberOfChunkStores).allocate(bitmaps, coord, MiruBackingStorage.memory, primitiveBuffer);
 
     }
 
     public static <BM> MiruContext<BM, ?> buildOnDiskContext(int numberOfChunkStores, MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord) throws Exception {
-        return factory(numberOfChunkStores).allocate(bitmaps, coord, MiruBackingStorage.disk);
+        byte[] primitiveBuffer = new byte[8];
+        return factory(numberOfChunkStores).allocate(bitmaps, coord, MiruBackingStorage.disk, primitiveBuffer);
 
     }
 
@@ -131,10 +133,11 @@ public class IndexTestUtil {
     public static ChunkStore[] buildByteBufferBackedChunkStores(int numberOfChunkStores, ByteBufferFactory byteBufferFactory, long segmentSize)
         throws Exception {
 
+        byte[] primitiveBuffer = new byte[8];
         ChunkStore[] chunkStores = new ChunkStore[numberOfChunkStores];
         ChunkStoreInitializer chunkStoreInitializer = new ChunkStoreInitializer();
         for (int i = 0; i < numberOfChunkStores; i++) {
-            chunkStores[i] = chunkStoreInitializer.create(byteBufferFactory, segmentSize, new HeapByteBufferFactory(), 500, 5_000);
+            chunkStores[i] = chunkStoreInitializer.create(byteBufferFactory, segmentSize, new HeapByteBufferFactory(), 500, 5_000, primitiveBuffer);
         }
 
         return chunkStores;
@@ -146,11 +149,12 @@ public class IndexTestUtil {
         for (int i = 0; i < numberOfChunkStores; i++) {
             pathsToPartitions[i] = Files.createTempDirectory("chunks").toFile();
         }
-
+        byte[] primitiveBuffer = new byte[8];
         ChunkStore[] chunkStores = new ChunkStore[numberOfChunkStores];
         ChunkStoreInitializer chunkStoreInitializer = new ChunkStoreInitializer();
         for (int i = 0; i < numberOfChunkStores; i++) {
-            chunkStores[i] = chunkStoreInitializer.openOrCreate(pathsToPartitions, i, "chunks-" + i, 512, new HeapByteBufferFactory(), 500, 5_000);
+            chunkStores[i] = chunkStoreInitializer.openOrCreate(pathsToPartitions, i, "chunks-" + i, 512, new HeapByteBufferFactory(), 500, 5_000,
+                primitiveBuffer);
         }
 
         return chunkStores;

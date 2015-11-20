@@ -41,24 +41,24 @@ public class MiruFilerAuthzIndex<BM> implements MiruAuthzIndex<BM> {
     }
 
     @Override
-    public BM getCompositeAuthz(MiruAuthzExpression authzExpression) throws Exception {
-        return cache.getOrCompose(authzExpression, authz -> getAuthz(authz).getIndex().orNull());
+    public BM getCompositeAuthz(MiruAuthzExpression authzExpression, byte[] primitiveBuffer) throws Exception {
+        return cache.getOrCompose(authzExpression, authz -> getAuthz(authz).getIndex(primitiveBuffer).orNull());
     }
 
     @Override
-    public void append(String authz, int... ids) throws Exception {
-        getAuthz(authz).append(ids);
+    public void append(String authz, byte[] primitiveBuffer, int... ids) throws Exception {
+        getAuthz(authz).append(primitiveBuffer, ids);
     }
 
     @Override
-    public void set(String authz, int... ids) throws Exception {
-        getAuthz(authz).set(ids);
+    public void set(String authz, byte[] primitiveBuffer, int... ids) throws Exception {
+        getAuthz(authz).set(primitiveBuffer, ids);
         cache.increment(authz);
     }
 
     @Override
-    public void remove(String authz, int id) throws Exception {
-        getAuthz(authz).remove(id);
+    public void remove(String authz, int id, byte[] primitiveBuffer) throws Exception {
+        getAuthz(authz).remove(id, primitiveBuffer);
         cache.increment(authz);
     }
 
@@ -70,6 +70,7 @@ public class MiruFilerAuthzIndex<BM> implements MiruAuthzIndex<BM> {
 
     private static final String IDEA_TYPE_CODE = "idea";
     public static final int IDEA_TYPE_ID = IDEA_TYPE_CODE.hashCode();
+
     public static void main(String[] args) {
         System.out.println("" + IDEA_TYPE_ID);
     }

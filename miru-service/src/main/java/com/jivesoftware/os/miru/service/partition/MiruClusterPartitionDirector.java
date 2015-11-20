@@ -84,7 +84,8 @@ public class MiruClusterPartitionDirector implements MiruPartitionDirector {
     public void setStorage(MiruTenantId tenantId, MiruPartitionId partitionId, MiruBackingStorage storage) throws Exception {
         MiruTenantTopology topology = expectedTenants.getLocalTopology(tenantId);
         if (topology != null) {
-            topology.setStorage(partitionId, storage);
+            byte[] primitiveBuffer = new byte[8];
+            topology.setStorage(partitionId, storage, primitiveBuffer);
         }
     }
 

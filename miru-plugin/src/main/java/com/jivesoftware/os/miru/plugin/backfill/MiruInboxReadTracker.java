@@ -17,5 +17,6 @@ public interface MiruInboxReadTracker {
         MiruStreamId streamId,
         final MiruSolutionLog solutionLog,
         final int lastActivityIndex,
-        long oldestBackfilledEventId) throws Exception;
+        long oldestBackfilledEventId,
+        byte[] primitiveBuffer) throws Exception;
 }

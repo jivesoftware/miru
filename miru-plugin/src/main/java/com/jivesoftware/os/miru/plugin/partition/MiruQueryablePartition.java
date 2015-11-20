@@ -12,7 +12,7 @@ public interface MiruQueryablePartition<BM> {
 
     boolean isLocal();
 
-    MiruRequestHandle<BM, ?> acquireQueryHandle() throws Exception;
+    MiruRequestHandle<BM, ?> acquireQueryHandle(byte[] primitiveBuffer) throws Exception;
 
     MiruRequestHandle<BM, ?> inspectRequestHandle() throws Exception;
 }

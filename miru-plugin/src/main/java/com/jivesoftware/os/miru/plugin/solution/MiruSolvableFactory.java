@@ -29,7 +29,8 @@ public class MiruSolvableFactory<Q, A, R> {
 
     public <BM> MiruSolvable<A> create(final MiruQueryablePartition<BM> replica, final Optional<R> report) {
         Callable<MiruPartitionResponse<A>> callable = () -> {
-            try (MiruRequestHandle<BM, ?> handle = replica.acquireQueryHandle()) {
+            byte[] primitiveBuffer = new byte[8];
+            try (MiruRequestHandle<BM, ?> handle = replica.acquireQueryHandle(primitiveBuffer)) {
                 if (handle.isLocal()) {
                     long start = System.currentTimeMillis();
                     MiruPartitionResponse<A> response = question.askLocal(handle, report);

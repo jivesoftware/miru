@@ -94,16 +94,18 @@ public class MiruIndexer<BM> {
 
         // 6. Update activity index
         otherFutures.add(indexExecutor.submit(() -> {
-            context.activityIndex.set(internalActivityAndIds);
+            byte[] primitiveBuffer = new byte[8];
+            context.activityIndex.set(internalActivityAndIds, primitiveBuffer);
             return null;
         }));
 
         // 7. Update removal index
         if (repair) {
             otherFutures.add(indexExecutor.submit(() -> {
+                byte[] primitiveBuffer = new byte[8];
                 // repairs also unhide (remove from removal)
                 for (MiruActivityAndId<MiruActivity> activityAndId : activityAndIds) {
-                    context.removalIndex.remove(activityAndId.id);
+                    context.removalIndex.remove(activityAndId.id, primitiveBuffer);
                 }
                 return null;
             }));
@@ -113,7 +115,8 @@ public class MiruIndexer<BM> {
         awaitFutures(otherFutures, "indexOther");
 
         // 9. Mark as ready
-        context.activityIndex.ready(internalActivityAndIds.get(internalActivityAndIds.size() - 1).id);
+        byte[] primitiveBuffer = new byte[8];
+        context.activityIndex.ready(internalActivityAndIds.get(internalActivityAndIds.size() - 1).id, primitiveBuffer);
 
         log.debug("End: Index batch of {}", internalActivityAndIds.size());
     }
@@ -124,7 +127,8 @@ public class MiruIndexer<BM> {
             new MiruActivityAndId[activityAndIds.size()]);
 
         context.activityInternExtern.intern(activityAndIds, 0, activityAndIds.size(), internalActivityAndIds, context.schema);
-        context.activityIndex.setAndReady(internalActivityAndIds);
+        byte[] primitiveBuffer = new byte[8];
+        context.activityIndex.setAndReady(internalActivityAndIds, primitiveBuffer);
     }
 
     /*
@@ -166,10 +170,10 @@ public class MiruIndexer<BM> {
         // finally, update the activity index
         context.activityIndex.setAndReady(internalActivityAndIds);
     }
-    */
-
+     */
     public void remove(MiruContext<BM, ?> context, MiruActivity activity, int id) throws Exception {
-        MiruInternalActivity existing = context.activityIndex.get(activity.tenantId, id);
+        byte[] primitiveBuffer = new byte[8];
+        MiruInternalActivity existing = context.activityIndex.get(activity.tenantId, id, primitiveBuffer);
         if (existing == null) {
             log.debug("Can't remove nonexistent activity at {}\n- offered: {}", id, activity);
         } else if (activity.version <= existing.version) {
@@ -183,10 +187,10 @@ public class MiruIndexer<BM> {
 
             //TODO apply field changes?
             // hide (add to removal)
-            context.removalIndex.set(id);
+            context.removalIndex.set(primitiveBuffer, id);
 
             // finally, update the activity index
-            context.activityIndex.setAndReady(internalActivity);
+            context.activityIndex.setAndReady(internalActivity, primitiveBuffer);
         }
     }
 

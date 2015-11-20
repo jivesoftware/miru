@@ -41,47 +41,47 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
     }
 
     @Override
-    public MiruInternalActivity get(final MiruTenantId tenantId, int index) {
-        int capacity = capacity();
+    public MiruInternalActivity get(final MiruTenantId tenantId, int index, byte[] primitiveBuffer) {
+        int capacity = capacity(primitiveBuffer);
         checkArgument(index >= 0 && index < capacity, "Index parameter is out of bounds. The value %s must be >=0 and <%s", index, capacity);
         try {
-            return keyedStore.read(FilerIO.intBytes(index), null, (monkey, filer, lock) -> {
+            return keyedStore.read(FilerIO.intBytes(index), null, (monkey, filer, _primitiveBuffer, lock) -> {
                 if (filer != null) {
                     synchronized (lock) {
                         filer.seek(0);
-                        return internalActivityMarshaller.fromFiler(tenantId, filer);
+                        return internalActivityMarshaller.fromFiler(tenantId, filer, _primitiveBuffer);
                     }
                 } else {
                     return null;
                 }
-            });
+            }, primitiveBuffer);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
     @Override
-    public MiruTermId[] get(int index, final int fieldId) {
-        int capacity = capacity();
+    public MiruTermId[] get(int index, final int fieldId, byte[] primitiveBuffer) {
+        int capacity = capacity(primitiveBuffer);
         checkArgument(index >= 0 && index < capacity, "Index parameter is out of bounds. The value %s must be >=0 and <%s", index, capacity);
         try {
-            return keyedStore.read(FilerIO.intBytes(index), null, (monkey, filer, lock) -> {
+            return keyedStore.read(FilerIO.intBytes(index), null, (monkey, filer, _primitiveBuffer, lock) -> {
                 if (filer != null) {
                     synchronized (lock) {
                         filer.seek(0);
-                        return internalActivityMarshaller.fieldValueFromFiler(filer, fieldId);
+                        return internalActivityMarshaller.fieldValueFromFiler(filer, fieldId, _primitiveBuffer);
                     }
                 } else {
                     return null;
                 }
-            });
+            }, primitiveBuffer);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
     @Override
-    public List<MiruTermId[]> getAll(int[] indexes, final int fieldId) {
+    public List<MiruTermId[]> getAll(int[] indexes, final int fieldId, byte[] primitiveBuffer) {
         if (indexes.length == 0) {
             return Collections.emptyList();
         }
@@ -92,42 +92,42 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
                     bytesForIndexes[i] = FilerIO.intBytes(indexes[i]);
                 }
             }
-            return keyedStore.readEach(bytesForIndexes, null, (monkey, filer, lock) -> {
+            return keyedStore.readEach(bytesForIndexes, null, (monkey, filer, _primitiveBuffer, lock) -> {
                 if (filer != null) {
                     synchronized (lock) {
                         filer.seek(0);
-                        return internalActivityMarshaller.fieldValueFromFiler(filer, fieldId);
+                        return internalActivityMarshaller.fieldValueFromFiler(filer, fieldId, _primitiveBuffer);
                     }
                 } else {
                     return null;
                 }
-            });
+            }, primitiveBuffer);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
     @Override
-    public int lastId() {
-        return capacity() - 1;
+    public int lastId(byte[] primitiveBuffer) {
+        return capacity(primitiveBuffer) - 1;
     }
 
     @Override
-    public void setAndReady(Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds) throws Exception {
+    public void setAndReady(Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds, byte[] primitiveBuffer) throws Exception {
         if (!activityAndIds.isEmpty()) {
-            int lastIndex = setInternal(activityAndIds);
-            ready(lastIndex);
+            int lastIndex = setInternal(activityAndIds, primitiveBuffer);
+            ready(lastIndex, primitiveBuffer);
         }
     }
 
     @Override
-    public void set(Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds) {
+    public void set(Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds, byte[] primitiveBuffer) {
         if (!activityAndIds.isEmpty()) {
-            setInternal(activityAndIds);
+            setInternal(activityAndIds, primitiveBuffer);
         }
     }
 
-    private int setInternal(Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds) {
+    private int setInternal(Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds, byte[] primitiveBuffer) {
         int lastIndex = -1;
         for (MiruActivityAndId<MiruInternalActivity> activityAndId : activityAndIds) {
             int index = activityAndId.id;
@@ -135,14 +135,14 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
             MiruInternalActivity activity = activityAndId.activity;
             checkArgument(index >= 0, "Index parameter is out of bounds. The value %s must be >=0", index);
             try {
-                final byte[] bytes = internalActivityMarshaller.toBytes(activity);
-                keyedStore.writeNewReplace(FilerIO.intBytes(index), (long) 4 + bytes.length, (monkey, newFiler, newLock) -> {
+                final byte[] bytes = internalActivityMarshaller.toBytes(activity, primitiveBuffer);
+                keyedStore.writeNewReplace(FilerIO.intBytes(index), (long) 4 + bytes.length, (monkey, newFiler, _primitiveBuffer, newLock) -> {
                     synchronized (newLock) {
                         newFiler.seek(0);
                         FilerIO.write(newFiler, bytes);
                     }
                     return null;
-                });
+                }, primitiveBuffer);
                 log.inc("set>total");
                 log.inc("set>bytes", bytes.length);
             } catch (IOException e) {
@@ -153,18 +153,18 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
     }
 
     @Override
-    public void ready(int index) throws Exception {
+    public void ready(int index, byte[] primitiveBuffer) throws Exception {
         log.trace("Check if index {} should extend capacity {}", index, indexSize);
         final int size = index + 1;
         synchronized (indexSize) {
             if (size > indexSize.get()) {
-                indexSizeFiler.readWriteAutoGrow(4L, (monkey, filer, lock) -> {
+                indexSizeFiler.readWriteAutoGrow(4L, (monkey, filer, _primitiveBuffer, lock) -> {
                     synchronized (lock) {
                         filer.seek(0);
-                        FilerIO.writeInt(filer, size, "size");
+                        FilerIO.writeInt(filer, size, "size", _primitiveBuffer);
                     }
                     return null;
-                });
+                }, primitiveBuffer);
                 log.inc("ready>total");
                 log.inc("ready>bytes", 4);
                 log.debug("Capacity extended to {}", size);
@@ -173,22 +173,22 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
         }
     }
 
-    private int capacity() {
+    private int capacity(byte[] primitiveBuffer) {
         try {
             int size = indexSize.get();
             if (size < 0) {
-                size = indexSizeFiler.read(null, (monkey, filer, lock) -> {
+                size = indexSizeFiler.read(null, (monkey, filer, _primitiveBuffer, lock) -> {
                     if (filer != null) {
                         int size1;
                         synchronized (lock) {
                             filer.seek(0);
-                            size1 = FilerIO.readInt(filer, "size");
+                            size1 = FilerIO.readInt(filer, "size", _primitiveBuffer);
                         }
                         return size1;
                     } else {
                         return 0;
                     }
-                });
+                }, primitiveBuffer);
                 log.inc("capacity>total");
                 log.inc("capacity>bytes", 4);
                 indexSize.set(size);

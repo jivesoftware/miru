@@ -3,7 +3,6 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-
 package com.jivesoftware.os.miru.plugin.index;
 
 import com.google.common.base.Optional;
@@ -15,8 +14,8 @@ import java.io.IOException;
  */
 public interface MiruSipIndex<S extends MiruSipCursor<S>> {
 
-    Optional<S> getSip() throws IOException;
+    Optional<S> getSip(byte[] primitiveBuffer) throws IOException;
 
-    boolean setSip(S sip) throws IOException;
+    boolean setSip(S sip, byte[] primitiveBuffer) throws IOException;
 
 }

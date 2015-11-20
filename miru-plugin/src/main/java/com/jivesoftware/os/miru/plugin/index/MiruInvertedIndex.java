@@ -16,7 +16,7 @@ public interface MiruInvertedIndex<BM> extends MiruInvertedIndexAppender {
      * @return the raw safe index
      * @throws Exception
      */
-    Optional<BM> getIndex() throws Exception;
+    Optional<BM> getIndex(byte[] primitiveBuffer) throws Exception;
 
     /**
      * Gets the raw index in an unsafe manner. The returned index is not guaranteed to be free of concurrent writes,
@@ -25,11 +25,11 @@ public interface MiruInvertedIndex<BM> extends MiruInvertedIndexAppender {
      * @return the raw unsafe index
      * @throws Exception
      */
-    Optional<BM> getIndexUnsafe() throws Exception;
+    Optional<BM> getIndexUnsafe(byte[] primitiveBuffer) throws Exception;
 
-    void replaceIndex(BM index, int setLastId) throws Exception;
+    void replaceIndex(BM index, int setLastId, byte[] primitiveBuffer) throws Exception;
 
-    void remove(int id) throws Exception;
+    void remove(int id, byte[] primitiveBuffer) throws Exception;
 
     /**
      * Sets multiple bits anywhere in the bitmap.
@@ -37,16 +37,16 @@ public interface MiruInvertedIndex<BM> extends MiruInvertedIndexAppender {
      * @param ids the indexes of the bits to set
      * @throws Exception
      */
-    void set(int... ids) throws Exception;
+    void set(byte[] primitiveBuffer, int... ids) throws Exception;
 
-    int lastId() throws Exception;
+    int lastId(byte[] primitiveBuffer) throws Exception;
 
-    void andNotToSourceSize(List<BM> masks) throws Exception;
+    void andNotToSourceSize(List<BM> masks, byte[] primitiveBuffer) throws Exception;
 
-    void orToSourceSize(BM mask) throws Exception;
+    void orToSourceSize(BM mask, byte[] primitiveBuffer) throws Exception;
 
-    void andNot(BM mask) throws Exception;
+    void andNot(BM mask, byte[] primitiveBuffer) throws Exception;
 
-    void or(BM mask) throws Exception;
+    void or(BM mask, byte[] primitiveBuffer) throws Exception;
 
 }

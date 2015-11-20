@@ -47,6 +47,7 @@ public class DistinctCountCustomQuestion implements Question<DistinctCountQuery,
 
     @Override
     public <BM> MiruPartitionResponse<DistinctCountAnswer> askLocal(MiruRequestHandle<BM, ?> handle, Optional<DistinctCountReport> report) throws Exception {
+        byte[] primitiveBuffer = new byte[8];
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
         MiruRequestContext<BM, ?> stream = handle.getRequestContext();
         MiruBitmaps<BM> bitmaps = handle.getBitmaps();
@@ -66,22 +67,22 @@ public class DistinctCountCustomQuestion implements Question<DistinctCountQuery,
         // 1) Execute the combined filter above on the given stream, add the bitmap
         BM filtered = bitmaps.create();
         aggregateUtil.filter(bitmaps, stream.getSchema(), stream.getTermComposer(), stream.getFieldIndexProvider(), combinedFilter, solutionLog, filtered,
-            null, stream.getActivityIndex().lastId(), -1);
+            null, stream.getActivityIndex().lastId(primitiveBuffer), -1, primitiveBuffer);
         ands.add(filtered);
 
         // 2) Add in the authz check if we have it
         if (!MiruAuthzExpression.NOT_PROVIDED.equals(request.authzExpression)) {
-            ands.add(stream.getAuthzIndex().getCompositeAuthz(request.authzExpression));
+            ands.add(stream.getAuthzIndex().getCompositeAuthz(request.authzExpression, primitiveBuffer));
         }
 
         // 3) Add in a time-range mask if we have it
         if (!MiruTimeRange.ALL_TIME.equals(request.query.timeRange)) {
             MiruTimeRange timeRange = request.query.timeRange;
-            ands.add(bitmaps.buildTimeRangeMask(stream.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp));
+            ands.add(bitmaps.buildTimeRangeMask(stream.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp, primitiveBuffer));
         }
 
         // 4) Mask out anything that hasn't made it into the activityIndex yet, or that has been removed from the index
-        ands.add(bitmaps.buildIndexMask(stream.getActivityIndex().lastId(), stream.getRemovalIndex().getIndex()));
+        ands.add(bitmaps.buildIndexMask(stream.getActivityIndex().lastId(primitiveBuffer), stream.getRemovalIndex().getIndex(primitiveBuffer)));
 
         // AND it all together and return the results
         BM answer = bitmaps.create();

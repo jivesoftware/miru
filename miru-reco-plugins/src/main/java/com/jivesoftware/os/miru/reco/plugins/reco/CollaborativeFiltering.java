@@ -59,6 +59,7 @@ public class CollaborativeFiltering {
         BM okActivity,
         MiruFilter removeDistinctsFilter)
         throws Exception {
+        byte[] primitiveBuffer = new byte[8];
 
         log.debug("Get collaborative filtering for allMyActivity={} okActivity={} query={}", allMyActivity, okActivity, request);
 
@@ -79,7 +80,7 @@ public class CollaborativeFiltering {
         // distinctParents: distinct parents <field1> that I've touched
         Set<MiruTermId> distinctParents = Sets.newHashSet();
 
-        aggregateUtil.gather(bitmaps, requestContext, myOkActivity, fieldId1, gatherBatchSize, solutionLog, distinctParents);
+        aggregateUtil.gather(bitmaps, requestContext, myOkActivity, fieldId1, gatherBatchSize, solutionLog, distinctParents, primitiveBuffer);
 
 //        int[] indexes = bitmaps.indexes(myOkActivity);
 //        List<MiruTermId[]> allFieldValues = requestContext.getActivityIndex().getAll(request.tenantId, indexes, fieldId1);
@@ -92,7 +93,7 @@ public class CollaborativeFiltering {
             Optional<BM> index = primaryFieldIndex.get(
                 fieldId1,
                 parent)
-                .getIndex();
+                .getIndex(primitiveBuffer);
             if (index.isPresent()) {
                 toBeORed.add(index.get());
             }
@@ -130,7 +131,7 @@ public class CollaborativeFiltering {
                     contributorHeap.add(miruTermCount);
                 }
                 return miruTermCount;
-            });
+            }, primitiveBuffer);
 
         if (request.query.aggregateFieldName2.equals(request.query.aggregateFieldName3)) {
             // special case where the ranked users <field2> are the desired parents <field3>
@@ -141,13 +142,13 @@ public class CollaborativeFiltering {
         if (!MiruFilter.NO_FILTER.equals(removeDistinctsFilter)) {
             BM remove = bitmaps.create();
             aggregateUtil.filter(bitmaps, requestContext.getSchema(), requestContext.getTermComposer(), requestContext.getFieldIndexProvider(),
-                removeDistinctsFilter, solutionLog, remove, null, requestContext.getActivityIndex().lastId(), -1);
+                removeDistinctsFilter, solutionLog, remove, null, requestContext.getActivityIndex().lastId(primitiveBuffer), -1, primitiveBuffer);
             if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
                 solutionLog.log(MiruSolutionLogLevel.INFO, "remove {}.", bitmaps.cardinality(remove));
                 solutionLog.log(MiruSolutionLogLevel.TRACE, "remove bitmap {}", remove);
             }
 
-            aggregateUtil.gather(bitmaps, requestContext, remove, fieldId3, gatherBatchSize, solutionLog, distinctParents);
+            aggregateUtil.gather(bitmaps, requestContext, remove, fieldId3, gatherBatchSize, solutionLog, distinctParents, primitiveBuffer);
 
 //            int[] removeIndexes = bitmaps.indexes(remove);
 //            List<MiruTermId[]> removeFieldValues = requestContext.getActivityIndex().getAll(request.tenantId, removeIndexes, fieldId3);
@@ -162,14 +163,15 @@ public class CollaborativeFiltering {
             Optional<BM> index = primaryFieldIndex.get(
                 fieldId2,
                 tc.termId)
-                .getIndex();
+                .getIndex(primitiveBuffer);
             if (index.isPresent()) {
                 BM contributorAllActivity = index.get();
                 BM contributorOkActivity = bitmaps.create();
                 bitmaps.and(contributorOkActivity, Arrays.asList(okActivity, contributorAllActivity));
 
                 Set<MiruTermId> distinctContributorParents = Sets.newHashSet();
-                aggregateUtil.gather(bitmaps, requestContext, contributorOkActivity, fieldId3, gatherBatchSize, solutionLog, distinctContributorParents);
+                aggregateUtil.gather(bitmaps, requestContext, contributorOkActivity, fieldId3, gatherBatchSize, solutionLog, distinctContributorParents,
+                    primitiveBuffer);
 
 //                int[] contributorIndexes = bitmaps.indexes(contributorOkActivity);
 //                List<MiruTermId[]> contributorFieldValues = requestContext.getActivityIndex().getAll(request.tenantId, contributorIndexes, fieldId3);

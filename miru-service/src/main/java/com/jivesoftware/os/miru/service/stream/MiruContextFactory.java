@@ -155,15 +155,17 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         }
     }
 
-    public <BM> MiruContext<BM, S> allocate(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord, MiruBackingStorage storage) throws Exception {
+    public <BM> MiruContext<BM, S> allocate(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord, MiruBackingStorage storage, byte[] primitiveBuffer) throws
+        Exception {
         // check for schema first
         MiruSchema schema = schemaProvider.getSchema(coord.tenantId);
 
-        ChunkStore[] chunkStores = getAllocator(storage).allocateChunkStores(coord);
-        return allocate(bitmaps, coord, schema, chunkStores);
+        ChunkStore[] chunkStores = getAllocator(storage).allocateChunkStores(coord, primitiveBuffer);
+        return allocate(bitmaps, coord, schema, chunkStores, primitiveBuffer);
     }
 
-    private <BM> MiruContext<BM, S> allocate(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord, MiruSchema schema, ChunkStore[] chunkStores) throws Exception {
+    private <BM> MiruContext<BM, S> allocate(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord, MiruSchema schema, ChunkStore[] chunkStores,
+        byte[] primitiveBuffer) throws Exception {
         int seed = coord.hashCode();
         TxCog<Integer, MapBackedKeyedFPIndex, ChunkFiler> skyhookCog = cogs.getSkyhookCog(seed);
         KeyedFilerStore<Long, Void> genericFilerStore = new TxKeyedFilerStore<>(cogs, seed, chunkStores, keyBytes("generic"), false,
@@ -178,7 +180,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             new TxKeyValueStore<>(skyhookCog, cogs.getSkyHookKeySemaphores(), seed, chunkStores,
                 new LongIntKeyValueMarshaller(),
                 keyBytes("timeIndex-timestamps"),
-                8, false, 4, false)));
+                8, false, 4, false), primitiveBuffer));
 
         TxKeyedFilerStore<Long, Void> activityFilerStore = new TxKeyedFilerStore<>(cogs, seed, chunkStores, keyBytes("activityIndex"), false,
             TxNamedMapOfFiler.CHUNK_FILER_CREATOR,
@@ -272,7 +274,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             fieldIndexCache,
             versionCache,
             removalIndexId,
-            new byte[] { 0 },
+            new byte[]{0},
             new MiruFilerRemovalIndex<>(
                 bitmaps,
                 removalIndexId,
@@ -281,7 +283,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                     TxNamedMapOfFiler.CHUNK_FILER_OPENER,
                     TxNamedMapOfFiler.OVERWRITE_GROWER_PROVIDER,
                     TxNamedMapOfFiler.REWRITE_GROWER_PROVIDER),
-                new byte[] { 0 },
+                new byte[]{0},
                 -1,
                 new Object()),
             new MiruDeltaInvertedIndex.Delta<BM>());
@@ -336,20 +338,21 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
     public <BM> MiruContext<BM, S> copy(MiruBitmaps<BM> bitmaps,
         MiruPartitionCoord coord,
         MiruContext<BM, S> from,
-        MiruBackingStorage toStorage) throws Exception {
+        MiruBackingStorage toStorage,
+        byte[] primitiveBuffer) throws Exception {
 
         // check for schema first
         MiruSchema schema = schemaProvider.getSchema(coord.tenantId);
 
         ChunkStore[] fromChunks = from.chunkStores;
-        ChunkStore[] toChunks = getAllocator(toStorage).allocateChunkStores(coord);
+        ChunkStore[] toChunks = getAllocator(toStorage).allocateChunkStores(coord, primitiveBuffer);
         if (fromChunks.length != toChunks.length) {
             throw new IllegalArgumentException("The number of from chunks:" + fromChunks.length + " must equal the number of to chunks:" + toChunks.length);
         }
         for (int i = 0; i < fromChunks.length; i++) {
-            fromChunks[i].copyTo(toChunks[i]);
+            fromChunks[i].copyTo(toChunks[i], primitiveBuffer);
         }
-        return allocate(bitmaps, coord, schema, toChunks);
+        return allocate(bitmaps, coord, schema, toChunks, primitiveBuffer);
     }
 
     public void markStorage(MiruPartitionCoord coord, MiruBackingStorage marked) throws Exception {

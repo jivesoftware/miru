@@ -62,12 +62,13 @@ public class MiruPartitionsRegion implements MiruPageRegion<Optional<String>> {
 
     private boolean inspect(MiruTenantId tenantId, MiruPartitionId partitionId, List<Map<String, Object>> partitions) {
         try {
+            byte[] primitiveBuffer = new byte[8];
             service.introspect(tenantId, partitionId, requestContext -> {
-                Optional<? extends MiruSipCursor<?>> sip = requestContext.getSipIndex().getSip();
+                Optional<? extends MiruSipCursor<?>> sip = requestContext.getSipIndex().getSip(primitiveBuffer);
                 partitions.add(ImmutableMap.<String, Object>builder()
                     .put("tenantId", tenantId.toString())
                     .put("partitionId", partitionId.toString())
-                    .put("activityLastId", requestContext.getActivityIndex().lastId())
+                    .put("activityLastId", requestContext.getActivityIndex().lastId(primitiveBuffer))
                     .put("timeLastId", requestContext.getTimeIndex().lastId())
                     .put("smallestTimestamp", String.valueOf(requestContext.getTimeIndex().getSmallestTimestamp()))
                     .put("largestTimestamp", String.valueOf(requestContext.getTimeIndex().getLargestTimestamp()))
@@ -79,7 +80,7 @@ public class MiruPartitionsRegion implements MiruPageRegion<Optional<String>> {
             LOG.debug("Tenant {} partition {} is unavailable", tenantId, partitionId);
             return true;
         } catch (Exception e) {
-            LOG.error("Failed introspection for tenant {} partition {}", new Object[] { tenantId, partitionId }, e);
+            LOG.error("Failed introspection for tenant {} partition {}", new Object[]{tenantId, partitionId}, e);
             return false;
         }
     }

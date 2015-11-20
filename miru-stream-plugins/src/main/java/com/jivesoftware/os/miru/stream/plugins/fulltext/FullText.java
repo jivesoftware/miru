@@ -50,20 +50,22 @@ public class FullText {
         BM answer,
         Map<FieldAndTermId, MutableInt> termCollector) throws Exception {
 
+        byte[] primitiveBuffer = new byte[8];
+
         log.debug("Get full text for answer={} request={}", answer, request);
         //System.out.println("Number of matches: " + bitmaps.cardinality(answer));
 
         List<ActivityScore> activityScores;
         if (request.query.strategy == FullTextQuery.Strategy.TF_IDF) {
-            activityScores = collectTfIdf(bitmaps, requestContext, request, lastReport, answer, termCollector);
+            activityScores = collectTfIdf(bitmaps, requestContext, request, lastReport, answer, termCollector, primitiveBuffer);
         } else if (request.query.strategy == FullTextQuery.Strategy.TIME) {
-            activityScores = collectTime(bitmaps, requestContext, request, lastReport, answer);
+            activityScores = collectTime(bitmaps, requestContext, request, lastReport, answer, primitiveBuffer);
         } else {
             activityScores = Collections.emptyList();
         }
 
-        boolean resultsExhausted = request.query.strategy == FullTextQuery.Strategy.TIME &&
-            request.query.timeRange.smallestTimestamp > requestContext.getTimeIndex().getLargestTimestamp();
+        boolean resultsExhausted = request.query.strategy == FullTextQuery.Strategy.TIME
+            && request.query.timeRange.smallestTimestamp > requestContext.getTimeIndex().getLargestTimestamp();
 
         FullTextAnswer result = new FullTextAnswer(activityScores, resultsExhausted);
         log.debug("result={}", result);
@@ -75,7 +77,8 @@ public class FullText {
         MiruRequest<FullTextQuery> request,
         Optional<FullTextReport> lastReport,
         BM answer,
-        Map<FieldAndTermId, MutableInt> termCollector) throws Exception {
+        Map<FieldAndTermId, MutableInt> termCollector,
+        byte[] primitiveBuffer) throws Exception {
 
         MiruActivityInternExtern internExtern = miruProvider.getActivityInternExtern(request.tenantId);
         MiruFieldIndex<BM> primaryFieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
@@ -88,7 +91,7 @@ public class FullText {
         Map<FieldAndTermId, Float> termMultipliers = Maps.newHashMapWithExpectedSize(termCollector.size());
         for (Map.Entry<FieldAndTermId, MutableInt> entry : termCollector.entrySet()) {
             FieldAndTermId fieldAndTermId = entry.getKey();
-            long idf = primaryFieldIndex.getGlobalCardinality(fieldAndTermId.fieldId, fieldAndTermId.termId);
+            long idf = primaryFieldIndex.getGlobalCardinality(fieldAndTermId.fieldId, fieldAndTermId.termId, primitiveBuffer);
             if (idf > 0) {
                 float multiplier = entry.getValue().floatValue() / (float) idf;
                 termMultipliers.put(fieldAndTermId, multiplier);
@@ -112,7 +115,7 @@ public class FullText {
             i++;
 
             if (i == batchSize) {
-                batchTfIdf(requestContext, request, internExtern, primaryFieldIndex, termMultipliers, scored, minScore, acceptableBelowMin, ids);
+                batchTfIdf(requestContext, request, internExtern, primaryFieldIndex, termMultipliers, scored, minScore, acceptableBelowMin, ids, primitiveBuffer);
                 i = 0;
             }
         }
@@ -120,7 +123,8 @@ public class FullText {
         if (i > 0) {
             int[] remainder = new int[i];
             System.arraycopy(ids, 0, remainder, 0, i);
-            batchTfIdf(requestContext, request, internExtern, primaryFieldIndex, termMultipliers, scored, minScore, acceptableBelowMin, remainder);
+            batchTfIdf(requestContext, request, internExtern, primaryFieldIndex, termMultipliers, scored, minScore, acceptableBelowMin, remainder,
+                primitiveBuffer);
         }
 
         Iterables.addAll(activityScores, Iterables.transform(scored, (RawBitScore input) -> {
@@ -143,14 +147,15 @@ public class FullText {
         MinMaxPriorityQueue<RawBitScore> scored,
         float minScore,
         MutableInt acceptableBelowMin,
-        int[] ids) throws Exception {
+        int[] ids,
+        byte[] primitiveBuffer) throws Exception {
 
         float[] scores = new float[ids.length];
         for (Map.Entry<FieldAndTermId, Float> entry : termMultipliers.entrySet()) {
             FieldAndTermId fieldAndTermId = entry.getKey();
             float multiplier = entry.getValue();
 
-            long[] tf = primaryFieldIndex.getCardinalities(fieldAndTermId.fieldId, fieldAndTermId.termId, ids);
+            long[] tf = primaryFieldIndex.getCardinalities(fieldAndTermId.fieldId, fieldAndTermId.termId, ids, primitiveBuffer);
             for (int i = 0; i < tf.length; i++) {
                 if (tf[i] > 0) {
                     scores[i] += multiplier * (float) tf[i];
@@ -162,13 +167,13 @@ public class FullText {
             int _i = i;
             if (scores[i] > minScore) {
                 RawBitScore bitScore = new RawBitScore(new Promise<>(() -> {
-                    MiruInternalActivity internalActivity = requestContext.getActivityIndex().get(request.tenantId, ids[_i]);
+                    MiruInternalActivity internalActivity = requestContext.getActivityIndex().get(request.tenantId, ids[_i], primitiveBuffer);
                     return internExtern.extern(internalActivity, requestContext.getSchema());
                 }), ids[i], scores[i]);
                 scored.add(bitScore);
             } else if (acceptableBelowMin.intValue() > 0) {
                 RawBitScore bitScore = new RawBitScore(new Promise<>(() -> {
-                    MiruInternalActivity internalActivity = requestContext.getActivityIndex().get(request.tenantId, ids[_i]);
+                    MiruInternalActivity internalActivity = requestContext.getActivityIndex().get(request.tenantId, ids[_i], primitiveBuffer);
                     return internExtern.extern(internalActivity, requestContext.getSchema());
                 }), ids[i], scores[i]);
                 scored.add(bitScore);
@@ -181,7 +186,8 @@ public class FullText {
         MiruRequestContext<BM, ?> requestContext,
         MiruRequest<FullTextQuery> request,
         Optional<FullTextReport> lastReport,
-        BM answer) throws Exception {
+        BM answer,
+        byte[] primitiveBuffer) throws Exception {
 
         MiruActivityInternExtern internExtern = miruProvider.getActivityInternExtern(request.tenantId);
 
@@ -192,7 +198,7 @@ public class FullText {
         MiruIntIterator iter = bitmaps.descendingIntIterator(answer);
         while (iter.hasNext()) {
             int lastSetBit = iter.next();
-            MiruInternalActivity internalActivity = requestContext.getActivityIndex().get(request.tenantId, lastSetBit);
+            MiruInternalActivity internalActivity = requestContext.getActivityIndex().get(request.tenantId, lastSetBit, primitiveBuffer);
             float score = 0f; //TODO ?
             ActivityScore activityScore = new ActivityScore(internExtern.extern(internalActivity, requestContext.getSchema()), score);
             activityScores.add(activityScore);
@@ -206,6 +212,7 @@ public class FullText {
     }
 
     private static class RawBitScore implements Comparable<RawBitScore> {
+
         private final Promise<MiruActivity> activity;
         private final int id;
         private final float score;
@@ -229,6 +236,7 @@ public class FullText {
     }
 
     private static class Promise<V> {
+
         private final Callable<V> callable;
         private boolean empty = true;
         private V value;

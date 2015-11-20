@@ -29,28 +29,28 @@ public class MiruDeltaActivityIndex implements MiruActivityIndex, Mergeable {
     }
 
     @Override
-    public MiruInternalActivity get(MiruTenantId tenantId, int index) {
+    public MiruInternalActivity get(MiruTenantId tenantId, int index, byte[] primitiveBuffer) {
         //TODO consider writing through to the backing index for old indexes to avoid the double lookup
         MiruActivityAndId<MiruInternalActivity> activityAndId = activities.get(index);
         if (activityAndId != null) {
             return activityAndId.activity;
         } else {
-            return backingIndex.get(tenantId, index);
+            return backingIndex.get(tenantId, index, primitiveBuffer);
         }
     }
 
     @Override
-    public MiruTermId[] get(int index, int fieldId) {
+    public MiruTermId[] get(int index, int fieldId, byte[] primitiveBuffer) {
         MiruActivityAndId<MiruInternalActivity> activityAndId = activities.get(index);
         if (activityAndId != null) {
             return activityAndId.activity.fieldsValues[fieldId];
         } else {
-            return backingIndex.get(index, fieldId);
+            return backingIndex.get(index, fieldId, primitiveBuffer);
         }
     }
 
     @Override
-    public List<MiruTermId[]> getAll(int[] indexes, int fieldId) {
+    public List<MiruTermId[]> getAll(int[] indexes, int fieldId, byte[] primitiveBuffer) {
         List<MiruTermId[]> allTermIds = Lists.newArrayList();
         boolean missed = false;
         for (int i = 0; i < indexes.length; i++) {
@@ -65,31 +65,31 @@ public class MiruDeltaActivityIndex implements MiruActivityIndex, Mergeable {
             }
         }
         if (missed) {
-            allTermIds.addAll(backingIndex.getAll(indexes, fieldId));
+            allTermIds.addAll(backingIndex.getAll(indexes, fieldId, primitiveBuffer));
         }
         return allTermIds;
     }
 
     @Override
-    public int lastId() {
+    public int lastId(byte[] primitiveBuffer) {
         int id = lastId.get();
         if (id < 0) {
-            return backingIndex.lastId();
+            return backingIndex.lastId(primitiveBuffer);
         } else {
             return id;
         }
     }
 
     @Override
-    public void setAndReady(Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds) throws Exception {
+    public void setAndReady(Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds, byte[] primitiveBuffer) throws Exception {
         if (!activityAndIds.isEmpty()) {
             int lastIndex = setInternal(activityAndIds);
-            ready(lastIndex);
+            ready(lastIndex, primitiveBuffer);
         }
     }
 
     @Override
-    public void set(Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds) {
+    public void set(Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds, byte[] primitiveBuffer) {
         if (!activityAndIds.isEmpty()) {
             setInternal(activityAndIds);
         }
@@ -106,7 +106,7 @@ public class MiruDeltaActivityIndex implements MiruActivityIndex, Mergeable {
     }
 
     @Override
-    public void ready(int index) throws Exception {
+    public void ready(int index, byte[] primitiveBuffer) throws Exception {
         lastId.set(index);
     }
 
@@ -116,8 +116,8 @@ public class MiruDeltaActivityIndex implements MiruActivityIndex, Mergeable {
     }
 
     @Override
-    public void merge() throws Exception {
-        backingIndex.setAndReady(activities.values());
+    public void merge(byte[] primitiveBuffer) throws Exception {
+        backingIndex.setAndReady(activities.values(), primitiveBuffer);
         activities.clear();
     }
 }

@@ -31,8 +31,9 @@ public class MiruFieldTest {
     @Test(dataProvider = "miruFieldDataProvider",
         enabled = true, description = "This test is disk dependent, disable if it flaps or becomes slow")
     public <BM> void getInvertedIndex(MiruBitmaps<BM> bitmaps, MiruFieldIndex<BM> fieldIndex, int fieldId, List<Integer> ids) throws Exception {
+        byte[] primitiveBuffer = new byte[8];
         for (int id : ids) {
-            Optional<BM> optional = fieldIndex.get(fieldId, new MiruTermId(FilerIO.intBytes(id))).getIndex();
+            Optional<BM> optional = fieldIndex.get(fieldId, new MiruTermId(FilerIO.intBytes(id))).getIndex(primitiveBuffer);
             assertTrue(optional.isPresent());
             assertEquals(bitmaps.cardinality(optional.get()), 1);
             assertTrue(bitmaps.isSet(optional.get(), id));
@@ -43,17 +44,19 @@ public class MiruFieldTest {
         enabled = true, description = "This test is disk dependent, disable if it flaps or becomes slow")
     public <BM> void getInvertedIndexWithConsideration(MiruBitmaps<BM> bitmaps, MiruFieldIndex<BM> fieldIndex, int fieldId, List<Integer> ids)
         throws Exception {
+        byte[] primitiveBuffer = new byte[8];
         // this works because maxId = id in our termToIndex maps
         int median = ids.get(ids.size() / 2);
 
         for (int id : ids) {
-            Optional<BM> optional = fieldIndex.get(fieldId, new MiruTermId(FilerIO.intBytes(id)), median).getIndex();
+            Optional<BM> optional = fieldIndex.get(fieldId, new MiruTermId(FilerIO.intBytes(id)), median).getIndex(primitiveBuffer);
             assertEquals(optional.isPresent(), id > median, "Should be " + optional.isPresent() + ": " + id + " > " + median);
         }
     }
 
     @DataProvider(name = "miruFieldDataProvider")
     public Object[][] miruFieldDataProvider() throws Exception {
+        byte[] primitiveBuffer = new byte[8];
         List<Integer> ids = Lists.newArrayList();
         MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(2);
         MiruTenantId tenantId = new MiruTenantId(FilerIO.intBytes(1));
@@ -65,19 +68,19 @@ public class MiruFieldTest {
 
         for (int id = 0; id < 10; id++) {
             ids.add(id);
-            hybridFieldIndex.append(fieldDefinition.fieldId, new MiruTermId(FilerIO.intBytes(id)), new int[] { id }, null);
+            hybridFieldIndex.append(fieldDefinition.fieldId, new MiruTermId(FilerIO.intBytes(id)), new int[]{id}, null, primitiveBuffer);
         }
 
         MiruContext<EWAHCompressedBitmap, ?> onDiskContext = IndexTestUtil.buildOnDiskContext(4, bitmaps, coord);
         MiruFieldIndex<EWAHCompressedBitmap> onDiskFieldIndex = onDiskContext.fieldIndexProvider.getFieldIndex(MiruFieldType.primary);
 
         for (int id = 0; id < 10; id++) {
-            onDiskFieldIndex.append(fieldDefinition.fieldId, new MiruTermId(FilerIO.intBytes(id)), new int[] { id }, null);
+            onDiskFieldIndex.append(fieldDefinition.fieldId, new MiruTermId(FilerIO.intBytes(id)), new int[]{id}, null, primitiveBuffer);
         }
 
-        return new Object[][] {
-            { bitmaps, hybridFieldIndex, fieldDefinition.fieldId, ids },
-            { bitmaps, onDiskFieldIndex, fieldDefinition.fieldId, ids }
+        return new Object[][]{
+            {bitmaps, hybridFieldIndex, fieldDefinition.fieldId, ids},
+            {bitmaps, onDiskFieldIndex, fieldDefinition.fieldId, ids}
         };
     }
 }

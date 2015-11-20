@@ -111,6 +111,7 @@ public class MiruIndexPairedLatest<BM> {
         List<Future<?>> futures = Lists.newArrayListWithCapacity(pairedLatestWorks.size());
         for (final PairedLatestWork pairedLatestWork : pairedLatestWorks) {
             futures.add(indexExecutor.submit(() -> {
+                byte[] primitiveBuffer = new byte[8];
                 MiruTermId fieldValue = pairedLatestWork.fieldValue;
                 List<IdAndTerm> idAndTerms = pairedLatestWork.work;
 
@@ -125,20 +126,20 @@ public class MiruIndexPairedLatest<BM> {
                     MiruTermId aggregateFieldValue = idAndTerm.term;
                     MiruInvertedIndex<BM> aggregateInvertedIndex = allFieldIndex.getOrCreateInvertedIndex(
                         pairedLatestWork.aggregateFieldId, aggregateFieldValue);
-                    Optional<BM> aggregateBitmap = aggregateInvertedIndex.getIndexUnsafe();
+                    Optional<BM> aggregateBitmap = aggregateInvertedIndex.getIndexUnsafe(primitiveBuffer);
                     if (aggregateBitmap.isPresent()) {
                         aggregateBitmaps.add(aggregateBitmap.get());
                         ids.add(idAndTerm.id);
                     }
                 }
 
-                invertedIndex.andNotToSourceSize(aggregateBitmaps);
+                invertedIndex.andNotToSourceSize(aggregateBitmaps, primitiveBuffer);
 
                 ids.reverse(); // we built in reverse order, so flip back to ascending
                 if (repair) {
-                    pairedLatestFieldIndex.set(pairedLatestWork.fieldId, pairedLatestTerm, ids.toArray(), null);
+                    pairedLatestFieldIndex.set(pairedLatestWork.fieldId, pairedLatestTerm, ids.toArray(), null, primitiveBuffer);
                 } else {
-                    pairedLatestFieldIndex.append(pairedLatestWork.fieldId, pairedLatestTerm, ids.toArray(), null);
+                    pairedLatestFieldIndex.append(pairedLatestWork.fieldId, pairedLatestTerm, ids.toArray(), null, primitiveBuffer);
                 }
 
                 return null;

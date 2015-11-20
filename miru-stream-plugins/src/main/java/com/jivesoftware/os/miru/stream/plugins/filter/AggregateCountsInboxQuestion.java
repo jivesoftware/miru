@@ -57,7 +57,7 @@ public class AggregateCountsInboxQuestion implements Question<AggregateCountsQue
     public <BM> MiruPartitionResponse<AggregateCountsAnswer> askLocal(MiruRequestHandle<BM, ?> handle,
         Optional<AggregateCountsReport> report)
         throws Exception {
-
+        byte[] primitiveBuffer = new byte[8];
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
         MiruRequestContext<BM, ?> context = handle.getRequestContext();
         MiruBitmaps<BM> bitmaps = handle.getBitmaps();
@@ -80,14 +80,14 @@ public class AggregateCountsInboxQuestion implements Question<AggregateCountsQue
         if (!MiruTimeRange.ALL_TIME.equals(request.query.answerTimeRange)) {
             MiruTimeRange timeRange = request.query.answerTimeRange;
 
-            ands.add(bitmaps.buildTimeRangeMask(context.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp));
+            ands.add(bitmaps.buildTimeRangeMask(context.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp, primitiveBuffer));
         }
         if (!MiruTimeRange.ALL_TIME.equals(request.query.countTimeRange)) {
             counterAnds.add(bitmaps.buildTimeRangeMask(
-                context.getTimeIndex(), request.query.countTimeRange.smallestTimestamp, request.query.countTimeRange.largestTimestamp));
+                context.getTimeIndex(), request.query.countTimeRange.smallestTimestamp, request.query.countTimeRange.largestTimestamp, primitiveBuffer));
         }
 
-        Optional<BM> inbox = context.getInboxIndex().getInbox(request.query.streamId).getIndex();
+        Optional<BM> inbox = context.getInboxIndex().getInbox(request.query.streamId).getIndex(primitiveBuffer);
         if (inbox.isPresent()) {
             ands.add(inbox.get());
         } else {
@@ -99,16 +99,16 @@ public class AggregateCountsInboxQuestion implements Question<AggregateCountsQue
         }
 
         if (!MiruAuthzExpression.NOT_PROVIDED.equals(request.authzExpression)) {
-            ands.add(context.getAuthzIndex().getCompositeAuthz(request.authzExpression));
+            ands.add(context.getAuthzIndex().getCompositeAuthz(request.authzExpression,primitiveBuffer));
         }
 
         if (unreadOnly) {
-            Optional<BM> unreadIndex = context.getUnreadTrackingIndex().getUnread(request.query.streamId).getIndex();
+            Optional<BM> unreadIndex = context.getUnreadTrackingIndex().getUnread(request.query.streamId).getIndex(primitiveBuffer);
             if (unreadIndex.isPresent()) {
                 ands.add(unreadIndex.get());
             }
         }
-        ands.add(bitmaps.buildIndexMask(context.getActivityIndex().lastId(), context.getRemovalIndex().getIndex()));
+        ands.add(bitmaps.buildIndexMask(context.getActivityIndex().lastId(primitiveBuffer), context.getRemovalIndex().getIndex(primitiveBuffer)));
 
         BM answer = bitmaps.create();
         bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
@@ -117,7 +117,7 @@ public class AggregateCountsInboxQuestion implements Question<AggregateCountsQue
         counterAnds.add(answer);
         if (!unreadOnly) {
             // if unreadOnly is true, the read-tracking index would already be applied to the answer
-            Optional<BM> unreadIndex = context.getUnreadTrackingIndex().getUnread(request.query.streamId).getIndex();
+            Optional<BM> unreadIndex = context.getUnreadTrackingIndex().getUnread(request.query.streamId).getIndex(primitiveBuffer);
             if (unreadIndex.isPresent()) {
                 counterAnds.add(unreadIndex.get());
             }

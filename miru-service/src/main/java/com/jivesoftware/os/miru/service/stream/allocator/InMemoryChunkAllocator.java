@@ -40,7 +40,7 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
     }
 
     @Override
-    public ChunkStore[] allocateChunkStores(MiruPartitionCoord coord) throws Exception {
+    public ChunkStore[] allocateChunkStores(MiruPartitionCoord coord, byte[] primitiveBuffer) throws Exception {
 
         ChunkStore[] chunkStores = new ChunkStore[numberOfChunkStores];
         ChunkStoreInitializer chunkStoreInitializer = new ChunkStoreInitializer();
@@ -49,7 +49,8 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
                 initialChunkSize,
                 cacheByteBufferFactory,
                 partitionInitialChunkCacheSize,
-                partitionMaxChunkCacheSize);
+                partitionMaxChunkCacheSize,
+                primitiveBuffer);
         }
         return chunkStores;
     }

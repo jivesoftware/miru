@@ -34,8 +34,8 @@ public class AmzaSipIndexMarshaller implements MiruSipIndexMarshaller<AmzaSipCur
     }
 
     @Override
-    public AmzaSipCursor fromFiler(Filer filer) throws IOException {
-        byte[] bytes = FilerIO.readByteArray(filer, "bytes");
+    public AmzaSipCursor fromFiler(Filer filer, byte[] primitiveBuffer) throws IOException {
+        byte[] bytes = FilerIO.readByteArray(filer, "bytes", primitiveBuffer);
         ByteBuffer buf = ByteBuffer.wrap(bytes);
         List<NamedCursor> namedCursors = Lists.newArrayList();
         int numCursors = buf.getInt();
@@ -51,7 +51,7 @@ public class AmzaSipIndexMarshaller implements MiruSipIndexMarshaller<AmzaSipCur
     }
 
     @Override
-    public void toFiler(Filer filer, AmzaSipCursor cursor) throws IOException {
+    public void toFiler(Filer filer, AmzaSipCursor cursor, byte[] primitiveBuffer) throws IOException {
 
         int length = (int) expectedCapacity(cursor);
 
@@ -65,7 +65,7 @@ public class AmzaSipIndexMarshaller implements MiruSipIndexMarshaller<AmzaSipCur
             buf.put(nameBytes);
         }
 
-        FilerIO.writeByteArray(filer, buf.array(), "bytes");
+        FilerIO.writeByteArray(filer, buf.array(), "bytes", primitiveBuffer);
         FilerIO.writeByte(filer, cursor.endOfStream ? (byte) 1 : (byte) 0, "endOfStream");
     }
 }

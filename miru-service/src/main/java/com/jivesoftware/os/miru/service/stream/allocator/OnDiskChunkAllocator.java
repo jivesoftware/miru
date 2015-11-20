@@ -54,7 +54,7 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
     }
 
     @Override
-    public ChunkStore[] allocateChunkStores(MiruPartitionCoord coord) throws Exception {
+    public ChunkStore[] allocateChunkStores(MiruPartitionCoord coord, byte[] primitiveBuffer) throws Exception {
 
         MiruResourcePartitionIdentifier identifier = new MiruPartitionCoordIdentifier(coord);
 
@@ -70,7 +70,8 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
                 resourceLocator.getOnDiskInitialChunkSize(),
                 cacheByteBufferFactory,
                 partitionInitialChunkCacheSize,
-                partitionMaxChunkCacheSize);
+                partitionMaxChunkCacheSize,
+                primitiveBuffer);
         }
         return chunkStores;
     }

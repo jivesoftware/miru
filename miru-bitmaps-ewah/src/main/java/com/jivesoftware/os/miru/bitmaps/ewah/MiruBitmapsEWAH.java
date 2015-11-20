@@ -34,6 +34,7 @@ import java.util.PriorityQueue;
  * @author jonathan
  */
 public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap> {
+
     private static final EWAHCompressedBitmap EMPTY = new EWAHCompressedBitmap(); // Balls!!
 
     private final int bufferSize;
@@ -302,9 +303,9 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap> {
     }
 
     @Override
-    public EWAHCompressedBitmap buildTimeRangeMask(MiruTimeIndex timeIndex, long smallestTimestamp, long largestTimestamp) {
-        int smallestId = timeIndex.smallestExclusiveTimestampIndex(smallestTimestamp);
-        int largestId = timeIndex.largestInclusiveTimestampIndex(largestTimestamp);
+    public EWAHCompressedBitmap buildTimeRangeMask(MiruTimeIndex timeIndex, long smallestTimestamp, long largestTimestamp, byte[] primitiveBuffer) {
+        int smallestId = timeIndex.smallestExclusiveTimestampIndex(smallestTimestamp, primitiveBuffer);
+        int largestId = timeIndex.largestInclusiveTimestampIndex(largestTimestamp, primitiveBuffer);
 
         EWAHCompressedBitmap mask = new EWAHCompressedBitmap();
 
@@ -361,7 +362,6 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap> {
 
         return mask;
     }
-
 
     @Override
     public void copy(EWAHCompressedBitmap container, EWAHCompressedBitmap original) {

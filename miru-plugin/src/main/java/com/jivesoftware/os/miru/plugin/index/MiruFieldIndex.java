@@ -19,23 +19,24 @@ public interface MiruFieldIndex<BM> {
 
     long getVersion(int fieldId, MiruTermId termId) throws Exception;
 
-    void append(int fieldId, MiruTermId termId, int[] ids, long[] counts) throws Exception;
+    void append(int fieldId, MiruTermId termId, int[] ids, long[] counts, byte[] primitiveBuffer) throws Exception;
 
-    void set(int fieldId, MiruTermId termId, int[] ids, long[] counts) throws Exception;
+    void set(int fieldId, MiruTermId termId, int[] ids, long[] counts, byte[] primitiveBuffer) throws Exception;
 
-    void remove(int fieldId, MiruTermId termId, int id) throws Exception;
+    void remove(int fieldId, MiruTermId termId, int id, byte[] primitiveBuffer) throws Exception;
 
-    void streamTermIdsForField(int fieldId, List<KeyRange> ranges, TermIdStream termIdStream) throws Exception;
+    void streamTermIdsForField(int fieldId, List<KeyRange> ranges, TermIdStream termIdStream, byte[] primitiveBuffer) throws Exception;
 
-    long getCardinality(int fieldId, MiruTermId termId, int id) throws Exception;
+    long getCardinality(int fieldId, MiruTermId termId, int id, byte[] primitiveBuffer) throws Exception;
 
-    long[] getCardinalities(int fieldId, MiruTermId termId, int[] ids) throws Exception;
+    long[] getCardinalities(int fieldId, MiruTermId termId, int[] ids, byte[] primitiveBuffer) throws Exception;
 
-    long getGlobalCardinality(int fieldId, MiruTermId termId) throws Exception;
+    long getGlobalCardinality(int fieldId, MiruTermId termId, byte[] primitiveBuffer) throws Exception;
 
-    void mergeCardinalities(int fieldId, MiruTermId termId, int[] ids, long[] counts) throws Exception;
+    void mergeCardinalities(int fieldId, MiruTermId termId, int[] ids, long[] counts, byte[] primitiveBuffer) throws Exception;
 
     class IndexKey {
+
         public final long id;
         public final byte[] keyBytes;
 

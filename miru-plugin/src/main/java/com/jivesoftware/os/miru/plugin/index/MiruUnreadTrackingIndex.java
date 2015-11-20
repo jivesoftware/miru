@@ -12,11 +12,11 @@ public interface MiruUnreadTrackingIndex<BM> {
 
     MiruInvertedIndexAppender getAppender(MiruStreamId streamId) throws Exception;
 
-    void append(MiruStreamId streamId, int... ids) throws Exception;
+    void append(MiruStreamId streamId, byte[] primitiveBuffer, int... ids) throws Exception;
 
-    void applyRead(MiruStreamId streamId, BM readMask) throws Exception;
+    void applyRead(MiruStreamId streamId, BM readMask, byte[] primitiveBuffer) throws Exception;
 
-    void applyUnread(MiruStreamId streamId, BM unreadMask) throws Exception;
+    void applyUnread(MiruStreamId streamId, BM unreadMask, byte[] primitiveBuffer) throws Exception;
 
     void close();
 }

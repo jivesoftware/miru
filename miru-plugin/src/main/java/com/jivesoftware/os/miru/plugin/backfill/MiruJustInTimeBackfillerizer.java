@@ -58,13 +58,13 @@ public class MiruJustInTimeBackfillerizer {
         // backfill in another thread to guard WAL interface from solver cancellation/interruption
         Future<?> future = backfillExecutor.submit(() -> {
             try {
-
+                byte[] primitiveBuffer = new byte[8];
                 synchronized (requestContext.getStreamLocks().lock(streamId, 0)) {
-                    int lastActivityIndex = requestContext.getInboxIndex().getLastActivityIndex(streamId);
-                    int lastId = Math.min(requestContext.getTimeIndex().lastId(), requestContext.getActivityIndex().lastId());
+                    int lastActivityIndex = requestContext.getInboxIndex().getLastActivityIndex(streamId, primitiveBuffer);
+                    int lastId = Math.min(requestContext.getTimeIndex().lastId(), requestContext.getActivityIndex().lastId(primitiveBuffer));
                     BM answer = bitmaps.create();
                     aggregateUtil.filter(bitmaps, requestContext.getSchema(), requestContext.getTermComposer(), requestContext.getFieldIndexProvider(),
-                        streamFilter, solutionLog, answer, null, requestContext.getActivityIndex().lastId(), lastActivityIndex);
+                        streamFilter, solutionLog, answer, null, requestContext.getActivityIndex().lastId(primitiveBuffer), lastActivityIndex, primitiveBuffer);
 
                     MiruInvertedIndexAppender inbox = requestContext.getInboxIndex().getAppender(streamId);
                     MiruInvertedIndexAppender unread = requestContext.getUnreadTrackingIndex().getAppender(streamId);
@@ -72,8 +72,8 @@ public class MiruJustInTimeBackfillerizer {
                         log.debug("before:\n  host={}\n  streamId={}\n  inbox={}\n  unread={}\n  last={}",
                             localHost,
                             streamId.getBytes(),
-                            requestContext.getInboxIndex().getInbox(streamId).getIndex(),
-                            requestContext.getUnreadTrackingIndex().getUnread(streamId).getIndex(),
+                            requestContext.getInboxIndex().getInbox(streamId).getIndex(primitiveBuffer),
+                            requestContext.getUnreadTrackingIndex().getUnread(streamId).getIndex(primitiveBuffer),
                             lastActivityIndex);
                     }
 
@@ -88,10 +88,10 @@ public class MiruJustInTimeBackfillerizer {
                     while (intIterator.hasNext()) {
                         int i = intIterator.next();
                         if (i > lastActivityIndex && i <= lastId) {
-                            MiruInternalActivity miruActivity = requestContext.getActivityIndex().get(tenantId, i);
+                            MiruInternalActivity miruActivity = requestContext.getActivityIndex().get(tenantId, i, primitiveBuffer);
                             if (miruActivity == null) {
                                 log.warn("Missing activity at index {}, timeIndex={}, activityIndex={}",
-                                    i, requestContext.getTimeIndex().lastId(), requestContext.getActivityIndex().lastId());
+                                    i, requestContext.getTimeIndex().lastId(), requestContext.getActivityIndex().lastId(primitiveBuffer));
                                 continue;
                             }
                             oldestBackfilledEventId = Math.min(oldestBackfilledEventId, miruActivity.time);
@@ -104,15 +104,15 @@ public class MiruJustInTimeBackfillerizer {
                             }
                         }
                     }
-                    inbox.appendAndExtend(inboxIds, lastId);
-                    unread.appendAndExtend(unreadIds, lastId);
+                    inbox.appendAndExtend(inboxIds, lastId, primitiveBuffer);
+                    unread.appendAndExtend(unreadIds, lastId, primitiveBuffer);
 
                     if (log.isDebugEnabled()) {
                         log.debug("after:\n  host={}\n  streamId={}\n  inbox={}\n  unread={}\n  last={}",
                             localHost,
                             streamId.getBytes(),
-                            requestContext.getInboxIndex().getInbox(streamId).getIndex(),
-                            requestContext.getUnreadTrackingIndex().getUnread(streamId).getIndex(),
+                            requestContext.getInboxIndex().getInbox(streamId).getIndex(primitiveBuffer),
+                            requestContext.getUnreadTrackingIndex().getUnread(streamId).getIndex(primitiveBuffer),
                             lastActivityIndex);
                     }
 
@@ -123,7 +123,8 @@ public class MiruJustInTimeBackfillerizer {
                         streamId,
                         solutionLog,
                         lastId,
-                        oldestBackfilledEventId);
+                        oldestBackfilledEventId,
+                        primitiveBuffer);
                 }
 
             } catch (Exception e) {

@@ -91,15 +91,15 @@ public class MiruTenantTopology<BM> {
         }
     }
 
-    public boolean updateStorage(MiruPartitionId partitionId, MiruBackingStorage backingStorage) throws Exception {
+    public boolean updateStorage(MiruPartitionId partitionId, MiruBackingStorage backingStorage, byte[] primitiveBuffer) throws Exception {
         Optional<MiruLocalHostedPartition<BM, ?, ?>> partition = getPartition(partitionId);
-        return partition.isPresent() && partition.get().setStorage(backingStorage);
+        return partition.isPresent() && partition.get().setStorage(backingStorage, primitiveBuffer);
     }
 
-    public void setStorage(MiruPartitionId partitionId, MiruBackingStorage storage) throws Exception {
+    public void setStorage(MiruPartitionId partitionId, MiruBackingStorage storage, byte[] primitiveBuffer) throws Exception {
         Optional<MiruLocalHostedPartition<BM, ?, ?>> partition = getPartition(partitionId);
         if (partition.isPresent()) {
-            partition.get().setStorage(storage);
+            partition.get().setStorage(storage, primitiveBuffer);
         }
     }
 

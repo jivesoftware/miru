@@ -27,91 +27,100 @@ public class MiruTimeIndexTest {
 
     @Test(dataProvider = "miruTimeIndexDataProviderWithData")
     public void testClosestIdWithPresentIds(MiruTimeIndex miruTimeIndex, int capacity) throws Exception {
+        byte[] primitiveBuffer = new byte[8];
         for (int i = 0; i < capacity; i++) {
-            int id = miruTimeIndex.getClosestId(i * 10);
+            int id = miruTimeIndex.getClosestId(i * 10, primitiveBuffer);
             assertEquals(id, i, "Should be equal at " + i);
         }
     }
 
     @Test(dataProvider = "miruTimeIndexDataProviderWithData")
     public void testClosestIdWithAbsentIds(MiruTimeIndex miruTimeIndex, int capacity) throws Exception {
+        byte[] primitiveBuffer = new byte[8];
         for (int i = 0; i < capacity; i++) {
-            int id = miruTimeIndex.getClosestId(i * 10 + 1);
+            int id = miruTimeIndex.getClosestId(i * 10 + 1, primitiveBuffer);
             assertEquals(id, i + 1, "Should be equal at " + i);
         }
     }
 
     @Test(dataProvider = "miruTimeIndexDataProviderWithData")
     public void testExactIdWithPresentIds(MiruTimeIndex miruTimeIndex, int capacity) throws Exception {
+        byte[] primitiveBuffer = new byte[8];
         for (int i = 0; i < capacity; i++) {
-            int id = miruTimeIndex.getExactId(i * 10);
+            int id = miruTimeIndex.getExactId(i * 10, primitiveBuffer);
             assertEquals(id, i, "Should be equal at " + i);
         }
     }
 
     @Test(dataProvider = "miruTimeIndexDataProviderWithData")
     public void testExactIdWithAbsentIds(MiruTimeIndex miruTimeIndex, int capacity) throws Exception {
+        byte[] primitiveBuffer = new byte[8];
         for (int i = 0; i < capacity; i++) {
-            int id = miruTimeIndex.getExactId(i * 10 + 1);
+            int id = miruTimeIndex.getExactId(i * 10 + 1, primitiveBuffer);
             assertEquals(id, -1, "Should be equal at " + i);
         }
     }
 
     @Test(dataProvider = "miruTimeIndexDataProviderWithData")
     public void testContainsWithPresentIds(MiruTimeIndex miruTimeIndex, int capacity) throws Exception {
+        byte[] primitiveBuffer = new byte[8];
         for (int i = 0; i < capacity; i++) {
-            assertTrue(miruTimeIndex.contains(Arrays.asList(i * 10L))[0], "Should be true at " + i);
+            assertTrue(miruTimeIndex.contains(Arrays.asList(i * 10L), primitiveBuffer)[0], "Should be true at " + i);
         }
     }
 
     @Test(dataProvider = "miruTimeIndexDataProviderWithData")
     public void testContainsWithAbsentIds(MiruTimeIndex miruTimeIndex, int capacity) throws Exception {
+        byte[] primitiveBuffer = new byte[8];
         for (int i = 0; i < capacity; i++) {
-            assertFalse(miruTimeIndex.contains(Arrays.asList(i * 10 + 1L))[0], "Should be false at " + i);
+            assertFalse(miruTimeIndex.contains(Arrays.asList(i * 10 + 1L), primitiveBuffer)[0], "Should be false at " + i);
         }
     }
 
     @Test(dataProvider = "miruTimeIndexDataProviderWithRangeData")
     public void testLargestInclusiveTimestampIndex(MiruTimeIndex miruTimeIndex) throws Exception {
+        byte[] primitiveBuffer = new byte[8];
         // { 1, 1, 1, 3, 3, 3, 5, 5, 5 }
-        assertEquals(miruTimeIndex.largestInclusiveTimestampIndex(0), -1);
-        assertEquals(miruTimeIndex.largestInclusiveTimestampIndex(1), 2);
-        assertEquals(miruTimeIndex.largestInclusiveTimestampIndex(2), 2);
-        assertEquals(miruTimeIndex.largestInclusiveTimestampIndex(3), 5);
-        assertEquals(miruTimeIndex.largestInclusiveTimestampIndex(4), 5);
-        assertEquals(miruTimeIndex.largestInclusiveTimestampIndex(5), 8);
-        assertEquals(miruTimeIndex.largestInclusiveTimestampIndex(6), 8);
+        assertEquals(miruTimeIndex.largestInclusiveTimestampIndex(0, primitiveBuffer), -1);
+        assertEquals(miruTimeIndex.largestInclusiveTimestampIndex(1, primitiveBuffer), 2);
+        assertEquals(miruTimeIndex.largestInclusiveTimestampIndex(2, primitiveBuffer), 2);
+        assertEquals(miruTimeIndex.largestInclusiveTimestampIndex(3, primitiveBuffer), 5);
+        assertEquals(miruTimeIndex.largestInclusiveTimestampIndex(4, primitiveBuffer), 5);
+        assertEquals(miruTimeIndex.largestInclusiveTimestampIndex(5, primitiveBuffer), 8);
+        assertEquals(miruTimeIndex.largestInclusiveTimestampIndex(6, primitiveBuffer), 8);
     }
 
     @Test(dataProvider = "miruTimeIndexDataProviderWithRangeData")
     public void testSmallestExclusiveTimestampIndex(MiruTimeIndex miruTimeIndex) throws Exception {
+        byte[] primitiveBuffer = new byte[8];
         // { 1, 1, 1, 3, 3, 3, 5, 5, 5 }
-        assertEquals(miruTimeIndex.smallestExclusiveTimestampIndex(0), 0);
-        assertEquals(miruTimeIndex.smallestExclusiveTimestampIndex(1), 3);
-        assertEquals(miruTimeIndex.smallestExclusiveTimestampIndex(2), 3);
-        assertEquals(miruTimeIndex.smallestExclusiveTimestampIndex(3), 6);
-        assertEquals(miruTimeIndex.smallestExclusiveTimestampIndex(4), 6);
-        assertEquals(miruTimeIndex.smallestExclusiveTimestampIndex(5), 9);
-        assertEquals(miruTimeIndex.smallestExclusiveTimestampIndex(6), 9);
+        assertEquals(miruTimeIndex.smallestExclusiveTimestampIndex(0, primitiveBuffer), 0);
+        assertEquals(miruTimeIndex.smallestExclusiveTimestampIndex(1, primitiveBuffer), 3);
+        assertEquals(miruTimeIndex.smallestExclusiveTimestampIndex(2, primitiveBuffer), 3);
+        assertEquals(miruTimeIndex.smallestExclusiveTimestampIndex(3, primitiveBuffer), 6);
+        assertEquals(miruTimeIndex.smallestExclusiveTimestampIndex(4, primitiveBuffer), 6);
+        assertEquals(miruTimeIndex.smallestExclusiveTimestampIndex(5, primitiveBuffer), 9);
+        assertEquals(miruTimeIndex.smallestExclusiveTimestampIndex(6, primitiveBuffer), 9);
     }
 
     @Test(dataProvider = "miruTimeIndexDataProviderWithoutData")
     public void testPartiallyPresentBatchIds(MiruTimeIndex miruTimeIndex) throws Exception {
-        boolean[] contains = miruTimeIndex.contains(Arrays.asList(10L, 20L, 30L, 40L));
+        byte[] primitiveBuffer = new byte[8];
+        boolean[] contains = miruTimeIndex.contains(Arrays.asList(10L, 20L, 30L, 40L), primitiveBuffer);
         for (boolean contained : contains) {
             assertFalse(contained);
         }
 
-        int[] ids = miruTimeIndex.nextId(10L, 20L, 30L, 40L);
+        int[] ids = miruTimeIndex.nextId(primitiveBuffer, 10L, 20L, 30L, 40L);
         for (int i = 0; i < ids.length; i++) {
             assertEquals(ids[i], i);
-            assertEquals(miruTimeIndex.getExactId((i + 1) * 10), ids[i]);
+            assertEquals(miruTimeIndex.getExactId((i + 1) * 10, primitiveBuffer), ids[i]);
         }
 
         assertEquals(miruTimeIndex.getSmallestTimestamp(), 10L);
         assertEquals(miruTimeIndex.getLargestTimestamp(), 40L);
 
-        contains = miruTimeIndex.contains(Arrays.asList(30L, 35L, 40L, 45L));
+        contains = miruTimeIndex.contains(Arrays.asList(30L, 35L, 40L, 45L), primitiveBuffer);
         for (int i = 0; i < contains.length; i++) {
             if (i % 2 == 1) {
                 assertFalse(contains[i]);
@@ -120,7 +129,7 @@ public class MiruTimeIndexTest {
             }
         }
 
-        ids = miruTimeIndex.nextId(-1L, 35L, -1L, 45L);
+        ids = miruTimeIndex.nextId(primitiveBuffer, -1L, 35L, -1L, 45L);
         for (int i = 0; i < ids.length; i++) {
             if (i % 2 == 1) {
                 assertEquals(ids[i], 4 + i / 2);
@@ -131,12 +140,12 @@ public class MiruTimeIndexTest {
 
         assertEquals(miruTimeIndex.getSmallestTimestamp(), 10L);
         assertEquals(miruTimeIndex.getLargestTimestamp(), 45L);
-        assertEquals(miruTimeIndex.smallestExclusiveTimestampIndex(10L), 1);
-        assertEquals(miruTimeIndex.smallestExclusiveTimestampIndex(12L), 1);
-        assertEquals(miruTimeIndex.smallestExclusiveTimestampIndex(40L), 5);
-        assertEquals(miruTimeIndex.largestInclusiveTimestampIndex(5L), -1);
-        assertEquals(miruTimeIndex.largestInclusiveTimestampIndex(42L), 4);
-        assertEquals(miruTimeIndex.largestInclusiveTimestampIndex(45L), 5);
+        assertEquals(miruTimeIndex.smallestExclusiveTimestampIndex(10L, primitiveBuffer), 1);
+        assertEquals(miruTimeIndex.smallestExclusiveTimestampIndex(12L, primitiveBuffer), 1);
+        assertEquals(miruTimeIndex.smallestExclusiveTimestampIndex(40L, primitiveBuffer), 5);
+        assertEquals(miruTimeIndex.largestInclusiveTimestampIndex(5L, primitiveBuffer), -1);
+        assertEquals(miruTimeIndex.largestInclusiveTimestampIndex(42L, primitiveBuffer), 4);
+        assertEquals(miruTimeIndex.largestInclusiveTimestampIndex(45L, primitiveBuffer), 5);
     }
 
     /*
@@ -183,6 +192,7 @@ public class MiruTimeIndexTest {
      */
     @Test
     public void testPerformance() throws Exception {
+        byte[] primitiveBuffer = new byte[8];
         DecimalFormat formatter = new DecimalFormat("###,###,###");
         int[] tryLevels = new int[]{3}; //{2, 3, 4, 5};
         int[] trySegments = new int[]{16}; //{4, 16, 32};
@@ -198,7 +208,7 @@ public class MiruTimeIndexTest {
                 start = System.currentTimeMillis();
                 MiruTimeIndex onDiskTimeIndex = IndexTestUtil.buildOnDiskContext(numberOfChunkStores, bitmaps, coord).timeIndex;
                 for (int i = 0; i < capacity; i++) {
-                    onDiskTimeIndex.nextId(i * 10);
+                    onDiskTimeIndex.nextId(primitiveBuffer, i * 10);
                 }
                 System.out.println("CopyToDisk"
                     + " levels=" + levels
@@ -210,7 +220,7 @@ public class MiruTimeIndexTest {
                 start = System.currentTimeMillis();
                 int gets = 100;
                 for (int i = 0; i < capacity; i += (capacity / gets)) {
-                    int id = onDiskTimeIndex.getClosestId(i * 10);
+                    int id = onDiskTimeIndex.getClosestId(i * 10, primitiveBuffer);
                     assertEquals(id, i);
                 }
                 System.out.println("GetClosest(" + gets + ")"
@@ -242,6 +252,7 @@ public class MiruTimeIndexTest {
 
     @DataProvider(name = "miruTimeIndexDataProviderWithData")
     public Object[][] miruTimeIndexDataProviderWithData() throws Exception {
+        byte[] primitiveBuffer = new byte[8];
         try {
             int capacity = 1_000;
             final long[] importValues = new long[capacity];
@@ -251,30 +262,29 @@ public class MiruTimeIndexTest {
 
             MiruTimeIndex miruInMemoryTimeIndex = IndexTestUtil.buildInMemoryContext(numberOfChunkStores, bitmaps, coord).timeIndex;
             MiruTimeIndex miruOnDiskTimeIndex = IndexTestUtil.buildOnDiskContext(numberOfChunkStores, bitmaps, coord).timeIndex;
-            miruOnDiskTimeIndex.nextId(importValues);
-            miruInMemoryTimeIndex.nextId(importValues);
+            miruOnDiskTimeIndex.nextId(primitiveBuffer, importValues);
+            miruInMemoryTimeIndex.nextId(primitiveBuffer, importValues);
 
             MiruTimeIndex miruInMemoryTimeIndexMerged = IndexTestUtil.buildInMemoryContext(numberOfChunkStores, bitmaps, coord).timeIndex;
             MiruTimeIndex miruOnDiskTimeIndexMerged = IndexTestUtil.buildOnDiskContext(numberOfChunkStores, bitmaps, coord).timeIndex;
-            miruOnDiskTimeIndexMerged.nextId(importValues);
-            miruInMemoryTimeIndexMerged.nextId(importValues);
-            ((MiruDeltaTimeIndex) miruOnDiskTimeIndexMerged).merge();
-            ((MiruDeltaTimeIndex) miruInMemoryTimeIndexMerged).merge();
+            miruOnDiskTimeIndexMerged.nextId(primitiveBuffer, importValues);
+            miruInMemoryTimeIndexMerged.nextId(primitiveBuffer, importValues);
+            ((MiruDeltaTimeIndex) miruOnDiskTimeIndexMerged).merge(primitiveBuffer);
+            ((MiruDeltaTimeIndex) miruInMemoryTimeIndexMerged).merge(primitiveBuffer);
 
             MiruTimeIndex miruInMemoryTimeIndexPartiallyMerged = IndexTestUtil.buildInMemoryContext(numberOfChunkStores, bitmaps, coord).timeIndex;
             MiruTimeIndex miruOnDiskTimeIndexPartiallyMerged = IndexTestUtil.buildOnDiskContext(numberOfChunkStores, bitmaps, coord).timeIndex;
             int i = 0;
             for (; i < importValues.length / 2; i++) {
-                miruInMemoryTimeIndexPartiallyMerged.nextId(importValues[i]);
-                miruOnDiskTimeIndexPartiallyMerged.nextId(importValues[i]);
+                miruInMemoryTimeIndexPartiallyMerged.nextId(primitiveBuffer, importValues[i]);
+                miruOnDiskTimeIndexPartiallyMerged.nextId(primitiveBuffer, importValues[i]);
             }
-            ((MiruDeltaTimeIndex) miruInMemoryTimeIndexPartiallyMerged).merge();
-            ((MiruDeltaTimeIndex) miruOnDiskTimeIndexPartiallyMerged).merge();
+            ((MiruDeltaTimeIndex) miruInMemoryTimeIndexPartiallyMerged).merge(primitiveBuffer);
+            ((MiruDeltaTimeIndex) miruOnDiskTimeIndexPartiallyMerged).merge(primitiveBuffer);
             for (; i < importValues.length; i++) {
-                miruInMemoryTimeIndexPartiallyMerged.nextId(importValues[i]);
-                miruOnDiskTimeIndexPartiallyMerged.nextId(importValues[i]);
+                miruInMemoryTimeIndexPartiallyMerged.nextId(primitiveBuffer, importValues[i]);
+                miruOnDiskTimeIndexPartiallyMerged.nextId(primitiveBuffer, importValues[i]);
             }
-
 
             return new Object[][]{
                 {miruInMemoryTimeIndex, capacity},
@@ -293,32 +303,33 @@ public class MiruTimeIndexTest {
 
     @DataProvider(name = "miruTimeIndexDataProviderWithRangeData")
     public Object[][] miruTimeIndexDataProviderWithRangeData() throws Exception {
+        byte[] primitiveBuffer = new byte[8];
         try {
             final long[] importValues = {1, 1, 1, 3, 3, 3, 5, 5, 5};
             MiruTimeIndex miruInMemoryTimeIndex = IndexTestUtil.buildInMemoryContext(numberOfChunkStores, bitmaps, coord).timeIndex;
             MiruTimeIndex miruOnDiskTimeIndex = IndexTestUtil.buildOnDiskContext(numberOfChunkStores, bitmaps, coord).timeIndex;
-            miruOnDiskTimeIndex.nextId(importValues);
-            miruInMemoryTimeIndex.nextId(importValues);
+            miruOnDiskTimeIndex.nextId(primitiveBuffer, importValues);
+            miruInMemoryTimeIndex.nextId(primitiveBuffer, importValues);
 
             MiruTimeIndex miruInMemoryTimeIndexMerged = IndexTestUtil.buildInMemoryContext(numberOfChunkStores, bitmaps, coord).timeIndex;
             MiruTimeIndex miruOnDiskTimeIndexMerged = IndexTestUtil.buildOnDiskContext(numberOfChunkStores, bitmaps, coord).timeIndex;
-            miruOnDiskTimeIndexMerged.nextId(importValues);
-            miruInMemoryTimeIndexMerged.nextId(importValues);
-            ((MiruDeltaTimeIndex) miruOnDiskTimeIndexMerged).merge();
-            ((MiruDeltaTimeIndex) miruInMemoryTimeIndexMerged).merge();
+            miruOnDiskTimeIndexMerged.nextId(primitiveBuffer, importValues);
+            miruInMemoryTimeIndexMerged.nextId(primitiveBuffer, importValues);
+            ((MiruDeltaTimeIndex) miruOnDiskTimeIndexMerged).merge(primitiveBuffer);
+            ((MiruDeltaTimeIndex) miruInMemoryTimeIndexMerged).merge(primitiveBuffer);
 
             MiruTimeIndex miruInMemoryTimeIndexPartiallyMerged = IndexTestUtil.buildInMemoryContext(numberOfChunkStores, bitmaps, coord).timeIndex;
             MiruTimeIndex miruOnDiskTimeIndexPartiallyMerged = IndexTestUtil.buildOnDiskContext(numberOfChunkStores, bitmaps, coord).timeIndex;
             int i = 0;
             for (; i < importValues.length / 2; i++) {
-                miruInMemoryTimeIndexPartiallyMerged.nextId(importValues[i]);
-                miruOnDiskTimeIndexPartiallyMerged.nextId(importValues[i]);
+                miruInMemoryTimeIndexPartiallyMerged.nextId(primitiveBuffer, importValues[i]);
+                miruOnDiskTimeIndexPartiallyMerged.nextId(primitiveBuffer, importValues[i]);
             }
-            ((MiruDeltaTimeIndex) miruInMemoryTimeIndexPartiallyMerged).merge();
-            ((MiruDeltaTimeIndex) miruOnDiskTimeIndexPartiallyMerged).merge();
+            ((MiruDeltaTimeIndex) miruInMemoryTimeIndexPartiallyMerged).merge(primitiveBuffer);
+            ((MiruDeltaTimeIndex) miruOnDiskTimeIndexPartiallyMerged).merge(primitiveBuffer);
             for (; i < importValues.length; i++) {
-                miruInMemoryTimeIndexPartiallyMerged.nextId(importValues[i]);
-                miruOnDiskTimeIndexPartiallyMerged.nextId(importValues[i]);
+                miruInMemoryTimeIndexPartiallyMerged.nextId(primitiveBuffer, importValues[i]);
+                miruOnDiskTimeIndexPartiallyMerged.nextId(primitiveBuffer, importValues[i]);
             }
 
             return new Object[][]{

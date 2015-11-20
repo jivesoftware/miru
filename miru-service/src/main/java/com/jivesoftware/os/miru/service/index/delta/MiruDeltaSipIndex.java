@@ -20,19 +20,19 @@ public class MiruDeltaSipIndex<S extends MiruSipCursor<S>> implements MiruSipInd
     }
 
     @Override
-    public Optional<S> getSip() throws IOException {
+    public Optional<S> getSip(byte[] primitiveBuffer) throws IOException {
         S sip = sipReference.get();
         if (sip == null) {
-            return backingIndex.getSip();
+            return backingIndex.getSip(primitiveBuffer);
         }
         return Optional.fromNullable(sip);
     }
 
     @Override
-    public boolean setSip(final S sip) throws IOException {
+    public boolean setSip(final S sip, byte[] primitiveBuffer) throws IOException {
         S existing = sipReference.get();
         if (existing == null) {
-            existing = backingIndex.getSip().orNull();
+            existing = backingIndex.getSip(primitiveBuffer).orNull();
             if (!sipReference.compareAndSet(null, existing)) {
                 existing = sipReference.get();
             }
@@ -53,10 +53,10 @@ public class MiruDeltaSipIndex<S extends MiruSipCursor<S>> implements MiruSipInd
     }
 
     @Override
-    public void merge() throws Exception {
+    public void merge(byte[] primitiveBuffer) throws Exception {
         S sip = sipReference.get();
         if (sip != null) {
-            backingIndex.setSip(sip);
+            backingIndex.setSip(sip, primitiveBuffer);
         }
     }
 }

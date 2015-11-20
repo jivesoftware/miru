@@ -24,27 +24,27 @@ public class RCVSSipIndexMarshaller implements MiruSipIndexMarshaller<RCVSSipCur
     }
 
     @Override
-    public RCVSSipCursor fromFiler(Filer filer) throws IOException {
-        long marker = FilerIO.readLong(filer, "marker");
+    public RCVSSipCursor fromFiler(Filer filer, byte[] primitiveBuffer) throws IOException {
+        long marker = FilerIO.readLong(filer, "marker", primitiveBuffer);
         if (marker == Long.MIN_VALUE) {
             byte sort = FilerIO.readByte(filer, "sort");
-            long clockTimestamp = FilerIO.readLong(filer, "clockTimestamp");
-            long activityTimestamp = FilerIO.readLong(filer, "activityTimestamp");
+            long clockTimestamp = FilerIO.readLong(filer, "clockTimestamp", primitiveBuffer);
+            long activityTimestamp = FilerIO.readLong(filer, "activityTimestamp", primitiveBuffer);
             boolean endOfStream = FilerIO.readByte(filer, "endOfStream") == (byte) 1;
             return new RCVSSipCursor(sort, clockTimestamp, activityTimestamp, endOfStream);
         } else {
             // legacy, marker becomes clockTimestamp
-            long activityTimestamp = FilerIO.readLong(filer, "activityTimestamp");
+            long activityTimestamp = FilerIO.readLong(filer, "activityTimestamp", primitiveBuffer);
             return new RCVSSipCursor(MiruPartitionedActivity.Type.ACTIVITY.getSort(), marker, activityTimestamp, false);
         }
     }
 
     @Override
-    public void toFiler(Filer filer, RCVSSipCursor cursor) throws IOException {
-        FilerIO.writeLong(filer, Long.MIN_VALUE, "marker");
+    public void toFiler(Filer filer, RCVSSipCursor cursor, byte[] primitiveBuffer) throws IOException {
+        FilerIO.writeLong(filer, Long.MIN_VALUE, "marker", primitiveBuffer);
         FilerIO.writeByte(filer, cursor.sort, "sort");
-        FilerIO.writeLong(filer, cursor.clockTimestamp, "clockTimestamp");
-        FilerIO.writeLong(filer, cursor.activityTimestamp, "activityTimestamp");
+        FilerIO.writeLong(filer, cursor.clockTimestamp, "clockTimestamp", primitiveBuffer);
+        FilerIO.writeLong(filer, cursor.activityTimestamp, "activityTimestamp", primitiveBuffer);
         FilerIO.writeByte(filer, cursor.endOfStream ? (byte) 1 : (byte) 0, "endOfStream");
     }
 }

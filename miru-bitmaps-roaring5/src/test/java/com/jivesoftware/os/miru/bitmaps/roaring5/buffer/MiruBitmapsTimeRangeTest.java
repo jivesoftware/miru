@@ -25,11 +25,12 @@ public class MiruBitmapsTimeRangeTest {
 
     @Test(dataProvider = "evenTimeIndexDataProvider")
     public <BM> void testBuildEvenTimeRangeMask(MiruBitmaps<BM> bitmaps, MiruTimeIndex miruTimeIndex) throws Exception {
+        byte[] primitiveBuffer = new byte[8];
         final int size = (64 * 3) + 1;
         for (int lower = 0; lower <= size / 2; lower++) {
             int upper = size - 1 - lower;
 
-            BM bitmap = bitmaps.buildTimeRangeMask(miruTimeIndex, lower, upper);
+            BM bitmap = bitmaps.buildTimeRangeMask(miruTimeIndex, lower, upper, primitiveBuffer);
             if (lower == upper) {
                 // the lower and upper are the same so there should be nothing left
                 assertExpectedNumberOfConsecutiveBitsStartingFromN(bitmaps, bitmap, -1, 0);
@@ -41,11 +42,12 @@ public class MiruBitmapsTimeRangeTest {
 
     @Test(dataProvider = "oddTimeIndexDataProvider")
     public <BM> void testBuildOddTimeRangeMask(MiruBitmaps<BM> bitmaps, MiruTimeIndex miruTimeIndex) throws Exception {
+        byte[] primitiveBuffer = new byte[8];
         final int size = 64 * 3;
         for (int lower = 0; lower < size / 2; lower++) {
             int upper = size - 1 - lower;
 
-            BM bitmap = bitmaps.buildTimeRangeMask(miruTimeIndex, lower, upper);
+            BM bitmap = bitmaps.buildTimeRangeMask(miruTimeIndex, lower, upper, primitiveBuffer);
             if (lower == upper) {
                 fail();
             } else {
@@ -56,7 +58,8 @@ public class MiruBitmapsTimeRangeTest {
 
     @Test(dataProvider = "singleEntryTimeIndexDataProvider")
     public <BM> void testSingleBitTimeRange(MiruBitmaps<BM> bitmaps, MiruTimeIndex miruTimeIndex) {
-        BM bitmap = bitmaps.buildTimeRangeMask(miruTimeIndex, 0, Long.MAX_VALUE);
+        byte[] primitiveBuffer = new byte[8];
+        BM bitmap = bitmaps.buildTimeRangeMask(miruTimeIndex, 0, Long.MAX_VALUE, primitiveBuffer);
 
         assertExpectedNumberOfConsecutiveBitsStartingFromN(bitmaps, bitmap, 0, 1);
     }
@@ -83,6 +86,7 @@ public class MiruBitmapsTimeRangeTest {
 
     @DataProvider(name = "evenTimeIndexDataProvider")
     public Object[][] evenTimeIndexDataProvider() throws Exception {
+        byte[] primitiveBuffer = new byte[8];
 
         final int size = (64 * 3) + 1;
         final long[] timestamps = new long[size];
@@ -92,43 +96,44 @@ public class MiruBitmapsTimeRangeTest {
 
         MiruTimeIndex miruInMemoryTimeIndex = buildInMemoryTimeIndex();
         MiruTimeIndex miruOnDiskTimeIndex = buildOnDiskTimeIndex();
-        miruInMemoryTimeIndex.nextId(timestamps);
-        miruOnDiskTimeIndex.nextId(timestamps);
+        miruInMemoryTimeIndex.nextId(primitiveBuffer, timestamps);
+        miruOnDiskTimeIndex.nextId(primitiveBuffer, timestamps);
 
         MiruTimeIndex miruInMemoryTimeIndexMerged = buildInMemoryTimeIndex();
         MiruTimeIndex miruOnDiskTimeIndexMerged = buildOnDiskTimeIndex();
-        miruInMemoryTimeIndexMerged.nextId(timestamps);
-        miruOnDiskTimeIndexMerged.nextId(timestamps);
-        ((MiruDeltaTimeIndex) miruInMemoryTimeIndexMerged).merge();
-        ((MiruDeltaTimeIndex) miruOnDiskTimeIndexMerged).merge();
+        miruInMemoryTimeIndexMerged.nextId(primitiveBuffer, timestamps);
+        miruOnDiskTimeIndexMerged.nextId(primitiveBuffer, timestamps);
+        ((MiruDeltaTimeIndex) miruInMemoryTimeIndexMerged).merge(primitiveBuffer);
+        ((MiruDeltaTimeIndex) miruOnDiskTimeIndexMerged).merge(primitiveBuffer);
 
         MiruTimeIndex miruInMemoryTimeIndexPartiallyMerged = buildInMemoryTimeIndex();
         MiruTimeIndex miruOnDiskTimeIndexPartiallyMerged = buildOnDiskTimeIndex();
         int i = 0;
         for (; i < timestamps.length / 2; i++) {
-            miruInMemoryTimeIndexPartiallyMerged.nextId(timestamps[i]);
-            miruOnDiskTimeIndexPartiallyMerged.nextId(timestamps[i]);
+            miruInMemoryTimeIndexPartiallyMerged.nextId(primitiveBuffer, timestamps[i]);
+            miruOnDiskTimeIndexPartiallyMerged.nextId(primitiveBuffer, timestamps[i]);
 
         }
-        ((MiruDeltaTimeIndex) miruInMemoryTimeIndexPartiallyMerged).merge();
-        ((MiruDeltaTimeIndex) miruOnDiskTimeIndexPartiallyMerged).merge();
+        ((MiruDeltaTimeIndex) miruInMemoryTimeIndexPartiallyMerged).merge(primitiveBuffer);
+        ((MiruDeltaTimeIndex) miruOnDiskTimeIndexPartiallyMerged).merge(primitiveBuffer);
         for (; i < timestamps.length; i++) {
-            miruInMemoryTimeIndexPartiallyMerged.nextId(timestamps[i]);
-            miruOnDiskTimeIndexPartiallyMerged.nextId(timestamps[i]);
+            miruInMemoryTimeIndexPartiallyMerged.nextId(primitiveBuffer, timestamps[i]);
+            miruOnDiskTimeIndexPartiallyMerged.nextId(primitiveBuffer, timestamps[i]);
         }
 
-        return new Object[][] {
-            { new MiruBitmapsRoaringBuffer(), miruInMemoryTimeIndex },
-            { new MiruBitmapsRoaringBuffer(), miruOnDiskTimeIndex },
-            { new MiruBitmapsRoaringBuffer(), miruInMemoryTimeIndexMerged },
-            { new MiruBitmapsRoaringBuffer(), miruOnDiskTimeIndexMerged },
-            { new MiruBitmapsRoaringBuffer(), miruInMemoryTimeIndexPartiallyMerged },
-            { new MiruBitmapsRoaringBuffer(), miruOnDiskTimeIndexPartiallyMerged }
+        return new Object[][]{
+            {new MiruBitmapsRoaringBuffer(), miruInMemoryTimeIndex},
+            {new MiruBitmapsRoaringBuffer(), miruOnDiskTimeIndex},
+            {new MiruBitmapsRoaringBuffer(), miruInMemoryTimeIndexMerged},
+            {new MiruBitmapsRoaringBuffer(), miruOnDiskTimeIndexMerged},
+            {new MiruBitmapsRoaringBuffer(), miruInMemoryTimeIndexPartiallyMerged},
+            {new MiruBitmapsRoaringBuffer(), miruOnDiskTimeIndexPartiallyMerged}
         };
     }
 
     @DataProvider(name = "oddTimeIndexDataProvider")
     public Object[][] oddTimeIndexDataProvider() throws Exception {
+        byte[] primitiveBuffer = new byte[8];
 
         final int size = 64 * 3;
         final long[] timestamps = new long[size];
@@ -137,28 +142,29 @@ public class MiruBitmapsTimeRangeTest {
         }
 
         MiruTimeIndex miruInMemoryTimeIndex = buildInMemoryTimeIndex();
-        miruInMemoryTimeIndex.nextId(timestamps);
+        miruInMemoryTimeIndex.nextId(primitiveBuffer, timestamps);
         MiruTimeIndex miruOnDiskTimeIndex = buildOnDiskTimeIndex();
-        miruOnDiskTimeIndex.nextId(timestamps);
+        miruOnDiskTimeIndex.nextId(primitiveBuffer, timestamps);
 
-        return new Object[][] {
-            { new MiruBitmapsRoaringBuffer(), miruInMemoryTimeIndex },
-            { new MiruBitmapsRoaringBuffer(), miruOnDiskTimeIndex }
+        return new Object[][]{
+            {new MiruBitmapsRoaringBuffer(), miruInMemoryTimeIndex},
+            {new MiruBitmapsRoaringBuffer(), miruOnDiskTimeIndex}
         };
     }
 
     @DataProvider(name = "singleEntryTimeIndexDataProvider")
     public Object[][] singleEntryTimeIndexDataProvider() throws Exception {
+        byte[] primitiveBuffer = new byte[8];
 
-        final long[] timestamps = new long[] { System.currentTimeMillis() };
+        final long[] timestamps = new long[]{System.currentTimeMillis()};
         MiruTimeIndex miruInMemoryTimeIndex = buildInMemoryTimeIndex();
         MiruTimeIndex miruOnDiskTimeIndex = buildOnDiskTimeIndex();
-        miruOnDiskTimeIndex.nextId(timestamps);
-        miruInMemoryTimeIndex.nextId(timestamps);
+        miruOnDiskTimeIndex.nextId(primitiveBuffer, timestamps);
+        miruInMemoryTimeIndex.nextId(primitiveBuffer, timestamps);
 
-        return new Object[][] {
-            { new MiruBitmapsRoaringBuffer(), miruInMemoryTimeIndex },
-            { new MiruBitmapsRoaringBuffer(), miruOnDiskTimeIndex }
+        return new Object[][]{
+            {new MiruBitmapsRoaringBuffer(), miruInMemoryTimeIndex},
+            {new MiruBitmapsRoaringBuffer(), miruOnDiskTimeIndex}
         };
     }
 

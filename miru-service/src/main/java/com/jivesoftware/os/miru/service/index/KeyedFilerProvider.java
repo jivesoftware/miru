@@ -18,18 +18,18 @@ public class KeyedFilerProvider<H, M> implements MiruFilerProvider<H, M> {
     }
 
     @Override
-    public <R> R read(H initialCapacity, final ChunkTransaction<M, R> transaction) throws IOException {
-        return keyedFilerStore.read(key, initialCapacity, transaction);
+    public <R> R read(H initialCapacity, final ChunkTransaction<M, R> transaction, byte[] primitiveBuffer) throws IOException {
+        return keyedFilerStore.read(key, initialCapacity, transaction, primitiveBuffer);
     }
 
     @Override
-    public <R> R writeNewReplace(H initialCapacity, final ChunkTransaction<M, R> transaction) throws IOException {
-        return keyedFilerStore.writeNewReplace(key, initialCapacity, transaction);
+    public <R> R writeNewReplace(H initialCapacity, final ChunkTransaction<M, R> transaction, byte[] primitiveBuffer) throws IOException {
+        return keyedFilerStore.writeNewReplace(key, initialCapacity, transaction, primitiveBuffer);
     }
 
     @Override
-    public <R> R readWriteAutoGrow(H initialCapacity, final ChunkTransaction<M, R> transaction) throws IOException {
-        return keyedFilerStore.readWriteAutoGrow(key, initialCapacity, transaction);
+    public <R> R readWriteAutoGrow(H initialCapacity, final ChunkTransaction<M, R> transaction, byte[] primitiveBuffer) throws IOException {
+        return keyedFilerStore.readWriteAutoGrow(key, initialCapacity, transaction, primitiveBuffer);
     }
 
 }

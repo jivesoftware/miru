@@ -52,7 +52,7 @@ public class FullTextCustomQuestion implements Question<FullTextQuery, FullTextA
     public <BM> MiruPartitionResponse<FullTextAnswer> askLocal(MiruRequestHandle<BM, ?> handle,
         Optional<FullTextReport> report)
         throws Exception {
-
+        byte[] primitiveBuffer = new byte[8];
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
         MiruRequestContext<BM, ?> context = handle.getRequestContext();
         MiruBitmaps<BM> bitmaps = handle.getBitmaps();
@@ -70,25 +70,25 @@ public class FullTextCustomQuestion implements Question<FullTextQuery, FullTextA
 
         BM filtered = bitmaps.create();
         aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), filter, solutionLog,
-            filtered, termCollector, context.getActivityIndex().lastId(), -1);
+            filtered, termCollector, context.getActivityIndex().lastId(primitiveBuffer), -1, primitiveBuffer);
 
         List<BM> ands = new ArrayList<>();
         ands.add(filtered);
-        ands.add(bitmaps.buildIndexMask(context.getActivityIndex().lastId(), context.getRemovalIndex().getIndex()));
+        ands.add(bitmaps.buildIndexMask(context.getActivityIndex().lastId(primitiveBuffer), context.getRemovalIndex().getIndex(primitiveBuffer)));
 
         if (!MiruFilter.NO_FILTER.equals(request.query.constraintsFilter)) {
             BM constrained = bitmaps.create();
             aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), request.query.constraintsFilter,
-                solutionLog, constrained, null, context.getActivityIndex().lastId(), -1);
+                solutionLog, constrained, null, context.getActivityIndex().lastId(primitiveBuffer), -1, primitiveBuffer);
             ands.add(constrained);
         }
 
         if (!MiruAuthzExpression.NOT_PROVIDED.equals(request.authzExpression)) {
-            ands.add(context.getAuthzIndex().getCompositeAuthz(request.authzExpression));
+            ands.add(context.getAuthzIndex().getCompositeAuthz(request.authzExpression, primitiveBuffer));
         }
 
         if (!MiruTimeRange.ALL_TIME.equals(request.query.timeRange)) {
-            ands.add(bitmaps.buildTimeRangeMask(context.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp));
+            ands.add(bitmaps.buildTimeRangeMask(context.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp, primitiveBuffer));
         }
 
         BM answer = bitmaps.create();

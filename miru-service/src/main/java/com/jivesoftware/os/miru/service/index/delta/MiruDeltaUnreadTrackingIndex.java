@@ -33,8 +33,8 @@ public class MiruDeltaUnreadTrackingIndex<BM> implements MiruUnreadTrackingIndex
     }
 
     @Override
-    public void append(MiruStreamId streamId, int... ids) throws Exception {
-        getAppender(streamId).append(ids);
+    public void append(MiruStreamId streamId, byte[] primitiveBuffer, int... ids) throws Exception {
+        getAppender(streamId).append(primitiveBuffer, ids);
     }
 
     @Override
@@ -57,15 +57,15 @@ public class MiruDeltaUnreadTrackingIndex<BM> implements MiruUnreadTrackingIndex
     }
 
     @Override
-    public void applyRead(MiruStreamId streamId, BM readMask) throws Exception {
+    public void applyRead(MiruStreamId streamId, BM readMask, byte[] primitiveBuffer) throws Exception {
         MiruInvertedIndex<BM> unread = getUnread(streamId);
-        unread.andNotToSourceSize(Collections.singletonList(readMask));
+        unread.andNotToSourceSize(Collections.singletonList(readMask), primitiveBuffer);
     }
 
     @Override
-    public void applyUnread(MiruStreamId streamId, BM unreadMask) throws Exception {
+    public void applyUnread(MiruStreamId streamId, BM unreadMask, byte[] primitiveBuffer) throws Exception {
         MiruInvertedIndex<BM> unread = getUnread(streamId);
-        unread.orToSourceSize(unreadMask);
+        unread.orToSourceSize(unreadMask, primitiveBuffer);
     }
 
     @Override
@@ -74,9 +74,9 @@ public class MiruDeltaUnreadTrackingIndex<BM> implements MiruUnreadTrackingIndex
     }
 
     @Override
-    public void merge() throws Exception {
+    public void merge(byte[] primitiveBuffer) throws Exception {
         for (MiruDeltaInvertedIndex<BM> delta : unreadDeltas.values()) {
-            delta.merge();
+            delta.merge(primitiveBuffer);
         }
         unreadDeltas.clear();
     }

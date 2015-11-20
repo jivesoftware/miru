@@ -34,8 +34,8 @@ public class MiruDeltaInboxIndex<BM> implements MiruInboxIndex<BM>, Mergeable {
     }
 
     @Override
-    public void append(MiruStreamId streamId, int... ids) throws Exception {
-        getAppender(streamId).append(ids);
+    public void append(MiruStreamId streamId, byte[] primitiveBuffer, int... ids) throws Exception {
+        getAppender(streamId).append(primitiveBuffer, ids);
     }
 
     @Override
@@ -58,8 +58,8 @@ public class MiruDeltaInboxIndex<BM> implements MiruInboxIndex<BM>, Mergeable {
     }
 
     @Override
-    public int getLastActivityIndex(MiruStreamId streamId) throws Exception {
-        return getInbox(streamId).lastId();
+    public int getLastActivityIndex(MiruStreamId streamId, byte[] primitiveBuffer) throws Exception {
+        return getInbox(streamId).lastId(primitiveBuffer);
     }
 
     @Override
@@ -68,9 +68,9 @@ public class MiruDeltaInboxIndex<BM> implements MiruInboxIndex<BM>, Mergeable {
     }
 
     @Override
-    public void merge() throws Exception {
+    public void merge(byte[] primitiveBuffer) throws Exception {
         for (MiruDeltaInvertedIndex<BM> delta : inboxDeltas.values()) {
-            delta.merge();
+            delta.merge(primitiveBuffer);
         }
         inboxDeltas.clear();
     }

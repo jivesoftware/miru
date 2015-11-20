@@ -10,9 +10,9 @@ import java.io.IOException;
  */
 public interface MiruFilerProvider<H, M> {
 
-    <R> R read(H initialCapacity, ChunkTransaction<M, R> transaction) throws IOException;
+    <R> R read(H initialCapacity, ChunkTransaction<M, R> transaction, byte[] primitiveBuffer) throws IOException;
 
-    <R> R writeNewReplace(H initialCapacity, ChunkTransaction<M, R> transaction) throws IOException;
+    <R> R writeNewReplace(H initialCapacity, ChunkTransaction<M, R> transaction, byte[] primitiveBuffer) throws IOException;
 
-    <R> R readWriteAutoGrow(H initialCapacity, ChunkTransaction<M, R> transaction) throws IOException;
+    <R> R readWriteAutoGrow(H initialCapacity, ChunkTransaction<M, R> transaction, byte[] primitiveBuffer) throws IOException;
 }

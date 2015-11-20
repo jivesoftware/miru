@@ -13,7 +13,7 @@ import java.util.List;
  */
 public interface MiruTimeIndex {
 
-    boolean[] contains(List<Long> timestamps) throws Exception;
+    boolean[] contains(List<Long> timestamps, byte[] primitiveBuffer) throws Exception;
 
     boolean intersects(MiruTimeRange timeRange);
 
@@ -23,15 +23,15 @@ public interface MiruTimeIndex {
      * @param timestamp the activity timestamp
      * @return the actual index or nearest insertion point
      */
-    int getClosestId(long timestamp);
+    int getClosestId(long timestamp, byte[] primitiveBuffer);
 
-    int getExactId(long timestamp) throws Exception;
+    int getExactId(long timestamp, byte[] primitiveBuffer) throws Exception;
 
     long getLargestTimestamp();
 
     long getSmallestTimestamp();
 
-    long getTimestamp(int id);
+    long getTimestamp(int id, byte[] primitiveBuffer);
 
     /**
      * Returns the smallest id satisfying the condition that {@link #getTimestamp(int)} is greater than the requested timestamp (exclusive lower bound).
@@ -39,7 +39,7 @@ public interface MiruTimeIndex {
      * @param timestamp the timestamp serving as the exclusive lower bound
      * @return the smallest id exclusive of the requested timestamp
      */
-    int smallestExclusiveTimestampIndex(long timestamp);
+    int smallestExclusiveTimestampIndex(long timestamp, byte[] primitiveBuffer);
 
     /**
      * Returns the largest id satisfying the condition that {@link #getTimestamp(int)} is less than or equal to the requested timestamp (inclusive upper bound).
@@ -47,11 +47,11 @@ public interface MiruTimeIndex {
      * @param timestamp the timestamp serving as the inclusive upper bound
      * @return the largest id inclusive of the requested timestamp
      */
-    int largestInclusiveTimestampIndex(long timestamp);
+    int largestInclusiveTimestampIndex(long timestamp, byte[] primitiveBuffer);
 
     int lastId();
 
-    int[] nextId(long... timestamps) throws Exception;
+    int[] nextId(byte[] primitiveBuffer, long... timestamps) throws Exception;
 
     void close();
 

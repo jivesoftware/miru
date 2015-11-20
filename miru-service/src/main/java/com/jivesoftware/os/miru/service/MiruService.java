@@ -231,10 +231,11 @@ public class MiruService implements Miru {
             MiruRequestContext<BM, ?> requestContext = handle.getRequestContext();
             int fieldId = requestContext.getSchema().getFieldId(fieldName);
             MiruFieldDefinition fieldDefinition = requestContext.getSchema().getFieldDefinition(fieldId);
+            byte[] primitiveBuffer = new byte[8];
             Optional<BM> index = requestContext.getFieldIndexProvider()
                 .getFieldIndex(MiruFieldType.primary)
                 .get(fieldId, requestContext.getTermComposer().compose(fieldDefinition, termValue))
-                .getIndex();
+                .getIndex(primitiveBuffer);
             if (index.isPresent()) {
                 return bitmapsDebug.toString(handle.getBitmaps(), index.get());
             } else {

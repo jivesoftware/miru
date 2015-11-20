@@ -32,7 +32,8 @@ public class MiruUnreadTrackingIndexTest {
         MiruStreamId streamId,
         List<Integer> expected)
         throws Exception {
-        Optional<EWAHCompressedBitmap> unread = miruUnreadTrackingIndex.getUnread(streamId).getIndex();
+        byte[] primitiveBuffer = new byte[8];
+        Optional<EWAHCompressedBitmap> unread = miruUnreadTrackingIndex.getUnread(streamId).getIndex(primitiveBuffer);
         assertNotNull(unread);
         assertTrue(unread.isPresent());
 
@@ -50,15 +51,16 @@ public class MiruUnreadTrackingIndexTest {
         MiruStreamId streamId,
         List<Integer> expected)
         throws Exception {
-        Optional<EWAHCompressedBitmap> unreadIndex = miruUnreadTrackingIndex.getUnread(streamId).getIndex();
+        byte[] primitiveBuffer = new byte[8];
+        Optional<EWAHCompressedBitmap> unreadIndex = miruUnreadTrackingIndex.getUnread(streamId).getIndex(primitiveBuffer);
         assertNotNull(unreadIndex);
         assertFalse(unreadIndex.isPresent());
 
-        miruUnreadTrackingIndex.append(streamId, 1);
-        miruUnreadTrackingIndex.append(streamId, 3);
-        miruUnreadTrackingIndex.append(streamId, 5);
+        miruUnreadTrackingIndex.append(streamId, primitiveBuffer, 1);
+        miruUnreadTrackingIndex.append(streamId, primitiveBuffer, 3);
+        miruUnreadTrackingIndex.append(streamId, primitiveBuffer, 5);
 
-        unreadIndex = miruUnreadTrackingIndex.getUnread(streamId).getIndex();
+        unreadIndex = miruUnreadTrackingIndex.getUnread(streamId).getIndex(primitiveBuffer);
         assertNotNull(unreadIndex);
         assertTrue(unreadIndex.isPresent());
         EWAHCompressedBitmap unreadBitmap = unreadIndex.get();
@@ -75,18 +77,19 @@ public class MiruUnreadTrackingIndexTest {
         MiruStreamId streamId,
         List<Integer> expected)
         throws Exception {
-        Optional<EWAHCompressedBitmap> unread = miruUnreadTrackingIndex.getUnread(streamId).getIndex();
+        byte[] primitiveBuffer = new byte[8];
+        Optional<EWAHCompressedBitmap> unread = miruUnreadTrackingIndex.getUnread(streamId).getIndex(primitiveBuffer);
         assertFalse(unread.isPresent());
 
-        miruUnreadTrackingIndex.append(streamId, 1);
-        miruUnreadTrackingIndex.append(streamId, 3);
+        miruUnreadTrackingIndex.append(streamId, primitiveBuffer, 1);
+        miruUnreadTrackingIndex.append(streamId, primitiveBuffer, 3);
 
         EWAHCompressedBitmap readMask = new EWAHCompressedBitmap();
         readMask.set(1);
         readMask.set(2);
-        miruUnreadTrackingIndex.applyRead(streamId, readMask);
+        miruUnreadTrackingIndex.applyRead(streamId, readMask, primitiveBuffer);
 
-        unread = miruUnreadTrackingIndex.getUnread(streamId).getIndex();
+        unread = miruUnreadTrackingIndex.getUnread(streamId).getIndex(primitiveBuffer);
         assertTrue(unread.isPresent());
         assertEquals(unread.get().cardinality(), 1);
         assertTrue(unread.get().get(3));
@@ -94,9 +97,9 @@ public class MiruUnreadTrackingIndexTest {
         EWAHCompressedBitmap unreadMask = new EWAHCompressedBitmap();
         unreadMask.set(1);
         unreadMask.set(3);
-        miruUnreadTrackingIndex.applyUnread(streamId, unreadMask);
+        miruUnreadTrackingIndex.applyUnread(streamId, unreadMask, primitiveBuffer);
 
-        unread = miruUnreadTrackingIndex.getUnread(streamId).getIndex();
+        unread = miruUnreadTrackingIndex.getUnread(streamId).getIndex(primitiveBuffer);
         assertTrue(unread.isPresent());
         assertEquals(unread.get().cardinality(), 2);
         assertTrue(unread.get().get(1));
@@ -109,19 +112,19 @@ public class MiruUnreadTrackingIndexTest {
         MiruStreamId streamId,
         List<Integer> expected)
         throws Exception {
-
+        byte[] primitiveBuffer = new byte[8];
         assertTrue(expected.size() > 2, "Test requires at least 2 data");
 
-        EWAHCompressedBitmap unread = miruUnreadTrackingIndex.getUnread(streamId).getIndex().get();
+        EWAHCompressedBitmap unread = miruUnreadTrackingIndex.getUnread(streamId).getIndex(primitiveBuffer).get();
         assertEquals(unread.cardinality(), expected.size());
 
         EWAHCompressedBitmap readMask = new EWAHCompressedBitmap();
         readMask.set(expected.get(0));
         readMask.set(expected.get(1));
         readMask.set(expected.get(expected.size() - 1) + 1);
-        miruUnreadTrackingIndex.applyRead(streamId, readMask);
+        miruUnreadTrackingIndex.applyRead(streamId, readMask, primitiveBuffer);
 
-        unread = miruUnreadTrackingIndex.getUnread(streamId).getIndex().get();
+        unread = miruUnreadTrackingIndex.getUnread(streamId).getIndex(primitiveBuffer).get();
         assertEquals(unread.cardinality(), expected.size() - 2);
         for (int i = 2; i < expected.size(); i++) {
             assertTrue(unread.get(expected.get(i)));
@@ -130,16 +133,17 @@ public class MiruUnreadTrackingIndexTest {
 
     @DataProvider(name = "miruUnreadTrackingIndexDataProviderWithoutData")
     public Object[][] miruUnreadTrackingIndexDataProviderWithoutData() throws Exception {
-        return generateUnreadIndexes(new MiruTenantId(new byte[] { 1 }), new int[0]);
+        return generateUnreadIndexes(new MiruTenantId(new byte[]{1}), new int[0]);
     }
 
     @DataProvider(name = "miruUnreadTrackingIndexDataProviderWithData")
     public Object[][] miruUnreadTrackingIndexDataProviderWithData() throws Exception {
-        return generateUnreadIndexes(new MiruTenantId(new byte[] { 1 }), new int[] { 1, 2, 3, 4 });
+        return generateUnreadIndexes(new MiruTenantId(new byte[]{1}), new int[]{1, 2, 3, 4});
     }
 
     private Object[][] generateUnreadIndexes(MiruTenantId tenantId, int[] data) throws Exception {
-        final MiruStreamId streamId = new MiruStreamId(new byte[] { 2 });
+        byte[] primitiveBuffer = new byte[8];
+        final MiruStreamId streamId = new MiruStreamId(new byte[]{2});
 
         assertTrue(data.length % 2 == 0, "Need an even number of data");
 
@@ -157,36 +161,36 @@ public class MiruUnreadTrackingIndexTest {
         MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("localhost", 10000));
 
         MiruUnreadTrackingIndex<EWAHCompressedBitmap> unmergedInMemoryIndex = buildInMemoryContext(4, bitmaps, coord).unreadTrackingIndex;
-        unmergedInMemoryIndex.append(streamId, data);
+        unmergedInMemoryIndex.append(streamId, primitiveBuffer, data);
 
         MiruUnreadTrackingIndex<EWAHCompressedBitmap> unmergedOnDiskIndex = buildOnDiskContext(4, bitmaps, coord).unreadTrackingIndex;
-        unmergedOnDiskIndex.append(streamId, data);
+        unmergedOnDiskIndex.append(streamId, primitiveBuffer, data);
 
         MiruUnreadTrackingIndex<EWAHCompressedBitmap> mergedInMemoryIndex = buildInMemoryContext(4, bitmaps, coord).unreadTrackingIndex;
-        mergedInMemoryIndex.append(streamId, data);
-        ((MiruDeltaUnreadTrackingIndex<EWAHCompressedBitmap>) mergedInMemoryIndex).merge();
+        mergedInMemoryIndex.append(streamId, primitiveBuffer, data);
+        ((MiruDeltaUnreadTrackingIndex<EWAHCompressedBitmap>) mergedInMemoryIndex).merge(primitiveBuffer);
 
         MiruUnreadTrackingIndex<EWAHCompressedBitmap> mergedOnDiskIndex = buildOnDiskContext(4, bitmaps, coord).unreadTrackingIndex;
-        mergedOnDiskIndex.append(streamId, data);
-        ((MiruDeltaUnreadTrackingIndex<EWAHCompressedBitmap>) mergedOnDiskIndex).merge();
+        mergedOnDiskIndex.append(streamId, primitiveBuffer, data);
+        ((MiruDeltaUnreadTrackingIndex<EWAHCompressedBitmap>) mergedOnDiskIndex).merge(primitiveBuffer);
 
         MiruUnreadTrackingIndex<EWAHCompressedBitmap> partiallyMergedInMemoryIndex = buildInMemoryContext(4, bitmaps, coord).unreadTrackingIndex;
-        partiallyMergedInMemoryIndex.append(streamId, data1_2);
-        ((MiruDeltaUnreadTrackingIndex<EWAHCompressedBitmap>) partiallyMergedInMemoryIndex).merge();
-        partiallyMergedInMemoryIndex.append(streamId, data2_2);
+        partiallyMergedInMemoryIndex.append(streamId, primitiveBuffer, data1_2);
+        ((MiruDeltaUnreadTrackingIndex<EWAHCompressedBitmap>) partiallyMergedInMemoryIndex).merge(primitiveBuffer);
+        partiallyMergedInMemoryIndex.append(streamId, primitiveBuffer, data2_2);
 
         MiruUnreadTrackingIndex<EWAHCompressedBitmap> partiallyMergedOnDiskIndex = buildOnDiskContext(4, bitmaps, coord).unreadTrackingIndex;
-        partiallyMergedOnDiskIndex.append(streamId, data1_2);
-        ((MiruDeltaUnreadTrackingIndex<EWAHCompressedBitmap>) partiallyMergedOnDiskIndex).merge();
-        partiallyMergedOnDiskIndex.append(streamId, data2_2);
+        partiallyMergedOnDiskIndex.append(streamId, primitiveBuffer, data1_2);
+        ((MiruDeltaUnreadTrackingIndex<EWAHCompressedBitmap>) partiallyMergedOnDiskIndex).merge(primitiveBuffer);
+        partiallyMergedOnDiskIndex.append(streamId, primitiveBuffer, data2_2);
 
-        return new Object[][] {
-            { bitmaps, unmergedInMemoryIndex, streamId, expected },
-            { bitmaps, unmergedOnDiskIndex, streamId, expected },
-            { bitmaps, mergedInMemoryIndex, streamId, expected },
-            { bitmaps, mergedOnDiskIndex, streamId, expected },
-            { bitmaps, partiallyMergedInMemoryIndex, streamId, expected },
-            { bitmaps, partiallyMergedOnDiskIndex, streamId, expected }
+        return new Object[][]{
+            {bitmaps, unmergedInMemoryIndex, streamId, expected},
+            {bitmaps, unmergedOnDiskIndex, streamId, expected},
+            {bitmaps, mergedInMemoryIndex, streamId, expected},
+            {bitmaps, mergedOnDiskIndex, streamId, expected},
+            {bitmaps, partiallyMergedInMemoryIndex, streamId, expected},
+            {bitmaps, partiallyMergedOnDiskIndex, streamId, expected}
         };
     }
 }
