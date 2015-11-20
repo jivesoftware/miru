@@ -99,7 +99,7 @@ public interface MiruBitmaps<BM> {
 
     BM buildIndexMask(int largestIndex, Optional<BM> andNotMask);
 
-    BM buildTimeRangeMask(MiruTimeIndex timeIndex, long smallestTimestamp, long largestTimestamp);
+    BM buildTimeRangeMask(MiruTimeIndex timeIndex, long smallestTimestamp, long largestTimestamp, byte[] primitiveBuffer);
 
     MiruIntIterator intIterator(BM bitmap);
 

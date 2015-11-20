@@ -9,13 +9,13 @@ public interface MiruAuthzIndex<BM> {
 
     MiruInvertedIndex<BM> getAuthz(String authz) throws Exception;
 
-    BM getCompositeAuthz(MiruAuthzExpression authzExpression) throws Exception;
+    BM getCompositeAuthz(MiruAuthzExpression authzExpression, byte[] primitiveBuffer) throws Exception;
 
-    void append(String authz, int... ids) throws Exception;
+    void append(String authz, byte[] primitiveBuffer, int... ids) throws Exception;
 
-    void set(String authz, int... ids) throws Exception;
+    void set(String authz, byte[] primitiveBuffer, int... ids) throws Exception;
 
-    void remove(String authz, int id) throws Exception;
+    void remove(String authz, int id, byte[] primitiveBuffer) throws Exception;
 
     void close();
 

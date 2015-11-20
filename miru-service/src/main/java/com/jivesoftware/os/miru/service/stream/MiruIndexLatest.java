@@ -38,6 +38,7 @@ public class MiruIndexLatest<BM> {
                 final MiruTermId[] fieldValues = internalActivityAndId.activity.fieldsValues[fieldDefinition.fieldId];
                 if (fieldValues != null && fieldValues.length > 0) {
                     futures.add(indexExecutor.submit(() -> {
+                        byte[] primitiveBuffer = new byte[8];
                         // Answers the question,
                         // "What is the latest activity against each distinct value of this field?"
                         MiruInvertedIndex<BM> aggregateIndex = latestFieldIndex.getOrCreateInvertedIndex(
@@ -46,15 +47,15 @@ public class MiruIndexLatest<BM> {
                         // ["doc"] -> "d1", "d2", "d3", "d4" -> [0, 1(d1), 0, 0, 1(d2), 0, 0, 1(d3), 0, 0, 1(d4)]
                         for (MiruTermId fieldValue : fieldValues) {
                             MiruInvertedIndex<BM> fieldValueIndex = allFieldIndex.get(fieldDefinition.fieldId, fieldValue);
-                            Optional<BM> optionalIndex = fieldValueIndex.getIndexUnsafe();
+                            Optional<BM> optionalIndex = fieldValueIndex.getIndexUnsafe(primitiveBuffer);
                             if (optionalIndex.isPresent()) {
-                                aggregateIndex.andNotToSourceSize(Collections.singletonList(optionalIndex.get()));
+                                aggregateIndex.andNotToSourceSize(Collections.singletonList(optionalIndex.get()), primitiveBuffer);
                             }
                         }
                         if (repair) {
-                            latestFieldIndex.set(fieldDefinition.fieldId, fieldAggregateTermId, new int[] { internalActivityAndId.id }, null);
+                            latestFieldIndex.set(fieldDefinition.fieldId, fieldAggregateTermId, new int[]{internalActivityAndId.id}, null, primitiveBuffer);
                         } else {
-                            latestFieldIndex.append(fieldDefinition.fieldId, fieldAggregateTermId, new int[] { internalActivityAndId.id }, null);
+                            latestFieldIndex.append(fieldDefinition.fieldId, fieldAggregateTermId, new int[]{internalActivityAndId.id}, null, primitiveBuffer);
                         }
                         return null;
                     }));

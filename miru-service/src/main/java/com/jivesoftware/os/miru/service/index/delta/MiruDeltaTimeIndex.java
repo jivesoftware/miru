@@ -37,9 +37,9 @@ public class MiruDeltaTimeIndex implements MiruTimeIndex, Mergeable {
     }
 
     @Override
-    public boolean[] contains(List<Long> contains) throws Exception {
+    public boolean[] contains(List<Long> contains, byte[] primitiveBuffer) throws Exception {
         if (timestamps.isEmpty()) {
-            return backingIndex.contains(contains);
+            return backingIndex.contains(contains, primitiveBuffer);
         } else {
             boolean[] result = new boolean[contains.size()];
             boolean delegate = false;
@@ -51,7 +51,7 @@ public class MiruDeltaTimeIndex implements MiruTimeIndex, Mergeable {
                 }
             }
             if (delegate) {
-                boolean[] merge = backingIndex.contains(contains);
+                boolean[] merge = backingIndex.contains(contains, primitiveBuffer);
                 for (int i = 0; i < contains.size(); i++) {
                     result[i] |= merge[i];
                 }
@@ -67,15 +67,15 @@ public class MiruDeltaTimeIndex implements MiruTimeIndex, Mergeable {
     }
 
     @Override
-    public int getClosestId(long timestamp) {
+    public int getClosestId(long timestamp, byte[] primitiveBuffer) {
         if (timestamps.isEmpty()) {
-            return backingIndex.getClosestId(timestamp);
+            return backingIndex.getClosestId(timestamp, primitiveBuffer);
         } else {
             int index = timestamps.binarySearch(timestamp);
             if (index >= 0) {
                 return baseId.get() + index;
             } else if (index == -1) {
-                return backingIndex.getClosestId(timestamp);
+                return backingIndex.getClosestId(timestamp, primitiveBuffer);
             } else {
                 int insertIndex = -(index + 1);
                 return baseId.get() + insertIndex;
@@ -84,13 +84,13 @@ public class MiruDeltaTimeIndex implements MiruTimeIndex, Mergeable {
     }
 
     @Override
-    public int getExactId(long timestamp) throws Exception {
+    public int getExactId(long timestamp, byte[] primitiveBuffer) throws Exception {
         if (timestamps.isEmpty()) {
-            return backingIndex.getExactId(timestamp);
+            return backingIndex.getExactId(timestamp, primitiveBuffer);
         } else {
             int got = timestampToId.get(timestamp);
             if (got == -1) {
-                got = backingIndex.getExactId(timestamp);
+                got = backingIndex.getExactId(timestamp, primitiveBuffer);
             }
             return got;
         }
@@ -119,22 +119,20 @@ public class MiruDeltaTimeIndex implements MiruTimeIndex, Mergeable {
     }
 
     @Override
-    public long getTimestamp(int id) {
+    public long getTimestamp(int id, byte[] primitiveBuffer) {
         if (timestamps.isEmpty()) {
-            return backingIndex.getTimestamp(id);
+            return backingIndex.getTimestamp(id, primitiveBuffer);
+        } else if (id < baseId.get()) {
+            return backingIndex.getTimestamp(id, primitiveBuffer);
         } else {
-            if (id < baseId.get()) {
-                return backingIndex.getTimestamp(id);
-            } else {
-                return timestamps.get(id - baseId.get());
-            }
+            return timestamps.get(id - baseId.get());
         }
     }
 
     @Override
-    public int smallestExclusiveTimestampIndex(long timestamp) {
+    public int smallestExclusiveTimestampIndex(long timestamp, byte[] primitiveBuffer) {
         if (timestamps.isEmpty()) {
-            return backingIndex.smallestExclusiveTimestampIndex(timestamp);
+            return backingIndex.smallestExclusiveTimestampIndex(timestamp, primitiveBuffer);
         } else {
             int index = timestamps.binarySearch(timestamp);
             if (index >= 0) {
@@ -144,7 +142,7 @@ public class MiruDeltaTimeIndex implements MiruTimeIndex, Mergeable {
                 }
                 return baseId.get() + i;
             } else if (index == -1) {
-                return backingIndex.smallestExclusiveTimestampIndex(timestamp);
+                return backingIndex.smallestExclusiveTimestampIndex(timestamp, primitiveBuffer);
             } else {
                 int i = -(index + 1);
                 while (i < timestamps.size() && timestamps.get(i) <= timestamp) {
@@ -156,9 +154,9 @@ public class MiruDeltaTimeIndex implements MiruTimeIndex, Mergeable {
     }
 
     @Override
-    public int largestInclusiveTimestampIndex(long timestamp) {
+    public int largestInclusiveTimestampIndex(long timestamp, byte[] primitiveBuffer) {
         if (timestamps.isEmpty()) {
-            return backingIndex.largestInclusiveTimestampIndex(timestamp);
+            return backingIndex.largestInclusiveTimestampIndex(timestamp, primitiveBuffer);
         } else {
             int index = timestamps.binarySearch(timestamp);
             if (index >= 0) {
@@ -168,7 +166,7 @@ public class MiruDeltaTimeIndex implements MiruTimeIndex, Mergeable {
                 }
                 return baseId.get() + i - 1;
             } else if (index == -1) {
-                return backingIndex.largestInclusiveTimestampIndex(timestamp);
+                return backingIndex.largestInclusiveTimestampIndex(timestamp, primitiveBuffer);
             } else {
                 int i = -(index + 1);
                 while (i < timestamps.size() && timestamps.get(i) <= timestamp) {
@@ -185,7 +183,7 @@ public class MiruDeltaTimeIndex implements MiruTimeIndex, Mergeable {
     }
 
     @Override
-    public int[] nextId(long... ts) throws Exception {
+    public int[] nextId(byte[] primitiveBuffer, long... ts) throws Exception {
         int[] result = new int[ts.length];
         long largestTimestamp = getLargestTimestamp();
         for (int i = 0; i < ts.length; i++) {
@@ -214,8 +212,8 @@ public class MiruDeltaTimeIndex implements MiruTimeIndex, Mergeable {
     }
 
     @Override
-    public void merge() throws Exception {
-        backingIndex.nextId(actualInsertionOrderTimestamps.toArray());
+    public void merge(byte[] primitiveBuffer) throws Exception {
+        backingIndex.nextId(primitiveBuffer, actualInsertionOrderTimestamps.toArray());
         clear();
     }
 

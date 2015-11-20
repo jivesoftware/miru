@@ -4,7 +4,7 @@ import java.util.List;
 
 public interface MiruInvertedIndexAppender {
 
-    void append(int... ids) throws Exception;
+    void append(byte[] primitiveBuffer, int... ids) throws Exception;
 
-    void appendAndExtend(List<Integer> ids, int lastId) throws Exception;
+    void appendAndExtend(List<Integer> ids, int lastId, byte[] primitiveBuffer) throws Exception;
 }

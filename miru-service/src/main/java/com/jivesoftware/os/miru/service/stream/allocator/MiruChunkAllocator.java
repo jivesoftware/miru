@@ -10,7 +10,7 @@ public interface MiruChunkAllocator {
 
     boolean checkExists(MiruPartitionCoord coord) throws Exception;
 
-    ChunkStore[] allocateChunkStores(MiruPartitionCoord coord) throws Exception;
+    ChunkStore[] allocateChunkStores(MiruPartitionCoord coord, byte[] primitiveBuffer) throws Exception;
 
     <BM> void close(ChunkStore[] chunkStores);
 }

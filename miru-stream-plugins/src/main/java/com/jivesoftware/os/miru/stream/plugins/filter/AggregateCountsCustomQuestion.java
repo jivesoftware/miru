@@ -51,6 +51,8 @@ public class AggregateCountsCustomQuestion implements Question<AggregateCountsQu
         Optional<AggregateCountsReport> report)
         throws Exception {
 
+        byte[] primitiveBuffer = new byte[8];
+
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
         MiruRequestContext<BM, ?> context = handle.getRequestContext();
         MiruBitmaps<BM> bitmaps = handle.getBitmaps();
@@ -67,17 +69,17 @@ public class AggregateCountsCustomQuestion implements Question<AggregateCountsQu
 
         BM filtered = bitmaps.create();
         aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), request.query.streamFilter,
-            solutionLog, filtered, null, context.getActivityIndex().lastId(), -1);
+            solutionLog, filtered, null, context.getActivityIndex().lastId(primitiveBuffer), -1, primitiveBuffer);
         ands.add(filtered);
 
-        ands.add(bitmaps.buildIndexMask(context.getActivityIndex().lastId(), context.getRemovalIndex().getIndex()));
+        ands.add(bitmaps.buildIndexMask(context.getActivityIndex().lastId(primitiveBuffer), context.getRemovalIndex().getIndex(primitiveBuffer)));
 
         if (!MiruAuthzExpression.NOT_PROVIDED.equals(request.authzExpression)) {
-            ands.add(context.getAuthzIndex().getCompositeAuthz(request.authzExpression));
+            ands.add(context.getAuthzIndex().getCompositeAuthz(request.authzExpression, primitiveBuffer));
         }
 
         if (!MiruTimeRange.ALL_TIME.equals(request.query.answerTimeRange)) {
-            ands.add(bitmaps.buildTimeRangeMask(context.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp));
+            ands.add(bitmaps.buildTimeRangeMask(context.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp, primitiveBuffer));
         }
 
         BM answer = bitmaps.create();
@@ -88,7 +90,7 @@ public class AggregateCountsCustomQuestion implements Question<AggregateCountsQu
         if (!MiruTimeRange.ALL_TIME.equals(request.query.countTimeRange)) {
             counter = bitmaps.create();
             bitmaps.and(counter, Arrays.asList(answer, bitmaps.buildTimeRangeMask(
-                context.getTimeIndex(), request.query.countTimeRange.smallestTimestamp, request.query.countTimeRange.largestTimestamp)));
+                context.getTimeIndex(), request.query.countTimeRange.smallestTimestamp, request.query.countTimeRange.largestTimestamp, primitiveBuffer)));
         }
 
         return new MiruPartitionResponse<>(aggregateCounts.getAggregateCounts(solutionLog, bitmaps, context, request, report, answer,

@@ -78,26 +78,26 @@ public class MiruDeltaFieldIndex<BM> implements MiruFieldIndex<BM>, Mergeable {
     }
 
     @Override
-    public void append(int fieldId, MiruTermId termId, int[] ids, long[] counts) throws Exception {
-        getOrAllocate(fieldId, termId).append(ids);
-        putCardinalities(fieldId, termId, ids, counts, true);
+    public void append(int fieldId, MiruTermId termId, int[] ids, long[] counts, byte[] primitiveBuffer) throws Exception {
+        getOrAllocate(fieldId, termId).append(primitiveBuffer, ids);
+        putCardinalities(fieldId, termId, ids, counts, true, primitiveBuffer);
     }
 
     @Override
-    public void set(int fieldId, MiruTermId termId, int[] ids, long[] counts) throws Exception {
-        getOrAllocate(fieldId, termId).set(ids);
-        putCardinalities(fieldId, termId, ids, counts, false);
+    public void set(int fieldId, MiruTermId termId, int[] ids, long[] counts, byte[] primitiveBuffer) throws Exception {
+        getOrAllocate(fieldId, termId).set(primitiveBuffer, ids);
+        putCardinalities(fieldId, termId, ids, counts, false, primitiveBuffer);
     }
 
     @Override
-    public void remove(int fieldId, MiruTermId termId, int id) throws Exception {
+    public void remove(int fieldId, MiruTermId termId, int id, byte[] primitiveBuffer) throws Exception {
         MiruInvertedIndex<BM> got = get(fieldId, termId);
-        got.remove(id);
-        putCardinalities(fieldId, termId, new int[] { id }, cardinalities[fieldId] != null ? new long[1] : null, false);
+        got.remove(id, primitiveBuffer);
+        putCardinalities(fieldId, termId, new int[]{id}, cardinalities[fieldId] != null ? new long[1] : null, false, primitiveBuffer);
     }
 
     @Override
-    public void streamTermIdsForField(int fieldId, List<KeyRange> ranges, final TermIdStream termIdStream) throws Exception {
+    public void streamTermIdsForField(int fieldId, List<KeyRange> ranges, final TermIdStream termIdStream, byte[] primitiveBuffer) throws Exception {
         final Set<MiruTermId> indexKeys = fieldIndexDeltas[fieldId].keySet();
         if (ranges != null && !ranges.isEmpty()) {
             for (KeyRange range : ranges) {
@@ -125,7 +125,7 @@ public class MiruDeltaFieldIndex<BM> implements MiruFieldIndex<BM>, Mergeable {
                 }
             }
             return true;
-        });
+        }, primitiveBuffer);
     }
 
     @Override
@@ -179,8 +179,8 @@ public class MiruDeltaFieldIndex<BM> implements MiruFieldIndex<BM>, Mergeable {
     }
 
     @Override
-    public long getCardinality(int fieldId, MiruTermId termId, int id) throws Exception {
-        long[] result = { -1 };
+    public long getCardinality(int fieldId, MiruTermId termId, int id, byte[] primitiveBuffer) throws Exception {
+        long[] result = {-1};
         cardinalities[fieldId].computeIfPresent(termId, (key, idCounts) -> {
             result[0] = idCounts.get(id);
             return idCounts;
@@ -188,12 +188,12 @@ public class MiruDeltaFieldIndex<BM> implements MiruFieldIndex<BM>, Mergeable {
         if (result[0] >= 0) {
             return result[0];
         } else {
-            return backingFieldIndex.getCardinality(fieldId, termId, id);
+            return backingFieldIndex.getCardinality(fieldId, termId, id, primitiveBuffer);
         }
     }
 
     @Override
-    public long[] getCardinalities(int fieldId, MiruTermId termId, int[] ids) throws Exception {
+    public long[] getCardinalities(int fieldId, MiruTermId termId, int[] ids, byte[] primitiveBuffer) throws Exception {
         long[] counts = new long[ids.length];
         if (cardinalities[fieldId] != null) {
             int[] consumableIds = Arrays.copyOf(ids, ids.length);
@@ -212,7 +212,7 @@ public class MiruDeltaFieldIndex<BM> implements MiruFieldIndex<BM>, Mergeable {
                 return idCounts;
             });
             if (consumed[0] < ids.length) {
-                long[] existing = backingFieldIndex.getCardinalities(fieldId, termId, consumableIds);
+                long[] existing = backingFieldIndex.getCardinalities(fieldId, termId, consumableIds, primitiveBuffer);
                 for (int i = 0; i < counts.length; i++) {
                     if (counts[i] < 0) {
                         counts[i] = existing[i];
@@ -226,9 +226,9 @@ public class MiruDeltaFieldIndex<BM> implements MiruFieldIndex<BM>, Mergeable {
     }
 
     @Override
-    public long getGlobalCardinality(int fieldId, MiruTermId termId) throws Exception {
+    public long getGlobalCardinality(int fieldId, MiruTermId termId, byte[] primitiveBuffer) throws Exception {
         if (cardinalities[fieldId] != null) {
-            long[] count = { -1 };
+            long[] count = {-1};
             cardinalities[fieldId].compute(termId, (key, idCounts) -> {
                 if (idCounts != null) {
                     count[0] = idCounts.get(-1);
@@ -238,20 +238,20 @@ public class MiruDeltaFieldIndex<BM> implements MiruFieldIndex<BM>, Mergeable {
             if (count[0] >= 0) {
                 return count[0];
             } else {
-                return backingFieldIndex.getGlobalCardinality(fieldId, termId);
+                return backingFieldIndex.getGlobalCardinality(fieldId, termId, primitiveBuffer);
             }
         }
         return -1;
     }
 
     @Override
-    public void mergeCardinalities(int fieldId, MiruTermId termId, int[] ids, long[] counts) throws Exception {
-        putCardinalities(fieldId, termId, ids, counts, false);
+    public void mergeCardinalities(int fieldId, MiruTermId termId, int[] ids, long[] counts, byte[] primitiveBuffer) throws Exception {
+        putCardinalities(fieldId, termId, ids, counts, false, primitiveBuffer);
     }
 
-    private void putCardinalities(int fieldId, MiruTermId termId, int[] ids, long[] counts, boolean append) throws Exception {
+    private void putCardinalities(int fieldId, MiruTermId termId, int[] ids, long[] counts, boolean append, byte[] primitiveBuffer) throws Exception {
         if (cardinalities[fieldId] != null && counts != null) {
-            long[] backingCounts = append ? null : backingFieldIndex.getCardinalities(fieldId, termId, ids);
+            long[] backingCounts = append ? null : backingFieldIndex.getCardinalities(fieldId, termId, ids, primitiveBuffer);
 
             cardinalities[fieldId].compute(termId, (key, idCounts) -> {
                 if (idCounts == null) {
@@ -272,7 +272,7 @@ public class MiruDeltaFieldIndex<BM> implements MiruFieldIndex<BM>, Mergeable {
 
                 if (!idCounts.adjustValue(-1, delta)) {
                     try {
-                        long globalCount = backingFieldIndex.getGlobalCardinality(fieldId, termId);
+                        long globalCount = backingFieldIndex.getGlobalCardinality(fieldId, termId, primitiveBuffer);
                         idCounts.put(-1, globalCount > 0 ? delta + globalCount : delta);
                     } catch (Exception e) {
                         throw new RuntimeException(e);
@@ -285,7 +285,7 @@ public class MiruDeltaFieldIndex<BM> implements MiruFieldIndex<BM>, Mergeable {
     }
 
     @Override
-    public void merge() throws Exception {
+    public void merge(byte[] primitiveBuffer) throws Exception {
         for (int fieldId = 0; fieldId < fieldIndexDeltas.length; fieldId++) {
             ConcurrentMap<MiruTermId, MiruDeltaInvertedIndex.Delta<BM>> deltaMap = fieldIndexDeltas[fieldId];
             for (Map.Entry<MiruTermId, MiruDeltaInvertedIndex.Delta<BM>> entry : deltaMap.entrySet()) {
@@ -295,7 +295,7 @@ public class MiruDeltaFieldIndex<BM> implements MiruFieldIndex<BM>, Mergeable {
                     delta,
                     getIndexKey(fieldId, entry.getKey()),
                     fieldIndexCache, versionCache);
-                invertedIndex.merge();
+                invertedIndex.merge(primitiveBuffer);
             }
             deltaMap.clear();
 
@@ -317,7 +317,7 @@ public class MiruDeltaFieldIndex<BM> implements MiruFieldIndex<BM>, Mergeable {
                             i++;
                         }
                     }
-                    backingFieldIndex.mergeCardinalities(fieldId, termId, ids, counts);
+                    backingFieldIndex.mergeCardinalities(fieldId, termId, ids, counts, primitiveBuffer);
                 }
                 cardinality.clear();
             }

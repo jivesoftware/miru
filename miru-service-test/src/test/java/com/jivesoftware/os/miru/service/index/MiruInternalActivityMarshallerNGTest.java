@@ -33,20 +33,21 @@ public class MiruInternalActivityMarshallerNGTest {
      */
     @Test
     public void testFieldValueFromFiler() throws Exception {
+        byte[] primitiveBuffer = new byte[8];
         System.out.println("fieldValueFromFiler");
         MiruInternalActivityMarshaller instance = new MiruInternalActivityMarshaller();
         MiruInternalActivity expResult = activity();
-        ByteArrayFiler filer = new ByteArrayFiler(instance.toBytes(expResult));
+        ByteArrayFiler filer = new ByteArrayFiler(instance.toBytes(expResult, primitiveBuffer));
         filer.seek(0);
 
         int fieldId = 3;
-        MiruTermId[] fieldValueFromFiler = instance.fieldValueFromFiler(filer, fieldId);
-        Assert.assertEquals(fieldValueFromFiler, new MiruTermId[] { new MiruTermId("b".getBytes()), new MiruTermId("c".getBytes()) });
+        MiruTermId[] fieldValueFromFiler = instance.fieldValueFromFiler(filer, fieldId, primitiveBuffer);
+        Assert.assertEquals(fieldValueFromFiler, new MiruTermId[]{new MiruTermId("b".getBytes()), new MiruTermId("c".getBytes())});
 
         filer.seek(0);
         int propId = 2;
-        MiruIBA[] propValueFromFiler = instance.propValueFromFiler(filer, propId);
-        Assert.assertEquals(propValueFromFiler, new MiruIBA[] { new MiruIBA("j".getBytes()) });
+        MiruIBA[] propValueFromFiler = instance.propValueFromFiler(filer, propId, primitiveBuffer);
+        Assert.assertEquals(propValueFromFiler, new MiruIBA[]{new MiruIBA("j".getBytes())});
     }
 
     /**
@@ -54,21 +55,22 @@ public class MiruInternalActivityMarshallerNGTest {
      */
     @Test
     public void testToBytesThenFromFiler() throws Exception {
+        byte[] primitiveBuffer = new byte[8];
         System.out.println("fromFiler");
         MiruInternalActivityMarshaller instance = new MiruInternalActivityMarshaller();
         MiruInternalActivity expResult = activity();
-        ByteArrayFiler filer = new ByteArrayFiler(instance.toBytes(expResult));
-        MiruInternalActivity result = instance.fromFiler(new MiruTenantId("abc".getBytes()), filer);
+        ByteArrayFiler filer = new ByteArrayFiler(instance.toBytes(expResult, primitiveBuffer));
+        MiruInternalActivity result = instance.fromFiler(new MiruTenantId("abc".getBytes()), filer, primitiveBuffer);
         Assert.assertEquals(result, expResult);
     }
 
     private MiruInternalActivity activity() {
-        return new MiruInternalActivity(new MiruTenantId("abc".getBytes()), 1, new String[] { "foo" }, 2,
-            new MiruTermId[][] {
-                null, null, { new MiruTermId("a".getBytes()) }, { new MiruTermId("b".getBytes()), new MiruTermId("c".getBytes()) }
+        return new MiruInternalActivity(new MiruTenantId("abc".getBytes()), 1, new String[]{"foo"}, 2,
+            new MiruTermId[][]{
+                null, null, {new MiruTermId("a".getBytes())}, {new MiruTermId("b".getBytes()), new MiruTermId("c".getBytes())}
             },
-            new MiruIBA[][] {
-                null, null, { new MiruIBA("j".getBytes()) }, { new MiruIBA("k".getBytes()), new MiruIBA("l".getBytes()) }
+            new MiruIBA[][]{
+                null, null, {new MiruIBA("j".getBytes())}, {new MiruIBA("k".getBytes()), new MiruIBA("l".getBytes())}
             });
 
     }

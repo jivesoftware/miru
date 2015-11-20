@@ -22,14 +22,15 @@ public class MiruIndexAuthz<BM> {
 
         //TODO create work based on distinct authz strings
         return Arrays.<Future<?>>asList(indexExecutor.submit(() -> {
+            byte[] primitiveBuffer = new byte[8];
             for (MiruActivityAndId<MiruInternalActivity> internalActivityAndId : internalActivityAndIds) {
                 MiruInternalActivity activity = internalActivityAndId.activity;
                 if (activity.authz != null) {
                     for (String authz : activity.authz) {
                         if (repair) {
-                            context.authzIndex.set(authz, internalActivityAndId.id);
+                            context.authzIndex.set(authz, primitiveBuffer, internalActivityAndId.id);
                         } else {
-                            context.authzIndex.append(authz, internalActivityAndId.id);
+                            context.authzIndex.append(authz, primitiveBuffer, internalActivityAndId.id);
                         }
                     }
                 }
@@ -46,6 +47,7 @@ public class MiruIndexAuthz<BM> {
         throws Exception {
 
         return Arrays.<Future<?>>asList(indexExecutor.submit(() -> {
+            byte[] primitiveBuffer = new byte[8];
             for (int i = 0; i < internalActivityAndIds.size(); i++) {
                 MiruActivityAndId<MiruInternalActivity> internalActivityAndId = internalActivityAndIds.get(i);
                 MiruInternalActivity internalActivity = internalActivityAndId.activity;
@@ -57,13 +59,13 @@ public class MiruIndexAuthz<BM> {
 
                 for (String authz : existingAuthz) {
                     if (!repairedAuthz.contains(authz)) {
-                        context.authzIndex.remove(authz, id);
+                        context.authzIndex.remove(authz, id, primitiveBuffer);
                     }
                 }
 
                 for (String authz : repairedAuthz) {
                     if (!existingAuthz.contains(authz)) {
-                        context.authzIndex.set(authz, id);
+                        context.authzIndex.set(authz, primitiveBuffer, id);
                     }
                 }
             }

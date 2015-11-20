@@ -30,15 +30,15 @@ public class MiruFilerSipIndex<S extends MiruSipCursor<S>> implements MiruSipInd
     }
 
     @Override
-    public Optional<S> getSip() throws IOException {
+    public Optional<S> getSip(byte[] primitiveBuffer) throws IOException {
         S sip = sipReference.get();
         if (sip == null && !absent.get()) {
-            sipFilerProvider.read(null, (monkey, filer, lock) -> {
+            sipFilerProvider.read(null, (monkey, filer, _primitiveBuffer, lock) -> {
                 if (filer != null) {
                     synchronized (lock) {
                         filer.seek(0);
                         try {
-                            sipReference.set(marshaller.fromFiler(filer));
+                            sipReference.set(marshaller.fromFiler(filer, _primitiveBuffer));
                         } catch (Exception e) {
                             LOG.warn("Failed to deserialize sip, length={}", filer.getSize());
                             sipReference.set(null);
@@ -50,22 +50,22 @@ public class MiruFilerSipIndex<S extends MiruSipCursor<S>> implements MiruSipInd
                     absent.set(true);
                 }
                 return null;
-            });
+            }, primitiveBuffer);
             sip = sipReference.get();
         }
         return Optional.fromNullable(sip);
     }
 
     @Override
-    public boolean setSip(final S sip) throws IOException {
-        return sipFilerProvider.readWriteAutoGrow(marshaller.expectedCapacity(sip), (monkey, filer, lock) -> {
-            S existingSip = getSip().orNull();
+    public boolean setSip(final S sip, byte[] primitiveBuffer) throws IOException {
+        return sipFilerProvider.readWriteAutoGrow(marshaller.expectedCapacity(sip), (monkey, filer, _primitiveBuffer, lock) -> {
+            S existingSip = getSip(_primitiveBuffer).orNull();
             while (existingSip == null || sip.compareTo(existingSip) > 0) {
                 if (sipReference.compareAndSet(existingSip, sip)) {
                     synchronized (lock) {
                         filer.seek(0);
                         try {
-                            marshaller.toFiler(filer, sip);
+                            marshaller.toFiler(filer, sip, _primitiveBuffer);
                         } catch (Exception e) {
                             throw new IOException("Failed to serialize sip");
                         }
@@ -76,6 +76,6 @@ public class MiruFilerSipIndex<S extends MiruSipCursor<S>> implements MiruSipInd
                 }
             }
             return false;
-        });
+        }, primitiveBuffer);
     }
 }

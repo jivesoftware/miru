@@ -182,10 +182,11 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
                 coord.tenantId, routingTopologies.getIfPresent(coord.tenantId) != null);
             return false;
         }
-        return prioritizeRebuildInternal(coord, topology);
+        byte[] primitiveBuffer = new byte[8];
+        return prioritizeRebuildInternal(coord, topology, primitiveBuffer);
     }
 
-    private <BM> boolean prioritizeRebuildInternal(MiruPartitionCoord coord, MiruTenantTopology<BM> topology) throws Exception {
+    private <BM> boolean prioritizeRebuildInternal(MiruPartitionCoord coord, MiruTenantTopology<BM> topology, byte[] primitiveBuffer) throws Exception {
         Optional<MiruLocalHostedPartition<BM, ?, ?>> optionalPartition = topology.getPartition(coord.partitionId);
         if (optionalPartition.isPresent()) {
             MiruLocalHostedPartition<BM, ?, ?> partition = optionalPartition.get();
@@ -196,7 +197,7 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
                 topology.warm(coord.partitionId);
                 return true;
             } else if (partition.getState() == MiruPartitionState.online) {
-                return topology.updateStorage(coord.partitionId, MiruBackingStorage.memory);
+                return topology.updateStorage(coord.partitionId, MiruBackingStorage.memory, primitiveBuffer);
             }
         }
         return false;

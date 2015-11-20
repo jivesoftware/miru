@@ -56,7 +56,8 @@ public class AmzaInboxReadTracker implements MiruInboxReadTracker {
         MiruStreamId streamId,
         final MiruSolutionLog solutionLog,
         final int lastActivityIndex,
-        long oldestBackfilledEventId) throws Exception {
+        long oldestBackfilledEventId,
+        byte[] primitiveBuffer) throws Exception {
 
         Collection<NamedCursor> cursors = getSipCursors(tenantId, partitionId, streamId);
         MiruWALClient.StreamBatch<MiruWALEntry, AmzaSipCursor> got = walClient.getRead(tenantId,
@@ -72,11 +73,11 @@ public class AmzaInboxReadTracker implements MiruInboxReadTracker {
                 MiruFilter filter = readEvent.filter;
 
                 if (e.activity.type == MiruPartitionedActivity.Type.READ) {
-                    readTracker.read(bitmaps, requestContext, streamId, filter, solutionLog, lastActivityIndex, readEvent.time);
+                    readTracker.read(bitmaps, requestContext, streamId, filter, solutionLog, lastActivityIndex, readEvent.time, primitiveBuffer);
                 } else if (e.activity.type == MiruPartitionedActivity.Type.UNREAD) {
-                    readTracker.unread(bitmaps, requestContext, streamId, filter, solutionLog, lastActivityIndex, readEvent.time);
+                    readTracker.unread(bitmaps, requestContext, streamId, filter, solutionLog, lastActivityIndex, readEvent.time, primitiveBuffer);
                 } else if (e.activity.type == MiruPartitionedActivity.Type.MARK_ALL_READ) {
-                    readTracker.markAllRead(bitmaps, requestContext, streamId, readEvent.time);
+                    readTracker.markAllRead(bitmaps, requestContext, streamId, readEvent.time, primitiveBuffer);
                 }
             }
             got = (got.cursor != null) ? walClient.getRead(tenantId, streamId, got.cursor, Long.MAX_VALUE, 1000) : null;

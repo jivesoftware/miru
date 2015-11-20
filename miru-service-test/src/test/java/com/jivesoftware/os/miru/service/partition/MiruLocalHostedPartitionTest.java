@@ -335,6 +335,7 @@ public class MiruLocalHostedPartitionTest {
 
     @Test
     public void testQueryHandleOfflineMemMappedHotDeploy() throws Exception {
+        byte[] primitiveBuffer = new byte[8];
         MiruLocalHostedPartition<EWAHCompressedBitmap, RCVSCursor, RCVSSipCursor> localHostedPartition = getEwahCompressedBitmapMiruLocalHostedPartition();
 
         setActive(true);
@@ -350,7 +351,7 @@ public class MiruLocalHostedPartitionTest {
         assertEquals(localHostedPartition.getState(), MiruPartitionState.offline);
         assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.disk);
 
-        try (MiruRequestHandle queryHandle = localHostedPartition.acquireQueryHandle()) {
+        try (MiruRequestHandle queryHandle = localHostedPartition.acquireQueryHandle(primitiveBuffer)) {
             assertEquals(queryHandle.getCoord(), coord);
             assertNotNull(queryHandle.getRequestContext()); // would throw exception if offline
         }
@@ -358,6 +359,7 @@ public class MiruLocalHostedPartitionTest {
 
     @Test(expectedExceptions = MiruPartitionUnavailableException.class)
     public void testQueryHandleOfflineMemoryException() throws Exception {
+        byte[] primitiveBuffer = new byte[8];
         MiruLocalHostedPartition<EWAHCompressedBitmap, RCVSCursor, RCVSSipCursor> localHostedPartition = getEwahCompressedBitmapMiruLocalHostedPartition();
 
         setActive(true);
@@ -370,7 +372,7 @@ public class MiruLocalHostedPartitionTest {
         assertEquals(localHostedPartition.getState(), MiruPartitionState.offline);
         assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.memory);
 
-        try (MiruRequestHandle queryHandle = localHostedPartition.acquireQueryHandle()) {
+        try (MiruRequestHandle queryHandle = localHostedPartition.acquireQueryHandle(primitiveBuffer)) {
             queryHandle.getRequestContext(); // throws exception
         }
     }

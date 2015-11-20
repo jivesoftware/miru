@@ -32,6 +32,8 @@ public class DistinctCount {
         BM answer)
         throws Exception {
 
+        byte[] primitiveBuffer = new byte[8];
+
         log.debug("Get number of distincts for answer={} query={}", answer, request);
 
         int collectedDistincts = 0;
@@ -53,7 +55,7 @@ public class DistinctCount {
 
             for (String aggregateTerm : aggregateTerms) {
                 MiruTermId aggregateTermId = termComposer.compose(fieldDefinition, aggregateTerm);
-                Optional<BM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex();
+                Optional<BM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex(primitiveBuffer);
                 if (!optionalTermIndex.isPresent()) {
                     continue;
                 }
@@ -72,7 +74,7 @@ public class DistinctCount {
                 if (lastSetBit < 0) {
                     break;
                 }
-                MiruTermId[] fieldValues = requestContext.getActivityIndex().get(lastSetBit, fieldId);
+                MiruTermId[] fieldValues = requestContext.getActivityIndex().get(lastSetBit, fieldId,primitiveBuffer);
                 log.trace("fieldValues={}", (Object) fieldValues);
                 if (fieldValues == null || fieldValues.length == 0) {
                     // could make this a reusable buffer, but this is effectively an error case and would require 3 buffers
@@ -86,7 +88,7 @@ public class DistinctCount {
                     String aggregateTerm = termComposer.decompose(fieldDefinition, aggregateTermId);
 
                     aggregateTerms.add(aggregateTerm);
-                    Optional<BM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex();
+                    Optional<BM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex(primitiveBuffer);
                     checkState(optionalTermIndex.isPresent(), "Unable to load inverted index for aggregateTermId: " + aggregateTermId);
 
                     BM revisedAnswer = reusable.next();

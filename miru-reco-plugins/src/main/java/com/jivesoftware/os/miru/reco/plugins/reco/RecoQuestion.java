@@ -50,6 +50,7 @@ public class RecoQuestion implements Question<RecoQuery, RecoAnswer, RecoReport>
 
     @Override
     public <BM> MiruPartitionResponse<RecoAnswer> askLocal(MiruRequestHandle<BM, ?> handle, Optional<RecoReport> report) throws Exception {
+        byte[] primitiveBuffer = new byte[8];
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
 
         MiruRequestContext<BM, ?> context = handle.getRequestContext();
@@ -71,7 +72,7 @@ public class RecoQuestion implements Question<RecoQuery, RecoAnswer, RecoReport>
         // 1) Execute the combined filter above on the given stream, add the bitmap
         BM filtered = bitmaps.create();
         aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), request.query.scorableFilter,
-            solutionLog, filtered, null, context.getActivityIndex().lastId(), -1);
+            solutionLog, filtered, null, context.getActivityIndex().lastId(primitiveBuffer), -1, primitiveBuffer);
         if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
             solutionLog.log(MiruSolutionLogLevel.INFO, "constrained scorable down to {} items.", bitmaps.cardinality(filtered));
             solutionLog.log(MiruSolutionLogLevel.TRACE, "constrained scorable down bitmap {}", filtered);
@@ -80,7 +81,7 @@ public class RecoQuestion implements Question<RecoQuery, RecoAnswer, RecoReport>
 
         // 2) Add in the authz check if we have it
         if (!MiruAuthzExpression.NOT_PROVIDED.equals(request.authzExpression)) {
-            BM compositeAuthz = context.getAuthzIndex().getCompositeAuthz(request.authzExpression);
+            BM compositeAuthz = context.getAuthzIndex().getCompositeAuthz(request.authzExpression, primitiveBuffer);
             if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
                 solutionLog.log(MiruSolutionLogLevel.INFO, "compositeAuthz contains {} items.", bitmaps.cardinality(compositeAuthz));
                 solutionLog.log(MiruSolutionLogLevel.TRACE, "compositeAuthz bitmap {}", compositeAuthz);
@@ -89,7 +90,7 @@ public class RecoQuestion implements Question<RecoQuery, RecoAnswer, RecoReport>
         }
 
         // 3) Mask out anything that hasn't made it into the activityIndex yet, or that has been removed from the index
-        BM buildIndexMask = bitmaps.buildIndexMask(context.getActivityIndex().lastId(), context.getRemovalIndex().getIndex());
+        BM buildIndexMask = bitmaps.buildIndexMask(context.getActivityIndex().lastId(primitiveBuffer), context.getRemovalIndex().getIndex(primitiveBuffer));
         if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
             solutionLog.log(MiruSolutionLogLevel.INFO, "indexMask contains {} items.", bitmaps.cardinality(buildIndexMask));
             solutionLog.log(MiruSolutionLogLevel.TRACE, "indexMask bitmap {}", buildIndexMask);
@@ -108,7 +109,7 @@ public class RecoQuestion implements Question<RecoQuery, RecoAnswer, RecoReport>
 
         BM allMyActivity = bitmaps.create();
         aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), request.query.constraintsFilter,
-            solutionLog, allMyActivity, null, context.getActivityIndex().lastId(), -1);
+            solutionLog, allMyActivity, null, context.getActivityIndex().lastId(primitiveBuffer), -1, primitiveBuffer);
         if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
             solutionLog.log(MiruSolutionLogLevel.INFO, "constrained mine down to {} items.", bitmaps.cardinality(allMyActivity));
             solutionLog.log(MiruSolutionLogLevel.TRACE, "constrained mine down bitmap {}", allMyActivity);

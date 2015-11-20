@@ -58,6 +58,8 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyQuery, SeaAnomalyA
 
     @Override
     public <BM> MiruPartitionResponse<SeaAnomalyAnswer> askLocal(MiruRequestHandle<BM, ?> handle, Optional<SeaAnomalyReport> report) throws Exception {
+
+        byte[] primitiveBuffer = new byte[8];
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
         MiruRequestContext<BM, ?> context = handle.getRequestContext();
         MiruBitmaps<BM> bitmaps = handle.getBitmaps();
@@ -81,7 +83,7 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyQuery, SeaAnomalyA
         }
 
         long start = System.currentTimeMillis();
-        ands.add(bitmaps.buildTimeRangeMask(context.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp));
+        ands.add(bitmaps.buildTimeRangeMask(context.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp, primitiveBuffer));
         solutionLog.log(MiruSolutionLogLevel.INFO, "anomaly timeRangeMask: {} millis.", System.currentTimeMillis() - start);
 
         // 1) Execute the combined filter above on the given stream, add the bitmap
@@ -91,19 +93,19 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyQuery, SeaAnomalyA
             BM filtered = bitmaps.create();
             start = System.currentTimeMillis();
             aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), request.query.constraintsFilter,
-                solutionLog, filtered, null, context.getActivityIndex().lastId(), -1);
+                solutionLog, filtered, null, context.getActivityIndex().lastId(primitiveBuffer), -1, primitiveBuffer);
             solutionLog.log(MiruSolutionLogLevel.INFO, "anomaly filter: {} millis.", System.currentTimeMillis() - start);
             ands.add(filtered);
         }
 
         // 2) Add in the authz check if we have it
         if (!MiruAuthzExpression.NOT_PROVIDED.equals(request.authzExpression)) {
-            ands.add(context.getAuthzIndex().getCompositeAuthz(request.authzExpression));
+            ands.add(context.getAuthzIndex().getCompositeAuthz(request.authzExpression, primitiveBuffer));
         }
 
         // 3) Mask out anything that hasn't made it into the activityIndex yet, or that has been removed from the index
         start = System.currentTimeMillis();
-        ands.add(bitmaps.buildIndexMask(context.getActivityIndex().lastId(), context.getRemovalIndex().getIndex()));
+        ands.add(bitmaps.buildIndexMask(context.getActivityIndex().lastId(primitiveBuffer), context.getRemovalIndex().getIndex(primitiveBuffer)));
         solutionLog.log(MiruSolutionLogLevel.INFO, "anomaly indexMask: {} millis.", System.currentTimeMillis() - start);
 
         // AND it all together to get the final constraints
@@ -126,7 +128,7 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyQuery, SeaAnomalyA
 
         int[] indexes = new int[request.query.divideTimeRangeIntoNSegments + 1];
         for (int i = 0; i < indexes.length; i++) {
-            indexes[i] = Math.abs(timeIndex.getClosestId(currentTime + 1)); // handle negative "theoretical insertion" index
+            indexes[i] = Math.abs(timeIndex.getClosestId(currentTime + 1, primitiveBuffer)); // handle negative "theoretical insertion" index
             currentTime += segmentDuration;
         }
 
@@ -156,7 +158,7 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyQuery, SeaAnomalyA
                             new MiruFilter(entry.getValue().operation, entry.getValue().inclusiveFilter, join, entry.getValue().subFilters));
                     }
                     return true;
-                });
+                }, primitiveBuffer);
             } else {
                 // TODO use got.
                 for (Entry<String, MiruFilter> entry : request.query.filters.entrySet()) {
@@ -184,7 +186,7 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyQuery, SeaAnomalyA
         for (int i = 0; i < 64; i++) {
             MiruTermId powerBitTerm = context.getTermComposer().compose(powerBitsFieldDefinition, String.valueOf(i));
             MiruInvertedIndex<BM> invertedIndex = primaryFieldIndex.get(powerBitsFieldId, powerBitTerm);
-            powerBitIndexes.add(invertedIndex.getIndex());
+            powerBitIndexes.add(invertedIndex.getIndex(primitiveBuffer));
         }
 
         Map<String, SeaAnomalyAnswer.Waveform> waveforms = Maps.newHashMapWithExpectedSize(expand.size());
@@ -196,7 +198,7 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyQuery, SeaAnomalyA
                 BM waveformFiltered = bitmaps.create();
 
                 aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), entry.getValue(), solutionLog,
-                    waveformFiltered, null, context.getActivityIndex().lastId(), -1);
+                    waveformFiltered, null, context.getActivityIndex().lastId(primitiveBuffer), -1, primitiveBuffer);
 
                 BM rawAnswer = bitmaps.create();
 

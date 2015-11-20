@@ -95,7 +95,7 @@ public class MiruIndexBloom<BM> {
         boolean repair,
         ExecutorService indexExecutor)
         throws ExecutionException, InterruptedException {
-
+        byte[] primitiveBuffer = new byte[8];
         List<BloomWork> bloomWorks = bloomWorksFuture.get();
 
         final MiruFieldIndex<BM> bloomFieldIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.bloom);
@@ -106,7 +106,7 @@ public class MiruIndexBloom<BM> {
                 MiruFieldDefinition bloomFieldDefinition = context.schema.getFieldDefinition(bloomWork.bloomFieldId);
                 MiruTermId compositeBloomId = indexUtil.makeBloomTerm(bloomWork.fieldValue, bloomFieldDefinition.name);
                 MiruInvertedIndex<BM> invertedIndex = bloomFieldIndex.getOrCreateInvertedIndex(bloomWork.fieldId, compositeBloomId);
-                bloomIndex.put(invertedIndex, bloomWork.bloomFieldValues);
+                bloomIndex.put(invertedIndex, bloomWork.bloomFieldValues, primitiveBuffer);
                 return null;
             }));
             callableCount++;

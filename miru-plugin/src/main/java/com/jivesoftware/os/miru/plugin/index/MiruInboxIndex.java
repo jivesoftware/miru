@@ -3,7 +3,6 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-
 package com.jivesoftware.os.miru.plugin.index;
 
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
@@ -35,7 +34,7 @@ public interface MiruInboxIndex<BM> {
      * @param streamId the streamId representing a user's inbox
      * @return the id of the latest recorded activity in this inbox
      */
-    int getLastActivityIndex(MiruStreamId streamId) throws Exception;
+    int getLastActivityIndex(MiruStreamId streamId, byte[] primitiveBuffer) throws Exception;
 
     /**
      * Index a given activity id in the inbox matching this streamId. If the inbox doesn't exist it will be created
@@ -44,7 +43,7 @@ public interface MiruInboxIndex<BM> {
      * @param streamId the inbox to index this activity in
      * @param ids      the activity ids to index
      */
-    void append(MiruStreamId streamId, int... ids) throws Exception;
+    void append(MiruStreamId streamId, byte[] primitiveBuffer, int... ids) throws Exception;
 
     /** Frees resources used by this index. */
     void close();

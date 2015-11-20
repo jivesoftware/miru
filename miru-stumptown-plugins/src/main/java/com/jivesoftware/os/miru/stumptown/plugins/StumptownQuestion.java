@@ -48,6 +48,8 @@ public class StumptownQuestion implements Question<StumptownQuery, StumptownAnsw
 
     @Override
     public <BM> MiruPartitionResponse<StumptownAnswer> askLocal(MiruRequestHandle<BM, ?> handle, Optional<StumptownReport> report) throws Exception {
+        byte[] primitiveBuffer = new byte[8];
+
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
         MiruRequestContext<BM, ?> context = handle.getRequestContext();
         MiruBitmaps<BM> bitmaps = handle.getBitmaps();
@@ -72,7 +74,7 @@ public class StumptownQuestion implements Question<StumptownQuery, StumptownAnsw
         }
 
         long start = System.currentTimeMillis();
-        ands.add(bitmaps.buildTimeRangeMask(context.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp));
+        ands.add(bitmaps.buildTimeRangeMask(context.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp, primitiveBuffer));
         solutionLog.log(MiruSolutionLogLevel.INFO, "stumptown timeRangeMask: {} millis.", System.currentTimeMillis() - start);
 
         // 1) Execute the combined filter above on the given stream, add the bitmap
@@ -82,19 +84,19 @@ public class StumptownQuestion implements Question<StumptownQuery, StumptownAnsw
             BM filtered = bitmaps.create();
             start = System.currentTimeMillis();
             aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), request.query.constraintsFilter,
-                solutionLog, filtered, null, context.getActivityIndex().lastId(), -1);
+                solutionLog, filtered, null, context.getActivityIndex().lastId(primitiveBuffer), -1, primitiveBuffer);
             solutionLog.log(MiruSolutionLogLevel.INFO, "stumptown filter: {} millis.", System.currentTimeMillis() - start);
             ands.add(filtered);
         }
 
         // 2) Add in the authz check if we have it
         if (!MiruAuthzExpression.NOT_PROVIDED.equals(request.authzExpression)) {
-            ands.add(context.getAuthzIndex().getCompositeAuthz(request.authzExpression));
+            ands.add(context.getAuthzIndex().getCompositeAuthz(request.authzExpression, primitiveBuffer));
         }
 
         // 3) Mask out anything that hasn't made it into the activityIndex yet, or that has been removed from the index
         start = System.currentTimeMillis();
-        ands.add(bitmaps.buildIndexMask(context.getActivityIndex().lastId(), context.getRemovalIndex().getIndex()));
+        ands.add(bitmaps.buildIndexMask(context.getActivityIndex().lastId(primitiveBuffer), context.getRemovalIndex().getIndex(primitiveBuffer)));
         solutionLog.log(MiruSolutionLogLevel.INFO, "stumptown indexMask: {} millis.", System.currentTimeMillis() - start);
 
         // AND it all together to get the final constraints
@@ -117,7 +119,7 @@ public class StumptownQuestion implements Question<StumptownQuery, StumptownAnsw
 
         int[] indexes = new int[request.query.divideTimeRangeIntoNSegments + 1];
         for (int i = 0; i < indexes.length; i++) {
-            indexes[i] = Math.abs(timeIndex.getClosestId(currentTime)); // handle negative "theoretical insertion" index
+            indexes[i] = Math.abs(timeIndex.getClosestId(currentTime, primitiveBuffer)); // handle negative "theoretical insertion" index
             currentTime += segmentDuration;
         }
 
@@ -128,7 +130,7 @@ public class StumptownQuestion implements Question<StumptownQuery, StumptownAnsw
             if (!bitmaps.isEmpty(constrained)) {
                 BM waveformFiltered = bitmaps.create();
                 aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), entry.getValue(), solutionLog,
-                    waveformFiltered, null, context.getActivityIndex().lastId(), -1);
+                    waveformFiltered, null, context.getActivityIndex().lastId(primitiveBuffer), -1, primitiveBuffer);
                 BM answer = bitmaps.create();
                 bitmaps.and(answer, Arrays.asList(constrained, waveformFiltered));
                 if (!bitmaps.isEmpty(answer)) {

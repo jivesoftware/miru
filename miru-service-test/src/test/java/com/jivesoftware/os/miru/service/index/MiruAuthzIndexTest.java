@@ -31,12 +31,12 @@ public class MiruAuthzIndexTest {
     @Test(dataProvider = "miruAuthzIndexDataProviderWithData")
     public void storeAndGetAuthz(MiruAuthzIndex<EWAHCompressedBitmap> miruAuthzIndex, MiruAuthzUtils miruAuthzUtils, Map<String, List<Integer>> bitsIn)
         throws Exception {
-
+        byte[] primitiveBuffer = new byte[8];
         for (Map.Entry<String, List<Integer>> entry : bitsIn.entrySet()) {
             String authz = entry.getKey();
             MiruAuthzExpression miruAuthzExpression = new MiruAuthzExpression(ImmutableList.of(authz));
 
-            EWAHCompressedBitmap bitsOut = miruAuthzIndex.getCompositeAuthz(miruAuthzExpression);
+            EWAHCompressedBitmap bitsOut = miruAuthzIndex.getCompositeAuthz(miruAuthzExpression, primitiveBuffer);
             List<Integer> actual = Lists.newArrayList();
             IntIterator iter = bitsOut.intIterator();
             while (iter.hasNext()) {
@@ -50,7 +50,7 @@ public class MiruAuthzIndexTest {
     @DataProvider(name = "miruAuthzIndexDataProviderWithData")
     public Object[][] miruAuthzIndexDataProvider() throws Exception {
         MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(8_192);
-        MiruTenantId tenantId = new MiruTenantId(new byte[] { 1 });
+        MiruTenantId tenantId = new MiruTenantId(new byte[]{1});
         MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, MiruPartitionId.of(1), new MiruHost("localhost", 10000));
         MiruAuthzUtils<EWAHCompressedBitmap> miruAuthzUtils = new MiruAuthzUtils<>(bitmaps);
 
@@ -74,13 +74,13 @@ public class MiruAuthzIndexTest {
         Map<String, List<Integer>> partiallyMergedLargeOnDiskBitsIn = populateAuthzIndex(partiallyMergedLargeMiruOnDiskAuthzIndex, miruAuthzUtils, 2,
             true, false);
 
-        return new Object[][] {
-            { unmergedLargeMiruHybridAuthzIndex, miruAuthzUtils, unmergedLargeHybridBitsIn },
-            { unmergedLargeMiruOnDiskAuthzIndex, miruAuthzUtils, unmergedLargeOnDiskBitsIn },
-            { mergedLargeMiruHybridAuthzIndex, miruAuthzUtils, mergedLargeHybridBitsIn },
-            { mergedLargeMiruOnDiskAuthzIndex, miruAuthzUtils, mergedLargeOnDiskBitsIn },
-            { partiallyMergedLargeMiruHybridAuthzIndex, miruAuthzUtils, partiallyMergedLargeHybridBitsIn },
-            { partiallyMergedLargeMiruOnDiskAuthzIndex, miruAuthzUtils, partiallyMergedLargeOnDiskBitsIn }
+        return new Object[][]{
+            {unmergedLargeMiruHybridAuthzIndex, miruAuthzUtils, unmergedLargeHybridBitsIn},
+            {unmergedLargeMiruOnDiskAuthzIndex, miruAuthzUtils, unmergedLargeOnDiskBitsIn},
+            {mergedLargeMiruHybridAuthzIndex, miruAuthzUtils, mergedLargeHybridBitsIn},
+            {mergedLargeMiruOnDiskAuthzIndex, miruAuthzUtils, mergedLargeOnDiskBitsIn},
+            {partiallyMergedLargeMiruHybridAuthzIndex, miruAuthzUtils, partiallyMergedLargeHybridBitsIn},
+            {partiallyMergedLargeMiruOnDiskAuthzIndex, miruAuthzUtils, partiallyMergedLargeOnDiskBitsIn}
         };
     }
 
@@ -90,7 +90,7 @@ public class MiruAuthzIndexTest {
         boolean mergeMiddle,
         boolean mergeEnd)
         throws Exception {
-
+        byte[] primitiveBuffer = new byte[8];
         Map<String, List<Integer>> bitsIn = Maps.newHashMap();
 
         for (int i = 1; i <= size; i++) {
@@ -102,13 +102,13 @@ public class MiruAuthzIndexTest {
             String authz = miruAuthzUtils.encode(FilerIO.longBytes((long) i));
 
             for (Integer bit : bits) {
-                authzIndex.append(authz, bit);
+                authzIndex.append(authz, primitiveBuffer, bit);
             }
             assertNull(bitsIn.put(authz, bits));
         }
 
         if (mergeMiddle) {
-            ((MiruDeltaAuthzIndex<BM>) authzIndex).merge();
+            ((MiruDeltaAuthzIndex<BM>) authzIndex).merge(primitiveBuffer);
         }
 
         for (int i = 1; i <= size; i++) {
@@ -119,13 +119,13 @@ public class MiruAuthzIndexTest {
             String authz = miruAuthzUtils.encode(FilerIO.longBytes((long) i));
 
             for (Integer bit : bits) {
-                authzIndex.append(authz, bit);
+                authzIndex.append(authz, primitiveBuffer, bit);
             }
             assertTrue(bitsIn.get(authz).addAll(bits));
         }
 
         if (mergeEnd) {
-            ((MiruDeltaAuthzIndex<BM>) authzIndex).merge();
+            ((MiruDeltaAuthzIndex<BM>) authzIndex).merge(primitiveBuffer);
         }
 
         return bitsIn;

@@ -30,7 +30,7 @@ public class MiruRemoteQueryablePartitionFactory {
             }
 
             @Override
-            public MiruRequestHandle<BM, S> acquireQueryHandle() throws Exception {
+            public MiruRequestHandle<BM, S> acquireQueryHandle(byte[] primitiveBuffer) throws Exception {
                 return new MiruRequestHandle<BM, S>() {
 
                     @Override

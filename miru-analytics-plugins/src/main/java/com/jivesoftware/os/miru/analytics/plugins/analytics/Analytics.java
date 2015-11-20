@@ -53,6 +53,8 @@ public class Analytics {
         Analysis<T> analysis,
         Analyzed<T> analyzed) throws Exception {
 
+        byte[] primtiveBuffer = new byte[8];
+
         MiruBitmaps<BM> bitmaps = handle.getBitmaps();
         MiruPartitionCoord coord = handle.getCoord();
         MiruTimeIndex timeIndex = context.getTimeIndex();
@@ -77,7 +79,7 @@ public class Analytics {
         List<BM> ands = new ArrayList<>();
 
         long start = System.currentTimeMillis();
-        ands.add(bitmaps.buildTimeRangeMask(timeIndex, timeRange.smallestTimestamp, timeRange.largestTimestamp));
+        ands.add(bitmaps.buildTimeRangeMask(timeIndex, timeRange.smallestTimestamp, timeRange.largestTimestamp, primtiveBuffer));
         solutionLog.log(MiruSolutionLogLevel.INFO, "analytics timeRangeMask: {} millis.", System.currentTimeMillis() - start);
 
         // 1) Execute the combined filter above on the given stream, add the bitmap
@@ -87,19 +89,19 @@ public class Analytics {
             BM filtered = bitmaps.create();
             start = System.currentTimeMillis();
             aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), constraintsFilter,
-                solutionLog, filtered, null, context.getActivityIndex().lastId(), -1);
+                solutionLog, filtered, null, context.getActivityIndex().lastId(primtiveBuffer), -1, primtiveBuffer);
             solutionLog.log(MiruSolutionLogLevel.INFO, "analytics filter: {} millis.", System.currentTimeMillis() - start);
             ands.add(filtered);
         }
 
         // 2) Add in the authz check if we have it
         if (!MiruAuthzExpression.NOT_PROVIDED.equals(authzExpression)) {
-            ands.add(context.getAuthzIndex().getCompositeAuthz(authzExpression));
+            ands.add(context.getAuthzIndex().getCompositeAuthz(authzExpression, primtiveBuffer));
         }
 
         // 3) Mask out anything that hasn't made it into the activityIndex yet, or that has been removed from the index
         start = System.currentTimeMillis();
-        ands.add(bitmaps.buildIndexMask(context.getActivityIndex().lastId(), context.getRemovalIndex().getIndex()));
+        ands.add(bitmaps.buildIndexMask(context.getActivityIndex().lastId(primtiveBuffer), context.getRemovalIndex().getIndex(primtiveBuffer)));
         solutionLog.log(MiruSolutionLogLevel.INFO, "analytics indexMask: {} millis.", System.currentTimeMillis() - start);
 
         // AND it all together to get the final constraints
@@ -122,7 +124,7 @@ public class Analytics {
         start = System.currentTimeMillis();
         int[] indexes = new int[divideTimeRangeIntoNSegments + 1];
         for (int i = 0; i < indexes.length; i++) {
-            indexes[i] = Math.abs(timeIndex.getClosestId(currentTime)); // handle negative "theoretical insertion" index
+            indexes[i] = Math.abs(timeIndex.getClosestId(currentTime, primtiveBuffer)); // handle negative "theoretical insertion" index
             currentTime += segmentDuration;
         }
         solutionLog.log(MiruSolutionLogLevel.INFO, "analytics bucket boundaries: {} millis.", System.currentTimeMillis() - start);
@@ -136,7 +138,7 @@ public class Analytics {
             if (!bitmaps.isEmpty(constrained)) {
                 BM waveformFiltered = bitmaps.create();
                 aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), filter, solutionLog,
-                    waveformFiltered, null, context.getActivityIndex().lastId(), -1);
+                    waveformFiltered, null, context.getActivityIndex().lastId(primtiveBuffer), -1, primtiveBuffer);
                 BM answer;
                 if (bitmaps.supportsInPlace()) {
                     answer = waveformFiltered;

@@ -36,6 +36,8 @@ public class Stumptown {
         int[] indexes)
         throws Exception {
 
+        byte[] primitiveBuffer = new byte[8];
+
         log.debug("Get stumptowning for answer={}", answer);
 
         MiruActivityInternExtern internExtern = miruProvider.getActivityInternExtern(tenantId);
@@ -47,7 +49,7 @@ public class Stumptown {
         for (long i = 0; i < cardinality && iter.hasNext(); i++) {
             int index = iter.next();
             if (i > (cardinality - 1 - desiredNumberOfResults)) {
-                results.add(internExtern.extern(requestContext.getActivityIndex().get(tenantId, index), schema));
+                results.add(internExtern.extern(requestContext.getActivityIndex().get(tenantId, index, primitiveBuffer), schema));
             }
         }
         Collections.reverse(results); // chronologically descending (for proper alignment when merging/appending older partitions)

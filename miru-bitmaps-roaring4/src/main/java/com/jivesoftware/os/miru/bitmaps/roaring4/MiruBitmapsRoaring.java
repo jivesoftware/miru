@@ -256,9 +256,9 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap> {
     }
 
     @Override
-    public RoaringBitmap buildTimeRangeMask(MiruTimeIndex timeIndex, long smallestTimestamp, long largestTimestamp) {
-        int smallestInclusiveId = timeIndex.smallestExclusiveTimestampIndex(smallestTimestamp);
-        int largestExclusiveId = timeIndex.largestInclusiveTimestampIndex(largestTimestamp) + 1;
+    public RoaringBitmap buildTimeRangeMask(MiruTimeIndex timeIndex, long smallestTimestamp, long largestTimestamp, byte[] primitiveBuffer) {
+        int smallestInclusiveId = timeIndex.smallestExclusiveTimestampIndex(smallestTimestamp, primitiveBuffer);
+        int largestExclusiveId = timeIndex.largestInclusiveTimestampIndex(largestTimestamp, primitiveBuffer) + 1;
 
         RoaringBitmap mask = new RoaringBitmap();
 
@@ -394,7 +394,7 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap> {
         System.out.println("c2: " + container.getCardinality());
     }*/
 
-    /*public static void main(String[] args) throws Exception {
+ /*public static void main(String[] args) throws Exception {
         RoaringBitmap bitmap = new RoaringBitmap();
         int[] indexes = { 343798, 343799, 343800, 343801, 343803, 343804, 343805, 343807, 343809, 343811, 343812, 343815, 343816, 343817, 343818, 343819,
             343821, 343825, 343827, 343828, 343830, 343831, 343832, 343833, 343835, 343836, 343837, 343838,

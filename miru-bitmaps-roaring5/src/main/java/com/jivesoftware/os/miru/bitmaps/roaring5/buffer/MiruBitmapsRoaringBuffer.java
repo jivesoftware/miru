@@ -262,9 +262,9 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
     }
 
     @Override
-    public MutableRoaringBitmap buildTimeRangeMask(MiruTimeIndex timeIndex, long smallestTimestamp, long largestTimestamp) {
-        int smallestInclusiveId = timeIndex.smallestExclusiveTimestampIndex(smallestTimestamp);
-        int largestExclusiveId = timeIndex.largestInclusiveTimestampIndex(largestTimestamp) + 1;
+    public MutableRoaringBitmap buildTimeRangeMask(MiruTimeIndex timeIndex, long smallestTimestamp, long largestTimestamp, byte[] primitiveBuffer) {
+        int smallestInclusiveId = timeIndex.smallestExclusiveTimestampIndex(smallestTimestamp, primitiveBuffer);
+        int largestExclusiveId = timeIndex.largestInclusiveTimestampIndex(largestTimestamp, primitiveBuffer) + 1;
 
         MutableRoaringBitmap mask = new MutableRoaringBitmap();
 

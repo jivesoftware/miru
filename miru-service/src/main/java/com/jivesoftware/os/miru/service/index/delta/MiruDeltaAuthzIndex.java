@@ -49,25 +49,25 @@ public class MiruDeltaAuthzIndex<BM> implements MiruAuthzIndex<BM>, Mergeable {
     }
 
     @Override
-    public BM getCompositeAuthz(MiruAuthzExpression authzExpression) throws Exception {
-        return cache.getOrCompose(authzExpression, authz -> getAuthz(authz).getIndex().orNull());
+    public BM getCompositeAuthz(MiruAuthzExpression authzExpression, byte[] primitiveBuffer) throws Exception {
+        return cache.getOrCompose(authzExpression, authz -> getAuthz(authz).getIndex(primitiveBuffer).orNull());
     }
 
     @Override
-    public void append(String authz, int... ids) throws Exception {
-        getOrCreate(authz).append(ids);
+    public void append(String authz, byte[] primitiveBuffer, int... ids) throws Exception {
+        getOrCreate(authz).append(primitiveBuffer, ids);
         cache.increment(authz);
     }
 
     @Override
-    public void set(String authz, int... ids) throws Exception {
-        getOrCreate(authz).set(ids);
+    public void set(String authz, byte[] primitiveBuffer, int... ids) throws Exception {
+        getOrCreate(authz).set(primitiveBuffer, ids);
         cache.increment(authz);
     }
 
     @Override
-    public void remove(String authz, int id) throws Exception {
-        getOrCreate(authz).remove(id);
+    public void remove(String authz, int id, byte[] primitiveBuffer) throws Exception {
+        getOrCreate(authz).remove(id, primitiveBuffer);
         cache.increment(authz);
     }
 
@@ -91,9 +91,9 @@ public class MiruDeltaAuthzIndex<BM> implements MiruAuthzIndex<BM>, Mergeable {
     }
 
     @Override
-    public void merge() throws Exception {
+    public void merge(byte[] primitiveBuffer) throws Exception {
         for (Map.Entry<String, MiruDeltaInvertedIndex<BM>> entry : authzDeltas.entrySet()) {
-            entry.getValue().merge();
+            entry.getValue().merge(primitiveBuffer);
             cache.increment(entry.getKey());
         }
         authzDeltas.clear();

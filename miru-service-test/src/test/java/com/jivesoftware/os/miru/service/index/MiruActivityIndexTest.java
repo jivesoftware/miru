@@ -34,9 +34,10 @@ public class MiruActivityIndexTest {
 
     @Test(dataProvider = "miruActivityIndexDataProvider")
     public void testSetActivity(MiruActivityIndex miruActivityIndex, boolean throwsUnsupportedExceptionOnSet) throws Exception {
+        byte[] primitiveBuffer = new byte[8];
         MiruInternalActivity miruActivity = buildMiruActivity(new MiruTenantId(RandomStringUtils.randomAlphabetic(10).getBytes()), 1, new String[0], 5);
         try {
-            miruActivityIndex.setAndReady(Arrays.asList(new MiruActivityAndId<>(miruActivity, 0)));
+            miruActivityIndex.setAndReady(Arrays.asList(new MiruActivityAndId<>(miruActivity, 0)),primitiveBuffer);
             if (throwsUnsupportedExceptionOnSet) {
                 fail("This implementation of the MiruActivityIndex should have thrown an UnsupportedOperationException");
             }
@@ -49,9 +50,10 @@ public class MiruActivityIndexTest {
 
     @Test(dataProvider = "miruActivityIndexDataProvider")
     public void testSetActivityOutOfBounds(MiruActivityIndex miruActivityIndex, boolean throwsUnsupportedExceptionOnSet) throws Exception {
+        byte[] primitiveBuffer = new byte[8];
         MiruInternalActivity miruActivity = buildMiruActivity(new MiruTenantId(RandomStringUtils.randomAlphabetic(10).getBytes()), 1, new String[0], 5);
         try {
-            miruActivityIndex.setAndReady(Arrays.asList(new MiruActivityAndId<>(miruActivity, -1)));
+            miruActivityIndex.setAndReady(Arrays.asList(new MiruActivityAndId<>(miruActivity, -1)),primitiveBuffer);
             if (throwsUnsupportedExceptionOnSet) {
                 fail("This implementation of the MiruActivityIndex should have thrown an UnsupportedOperationException");
             }
@@ -67,15 +69,17 @@ public class MiruActivityIndexTest {
 
     @Test(dataProvider = "miruActivityIndexDataProviderWithData")
     public void testGetActivity(MiruActivityIndex miruActivityIndex, MiruInternalActivity[] expectedActivities) {
+        byte[] primitiveBuffer = new byte[8];
         assertTrue(expectedActivities.length == 3);
-        assertEquals(miruActivityIndex.get(expectedActivities[0].tenantId, 0), expectedActivities[0]);
-        assertEquals(miruActivityIndex.get(expectedActivities[1].tenantId, 1), expectedActivities[1]);
-        assertEquals(miruActivityIndex.get(expectedActivities[2].tenantId, 2), expectedActivities[2]);
+        assertEquals(miruActivityIndex.get(expectedActivities[0].tenantId, 0, primitiveBuffer), expectedActivities[0]);
+        assertEquals(miruActivityIndex.get(expectedActivities[1].tenantId, 1, primitiveBuffer), expectedActivities[1]);
+        assertEquals(miruActivityIndex.get(expectedActivities[2].tenantId, 2, primitiveBuffer), expectedActivities[2]);
     }
 
     @Test(dataProvider = "miruActivityIndexDataProviderWithData", expectedExceptions = IllegalArgumentException.class)
     public void testGetActivityOverCapacity(MiruActivityIndex miruActivityIndex, MiruInternalActivity[] expectedActivities) {
-        miruActivityIndex.get(null, expectedActivities.length); // This should throw an exception
+        byte[] primitiveBuffer = new byte[8];
+        miruActivityIndex.get(null, expectedActivities.length, primitiveBuffer); // This should throw an exception
     }
 
     @DataProvider(name = "miruActivityIndexDataProvider")
@@ -83,35 +87,36 @@ public class MiruActivityIndexTest {
         MiruActivityIndex hybridActivityIndex = buildInMemoryActivityIndex();
         MiruActivityIndex onDiskActivityIndex = buildOnDiskActivityIndex();
 
-        return new Object[][] {
-            { hybridActivityIndex, false },
-            { onDiskActivityIndex, false } };
+        return new Object[][]{
+            {hybridActivityIndex, false},
+            {onDiskActivityIndex, false}};
     }
 
     @DataProvider(name = "miruActivityIndexDataProviderWithData")
     public Object[][] miruActivityIndexDataProviderWithData() throws Exception {
+        byte[] primitiveBuffer = new byte[8];
         MiruTenantId tenantId = new MiruTenantId(RandomStringUtils.randomAlphabetic(10).getBytes());
         MiruInternalActivity miruActivity1 = buildMiruActivity(tenantId, 1, new String[0], 3);
         MiruInternalActivity miruActivity2 = buildMiruActivity(tenantId, 2, new String[0], 4);
-        MiruInternalActivity miruActivity3 = buildMiruActivity(tenantId, 3, new String[] { "abcde" }, 1);
-        final MiruInternalActivity[] miruActivities = new MiruInternalActivity[] { miruActivity1, miruActivity2, miruActivity3 };
+        MiruInternalActivity miruActivity3 = buildMiruActivity(tenantId, 3, new String[]{"abcde"}, 1);
+        final MiruInternalActivity[] miruActivities = new MiruInternalActivity[]{miruActivity1, miruActivity2, miruActivity3};
 
         // Add activities to in-memory index
         MiruActivityIndex hybridActivityIndex = buildInMemoryActivityIndex();
         hybridActivityIndex.setAndReady(Arrays.asList(
             new MiruActivityAndId<>(miruActivity1, 0),
             new MiruActivityAndId<>(miruActivity2, 1),
-            new MiruActivityAndId<>(miruActivity3, 2)));
+            new MiruActivityAndId<>(miruActivity3, 2)), primitiveBuffer);
 
         MiruActivityIndex onDiskActivityIndex = buildOnDiskActivityIndex();
         onDiskActivityIndex.setAndReady(Arrays.asList(
             new MiruActivityAndId<>(miruActivity1, 0),
             new MiruActivityAndId<>(miruActivity2, 1),
-            new MiruActivityAndId<>(miruActivity3, 2)));
+            new MiruActivityAndId<>(miruActivity3, 2)), primitiveBuffer);
 
-        return new Object[][] {
-            { hybridActivityIndex, miruActivities },
-            { onDiskActivityIndex, miruActivities }
+        return new Object[][]{
+            {hybridActivityIndex, miruActivities},
+            {onDiskActivityIndex, miruActivities}
         };
     }
 

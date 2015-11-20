@@ -36,10 +36,10 @@ import static org.testng.Assert.assertTrue;
 public class LuceneBackedQueryParserTest {
 
     private final MiruSchema schema = new MiruSchema.Builder("test", 0)
-        .setFieldDefinitions(new MiruFieldDefinition[] {
-            new MiruFieldDefinition(0, "a", MiruFieldDefinition.Type.multiTerm, MiruFieldDefinition.Prefix.WILDCARD),
-            new MiruFieldDefinition(1, "b", MiruFieldDefinition.Type.multiTerm, MiruFieldDefinition.Prefix.WILDCARD)
-        })
+        .setFieldDefinitions(new MiruFieldDefinition[]{
+        new MiruFieldDefinition(0, "a", MiruFieldDefinition.Type.multiTerm, MiruFieldDefinition.Prefix.WILDCARD),
+        new MiruFieldDefinition(1, "b", MiruFieldDefinition.Type.multiTerm, MiruFieldDefinition.Prefix.WILDCARD)
+    })
         .build();
 
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
@@ -53,7 +53,7 @@ public class LuceneBackedQueryParserTest {
     public void setUp() throws Exception {
         fieldIndex = new TestFieldIndex(2);
         @SuppressWarnings("unchecked")
-        MiruFieldIndex<RoaringBitmap>[] indexes = (MiruFieldIndex<RoaringBitmap>[]) new MiruFieldIndex[] {
+        MiruFieldIndex<RoaringBitmap>[] indexes = (MiruFieldIndex<RoaringBitmap>[]) new MiruFieldIndex[]{
             fieldIndex,
             null,
             null,
@@ -64,6 +64,7 @@ public class LuceneBackedQueryParserTest {
 
     @Test
     public void testBooleanExpression() throws Exception {
+        byte[] primitiveBuffer = new byte[8];
         fieldIndex.put(0, term("red"), RoaringBitmap.bitmapOf(0, 2, 4, 6, 8));
         fieldIndex.put(0, term("green"), RoaringBitmap.bitmapOf(1, 3, 5, 7, 9));
         fieldIndex.put(0, term("blue"), RoaringBitmap.bitmapOf(0, 1, 4, 5, 8, 9));
@@ -81,7 +82,8 @@ public class LuceneBackedQueryParserTest {
         // (2, 6) OR (0, 4, 8)
         // (0, 2, 4, 6, 8)
         RoaringBitmap storage = new RoaringBitmap();
-        aggregateUtil.filter(bitmaps, schema, termComposer, fieldIndexProvider, filter, new MiruSolutionLog(MiruSolutionLogLevel.NONE), storage, null, 9, -1);
+        aggregateUtil.filter(bitmaps, schema, termComposer, fieldIndexProvider, filter, new MiruSolutionLog(MiruSolutionLogLevel.NONE), storage, null, 9, -1,
+            primitiveBuffer);
         Assert.assertEquals(storage.getCardinality(), 5);
         assertTrue(storage.contains(0));
         assertTrue(storage.contains(2));
@@ -92,6 +94,7 @@ public class LuceneBackedQueryParserTest {
 
     @Test
     public void testWildcardExpression() throws Exception {
+        byte[] primitiveBuffer = new byte[8];
         fieldIndex.put(0, term("red"), RoaringBitmap.bitmapOf(0, 2, 4, 6, 8));
         fieldIndex.put(0, term("green"), RoaringBitmap.bitmapOf(1, 3, 5, 7, 9));
         fieldIndex.put(0, term("blue"), RoaringBitmap.bitmapOf(0, 1, 4, 5, 8, 9));
@@ -109,7 +112,8 @@ public class LuceneBackedQueryParserTest {
         // (2, 6) OR (0, 4, 8)
         // (0, 2, 4, 6, 8)
         RoaringBitmap storage = new RoaringBitmap();
-        aggregateUtil.filter(bitmaps, schema, termComposer, fieldIndexProvider, filter, new MiruSolutionLog(MiruSolutionLogLevel.NONE), storage, null, 9, -1);
+        aggregateUtil.filter(bitmaps, schema, termComposer, fieldIndexProvider, filter, new MiruSolutionLog(MiruSolutionLogLevel.NONE), storage, null, 9, -1,
+            primitiveBuffer);
         Assert.assertEquals(storage.getCardinality(), 5);
         assertTrue(storage.contains(0));
         assertTrue(storage.contains(2));
@@ -148,21 +152,23 @@ public class LuceneBackedQueryParserTest {
         @Override
         public MiruInvertedIndex<RoaringBitmap> get(int fieldId, MiruTermId termId) throws Exception {
             @SuppressWarnings("unchecked")
+            byte[] primitiveBuffer = new byte[8];
             MiruInvertedIndex<RoaringBitmap> mockInvertedIndex = (MiruInvertedIndex<RoaringBitmap>) Mockito.mock(MiruInvertedIndex.class);
-            Mockito.when(mockInvertedIndex.getIndex()).thenReturn(Optional.fromNullable(indexes[fieldId].get(termId)));
+            Mockito.when(mockInvertedIndex.getIndex(primitiveBuffer)).thenReturn(Optional.fromNullable(indexes[fieldId].get(termId)));
             return mockInvertedIndex;
         }
 
         @Override
         public MiruInvertedIndex<RoaringBitmap> get(int fieldId, MiruTermId termId, int considerIfIndexIdGreaterThanN) throws Exception {
             @SuppressWarnings("unchecked")
+            byte[] primitiveBuffer = new byte[8];
             MiruInvertedIndex<RoaringBitmap> mockInvertedIndex = (MiruInvertedIndex<RoaringBitmap>) Mockito.mock(MiruInvertedIndex.class);
-            Mockito.when(mockInvertedIndex.getIndex()).thenReturn(Optional.fromNullable(indexes[fieldId].get(termId)));
+            Mockito.when(mockInvertedIndex.getIndex(primitiveBuffer)).thenReturn(Optional.fromNullable(indexes[fieldId].get(termId)));
             return mockInvertedIndex;
         }
 
         @Override
-        public void streamTermIdsForField(int fieldId, List<KeyRange> ranges, TermIdStream termIdStream) throws Exception {
+        public void streamTermIdsForField(int fieldId, List<KeyRange> ranges, TermIdStream termIdStream, byte[] primitiveBuffer) throws Exception {
             for (KeyRange range : ranges) {
                 MiruTermId fromKey = new MiruTermId(range.getStartInclusiveKey());
                 MiruTermId toKey = new MiruTermId(range.getStopExclusiveKey());
@@ -180,37 +186,37 @@ public class LuceneBackedQueryParserTest {
         }
 
         @Override
-        public void append(int fieldId, MiruTermId termId, int[] ids, long[] counts) throws Exception {
+        public void append(int fieldId, MiruTermId termId, int[] ids, long[] counts, byte[] primitiveBuffer) throws Exception {
             throw new UnsupportedOperationException("Nope");
         }
 
         @Override
-        public void set(int fieldId, MiruTermId termId, int[] ids, long[] counts) throws Exception {
+        public void set(int fieldId, MiruTermId termId, int[] ids, long[] counts, byte[] primitiveBuffer) throws Exception {
             throw new UnsupportedOperationException("Nope");
         }
 
         @Override
-        public void remove(int fieldId, MiruTermId termId, int id) throws Exception {
+        public void remove(int fieldId, MiruTermId termId, int id, byte[] primitiveBuffer) throws Exception {
             throw new UnsupportedOperationException("Nope");
         }
 
         @Override
-        public long getCardinality(int fieldId, MiruTermId termId, int id) throws Exception {
+        public long getCardinality(int fieldId, MiruTermId termId, int id, byte[] primitiveBuffer) throws Exception {
             throw new UnsupportedOperationException("Nope");
         }
 
         @Override
-        public long[] getCardinalities(int fieldId, MiruTermId termId, int[] ids) throws Exception {
+        public long[] getCardinalities(int fieldId, MiruTermId termId, int[] ids, byte[] primitiveBuffer) throws Exception {
             throw new UnsupportedOperationException("Nope");
         }
 
         @Override
-        public long getGlobalCardinality(int fieldId, MiruTermId termId) throws Exception {
+        public long getGlobalCardinality(int fieldId, MiruTermId termId, byte[] primitiveBuffer) throws Exception {
             throw new UnsupportedOperationException("Nope");
         }
 
         @Override
-        public void mergeCardinalities(int fieldId, MiruTermId termId, int[] ids, long[] counts) throws Exception {
+        public void mergeCardinalities(int fieldId, MiruTermId termId, int[] ids, long[] counts, byte[] primitiveBuffer) throws Exception {
             throw new UnsupportedOperationException("Nope");
         }
     }

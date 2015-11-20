@@ -105,16 +105,19 @@ public class MiruIndexFieldValues<BM> {
             final int finalFieldId = fieldId;
             for (final FieldValuesWork fieldValuesWork : fieldWork) {
                 futures.add(indexExecutor.submit(() -> {
+                    byte[] primitiveBuffer = new byte[8];
                     if (repair) {
                         fieldIndex.set(finalFieldId,
                             fieldValuesWork.fieldValue,
                             fieldValuesWork.ids.toArray(),
-                            fieldValuesWork.counts != null ? fieldValuesWork.counts.toArray() : null);
+                            fieldValuesWork.counts != null ? fieldValuesWork.counts.toArray() : null,
+                            primitiveBuffer);
                     } else {
                         fieldIndex.append(finalFieldId,
                             fieldValuesWork.fieldValue,
                             fieldValuesWork.ids.toArray(),
-                            fieldValuesWork.counts != null ? fieldValuesWork.counts.toArray() : null);
+                            fieldValuesWork.counts != null ? fieldValuesWork.counts.toArray() : null,
+                            primitiveBuffer);
                     }
                     return null;
                 }));
@@ -136,6 +139,7 @@ public class MiruIndexFieldValues<BM> {
     }
 
     private static class TermWork {
+
         private final TIntList ids = new TIntArrayList();
         private final TLongList counts;
 

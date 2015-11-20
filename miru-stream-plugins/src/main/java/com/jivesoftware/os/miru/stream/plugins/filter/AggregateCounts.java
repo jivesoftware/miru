@@ -93,6 +93,8 @@ public class AggregateCounts {
         BM answer,
         Optional<BM> counter) throws Exception {
 
+        byte[] primitiveBuffer = new byte[8];
+
         int collectedDistincts = 0;
         int skippedDistincts = 0;
         Set<String> aggregateTerms;
@@ -108,7 +110,7 @@ public class AggregateCounts {
             BM filtered = bitmaps.create();
             aggregateUtil.filter(bitmaps, requestContext.getSchema(), requestContext.getTermComposer(), requestContext.getFieldIndexProvider(),
                 constraint.constraintsFilter,
-                solutionLog, filtered, null, requestContext.getActivityIndex().lastId(), -1);
+                solutionLog, filtered, null, requestContext.getActivityIndex().lastId(primitiveBuffer), -1, primitiveBuffer);
 
             if (bitmaps.supportsInPlace()) {
                 bitmaps.inPlaceAnd(answer, filtered);
@@ -142,7 +144,7 @@ public class AggregateCounts {
         if (fieldId >= 0) {
             BM unreadIndex = null;
             if (!MiruStreamId.NULL.equals(streamId)) {
-                Optional<BM> unread = requestContext.getUnreadTrackingIndex().getUnread(streamId).getIndex();
+                Optional<BM> unread = requestContext.getUnreadTrackingIndex().getUnread(streamId).getIndex(primitiveBuffer);
                 if (unread.isPresent()) {
                     unreadIndex = unread.get();
                 }
@@ -156,7 +158,7 @@ public class AggregateCounts {
             CardinalityAndLastSetBit answerCollector = null;
             for (String aggregateTerm : aggregateTerms) { // Consider
                 MiruTermId aggregateTermId = termComposer.compose(fieldDefinition, aggregateTerm);
-                Optional<BM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex();
+                Optional<BM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex(primitiveBuffer);
                 if (!optionalTermIndex.isPresent()) {
                     continue;
                 }
@@ -207,7 +209,7 @@ public class AggregateCounts {
                     break;
                 }
 
-                MiruInternalActivity activity = requestContext.getActivityIndex().get(tenantId, lastSetBit);
+                MiruInternalActivity activity = requestContext.getActivityIndex().get(tenantId, lastSetBit, primitiveBuffer);
                 MiruTermId[] fieldValues = activity.fieldsValues[fieldId];
                 log.trace("fieldValues={}", (Object) fieldValues);
                 if (fieldValues == null || fieldValues.length == 0) {
@@ -228,7 +230,7 @@ public class AggregateCounts {
                     String aggregateTerm = termComposer.decompose(fieldDefinition, aggregateTermId);
                     aggregateTerms.add(aggregateTerm);
 
-                    Optional<BM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex();
+                    Optional<BM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex(primitiveBuffer);
                     checkState(optionalTermIndex.isPresent(), "Unable to load inverted index for aggregateTermId: " + aggregateTermId);
 
                     BM termIndex = optionalTermIndex.get();
