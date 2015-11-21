@@ -19,7 +19,7 @@ public class WaveformRegression {
         SimpleRegression r = new SimpleRegression();
         int l = samples.length;
         for (int i = 0; i < l; i++) {
-            double s = i / (l - 1);
+            double s = (double) i / (double) (l - 1);
             r.addData(s, samples[i]);
         }
         return r;
