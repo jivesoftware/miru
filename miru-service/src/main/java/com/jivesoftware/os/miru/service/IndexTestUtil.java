@@ -12,6 +12,7 @@ import com.jivesoftware.os.filer.io.KeyValueMarshaller;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.io.api.KeyValueStore;
 import com.jivesoftware.os.filer.io.api.KeyedFilerStore;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.filer.io.chunk.ChunkStore;
 import com.jivesoftware.os.filer.keyed.store.TxKeyValueStore;
 import com.jivesoftware.os.filer.keyed.store.TxKeyedFilerStore;
@@ -105,16 +106,16 @@ public class IndexTestUtil {
     public static <BM extends IBM, IBM> MiruContext<IBM, RCVSSipCursor> buildInMemoryContext(int numberOfChunkStores,
         MiruBitmaps<BM, IBM> bitmaps,
         MiruPartitionCoord coord) throws Exception {
-            byte[] primitiveBuffer = new byte[8];
-        return factory(numberOfChunkStores).allocate(bitmaps, coord, MiruBackingStorage.memory, primitiveBuffer);
+            StackBuffer stackBuffer = new StackBuffer();
+        return factory(numberOfChunkStores).allocate(bitmaps, coord, MiruBackingStorage.memory, stackBuffer);
 
     }
 
     public static <BM extends IBM, IBM> MiruContext<IBM, RCVSSipCursor> buildOnDiskContext(int numberOfChunkStores,
         MiruBitmaps<BM, IBM> bitmaps,
         MiruPartitionCoord coord) throws Exception {
-            byte[] primitiveBuffer = new byte[8];
-        return factory(numberOfChunkStores).allocate(bitmaps, coord, MiruBackingStorage.disk, primitiveBuffer);
+            StackBuffer stackBuffer = new StackBuffer();
+        return factory(numberOfChunkStores).allocate(bitmaps, coord, MiruBackingStorage.disk, stackBuffer);
 
     }
 
@@ -137,11 +138,11 @@ public class IndexTestUtil {
     public static ChunkStore[] buildByteBufferBackedChunkStores(int numberOfChunkStores, ByteBufferFactory byteBufferFactory, long segmentSize)
         throws Exception {
 
-        byte[] primitiveBuffer = new byte[8];
+        StackBuffer stackBuffer = new StackBuffer();
         ChunkStore[] chunkStores = new ChunkStore[numberOfChunkStores];
         ChunkStoreInitializer chunkStoreInitializer = new ChunkStoreInitializer();
         for (int i = 0; i < numberOfChunkStores; i++) {
-            chunkStores[i] = chunkStoreInitializer.create(byteBufferFactory, segmentSize, new HeapByteBufferFactory(), 500, 5_000, primitiveBuffer);
+            chunkStores[i] = chunkStoreInitializer.create(byteBufferFactory, segmentSize, new HeapByteBufferFactory(), 500, 5_000, stackBuffer);
         }
 
         return chunkStores;
@@ -153,12 +154,12 @@ public class IndexTestUtil {
         for (int i = 0; i < numberOfChunkStores; i++) {
             pathsToPartitions[i] = Files.createTempDirectory("chunks").toFile();
         }
-        byte[] primitiveBuffer = new byte[8];
+        StackBuffer stackBuffer = new StackBuffer();
         ChunkStore[] chunkStores = new ChunkStore[numberOfChunkStores];
         ChunkStoreInitializer chunkStoreInitializer = new ChunkStoreInitializer();
         for (int i = 0; i < numberOfChunkStores; i++) {
             chunkStores[i] = chunkStoreInitializer.openOrCreate(pathsToPartitions, i, "chunks-" + i, 512, new HeapByteBufferFactory(), 500, 5_000,
-                primitiveBuffer);
+                stackBuffer);
         }
 
         return chunkStores;

@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.service.index.delta;
 import com.google.common.base.Optional;
 import com.google.common.cache.Cache;
 import com.google.common.collect.Maps;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
@@ -34,8 +35,8 @@ public class MiruDeltaInboxIndex<BM extends IBM, IBM> implements MiruInboxIndex<
     }
 
     @Override
-    public void append(MiruStreamId streamId, byte[] primitiveBuffer, int... ids) throws Exception {
-        getAppender(streamId).append(primitiveBuffer, ids);
+    public void append(MiruStreamId streamId, StackBuffer stackBuffer, int... ids) throws Exception {
+        getAppender(streamId).append(stackBuffer, ids);
     }
 
     @Override
@@ -58,8 +59,8 @@ public class MiruDeltaInboxIndex<BM extends IBM, IBM> implements MiruInboxIndex<
     }
 
     @Override
-    public int getLastActivityIndex(MiruStreamId streamId, byte[] primitiveBuffer) throws Exception {
-        return getInbox(streamId).lastId(primitiveBuffer);
+    public int getLastActivityIndex(MiruStreamId streamId, StackBuffer stackBuffer) throws Exception {
+        return getInbox(streamId).lastId(stackBuffer);
     }
 
     @Override
@@ -68,9 +69,9 @@ public class MiruDeltaInboxIndex<BM extends IBM, IBM> implements MiruInboxIndex<
     }
 
     @Override
-    public void merge(byte[] primitiveBuffer) throws Exception {
+    public void merge(StackBuffer stackBuffer) throws Exception {
         for (MiruDeltaInvertedIndex<BM, IBM> delta : inboxDeltas.values()) {
-            delta.merge(primitiveBuffer);
+            delta.merge(stackBuffer);
         }
         inboxDeltas.clear();
     }

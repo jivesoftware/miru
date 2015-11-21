@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.service.partition;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.ListMultimap;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
@@ -84,8 +85,8 @@ public class MiruClusterPartitionDirector implements MiruPartitionDirector {
     public void setStorage(MiruTenantId tenantId, MiruPartitionId partitionId, MiruBackingStorage storage) throws Exception {
         MiruTenantTopology topology = expectedTenants.getLocalTopology(tenantId);
         if (topology != null) {
-            byte[] primitiveBuffer = new byte[8];
-            topology.setStorage(partitionId, storage, primitiveBuffer);
+            StackBuffer stackBuffer = new StackBuffer();
+            topology.setStorage(partitionId, storage, stackBuffer);
         }
     }
 

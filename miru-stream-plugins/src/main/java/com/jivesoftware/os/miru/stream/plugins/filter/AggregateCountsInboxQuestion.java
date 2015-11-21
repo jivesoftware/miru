@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.stream.plugins.filter;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
@@ -57,7 +58,7 @@ public class AggregateCountsInboxQuestion implements Question<AggregateCountsQue
     public <BM extends IBM, IBM> MiruPartitionResponse<AggregateCountsAnswer> askLocal(MiruRequestHandle<BM, IBM, ?> handle,
         Optional<AggregateCountsReport> report)
         throws Exception {
-        byte[] primitiveBuffer = new byte[8];
+        StackBuffer stackBuffer = new StackBuffer();
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
         MiruRequestContext<IBM, ?> context = handle.getRequestContext();
         MiruBitmaps<BM, IBM> bitmaps = handle.getBitmaps();
@@ -80,14 +81,14 @@ public class AggregateCountsInboxQuestion implements Question<AggregateCountsQue
         if (!MiruTimeRange.ALL_TIME.equals(request.query.answerTimeRange)) {
             MiruTimeRange timeRange = request.query.answerTimeRange;
 
-            ands.add(bitmaps.buildTimeRangeMask(context.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp, primitiveBuffer));
+            ands.add(bitmaps.buildTimeRangeMask(context.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp, stackBuffer));
         }
         if (!MiruTimeRange.ALL_TIME.equals(request.query.countTimeRange)) {
             counterAnds.add(bitmaps.buildTimeRangeMask(
-                context.getTimeIndex(), request.query.countTimeRange.smallestTimestamp, request.query.countTimeRange.largestTimestamp, primitiveBuffer));
+                context.getTimeIndex(), request.query.countTimeRange.smallestTimestamp, request.query.countTimeRange.largestTimestamp, stackBuffer));
         }
 
-        Optional<IBM> inbox = context.getInboxIndex().getInbox(request.query.streamId).getIndex(primitiveBuffer);
+        Optional<IBM> inbox = context.getInboxIndex().getInbox(request.query.streamId).getIndex(stackBuffer);
         if (inbox.isPresent()) {
             ands.add(inbox.get());
         } else {
@@ -99,16 +100,16 @@ public class AggregateCountsInboxQuestion implements Question<AggregateCountsQue
         }
 
         if (!MiruAuthzExpression.NOT_PROVIDED.equals(request.authzExpression)) {
-            ands.add(context.getAuthzIndex().getCompositeAuthz(request.authzExpression,primitiveBuffer));
+            ands.add(context.getAuthzIndex().getCompositeAuthz(request.authzExpression,stackBuffer));
         }
 
         if (unreadOnly) {
-            Optional<IBM> unreadIndex = context.getUnreadTrackingIndex().getUnread(request.query.streamId).getIndex(primitiveBuffer);
+            Optional<IBM> unreadIndex = context.getUnreadTrackingIndex().getUnread(request.query.streamId).getIndex(stackBuffer);
             if (unreadIndex.isPresent()) {
                 ands.add(unreadIndex.get());
             }
         }
-        ands.add(bitmaps.buildIndexMask(context.getActivityIndex().lastId(primitiveBuffer), context.getRemovalIndex().getIndex(primitiveBuffer)));
+        ands.add(bitmaps.buildIndexMask(context.getActivityIndex().lastId(stackBuffer), context.getRemovalIndex().getIndex(stackBuffer)));
 
         BM answer = bitmaps.create();
         bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
@@ -117,7 +118,7 @@ public class AggregateCountsInboxQuestion implements Question<AggregateCountsQue
         counterAnds.add(answer);
         if (!unreadOnly) {
             // if unreadOnly is true, the read-tracking index would already be applied to the answer
-            Optional<IBM> unreadIndex = context.getUnreadTrackingIndex().getUnread(request.query.streamId).getIndex(primitiveBuffer);
+            Optional<IBM> unreadIndex = context.getUnreadTrackingIndex().getUnread(request.query.streamId).getIndex(stackBuffer);
             if (unreadIndex.isPresent()) {
                 counterAnds.add(unreadIndex.get());
             }

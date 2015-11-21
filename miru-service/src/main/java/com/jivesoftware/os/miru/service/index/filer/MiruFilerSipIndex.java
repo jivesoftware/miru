@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.service.index.filer;
 
 import com.google.common.base.Optional;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.plugin.index.MiruSipIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruSipIndexMarshaller;
@@ -30,15 +31,15 @@ public class MiruFilerSipIndex<S extends MiruSipCursor<S>> implements MiruSipInd
     }
 
     @Override
-    public Optional<S> getSip(byte[] primitiveBuffer) throws IOException {
+    public Optional<S> getSip(StackBuffer stackBuffer) throws IOException {
         S sip = sipReference.get();
         if (sip == null && !absent.get()) {
-            sipFilerProvider.read(null, (monkey, filer, _primitiveBuffer, lock) -> {
+            sipFilerProvider.read(null, (monkey, filer, _stackBuffer, lock) -> {
                 if (filer != null) {
                     synchronized (lock) {
                         filer.seek(0);
                         try {
-                            sipReference.set(marshaller.fromFiler(filer, _primitiveBuffer));
+                            sipReference.set(marshaller.fromFiler(filer, _stackBuffer));
                         } catch (Exception e) {
                             LOG.warn("Failed to deserialize sip, length={}", filer.getSize());
                             sipReference.set(null);
@@ -50,22 +51,22 @@ public class MiruFilerSipIndex<S extends MiruSipCursor<S>> implements MiruSipInd
                     absent.set(true);
                 }
                 return null;
-            }, primitiveBuffer);
+            }, stackBuffer);
             sip = sipReference.get();
         }
         return Optional.fromNullable(sip);
     }
 
     @Override
-    public boolean setSip(final S sip, byte[] primitiveBuffer) throws IOException {
-        return sipFilerProvider.readWriteAutoGrow(marshaller.expectedCapacity(sip), (monkey, filer, _primitiveBuffer, lock) -> {
-            S existingSip = getSip(_primitiveBuffer).orNull();
+    public boolean setSip(final S sip, StackBuffer stackBuffer) throws IOException {
+        return sipFilerProvider.readWriteAutoGrow(marshaller.expectedCapacity(sip), (monkey, filer, _stackBuffer, lock) -> {
+            S existingSip = getSip(_stackBuffer).orNull();
             while (existingSip == null || sip.compareTo(existingSip) > 0) {
                 if (sipReference.compareAndSet(existingSip, sip)) {
                     synchronized (lock) {
                         filer.seek(0);
                         try {
-                            marshaller.toFiler(filer, sip, _primitiveBuffer);
+                            marshaller.toFiler(filer, sip, _stackBuffer);
                         } catch (Exception e) {
                             throw new IOException("Failed to serialize sip");
                         }
@@ -76,6 +77,6 @@ public class MiruFilerSipIndex<S extends MiruSipCursor<S>> implements MiruSipInd
                 }
             }
             return false;
-        }, primitiveBuffer);
+        }, stackBuffer);
     }
 }

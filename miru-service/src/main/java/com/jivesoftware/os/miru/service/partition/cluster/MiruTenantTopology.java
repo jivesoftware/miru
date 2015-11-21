@@ -4,6 +4,7 @@ import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
@@ -91,15 +92,15 @@ public class MiruTenantTopology<BM extends IBM, IBM> {
         }
     }
 
-    public boolean updateStorage(MiruPartitionId partitionId, MiruBackingStorage backingStorage, byte[] primitiveBuffer) throws Exception {
+    public boolean updateStorage(MiruPartitionId partitionId, MiruBackingStorage backingStorage, StackBuffer stackBuffer) throws Exception {
         Optional<MiruLocalHostedPartition<BM, IBM, ?, ?>> partition = getPartition(partitionId);
-        return partition.isPresent() && partition.get().setStorage(backingStorage, primitiveBuffer);
+        return partition.isPresent() && partition.get().setStorage(backingStorage, stackBuffer);
     }
 
-    public void setStorage(MiruPartitionId partitionId, MiruBackingStorage storage, byte[] primitiveBuffer) throws Exception {
+    public void setStorage(MiruPartitionId partitionId, MiruBackingStorage storage, StackBuffer stackBuffer) throws Exception {
         Optional<MiruLocalHostedPartition<BM, IBM, ?, ?>> partition = getPartition(partitionId);
         if (partition.isPresent()) {
-            partition.get().setStorage(storage, primitiveBuffer);
+            partition.get().setStorage(storage, stackBuffer);
         }
     }
 

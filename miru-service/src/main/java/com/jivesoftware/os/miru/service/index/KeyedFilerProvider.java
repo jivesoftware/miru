@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.service.index;
 
 import com.jivesoftware.os.filer.io.api.ChunkTransaction;
 import com.jivesoftware.os.filer.io.api.KeyedFilerStore;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import java.io.IOException;
 
 /**
@@ -18,18 +19,18 @@ public class KeyedFilerProvider<H, M> implements MiruFilerProvider<H, M> {
     }
 
     @Override
-    public <R> R read(H initialCapacity, final ChunkTransaction<M, R> transaction, byte[] primitiveBuffer) throws IOException {
-        return keyedFilerStore.read(key, initialCapacity, transaction, primitiveBuffer);
+    public <R> R read(H initialCapacity, final ChunkTransaction<M, R> transaction, StackBuffer stackBuffer) throws IOException {
+        return keyedFilerStore.read(key, initialCapacity, transaction, stackBuffer);
     }
 
     @Override
-    public <R> R writeNewReplace(H initialCapacity, final ChunkTransaction<M, R> transaction, byte[] primitiveBuffer) throws IOException {
-        return keyedFilerStore.writeNewReplace(key, initialCapacity, transaction, primitiveBuffer);
+    public <R> R writeNewReplace(H initialCapacity, final ChunkTransaction<M, R> transaction, StackBuffer stackBuffer) throws IOException {
+        return keyedFilerStore.writeNewReplace(key, initialCapacity, transaction, stackBuffer);
     }
 
     @Override
-    public <R> R readWriteAutoGrow(H initialCapacity, final ChunkTransaction<M, R> transaction, byte[] primitiveBuffer) throws IOException {
-        return keyedFilerStore.readWriteAutoGrow(key, initialCapacity, transaction, primitiveBuffer);
+    public <R> R readWriteAutoGrow(H initialCapacity, final ChunkTransaction<M, R> transaction, StackBuffer stackBuffer) throws IOException {
+        return keyedFilerStore.readWriteAutoGrow(key, initialCapacity, transaction, stackBuffer);
     }
 
 }

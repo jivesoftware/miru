@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.service.index.delta;
 
 import com.google.common.base.Optional;
 import com.google.common.cache.Cache;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
@@ -43,8 +44,8 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     private final Callable<Optional<IBM>> indexLoader = new Callable<Optional<IBM>>() {
         @Override
         public Optional<IBM> call() throws Exception {
-            byte[] primitiveBuffer = new byte[8];
-            Optional<IBM> index = delta.replaced ? Optional.<IBM>absent() : backingIndex.getIndex(primitiveBuffer);
+            StackBuffer stackBuffer = new StackBuffer();
+            Optional<IBM> index = delta.replaced ? Optional.<IBM>absent() : backingIndex.getIndex(stackBuffer);
             if (index.isPresent()) {
                 IBM got = index.get();
                 IBM exclude = delta.andNot;
@@ -67,7 +68,7 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     };
 
     @Override
-    public Optional<IBM> getIndex(byte[] primitiveBuffer) throws Exception {
+    public Optional<IBM> getIndex(StackBuffer stackBuffer) throws Exception {
         if (fieldIndexCache != null) {
             return (Optional<IBM>) fieldIndexCache.get(indexKey, indexLoader);
         } else {
@@ -76,7 +77,7 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     }
 
     @Override
-    public <R> R txIndex(IndexTx<R, IBM> tx, byte[] primitiveBuffer) throws Exception {
+    public <R> R txIndex(IndexTx<R, IBM> tx, StackBuffer stackBuffer) throws Exception {
         if (fieldIndexCache != null) {
             Optional<IBM> index = (Optional<IBM>) fieldIndexCache.getIfPresent(indexKey);
             if (index != null) {
@@ -90,11 +91,11 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
             return tx.tx(delta.or, null);
         } else if (delta.or != null || delta.andNot != null) {
             LOG.inc("txIndex>delta", 1);
-            Optional<IBM> index = getIndex(primitiveBuffer);
+            Optional<IBM> index = getIndex(stackBuffer);
             return tx.tx(index.orNull(), null);
         } else {
             LOG.inc("txIndex>backing", 1);
-            return backingIndex.txIndex(tx, primitiveBuffer);
+            return backingIndex.txIndex(tx, stackBuffer);
         }
     }
 
@@ -108,12 +109,12 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     }
 
     @Override
-    public Optional<IBM> getIndexUnsafe(byte[] primitiveBuffer) throws Exception {
-        return getIndex(primitiveBuffer);
+    public Optional<IBM> getIndexUnsafe(StackBuffer stackBuffer) throws Exception {
+        return getIndex(stackBuffer);
     }
 
     @Override
-    public void replaceIndex(IBM index, int setLastId, byte[] primitiveBuffer) throws Exception {
+    public void replaceIndex(IBM index, int setLastId, StackBuffer stackBuffer) throws Exception {
         synchronized (delta) {
             delta.replaced = true;
             delta.andNot = null;
@@ -124,7 +125,7 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     }
 
     @Override
-    public void append(byte[] primitiveBuffer, int... ids) throws Exception {
+    public void append(StackBuffer stackBuffer, int... ids) throws Exception {
         if (ids.length == 0) {
             return;
         }
@@ -145,7 +146,7 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     }
 
     @Override
-    public void appendAndExtend(List<Integer> ids, int lastId, byte[] primitiveBuffer) throws Exception {
+    public void appendAndExtend(List<Integer> ids, int lastId, StackBuffer stackBuffer) throws Exception {
         if (ids.isEmpty()) {
             return;
         }
@@ -165,7 +166,7 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     }
 
     @Override
-    public void remove(int id, byte[] primitiveBuffer) throws Exception {
+    public void remove(int id, StackBuffer stackBuffer) throws Exception {
         synchronized (delta) {
             if (delta.or != null) {
                 BM container = bitmaps.create();
@@ -185,7 +186,7 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     }
 
     @Override
-    public void set(byte[] primitiveBuffer, int... ids) throws Exception {
+    public void set(StackBuffer stackBuffer, int... ids) throws Exception {
         if (ids.length == 0) {
             return;
         }
@@ -213,15 +214,15 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     }
 
     @Override
-    public int lastId(byte[] primitiveBuffer) throws Exception {
+    public int lastId(StackBuffer stackBuffer) throws Exception {
         if (delta.lastId < 0) {
-            delta.lastId = backingIndex.lastId(primitiveBuffer);
+            delta.lastId = backingIndex.lastId(stackBuffer);
         }
         return delta.lastId;
     }
 
     @Override
-    public void andNotToSourceSize(List<IBM> masks, byte[] primitiveBuffer) throws Exception {
+    public void andNotToSourceSize(List<IBM> masks, StackBuffer stackBuffer) throws Exception {
         if (masks.isEmpty()) {
             return;
         }
@@ -232,7 +233,7 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
                 delta.or = container;
             }
 
-            Optional<IBM> index = backingIndex.getIndex(primitiveBuffer);
+            Optional<IBM> index = backingIndex.getIndex(stackBuffer);
             if (index.isPresent() || delta.replaced) {
                 BM container = bitmaps.create();
                 bitmaps.or(container, masks);
@@ -262,7 +263,7 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     }
 
     @Override
-    public void orToSourceSize(IBM mask, byte[] primitiveBuffer) throws Exception {
+    public void orToSourceSize(IBM mask, StackBuffer stackBuffer) throws Exception {
         synchronized (delta) {
             // technically removing from delta.andNot is unnecessary (since delta.or is applied on top), but reducing its size saves memory
             if (delta.andNot != null) {
@@ -280,7 +281,7 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
                 container = mask;
             }
 
-            Optional<IBM> index = delta.replaced ? Optional.<IBM>absent() : backingIndex.getIndex(primitiveBuffer);
+            Optional<IBM> index = delta.replaced ? Optional.<IBM>absent() : backingIndex.getIndex(stackBuffer);
             if (index.isPresent()) {
                 // reduce size of delta
                 IBM got = index.get();
@@ -295,7 +296,7 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     }
 
     @Override
-    public void andNot(IBM mask, byte[] primitiveBuffer) throws Exception {
+    public void andNot(IBM mask, StackBuffer stackBuffer) throws Exception {
         synchronized (delta) {
             if (delta.or != null) {
                 BM container = bitmaps.create();
@@ -303,7 +304,7 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
                 delta.or = container;
             }
 
-            Optional<IBM> index = backingIndex.getIndex(primitiveBuffer);
+            Optional<IBM> index = backingIndex.getIndex(stackBuffer);
             if (index.isPresent() || delta.replaced) {
                 IBM container = mask;
 
@@ -330,7 +331,7 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     }
 
     @Override
-    public void or(IBM mask, byte[] primitiveBuffer) throws Exception {
+    public void or(IBM mask, StackBuffer stackBuffer) throws Exception {
         synchronized (delta) {
             // technically removing from delta.andNot is unnecessary (since delta.or is applied on top), but reducing its size saves memory
             if (delta.andNot != null) {
@@ -348,7 +349,7 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
                 container = mask;
             }
 
-            Optional<IBM> index = delta.replaced ? Optional.<IBM>absent() : backingIndex.getIndex(primitiveBuffer);
+            Optional<IBM> index = delta.replaced ? Optional.<IBM>absent() : backingIndex.getIndex(stackBuffer);
             if (index.isPresent()) {
                 // reduce size of delta
                 IBM got = index.get();
@@ -363,7 +364,7 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     }
 
     @Override
-    public void merge(byte[] primitiveBuffer) throws Exception {
+    public void merge(StackBuffer stackBuffer) throws Exception {
         if (delta.andNot == null && delta.or == null) {
             return;
         }
@@ -371,7 +372,7 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
         synchronized (delta) {
             Optional<IBM> index = indexLoader.call();
             if (index.isPresent()) {
-                backingIndex.replaceIndex(index.get(), Math.max(backingIndex.lastId(primitiveBuffer), delta.lastId), primitiveBuffer);
+                backingIndex.replaceIndex(index.get(), Math.max(backingIndex.lastId(stackBuffer), delta.lastId), stackBuffer);
             }
             delta.lastId = -1;
             delta.andNot = null;

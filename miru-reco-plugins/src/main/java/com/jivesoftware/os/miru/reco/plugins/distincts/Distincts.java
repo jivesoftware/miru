@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.reco.plugins.distincts;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.filer.io.api.KeyRange;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
@@ -60,7 +61,7 @@ public class Distincts {
         int gatherBatchSize,
         MiruSolutionLog solutionLog,
         TermIdStream termIdStream) throws Exception {
-        byte[] primitiveBuffer = new byte[8];
+        StackBuffer stackBuffer = new StackBuffer();
 
         log.debug("Gather distincts for query={}", query);
 
@@ -80,7 +81,7 @@ public class Distincts {
                 }
 
                 requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary)
-                    .streamTermIdsForField(fieldId, ranges, termIdStream, primitiveBuffer);
+                    .streamTermIdsForField(fieldId, ranges, termIdStream, stackBuffer);
             } else {
                 long start = System.currentTimeMillis();
                 final byte[][] prefixesAsBytes;
@@ -96,12 +97,12 @@ public class Distincts {
 
                 List<IBM> ands = Lists.newArrayList();
                 BM constrained = aggregateUtil.filter(bitmaps, requestContext.getSchema(), termComposer, requestContext.getFieldIndexProvider(),
-                    query.constraintsFilter, solutionLog, null, requestContext.getActivityIndex().lastId(primitiveBuffer), -1, primitiveBuffer);
+                    query.constraintsFilter, solutionLog, null, requestContext.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
                 ands.add(constrained);
 
                 if (!MiruTimeRange.ALL_TIME.equals(query.timeRange)) {
                     MiruTimeRange timeRange = query.timeRange;
-                    ands.add(bitmaps.buildTimeRangeMask(requestContext.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp, primitiveBuffer));
+                    ands.add(bitmaps.buildTimeRangeMask(requestContext.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp, stackBuffer));
                 }
 
                 BM result = bitmaps.create();
@@ -115,7 +116,7 @@ public class Distincts {
                 start = System.currentTimeMillis();
                 Set<MiruTermId> termIds = Sets.newHashSet();
                 //TODO expose batch size to query?
-                aggregateUtil.gather(bitmaps, requestContext, result, fieldId, gatherBatchSize, solutionLog, termIds, primitiveBuffer);
+                aggregateUtil.gather(bitmaps, requestContext, result, fieldId, gatherBatchSize, solutionLog, termIds, stackBuffer);
                 solutionLog.log(MiruSolutionLogLevel.INFO, "distincts gatherDirect: gather {} ms.", System.currentTimeMillis() - start);
 
                 if (prefixesAsBytes.length > 0) {

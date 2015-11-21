@@ -4,6 +4,7 @@ import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multiset;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -107,7 +108,7 @@ public class MiruIndexFieldValues<BM> {
             final int finalFieldId = fieldId;
             for (final FieldValuesWork fieldValuesWork : fieldWork) {
                 futures.add(indexExecutor.submit(() -> {
-                    byte[] primitiveBuffer = new byte[8];
+                    StackBuffer stackBuffer = new StackBuffer();
                     if (repair) {
                         log.inc("count>set", fieldValuesWork.ids.size());
                         log.inc("count>set", fieldValuesWork.ids.size(), tenantId.toString());
@@ -115,7 +116,7 @@ public class MiruIndexFieldValues<BM> {
                             fieldValuesWork.fieldValue,
                             fieldValuesWork.ids.toArray(),
                             fieldValuesWork.counts != null ? fieldValuesWork.counts.toArray() : null,
-                            primitiveBuffer);
+                            stackBuffer);
                     } else {
                         log.inc("count>append", fieldValuesWork.ids.size());
                         log.inc("count>append", fieldValuesWork.ids.size(), tenantId.toString());
@@ -123,7 +124,7 @@ public class MiruIndexFieldValues<BM> {
                             fieldValuesWork.fieldValue,
                             fieldValuesWork.ids.toArray(),
                             fieldValuesWork.counts != null ? fieldValuesWork.counts.toArray() : null,
-                            primitiveBuffer);
+                            stackBuffer);
                     }
                     return null;
                 }));

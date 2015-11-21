@@ -7,12 +7,12 @@ import com.google.common.collect.Interners;
 import com.google.common.collect.Lists;
 import com.google.common.hash.Hashing;
 import com.google.common.io.Files;
-import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.jivesoftware.os.amza.client.AmzaClientProvider;
 import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.filer.chunk.store.transaction.TxCogs;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
@@ -339,7 +339,7 @@ public class MiruLocalHostedPartitionTest {
 
     @Test
     public void testQueryHandleOfflineMemMappedHotDeploy() throws Exception {
-        byte[] primitiveBuffer = new byte[8];
+        StackBuffer stackBuffer = new StackBuffer();
         MiruLocalHostedPartition<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSCursor, RCVSSipCursor> localHostedPartition =
             getRoaringLocalHostedPartition();
 
@@ -356,7 +356,7 @@ public class MiruLocalHostedPartitionTest {
         assertEquals(localHostedPartition.getState(), MiruPartitionState.offline);
         assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.disk);
 
-        try (MiruRequestHandle queryHandle = localHostedPartition.acquireQueryHandle(primitiveBuffer)) {
+        try (MiruRequestHandle queryHandle = localHostedPartition.acquireQueryHandle(stackBuffer)) {
             assertEquals(queryHandle.getCoord(), coord);
             assertNotNull(queryHandle.getRequestContext()); // would throw exception if offline
         }
@@ -364,7 +364,7 @@ public class MiruLocalHostedPartitionTest {
 
     @Test(expectedExceptions = MiruPartitionUnavailableException.class)
     public void testQueryHandleOfflineMemoryException() throws Exception {
-        byte[] primitiveBuffer = new byte[8];
+        StackBuffer stackBuffer = new StackBuffer();
         MiruLocalHostedPartition<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSCursor, RCVSSipCursor> localHostedPartition =
             getRoaringLocalHostedPartition();
 
@@ -378,7 +378,7 @@ public class MiruLocalHostedPartitionTest {
         assertEquals(localHostedPartition.getState(), MiruPartitionState.offline);
         assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.memory);
 
-        try (MiruRequestHandle queryHandle = localHostedPartition.acquireQueryHandle(primitiveBuffer)) {
+        try (MiruRequestHandle queryHandle = localHostedPartition.acquireQueryHandle(stackBuffer)) {
             queryHandle.getRequestContext(); // throws exception
         }
     }

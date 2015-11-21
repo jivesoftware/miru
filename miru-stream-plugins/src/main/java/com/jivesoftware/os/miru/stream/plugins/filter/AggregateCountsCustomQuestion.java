@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.stream.plugins.filter;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
@@ -51,7 +52,7 @@ public class AggregateCountsCustomQuestion implements Question<AggregateCountsQu
         Optional<AggregateCountsReport> report)
         throws Exception {
 
-        byte[] primitiveBuffer = new byte[8];
+        StackBuffer stackBuffer = new StackBuffer();
 
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
         MiruRequestContext<IBM, ?> context = handle.getRequestContext();
@@ -68,17 +69,17 @@ public class AggregateCountsCustomQuestion implements Question<AggregateCountsQu
         List<IBM> ands = new ArrayList<>();
 
         BM filtered = aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), request.query.streamFilter,
-            solutionLog, null, context.getActivityIndex().lastId(primitiveBuffer), -1, primitiveBuffer);
+            solutionLog, null, context.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
         ands.add(filtered);
 
-        ands.add(bitmaps.buildIndexMask(context.getActivityIndex().lastId(primitiveBuffer), context.getRemovalIndex().getIndex(primitiveBuffer)));
+        ands.add(bitmaps.buildIndexMask(context.getActivityIndex().lastId(stackBuffer), context.getRemovalIndex().getIndex(stackBuffer)));
 
         if (!MiruAuthzExpression.NOT_PROVIDED.equals(request.authzExpression)) {
-            ands.add(context.getAuthzIndex().getCompositeAuthz(request.authzExpression, primitiveBuffer));
+            ands.add(context.getAuthzIndex().getCompositeAuthz(request.authzExpression, stackBuffer));
         }
 
         if (!MiruTimeRange.ALL_TIME.equals(request.query.answerTimeRange)) {
-            ands.add(bitmaps.buildTimeRangeMask(context.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp, primitiveBuffer));
+            ands.add(bitmaps.buildTimeRangeMask(context.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp, stackBuffer));
         }
 
         BM answer = bitmaps.create();
@@ -89,7 +90,7 @@ public class AggregateCountsCustomQuestion implements Question<AggregateCountsQu
         if (!MiruTimeRange.ALL_TIME.equals(request.query.countTimeRange)) {
             counter = bitmaps.create();
             bitmaps.and(counter, Arrays.asList(answer, bitmaps.buildTimeRangeMask(
-                context.getTimeIndex(), request.query.countTimeRange.smallestTimestamp, request.query.countTimeRange.largestTimestamp, primitiveBuffer)));
+                context.getTimeIndex(), request.query.countTimeRange.smallestTimestamp, request.query.countTimeRange.largestTimestamp, stackBuffer)));
         }
 
         return new MiruPartitionResponse<>(aggregateCounts.getAggregateCounts(solutionLog, bitmaps, context, request, report, answer,

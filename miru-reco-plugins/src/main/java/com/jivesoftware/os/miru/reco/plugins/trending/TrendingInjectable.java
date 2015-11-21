@@ -41,7 +41,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.apache.commons.math.stat.descriptive.rank.Percentile;
-import org.apache.commons.math.stat.regression.SimpleRegression;
 
 import static com.google.common.base.Objects.firstNonNull;
 
@@ -95,6 +94,8 @@ public class TrendingInjectable {
 
     public MiruResponse<TrendingAnswer> scoreTrending(MiruRequest<TrendingQuery> request) throws MiruQueryServiceException {
         try {
+            WaveformRegression regression = new WaveformRegression();
+            WaveformRegression relativeRegression = new WaveformRegression();
             LOG.debug("askAndMerge: request={}", request);
             MiruTenantId tenantId = request.tenantId;
             Miru miru = provider.getMiru(tenantId);
@@ -199,13 +200,16 @@ public class TrendingInjectable {
                 if (hasCounts) {
                     if (request.query.strategies.contains(Strategy.LINEAR_REGRESSION)) {
                         if (request.query.relativeChangeTimeRange != null) {
-                            SimpleRegression regression = WaveformRegression.getRegression(waveform, firstBucket, lastBucket);
-                            SimpleRegression regressionRelative = WaveformRegression.getRegression(waveform, firstRelativeBucket, lastRelativeBucket);
-                            double rankDelta = regression.getSlope() - regressionRelative.getSlope();
-                            strategyResults.get(Strategy.LINEAR_REGRESSION).add(new Trendy(entry.getId(), regression.getSlope(), rankDelta));
+                            regression.clear();
+                            regression.add(waveform, firstBucket, lastBucket);
+                            relativeRegression.clear();
+                            relativeRegression.add(waveform, firstRelativeBucket, lastRelativeBucket);
+                            double rankDelta = regression.slope() - relativeRegression.slope();
+                            strategyResults.get(Strategy.LINEAR_REGRESSION).add(new Trendy(entry.getId(), regression.slope(), rankDelta));
                         } else {
-                            SimpleRegression regression = WaveformRegression.getRegression(waveform, 0, waveform.length);
-                            strategyResults.get(Strategy.LINEAR_REGRESSION).add(new Trendy(entry.getId(), regression.getSlope(), null));
+                            regression.clear();
+                            regression.add(waveform, 0, waveform.length);
+                            strategyResults.get(Strategy.LINEAR_REGRESSION).add(new Trendy(entry.getId(), regression.slope(), null));
                         }
                     }
                     if (request.query.strategies.contains(Strategy.LEADER)) {

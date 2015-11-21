@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.service.stream;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -43,7 +44,7 @@ public class MiruIndexLatest<BM> {
                 final MiruTermId[] fieldValues = internalActivityAndId.activity.fieldsValues[fieldDefinition.fieldId];
                 if (fieldValues != null && fieldValues.length > 0) {
                     futures.add(indexExecutor.submit(() -> {
-                        byte[] primitiveBuffer = new byte[8];
+                        StackBuffer stackBuffer = new StackBuffer();
                         // Answers the question,
                         // "What is the latest activity against each distinct value of this field?"
                         MiruInvertedIndex<BM> aggregateIndex = latestFieldIndex.getOrCreateInvertedIndex(
@@ -52,23 +53,23 @@ public class MiruIndexLatest<BM> {
                         // ["doc"] -> "d1", "d2", "d3", "d4" -> [0, 1(d1), 0, 0, 1(d2), 0, 0, 1(d3), 0, 0, 1(d4)]
                         for (MiruTermId fieldValue : fieldValues) {
                             MiruInvertedIndex<BM> fieldValueIndex = allFieldIndex.get(fieldDefinition.fieldId, fieldValue);
-                            Optional<BM> optionalIndex = fieldValueIndex.getIndexUnsafe(primitiveBuffer);
+                            Optional<BM> optionalIndex = fieldValueIndex.getIndexUnsafe(stackBuffer);
                             if (optionalIndex.isPresent()) {
                                 log.inc("count>andNot", 1);
                                 log.inc("count>andNot", 1, tenantId.toString());
-                                aggregateIndex.andNotToSourceSize(Collections.singletonList(optionalIndex.get()), primitiveBuffer);
+                                aggregateIndex.andNotToSourceSize(Collections.singletonList(optionalIndex.get()), stackBuffer);
                             }
                         }
 
                         if (repair) {
                             log.inc("count>set", 1);
                             log.inc("count>set", 1, tenantId.toString());
-                            latestFieldIndex.set(fieldDefinition.fieldId, fieldAggregateTermId, new int[] { internalActivityAndId.id }, null, primitiveBuffer);
+                            latestFieldIndex.set(fieldDefinition.fieldId, fieldAggregateTermId, new int[] { internalActivityAndId.id }, null, stackBuffer);
                         } else {
                             log.inc("count>append", 1);
                             log.inc("count>append", 1, tenantId.toString());
                             latestFieldIndex.append(fieldDefinition.fieldId, fieldAggregateTermId, new int[] { internalActivityAndId.id }, null,
-                                primitiveBuffer);
+                                stackBuffer);
                         }
                         return null;
                     }));

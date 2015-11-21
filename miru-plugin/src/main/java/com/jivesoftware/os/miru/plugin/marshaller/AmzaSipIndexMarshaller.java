@@ -4,6 +4,7 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.filer.io.Filer;
 import com.jivesoftware.os.filer.io.FilerIO;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.context.MiruContextConstants;
 import com.jivesoftware.os.miru.api.topology.NamedCursor;
 import com.jivesoftware.os.miru.api.wal.AmzaSipCursor;
@@ -34,8 +35,8 @@ public class AmzaSipIndexMarshaller implements MiruSipIndexMarshaller<AmzaSipCur
     }
 
     @Override
-    public AmzaSipCursor fromFiler(Filer filer, byte[] primitiveBuffer) throws IOException {
-        byte[] bytes = FilerIO.readByteArray(filer, "bytes", primitiveBuffer);
+    public AmzaSipCursor fromFiler(Filer filer, StackBuffer stackBuffer) throws IOException {
+        byte[] bytes = FilerIO.readByteArray(filer, "bytes", stackBuffer);
         ByteBuffer buf = ByteBuffer.wrap(bytes);
         List<NamedCursor> namedCursors = Lists.newArrayList();
         int numCursors = buf.getInt();
@@ -51,7 +52,7 @@ public class AmzaSipIndexMarshaller implements MiruSipIndexMarshaller<AmzaSipCur
     }
 
     @Override
-    public void toFiler(Filer filer, AmzaSipCursor cursor, byte[] primitiveBuffer) throws IOException {
+    public void toFiler(Filer filer, AmzaSipCursor cursor, StackBuffer stackBuffer) throws IOException {
 
         int length = (int) expectedCapacity(cursor);
 
@@ -65,7 +66,7 @@ public class AmzaSipIndexMarshaller implements MiruSipIndexMarshaller<AmzaSipCur
             buf.put(nameBytes);
         }
 
-        FilerIO.writeByteArray(filer, buf.array(), "bytes", primitiveBuffer);
+        FilerIO.writeByteArray(filer, buf.array(), "bytes", stackBuffer);
         FilerIO.writeByte(filer, cursor.endOfStream ? (byte) 1 : (byte) 0, "endOfStream");
     }
 }

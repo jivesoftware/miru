@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.service.index.delta;
 import com.google.common.base.Optional;
 import com.google.common.cache.Cache;
 import com.google.common.collect.Maps;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
@@ -33,8 +34,8 @@ public class MiruDeltaUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUn
     }
 
     @Override
-    public void append(MiruStreamId streamId, byte[] primitiveBuffer, int... ids) throws Exception {
-        getAppender(streamId).append(primitiveBuffer, ids);
+    public void append(MiruStreamId streamId, StackBuffer stackBuffer, int... ids) throws Exception {
+        getAppender(streamId).append(stackBuffer, ids);
     }
 
     @Override
@@ -57,15 +58,15 @@ public class MiruDeltaUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUn
     }
 
     @Override
-    public void applyRead(MiruStreamId streamId, IBM readMask, byte[] primitiveBuffer) throws Exception {
+    public void applyRead(MiruStreamId streamId, IBM readMask, StackBuffer stackBuffer) throws Exception {
         MiruInvertedIndex<IBM> unread = getUnread(streamId);
-        unread.andNotToSourceSize(Collections.singletonList(readMask), primitiveBuffer);
+        unread.andNotToSourceSize(Collections.singletonList(readMask), stackBuffer);
     }
 
     @Override
-    public void applyUnread(MiruStreamId streamId, IBM unreadMask, byte[] primitiveBuffer) throws Exception {
+    public void applyUnread(MiruStreamId streamId, IBM unreadMask, StackBuffer stackBuffer) throws Exception {
         MiruInvertedIndex<IBM> unread = getUnread(streamId);
-        unread.orToSourceSize(unreadMask, primitiveBuffer);
+        unread.orToSourceSize(unreadMask, stackBuffer);
     }
 
     @Override
@@ -74,9 +75,9 @@ public class MiruDeltaUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUn
     }
 
     @Override
-    public void merge(byte[] primitiveBuffer) throws Exception {
+    public void merge(StackBuffer stackBuffer) throws Exception {
         for (MiruDeltaInvertedIndex<BM, IBM> delta : unreadDeltas.values()) {
-            delta.merge(primitiveBuffer);
+            delta.merge(stackBuffer);
         }
         unreadDeltas.clear();
     }
