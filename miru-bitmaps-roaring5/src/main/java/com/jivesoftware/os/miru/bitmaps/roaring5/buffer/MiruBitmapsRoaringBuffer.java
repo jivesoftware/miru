@@ -206,8 +206,10 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
                 MutableRoaringBitmap mutable = new MutableRoaringBitmap();
                 mutable.or(bitmap);
                 return mutable;
-            } else {
+            } else if (buffer != null) {
                 return new ImmutableRoaringBitmap(buffer).toMutableRoaringBitmap();
+            } else {
+                return new MutableRoaringBitmap();
             }
         }, primitiveBuffer);
 
