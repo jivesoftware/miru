@@ -5,16 +5,16 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 /**
  *
  */
-public class SingleBitmapsProvider<BM> implements MiruBitmapsProvider {
+public class SingleBitmapsProvider implements MiruBitmapsProvider {
 
-    private final MiruBitmaps<BM> bitmaps;
+    private final MiruBitmaps<?, ?> bitmaps;
 
-    public SingleBitmapsProvider(MiruBitmaps<BM> bitmaps) {
+    public SingleBitmapsProvider(MiruBitmaps<?, ?> bitmaps) {
         this.bitmaps = bitmaps;
     }
 
     @Override
-    public MiruBitmaps<BM> getBitmaps(MiruTenantId tenantnId) {
+    public MiruBitmaps<?, ?> getBitmaps(MiruTenantId tenantnId) {
         return bitmaps;
     }
 }

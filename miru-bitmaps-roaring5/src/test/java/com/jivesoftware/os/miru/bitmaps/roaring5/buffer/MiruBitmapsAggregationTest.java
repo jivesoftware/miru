@@ -4,6 +4,7 @@ import com.google.common.collect.Lists;
 import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
 import gnu.trove.list.array.TIntArrayList;
 import java.util.List;
+import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
 import org.roaringbitmap.buffer.MutableRoaringBitmap;
 import org.testng.annotations.Test;
 
@@ -16,7 +17,7 @@ public class MiruBitmapsAggregationTest {
     @Test
     public void testOr() throws Exception {
         MiruBitmapsRoaringBuffer bitmaps = new MiruBitmapsRoaringBuffer();
-        List<MutableRoaringBitmap> ors = Lists.newArrayList();
+        List<ImmutableRoaringBitmap> ors = Lists.newArrayList();
         int numBits = 10;
         for (int i = 0; i < numBits; i++) {
             MutableRoaringBitmap or = bitmaps.createWithBits(i * 137);
@@ -34,7 +35,7 @@ public class MiruBitmapsAggregationTest {
     @Test
     public void testAnd() throws Exception {
         MiruBitmapsRoaringBuffer bitmaps = new MiruBitmapsRoaringBuffer();
-        List<MutableRoaringBitmap> ands = Lists.newArrayList();
+        List<ImmutableRoaringBitmap> ands = Lists.newArrayList();
         int numBits = 10;
         int andBits = 3;
         for (int i = 0; i < numBits - andBits; i++) {
@@ -84,7 +85,7 @@ public class MiruBitmapsAggregationTest {
     @Test
     public void testAndNot_multi() throws Exception {
         MiruBitmapsRoaringBuffer bitmaps = new MiruBitmapsRoaringBuffer();
-        List<MutableRoaringBitmap> nots = Lists.newArrayList();
+        List<ImmutableRoaringBitmap> nots = Lists.newArrayList();
         int numOriginal = 10;
         int numNot = 3;
         TIntArrayList originalBits = new TIntArrayList();
@@ -138,7 +139,7 @@ public class MiruBitmapsAggregationTest {
     @Test
     public void testAndWithCardinalityAndLastSetBit() throws Exception {
         MiruBitmapsRoaringBuffer bitmaps = new MiruBitmapsRoaringBuffer();
-        List<MutableRoaringBitmap> ands = Lists.newArrayList();
+        List<ImmutableRoaringBitmap> ands = Lists.newArrayList();
         int numOriginal = 10;
         int numAnd = 3;
         for (int i = 0; i < numOriginal - numAnd; i++) {

@@ -24,20 +24,20 @@ import java.util.List;
 /**
  * @author jonathan
  */
-public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM> {
+public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<IBM> {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
     private static final int LAST_ID_LENGTH = 4;
 
-    private final MiruBitmaps<BM> bitmaps;
+    private final MiruBitmaps<BM, IBM> bitmaps;
     private final MiruFieldIndex.IndexKey indexKey;
     private final KeyedFilerStore<Long, Void> keyedFilerStore;
     private final int considerIfIndexIdGreaterThanN;
     private final Object mutationLock;
     private volatile int lastId = Integer.MIN_VALUE;
 
-    public MiruFilerInvertedIndex(MiruBitmaps<BM> bitmaps,
+    public MiruFilerInvertedIndex(MiruBitmaps<BM, IBM> bitmaps,
         MiruFieldIndex.IndexKey indexKey,
         KeyedFilerStore<Long, Void> keyedFilerStore,
         int considerIfIndexIdGreaterThanN,
@@ -50,7 +50,7 @@ public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM> {
     }
 
     @Override
-    public Optional<BM> getIndex(byte[] primitiveBuffer) throws Exception {
+    public Optional<IBM> getIndex(byte[] primitiveBuffer) throws Exception {
         if (lastId > Integer.MIN_VALUE && lastId <= considerIfIndexIdGreaterThanN) {
             return Optional.absent();
         }
@@ -76,7 +76,7 @@ public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM> {
     }
 
     @Override
-    public <R> R txIndex(IndexTx<R, BM> tx, byte[] primitiveBuffer) throws Exception {
+    public <R> R txIndex(IndexTx<R, IBM> tx, byte[] primitiveBuffer) throws Exception {
         if (lastId > Integer.MIN_VALUE && lastId <= considerIfIndexIdGreaterThanN) {
             return tx.tx(null, null);
         }
@@ -108,7 +108,7 @@ public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM> {
     }
 
     @Override
-    public void replaceIndex(BM index, int setLastId, byte[] primitiveBuffer) throws Exception {
+    public void replaceIndex(IBM index, int setLastId, byte[] primitiveBuffer) throws Exception {
         synchronized (mutationLock) {
             setIndex(index, setLastId, primitiveBuffer);
             lastId = Math.max(setLastId, lastId);
@@ -133,16 +133,16 @@ public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM> {
         return null;
     }
 
-    private BM getOrCreateIndex(byte[] primitiveBuffer) throws Exception {
-        Optional<BM> index = getIndex(primitiveBuffer);
+    private IBM getOrCreateIndex(byte[] primitiveBuffer) throws Exception {
+        Optional<IBM> index = getIndex(primitiveBuffer);
         return index.isPresent() ? index.get() : bitmaps.create();
     }
 
-    private static <BM> long serializedSizeInBytes(MiruBitmaps<BM> bitmaps, BM index) {
+    private static <BM extends IBM, IBM> long serializedSizeInBytes(MiruBitmaps<BM, IBM> bitmaps, IBM index) {
         return LAST_ID_LENGTH + bitmaps.serializedSizeInBytes(index);
     }
 
-    private void setIndex(BM index, int setLastId, byte[] primitiveBuffer) throws Exception {
+    private void setIndex(IBM index, int setLastId, byte[] primitiveBuffer) throws Exception {
         long filerSizeInBytes = serializedSizeInBytes(bitmaps, index);
         ByteArrayDataOutput dataOutput = ByteStreams.newDataOutput((int) filerSizeInBytes);
         dataOutput.write(FilerIO.intBytes(setLastId));
@@ -155,7 +155,7 @@ public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM> {
     }
 
     @Override
-    public Optional<BM> getIndexUnsafe(byte[] primitiveBuffer) throws Exception {
+    public Optional<IBM> getIndexUnsafe(byte[] primitiveBuffer) throws Exception {
         return getIndex(primitiveBuffer);
     }
 
@@ -165,7 +165,7 @@ public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM> {
             return;
         }
         synchronized (mutationLock) {
-            BM index = getOrCreateIndex(primitiveBuffer);
+            IBM index = getOrCreateIndex(primitiveBuffer);
             BM r = bitmaps.create();
             bitmaps.append(r, index, ids);
             int appendLastId = ids[ids.length - 1];
@@ -180,7 +180,7 @@ public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM> {
     @Override
     public void appendAndExtend(List<Integer> ids, int extendToId, byte[] primitiveBuffer) throws Exception {
         synchronized (mutationLock) {
-            BM index = getOrCreateIndex(primitiveBuffer);
+            IBM index = getOrCreateIndex(primitiveBuffer);
             BM r = bitmaps.create();
             bitmaps.extend(r, index, ids, extendToId + 1);
 
@@ -198,7 +198,7 @@ public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM> {
     @Override
     public void remove(int id, byte[] primitiveBuffer) throws Exception {
         synchronized (mutationLock) {
-            BM index = getOrCreateIndex(primitiveBuffer);
+            IBM index = getOrCreateIndex(primitiveBuffer);
             BM r = bitmaps.create();
             bitmaps.remove(r, index, id);
             setIndex(r, lastId, primitiveBuffer);
@@ -211,7 +211,7 @@ public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM> {
             return;
         }
         synchronized (mutationLock) {
-            BM index = getOrCreateIndex(primitiveBuffer);
+            IBM index = getOrCreateIndex(primitiveBuffer);
             BM r = bitmaps.create();
             bitmaps.set(r, index, ids);
 
@@ -246,9 +246,9 @@ public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM> {
     }
 
     @Override
-    public void andNot(BM mask, byte[] primitiveBuffer) throws Exception {
+    public void andNot(IBM mask, byte[] primitiveBuffer) throws Exception {
         synchronized (mutationLock) {
-            BM index = getOrCreateIndex(primitiveBuffer);
+            IBM index = getOrCreateIndex(primitiveBuffer);
             BM r = bitmaps.create();
             bitmaps.andNot(r, index, mask);
             setIndex(r, lastId, primitiveBuffer);
@@ -256,9 +256,9 @@ public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM> {
     }
 
     @Override
-    public void or(BM mask, byte[] primitiveBuffer) throws Exception {
+    public void or(IBM mask, byte[] primitiveBuffer) throws Exception {
         synchronized (mutationLock) {
-            BM index = getOrCreateIndex(primitiveBuffer);
+            IBM index = getOrCreateIndex(primitiveBuffer);
             BM r = bitmaps.create();
             bitmaps.or(r, Arrays.asList(index, mask));
             setIndex(r, Math.max(lastId, bitmaps.lastSetBit(mask)), primitiveBuffer);
@@ -266,9 +266,9 @@ public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM> {
     }
 
     @Override
-    public void andNotToSourceSize(List<BM> masks, byte[] primitiveBuffer) throws Exception {
+    public void andNotToSourceSize(List<IBM> masks, byte[] primitiveBuffer) throws Exception {
         synchronized (mutationLock) {
-            BM index = getOrCreateIndex(primitiveBuffer);
+            IBM index = getOrCreateIndex(primitiveBuffer);
             BM andNot = bitmaps.create();
             bitmaps.andNotToSourceSize(andNot, index, masks);
             setIndex(andNot, lastId, primitiveBuffer);
@@ -276,9 +276,9 @@ public class MiruFilerInvertedIndex<BM> implements MiruInvertedIndex<BM> {
     }
 
     @Override
-    public void orToSourceSize(BM mask, byte[] primitiveBuffer) throws Exception {
+    public void orToSourceSize(IBM mask, byte[] primitiveBuffer) throws Exception {
         synchronized (mutationLock) {
-            BM index = getOrCreateIndex(primitiveBuffer);
+            IBM index = getOrCreateIndex(primitiveBuffer);
             BM or = bitmaps.create();
             bitmaps.orToSourceSize(or, index, mask);
             setIndex(or, lastId, primitiveBuffer);

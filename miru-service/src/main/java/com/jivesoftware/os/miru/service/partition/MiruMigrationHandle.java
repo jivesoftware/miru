@@ -11,15 +11,15 @@ import java.util.concurrent.ExecutorService;
 /**
  *
  */
-public interface MiruMigrationHandle<BM, C extends MiruCursor<C, S>, S extends MiruSipCursor<S>> extends AutoCloseable {
+public interface MiruMigrationHandle<BM extends IBM, IBM, C extends MiruCursor<C, S>, S extends MiruSipCursor<S>> extends AutoCloseable {
 
     boolean canMigrateTo(MiruBackingStorage destinationStorage);
 
-    Optional<MiruContext<BM, S>> getContext();
+    Optional<MiruContext<IBM, S>> getContext();
 
-    Optional<MiruContext<BM, S>> closeContext();
+    Optional<MiruContext<IBM, S>> closeContext();
 
     void merge(MiruMergeChits chits, ExecutorService mergeExecutor) throws Exception;
 
-    MiruPartitionAccessor<BM, C, S> migrated(MiruContext<BM, S> stream, Optional<MiruBackingStorage> storage, Optional<MiruPartitionState> state);
+    MiruPartitionAccessor<BM, IBM, C, S> migrated(MiruContext<IBM, S> stream, Optional<MiruBackingStorage> storage, Optional<MiruPartitionState> state);
 }

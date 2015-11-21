@@ -15,6 +15,7 @@
  */
 package com.jivesoftware.os.miru.bitmaps.ewah;
 
+import com.fasterxml.jackson.databind.util.ByteBufferBackedInputStream;
 import com.google.common.base.Optional;
 import com.googlecode.javaewah.BitmapStorage;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
@@ -25,7 +26,9 @@ import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
+import com.jivesoftware.os.miru.plugin.index.MiruTxIndex;
 import java.io.DataInput;
+import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.util.Collection;
 import java.util.List;
@@ -34,7 +37,7 @@ import java.util.PriorityQueue;
 /**
  * @author jonathan
  */
-public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap> {
+public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap, EWAHCompressedBitmap> {
 
     private static final EWAHCompressedBitmap EMPTY = new EWAHCompressedBitmap(); // Balls!!
 
@@ -146,6 +149,43 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap> {
     }
 
     @Override
+    public EWAHCompressedBitmap orTx(List<MiruTxIndex<EWAHCompressedBitmap>> indexes, byte[] primitiveBuffer) throws Exception {
+        if (indexes.isEmpty()) {
+            return new EWAHCompressedBitmap();
+        }
+
+        EWAHCompressedBitmap container = indexes.get(0).txIndex((bitmap, buffer) -> {
+            if (bitmap != null) {
+                return bitmap;
+            } else if (buffer != null) {
+                EWAHCompressedBitmap deser = new EWAHCompressedBitmap();
+                deser.deserialize(new DataInputStream(new ByteBufferBackedInputStream(buffer)));
+                return deser;
+            } else {
+                return new EWAHCompressedBitmap();
+            }
+        }, primitiveBuffer);
+
+        for (MiruTxIndex<EWAHCompressedBitmap> index : indexes.subList(1, indexes.size())) {
+            EWAHCompressedBitmap or = index.txIndex((bitmap, buffer) -> {
+                if (bitmap != null) {
+                    return bitmap;
+                } else if (buffer != null) {
+                    EWAHCompressedBitmap deser = new EWAHCompressedBitmap();
+                    deser.deserialize(new DataInputStream(new ByteBufferBackedInputStream(buffer)));
+                    return deser;
+                } else {
+                    return new EWAHCompressedBitmap();
+                }
+            }, primitiveBuffer);
+
+            container.or(or);
+        }
+
+        return container;
+    }
+
+    @Override
     public void inPlaceAnd(EWAHCompressedBitmap original, EWAHCompressedBitmap bitmap) {
         throw new UnsupportedOperationException("NOPE");
     }
@@ -153,6 +193,51 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap> {
     @Override
     public void and(EWAHCompressedBitmap container, Collection<EWAHCompressedBitmap> bitmaps) {
         FastAggregation.bufferedandWithContainer(container, bufferSize, bitmaps.toArray(new EWAHCompressedBitmap[bitmaps.size()]));
+    }
+
+    @Override
+    public EWAHCompressedBitmap andTx(List<MiruTxIndex<EWAHCompressedBitmap>> indexes, byte[] primitiveBuffer) throws Exception {
+        if (indexes.isEmpty()) {
+            return new EWAHCompressedBitmap();
+        }
+
+        EWAHCompressedBitmap container = indexes.get(0).txIndex((bitmap, buffer) -> {
+            if (bitmap != null) {
+                return bitmap;
+            } else if (buffer != null) {
+                EWAHCompressedBitmap deser = new EWAHCompressedBitmap();
+                deser.deserialize(new DataInputStream(new ByteBufferBackedInputStream(buffer)));
+                return deser;
+            } else {
+                return new EWAHCompressedBitmap();
+            }
+        }, primitiveBuffer);
+
+        if (container.isEmpty()) {
+            return container;
+        }
+
+        for (MiruTxIndex<EWAHCompressedBitmap> index : indexes.subList(1, indexes.size())) {
+            EWAHCompressedBitmap and = index.txIndex((bitmap, buffer) -> {
+                if (bitmap != null) {
+                    return bitmap;
+                } else if (buffer != null) {
+                    EWAHCompressedBitmap deser = new EWAHCompressedBitmap();
+                    deser.deserialize(new DataInputStream(new ByteBufferBackedInputStream(buffer)));
+                    return deser;
+                } else {
+                    return new EWAHCompressedBitmap();
+                }
+            }, primitiveBuffer);
+
+            container.and(and);
+
+            if (container.isEmpty()) {
+                return container;
+            }
+        }
+
+        return container;
     }
 
     @Override
@@ -183,6 +268,55 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap> {
             or((BitmapStorage) ored, bitmaps);
             original.andNotToContainer(ored, container);
         }
+    }
+
+    @Override
+    public EWAHCompressedBitmap andNotTx(MiruTxIndex<EWAHCompressedBitmap> original,
+        List<MiruTxIndex<EWAHCompressedBitmap>> not,
+        byte[] primitiveBuffer) throws Exception {
+        if (not.isEmpty()) {
+            return new EWAHCompressedBitmap();
+        }
+
+        EWAHCompressedBitmap container = original.txIndex((bitmap, buffer) -> {
+            if (bitmap != null) {
+                return bitmap;
+            } else if (buffer != null) {
+                EWAHCompressedBitmap deser = new EWAHCompressedBitmap();
+                deser.deserialize(new DataInputStream(new ByteBufferBackedInputStream(buffer)));
+                return deser;
+            } else {
+                return new EWAHCompressedBitmap();
+            }
+        }, primitiveBuffer);
+
+        if (container.isEmpty()) {
+            return container;
+        }
+
+        for (MiruTxIndex<EWAHCompressedBitmap> index : not) {
+            EWAHCompressedBitmap andNot = index.txIndex((bitmap, buffer) -> {
+                if (bitmap != null) {
+                    return bitmap;
+                } else if (buffer != null) {
+                    EWAHCompressedBitmap deser = new EWAHCompressedBitmap();
+                    deser.deserialize(new DataInputStream(new ByteBufferBackedInputStream(buffer)));
+                    return deser;
+                } else {
+                    return null;
+                }
+            }, primitiveBuffer);
+
+            if (andNot != null) {
+                container.andNot(andNot);
+            }
+
+            if (container.isEmpty()) {
+                return container;
+            }
+        }
+
+        return container;
     }
 
     // TODO eval if this is better than FastAgg OR?

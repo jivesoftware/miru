@@ -54,21 +54,21 @@ public class AggregateCountsInboxQuestion implements Question<AggregateCountsQue
     }
 
     @Override
-    public <BM> MiruPartitionResponse<AggregateCountsAnswer> askLocal(MiruRequestHandle<BM, ?> handle,
+    public <BM extends IBM, IBM> MiruPartitionResponse<AggregateCountsAnswer> askLocal(MiruRequestHandle<BM, IBM, ?> handle,
         Optional<AggregateCountsReport> report)
         throws Exception {
         byte[] primitiveBuffer = new byte[8];
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
-        MiruRequestContext<BM, ?> context = handle.getRequestContext();
-        MiruBitmaps<BM> bitmaps = handle.getBitmaps();
+        MiruRequestContext<IBM, ?> context = handle.getRequestContext();
+        MiruBitmaps<BM, IBM> bitmaps = handle.getBitmaps();
 
         if (handle.canBackfill()) {
             backfillerizer.backfill(bitmaps, context, request.query.streamFilter, solutionLog, request.tenantId,
                 handle.getCoord().partitionId, request.query.streamId);
         }
 
-        List<BM> ands = new ArrayList<>();
-        List<BM> counterAnds = new ArrayList<>();
+        List<IBM> ands = new ArrayList<>();
+        List<IBM> counterAnds = new ArrayList<>();
 
         if (!context.getTimeIndex().intersects(request.query.answerTimeRange)) {
             LOG.debug("No answer time index intersection");
@@ -87,7 +87,7 @@ public class AggregateCountsInboxQuestion implements Question<AggregateCountsQue
                 context.getTimeIndex(), request.query.countTimeRange.smallestTimestamp, request.query.countTimeRange.largestTimestamp, primitiveBuffer));
         }
 
-        Optional<BM> inbox = context.getInboxIndex().getInbox(request.query.streamId).getIndex(primitiveBuffer);
+        Optional<IBM> inbox = context.getInboxIndex().getInbox(request.query.streamId).getIndex(primitiveBuffer);
         if (inbox.isPresent()) {
             ands.add(inbox.get());
         } else {
@@ -103,7 +103,7 @@ public class AggregateCountsInboxQuestion implements Question<AggregateCountsQue
         }
 
         if (unreadOnly) {
-            Optional<BM> unreadIndex = context.getUnreadTrackingIndex().getUnread(request.query.streamId).getIndex(primitiveBuffer);
+            Optional<IBM> unreadIndex = context.getUnreadTrackingIndex().getUnread(request.query.streamId).getIndex(primitiveBuffer);
             if (unreadIndex.isPresent()) {
                 ands.add(unreadIndex.get());
             }
@@ -117,7 +117,7 @@ public class AggregateCountsInboxQuestion implements Question<AggregateCountsQue
         counterAnds.add(answer);
         if (!unreadOnly) {
             // if unreadOnly is true, the read-tracking index would already be applied to the answer
-            Optional<BM> unreadIndex = context.getUnreadTrackingIndex().getUnread(request.query.streamId).getIndex(primitiveBuffer);
+            Optional<IBM> unreadIndex = context.getUnreadTrackingIndex().getUnread(request.query.streamId).getIndex(primitiveBuffer);
             if (unreadIndex.isPresent()) {
                 counterAnds.add(unreadIndex.get());
             }

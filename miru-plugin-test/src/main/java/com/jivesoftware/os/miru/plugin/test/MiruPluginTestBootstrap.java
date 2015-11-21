@@ -92,12 +92,12 @@ import org.testng.Assert;
  */
 public class MiruPluginTestBootstrap {
 
-    public <BM> MiruProvider<MiruService> bootstrap(MiruTenantId tenantId,
+    public <BM extends IBM, IBM> MiruProvider<MiruService> bootstrap(MiruTenantId tenantId,
         MiruPartitionId partitionId,
         MiruHost miruHost,
         MiruSchema miruSchema,
         MiruBackingStorage desiredStorage,
-        final MiruBitmaps<BM> bitmaps,
+        final MiruBitmaps<BM, IBM> bitmaps,
         List<MiruPartitionedActivity> partitionedActivities)
         throws Exception {
 
@@ -205,7 +205,7 @@ public class MiruPluginTestBootstrap {
             new MiruTempDirectoryResourceLocator(),
             termComposer,
             activityInternExtern,
-            new SingleBitmapsProvider<>(bitmaps));
+            new SingleBitmapsProvider(bitmaps));
 
         miruServiceLifecyle.start();
         final MiruService miruService = miruServiceLifecyle.getService();

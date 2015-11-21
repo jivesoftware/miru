@@ -25,8 +25,8 @@ public class DistinctCount {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
-    public <BM> DistinctCountAnswer numberOfDistincts(MiruBitmaps<BM> bitmaps,
-        MiruRequestContext<BM, ?> requestContext,
+    public <BM extends IBM, IBM> DistinctCountAnswer numberOfDistincts(MiruBitmaps<BM, IBM> bitmaps,
+        MiruRequestContext<IBM, ?> requestContext,
         MiruRequest<DistinctCountQuery> request,
         Optional<DistinctCountReport> lastReport,
         BM answer)
@@ -50,17 +50,17 @@ public class DistinctCount {
         MiruFieldDefinition fieldDefinition = requestContext.getSchema().getFieldDefinition(fieldId);
         log.debug("fieldId={}", fieldId);
         if (fieldId >= 0) {
-            MiruFieldIndex<BM> fieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
-            ReusableBuffers<BM> reusable = new ReusableBuffers<>(bitmaps, 2);
+            MiruFieldIndex<IBM> fieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
+            ReusableBuffers<BM, IBM> reusable = new ReusableBuffers<>(bitmaps, 2);
 
             for (String aggregateTerm : aggregateTerms) {
                 MiruTermId aggregateTermId = termComposer.compose(fieldDefinition, aggregateTerm);
-                Optional<BM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex(primitiveBuffer);
+                Optional<IBM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex(primitiveBuffer);
                 if (!optionalTermIndex.isPresent()) {
                     continue;
                 }
 
-                BM termIndex = optionalTermIndex.get();
+                IBM termIndex = optionalTermIndex.get();
 
                 BM revisedAnswer = reusable.next();
                 bitmaps.andNot(revisedAnswer, answer, termIndex);
@@ -88,7 +88,7 @@ public class DistinctCount {
                     String aggregateTerm = termComposer.decompose(fieldDefinition, aggregateTermId);
 
                     aggregateTerms.add(aggregateTerm);
-                    Optional<BM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex(primitiveBuffer);
+                    Optional<IBM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex(primitiveBuffer);
                     checkState(optionalTermIndex.isPresent(), "Unable to load inverted index for aggregateTermId: " + aggregateTermId);
 
                     BM revisedAnswer = reusable.next();

@@ -33,7 +33,7 @@ public class MiruFieldIndexTest {
     private final long initialChunkStoreSizeInBytes = 4_096;
 
     @Test(dataProvider = "miruIndexDataProvider")
-    public <BM> void testGetMissingFieldTerm(MiruBitmaps<BM> bitmaps, MiruFieldIndex<BM> miruFieldIndex, MiruBackingStorage miruBackingStorage) throws
+    public <BM extends IBM, IBM> void testGetMissingFieldTerm(MiruBitmaps<BM, IBM> bitmaps, MiruFieldIndex<BM> miruFieldIndex, MiruBackingStorage miruBackingStorage) throws
         Exception {
         byte[] primitiveBuffer = new byte[8];
         MiruInvertedIndex<BM> invertedIndex = miruFieldIndex.get(0, new MiruTermId(FilerIO.intBytes(1)));
@@ -42,7 +42,7 @@ public class MiruFieldIndexTest {
     }
 
     @Test(dataProvider = "miruIndexDataProvider")
-    public <BM> void testIndexFieldTerm(MiruBitmaps<BM> bitmaps, MiruFieldIndex<BM> miruFieldIndex, MiruBackingStorage miruBackingStorage) throws Exception {
+    public <BM extends IBM, IBM> void testIndexFieldTerm(MiruBitmaps<BM, IBM> bitmaps, MiruFieldIndex<BM> miruFieldIndex, MiruBackingStorage miruBackingStorage) throws Exception {
         byte[] primitiveBuffer = new byte[8];
         miruFieldIndex.append(0, new MiruTermId(FilerIO.intBytes(2)), new int[]{3}, null, primitiveBuffer);
         MiruInvertedIndex<BM> invertedIndex = miruFieldIndex.get(0, new MiruTermId(FilerIO.intBytes(2)));
@@ -52,7 +52,7 @@ public class MiruFieldIndexTest {
     }
 
     @Test(dataProvider = "miruIndexDataProviderWithData")
-    public <BM> void testExpectedData(MiruBitmaps<BM> bitmaps, MiruFieldIndex<BM> miruFieldIndex, List<Integer> expected, MiruBackingStorage miruBackingStorage)
+    public <BM extends IBM, IBM> void testExpectedData(MiruBitmaps<BM, IBM> bitmaps, MiruFieldIndex<BM> miruFieldIndex, List<Integer> expected, MiruBackingStorage miruBackingStorage)
         throws Exception {
         byte[] primitiveBuffer = new byte[8];
         byte[] key = "term1".getBytes();

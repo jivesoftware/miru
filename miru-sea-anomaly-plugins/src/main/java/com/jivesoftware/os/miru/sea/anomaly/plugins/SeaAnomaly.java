@@ -22,7 +22,7 @@ public class SeaAnomaly {
         this.miruProvider = miruProvider;
     }
 
-    public <BM> Waveform metricingSum(MiruBitmaps<BM> bitmaps,
+    public <BM extends IBM, IBM> Waveform metricingSum(MiruBitmaps<BM, IBM> bitmaps,
         BM rawAnswer,
         List<BM> answers,
         int[] indexes,
@@ -36,7 +36,7 @@ public class SeaAnomaly {
         return new Waveform(waveform);
     }
 
-    public <BM> Waveform metricingAvg(MiruBitmaps<BM> bitmaps,
+    public <BM extends IBM, IBM> Waveform metricingAvg(MiruBitmaps<BM, IBM> bitmaps,
         BM rawAnswer,
         List<BM> answers,
         int[] indexes,
@@ -67,7 +67,7 @@ public class SeaAnomaly {
      -----
      12341   avg (1+2+3+4+1)/5 max 4, min 1 (cardinality 5)
      */
-    public <BM> Waveform metricingMin(MiruBitmaps<BM> bitmaps,
+    public <BM extends IBM, IBM> Waveform metricingMin(MiruBitmaps<BM, IBM> bitmaps,
         BM rawAnswer,
         List<BM> answers,
         int[] indexes,
@@ -77,7 +77,7 @@ public class SeaAnomaly {
         return null; // TODO
     }
 
-    public <BM> Waveform metricingMax(MiruBitmaps<BM> bitmaps,
+    public <BM extends IBM, IBM> Waveform metricingMax(MiruBitmaps<BM, IBM> bitmaps,
         BM rawAnswer,
         List<BM> answers,
         int[] indexes,
@@ -87,7 +87,7 @@ public class SeaAnomaly {
         return null; // TODO
     }
 
-    private <BM> long[] sum(int[] indexes, int numBits, List<BM> answers, MiruBitmaps<BM> bitmaps) {
+    private <BM extends IBM, IBM> long[] sum(int[] indexes, int numBits, List<BM> answers, MiruBitmaps<BM, IBM> bitmaps) {
         long[] waveform = null;
         long[] rawCardinalities = new long[indexes.length - 1];
 

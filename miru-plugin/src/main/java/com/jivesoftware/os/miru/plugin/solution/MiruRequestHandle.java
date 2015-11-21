@@ -8,11 +8,11 @@ import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 /**
  *
  */
-public interface MiruRequestHandle<BM, S extends MiruSipCursor<S>> extends AutoCloseable {
+public interface MiruRequestHandle<BM extends IBM, IBM, S extends MiruSipCursor<S>> extends AutoCloseable {
 
-    MiruBitmaps<BM> getBitmaps();
+    MiruBitmaps<BM, IBM> getBitmaps();
 
-    MiruRequestContext<BM, S> getRequestContext();
+    MiruRequestContext<IBM, S> getRequestContext();
 
     boolean isLocal();
 

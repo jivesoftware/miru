@@ -28,12 +28,12 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * DELTA FORCE
  */
-public class MiruDeltaFieldIndex<BM> implements MiruFieldIndex<BM>, Mergeable {
+public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<IBM>, Mergeable {
 
-    private final MiruBitmaps<BM> bitmaps;
+    private final MiruBitmaps<BM, IBM> bitmaps;
     private final long[] indexIds;
-    private final MiruFieldIndex<BM> backingFieldIndex;
-    private final ConcurrentSkipListMap<MiruTermId, MiruDeltaInvertedIndex.Delta<BM>>[] fieldIndexDeltas;
+    private final MiruFieldIndex<IBM> backingFieldIndex;
+    private final ConcurrentSkipListMap<MiruTermId, MiruDeltaInvertedIndex.Delta<IBM>>[] fieldIndexDeltas;
     private final ConcurrentHashMap<MiruTermId, TIntLongMap>[] cardinalities;
     private final Cache<IndexKey, Optional<?>> fieldIndexCache;
     private final Cache<MiruFieldIndex.IndexKey, Long> versionCache;
@@ -49,9 +49,9 @@ public class MiruDeltaFieldIndex<BM> implements MiruFieldIndex<BM>, Mergeable {
         }
     };
 
-    public MiruDeltaFieldIndex(MiruBitmaps<BM> bitmaps,
+    public MiruDeltaFieldIndex(MiruBitmaps<BM, IBM> bitmaps,
         long[] indexIds,
-        MiruFieldIndex<BM> backingFieldIndex,
+        MiruFieldIndex<IBM> backingFieldIndex,
         MiruFieldDefinition[] fieldDefinitions,
         Cache<IndexKey, Optional<?>> fieldIndexCache,
         Cache<IndexKey, Long> versionCache,
@@ -91,7 +91,7 @@ public class MiruDeltaFieldIndex<BM> implements MiruFieldIndex<BM>, Mergeable {
 
     @Override
     public void remove(int fieldId, MiruTermId termId, int id, byte[] primitiveBuffer) throws Exception {
-        MiruInvertedIndex<BM> got = get(fieldId, termId);
+        MiruInvertedIndex<IBM> got = get(fieldId, termId);
         got.remove(id, primitiveBuffer);
         putCardinalities(fieldId, termId, new int[]{id}, cardinalities[fieldId] != null ? new long[1] : null, false, primitiveBuffer);
     }
@@ -129,11 +129,11 @@ public class MiruDeltaFieldIndex<BM> implements MiruFieldIndex<BM>, Mergeable {
     }
 
     @Override
-    public MiruInvertedIndex<BM> get(int fieldId, MiruTermId termId) throws Exception {
-        MiruDeltaInvertedIndex.Delta<BM> delta = fieldIndexDeltas[fieldId].get(termId);
+    public MiruInvertedIndex<IBM> get(int fieldId, MiruTermId termId) throws Exception {
+        MiruDeltaInvertedIndex.Delta<IBM> delta = fieldIndexDeltas[fieldId].get(termId);
         if (delta == null) {
             delta = new MiruDeltaInvertedIndex.Delta<>();
-            MiruDeltaInvertedIndex.Delta<BM> existing = fieldIndexDeltas[fieldId].putIfAbsent(termId, delta);
+            MiruDeltaInvertedIndex.Delta<IBM> existing = fieldIndexDeltas[fieldId].putIfAbsent(termId, delta);
             if (existing != null) {
                 delta = existing;
             }
@@ -147,11 +147,11 @@ public class MiruDeltaFieldIndex<BM> implements MiruFieldIndex<BM>, Mergeable {
     }
 
     @Override
-    public MiruInvertedIndex<BM> get(int fieldId, MiruTermId termId, int considerIfIndexIdGreaterThanN) throws Exception {
-        MiruDeltaInvertedIndex.Delta<BM> delta = fieldIndexDeltas[fieldId].get(termId);
+    public MiruInvertedIndex<IBM> get(int fieldId, MiruTermId termId, int considerIfIndexIdGreaterThanN) throws Exception {
+        MiruDeltaInvertedIndex.Delta<IBM> delta = fieldIndexDeltas[fieldId].get(termId);
         if (delta == null) {
             delta = new MiruDeltaInvertedIndex.Delta<>();
-            MiruDeltaInvertedIndex.Delta<BM> existing = fieldIndexDeltas[fieldId].putIfAbsent(termId, delta);
+            MiruDeltaInvertedIndex.Delta<IBM> existing = fieldIndexDeltas[fieldId].putIfAbsent(termId, delta);
             if (existing != null) {
                 delta = existing;
             }
@@ -161,15 +161,15 @@ public class MiruDeltaFieldIndex<BM> implements MiruFieldIndex<BM>, Mergeable {
     }
 
     @Override
-    public MiruInvertedIndex<BM> getOrCreateInvertedIndex(int fieldId, MiruTermId termId) throws Exception {
+    public MiruInvertedIndex<IBM> getOrCreateInvertedIndex(int fieldId, MiruTermId termId) throws Exception {
         return getOrAllocate(fieldId, termId);
     }
 
-    private MiruInvertedIndex<BM> getOrAllocate(int fieldId, MiruTermId termId) throws Exception {
-        MiruDeltaInvertedIndex.Delta<BM> delta = fieldIndexDeltas[fieldId].get(termId);
+    private MiruInvertedIndex<IBM> getOrAllocate(int fieldId, MiruTermId termId) throws Exception {
+        MiruDeltaInvertedIndex.Delta<IBM> delta = fieldIndexDeltas[fieldId].get(termId);
         if (delta == null) {
             delta = new MiruDeltaInvertedIndex.Delta<>();
-            MiruDeltaInvertedIndex.Delta<BM> existing = fieldIndexDeltas[fieldId].putIfAbsent(termId, delta);
+            MiruDeltaInvertedIndex.Delta<IBM> existing = fieldIndexDeltas[fieldId].putIfAbsent(termId, delta);
             if (existing != null) {
                 delta = existing;
             }
@@ -287,10 +287,10 @@ public class MiruDeltaFieldIndex<BM> implements MiruFieldIndex<BM>, Mergeable {
     @Override
     public void merge(byte[] primitiveBuffer) throws Exception {
         for (int fieldId = 0; fieldId < fieldIndexDeltas.length; fieldId++) {
-            ConcurrentMap<MiruTermId, MiruDeltaInvertedIndex.Delta<BM>> deltaMap = fieldIndexDeltas[fieldId];
-            for (Map.Entry<MiruTermId, MiruDeltaInvertedIndex.Delta<BM>> entry : deltaMap.entrySet()) {
-                MiruDeltaInvertedIndex.Delta<BM> delta = entry.getValue();
-                MiruDeltaInvertedIndex<BM> invertedIndex = new MiruDeltaInvertedIndex<>(bitmaps,
+            ConcurrentMap<MiruTermId, MiruDeltaInvertedIndex.Delta<IBM>> deltaMap = fieldIndexDeltas[fieldId];
+            for (Map.Entry<MiruTermId, MiruDeltaInvertedIndex.Delta<IBM>> entry : deltaMap.entrySet()) {
+                MiruDeltaInvertedIndex.Delta<IBM> delta = entry.getValue();
+                MiruDeltaInvertedIndex<BM, IBM> invertedIndex = new MiruDeltaInvertedIndex<>(bitmaps,
                     backingFieldIndex.getOrCreateInvertedIndex(fieldId, entry.getKey()),
                     delta,
                     getIndexKey(fieldId, entry.getKey()),

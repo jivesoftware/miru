@@ -24,19 +24,19 @@ import java.util.concurrent.Future;
 /**
  *
  */
-public class MiruIndexBloom<BM> {
+public class MiruIndexBloom<BM extends IBM, IBM> {
 
     private final static MetricLogger log = MetricLoggerFactory.getLogger();
 
-    private final BloomIndex<BM> bloomIndex;
+    private final BloomIndex<BM, IBM> bloomIndex;
     private final MiruIndexUtil indexUtil = new MiruIndexUtil();
 
-    public MiruIndexBloom(BloomIndex<BM> bloomIndex) {
+    public MiruIndexBloom(BloomIndex<BM, IBM> bloomIndex) {
         this.bloomIndex = bloomIndex;
         //this.bloomIndex = new BloomIndex<>(bitmaps, Hashing.murmur3_128(), 100_000, 0.01f); // TODO fix somehow
     }
 
-    public List<Future<List<BloomWork>>> compose(MiruContext<BM, ?> context,
+    public List<Future<List<BloomWork>>> compose(MiruContext<IBM, ?> context,
         final List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds,
         ExecutorService indexExecutor)
         throws Exception {
@@ -76,7 +76,7 @@ public class MiruIndexBloom<BM> {
         return workFutures;
     }
 
-    public Future<List<BloomWork>> prepare(final MiruContext<BM, ?> context,
+    public Future<List<BloomWork>> prepare(final MiruContext<IBM, ?> context,
         final List<Future<List<BloomWork>>> bloomWorkFutures,
         ExecutorService indexExecutor)
         throws ExecutionException, InterruptedException {
@@ -91,7 +91,7 @@ public class MiruIndexBloom<BM> {
         });
     }
 
-    public List<Future<?>> index(final MiruContext<BM, ?> context,
+    public List<Future<?>> index(final MiruContext<IBM, ?> context,
         MiruTenantId tenantId, final Future<List<BloomWork>> bloomWorksFuture,
         boolean repair,
         ExecutorService indexExecutor)
@@ -99,7 +99,7 @@ public class MiruIndexBloom<BM> {
         byte[] primitiveBuffer = new byte[8];
         List<BloomWork> bloomWorks = bloomWorksFuture.get();
 
-        final MiruFieldIndex<BM> bloomFieldIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.bloom);
+        final MiruFieldIndex<IBM> bloomFieldIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.bloom);
         int callableCount = 0;
         List<Future<?>> futures = Lists.newArrayList();
         for (final BloomWork bloomWork : bloomWorks) {
@@ -108,7 +108,7 @@ public class MiruIndexBloom<BM> {
                 log.inc("count", bloomWork.bloomFieldValues.size(), tenantId.toString());
                 MiruFieldDefinition bloomFieldDefinition = context.schema.getFieldDefinition(bloomWork.bloomFieldId);
                 MiruTermId compositeBloomId = indexUtil.makeBloomTerm(bloomWork.fieldValue, bloomFieldDefinition.name);
-                MiruInvertedIndex<BM> invertedIndex = bloomFieldIndex.getOrCreateInvertedIndex(bloomWork.fieldId, compositeBloomId);
+                MiruInvertedIndex<IBM> invertedIndex = bloomFieldIndex.getOrCreateInvertedIndex(bloomWork.fieldId, compositeBloomId);
                 bloomIndex.put(invertedIndex, bloomWork.bloomFieldValues, primitiveBuffer);
                 return null;
             }));

@@ -14,15 +14,18 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  *
  */
-public class MiruAuthzCache<BM> {
+public class MiruAuthzCache<BM extends IBM, IBM> {
 
-    private final MiruBitmaps<BM> bitmaps;
+    private final MiruBitmaps<BM, IBM> bitmaps;
     private final Cache<VersionedAuthzExpression, BM> cache;
     private final ConcurrentMap<String, VersionableAuthz> versionables = Maps.newConcurrentMap();
     private final MiruActivityInternExtern interner;
-    private final MiruAuthzUtils<BM> utils;
+    private final MiruAuthzUtils<BM, IBM> utils;
 
-    public MiruAuthzCache(MiruBitmaps<BM> bitmaps, Cache<VersionedAuthzExpression, BM> cache, MiruActivityInternExtern interner, MiruAuthzUtils<BM> utils) {
+    public MiruAuthzCache(MiruBitmaps<BM, IBM> bitmaps,
+        Cache<VersionedAuthzExpression, BM> cache,
+        MiruActivityInternExtern interner,
+        MiruAuthzUtils<BM, IBM> utils) {
         this.bitmaps = bitmaps;
         this.cache = cache;
         this.interner = interner;
@@ -45,7 +48,7 @@ public class MiruAuthzCache<BM> {
         currentVersion(authz).increment();
     }
 
-    public BM getOrCompose(MiruAuthzExpression authzExpression, MiruAuthzUtils.IndexRetriever<BM> indexRetriever) throws Exception {
+    public BM getOrCompose(MiruAuthzExpression authzExpression, MiruAuthzUtils.IndexRetriever<IBM> indexRetriever) throws Exception {
         VersionedAuthzExpression key = new VersionedAuthzExpression(currentVersions(authzExpression));
         BM got = cache.getIfPresent(key);
         if (got == null) {

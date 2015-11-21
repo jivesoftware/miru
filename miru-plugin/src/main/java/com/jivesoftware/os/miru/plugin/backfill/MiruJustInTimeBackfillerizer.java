@@ -46,8 +46,8 @@ public class MiruJustInTimeBackfillerizer {
         this.backfillExecutor = backfillExecutor;
     }
 
-    public <BM> void backfill(final MiruBitmaps<BM> bitmaps,
-        final MiruRequestContext<BM, ?> requestContext,
+    public <BM extends IBM, IBM> void backfill(final MiruBitmaps<BM, IBM> bitmaps,
+        final MiruRequestContext<IBM, ?> requestContext,
         final MiruFilter streamFilter,
         final MiruSolutionLog solutionLog,
         final MiruTenantId tenantId,
@@ -62,9 +62,9 @@ public class MiruJustInTimeBackfillerizer {
                 synchronized (requestContext.getStreamLocks().lock(streamId, 0)) {
                     int lastActivityIndex = requestContext.getInboxIndex().getLastActivityIndex(streamId, primitiveBuffer);
                     int lastId = Math.min(requestContext.getTimeIndex().lastId(), requestContext.getActivityIndex().lastId(primitiveBuffer));
-                    BM answer = bitmaps.create();
-                    aggregateUtil.filter(bitmaps, requestContext.getSchema(), requestContext.getTermComposer(), requestContext.getFieldIndexProvider(),
-                        streamFilter, solutionLog, answer, null, requestContext.getActivityIndex().lastId(primitiveBuffer), lastActivityIndex, primitiveBuffer);
+                    BM answer = aggregateUtil.filter(bitmaps, requestContext.getSchema(), requestContext.getTermComposer(),
+                        requestContext.getFieldIndexProvider(), streamFilter, solutionLog, null, requestContext.getActivityIndex().lastId(primitiveBuffer),
+                        lastActivityIndex, primitiveBuffer);
 
                     MiruInvertedIndexAppender inbox = requestContext.getInboxIndex().getAppender(streamId);
                     MiruInvertedIndexAppender unread = requestContext.getUnreadTrackingIndex().getAppender(streamId);

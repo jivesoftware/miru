@@ -46,11 +46,11 @@ public class DistinctCountCustomQuestion implements Question<DistinctCountQuery,
     }
 
     @Override
-    public <BM> MiruPartitionResponse<DistinctCountAnswer> askLocal(MiruRequestHandle<BM, ?> handle, Optional<DistinctCountReport> report) throws Exception {
+    public <BM extends IBM, IBM> MiruPartitionResponse<DistinctCountAnswer> askLocal(MiruRequestHandle<BM, IBM, ?> handle, Optional<DistinctCountReport> report) throws Exception {
         byte[] primitiveBuffer = new byte[8];
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
-        MiruRequestContext<BM, ?> stream = handle.getRequestContext();
-        MiruBitmaps<BM> bitmaps = handle.getBitmaps();
+        MiruRequestContext<IBM, ?> stream = handle.getRequestContext();
+        MiruBitmaps<BM, IBM> bitmaps = handle.getBitmaps();
 
         // First grab the stream filter (required)
         MiruFilter combinedFilter = request.query.streamFilter;
@@ -62,11 +62,10 @@ public class DistinctCountCustomQuestion implements Question<DistinctCountQuery,
         }
 
         // Start building up list of bitmap operations to run
-        List<BM> ands = new ArrayList<>();
+        List<IBM> ands = new ArrayList<>();
 
         // 1) Execute the combined filter above on the given stream, add the bitmap
-        BM filtered = bitmaps.create();
-        aggregateUtil.filter(bitmaps, stream.getSchema(), stream.getTermComposer(), stream.getFieldIndexProvider(), combinedFilter, solutionLog, filtered,
+        BM filtered = aggregateUtil.filter(bitmaps, stream.getSchema(), stream.getTermComposer(), stream.getFieldIndexProvider(), combinedFilter, solutionLog,
             null, stream.getActivityIndex().lastId(primitiveBuffer), -1, primitiveBuffer);
         ands.add(filtered);
 

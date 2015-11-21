@@ -24,13 +24,13 @@ public class MiruBitmapsTimeRangeTest {
     private final int numberOfChunkStores = 4;
 
     @Test(dataProvider = "evenTimeIndexDataProvider")
-    public <BM> void testBuildEvenTimeRangeMask(MiruBitmaps<BM> bitmaps, MiruTimeIndex miruTimeIndex) throws Exception {
+    public <BM extends IBM, IBM> void testBuildEvenTimeRangeMask(MiruBitmaps<BM, IBM> bitmaps, MiruTimeIndex miruTimeIndex) throws Exception {
         byte[] primitiveBuffer = new byte[8];
         final int size = (64 * 3) + 1;
         for (int lower = 0; lower <= size / 2; lower++) {
             int upper = size - 1 - lower;
 
-            BM bitmap = bitmaps.buildTimeRangeMask(miruTimeIndex, lower, upper, primitiveBuffer);
+            IBM bitmap = bitmaps.buildTimeRangeMask(miruTimeIndex, lower, upper, primitiveBuffer);
             if (lower == upper) {
                 // the lower and upper are the same so there should be nothing left
                 assertExpectedNumberOfConsecutiveBitsStartingFromN(bitmaps, bitmap, -1, 0);
@@ -41,13 +41,13 @@ public class MiruBitmapsTimeRangeTest {
     }
 
     @Test(dataProvider = "oddTimeIndexDataProvider")
-    public <BM> void testBuildOddTimeRangeMask(MiruBitmaps<BM> bitmaps, MiruTimeIndex miruTimeIndex) throws Exception {
+    public <BM extends IBM, IBM> void testBuildOddTimeRangeMask(MiruBitmaps<BM, IBM> bitmaps, MiruTimeIndex miruTimeIndex) throws Exception {
         byte[] primitiveBuffer = new byte[8];
         final int size = 64 * 3;
         for (int lower = 0; lower < size / 2; lower++) {
             int upper = size - 1 - lower;
 
-            BM bitmap = bitmaps.buildTimeRangeMask(miruTimeIndex, lower, upper, primitiveBuffer);
+            IBM bitmap = bitmaps.buildTimeRangeMask(miruTimeIndex, lower, upper, primitiveBuffer);
             if (lower == upper) {
                 fail();
             } else {
@@ -57,14 +57,14 @@ public class MiruBitmapsTimeRangeTest {
     }
 
     @Test(dataProvider = "singleEntryTimeIndexDataProvider")
-    public <BM> void testSingleBitTimeRange(MiruBitmaps<BM> bitmaps, MiruTimeIndex miruTimeIndex) {
+    public <BM extends IBM, IBM> void testSingleBitTimeRange(MiruBitmaps<BM, IBM> bitmaps, MiruTimeIndex miruTimeIndex) {
         byte[] primitiveBuffer = new byte[8];
-        BM bitmap = bitmaps.buildTimeRangeMask(miruTimeIndex, 0, Long.MAX_VALUE, primitiveBuffer);
+        IBM bitmap = bitmaps.buildTimeRangeMask(miruTimeIndex, 0, Long.MAX_VALUE, primitiveBuffer);
 
         assertExpectedNumberOfConsecutiveBitsStartingFromN(bitmaps, bitmap, 0, 1);
     }
 
-    private <BM> void assertExpectedNumberOfConsecutiveBitsStartingFromN(MiruBitmaps<BM> bitmaps, BM bitmap, int expectedStartingFrom,
+    private <BM extends IBM, IBM> void assertExpectedNumberOfConsecutiveBitsStartingFromN(MiruBitmaps<BM, IBM> bitmaps, IBM bitmap, int expectedStartingFrom,
         int expectedCardinality) {
         int last = -1;
         int cardinality = 0;

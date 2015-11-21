@@ -34,8 +34,8 @@ public class Distincts {
         this.termComposer = termComposer;
     }
 
-    public <BM> DistinctsAnswer gather(MiruBitmaps<BM> bitmaps,
-        MiruRequestContext<BM, ?> requestContext,
+    public <BM extends IBM, IBM> DistinctsAnswer gather(MiruBitmaps<BM, IBM> bitmaps,
+        MiruRequestContext<IBM, ?> requestContext,
         final DistinctsQuery query,
         int gatherBatchSize,
         MiruSolutionLog solutionLog)
@@ -54,8 +54,8 @@ public class Distincts {
         return result;
     }
 
-    public <BM> void gatherDirect(MiruBitmaps<BM> bitmaps,
-        MiruRequestContext<BM, ?> requestContext,
+    public <BM extends IBM, IBM> void gatherDirect(MiruBitmaps<BM, IBM> bitmaps,
+        MiruRequestContext<IBM, ?> requestContext,
         DistinctsQuery query,
         int gatherBatchSize,
         MiruSolutionLog solutionLog,
@@ -94,10 +94,9 @@ public class Distincts {
                     prefixesAsBytes = new byte[0][];
                 }
 
-                List<BM> ands = Lists.newArrayList();
-                BM constrained = bitmaps.create();
-                aggregateUtil.filter(bitmaps, requestContext.getSchema(), termComposer, requestContext.getFieldIndexProvider(), query.constraintsFilter,
-                    solutionLog, constrained, null, requestContext.getActivityIndex().lastId(primitiveBuffer), -1, primitiveBuffer);
+                List<IBM> ands = Lists.newArrayList();
+                BM constrained = aggregateUtil.filter(bitmaps, requestContext.getSchema(), termComposer, requestContext.getFieldIndexProvider(),
+                    query.constraintsFilter, solutionLog, null, requestContext.getActivityIndex().lastId(primitiveBuffer), -1, primitiveBuffer);
                 ands.add(constrained);
 
                 if (!MiruTimeRange.ALL_TIME.equals(query.timeRange)) {
@@ -105,11 +104,10 @@ public class Distincts {
                     ands.add(bitmaps.buildTimeRangeMask(requestContext.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp, primitiveBuffer));
                 }
 
-                BM result;
+                BM result = bitmaps.create();
                 if (ands.size() == 1) {
-                    result = ands.get(0);
+                    bitmaps.copy(result, ands.get(0));
                 } else {
-                    result = bitmaps.create();
                     bitmaps.and(result, ands);
                 }
                 solutionLog.log(MiruSolutionLogLevel.INFO, "distincts gatherDirect: setup {} ms.", System.currentTimeMillis() - start);

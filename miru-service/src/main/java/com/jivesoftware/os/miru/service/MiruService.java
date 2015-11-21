@@ -112,13 +112,13 @@ public class MiruService implements Miru {
         long totalElapsed;
 
         try {
-            Iterable<? extends OrderedPartitions<?>> partitionReplicas = partitionDirector.allQueryablePartitionsInOrder(
+            Iterable<? extends OrderedPartitions<?, ?>> partitionReplicas = partitionDirector.allQueryablePartitionsInOrder(
                 tenantId, solvableFactory.getQueryKey());
 
             Optional<A> lastAnswer = Optional.absent();
 
             List<ExpectedSolution<A>> expectedSolutions = Lists.newArrayList();
-            for (OrderedPartitions<?> orderedPartitions : partitionReplicas) {
+            for (OrderedPartitions<?, ?> orderedPartitions : partitionReplicas) {
                 Optional<Long> suggestedTimeoutInMillis = partitionComparison.suggestTimeout(orderedPartitions.tenantId, orderedPartitions.partitionId,
                     solvableFactory.getQueryKey());
                 solutionLog.log(MiruSolutionLogLevel.INFO, "Solving partition:{} for tenant:{} with timeout:{}",
@@ -190,10 +190,10 @@ public class MiruService implements Miru {
         A defaultValue,
         MiruSolutionLogLevel logLevel)
         throws Exception {
-        Optional<? extends MiruQueryablePartition<?>> partition = getLocalTenantPartition(tenantId, partitionId);
+        Optional<? extends MiruQueryablePartition<?, ?>> partition = getLocalTenantPartition(tenantId, partitionId);
 
         if (partition.isPresent()) {
-            Callable<MiruPartitionResponse<A>> callable = factory.create(partition.get(), report);
+            Callable<MiruPartitionResponse<A>> callable = factory.create((MiruQueryablePartition) partition.get(), report);
             MiruPartitionResponse<A> answer = callable.call();
 
             log.inc("askImmediate");
@@ -218,21 +218,21 @@ public class MiruService implements Miru {
      * Inspect a field term.
      */
     public String inspect(MiruTenantId tenantId, MiruPartitionId partitionId, String fieldName, String termValue) throws Exception {
-        Optional<? extends MiruQueryablePartition<?>> partition = getLocalTenantPartition(tenantId, partitionId);
+        Optional<? extends MiruQueryablePartition<?, ?>> partition = getLocalTenantPartition(tenantId, partitionId);
         if (partition.isPresent()) {
-            return inspect(partition.get(), fieldName, termValue);
+            return inspect((MiruQueryablePartition) partition.get(), fieldName, termValue);
         } else {
             return "Partition unavailable";
         }
     }
 
-    private <BM> String inspect(MiruQueryablePartition<BM> partition, String fieldName, String termValue) throws Exception {
-        try (MiruRequestHandle<BM, ?> handle = partition.inspectRequestHandle()) {
-            MiruRequestContext<BM, ?> requestContext = handle.getRequestContext();
+    private <BM extends IBM, IBM> String inspect(MiruQueryablePartition<BM, IBM> partition, String fieldName, String termValue) throws Exception {
+        try (MiruRequestHandle<BM, IBM, ?> handle = partition.inspectRequestHandle()) {
+            MiruRequestContext<IBM, ?> requestContext = handle.getRequestContext();
             int fieldId = requestContext.getSchema().getFieldId(fieldName);
             MiruFieldDefinition fieldDefinition = requestContext.getSchema().getFieldDefinition(fieldId);
             byte[] primitiveBuffer = new byte[8];
-            Optional<BM> index = requestContext.getFieldIndexProvider()
+            Optional<IBM> index = requestContext.getFieldIndexProvider()
                 .getFieldIndex(MiruFieldType.primary)
                 .get(fieldId, requestContext.getTermComposer().compose(fieldDefinition, termValue))
                 .getIndex(primitiveBuffer);
@@ -267,7 +267,7 @@ public class MiruService implements Miru {
         return partitionDirector.prioritizeRebuild(tenantId, partitionId);
     }
 
-    private Optional<? extends MiruQueryablePartition<?>> getLocalTenantPartition(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+    private Optional<? extends MiruQueryablePartition<?, ?>> getLocalTenantPartition(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         MiruPartitionCoord localPartitionCoord = new MiruPartitionCoord(tenantId, partitionId, localhost);
         return partitionDirector.getQueryablePartition(localPartitionCoord);
     }
@@ -277,10 +277,10 @@ public class MiruService implements Miru {
     }
 
     public void introspect(MiruTenantId tenantId, MiruPartitionId partitionId, RequestContextCallback callback) throws Exception {
-        Optional<? extends MiruQueryablePartition<?>> partition = getLocalTenantPartition(tenantId, partitionId);
+        Optional<? extends MiruQueryablePartition<?, ?>> partition = getLocalTenantPartition(tenantId, partitionId);
         if (partition.isPresent()) {
-            MiruQueryablePartition<?> hostedPartition = partition.get();
-            try (MiruRequestHandle<?, ? extends MiruSipCursor<?>> handle = hostedPartition.inspectRequestHandle()) {
+            MiruQueryablePartition<?, ?> hostedPartition = partition.get();
+            try (MiruRequestHandle<?, ?, ? extends MiruSipCursor<?>> handle = hostedPartition.inspectRequestHandle()) {
                 callback.call(handle.getRequestContext());
             }
         }
@@ -297,13 +297,13 @@ public class MiruService implements Miru {
         long getStart();
     }
 
-    private class ParallelExpectedSolution<A> implements ExpectedSolution<A> {
+    private class ParallelExpectedSolution<A, BM extends IBM, IBM> implements ExpectedSolution<A> {
 
-        private final OrderedPartitions<?> orderedPartitions;
+        private final OrderedPartitions<BM, IBM> orderedPartitions;
         private final Future<MiruSolved<A>> future;
         private final long start;
 
-        public <Q, P> ParallelExpectedSolution(OrderedPartitions<?> orderedPartitions,
+        public <Q, P> ParallelExpectedSolution(OrderedPartitions<BM, IBM> orderedPartitions,
             MiruSolvableFactory<Q, A, P> solvableFactory,
             Optional<Long> suggestedTimeoutInMillis,
             MiruSolutionLog solutionLog) {
@@ -341,16 +341,16 @@ public class MiruService implements Miru {
         }
     }
 
-    private class SerialExpectedSolution<Q, A, P> implements ExpectedSolution<A> {
+    private class SerialExpectedSolution<Q, A, P, BM extends IBM, IBM> implements ExpectedSolution<A> {
 
-        private final OrderedPartitions<?> orderedPartitions;
+        private final OrderedPartitions<BM, IBM> orderedPartitions;
         private final MiruSolvableFactory<Q, A, P> solvableFactory;
         private final Optional<Long> suggestedTimeoutInMillis;
         private final MiruSolutionLog solutionLog;
 
         private long start;
 
-        public SerialExpectedSolution(OrderedPartitions<?> orderedPartitions,
+        public SerialExpectedSolution(OrderedPartitions<BM, IBM> orderedPartitions,
             MiruSolvableFactory<Q, A, P> solvableFactory,
             Optional<Long> suggestedTimeoutInMillis,
             MiruSolutionLog solutionLog) {

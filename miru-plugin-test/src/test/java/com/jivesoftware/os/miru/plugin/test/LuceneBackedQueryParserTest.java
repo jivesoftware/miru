@@ -12,6 +12,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndexProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
+import com.jivesoftware.os.miru.plugin.index.MiruTxIndex;
 import com.jivesoftware.os.miru.plugin.index.TermIdStream;
 import com.jivesoftware.os.miru.plugin.query.LuceneBackedQueryParser;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
@@ -81,9 +82,8 @@ public class LuceneBackedQueryParserTest {
         // ((0, 2, 4, 6, 8) AND (2, 3, 6, 7)) OR ((0, 2, 4, 6, 8) NOT (2, 3, 6, 7))
         // (2, 6) OR (0, 4, 8)
         // (0, 2, 4, 6, 8)
-        RoaringBitmap storage = new RoaringBitmap();
-        aggregateUtil.filter(bitmaps, schema, termComposer, fieldIndexProvider, filter, new MiruSolutionLog(MiruSolutionLogLevel.NONE), storage, null, 9, -1,
-            primitiveBuffer);
+        RoaringBitmap storage = aggregateUtil.filter(bitmaps, schema, termComposer, fieldIndexProvider, filter, new MiruSolutionLog(MiruSolutionLogLevel.NONE),
+            null, 9, -1, primitiveBuffer);
         Assert.assertEquals(storage.getCardinality(), 5);
         assertTrue(storage.contains(0));
         assertTrue(storage.contains(2));
@@ -111,9 +111,8 @@ public class LuceneBackedQueryParserTest {
         // ((0, 2, 4, 6, 8) AND (2, 3, 6, 7)) OR ((0, 2, 4, 6, 8) NOT (2, 3, 6, 7))
         // (2, 6) OR (0, 4, 8)
         // (0, 2, 4, 6, 8)
-        RoaringBitmap storage = new RoaringBitmap();
-        aggregateUtil.filter(bitmaps, schema, termComposer, fieldIndexProvider, filter, new MiruSolutionLog(MiruSolutionLogLevel.NONE), storage, null, 9, -1,
-            primitiveBuffer);
+        RoaringBitmap storage = aggregateUtil.filter(bitmaps, schema, termComposer, fieldIndexProvider, filter, new MiruSolutionLog(MiruSolutionLogLevel.NONE),
+            null, 9, -1, primitiveBuffer);
         Assert.assertEquals(storage.getCardinality(), 5);
         assertTrue(storage.contains(0));
         assertTrue(storage.contains(2));
@@ -151,20 +150,124 @@ public class LuceneBackedQueryParserTest {
 
         @Override
         public MiruInvertedIndex<RoaringBitmap> get(int fieldId, MiruTermId termId) throws Exception {
-            @SuppressWarnings("unchecked")
-            byte[] primitiveBuffer = new byte[8];
-            MiruInvertedIndex<RoaringBitmap> mockInvertedIndex = (MiruInvertedIndex<RoaringBitmap>) Mockito.mock(MiruInvertedIndex.class);
-            Mockito.when(mockInvertedIndex.getIndex(primitiveBuffer)).thenReturn(Optional.fromNullable(indexes[fieldId].get(termId)));
-            return mockInvertedIndex;
+            return new MiruInvertedIndex<RoaringBitmap>() {
+                @Override
+                public Optional<RoaringBitmap> getIndex(byte[] primitiveBuffer) throws Exception {
+                    return Optional.fromNullable(indexes[fieldId].get(termId));
+                }
+
+                @Override
+                public Optional<RoaringBitmap> getIndexUnsafe(byte[] primitiveBuffer) throws Exception {
+                    return getIndex(primitiveBuffer);
+                }
+
+                @Override
+                public void replaceIndex(RoaringBitmap index, int setLastId, byte[] primitiveBuffer) throws Exception {
+                }
+
+                @Override
+                public void remove(int id, byte[] primitiveBuffer) throws Exception {
+                }
+
+                @Override
+                public void set(byte[] primitiveBuffer, int... ids) throws Exception {
+                }
+
+                @Override
+                public int lastId(byte[] primitiveBuffer) throws Exception {
+                    return 0;
+                }
+
+                @Override
+                public void andNotToSourceSize(List<RoaringBitmap> masks, byte[] primitiveBuffer) throws Exception {
+                }
+
+                @Override
+                public void orToSourceSize(RoaringBitmap mask, byte[] primitiveBuffer) throws Exception {
+                }
+
+                @Override
+                public void andNot(RoaringBitmap mask, byte[] primitiveBuffer) throws Exception {
+                }
+
+                @Override
+                public void or(RoaringBitmap mask, byte[] primitiveBuffer) throws Exception {
+                }
+
+                @Override
+                public void append(byte[] primitiveBuffer, int... ids) throws Exception {
+                }
+
+                @Override
+                public void appendAndExtend(List<Integer> ids, int lastId, byte[] primitiveBuffer) throws Exception {
+                }
+
+                @Override
+                public <R> R txIndex(IndexTx<R, RoaringBitmap> tx, byte[] primitiveBuffer) throws Exception {
+                    return tx.tx(indexes[fieldId].get(termId), null);
+                }
+            };
         }
 
         @Override
         public MiruInvertedIndex<RoaringBitmap> get(int fieldId, MiruTermId termId, int considerIfIndexIdGreaterThanN) throws Exception {
-            @SuppressWarnings("unchecked")
-            byte[] primitiveBuffer = new byte[8];
-            MiruInvertedIndex<RoaringBitmap> mockInvertedIndex = (MiruInvertedIndex<RoaringBitmap>) Mockito.mock(MiruInvertedIndex.class);
-            Mockito.when(mockInvertedIndex.getIndex(primitiveBuffer)).thenReturn(Optional.fromNullable(indexes[fieldId].get(termId)));
-            return mockInvertedIndex;
+            return new MiruInvertedIndex<RoaringBitmap>() {
+                @Override
+                public Optional<RoaringBitmap> getIndex(byte[] primitiveBuffer) throws Exception {
+                    return Optional.fromNullable(indexes[fieldId].get(termId));
+                }
+
+                @Override
+                public Optional<RoaringBitmap> getIndexUnsafe(byte[] primitiveBuffer) throws Exception {
+                    return getIndex(primitiveBuffer);
+                }
+
+                @Override
+                public void replaceIndex(RoaringBitmap index, int setLastId, byte[] primitiveBuffer) throws Exception {
+                }
+
+                @Override
+                public void remove(int id, byte[] primitiveBuffer) throws Exception {
+                }
+
+                @Override
+                public void set(byte[] primitiveBuffer, int... ids) throws Exception {
+                }
+
+                @Override
+                public int lastId(byte[] primitiveBuffer) throws Exception {
+                    return 0;
+                }
+
+                @Override
+                public void andNotToSourceSize(List<RoaringBitmap> masks, byte[] primitiveBuffer) throws Exception {
+                }
+
+                @Override
+                public void orToSourceSize(RoaringBitmap mask, byte[] primitiveBuffer) throws Exception {
+                }
+
+                @Override
+                public void andNot(RoaringBitmap mask, byte[] primitiveBuffer) throws Exception {
+                }
+
+                @Override
+                public void or(RoaringBitmap mask, byte[] primitiveBuffer) throws Exception {
+                }
+
+                @Override
+                public void append(byte[] primitiveBuffer, int... ids) throws Exception {
+                }
+
+                @Override
+                public void appendAndExtend(List<Integer> ids, int lastId, byte[] primitiveBuffer) throws Exception {
+                }
+
+                @Override
+                public <R> R txIndex(IndexTx<R, RoaringBitmap> tx, byte[] primitiveBuffer) throws Exception {
+                    return tx.tx(indexes[fieldId].get(termId), null);
+                }
+            };
         }
 
         @Override

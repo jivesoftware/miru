@@ -10,9 +10,9 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
 /** @author jonathan */
 public class MiruRemoteQueryablePartitionFactory {
 
-    public <BM, S extends MiruSipCursor<S>> MiruQueryablePartition<BM> create(final MiruPartitionCoord coord) {
+    public <BM extends IBM, IBM, S extends MiruSipCursor<S>> MiruQueryablePartition<BM, IBM> create(final MiruPartitionCoord coord) {
 
-        return new MiruQueryablePartition<BM>() {
+        return new MiruQueryablePartition<BM, IBM>() {
 
             @Override
             public boolean isLocal() {
@@ -25,21 +25,21 @@ public class MiruRemoteQueryablePartitionFactory {
             }
 
             @Override
-            public MiruRequestHandle<BM, ?> inspectRequestHandle() throws Exception {
+            public MiruRequestHandle<BM, IBM, ?> inspectRequestHandle() throws Exception {
                 throw new UnsupportedOperationException("Remote partitions cannot be inspected");
             }
 
             @Override
-            public MiruRequestHandle<BM, S> acquireQueryHandle(byte[] primitiveBuffer) throws Exception {
-                return new MiruRequestHandle<BM, S>() {
+            public MiruRequestHandle<BM, IBM, S> acquireQueryHandle(byte[] primitiveBuffer) throws Exception {
+                return new MiruRequestHandle<BM, IBM, S>() {
 
                     @Override
-                    public MiruBitmaps<BM> getBitmaps() {
+                    public MiruBitmaps<BM, IBM> getBitmaps() {
                         return null;
                     }
 
                     @Override
-                    public MiruRequestContext<BM, S> getRequestContext() {
+                    public MiruRequestContext<IBM, S> getRequestContext() {
                         return null;
                     }
 

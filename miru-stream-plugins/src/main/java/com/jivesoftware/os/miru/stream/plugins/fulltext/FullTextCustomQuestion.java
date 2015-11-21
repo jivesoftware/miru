@@ -49,13 +49,13 @@ public class FullTextCustomQuestion implements Question<FullTextQuery, FullTextA
     }
 
     @Override
-    public <BM> MiruPartitionResponse<FullTextAnswer> askLocal(MiruRequestHandle<BM, ?> handle,
+    public <BM extends IBM, IBM> MiruPartitionResponse<FullTextAnswer> askLocal(MiruRequestHandle<BM, IBM, ?> handle,
         Optional<FullTextReport> report)
         throws Exception {
         byte[] primitiveBuffer = new byte[8];
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
-        MiruRequestContext<BM, ?> context = handle.getRequestContext();
-        MiruBitmaps<BM> bitmaps = handle.getBitmaps();
+        MiruRequestContext<IBM, ?> context = handle.getRequestContext();
+        MiruBitmaps<BM, IBM> bitmaps = handle.getBitmaps();
 
         MiruTimeRange timeRange = request.query.timeRange;
         if (!context.getTimeIndex().intersects(timeRange)) {
@@ -68,18 +68,16 @@ public class FullTextCustomQuestion implements Question<FullTextQuery, FullTextA
         MiruFilter filter = fullText.parseQuery(request.query.defaultField, request.query.query);
         Map<FieldAndTermId, MutableInt> termCollector = request.query.strategy == FullTextQuery.Strategy.TF_IDF ? Maps.newHashMap() : null;
 
-        BM filtered = bitmaps.create();
-        aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), filter, solutionLog,
-            filtered, termCollector, context.getActivityIndex().lastId(primitiveBuffer), -1, primitiveBuffer);
+        BM filtered = aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), filter, solutionLog,
+            termCollector, context.getActivityIndex().lastId(primitiveBuffer), -1, primitiveBuffer);
 
-        List<BM> ands = new ArrayList<>();
+        List<IBM> ands = new ArrayList<>();
         ands.add(filtered);
         ands.add(bitmaps.buildIndexMask(context.getActivityIndex().lastId(primitiveBuffer), context.getRemovalIndex().getIndex(primitiveBuffer)));
 
         if (!MiruFilter.NO_FILTER.equals(request.query.constraintsFilter)) {
-            BM constrained = bitmaps.create();
-            aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), request.query.constraintsFilter,
-                solutionLog, constrained, null, context.getActivityIndex().lastId(primitiveBuffer), -1, primitiveBuffer);
+            BM constrained = aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), request.query.constraintsFilter,
+                solutionLog, null, context.getActivityIndex().lastId(primitiveBuffer), -1, primitiveBuffer);
             ands.add(constrained);
         }
 

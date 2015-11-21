@@ -50,13 +50,13 @@ public class CollaborativeFiltering {
     /*
      * I have viewed these things; among others who have also viewed these things, what have they viewed that I have not?
      */
-    public <BM> RecoAnswer collaborativeFiltering(MiruSolutionLog solutionLog,
-        MiruBitmaps<BM> bitmaps,
-        MiruRequestContext<BM, ?> requestContext,
+    public <BM extends IBM, IBM> RecoAnswer collaborativeFiltering(MiruSolutionLog solutionLog,
+        MiruBitmaps<BM, IBM> bitmaps,
+        MiruRequestContext<IBM, ?> requestContext,
         final MiruRequest<RecoQuery> request,
         Optional<RecoReport> report,
-        BM allMyActivity,
-        BM okActivity,
+        IBM allMyActivity,
+        IBM okActivity,
         MiruFilter removeDistinctsFilter)
         throws Exception {
         byte[] primitiveBuffer = new byte[8];
@@ -75,7 +75,7 @@ public class CollaborativeFiltering {
         BM myOkActivity = bitmaps.create();
         bitmaps.and(myOkActivity, Arrays.asList(allMyActivity, okActivity));
 
-        MiruFieldIndex<BM> primaryFieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
+        MiruFieldIndex<IBM> primaryFieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
 
         // distinctParents: distinct parents <field1> that I've touched
         Set<MiruTermId> distinctParents = Sets.newHashSet();
@@ -87,10 +87,10 @@ public class CollaborativeFiltering {
 //        for (MiruTermId[] fieldValues : allFieldValues) {
 //            Collections.addAll(distinctParents, fieldValues);
 //        }
-        List<BM> toBeORed = new ArrayList<>();
+        List<IBM> toBeORed = new ArrayList<>();
         log.debug("allField1Activity: fieldId={}", fieldId1);
         for (MiruTermId parent : distinctParents) {
-            Optional<BM> index = primaryFieldIndex.get(
+            Optional<IBM> index = primaryFieldIndex.get(
                 fieldId1,
                 parent)
                 .getIndex(primitiveBuffer);
@@ -140,9 +140,8 @@ public class CollaborativeFiltering {
 
         // augment distinctParents with additional distinct parents <field1> for exclusion below
         if (!MiruFilter.NO_FILTER.equals(removeDistinctsFilter)) {
-            BM remove = bitmaps.create();
-            aggregateUtil.filter(bitmaps, requestContext.getSchema(), requestContext.getTermComposer(), requestContext.getFieldIndexProvider(),
-                removeDistinctsFilter, solutionLog, remove, null, requestContext.getActivityIndex().lastId(primitiveBuffer), -1, primitiveBuffer);
+            BM remove = aggregateUtil.filter(bitmaps, requestContext.getSchema(), requestContext.getTermComposer(), requestContext.getFieldIndexProvider(),
+                removeDistinctsFilter, solutionLog, null, requestContext.getActivityIndex().lastId(primitiveBuffer), -1, primitiveBuffer);
             if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
                 solutionLog.log(MiruSolutionLogLevel.INFO, "remove {}.", bitmaps.cardinality(remove));
                 solutionLog.log(MiruSolutionLogLevel.TRACE, "remove bitmap {}", remove);
@@ -160,12 +159,12 @@ public class CollaborativeFiltering {
         Multiset<MiruTermId> scoredParents = HashMultiset.create();
 
         for (MiruTermCount tc : contributorHeap) {
-            Optional<BM> index = primaryFieldIndex.get(
+            Optional<IBM> index = primaryFieldIndex.get(
                 fieldId2,
                 tc.termId)
                 .getIndex(primitiveBuffer);
             if (index.isPresent()) {
-                BM contributorAllActivity = index.get();
+                IBM contributorAllActivity = index.get();
                 BM contributorOkActivity = bitmaps.create();
                 bitmaps.and(contributorOkActivity, Arrays.asList(okActivity, contributorAllActivity));
 
@@ -196,7 +195,7 @@ public class CollaborativeFiltering {
         return composeAnswer(requestContext, request, fieldDefinition3, scoredHeap);
     }
 
-    private <BM> RecoAnswer composeAnswer(MiruRequestContext<BM, ?> requestContext,
+    private <BM extends IBM, IBM> RecoAnswer composeAnswer(MiruRequestContext<IBM, ?> requestContext,
         MiruRequest<RecoQuery> request,
         MiruFieldDefinition fieldDefinition,
         MinMaxPriorityQueue<MiruTermCount> heap) {

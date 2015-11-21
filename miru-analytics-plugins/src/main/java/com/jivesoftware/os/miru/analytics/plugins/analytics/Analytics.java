@@ -43,9 +43,9 @@ public class Analytics {
         boolean analyzed(T term, long version, long[] waveformBuffer) throws Exception;
     }
 
-    public <BM, T> boolean analyze(MiruSolutionLog solutionLog,
-        MiruRequestHandle<BM, ?> handle,
-        MiruRequestContext<BM, ?> context,
+    public <BM extends IBM, IBM, T> boolean analyze(MiruSolutionLog solutionLog,
+        MiruRequestHandle<BM, IBM, ?> handle,
+        MiruRequestContext<IBM, ?> context,
         MiruAuthzExpression authzExpression,
         MiruTimeRange timeRange,
         MiruFilter constraintsFilter,
@@ -55,7 +55,7 @@ public class Analytics {
 
         byte[] primtiveBuffer = new byte[8];
 
-        MiruBitmaps<BM> bitmaps = handle.getBitmaps();
+        MiruBitmaps<BM, IBM> bitmaps = handle.getBitmaps();
         MiruPartitionCoord coord = handle.getCoord();
         MiruTimeIndex timeIndex = context.getTimeIndex();
 
@@ -76,7 +76,7 @@ public class Analytics {
         }
 
         // Start building up list of bitmap operations to run
-        List<BM> ands = new ArrayList<>();
+        List<IBM> ands = new ArrayList<>();
 
         long start = System.currentTimeMillis();
         ands.add(bitmaps.buildTimeRangeMask(timeIndex, timeRange.smallestTimestamp, timeRange.largestTimestamp, primtiveBuffer));
@@ -86,10 +86,9 @@ public class Analytics {
         if (MiruFilter.NO_FILTER.equals(constraintsFilter)) {
             solutionLog.log(MiruSolutionLogLevel.INFO, "analytics filter: no constraints.");
         } else {
-            BM filtered = bitmaps.create();
             start = System.currentTimeMillis();
-            aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), constraintsFilter,
-                solutionLog, filtered, null, context.getActivityIndex().lastId(primtiveBuffer), -1, primtiveBuffer);
+            BM filtered = aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), constraintsFilter,
+                solutionLog, null, context.getActivityIndex().lastId(primtiveBuffer), -1, primtiveBuffer);
             solutionLog.log(MiruSolutionLogLevel.INFO, "analytics filter: {} millis.", System.currentTimeMillis() - start);
             ands.add(filtered);
         }
@@ -136,9 +135,8 @@ public class Analytics {
         analysis.consume((term, version, filter) -> {
             boolean found = false;
             if (!bitmaps.isEmpty(constrained)) {
-                BM waveformFiltered = bitmaps.create();
-                aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), filter, solutionLog,
-                    waveformFiltered, null, context.getActivityIndex().lastId(primtiveBuffer), -1, primtiveBuffer);
+                BM waveformFiltered = aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), filter,
+                    solutionLog, null, context.getActivityIndex().lastId(primtiveBuffer), -1, primtiveBuffer);
                 BM answer;
                 if (bitmaps.supportsInPlace()) {
                     answer = waveformFiltered;

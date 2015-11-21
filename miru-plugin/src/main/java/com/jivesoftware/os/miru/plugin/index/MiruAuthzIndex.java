@@ -5,11 +5,11 @@ import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 /**
  * @author jonathan
  */
-public interface MiruAuthzIndex<BM> {
+public interface MiruAuthzIndex<IBM> {
 
-    MiruInvertedIndex<BM> getAuthz(String authz) throws Exception;
+    MiruInvertedIndex<IBM> getAuthz(String authz) throws Exception;
 
-    BM getCompositeAuthz(MiruAuthzExpression authzExpression, byte[] primitiveBuffer) throws Exception;
+    IBM getCompositeAuthz(MiruAuthzExpression authzExpression, byte[] primitiveBuffer) throws Exception;
 
     void append(String authz, byte[] primitiveBuffer, int... ids) throws Exception;
 

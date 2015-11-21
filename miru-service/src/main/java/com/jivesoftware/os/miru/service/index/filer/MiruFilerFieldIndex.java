@@ -17,16 +17,16 @@ import java.util.List;
 /**
  * @author jonathan
  */
-public class MiruFilerFieldIndex<BM> implements MiruFieldIndex<BM> {
+public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<IBM> {
 
-    private final MiruBitmaps<BM> bitmaps;
+    private final MiruBitmaps<BM, IBM> bitmaps;
     private final long[] indexIds;
     private final KeyedFilerStore<Long, Void>[] indexes;
     private final KeyedFilerStore<Integer, MapContext>[] cardinalities;
     // We could lock on both field + termId for improved hash/striping, but we favor just termId to reduce object creation
     private final StripingLocksProvider<MiruTermId> stripingLocksProvider;
 
-    public MiruFilerFieldIndex(MiruBitmaps<BM> bitmaps,
+    public MiruFilerFieldIndex(MiruBitmaps<BM, IBM> bitmaps,
         long[] indexIds,
         KeyedFilerStore<Long, Void>[] indexes,
         KeyedFilerStore<Integer, MapContext>[] cardinalities,
@@ -73,21 +73,21 @@ public class MiruFilerFieldIndex<BM> implements MiruFieldIndex<BM> {
     }
 
     @Override
-    public MiruInvertedIndex<BM> get(int fieldId, MiruTermId termId) throws Exception {
+    public MiruInvertedIndex<IBM> get(int fieldId, MiruTermId termId) throws Exception {
         return getIndex(fieldId, termId, -1);
     }
 
     @Override
-    public MiruInvertedIndex<BM> get(int fieldId, MiruTermId termId, int considerIfIndexIdGreaterThanN) throws Exception {
+    public MiruInvertedIndex<IBM> get(int fieldId, MiruTermId termId, int considerIfIndexIdGreaterThanN) throws Exception {
         return getIndex(fieldId, termId, considerIfIndexIdGreaterThanN);
     }
 
     @Override
-    public MiruInvertedIndex<BM> getOrCreateInvertedIndex(int fieldId, MiruTermId term) throws Exception {
+    public MiruInvertedIndex<IBM> getOrCreateInvertedIndex(int fieldId, MiruTermId term) throws Exception {
         return getIndex(fieldId, term, -1);
     }
 
-    private MiruInvertedIndex<BM> getIndex(int fieldId, MiruTermId termId, int considerIfIndexIdGreaterThanN) throws Exception {
+    private MiruInvertedIndex<IBM> getIndex(int fieldId, MiruTermId termId, int considerIfIndexIdGreaterThanN) throws Exception {
         return new MiruFilerInvertedIndex<>(bitmaps, new IndexKey(indexIds[fieldId], termId.getBytes()), indexes[fieldId],
             considerIfIndexIdGreaterThanN, stripingLocksProvider.lock(termId, 0));
     }

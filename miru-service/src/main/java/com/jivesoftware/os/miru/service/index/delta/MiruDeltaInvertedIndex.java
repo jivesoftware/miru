@@ -8,7 +8,6 @@ import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.index.Mergeable;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import java.io.DataInputStream;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -16,20 +15,20 @@ import java.util.concurrent.Callable;
 /**
  * DELTA FORCE
  */
-public class MiruDeltaInvertedIndex<BM> implements MiruInvertedIndex<BM>, Mergeable {
+public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<IBM>, Mergeable {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
-    private final MiruBitmaps<BM> bitmaps;
-    private final MiruInvertedIndex<BM> backingIndex;
-    private final Delta<BM> delta;
+    private final MiruBitmaps<BM, IBM> bitmaps;
+    private final MiruInvertedIndex<IBM> backingIndex;
+    private final Delta<IBM> delta;
     private final MiruFieldIndex.IndexKey indexKey;
     private final Cache<MiruFieldIndex.IndexKey, Optional<?>> fieldIndexCache;
     private final Cache<MiruFieldIndex.IndexKey, Long> versionCache;
 
-    public MiruDeltaInvertedIndex(MiruBitmaps<BM> bitmaps,
-        MiruInvertedIndex<BM> backingIndex,
-        Delta<BM> delta,
+    public MiruDeltaInvertedIndex(MiruBitmaps<BM, IBM> bitmaps,
+        MiruInvertedIndex<IBM> backingIndex,
+        Delta<IBM> delta,
         MiruFieldIndex.IndexKey indexKey,
         Cache<MiruFieldIndex.IndexKey, Optional<?>> fieldIndexCache,
         Cache<MiruFieldIndex.IndexKey, Long> versionCache) {
@@ -41,20 +40,20 @@ public class MiruDeltaInvertedIndex<BM> implements MiruInvertedIndex<BM>, Mergea
         this.versionCache = versionCache;
     }
 
-    private final Callable<Optional<BM>> indexLoader = new Callable<Optional<BM>>() {
+    private final Callable<Optional<IBM>> indexLoader = new Callable<Optional<IBM>>() {
         @Override
-        public Optional<BM> call() throws Exception {
+        public Optional<IBM> call() throws Exception {
             byte[] primitiveBuffer = new byte[8];
-            Optional<BM> index = delta.replaced ? Optional.<BM>absent() : backingIndex.getIndex(primitiveBuffer);
+            Optional<IBM> index = delta.replaced ? Optional.<IBM>absent() : backingIndex.getIndex(primitiveBuffer);
             if (index.isPresent()) {
-                BM got = index.get();
-                BM exclude = delta.andNot;
+                IBM got = index.get();
+                IBM exclude = delta.andNot;
                 if (exclude != null) {
                     BM container = bitmaps.create();
                     bitmaps.andNot(container, got, exclude);
                     got = container;
                 }
-                BM include = delta.or;
+                IBM include = delta.or;
                 if (include != null) {
                     BM container = bitmaps.create();
                     bitmaps.or(container, Arrays.asList(got, include));
@@ -68,18 +67,18 @@ public class MiruDeltaInvertedIndex<BM> implements MiruInvertedIndex<BM>, Mergea
     };
 
     @Override
-    public Optional<BM> getIndex(byte[] primitiveBuffer) throws Exception {
+    public Optional<IBM> getIndex(byte[] primitiveBuffer) throws Exception {
         if (fieldIndexCache != null) {
-            return (Optional<BM>) fieldIndexCache.get(indexKey, indexLoader);
+            return (Optional<IBM>) fieldIndexCache.get(indexKey, indexLoader);
         } else {
             return indexLoader.call();
         }
     }
 
     @Override
-    public <R> R txIndex(IndexTx<R, BM> tx, byte[] primitiveBuffer) throws Exception {
+    public <R> R txIndex(IndexTx<R, IBM> tx, byte[] primitiveBuffer) throws Exception {
         if (fieldIndexCache != null) {
-            Optional<BM> index = (Optional<BM>) fieldIndexCache.getIfPresent(indexKey);
+            Optional<IBM> index = (Optional<IBM>) fieldIndexCache.getIfPresent(indexKey);
             if (index != null) {
                 LOG.inc("txIndex>cached", 1);
                 return tx.tx(index.orNull(), null);
@@ -91,7 +90,7 @@ public class MiruDeltaInvertedIndex<BM> implements MiruInvertedIndex<BM>, Mergea
             return tx.tx(delta.or, null);
         } else if (delta.or != null || delta.andNot != null) {
             LOG.inc("txIndex>delta", 1);
-            Optional<BM> index = getIndex(primitiveBuffer);
+            Optional<IBM> index = getIndex(primitiveBuffer);
             return tx.tx(index.orNull(), null);
         } else {
             LOG.inc("txIndex>backing", 1);
@@ -109,12 +108,12 @@ public class MiruDeltaInvertedIndex<BM> implements MiruInvertedIndex<BM>, Mergea
     }
 
     @Override
-    public Optional<BM> getIndexUnsafe(byte[] primitiveBuffer) throws Exception {
+    public Optional<IBM> getIndexUnsafe(byte[] primitiveBuffer) throws Exception {
         return getIndex(primitiveBuffer);
     }
 
     @Override
-    public void replaceIndex(BM index, int setLastId, byte[] primitiveBuffer) throws Exception {
+    public void replaceIndex(IBM index, int setLastId, byte[] primitiveBuffer) throws Exception {
         synchronized (delta) {
             delta.replaced = true;
             delta.andNot = null;
@@ -222,7 +221,7 @@ public class MiruDeltaInvertedIndex<BM> implements MiruInvertedIndex<BM>, Mergea
     }
 
     @Override
-    public void andNotToSourceSize(List<BM> masks, byte[] primitiveBuffer) throws Exception {
+    public void andNotToSourceSize(List<IBM> masks, byte[] primitiveBuffer) throws Exception {
         if (masks.isEmpty()) {
             return;
         }
@@ -233,14 +232,14 @@ public class MiruDeltaInvertedIndex<BM> implements MiruInvertedIndex<BM>, Mergea
                 delta.or = container;
             }
 
-            Optional<BM> index = backingIndex.getIndex(primitiveBuffer);
+            Optional<IBM> index = backingIndex.getIndex(primitiveBuffer);
             if (index.isPresent() || delta.replaced) {
                 BM container = bitmaps.create();
                 bitmaps.or(container, masks);
 
                 if (!delta.replaced) {
                     // first find the actual bits that matter
-                    BM existing = index.get();
+                    IBM existing = index.get();
                     BM actualBits = bitmaps.create();
                     //TODO toSourceSize
                     bitmaps.and(actualBits, Arrays.asList(existing, container));
@@ -263,7 +262,7 @@ public class MiruDeltaInvertedIndex<BM> implements MiruInvertedIndex<BM>, Mergea
     }
 
     @Override
-    public void orToSourceSize(BM mask, byte[] primitiveBuffer) throws Exception {
+    public void orToSourceSize(IBM mask, byte[] primitiveBuffer) throws Exception {
         synchronized (delta) {
             // technically removing from delta.andNot is unnecessary (since delta.or is applied on top), but reducing its size saves memory
             if (delta.andNot != null) {
@@ -272,18 +271,19 @@ public class MiruDeltaInvertedIndex<BM> implements MiruInvertedIndex<BM>, Mergea
                 delta.andNot = container;
             }
 
-            BM container;
+            IBM container;
             if (delta.or != null) {
-                container = bitmaps.create();
-                bitmaps.orToSourceSize(container, delta.or, mask);
+                BM mutable = bitmaps.create();
+                bitmaps.orToSourceSize(mutable, delta.or, mask);
+                container = mutable;
             } else {
                 container = mask;
             }
 
-            Optional<BM> index = delta.replaced ? Optional.<BM>absent() : backingIndex.getIndex(primitiveBuffer);
+            Optional<IBM> index = delta.replaced ? Optional.<IBM>absent() : backingIndex.getIndex(primitiveBuffer);
             if (index.isPresent()) {
                 // reduce size of delta
-                BM got = index.get();
+                IBM got = index.get();
                 BM actualBits = bitmaps.create();
                 bitmaps.andNotToSourceSize(actualBits, container, got);
                 container = actualBits;
@@ -295,7 +295,7 @@ public class MiruDeltaInvertedIndex<BM> implements MiruInvertedIndex<BM>, Mergea
     }
 
     @Override
-    public void andNot(BM mask, byte[] primitiveBuffer) throws Exception {
+    public void andNot(IBM mask, byte[] primitiveBuffer) throws Exception {
         synchronized (delta) {
             if (delta.or != null) {
                 BM container = bitmaps.create();
@@ -303,13 +303,13 @@ public class MiruDeltaInvertedIndex<BM> implements MiruInvertedIndex<BM>, Mergea
                 delta.or = container;
             }
 
-            Optional<BM> index = backingIndex.getIndex(primitiveBuffer);
+            Optional<IBM> index = backingIndex.getIndex(primitiveBuffer);
             if (index.isPresent() || delta.replaced) {
-                BM container = mask;
+                IBM container = mask;
 
                 if (!delta.replaced) {
                     // first find the actual bits that matter
-                    BM existing = index.get();
+                    IBM existing = index.get();
                     BM actualBits = bitmaps.create();
                     bitmaps.and(actualBits, Arrays.asList(existing, container));
                     container = actualBits;
@@ -330,7 +330,7 @@ public class MiruDeltaInvertedIndex<BM> implements MiruInvertedIndex<BM>, Mergea
     }
 
     @Override
-    public void or(BM mask, byte[] primitiveBuffer) throws Exception {
+    public void or(IBM mask, byte[] primitiveBuffer) throws Exception {
         synchronized (delta) {
             // technically removing from delta.andNot is unnecessary (since delta.or is applied on top), but reducing its size saves memory
             if (delta.andNot != null) {
@@ -339,18 +339,19 @@ public class MiruDeltaInvertedIndex<BM> implements MiruInvertedIndex<BM>, Mergea
                 delta.andNot = container;
             }
 
-            BM container;
+            IBM container;
             if (delta.or != null) {
-                container = bitmaps.create();
-                bitmaps.or(container, Arrays.asList(delta.or, mask));
+                BM mutable = bitmaps.create();
+                bitmaps.or(mutable, Arrays.asList(delta.or, mask));
+                container = mutable;
             } else {
                 container = mask;
             }
 
-            Optional<BM> index = delta.replaced ? Optional.<BM>absent() : backingIndex.getIndex(primitiveBuffer);
+            Optional<IBM> index = delta.replaced ? Optional.<IBM>absent() : backingIndex.getIndex(primitiveBuffer);
             if (index.isPresent()) {
                 // reduce size of delta
-                BM got = index.get();
+                IBM got = index.get();
                 BM actualBits = bitmaps.create();
                 bitmaps.andNot(actualBits, container, got);
                 container = actualBits;
@@ -368,7 +369,7 @@ public class MiruDeltaInvertedIndex<BM> implements MiruInvertedIndex<BM>, Mergea
         }
 
         synchronized (delta) {
-            Optional<BM> index = indexLoader.call();
+            Optional<IBM> index = indexLoader.call();
             if (index.isPresent()) {
                 backingIndex.replaceIndex(index.get(), Math.max(backingIndex.lastId(primitiveBuffer), delta.lastId), primitiveBuffer);
             }
@@ -379,11 +380,11 @@ public class MiruDeltaInvertedIndex<BM> implements MiruInvertedIndex<BM>, Mergea
         }
     }
 
-    public static class Delta<BM> {
+    public static class Delta<IBM> {
 
         private int lastId = -1;
-        private BM andNot;
-        private BM or;
+        private IBM andNot;
+        private IBM or;
         private boolean replaced = false;
     }
 }

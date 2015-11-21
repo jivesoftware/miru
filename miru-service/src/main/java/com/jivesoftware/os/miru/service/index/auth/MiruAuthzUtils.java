@@ -10,21 +10,21 @@ import java.util.List;
 /**
  *
  */
-public class MiruAuthzUtils<BM> {
+public class MiruAuthzUtils<BM extends IBM, IBM> {
 
     private static final BaseEncoding coder = BaseEncoding.base32().lowerCase().omitPadding();
     private static final Splitter splitter = Splitter.on('.');
 
-    private final MiruBitmaps<BM> bitmaps;
+    private final MiruBitmaps<BM, IBM> bitmaps;
 
-    public MiruAuthzUtils(MiruBitmaps<BM> bitmaps) {
+    public MiruAuthzUtils(MiruBitmaps<BM, IBM> bitmaps) {
         this.bitmaps = bitmaps;
     }
 
-    public BM getCompositeAuthz(MiruAuthzExpression authzExpression, IndexRetriever<BM> retriever) throws Exception {
-        List<BM> orClauses = Lists.newArrayList();
+    public BM getCompositeAuthz(MiruAuthzExpression authzExpression, IndexRetriever<IBM> retriever) throws Exception {
+        List<IBM> orClauses = Lists.newArrayList();
         for (String value : authzExpression.values) {
-            BM valueIndex = retriever.getIndex(value);
+            IBM valueIndex = retriever.getIndex(value);
 
             if (valueIndex != null) {
                 orClauses.add(valueIndex);
