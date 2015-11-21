@@ -95,6 +95,7 @@ public class RCVSActivityWALRegion implements MiruPageRegion<RCVSActivityWALRegi
                             final MiruWALClient.StreamBatch<MiruWALEntry, RCVSSipCursor> sipped = miruWALDirector.sipActivity(tenantId,
                                 partitionId,
                                 new RCVSSipCursor(MiruPartitionedActivity.Type.ACTIVITY.getSort(), afterTimestamp, 0, false),
+                                null,
                                 limit);
 
                             walActivities.addAll(Lists.transform(sipped.activities,

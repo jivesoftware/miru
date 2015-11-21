@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.service.partition;
 
+import com.jivesoftware.os.miru.api.activity.TimeAndVersion;
 import com.jivesoftware.os.miru.api.wal.AmzaSipCursor;
 import java.util.Set;
 

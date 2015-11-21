@@ -6,6 +6,7 @@ import com.google.common.collect.Sets;
 import com.jivesoftware.os.miru.api.HostPortProvider;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
+import com.jivesoftware.os.miru.api.activity.TimeAndVersion;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.wal.MiruActivityLookupEntry;
 import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus;
@@ -146,8 +147,10 @@ public class RCVSActivityWALReader implements MiruActivityWALReader<RCVSCursor, 
     public RCVSSipCursor streamSip(MiruTenantId tenantId,
         MiruPartitionId partitionId,
         RCVSSipCursor afterCursor,
+        Set<TimeAndVersion> lastSeen,
         final int batchSize,
-        final StreamMiruActivityWAL streamMiruActivityWAL)
+        final StreamMiruActivityWAL streamMiruActivityWAL,
+        final StreamSuppressed streamSuppressed)
         throws Exception {
 
         if (afterCursor != null && afterCursor.endOfStream) {
@@ -178,7 +181,9 @@ public class RCVSActivityWALReader implements MiruActivityWALReader<RCVSCursor, 
                         } else if (partitionedActivity.type == MiruPartitionedActivity.Type.END) {
                             ends.add(partitionedActivity.writerId);
                         } else {
-                            cvats.add(v);
+                            if (!streamAlreadySeen(lastSeen, partitionedActivity, streamSuppressed)) {
+                                cvats.add(v);
+                            }
                         }
                     }
                     if (cvats.size() < batchSize) {
@@ -235,6 +240,22 @@ public class RCVSActivityWALReader implements MiruActivityWALReader<RCVSCursor, 
         }
         endOfStream |= !begins.isEmpty() && ends.containsAll(begins);
         return new RCVSSipCursor(nextSort, nextClockTimestamp, nextActivityTimestamp, endOfStream);
+    }
+
+    private boolean streamAlreadySeen(Set<TimeAndVersion> lastSeen,
+        MiruPartitionedActivity partitionedActivity,
+        StreamSuppressed streamSuppressed) throws Exception {
+        if (lastSeen != null) {
+            long version = partitionedActivity.activity.isPresent() ? partitionedActivity.activity.get().version : 0;
+            TimeAndVersion timeAndVersion = new TimeAndVersion(partitionedActivity.timestamp, version);
+            if (lastSeen.contains(timeAndVersion)) {
+                if (streamSuppressed != null) {
+                    streamSuppressed.stream(timeAndVersion);
+                }
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override

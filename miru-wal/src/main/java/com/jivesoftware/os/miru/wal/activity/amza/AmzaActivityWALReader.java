@@ -11,6 +11,7 @@ import com.jivesoftware.os.amza.shared.take.TakeCursors;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
+import com.jivesoftware.os.miru.api.activity.TimeAndVersion;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.marshall.JacksonJsonObjectTypeMarshaller;
 import com.jivesoftware.os.miru.api.topology.NamedCursor;
@@ -60,17 +61,37 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
     }
 
     private TakeCursors takeCursors(StreamMiruActivityWAL streamMiruActivityWAL,
+        StreamSuppressed streamSuppressed,
         AmzaClient client,
-        Map<String, NamedCursor> cursorsByName) throws Exception {
+        Map<String, NamedCursor> cursorsByName,
+        Set<TimeAndVersion> lastSeen) throws Exception {
         return amzaWALUtil.take(client, cursorsByName, (rowTxId, prefix, key, value) -> {
             MiruPartitionedActivity partitionedActivity = partitionedActivityMarshaller.fromBytes(value.getValue());
-            if (partitionedActivity != null && partitionedActivity.type.isActivityType()) {
+            if (partitionedActivity != null
+                && partitionedActivity.type.isActivityType()
+                && !streamAlreadySeen(lastSeen, partitionedActivity, streamSuppressed)) {
                 if (!streamMiruActivityWAL.stream(partitionedActivity.timestamp, partitionedActivity, value.getTimestampId())) {
                     return false;
                 }
             }
             return true;
         });
+    }
+
+    private boolean streamAlreadySeen(Set<TimeAndVersion> lastSeen,
+        MiruPartitionedActivity partitionedActivity,
+        StreamSuppressed streamSuppressed) throws Exception {
+        if (lastSeen != null) {
+            long version = partitionedActivity.activity.isPresent() ? partitionedActivity.activity.get().version : 0;
+            TimeAndVersion timeAndVersion = new TimeAndVersion(partitionedActivity.timestamp, version);
+            if (lastSeen.contains(timeAndVersion)) {
+                if (streamSuppressed != null) {
+                    streamSuppressed.stream(timeAndVersion);
+                }
+                return true;
+            }
+        }
+        return false;
     }
 
     private boolean isEndOfStream(AmzaClient client) throws Exception {
@@ -113,7 +134,7 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
         Map<String, NamedCursor> sipCursorsByName = cursor != null && cursor.sipCursor != null
             ? extractCursors(cursor.sipCursor.cursors) : Maps.newHashMap();
 
-        TakeCursors takeCursors = takeCursors(streamMiruActivityWAL, client, cursorsByName);
+        TakeCursors takeCursors = takeCursors(streamMiruActivityWAL, null, client, cursorsByName, null);
 
         amzaWALUtil.mergeCursors(cursorsByName, takeCursors);
         amzaWALUtil.mergeCursors(sipCursorsByName, takeCursors);
@@ -125,8 +146,10 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
     public AmzaSipCursor streamSip(MiruTenantId tenantId,
         MiruPartitionId partitionId,
         AmzaSipCursor sipCursor,
+        Set<TimeAndVersion> lastSeen,
         int batchSize,
-        StreamMiruActivityWAL streamMiruActivityWAL) throws Exception {
+        StreamMiruActivityWAL streamMiruActivityWAL,
+        StreamSuppressed streamSuppressed) throws Exception {
 
         AmzaClient client = amzaWALUtil.getActivityClient(tenantId, partitionId);
         if (client == null) {
@@ -135,7 +158,7 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
 
         Map<String, NamedCursor> sipCursorsByName = sipCursor != null ? extractCursors(sipCursor.cursors) : Maps.newHashMap();
 
-        TakeCursors takeCursors = takeCursors(streamMiruActivityWAL, client, sipCursorsByName);
+        TakeCursors takeCursors = takeCursors(streamMiruActivityWAL, streamSuppressed, client, sipCursorsByName, lastSeen);
         if (takeCursors.tookToEnd) {
             streamMiruActivityWAL.stream(-1, null, -1);
         }

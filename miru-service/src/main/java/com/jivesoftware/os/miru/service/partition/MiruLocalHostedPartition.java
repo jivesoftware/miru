@@ -12,6 +12,7 @@ import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
+import com.jivesoftware.os.miru.api.activity.TimeAndVersion;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaUnvailableException;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.topology.MiruPartitionActive;
@@ -854,13 +855,21 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
             int[] counts = new int[maxWriterId + 1];
             Arrays.fill(counts, -1);
 
-            MiruWALClient.StreamBatch<MiruWALEntry, S> sippedActivity = walClient.sipActivity(coord.tenantId, coord.partitionId,
+            MiruWALClient.StreamBatch<MiruWALEntry, S> sippedActivity = walClient.sipActivity(coord.tenantId,
+                coord.partitionId,
                 sipCursor,
+                sipTracker.getSeenLastSip(),
                 partitionSipBatchSize);
 
             while (accessorRef.get() == accessor && sippedActivity != null) {
                 if (Thread.interrupted()) {
                     throw new InterruptedException("Interrupted while streaming sip");
+                }
+
+                if (sippedActivity.suppressed != null) {
+                    for (TimeAndVersion timeAndVersion : sippedActivity.suppressed) {
+                        sipTracker.addSeenThisSip(timeAndVersion);
+                    }
                 }
 
                 List<MiruPartitionedActivity> partitionedActivities = Lists.newArrayListWithCapacity(sippedActivity.activities.size());
@@ -907,7 +916,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                     break;
                 }
 
-                sippedActivity = walClient.sipActivity(coord.tenantId, coord.partitionId, sipCursor, partitionSipBatchSize);
+                sippedActivity = walClient.sipActivity(coord.tenantId, coord.partitionId, sipCursor, sipTracker.getSeenThisSip(), partitionSipBatchSize);
             }
 
             if (!accessor.hasOpenWriters()) {
