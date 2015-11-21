@@ -11,6 +11,7 @@ import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivityFactory;
+import com.jivesoftware.os.miru.api.activity.TimeAndVersion;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.field.MiruFieldName;
@@ -152,6 +153,7 @@ public class SipTest {
 
         MiruWALClient.StreamBatch<MiruWALEntry, RCVSSipCursor> sippedActivity = walDirector.sipActivity(tenantId, partitionId,
             sipCursor,
+            null,
             10_000);
 
         while (sippedActivity != null) {
@@ -185,7 +187,7 @@ public class SipTest {
                 break;
             }
 
-            sippedActivity = walDirector.sipActivity(tenantId, partitionId, sipCursor, 10_000);
+            sippedActivity = walDirector.sipActivity(tenantId, partitionId, sipCursor, null, 10_000);
         }
 
         return new CursorAndLastSeen(sipCursor, seenLastSip);

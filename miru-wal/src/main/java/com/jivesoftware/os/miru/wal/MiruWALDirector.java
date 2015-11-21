@@ -7,6 +7,7 @@ import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivityFactory;
+import com.jivesoftware.os.miru.api.activity.TimeAndVersion;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
@@ -193,7 +194,7 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
     public void sanitizeActivitySipWAL(final MiruTenantId tenantId, final MiruPartitionId partitionId) throws Exception {
         final long afterTimestamp = packTimestamp(TimeUnit.DAYS.toMillis(1));
         final List<MiruActivitySipWALColumnKey> badKeys = Lists.newArrayList();
-        activityWALReader.streamSip(tenantId, partitionId, null, 10_000,
+        activityWALReader.streamSip(tenantId, partitionId, null, null, 10_000,
             (collisionId, partitionedActivity, timestamp) -> {
                 if (partitionedActivity.timestamp > afterTimestamp && partitionedActivity.type.isActivityType()) {
                     LOG.warn("Sanitizer is removing sip activity " + collisionId + "/" + partitionedActivity.timestamp + " from "
@@ -201,7 +202,7 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
                     badKeys.add(new MiruActivitySipWALColumnKey(partitionedActivity.type.getSort(), collisionId, timestamp));
                 }
                 return partitionedActivity.type.isActivityType();
-            });
+            }, null);
         activityWALWriter.deleteSip(tenantId, partitionId, badKeys);
     }
 
@@ -296,18 +297,20 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
                 return activities.size() < batchSize;
             });
 
-        return new StreamBatch<>(activities, nextCursor, false);
+        return new StreamBatch<>(activities, nextCursor, false, null);
     }
 
     @Override
     public StreamBatch<MiruWALEntry, S> sipActivity(MiruTenantId tenantId,
         MiruPartitionId partitionId,
         S cursor,
+        Set<TimeAndVersion> lastSeen,
         final int batchSize) throws Exception {
 
         List<MiruWALEntry> activities = new ArrayList<>();
+        Set<TimeAndVersion> suppressed = Sets.newHashSet();
         boolean[] endOfWAL = { false };
-        S nextCursor = activityWALReader.streamSip(tenantId, partitionId, cursor, batchSize,
+        S nextCursor = activityWALReader.streamSip(tenantId, partitionId, cursor, lastSeen, batchSize,
             (collisionId, partitionedActivity, timestamp) -> {
                 if (collisionId != -1) {
                     activities.add(new MiruWALEntry(collisionId, timestamp, partitionedActivity));
@@ -315,9 +318,10 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
                     endOfWAL[0] = true;
                 }
                 return activities.size() < batchSize;
-            });
+            },
+            suppressed::add);
 
-        return new StreamBatch<>(activities, nextCursor, endOfWAL[0]);
+        return new StreamBatch<>(activities, nextCursor, endOfWAL[0], suppressed);
     }
 
     @Override
@@ -344,7 +348,7 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
             batch.add(new MiruWALEntry(collisionId, timestamp, partitionedActivity));
             return true; // always consume completely
         });
-        return new StreamBatch<>(batch, nextCursor, batch.size() < batchSize);
+        return new StreamBatch<>(batch, nextCursor, batch.size() < batchSize, null);
     }
 
 }

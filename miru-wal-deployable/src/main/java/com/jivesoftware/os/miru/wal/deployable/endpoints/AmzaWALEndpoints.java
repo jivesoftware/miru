@@ -14,6 +14,7 @@ import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.RoutingGroupType;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.StreamBatch;
 import com.jivesoftware.os.miru.api.wal.MiruWALEntry;
+import com.jivesoftware.os.miru.api.wal.SipAndLastSeen;
 import com.jivesoftware.os.miru.wal.MiruWALDirector;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -310,16 +311,16 @@ public class AmzaWALEndpoints {
     public Response sipActivity(@PathParam("tenantId") String tenantId,
         @PathParam("partitionId") int partitionId,
         @PathParam("batchSize") int batchSize,
-        AmzaSipCursor cursor)
+        SipAndLastSeen<AmzaSipCursor> sipAndLastSeen)
         throws Exception {
         try {
             long start = System.currentTimeMillis();
             StreamBatch<MiruWALEntry, AmzaSipCursor> sipActivity = walDirector.sipActivity(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
-                MiruPartitionId.of(partitionId), cursor, batchSize);
+                MiruPartitionId.of(partitionId), sipAndLastSeen.sipCursor, sipAndLastSeen.lastSeen, batchSize);
             stats.ingressed("/sip/activity/" + tenantId + "/" + partitionId + "/" + batchSize, 1, System.currentTimeMillis() - start);
             return responseHelper.jsonResponse(sipActivity);
         } catch (Exception x) {
-            log.error("Failed calling sipActivity({},{},{},{})", new Object[] { tenantId, partitionId, batchSize, cursor }, x);
+            log.error("Failed calling sipActivity({},{},{},{})", new Object[] { tenantId, partitionId, batchSize, sipAndLastSeen }, x);
             return responseHelper.errorResponse("Server error", x);
         }
     }

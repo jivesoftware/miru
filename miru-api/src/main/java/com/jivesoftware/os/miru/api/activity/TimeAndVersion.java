@@ -1,14 +1,16 @@
-package com.jivesoftware.os.miru.service.partition;
+package com.jivesoftware.os.miru.api.activity;
 
-/**
- * Package private encapsulation of activity timestamp and version.
- */
-class TimeAndVersion {
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-    private final long timestamp;
-    private final long version;
+public class TimeAndVersion {
 
-    TimeAndVersion(long timestamp, long version) {
+    public final long timestamp;
+    public final long version;
+
+    @JsonCreator
+    public TimeAndVersion(@JsonProperty("timestamp") long timestamp,
+        @JsonProperty("version") long version) {
         this.timestamp = timestamp;
         this.version = version;
     }
