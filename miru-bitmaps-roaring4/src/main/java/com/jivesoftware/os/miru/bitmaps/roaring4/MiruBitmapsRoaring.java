@@ -17,6 +17,7 @@ package com.jivesoftware.os.miru.bitmaps.roaring4;
 
 import com.fasterxml.jackson.databind.util.ByteBufferBackedInputStream;
 import com.google.common.base.Optional;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
@@ -150,7 +151,7 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
     }
 
     @Override
-    public RoaringBitmap orTx(List<MiruTxIndex<RoaringBitmap>> indexes, byte[] primitiveBuffer) throws Exception {
+    public RoaringBitmap orTx(List<MiruTxIndex<RoaringBitmap>> indexes, StackBuffer stackBuffer) throws Exception {
         if (indexes.isEmpty()) {
             return new RoaringBitmap();
         }
@@ -165,7 +166,7 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
             } else {
                 return new RoaringBitmap();
             }
-        }, primitiveBuffer);
+        }, stackBuffer);
 
         for (MiruTxIndex<RoaringBitmap> index : indexes.subList(1, indexes.size())) {
             RoaringBitmap or = index.txIndex((bitmap, buffer) -> {
@@ -178,7 +179,7 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
                 } else {
                     return null;
                 }
-            }, primitiveBuffer);
+            }, stackBuffer);
 
             if (or != null) {
                 container.or(or);
@@ -199,7 +200,7 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
     }
 
     @Override
-    public RoaringBitmap andTx(List<MiruTxIndex<RoaringBitmap>> indexes, byte[] primitiveBuffer) throws Exception {
+    public RoaringBitmap andTx(List<MiruTxIndex<RoaringBitmap>> indexes, StackBuffer stackBuffer) throws Exception {
         if (indexes.isEmpty()) {
             return new RoaringBitmap();
         }
@@ -214,7 +215,7 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
             } else {
                 return new RoaringBitmap();
             }
-        }, primitiveBuffer);
+        }, stackBuffer);
 
         if (container.isEmpty()) {
             return container;
@@ -231,7 +232,7 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
                 } else {
                     return new RoaringBitmap();
                 }
-            }, primitiveBuffer);
+            }, stackBuffer);
 
             container.and(and);
 
@@ -249,8 +250,8 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
     }
 
     @Override
-    public void inPlaceAndNot(RoaringBitmap original, MiruInvertedIndex<RoaringBitmap> not, byte[] primitiveBuffer) throws Exception {
-        Optional<RoaringBitmap> index = not.getIndex(primitiveBuffer);
+    public void inPlaceAndNot(RoaringBitmap original, MiruInvertedIndex<RoaringBitmap> not, StackBuffer stackBuffer) throws Exception {
+        Optional<RoaringBitmap> index = not.getIndex(stackBuffer);
         if (index.isPresent()) {
             original.andNot(index.get());
         }
@@ -278,7 +279,7 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
     }
 
     @Override
-    public RoaringBitmap andNotTx(MiruTxIndex<RoaringBitmap> original, List<MiruTxIndex<RoaringBitmap>> not, byte[] primitiveBuffer) throws Exception {
+    public RoaringBitmap andNotTx(MiruTxIndex<RoaringBitmap> original, List<MiruTxIndex<RoaringBitmap>> not, StackBuffer stackBuffer) throws Exception {
         if (not.isEmpty()) {
             return new RoaringBitmap();
         }
@@ -293,7 +294,7 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
             } else {
                 return new RoaringBitmap();
             }
-        }, primitiveBuffer);
+        }, stackBuffer);
 
         if (container.isEmpty()) {
             return container;
@@ -310,7 +311,7 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
                 } else {
                     return null;
                 }
-            }, primitiveBuffer);
+            }, stackBuffer);
 
             if (andNot != null) {
                 container.andNot(andNot);
@@ -404,9 +405,9 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
     }
 
     @Override
-    public RoaringBitmap buildTimeRangeMask(MiruTimeIndex timeIndex, long smallestTimestamp, long largestTimestamp, byte[] primitiveBuffer) {
-        int smallestInclusiveId = timeIndex.smallestExclusiveTimestampIndex(smallestTimestamp, primitiveBuffer);
-        int largestExclusiveId = timeIndex.largestInclusiveTimestampIndex(largestTimestamp, primitiveBuffer) + 1;
+    public RoaringBitmap buildTimeRangeMask(MiruTimeIndex timeIndex, long smallestTimestamp, long largestTimestamp, StackBuffer stackBuffer) {
+        int smallestInclusiveId = timeIndex.smallestExclusiveTimestampIndex(smallestTimestamp, stackBuffer);
+        int largestExclusiveId = timeIndex.largestInclusiveTimestampIndex(largestTimestamp, stackBuffer) + 1;
 
         RoaringBitmap mask = new RoaringBitmap();
 

@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.bitmaps.ewah;
 
 import com.googlecode.javaewah.EWAHCompressedBitmap;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
@@ -26,12 +27,12 @@ public class MiruBitmapsTimeRangeTest {
 
     @Test(dataProvider = "evenTimeIndexDataProvider")
     public <BM extends IBM, IBM> void testBuildEvenTimeRangeMask(MiruBitmaps<BM, IBM> bitmaps, MiruTimeIndex miruTimeIndex) throws Exception {
-        byte[] primitiveBuffer = new byte[8];
+        StackBuffer stackBuffer = new StackBuffer();
         final int size = (EWAHCompressedBitmap.WORD_IN_BITS * 3) + 1;
         for (int lower = 0; lower <= size / 2; lower++) {
             int upper = size - 1 - lower;
 
-            IBM bitmap = bitmaps.buildTimeRangeMask(miruTimeIndex, lower, upper, primitiveBuffer);
+            IBM bitmap = bitmaps.buildTimeRangeMask(miruTimeIndex, lower, upper, stackBuffer);
             if (lower == upper) {
                 // the lower and upper are the same so there should be nothing left
                 assertExpectedNumberOfConsecutiveBitsStartingFromN(bitmaps, bitmap, -1, 0);
@@ -43,12 +44,12 @@ public class MiruBitmapsTimeRangeTest {
 
     @Test(dataProvider = "oddTimeIndexDataProvider")
     public <BM extends IBM, IBM> void testBuildOddTimeRangeMask(MiruBitmaps<BM, IBM> bitmaps, MiruTimeIndex miruTimeIndex) throws Exception {
-        byte[] primitiveBuffer = new byte[8];
+        StackBuffer stackBuffer = new StackBuffer();
         final int size = EWAHCompressedBitmap.WORD_IN_BITS * 3;
         for (int lower = 0; lower < size / 2; lower++) {
             int upper = size - 1 - lower;
 
-            IBM bitmap = bitmaps.buildTimeRangeMask(miruTimeIndex, lower, upper, primitiveBuffer);
+            IBM bitmap = bitmaps.buildTimeRangeMask(miruTimeIndex, lower, upper, stackBuffer);
             if (lower == upper) {
                 fail();
             } else {
@@ -59,8 +60,8 @@ public class MiruBitmapsTimeRangeTest {
 
     @Test(dataProvider = "singleEntryTimeIndexDataProvider")
     public <BM extends IBM, IBM> void testSingleBitTimeRange(MiruBitmaps<BM, IBM> bitmaps, MiruTimeIndex miruTimeIndex) {
-        byte[] primitiveBuffer = new byte[8];
-        IBM bitmap = bitmaps.buildTimeRangeMask(miruTimeIndex, 0, Long.MAX_VALUE, primitiveBuffer);
+        StackBuffer stackBuffer = new StackBuffer();
+        IBM bitmap = bitmaps.buildTimeRangeMask(miruTimeIndex, 0, Long.MAX_VALUE, stackBuffer);
 
         assertExpectedNumberOfConsecutiveBitsStartingFromN(bitmaps, bitmap, 0, 1);
     }
@@ -88,7 +89,7 @@ public class MiruBitmapsTimeRangeTest {
     @DataProvider(name = "evenTimeIndexDataProvider")
     public Object[][] evenTimeIndexDataProvider() throws Exception {
 
-        byte[] primitiveBuffer = new byte[8];
+        StackBuffer stackBuffer = new StackBuffer();
 
         final int size = (EWAHCompressedBitmap.WORD_IN_BITS * 3) + 1;
         final long[] timestamps = new long[size];
@@ -98,29 +99,29 @@ public class MiruBitmapsTimeRangeTest {
 
         MiruTimeIndex miruInMemoryTimeIndex = buildInMemoryTimeIndex();
         MiruTimeIndex miruOnDiskTimeIndex = buildOnDiskTimeIndex();
-        miruInMemoryTimeIndex.nextId(primitiveBuffer, timestamps);
-        miruOnDiskTimeIndex.nextId(primitiveBuffer, timestamps);
+        miruInMemoryTimeIndex.nextId(stackBuffer, timestamps);
+        miruOnDiskTimeIndex.nextId(stackBuffer, timestamps);
 
         MiruTimeIndex miruInMemoryTimeIndexMerged = buildInMemoryTimeIndex();
         MiruTimeIndex miruOnDiskTimeIndexMerged = buildOnDiskTimeIndex();
-        miruInMemoryTimeIndexMerged.nextId(primitiveBuffer, timestamps);
-        miruOnDiskTimeIndexMerged.nextId(primitiveBuffer, timestamps);
-        ((MiruDeltaTimeIndex) miruInMemoryTimeIndexMerged).merge(primitiveBuffer);
-        ((MiruDeltaTimeIndex) miruOnDiskTimeIndexMerged).merge(primitiveBuffer);
+        miruInMemoryTimeIndexMerged.nextId(stackBuffer, timestamps);
+        miruOnDiskTimeIndexMerged.nextId(stackBuffer, timestamps);
+        ((MiruDeltaTimeIndex) miruInMemoryTimeIndexMerged).merge(stackBuffer);
+        ((MiruDeltaTimeIndex) miruOnDiskTimeIndexMerged).merge(stackBuffer);
 
         MiruTimeIndex miruInMemoryTimeIndexPartiallyMerged = buildInMemoryTimeIndex();
         MiruTimeIndex miruOnDiskTimeIndexPartiallyMerged = buildOnDiskTimeIndex();
         int i = 0;
         for (; i < timestamps.length / 2; i++) {
-            miruInMemoryTimeIndexPartiallyMerged.nextId(primitiveBuffer, timestamps[i]);
-            miruOnDiskTimeIndexPartiallyMerged.nextId(primitiveBuffer, timestamps[i]);
+            miruInMemoryTimeIndexPartiallyMerged.nextId(stackBuffer, timestamps[i]);
+            miruOnDiskTimeIndexPartiallyMerged.nextId(stackBuffer, timestamps[i]);
 
         }
-        ((MiruDeltaTimeIndex) miruInMemoryTimeIndexPartiallyMerged).merge(primitiveBuffer);
-        ((MiruDeltaTimeIndex) miruOnDiskTimeIndexPartiallyMerged).merge(primitiveBuffer);
+        ((MiruDeltaTimeIndex) miruInMemoryTimeIndexPartiallyMerged).merge(stackBuffer);
+        ((MiruDeltaTimeIndex) miruOnDiskTimeIndexPartiallyMerged).merge(stackBuffer);
         for (; i < timestamps.length; i++) {
-            miruInMemoryTimeIndexPartiallyMerged.nextId(primitiveBuffer, timestamps[i]);
-            miruOnDiskTimeIndexPartiallyMerged.nextId(primitiveBuffer, timestamps[i]);
+            miruInMemoryTimeIndexPartiallyMerged.nextId(stackBuffer, timestamps[i]);
+            miruOnDiskTimeIndexPartiallyMerged.nextId(stackBuffer, timestamps[i]);
         }
 
         return new Object[][]{
@@ -136,7 +137,7 @@ public class MiruBitmapsTimeRangeTest {
     @DataProvider(name = "oddTimeIndexDataProvider")
     public Object[][] oddTimeIndexDataProvider() throws Exception {
 
-        byte[] primitiveBuffer = new byte[8];
+        StackBuffer stackBuffer = new StackBuffer();
 
         final int size = EWAHCompressedBitmap.WORD_IN_BITS * 3;
         final long[] timestamps = new long[size];
@@ -145,9 +146,9 @@ public class MiruBitmapsTimeRangeTest {
         }
 
         MiruTimeIndex miruInMemoryTimeIndex = buildInMemoryTimeIndex();
-        miruInMemoryTimeIndex.nextId(primitiveBuffer, timestamps);
+        miruInMemoryTimeIndex.nextId(stackBuffer, timestamps);
         MiruTimeIndex miruOnDiskTimeIndex = buildOnDiskTimeIndex();
-        miruOnDiskTimeIndex.nextId(primitiveBuffer, timestamps);
+        miruOnDiskTimeIndex.nextId(stackBuffer, timestamps);
 
         return new Object[][]{
             {new MiruBitmapsEWAH(2), miruInMemoryTimeIndex},
@@ -158,13 +159,13 @@ public class MiruBitmapsTimeRangeTest {
     @DataProvider(name = "singleEntryTimeIndexDataProvider")
     public Object[][] singleEntryTimeIndexDataProvider() throws Exception {
 
-        byte[] primitiveBuffer = new byte[8];
+        StackBuffer stackBuffer = new StackBuffer();
 
         final long[] timestamps = new long[]{System.currentTimeMillis()};
         MiruTimeIndex miruInMemoryTimeIndex = buildInMemoryTimeIndex();
         MiruTimeIndex miruOnDiskTimeIndex = buildOnDiskTimeIndex();
-        miruOnDiskTimeIndex.nextId(primitiveBuffer, timestamps);
-        miruInMemoryTimeIndex.nextId(primitiveBuffer, timestamps);
+        miruOnDiskTimeIndex.nextId(stackBuffer, timestamps);
+        miruInMemoryTimeIndex.nextId(stackBuffer, timestamps);
 
         return new Object[][]{
             {new MiruBitmapsEWAH(2), miruInMemoryTimeIndex},

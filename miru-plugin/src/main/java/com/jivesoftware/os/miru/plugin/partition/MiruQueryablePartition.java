@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.plugin.partition;
 
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
 
@@ -12,7 +13,7 @@ public interface MiruQueryablePartition<BM extends IBM, IBM> {
 
     boolean isLocal();
 
-    MiruRequestHandle<BM, IBM, ?> acquireQueryHandle(byte[] primitiveBuffer) throws Exception;
+    MiruRequestHandle<BM, IBM, ?> acquireQueryHandle(StackBuffer stackBuffer) throws Exception;
 
     MiruRequestHandle<BM, IBM, ?> inspectRequestHandle() throws Exception;
 }

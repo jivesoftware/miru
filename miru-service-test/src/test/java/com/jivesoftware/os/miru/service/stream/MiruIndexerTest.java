@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.hash.Hashing;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
@@ -40,16 +41,16 @@ public class MiruIndexerTest {
         List<MiruActivityAndId<MiruActivity>> activityList)
         throws Exception {
 
-        byte[] primitiveBuffer = new byte[8];
+        StackBuffer stackBuffer = new StackBuffer();
         MiruTenantId tenantId = coord.tenantId;
 
         // First check existing data
-        verifyFieldValues(tenantId, context, 0, 0, primitiveBuffer);
-        verifyAuthzValues(context.getAuthzIndex(), context.getActivityIndex().get(tenantId, 0, primitiveBuffer).authz, 0, primitiveBuffer);
-        verifyFieldValues(tenantId, context, 1, 0, primitiveBuffer);
-        verifyAuthzValues(context.getAuthzIndex(), context.getActivityIndex().get(tenantId, 1, primitiveBuffer).authz, 1, primitiveBuffer);
-        verifyFieldValues(tenantId, context, 2, 0, primitiveBuffer);
-        verifyAuthzValues(context.getAuthzIndex(), context.getActivityIndex().get(tenantId, 2, primitiveBuffer).authz, 2, primitiveBuffer);
+        verifyFieldValues(tenantId, context, 0, 0, stackBuffer);
+        verifyAuthzValues(context.getAuthzIndex(), context.getActivityIndex().get(tenantId, 0, stackBuffer).authz, 0, stackBuffer);
+        verifyFieldValues(tenantId, context, 1, 0, stackBuffer);
+        verifyAuthzValues(context.getAuthzIndex(), context.getActivityIndex().get(tenantId, 1, stackBuffer).authz, 1, stackBuffer);
+        verifyFieldValues(tenantId, context, 2, 0, stackBuffer);
+        verifyAuthzValues(context.getAuthzIndex(), context.getActivityIndex().get(tenantId, 2, stackBuffer).authz, 2, stackBuffer);
 
         // Next add new data and check it
         miruIndexer.index(
@@ -62,9 +63,9 @@ public class MiruIndexerTest {
                 3))),
             false,
             MoreExecutors.sameThreadExecutor());
-        verifyFieldValues(tenantId, context, 3, 0, primitiveBuffer);
-        verifyFieldValues(tenantId, context, 3, 1, primitiveBuffer);
-        verifyAuthzValues(context.getAuthzIndex(), context.getActivityIndex().get(tenantId, 3, primitiveBuffer).authz, 3, primitiveBuffer);
+        verifyFieldValues(tenantId, context, 3, 0, stackBuffer);
+        verifyFieldValues(tenantId, context, 3, 1, stackBuffer);
+        verifyAuthzValues(context.getAuthzIndex(), context.getActivityIndex().get(tenantId, 3, stackBuffer).authz, 3, stackBuffer);
 
         miruIndexer.index(
             context,
@@ -76,9 +77,9 @@ public class MiruIndexerTest {
                 4))),
             false,
             MoreExecutors.sameThreadExecutor());
-        verifyFieldValues(tenantId, context, 4, 0, primitiveBuffer);
-        verifyFieldValues(tenantId, context, 4, 2, primitiveBuffer);
-        verifyAuthzValues(context.getAuthzIndex(), context.getActivityIndex().get(tenantId, 4, primitiveBuffer).authz, 4, primitiveBuffer);
+        verifyFieldValues(tenantId, context, 4, 0, stackBuffer);
+        verifyFieldValues(tenantId, context, 4, 2, stackBuffer);
+        verifyAuthzValues(context.getAuthzIndex(), context.getActivityIndex().get(tenantId, 4, stackBuffer).authz, 4, stackBuffer);
     }
 
     @Test(dataProvider = "miruIndexContextDataProvider")
@@ -88,7 +89,7 @@ public class MiruIndexerTest {
         List<MiruActivityAndId<MiruActivity>> activityList)
         throws Exception {
 
-        byte[] primitiveBuffer = new byte[8];
+        StackBuffer stackBuffer = new StackBuffer();
         MiruTenantId tenantId = coord.tenantId;
 
         List<MiruActivityAndId<MiruActivity>> activityAndIds = Lists.newArrayList();
@@ -126,22 +127,22 @@ public class MiruIndexerTest {
 
         // First check existing data
         for (MiruActivityAndId<MiruActivity> activityAndId : activityList) {
-            verifyFieldValues(tenantId, context, activityAndId.id, 0, primitiveBuffer);
-            verifyFieldValues(tenantId, context, activityAndId.id, 1, primitiveBuffer);
-            verifyAuthzValues(context.getAuthzIndex(), context.getActivityIndex().get(tenantId, activityAndId.id, primitiveBuffer).authz, activityAndId.id,
-                primitiveBuffer);
+            verifyFieldValues(tenantId, context, activityAndId.id, 0, stackBuffer);
+            verifyFieldValues(tenantId, context, activityAndId.id, 1, stackBuffer);
+            verifyAuthzValues(context.getAuthzIndex(), context.getActivityIndex().get(tenantId, activityAndId.id, stackBuffer).authz, activityAndId.id,
+                stackBuffer);
         }
 
         // And check new data
-        verifyFieldValues(tenantId, context, nextId, 0, primitiveBuffer);
-        verifyFieldValues(tenantId, context, nextId, 1, primitiveBuffer);
-        verifyAuthzValues(context.getAuthzIndex(), context.getActivityIndex().get(tenantId, nextId, primitiveBuffer).authz, nextId, primitiveBuffer);
+        verifyFieldValues(tenantId, context, nextId, 0, stackBuffer);
+        verifyFieldValues(tenantId, context, nextId, 1, stackBuffer);
+        verifyAuthzValues(context.getAuthzIndex(), context.getActivityIndex().get(tenantId, nextId, stackBuffer).authz, nextId, stackBuffer);
     }
 
-    private void verifyFieldValues(MiruTenantId tenantId, MiruContext<ImmutableRoaringBitmap, ?> context, int activityId, int fieldId, byte[] primitiveBuffer)
+    private void verifyFieldValues(MiruTenantId tenantId, MiruContext<ImmutableRoaringBitmap, ?> context, int activityId, int fieldId, StackBuffer stackBuffer)
         throws Exception {
 
-        MiruInternalActivity miruActivity = context.getActivityIndex().get(tenantId, activityId, primitiveBuffer);
+        MiruInternalActivity miruActivity = context.getActivityIndex().get(tenantId, activityId, stackBuffer);
 
         MiruTermId[] fieldValues = miruActivity.fieldsValues[fieldId];
         if (fieldValues == null) {
@@ -152,7 +153,7 @@ public class MiruIndexerTest {
                 .getFieldIndex(MiruFieldType.primary)
                 .get(fieldId, fieldValue);
             assertNotNull(invertedIndex);
-            ImmutableRoaringBitmap bitmap = invertedIndex.getIndex(primitiveBuffer).get();
+            ImmutableRoaringBitmap bitmap = invertedIndex.getIndex(stackBuffer).get();
             assertNotNull(bitmap);
             assertTrue(bitmap.contains(activityId));
         }
@@ -161,10 +162,10 @@ public class MiruIndexerTest {
     private void verifyAuthzValues(MiruAuthzIndex<ImmutableRoaringBitmap> miruAuthzIndex,
         String[] authzs,
         int activityId,
-        byte[] primitiveBuffer) throws Exception {
+        StackBuffer stackBuffer) throws Exception {
         MiruAuthzExpression miruAuthzExpression = new MiruAuthzExpression(Arrays.asList(authzs));
 
-        ImmutableRoaringBitmap compositeAuthz = miruAuthzIndex.getCompositeAuthz(miruAuthzExpression, primitiveBuffer);
+        ImmutableRoaringBitmap compositeAuthz = miruAuthzIndex.getCompositeAuthz(miruAuthzExpression, stackBuffer);
         assertTrue(compositeAuthz.contains(activityId));
     }
 

@@ -4,6 +4,7 @@ import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -112,7 +113,7 @@ public class MiruIndexPairedLatest<BM> {
         List<Future<?>> futures = Lists.newArrayListWithCapacity(pairedLatestWorks.size());
         for (final PairedLatestWork pairedLatestWork : pairedLatestWorks) {
             futures.add(indexExecutor.submit(() -> {
-                byte[] primitiveBuffer = new byte[8];
+                StackBuffer stackBuffer = new StackBuffer();
                 MiruTermId fieldValue = pairedLatestWork.fieldValue;
                 List<IdAndTerm> idAndTerms = pairedLatestWork.work;
 
@@ -127,7 +128,7 @@ public class MiruIndexPairedLatest<BM> {
                     MiruTermId aggregateFieldValue = idAndTerm.term;
                     MiruInvertedIndex<BM> aggregateInvertedIndex = allFieldIndex.getOrCreateInvertedIndex(
                         pairedLatestWork.aggregateFieldId, aggregateFieldValue);
-                    Optional<BM> aggregateBitmap = aggregateInvertedIndex.getIndexUnsafe(primitiveBuffer);
+                    Optional<BM> aggregateBitmap = aggregateInvertedIndex.getIndexUnsafe(stackBuffer);
                     if (aggregateBitmap.isPresent()) {
                         aggregateBitmaps.add(aggregateBitmap.get());
                         ids.add(idAndTerm.id);
@@ -136,17 +137,17 @@ public class MiruIndexPairedLatest<BM> {
 
                 log.inc("count>andNot", aggregateBitmaps.size());
                 log.inc("count>andNot", aggregateBitmaps.size(), tenantId.toString());
-                invertedIndex.andNotToSourceSize(aggregateBitmaps, primitiveBuffer);
+                invertedIndex.andNotToSourceSize(aggregateBitmaps, stackBuffer);
 
                 ids.reverse(); // we built in reverse order, so flip back to ascending
                 if (repair) {
                     log.inc("count>set", 1);
                     log.inc("count>set", 1, tenantId.toString());
-                    pairedLatestFieldIndex.set(pairedLatestWork.fieldId, pairedLatestTerm, ids.toArray(), null, primitiveBuffer);
+                    pairedLatestFieldIndex.set(pairedLatestWork.fieldId, pairedLatestTerm, ids.toArray(), null, stackBuffer);
                 } else {
                     log.inc("count>append", 1);
                     log.inc("count>append", 1, tenantId.toString());
-                    pairedLatestFieldIndex.append(pairedLatestWork.fieldId, pairedLatestTerm, ids.toArray(), null, primitiveBuffer);
+                    pairedLatestFieldIndex.append(pairedLatestWork.fieldId, pairedLatestTerm, ids.toArray(), null, stackBuffer);
                 }
 
                 return null;

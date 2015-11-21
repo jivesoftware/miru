@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.service.index;
 import com.google.common.collect.Lists;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.jivesoftware.os.filer.io.FilerIO;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
@@ -35,34 +36,34 @@ public class MiruFieldIndexTest {
     @Test(dataProvider = "miruIndexDataProvider")
     public <BM extends IBM, IBM> void testGetMissingFieldTerm(MiruBitmaps<BM, IBM> bitmaps, MiruFieldIndex<BM> miruFieldIndex, MiruBackingStorage miruBackingStorage) throws
         Exception {
-        byte[] primitiveBuffer = new byte[8];
+        StackBuffer stackBuffer = new StackBuffer();
         MiruInvertedIndex<BM> invertedIndex = miruFieldIndex.get(0, new MiruTermId(FilerIO.intBytes(1)));
         assertNotNull(invertedIndex);
-        assertFalse(invertedIndex.getIndex(primitiveBuffer).isPresent());
+        assertFalse(invertedIndex.getIndex(stackBuffer).isPresent());
     }
 
     @Test(dataProvider = "miruIndexDataProvider")
     public <BM extends IBM, IBM> void testIndexFieldTerm(MiruBitmaps<BM, IBM> bitmaps, MiruFieldIndex<BM> miruFieldIndex, MiruBackingStorage miruBackingStorage) throws Exception {
-        byte[] primitiveBuffer = new byte[8];
-        miruFieldIndex.append(0, new MiruTermId(FilerIO.intBytes(2)), new int[]{3}, null, primitiveBuffer);
+        StackBuffer stackBuffer = new StackBuffer();
+        miruFieldIndex.append(0, new MiruTermId(FilerIO.intBytes(2)), new int[]{3}, null, stackBuffer);
         MiruInvertedIndex<BM> invertedIndex = miruFieldIndex.get(0, new MiruTermId(FilerIO.intBytes(2)));
         assertNotNull(invertedIndex);
-        assertTrue(invertedIndex.getIndex(primitiveBuffer).isPresent());
-        assertTrue(bitmaps.isSet(invertedIndex.getIndex(primitiveBuffer).get(), 3));
+        assertTrue(invertedIndex.getIndex(stackBuffer).isPresent());
+        assertTrue(bitmaps.isSet(invertedIndex.getIndex(stackBuffer).get(), 3));
     }
 
     @Test(dataProvider = "miruIndexDataProviderWithData")
     public <BM extends IBM, IBM> void testExpectedData(MiruBitmaps<BM, IBM> bitmaps, MiruFieldIndex<BM> miruFieldIndex, List<Integer> expected, MiruBackingStorage miruBackingStorage)
         throws Exception {
-        byte[] primitiveBuffer = new byte[8];
+        StackBuffer stackBuffer = new StackBuffer();
         byte[] key = "term1".getBytes();
 
         MiruInvertedIndex<BM> invertedIndex = miruFieldIndex.get(0, new MiruTermId(key));
         assertNotNull(invertedIndex);
-        assertTrue(invertedIndex.getIndex(primitiveBuffer).isPresent());
+        assertTrue(invertedIndex.getIndex(stackBuffer).isPresent());
 
         List<Integer> actual = Lists.newArrayList();
-        MiruIntIterator iter = bitmaps.intIterator(invertedIndex.getIndex(primitiveBuffer).get());
+        MiruIntIterator iter = bitmaps.intIterator(invertedIndex.getIndex(stackBuffer).get());
         while (iter.hasNext()) {
             actual.add(iter.next());
         }
@@ -71,7 +72,7 @@ public class MiruFieldIndexTest {
 
     @DataProvider(name = "miruIndexDataProvider")
     public Object[][] miruIndexDataProvider() throws Exception {
-        byte[] primitiveBuffer = new byte[8];
+        StackBuffer stackBuffer = new StackBuffer();
         MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(4);
         MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("localhost", 10000));
 
@@ -89,18 +90,18 @@ public class MiruFieldIndexTest {
 
     @DataProvider(name = "miruIndexDataProviderWithData")
     public Object[][] miruIndexDataProviderWithData() throws Exception {
-        byte[] primitiveBuffer = new byte[8];
+        StackBuffer stackBuffer = new StackBuffer();
         MiruTenantId tenantId = new MiruTenantId("test".getBytes());
         MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(4);
         MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, MiruPartitionId.of(0), new MiruHost("localhost", 10000));
 
         MiruContext<EWAHCompressedBitmap, ?> hybridContext = buildInMemoryContext(4, bitmaps, coord);
         MiruFieldIndex<EWAHCompressedBitmap> miruHybridFieldIndex = hybridContext.fieldIndexProvider.getFieldIndex(MiruFieldType.primary);
-        miruHybridFieldIndex.append(0, new MiruTermId("term1".getBytes()), new int[]{1, 2, 3}, null, primitiveBuffer);
+        miruHybridFieldIndex.append(0, new MiruTermId("term1".getBytes()), new int[]{1, 2, 3}, null, stackBuffer);
 
         MiruContext<EWAHCompressedBitmap, ?> onDiskContext = buildOnDiskContext(4, bitmaps, coord);
         MiruFieldIndex<EWAHCompressedBitmap> miruOnDiskFieldIndex = onDiskContext.fieldIndexProvider.getFieldIndex(MiruFieldType.primary);
-        miruOnDiskFieldIndex.append(0, new MiruTermId("term1".getBytes()), new int[]{1, 2, 3}, null, primitiveBuffer);
+        miruOnDiskFieldIndex.append(0, new MiruTermId("term1".getBytes()), new int[]{1, 2, 3}, null, stackBuffer);
 
         return new Object[][]{
             {bitmaps, miruHybridFieldIndex, Arrays.asList(1, 2, 3), MiruBackingStorage.memory},

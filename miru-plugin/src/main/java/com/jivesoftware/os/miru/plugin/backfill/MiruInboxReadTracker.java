@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.plugin.backfill;
 
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -18,5 +19,5 @@ public interface MiruInboxReadTracker {
         final MiruSolutionLog solutionLog,
         final int lastActivityIndex,
         long oldestBackfilledEventId,
-        byte[] primitiveBuffer) throws Exception;
+        StackBuffer stackBuffer) throws Exception;
 }

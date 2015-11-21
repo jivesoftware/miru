@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.service.stream;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -96,7 +97,7 @@ public class MiruIndexBloom<BM extends IBM, IBM> {
         boolean repair,
         ExecutorService indexExecutor)
         throws ExecutionException, InterruptedException {
-        byte[] primitiveBuffer = new byte[8];
+        StackBuffer stackBuffer = new StackBuffer();
         List<BloomWork> bloomWorks = bloomWorksFuture.get();
 
         final MiruFieldIndex<IBM> bloomFieldIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.bloom);
@@ -109,7 +110,7 @@ public class MiruIndexBloom<BM extends IBM, IBM> {
                 MiruFieldDefinition bloomFieldDefinition = context.schema.getFieldDefinition(bloomWork.bloomFieldId);
                 MiruTermId compositeBloomId = indexUtil.makeBloomTerm(bloomWork.fieldValue, bloomFieldDefinition.name);
                 MiruInvertedIndex<IBM> invertedIndex = bloomFieldIndex.getOrCreateInvertedIndex(bloomWork.fieldId, compositeBloomId);
-                bloomIndex.put(invertedIndex, bloomWork.bloomFieldValues, primitiveBuffer);
+                bloomIndex.put(invertedIndex, bloomWork.bloomFieldValues, stackBuffer);
                 return null;
             }));
             callableCount++;

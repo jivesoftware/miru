@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.stumptown.plugins;
 
 import com.google.common.collect.Lists;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -36,7 +37,7 @@ public class Stumptown {
         int[] indexes)
         throws Exception {
 
-        byte[] primitiveBuffer = new byte[8];
+        StackBuffer stackBuffer = new StackBuffer();
 
         log.debug("Get stumptowning for answer={}", answer);
 
@@ -49,7 +50,7 @@ public class Stumptown {
         for (long i = 0; i < cardinality && iter.hasNext(); i++) {
             int index = iter.next();
             if (i > (cardinality - 1 - desiredNumberOfResults)) {
-                results.add(internExtern.extern(requestContext.getActivityIndex().get(tenantId, index, primitiveBuffer), schema));
+                results.add(internExtern.extern(requestContext.getActivityIndex().get(tenantId, index, stackBuffer), schema));
             }
         }
         Collections.reverse(results); // chronologically descending (for proper alignment when merging/appending older partitions)

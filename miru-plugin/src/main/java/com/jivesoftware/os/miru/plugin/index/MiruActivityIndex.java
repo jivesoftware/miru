@@ -5,6 +5,7 @@
  */
 package com.jivesoftware.os.miru.plugin.index;
 
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import java.util.Collection;
@@ -20,7 +21,7 @@ public interface MiruActivityIndex {
      * @param index the index of the activity
      * @return the activity at the given index
      */
-    MiruInternalActivity get(MiruTenantId tenantId, int index, byte[] primitiveBuffer);
+    MiruInternalActivity get(MiruTenantId tenantId, int index, StackBuffer stackBuffer);
 
     /**
      * Get the terms from the given field for the activity at the requested index.
@@ -29,7 +30,7 @@ public interface MiruActivityIndex {
      * @param fieldId the field
      * @return the terms
      */
-    MiruTermId[] get(int index, int fieldId, byte[] primitiveBuffer);
+    MiruTermId[] get(int index, int fieldId, StackBuffer stackBuffer);
 
     /**
      * Get the terms from the given field for each activity index.
@@ -38,14 +39,14 @@ public interface MiruActivityIndex {
      * @param fieldId the field
      * @return the terms
      */
-    List<MiruTermId[]> getAll(int[] indexes, int fieldId, byte[] primitiveBuffer);
+    List<MiruTermId[]> getAll(int[] indexes, int fieldId, StackBuffer stackBuffer);
 
     /**
      * Returns the index of the last activity.
      *
      * @return the index of the last activity
      */
-    int lastId(byte[] primitiveBuffer);
+    int lastId(StackBuffer stackBuffer);
 
     /**
      * Store the given activity at the provided index value, and readies the index using the highest id seen.
@@ -54,7 +55,7 @@ public interface MiruActivityIndex {
      *
      * @param activityAndIds the activities to be stored and their indexes
      */
-    void setAndReady(Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds, byte[] primitiveBuffer) throws Exception;
+    void setAndReady(Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds, StackBuffer stackBuffer) throws Exception;
 
     /**
      * Store the given activity at the provided index value, but does not make ready the new ids.
@@ -63,7 +64,7 @@ public interface MiruActivityIndex {
      *
      * @param activityAndIds the activities to be stored and their indexes
      */
-    void set(Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds, byte[] primitiveBuffer);
+    void set(Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds, StackBuffer stackBuffer);
 
     /**
      * Readies the index up to the provided index value.
@@ -72,7 +73,7 @@ public interface MiruActivityIndex {
      *
      * @param index the max ready index
      */
-    void ready(int index, byte[] primitiveBuffer) throws Exception;
+    void ready(int index, StackBuffer stackBuffer) throws Exception;
 
     /** Free resources used by the index. */
     void close();

@@ -5,6 +5,7 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
@@ -231,11 +232,11 @@ public class MiruService implements Miru {
             MiruRequestContext<IBM, ?> requestContext = handle.getRequestContext();
             int fieldId = requestContext.getSchema().getFieldId(fieldName);
             MiruFieldDefinition fieldDefinition = requestContext.getSchema().getFieldDefinition(fieldId);
-            byte[] primitiveBuffer = new byte[8];
+            StackBuffer stackBuffer = new StackBuffer();
             Optional<IBM> index = requestContext.getFieldIndexProvider()
                 .getFieldIndex(MiruFieldType.primary)
                 .get(fieldId, requestContext.getTermComposer().compose(fieldDefinition, termValue))
-                .getIndex(primitiveBuffer);
+                .getIndex(stackBuffer);
             if (index.isPresent()) {
                 return bitmapsDebug.toString(handle.getBitmaps(), index.get());
             } else {

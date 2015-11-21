@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.plugin.backfill;
 
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.MiruReadEvent;
@@ -54,7 +55,7 @@ public class RCVSInboxReadTracker implements MiruInboxReadTracker {
         final MiruSolutionLog solutionLog,
         final int lastActivityIndex,
         long oldestBackfilledEventId,
-        byte[] primitiveBuffer) throws Exception {
+        StackBuffer stackBuffer) throws Exception {
 
         // First find the oldest eventId from our sip WAL
         long afterTimestamp = getSipTimestamp(tenantId, partitionId, streamId);
@@ -72,11 +73,11 @@ public class RCVSInboxReadTracker implements MiruInboxReadTracker {
                 MiruFilter filter = readEvent.filter;
 
                 if (e.activity.type == MiruPartitionedActivity.Type.READ) {
-                    readTracker.read(bitmaps, requestContext, streamId, filter, solutionLog, lastActivityIndex, readEvent.time, primitiveBuffer);
+                    readTracker.read(bitmaps, requestContext, streamId, filter, solutionLog, lastActivityIndex, readEvent.time, stackBuffer);
                 } else if (e.activity.type == MiruPartitionedActivity.Type.UNREAD) {
-                    readTracker.unread(bitmaps, requestContext, streamId, filter, solutionLog, lastActivityIndex, readEvent.time, primitiveBuffer);
+                    readTracker.unread(bitmaps, requestContext, streamId, filter, solutionLog, lastActivityIndex, readEvent.time, stackBuffer);
                 } else if (e.activity.type == MiruPartitionedActivity.Type.MARK_ALL_READ) {
-                    readTracker.markAllRead(bitmaps, requestContext, streamId, readEvent.time, primitiveBuffer);
+                    readTracker.markAllRead(bitmaps, requestContext, streamId, readEvent.time, stackBuffer);
                 }
             }
             got = (got.cursor != null) ? walClient.getRead(tenantId, streamId, got.cursor, Long.MAX_VALUE, 1000) : null;

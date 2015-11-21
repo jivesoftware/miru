@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.stream.plugins.count;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.Sets;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
@@ -32,7 +33,7 @@ public class DistinctCount {
         BM answer)
         throws Exception {
 
-        byte[] primitiveBuffer = new byte[8];
+        StackBuffer stackBuffer = new StackBuffer();
 
         log.debug("Get number of distincts for answer={} query={}", answer, request);
 
@@ -55,7 +56,7 @@ public class DistinctCount {
 
             for (String aggregateTerm : aggregateTerms) {
                 MiruTermId aggregateTermId = termComposer.compose(fieldDefinition, aggregateTerm);
-                Optional<IBM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex(primitiveBuffer);
+                Optional<IBM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex(stackBuffer);
                 if (!optionalTermIndex.isPresent()) {
                     continue;
                 }
@@ -74,7 +75,7 @@ public class DistinctCount {
                 if (lastSetBit < 0) {
                     break;
                 }
-                MiruTermId[] fieldValues = requestContext.getActivityIndex().get(lastSetBit, fieldId,primitiveBuffer);
+                MiruTermId[] fieldValues = requestContext.getActivityIndex().get(lastSetBit, fieldId,stackBuffer);
                 log.trace("fieldValues={}", (Object) fieldValues);
                 if (fieldValues == null || fieldValues.length == 0) {
                     // could make this a reusable buffer, but this is effectively an error case and would require 3 buffers
@@ -88,7 +89,7 @@ public class DistinctCount {
                     String aggregateTerm = termComposer.decompose(fieldDefinition, aggregateTermId);
 
                     aggregateTerms.add(aggregateTerm);
-                    Optional<IBM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex(primitiveBuffer);
+                    Optional<IBM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex(stackBuffer);
                     checkState(optionalTermIndex.isPresent(), "Unable to load inverted index for aggregateTermId: " + aggregateTermId);
 
                     BM revisedAnswer = reusable.next();

@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.plugin.solution;
 
 import com.google.common.base.Optional;
 import com.jivesoftware.os.filer.io.api.KeyRange;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.jive.utils.base.interfaces.CallbackStream;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
@@ -51,7 +52,7 @@ public class MiruAggregateUtil {
         int pivotFieldId,
         String streamField,
         CallbackStream<MiruTermCount> terms,
-        byte[] primitiveBuffer)
+        StackBuffer stackBuffer)
         throws Exception {
 
         boolean traceEnabled = LOG.isTraceEnabled();
@@ -87,7 +88,7 @@ public class MiruAggregateUtil {
                 break;
             }
 
-            MiruTermId[] fieldValues = requestContext.getActivityIndex().get(lastSetBit, streamFieldId, primitiveBuffer);
+            MiruTermId[] fieldValues = requestContext.getActivityIndex().get(lastSetBit, streamFieldId, stackBuffer);
             if (traceEnabled) {
                 LOG.trace("stream: fieldValues={}", new Object[]{fieldValues});
             }
@@ -111,7 +112,7 @@ public class MiruAggregateUtil {
                 MiruTermId pivotTerm = fieldValues[0];
 
                 MiruInvertedIndex<IBM> invertedIndex = fieldIndex.get(pivotFieldId, pivotTerm);
-                Optional<IBM> optionalTermIndex = invertedIndex.getIndex(primitiveBuffer);
+                Optional<IBM> optionalTermIndex = invertedIndex.getIndex(stackBuffer);
                 checkState(optionalTermIndex.isPresent(), "Unable to load inverted index for aggregateTermId: " + pivotTerm);
                 IBM termIndex = optionalTermIndex.get();
 
@@ -161,7 +162,7 @@ public class MiruAggregateUtil {
         int batchSize,
         MiruSolutionLog solutionLog,
         Collection<MiruTermId> result,
-        byte[] primitiveBuffer) throws Exception {
+        StackBuffer stackBuffer) throws Exception {
 
         MiruActivityIndex activityIndex = requestContext.getActivityIndex();
         MiruFieldIndex<IBM> primaryFieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
@@ -197,7 +198,7 @@ public class MiruAggregateUtil {
             if (bitmaps.supportsInPlace()) {
                 bitmaps.inPlaceAndNot(answer, seen);
                 long start = System.nanoTime();
-                List<MiruTermId[]> all = activityIndex.getAll(actualIds, pivotFieldId, primitiveBuffer);
+                List<MiruTermId[]> all = activityIndex.getAll(actualIds, pivotFieldId, stackBuffer);
                 getAllCost += (System.nanoTime() - start);
                 done:
                 for (MiruTermId[] termIds : all) {
@@ -208,7 +209,7 @@ public class MiruAggregateUtil {
                                 start = System.nanoTime();
                                 MiruInvertedIndex<IBM> invertedIndex = primaryFieldIndex.get(pivotFieldId, termId);
                                 start = System.nanoTime();
-                                bitmaps.inPlaceAndNot(answer, invertedIndex, primitiveBuffer);
+                                bitmaps.inPlaceAndNot(answer, invertedIndex, stackBuffer);
                                 andNotCost += (System.nanoTime() - start);
                             }
                         }
@@ -217,7 +218,7 @@ public class MiruAggregateUtil {
             } else {
                 List<IBM> andNots = new ArrayList<>();
                 andNots.add(seen);
-                List<MiruTermId[]> all = activityIndex.getAll(actualIds, pivotFieldId, primitiveBuffer);
+                List<MiruTermId[]> all = activityIndex.getAll(actualIds, pivotFieldId, stackBuffer);
                 for (MiruTermId[] termIds : all) {
                     if (termIds != null && termIds.length > 0) {
                         used++;
@@ -225,7 +226,7 @@ public class MiruAggregateUtil {
                             if (distincts.add(termId)) {
                                 result.add(termId);
                                 MiruInvertedIndex<IBM> invertedIndex = primaryFieldIndex.get(pivotFieldId, termId);
-                                Optional<IBM> gotIndex = invertedIndex.getIndex(primitiveBuffer);
+                                Optional<IBM> gotIndex = invertedIndex.getIndex(stackBuffer);
                                 if (gotIndex.isPresent()) {
                                     andNots.add(gotIndex.get());
                                 }
@@ -252,10 +253,10 @@ public class MiruAggregateUtil {
         Map<FieldAndTermId, MutableInt> termCollector,
         int largestIndex,
         final int considerIfIndexIdGreaterThanN,
-        byte[] primitiveBuffer)
+        StackBuffer stackBuffer)
         throws Exception {
         return filterInOut(bitmaps, schema, termComposer, fieldIndexProvider, filter, solutionLog, termCollector, true,
-            largestIndex, considerIfIndexIdGreaterThanN, primitiveBuffer);
+            largestIndex, considerIfIndexIdGreaterThanN, stackBuffer);
     }
 
     private <BM extends IBM, IBM> BM filterInOut(MiruBitmaps<BM, IBM> bitmaps,
@@ -268,7 +269,7 @@ public class MiruAggregateUtil {
         boolean termIn,
         int largestIndex,
         final int considerIfIndexIdGreaterThanN,
-        byte[] primitiveBuffer)
+        StackBuffer stackBuffer)
         throws Exception {
 
         List<MiruTxIndex<IBM>> filterBitmaps = new ArrayList<>();
@@ -298,7 +299,7 @@ public class MiruAggregateUtil {
                                             considerIfIndexIdGreaterThanN, fieldTermIn, termCollector, fieldBitmaps);
                                     }
                                     return true;
-                                }, primitiveBuffer);
+                                }, stackBuffer);
                         } else {
                             MiruTermId termId = termComposer.compose(fieldDefinition, term);
                             getAndCollectTerm(fieldIndexProvider, fieldFilter, fieldId, termId,
@@ -320,7 +321,7 @@ public class MiruAggregateUtil {
                             filterBitmaps.add(fieldBitmaps.get(0));
                         } else {
                             start = System.currentTimeMillis();
-                            BM r = bitmaps.orTx(fieldBitmaps, primitiveBuffer);
+                            BM r = bitmaps.orTx(fieldBitmaps, stackBuffer);
                             filterBitmaps.add(new SimpleInvertedIndex<>(r));
                             solutionLog.log(MiruSolutionLogLevel.DEBUG, "filter: fieldId={} bitmaps={} aggregate took {} millis.",
                                 fieldId, fieldBitmaps.size(), System.currentTimeMillis() - start);
@@ -333,11 +334,11 @@ public class MiruAggregateUtil {
             for (MiruFilter subFilter : filter.subFilters) {
                 boolean subTermIn = (filter.operation == MiruFilterOperation.pButNotQ && !filterBitmaps.isEmpty()) ? !termIn : termIn;
                 BM subStorage = filterInOut(bitmaps, schema, termComposer, fieldIndexProvider, subFilter, solutionLog,
-                    termCollector, subTermIn, largestIndex, considerIfIndexIdGreaterThanN, primitiveBuffer);
+                    termCollector, subTermIn, largestIndex, considerIfIndexIdGreaterThanN, stackBuffer);
                 filterBitmaps.add(new SimpleInvertedIndex<>(subStorage));
             }
         }
-        return executeFilter(bitmaps, filter.operation, solutionLog, filterBitmaps, primitiveBuffer);
+        return executeFilter(bitmaps, filter.operation, solutionLog, filterBitmaps, stackBuffer);
     }
 
     private <IBM> void getAndCollectTerm(MiruFieldIndexProvider<IBM> fieldIndexProvider,
@@ -372,16 +373,16 @@ public class MiruAggregateUtil {
         MiruFilterOperation operation,
         MiruSolutionLog solutionLog,
         List<MiruTxIndex<IBM>> filterBitmaps,
-        byte[] primitiveBuffer) throws Exception {
+        StackBuffer stackBuffer) throws Exception {
 
         BM bitmapStorage;
         long start = System.currentTimeMillis();
         if (operation == MiruFilterOperation.and) {
-            bitmapStorage = bitmaps.andTx(filterBitmaps, primitiveBuffer);
+            bitmapStorage = bitmaps.andTx(filterBitmaps, stackBuffer);
         } else if (operation == MiruFilterOperation.or) {
-            bitmapStorage = bitmaps.orTx(filterBitmaps, primitiveBuffer);
+            bitmapStorage = bitmaps.orTx(filterBitmaps, stackBuffer);
         } else if (operation == MiruFilterOperation.pButNotQ) {
-            bitmapStorage = bitmaps.andNotTx(filterBitmaps.get(0), filterBitmaps.subList(1, filterBitmaps.size()), primitiveBuffer);
+            bitmapStorage = bitmaps.andNotTx(filterBitmaps.get(0), filterBitmaps.subList(1, filterBitmaps.size()), stackBuffer);
         } else {
             throw new UnsupportedOperationException(operation + " isn't currently supported.");
         }
@@ -402,7 +403,7 @@ public class MiruAggregateUtil {
         }
 
         @Override
-        public <R> R txIndex(IndexTx<R, IBM> tx, byte[] primitiveBuffer) throws Exception {
+        public <R> R txIndex(IndexTx<R, IBM> tx, StackBuffer stackBuffer) throws Exception {
             return tx.tx(bitmap, null);
         }
     }

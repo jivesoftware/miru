@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.service.stream;
 
 import com.google.common.collect.Sets;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityAndId;
 import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
@@ -28,7 +29,7 @@ public class MiruIndexAuthz<BM> {
 
         //TODO create work based on distinct authz strings
         return Collections.<Future<?>>singletonList(indexExecutor.submit(() -> {
-            byte[] primitiveBuffer = new byte[8];
+            StackBuffer stackBuffer = new StackBuffer();
             for (MiruActivityAndId<MiruInternalActivity> internalActivityAndId : internalActivityAndIds) {
                 MiruInternalActivity activity = internalActivityAndId.activity;
                 if (activity.authz != null) {
@@ -36,13 +37,13 @@ public class MiruIndexAuthz<BM> {
                         log.inc("count>set", activity.authz.length);
                         log.inc("count>set", activity.authz.length, tenantId.toString());
                         for (String authz : activity.authz) {
-                            context.authzIndex.set(authz, primitiveBuffer, internalActivityAndId.id);
+                            context.authzIndex.set(authz, stackBuffer, internalActivityAndId.id);
                         }
                     } else {
                         log.inc("count>append", activity.authz.length);
                         log.inc("count>append", activity.authz.length, tenantId.toString());
                         for (String authz : activity.authz) {
-                            context.authzIndex.append(authz, primitiveBuffer, internalActivityAndId.id);
+                            context.authzIndex.append(authz, stackBuffer, internalActivityAndId.id);
                         }
                     }
                 }
@@ -59,7 +60,7 @@ public class MiruIndexAuthz<BM> {
         throws Exception {
 
         return Collections.<Future<?>>singletonList(indexExecutor.submit(() -> {
-            byte[] primitiveBuffer = new byte[8];
+            StackBuffer stackBuffer = new StackBuffer();
             for (int i = 0; i < internalActivityAndIds.size(); i++) {
                 MiruActivityAndId<MiruInternalActivity> internalActivityAndId = internalActivityAndIds.get(i);
                 MiruInternalActivity internalActivity = internalActivityAndId.activity;
@@ -71,13 +72,13 @@ public class MiruIndexAuthz<BM> {
 
                 for (String authz : existingAuthz) {
                     if (!repairedAuthz.contains(authz)) {
-                        context.authzIndex.remove(authz, id, primitiveBuffer);
+                        context.authzIndex.remove(authz, id, stackBuffer);
                     }
                 }
 
                 for (String authz : repairedAuthz) {
                     if (!existingAuthz.contains(authz)) {
-                        context.authzIndex.set(authz, primitiveBuffer, id);
+                        context.authzIndex.set(authz, stackBuffer, id);
                     }
                 }
             }

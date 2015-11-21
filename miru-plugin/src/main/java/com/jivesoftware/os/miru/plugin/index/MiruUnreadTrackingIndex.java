@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.plugin.index;
 
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 
 /**
@@ -12,11 +13,11 @@ public interface MiruUnreadTrackingIndex<IBM> {
 
     MiruInvertedIndexAppender getAppender(MiruStreamId streamId) throws Exception;
 
-    void append(MiruStreamId streamId, byte[] primitiveBuffer, int... ids) throws Exception;
+    void append(MiruStreamId streamId, StackBuffer stackBuffer, int... ids) throws Exception;
 
-    void applyRead(MiruStreamId streamId, IBM readMask, byte[] primitiveBuffer) throws Exception;
+    void applyRead(MiruStreamId streamId, IBM readMask, StackBuffer stackBuffer) throws Exception;
 
-    void applyUnread(MiruStreamId streamId, IBM unreadMask, byte[] primitiveBuffer) throws Exception;
+    void applyUnread(MiruStreamId streamId, IBM unreadMask, StackBuffer stackBuffer) throws Exception;
 
     void close();
 }

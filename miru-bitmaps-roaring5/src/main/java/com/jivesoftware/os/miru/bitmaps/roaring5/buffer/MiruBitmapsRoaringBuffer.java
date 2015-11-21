@@ -18,6 +18,7 @@ package com.jivesoftware.os.miru.bitmaps.roaring5.buffer;
 import com.google.common.base.Optional;
 import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
@@ -156,7 +157,7 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
     }
 
     @Override
-    public MutableRoaringBitmap orTx(List<MiruTxIndex<ImmutableRoaringBitmap>> indexes, byte[] primitiveBuffer) throws Exception {
+    public MutableRoaringBitmap orTx(List<MiruTxIndex<ImmutableRoaringBitmap>> indexes, StackBuffer stackBuffer) throws Exception {
         if (indexes.isEmpty()) {
             return new MutableRoaringBitmap();
         }
@@ -169,7 +170,7 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
             } else {
                 return new ImmutableRoaringBitmap(buffer).toMutableRoaringBitmap();
             }
-        }, primitiveBuffer);
+        }, stackBuffer);
 
         for (MiruTxIndex<ImmutableRoaringBitmap> index : indexes.subList(1, indexes.size())) {
             index.txIndex((bitmap, buffer) -> {
@@ -179,7 +180,7 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
                     container.or(new ImmutableRoaringBitmap(buffer));
                 }
                 return null;
-            }, primitiveBuffer);
+            }, stackBuffer);
         }
 
         return container;
@@ -196,7 +197,7 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
     }
 
     @Override
-    public MutableRoaringBitmap andTx(List<MiruTxIndex<ImmutableRoaringBitmap>> indexes, byte[] primitiveBuffer) throws Exception {
+    public MutableRoaringBitmap andTx(List<MiruTxIndex<ImmutableRoaringBitmap>> indexes, StackBuffer stackBuffer) throws Exception {
         if (indexes.isEmpty()) {
             return new MutableRoaringBitmap();
         }
@@ -211,7 +212,7 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
             } else {
                 return new MutableRoaringBitmap();
             }
-        }, primitiveBuffer);
+        }, stackBuffer);
 
         if (container.isEmpty()) {
             return container;
@@ -227,7 +228,7 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
                     container.clear();
                 }
                 return null;
-            }, primitiveBuffer);
+            }, stackBuffer);
 
             if (container.isEmpty()) {
                 return container;
@@ -243,7 +244,7 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
     }
 
     @Override
-    public void inPlaceAndNot(MutableRoaringBitmap original, MiruInvertedIndex<ImmutableRoaringBitmap> not, byte[] primitiveBuffer) throws Exception {
+    public void inPlaceAndNot(MutableRoaringBitmap original, MiruInvertedIndex<ImmutableRoaringBitmap> not, StackBuffer stackBuffer) throws Exception {
         not.txIndex((bitmap, buffer) -> {
             if (bitmap != null) {
                 original.andNot(bitmap);
@@ -252,7 +253,7 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
                 original.andNot(notBitmap);
             }
             return null;
-        }, primitiveBuffer);
+        }, stackBuffer);
     }
 
     @Override
@@ -278,7 +279,7 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
     @Override
     public MutableRoaringBitmap andNotTx(MiruTxIndex<ImmutableRoaringBitmap> original,
         List<MiruTxIndex<ImmutableRoaringBitmap>> not,
-        byte[] primitiveBuffer) throws Exception {
+        StackBuffer stackBuffer) throws Exception {
 
         MutableRoaringBitmap container = original.txIndex((bitmap, buffer) -> {
             if (bitmap != null) {
@@ -288,7 +289,7 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
             } else {
                 return new ImmutableRoaringBitmap(buffer).toMutableRoaringBitmap();
             }
-        }, primitiveBuffer);
+        }, stackBuffer);
 
         if (container.isEmpty()) {
             return container;
@@ -302,7 +303,7 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
                     container.andNot(new ImmutableRoaringBitmap(buffer));
                 }
                 return null;
-            }, primitiveBuffer);
+            }, stackBuffer);
 
             if (container.isEmpty()) {
                 break;
@@ -394,9 +395,9 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
     }
 
     @Override
-    public MutableRoaringBitmap buildTimeRangeMask(MiruTimeIndex timeIndex, long smallestTimestamp, long largestTimestamp, byte[] primitiveBuffer) {
-        int smallestInclusiveId = timeIndex.smallestExclusiveTimestampIndex(smallestTimestamp, primitiveBuffer);
-        int largestExclusiveId = timeIndex.largestInclusiveTimestampIndex(largestTimestamp, primitiveBuffer) + 1;
+    public MutableRoaringBitmap buildTimeRangeMask(MiruTimeIndex timeIndex, long smallestTimestamp, long largestTimestamp, StackBuffer stackBuffer) {
+        int smallestInclusiveId = timeIndex.smallestExclusiveTimestampIndex(smallestTimestamp, stackBuffer);
+        int largestExclusiveId = timeIndex.largestInclusiveTimestampIndex(largestTimestamp, stackBuffer) + 1;
 
         MutableRoaringBitmap mask = new MutableRoaringBitmap();
 

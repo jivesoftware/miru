@@ -21,6 +21,7 @@ import com.googlecode.javaewah.BitmapStorage;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.googlecode.javaewah.FastAggregation;
 import com.googlecode.javaewah.IntIterator;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
@@ -149,7 +150,7 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap, EWAHCo
     }
 
     @Override
-    public EWAHCompressedBitmap orTx(List<MiruTxIndex<EWAHCompressedBitmap>> indexes, byte[] primitiveBuffer) throws Exception {
+    public EWAHCompressedBitmap orTx(List<MiruTxIndex<EWAHCompressedBitmap>> indexes, StackBuffer stackBuffer) throws Exception {
         if (indexes.isEmpty()) {
             return new EWAHCompressedBitmap();
         }
@@ -164,7 +165,7 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap, EWAHCo
             } else {
                 return new EWAHCompressedBitmap();
             }
-        }, primitiveBuffer);
+        }, stackBuffer);
 
         for (MiruTxIndex<EWAHCompressedBitmap> index : indexes.subList(1, indexes.size())) {
             EWAHCompressedBitmap or = index.txIndex((bitmap, buffer) -> {
@@ -177,7 +178,7 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap, EWAHCo
                 } else {
                     return new EWAHCompressedBitmap();
                 }
-            }, primitiveBuffer);
+            }, stackBuffer);
 
             container.or(or);
         }
@@ -196,7 +197,7 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap, EWAHCo
     }
 
     @Override
-    public EWAHCompressedBitmap andTx(List<MiruTxIndex<EWAHCompressedBitmap>> indexes, byte[] primitiveBuffer) throws Exception {
+    public EWAHCompressedBitmap andTx(List<MiruTxIndex<EWAHCompressedBitmap>> indexes, StackBuffer stackBuffer) throws Exception {
         if (indexes.isEmpty()) {
             return new EWAHCompressedBitmap();
         }
@@ -211,7 +212,7 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap, EWAHCo
             } else {
                 return new EWAHCompressedBitmap();
             }
-        }, primitiveBuffer);
+        }, stackBuffer);
 
         if (container.isEmpty()) {
             return container;
@@ -228,7 +229,7 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap, EWAHCo
                 } else {
                     return new EWAHCompressedBitmap();
                 }
-            }, primitiveBuffer);
+            }, stackBuffer);
 
             container.and(and);
 
@@ -246,7 +247,7 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap, EWAHCo
     }
 
     @Override
-    public void inPlaceAndNot(EWAHCompressedBitmap original, MiruInvertedIndex<EWAHCompressedBitmap> not, byte[] primitiveBuffer) throws Exception {
+    public void inPlaceAndNot(EWAHCompressedBitmap original, MiruInvertedIndex<EWAHCompressedBitmap> not, StackBuffer stackBuffer) throws Exception {
         throw new UnsupportedOperationException("NOPE");
     }
 
@@ -273,7 +274,7 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap, EWAHCo
     @Override
     public EWAHCompressedBitmap andNotTx(MiruTxIndex<EWAHCompressedBitmap> original,
         List<MiruTxIndex<EWAHCompressedBitmap>> not,
-        byte[] primitiveBuffer) throws Exception {
+        StackBuffer stackBuffer) throws Exception {
         if (not.isEmpty()) {
             return new EWAHCompressedBitmap();
         }
@@ -288,7 +289,7 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap, EWAHCo
             } else {
                 return new EWAHCompressedBitmap();
             }
-        }, primitiveBuffer);
+        }, stackBuffer);
 
         if (container.isEmpty()) {
             return container;
@@ -305,7 +306,7 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap, EWAHCo
                 } else {
                     return null;
                 }
-            }, primitiveBuffer);
+            }, stackBuffer);
 
             if (andNot != null) {
                 container.andNot(andNot);
@@ -448,9 +449,9 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap, EWAHCo
     }
 
     @Override
-    public EWAHCompressedBitmap buildTimeRangeMask(MiruTimeIndex timeIndex, long smallestTimestamp, long largestTimestamp, byte[] primitiveBuffer) {
-        int smallestId = timeIndex.smallestExclusiveTimestampIndex(smallestTimestamp, primitiveBuffer);
-        int largestId = timeIndex.largestInclusiveTimestampIndex(largestTimestamp, primitiveBuffer);
+    public EWAHCompressedBitmap buildTimeRangeMask(MiruTimeIndex timeIndex, long smallestTimestamp, long largestTimestamp, StackBuffer stackBuffer) {
+        int smallestId = timeIndex.smallestExclusiveTimestampIndex(smallestTimestamp, stackBuffer);
+        int largestId = timeIndex.largestInclusiveTimestampIndex(largestTimestamp, stackBuffer);
 
         EWAHCompressedBitmap mask = new EWAHCompressedBitmap();
 

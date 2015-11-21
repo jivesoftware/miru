@@ -4,6 +4,7 @@ import com.google.common.base.Optional;
 import com.google.common.cache.Cache;
 import com.google.common.primitives.UnsignedBytes;
 import com.jivesoftware.os.filer.io.api.KeyRange;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
@@ -78,26 +79,26 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
     }
 
     @Override
-    public void append(int fieldId, MiruTermId termId, int[] ids, long[] counts, byte[] primitiveBuffer) throws Exception {
-        getOrAllocate(fieldId, termId).append(primitiveBuffer, ids);
-        putCardinalities(fieldId, termId, ids, counts, true, primitiveBuffer);
+    public void append(int fieldId, MiruTermId termId, int[] ids, long[] counts, StackBuffer stackBuffer) throws Exception {
+        getOrAllocate(fieldId, termId).append(stackBuffer, ids);
+        putCardinalities(fieldId, termId, ids, counts, true, stackBuffer);
     }
 
     @Override
-    public void set(int fieldId, MiruTermId termId, int[] ids, long[] counts, byte[] primitiveBuffer) throws Exception {
-        getOrAllocate(fieldId, termId).set(primitiveBuffer, ids);
-        putCardinalities(fieldId, termId, ids, counts, false, primitiveBuffer);
+    public void set(int fieldId, MiruTermId termId, int[] ids, long[] counts, StackBuffer stackBuffer) throws Exception {
+        getOrAllocate(fieldId, termId).set(stackBuffer, ids);
+        putCardinalities(fieldId, termId, ids, counts, false, stackBuffer);
     }
 
     @Override
-    public void remove(int fieldId, MiruTermId termId, int id, byte[] primitiveBuffer) throws Exception {
+    public void remove(int fieldId, MiruTermId termId, int id, StackBuffer stackBuffer) throws Exception {
         MiruInvertedIndex<IBM> got = get(fieldId, termId);
-        got.remove(id, primitiveBuffer);
-        putCardinalities(fieldId, termId, new int[]{id}, cardinalities[fieldId] != null ? new long[1] : null, false, primitiveBuffer);
+        got.remove(id, stackBuffer);
+        putCardinalities(fieldId, termId, new int[]{id}, cardinalities[fieldId] != null ? new long[1] : null, false, stackBuffer);
     }
 
     @Override
-    public void streamTermIdsForField(int fieldId, List<KeyRange> ranges, final TermIdStream termIdStream, byte[] primitiveBuffer) throws Exception {
+    public void streamTermIdsForField(int fieldId, List<KeyRange> ranges, final TermIdStream termIdStream, StackBuffer stackBuffer) throws Exception {
         final Set<MiruTermId> indexKeys = fieldIndexDeltas[fieldId].keySet();
         if (ranges != null && !ranges.isEmpty()) {
             for (KeyRange range : ranges) {
@@ -125,7 +126,7 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
                 }
             }
             return true;
-        }, primitiveBuffer);
+        }, stackBuffer);
     }
 
     @Override
@@ -179,7 +180,7 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
     }
 
     @Override
-    public long getCardinality(int fieldId, MiruTermId termId, int id, byte[] primitiveBuffer) throws Exception {
+    public long getCardinality(int fieldId, MiruTermId termId, int id, StackBuffer stackBuffer) throws Exception {
         long[] result = {-1};
         cardinalities[fieldId].computeIfPresent(termId, (key, idCounts) -> {
             result[0] = idCounts.get(id);
@@ -188,12 +189,12 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
         if (result[0] >= 0) {
             return result[0];
         } else {
-            return backingFieldIndex.getCardinality(fieldId, termId, id, primitiveBuffer);
+            return backingFieldIndex.getCardinality(fieldId, termId, id, stackBuffer);
         }
     }
 
     @Override
-    public long[] getCardinalities(int fieldId, MiruTermId termId, int[] ids, byte[] primitiveBuffer) throws Exception {
+    public long[] getCardinalities(int fieldId, MiruTermId termId, int[] ids, StackBuffer stackBuffer) throws Exception {
         long[] counts = new long[ids.length];
         if (cardinalities[fieldId] != null) {
             int[] consumableIds = Arrays.copyOf(ids, ids.length);
@@ -212,7 +213,7 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
                 return idCounts;
             });
             if (consumed[0] < ids.length) {
-                long[] existing = backingFieldIndex.getCardinalities(fieldId, termId, consumableIds, primitiveBuffer);
+                long[] existing = backingFieldIndex.getCardinalities(fieldId, termId, consumableIds, stackBuffer);
                 for (int i = 0; i < counts.length; i++) {
                     if (counts[i] < 0) {
                         counts[i] = existing[i];
@@ -226,7 +227,7 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
     }
 
     @Override
-    public long getGlobalCardinality(int fieldId, MiruTermId termId, byte[] primitiveBuffer) throws Exception {
+    public long getGlobalCardinality(int fieldId, MiruTermId termId, StackBuffer stackBuffer) throws Exception {
         if (cardinalities[fieldId] != null) {
             long[] count = {-1};
             cardinalities[fieldId].compute(termId, (key, idCounts) -> {
@@ -238,20 +239,20 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
             if (count[0] >= 0) {
                 return count[0];
             } else {
-                return backingFieldIndex.getGlobalCardinality(fieldId, termId, primitiveBuffer);
+                return backingFieldIndex.getGlobalCardinality(fieldId, termId, stackBuffer);
             }
         }
         return -1;
     }
 
     @Override
-    public void mergeCardinalities(int fieldId, MiruTermId termId, int[] ids, long[] counts, byte[] primitiveBuffer) throws Exception {
-        putCardinalities(fieldId, termId, ids, counts, false, primitiveBuffer);
+    public void mergeCardinalities(int fieldId, MiruTermId termId, int[] ids, long[] counts, StackBuffer stackBuffer) throws Exception {
+        putCardinalities(fieldId, termId, ids, counts, false, stackBuffer);
     }
 
-    private void putCardinalities(int fieldId, MiruTermId termId, int[] ids, long[] counts, boolean append, byte[] primitiveBuffer) throws Exception {
+    private void putCardinalities(int fieldId, MiruTermId termId, int[] ids, long[] counts, boolean append, StackBuffer stackBuffer) throws Exception {
         if (cardinalities[fieldId] != null && counts != null) {
-            long[] backingCounts = append ? null : backingFieldIndex.getCardinalities(fieldId, termId, ids, primitiveBuffer);
+            long[] backingCounts = append ? null : backingFieldIndex.getCardinalities(fieldId, termId, ids, stackBuffer);
 
             cardinalities[fieldId].compute(termId, (key, idCounts) -> {
                 if (idCounts == null) {
@@ -272,7 +273,7 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
 
                 if (!idCounts.adjustValue(-1, delta)) {
                     try {
-                        long globalCount = backingFieldIndex.getGlobalCardinality(fieldId, termId, primitiveBuffer);
+                        long globalCount = backingFieldIndex.getGlobalCardinality(fieldId, termId, stackBuffer);
                         idCounts.put(-1, globalCount > 0 ? delta + globalCount : delta);
                     } catch (Exception e) {
                         throw new RuntimeException(e);
@@ -285,7 +286,7 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
     }
 
     @Override
-    public void merge(byte[] primitiveBuffer) throws Exception {
+    public void merge(StackBuffer stackBuffer) throws Exception {
         for (int fieldId = 0; fieldId < fieldIndexDeltas.length; fieldId++) {
             ConcurrentMap<MiruTermId, MiruDeltaInvertedIndex.Delta<IBM>> deltaMap = fieldIndexDeltas[fieldId];
             for (Map.Entry<MiruTermId, MiruDeltaInvertedIndex.Delta<IBM>> entry : deltaMap.entrySet()) {
@@ -295,7 +296,7 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
                     delta,
                     getIndexKey(fieldId, entry.getKey()),
                     fieldIndexCache, versionCache);
-                invertedIndex.merge(primitiveBuffer);
+                invertedIndex.merge(stackBuffer);
             }
             deltaMap.clear();
 
@@ -317,7 +318,7 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
                             i++;
                         }
                     }
-                    backingFieldIndex.mergeCardinalities(fieldId, termId, ids, counts, primitiveBuffer);
+                    backingFieldIndex.mergeCardinalities(fieldId, termId, ids, counts, stackBuffer);
                 }
                 cardinality.clear();
             }

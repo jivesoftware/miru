@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.plugin.index;
 
 import com.jivesoftware.os.filer.io.api.KeyRange;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import java.util.Arrays;
 import java.util.List;
@@ -19,21 +20,21 @@ public interface MiruFieldIndex<IBM> {
 
     long getVersion(int fieldId, MiruTermId termId) throws Exception;
 
-    void append(int fieldId, MiruTermId termId, int[] ids, long[] counts, byte[] primitiveBuffer) throws Exception;
+    void append(int fieldId, MiruTermId termId, int[] ids, long[] counts, StackBuffer stackBuffer) throws Exception;
 
-    void set(int fieldId, MiruTermId termId, int[] ids, long[] counts, byte[] primitiveBuffer) throws Exception;
+    void set(int fieldId, MiruTermId termId, int[] ids, long[] counts, StackBuffer stackBuffer) throws Exception;
 
-    void remove(int fieldId, MiruTermId termId, int id, byte[] primitiveBuffer) throws Exception;
+    void remove(int fieldId, MiruTermId termId, int id, StackBuffer stackBuffer) throws Exception;
 
-    void streamTermIdsForField(int fieldId, List<KeyRange> ranges, TermIdStream termIdStream, byte[] primitiveBuffer) throws Exception;
+    void streamTermIdsForField(int fieldId, List<KeyRange> ranges, TermIdStream termIdStream, StackBuffer stackBuffer) throws Exception;
 
-    long getCardinality(int fieldId, MiruTermId termId, int id, byte[] primitiveBuffer) throws Exception;
+    long getCardinality(int fieldId, MiruTermId termId, int id, StackBuffer stackBuffer) throws Exception;
 
-    long[] getCardinalities(int fieldId, MiruTermId termId, int[] ids, byte[] primitiveBuffer) throws Exception;
+    long[] getCardinalities(int fieldId, MiruTermId termId, int[] ids, StackBuffer stackBuffer) throws Exception;
 
-    long getGlobalCardinality(int fieldId, MiruTermId termId, byte[] primitiveBuffer) throws Exception;
+    long getGlobalCardinality(int fieldId, MiruTermId termId, StackBuffer stackBuffer) throws Exception;
 
-    void mergeCardinalities(int fieldId, MiruTermId termId, int[] ids, long[] counts, byte[] primitiveBuffer) throws Exception;
+    void mergeCardinalities(int fieldId, MiruTermId termId, int[] ids, long[] counts, StackBuffer stackBuffer) throws Exception;
 
     class IndexKey {
 

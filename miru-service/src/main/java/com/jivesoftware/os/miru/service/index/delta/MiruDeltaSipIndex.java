@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.service.index.delta;
 
 import com.google.common.base.Optional;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.plugin.index.MiruSipIndex;
 import com.jivesoftware.os.miru.service.index.Mergeable;
@@ -20,19 +21,19 @@ public class MiruDeltaSipIndex<S extends MiruSipCursor<S>> implements MiruSipInd
     }
 
     @Override
-    public Optional<S> getSip(byte[] primitiveBuffer) throws IOException {
+    public Optional<S> getSip(StackBuffer stackBuffer) throws IOException {
         S sip = sipReference.get();
         if (sip == null) {
-            return backingIndex.getSip(primitiveBuffer);
+            return backingIndex.getSip(stackBuffer);
         }
         return Optional.fromNullable(sip);
     }
 
     @Override
-    public boolean setSip(final S sip, byte[] primitiveBuffer) throws IOException {
+    public boolean setSip(final S sip, StackBuffer stackBuffer) throws IOException {
         S existing = sipReference.get();
         if (existing == null) {
-            existing = backingIndex.getSip(primitiveBuffer).orNull();
+            existing = backingIndex.getSip(stackBuffer).orNull();
             if (!sipReference.compareAndSet(null, existing)) {
                 existing = sipReference.get();
             }
@@ -53,10 +54,10 @@ public class MiruDeltaSipIndex<S extends MiruSipCursor<S>> implements MiruSipInd
     }
 
     @Override
-    public void merge(byte[] primitiveBuffer) throws Exception {
+    public void merge(StackBuffer stackBuffer) throws Exception {
         S sip = sipReference.get();
         if (sip != null) {
-            backingIndex.setSip(sip, primitiveBuffer);
+            backingIndex.setSip(sip, stackBuffer);
         }
     }
 }

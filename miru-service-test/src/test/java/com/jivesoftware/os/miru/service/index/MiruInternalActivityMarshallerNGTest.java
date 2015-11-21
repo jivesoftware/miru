@@ -16,6 +16,7 @@
 package com.jivesoftware.os.miru.service.index;
 
 import com.jivesoftware.os.filer.io.ByteArrayFiler;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -33,20 +34,20 @@ public class MiruInternalActivityMarshallerNGTest {
      */
     @Test
     public void testFieldValueFromFiler() throws Exception {
-        byte[] primitiveBuffer = new byte[8];
+        StackBuffer stackBuffer = new StackBuffer();
         System.out.println("fieldValueFromFiler");
         MiruInternalActivityMarshaller instance = new MiruInternalActivityMarshaller();
         MiruInternalActivity expResult = activity();
-        ByteArrayFiler filer = new ByteArrayFiler(instance.toBytes(expResult, primitiveBuffer));
+        ByteArrayFiler filer = new ByteArrayFiler(instance.toBytes(expResult, stackBuffer));
         filer.seek(0);
 
         int fieldId = 3;
-        MiruTermId[] fieldValueFromFiler = instance.fieldValueFromFiler(filer, fieldId, primitiveBuffer);
+        MiruTermId[] fieldValueFromFiler = instance.fieldValueFromFiler(filer, fieldId, stackBuffer);
         Assert.assertEquals(fieldValueFromFiler, new MiruTermId[]{new MiruTermId("b".getBytes()), new MiruTermId("c".getBytes())});
 
         filer.seek(0);
         int propId = 2;
-        MiruIBA[] propValueFromFiler = instance.propValueFromFiler(filer, propId, primitiveBuffer);
+        MiruIBA[] propValueFromFiler = instance.propValueFromFiler(filer, propId, stackBuffer);
         Assert.assertEquals(propValueFromFiler, new MiruIBA[]{new MiruIBA("j".getBytes())});
     }
 
@@ -55,12 +56,12 @@ public class MiruInternalActivityMarshallerNGTest {
      */
     @Test
     public void testToBytesThenFromFiler() throws Exception {
-        byte[] primitiveBuffer = new byte[8];
+        StackBuffer stackBuffer = new StackBuffer();
         System.out.println("fromFiler");
         MiruInternalActivityMarshaller instance = new MiruInternalActivityMarshaller();
         MiruInternalActivity expResult = activity();
-        ByteArrayFiler filer = new ByteArrayFiler(instance.toBytes(expResult, primitiveBuffer));
-        MiruInternalActivity result = instance.fromFiler(new MiruTenantId("abc".getBytes()), filer, primitiveBuffer);
+        ByteArrayFiler filer = new ByteArrayFiler(instance.toBytes(expResult, stackBuffer));
+        MiruInternalActivity result = instance.fromFiler(new MiruTenantId("abc".getBytes()), filer, stackBuffer);
         Assert.assertEquals(result, expResult);
     }
 

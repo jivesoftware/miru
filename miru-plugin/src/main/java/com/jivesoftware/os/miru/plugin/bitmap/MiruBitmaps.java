@@ -16,6 +16,7 @@
 package com.jivesoftware.os.miru.plugin.bitmap;
 
 import com.google.common.base.Optional;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTxIndex;
@@ -77,23 +78,23 @@ public interface MiruBitmaps<BM extends IBM, IBM> {
 
     void or(BM container, Collection<IBM> bitmaps);
 
-    BM orTx(List<MiruTxIndex<IBM>> indexes, byte[] primitiveBuffer) throws Exception;
+    BM orTx(List<MiruTxIndex<IBM>> indexes, StackBuffer stackBuffer) throws Exception;
 
     void inPlaceAnd(BM original, IBM bitmap);
 
     void and(BM container, Collection<IBM> bitmaps);
 
-    BM andTx(List<MiruTxIndex<IBM>> indexes, byte[] primitiveBuffer) throws Exception;
+    BM andTx(List<MiruTxIndex<IBM>> indexes, StackBuffer stackBuffer) throws Exception;
 
     void inPlaceAndNot(BM original, IBM not);
 
-    void inPlaceAndNot(BM original, MiruInvertedIndex<IBM> not, byte[] primitiveBuffer) throws Exception;
+    void inPlaceAndNot(BM original, MiruInvertedIndex<IBM> not, StackBuffer stackBuffer) throws Exception;
 
     void andNot(BM container, IBM original, IBM not);
 
     void andNot(BM container, IBM original, List<IBM> not);
 
-    BM andNotTx(MiruTxIndex<IBM> original, List<MiruTxIndex<IBM>> not, byte[] primitiveBuffer) throws Exception;
+    BM andNotTx(MiruTxIndex<IBM> original, List<MiruTxIndex<IBM>> not, StackBuffer stackBuffer) throws Exception;
 
     void copy(BM container, IBM original);
 
@@ -111,7 +112,7 @@ public interface MiruBitmaps<BM extends IBM, IBM> {
 
     IBM buildIndexMask(int largestIndex, Optional<IBM> andNotMask);
 
-    IBM buildTimeRangeMask(MiruTimeIndex timeIndex, long smallestTimestamp, long largestTimestamp, byte[] primitiveBuffer);
+    IBM buildTimeRangeMask(MiruTimeIndex timeIndex, long smallestTimestamp, long largestTimestamp, StackBuffer stackBuffer);
 
     MiruIntIterator intIterator(IBM bitmap);
 

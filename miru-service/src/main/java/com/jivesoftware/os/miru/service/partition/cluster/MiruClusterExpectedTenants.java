@@ -10,6 +10,7 @@ import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
@@ -182,13 +183,13 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
                 coord.tenantId, routingTopologies.getIfPresent(coord.tenantId) != null);
             return false;
         }
-        byte[] primitiveBuffer = new byte[8];
-        return prioritizeRebuildInternal(coord, (MiruTenantTopology) topology, primitiveBuffer);
+        StackBuffer stackBuffer = new StackBuffer();
+        return prioritizeRebuildInternal(coord, (MiruTenantTopology) topology, stackBuffer);
     }
 
     private <BM extends IBM, IBM> boolean prioritizeRebuildInternal(MiruPartitionCoord coord,
         MiruTenantTopology<BM, IBM> topology,
-        byte[] primitiveBuffer) throws Exception {
+        StackBuffer stackBuffer) throws Exception {
 
         Optional<MiruLocalHostedPartition<BM, IBM, ?, ?>> optionalPartition = topology.getPartition(coord.partitionId);
         if (optionalPartition.isPresent()) {
@@ -200,7 +201,7 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
                 topology.warm(coord.partitionId);
                 return true;
             } else if (partition.getState() == MiruPartitionState.online) {
-                return topology.updateStorage(coord.partitionId, MiruBackingStorage.memory, primitiveBuffer);
+                return topology.updateStorage(coord.partitionId, MiruBackingStorage.memory, stackBuffer);
             }
         }
         return false;

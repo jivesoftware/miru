@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.stream.plugins.filter;
 import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -93,7 +94,7 @@ public class AggregateCounts {
         BM answer,
         Optional<BM> counter) throws Exception {
 
-        byte[] primitiveBuffer = new byte[8];
+        StackBuffer stackBuffer = new StackBuffer();
 
         int collectedDistincts = 0;
         int skippedDistincts = 0;
@@ -108,7 +109,7 @@ public class AggregateCounts {
 
         if (!MiruFilter.NO_FILTER.equals(constraint.constraintsFilter)) {
             BM filtered = aggregateUtil.filter(bitmaps, requestContext.getSchema(), requestContext.getTermComposer(), requestContext.getFieldIndexProvider(),
-                constraint.constraintsFilter, solutionLog, null, requestContext.getActivityIndex().lastId(primitiveBuffer), -1, primitiveBuffer);
+                constraint.constraintsFilter, solutionLog, null, requestContext.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
 
             if (bitmaps.supportsInPlace()) {
                 bitmaps.inPlaceAnd(answer, filtered);
@@ -142,7 +143,7 @@ public class AggregateCounts {
         if (fieldId >= 0) {
             IBM unreadIndex = null;
             if (!MiruStreamId.NULL.equals(streamId)) {
-                Optional<IBM> unread = requestContext.getUnreadTrackingIndex().getUnread(streamId).getIndex(primitiveBuffer);
+                Optional<IBM> unread = requestContext.getUnreadTrackingIndex().getUnread(streamId).getIndex(stackBuffer);
                 if (unread.isPresent()) {
                     unreadIndex = unread.get();
                 }
@@ -156,7 +157,7 @@ public class AggregateCounts {
             CardinalityAndLastSetBit answerCollector = null;
             for (String aggregateTerm : aggregateTerms) { // Consider
                 MiruTermId aggregateTermId = termComposer.compose(fieldDefinition, aggregateTerm);
-                Optional<IBM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex(primitiveBuffer);
+                Optional<IBM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex(stackBuffer);
                 if (!optionalTermIndex.isPresent()) {
                     continue;
                 }
@@ -207,7 +208,7 @@ public class AggregateCounts {
                     break;
                 }
 
-                MiruInternalActivity activity = requestContext.getActivityIndex().get(tenantId, lastSetBit, primitiveBuffer);
+                MiruInternalActivity activity = requestContext.getActivityIndex().get(tenantId, lastSetBit, stackBuffer);
                 MiruTermId[] fieldValues = activity.fieldsValues[fieldId];
                 log.trace("fieldValues={}", (Object) fieldValues);
                 if (fieldValues == null || fieldValues.length == 0) {
@@ -228,7 +229,7 @@ public class AggregateCounts {
                     String aggregateTerm = termComposer.decompose(fieldDefinition, aggregateTermId);
                     aggregateTerms.add(aggregateTerm);
 
-                    Optional<IBM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex(primitiveBuffer);
+                    Optional<IBM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex(stackBuffer);
                     checkState(optionalTermIndex.isPresent(), "Unable to load inverted index for aggregateTermId: " + aggregateTermId);
 
                     IBM termIndex = optionalTermIndex.get();

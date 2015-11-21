@@ -18,6 +18,7 @@ package com.jivesoftware.os.miru.plugin.index;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
 import com.google.common.hash.HashFunction;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
@@ -71,14 +72,14 @@ public class BloomIndex<BM extends IBM, IBM> {
         return Math.max(1, (int) Math.round(m / n * Math.log(2)));
     }
 
-    public void put(MiruInvertedIndex<?> bloomIndex, List<MiruTermId> keys, byte[] primitiveBuffer) throws Exception {
+    public void put(MiruInvertedIndex<?> bloomIndex, List<MiruTermId> keys, StackBuffer stackBuffer) throws Exception {
 
         int[] bitIndexes = new int[keys.size() * numHashFunctions];
         for (int i = 0; i < keys.size(); i++) {
             MiruTermId key = keys.get(i);
             createBitIndexesForValue(key.getBytes(), numHashFunctions, bitIndexes, i * numHashFunctions);
         }
-        bloomIndex.set(primitiveBuffer, bitIndexes);
+        bloomIndex.set(stackBuffer, bitIndexes);
     }
 
     public <V extends HasValue> List<Mights<V>> wantBits(List<V> keys) {

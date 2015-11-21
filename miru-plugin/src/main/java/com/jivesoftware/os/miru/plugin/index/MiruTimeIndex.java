@@ -5,6 +5,7 @@
  */
 package com.jivesoftware.os.miru.plugin.index;
 
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import java.util.List;
 
@@ -13,7 +14,7 @@ import java.util.List;
  */
 public interface MiruTimeIndex {
 
-    boolean[] contains(List<Long> timestamps, byte[] primitiveBuffer) throws Exception;
+    boolean[] contains(List<Long> timestamps, StackBuffer stackBuffer) throws Exception;
 
     boolean intersects(MiruTimeRange timeRange);
 
@@ -23,15 +24,15 @@ public interface MiruTimeIndex {
      * @param timestamp the activity timestamp
      * @return the actual index or nearest insertion point
      */
-    int getClosestId(long timestamp, byte[] primitiveBuffer);
+    int getClosestId(long timestamp, StackBuffer stackBuffer);
 
-    int getExactId(long timestamp, byte[] primitiveBuffer) throws Exception;
+    int getExactId(long timestamp, StackBuffer stackBuffer) throws Exception;
 
     long getLargestTimestamp();
 
     long getSmallestTimestamp();
 
-    long getTimestamp(int id, byte[] primitiveBuffer);
+    long getTimestamp(int id, StackBuffer stackBuffer);
 
     /**
      * Returns the smallest id satisfying the condition that {@link #getTimestamp(int)} is greater than the requested timestamp (exclusive lower bound).
@@ -39,7 +40,7 @@ public interface MiruTimeIndex {
      * @param timestamp the timestamp serving as the exclusive lower bound
      * @return the smallest id exclusive of the requested timestamp
      */
-    int smallestExclusiveTimestampIndex(long timestamp, byte[] primitiveBuffer);
+    int smallestExclusiveTimestampIndex(long timestamp, StackBuffer stackBuffer);
 
     /**
      * Returns the largest id satisfying the condition that {@link #getTimestamp(int)} is less than or equal to the requested timestamp (inclusive upper bound).
@@ -47,11 +48,11 @@ public interface MiruTimeIndex {
      * @param timestamp the timestamp serving as the inclusive upper bound
      * @return the largest id inclusive of the requested timestamp
      */
-    int largestInclusiveTimestampIndex(long timestamp, byte[] primitiveBuffer);
+    int largestInclusiveTimestampIndex(long timestamp, StackBuffer stackBuffer);
 
     int lastId();
 
-    int[] nextId(byte[] primitiveBuffer, long... timestamps) throws Exception;
+    int[] nextId(StackBuffer stackBuffer, long... timestamps) throws Exception;
 
     void close();
 

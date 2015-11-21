@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.filer.io.FilerIO;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
@@ -32,12 +33,12 @@ public class MiruAuthzIndexTest {
     @Test(dataProvider = "miruAuthzIndexDataProviderWithData")
     public void storeAndGetAuthz(MiruAuthzIndex<ImmutableRoaringBitmap> miruAuthzIndex, MiruAuthzUtils miruAuthzUtils, Map<String, List<Integer>> bitsIn)
         throws Exception {
-        byte[] primitiveBuffer = new byte[8];
+        StackBuffer stackBuffer = new StackBuffer();
         for (Map.Entry<String, List<Integer>> entry : bitsIn.entrySet()) {
             String authz = entry.getKey();
             MiruAuthzExpression miruAuthzExpression = new MiruAuthzExpression(ImmutableList.of(authz));
 
-            ImmutableRoaringBitmap bitsOut = miruAuthzIndex.getCompositeAuthz(miruAuthzExpression, primitiveBuffer);
+            ImmutableRoaringBitmap bitsOut = miruAuthzIndex.getCompositeAuthz(miruAuthzExpression, stackBuffer);
             List<Integer> actual = Lists.newArrayList();
             IntIterator iter = bitsOut.getIntIterator();
             while (iter.hasNext()) {
@@ -91,7 +92,7 @@ public class MiruAuthzIndexTest {
         boolean mergeMiddle,
         boolean mergeEnd)
         throws Exception {
-        byte[] primitiveBuffer = new byte[8];
+        StackBuffer stackBuffer = new StackBuffer();
         Map<String, List<Integer>> bitsIn = Maps.newHashMap();
 
         for (int i = 1; i <= size; i++) {
@@ -103,13 +104,13 @@ public class MiruAuthzIndexTest {
             String authz = miruAuthzUtils.encode(FilerIO.longBytes((long) i));
 
             for (Integer bit : bits) {
-                authzIndex.append(authz, primitiveBuffer, bit);
+                authzIndex.append(authz, stackBuffer, bit);
             }
             assertNull(bitsIn.put(authz, bits));
         }
 
         if (mergeMiddle) {
-            ((MiruDeltaAuthzIndex<BM, IBM>) authzIndex).merge(primitiveBuffer);
+            ((MiruDeltaAuthzIndex<BM, IBM>) authzIndex).merge(stackBuffer);
         }
 
         for (int i = 1; i <= size; i++) {
@@ -120,13 +121,13 @@ public class MiruAuthzIndexTest {
             String authz = miruAuthzUtils.encode(FilerIO.longBytes((long) i));
 
             for (Integer bit : bits) {
-                authzIndex.append(authz, primitiveBuffer, bit);
+                authzIndex.append(authz, stackBuffer, bit);
             }
             assertTrue(bitsIn.get(authz).addAll(bits));
         }
 
         if (mergeEnd) {
-            ((MiruDeltaAuthzIndex<BM, IBM>) authzIndex).merge(primitiveBuffer);
+            ((MiruDeltaAuthzIndex<BM, IBM>) authzIndex).merge(stackBuffer);
         }
 
         return bitsIn;

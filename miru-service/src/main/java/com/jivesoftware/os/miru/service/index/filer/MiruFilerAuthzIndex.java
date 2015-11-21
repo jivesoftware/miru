@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.service.index.filer;
 
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.io.api.KeyedFilerStore;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruAuthzIndex;
@@ -41,24 +42,24 @@ public class MiruFilerAuthzIndex<BM extends IBM, IBM> implements MiruAuthzIndex<
     }
 
     @Override
-    public BM getCompositeAuthz(MiruAuthzExpression authzExpression, byte[] primitiveBuffer) throws Exception {
-        return cache.getOrCompose(authzExpression, authz -> getAuthz(authz).getIndex(primitiveBuffer).orNull());
+    public BM getCompositeAuthz(MiruAuthzExpression authzExpression, StackBuffer stackBuffer) throws Exception {
+        return cache.getOrCompose(authzExpression, authz -> getAuthz(authz).getIndex(stackBuffer).orNull());
     }
 
     @Override
-    public void append(String authz, byte[] primitiveBuffer, int... ids) throws Exception {
-        getAuthz(authz).append(primitiveBuffer, ids);
+    public void append(String authz, StackBuffer stackBuffer, int... ids) throws Exception {
+        getAuthz(authz).append(stackBuffer, ids);
     }
 
     @Override
-    public void set(String authz, byte[] primitiveBuffer, int... ids) throws Exception {
-        getAuthz(authz).set(primitiveBuffer, ids);
+    public void set(String authz, StackBuffer stackBuffer, int... ids) throws Exception {
+        getAuthz(authz).set(stackBuffer, ids);
         cache.increment(authz);
     }
 
     @Override
-    public void remove(String authz, int id, byte[] primitiveBuffer) throws Exception {
-        getAuthz(authz).remove(id, primitiveBuffer);
+    public void remove(String authz, int id, StackBuffer stackBuffer) throws Exception {
+        getAuthz(authz).remove(id, stackBuffer);
         cache.increment(authz);
     }
 

@@ -18,6 +18,7 @@ package com.jivesoftware.os.miru.service.index;
 import com.jivesoftware.os.filer.io.ByteArrayFiler;
 import com.jivesoftware.os.filer.io.Filer;
 import com.jivesoftware.os.filer.io.FilerIO;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -30,49 +31,49 @@ import java.io.IOException;
  */
 public class MiruInternalActivityMarshaller {
 
-    public MiruTermId[] fieldValueFromFiler(Filer filer, int fieldId, byte[] primitiveBuffer) throws IOException {
+    public MiruTermId[] fieldValueFromFiler(Filer filer, int fieldId, StackBuffer stackBuffer) throws IOException {
         filer.seek((4 + 4) + (fieldId * 4));
-        filer.seek(FilerIO.readInt(filer, "offset", primitiveBuffer));
-        return valuesFromFiler(filer, primitiveBuffer);
+        filer.seek(FilerIO.readInt(filer, "offset", stackBuffer));
+        return valuesFromFiler(filer, stackBuffer);
     }
 
-    public MiruIBA[] propValueFromFiler(Filer filer, int propId, byte[] primitiveBuffer) throws IOException {
-        int fieldsLength = FilerIO.readInt(filer, "fieldsLength", primitiveBuffer);
+    public MiruIBA[] propValueFromFiler(Filer filer, int propId, StackBuffer stackBuffer) throws IOException {
+        int fieldsLength = FilerIO.readInt(filer, "fieldsLength", stackBuffer);
         filer.seek((4 + 4) + (fieldsLength * 4) + (propId * 4));
-        filer.seek(FilerIO.readInt(filer, "offset", primitiveBuffer));
-        return propsFromFiler(filer, primitiveBuffer);
+        filer.seek(FilerIO.readInt(filer, "offset", stackBuffer));
+        return propsFromFiler(filer, stackBuffer);
     }
 
-    public MiruInternalActivity fromFiler(MiruTenantId tenant, Filer filer, byte[] primitiveBuffer) throws IOException {
-        int fieldsLength = FilerIO.readInt(filer, "fieldsLength", primitiveBuffer);
-        int propsLength = FilerIO.readInt(filer, "propsLength", primitiveBuffer);
+    public MiruInternalActivity fromFiler(MiruTenantId tenant, Filer filer, StackBuffer stackBuffer) throws IOException {
+        int fieldsLength = FilerIO.readInt(filer, "fieldsLength", stackBuffer);
+        int propsLength = FilerIO.readInt(filer, "propsLength", stackBuffer);
         MiruTermId[][] values = new MiruTermId[fieldsLength][];
         MiruIBA[][] props = new MiruIBA[propsLength][];
         for (int i = 0; i < fieldsLength + propsLength; i++) {
-            FilerIO.readInt(filer, "offest", primitiveBuffer);
+            FilerIO.readInt(filer, "offest", stackBuffer);
         }
         for (int i = 0; i < fieldsLength; i++) {
-            values[i] = valuesFromFiler(filer, primitiveBuffer);
+            values[i] = valuesFromFiler(filer, stackBuffer);
         }
         for (int i = 0; i < propsLength; i++) {
-            props[i] = propsFromFiler(filer, primitiveBuffer);
+            props[i] = propsFromFiler(filer, stackBuffer);
         }
 
-        long time = FilerIO.readLong(filer, "time", primitiveBuffer);
-        long version = FilerIO.readLong(filer, "version", primitiveBuffer);
-        String[] authz = FilerIO.readStringArray(filer, "authz", primitiveBuffer);
+        long time = FilerIO.readLong(filer, "time", stackBuffer);
+        long version = FilerIO.readLong(filer, "version", stackBuffer);
+        String[] authz = FilerIO.readStringArray(filer, "authz", stackBuffer);
 
         return new MiruInternalActivity(tenant, time, authz, version, values, props);
     }
 
-    private MiruTermId[] valuesFromFiler(Filer filer, byte[] primitiveBuffer) throws IOException {
-        int length = FilerIO.readInt(filer, "length", primitiveBuffer);
+    private MiruTermId[] valuesFromFiler(Filer filer, StackBuffer stackBuffer) throws IOException {
+        int length = FilerIO.readInt(filer, "length", stackBuffer);
         if (length <= 0) {
             return null;
         }
         MiruTermId[] terms = new MiruTermId[length];
         for (int i = 0; i < length; i++) {
-            int l = FilerIO.readInt(filer, "length", primitiveBuffer);
+            int l = FilerIO.readInt(filer, "length", stackBuffer);
             byte[] bytes = new byte[l];
             FilerIO.read(filer, bytes);
             terms[i] = new MiruTermId(bytes);
@@ -81,14 +82,14 @@ public class MiruInternalActivityMarshaller {
         return terms;
     }
 
-    private MiruIBA[] propsFromFiler(Filer filer, byte[] primitiveBuffer) throws IOException {
-        int length = FilerIO.readInt(filer, "length", primitiveBuffer);
+    private MiruIBA[] propsFromFiler(Filer filer, StackBuffer stackBuffer) throws IOException {
+        int length = FilerIO.readInt(filer, "length", stackBuffer);
         if (length <= 0) {
             return null;
         }
         MiruIBA[] terms = new MiruIBA[length];
         for (int i = 0; i < length; i++) {
-            int l = FilerIO.readInt(filer, "length", primitiveBuffer);
+            int l = FilerIO.readInt(filer, "length", stackBuffer);
             byte[] bytes = new byte[l];
             FilerIO.read(filer, bytes);
             terms[i] = new MiruIBA(bytes);
@@ -97,7 +98,7 @@ public class MiruInternalActivityMarshaller {
         return terms;
     }
 
-    public byte[] toBytes(MiruInternalActivity activity, byte[] primitiveBuffer) throws IOException {
+    public byte[] toBytes(MiruInternalActivity activity, StackBuffer stackBuffer) throws IOException {
 
         int fieldsLength = activity.fieldsValues.length;
         int propsLength = activity.propsValues.length;
@@ -108,42 +109,42 @@ public class MiruInternalActivityMarshaller {
         int offset = (4 + 4) + (fieldsLength * 4) + (propsLength * 4);
         for (int i = 0; i < fieldsLength; i++) {
             offsetIndex[i] = offset;
-            valueBytes[i] = fieldValuesToBytes(activity.fieldsValues[i], primitiveBuffer);
+            valueBytes[i] = fieldValuesToBytes(activity.fieldsValues[i], stackBuffer);
             offset += valueBytes[i].length;
         }
 
         for (int i = 0; i < propsLength; i++) {
             int ii = i + fieldsLength;
             offsetIndex[ii] = offset;
-            valueBytes[ii] = fieldValuesToBytes(activity.propsValues[i], primitiveBuffer);
+            valueBytes[ii] = fieldValuesToBytes(activity.propsValues[i], stackBuffer);
             offset += valueBytes[ii].length;
         }
 
         ByteArrayFiler filer = new ByteArrayFiler();
-        FilerIO.writeInt(filer, fieldsLength, "fieldsLength", primitiveBuffer);
-        FilerIO.writeInt(filer, propsLength, "propsLength", primitiveBuffer);
+        FilerIO.writeInt(filer, fieldsLength, "fieldsLength", stackBuffer);
+        FilerIO.writeInt(filer, propsLength, "propsLength", stackBuffer);
         for (int index : offsetIndex) {
-            FilerIO.writeInt(filer, index, "index", primitiveBuffer);
+            FilerIO.writeInt(filer, index, "index", stackBuffer);
         }
         for (byte[] value : valueBytes) {
             FilerIO.write(filer, value);
         }
 
-        FilerIO.writeLong(filer, activity.time, "time", primitiveBuffer);
-        FilerIO.writeLong(filer, activity.version, "version", primitiveBuffer);
-        FilerIO.writeStringArray(filer, activity.authz, "authz", primitiveBuffer);
+        FilerIO.writeLong(filer, activity.time, "time", stackBuffer);
+        FilerIO.writeLong(filer, activity.version, "version", stackBuffer);
+        FilerIO.writeStringArray(filer, activity.authz, "authz", stackBuffer);
         return filer.getBytes();
     }
 
-    private byte[] fieldValuesToBytes(MiruIBA[] values, byte[] primitiveBuffer) throws IOException {
+    private byte[] fieldValuesToBytes(MiruIBA[] values, StackBuffer stackBuffer) throws IOException {
         ByteArrayFiler filer = new ByteArrayFiler();
         if (values == null) {
-            FilerIO.writeInt(filer, -1, "length", primitiveBuffer);
+            FilerIO.writeInt(filer, -1, "length", stackBuffer);
         } else {
-            FilerIO.writeInt(filer, values.length, "length", primitiveBuffer);
+            FilerIO.writeInt(filer, values.length, "length", stackBuffer);
             for (MiruIBA v : values) {
                 byte[] bytes = v.immutableBytes();
-                FilerIO.writeInt(filer, bytes.length, "length", primitiveBuffer);
+                FilerIO.writeInt(filer, bytes.length, "length", stackBuffer);
                 FilerIO.write(filer, bytes);
             }
         }

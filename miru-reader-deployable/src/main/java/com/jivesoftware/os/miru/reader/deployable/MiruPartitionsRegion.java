@@ -5,6 +5,7 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
@@ -62,13 +63,13 @@ public class MiruPartitionsRegion implements MiruPageRegion<Optional<String>> {
 
     private boolean inspect(MiruTenantId tenantId, MiruPartitionId partitionId, List<Map<String, Object>> partitions) {
         try {
-            byte[] primitiveBuffer = new byte[8];
+            StackBuffer stackBuffer = new StackBuffer();
             service.introspect(tenantId, partitionId, requestContext -> {
-                Optional<? extends MiruSipCursor<?>> sip = requestContext.getSipIndex().getSip(primitiveBuffer);
+                Optional<? extends MiruSipCursor<?>> sip = requestContext.getSipIndex().getSip(stackBuffer);
                 partitions.add(ImmutableMap.<String, Object>builder()
                     .put("tenantId", tenantId.toString())
                     .put("partitionId", partitionId.toString())
-                    .put("activityLastId", requestContext.getActivityIndex().lastId(primitiveBuffer))
+                    .put("activityLastId", requestContext.getActivityIndex().lastId(stackBuffer))
                     .put("timeLastId", requestContext.getTimeIndex().lastId())
                     .put("smallestTimestamp", String.valueOf(requestContext.getTimeIndex().getSmallestTimestamp()))
                     .put("largestTimestamp", String.valueOf(requestContext.getTimeIndex().getLargestTimestamp()))

@@ -1,8 +1,7 @@
 package com.jivesoftware.os.miru.plugin.index;
 
 import com.google.common.base.Optional;
-import java.io.IOException;
-import java.nio.ByteBuffer;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import java.util.List;
 
 /**
@@ -18,7 +17,7 @@ public interface MiruInvertedIndex<IBM> extends MiruInvertedIndexAppender, MiruT
      * @return the raw safe index
      * @throws Exception
      */
-    Optional<IBM> getIndex(byte[] primitiveBuffer) throws Exception;
+    Optional<IBM> getIndex(StackBuffer stackBuffer) throws Exception;
 
     /**
      * Gets the raw index in an unsafe manner. The returned index is not guaranteed to be free of concurrent writes,
@@ -27,11 +26,11 @@ public interface MiruInvertedIndex<IBM> extends MiruInvertedIndexAppender, MiruT
      * @return the raw unsafe index
      * @throws Exception
      */
-    Optional<IBM> getIndexUnsafe(byte[] primitiveBuffer) throws Exception;
+    Optional<IBM> getIndexUnsafe(StackBuffer stackBuffer) throws Exception;
 
-    void replaceIndex(IBM index, int setLastId, byte[] primitiveBuffer) throws Exception;
+    void replaceIndex(IBM index, int setLastId, StackBuffer stackBuffer) throws Exception;
 
-    void remove(int id, byte[] primitiveBuffer) throws Exception;
+    void remove(int id, StackBuffer stackBuffer) throws Exception;
 
     /**
      * Sets multiple bits anywhere in the bitmap.
@@ -39,16 +38,16 @@ public interface MiruInvertedIndex<IBM> extends MiruInvertedIndexAppender, MiruT
      * @param ids the indexes of the bits to set
      * @throws Exception
      */
-    void set(byte[] primitiveBuffer, int... ids) throws Exception;
+    void set(StackBuffer stackBuffer, int... ids) throws Exception;
 
-    int lastId(byte[] primitiveBuffer) throws Exception;
+    int lastId(StackBuffer stackBuffer) throws Exception;
 
-    void andNotToSourceSize(List<IBM> masks, byte[] primitiveBuffer) throws Exception;
+    void andNotToSourceSize(List<IBM> masks, StackBuffer stackBuffer) throws Exception;
 
-    void orToSourceSize(IBM mask, byte[] primitiveBuffer) throws Exception;
+    void orToSourceSize(IBM mask, StackBuffer stackBuffer) throws Exception;
 
-    void andNot(IBM mask, byte[] primitiveBuffer) throws Exception;
+    void andNot(IBM mask, StackBuffer stackBuffer) throws Exception;
 
-    void or(IBM mask, byte[] primitiveBuffer) throws Exception;
+    void or(IBM mask, StackBuffer stackBuffer) throws Exception;
 
 }

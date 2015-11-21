@@ -13,6 +13,7 @@ import com.jivesoftware.os.filer.chunk.store.transaction.TxMapGrower;
 import com.jivesoftware.os.filer.chunk.store.transaction.TxNamedMapOfFiler;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.io.api.KeyedFilerStore;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.filer.io.chunk.ChunkFiler;
 import com.jivesoftware.os.filer.io.chunk.ChunkStore;
 import com.jivesoftware.os.filer.io.map.MapContext;
@@ -158,20 +159,20 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
     public <BM extends IBM, IBM> MiruContext<IBM, S> allocate(MiruBitmaps<BM, IBM> bitmaps,
         MiruPartitionCoord coord,
         MiruBackingStorage storage,
-        byte[] primitiveBuffer) throws Exception {
+        StackBuffer stackBuffer) throws Exception {
 
         // check for schema first
         MiruSchema schema = schemaProvider.getSchema(coord.tenantId);
 
-        ChunkStore[] chunkStores = getAllocator(storage).allocateChunkStores(coord, primitiveBuffer);
-        return allocate(bitmaps, coord, schema, chunkStores, primitiveBuffer);
+        ChunkStore[] chunkStores = getAllocator(storage).allocateChunkStores(coord, stackBuffer);
+        return allocate(bitmaps, coord, schema, chunkStores, stackBuffer);
     }
 
     private <BM extends IBM, IBM> MiruContext<IBM, S> allocate(MiruBitmaps<BM, IBM> bitmaps,
         MiruPartitionCoord coord,
         MiruSchema schema,
         ChunkStore[] chunkStores,
-        byte[] primitiveBuffer) throws Exception {
+        StackBuffer stackBuffer) throws Exception {
 
         int seed = coord.hashCode();
         TxCog<Integer, MapBackedKeyedFPIndex, ChunkFiler> skyhookCog = cogs.getSkyhookCog(seed);
@@ -187,7 +188,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             new TxKeyValueStore<>(skyhookCog, cogs.getSkyHookKeySemaphores(), seed, chunkStores,
                 new LongIntKeyValueMarshaller(),
                 keyBytes("timeIndex-timestamps"),
-                8, false, 4, false), primitiveBuffer));
+                8, false, 4, false), stackBuffer));
 
         TxKeyedFilerStore<Long, Void> activityFilerStore = new TxKeyedFilerStore<>(cogs, seed, chunkStores, keyBytes("activityIndex"), false,
             TxNamedMapOfFiler.CHUNK_FILER_CREATOR,
@@ -346,20 +347,20 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         MiruPartitionCoord coord,
         MiruContext<IBM, S> from,
         MiruBackingStorage toStorage,
-        byte[] primitiveBuffer) throws Exception {
+        StackBuffer stackBuffer) throws Exception {
 
         // check for schema first
         MiruSchema schema = schemaProvider.getSchema(coord.tenantId);
 
         ChunkStore[] fromChunks = from.chunkStores;
-        ChunkStore[] toChunks = getAllocator(toStorage).allocateChunkStores(coord, primitiveBuffer);
+        ChunkStore[] toChunks = getAllocator(toStorage).allocateChunkStores(coord, stackBuffer);
         if (fromChunks.length != toChunks.length) {
             throw new IllegalArgumentException("The number of from chunks:" + fromChunks.length + " must equal the number of to chunks:" + toChunks.length);
         }
         for (int i = 0; i < fromChunks.length; i++) {
-            fromChunks[i].copyTo(toChunks[i], primitiveBuffer);
+            fromChunks[i].copyTo(toChunks[i], stackBuffer);
         }
-        return allocate(bitmaps, coord, schema, toChunks, primitiveBuffer);
+        return allocate(bitmaps, coord, schema, toChunks, stackBuffer);
     }
 
     public void markStorage(MiruPartitionCoord coord, MiruBackingStorage marked) throws Exception {

@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.service.index.delta;
 import com.google.common.base.Optional;
 import com.google.common.cache.Cache;
 import com.google.common.collect.Maps;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruAuthzIndex;
@@ -49,25 +50,25 @@ public class MiruDeltaAuthzIndex<BM extends IBM, IBM> implements MiruAuthzIndex<
     }
 
     @Override
-    public BM getCompositeAuthz(MiruAuthzExpression authzExpression, byte[] primitiveBuffer) throws Exception {
-        return cache.getOrCompose(authzExpression, authz -> getAuthz(authz).getIndex(primitiveBuffer).orNull());
+    public BM getCompositeAuthz(MiruAuthzExpression authzExpression, StackBuffer stackBuffer) throws Exception {
+        return cache.getOrCompose(authzExpression, authz -> getAuthz(authz).getIndex(stackBuffer).orNull());
     }
 
     @Override
-    public void append(String authz, byte[] primitiveBuffer, int... ids) throws Exception {
-        getOrCreate(authz).append(primitiveBuffer, ids);
+    public void append(String authz, StackBuffer stackBuffer, int... ids) throws Exception {
+        getOrCreate(authz).append(stackBuffer, ids);
         cache.increment(authz);
     }
 
     @Override
-    public void set(String authz, byte[] primitiveBuffer, int... ids) throws Exception {
-        getOrCreate(authz).set(primitiveBuffer, ids);
+    public void set(String authz, StackBuffer stackBuffer, int... ids) throws Exception {
+        getOrCreate(authz).set(stackBuffer, ids);
         cache.increment(authz);
     }
 
     @Override
-    public void remove(String authz, int id, byte[] primitiveBuffer) throws Exception {
-        getOrCreate(authz).remove(id, primitiveBuffer);
+    public void remove(String authz, int id, StackBuffer stackBuffer) throws Exception {
+        getOrCreate(authz).remove(id, stackBuffer);
         cache.increment(authz);
     }
 
@@ -91,9 +92,9 @@ public class MiruDeltaAuthzIndex<BM extends IBM, IBM> implements MiruAuthzIndex<
     }
 
     @Override
-    public void merge(byte[] primitiveBuffer) throws Exception {
+    public void merge(StackBuffer stackBuffer) throws Exception {
         for (Map.Entry<String, MiruDeltaInvertedIndex<BM, IBM>> entry : authzDeltas.entrySet()) {
-            entry.getValue().merge(primitiveBuffer);
+            entry.getValue().merge(stackBuffer);
             cache.increment(entry.getKey());
         }
         authzDeltas.clear();
