@@ -11,14 +11,14 @@ import com.jivesoftware.os.miru.plugin.index.MiruUnreadTrackingIndex;
 import java.util.Collections;
 
 /** @author jonathan */
-public class MiruFilerUnreadTrackingIndex<BM> implements MiruUnreadTrackingIndex<BM> {
+public class MiruFilerUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUnreadTrackingIndex<IBM> {
 
-    private final MiruBitmaps<BM> bitmaps;
+    private final MiruBitmaps<BM, IBM> bitmaps;
     private final long indexId;
     private final KeyedFilerStore store;
     private final StripingLocksProvider<MiruStreamId> stripingLocksProvider;
 
-    public MiruFilerUnreadTrackingIndex(MiruBitmaps<BM> bitmaps,
+    public MiruFilerUnreadTrackingIndex(MiruBitmaps<BM, IBM> bitmaps,
         long indexId,
         KeyedFilerStore store,
         StripingLocksProvider<MiruStreamId> stripingLocksProvider)
@@ -35,7 +35,7 @@ public class MiruFilerUnreadTrackingIndex<BM> implements MiruUnreadTrackingIndex
     }
 
     @Override
-    public MiruInvertedIndex<BM> getUnread(MiruStreamId streamId) throws Exception {
+    public MiruInvertedIndex<IBM> getUnread(MiruStreamId streamId) throws Exception {
         return new MiruFilerInvertedIndex<>(bitmaps, new MiruFieldIndex.IndexKey(indexId, streamId.getBytes()), store, -1,
             stripingLocksProvider.lock(streamId, 0));
     }
@@ -46,14 +46,14 @@ public class MiruFilerUnreadTrackingIndex<BM> implements MiruUnreadTrackingIndex
     }
 
     @Override
-    public void applyRead(MiruStreamId streamId, BM readMask, byte[] primitiveBuffer) throws Exception {
-        MiruInvertedIndex<BM> unread = getUnread(streamId);
+    public void applyRead(MiruStreamId streamId, IBM readMask, byte[] primitiveBuffer) throws Exception {
+        MiruInvertedIndex<IBM> unread = getUnread(streamId);
         unread.andNotToSourceSize(Collections.singletonList(readMask), primitiveBuffer);
     }
 
     @Override
-    public void applyUnread(MiruStreamId streamId, BM unreadMask, byte[] primitiveBuffer) throws Exception {
-        MiruInvertedIndex<BM> unread = getUnread(streamId);
+    public void applyUnread(MiruStreamId streamId, IBM unreadMask, byte[] primitiveBuffer) throws Exception {
+        MiruInvertedIndex<IBM> unread = getUnread(streamId);
         unread.orToSourceSize(unreadMask, primitiveBuffer);
     }
 

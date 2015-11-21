@@ -46,9 +46,9 @@ public class AggregateCounts {
         this.miruProvider = miruProvider;
     }
 
-    public <BM> AggregateCountsAnswer getAggregateCounts(MiruSolutionLog solutionLog,
-        MiruBitmaps<BM> bitmaps,
-        MiruRequestContext<BM, ?> requestContext,
+    public <BM extends IBM, IBM> AggregateCountsAnswer getAggregateCounts(MiruSolutionLog solutionLog,
+        MiruBitmaps<BM, IBM> bitmaps,
+        MiruRequestContext<IBM, ?> requestContext,
         MiruRequest<AggregateCountsQuery> request,
         Optional<AggregateCountsReport> lastReport,
         BM answer,
@@ -83,9 +83,9 @@ public class AggregateCounts {
         return result;
     }
 
-    private final <BM> AggregateCountsAnswerConstraint answerConstraint(MiruSolutionLog solutionLog,
-        MiruBitmaps<BM> bitmaps,
-        MiruRequestContext<BM, ?> requestContext,
+    private final <BM extends IBM, IBM> AggregateCountsAnswerConstraint answerConstraint(MiruSolutionLog solutionLog,
+        MiruBitmaps<BM, IBM> bitmaps,
+        MiruRequestContext<IBM, ?> requestContext,
         MiruTenantId tenantId,
         MiruStreamId streamId,
         AggregateCountsQueryConstraint constraint,
@@ -107,10 +107,8 @@ public class AggregateCounts {
         }
 
         if (!MiruFilter.NO_FILTER.equals(constraint.constraintsFilter)) {
-            BM filtered = bitmaps.create();
-            aggregateUtil.filter(bitmaps, requestContext.getSchema(), requestContext.getTermComposer(), requestContext.getFieldIndexProvider(),
-                constraint.constraintsFilter,
-                solutionLog, filtered, null, requestContext.getActivityIndex().lastId(primitiveBuffer), -1, primitiveBuffer);
+            BM filtered = aggregateUtil.filter(bitmaps, requestContext.getSchema(), requestContext.getTermComposer(), requestContext.getFieldIndexProvider(),
+                constraint.constraintsFilter, solutionLog, null, requestContext.getActivityIndex().lastId(primitiveBuffer), -1, primitiveBuffer);
 
             if (bitmaps.supportsInPlace()) {
                 bitmaps.inPlaceAnd(answer, filtered);
@@ -120,7 +118,7 @@ public class AggregateCounts {
                 }
             } else {
                 BM constrained = bitmaps.create();
-                List<BM> ands = Arrays.asList(answer, filtered);
+                List<IBM> ands = Arrays.asList(answer, filtered);
                 bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
                 bitmaps.and(constrained, ands);
                 answer = constrained;
@@ -137,14 +135,14 @@ public class AggregateCounts {
 
         List<AggregateCount> aggregateCounts = new ArrayList<>();
         MiruTermComposer termComposer = requestContext.getTermComposer();
-        MiruFieldIndex<BM> fieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
+        MiruFieldIndex<IBM> fieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
         int fieldId = requestContext.getSchema().getFieldId(constraint.aggregateCountAroundField);
         MiruFieldDefinition fieldDefinition = requestContext.getSchema().getFieldDefinition(fieldId);
         log.debug("fieldId={}", fieldId);
         if (fieldId >= 0) {
-            BM unreadIndex = null;
+            IBM unreadIndex = null;
             if (!MiruStreamId.NULL.equals(streamId)) {
-                Optional<BM> unread = requestContext.getUnreadTrackingIndex().getUnread(streamId).getIndex(primitiveBuffer);
+                Optional<IBM> unread = requestContext.getUnreadTrackingIndex().getUnread(streamId).getIndex(primitiveBuffer);
                 if (unread.isPresent()) {
                     unreadIndex = unread.get();
                 }
@@ -152,18 +150,18 @@ public class AggregateCounts {
 
             // 2 to swap answers, 2 to swap counters, 1 to check unread
             final int numBuffers = 2 + (counter.isPresent() ? 2 : 0) + (unreadIndex != null ? 1 : 0);
-            ReusableBuffers<BM> reusable = new ReusableBuffers<>(bitmaps, numBuffers);
+            ReusableBuffers<BM, IBM> reusable = new ReusableBuffers<>(bitmaps, numBuffers);
 
             long beforeCount = counter.isPresent() ? bitmaps.cardinality(counter.get()) : bitmaps.cardinality(answer);
             CardinalityAndLastSetBit answerCollector = null;
             for (String aggregateTerm : aggregateTerms) { // Consider
                 MiruTermId aggregateTermId = termComposer.compose(fieldDefinition, aggregateTerm);
-                Optional<BM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex(primitiveBuffer);
+                Optional<IBM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex(primitiveBuffer);
                 if (!optionalTermIndex.isPresent()) {
                     continue;
                 }
 
-                BM termIndex = optionalTermIndex.get();
+                IBM termIndex = optionalTermIndex.get();
 
                 if (bitmaps.supportsInPlace()) {
                     answerCollector = bitmaps.inPlaceAndNotWithCardinalityAndLastSetBit(answer, termIndex);
@@ -230,10 +228,10 @@ public class AggregateCounts {
                     String aggregateTerm = termComposer.decompose(fieldDefinition, aggregateTermId);
                     aggregateTerms.add(aggregateTerm);
 
-                    Optional<BM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex(primitiveBuffer);
+                    Optional<IBM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex(primitiveBuffer);
                     checkState(optionalTermIndex.isPresent(), "Unable to load inverted index for aggregateTermId: " + aggregateTermId);
 
-                    BM termIndex = optionalTermIndex.get();
+                    IBM termIndex = optionalTermIndex.get();
 
                     if (bitmaps.supportsInPlace()) {
                         answerCollector = bitmaps.inPlaceAndNotWithCardinalityAndLastSetBit(answer, termIndex);

@@ -16,13 +16,13 @@ import com.jivesoftware.os.miru.service.partition.cluster.MiruTenantTopology;
  */
 public interface MiruExpectedTenants {
 
-    MiruTenantTopology<?> getLocalTopology(MiruTenantId tenantId) throws Exception;
+    MiruTenantTopology<?, ?> getLocalTopology(MiruTenantId tenantId) throws Exception;
 
     boolean prioritizeRebuild(MiruPartitionCoord coord) throws Exception;
 
     void thumpthump() throws Exception;
 
-    Iterable<? extends OrderedPartitions<?>> allQueryablePartitionsInOrder(MiruTenantId tenantId, String queryKey) throws Exception;
+    Iterable<? extends OrderedPartitions<?, ?>> allQueryablePartitionsInOrder(MiruTenantId tenantId, String queryKey) throws Exception;
 
     boolean expectedTopologies(Optional<MiruTenantId> tenantId, CoordinateStream stream) throws Exception;
 }

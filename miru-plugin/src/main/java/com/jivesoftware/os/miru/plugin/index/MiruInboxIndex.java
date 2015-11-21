@@ -8,7 +8,7 @@ package com.jivesoftware.os.miru.plugin.index;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 
 /** @author jonathan */
-public interface MiruInboxIndex<BM> {
+public interface MiruInboxIndex<IBM> {
 
     /**
      * Get the inbox index for a given streamId.
@@ -16,7 +16,7 @@ public interface MiruInboxIndex<BM> {
      * @param streamId the streamId that represents a given inbox
      * @return the index representing this inbox
      */
-    MiruInvertedIndex<BM> getInbox(MiruStreamId streamId) throws Exception;
+    MiruInvertedIndex<IBM> getInbox(MiruStreamId streamId) throws Exception;
 
     /**
      * Get the inbox index for a given streamId, creating if it doesn't already exist.

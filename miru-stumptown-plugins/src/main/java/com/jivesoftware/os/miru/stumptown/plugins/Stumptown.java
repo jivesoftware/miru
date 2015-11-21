@@ -28,8 +28,8 @@ public class Stumptown {
         this.miruProvider = miruProvider;
     }
 
-    public <BM> Waveform stumptowning(MiruBitmaps<BM> bitmaps,
-        MiruRequestContext<BM, ?> requestContext,
+    public <BM extends IBM, IBM> Waveform stumptowning(MiruBitmaps<BM, IBM> bitmaps,
+        MiruRequestContext<IBM, ?> requestContext,
         MiruTenantId tenantId,
         BM answer,
         int desiredNumberOfResults,

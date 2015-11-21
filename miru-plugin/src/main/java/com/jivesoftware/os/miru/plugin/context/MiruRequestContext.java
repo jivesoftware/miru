@@ -17,7 +17,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruUnreadTrackingIndex;
 /**
  * @author jonathan
  */
-public interface MiruRequestContext<BM, S extends MiruSipCursor<S>> {
+public interface MiruRequestContext<IBM, S extends MiruSipCursor<S>> {
 
     MiruSchema getSchema();
 
@@ -27,17 +27,17 @@ public interface MiruRequestContext<BM, S extends MiruSipCursor<S>> {
 
     MiruActivityIndex getActivityIndex();
 
-    MiruFieldIndexProvider<BM> getFieldIndexProvider();
+    MiruFieldIndexProvider<IBM> getFieldIndexProvider();
 
     MiruSipIndex<S> getSipIndex();
 
-    MiruAuthzIndex<BM> getAuthzIndex();
+    MiruAuthzIndex<IBM> getAuthzIndex();
 
-    MiruRemovalIndex<BM> getRemovalIndex();
+    MiruRemovalIndex<IBM> getRemovalIndex();
 
-    MiruUnreadTrackingIndex<BM> getUnreadTrackingIndex();
+    MiruUnreadTrackingIndex<IBM> getUnreadTrackingIndex();
 
-    MiruInboxIndex<BM> getInboxIndex();
+    MiruInboxIndex<IBM> getInboxIndex();
 
     StripingLocksProvider<MiruStreamId> getStreamLocks();
 }

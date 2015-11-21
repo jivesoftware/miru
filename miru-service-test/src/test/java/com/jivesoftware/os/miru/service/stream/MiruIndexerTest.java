@@ -23,6 +23,7 @@ import com.jivesoftware.os.miru.service.IndexTestUtil;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
 import org.roaringbitmap.buffer.MutableRoaringBitmap;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -34,8 +35,8 @@ public class MiruIndexerTest {
 
     @Test(dataProvider = "miruIndexContextDataProvider")
     public void testIndexData(MiruPartitionCoord coord,
-        MiruContext<MutableRoaringBitmap, ?> context,
-        MiruIndexer<MutableRoaringBitmap> miruIndexer,
+        MiruContext<ImmutableRoaringBitmap, ?> context,
+        MiruIndexer<MutableRoaringBitmap, ImmutableRoaringBitmap> miruIndexer,
         List<MiruActivityAndId<MiruActivity>> activityList)
         throws Exception {
 
@@ -82,8 +83,8 @@ public class MiruIndexerTest {
 
     @Test(dataProvider = "miruIndexContextDataProvider")
     public void testRepairData(MiruPartitionCoord coord,
-        MiruContext<MutableRoaringBitmap, ?> context,
-        MiruIndexer<MutableRoaringBitmap> miruIndexer,
+        MiruContext<ImmutableRoaringBitmap, ?> context,
+        MiruIndexer<MutableRoaringBitmap, ImmutableRoaringBitmap> miruIndexer,
         List<MiruActivityAndId<MiruActivity>> activityList)
         throws Exception {
 
@@ -137,7 +138,7 @@ public class MiruIndexerTest {
         verifyAuthzValues(context.getAuthzIndex(), context.getActivityIndex().get(tenantId, nextId, primitiveBuffer).authz, nextId, primitiveBuffer);
     }
 
-    private void verifyFieldValues(MiruTenantId tenantId, MiruContext<MutableRoaringBitmap, ?> context, int activityId, int fieldId, byte[] primitiveBuffer)
+    private void verifyFieldValues(MiruTenantId tenantId, MiruContext<ImmutableRoaringBitmap, ?> context, int activityId, int fieldId, byte[] primitiveBuffer)
         throws Exception {
 
         MiruInternalActivity miruActivity = context.getActivityIndex().get(tenantId, activityId, primitiveBuffer);
@@ -147,23 +148,23 @@ public class MiruIndexerTest {
             fieldValues = new MiruTermId[0];
         }
         for (MiruTermId fieldValue : fieldValues) {
-            MiruInvertedIndex<MutableRoaringBitmap> invertedIndex = context.getFieldIndexProvider()
+            MiruInvertedIndex<ImmutableRoaringBitmap> invertedIndex = context.getFieldIndexProvider()
                 .getFieldIndex(MiruFieldType.primary)
                 .get(fieldId, fieldValue);
             assertNotNull(invertedIndex);
-            MutableRoaringBitmap bitmap = invertedIndex.getIndex(primitiveBuffer).get();
+            ImmutableRoaringBitmap bitmap = invertedIndex.getIndex(primitiveBuffer).get();
             assertNotNull(bitmap);
             assertTrue(bitmap.contains(activityId));
         }
     }
 
-    private void verifyAuthzValues(MiruAuthzIndex<MutableRoaringBitmap> miruAuthzIndex,
+    private void verifyAuthzValues(MiruAuthzIndex<ImmutableRoaringBitmap> miruAuthzIndex,
         String[] authzs,
         int activityId,
         byte[] primitiveBuffer) throws Exception {
         MiruAuthzExpression miruAuthzExpression = new MiruAuthzExpression(Arrays.asList(authzs));
 
-        MutableRoaringBitmap compositeAuthz = miruAuthzIndex.getCompositeAuthz(miruAuthzExpression, primitiveBuffer);
+        ImmutableRoaringBitmap compositeAuthz = miruAuthzIndex.getCompositeAuthz(miruAuthzExpression, primitiveBuffer);
         assertTrue(compositeAuthz.contains(activityId));
     }
 
@@ -173,13 +174,13 @@ public class MiruIndexerTest {
         MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, MiruPartitionId.of(0), new MiruHost("localhost", 10000));
 
         MiruBitmapsRoaringBuffer bitmaps = new MiruBitmapsRoaringBuffer();
-        MiruIndexer<MutableRoaringBitmap> miruIndexer = new MiruIndexer<>(new MiruIndexAuthz<>(),
+        MiruIndexer<MutableRoaringBitmap, ImmutableRoaringBitmap> miruIndexer = new MiruIndexer<>(new MiruIndexAuthz<>(),
             new MiruIndexFieldValues<>(),
             new MiruIndexBloom<>(new BloomIndex<>(bitmaps, Hashing.murmur3_128(), 100_000, 0.01f)),
             new MiruIndexLatest<>(),
             new MiruIndexPairedLatest<>());
 
-        MiruContext<MutableRoaringBitmap, ?> inMemoryContext = IndexTestUtil.buildInMemoryContext(4, bitmaps, coord);
+        MiruContext<ImmutableRoaringBitmap, ?> inMemoryContext = IndexTestUtil.buildInMemoryContext(4, bitmaps, coord);
 
         // Build in-memory index stream object
         MiruActivity miruActivity1 = buildMiruActivity(tenantId, 1, new String[] { "abcde" },
@@ -193,7 +194,7 @@ public class MiruIndexerTest {
             new MiruActivityAndId<>(miruActivity2, 1),
             new MiruActivityAndId<>(miruActivity3, 2));
 
-        MiruContext<MutableRoaringBitmap, ?> onDiskContext = IndexTestUtil.buildOnDiskContext(4, bitmaps, coord);
+        MiruContext<ImmutableRoaringBitmap, ?> onDiskContext = IndexTestUtil.buildOnDiskContext(4, bitmaps, coord);
 
         // Index initial activities
         miruIndexer.index(inMemoryContext,

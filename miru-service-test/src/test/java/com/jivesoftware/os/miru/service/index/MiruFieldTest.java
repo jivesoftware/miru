@@ -30,7 +30,7 @@ public class MiruFieldTest {
 
     @Test(dataProvider = "miruFieldDataProvider",
         enabled = true, description = "This test is disk dependent, disable if it flaps or becomes slow")
-    public <BM> void getInvertedIndex(MiruBitmaps<BM> bitmaps, MiruFieldIndex<BM> fieldIndex, int fieldId, List<Integer> ids) throws Exception {
+    public <BM extends IBM, IBM> void getInvertedIndex(MiruBitmaps<BM, IBM> bitmaps, MiruFieldIndex<BM> fieldIndex, int fieldId, List<Integer> ids) throws Exception {
         byte[] primitiveBuffer = new byte[8];
         for (int id : ids) {
             Optional<BM> optional = fieldIndex.get(fieldId, new MiruTermId(FilerIO.intBytes(id))).getIndex(primitiveBuffer);
@@ -42,7 +42,7 @@ public class MiruFieldTest {
 
     @Test(dataProvider = "miruFieldDataProvider",
         enabled = true, description = "This test is disk dependent, disable if it flaps or becomes slow")
-    public <BM> void getInvertedIndexWithConsideration(MiruBitmaps<BM> bitmaps, MiruFieldIndex<BM> fieldIndex, int fieldId, List<Integer> ids)
+    public <BM extends IBM, IBM> void getInvertedIndexWithConsideration(MiruBitmaps<BM, IBM> bitmaps, MiruFieldIndex<BM> fieldIndex, int fieldId, List<Integer> ids)
         throws Exception {
         byte[] primitiveBuffer = new byte[8];
         // this works because maxId = id in our termToIndex maps

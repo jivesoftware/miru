@@ -53,16 +53,16 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * Package protected class, for use by {@link com.jivesoftware.os.miru.service.partition.MiruLocalHostedPartition}.
  */
-public class MiruPartitionAccessor<BM, C extends MiruCursor<C, S>, S extends MiruSipCursor<S>> {
+public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, S>, S extends MiruSipCursor<S>> {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
     private static final int PERMITS = 64; //TODO config?
 
     public final MiruStats miruStats;
-    public final MiruBitmaps<BM> bitmaps;
+    public final MiruBitmaps<BM, IBM> bitmaps;
     public final MiruPartitionCoord coord;
     public final MiruPartitionCoordInfo info;
-    public final Optional<MiruContext<BM, S>> context;
+    public final Optional<MiruContext<IBM, S>> context;
 
     public final AtomicReference<Set<TimeAndVersion>> seenLastSip;
 
@@ -75,15 +75,15 @@ public class MiruPartitionAccessor<BM, C extends MiruCursor<C, S>, S extends Mir
 
     private final AtomicReference<C> rebuildCursor;
     private final MiruIndexRepairs indexRepairs;
-    private final MiruIndexer<BM> indexer;
+    private final MiruIndexer<BM, IBM> indexer;
 
     private final AtomicLong timestampOfLastMerge;
 
     private MiruPartitionAccessor(MiruStats miruStats,
-        MiruBitmaps<BM> bitmaps,
+        MiruBitmaps<BM, IBM> bitmaps,
         MiruPartitionCoord coord,
         MiruPartitionCoordInfo info,
-        Optional<MiruContext<BM, S>> context,
+        Optional<MiruContext<IBM, S>> context,
         AtomicReference<C> rebuildCursor,
         Set<TimeAndVersion> seenLastSip,
         AtomicLong endOfStream,
@@ -92,7 +92,7 @@ public class MiruPartitionAccessor<BM, C extends MiruCursor<C, S>, S extends Mir
         Semaphore writeSemaphore,
         AtomicBoolean closed,
         MiruIndexRepairs indexRepairs,
-        MiruIndexer<BM> indexer,
+        MiruIndexer<BM, IBM> indexer,
         AtomicLong timestampOfLastMerge) {
 
         this.miruStats = miruStats;
@@ -112,14 +112,14 @@ public class MiruPartitionAccessor<BM, C extends MiruCursor<C, S>, S extends Mir
         this.timestampOfLastMerge = timestampOfLastMerge;
     }
 
-    static <BM, C extends MiruCursor<C, S>, S extends MiruSipCursor<S>> MiruPartitionAccessor<BM, C, S> initialize(MiruStats miruStats,
-        MiruBitmaps<BM> bitmaps,
+    static <BM extends IBM, IBM, C extends MiruCursor<C, S>, S extends MiruSipCursor<S>> MiruPartitionAccessor<BM, IBM, C, S> initialize(MiruStats miruStats,
+        MiruBitmaps<BM, IBM> bitmaps,
         MiruPartitionCoord coord,
         MiruPartitionCoordInfo info,
-        Optional<MiruContext<BM, S>> context,
+        Optional<MiruContext<IBM, S>> context,
         MiruIndexRepairs indexRepairs,
-        MiruIndexer<BM> indexer) {
-        return new MiruPartitionAccessor<BM, C, S>(miruStats,
+        MiruIndexer<BM, IBM> indexer) {
+        return new MiruPartitionAccessor<BM, IBM, C, S>(miruStats,
             bitmaps,
             coord,
             info,
@@ -136,12 +136,12 @@ public class MiruPartitionAccessor<BM, C extends MiruCursor<C, S>, S extends Mir
             new AtomicLong(System.currentTimeMillis()));
     }
 
-    MiruPartitionAccessor<BM, C, S> copyToState(MiruPartitionState toState) {
+    MiruPartitionAccessor<BM, IBM, C, S> copyToState(MiruPartitionState toState) {
         return new MiruPartitionAccessor<>(miruStats, bitmaps, coord, info.copyToState(toState), context, rebuildCursor,
             seenLastSip.get(), endOfStream, hasOpenWriters, readSemaphore, writeSemaphore, closed, indexRepairs, indexer, timestampOfLastMerge);
     }
 
-    Optional<MiruContext<BM, S>> close() throws InterruptedException {
+    Optional<MiruContext<IBM, S>> close() throws InterruptedException {
         writeSemaphore.acquire(PERMITS);
         try {
             readSemaphore.acquire(PERMITS);
@@ -155,7 +155,7 @@ public class MiruPartitionAccessor<BM, C extends MiruCursor<C, S>, S extends Mir
         }
     }
 
-    private Optional<MiruContext<BM, S>> closeImmediate() {
+    private Optional<MiruContext<IBM, S>> closeImmediate() {
         closed.set(true);
         return context;
     }
@@ -233,7 +233,7 @@ public class MiruPartitionAccessor<BM, C extends MiruCursor<C, S>, S extends Mir
     //private final AtomicLong merges = new AtomicLong(0);
     void merge(MiruMergeChits chits, ExecutorService mergeExecutor) throws Exception {
         if (context.isPresent()) {
-            final MiruContext<BM, S> got = context.get();
+            final MiruContext<IBM, S> got = context.get();
             long elapsed;
             synchronized (got.writeLock) {
                 //System.out.println("Merging... (remaining: " + chits.remaining() + ") (merges: " + merges.incrementAndGet() + ")");
@@ -242,12 +242,12 @@ public class MiruPartitionAccessor<BM, C extends MiruCursor<C, S>, S extends Mir
                 List<Future<?>> futures = Lists.newArrayList();
                 futures.add(mergeExecutor.submit(new MergeRunnable((MiruDeltaTimeIndex) got.timeIndex)));
                 for (MiruFieldType fieldType : MiruFieldType.values()) {
-                    futures.add(mergeExecutor.submit(new MergeRunnable((MiruDeltaFieldIndex<BM>) got.fieldIndexProvider.getFieldIndex(fieldType))));
+                    futures.add(mergeExecutor.submit(new MergeRunnable((MiruDeltaFieldIndex<BM, IBM>) got.fieldIndexProvider.getFieldIndex(fieldType))));
                 }
-                futures.add(mergeExecutor.submit(new MergeRunnable((MiruDeltaAuthzIndex<BM>) got.authzIndex)));
-                futures.add(mergeExecutor.submit(new MergeRunnable((MiruDeltaRemovalIndex<BM>) got.removalIndex)));
-                futures.add(mergeExecutor.submit(new MergeRunnable((MiruDeltaInboxIndex<BM>) got.inboxIndex)));
-                futures.add(mergeExecutor.submit(new MergeRunnable((MiruDeltaUnreadTrackingIndex<BM>) got.unreadTrackingIndex)));
+                futures.add(mergeExecutor.submit(new MergeRunnable((MiruDeltaAuthzIndex<BM, IBM>) got.authzIndex)));
+                futures.add(mergeExecutor.submit(new MergeRunnable((MiruDeltaRemovalIndex<BM, IBM>) got.removalIndex)));
+                futures.add(mergeExecutor.submit(new MergeRunnable((MiruDeltaInboxIndex<BM, IBM>) got.inboxIndex)));
+                futures.add(mergeExecutor.submit(new MergeRunnable((MiruDeltaUnreadTrackingIndex<BM, IBM>) got.unreadTrackingIndex)));
                 futures.add(mergeExecutor.submit(new MergeRunnable((MiruDeltaActivityIndex) got.activityIndex)));
                 futures.add(mergeExecutor.submit(new MergeRunnable((MiruDeltaSipIndex) got.sipIndex)));
 
@@ -291,7 +291,7 @@ public class MiruPartitionAccessor<BM, C extends MiruCursor<C, S>, S extends Mir
         if (!context.isPresent()) {
             return -1;
         }
-        MiruContext<BM, S> got = context.get();
+        MiruContext<IBM, S> got = context.get();
 
         int consumedCount = 0;
         writeSemaphore.acquire();
@@ -359,7 +359,7 @@ public class MiruPartitionAccessor<BM, C extends MiruCursor<C, S>, S extends Mir
         return consumedCount;
     }
 
-    private void checkCorruption(MiruContext<BM, S> got, Exception e) {
+    private void checkCorruption(MiruContext<IBM, S> got, Exception e) {
         Throwable t = e;
         while (t != null) {
             if (t instanceof CorruptionException) {
@@ -371,7 +371,7 @@ public class MiruPartitionAccessor<BM, C extends MiruCursor<C, S>, S extends Mir
         }
     }
 
-    private int consumeTypedBatch(MiruContext<BM, S> got,
+    private int consumeTypedBatch(MiruContext<IBM, S> got,
         MiruPartitionedActivity.Type batchType,
         List<MiruPartitionedActivity> batch,
         IndexStrategy strategy,
@@ -409,7 +409,7 @@ public class MiruPartitionAccessor<BM, C extends MiruCursor<C, S>, S extends Mir
         return 0;
     }
 
-    private int handleActivityType(MiruContext<BM, S> got,
+    private int handleActivityType(MiruContext<IBM, S> got,
         List<MiruPartitionedActivity> partitionedActivities,
         ExecutorService indexExecutor,
         byte[] primitiveBuffer)
@@ -455,7 +455,7 @@ public class MiruPartitionAccessor<BM, C extends MiruCursor<C, S>, S extends Mir
         return activityCount;
     }
 
-    private int handleRepairType(MiruContext<BM, S> got,
+    private int handleRepairType(MiruContext<IBM, S> got,
         List<MiruPartitionedActivity> partitionedActivities,
         ExecutorService indexExecutor,
         byte[] primitiveBuffer)
@@ -505,7 +505,7 @@ public class MiruPartitionAccessor<BM, C extends MiruCursor<C, S>, S extends Mir
         return count;
     }
 
-    private int handleRemoveType(MiruContext<BM, S> got,
+    private int handleRemoveType(MiruContext<IBM, S> got,
         List<MiruPartitionedActivity> partitionedActivities,
         IndexStrategy strategy,
         byte[] primitiveBuffer)
@@ -538,7 +538,7 @@ public class MiruPartitionAccessor<BM, C extends MiruCursor<C, S>, S extends Mir
         return count;
     }
 
-    MiruRequestHandle<BM, S> getRequestHandle() {
+    MiruRequestHandle<BM, IBM, S> getRequestHandle() {
         log.debug("Request handle requested for {}", coord);
 
         if (closed.get()) {
@@ -559,15 +559,15 @@ public class MiruPartitionAccessor<BM, C extends MiruCursor<C, S>, S extends Mir
             throw new MiruPartitionUnavailableException("Partition is closed");
         }
 
-        return new MiruRequestHandle<BM, S>() {
+        return new MiruRequestHandle<BM, IBM, S>() {
 
             @Override
-            public MiruBitmaps<BM> getBitmaps() {
+            public MiruBitmaps<BM, IBM> getBitmaps() {
                 return bitmaps;
             }
 
             @Override
-            public MiruRequestContext<BM, S> getRequestContext() {
+            public MiruRequestContext<IBM, S> getRequestContext() {
                 if (info.state != MiruPartitionState.online) {
                     throw new MiruPartitionUnavailableException("Partition is not online");
                 }
@@ -600,7 +600,7 @@ public class MiruPartitionAccessor<BM, C extends MiruCursor<C, S>, S extends Mir
         };
     }
 
-    MiruMigrationHandle<BM, C, S> getMigrationHandle(long millis) {
+    MiruMigrationHandle<BM, IBM, C, S> getMigrationHandle(long millis) {
         try {
             writeSemaphore.tryAcquire(PERMITS, millis, TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {
@@ -612,7 +612,7 @@ public class MiruPartitionAccessor<BM, C extends MiruCursor<C, S>, S extends Mir
             throw new MiruPartitionUnavailableException("Partition is closed");
         }
 
-        return new MiruMigrationHandle<BM, C, S>() {
+        return new MiruMigrationHandle<BM, IBM, C, S>() {
 
             @Override
             public boolean canMigrateTo(MiruBackingStorage destinationStorage) {
@@ -623,12 +623,12 @@ public class MiruPartitionAccessor<BM, C extends MiruCursor<C, S>, S extends Mir
             }
 
             @Override
-            public Optional<MiruContext<BM, S>> getContext() {
+            public Optional<MiruContext<IBM, S>> getContext() {
                 return context;
             }
 
             @Override
-            public Optional<MiruContext<BM, S>> closeContext() {
+            public Optional<MiruContext<IBM, S>> closeContext() {
                 // we have all the semaphores so we can close immediately
                 return MiruPartitionAccessor.this.closeImmediate();
             }
@@ -639,7 +639,7 @@ public class MiruPartitionAccessor<BM, C extends MiruCursor<C, S>, S extends Mir
             }
 
             @Override
-            public MiruPartitionAccessor<BM, C, S> migrated(MiruContext<BM, S> context,
+            public MiruPartitionAccessor<BM, IBM, C, S> migrated(MiruContext<IBM, S> context,
                 Optional<MiruBackingStorage> storage,
                 Optional<MiruPartitionState> state) {
 

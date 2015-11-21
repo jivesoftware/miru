@@ -47,15 +47,15 @@ public class AggregateCountsCustomQuestion implements Question<AggregateCountsQu
     }
 
     @Override
-    public <BM> MiruPartitionResponse<AggregateCountsAnswer> askLocal(MiruRequestHandle<BM, ?> handle,
+    public <BM extends IBM, IBM> MiruPartitionResponse<AggregateCountsAnswer> askLocal(MiruRequestHandle<BM, IBM, ?> handle,
         Optional<AggregateCountsReport> report)
         throws Exception {
 
         byte[] primitiveBuffer = new byte[8];
 
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
-        MiruRequestContext<BM, ?> context = handle.getRequestContext();
-        MiruBitmaps<BM> bitmaps = handle.getBitmaps();
+        MiruRequestContext<IBM, ?> context = handle.getRequestContext();
+        MiruBitmaps<BM, IBM> bitmaps = handle.getBitmaps();
 
         MiruTimeRange timeRange = request.query.answerTimeRange;
         if (!context.getTimeIndex().intersects(timeRange)) {
@@ -65,11 +65,10 @@ public class AggregateCountsCustomQuestion implements Question<AggregateCountsQu
                 bitmaps, context, request, report, bitmaps.create(), Optional.absent()), solutionLog.asList());
         }
 
-        List<BM> ands = new ArrayList<>();
+        List<IBM> ands = new ArrayList<>();
 
-        BM filtered = bitmaps.create();
-        aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), request.query.streamFilter,
-            solutionLog, filtered, null, context.getActivityIndex().lastId(primitiveBuffer), -1, primitiveBuffer);
+        BM filtered = aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), request.query.streamFilter,
+            solutionLog, null, context.getActivityIndex().lastId(primitiveBuffer), -1, primitiveBuffer);
         ands.add(filtered);
 
         ands.add(bitmaps.buildIndexMask(context.getActivityIndex().lastId(primitiveBuffer), context.getRemovalIndex().getIndex(primitiveBuffer)));

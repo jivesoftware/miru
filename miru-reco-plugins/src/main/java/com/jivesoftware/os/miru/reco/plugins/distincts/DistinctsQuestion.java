@@ -31,10 +31,10 @@ public class DistinctsQuestion implements Question<DistinctsQuery, DistinctsAnsw
     }
 
     @Override
-    public <BM> MiruPartitionResponse<DistinctsAnswer> askLocal(MiruRequestHandle<BM, ?> handle, Optional<DistinctsReport> report) throws Exception {
+    public <BM extends IBM, IBM> MiruPartitionResponse<DistinctsAnswer> askLocal(MiruRequestHandle<BM, IBM, ?> handle, Optional<DistinctsReport> report) throws Exception {
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
-        MiruRequestContext<BM, ?> context = handle.getRequestContext();
-        MiruBitmaps<BM> bitmaps = handle.getBitmaps();
+        MiruRequestContext<IBM, ?> context = handle.getRequestContext();
+        MiruBitmaps<BM, IBM> bitmaps = handle.getBitmaps();
 
         //TODO config batch size
         return new MiruPartitionResponse<>(distincts.gather(bitmaps, context, request.query, 100, solutionLog), solutionLog.asList());

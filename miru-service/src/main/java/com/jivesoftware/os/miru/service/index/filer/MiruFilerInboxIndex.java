@@ -6,17 +6,18 @@ import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInboxIndex;
+import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndexAppender;
 
 /** @author jonathan */
-public class MiruFilerInboxIndex<BM> implements MiruInboxIndex<BM> {
+public class MiruFilerInboxIndex<BM extends IBM, IBM> implements MiruInboxIndex<IBM> {
 
-    private final MiruBitmaps<BM> bitmaps;
+    private final MiruBitmaps<BM, IBM> bitmaps;
     private final long indexId;
     private final KeyedFilerStore<Long, Void> store;
     private final StripingLocksProvider<MiruStreamId> stripingLocksProvider;
 
-    public MiruFilerInboxIndex(MiruBitmaps<BM> bitmaps,
+    public MiruFilerInboxIndex(MiruBitmaps<BM, IBM> bitmaps,
         long indexId,
         KeyedFilerStore<Long, Void> store,
         StripingLocksProvider<MiruStreamId> stripingLocksProvider)
@@ -32,7 +33,8 @@ public class MiruFilerInboxIndex<BM> implements MiruInboxIndex<BM> {
         getAppender(streamId).append(primitiveBuffer, ids);
     }
 
-    public MiruFilerInvertedIndex<BM> getInbox(MiruStreamId streamId) {
+    @Override
+    public MiruInvertedIndex<IBM> getInbox(MiruStreamId streamId) {
         return new MiruFilerInvertedIndex<>(bitmaps,
             new MiruFieldIndex.IndexKey(indexId, streamId.getBytes()),
             store,

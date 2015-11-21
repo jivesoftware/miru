@@ -13,7 +13,7 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
  */
 public interface Question<Q, A, P> {
 
-    <BM> MiruPartitionResponse<A> askLocal(MiruRequestHandle<BM, ?> queryHandle, Optional<P> report) throws Exception;
+    <BM extends IBM, IBM> MiruPartitionResponse<A> askLocal(MiruRequestHandle<BM, IBM, ?> queryHandle, Optional<P> report) throws Exception;
 
     MiruPartitionResponse<A> askRemote(MiruHost host, MiruPartitionId partitionId, Optional<P> report) throws MiruQueryServiceException;
 

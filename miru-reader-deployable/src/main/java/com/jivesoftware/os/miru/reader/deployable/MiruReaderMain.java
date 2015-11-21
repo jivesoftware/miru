@@ -192,7 +192,7 @@ public class MiruReaderMain {
                 Interners.<String>newWeakInterner(),
                 termComposer);
 
-            MiruBitmaps<?> bitmaps = miruServiceConfig.getBitmapsClass().newInstance();
+            MiruBitmaps<?, ?> bitmaps = miruServiceConfig.getBitmapsClass().newInstance();
 
             HttpDeliveryClientHealthProvider clientHealthProvider = new HttpDeliveryClientHealthProvider(instanceConfig.getInstanceKey(),
                 HttpRequestHelperUtils.buildRequestHelper(instanceConfig.getRoutesHost(), instanceConfig.getRoutesPort()),
@@ -239,7 +239,7 @@ public class MiruReaderMain {
                     miruResourceLocator,
                     termComposer,
                     internExtern,
-                    new SingleBitmapsProvider<>(bitmaps));
+                    new SingleBitmapsProvider(bitmaps));
             } else if (walConfig.getActivityWALType().equals("amza") || walConfig.getActivityWALType().equals("amza_rcvs")) {
                 MiruWALClient<AmzaCursor, AmzaSipCursor> amzaWALClient = new MiruWALClientInitializer().initialize("", walHttpClient, mapper, 10_000,
                     "/miru/wal/amza", AmzaCursor.class, AmzaSipCursor.class);
@@ -257,7 +257,7 @@ public class MiruReaderMain {
                     miruResourceLocator,
                     termComposer,
                     internExtern,
-                    new SingleBitmapsProvider<>(bitmaps));
+                    new SingleBitmapsProvider(bitmaps));
             } else {
                 throw new IllegalStateException("Invalid activity WAL type: " + walConfig.getActivityWALType());
             }

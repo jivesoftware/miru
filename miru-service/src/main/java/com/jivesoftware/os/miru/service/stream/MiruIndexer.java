@@ -2,7 +2,6 @@ package com.jivesoftware.os.miru.service.stream;
 
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
-import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityAndId;
 import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
@@ -17,21 +16,21 @@ import java.util.concurrent.Future;
 /**
  * Handles indexing of activity, including repair and removal, with synchronization and attention to versioning.
  */
-public class MiruIndexer<BM> {
+public class MiruIndexer<BM extends IBM, IBM> {
 
     private final static MetricLogger log = MetricLoggerFactory.getLogger();
 
-    private final MiruIndexAuthz<BM> indexAuthz;
-    private final MiruIndexFieldValues<BM> indexFieldValues;
-    private final MiruIndexBloom<BM> indexBloom;
-    private final MiruIndexLatest<BM> indexLatest;
-    private final MiruIndexPairedLatest<BM> indexPairedLatest;
+    private final MiruIndexAuthz<IBM> indexAuthz;
+    private final MiruIndexFieldValues<IBM> indexFieldValues;
+    private final MiruIndexBloom<BM, IBM> indexBloom;
+    private final MiruIndexLatest<IBM> indexLatest;
+    private final MiruIndexPairedLatest<IBM> indexPairedLatest;
 
-    public MiruIndexer(MiruIndexAuthz<BM> indexAuthz,
-        MiruIndexFieldValues<BM> indexFieldValues,
-        MiruIndexBloom<BM> indexBloom,
-        MiruIndexLatest<BM> indexLatest,
-        MiruIndexPairedLatest<BM> indexPairedLatest) {
+    public MiruIndexer(MiruIndexAuthz<IBM> indexAuthz,
+        MiruIndexFieldValues<IBM> indexFieldValues,
+        MiruIndexBloom<BM, IBM> indexBloom,
+        MiruIndexLatest<IBM> indexLatest,
+        MiruIndexPairedLatest<IBM> indexPairedLatest) {
         this.indexAuthz = indexAuthz;
         this.indexFieldValues = indexFieldValues;
         this.indexBloom = indexBloom;
@@ -39,7 +38,7 @@ public class MiruIndexer<BM> {
         this.indexPairedLatest = indexPairedLatest;
     }
 
-    public void index(final MiruContext<BM, ?> context,
+    public void index(final MiruContext<IBM, ?> context,
         final MiruPartitionCoord coord,
         final List<MiruActivityAndId<MiruActivity>> activityAndIds,
         boolean repair,
@@ -126,7 +125,7 @@ public class MiruIndexer<BM> {
         log.debug("End: Index batch of {}", internalActivityAndIds.size());
     }
 
-    public void set(MiruContext<BM, ?> context, List<MiruActivityAndId<MiruActivity>> activityAndIds) throws Exception {
+    public void set(MiruContext<IBM, ?> context, List<MiruActivityAndId<MiruActivity>> activityAndIds) throws Exception {
         @SuppressWarnings("unchecked")
         List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds = Arrays.<MiruActivityAndId<MiruInternalActivity>>asList(
             new MiruActivityAndId[activityAndIds.size()]);
@@ -176,7 +175,7 @@ public class MiruIndexer<BM> {
         context.activityIndex.setAndReady(internalActivityAndIds);
     }
      */
-    public void remove(MiruContext<BM, ?> context, MiruActivity activity, int id) throws Exception {
+    public void remove(MiruContext<IBM, ?> context, MiruActivity activity, int id) throws Exception {
         byte[] primitiveBuffer = new byte[8];
         MiruInternalActivity existing = context.activityIndex.get(activity.tenantId, id, primitiveBuffer);
         if (existing == null) {

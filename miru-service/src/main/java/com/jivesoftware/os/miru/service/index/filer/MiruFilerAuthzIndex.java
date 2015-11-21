@@ -11,18 +11,18 @@ import com.jivesoftware.os.miru.service.index.auth.MiruAuthzCache;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzUtils;
 
 /** @author jonathan */
-public class MiruFilerAuthzIndex<BM> implements MiruAuthzIndex<BM> {
+public class MiruFilerAuthzIndex<BM extends IBM, IBM> implements MiruAuthzIndex<IBM> {
 
-    private final MiruBitmaps<BM> bitmaps;
+    private final MiruBitmaps<BM, IBM> bitmaps;
     private final long indexId;
     private final KeyedFilerStore keyedStore;
-    private final MiruAuthzCache<BM> cache;
+    private final MiruAuthzCache<BM, IBM> cache;
     private final StripingLocksProvider<String> stripingLocksProvider;
 
-    public MiruFilerAuthzIndex(MiruBitmaps<BM> bitmaps,
+    public MiruFilerAuthzIndex(MiruBitmaps<BM, IBM> bitmaps,
         long indexId,
         KeyedFilerStore keyedStore,
-        MiruAuthzCache<BM> cache,
+        MiruAuthzCache<BM, IBM> cache,
         StripingLocksProvider<String> stripingLocksProvider)
         throws Exception {
 
@@ -35,7 +35,7 @@ public class MiruFilerAuthzIndex<BM> implements MiruAuthzIndex<BM> {
     }
 
     @Override
-    public MiruInvertedIndex<BM> getAuthz(String authz) throws Exception {
+    public MiruInvertedIndex<IBM> getAuthz(String authz) throws Exception {
         return new MiruFilerInvertedIndex<>(bitmaps, new MiruFieldIndex.IndexKey(indexId, MiruAuthzUtils.key(authz)), keyedStore, -1,
             stripingLocksProvider.lock(authz, 0));
     }

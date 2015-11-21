@@ -58,11 +58,11 @@ public class RoaringBufferAggregation {
         }
     }
 
-    public static void and(MutableRoaringBitmap container, MutableRoaringBitmap... bitmaps) {
+    public static void and(MutableRoaringBitmap container, ImmutableRoaringBitmap... bitmaps) {
         if (bitmaps.length == 1) {
             container.or(bitmaps[0]);
         } else if (bitmaps.length > 1) {
-            MutableRoaringBitmap[] array = Arrays.copyOf(bitmaps, bitmaps.length);
+            ImmutableRoaringBitmap[] array = Arrays.copyOf(bitmaps, bitmaps.length);
             Arrays.sort(array, (a, b) -> a.getSizeInBytes() - b.getSizeInBytes());
             MutableRoaringBitmap answer = MutableRoaringBitmap.and(array[0], array[1]);
             for (int k = 2; k < array.length; ++k) {
@@ -74,8 +74,8 @@ public class RoaringBufferAggregation {
     }
 
     public static void andNot(final MutableRoaringBitmap answer,
-        final MutableRoaringBitmap x1,
-        final MutableRoaringBitmap x2) {
+        final ImmutableRoaringBitmap x1,
+        final ImmutableRoaringBitmap x2) {
 
         MutableRoaringArray highLowContainer = (MutableRoaringArray) answer.highLowContainer;
 
@@ -120,8 +120,8 @@ public class RoaringBufferAggregation {
         }
     }
 
-    public static void or(final MutableRoaringBitmap answer, final MutableRoaringBitmap x1,
-        final MutableRoaringBitmap x2) {
+    public static void or(final MutableRoaringBitmap answer, final ImmutableRoaringBitmap x1,
+        final ImmutableRoaringBitmap x2) {
 
         MutableRoaringArray highLowContainer = (MutableRoaringArray) answer.highLowContainer;
 
@@ -168,16 +168,23 @@ public class RoaringBufferAggregation {
         }
     }
 
-    public static void or(MutableRoaringBitmap container, MutableRoaringBitmap... bitmaps) {
+    public static void lazyOr(MutableRoaringBitmap container, ImmutableRoaringBitmap... bitmaps) {
+        for (int k = 0; k < bitmaps.length; ++k) {
+            container.lazyor(bitmaps[k]);
+        }
+        container.repairAfterLazy();
+    }
+
+    public static void or(MutableRoaringBitmap container, ImmutableRoaringBitmap... bitmaps) {
         if (bitmaps.length == 0) {
             return;
         }
 
-        PriorityQueue<MutableRoaringBitmap> pq = new PriorityQueue<>(bitmaps.length, (a, b) -> a.getSizeInBytes() - b.getSizeInBytes());
+        PriorityQueue<ImmutableRoaringBitmap> pq = new PriorityQueue<>(bitmaps.length, (a, b) -> a.getSizeInBytes() - b.getSizeInBytes());
         Collections.addAll(pq, bitmaps);
         while (pq.size() > 1) {
-            MutableRoaringBitmap x1 = pq.poll();
-            MutableRoaringBitmap x2 = pq.poll();
+            ImmutableRoaringBitmap x1 = pq.poll();
+            ImmutableRoaringBitmap x2 = pq.poll();
             pq.add(MutableRoaringBitmap.or(x1, x2));
         }
         container.or(pq.poll());

@@ -14,17 +14,17 @@ import java.util.Collections;
 import java.util.concurrent.ConcurrentMap;
 
 /** @author jonathan */
-public class MiruDeltaUnreadTrackingIndex<BM> implements MiruUnreadTrackingIndex<BM>, Mergeable {
+public class MiruDeltaUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUnreadTrackingIndex<IBM>, Mergeable {
 
-    private final MiruBitmaps<BM> bitmaps;
+    private final MiruBitmaps<BM, IBM> bitmaps;
     private final long indexId;
-    private final MiruUnreadTrackingIndex<BM> backingIndex;
+    private final MiruUnreadTrackingIndex<IBM> backingIndex;
     private final Cache<MiruFieldIndex.IndexKey, Optional<?>> fieldIndexCache;
-    private final ConcurrentMap<MiruStreamId, MiruDeltaInvertedIndex<BM>> unreadDeltas = Maps.newConcurrentMap();
+    private final ConcurrentMap<MiruStreamId, MiruDeltaInvertedIndex<BM, IBM>> unreadDeltas = Maps.newConcurrentMap();
 
-    public MiruDeltaUnreadTrackingIndex(MiruBitmaps<BM> bitmaps,
+    public MiruDeltaUnreadTrackingIndex(MiruBitmaps<BM, IBM> bitmaps,
         long indexId,
-        MiruUnreadTrackingIndex<BM> backingIndex,
+        MiruUnreadTrackingIndex<IBM> backingIndex,
         Cache<MiruFieldIndex.IndexKey, Optional<?>> fieldIndexCache) {
         this.bitmaps = bitmaps;
         this.indexId = indexId;
@@ -38,12 +38,12 @@ public class MiruDeltaUnreadTrackingIndex<BM> implements MiruUnreadTrackingIndex
     }
 
     @Override
-    public MiruInvertedIndex<BM> getUnread(MiruStreamId streamId) throws Exception {
-        MiruDeltaInvertedIndex<BM> delta = unreadDeltas.get(streamId);
+    public MiruInvertedIndex<IBM> getUnread(MiruStreamId streamId) throws Exception {
+        MiruDeltaInvertedIndex<BM, IBM> delta = unreadDeltas.get(streamId);
         if (delta == null) {
-            delta = new MiruDeltaInvertedIndex<>(bitmaps, backingIndex.getUnread(streamId), new MiruDeltaInvertedIndex.Delta<BM>(),
+            delta = new MiruDeltaInvertedIndex<>(bitmaps, backingIndex.getUnread(streamId), new MiruDeltaInvertedIndex.Delta<IBM>(),
                 new MiruFieldIndex.IndexKey(indexId, streamId.getBytes()), fieldIndexCache, null);
-            MiruDeltaInvertedIndex<BM> existing = unreadDeltas.putIfAbsent(streamId, delta);
+            MiruDeltaInvertedIndex<BM, IBM> existing = unreadDeltas.putIfAbsent(streamId, delta);
             if (existing != null) {
                 delta = existing;
             }
@@ -57,14 +57,14 @@ public class MiruDeltaUnreadTrackingIndex<BM> implements MiruUnreadTrackingIndex
     }
 
     @Override
-    public void applyRead(MiruStreamId streamId, BM readMask, byte[] primitiveBuffer) throws Exception {
-        MiruInvertedIndex<BM> unread = getUnread(streamId);
+    public void applyRead(MiruStreamId streamId, IBM readMask, byte[] primitiveBuffer) throws Exception {
+        MiruInvertedIndex<IBM> unread = getUnread(streamId);
         unread.andNotToSourceSize(Collections.singletonList(readMask), primitiveBuffer);
     }
 
     @Override
-    public void applyUnread(MiruStreamId streamId, BM unreadMask, byte[] primitiveBuffer) throws Exception {
-        MiruInvertedIndex<BM> unread = getUnread(streamId);
+    public void applyUnread(MiruStreamId streamId, IBM unreadMask, byte[] primitiveBuffer) throws Exception {
+        MiruInvertedIndex<IBM> unread = getUnread(streamId);
         unread.orToSourceSize(unreadMask, primitiveBuffer);
     }
 
@@ -75,7 +75,7 @@ public class MiruDeltaUnreadTrackingIndex<BM> implements MiruUnreadTrackingIndex
 
     @Override
     public void merge(byte[] primitiveBuffer) throws Exception {
-        for (MiruDeltaInvertedIndex<BM> delta : unreadDeltas.values()) {
+        for (MiruDeltaInvertedIndex<BM, IBM> delta : unreadDeltas.values()) {
             delta.merge(primitiveBuffer);
         }
         unreadDeltas.clear();

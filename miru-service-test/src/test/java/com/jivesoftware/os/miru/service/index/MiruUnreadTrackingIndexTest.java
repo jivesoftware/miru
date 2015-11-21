@@ -13,6 +13,7 @@ import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
 import com.jivesoftware.os.miru.plugin.index.MiruUnreadTrackingIndex;
 import com.jivesoftware.os.miru.service.index.delta.MiruDeltaUnreadTrackingIndex;
 import java.util.List;
+import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
 import org.roaringbitmap.buffer.MutableRoaringBitmap;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -27,13 +28,13 @@ import static org.testng.Assert.assertTrue;
 public class MiruUnreadTrackingIndexTest {
 
     @Test(dataProvider = "miruUnreadTrackingIndexDataProviderWithData")
-    public void testDefaultData(MiruBitmaps<MutableRoaringBitmap> bitmaps,
-        MiruUnreadTrackingIndex<MutableRoaringBitmap> miruUnreadTrackingIndex,
+    public void testDefaultData(MiruBitmaps<MutableRoaringBitmap, ImmutableRoaringBitmap> bitmaps,
+        MiruUnreadTrackingIndex<ImmutableRoaringBitmap> miruUnreadTrackingIndex,
         MiruStreamId streamId,
         List<Integer> expected)
         throws Exception {
         byte[] primitiveBuffer = new byte[8];
-        Optional<MutableRoaringBitmap> unread = miruUnreadTrackingIndex.getUnread(streamId).getIndex(primitiveBuffer);
+        Optional<ImmutableRoaringBitmap> unread = miruUnreadTrackingIndex.getUnread(streamId).getIndex(primitiveBuffer);
         assertNotNull(unread);
         assertTrue(unread.isPresent());
 
@@ -46,13 +47,13 @@ public class MiruUnreadTrackingIndexTest {
     }
 
     @Test(dataProvider = "miruUnreadTrackingIndexDataProviderWithoutData")
-    public void testIndex(MiruBitmaps<MutableRoaringBitmap> bitmaps,
-        MiruUnreadTrackingIndex<MutableRoaringBitmap> miruUnreadTrackingIndex,
+    public void testIndex(MiruBitmaps<MutableRoaringBitmap, ImmutableRoaringBitmap> bitmaps,
+        MiruUnreadTrackingIndex<ImmutableRoaringBitmap> miruUnreadTrackingIndex,
         MiruStreamId streamId,
         List<Integer> expected)
         throws Exception {
         byte[] primitiveBuffer = new byte[8];
-        Optional<MutableRoaringBitmap> unreadIndex = miruUnreadTrackingIndex.getUnread(streamId).getIndex(primitiveBuffer);
+        Optional<ImmutableRoaringBitmap> unreadIndex = miruUnreadTrackingIndex.getUnread(streamId).getIndex(primitiveBuffer);
         assertNotNull(unreadIndex);
         assertFalse(unreadIndex.isPresent());
 
@@ -63,7 +64,7 @@ public class MiruUnreadTrackingIndexTest {
         unreadIndex = miruUnreadTrackingIndex.getUnread(streamId).getIndex(primitiveBuffer);
         assertNotNull(unreadIndex);
         assertTrue(unreadIndex.isPresent());
-        MutableRoaringBitmap unreadBitmap = unreadIndex.get();
+        ImmutableRoaringBitmap unreadBitmap = unreadIndex.get();
         assertTrue(unreadBitmap.contains(1));
         assertFalse(unreadBitmap.contains(2));
         assertTrue(unreadBitmap.contains(3));
@@ -72,13 +73,13 @@ public class MiruUnreadTrackingIndexTest {
     }
 
     @Test(dataProvider = "miruUnreadTrackingIndexDataProviderWithoutData")
-    public void testUnread(MiruBitmaps<MutableRoaringBitmap> bitmaps,
-        MiruUnreadTrackingIndex<MutableRoaringBitmap> miruUnreadTrackingIndex,
+    public void testUnread(MiruBitmaps<MutableRoaringBitmap, ImmutableRoaringBitmap> bitmaps,
+        MiruUnreadTrackingIndex<ImmutableRoaringBitmap> miruUnreadTrackingIndex,
         MiruStreamId streamId,
         List<Integer> expected)
         throws Exception {
         byte[] primitiveBuffer = new byte[8];
-        Optional<MutableRoaringBitmap> unread = miruUnreadTrackingIndex.getUnread(streamId).getIndex(primitiveBuffer);
+        Optional<ImmutableRoaringBitmap> unread = miruUnreadTrackingIndex.getUnread(streamId).getIndex(primitiveBuffer);
         assertFalse(unread.isPresent());
 
         miruUnreadTrackingIndex.append(streamId, primitiveBuffer, 1);
@@ -107,15 +108,15 @@ public class MiruUnreadTrackingIndexTest {
     }
 
     @Test(dataProvider = "miruUnreadTrackingIndexDataProviderWithData")
-    public void testRead(MiruBitmaps<MutableRoaringBitmap> bitmaps,
-        MiruUnreadTrackingIndex<MutableRoaringBitmap> miruUnreadTrackingIndex,
+    public void testRead(MiruBitmaps<MutableRoaringBitmap, ImmutableRoaringBitmap> bitmaps,
+        MiruUnreadTrackingIndex<ImmutableRoaringBitmap> miruUnreadTrackingIndex,
         MiruStreamId streamId,
         List<Integer> expected)
         throws Exception {
         byte[] primitiveBuffer = new byte[8];
         assertTrue(expected.size() > 2, "Test requires at least 2 data");
 
-        MutableRoaringBitmap unread = miruUnreadTrackingIndex.getUnread(streamId).getIndex(primitiveBuffer).get();
+        ImmutableRoaringBitmap unread = miruUnreadTrackingIndex.getUnread(streamId).getIndex(primitiveBuffer).get();
         assertEquals(unread.getCardinality(), expected.size());
 
         MutableRoaringBitmap readMask = new MutableRoaringBitmap();
@@ -160,28 +161,28 @@ public class MiruUnreadTrackingIndexTest {
         MiruBitmapsRoaringBuffer bitmaps = new MiruBitmapsRoaringBuffer();
         MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("localhost", 10000));
 
-        MiruUnreadTrackingIndex<MutableRoaringBitmap> unmergedInMemoryIndex = buildInMemoryContext(4, bitmaps, coord).unreadTrackingIndex;
+        MiruUnreadTrackingIndex<ImmutableRoaringBitmap> unmergedInMemoryIndex = buildInMemoryContext(4, bitmaps, coord).unreadTrackingIndex;
         unmergedInMemoryIndex.append(streamId, primitiveBuffer, data);
 
-        MiruUnreadTrackingIndex<MutableRoaringBitmap> unmergedOnDiskIndex = buildOnDiskContext(4, bitmaps, coord).unreadTrackingIndex;
+        MiruUnreadTrackingIndex<ImmutableRoaringBitmap> unmergedOnDiskIndex = buildOnDiskContext(4, bitmaps, coord).unreadTrackingIndex;
         unmergedOnDiskIndex.append(streamId, primitiveBuffer, data);
 
-        MiruUnreadTrackingIndex<MutableRoaringBitmap> mergedInMemoryIndex = buildInMemoryContext(4, bitmaps, coord).unreadTrackingIndex;
+        MiruUnreadTrackingIndex<ImmutableRoaringBitmap> mergedInMemoryIndex = buildInMemoryContext(4, bitmaps, coord).unreadTrackingIndex;
         mergedInMemoryIndex.append(streamId, primitiveBuffer, data);
-        ((MiruDeltaUnreadTrackingIndex<MutableRoaringBitmap>) mergedInMemoryIndex).merge(primitiveBuffer);
+        ((MiruDeltaUnreadTrackingIndex<MutableRoaringBitmap, ImmutableRoaringBitmap>) mergedInMemoryIndex).merge(primitiveBuffer);
 
-        MiruUnreadTrackingIndex<MutableRoaringBitmap> mergedOnDiskIndex = buildOnDiskContext(4, bitmaps, coord).unreadTrackingIndex;
+        MiruUnreadTrackingIndex<ImmutableRoaringBitmap> mergedOnDiskIndex = buildOnDiskContext(4, bitmaps, coord).unreadTrackingIndex;
         mergedOnDiskIndex.append(streamId, primitiveBuffer, data);
-        ((MiruDeltaUnreadTrackingIndex<MutableRoaringBitmap>) mergedOnDiskIndex).merge(primitiveBuffer);
+        ((MiruDeltaUnreadTrackingIndex<ImmutableRoaringBitmap, ImmutableRoaringBitmap>) mergedOnDiskIndex).merge(primitiveBuffer);
 
-        MiruUnreadTrackingIndex<MutableRoaringBitmap> partiallyMergedInMemoryIndex = buildInMemoryContext(4, bitmaps, coord).unreadTrackingIndex;
+        MiruUnreadTrackingIndex<ImmutableRoaringBitmap> partiallyMergedInMemoryIndex = buildInMemoryContext(4, bitmaps, coord).unreadTrackingIndex;
         partiallyMergedInMemoryIndex.append(streamId, primitiveBuffer, data1_2);
-        ((MiruDeltaUnreadTrackingIndex<MutableRoaringBitmap>) partiallyMergedInMemoryIndex).merge(primitiveBuffer);
+        ((MiruDeltaUnreadTrackingIndex<MutableRoaringBitmap, ImmutableRoaringBitmap>) partiallyMergedInMemoryIndex).merge(primitiveBuffer);
         partiallyMergedInMemoryIndex.append(streamId, primitiveBuffer, data2_2);
 
-        MiruUnreadTrackingIndex<MutableRoaringBitmap> partiallyMergedOnDiskIndex = buildOnDiskContext(4, bitmaps, coord).unreadTrackingIndex;
+        MiruUnreadTrackingIndex<ImmutableRoaringBitmap> partiallyMergedOnDiskIndex = buildOnDiskContext(4, bitmaps, coord).unreadTrackingIndex;
         partiallyMergedOnDiskIndex.append(streamId, primitiveBuffer, data1_2);
-        ((MiruDeltaUnreadTrackingIndex<MutableRoaringBitmap>) partiallyMergedOnDiskIndex).merge(primitiveBuffer);
+        ((MiruDeltaUnreadTrackingIndex<MutableRoaringBitmap, ImmutableRoaringBitmap>) partiallyMergedOnDiskIndex).merge(primitiveBuffer);
         partiallyMergedOnDiskIndex.append(streamId, primitiveBuffer, data2_2);
 
         return new Object[][] {

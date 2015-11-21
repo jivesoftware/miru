@@ -17,19 +17,19 @@ import java.util.concurrent.ConcurrentMap;
 /**
  * DELTA FORCE
  */
-public class MiruDeltaAuthzIndex<BM> implements MiruAuthzIndex<BM>, Mergeable {
+public class MiruDeltaAuthzIndex<BM extends IBM, IBM> implements MiruAuthzIndex<IBM>, Mergeable {
 
-    private final MiruBitmaps<BM> bitmaps;
+    private final MiruBitmaps<BM, IBM> bitmaps;
     private final long indexId;
-    private final MiruAuthzCache<BM> cache;
-    private final MiruAuthzIndex<BM> backingIndex;
+    private final MiruAuthzCache<BM, IBM> cache;
+    private final MiruAuthzIndex<IBM> backingIndex;
     private final Cache<MiruFieldIndex.IndexKey, Optional<?>> fieldIndexCache;
-    private final ConcurrentMap<String, MiruDeltaInvertedIndex<BM>> authzDeltas = Maps.newConcurrentMap();
+    private final ConcurrentMap<String, MiruDeltaInvertedIndex<BM, IBM>> authzDeltas = Maps.newConcurrentMap();
 
-    public MiruDeltaAuthzIndex(MiruBitmaps<BM> bitmaps,
+    public MiruDeltaAuthzIndex(MiruBitmaps<BM, IBM> bitmaps,
         long indexId,
-        MiruAuthzCache<BM> cache,
-        MiruAuthzIndex<BM> backingIndex,
+        MiruAuthzCache<BM, IBM> cache,
+        MiruAuthzIndex<IBM> backingIndex,
         Cache<MiruFieldIndex.IndexKey, Optional<?>> fieldIndexCache) {
         this.bitmaps = bitmaps;
         this.indexId = indexId;
@@ -39,8 +39,8 @@ public class MiruDeltaAuthzIndex<BM> implements MiruAuthzIndex<BM>, Mergeable {
     }
 
     @Override
-    public MiruInvertedIndex<BM> getAuthz(String authz) throws Exception {
-        MiruDeltaInvertedIndex<BM> delta = authzDeltas.get(authz);
+    public MiruInvertedIndex<IBM> getAuthz(String authz) throws Exception {
+        MiruDeltaInvertedIndex<BM, IBM> delta = authzDeltas.get(authz);
         if (delta != null) {
             return delta;
         } else {
@@ -71,12 +71,12 @@ public class MiruDeltaAuthzIndex<BM> implements MiruAuthzIndex<BM>, Mergeable {
         cache.increment(authz);
     }
 
-    private MiruDeltaInvertedIndex<BM> getOrCreate(String authz) throws Exception {
-        MiruDeltaInvertedIndex<BM> delta = authzDeltas.get(authz);
+    private MiruDeltaInvertedIndex<BM, IBM> getOrCreate(String authz) throws Exception {
+        MiruDeltaInvertedIndex<BM, IBM> delta = authzDeltas.get(authz);
         if (delta == null) {
-            delta = new MiruDeltaInvertedIndex<>(bitmaps, backingIndex.getAuthz(authz), new MiruDeltaInvertedIndex.Delta<BM>(),
+            delta = new MiruDeltaInvertedIndex<>(bitmaps, backingIndex.getAuthz(authz), new MiruDeltaInvertedIndex.Delta<IBM>(),
                 new MiruFieldIndex.IndexKey(indexId, MiruAuthzUtils.key(authz)), fieldIndexCache, null);
-            MiruDeltaInvertedIndex<BM> existing = authzDeltas.putIfAbsent(authz, delta);
+            MiruDeltaInvertedIndex<BM, IBM> existing = authzDeltas.putIfAbsent(authz, delta);
             if (existing != null) {
                 delta = existing;
             }
@@ -92,7 +92,7 @@ public class MiruDeltaAuthzIndex<BM> implements MiruAuthzIndex<BM>, Mergeable {
 
     @Override
     public void merge(byte[] primitiveBuffer) throws Exception {
-        for (Map.Entry<String, MiruDeltaInvertedIndex<BM>> entry : authzDeltas.entrySet()) {
+        for (Map.Entry<String, MiruDeltaInvertedIndex<BM, IBM>> entry : authzDeltas.entrySet()) {
             entry.getValue().merge(primitiveBuffer);
             cache.increment(entry.getKey());
         }

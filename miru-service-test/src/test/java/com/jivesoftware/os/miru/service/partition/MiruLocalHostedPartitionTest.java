@@ -43,7 +43,7 @@ import com.jivesoftware.os.miru.api.topology.RangeMinMax;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.api.wal.RCVSCursor;
 import com.jivesoftware.os.miru.api.wal.RCVSSipCursor;
-import com.jivesoftware.os.miru.bitmaps.ewah.MiruBitmapsEWAH;
+import com.jivesoftware.os.miru.bitmaps.roaring5.buffer.MiruBitmapsRoaringBuffer;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruRegistryClusterClient;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSetDirector;
@@ -95,6 +95,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import org.merlin.config.BindInterfaceToConfiguration;
+import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
+import org.roaringbitmap.buffer.MutableRoaringBitmap;
 import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -133,8 +135,8 @@ public class MiruLocalHostedPartitionTest {
     private MiruPartitionId partitionId;
     private MiruTenantId tenantId;
     private MiruHost host;
-    private MiruBitmapsEWAH bitmaps;
-    private MiruIndexer<EWAHCompressedBitmap> indexer;
+    private MiruBitmapsRoaringBuffer bitmaps;
+    private MiruIndexer<MutableRoaringBitmap, ImmutableRoaringBitmap> indexer;
     private MiruLocalHostedPartition.Timings timings;
     private long topologyIsStaleAfterMillis = TimeUnit.HOURS.toMillis(1);
 
@@ -170,7 +172,7 @@ public class MiruLocalHostedPartitionTest {
         schemaProvider = mock(MiruSchemaProvider.class);
         when(schemaProvider.getSchema(any(MiruTenantId.class))).thenReturn(schema);
 
-        bitmaps = new MiruBitmapsEWAH(2);
+        bitmaps = new MiruBitmapsRoaringBuffer();
         indexer = new MiruIndexer<>(new MiruIndexAuthz<>(),
             new MiruIndexFieldValues<>(),
             new MiruIndexBloom<>(new BloomIndex<>(bitmaps, Hashing.murmur3_128(), 100_000, 0.01f)),
@@ -298,7 +300,8 @@ public class MiruLocalHostedPartitionTest {
 
     @Test
     public void testBootstrapToOnline() throws Exception {
-        MiruLocalHostedPartition<EWAHCompressedBitmap, RCVSCursor, RCVSSipCursor> localHostedPartition = getEwahCompressedBitmapMiruLocalHostedPartition();
+        MiruLocalHostedPartition<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSCursor, RCVSSipCursor> localHostedPartition =
+            getRoaringLocalHostedPartition();
 
         setActive(true);
         waitForRef(bootstrapRunnable).run();
@@ -319,7 +322,8 @@ public class MiruLocalHostedPartitionTest {
 
     @Test
     public void testInactiveToOffline() throws Exception {
-        MiruLocalHostedPartition<EWAHCompressedBitmap, RCVSCursor, RCVSSipCursor> localHostedPartition = getEwahCompressedBitmapMiruLocalHostedPartition();
+        MiruLocalHostedPartition<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSCursor, RCVSSipCursor> localHostedPartition =
+            getRoaringLocalHostedPartition();
 
         setActive(true);
         waitForRef(bootstrapRunnable).run(); // enters bootstrap
@@ -336,7 +340,8 @@ public class MiruLocalHostedPartitionTest {
     @Test
     public void testQueryHandleOfflineMemMappedHotDeploy() throws Exception {
         byte[] primitiveBuffer = new byte[8];
-        MiruLocalHostedPartition<EWAHCompressedBitmap, RCVSCursor, RCVSSipCursor> localHostedPartition = getEwahCompressedBitmapMiruLocalHostedPartition();
+        MiruLocalHostedPartition<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSCursor, RCVSSipCursor> localHostedPartition =
+            getRoaringLocalHostedPartition();
 
         setActive(true);
         waitForRef(bootstrapRunnable).run(); // enters bootstrap
@@ -360,7 +365,8 @@ public class MiruLocalHostedPartitionTest {
     @Test(expectedExceptions = MiruPartitionUnavailableException.class)
     public void testQueryHandleOfflineMemoryException() throws Exception {
         byte[] primitiveBuffer = new byte[8];
-        MiruLocalHostedPartition<EWAHCompressedBitmap, RCVSCursor, RCVSSipCursor> localHostedPartition = getEwahCompressedBitmapMiruLocalHostedPartition();
+        MiruLocalHostedPartition<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSCursor, RCVSSipCursor> localHostedPartition =
+            getRoaringLocalHostedPartition();
 
         setActive(true);
         waitForRef(bootstrapRunnable).run(); // enters bootstrap
@@ -379,7 +385,8 @@ public class MiruLocalHostedPartitionTest {
 
     @Test
     public void testRemove() throws Exception {
-        MiruLocalHostedPartition<EWAHCompressedBitmap, RCVSCursor, RCVSSipCursor> localHostedPartition = getEwahCompressedBitmapMiruLocalHostedPartition();
+        MiruLocalHostedPartition<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSCursor, RCVSSipCursor> localHostedPartition =
+            getRoaringLocalHostedPartition();
 
         setActive(true);
         waitForRef(bootstrapRunnable).run(); // enters bootstrap
@@ -395,7 +402,8 @@ public class MiruLocalHostedPartitionTest {
     @Test
     public void testSchemaNotRegistered_checkActive() throws Exception {
         when(schemaProvider.getSchema(any(MiruTenantId.class))).thenThrow(new MiruSchemaUnvailableException("test"));
-        MiruLocalHostedPartition<EWAHCompressedBitmap, RCVSCursor, RCVSSipCursor> localHostedPartition = getEwahCompressedBitmapMiruLocalHostedPartition();
+        MiruLocalHostedPartition<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSCursor, RCVSSipCursor> localHostedPartition =
+            getRoaringLocalHostedPartition();
 
         assertEquals(localHostedPartition.getState(), MiruPartitionState.offline);
         assertEquals(localHostedPartition.getStorage(), defaultStorage);
@@ -412,7 +420,8 @@ public class MiruLocalHostedPartitionTest {
     @Test
     public void testSchemaRegisteredLate() throws Exception {
         when(schemaProvider.getSchema(any(MiruTenantId.class))).thenThrow(new MiruSchemaUnvailableException("test"));
-        MiruLocalHostedPartition<EWAHCompressedBitmap, RCVSCursor, RCVSSipCursor> localHostedPartition = getEwahCompressedBitmapMiruLocalHostedPartition();
+        MiruLocalHostedPartition<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSCursor, RCVSSipCursor> localHostedPartition =
+            getRoaringLocalHostedPartition();
 
         assertEquals(localHostedPartition.getState(), MiruPartitionState.offline);
         assertEquals(localHostedPartition.getStorage(), defaultStorage);
@@ -436,7 +445,7 @@ public class MiruLocalHostedPartitionTest {
         assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.disk);
     }
 
-    private MiruLocalHostedPartition<EWAHCompressedBitmap, RCVSCursor, RCVSSipCursor> getEwahCompressedBitmapMiruLocalHostedPartition()
+    private MiruLocalHostedPartition<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSCursor, RCVSSipCursor> getRoaringLocalHostedPartition()
         throws Exception {
         return new MiruLocalHostedPartition<>(new MiruStats(), bitmaps, coord, -1, contextFactory, sipTrackerFactory,
             walClient, partitionEventHandler, rebuildDirector, scheduledBootstrapService, scheduledRebuildService,

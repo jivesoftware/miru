@@ -9,13 +9,13 @@ import java.util.List;
  *
  * @author jonathan
  */
-public interface MiruFieldIndex<BM> {
+public interface MiruFieldIndex<IBM> {
 
-    MiruInvertedIndex<BM> get(int fieldId, MiruTermId termId) throws Exception;
+    MiruInvertedIndex<IBM> get(int fieldId, MiruTermId termId) throws Exception;
 
-    MiruInvertedIndex<BM> get(int fieldId, MiruTermId termId, int considerIfIndexIdGreaterThanN) throws Exception;
+    MiruInvertedIndex<IBM> get(int fieldId, MiruTermId termId, int considerIfIndexIdGreaterThanN) throws Exception;
 
-    MiruInvertedIndex<BM> getOrCreateInvertedIndex(int fieldId, MiruTermId term) throws Exception;
+    MiruInvertedIndex<IBM> getOrCreateInvertedIndex(int fieldId, MiruTermId term) throws Exception;
 
     long getVersion(int fieldId, MiruTermId termId) throws Exception;
 

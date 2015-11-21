@@ -56,18 +56,18 @@ public class DistinctCountInboxQuestion implements Question<DistinctCountQuery, 
     }
 
     @Override
-    public <BM> MiruPartitionResponse<DistinctCountAnswer> askLocal(MiruRequestHandle<BM, ?> handle, Optional<DistinctCountReport> report) throws Exception {
+    public <BM extends IBM, IBM> MiruPartitionResponse<DistinctCountAnswer> askLocal(MiruRequestHandle<BM, IBM, ?> handle, Optional<DistinctCountReport> report) throws Exception {
         byte[] primitiveBuffer = new byte[8];
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
-        MiruRequestContext<BM, ?> context = handle.getRequestContext();
-        MiruBitmaps<BM> bitmaps = handle.getBitmaps();
+        MiruRequestContext<IBM, ?> context = handle.getRequestContext();
+        MiruBitmaps<BM, IBM> bitmaps = handle.getBitmaps();
 
         if (handle.canBackfill()) {
             backfillerizer.backfill(bitmaps, context, request.query.streamFilter, solutionLog, request.tenantId,
                 handle.getCoord().partitionId, request.query.streamId);
         }
 
-        List<BM> ands = new ArrayList<>();
+        List<IBM> ands = new ArrayList<>();
         if (!MiruTimeRange.ALL_TIME.equals(request.query.timeRange)) {
             MiruTimeRange timeRange = request.query.timeRange;
 
@@ -81,7 +81,7 @@ public class DistinctCountInboxQuestion implements Question<DistinctCountQuery, 
             ands.add(bitmaps.buildTimeRangeMask(context.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp, primitiveBuffer));
         }
 
-        Optional<BM> inbox = context.getInboxIndex().getInbox(request.query.streamId).getIndex(primitiveBuffer);
+        Optional<IBM> inbox = context.getInboxIndex().getInbox(request.query.streamId).getIndex(primitiveBuffer);
         if (inbox.isPresent()) {
             ands.add(inbox.get());
         } else {
@@ -91,16 +91,15 @@ public class DistinctCountInboxQuestion implements Question<DistinctCountQuery, 
         }
 
         if (!MiruFilter.NO_FILTER.equals(request.query.constraintsFilter)) {
-            BM filtered = bitmaps.create();
-            aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), request.query.constraintsFilter,
-                solutionLog, filtered, null, context.getActivityIndex().lastId(primitiveBuffer), -1, primitiveBuffer);
+            BM filtered = aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(),
+                request.query.constraintsFilter, solutionLog, null, context.getActivityIndex().lastId(primitiveBuffer), -1, primitiveBuffer);
             ands.add(filtered);
         }
         if (!MiruAuthzExpression.NOT_PROVIDED.equals(request.authzExpression)) {
             ands.add(context.getAuthzIndex().getCompositeAuthz(request.authzExpression, primitiveBuffer));
         }
         if (unreadOnly) {
-            Optional<BM> unreadIndex = context.getUnreadTrackingIndex().getUnread(request.query.streamId).getIndex(primitiveBuffer);
+            Optional<IBM> unreadIndex = context.getUnreadTrackingIndex().getUnread(request.query.streamId).getIndex(primitiveBuffer);
             if (unreadIndex.isPresent()) {
                 ands.add(unreadIndex.get());
             }

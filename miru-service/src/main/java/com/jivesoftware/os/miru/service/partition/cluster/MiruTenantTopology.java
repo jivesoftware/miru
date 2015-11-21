@@ -26,22 +26,22 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListMap;
 
-public class MiruTenantTopology<BM> {
+public class MiruTenantTopology<BM extends IBM, IBM> {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final long ensurePartitionsIntervalInMillis;
-    private final MiruBitmaps<BM> bitmaps;
+    private final MiruBitmaps<BM, IBM> bitmaps;
     private final MiruHost localHost;
     private final MiruTenantId tenantId;
     private final MiruLocalPartitionFactory<?, ?> localPartitionFactory;
-    private final ConcurrentSkipListMap<MiruPartitionId, MiruLocalHostedPartition<BM, ?, ?>> topology;
+    private final ConcurrentSkipListMap<MiruPartitionId, MiruLocalHostedPartition<BM, IBM, ?, ?>> topology;
 
     private final StripingLocksProvider<MiruPartitionId> topologyLock = new StripingLocksProvider<>(64);
 
     public MiruTenantTopology(
         long ensurePartitionsIntervalInMillis,
-        MiruBitmaps<BM> bitmaps,
+        MiruBitmaps<BM, IBM> bitmaps,
         MiruHost localHost,
         MiruTenantId tenantId,
         MiruLocalPartitionFactory<?, ?> localPartitionFactory) {
@@ -78,26 +78,26 @@ public class MiruTenantTopology<BM> {
     }
 
     public void warm() throws Exception {
-        Map.Entry<MiruPartitionId, MiruLocalHostedPartition<BM, ?, ?>> lastEntry = topology.lastEntry();
+        Map.Entry<MiruPartitionId, MiruLocalHostedPartition<BM, IBM, ?, ?>> lastEntry = topology.lastEntry();
         if (lastEntry != null) {
             lastEntry.getValue().warm();
         }
     }
 
     public void warm(MiruPartitionId partitionId) throws Exception {
-        MiruLocalHostedPartition<BM, ?, ?> hostedPartition = topology.get(partitionId);
+        MiruLocalHostedPartition<BM, IBM, ?, ?> hostedPartition = topology.get(partitionId);
         if (hostedPartition != null) {
             hostedPartition.warm();
         }
     }
 
     public boolean updateStorage(MiruPartitionId partitionId, MiruBackingStorage backingStorage, byte[] primitiveBuffer) throws Exception {
-        Optional<MiruLocalHostedPartition<BM, ?, ?>> partition = getPartition(partitionId);
+        Optional<MiruLocalHostedPartition<BM, IBM, ?, ?>> partition = getPartition(partitionId);
         return partition.isPresent() && partition.get().setStorage(backingStorage, primitiveBuffer);
     }
 
     public void setStorage(MiruPartitionId partitionId, MiruBackingStorage storage, byte[] primitiveBuffer) throws Exception {
-        Optional<MiruLocalHostedPartition<BM, ?, ?>> partition = getPartition(partitionId);
+        Optional<MiruLocalHostedPartition<BM, IBM, ?, ?>> partition = getPartition(partitionId);
         if (partition.isPresent()) {
             partition.get().setStorage(storage, primitiveBuffer);
         }
@@ -115,18 +115,18 @@ public class MiruTenantTopology<BM> {
             }
         }
 
-        for (MiruLocalHostedPartition<BM, ?, ?> hostedPartition : topology.values()) {
+        for (MiruLocalHostedPartition<BM, IBM, ?, ?> hostedPartition : topology.values()) {
             if (hostedPartition.isExpired()) {
                 removeTopology(hostedPartition.getPartitionId());
             }
         }
     }
 
-    public Collection<MiruLocalHostedPartition<BM, ?, ?>> allPartitions() {
+    public Collection<MiruLocalHostedPartition<BM, IBM, ?, ?>> allPartitions() {
         return Collections.unmodifiableCollection(topology.values());
     }
 
-    public Optional<MiruLocalHostedPartition<BM, ?, ?>> getPartition(MiruPartitionId partitionId) {
+    public Optional<MiruLocalHostedPartition<BM, IBM, ?, ?>> getPartition(MiruPartitionId partitionId) {
         return Optional.fromNullable(topology.get(partitionId));
     }
 
@@ -165,7 +165,7 @@ public class MiruTenantTopology<BM> {
 
     private void ensureTopology(MiruPartitionId partitionId, boolean expires) throws Exception {
         synchronized (topologyLock.lock(partitionId, 0)) {
-            MiruLocalHostedPartition<BM, ?, ?> hostedPartition = topology.get(partitionId);
+            MiruLocalHostedPartition<BM, IBM, ?, ?> hostedPartition = topology.get(partitionId);
             if (hostedPartition != null) {
                 if (!expires) {
                     hostedPartition.cancelExpiration();
@@ -174,7 +174,7 @@ public class MiruTenantTopology<BM> {
                 MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, partitionId, localHost);
                 long expireAfterMillis = expires ? ensurePartitionsIntervalInMillis * 2 : -1;
                 //TODO unnecessary cast, but the wildcards cause some IDE confusion
-                MiruLocalHostedPartition<BM, ?, ?> partition = localPartitionFactory.create((MiruBitmaps) bitmaps, coord, expireAfterMillis);
+                MiruLocalHostedPartition<BM, IBM, ?, ?> partition = localPartitionFactory.create((MiruBitmaps) bitmaps, coord, expireAfterMillis);
                 topology.put(partitionId, partition);
             }
         }

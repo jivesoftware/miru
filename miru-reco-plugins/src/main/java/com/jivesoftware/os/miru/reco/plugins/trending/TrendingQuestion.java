@@ -77,16 +77,16 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
     }
 
     @Override
-    public <BM> MiruPartitionResponse<AnalyticsAnswer> askLocal(MiruRequestHandle<BM, ?> handle, Optional<TrendingReport> report) throws Exception {
+    public <BM extends IBM, IBM> MiruPartitionResponse<AnalyticsAnswer> askLocal(MiruRequestHandle<BM, IBM, ?> handle, Optional<TrendingReport> report) throws Exception {
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
-        MiruRequestContext<BM, ? extends MiruSipCursor<?>> context = handle.getRequestContext();
+        MiruRequestContext<IBM, ? extends MiruSipCursor<?>> context = handle.getRequestContext();
 
         MiruPartitionCoord coord = handle.getCoord();
         MiruSchema schema = context.getSchema();
         int fieldId = schema.getFieldId(request.query.aggregateCountAroundField);
         MiruFieldDefinition fieldDefinition = schema.getFieldDefinition(fieldId);
 
-        MiruFieldIndex<BM> fieldIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
+        MiruFieldIndex<IBM> fieldIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
         MiruTermComposer termComposer = context.getTermComposer();
 
         long upperTime = combinedTimeRange.largestTimestamp;

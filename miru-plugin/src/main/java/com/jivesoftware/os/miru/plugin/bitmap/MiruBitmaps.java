@@ -18,6 +18,7 @@ package com.jivesoftware.os.miru.plugin.bitmap;
 import com.google.common.base.Optional;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
+import com.jivesoftware.os.miru.plugin.index.MiruTxIndex;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.util.Collection;
@@ -26,7 +27,7 @@ import java.util.List;
 /**
  * @author jonathan
  */
-public interface MiruBitmaps<BM> {
+public interface MiruBitmaps<BM extends IBM, IBM> {
 
     BM create();
 
@@ -34,19 +35,19 @@ public interface MiruBitmaps<BM> {
 
     BM[] createArrayOf(int size);
 
-    void append(BM container, BM bitmap, int... indexes);
+    void append(BM container, IBM bitmap, int... indexes);
 
-    void set(BM container, BM bitmap, int... indexes);
+    void set(BM container, IBM bitmap, int... indexes);
 
-    void remove(BM container, BM bitmap, int... indexes);
+    void remove(BM container, IBM bitmap, int... indexes);
 
-    boolean isSet(BM bitmap, int index);
+    boolean isSet(IBM bitmap, int index);
 
-    void extend(BM container, BM bitmap, List<Integer> indexes, int extendToIndex);
+    void extend(BM container, IBM bitmap, List<Integer> indexes, int extendToIndex);
 
     void clear(BM bitmap);
 
-    long cardinality(BM bitmap);
+    long cardinality(IBM bitmap);
 
     /**
      * Returns cardinalities for the bitmap bounded by the given indexes. The number of cardinalities returned will be 1 less than
@@ -56,62 +57,68 @@ public interface MiruBitmaps<BM> {
      * @param indexBoundaries lower boundary is inclusive, upper boundary is exclusive
      * @return the cardinalities
      */
-    void boundedCardinalities(BM container, int[] indexBoundaries, long[] rawWaveform);
+    void boundedCardinalities(IBM container, int[] indexBoundaries, long[] rawWaveform);
 
     boolean supportsInPlace();
 
-    boolean isEmpty(BM bitmap);
+    boolean isEmpty(IBM bitmap);
 
-    long sizeInBytes(BM bitmap);
+    long sizeInBytes(IBM bitmap);
 
-    long sizeInBits(BM bitmap);
+    long sizeInBits(IBM bitmap);
 
-    long serializedSizeInBytes(BM bitmap);
+    long serializedSizeInBytes(IBM bitmap);
 
     BM deserialize(DataInput dataInput) throws Exception;
 
-    void serialize(BM bitmap, DataOutput dataOutput) throws Exception;
+    void serialize(IBM bitmap, DataOutput dataOutput) throws Exception;
 
-    void inPlaceOr(BM original, BM or);
+    void inPlaceOr(BM original, IBM or);
 
-    void or(BM container, Collection<BM> bitmaps);
+    void or(BM container, Collection<IBM> bitmaps);
 
-    void inPlaceAnd(BM original, BM bitmap);
+    BM orTx(List<MiruTxIndex<IBM>> indexes, byte[] primitiveBuffer) throws Exception;
 
-    void and(BM container, Collection<BM> bitmaps);
+    void inPlaceAnd(BM original, IBM bitmap);
 
-    void inPlaceAndNot(BM original, BM not);
+    void and(BM container, Collection<IBM> bitmaps);
 
-    void inPlaceAndNot(BM original, MiruInvertedIndex<BM> not, byte[] primitiveBuffer) throws Exception;
+    BM andTx(List<MiruTxIndex<IBM>> indexes, byte[] primitiveBuffer) throws Exception;
 
-    void andNot(BM container, BM original, BM not);
+    void inPlaceAndNot(BM original, IBM not);
 
-    void andNot(BM container, BM original, List<BM> not);
+    void inPlaceAndNot(BM original, MiruInvertedIndex<IBM> not, byte[] primitiveBuffer) throws Exception;
 
-    void copy(BM container, BM original);
+    void andNot(BM container, IBM original, IBM not);
 
-    CardinalityAndLastSetBit inPlaceAndNotWithCardinalityAndLastSetBit(BM original, BM not);
+    void andNot(BM container, IBM original, List<IBM> not);
 
-    CardinalityAndLastSetBit andNotWithCardinalityAndLastSetBit(BM container, BM original, BM not);
+    BM andNotTx(MiruTxIndex<IBM> original, List<MiruTxIndex<IBM>> not, byte[] primitiveBuffer) throws Exception;
 
-    CardinalityAndLastSetBit andWithCardinalityAndLastSetBit(BM container, List<BM> ands);
+    void copy(BM container, IBM original);
 
-    void orToSourceSize(BM container, BM source, BM mask);
+    CardinalityAndLastSetBit inPlaceAndNotWithCardinalityAndLastSetBit(BM original, IBM not);
 
-    void andNotToSourceSize(BM container, BM source, BM mask);
+    CardinalityAndLastSetBit andNotWithCardinalityAndLastSetBit(BM container, IBM original, IBM not);
 
-    void andNotToSourceSize(BM container, BM source, List<BM> masks);
+    CardinalityAndLastSetBit andWithCardinalityAndLastSetBit(BM container, List<IBM> ands);
 
-    BM buildIndexMask(int largestIndex, Optional<BM> andNotMask);
+    void orToSourceSize(BM container, IBM source, IBM mask);
 
-    BM buildTimeRangeMask(MiruTimeIndex timeIndex, long smallestTimestamp, long largestTimestamp, byte[] primitiveBuffer);
+    void andNotToSourceSize(BM container, IBM source, IBM mask);
 
-    MiruIntIterator intIterator(BM bitmap);
+    void andNotToSourceSize(BM container, IBM source, List<IBM> masks);
 
-    MiruIntIterator descendingIntIterator(BM bitmap);
+    IBM buildIndexMask(int largestIndex, Optional<IBM> andNotMask);
 
-    int[] indexes(BM bitmap);
+    IBM buildTimeRangeMask(MiruTimeIndex timeIndex, long smallestTimestamp, long largestTimestamp, byte[] primitiveBuffer);
 
-    int lastSetBit(BM bitmap);
+    MiruIntIterator intIterator(IBM bitmap);
+
+    MiruIntIterator descendingIntIterator(IBM bitmap);
+
+    int[] indexes(IBM bitmap);
+
+    int lastSetBit(IBM bitmap);
 
 }

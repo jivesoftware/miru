@@ -185,5 +185,5 @@ public interface MiruServiceConfig extends Config {
     int getVersionCacheConcurrencyLevel();
 
     @ClassDefault(IllegalStateException.class)
-    Class<? extends MiruBitmaps<?>> getBitmapsClass();
+    Class<? extends MiruBitmaps<?, ?>> getBitmapsClass();
 }

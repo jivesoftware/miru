@@ -30,7 +30,7 @@ import java.util.List;
  *
  * @author jonathan
  */
-public class BloomIndex<BM> {
+public class BloomIndex<BM extends IBM, IBM> {
 
     static public interface HasValue {
 
@@ -42,12 +42,12 @@ public class BloomIndex<BM> {
         void mightContain(V value);
     }
 
-    private final MiruBitmaps<BM> bitmaps;
+    private final MiruBitmaps<BM, IBM> bitmaps;
     private final HashFunction hashFunction;
     private final int numBits;
     private final int numHashFunctions;
 
-    public BloomIndex(MiruBitmaps<BM> bitmaps, HashFunction hashFunction, int expectedInsertions, float falsePositiveProbability) {
+    public BloomIndex(MiruBitmaps<BM, IBM> bitmaps, HashFunction hashFunction, int expectedInsertions, float falsePositiveProbability) {
         this.bitmaps = bitmaps;
         this.hashFunction = hashFunction;
 

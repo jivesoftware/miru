@@ -15,13 +15,16 @@
  */
 package com.jivesoftware.os.miru.bitmaps.roaring4;
 
+import com.fasterxml.jackson.databind.util.ByteBufferBackedInputStream;
 import com.google.common.base.Optional;
 import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
+import com.jivesoftware.os.miru.plugin.index.MiruTxIndex;
 import java.io.DataInput;
+import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.util.Arrays;
 import java.util.Collection;
@@ -34,7 +37,7 @@ import org.roaringbitmap.RoaringInspection;
 /**
  * @author jonathan
  */
-public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap> {
+public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBitmap> {
 
     private boolean append(RoaringBitmap bitmap, int... indexes) {
         if (indexes.length == 1) {
@@ -147,6 +150,45 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap> {
     }
 
     @Override
+    public RoaringBitmap orTx(List<MiruTxIndex<RoaringBitmap>> indexes, byte[] primitiveBuffer) throws Exception {
+        if (indexes.isEmpty()) {
+            return new RoaringBitmap();
+        }
+
+        RoaringBitmap container = indexes.get(0).txIndex((bitmap, buffer) -> {
+            if (bitmap != null) {
+                return bitmap;
+            } else if (buffer != null) {
+                RoaringBitmap deser = new RoaringBitmap();
+                deser.deserialize(new DataInputStream(new ByteBufferBackedInputStream(buffer)));
+                return deser;
+            } else {
+                return new RoaringBitmap();
+            }
+        }, primitiveBuffer);
+
+        for (MiruTxIndex<RoaringBitmap> index : indexes.subList(1, indexes.size())) {
+            RoaringBitmap or = index.txIndex((bitmap, buffer) -> {
+                if (bitmap != null) {
+                    return bitmap;
+                } else if (buffer != null) {
+                    RoaringBitmap deser = new RoaringBitmap();
+                    deser.deserialize(new DataInputStream(new ByteBufferBackedInputStream(buffer)));
+                    return deser;
+                } else {
+                    return null;
+                }
+            }, primitiveBuffer);
+
+            if (or != null) {
+                container.or(or);
+            }
+        }
+
+        return container;
+    }
+
+    @Override
     public void inPlaceAnd(RoaringBitmap original, RoaringBitmap bitmap) {
         original.and(bitmap);
     }
@@ -154,6 +196,51 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap> {
     @Override
     public void and(RoaringBitmap container, Collection<RoaringBitmap> bitmaps) {
         RoaringAggregation.and(container, bitmaps.toArray(new RoaringBitmap[bitmaps.size()]));
+    }
+
+    @Override
+    public RoaringBitmap andTx(List<MiruTxIndex<RoaringBitmap>> indexes, byte[] primitiveBuffer) throws Exception {
+        if (indexes.isEmpty()) {
+            return new RoaringBitmap();
+        }
+
+        RoaringBitmap container = indexes.get(0).txIndex((bitmap, buffer) -> {
+            if (bitmap != null) {
+                return bitmap;
+            } else if (buffer != null) {
+                RoaringBitmap deser = new RoaringBitmap();
+                deser.deserialize(new DataInputStream(new ByteBufferBackedInputStream(buffer)));
+                return deser;
+            } else {
+                return new RoaringBitmap();
+            }
+        }, primitiveBuffer);
+
+        if (container.isEmpty()) {
+            return container;
+        }
+
+        for (MiruTxIndex<RoaringBitmap> index : indexes.subList(1, indexes.size())) {
+            RoaringBitmap and = index.txIndex((bitmap, buffer) -> {
+                if (bitmap != null) {
+                    return bitmap;
+                } else if (buffer != null) {
+                    RoaringBitmap deser = new RoaringBitmap();
+                    deser.deserialize(new DataInputStream(new ByteBufferBackedInputStream(buffer)));
+                    return deser;
+                } else {
+                    return new RoaringBitmap();
+                }
+            }, primitiveBuffer);
+
+            container.and(and);
+
+            if (container.isEmpty()) {
+                return container;
+            }
+        }
+
+        return container;
     }
 
     @Override
@@ -188,6 +275,53 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap> {
                 }
             }
         }
+    }
+
+    @Override
+    public RoaringBitmap andNotTx(MiruTxIndex<RoaringBitmap> original, List<MiruTxIndex<RoaringBitmap>> not, byte[] primitiveBuffer) throws Exception {
+        if (not.isEmpty()) {
+            return new RoaringBitmap();
+        }
+
+        RoaringBitmap container = original.txIndex((bitmap, buffer) -> {
+            if (bitmap != null) {
+                return bitmap;
+            } else if (buffer != null) {
+                RoaringBitmap deser = new RoaringBitmap();
+                deser.deserialize(new DataInputStream(new ByteBufferBackedInputStream(buffer)));
+                return deser;
+            } else {
+                return new RoaringBitmap();
+            }
+        }, primitiveBuffer);
+
+        if (container.isEmpty()) {
+            return container;
+        }
+
+        for (MiruTxIndex<RoaringBitmap> index : not) {
+            RoaringBitmap andNot = index.txIndex((bitmap, buffer) -> {
+                if (bitmap != null) {
+                    return bitmap;
+                } else if (buffer != null) {
+                    RoaringBitmap deser = new RoaringBitmap();
+                    deser.deserialize(new DataInputStream(new ByteBufferBackedInputStream(buffer)));
+                    return deser;
+                } else {
+                    return null;
+                }
+            }, primitiveBuffer);
+
+            if (andNot != null) {
+                container.andNot(andNot);
+            }
+
+            if (container.isEmpty()) {
+                return container;
+            }
+        }
+
+        return container;
     }
 
     @Override

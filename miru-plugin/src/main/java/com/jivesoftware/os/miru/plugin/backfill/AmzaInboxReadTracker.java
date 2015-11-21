@@ -49,8 +49,8 @@ public class AmzaInboxReadTracker implements MiruInboxReadTracker {
     }
 
     @Override
-    public <BM> void sipAndApplyReadTracking(final MiruBitmaps<BM> bitmaps,
-        final MiruRequestContext<BM, ?> requestContext,
+    public <BM extends IBM, IBM> void sipAndApplyReadTracking(final MiruBitmaps<BM, IBM> bitmaps,
+        final MiruRequestContext<IBM, ?> requestContext,
         MiruTenantId tenantId,
         MiruPartitionId partitionId,
         MiruStreamId streamId,

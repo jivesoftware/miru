@@ -15,17 +15,17 @@ import java.util.concurrent.ConcurrentMap;
 /**
  * DELTA FORCE
  */
-public class MiruDeltaInboxIndex<BM> implements MiruInboxIndex<BM>, Mergeable {
+public class MiruDeltaInboxIndex<BM extends IBM, IBM> implements MiruInboxIndex<IBM>, Mergeable {
 
-    private final MiruBitmaps<BM> bitmaps;
+    private final MiruBitmaps<BM, IBM> bitmaps;
     private final long indexId;
-    private final MiruInboxIndex<BM> backingIndex;
+    private final MiruInboxIndex<IBM> backingIndex;
     private final Cache<MiruFieldIndex.IndexKey, Optional<?>> fieldIndexCache;
-    private final ConcurrentMap<MiruStreamId, MiruDeltaInvertedIndex<BM>> inboxDeltas = Maps.newConcurrentMap();
+    private final ConcurrentMap<MiruStreamId, MiruDeltaInvertedIndex<BM, IBM>> inboxDeltas = Maps.newConcurrentMap();
 
-    public MiruDeltaInboxIndex(MiruBitmaps<BM> bitmaps,
+    public MiruDeltaInboxIndex(MiruBitmaps<BM, IBM> bitmaps,
         long indexId,
-        MiruInboxIndex<BM> backingIndex,
+        MiruInboxIndex<IBM> backingIndex,
         Cache<MiruFieldIndex.IndexKey, Optional<?>> fieldIndexCache) {
         this.bitmaps = bitmaps;
         this.indexId = indexId;
@@ -39,12 +39,12 @@ public class MiruDeltaInboxIndex<BM> implements MiruInboxIndex<BM>, Mergeable {
     }
 
     @Override
-    public MiruInvertedIndex<BM> getInbox(MiruStreamId streamId) throws Exception {
-        MiruDeltaInvertedIndex<BM> delta = inboxDeltas.get(streamId);
+    public MiruInvertedIndex<IBM> getInbox(MiruStreamId streamId) throws Exception {
+        MiruDeltaInvertedIndex<BM, IBM> delta = inboxDeltas.get(streamId);
         if (delta == null) {
-            delta = new MiruDeltaInvertedIndex<>(bitmaps, backingIndex.getInbox(streamId), new MiruDeltaInvertedIndex.Delta<BM>(),
+            delta = new MiruDeltaInvertedIndex<>(bitmaps, backingIndex.getInbox(streamId), new MiruDeltaInvertedIndex.Delta<IBM>(),
                 new MiruFieldIndex.IndexKey(indexId, streamId.getBytes()), fieldIndexCache, null);
-            MiruDeltaInvertedIndex<BM> existing = inboxDeltas.putIfAbsent(streamId, delta);
+            MiruDeltaInvertedIndex<BM, IBM> existing = inboxDeltas.putIfAbsent(streamId, delta);
             if (existing != null) {
                 delta = existing;
             }
@@ -69,7 +69,7 @@ public class MiruDeltaInboxIndex<BM> implements MiruInboxIndex<BM>, Mergeable {
 
     @Override
     public void merge(byte[] primitiveBuffer) throws Exception {
-        for (MiruDeltaInvertedIndex<BM> delta : inboxDeltas.values()) {
+        for (MiruDeltaInvertedIndex<BM, IBM> delta : inboxDeltas.values()) {
             delta.merge(primitiveBuffer);
         }
         inboxDeltas.clear();

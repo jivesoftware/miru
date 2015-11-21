@@ -24,7 +24,7 @@ public class MiruTenantTopologyFactory {
         this.localPartitionFactory = localPartitionFactory;
     }
 
-    public MiruTenantTopology<?> create(MiruTenantId tenantId) {
+    public MiruTenantTopology<?, ?> create(MiruTenantId tenantId) {
         return new MiruTenantTopology<>(config.getEnsurePartitionsIntervalInMillis(),
             bitmapsProvider.getBitmaps(tenantId),
             localHost,
@@ -32,7 +32,7 @@ public class MiruTenantTopologyFactory {
             localPartitionFactory);
     }
 
-    public void prioritizeRebuild(MiruLocalHostedPartition<?, ?, ?> partition) {
+    public void prioritizeRebuild(MiruLocalHostedPartition<?, ?, ?, ?> partition) {
         localPartitionFactory.prioritizeRebuild(partition);
     }
 }
