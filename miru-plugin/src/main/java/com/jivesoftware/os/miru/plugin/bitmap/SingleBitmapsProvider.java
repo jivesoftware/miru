@@ -14,7 +14,7 @@ public class SingleBitmapsProvider implements MiruBitmapsProvider {
     }
 
     @Override
-    public MiruBitmaps<?, ?> getBitmaps(MiruTenantId tenantnId) {
-        return bitmaps;
+    public <BM extends IBM, IBM> MiruBitmaps<BM, IBM> getBitmaps(MiruTenantId tenantnId) {
+        return (MiruBitmaps) bitmaps;
     }
 }
