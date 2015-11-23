@@ -62,8 +62,8 @@ public class RecoQuestion implements Question<RecoQuery, RecoAnswer, RecoReport>
             solutionLog.log(MiruSolutionLogLevel.WARN, "No time index intersection. Partition {}: {} doesn't intersect with {}",
                 handle.getCoord().partitionId, context.getTimeIndex(), timeRange);
             return new MiruPartitionResponse<>(
-                collaborativeFiltering.collaborativeFiltering(solutionLog, bitmaps, context, request, report, bitmaps.create(), bitmaps.create(),
-                    removeDistinctsFilter),
+                collaborativeFiltering.collaborativeFiltering(solutionLog, bitmaps, context, handle.getCoord(), request, report, bitmaps.create(),
+                    bitmaps.create(), removeDistinctsFilter),
                 solutionLog.asList());
         }
 
@@ -115,7 +115,8 @@ public class RecoQuestion implements Question<RecoQuery, RecoAnswer, RecoReport>
         }
 
         return new MiruPartitionResponse<>(
-            collaborativeFiltering.collaborativeFiltering(solutionLog, bitmaps, context, request, report, allMyActivity, okActivity, removeDistinctsFilter),
+            collaborativeFiltering.collaborativeFiltering(solutionLog, bitmaps, context, handle.getCoord(), request, report, allMyActivity, okActivity,
+                removeDistinctsFilter),
             solutionLog.asList());
     }
 

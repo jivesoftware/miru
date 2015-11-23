@@ -6,6 +6,7 @@ import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Multiset;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
+import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
@@ -54,6 +55,7 @@ public class CollaborativeFiltering {
     public <BM extends IBM, IBM> RecoAnswer collaborativeFiltering(MiruSolutionLog solutionLog,
         MiruBitmaps<BM, IBM> bitmaps,
         MiruRequestContext<IBM, ?> requestContext,
+        MiruPartitionCoord coord,
         final MiruRequest<RecoQuery> request,
         Optional<RecoReport> report,
         IBM allMyActivity,
@@ -126,7 +128,7 @@ public class CollaborativeFiltering {
         final MinMaxPriorityQueue<MiruTermCount> contributorHeap = MinMaxPriorityQueue.orderedBy(highestCountComparator)
             .maximumSize(request.query.desiredNumberOfDistincts) // overloaded :(
             .create();
-        aggregateUtil.stream(bitmaps, requestContext, otherOkField1Activity, Optional.<BM>absent(), fieldId2, request.query.aggregateFieldName2,
+        aggregateUtil.stream(bitmaps, requestContext, coord, otherOkField1Activity, Optional.<BM>absent(), fieldId2, request.query.aggregateFieldName2,
             miruTermCount -> {
                 if (miruTermCount != null) {
                     contributorHeap.add(miruTermCount);

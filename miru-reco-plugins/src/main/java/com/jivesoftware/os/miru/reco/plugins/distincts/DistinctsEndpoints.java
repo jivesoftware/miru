@@ -54,13 +54,17 @@ public class DistinctsEndpoints {
             long t = System.currentTimeMillis();
             MiruResponse<DistinctsAnswer> response = injectable.gatherDistincts(request);
 
-            log.info("gatherDistincts: " + response.answer.results.size() + " / " + response.answer.collectedDistincts
-                + " in " + (System.currentTimeMillis() - t) + " ms");
+            if (response.answer != null) {
+                int numResults = response.answer.results != null ? response.answer.results.size() : -1;
+                log.info("gatherDistincts: {} / {} in {} ms", numResults, response.answer.collectedDistincts, System.currentTimeMillis() - t);
+            } else {
+                log.warn("gatherDistincts: no answer for tenant: {}", request.tenantId);
+            }
             return responseHelper.jsonResponse(response);
         } catch (MiruPartitionUnavailableException e) {
             return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Partition unavailable").build();
         } catch (Exception e) {
-            log.error("Failed to gather distincts.", e);
+            log.error("Failed to gather distincts for tenant: {}", new Object[] { request.tenantId }, e);
             return Response.serverError().build();
         }
     }
@@ -71,12 +75,19 @@ public class DistinctsEndpoints {
     @Produces(MediaType.APPLICATION_OCTET_STREAM)
     public Response gatherDistincts(@PathParam("partitionId") int id, byte[] rawBytes) {
         MiruPartitionId partitionId = MiruPartitionId.of(id);
+
+        MiruRequestAndReport<DistinctsQuery, DistinctsReport> requestAndReport;
+        try {
+            requestAndReport = (MiruRequestAndReport<DistinctsQuery, DistinctsReport>) conf.asObject(rawBytes);
+        } catch (Exception e) {
+            log.error("Failed to deserialize request", e);
+            return Response.serverError().build();
+        }
+
         try {
             //byte[] jsonBytes = Snappy.uncompress(rawBytes);
             //MiruRequestAndReport<DistinctsQuery, DistinctsReport> requestAndReport = objectMapper.readValue(jsonBytes, resultType);
             //MiruPartitionResponse<DistinctsAnswer> result = injectable.gatherDistincts(partitionId, requestAndReport);
-            MiruRequestAndReport<DistinctsQuery, DistinctsReport> requestAndReport = (MiruRequestAndReport<DistinctsQuery, DistinctsReport>) conf.asObject(
-                rawBytes);
             MiruPartitionResponse<DistinctsAnswer> result = injectable.gatherDistincts(partitionId, requestAndReport);
             //byte[] responseBytes = result != null ? Snappy.compress(objectMapper.writeValueAsBytes(result)) : new byte[0];
             byte[] responseBytes = result != null ? conf.asByteArray(result) : new byte[0];
@@ -84,7 +95,7 @@ public class DistinctsEndpoints {
         } catch (MiruPartitionUnavailableException e) {
             return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Partition unavailable").build();
         } catch (Exception e) {
-            log.error("Failed to gather distincts for partition: " + partitionId.getId(), e);
+            log.error("Failed to gather distincts for tenant: {} partition: {}", new Object[] { requestAndReport.request.tenantId, partitionId.getId() }, e);
             return Response.serverError().build();
         }
     }

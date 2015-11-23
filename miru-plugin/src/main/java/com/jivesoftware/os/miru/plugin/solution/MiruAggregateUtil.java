@@ -4,6 +4,7 @@ import com.google.common.base.Optional;
 import com.jivesoftware.os.filer.io.api.KeyRange;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.jive.utils.base.interfaces.CallbackStream;
+import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -47,6 +48,7 @@ public class MiruAggregateUtil {
 
     public <BM extends IBM, IBM, S extends MiruSipCursor<S>> void stream(MiruBitmaps<BM, IBM> bitmaps,
         MiruRequestContext<IBM, S> requestContext,
+        MiruPartitionCoord coord,
         BM answer,
         Optional<BM> counter,
         int pivotFieldId,
@@ -80,7 +82,8 @@ public class MiruAggregateUtil {
             int lastSetBit = answerCollector == null ? bitmaps.lastSetBit(answer) : answerCollector.lastSetBit;
             LOG.trace("stream: lastSetBit={}", lastSetBit);
             if (priorLastSetBit <= lastSetBit) {
-                LOG.error("Failed to make forward progress removing lastSetBit:{} answer:{}", lastSetBit, answer);
+                LOG.error("Failed to make forward progress while streaming {} removing lastSetBit:{} remaining:{}",
+                    coord, lastSetBit, bitmaps.cardinality(answer));
                 break;
             }
             priorLastSetBit = lastSetBit;

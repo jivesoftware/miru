@@ -54,7 +54,7 @@ public class MiruSolvableFactory<Q, A, R> {
                 LOG.info("Partition unavailable on {}: {}", replica.getCoord(), e.getMessage());
                 throw e;
             } catch (Throwable t) {
-                LOG.info("Solvable encountered a problem", t);
+                LOG.info("Solvable encountered a problem for {}", new Object[] { replica.getCoord() }, t);
                 throw t;
             }
         };
