@@ -21,7 +21,10 @@ import com.googlecode.javaewah.BitmapStorage;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.googlecode.javaewah.FastAggregation;
 import com.googlecode.javaewah.IntIterator;
+import com.jivesoftware.os.filer.io.ByteBufferDataInput;
+import com.jivesoftware.os.filer.io.FilerDataInput;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
+import com.jivesoftware.os.filer.io.chunk.ChunkFiler;
 import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
@@ -31,6 +34,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruTxIndex;
 import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.DataOutput;
+import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.PriorityQueue;
@@ -155,26 +159,22 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap, EWAHCo
             return new EWAHCompressedBitmap();
         }
 
-        EWAHCompressedBitmap container = indexes.get(0).txIndex((bitmap, buffer) -> {
+        EWAHCompressedBitmap container = indexes.get(0).txIndex((bitmap, filer, stackBuffer1) -> {
             if (bitmap != null) {
                 return bitmap;
-            } else if (buffer != null) {
-                EWAHCompressedBitmap deser = new EWAHCompressedBitmap();
-                deser.deserialize(new DataInputStream(new ByteBufferBackedInputStream(buffer)));
-                return deser;
+            } else if (filer != null) {
+                return bitmapFromFiler(filer, stackBuffer1);
             } else {
                 return new EWAHCompressedBitmap();
             }
         }, stackBuffer);
 
         for (MiruTxIndex<EWAHCompressedBitmap> index : indexes.subList(1, indexes.size())) {
-            EWAHCompressedBitmap or = index.txIndex((bitmap, buffer) -> {
+            EWAHCompressedBitmap or = index.txIndex((bitmap, filer, stackBuffer1) -> {
                 if (bitmap != null) {
                     return bitmap;
-                } else if (buffer != null) {
-                    EWAHCompressedBitmap deser = new EWAHCompressedBitmap();
-                    deser.deserialize(new DataInputStream(new ByteBufferBackedInputStream(buffer)));
-                    return deser;
+                } else if (filer != null) {
+                    return bitmapFromFiler(filer, stackBuffer1);
                 } else {
                     return new EWAHCompressedBitmap();
                 }
@@ -202,13 +202,11 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap, EWAHCo
             return new EWAHCompressedBitmap();
         }
 
-        EWAHCompressedBitmap container = indexes.get(0).txIndex((bitmap, buffer) -> {
+        EWAHCompressedBitmap container = indexes.get(0).txIndex((bitmap, filer, stackBuffer1) -> {
             if (bitmap != null) {
                 return bitmap;
-            } else if (buffer != null) {
-                EWAHCompressedBitmap deser = new EWAHCompressedBitmap();
-                deser.deserialize(new DataInputStream(new ByteBufferBackedInputStream(buffer)));
-                return deser;
+            } else if (filer != null) {
+                return bitmapFromFiler(filer, stackBuffer1);
             } else {
                 return new EWAHCompressedBitmap();
             }
@@ -219,13 +217,11 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap, EWAHCo
         }
 
         for (MiruTxIndex<EWAHCompressedBitmap> index : indexes.subList(1, indexes.size())) {
-            EWAHCompressedBitmap and = index.txIndex((bitmap, buffer) -> {
+            EWAHCompressedBitmap and = index.txIndex((bitmap, filer, stackBuffer1) -> {
                 if (bitmap != null) {
                     return bitmap;
-                } else if (buffer != null) {
-                    EWAHCompressedBitmap deser = new EWAHCompressedBitmap();
-                    deser.deserialize(new DataInputStream(new ByteBufferBackedInputStream(buffer)));
-                    return deser;
+                } else if (filer != null) {
+                    return bitmapFromFiler(filer, stackBuffer1);
                 } else {
                     return new EWAHCompressedBitmap();
                 }
@@ -279,13 +275,11 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap, EWAHCo
             return new EWAHCompressedBitmap();
         }
 
-        EWAHCompressedBitmap container = original.txIndex((bitmap, buffer) -> {
+        EWAHCompressedBitmap container = original.txIndex((bitmap, filer, stackBuffer1) -> {
             if (bitmap != null) {
                 return bitmap;
-            } else if (buffer != null) {
-                EWAHCompressedBitmap deser = new EWAHCompressedBitmap();
-                deser.deserialize(new DataInputStream(new ByteBufferBackedInputStream(buffer)));
-                return deser;
+            } else if (filer != null) {
+                return bitmapFromFiler(filer, stackBuffer1);
             } else {
                 return new EWAHCompressedBitmap();
             }
@@ -296,13 +290,11 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap, EWAHCo
         }
 
         for (MiruTxIndex<EWAHCompressedBitmap> index : not) {
-            EWAHCompressedBitmap andNot = index.txIndex((bitmap, buffer) -> {
+            EWAHCompressedBitmap andNot = index.txIndex((bitmap, filer, stackBuffer1) -> {
                 if (bitmap != null) {
                     return bitmap;
-                } else if (buffer != null) {
-                    EWAHCompressedBitmap deser = new EWAHCompressedBitmap();
-                    deser.deserialize(new DataInputStream(new ByteBufferBackedInputStream(buffer)));
-                    return deser;
+                } else if (filer != null) {
+                    return bitmapFromFiler(filer, stackBuffer1);
                 } else {
                     return null;
                 }
@@ -561,5 +553,15 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap, EWAHCo
             last = iterator.next();
         }
         return last;
+    }
+
+    private EWAHCompressedBitmap bitmapFromFiler(ChunkFiler filer, StackBuffer stackBuffer1) throws IOException {
+        EWAHCompressedBitmap deser = new EWAHCompressedBitmap();
+        if (filer.canLeakUnsafeByteBuffer()) {
+            deser.deserialize(new ByteBufferDataInput(filer.leakUnsafeByteBuffer()));
+        } else {
+            deser.deserialize(new FilerDataInput(filer, stackBuffer1));
+        }
+        return deser;
     }
 }

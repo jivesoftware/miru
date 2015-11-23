@@ -5,6 +5,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
 import com.jivesoftware.os.filer.io.Filer;
+import com.jivesoftware.os.filer.io.FilerDataInput;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.api.ChunkTransaction;
 import com.jivesoftware.os.filer.io.api.KeyedFilerStore;
@@ -38,6 +39,8 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     private final Object mutationLock;
     private volatile int lastId = Integer.MIN_VALUE;
 
+    private final ChunkTransaction<Void, BitmapAndLastId<BM>> getTransaction;
+
     public MiruFilerInvertedIndex(MiruBitmaps<BM, IBM> bitmaps,
         MiruFieldIndex.IndexKey indexKey,
         KeyedFilerStore<Long, Void> keyedFilerStore,
@@ -48,6 +51,16 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
         this.keyedFilerStore = Preconditions.checkNotNull(keyedFilerStore);
         this.considerIfIndexIdGreaterThanN = considerIfIndexIdGreaterThanN;
         this.mutationLock = mutationLock;
+        //TODO pass in
+        this.getTransaction = (monkey, filer, stackBuffer, lock) -> {
+            if (filer != null) {
+                synchronized (lock) {
+                    filer.seek(0);
+                    return deser(bitmaps, filer, stackBuffer);
+                }
+            }
+            return null;
+        };
     }
 
     @Override
@@ -56,21 +69,16 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
             return Optional.absent();
         }
 
-        byte[] rawBytes = keyedFilerStore.read(indexKey.keyBytes, null, getTransaction, stackBuffer);
-        if (rawBytes != null) {
-            log.inc("get>total");
-            log.inc("get>bytes", rawBytes.length);
-        } else {
-            log.inc("get>null");
-        }
+        BitmapAndLastId<BM> bitmapAndLastId = keyedFilerStore.read(indexKey.keyBytes, null, getTransaction, stackBuffer);
 
-        BitmapAndLastId<BM> bitmapAndLastId = deser(rawBytes);
         if (bitmapAndLastId != null) {
+            log.inc("get>hit");
             if (lastId == Integer.MIN_VALUE) {
                 lastId = bitmapAndLastId.lastId;
             }
             return Optional.of(bitmapAndLastId.bitmap);
         } else {
+            log.inc("get>miss");
             lastId = -1;
             return Optional.absent();
         }
@@ -79,7 +87,7 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     @Override
     public <R> R txIndex(IndexTx<R, IBM> tx, StackBuffer stackBuffer) throws Exception {
         if (lastId > Integer.MIN_VALUE && lastId <= considerIfIndexIdGreaterThanN) {
-            return tx.tx(null, null);
+            return tx.tx(null, null, null);
         }
 
         return keyedFilerStore.read(indexKey.keyBytes, null, (monkey, filer, stackBuffer1, lock) -> {
@@ -87,20 +95,13 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
                 if (filer != null) {
                     synchronized (lock) {
                         if (filer.length() < LAST_ID_LENGTH + 4) {
-                            return tx.tx(null, null);
-                        } else if (filer.canLeakUnsafeByteBuffer()) {
-                            ByteBuffer buffer = filer.leakUnsafeByteBuffer();
-                            buffer.position(LAST_ID_LENGTH);
-                            return tx.tx(null, buffer);
+                            return tx.tx(null, null, null);
                         } else {
-                            filer.seek(LAST_ID_LENGTH);
-                            byte[] bytes = new byte[(int) filer.length() - LAST_ID_LENGTH];
-                            FilerIO.read(filer, bytes);
-                            return tx.tx(null, ByteBuffer.wrap(bytes));
+                            return tx.tx(null, filer, stackBuffer1);
                         }
                     }
                 } else {
-                    return tx.tx(null, null);
+                    return tx.tx(null, null, null);
                 }
             } catch (Exception e) {
                 throw new IOException(e);
@@ -116,19 +117,17 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
         }
     }
 
-    private BitmapAndLastId<BM> deser(byte[] bytes) throws IOException {
-        //TODO just add a byte marker, this sucks
-        if (bytes != null && bytes.length > LAST_ID_LENGTH + 4) {
-            if (FilerIO.bytesInt(bytes, LAST_ID_LENGTH) > 0) {
-                int lastId = FilerIO.bytesInt(bytes, 0);
-                DataInput dataInput = ByteStreams.newDataInput(bytes, LAST_ID_LENGTH);
-                try {
-                    return new BitmapAndLastId<>(bitmaps.deserialize(dataInput), lastId);
-                } catch (Exception e) {
-                    throw new IOException("Failed to deserialize", e);
-                }
-            } else {
-                return new BitmapAndLastId<>(bitmaps.create(), -1);
+    private static <BM extends IBM, IBM> BitmapAndLastId<BM> deser(MiruBitmaps<BM, IBM> bitmaps,
+        ChunkFiler filer,
+        StackBuffer stackBuffer) throws IOException {
+
+        if (filer.length() > LAST_ID_LENGTH + 4) {
+            int lastId = filer.readInt();
+            DataInput dataInput = new FilerDataInput(filer, stackBuffer);
+            try {
+                return new BitmapAndLastId<>(bitmaps.deserialize(dataInput), lastId);
+            } catch (Exception e) {
+                throw new IOException("Failed to deserialize", e);
             }
         }
         return null;
@@ -292,18 +291,6 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
         } else {
             return -1;
         }
-    };
-
-    private static final ChunkTransaction<Void, byte[]> getTransaction = (monkey, filer, stackBuffer, lock) -> {
-        if (filer != null) {
-            synchronized (lock) {
-                filer.seek(0);
-                byte[] bytes = new byte[(int) filer.length()];
-                FilerIO.read(filer, bytes);
-                return bytes;
-            }
-        }
-        return null;
     };
 
     private static class SetTransaction implements ChunkTransaction<Void, Void> {

@@ -17,7 +17,13 @@ package com.jivesoftware.os.miru.bitmaps.roaring5;
 
 import com.fasterxml.jackson.databind.util.ByteBufferBackedInputStream;
 import com.google.common.base.Optional;
+import com.jivesoftware.os.filer.io.AutoGrowingByteBufferBackedFiler;
+import com.jivesoftware.os.filer.io.ByteBufferDataInput;
+import com.jivesoftware.os.filer.io.FileBackedMemMappedByteBufferFactory;
+import com.jivesoftware.os.filer.io.FilerDataInput;
+import com.jivesoftware.os.filer.io.FilerDataOutput;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
+import com.jivesoftware.os.filer.io.chunk.ChunkFiler;
 import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
@@ -27,9 +33,14 @@ import com.jivesoftware.os.miru.plugin.index.MiruTxIndex;
 import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.DataOutput;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Random;
+import org.apache.commons.io.FileUtils;
 import org.roaringbitmap.IntIterator;
 import org.roaringbitmap.RoaringAggregation;
 import org.roaringbitmap.RoaringBitmap;
@@ -156,26 +167,22 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
             return new RoaringBitmap();
         }
 
-        RoaringBitmap container = indexes.get(0).txIndex((bitmap, buffer) -> {
+        RoaringBitmap container = indexes.get(0).txIndex((bitmap, filer, stackBuffer1) -> {
             if (bitmap != null) {
                 return bitmap;
-            } else if (buffer != null) {
-                RoaringBitmap deser = new RoaringBitmap();
-                deser.deserialize(new DataInputStream(new ByteBufferBackedInputStream(buffer)));
-                return deser;
+            } else if (filer != null) {
+                return bitmapFromFiler(filer, stackBuffer1);
             } else {
                 return new RoaringBitmap();
             }
         }, stackBuffer);
 
         for (MiruTxIndex<RoaringBitmap> index : indexes.subList(1, indexes.size())) {
-            RoaringBitmap or = index.txIndex((bitmap, buffer) -> {
+            RoaringBitmap or = index.txIndex((bitmap, filer, stackBuffer1) -> {
                 if (bitmap != null) {
                     return bitmap;
-                } else if (buffer != null) {
-                    RoaringBitmap deser = new RoaringBitmap();
-                    deser.deserialize(new DataInputStream(new ByteBufferBackedInputStream(buffer)));
-                    return deser;
+                } else if (filer != null) {
+                    return bitmapFromFiler(filer, stackBuffer1);
                 } else {
                     return null;
                 }
@@ -205,13 +212,11 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
             return new RoaringBitmap();
         }
 
-        RoaringBitmap container = indexes.get(0).txIndex((bitmap, buffer) -> {
+        RoaringBitmap container = indexes.get(0).txIndex((bitmap, filer, stackBuffer1) -> {
             if (bitmap != null) {
                 return bitmap;
-            } else if (buffer != null) {
-                RoaringBitmap deser = new RoaringBitmap();
-                deser.deserialize(new DataInputStream(new ByteBufferBackedInputStream(buffer)));
-                return deser;
+            } else if (filer != null) {
+                return bitmapFromFiler(filer, stackBuffer1);
             } else {
                 return new RoaringBitmap();
             }
@@ -222,13 +227,11 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
         }
 
         for (MiruTxIndex<RoaringBitmap> index : indexes.subList(1, indexes.size())) {
-            RoaringBitmap and = index.txIndex((bitmap, buffer) -> {
+            RoaringBitmap and = index.txIndex((bitmap, filer, stackBuffer1) -> {
                 if (bitmap != null) {
                     return bitmap;
-                } else if (buffer != null) {
-                    RoaringBitmap deser = new RoaringBitmap();
-                    deser.deserialize(new DataInputStream(new ByteBufferBackedInputStream(buffer)));
-                    return deser;
+                } else if (filer != null) {
+                    return bitmapFromFiler(filer, stackBuffer1);
                 } else {
                     return new RoaringBitmap();
                 }
@@ -284,13 +287,11 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
             return new RoaringBitmap();
         }
 
-        RoaringBitmap container = original.txIndex((bitmap, buffer) -> {
+        RoaringBitmap container = original.txIndex((bitmap, filer, stackBuffer1) -> {
             if (bitmap != null) {
                 return bitmap;
-            } else if (buffer != null) {
-                RoaringBitmap deser = new RoaringBitmap();
-                deser.deserialize(new DataInputStream(new ByteBufferBackedInputStream(buffer)));
-                return deser;
+            } else if (filer != null) {
+                return bitmapFromFiler(filer, stackBuffer1);
             } else {
                 return new RoaringBitmap();
             }
@@ -301,19 +302,19 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
         }
 
         for (MiruTxIndex<RoaringBitmap> index : not) {
-            RoaringBitmap andNot = index.txIndex((bitmap, buffer) -> {
+            RoaringBitmap andNot = index.txIndex((bitmap, filer, stackBuffer1) -> {
                 if (bitmap != null) {
                     return bitmap;
-                } else if (buffer != null) {
-                    RoaringBitmap deser = new RoaringBitmap();
-                    deser.deserialize(new DataInputStream(new ByteBufferBackedInputStream(buffer)));
-                    return deser;
+                } else if (filer != null) {
+                    return bitmapFromFiler(filer, stackBuffer1);
                 } else {
                     return null;
                 }
             }, stackBuffer);
 
-            container.andNot(andNot);
+            if (andNot != null) {
+                container.andNot(andNot);
+            }
 
             if (container.isEmpty()) {
                 return container;
@@ -470,149 +471,87 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
         return last;
     }
 
-    /*public static void main(String[] args) throws Exception {
+    private RoaringBitmap bitmapFromFiler(ChunkFiler filer, StackBuffer stackBuffer1) throws IOException {
+        RoaringBitmap deser = new RoaringBitmap();
+        if (filer.canLeakUnsafeByteBuffer()) {
+            deser.deserialize(new ByteBufferDataInput(filer.leakUnsafeByteBuffer()));
+        } else {
+            deser.deserialize(new FilerDataInput(filer, stackBuffer1));
+        }
+        return deser;
+    }
+
+    public static void main(String[] args) throws Exception {
+        Random r = new Random(1234);
+        StackBuffer buf = new StackBuffer();
         for (int i = 0; i < 100; i++) {
 
-            long start = System.currentTimeMillis();
+            long start;
+            long count;
+
             RoaringBitmap b1 = new RoaringBitmap();
-            RoaringBitmap b2 = new RoaringBitmap();
-            Random r = new Random(1234);
-            for (int j = 0; j < 100_000; j++) {
+            for (int j = 0; j < 1_000_000; j++) {
                 if (r.nextBoolean()) {
                     b1.add(j);
                 }
-                if (r.nextBoolean()) {
-                    b2.add(j);
-                }
-                RoaringBitmap b3 = new RoaringBitmap();
-                RoaringAggregation.or(b3, b1, b2);
             }
-            System.out.println("---- regular ----");
-            System.out.println((System.currentTimeMillis() - start) + " ms");
 
+            File tempDir = Files.createTempDirectory("roaring5").toFile();
+            AutoGrowingByteBufferBackedFiler autoFiler = new AutoGrowingByteBufferBackedFiler(
+                new FileBackedMemMappedByteBufferFactory("roaring5", 0, new File[] { tempDir }), 1024 * 1024, 1024 * 1024);
+
+            autoFiler.seek(0);
+            b1.serialize(new FilerDataOutput(autoFiler, new StackBuffer()));
+
+            ChunkFiler filer = new ChunkFiler(null, autoFiler, 0, 0, b1.serializedSizeInBytes());
+
+            System.out.println("---- filer ----");
+            count = 0;
             start = System.currentTimeMillis();
-            MutableRoaringBitmap m1 = new MutableRoaringBitmap();
-            MutableRoaringBitmap m2 = new MutableRoaringBitmap();
-            r = new Random(1234);
-            for (int j = 0; j < 100_000; j++) {
-                if (r.nextBoolean()) {
-                    m1.add(j);
-                }
-                if (r.nextBoolean()) {
-                    m2.add(j);
-                }
-                MutableRoaringBitmap m3 = BufferFastAggregation.or(m1, m2);
-            }
-            System.out.println("---- buffers ----");
-            System.out.println((System.currentTimeMillis() - start) + " ms");
-
-        }
-    }*/
-
- /*public static void main(String[] args) throws Exception {
-        FileReader fileReader = new FileReader("/Users/kevin.karpenske/Desktop/roaring-xor.out");
-        BufferedReader buf = new BufferedReader(fileReader);
-
-        String line1;
-        do {
-            line1 = buf.readLine();
-        }
-        while (line1 == null || line1.trim().isEmpty());
-
-        String line2;
-        do {
-            line2 = buf.readLine();
-        }
-        while (line2 == null || line2.trim().isEmpty());
-
-        String[] line1split = line1.split(",");
-        String[] line2split = line2.split(",");
-
-        int[] indexes1 = new int[line1split.length];
-        int[] indexes2 = new int[line2split.length];
-
-        for (int i = 0; i < indexes1.length; i++) {
-            indexes1[i] = Integer.parseInt(line1split[i]);
-        }
-
-        for (int i = 0; i < indexes2.length; i++) {
-            indexes2[i] = Integer.parseInt(line2split[i]);
-        }
-
-        System.out.println("1: " + indexes1.length);
-        System.out.println("2: " + indexes2.length);
-
-
-        MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
-
-        RoaringBitmap bitmap1 = new RoaringBitmap();
-        bitmaps.append(bitmap1, new RoaringBitmap(), indexes1);
-        ByteArrayDataOutput dataOutput = ByteStreams.newDataOutput();
-        bitmaps.serialize(bitmap1, dataOutput);
-        bitmap1 = bitmaps.deserialize(ByteStreams.newDataInput(dataOutput.toByteArray()));
-
-        int run = 0;
-        for (int i = 0; i < indexes2.length; i++) {
-            if (i > 0) {
-                if (indexes2[i - 1] == indexes2[i] - 1) {
-                    run++;
+            for (int j = 0; j < 10_000; j++) {
+                filer.seek(0);
+                RoaringBitmap tmp = new RoaringBitmap();
+                if (filer.canLeakUnsafeByteBuffer()) {
+                    tmp.deserialize(new ByteBufferDataInput(filer.leakUnsafeByteBuffer()));
                 } else {
-                    if (run > 1000) {
-                        System.out.println("run of " + run);
-                    }
-                    run = 0;
+                    tmp.deserialize(new FilerDataInput(filer, buf));
+                }
+                count += tmp.getCardinality();
+            }
+            System.out.println("time=" + (System.currentTimeMillis() - start) + ", count=" + count);
+
+            /*System.out.println("---- array ----");
+            count = 0;
+            start = System.currentTimeMillis();
+            for (int j = 0; j < 10_000; j++) {
+                filer.seek(0);
+                byte[] bytes = new byte[(int) filer.length()];
+                filer.read(bytes);
+                RoaringBitmap tmp = new RoaringBitmap();
+                tmp.deserialize(ByteStreams.newDataInput(bytes));
+                //count += tmp.getCardinality();
+            }
+            System.out.println("time=" + (System.currentTimeMillis() - start) + ", count=" + count);
+
+            System.out.println("---- shared ----");
+            count = 0;
+            start = System.currentTimeMillis();
+            {
+                byte[] shared = new byte[(int) filer.length()];
+                for (int j = 0; j < 10_000; j++) {
+                    filer.seek(0);
+                    filer.read(shared);
+                    RoaringBitmap tmp = new RoaringBitmap();
+                    tmp.deserialize(ByteStreams.newDataInput(shared));
+                    //count += tmp.getCardinality();
                 }
             }
+            System.out.println("time=" + (System.currentTimeMillis() - start) + ", count=" + count);*/
+
+            System.out.println();
+
+            filer.close();
+            FileUtils.deleteDirectory(tempDir);
         }
-
-        RoaringBitmap bitmap2 = new RoaringBitmap();
-        bitmaps.append(bitmap2, new RoaringBitmap(), indexes2);
-        dataOutput = ByteStreams.newDataOutput();
-        bitmaps.serialize(bitmap2, dataOutput);
-        bitmap2 = bitmaps.deserialize(ByteStreams.newDataInput(dataOutput.toByteArray()));
-
-        RoaringBitmap container = new RoaringBitmap();
-        RoaringAggregation.or(container, new RoaringBitmap[] { bitmap1, bitmap2 });
-        System.out.println("c1: " + container.getCardinality());
-
-        container = new RoaringBitmap();
-        RoaringAggregation.or(container, bitmap1, bitmap2);
-        System.out.println("c2: " + container.getCardinality());
-    }*/
-
- /*public static void main(String[] args) throws Exception {
-        RoaringBitmap bitmap = new RoaringBitmap();
-        int[] indexes = { 343798, 343799, 343800, 343801, 343803, 343804, 343805, 343807, 343809, 343811, 343812, 343815, 343816, 343817, 343818, 343819,
-            343821, 343825, 343827, 343828, 343830, 343831, 343832, 343833, 343835, 343836, 343837, 343838,
-            343839, 343840, 343841, 343842, 343843, 343844, 343845, 343847, 343848, 343849, 343850, 343851, 343853, 343854, 343855, 343856, 343858, 343859,
-            343860, 343861, 343862, 343863, 343864, 343865, 343866, 343868, 343869, 343874, 343875,
-            343877, 343879, 343880, 343881, 343882, 343883, 343887, 343889, 343890, 343891, 343894, 343895, 343898, 343899, 343900, 343901, 343902, 343904,
-            343906, 343907, 343908, 343909, 343910, 343911, 343912, 343913, 343914, 343915, 343916,
-            343917, 343918, 343919, 343921, 343922, 343923, 343924, 343927, 343928, 343929, 343930, 343931, 343932, 343933, 343934, 343935, 343938, 343939,
-            343941, 343942, 343943, 343944, 343945, 343946, 343949, 343951, 343953, 343954, 343955,
-            343956, 343958, 343959, 343961, 343962, 343964, 343965, 343966, 343967, 343968, 343969, 343971, 343972, 343973, 343974, 343976, 343978, 343979,
-            343981, 343982, 343983, 343985, 343987, 343988, 343989, 343992, 343993, 343994, 343995,
-            343996, 343997, 343998, 344000, 344001, 344002, 344003, 344004, 344006, 344008, 344009, 344011, 344012, 344013, 344015, 344017, 344019, 344020,
-            344021, 344023, 344025, 344026, 344027, 344028, 344029, 344030, 344031, 344034, 344035,
-            344036, 344037, 344038, 344039, 344040, 344042, 344043, 344046, 344047 };
-
-        int rangeStart = 0;
-        for (int rangeEnd = 1; rangeEnd < indexes.length; rangeEnd++) {
-            if (indexes[rangeEnd - 1] + 1 != indexes[rangeEnd]) {
-                if (rangeStart == rangeEnd - 1) {
-                    System.out.println("add " + indexes[rangeStart]);
-                    bitmap.add(indexes[rangeStart]);
-                } else {
-                    System.out.println("flip " + indexes[rangeStart] + " to " + (indexes[rangeEnd - 1] + 1));
-                    bitmap.flip(indexes[rangeStart], indexes[rangeEnd - 1] + 1);
-                }
-                rangeStart = rangeEnd;
-            }
-        }
-        if (rangeStart == indexes.length - 1) {
-            bitmap.add(indexes[rangeStart]);
-        } else {
-            bitmap.flip(indexes[rangeStart], indexes[indexes.length - 1] + 1);
-        }
-    }*/
+    }
 }
