@@ -165,24 +165,24 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
             return new MutableRoaringBitmap();
         }
 
-        MutableRoaringBitmap container = indexes.get(0).txIndex((bitmap, filer, stackBuffer1) -> {
+        MutableRoaringBitmap container = indexes.get(0).txIndex((bitmap, filer, offset, stackBuffer1) -> {
             if (bitmap != null) {
                 MutableRoaringBitmap mutable = new MutableRoaringBitmap();
                 mutable.or(bitmap);
                 return mutable;
             } else if (filer != null) {
-                return bitmapFromFiler(filer, stackBuffer1);
+                return bitmapFromFiler(filer, offset, stackBuffer1);
             } else {
                 return new MutableRoaringBitmap();
             }
         }, stackBuffer);
 
         for (MiruTxIndex<ImmutableRoaringBitmap> index : indexes.subList(1, indexes.size())) {
-            index.txIndex((bitmap, filer, stackBuffer1) -> {
+            index.txIndex((bitmap, filer, offset, stackBuffer1) -> {
                 if (bitmap != null) {
                     container.or(bitmap);
                 } else if (filer != null) {
-                    container.or(bitmapFromFiler(filer, stackBuffer1));
+                    container.or(bitmapFromFiler(filer, offset, stackBuffer1));
                 }
                 return null;
             }, stackBuffer);
@@ -207,13 +207,13 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
             return new MutableRoaringBitmap();
         }
 
-        MutableRoaringBitmap container = indexes.get(0).txIndex((bitmap, filer, stackBuffer1) -> {
+        MutableRoaringBitmap container = indexes.get(0).txIndex((bitmap, filer, offset, stackBuffer1) -> {
             if (bitmap != null) {
                 MutableRoaringBitmap mutable = new MutableRoaringBitmap();
                 mutable.or(bitmap);
                 return mutable;
             } else if (filer != null) {
-                return bitmapFromFiler(filer, stackBuffer1);
+                return bitmapFromFiler(filer, offset, stackBuffer1);
             } else {
                 return new MutableRoaringBitmap();
             }
@@ -224,11 +224,11 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
         }
 
         for (MiruTxIndex<ImmutableRoaringBitmap> index : indexes.subList(1, indexes.size())) {
-            index.txIndex((bitmap, filer, stackBuffer1) -> {
+            index.txIndex((bitmap, filer, offset, stackBuffer1) -> {
                 if (bitmap != null) {
                     container.and(bitmap);
                 } else if (filer != null) {
-                    container.and(bitmapFromFiler(filer, stackBuffer1));
+                    container.and(bitmapFromFiler(filer, offset, stackBuffer1));
                 } else {
                     container.clear();
                 }
@@ -250,11 +250,11 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
 
     @Override
     public void inPlaceAndNot(MutableRoaringBitmap original, MiruInvertedIndex<ImmutableRoaringBitmap> not, StackBuffer stackBuffer) throws Exception {
-        not.txIndex((bitmap, filer, stackBuffer1) -> {
+        not.txIndex((bitmap, filer, offset, stackBuffer1) -> {
             if (bitmap != null) {
                 original.andNot(bitmap);
             } else if (filer != null) {
-                original.andNot(bitmapFromFiler(filer, stackBuffer1));
+                original.andNot(bitmapFromFiler(filer, offset, stackBuffer1));
             }
             return null;
         }, stackBuffer);
@@ -285,13 +285,13 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
         List<MiruTxIndex<ImmutableRoaringBitmap>> not,
         StackBuffer stackBuffer) throws Exception {
 
-        MutableRoaringBitmap container = original.txIndex((bitmap, filer, stackBuffer1) -> {
+        MutableRoaringBitmap container = original.txIndex((bitmap, filer, offset, stackBuffer1) -> {
             if (bitmap != null) {
                 MutableRoaringBitmap mutable = new MutableRoaringBitmap();
                 mutable.or(bitmap);
                 return mutable;
             } else if (filer != null) {
-                return bitmapFromFiler(filer, stackBuffer1);
+                return bitmapFromFiler(filer, offset, stackBuffer1);
             } else {
                 return new MutableRoaringBitmap();
             }
@@ -302,11 +302,11 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
         }
 
         for (MiruTxIndex<ImmutableRoaringBitmap> index : not) {
-            index.txIndex((bitmap, filer, stackBuffer1) -> {
+            index.txIndex((bitmap, filer, offset, stackBuffer1) -> {
                 if (bitmap != null) {
                     container.andNot(bitmap);
                 } else if (filer != null) {
-                    container.andNot(bitmapFromFiler(filer, stackBuffer1));
+                    container.andNot(bitmapFromFiler(filer, offset, stackBuffer1));
                 }
                 return null;
             }, stackBuffer);
@@ -468,10 +468,13 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
         return last;
     }
 
-    private MutableRoaringBitmap bitmapFromFiler(ChunkFiler filer, StackBuffer stackBuffer1) throws IOException {
+    private MutableRoaringBitmap bitmapFromFiler(ChunkFiler filer, int offset, StackBuffer stackBuffer1) throws IOException {
         if (filer.canLeakUnsafeByteBuffer()) {
-            return new ImmutableRoaringBitmap(filer.leakUnsafeByteBuffer()).toMutableRoaringBitmap();
+            ByteBuffer buf = filer.leakUnsafeByteBuffer();
+            buf.position(offset);
+            return new ImmutableRoaringBitmap(buf).toMutableRoaringBitmap();
         } else {
+            filer.seek(offset);
             MutableRoaringBitmap mutable = new MutableRoaringBitmap();
             mutable.deserialize(new FilerDataInput(filer, stackBuffer1));
             return mutable;

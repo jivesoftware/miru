@@ -31,6 +31,7 @@ import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -160,22 +161,22 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
             return new RoaringBitmap();
         }
 
-        RoaringBitmap container = indexes.get(0).txIndex((bitmap, filer, stackBuffer1) -> {
+        RoaringBitmap container = indexes.get(0).txIndex((bitmap, filer, offset, stackBuffer1) -> {
             if (bitmap != null) {
                 return bitmap;
             } else if (filer != null) {
-                return bitmapFromFiler(filer, stackBuffer1);
+                return bitmapFromFiler(filer, offset, stackBuffer1);
             } else {
                 return new RoaringBitmap();
             }
         }, stackBuffer);
 
         for (MiruTxIndex<RoaringBitmap> index : indexes.subList(1, indexes.size())) {
-            RoaringBitmap or = index.txIndex((bitmap, filer, stackBuffer1) -> {
+            RoaringBitmap or = index.txIndex((bitmap, filer, offset, stackBuffer1) -> {
                 if (bitmap != null) {
                     return bitmap;
                 } else if (filer != null) {
-                    return bitmapFromFiler(filer, stackBuffer1);
+                    return bitmapFromFiler(filer, offset, stackBuffer1);
                 } else {
                     return null;
                 }
@@ -205,11 +206,11 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
             return new RoaringBitmap();
         }
 
-        RoaringBitmap container = indexes.get(0).txIndex((bitmap, filer, stackBuffer1) -> {
+        RoaringBitmap container = indexes.get(0).txIndex((bitmap, filer, offset, stackBuffer1) -> {
             if (bitmap != null) {
                 return bitmap;
             } else if (filer != null) {
-                return bitmapFromFiler(filer, stackBuffer1);
+                return bitmapFromFiler(filer, offset, stackBuffer1);
             } else {
                 return new RoaringBitmap();
             }
@@ -220,11 +221,11 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
         }
 
         for (MiruTxIndex<RoaringBitmap> index : indexes.subList(1, indexes.size())) {
-            RoaringBitmap and = index.txIndex((bitmap, filer, stackBuffer1) -> {
+            RoaringBitmap and = index.txIndex((bitmap, filer, offset, stackBuffer1) -> {
                 if (bitmap != null) {
                     return bitmap;
                 } else if (filer != null) {
-                    return bitmapFromFiler(filer, stackBuffer1);
+                    return bitmapFromFiler(filer, offset, stackBuffer1);
                 } else {
                     return new RoaringBitmap();
                 }
@@ -280,11 +281,11 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
             return new RoaringBitmap();
         }
 
-        RoaringBitmap container = original.txIndex((bitmap, filer, stackBuffer1) -> {
+        RoaringBitmap container = original.txIndex((bitmap, filer, offset, stackBuffer1) -> {
             if (bitmap != null) {
                 return bitmap;
             } else if (filer != null) {
-                return bitmapFromFiler(filer, stackBuffer1);
+                return bitmapFromFiler(filer, offset, stackBuffer1);
             } else {
                 return new RoaringBitmap();
             }
@@ -295,11 +296,11 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
         }
 
         for (MiruTxIndex<RoaringBitmap> index : not) {
-            RoaringBitmap andNot = index.txIndex((bitmap, filer, stackBuffer1) -> {
+            RoaringBitmap andNot = index.txIndex((bitmap, filer, offset, stackBuffer1) -> {
                 if (bitmap != null) {
                     return bitmap;
                 } else if (filer != null) {
-                    return bitmapFromFiler(filer, stackBuffer1);
+                    return bitmapFromFiler(filer, offset, stackBuffer1);
                 } else {
                     return null;
                 }
@@ -464,11 +465,14 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
         return last;
     }
 
-    private RoaringBitmap bitmapFromFiler(ChunkFiler filer, StackBuffer stackBuffer1) throws IOException {
+    private RoaringBitmap bitmapFromFiler(ChunkFiler filer, int offset, StackBuffer stackBuffer1) throws IOException {
         RoaringBitmap deser = new RoaringBitmap();
         if (filer.canLeakUnsafeByteBuffer()) {
-            deser.deserialize(new ByteBufferDataInput(filer.leakUnsafeByteBuffer()));
+            ByteBuffer buf = filer.leakUnsafeByteBuffer();
+            buf.position(offset);
+            deser.deserialize(new ByteBufferDataInput(buf));
         } else {
+            filer.seek(offset);
             deser.deserialize(new FilerDataInput(filer, stackBuffer1));
         }
         return deser;

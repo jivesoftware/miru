@@ -13,7 +13,7 @@ public interface MiruTxIndex<IBM> {
 
     interface IndexTx<R, IBM> {
 
-        R tx(IBM bitmap, ChunkFiler filer, StackBuffer stackBuffer) throws Exception;
+        R tx(IBM bitmap, ChunkFiler filer, int offset, StackBuffer stackBuffer) throws Exception;
     }
 
 }

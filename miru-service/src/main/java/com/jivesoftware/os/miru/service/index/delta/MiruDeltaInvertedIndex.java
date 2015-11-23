@@ -82,17 +82,17 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
             Optional<IBM> index = (Optional<IBM>) fieldIndexCache.getIfPresent(indexKey);
             if (index != null) {
                 LOG.inc("txIndex>cached", 1);
-                return tx.tx(index.orNull(), null, null);
+                return tx.tx(index.orNull(), null, -1, null);
             }
         }
 
         if (delta.replaced) {
             LOG.inc("txIndex>replaced", 1);
-            return tx.tx(delta.or, null, null);
+            return tx.tx(delta.or, null, -1, null);
         } else if (delta.or != null || delta.andNot != null) {
             LOG.inc("txIndex>delta", 1);
             Optional<IBM> index = getIndex(stackBuffer);
-            return tx.tx(index.orNull(), null, null);
+            return tx.tx(index.orNull(), null, -1, null);
         } else {
             LOG.inc("txIndex>backing", 1);
             return backingIndex.txIndex(tx, stackBuffer);
