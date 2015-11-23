@@ -36,10 +36,10 @@ import static org.testng.Assert.assertTrue;
 public class LuceneBackedQueryParserTest {
 
     private final MiruSchema schema = new MiruSchema.Builder("test", 0)
-        .setFieldDefinitions(new MiruFieldDefinition[]{
-        new MiruFieldDefinition(0, "a", MiruFieldDefinition.Type.multiTerm, MiruFieldDefinition.Prefix.WILDCARD),
-        new MiruFieldDefinition(1, "b", MiruFieldDefinition.Type.multiTerm, MiruFieldDefinition.Prefix.WILDCARD)
-    })
+        .setFieldDefinitions(new MiruFieldDefinition[] {
+            new MiruFieldDefinition(0, "a", MiruFieldDefinition.Type.multiTerm, MiruFieldDefinition.Prefix.WILDCARD),
+            new MiruFieldDefinition(1, "b", MiruFieldDefinition.Type.multiTerm, MiruFieldDefinition.Prefix.WILDCARD)
+        })
         .build();
 
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
@@ -53,7 +53,7 @@ public class LuceneBackedQueryParserTest {
     public void setUp() throws Exception {
         fieldIndex = new TestFieldIndex(2);
         @SuppressWarnings("unchecked")
-        MiruFieldIndex<RoaringBitmap>[] indexes = (MiruFieldIndex<RoaringBitmap>[]) new MiruFieldIndex[]{
+        MiruFieldIndex<RoaringBitmap>[] indexes = (MiruFieldIndex<RoaringBitmap>[]) new MiruFieldIndex[] {
             fieldIndex,
             null,
             null,
@@ -149,124 +149,12 @@ public class LuceneBackedQueryParserTest {
 
         @Override
         public MiruInvertedIndex<RoaringBitmap> get(int fieldId, MiruTermId termId) throws Exception {
-            return new MiruInvertedIndex<RoaringBitmap>() {
-                @Override
-                public Optional<RoaringBitmap> getIndex(StackBuffer stackBuffer) throws Exception {
-                    return Optional.fromNullable(indexes[fieldId].get(termId));
-                }
-
-                @Override
-                public Optional<RoaringBitmap> getIndexUnsafe(StackBuffer stackBuffer) throws Exception {
-                    return getIndex(stackBuffer);
-                }
-
-                @Override
-                public void replaceIndex(RoaringBitmap index, int setLastId, StackBuffer stackBuffer) throws Exception {
-                }
-
-                @Override
-                public void remove(int id, StackBuffer stackBuffer) throws Exception {
-                }
-
-                @Override
-                public void set(StackBuffer stackBuffer, int... ids) throws Exception {
-                }
-
-                @Override
-                public int lastId(StackBuffer stackBuffer) throws Exception {
-                    return 0;
-                }
-
-                @Override
-                public void andNotToSourceSize(List<RoaringBitmap> masks, StackBuffer stackBuffer) throws Exception {
-                }
-
-                @Override
-                public void orToSourceSize(RoaringBitmap mask, StackBuffer stackBuffer) throws Exception {
-                }
-
-                @Override
-                public void andNot(RoaringBitmap mask, StackBuffer stackBuffer) throws Exception {
-                }
-
-                @Override
-                public void or(RoaringBitmap mask, StackBuffer stackBuffer) throws Exception {
-                }
-
-                @Override
-                public void append(StackBuffer stackBuffer, int... ids) throws Exception {
-                }
-
-                @Override
-                public void appendAndExtend(List<Integer> ids, int lastId, StackBuffer stackBuffer) throws Exception {
-                }
-
-                @Override
-                public <R> R txIndex(IndexTx<R, RoaringBitmap> tx, StackBuffer stackBuffer) throws Exception {
-                    return tx.tx(indexes[fieldId].get(termId), null);
-                }
-            };
+            return new TestInvertedIndex(fieldId, termId);
         }
 
         @Override
         public MiruInvertedIndex<RoaringBitmap> get(int fieldId, MiruTermId termId, int considerIfIndexIdGreaterThanN) throws Exception {
-            return new MiruInvertedIndex<RoaringBitmap>() {
-                @Override
-                public Optional<RoaringBitmap> getIndex(StackBuffer stackBuffer) throws Exception {
-                    return Optional.fromNullable(indexes[fieldId].get(termId));
-                }
-
-                @Override
-                public Optional<RoaringBitmap> getIndexUnsafe(StackBuffer stackBuffer) throws Exception {
-                    return getIndex(stackBuffer);
-                }
-
-                @Override
-                public void replaceIndex(RoaringBitmap index, int setLastId, StackBuffer stackBuffer) throws Exception {
-                }
-
-                @Override
-                public void remove(int id, StackBuffer stackBuffer) throws Exception {
-                }
-
-                @Override
-                public void set(StackBuffer stackBuffer, int... ids) throws Exception {
-                }
-
-                @Override
-                public int lastId(StackBuffer stackBuffer) throws Exception {
-                    return 0;
-                }
-
-                @Override
-                public void andNotToSourceSize(List<RoaringBitmap> masks, StackBuffer stackBuffer) throws Exception {
-                }
-
-                @Override
-                public void orToSourceSize(RoaringBitmap mask, StackBuffer stackBuffer) throws Exception {
-                }
-
-                @Override
-                public void andNot(RoaringBitmap mask, StackBuffer stackBuffer) throws Exception {
-                }
-
-                @Override
-                public void or(RoaringBitmap mask, StackBuffer stackBuffer) throws Exception {
-                }
-
-                @Override
-                public void append(StackBuffer stackBuffer, int... ids) throws Exception {
-                }
-
-                @Override
-                public void appendAndExtend(List<Integer> ids, int lastId, StackBuffer stackBuffer) throws Exception {
-                }
-
-                @Override
-                public <R> R txIndex(IndexTx<R, RoaringBitmap> tx, StackBuffer stackBuffer) throws Exception {
-                    return tx.tx(indexes[fieldId].get(termId), null);
-                }
-            };
+            return new TestInvertedIndex(fieldId, termId);
         }
 
         @Override
@@ -320,6 +208,72 @@ public class LuceneBackedQueryParserTest {
         @Override
         public void mergeCardinalities(int fieldId, MiruTermId termId, int[] ids, long[] counts, StackBuffer stackBuffer) throws Exception {
             throw new UnsupportedOperationException("Nope");
+        }
+
+        private class TestInvertedIndex implements MiruInvertedIndex<RoaringBitmap> {
+            private final int fieldId;
+            private final MiruTermId termId;
+
+            public TestInvertedIndex(int fieldId, MiruTermId termId) {
+                this.fieldId = fieldId;
+                this.termId = termId;
+            }
+
+            @Override
+            public Optional<RoaringBitmap> getIndex(StackBuffer stackBuffer) throws Exception {
+                return Optional.fromNullable(indexes[fieldId].get(termId));
+            }
+
+            @Override
+            public Optional<RoaringBitmap> getIndexUnsafe(StackBuffer stackBuffer) throws Exception {
+                return getIndex(stackBuffer);
+            }
+
+            @Override
+            public void replaceIndex(RoaringBitmap index, int setLastId, StackBuffer stackBuffer) throws Exception {
+            }
+
+            @Override
+            public void remove(int id, StackBuffer stackBuffer) throws Exception {
+            }
+
+            @Override
+            public void set(StackBuffer stackBuffer, int... ids) throws Exception {
+            }
+
+            @Override
+            public int lastId(StackBuffer stackBuffer) throws Exception {
+                return 0;
+            }
+
+            @Override
+            public void andNotToSourceSize(List<RoaringBitmap> masks, StackBuffer stackBuffer) throws Exception {
+            }
+
+            @Override
+            public void orToSourceSize(RoaringBitmap mask, StackBuffer stackBuffer) throws Exception {
+            }
+
+            @Override
+            public void andNot(RoaringBitmap mask, StackBuffer stackBuffer) throws Exception {
+            }
+
+            @Override
+            public void or(RoaringBitmap mask, StackBuffer stackBuffer) throws Exception {
+            }
+
+            @Override
+            public void append(StackBuffer stackBuffer, int... ids) throws Exception {
+            }
+
+            @Override
+            public void appendAndExtend(List<Integer> ids, int lastId, StackBuffer stackBuffer) throws Exception {
+            }
+
+            @Override
+            public <R> R txIndex(IndexTx<R, RoaringBitmap> tx, StackBuffer stackBuffer) throws Exception {
+                return tx.tx(indexes[fieldId].get(termId), null, null);
+            }
         }
     }
 
