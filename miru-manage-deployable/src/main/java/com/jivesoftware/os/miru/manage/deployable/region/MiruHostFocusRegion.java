@@ -7,8 +7,8 @@ import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartition;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
-import com.jivesoftware.os.miru.api.MiruTopologyStatus;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.topology.MiruTopologyStatus;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.manage.deployable.region.bean.PartitionCoordBean;
 import com.jivesoftware.os.miru.manage.deployable.region.bean.TenantBean;
@@ -70,8 +70,8 @@ public class MiruHostFocusRegion implements MiruRegion<MiruHost> {
                 String lastIngress = timeAgo(System.currentTimeMillis() - status.lastIngressTimestamp);
                 String lastQuery = timeAgo(System.currentTimeMillis() - status.lastQueryTimestamp);
                 PartitionCoordBean partitionCoordBean = new PartitionCoordBean(
-                        partition != null ? partition.coord : null,
-                        storage, lastIngress, lastQuery);
+                    partition != null ? partition.coord : null,
+                    storage, lastIngress, lastQuery);
                 if (state == MiruPartitionState.online) {
                     tenantBean.getOnline().add(partitionCoordBean);
                 } else if (state == MiruPartitionState.rebuilding) {

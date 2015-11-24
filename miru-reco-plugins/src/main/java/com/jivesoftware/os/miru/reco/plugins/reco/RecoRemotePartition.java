@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.reco.plugins.reco;
 
 import com.google.common.base.Optional;
+import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
@@ -10,7 +11,6 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.mlogger.core.EndPointMetrics;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.routing.bird.http.client.HttpClient;
 
 import static com.jivesoftware.os.miru.reco.plugins.reco.RecoConstants.CUSTOM_QUERY_ENDPOINT;
 import static com.jivesoftware.os.miru.reco.plugins.reco.RecoConstants.RECO_PREFIX;
@@ -34,11 +34,18 @@ public class RecoRemotePartition implements MiruRemotePartition<RecoQuery, RecoA
     }
 
     @Override
-    public MiruPartitionResponse<RecoAnswer> askRemote(HttpClient httpClient,
+    public MiruPartitionResponse<RecoAnswer> askRemote(MiruHost host,
         MiruPartitionId partitionId,
         MiruRequest<RecoQuery> request,
         Optional<RecoReport> report) throws MiruQueryServiceException {
-        return remotePartitionReader.read(httpClient, getEndpoint(partitionId), request, RecoAnswer.class, report, endPointMetrics, RecoAnswer.EMPTY_RESULTS);
+        return remotePartitionReader.read("reco",
+            host,
+            getEndpoint(partitionId),
+            request,
+            RecoAnswer.class,
+            report,
+            endPointMetrics,
+            RecoAnswer.EMPTY_RESULTS);
     }
 
 }

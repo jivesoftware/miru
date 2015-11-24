@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.plugin.index;
 import com.google.common.base.Charsets;
 import com.google.common.collect.Interner;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
@@ -12,7 +13,6 @@ import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -97,7 +97,7 @@ public class MiruActivityInternExtern {
                 for (int i = 0; i < fieldValues.size(); i++) {
                     String fieldValue = fieldValues.get(i);
                     if (fieldValue.length() > MAX_TERM_LENGTH || fieldValue.length() == 0) {
-                        log.warn("Ignored term {} because it is equals to zero or greater than {}.", fieldValue.length(), MAX_TERM_LENGTH);
+                        log.warn("Ignored term {} because its length is zero or greater than {}.", fieldValue.length(), MAX_TERM_LENGTH);
                         // heavy-handed copy for removal from list, but the original list may be immutable, and this should be a rare occurrence
                         List<String> snip = Lists.newArrayListWithCapacity(fieldValues.size() - 1);
                         snip.addAll(fieldValues.subList(0, i));
@@ -147,7 +147,7 @@ public class MiruActivityInternExtern {
     }
 
     private Map<String, List<String>> externFields(MiruTermId[][] fields, MiruSchema schema) {
-        Map<String, List<String>> externFields = new HashMap<>();
+        Map<String, List<String>> externFields = Maps.newHashMapWithExpectedSize(fields.length);
         for (int i = 0; i < fields.length; i++) {
             MiruTermId[] values = fields[i];
             if (values != null) {
@@ -163,7 +163,7 @@ public class MiruActivityInternExtern {
     }
 
     private Map<String, List<String>> externProps(MiruIBA[][] properties, MiruSchema schema) {
-        Map<String, List<String>> externProperties = new HashMap<>();
+        Map<String, List<String>> externProperties = Maps.newHashMapWithExpectedSize(properties.length);
         for (int i = 0; i < properties.length; i++) {
             MiruIBA[] values = properties[i];
             if (values != null) {

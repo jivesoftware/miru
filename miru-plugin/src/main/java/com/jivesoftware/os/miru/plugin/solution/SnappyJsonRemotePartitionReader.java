@@ -4,15 +4,20 @@ import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
-import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
+import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
 import com.jivesoftware.os.mlogger.core.EndPointMetrics;
-import com.jivesoftware.os.routing.bird.http.client.HttpClient;
+import com.jivesoftware.os.routing.bird.http.client.ConnectionDescriptorSelectiveStrategy;
 import com.jivesoftware.os.routing.bird.http.client.HttpClientException;
 import com.jivesoftware.os.routing.bird.http.client.HttpResponse;
+import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
 import com.jivesoftware.os.routing.bird.http.client.NonSuccessStatusCodeException;
+import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
+import com.jivesoftware.os.routing.bird.shared.ClientCall;
+import com.jivesoftware.os.routing.bird.shared.HostPort;
+import java.util.Map;
 import org.apache.http.HttpStatus;
 import org.xerial.snappy.Snappy;
 
@@ -23,13 +28,27 @@ public class SnappyJsonRemotePartitionReader implements MiruRemotePartitionReade
 
     private static final byte[] EMPTY_RESPONSE = new byte[0];
     private static final ObjectMapper MAPPER;
+    private static final HttpResponseMapper RESPONSE_MAPPER;
+
     static {
         MAPPER = new ObjectMapper();
         MAPPER.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
         MAPPER.registerModule(new GuavaModule());
+
+        RESPONSE_MAPPER = new HttpResponseMapper(MAPPER);
     }
 
-    public <Q, A, P> MiruPartitionResponse<A> read(HttpClient httpClient,
+    private final TenantAwareHttpClient<String> readerHttpClient;
+    private final Map<MiruHost, ConnectionDescriptorSelectiveStrategy> strategyPerHost;
+
+    public SnappyJsonRemotePartitionReader(TenantAwareHttpClient<String> readerHttpClient,
+        Map<MiruHost, ConnectionDescriptorSelectiveStrategy> strategyPerHost) {
+        this.readerHttpClient = readerHttpClient;
+        this.strategyPerHost = strategyPerHost;
+    }
+
+    public <Q, A, P> MiruPartitionResponse<A> read(String queryKey,
+        MiruHost host,
         String endpoint,
         MiruRequest<Q> request,
         Class<A> answerClass,
@@ -40,16 +59,38 @@ public class SnappyJsonRemotePartitionReader implements MiruRemotePartitionReade
 
         endPointMetrics.start();
         try {
+            ConnectionDescriptorSelectiveStrategy strategy = strategyPerHost.computeIfAbsent(host,
+                miruHost -> new ConnectionDescriptorSelectiveStrategy(new HostPort[] { new HostPort(miruHost.getLogicalName(), miruHost.getPort()) }));
             MiruRequestAndReport<Q, P> requestAndReport = new MiruRequestAndReport<>(request, report.orNull());
-            return unpack(executePost(httpClient, endpoint, pack(requestAndReport)), answerClass, emptyResults);
+            byte[] postBytes = pack(requestAndReport);
+            return unpack(
+                readerHttpClient.call("", strategy,
+                    queryKey + ":" + request.name + ":snappyJson",
+                    httpClient1 -> {
+                        HttpResponse httpResponse = httpClient1.postBytes(endpoint, postBytes, null);
+                        if (!RESPONSE_MAPPER.isSuccessStatusCode(httpResponse.getStatusCode())) {
+                            throw new NonSuccessStatusCodeException(httpResponse.getStatusCode(), "Non success status code: " + httpResponse.getStatusCode());
+                        }
+
+                        byte[] responseBody = httpResponse.getResponseBody();
+                        if (responseBody == null) {
+                            responseBody = EMPTY_RESPONSE;
+                        }
+
+                        return new ClientCall.ClientResponse<>(responseBody, true);
+                    }),
+                answerClass,
+                emptyResults);
         } catch (NonSuccessStatusCodeException e) {
             if (e.getStatusCode() == HttpStatus.SC_SERVICE_UNAVAILABLE) {
-                throw new MiruPartitionUnavailableException("Remote partition is unavailable");
+                throw new MiruPartitionUnavailableException("Remote partition is unavailable for host: " + host + " endpoint: " + e.getMessage());
             } else {
-                throw new MiruQueryServiceException("Failed remote read for endpoint: " + endpoint, e);
+                throw new MiruQueryServiceException("Failed remote read for host: " + host + " endpoint: " + endpoint, e);
             }
+        } catch (HttpClientException e) {
+            throw new MiruQueryServiceException("Failed to query host: " + host + " endpoint: " + endpoint, e);
         } catch (RuntimeException e) {
-            throw new MiruQueryServiceException("Failed remote read for endpoint: " + endpoint, e);
+            throw new MiruQueryServiceException("Failed remote read for host: " + host + " endpoint: " + endpoint, e);
         } finally {
             endPointMetrics.stop();
         }
@@ -74,32 +115,5 @@ public class SnappyJsonRemotePartitionReader implements MiruRemotePartitionReade
         } catch (Exception x) {
             throw new RuntimeException("Error deserializing response object for bytes of length=" + compressedBytes.length, x);
         }
-    }
-
-    private byte[] executePost(HttpClient httpClient, String endpointUrl, byte[] postEntity) {
-        HttpResponse response;
-        try {
-            response = httpClient.postBytes(endpointUrl, postEntity, null);
-        } catch (HttpClientException x) {
-            throw new RuntimeException("Error posting query request to server for entity length=" + postEntity.length +
-                " at endpoint=\"" + endpointUrl + "\".", x);
-        }
-
-        byte[] responseBody = response.getResponseBody();
-        if (responseBody == null) {
-            responseBody = EMPTY_RESPONSE;
-        }
-
-        if (!this.isSuccessStatusCode(response.getStatusCode())) {
-            throw new NonSuccessStatusCodeException(response.getStatusCode(),
-                "Received non success status code (" + response.getStatusCode() + ") " + "from the server.  The reason phrase on the response was \"" +
-                    response.getStatusReasonPhrase() + "\" " + "and the body of the response was \"" + new String(responseBody, Charsets.UTF_8) + "\".");
-        } else {
-            return responseBody;
-        }
-    }
-
-    private boolean isSuccessStatusCode(int statusCode) {
-        return statusCode >= 200 && statusCode < 300;
     }
 }

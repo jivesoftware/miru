@@ -9,23 +9,21 @@ import java.util.List;
 public class PartitionBean {
 
     private final int partitionId;
-    private final String activityCount;
-    private final int begins;
-    private final int ends;
+    private String activityCount;
+    private int begins;
+    private int ends;
     private final List<PartitionCoordBean> online = Lists.newArrayList();
     private final List<PartitionCoordBean> rebuilding = Lists.newArrayList();
     private final List<PartitionCoordBean> bootstrap = Lists.newArrayList();
     private final List<PartitionCoordBean> offline = Lists.newArrayList();
+    private boolean destroyed;
     private String minClock;
     private String maxClock;
     private String minOrderId;
     private String maxOrderId;
 
-    public PartitionBean(int partitionId, long activityCount, int begins, int ends) {
+    public PartitionBean(int partitionId) {
         this.partitionId = partitionId;
-        this.activityCount = String.valueOf(activityCount);
-        this.begins = begins;
-        this.ends = ends;
     }
 
     public int getPartitionId() {
@@ -36,12 +34,24 @@ public class PartitionBean {
         return activityCount;
     }
 
+    public void setActivityCount(String activityCount) {
+        this.activityCount = activityCount;
+    }
+
     public int getBegins() {
         return begins;
     }
 
+    public void setBegins(int begins) {
+        this.begins = begins;
+    }
+
     public int getEnds() {
         return ends;
+    }
+
+    public void setEnds(int ends) {
+        this.ends = ends;
     }
 
     public List<PartitionCoordBean> getOnline() {
@@ -58,6 +68,14 @@ public class PartitionBean {
 
     public List<PartitionCoordBean> getOffline() {
         return offline;
+    }
+
+    public boolean isDestroyed() {
+        return destroyed;
+    }
+
+    public void setDestroyed(boolean destroyed) {
+        this.destroyed = destroyed;
     }
 
     public String getMinClock() {

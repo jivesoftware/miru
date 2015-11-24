@@ -47,28 +47,6 @@ public class MiruWALEndpoints {
     }
 
     @GET
-    @Path("/lookup")
-    @Produces(MediaType.TEXT_HTML)
-    public Response getLookup() {
-        String rendered = writerUIService.renderLookup();
-        return Response.ok(rendered).build();
-    }
-
-    @GET
-    @Path("/lookup/{tenantId}")
-    @Produces(MediaType.TEXT_HTML)
-    public Response getActivityWALForTenant(
-        @PathParam("tenantId") String tenantId,
-        @QueryParam("afterTimestamp") Long afterTimestamp,
-        @QueryParam("limit") Integer limit) {
-        String rendered = writerUIService.renderLookupWithFocus(
-            new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
-            Optional.fromNullable(afterTimestamp),
-            Optional.fromNullable(limit));
-        return Response.ok(rendered).build();
-    }
-
-    @GET
     @Path("/activity")
     @Produces(MediaType.TEXT_HTML)
     public Response getActivityWALForTenant() {
@@ -183,12 +161,12 @@ public class MiruWALEndpoints {
     }
 
     @POST
-    @Path("/repair/repairRanges")
+    @Path("/repair/repairRanges/{fast}")
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     @Produces(MediaType.TEXT_HTML)
-    public Response repairRanges() {
+    public Response repairRanges(@PathParam("fast") boolean fast) {
         try {
-            miruWALDirector.repairRanges();
+            miruWALDirector.repairRanges(fast);
             return Response.ok("success").build();
         } catch (Throwable t) {
             LOG.error("POST /repair/repairRanges", t);
@@ -207,6 +185,27 @@ public class MiruWALEndpoints {
             return Response.ok("success").build();
         } catch (Throwable t) {
             LOG.error("POST /repair/removePartition/{}/{}", new Object[] { tenantId, partitionId }, t);
+            return Response.serverError().entity(t.getMessage()).build();
+        }
+    }
+
+    @GET
+    @Path("/cleanup")
+    @Produces(MediaType.TEXT_HTML)
+    public Response getCleanup() {
+        String rendered = writerUIService.renderCleanup();
+        return Response.ok(rendered).build();
+    }
+
+    @POST
+    @Path("/cleanup/destroyed")
+    @Produces(MediaType.TEXT_HTML)
+    public Response cleanupDestroyed() {
+        try {
+            miruWALDirector.removeDestroyed();
+            return Response.ok("success").build();
+        } catch (Throwable t) {
+            LOG.error("POST /cleanup/destroyed", t);
             return Response.serverError().entity(t.getMessage()).build();
         }
     }

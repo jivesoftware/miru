@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.manage.deployable.topology;
 
+import com.google.common.base.Charsets;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
@@ -69,6 +70,63 @@ public class MiruTopologyEndpoints {
             return r;
         } catch (Exception x) {
             String msg = "Failed to update ingress";
+            LOG.error(msg, x);
+            return ResponseHelper.INSTANCE.errorResponse(msg, x);
+        }
+    }
+
+    @POST
+    @Path("/remove/ingress/{tenantId}/{partitionId}")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response removeIngress(@PathParam("tenantId") String tenantId,
+        @PathParam("partitionId") int partitionId) {
+        try {
+            long start = System.currentTimeMillis();
+            registry.removeIngress(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), MiruPartitionId.of(partitionId));
+            Response r = ResponseHelper.INSTANCE.jsonResponse("ok");
+            stats.ingressed("/remove/ingress/" + tenantId + "/" + partitionId, 1, System.currentTimeMillis() - start);
+            return r;
+        } catch (Exception x) {
+            String msg = "Failed to remove ingress";
+            LOG.error(msg, x);
+            return ResponseHelper.INSTANCE.errorResponse(msg, x);
+        }
+    }
+
+    @POST
+    @Path("/destroy/partition/{tenantId}/{partitionId}")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response destroyPartition(@PathParam("tenantId") String tenantId,
+        @PathParam("partitionId") int partitionId) {
+        try {
+            long start = System.currentTimeMillis();
+            registry.destroyPartition(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), MiruPartitionId.of(partitionId));
+            Response r = ResponseHelper.INSTANCE.jsonResponse("ok");
+            stats.ingressed("/destroy/partition/" + tenantId + "/" + partitionId, 1, System.currentTimeMillis() - start);
+            return r;
+        } catch (Exception x) {
+            String msg = "Failed to destroy partition";
+            LOG.error(msg, x);
+            return ResponseHelper.INSTANCE.errorResponse(msg, x);
+        }
+    }
+
+    @GET
+    @Path("/partition/status/{tenantId}/{partitionId}")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getPartitionStatus(@PathParam("tenantId") String tenantId,
+        @PathParam("partitionId") int largestPartitionId) {
+        try {
+            long start = System.currentTimeMillis();
+            Response r = ResponseHelper.INSTANCE.jsonResponse(
+                registry.getPartitionStatus(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), MiruPartitionId.of(largestPartitionId)));
+            stats.ingressed("/partition/status/" + tenantId + "/" + largestPartitionId, 1, System.currentTimeMillis() - start);
+            return r;
+        } catch (Exception x) {
+            String msg = "Failed to get partition status for " + tenantId + " " + largestPartitionId;
             LOG.error(msg, x);
             return ResponseHelper.INSTANCE.errorResponse(msg, x);
         }
@@ -145,6 +203,23 @@ public class MiruTopologyEndpoints {
         }
     }
 
+    @GET
+    @Path("/ingress/ranges/{tenantId}")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getIngressRanges(@PathParam("tenantId") String tenantId) {
+        try {
+            long start = System.currentTimeMillis();
+            Response r = ResponseHelper.INSTANCE.jsonResponse(registry.getIngressRanges(new MiruTenantId(tenantId.getBytes(StandardCharsets.UTF_8))));
+            stats.ingressed("/ingress/ranges/" + tenantId, 1, System.currentTimeMillis() - start);
+            return r;
+        } catch (Exception x) {
+            String msg = "Failed to getIngressRanges for " + tenantId;
+            LOG.error(msg, x);
+            return ResponseHelper.INSTANCE.errorResponse(msg, x);
+        }
+    }
+
     @POST
     @Path("/remove/{host}/{port}")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -154,7 +229,7 @@ public class MiruTopologyEndpoints {
         try {
             long start = System.currentTimeMillis();
             MiruHost miruHost = new MiruHost(host, port);
-            registry.remove(miruHost);
+            registry.removeHost(miruHost);
             stats.ingressed("/remove/" + host + "/" + port, 1, System.currentTimeMillis() - start);
             return ResponseHelper.INSTANCE.jsonResponse("");
         } catch (Exception x) {
@@ -177,7 +252,7 @@ public class MiruTopologyEndpoints {
             MiruTenantId miruTenantId = new MiruTenantId(tenantId.getBytes(StandardCharsets.UTF_8));
             MiruPartitionId miruPartitionId = MiruPartitionId.of(partitionId);
             MiruHost miruHost = new MiruHost(host, port);
-            registry.remove(miruHost, miruTenantId, miruPartitionId);
+            registry.removeTopology(miruHost, miruTenantId, miruPartitionId);
             stats.ingressed("/remove/" + host + "/" + port + "/" + tenantId + "/" + partitionId, 1, System.currentTimeMillis() - start);
             return ResponseHelper.INSTANCE.jsonResponse("");
         } catch (Exception x) {

@@ -16,9 +16,9 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import static com.jivesoftware.os.miru.reco.plugins.uniques.UniquesConstants.CUSTOM_QUERY_ENDPOINT;
-import static com.jivesoftware.os.miru.reco.plugins.uniques.UniquesConstants.DISTINCTS_PREFIX;
+import static com.jivesoftware.os.miru.reco.plugins.uniques.UniquesConstants.UNIQUES_PREFIX;
 
-@Path(DISTINCTS_PREFIX)
+@Path(UNIQUES_PREFIX)
 @Singleton
 public class UniquesEndpoints {
 

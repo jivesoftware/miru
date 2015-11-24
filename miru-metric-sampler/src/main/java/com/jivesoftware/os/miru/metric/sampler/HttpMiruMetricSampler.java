@@ -31,7 +31,7 @@ public class HttpMiruMetricSampler implements MiruMetricSampler, Runnable {
     private final String instance;
     private final String version;
     private final AtomicLong senderIndex = new AtomicLong();
-    private final MiruMetricSampleSender[] sender;
+    private final MiruMetricSampleSenderProvider senderProvider;
     private final int maxBacklog;
     private final int sampleIntervalInMillis;
     private final boolean tenantLevelMetricsEnable;
@@ -47,7 +47,7 @@ public class HttpMiruMetricSampler implements MiruMetricSampler, Runnable {
         String service,
         String instance,
         String version,
-        MiruMetricSampleSender[] logSenders,
+        MiruMetricSampleSenderProvider senderProvider,
         int sampleIntervalInMillis,
         int maxBacklog,
         boolean tenantLevelMetricsEnable,
@@ -57,7 +57,7 @@ public class HttpMiruMetricSampler implements MiruMetricSampler, Runnable {
         this.service = service;
         this.instance = instance;
         this.version = version;
-        this.sender = logSenders;
+        this.senderProvider = senderProvider;
         this.cluster = cluster;
         this.sampleIntervalInMillis = sampleIntervalInMillis;
         this.maxBacklog = maxBacklog;
@@ -116,7 +116,7 @@ public class HttpMiruMetricSampler implements MiruMetricSampler, Runnable {
         for (CountersAndTimers a : CountersAndTimers.getAll()) {
             gather("null", a, metrics, time);
             if (tenantLevelMetricsEnable) {
-                Collection<CountersAndTimers> cats = a.getAllTenantSpecficMetrics();
+                Collection<CountersAndTimers> cats = a.getAllTenantSpecificMetrics();
                 for (CountersAndTimers c : cats) {
                     String tenant = c.getName().split(">")[2];
                     gather(tenant, c, metrics, time);
@@ -180,18 +180,19 @@ public class HttpMiruMetricSampler implements MiruMetricSampler, Runnable {
     }
 
     private void send(List<AnomalyMetric> samples) {
-        for (MiruMetricSampleSender s : sender) {
+        MiruMetricSampleSender[] senders = senderProvider.getSenders();
+        for (MiruMetricSampleSender s : senders) {
             int i = 0;
             try {
-                i = (int) (senderIndex.get() % sender.length);
-                sender[i].send(samples);
+                i = (int) (senderIndex.get() % senders.length);
+                senders[i].send(samples);
                 samples.clear();
                 return;
             } catch (SocketException e) {
-                log.warn("Sampler:{} failed to send:{} samples: {}: {}", sender[i], samples.size(), e.getClass().getCanonicalName(), e.getMessage());
+                log.warn("Sampler:{} failed to send:{} samples: {}: {}", senders[i], samples.size(), e.getClass().getCanonicalName(), e.getMessage());
                 senderIndex.incrementAndGet();
             } catch (Exception e) {
-                log.warn("Sampler:{} failed to send:{} samples", new Object[] { sender[i], samples.size(), e.getMessage() }, e);
+                log.warn("Sampler:{} failed to send:{} samples", new Object[]{senders[i], samples.size(), e.getMessage()}, e);
                 senderIndex.incrementAndGet();
             }
         }

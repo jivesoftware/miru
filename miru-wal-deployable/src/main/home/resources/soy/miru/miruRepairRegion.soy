@@ -16,8 +16,12 @@
                     <td>Repair missing begin/end activities so that all partitions are properly closed</td>
                 </tr>
                 <tr>
-                    <td><input type="button" value="Repair Ranges" onclick="miru.repair.repairRanges(this)" /></td>
+                    <td><input type="button" value="Repair Ranges (Full)" onclick="miru.repair.repairRanges(this, false)" /></td>
                     <td>Repair missing clock/orderId ranges for all partitions</td>
+                </tr>
+                <tr>
+                    <td><input type="button" value="Repair Ranges (Fast)" onclick="miru.repair.repairRanges(this, true)" /></td>
+                    <td>Repair missing max clock for all partitions</td>
                 </tr>
             </table>
         </div>

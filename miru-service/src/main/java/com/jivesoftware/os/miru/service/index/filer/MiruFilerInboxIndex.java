@@ -2,21 +2,23 @@ package com.jivesoftware.os.miru.service.index.filer;
 
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.io.api.KeyedFilerStore;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInboxIndex;
+import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndexAppender;
 
 /** @author jonathan */
-public class MiruFilerInboxIndex<BM> implements MiruInboxIndex<BM> {
+public class MiruFilerInboxIndex<BM extends IBM, IBM> implements MiruInboxIndex<IBM> {
 
-    private final MiruBitmaps<BM> bitmaps;
+    private final MiruBitmaps<BM, IBM> bitmaps;
     private final long indexId;
     private final KeyedFilerStore<Long, Void> store;
     private final StripingLocksProvider<MiruStreamId> stripingLocksProvider;
 
-    public MiruFilerInboxIndex(MiruBitmaps<BM> bitmaps,
+    public MiruFilerInboxIndex(MiruBitmaps<BM, IBM> bitmaps,
         long indexId,
         KeyedFilerStore<Long, Void> store,
         StripingLocksProvider<MiruStreamId> stripingLocksProvider)
@@ -28,11 +30,12 @@ public class MiruFilerInboxIndex<BM> implements MiruInboxIndex<BM> {
     }
 
     @Override
-    public void append(MiruStreamId streamId, int... ids) throws Exception {
-        getAppender(streamId).append(ids);
+    public void append(MiruStreamId streamId, StackBuffer stackBuffer, int... ids) throws Exception {
+        getAppender(streamId).append(stackBuffer, ids);
     }
 
-    public MiruFilerInvertedIndex<BM> getInbox(MiruStreamId streamId) {
+    @Override
+    public MiruInvertedIndex<IBM> getInbox(MiruStreamId streamId) {
         return new MiruFilerInvertedIndex<>(bitmaps,
             new MiruFieldIndex.IndexKey(indexId, streamId.getBytes()),
             store,
@@ -46,8 +49,8 @@ public class MiruFilerInboxIndex<BM> implements MiruInboxIndex<BM> {
     }
 
     @Override
-    public int getLastActivityIndex(MiruStreamId streamId) throws Exception {
-        return getInbox(streamId).lastId();
+    public int getLastActivityIndex(MiruStreamId streamId, StackBuffer stackBuffer) throws Exception {
+        return getInbox(streamId).lastId(stackBuffer);
     }
 
     @Override

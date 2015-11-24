@@ -1,8 +1,8 @@
 package com.jivesoftware.os.miru.stream.plugins.count;
 
 import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
@@ -15,7 +15,6 @@ import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import java.util.Collections;
 import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkState;
@@ -27,12 +26,14 @@ public class DistinctCount {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
-    public <BM> DistinctCountAnswer numberOfDistincts(MiruBitmaps<BM> bitmaps,
-        MiruRequestContext<BM, ?> requestContext,
+    public <BM extends IBM, IBM> DistinctCountAnswer numberOfDistincts(MiruBitmaps<BM, IBM> bitmaps,
+        MiruRequestContext<IBM, ?> requestContext,
         MiruRequest<DistinctCountQuery> request,
         Optional<DistinctCountReport> lastReport,
         BM answer)
         throws Exception {
+
+        StackBuffer stackBuffer = new StackBuffer();
 
         log.debug("Get number of distincts for answer={} query={}", answer, request);
 
@@ -50,20 +51,20 @@ public class DistinctCount {
         MiruFieldDefinition fieldDefinition = requestContext.getSchema().getFieldDefinition(fieldId);
         log.debug("fieldId={}", fieldId);
         if (fieldId >= 0) {
-            MiruFieldIndex<BM> fieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
-            ReusableBuffers<BM> reusable = new ReusableBuffers<>(bitmaps, 2);
+            MiruFieldIndex<IBM> fieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
+            ReusableBuffers<BM, IBM> reusable = new ReusableBuffers<>(bitmaps, 2);
 
             for (String aggregateTerm : aggregateTerms) {
                 MiruTermId aggregateTermId = termComposer.compose(fieldDefinition, aggregateTerm);
-                Optional<BM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex();
+                Optional<IBM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex(stackBuffer);
                 if (!optionalTermIndex.isPresent()) {
                     continue;
                 }
 
-                BM termIndex = optionalTermIndex.get();
+                IBM termIndex = optionalTermIndex.get();
 
                 BM revisedAnswer = reusable.next();
-                bitmaps.andNot(revisedAnswer, answer, Collections.singletonList(termIndex));
+                bitmaps.andNot(revisedAnswer, answer, termIndex);
                 answer = revisedAnswer;
             }
 
@@ -74,7 +75,7 @@ public class DistinctCount {
                 if (lastSetBit < 0) {
                     break;
                 }
-                MiruTermId[] fieldValues = requestContext.getActivityIndex().get(lastSetBit, fieldId);
+                MiruTermId[] fieldValues = requestContext.getActivityIndex().get(lastSetBit, fieldId,stackBuffer);
                 log.trace("fieldValues={}", (Object) fieldValues);
                 if (fieldValues == null || fieldValues.length == 0) {
                     // could make this a reusable buffer, but this is effectively an error case and would require 3 buffers
@@ -88,7 +89,7 @@ public class DistinctCount {
                     String aggregateTerm = termComposer.decompose(fieldDefinition, aggregateTermId);
 
                     aggregateTerms.add(aggregateTerm);
-                    Optional<BM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex();
+                    Optional<IBM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex(stackBuffer);
                     checkState(optionalTermIndex.isPresent(), "Unable to load inverted index for aggregateTermId: " + aggregateTermId);
 
                     BM revisedAnswer = reusable.next();
@@ -103,7 +104,9 @@ public class DistinctCount {
                 }
             }
         }
-        DistinctCountAnswer result = new DistinctCountAnswer(ImmutableSet.copyOf(aggregateTerms), collectedDistincts);
+
+        boolean resultsExhausted = request.query.timeRange.smallestTimestamp > requestContext.getTimeIndex().getLargestTimestamp();
+        DistinctCountAnswer result = new DistinctCountAnswer(aggregateTerms, collectedDistincts, resultsExhausted);
         log.debug("result={}", result);
         return result;
     }

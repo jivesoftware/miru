@@ -20,7 +20,7 @@ anomaly.query = {
                 tooltipFillColor: "rgba(0,0,0,1)",
                 pointDot: false,
                 bezierCurve: false,
-                datasetFill: false,
+                datasetFill: true,
                 responsive: true,
                 animation: false
             });
@@ -38,7 +38,7 @@ anomaly.query = {
         var isLarge = [];
         $('.anom-wave-toggle').each(function (i) {
             $(this).click(function () {
-                $(this).animate({height: (isLarge[i] ? '20px' : '100%')});
+                $(this).animate({height: (isLarge[i] ? '36px' : '100%')});
                 isLarge[i] = !isLarge[i];
             });
         });

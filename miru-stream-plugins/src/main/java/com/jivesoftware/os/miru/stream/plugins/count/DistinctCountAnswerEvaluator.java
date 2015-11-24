@@ -17,6 +17,10 @@ public class DistinctCountAnswerEvaluator implements MiruAnswerEvaluator<Distinc
 
     @Override
     public boolean isDone(DistinctCountAnswer answer, MiruSolutionLog solutionLog) {
+        solutionLog.log(MiruSolutionLogLevel.INFO, "Results exhausted = {}", answer.resultsExhausted);
+        if (answer.resultsExhausted) {
+            return true;
+        }
         solutionLog.log(MiruSolutionLogLevel.INFO, "Evaluate {} >= {}", answer.collectedDistincts, query.desiredNumberOfDistincts);
         return answer.collectedDistincts >= query.desiredNumberOfDistincts;
     }
@@ -24,5 +28,10 @@ public class DistinctCountAnswerEvaluator implements MiruAnswerEvaluator<Distinc
     @Override
     public boolean stopOnUnsolvablePartition() {
         return true;
+    }
+
+    @Override
+    public boolean useParallelSolver() {
+        return false;
     }
 }

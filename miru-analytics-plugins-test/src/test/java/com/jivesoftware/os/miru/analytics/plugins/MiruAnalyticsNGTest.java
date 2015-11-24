@@ -20,6 +20,8 @@ import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
+import com.jivesoftware.os.miru.bitmaps.roaring5.MiruBitmapsRoaring;
+import com.jivesoftware.os.miru.bitmaps.roaring5.buffer.MiruBitmapsRoaringBuffer;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
@@ -27,7 +29,6 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.test.MiruPluginTestBootstrap;
 import com.jivesoftware.os.miru.service.MiruService;
-import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsRoaring;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Random;
@@ -64,7 +65,7 @@ public class MiruAnalyticsNGTest {
     @BeforeMethod
     public void setUpMethod() throws Exception {
         MiruProvider<MiruService> miruProvider = new MiruPluginTestBootstrap().bootstrap(tenant1, partitionId, miruHost,
-            miruSchema, MiruBackingStorage.memory, new MiruBitmapsRoaring(), Collections.<MiruPartitionedActivity>emptyList());
+            miruSchema, MiruBackingStorage.memory, new MiruBitmapsRoaringBuffer(), Collections.<MiruPartitionedActivity>emptyList());
 
         this.service = miruProvider.getMiru(tenant1);
 
@@ -83,7 +84,7 @@ public class MiruAnalyticsNGTest {
         int numberOfBuckets = 32;
         long timespan = snowflakeIdPacker.pack(numberOfBuckets * TimeUnit.HOURS.toMillis(3), 0, 0);
         long intervalPerActivity = timespan / numberOfActivities;
-        long smallestTime = snowflakeIdPacker.pack(numberOfBuckets * TimeUnit.HOURS.toMillis(3), 0, 0) - timespan;
+        long smallestTime = snowflakeIdPacker.pack(System.currentTimeMillis(), 0, 0) - timespan;
         AtomicLong time = new AtomicLong(smallestTime);
 
         System.out.println("Building activities....");
@@ -119,7 +120,8 @@ public class MiruAnalyticsNGTest {
             MiruFilter filter = new MiruFilter(MiruFilterOperation.or, false, Arrays.asList(miruFieldFilter), null);
 
             long s = System.currentTimeMillis();
-            MiruRequest<AnalyticsQuery> request = new MiruRequest<>(tenant1,
+            MiruRequest<AnalyticsQuery> request = new MiruRequest<>("test",
+                tenant1,
                 new MiruActorId(new byte[] { 1 }),
                 MiruAuthzExpression.NOT_PROVIDED,
                 new AnalyticsQuery(

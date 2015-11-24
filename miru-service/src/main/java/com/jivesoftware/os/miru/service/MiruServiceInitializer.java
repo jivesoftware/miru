@@ -54,7 +54,6 @@ import com.jivesoftware.os.miru.service.stream.allocator.MiruChunkAllocator;
 import com.jivesoftware.os.miru.service.stream.allocator.OnDiskChunkAllocator;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.routing.bird.http.client.HttpClientFactory;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
@@ -78,7 +77,6 @@ public class MiruServiceInitializer {
         MiruWALClient<C, S> walClient,
         MiruSipTrackerFactory<S> sipTrackerFactory,
         MiruSipIndexMarshaller<S> sipIndexMarshaller,
-        HttpClientFactory httpClientFactory,
         MiruResourceLocator resourceLocator,
         MiruTermComposer termComposer,
         MiruActivityInternExtern internExtern,
@@ -102,6 +100,9 @@ public class MiruServiceInitializer {
         // query solvers
         final ExecutorService solverExecutor = Executors.newFixedThreadPool(config.getSolverExecutorThreads(),
             new NamedThreadFactory(threadGroup, "solver"));
+
+        final ExecutorService parallelExecutor = Executors.newFixedThreadPool(config.getParallelSolversExecutorThreads(),
+            new NamedThreadFactory(threadGroup, "parallel_solvers"));
 
         final ExecutorService rebuildExecutors = Executors.newFixedThreadPool(config.getRebuilderThreads(),
             new NamedThreadFactory(threadGroup, "rebuild_wal_consumer"));
@@ -148,11 +149,19 @@ public class MiruServiceInitializer {
             config.getPartitionInitialChunkCacheSize(),
             config.getPartitionMaxChunkCacheSize());
 
-        Cache<MiruFieldIndex.IndexKey, Optional<?>> fieldIndexCache = CacheBuilder.newBuilder()
-            .expireAfterAccess(config.getFieldIndexCacheExpireAfterMillis(), TimeUnit.MILLISECONDS)
-            .maximumSize(config.getFieldIndexCacheMaxSize())
-            .concurrencyLevel(config.getFieldIndexCacheConcurrencyLevel())
-            .softValues()
+        Cache<MiruFieldIndex.IndexKey, Optional<?>> fieldIndexCache = null;
+        if (config.getFieldIndexCacheMaxSize() > 0) {
+            fieldIndexCache = CacheBuilder.newBuilder()
+                .expireAfterAccess(config.getFieldIndexCacheExpireAfterMillis(), TimeUnit.MILLISECONDS)
+                .maximumSize(config.getFieldIndexCacheMaxSize())
+                .concurrencyLevel(config.getFieldIndexCacheConcurrencyLevel())
+                .softValues()
+                .build();
+        }
+
+        Cache<MiruFieldIndex.IndexKey, Long> versionCache = CacheBuilder.newBuilder()
+            .maximumSize(config.getVersionCacheMaxSize())
+            .concurrencyLevel(config.getVersionCacheConcurrencyLevel())
             .build();
 
         TxCogs cogs = new TxCogs(256, 64,
@@ -173,6 +182,7 @@ public class MiruServiceInitializer {
             MiruBackingStorage.valueOf(config.getDefaultStorage()),
             config.getPartitionAuthzCacheSize(),
             fieldIndexCache,
+            versionCache,
             new AtomicLong(0),
             fieldIndexStripingLocksProvider,
             streamStripingLocksProvider,
@@ -222,7 +232,7 @@ public class MiruServiceInitializer {
             indexRepairs,
             miruMergeChits);
 
-        MiruRemoteQueryablePartitionFactory remotePartitionFactory = new MiruRemoteQueryablePartitionFactory(httpClientFactory);
+        MiruRemoteQueryablePartitionFactory remotePartitionFactory = new MiruRemoteQueryablePartitionFactory();
 
         MiruTenantTopologyFactory tenantTopologyFactory = new MiruTenantTopologyFactory(config,
             bitmapsProvider,
@@ -250,7 +260,8 @@ public class MiruServiceInitializer {
             partitionDirector,
             partitionComparison,
             solver,
-            schemaProvider);
+            schemaProvider,
+            parallelExecutor);
 
         return new MiruLifecyle<MiruService>() {
 
@@ -272,6 +283,7 @@ public class MiruServiceInitializer {
                 scheduledRebuildExecutor.shutdownNow();
                 scheduledSipMigrateExecutor.shutdownNow();
                 solverExecutor.shutdownNow();
+                parallelExecutor.shutdownNow();
                 streamFactoryExecutor.shutdownNow();
             }
         };

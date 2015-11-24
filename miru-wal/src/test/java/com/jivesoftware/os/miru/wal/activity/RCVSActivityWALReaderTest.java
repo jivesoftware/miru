@@ -38,7 +38,7 @@ public class RCVSActivityWALReaderTest {
             new InMemoryRowColumnValueStore<>();
 
         RCVSActivityWALWriter activityWALWriter = new RCVSActivityWALWriter(activityWAL, activitySipWAL);
-        RCVSActivityWALReader activityWALReader = new RCVSActivityWALReader(10_000, activityWAL, activitySipWAL);
+        RCVSActivityWALReader activityWALReader = new RCVSActivityWALReader(host -> 10_000, activityWAL, activitySipWAL);
         MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory();
 
         for (int i = 0; i < totalActivities; i++) {
@@ -73,7 +73,7 @@ public class RCVSActivityWALReaderTest {
             new InMemoryRowColumnValueStore<>();
 
         RCVSActivityWALWriter activityWALWriter = new RCVSActivityWALWriter(activityWAL, activitySipWAL);
-        RCVSActivityWALReader activityWALReader = new RCVSActivityWALReader(10_000, activityWAL, activitySipWAL);
+        RCVSActivityWALReader activityWALReader = new RCVSActivityWALReader(host -> 10_000, activityWAL, activitySipWAL);
         final AtomicLong clockTimestamp = new AtomicLong();
         MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory(clockTimestamp::get);
 
@@ -84,11 +84,12 @@ public class RCVSActivityWALReaderTest {
         }
 
         final List<Long> timestamps = Lists.newArrayListWithCapacity(totalActivities);
-        activityWALReader.streamSip(tenantId, partitionId, RCVSSipCursor.INITIAL, batchSize,
+        activityWALReader.streamSip(tenantId, partitionId, RCVSSipCursor.INITIAL, null, batchSize,
             (collisionId, partitionedActivity, timestamp) -> {
                 timestamps.add(collisionId);
                 return true;
-            });
+            },
+            null);
 
         assertEquals(timestamps.size(), totalActivities);
         assertEquals(timestamps.get(0).longValue(), startingTimestamp);
@@ -109,7 +110,7 @@ public class RCVSActivityWALReaderTest {
             new InMemoryRowColumnValueStore<>();
 
         RCVSActivityWALWriter activityWALWriter = new RCVSActivityWALWriter(activityWAL, activitySipWAL);
-        RCVSActivityWALReader activityWALReader = new RCVSActivityWALReader(10_000, activityWAL, activitySipWAL);
+        RCVSActivityWALReader activityWALReader = new RCVSActivityWALReader(host -> 10_000, activityWAL, activitySipWAL);
         final AtomicLong clockTimestamp = new AtomicLong();
         MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory(clockTimestamp::get);
 
@@ -120,12 +121,13 @@ public class RCVSActivityWALReaderTest {
         }
 
         final AtomicLong expectedTimestamp = new AtomicLong(startingTimestamp);
-        activityWALReader.streamSip(tenantId, partitionId, RCVSSipCursor.INITIAL, batchSize,
+        activityWALReader.streamSip(tenantId, partitionId, RCVSSipCursor.INITIAL, null, batchSize,
             (collisionId, partitionedActivity, timestamp) -> {
                 assertEquals(partitionedActivity.clockTimestamp, startingTimestamp);
                 assertEquals(partitionedActivity.timestamp, expectedTimestamp.getAndIncrement());
                 return true;
-            });
+            },
+            null);
 
         assertEquals(expectedTimestamp.get(), startingTimestamp + totalActivities);
     }

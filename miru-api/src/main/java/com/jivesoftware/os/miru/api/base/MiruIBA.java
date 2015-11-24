@@ -3,21 +3,25 @@ package com.jivesoftware.os.miru.api.base;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Charsets;
+import com.google.common.primitives.UnsignedBytes;
 import java.io.Serializable;
 import java.util.Arrays;
+import java.util.Comparator;
 
 /**
  * (IBA) Immutable Byte Array
  *
  * @author jonathan
  */
-public class MiruIBA implements Comparable, Serializable {
+public class MiruIBA implements Comparable<MiruIBA>, Serializable {
+
+    private static final Comparator<byte[]> LEX_COMPARATOR = UnsignedBytes.lexicographicalComparator();
 
     private int hashCode = 0;
     private final byte[] bytes;
 
     @JsonCreator
-    public MiruIBA(@JsonProperty ("bytes") byte[] _bytes) {
+    public MiruIBA(@JsonProperty("bytes") byte[] _bytes) {
         bytes = _bytes;
     }
 
@@ -86,28 +90,7 @@ public class MiruIBA implements Comparable, Serializable {
     }
 
     @Override
-    public int compareTo(Object o) {
-        byte[] b;
-        if (o instanceof byte[]) {
-            b = (byte[]) o;
-        } else if (o instanceof MiruIBA) {
-            b = ((MiruIBA) o).bytes;
-        } else {
-            b = new byte[0];
-        }
-        if (b.length < bytes.length) {
-            return -1;
-        } else if (b.length > bytes.length) {
-            return 1;
-        } else {
-            for (int i = 0; i < bytes.length; i++) {
-                if (b[i] < bytes[i]) {
-                    return -1;
-                } else if (b[i] > bytes[i]) {
-                    return 1;
-                }
-            }
-            return 0;
-        }
+    public int compareTo(MiruIBA o) {
+        return LEX_COMPARATOR.compare(bytes, o.bytes);
     }
 }

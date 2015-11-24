@@ -5,12 +5,12 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-build-management</artifactId>
-        <version>0.514-SNAPSHOT</version>
+        <version>0.654-SNAPSHOT</version>
         <relativePath>../inheritance-poms/global-build-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru</groupId>
     <artifactId>miru-logappender</artifactId>
-    <version>0.514-SNAPSHOT</version>
+    <version>0.654-SNAPSHOT</version>
     <properties>
         <module.type>shared_lib</module.type>
     </properties>
@@ -35,8 +35,11 @@
         <dependency>
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
-            <version>6.8.1</version>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.routing.bird</groupId>
+            <artifactId>routing-bird-shared</artifactId>
         </dependency>
     </dependencies>
 </project>

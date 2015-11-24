@@ -5,13 +5,13 @@ package com.jivesoftware.os.miru.plugin.bitmap;
  * reusable answer plus an additional reusable bitmap into a new answer, "size" must be at least 3. However, if the previous answer is reusable but the
  * additional bitmap is non-reusable, then "size" need only be 2.
  */
-public class ReusableBuffers<BM> {
+public class ReusableBuffers<BM extends IBM, IBM> {
 
     private int index = 0;
-    private final MiruBitmaps<BM> bitmaps;
+    private final MiruBitmaps<BM, IBM> bitmaps;
     private final BM[] bufs;
 
-    public ReusableBuffers(MiruBitmaps<BM> bitmaps, int size) {
+    public ReusableBuffers(MiruBitmaps<BM, IBM> bitmaps, int size) {
         this.bitmaps = bitmaps;
         this.bufs = null; // bitmaps.createArrayOf(size);
     }

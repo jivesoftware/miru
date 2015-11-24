@@ -53,6 +53,8 @@ import com.jivesoftware.os.routing.bird.health.api.HealthChecker;
 import com.jivesoftware.os.routing.bird.health.api.HealthFactory;
 import com.jivesoftware.os.routing.bird.health.checkers.GCLoadHealthChecker;
 import com.jivesoftware.os.routing.bird.health.checkers.ServiceStartupHealthCheck;
+import com.jivesoftware.os.routing.bird.http.client.HttpDeliveryClientHealthProvider;
+import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelperUtils;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.http.client.TenantRoutingHttpClientInitializer;
 import com.jivesoftware.os.routing.bird.server.util.Resource;
@@ -101,7 +103,7 @@ public class MiruStumptownMain {
             deployable.addManageInjectables(HasUI.class, new HasUI(Arrays.asList(new HasUI.UI("manage", "manage", "/manage/ui"),
                 new HasUI.UI("Reset Errors", "manage", "/manage/resetErrors"),
                 new HasUI.UI("Tail", "manage", "/manage/tail"),
-                new HasUI.UI("Thead Dump", "manage", "/manage/threadDump"),
+                new HasUI.UI("Thread Dump", "manage", "/manage/threadDump"),
                 new HasUI.UI("Health", "manage", "/manage/ui"),
                 new HasUI.UI("Stumptown", "main", "/"))));
             deployable.addHealthCheck(new GCLoadHealthChecker(deployable.config(GCLoadHealthChecker.GCLoadHealthCheckerConfig.class)));
@@ -130,15 +132,23 @@ public class MiruStumptownMain {
 
             OrderIdProvider orderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName()));
 
+
+            HttpDeliveryClientHealthProvider clientHealthProvider = new HttpDeliveryClientHealthProvider(instanceConfig.getInstanceKey(),
+                HttpRequestHelperUtils.buildRequestHelper(instanceConfig.getRoutesHost(), instanceConfig.getRoutesPort()),
+                instanceConfig.getConnectionsHealth(), 5_000, 100);
             TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
 
             TenantAwareHttpClient<String> miruWriterClient = tenantRoutingHttpClientInitializer.initialize(deployable
-                .getTenantRoutingProvider()
-                .getConnections("miru-writer", "main"));  // TODO expose to conf
+                    .getTenantRoutingProvider()
+                    .getConnections("miru-writer", "main"),
+                clientHealthProvider,
+                10, 10_000);  // TODO expose to conf
 
             TenantAwareHttpClient<String> miruManageClient = tenantRoutingHttpClientInitializer.initialize(deployable
-                .getTenantRoutingProvider()
-                .getConnections("miru-manage", "main")); // TODO expose to conf
+                    .getTenantRoutingProvider()
+                    .getConnections("miru-manage", "main"),
+                clientHealthProvider,
+                10, 10_000); // TODO expose to conf
 
             LogMill logMill = new LogMill(orderIdProvider);
             MiruStumptownIntakeConfig intakeConfig = deployable.config(MiruStumptownIntakeConfig.class);
@@ -233,6 +243,7 @@ public class MiruStumptownMain {
 
             deployable.addResource(sourceTree);
             deployable.buildServer().start();
+            clientHealthProvider.start();
             serviceStartupHealthCheck.success();
         } catch (Throwable t) {
             serviceStartupHealthCheck.info("Encountered the following failure during startup.", t);

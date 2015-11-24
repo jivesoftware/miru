@@ -31,8 +31,9 @@ public class AggregateCountsPlugin implements MiruPlugin<AggregateCountsEndpoint
     }
 
     @Override
-    public Collection<MiruRemotePartition<?, ?, ?>> getRemotePartitions() {
-        JsonRemotePartitionReader remotePartitionReader = new JsonRemotePartitionReader();
+    public Collection<MiruRemotePartition<?, ?, ?>> getRemotePartitions(MiruProvider<? extends Miru> miruProvider) {
+        JsonRemotePartitionReader remotePartitionReader = new JsonRemotePartitionReader(miruProvider.getReaderHttpClient(),
+            miruProvider.getReaderStrategyCache());
         return Arrays.asList(new AggregateCountsCustomRemotePartition(remotePartitionReader),
             new AggregateCountsInboxAllRemotePartition(remotePartitionReader),
             new AggregateCountsInboxUnreadRemotePartition(remotePartitionReader));

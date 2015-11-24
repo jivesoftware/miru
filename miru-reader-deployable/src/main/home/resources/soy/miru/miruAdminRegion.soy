@@ -20,7 +20,7 @@
 {template .adminRegion}
     <div class="btn-group" role="group">
         <a href="#" rel="popover" id="popoverAnchor-errors" data-popover-content="#popover-errors" data-placement="bottom" class="btn btn-primary" title="errors">
-                <span class="glyphicon glyphicon-menu-down">Errors <span class="badge">{$errors}</span></a>
+                <span class="glyphicon glyphicon-menu-down"></span>Errors <span class="badge">{$errors}</span></a>
         <div id="popover-errors" class="hide">
             <table class="table table-striped">
                 {foreach $e in $recentErrors}
@@ -32,7 +32,7 @@
         </div>
         
         <a href="#" rel="popover" id="popoverAnchor-warns" data-popover-content="#popover-warns" data-placement="bottom" class="btn btn-primary" title="warns">
-                <span class="glyphicon glyphicon-menu-down">Warns <span class="badge">{$warns}</span></a>
+                <span class="glyphicon glyphicon-menu-down"></span>Warns <span class="badge">{$warns}</span></a>
         <div id="popover-warns" class="hide">
             <table class="table table-striped">
                 {foreach $e in $recentWarns}
@@ -44,7 +44,7 @@
         </div>
 
         <a href="#" rel="popover" id="popoverAnchor-infos" data-popover-content="#popover-infos" data-placement="bottom" class="btn btn-primary" title="infos">
-                <span class="glyphicon glyphicon-menu-down">Infos <span class="badge">{$infos}</span></a>
+                <span class="glyphicon glyphicon-menu-down"></span>Infos <span class="badge">{$infos}</span></a>
         <div id="popover-infos" class="hide">
             <table class="table table-striped">
                 {foreach $e in $recentInfos}

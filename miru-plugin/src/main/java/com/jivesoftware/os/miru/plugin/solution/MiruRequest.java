@@ -13,6 +13,7 @@ import java.io.Serializable;
  */
 public class MiruRequest<Q> implements Serializable {
 
+    public final String name;
     public final MiruTenantId tenantId;
     public final MiruActorId actorId;
     public final MiruAuthzExpression authzExpression;
@@ -20,11 +21,13 @@ public class MiruRequest<Q> implements Serializable {
     public final MiruSolutionLogLevel logLevel;
 
     @JsonCreator
-    public MiruRequest(@JsonProperty("tenantId") MiruTenantId tenantId,
+    public MiruRequest(@JsonProperty("name") String name,
+        @JsonProperty("tenantId") MiruTenantId tenantId,
         @JsonProperty("actorId") MiruActorId actorId,
         @JsonProperty("authzExpression") MiruAuthzExpression authzExpression,
         @JsonProperty("query") Q query,
         @JsonProperty("logLevel") MiruSolutionLogLevel logLevel) {
+        this.name = name;
         this.tenantId = tenantId;
         this.actorId = actorId;
         this.query = query;
@@ -34,13 +37,14 @@ public class MiruRequest<Q> implements Serializable {
 
     @Override
     public String toString() {
-        return "MiruRequest{"
-            + "tenantId=" + tenantId
-            + ", actorId=" + actorId
-            + ", authzExpression=" + authzExpression
-            + ", query=" + query
-            + ", logLevel=" + logLevel
-            + '}';
+        return "MiruRequest{" +
+            "name='" + name + '\'' +
+            ", tenantId=" + tenantId +
+            ", actorId=" + actorId +
+            ", authzExpression=" + authzExpression +
+            ", query=" + query +
+            ", logLevel=" + logLevel +
+            '}';
     }
 
 }

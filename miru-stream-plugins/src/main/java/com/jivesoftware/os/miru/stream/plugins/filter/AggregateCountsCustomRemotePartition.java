@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.stream.plugins.filter;
 
 import com.google.common.base.Optional;
+import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
@@ -10,7 +11,6 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.mlogger.core.EndPointMetrics;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.routing.bird.http.client.HttpClient;
 
 import static com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsConstants.CUSTOM_QUERY_ENDPOINT;
 import static com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsConstants.FILTER_PREFIX;
@@ -34,11 +34,17 @@ public class AggregateCountsCustomRemotePartition implements MiruRemotePartition
     }
 
     @Override
-    public MiruPartitionResponse<AggregateCountsAnswer> askRemote(HttpClient httpClient,
+    public MiruPartitionResponse<AggregateCountsAnswer> askRemote(MiruHost host,
         MiruPartitionId partitionId,
         MiruRequest<AggregateCountsQuery> request,
         Optional<AggregateCountsReport> report) throws MiruQueryServiceException {
-        return remotePartitionReader.read(httpClient, getEndpoint(partitionId), request, AggregateCountsAnswer.class, report, endPointMetrics,
+        return remotePartitionReader.read("aggregateCountsCustom",
+            host,
+            getEndpoint(partitionId),
+            request,
+            AggregateCountsAnswer.class,
+            report,
+            endPointMetrics,
             AggregateCountsAnswer.EMPTY_RESULTS);
     }
 }

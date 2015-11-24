@@ -6,6 +6,7 @@
 package com.jivesoftware.os.miru.stream.plugins;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.filer.io.FilerIO;
@@ -25,6 +26,8 @@ import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
+import com.jivesoftware.os.miru.bitmaps.roaring5.MiruBitmapsRoaring;
+import com.jivesoftware.os.miru.bitmaps.roaring5.buffer.MiruBitmapsRoaringBuffer;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
@@ -32,16 +35,16 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.test.MiruPluginTestBootstrap;
 import com.jivesoftware.os.miru.service.MiruService;
-import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsRoaring;
 import com.jivesoftware.os.miru.stream.plugins.count.DistinctCount;
 import com.jivesoftware.os.miru.stream.plugins.count.DistinctCountAnswer;
 import com.jivesoftware.os.miru.stream.plugins.count.DistinctCountInjectable;
 import com.jivesoftware.os.miru.stream.plugins.count.DistinctCountQuery;
+import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCount;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCounts;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsAnswer;
-import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsAnswer.AggregateCount;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsInjectable;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsQuery;
+import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsQueryConstraint;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -101,7 +104,7 @@ public class MiruStreamServiceNGTest {
             .build();
 
         MiruProvider<MiruService> miruProvider = new MiruPluginTestBootstrap().bootstrap(tenant1, partitionId, miruHost,
-            miruSchema, MiruBackingStorage.memory, new MiruBitmapsRoaring(), Collections.<MiruPartitionedActivity>emptyList());
+            miruSchema, MiruBackingStorage.memory, new MiruBitmapsRoaringBuffer(), Collections.<MiruPartitionedActivity>emptyList());
         this.service = miruProvider.getMiru(tenant1);
 
         this.aggregateCountsInjectable = new AggregateCountsInjectable(miruProvider, new AggregateCounts(miruProvider));
@@ -160,7 +163,7 @@ public class MiruStreamServiceNGTest {
                 fieldFilters.add(new MiruFieldFilter(MiruFieldType.primary, "target", ImmutableList.copyOf(following)));
 
                 MiruFilter filter = new MiruFilter(MiruFilterOperation.or, false, fieldFilters, null);
-                MiruRequest<AggregateCountsQuery> query = new MiruRequest<>(
+                MiruRequest<AggregateCountsQuery> query = new MiruRequest<>("test",
                     tenant1,
                     MiruActorId.NOT_PROVIDED,
                     MiruAuthzExpression.NOT_PROVIDED,
@@ -169,9 +172,9 @@ public class MiruStreamServiceNGTest {
                         new MiruTimeRange(0, capacity),
                         new MiruTimeRange(0, capacity),
                         filter,
-                        MiruFilter.NO_FILTER,
-                        "container",
-                        0, 51),
+                        ImmutableMap.of("blah", new AggregateCountsQueryConstraint(MiruFilter.NO_FILTER,
+                            "container",
+                            0, 51))),
                     MiruSolutionLogLevel.NONE);
 
                 long start = System.currentTimeMillis();
@@ -182,8 +185,8 @@ public class MiruStreamServiceNGTest {
                 //                    System.out.println(a);
                 //                }
                 System.out.println("\t\t\tQuery:" + (q + 1) + " latency:" + elapse
-                    + " count:" + results.answer.results.size()
-                    + " all:" + formatter.format(count(results.answer.results))
+                    + " count:" + results.answer.constraints.get("blah").results.size()
+                    + " all:" + formatter.format(count(results.answer.constraints.get("blah").results))
                     + " indexSizeToLatencyRatio:" + (indexSize / elapse));
             }
         }
@@ -267,7 +270,7 @@ public class MiruStreamServiceNGTest {
 
         //aggregateQuery:
         {
-            MiruRequest<AggregateCountsQuery> query = new MiruRequest<>(
+            MiruRequest<AggregateCountsQuery> query = new MiruRequest<>("test",
                 tenant1,
                 MiruActorId.NOT_PROVIDED,
                 MiruAuthzExpression.NOT_PROVIDED, new AggregateCountsQuery(
@@ -275,11 +278,11 @@ public class MiruStreamServiceNGTest {
                 new MiruTimeRange(0, 1_000),
                 new MiruTimeRange(0, 1_000),
                 filter,
-                MiruFilter.NO_FILTER,
-                "container", 0, 10),
+                ImmutableMap.of("blah", new AggregateCountsQueryConstraint(MiruFilter.NO_FILTER,
+                    "container", 0, 10))),
                 MiruSolutionLogLevel.NONE);
             MiruResponse<AggregateCountsAnswer> results = aggregateCountsInjectable.filterInboxStreamAll(query);
-            for (AggregateCount a : results.answer.results) {
+            for (AggregateCount a : results.answer.constraints.get("blah").results) {
                 System.out.println(a);
             }
         }
@@ -288,7 +291,7 @@ public class MiruStreamServiceNGTest {
 
         //countQuery:
         {
-            MiruRequest<DistinctCountQuery> query = new MiruRequest<>(
+            MiruRequest<DistinctCountQuery> query = new MiruRequest<>("test",
                 tenant1,
                 MiruActorId.NOT_PROVIDED,
                 MiruAuthzExpression.NOT_PROVIDED,
@@ -310,7 +313,7 @@ public class MiruStreamServiceNGTest {
 
         //aggregateQuery:
         {
-            MiruRequest<AggregateCountsQuery> query = new MiruRequest<>(
+            MiruRequest<AggregateCountsQuery> query = new MiruRequest<>("test",
                 tenant1,
                 MiruActorId.NOT_PROVIDED,
                 MiruAuthzExpression.NOT_PROVIDED, new AggregateCountsQuery(
@@ -318,11 +321,11 @@ public class MiruStreamServiceNGTest {
                 new MiruTimeRange(0, 1_000),
                 new MiruTimeRange(0, 1_000),
                 filter,
-                MiruFilter.NO_FILTER,
-                "container", 0, 10),
+                ImmutableMap.of("blah", new AggregateCountsQueryConstraint(MiruFilter.NO_FILTER,
+                    "container", 0, 10))),
                 MiruSolutionLogLevel.NONE);
             MiruResponse<AggregateCountsAnswer> results = aggregateCountsInjectable.filterInboxStreamAll(query);
-            for (AggregateCount a : results.answer.results) {
+            for (AggregateCount a : results.answer.constraints.get("blah").results) {
                 System.out.println(a);
             }
         }
@@ -331,7 +334,7 @@ public class MiruStreamServiceNGTest {
 
         //countQuery:
         {
-            MiruRequest<DistinctCountQuery> query = new MiruRequest<>(
+            MiruRequest<DistinctCountQuery> query = new MiruRequest<>("test",
                 tenant1,
                 MiruActorId.NOT_PROVIDED,
                 MiruAuthzExpression.NOT_PROVIDED,

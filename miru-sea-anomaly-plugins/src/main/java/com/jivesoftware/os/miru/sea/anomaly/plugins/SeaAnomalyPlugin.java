@@ -22,15 +22,16 @@ public class SeaAnomalyPlugin implements MiruPlugin<SeaAnomalyEndpoints, SeaAnom
     @Override
     public Collection<MiruEndpointInjectable<SeaAnomalyInjectable>> getInjectables(MiruProvider<? extends Miru> miruProvider) {
 
-        SeaAnomaly stumptown = new SeaAnomaly(miruProvider);
+        SeaAnomaly anomaly = new SeaAnomaly(miruProvider);
         return Collections.singletonList(new MiruEndpointInjectable<>(
             SeaAnomalyInjectable.class,
-            new SeaAnomalyInjectable(miruProvider, stumptown)
+            new SeaAnomalyInjectable(miruProvider, anomaly)
         ));
     }
 
     @Override
-    public Collection<MiruRemotePartition<?, ?, ?>> getRemotePartitions() {
-        return Collections.singletonList(new SeaAnomalyRemotePartition(new JsonRemotePartitionReader()));
+    public Collection<MiruRemotePartition<?, ?, ?>> getRemotePartitions(MiruProvider<? extends Miru> miruProvider) {
+        return Collections.singletonList(new SeaAnomalyRemotePartition(
+            new JsonRemotePartitionReader(miruProvider.getReaderHttpClient(), miruProvider.getReaderStrategyCache())));
     }
 }

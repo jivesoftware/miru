@@ -7,14 +7,15 @@ import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruRemovalIndex;
 
-public class MiruDeltaRemovalIndex<BM> extends MiruDeltaInvertedIndex<BM> implements MiruRemovalIndex<BM> {
+public class MiruDeltaRemovalIndex<BM extends IBM, IBM> extends MiruDeltaInvertedIndex<BM, IBM> implements MiruRemovalIndex<IBM> {
 
-    public MiruDeltaRemovalIndex(MiruBitmaps<BM> bitmaps,
+    public MiruDeltaRemovalIndex(MiruBitmaps<BM, IBM> bitmaps,
         Cache<MiruFieldIndex.IndexKey, Optional<?>> fieldIndexCache,
+        Cache<MiruFieldIndex.IndexKey, Long> versionCache,
         long indexId,
         byte[] keyBytes,
-        MiruInvertedIndex<BM> backingIndex,
-        Delta<BM> delta) {
-        super(bitmaps, backingIndex, delta, new MiruFieldIndex.IndexKey(indexId, keyBytes), fieldIndexCache);
+        MiruInvertedIndex<IBM> backingIndex,
+        Delta<IBM> delta) {
+        super(bitmaps, backingIndex, delta, new MiruFieldIndex.IndexKey(indexId, keyBytes), fieldIndexCache, versionCache);
     }
 }

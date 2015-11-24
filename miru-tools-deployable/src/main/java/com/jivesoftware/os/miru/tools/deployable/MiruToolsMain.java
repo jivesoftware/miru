@@ -25,17 +25,21 @@ import com.jivesoftware.os.miru.api.topology.ReaderRequestHelpers;
 import com.jivesoftware.os.miru.cluster.client.MiruClusterClientInitializer;
 import com.jivesoftware.os.miru.logappender.MiruLogAppender;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
+import com.jivesoftware.os.miru.logappender.RoutingBirdLogSenderProvider;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSampler;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer.MiruMetricSamplerConfig;
+import com.jivesoftware.os.miru.metric.sampler.RoutingBirdMetricSampleSenderProvider;
 import com.jivesoftware.os.miru.tools.deployable.endpoints.AggregateCountsPluginEndpoints;
 import com.jivesoftware.os.miru.tools.deployable.endpoints.AnalyticsPluginEndpoints;
 import com.jivesoftware.os.miru.tools.deployable.endpoints.DistinctsPluginEndpoints;
+import com.jivesoftware.os.miru.tools.deployable.endpoints.FullTextPluginEndpoints;
 import com.jivesoftware.os.miru.tools.deployable.endpoints.MiruToolsEndpoints;
 import com.jivesoftware.os.miru.tools.deployable.endpoints.RealwavePluginEndpoints;
 import com.jivesoftware.os.miru.tools.deployable.region.AggregateCountsPluginRegion;
 import com.jivesoftware.os.miru.tools.deployable.region.AnalyticsPluginRegion;
 import com.jivesoftware.os.miru.tools.deployable.region.DistinctsPluginRegion;
+import com.jivesoftware.os.miru.tools.deployable.region.FullTextPluginRegion;
 import com.jivesoftware.os.miru.tools.deployable.region.MiruToolsPlugin;
 import com.jivesoftware.os.miru.tools.deployable.region.RealwaveFramePluginRegion;
 import com.jivesoftware.os.miru.tools.deployable.region.RealwavePluginRegion;
@@ -56,9 +60,13 @@ import com.jivesoftware.os.routing.bird.health.api.HealthChecker;
 import com.jivesoftware.os.routing.bird.health.api.HealthFactory;
 import com.jivesoftware.os.routing.bird.health.checkers.GCLoadHealthChecker;
 import com.jivesoftware.os.routing.bird.health.checkers.ServiceStartupHealthCheck;
+import com.jivesoftware.os.routing.bird.http.client.HttpDeliveryClientHealthProvider;
+import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelperUtils;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.http.client.TenantRoutingHttpClientInitializer;
 import com.jivesoftware.os.routing.bird.server.util.Resource;
+import com.jivesoftware.os.routing.bird.shared.TenantRoutingProvider;
+import com.jivesoftware.os.routing.bird.shared.TenantsServiceConnectionDescriptorProvider;
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
@@ -97,7 +105,7 @@ public class MiruToolsMain {
             deployable.addManageInjectables(HasUI.class, new HasUI(Arrays.asList(new HasUI.UI("manage", "manage", "/manage/ui"),
                 new HasUI.UI("Reset Errors", "manage", "/manage/resetErrors"),
                 new HasUI.UI("Tail", "manage", "/manage/tail"),
-                new HasUI.UI("Thead Dump", "manage", "/manage/threadDump"),
+                new HasUI.UI("Thread Dump", "manage", "/manage/threadDump"),
                 new HasUI.UI("Health", "manage", "/manage/ui"),
                 new HasUI.UI("Miru-Tools", "main", "/"))));
             deployable.buildStatusReporter(null).start();
@@ -111,67 +119,83 @@ public class MiruToolsMain {
             mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
             mapper.registerModule(new GuavaModule());
 
+            TenantRoutingProvider tenantRoutingProvider = deployable.getTenantRoutingProvider();
             MiruLogAppenderInitializer.MiruLogAppenderConfig miruLogAppenderConfig = deployable.config(MiruLogAppenderInitializer.MiruLogAppenderConfig.class);
+            TenantsServiceConnectionDescriptorProvider logConnections = tenantRoutingProvider.getConnections("miru-stumptown", "main");
             MiruLogAppender miruLogAppender = new MiruLogAppenderInitializer().initialize(null, //TODO datacenter
                 instanceConfig.getClusterName(),
                 instanceConfig.getHost(),
                 instanceConfig.getServiceName(),
                 String.valueOf(instanceConfig.getInstanceName()),
                 instanceConfig.getVersion(),
-                miruLogAppenderConfig);
+                miruLogAppenderConfig,
+                new RoutingBirdLogSenderProvider<>(logConnections, "", miruLogAppenderConfig.getSocketTimeoutInMillis()));
             miruLogAppender.install();
 
             MiruMetricSamplerConfig metricSamplerConfig = deployable.config(MiruMetricSamplerConfig.class);
+            TenantsServiceConnectionDescriptorProvider metricConnections = tenantRoutingProvider.getConnections("miru-anomaly", "main");
             MiruMetricSampler sampler = new MiruMetricSamplerInitializer().initialize(null, //TODO datacenter
                 instanceConfig.getClusterName(),
                 instanceConfig.getHost(),
                 instanceConfig.getServiceName(),
                 String.valueOf(instanceConfig.getInstanceName()),
                 instanceConfig.getVersion(),
-                metricSamplerConfig);
+                metricSamplerConfig,
+                new RoutingBirdMetricSampleSenderProvider<>(metricConnections, "", miruLogAppenderConfig.getSocketTimeoutInMillis()));
             sampler.start();
 
             MiruSoyRendererConfig rendererConfig = deployable.config(MiruSoyRendererConfig.class);
 
+            HttpDeliveryClientHealthProvider clientHealthProvider = new HttpDeliveryClientHealthProvider(instanceConfig.getInstanceKey(),
+                HttpRequestHelperUtils.buildRequestHelper(instanceConfig.getRoutesHost(), instanceConfig.getRoutesPort()),
+                instanceConfig.getConnectionsHealth(), 5_000, 100);
             TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
-            TenantAwareHttpClient<String> miruManageClient = tenantRoutingHttpClientInitializer.initialize(deployable
-                .getTenantRoutingProvider()
-                .getConnections("miru-manage", "main")); // TODO expose to conf
+            TenantAwareHttpClient<String> miruManageClient = tenantRoutingHttpClientInitializer.initialize(tenantRoutingProvider
+                    .getConnections("miru-manage", "main"),
+                clientHealthProvider,
+                10, 10_000); // TODO expose to conf
 
             MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize(new MiruStats(), "", miruManageClient, mapper);
 
             MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
 
-            MiruToolsService miruToolsService = new MiruToolsInitializer().initialize(renderer);
+            MiruToolsService miruToolsService = new MiruToolsInitializer().initialize(instanceConfig.getClusterName(),
+                instanceConfig.getInstanceName(),
+                renderer,
+                tenantRoutingProvider);
 
             ReaderRequestHelpers readerRequestHelpers = new ReaderRequestHelpers(clusterClient, mapper, TimeUnit.MINUTES.toMillis(10));
 
             List<MiruToolsPlugin> plugins = Lists.newArrayList(
-                new MiruToolsPlugin("asterisk", "Distincts",
-                    "/miru/tools/distincts",
-                    DistinctsPluginEndpoints.class,
-                    new DistinctsPluginRegion("soy.miru.page.distinctsPluginRegion", renderer, readerRequestHelpers)),
-                new MiruToolsPlugin("stats", "Analytics",
-                    "/miru/tools/analytics",
-                    AnalyticsPluginEndpoints.class,
-                    new AnalyticsPluginRegion("soy.miru.page.analyticsPluginRegion", renderer, readerRequestHelpers)),
-                new MiruToolsPlugin("list", "Trending",
-                    "/miru/tools/trending",
-                    TrendingPluginEndpoints.class,
-                    new TrendingPluginRegion("soy.miru.page.trendingPluginRegion", renderer, readerRequestHelpers)),
-                new MiruToolsPlugin("thumbs-up", "Reco",
-                    "/miru/tools/reco",
-                    RecoPluginEndpoints.class,
-                    new RecoPluginRegion("soy.miru.page.recoPluginRegion", renderer, readerRequestHelpers)),
                 new MiruToolsPlugin("road", "Aggregate Counts",
                     "/miru/tools/aggregate",
                     AggregateCountsPluginEndpoints.class,
                     new AggregateCountsPluginRegion("soy.miru.page.aggregateCountsPluginRegion", renderer, readerRequestHelpers)),
+                new MiruToolsPlugin("stats", "Analytics",
+                    "/miru/tools/analytics",
+                    AnalyticsPluginEndpoints.class,
+                    new AnalyticsPluginRegion("soy.miru.page.analyticsPluginRegion", renderer, readerRequestHelpers)),
+                new MiruToolsPlugin("asterisk", "Distincts",
+                    "/miru/tools/distincts",
+                    DistinctsPluginEndpoints.class,
+                    new DistinctsPluginRegion("soy.miru.page.distinctsPluginRegion", renderer, readerRequestHelpers)),
+                new MiruToolsPlugin("search", "Full Text",
+                    "/miru/tools/fulltext",
+                    FullTextPluginEndpoints.class,
+                    new FullTextPluginRegion("soy.miru.page.fullTextPluginRegion", renderer, readerRequestHelpers)),
                 new MiruToolsPlugin("flash", "Realwave",
                     "/miru/tools/realwave",
                     RealwavePluginEndpoints.class,
                     new RealwavePluginRegion("soy.miru.page.realwavePluginRegion", renderer, readerRequestHelpers),
-                    new RealwaveFramePluginRegion("soy.miru.page.realwaveFramePluginRegion", renderer)));
+                    new RealwaveFramePluginRegion("soy.miru.page.realwaveFramePluginRegion", renderer)),
+                new MiruToolsPlugin("thumbs-up", "Reco",
+                    "/miru/tools/reco",
+                    RecoPluginEndpoints.class,
+                    new RecoPluginRegion("soy.miru.page.recoPluginRegion", renderer, readerRequestHelpers)),
+                new MiruToolsPlugin("list", "Trending",
+                    "/miru/tools/trending",
+                    TrendingPluginEndpoints.class,
+                    new TrendingPluginRegion("soy.miru.page.trendingPluginRegion", renderer, readerRequestHelpers)));
 
             File staticResourceDir = new File(System.getProperty("user.dir"));
             System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());
@@ -193,6 +217,7 @@ public class MiruToolsMain {
 
             deployable.addResource(sourceTree);
             deployable.buildServer().start();
+            clientHealthProvider.start();
             serviceStartupHealthCheck.success();
         } catch (Throwable t) {
             serviceStartupHealthCheck.info("Encountered the following failure during startup.", t);

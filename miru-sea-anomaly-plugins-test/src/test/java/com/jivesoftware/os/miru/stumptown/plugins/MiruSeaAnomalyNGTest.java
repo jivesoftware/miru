@@ -19,6 +19,8 @@ import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
+import com.jivesoftware.os.miru.bitmaps.roaring5.MiruBitmapsRoaring;
+import com.jivesoftware.os.miru.bitmaps.roaring5.buffer.MiruBitmapsRoaringBuffer;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
@@ -31,7 +33,6 @@ import com.jivesoftware.os.miru.sea.anomaly.plugins.SeaAnomalyAnswer;
 import com.jivesoftware.os.miru.sea.anomaly.plugins.SeaAnomalyInjectable;
 import com.jivesoftware.os.miru.sea.anomaly.plugins.SeaAnomalyQuery;
 import com.jivesoftware.os.miru.service.MiruService;
-import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsRoaring;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -70,7 +71,7 @@ public class MiruSeaAnomalyNGTest {
     @BeforeMethod
     public void setUpMethod() throws Exception {
         MiruProvider<MiruService> miruProvider = new MiruPluginTestBootstrap().bootstrap(tenant1, partitionId, miruHost,
-            miruSchema, MiruBackingStorage.memory, new MiruBitmapsRoaring(), Collections.<MiruPartitionedActivity>emptyList());
+            miruSchema, MiruBackingStorage.memory, new MiruBitmapsRoaringBuffer(), Collections.<MiruPartitionedActivity>emptyList());
 
         this.service = miruProvider.getMiru(tenant1);
 
@@ -124,7 +125,8 @@ public class MiruSeaAnomalyNGTest {
             MiruFieldFilter miruFieldFilter = new MiruFieldFilter(MiruFieldType.primary, "user", ImmutableList.of(user));
             MiruFilter filter = new MiruFilter(MiruFilterOperation.or, false, Arrays.asList(miruFieldFilter), null);
 
-            MiruRequest<SeaAnomalyQuery> request = new MiruRequest<>(tenant1,
+            MiruRequest<SeaAnomalyQuery> request = new MiruRequest<>("test",
+                tenant1,
                 MiruActorId.NOT_PROVIDED,
                 MiruAuthzExpression.NOT_PROVIDED,
                 new SeaAnomalyQuery(

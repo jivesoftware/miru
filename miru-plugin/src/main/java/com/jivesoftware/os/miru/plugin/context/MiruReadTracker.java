@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.plugin.context;
 
 import com.google.common.base.Optional;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
@@ -17,61 +18,62 @@ public class MiruReadTracker {
         this.aggregateUtil = aggregateUtil;
     }
 
-    public <BM> void read(MiruBitmaps<BM> bitmaps,
-        MiruRequestContext<BM, ?> context,
+    public <BM extends IBM, IBM> void read(MiruBitmaps<BM, IBM> bitmaps,
+        MiruRequestContext<IBM, ?> context,
         MiruStreamId streamId,
         MiruFilter filter,
         MiruSolutionLog solutionLog,
         int lastActivityIndex,
-        long lastActivityTimestamp)
+        long lastActivityTimestamp,
+        StackBuffer stackBuffer)
         throws Exception {
 
-        BM indexMask = bitmaps.buildIndexMask(lastActivityIndex, Optional.<BM>absent());
+        IBM indexMask = bitmaps.buildIndexMask(lastActivityIndex, Optional.<IBM>absent());
 
         synchronized (context.getStreamLocks().lock(streamId, 0)) {
-            BM timeMask = bitmaps.buildTimeRangeMask(context.getTimeIndex(), 0L, lastActivityTimestamp);
-            BM filtered = bitmaps.create();
-            aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), filter, solutionLog, filtered,
-                context.getActivityIndex().lastId(), -1);
+            IBM timeMask = bitmaps.buildTimeRangeMask(context.getTimeIndex(), 0L, lastActivityTimestamp, stackBuffer);
+            BM filtered = aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), filter, solutionLog,
+                null, context.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
 
             BM result = bitmaps.create();
             bitmaps.and(result, Arrays.asList(filtered, indexMask, timeMask));
-            context.getUnreadTrackingIndex().applyRead(streamId, result);
+            context.getUnreadTrackingIndex().applyRead(streamId, result, stackBuffer);
         }
     }
 
-    public <BM> void unread(MiruBitmaps<BM> bitmaps,
-        MiruRequestContext<BM, ?> context,
+    public <BM extends IBM, IBM> void unread(MiruBitmaps<BM, IBM> bitmaps,
+        MiruRequestContext<IBM, ?> context,
         MiruStreamId streamId,
         MiruFilter filter,
         MiruSolutionLog solutionLog,
         int lastActivityIndex,
-        long lastActivityTimestamp)
+        long lastActivityTimestamp,
+        StackBuffer stackBuffer)
         throws Exception {
 
-        BM indexMask = bitmaps.buildIndexMask(lastActivityIndex, Optional.<BM>absent());
+        IBM indexMask = bitmaps.buildIndexMask(lastActivityIndex, Optional.<IBM>absent());
 
         synchronized (context.getStreamLocks().lock(streamId, 0)) {
-            BM timeMask = bitmaps.buildTimeRangeMask(context.getTimeIndex(), 0L, lastActivityTimestamp);
-            BM filtered = bitmaps.create();
-            aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), filter, solutionLog, filtered,
-                context.getActivityIndex().lastId(), -1);
+            IBM timeMask = bitmaps.buildTimeRangeMask(context.getTimeIndex(), 0L, lastActivityTimestamp, stackBuffer);
+            BM filtered = aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), filter, solutionLog,
+                null, context.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
 
             BM result = bitmaps.create();
             bitmaps.and(result, Arrays.asList(filtered, indexMask, timeMask));
-            context.getUnreadTrackingIndex().applyUnread(streamId, result);
+            context.getUnreadTrackingIndex().applyUnread(streamId, result, stackBuffer);
         }
     }
 
-    public <BM> void markAllRead(MiruBitmaps<BM> bitmaps,
-        MiruRequestContext<BM, ?> context,
+    public <BM extends IBM, IBM> void markAllRead(MiruBitmaps<BM, IBM> bitmaps,
+        MiruRequestContext<IBM, ?> context,
         MiruStreamId streamId,
-        long timestamp)
+        long timestamp,
+        StackBuffer stackBuffer)
         throws Exception {
 
         synchronized (context.getStreamLocks().lock(streamId, 0)) {
-            BM timeMask = bitmaps.buildTimeRangeMask(context.getTimeIndex(), 0L, timestamp);
-            context.getUnreadTrackingIndex().applyRead(streamId, timeMask);
+            IBM timeMask = bitmaps.buildTimeRangeMask(context.getTimeIndex(), 0L, timestamp, stackBuffer);
+            context.getUnreadTrackingIndex().applyRead(streamId, timeMask, stackBuffer);
         }
     }
 }

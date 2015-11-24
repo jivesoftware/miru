@@ -1,13 +1,12 @@
 package com.jivesoftware.os.miru.reco.plugins.reco;
 
 import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.plugin.solution.MiruAnswerMerger;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -38,7 +37,7 @@ public class RecoAnswerMerger implements MiruAnswerMerger<RecoAnswer> {
 
         RecoAnswer lastAnswer = last.get();
 
-        Map<String, RecoAnswer.Recommendation> ongoing = new HashMap<>();
+        Map<String, RecoAnswer.Recommendation> ongoing = Maps.newHashMapWithExpectedSize(currentAnswer.results.size());
         for (RecoAnswer.Recommendation recommendation : currentAnswer.results) {
             ongoing.put(recommendation.distinctValue, recommendation);
         }
@@ -60,7 +59,7 @@ public class RecoAnswerMerger implements MiruAnswerMerger<RecoAnswer> {
             }
         }
         int partitionsVisited = lastAnswer.partitionsVisited + 1;
-        RecoAnswer mergedAnswer = new RecoAnswer(ImmutableList.copyOf(mergedResults), partitionsVisited);
+        RecoAnswer mergedAnswer = new RecoAnswer(mergedResults, partitionsVisited, currentAnswer.resultsExhausted);
 
         logMergeResult(currentAnswer, lastAnswer, mergedAnswer, solutionLog);
 
@@ -75,7 +74,7 @@ public class RecoAnswerMerger implements MiruAnswerMerger<RecoAnswer> {
             Collections.sort(results);
             solutionLog.log(MiruSolutionLogLevel.INFO, "mergeReco: sorted in {} ms", (System.currentTimeMillis() - t));
             results = results.subList(0, Math.min(desiredNumberOfDistincts, results.size()));
-            return new RecoAnswer(ImmutableList.copyOf(results), answer.partitionsVisited);
+            return new RecoAnswer(results, answer.partitionsVisited, answer.resultsExhausted);
         }).or(alternative);
     }
 

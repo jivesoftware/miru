@@ -1,5 +1,7 @@
 package com.jivesoftware.os.miru.service.stream;
 
+import com.jivesoftware.os.filer.io.api.StackBuffer;
+import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityAndId;
 import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
@@ -15,21 +17,21 @@ import java.util.concurrent.Future;
 /**
  * Handles indexing of activity, including repair and removal, with synchronization and attention to versioning.
  */
-public class MiruIndexer<BM> {
+public class MiruIndexer<BM extends IBM, IBM> {
 
     private final static MetricLogger log = MetricLoggerFactory.getLogger();
 
-    private final MiruIndexAuthz<BM> indexAuthz;
-    private final MiruIndexFieldValues<BM> indexFieldValues;
-    private final MiruIndexBloom<BM> indexBloom;
-    private final MiruIndexLatest<BM> indexLatest;
-    private final MiruIndexPairedLatest<BM> indexPairedLatest;
+    private final MiruIndexAuthz<IBM> indexAuthz;
+    private final MiruIndexFieldValues<IBM> indexFieldValues;
+    private final MiruIndexBloom<BM, IBM> indexBloom;
+    private final MiruIndexLatest<IBM> indexLatest;
+    private final MiruIndexPairedLatest<IBM> indexPairedLatest;
 
-    public MiruIndexer(MiruIndexAuthz<BM> indexAuthz,
-        MiruIndexFieldValues<BM> indexFieldValues,
-        MiruIndexBloom<BM> indexBloom,
-        MiruIndexLatest<BM> indexLatest,
-        MiruIndexPairedLatest<BM> indexPairedLatest) {
+    public MiruIndexer(MiruIndexAuthz<IBM> indexAuthz,
+        MiruIndexFieldValues<IBM> indexFieldValues,
+        MiruIndexBloom<BM, IBM> indexBloom,
+        MiruIndexLatest<IBM> indexLatest,
+        MiruIndexPairedLatest<IBM> indexPairedLatest) {
         this.indexAuthz = indexAuthz;
         this.indexFieldValues = indexFieldValues;
         this.indexBloom = indexBloom;
@@ -37,7 +39,8 @@ public class MiruIndexer<BM> {
         this.indexPairedLatest = indexPairedLatest;
     }
 
-    public void index(final MiruContext<BM, ?> context,
+    public void index(final MiruContext<IBM, ?> context,
+        final MiruPartitionCoord coord,
         final List<MiruActivityAndId<MiruActivity>> activityAndIds,
         boolean repair,
         ExecutorService indexExecutor)
@@ -80,30 +83,34 @@ public class MiruIndexer<BM> {
         Future<List<PairedLatestWork>> pairedLatestPrepared = indexPairedLatest.prepare(context, pairedLatestComposed, indexExecutor);
 
         // 3. Index field values work
-        List<Future<?>> fieldFutures = indexFieldValues.index(context, fieldValuesComposed, repair, indexExecutor);
+        List<Future<?>> fieldFutures = indexFieldValues.index(context, coord.tenantId, fieldValuesComposed, repair, indexExecutor);
 
         // 4. Wait for completion
         awaitFutures(fieldFutures, "indexFieldValues");
 
         // 5. Index remaining work
         final List<Future<?>> otherFutures = new ArrayList<>();
-        otherFutures.addAll(indexAuthz.index(context, internalActivityAndIds, repair, indexExecutor));
-        otherFutures.addAll(indexBloom.index(context, bloomPrepared, repair, indexExecutor));
-        otherFutures.addAll(indexLatest.index(context, internalActivityAndIds, repair, indexExecutor));
-        otherFutures.addAll(indexPairedLatest.index(context, pairedLatestPrepared, repair, indexExecutor));
+        otherFutures.addAll(indexAuthz.index(context, coord.tenantId, internalActivityAndIds, repair, indexExecutor));
+        otherFutures.addAll(indexBloom.index(context, coord.tenantId, bloomPrepared, repair, indexExecutor));
+        otherFutures.addAll(indexLatest.index(context, coord.tenantId, internalActivityAndIds, repair, indexExecutor));
+        otherFutures.addAll(indexPairedLatest.index(context, coord.tenantId, pairedLatestPrepared, repair, indexExecutor));
 
         // 6. Update activity index
         otherFutures.add(indexExecutor.submit(() -> {
-            context.activityIndex.set(internalActivityAndIds);
+            StackBuffer stackBuffer = new StackBuffer();
+            context.activityIndex.set(internalActivityAndIds, stackBuffer);
             return null;
         }));
 
         // 7. Update removal index
         if (repair) {
             otherFutures.add(indexExecutor.submit(() -> {
+                StackBuffer stackBuffer = new StackBuffer();
                 // repairs also unhide (remove from removal)
+                log.inc("count>remove", activityAndIds.size());
+                log.inc("count>remove", activityAndIds.size(), coord.tenantId.toString());
                 for (MiruActivityAndId<MiruActivity> activityAndId : activityAndIds) {
-                    context.removalIndex.remove(activityAndId.id);
+                    context.removalIndex.remove(activityAndId.id, stackBuffer);
                 }
                 return null;
             }));
@@ -113,19 +120,21 @@ public class MiruIndexer<BM> {
         awaitFutures(otherFutures, "indexOther");
 
         // 9. Mark as ready
-        context.activityIndex.ready(internalActivityAndIds.get(internalActivityAndIds.size() - 1).id);
+        StackBuffer stackBuffer = new StackBuffer();
+        context.activityIndex.ready(internalActivityAndIds.get(internalActivityAndIds.size() - 1).id, stackBuffer);
 
         context.flush(false); //TODO config fsync
         log.debug("End: Index batch of {}", internalActivityAndIds.size());
     }
 
-    public void set(MiruContext<BM, ?> context, List<MiruActivityAndId<MiruActivity>> activityAndIds) throws Exception {
+    public void set(MiruContext<IBM, ?> context, List<MiruActivityAndId<MiruActivity>> activityAndIds) throws Exception {
         @SuppressWarnings("unchecked")
         List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds = Arrays.<MiruActivityAndId<MiruInternalActivity>>asList(
             new MiruActivityAndId[activityAndIds.size()]);
 
         context.activityInternExtern.intern(activityAndIds, 0, activityAndIds.size(), internalActivityAndIds, context.schema);
-        context.activityIndex.setAndReady(internalActivityAndIds);
+        StackBuffer stackBuffer = new StackBuffer();
+        context.activityIndex.setAndReady(internalActivityAndIds, stackBuffer);
     }
 
     /*
@@ -167,10 +176,10 @@ public class MiruIndexer<BM> {
         // finally, update the activity index
         context.activityIndex.setAndReady(internalActivityAndIds);
     }
-    */
-
-    public void remove(MiruContext<BM, ?> context, MiruActivity activity, int id) throws Exception {
-        MiruInternalActivity existing = context.activityIndex.get(activity.tenantId, id);
+     */
+    public void remove(MiruContext<IBM, ?> context, MiruActivity activity, int id) throws Exception {
+        StackBuffer stackBuffer = new StackBuffer();
+        MiruInternalActivity existing = context.activityIndex.get(activity.tenantId, id, stackBuffer);
         if (existing == null) {
             log.debug("Can't remove nonexistent activity at {}\n- offered: {}", id, activity);
         } else if (activity.version <= existing.version) {
@@ -184,10 +193,10 @@ public class MiruIndexer<BM> {
 
             //TODO apply field changes?
             // hide (add to removal)
-            context.removalIndex.set(id);
+            context.removalIndex.set(stackBuffer, id);
 
             // finally, update the activity index
-            context.activityIndex.setAndReady(internalActivity);
+            context.activityIndex.setAndReady(internalActivity, stackBuffer);
         }
     }
 

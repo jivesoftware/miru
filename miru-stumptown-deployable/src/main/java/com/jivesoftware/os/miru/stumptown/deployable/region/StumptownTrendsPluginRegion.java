@@ -21,9 +21,11 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
+import com.jivesoftware.os.miru.plugin.solution.Waveform;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingAnswer;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingConstants;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery;
+import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery.Strategy;
 import com.jivesoftware.os.miru.reco.plugins.trending.Trendy;
 import com.jivesoftware.os.miru.stumptown.deployable.StumptownSchemaConstants;
 import com.jivesoftware.os.miru.stumptown.deployable.endpoints.MinMaxDouble;
@@ -119,7 +121,7 @@ public class StumptownTrendsPluginRegion implements MiruPageRegion<Optional<Stum
                 data.put("aggregatableFields", Arrays.asList("service", "instance", "level", "thread", "logger", "exceptionClass", "methodName", "lineNumber"));
 
                 data.put("strategy", input.strategy);
-                data.put("strategyFields", Arrays.asList(TrendingQuery.Strategy.LEADER.name(), TrendingQuery.Strategy.LINEAR_REGRESSION.name()));
+                data.put("strategyFields", Arrays.asList(Strategy.LEADER.name(), Strategy.LINEAR_REGRESSION.name()));
 
                 TimeUnit fromTimeUnit = TimeUnit.valueOf(input.fromTimeUnit);
                 TimeUnit toTimeUnit = TimeUnit.valueOf(input.toTimeUnit);
@@ -134,21 +136,24 @@ public class StumptownTrendsPluginRegion implements MiruPageRegion<Optional<Stum
 
                 MiruFilter constraintsFilter = new MiruFilter(MiruFilterOperation.and, false, fieldFilters, null);
 
+                Strategy strategy = Strategy.valueOf(input.strategy);
                 MiruResponse<TrendingAnswer> response = null;
                 MiruTenantId tenantId = StumptownSchemaConstants.TENANT_ID;
                 for (HttpRequestHelper requestHelper : miruReaders.get(Optional.<MiruHost>absent())) {
                     try {
                         @SuppressWarnings("unchecked")
                         MiruResponse<TrendingAnswer> trendingResponse = requestHelper.executeRequest(
-                            new MiruRequest<>(tenantId, MiruActorId.NOT_PROVIDED, MiruAuthzExpression.NOT_PROVIDED,
-                                new TrendingQuery(TrendingQuery.Strategy.valueOf(input.strategy),
+                            new MiruRequest<>("stumptownTrends",
+                                tenantId,
+                                MiruActorId.NOT_PROVIDED,
+                                MiruAuthzExpression.NOT_PROVIDED,
+                                new TrendingQuery(Collections.singleton(strategy),
                                     miruTimeRange,
                                     null,
                                     30,
                                     constraintsFilter,
                                     input.aggregateAroundField,
-                                    MiruFilter.NO_FILTER,
-                                    null,
+                                    Collections.emptyList(),
                                     100),
                                 MiruSolutionLogLevel.INFO),
                             TrendingConstants.TRENDING_PREFIX + TrendingConstants.CUSTOM_QUERY_ENDPOINT, MiruResponse.class,
@@ -168,7 +173,8 @@ public class StumptownTrendsPluginRegion implements MiruPageRegion<Optional<Stum
                 if (response != null && response.answer != null) {
                     data.put("elapse", String.valueOf(response.totalElapsed));
 
-                    List<Trendy> results = response.answer.results;
+                    Map<String, Waveform> waveforms = response.answer.waveforms;
+                    List<Trendy> results = response.answer.results.get(strategy.name());
                     if (results == null) {
                         results = Collections.emptyList();
                     }
@@ -177,10 +183,14 @@ public class StumptownTrendsPluginRegion implements MiruPageRegion<Optional<Stum
 
                     final MinMaxDouble mmd = new MinMaxDouble();
                     mmd.value(0);
+                    Map<String, long[]> pngWaveforms = Maps.newHashMap();
                     for (Trendy t : results) {
-                        for (long w : t.waveform) {
+                        long[] waveform = new long[input.buckets];
+                        waveforms.get(t.distinctValue).mergeWaveform(waveform);
+                        for (long w : waveform) {
                             mmd.value(w);
                         }
+                        pngWaveforms.put(t.distinctValue, waveform);
                     }
 
                     data.put("results", Lists.transform(results, trendy -> ImmutableMap.of(
@@ -188,7 +198,7 @@ public class StumptownTrendsPluginRegion implements MiruPageRegion<Optional<Stum
                         "rank", String.valueOf(Math.round(trendy.rank * 100.0) / 100.0),
                         "waveform", "data:image/png;base64," + new PNGWaveforms()
                             .hitsToBase64PNGWaveform(600, 96, 10, 4,
-                                ImmutableMap.of(trendy.distinctValue, trendy.waveform),
+                                ImmutableMap.of(trendy.distinctValue, pngWaveforms.get(trendy.distinctValue)),
                                 Optional.of(mmd)))));
                     ObjectMapper mapper = new ObjectMapper();
                     mapper.enable(SerializationFeature.INDENT_OUTPUT);

@@ -77,7 +77,10 @@ public class MiruLocalPartitionFactory<C extends MiruCursor<C, S>, S extends Mir
         this.mergeChits = mergeChits;
     }
 
-    public <BM> MiruLocalHostedPartition<BM, C, S> create(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord, long expireAfterMillis) throws Exception {
+    public <BM extends IBM, IBM> MiruLocalHostedPartition<BM, IBM, C, S> create(MiruBitmaps<BM, IBM> bitmaps,
+        MiruPartitionCoord coord,
+        long expireAfterMillis) throws Exception {
+
         return new MiruLocalHostedPartition<>(miruStats,
             bitmaps,
             coord,
@@ -110,10 +113,11 @@ public class MiruLocalPartitionFactory<C extends MiruCursor<C, S>, S extends Mir
                 config.getPartitionRebuildIntervalInMillis(),
                 config.getPartitionSipMigrateIntervalInMillis(),
                 config.getPartitionBanUnregisteredSchemaMillis(),
-                config.getPartitionMigrationWaitInMillis()));
+                config.getPartitionMigrationWaitInMillis(),
+                config.getPartitionSipNotifyEndOfStreamMillis()));
     }
 
-    public void prioritizeRebuild(MiruLocalHostedPartition<?, ?, ?> partition) {
+    public void prioritizeRebuild(MiruLocalHostedPartition<?, ?, ?, ?> partition) {
         rebuildDirector.prioritize(partition);
     }
 }

@@ -18,6 +18,8 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
+import com.jivesoftware.os.miru.bitmaps.roaring5.MiruBitmapsRoaring;
+import com.jivesoftware.os.miru.bitmaps.roaring5.buffer.MiruBitmapsRoaringBuffer;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
@@ -29,9 +31,7 @@ import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsAnswer;
 import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsInjectable;
 import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsQuery;
 import com.jivesoftware.os.miru.service.MiruService;
-import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsRoaring;
 import java.util.Collections;
-import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -75,7 +75,7 @@ public class MiruDistinctsNGTest {
     @BeforeMethod
     public void setUpMethod() throws Exception {
         MiruProvider<MiruService> miruProvider = new MiruPluginTestBootstrap().bootstrap(tenant1, partitionId, miruHost,
-            miruSchema, MiruBackingStorage.memory, new MiruBitmapsRoaring(), Collections.<MiruPartitionedActivity>emptyList());
+            miruSchema, MiruBackingStorage.memory, new MiruBitmapsRoaringBuffer(), Collections.<MiruPartitionedActivity>emptyList());
 
         this.service = miruProvider.getMiru(tenant1);
 
@@ -85,7 +85,6 @@ public class MiruDistinctsNGTest {
     @Test(enabled = true)
     public void basicTest() throws Exception {
 
-        Random rand = new Random(1_234);
         SnowflakeIdPacker snowflakeIdPacker = new SnowflakeIdPacker();
         long timespan = numberOfBuckets * snowflakeIdPacker.pack(TimeUnit.HOURS.toMillis(3), 0, 0);
         long intervalPerActivity = timespan / numberOfActivities;
@@ -165,7 +164,8 @@ public class MiruDistinctsNGTest {
 
         for (MiruFieldDefinition fieldDefinition : miruSchema.getFieldDefinitions()) {
             long s = System.currentTimeMillis();
-            MiruRequest<DistinctsQuery> request = new MiruRequest<>(tenant1,
+            MiruRequest<DistinctsQuery> request = new MiruRequest<>("test",
+                tenant1,
                 MiruActorId.NOT_PROVIDED,
                 MiruAuthzExpression.NOT_PROVIDED,
                 new DistinctsQuery(timeRange, fieldDefinition.name, MiruFilter.NO_FILTER, null),
@@ -200,7 +200,8 @@ public class MiruDistinctsNGTest {
 
         long s = System.currentTimeMillis();
         Set<String> types = Sets.newHashSet("0", "1", "2", "3", "8", "-1");
-        MiruRequest<DistinctsQuery> request = new MiruRequest<>(tenant1,
+        MiruRequest<DistinctsQuery> request = new MiruRequest<>("test",
+            tenant1,
             MiruActorId.NOT_PROVIDED,
             MiruAuthzExpression.NOT_PROVIDED,
             new DistinctsQuery(timeRange, fieldDefinition.name, MiruFilter.NO_FILTER, Lists.newArrayList(types)),
@@ -239,7 +240,8 @@ public class MiruDistinctsNGTest {
 
         long s = System.currentTimeMillis();
         Set<String> wildcards = Sets.newHashSet("ca", "do", "el", "mo");
-        MiruRequest<DistinctsQuery> request = new MiruRequest<>(tenant1,
+        MiruRequest<DistinctsQuery> request = new MiruRequest<>("test",
+            tenant1,
             MiruActorId.NOT_PROVIDED,
             MiruAuthzExpression.NOT_PROVIDED,
             new DistinctsQuery(timeRange, fieldDefinition.name, MiruFilter.NO_FILTER, Lists.newArrayList(wildcards)),

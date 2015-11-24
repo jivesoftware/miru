@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.reco.plugins.trending;
 
 import com.google.common.base.Optional;
 import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsAnswer;
+import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
@@ -11,7 +12,6 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.mlogger.core.EndPointMetrics;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.routing.bird.http.client.HttpClient;
 
 /**
  *
@@ -32,11 +32,12 @@ public class TrendingRemotePartition implements MiruRemotePartition<TrendingQuer
     }
 
     @Override
-    public MiruPartitionResponse<AnalyticsAnswer> askRemote(HttpClient httpClient,
+    public MiruPartitionResponse<AnalyticsAnswer> askRemote(MiruHost host,
         MiruPartitionId partitionId,
         MiruRequest<TrendingQuery> request,
         Optional<TrendingReport> report) throws MiruQueryServiceException {
-        return remotePartitionReader.read(httpClient,
+        return remotePartitionReader.read("trending",
+            host,
             getEndpoint(partitionId),
             request,
             AnalyticsAnswer.class,

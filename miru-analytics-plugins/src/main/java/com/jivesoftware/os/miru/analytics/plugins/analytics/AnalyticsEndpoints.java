@@ -20,7 +20,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import org.xerial.snappy.Snappy;
+import org.nustaq.serialization.FSTConfiguration;
 
 import static com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsConstants.ANALYTICS_PREFIX;
 import static com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsConstants.CUSTOM_QUERY_ENDPOINT;
@@ -30,6 +30,7 @@ import static com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsCons
 public class AnalyticsEndpoints {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
+    private static final FSTConfiguration conf = FSTConfiguration.createDefaultConfiguration();
 
     private final AnalyticsInjectable injectable;
     private final ObjectMapper objectMapper;
@@ -73,10 +74,15 @@ public class AnalyticsEndpoints {
     public Response scoreAnalyticing(@PathParam("partitionId") int id, byte[] rawBytes) {
         MiruPartitionId partitionId = MiruPartitionId.of(id);
         try {
-            byte[] jsonBytes = Snappy.uncompress(rawBytes);
-            MiruRequestAndReport<AnalyticsQuery, AnalyticsReport> requestAndReport = objectMapper.readValue(jsonBytes, resultType);
+            //byte[] jsonBytes = Snappy.uncompress(rawBytes);
+            //MiruRequestAndReport<AnalyticsQuery, AnalyticsReport> requestAndReport = objectMapper.readValue(jsonBytes, resultType);
+            MiruRequestAndReport<AnalyticsQuery, AnalyticsReport> requestAndReport = (MiruRequestAndReport<AnalyticsQuery, AnalyticsReport>) conf.asObject(
+                rawBytes);
             MiruPartitionResponse<AnalyticsAnswer> result = injectable.score(partitionId, requestAndReport);
-            byte[] responseBytes = result != null ? Snappy.compress(objectMapper.writeValueAsBytes(result)) : new byte[0];
+
+
+            //byte[] responseBytes = result != null ? Snappy.compress(objectMapper.writeValueAsBytes(result)) : new byte[0];
+            byte[] responseBytes = result != null ? conf.asByteArray(result) : new byte[0];
             return Response.ok(responseBytes, MediaType.APPLICATION_OCTET_STREAM).build();
         } catch (MiruPartitionUnavailableException e) {
             return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Partition unavailable").build();

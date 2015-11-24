@@ -1,7 +1,9 @@
 package com.jivesoftware.os.miru.service;
 
+import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import org.merlin.config.Config;
 import org.merlin.config.defaults.BooleanDefault;
+import org.merlin.config.defaults.ClassDefault;
 import org.merlin.config.defaults.IntDefault;
 import org.merlin.config.defaults.LongDefault;
 import org.merlin.config.defaults.StringDefault;
@@ -83,6 +85,9 @@ public interface MiruServiceConfig extends Config {
     @LongDefault(3_000)
     long getPartitionMigrationWaitInMillis();
 
+    @LongDefault(30_000)
+    long getPartitionSipNotifyEndOfStreamMillis();
+
     @IntDefault(3)
     int getPartitionNumberOfChunkStores();
 
@@ -149,6 +154,9 @@ public interface MiruServiceConfig extends Config {
     @IntDefault(24)
     int getSolverExecutorThreads();
 
+    @IntDefault(8)
+    int getParallelSolversExecutorThreads();
+
     @IntDefault(24)
     int getRebuilderThreads();
 
@@ -178,4 +186,12 @@ public interface MiruServiceConfig extends Config {
     @IntDefault(512)
     int getFieldIndexCacheConcurrencyLevel();
 
+    @LongDefault(1_000_000)
+    long getVersionCacheMaxSize();
+
+    @IntDefault(512)
+    int getVersionCacheConcurrencyLevel();
+
+    @ClassDefault(IllegalStateException.class)
+    Class<? extends MiruBitmaps<?, ?>> getBitmapsClass();
 }

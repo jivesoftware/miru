@@ -1,10 +1,6 @@
 package com.jivesoftware.os.miru.stream.plugins.filter;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableSet;
-import java.util.Set;
-
+import java.util.Map;
 
 /**
  *
@@ -12,30 +8,16 @@ import java.util.Set;
  */
 public class AggregateCountsReport {
 
-    public final ImmutableSet<String> aggregateTerms;
-    public final int skippedDistincts;
-    public final int collectedDistincts;
+    public final Map<String, AggregateCountsReportConstraint> constraints;
 
-    public AggregateCountsReport(ImmutableSet<String> aggregateTerms, int skippedDistincts, int collectedDistincts) {
-        this.aggregateTerms = aggregateTerms;
-        this.skippedDistincts = skippedDistincts;
-        this.collectedDistincts = collectedDistincts;
-    }
-
-    @JsonCreator
-    public static AggregateCountsReport fromJson(
-            @JsonProperty("aggregateTerms") Set<String> aggregateTerms,
-            @JsonProperty("skippedDistincts") int skippedDistincts,
-            @JsonProperty("collectedDistincts") int collectedDistincts) {
-        return new AggregateCountsReport(ImmutableSet.copyOf(aggregateTerms), skippedDistincts, collectedDistincts);
+    public AggregateCountsReport(Map<String, AggregateCountsReportConstraint> constraints) {
+        this.constraints = constraints;
     }
 
     @Override
     public String toString() {
-        return "AggregateCountsReport{" +
-                "aggregateTerms=" + aggregateTerms +
-                ", skippedDistincts=" + skippedDistincts +
-                ", collectedDistincts=" + collectedDistincts +
-                '}';
+        return "AggregateCountsReport{"
+            + "constraints=" + constraints
+            + '}';
     }
 }

@@ -1,12 +1,12 @@
 package com.jivesoftware.os.miru.reco.plugins.distincts;
 
 import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.miru.plugin.solution.MiruAnswerMerger;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
-import java.util.LinkedHashSet;
+import java.util.Set;
 
 /**
  *
@@ -27,10 +27,10 @@ public class DistinctsAnswerMerger implements MiruAnswerMerger<DistinctsAnswer> 
         }
 
         DistinctsAnswer lastAnswer = last.get();
-        LinkedHashSet<String> terms = Sets.newLinkedHashSet(lastAnswer.results);
+        Set<String> terms = Sets.newHashSet(lastAnswer.results);
         terms.addAll(currentAnswer.results);
 
-        DistinctsAnswer mergedAnswer = new DistinctsAnswer(ImmutableList.copyOf(terms), terms.size(), currentAnswer.resultsExhausted);
+        DistinctsAnswer mergedAnswer = new DistinctsAnswer(Lists.newArrayList(terms), terms.size(), currentAnswer.resultsExhausted);
 
         logMergeResult(currentAnswer, lastAnswer, mergedAnswer, solutionLog);
 

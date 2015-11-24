@@ -131,7 +131,10 @@ public class DistinctsPluginRegion implements MiruPageRegion<Optional<DistinctsP
                         try {
                             @SuppressWarnings("unchecked")
                             MiruResponse<DistinctsAnswer> distinctsResponse = requestHelper.executeRequest(
-                                new MiruRequest<>(tenantId, MiruActorId.NOT_PROVIDED, MiruAuthzExpression.NOT_PROVIDED,
+                                new MiruRequest<>("toolsDistincts",
+                                    tenantId,
+                                    MiruActorId.NOT_PROVIDED,
+                                    MiruAuthzExpression.NOT_PROVIDED,
                                     new DistinctsQuery(
                                         new MiruTimeRange(fromTime, toTime),
                                         input.field,

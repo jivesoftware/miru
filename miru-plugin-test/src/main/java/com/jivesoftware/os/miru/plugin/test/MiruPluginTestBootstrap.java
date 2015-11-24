@@ -5,12 +5,13 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Interners;
 import com.google.common.io.Files;
-import com.jivesoftware.os.amza.client.AmzaKretrProvider;
+import com.jivesoftware.os.amza.client.AmzaClientProvider;
 import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceConfig;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceInitializer;
+import com.jivesoftware.os.miru.api.HostPortProvider;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruLifecyle;
@@ -35,13 +36,17 @@ import com.jivesoftware.os.miru.cluster.MiruReplicaSet;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSetDirector;
 import com.jivesoftware.os.miru.cluster.amza.AmzaClusterRegistry;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
+import com.jivesoftware.os.miru.plugin.backfill.MiruInboxReadTracker;
+import com.jivesoftware.os.miru.plugin.backfill.MiruJustInTimeBackfillerizer;
+import com.jivesoftware.os.miru.plugin.backfill.RCVSInboxReadTracker;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.SingleBitmapsProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.index.MiruBackfillerizerInitializer;
-import com.jivesoftware.os.miru.plugin.index.MiruJustInTimeBackfillerizer;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.marshaller.RCVSSipIndexMarshaller;
+import com.jivesoftware.os.miru.plugin.query.LuceneBackedQueryParser;
+import com.jivesoftware.os.miru.plugin.query.MiruQueryParser;
 import com.jivesoftware.os.miru.plugin.schema.SingleSchemaProvider;
 import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
 import com.jivesoftware.os.miru.service.MiruService;
@@ -50,7 +55,7 @@ import com.jivesoftware.os.miru.service.MiruServiceInitializer;
 import com.jivesoftware.os.miru.service.locator.MiruTempDirectoryResourceLocator;
 import com.jivesoftware.os.miru.service.partition.RCVSSipTrackerFactory;
 import com.jivesoftware.os.miru.wal.MiruWALDirector;
-import com.jivesoftware.os.miru.wal.MiruWALInitializer;
+import com.jivesoftware.os.miru.wal.RCVSWALInitializer;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
 import com.jivesoftware.os.miru.wal.activity.rcvs.RCVSActivityWALReader;
@@ -66,13 +71,12 @@ import com.jivesoftware.os.routing.bird.deployable.Deployable;
 import com.jivesoftware.os.routing.bird.health.api.HealthCheckRegistry;
 import com.jivesoftware.os.routing.bird.health.api.HealthChecker;
 import com.jivesoftware.os.routing.bird.health.api.HealthFactory;
-import com.jivesoftware.os.routing.bird.http.client.HttpClientConfiguration;
-import com.jivesoftware.os.routing.bird.http.client.HttpClientFactory;
-import com.jivesoftware.os.routing.bird.http.client.HttpClientFactoryProvider;
+import com.jivesoftware.os.routing.bird.http.client.ConnectionDescriptorSelectiveStrategy;
+import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import java.io.File;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
@@ -80,6 +84,7 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.config.LoggerConfig;
 import org.merlin.config.BindInterfaceToConfiguration;
+import org.merlin.config.Config;
 import org.testng.Assert;
 
 /**
@@ -87,12 +92,12 @@ import org.testng.Assert;
  */
 public class MiruPluginTestBootstrap {
 
-    public <BM> MiruProvider<MiruService> bootstrap(MiruTenantId tenantId,
+    public <BM extends IBM, IBM> MiruProvider<MiruService> bootstrap(MiruTenantId tenantId,
         MiruPartitionId partitionId,
         MiruHost miruHost,
         MiruSchema miruSchema,
         MiruBackingStorage desiredStorage,
-        final MiruBitmaps<BM> bitmaps,
+        final MiruBitmaps<BM, IBM> bitmaps,
         List<MiruPartitionedActivity> partitionedActivities)
         throws Exception {
 
@@ -121,23 +126,26 @@ public class MiruPluginTestBootstrap {
             loggerConfig.setLevel(Level.WARN);
         }
 
-        HttpClientFactory httpClientFactory = new HttpClientFactoryProvider()
-            .createHttpClientFactory(Collections.<HttpClientConfiguration>emptyList());
-
         ObjectMapper mapper = new ObjectMapper();
 
         InMemoryRowColumnValueStoreInitializer inMemoryRowColumnValueStoreInitializer = new InMemoryRowColumnValueStoreInitializer();
-        MiruWALInitializer.MiruWAL wal = new MiruWALInitializer().initialize("test", inMemoryRowColumnValueStoreInitializer, mapper);
+        RCVSWALInitializer.RCVSWAL wal = new RCVSWALInitializer().initialize("test", inMemoryRowColumnValueStoreInitializer, mapper);
         if (!partitionedActivities.isEmpty()) {
             MiruActivityWALWriter activityWALWriter = new RCVSActivityWALWriter(wal.getActivityWAL(), wal.getActivitySipWAL());
             activityWALWriter.write(tenantId, partitionId, partitionedActivities);
         }
 
+        HostPortProvider hostPortProvider = host -> 10_000;
+
         MiruActivityWALWriter activityWALWriter = new RCVSActivityWALWriter(wal.getActivityWAL(), wal.getActivitySipWAL());
-        MiruActivityWALReader<RCVSCursor, RCVSSipCursor> activityWALReader = new RCVSActivityWALReader(10_000, wal.getActivityWAL(), wal.getActivitySipWAL());
+        MiruActivityWALReader<RCVSCursor, RCVSSipCursor> activityWALReader = new RCVSActivityWALReader(hostPortProvider,
+            wal.getActivityWAL(),
+            wal.getActivitySipWAL());
         MiruReadTrackingWALWriter readTrackingWALWriter = new RCVSReadTrackingWALWriter(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
-        MiruReadTrackingWALReader readTrackingWALReader = new RCVSReadTrackingWALReader(10_000, wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
-        MiruWALLookup walLookup = new RCVSWALLookup(10_000, wal.getActivityLookupTable());
+        MiruReadTrackingWALReader<RCVSCursor, RCVSSipCursor> readTrackingWALReader = new RCVSReadTrackingWALReader(hostPortProvider,
+            wal.getReadTrackingWAL(),
+            wal.getReadTrackingSipWAL());
+        MiruWALLookup walLookup = new RCVSWALLookup(wal.getWALLookupTable());
 
         MiruClusterRegistry clusterRegistry;
 
@@ -147,13 +155,13 @@ public class MiruPluginTestBootstrap {
         acrc.setWorkingDirectories(amzaDataDir.getAbsolutePath());
         acrc.setIndexDirectories(amzaIndexDir.getAbsolutePath());
         Deployable deployable = new Deployable(new String[0]);
-        AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable, 1, "instanceKey", "localhost", 10000, "test-cluster", acrc,
+        AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable, 1, "instanceKey", "serviceName", "localhost", 10000, null, acrc,
             rowsChanged -> {
             });
 
-        AmzaKretrProvider amzaKretrProvider = new AmzaKretrProvider(amzaService);
+        AmzaClientProvider amzaClientProvider = new AmzaClientProvider(amzaService);
         clusterRegistry = new AmzaClusterRegistry(amzaService,
-            amzaKretrProvider,
+            amzaClientProvider,
             0,
             10_000L,
             new JacksonJsonObjectTypeMarshaller<>(MiruSchema.class, mapper),
@@ -166,6 +174,7 @@ public class MiruPluginTestBootstrap {
         MiruReplicaSetDirector replicaSetDirector = new MiruReplicaSetDirector(new OrderIdProviderImpl(new ConstantWriterIdProvider(1)), clusterRegistry);
         MiruWALClient<RCVSCursor, RCVSSipCursor> walClient = new MiruWALDirector<>(walLookup, activityWALReader, activityWALWriter, readTrackingWALReader,
             readTrackingWALWriter, new MiruRegistryClusterClient(clusterRegistry, replicaSetDirector));
+        MiruInboxReadTracker inboxReadTracker = new RCVSInboxReadTracker(walClient);
 
         MiruRegistryClusterClient clusterClient = new MiruRegistryClusterClient(clusterRegistry, replicaSetDirector);
 
@@ -174,7 +183,7 @@ public class MiruPluginTestBootstrap {
         clusterRegistry.updateIngress(new MiruIngressUpdate(tenantId, partitionId, new RangeMinMax(), System.currentTimeMillis(), false));
 
         MiruLifecyle<MiruJustInTimeBackfillerizer> backfillerizerLifecycle = new MiruBackfillerizerInitializer()
-            .initialize(config.getReadStreamIdsPropName(), miruHost, walClient);
+            .initialize(config.getReadStreamIdsPropName(), miruHost, inboxReadTracker);
 
         backfillerizerLifecycle.start();
         final MiruJustInTimeBackfillerizer backfillerizer = backfillerizerLifecycle.getService();
@@ -194,11 +203,10 @@ public class MiruPluginTestBootstrap {
             walClient,
             new RCVSSipTrackerFactory(),
             new RCVSSipIndexMarshaller(),
-            httpClientFactory,
             new MiruTempDirectoryResourceLocator(),
             termComposer,
             activityInternExtern,
-            new SingleBitmapsProvider<>(bitmaps));
+            new SingleBitmapsProvider(bitmaps));
 
         miruServiceLifecyle.start();
         final MiruService miruService = miruServiceLifecyle.getService();
@@ -234,6 +242,11 @@ public class MiruPluginTestBootstrap {
             }
 
             @Override
+            public MiruQueryParser getQueryParser(String defaultField) {
+                return new LuceneBackedQueryParser(defaultField);
+            }
+
+            @Override
             public MiruStats getStats() {
                 return miruStats;
             }
@@ -241,6 +254,21 @@ public class MiruPluginTestBootstrap {
             @Override
             public <R extends MiruRemotePartition<?, ?, ?>> R getRemotePartition(Class<R> remotePartitionClass) {
                 return null;
+            }
+
+            @Override
+            public TenantAwareHttpClient<String> getReaderHttpClient() {
+                return null;
+            }
+
+            @Override
+            public Map<MiruHost, ConnectionDescriptorSelectiveStrategy> getReaderStrategyCache() {
+                return null;
+            }
+
+            @Override
+            public <C extends Config> C getConfig(Class<C> configClass) {
+                return BindInterfaceToConfiguration.bindDefault(configClass);
             }
         };
     }

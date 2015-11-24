@@ -2,10 +2,12 @@ package com.jivesoftware.os.miru.api.wal;
 
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
+import com.jivesoftware.os.miru.api.activity.TimeAndVersion;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.routing.bird.shared.HostPort;
 import java.util.List;
+import java.util.Set;
 
 /**
  * @author jonathan.colt
@@ -20,7 +22,6 @@ public interface MiruWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
 
     enum RoutingGroupType {
         activity,
-        lookup,
         readTracking
     }
 
@@ -28,13 +29,11 @@ public interface MiruWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
 
     void writeActivity(MiruTenantId tenantId, MiruPartitionId partitionId, List<MiruPartitionedActivity> partitionedActivities) throws Exception;
 
-    void writeLookup(MiruTenantId tenantId, List<MiruVersionedActivityLookupEntry> entries) throws Exception;
-
     void writeReadTracking(MiruTenantId tenantId, MiruStreamId streamId, List<MiruPartitionedActivity> partitionedActivities) throws Exception;
 
     MiruPartitionId getLargestPartitionId(MiruTenantId tenantId) throws Exception;
 
-    WriterCursor getCursorForWriterId(MiruTenantId tenantId, int writerId) throws Exception;
+    WriterCursor getCursorForWriterId(MiruTenantId tenantId, MiruPartitionId partitionId, int writerId) throws Exception;
 
     class WriterCursor {
 
@@ -50,103 +49,46 @@ public interface MiruWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
         }
     }
 
-    MiruActivityWALStatus getPartitionStatus(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
+    MiruActivityWALStatus getActivityWALStatusForTenant(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
 
     long oldestActivityClockTimestamp(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
 
-    List<MiruVersionedActivityLookupEntry> getVersionedEntries(MiruTenantId tenantId, Long[] timestamps) throws Exception;
-
-    List<MiruLookupEntry> lookupActivity(MiruTenantId tenantId, long afterTimestamp, int batchSize) throws Exception;
-
-    class MiruLookupEntry {
-
-        public long collisionId;
-        public long version;
-        public MiruActivityLookupEntry entry;
-
-        public MiruLookupEntry() {
-        }
-
-        public MiruLookupEntry(long collisionId, long version, MiruActivityLookupEntry entry) {
-            this.collisionId = collisionId;
-            this.version = version;
-            this.entry = entry;
-        }
-
-        @Override
-        public String toString() {
-            return "MiruLookupEntry{" + "collisionId=" + collisionId + ", version=" + version + ", entry=" + entry + '}';
-        }
-
-    }
+    List<MiruVersionedActivityLookupEntry> getVersionedEntries(MiruTenantId tenantId, MiruPartitionId partitionId, Long[] timestamps) throws Exception;
 
     StreamBatch<MiruWALEntry, C> getActivity(MiruTenantId tenantId,
         MiruPartitionId partitionId, C cursor, int batchSize) throws Exception;
 
     StreamBatch<MiruWALEntry, S> sipActivity(MiruTenantId tenantId,
-        MiruPartitionId partitionId, S cursor, int batchSize) throws Exception;
+        MiruPartitionId partitionId, S cursor, Set<TimeAndVersion> lastSeen, int batchSize) throws Exception;
 
     class StreamBatch<T, C> {
 
-        public List<T> batch; // non final for json ser-der
+        public List<T> activities; // non final for json ser-der
         public C cursor; // non final for json ser-der
+        public boolean endOfWAL; // non final for json ser-der
+        public Set<TimeAndVersion> suppressed;
 
         public StreamBatch() {
         }
 
-        public StreamBatch(List<T> batch, C cursor) {
-            this.batch = batch;
+        public StreamBatch(List<T> activities, C cursor, boolean endOfWAL, Set<TimeAndVersion> suppressed) {
+            this.activities = activities;
             this.cursor = cursor;
+            this.endOfWAL = endOfWAL;
+            this.suppressed = suppressed;
         }
 
         @Override
         public String toString() {
-            return "StreamBatch{" + "batch=" + batch + ", cursor=" + cursor + '}';
+            return "StreamBatch{" +
+                "activities=" + activities +
+                ", cursor=" + cursor +
+                ", endOfWAL=" + endOfWAL +
+                ", suppressed=" + suppressed +
+                '}';
         }
-
     }
 
-    StreamBatch<MiruReadSipEntry, SipReadCursor> sipRead(MiruTenantId tenantId,
-        MiruStreamId streamId, SipReadCursor cursor, int batchSize) throws Exception;
+    StreamBatch<MiruWALEntry, S> getRead(MiruTenantId tenantId, MiruStreamId streamId, S cursor, long oldestEventId, int batchSize) throws Exception;
 
-    StreamBatch<MiruWALEntry, GetReadCursor> getRead(MiruTenantId tenantId,
-        MiruStreamId streamId, GetReadCursor cursor, int batchSize) throws Exception;
-
-    class SipReadCursor {
-
-        public long sipId; // non final for json ser-der
-        public long eventId; // non final for json ser-der
-
-        public SipReadCursor() {
-        }
-
-        public SipReadCursor(long sipId, long eventId) {
-            this.sipId = sipId;
-            this.eventId = eventId;
-        }
-
-        @Override
-        public String toString() {
-            return "SipReadCursor{" + "sipId=" + sipId + ", eventId=" + eventId + '}';
-        }
-
-    }
-
-    class GetReadCursor {
-
-        public long eventId; // non final for json ser-der
-
-        public GetReadCursor() {
-        }
-
-        public GetReadCursor(long eventId) {
-            this.eventId = eventId;
-        }
-
-        @Override
-        public String toString() {
-            return "GetReadCursor{" + "eventId=" + eventId + '}';
-        }
-
-    }
 }

@@ -21,7 +21,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import org.xerial.snappy.Snappy;
+import org.nustaq.serialization.FSTConfiguration;
 
 import static com.jivesoftware.os.miru.reco.plugins.trending.TrendingConstants.CUSTOM_QUERY_ENDPOINT;
 import static com.jivesoftware.os.miru.reco.plugins.trending.TrendingConstants.TRENDING_PREFIX;
@@ -31,6 +31,7 @@ import static com.jivesoftware.os.miru.reco.plugins.trending.TrendingConstants.T
 public class TrendingEndpoints {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
+    private static final FSTConfiguration conf = FSTConfiguration.createDefaultConfiguration();
 
     private final TrendingInjectable injectable;
     private final ObjectMapper objectMapper;
@@ -54,8 +55,8 @@ public class TrendingEndpoints {
             long t = System.currentTimeMillis();
             MiruResponse<TrendingAnswer> response = injectable.scoreTrending(request);
 
-            log.info("scoreTrending: " + response.answer.results.size() + " / " + request.query.desiredNumberOfDistincts +
-                " in " + (System.currentTimeMillis() - t) + " ms");
+            log.info("scoreTrending: " + response.answer.results.size() + " / " + request.query.desiredNumberOfDistincts
+                + " in " + (System.currentTimeMillis() - t) + " ms");
             return responseHelper.jsonResponse(response);
         } catch (MiruPartitionUnavailableException e) {
             return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Partition unavailable").build();
@@ -71,16 +72,26 @@ public class TrendingEndpoints {
     @Produces(MediaType.APPLICATION_OCTET_STREAM)
     public Response scoreTrending(@PathParam("partitionId") int id, byte[] rawBytes) {
         MiruPartitionId partitionId = MiruPartitionId.of(id);
+
+        MiruRequestAndReport<TrendingQuery, TrendingReport> requestAndReport;
         try {
-            byte[] jsonBytes = Snappy.uncompress(rawBytes);
-            MiruRequestAndReport<TrendingQuery, TrendingReport> requestAndReport = objectMapper.readValue(jsonBytes, resultType);
+            requestAndReport = (MiruRequestAndReport<TrendingQuery, TrendingReport>) conf.asObject(rawBytes);
+        } catch (Exception e) {
+            log.error("Failed to deserialize request", e);
+            return Response.serverError().build();
+        }
+
+        try {
+            //byte[] jsonBytes = Snappy.uncompress(rawBytes);
+            //MiruRequestAndReport<TrendingQuery, TrendingReport> requestAndReport = objectMapper.readValue(jsonBytes, resultType);
             MiruPartitionResponse<AnalyticsAnswer> result = injectable.scoreTrending(partitionId, requestAndReport);
-            byte[] responseBytes = result != null ? Snappy.compress(objectMapper.writeValueAsBytes(result)) : new byte[0];
+            //byte[] responseBytes = result != null ? Snappy.compress(objectMapper.writeValueAsBytes(result)) : new byte[0];
+            byte[] responseBytes = result != null ? conf.asByteArray(result) : new byte[0];
             return Response.ok(responseBytes, MediaType.APPLICATION_OCTET_STREAM).build();
         } catch (MiruPartitionUnavailableException e) {
             return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Partition unavailable").build();
         } catch (Exception e) {
-            log.error("Failed to score trending for partition: " + partitionId.getId(), e);
+            log.error("Failed to score trending for tenant: {} partition: {}", new Object[] { requestAndReport.request.tenantId, partitionId }, e);
             return Response.serverError().build();
         }
     }

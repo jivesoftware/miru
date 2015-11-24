@@ -1,0 +1,119 @@
+package com.jivesoftware.os.miru.wal.readtracking.amza;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Optional;
+import com.google.common.collect.Maps;
+import com.jivesoftware.os.amza.client.AmzaClientProvider;
+import com.jivesoftware.os.amza.shared.partition.PartitionProperties;
+import com.jivesoftware.os.amza.shared.take.TakeCursors;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
+import com.jivesoftware.os.miru.api.base.MiruStreamId;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.marshall.JacksonJsonObjectTypeMarshaller;
+import com.jivesoftware.os.miru.api.topology.NamedCursor;
+import com.jivesoftware.os.miru.api.wal.AmzaCursor;
+import com.jivesoftware.os.miru.api.wal.AmzaSipCursor;
+import com.jivesoftware.os.miru.wal.AmzaWALUtil;
+import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
+import com.jivesoftware.os.routing.bird.shared.HostPort;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
+public class AmzaReadTrackingWALReader implements MiruReadTrackingWALReader<AmzaCursor, AmzaSipCursor> {
+
+    private final AmzaWALUtil amzaWALUtil;
+    private final JacksonJsonObjectTypeMarshaller<MiruPartitionedActivity> partitionedActivityMarshaller;
+
+    public AmzaReadTrackingWALReader(AmzaWALUtil amzaWALUtil, ObjectMapper mapper) {
+        this.amzaWALUtil = amzaWALUtil;
+        this.partitionedActivityMarshaller = new JacksonJsonObjectTypeMarshaller<>(MiruPartitionedActivity.class, mapper);
+    }
+
+    private Map<String, NamedCursor> extractCursors(List<NamedCursor> cursors) {
+        Map<String, NamedCursor> cursorsByName = Maps.newHashMapWithExpectedSize(cursors.size());
+        for (NamedCursor namedCursor : cursors) {
+            cursorsByName.put(namedCursor.name, namedCursor);
+        }
+        return cursorsByName;
+    }
+
+    private AmzaCursor scanCursors(MiruReadTrackingWALReader.StreamReadTrackingWAL streamMiruReadTrackingWAL,
+        AmzaClientProvider.AmzaClient client,
+        MiruStreamId streamId,
+        Map<String, NamedCursor> cursorsByName) throws Exception {
+        return amzaWALUtil.scan(client, cursorsByName, streamId.getBytes(), (rowTxId, prefix, key, value) -> {
+            MiruPartitionedActivity partitionedActivity = partitionedActivityMarshaller.fromBytes(value.getValue());
+            if (partitionedActivity != null) {
+                if (!streamMiruReadTrackingWAL.stream(partitionedActivity.timestamp, partitionedActivity, value.getTimestampId())) {
+                    return false;
+                }
+            }
+            return true;
+        });
+    }
+
+    private TakeCursors takeSipCursors(MiruReadTrackingWALReader.StreamReadTrackingSipWAL streamMiruReadTrackingSipWAL,
+        AmzaClientProvider.AmzaClient client,
+        MiruStreamId streamId,
+        Map<String, NamedCursor> cursorsByName) throws Exception {
+        return amzaWALUtil.take(client, cursorsByName, streamId.getBytes(), (rowTxId, prefix, key, value) -> {
+            MiruPartitionedActivity partitionedActivity = partitionedActivityMarshaller.fromBytes(value.getValue());
+            if (partitionedActivity != null) {
+                //TODO key->bytes is sufficient for the activity timestamp, so technically we don't need values at all
+                if (!streamMiruReadTrackingSipWAL.stream(partitionedActivity.timestamp, rowTxId)) {
+                    return false;
+                }
+            }
+            return true;
+        });
+    }
+
+    @Override
+    public HostPort[] getRoutingGroup(MiruTenantId tenantId, MiruStreamId streamId) throws Exception {
+        return amzaWALUtil.getReadTrackingRoutingGroup(tenantId, Optional.<PartitionProperties>absent());
+    }
+
+    @Override
+    public AmzaCursor getCursor(long eventId) {
+        return new AmzaCursor(Collections.singletonList(new NamedCursor(amzaWALUtil.getRingMemberName(), eventId)), null);
+    }
+
+    @Override
+    public AmzaCursor stream(MiruTenantId tenantId,
+        MiruStreamId streamId,
+        AmzaCursor cursor,
+        int batchSize,
+        StreamReadTrackingWAL streamReadTrackingWAL) throws Exception {
+
+        AmzaClientProvider.AmzaClient client = amzaWALUtil.getReadTrackingClient(tenantId);
+        if (client == null) {
+            return cursor;
+        }
+
+        Map<String, NamedCursor> cursorsByName = cursor != null ? extractCursors(cursor.cursors) : Maps.newHashMap();
+
+        return scanCursors(streamReadTrackingWAL, client, streamId, cursorsByName);
+    }
+
+    @Override
+    public AmzaSipCursor streamSip(MiruTenantId tenantId,
+        MiruStreamId streamId,
+        AmzaSipCursor sipCursor,
+        int batchSize,
+        StreamReadTrackingSipWAL streamReadTrackingSipWAL) throws Exception {
+
+        AmzaClientProvider.AmzaClient client = amzaWALUtil.getReadTrackingClient(tenantId);
+        if (client == null) {
+            return sipCursor;
+        }
+
+        Map<String, NamedCursor> sipCursorsByName = sipCursor != null ? extractCursors(sipCursor.cursors) : Maps.newHashMap();
+
+        TakeCursors takeCursors = takeSipCursors(streamReadTrackingSipWAL, client, streamId, sipCursorsByName);
+
+        amzaWALUtil.mergeCursors(sipCursorsByName, takeCursors);
+
+        return new AmzaSipCursor(sipCursorsByName.values(), false);
+    }
+}

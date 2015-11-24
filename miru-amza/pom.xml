@@ -5,16 +5,20 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-build-management</artifactId>
-        <version>0.514-SNAPSHOT</version>
+        <version>0.654-SNAPSHOT</version>
         <relativePath>../inheritance-poms/global-build-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru</groupId>
     <artifactId>miru-amza</artifactId>
-    <version>0.514-SNAPSHOT</version>
+    <version>0.654-SNAPSHOT</version>
     <properties>
         <module.type>shared_lib</module.type>
     </properties>
     <dependencies>
+        <dependency>
+            <groupId>com.jivesoftware.os.mlogger</groupId>
+            <artifactId>core</artifactId>
+        </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.amza</groupId>
             <artifactId>amza-service</artifactId>
@@ -46,6 +50,10 @@
         <dependency>
             <groupId>com.jivesoftware.os.routing.bird</groupId>
             <artifactId>merlin-config</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.routing.bird</groupId>
+            <artifactId>routing-bird-shared</artifactId>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.routing.bird</groupId>

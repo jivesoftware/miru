@@ -19,4 +19,10 @@ public interface MiruAnswerEvaluator<A> {
      * @return true if solving should continue beyond unsolvable replicas, or false if an unsolvable replica should halt the solver
      */
     boolean stopOnUnsolvablePartition();
+
+    /**
+     * Specifies whether the solution can be solved in parallel.
+     * @return true if parallel solver should be used, or false for the serial solver
+     */
+    boolean useParallelSolver();
 }

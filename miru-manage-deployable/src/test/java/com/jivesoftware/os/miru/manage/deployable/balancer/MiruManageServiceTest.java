@@ -5,7 +5,7 @@ import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
-import com.jivesoftware.os.amza.client.AmzaKretrProvider;
+import com.jivesoftware.os.amza.client.AmzaClientProvider;
 import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceConfig;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceInitializer;
@@ -23,12 +23,14 @@ import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.amza.AmzaClusterRegistry;
 import com.jivesoftware.os.miru.manage.deployable.MiruManageInitializer;
 import com.jivesoftware.os.miru.manage.deployable.MiruManageService;
+import com.jivesoftware.os.miru.manage.deployable.region.MiruSchemaRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer.MiruSoyRendererConfig;
 import com.jivesoftware.os.routing.bird.deployable.Deployable;
 import java.io.File;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.merlin.config.BindInterfaceToConfiguration;
@@ -77,11 +79,11 @@ public class MiruManageServiceTest {
         acrc.setWorkingDirectories(amzaDataDir.getAbsolutePath());
         acrc.setIndexDirectories(amzaIndexDir.getAbsolutePath());
         Deployable deployable = new Deployable(new String[0]);
-        AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable, 1, "instanceKey", "localhost", 10000, "test-cluster", acrc,
+        AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable, 1, "instanceKey", "serviceName", "localhost", 10000, null, acrc,
             rowsChanged -> {
             });
         MiruClusterRegistry clusterRegistry = new AmzaClusterRegistry(amzaService,
-            new AmzaKretrProvider(amzaService),
+            new AmzaClientProvider(amzaService),
             0,
             10_000L,
             new JacksonJsonObjectTypeMarshaller<>(MiruSchema.class, mapper),
@@ -94,19 +96,26 @@ public class MiruManageServiceTest {
         clusterRegistry.registerSchema(tenantId, miruSchema);
 
         MiruWALClient miruWALClient = Mockito.mock(MiruWALClient.class);
-        Mockito.when(miruWALClient.getAllTenantIds()).thenReturn(Arrays.asList(tenantId));
+        Mockito.when(miruWALClient.getAllTenantIds()).thenReturn(Collections.singletonList(tenantId));
         Mockito.when(miruWALClient.getLargestPartitionId(Mockito.<MiruTenantId>any())).thenReturn(partitionId);
 
-        Mockito.when(miruWALClient.getPartitionStatus(Mockito.<MiruTenantId>any(), Mockito.any(MiruPartitionId.class)))
-            .thenReturn(new MiruActivityWALStatus(partitionId, 10, Arrays.asList(0), Arrays.asList(0)));
+        Mockito.when(miruWALClient.getActivityWALStatusForTenant(Mockito.<MiruTenantId>any(), Mockito.any(MiruPartitionId.class)))
+            .thenReturn(new MiruActivityWALStatus(partitionId,
+                Collections.singletonList(new MiruActivityWALStatus.WriterCount(1, 10)),
+                Collections.singletonList(0),
+                Collections.singletonList(0)));
 
         MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(config);
         MiruStats stats = new MiruStats();
 
-        miruManageService = new MiruManageInitializer().initialize(renderer,
+        miruManageService = new MiruManageInitializer().initialize("test",
+            1,
+            renderer,
             clusterRegistry,
             miruWALClient,
-            stats);
+            stats,
+            null,
+            mapper);
 
         long electTime = System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1);
         for (int i = 0; i < numberOfReplicas; i++) {
@@ -147,11 +156,9 @@ public class MiruManageServiceTest {
 
     @Test
     public void testRenderSchemaWithLookup() throws Exception {
-        ObjectMapper objectMapper = new ObjectMapper();
-        String lookupJSON = objectMapper.writeValueAsString(miruSchema);
-        String rendered = miruManageService.renderSchemaWithLookup(lookupJSON);
-        System.out.println(rendered);
-        assertTrue(rendered.contains("<td>" + tenantId.toString() + "</td>"));
+        String rendered = miruManageService.renderSchema(new MiruSchemaRegion.SchemaInput(null, "test", 1));
+        //System.out.println(rendered);
+        assertTrue(rendered.contains("<tr><td>1</td><td>0</td></tr>"));
     }
 
 }

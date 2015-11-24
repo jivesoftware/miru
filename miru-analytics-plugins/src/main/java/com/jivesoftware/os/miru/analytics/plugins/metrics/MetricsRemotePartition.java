@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.analytics.plugins.metrics;
 
 import com.google.common.base.Optional;
+import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
@@ -10,7 +11,6 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.mlogger.core.EndPointMetrics;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.routing.bird.http.client.HttpClient;
 
 import static com.jivesoftware.os.miru.analytics.plugins.metrics.MetricsConstants.CUSTOM_QUERY_ENDPOINT;
 import static com.jivesoftware.os.miru.analytics.plugins.metrics.MetricsConstants.METRICS_PREFIX;
@@ -34,11 +34,12 @@ public class MetricsRemotePartition implements MiruRemotePartition<MetricsQuery,
     }
 
     @Override
-    public MiruPartitionResponse<MetricsAnswer> askRemote(HttpClient httpClient,
+    public MiruPartitionResponse<MetricsAnswer> askRemote(MiruHost host,
         MiruPartitionId partitionId,
         MiruRequest<MetricsQuery> request,
         Optional<MetricsReport> report) throws MiruQueryServiceException {
-        return remotePartitionReader.read(httpClient,
+        return remotePartitionReader.read("metrics",
+            host,
             getEndpoint(partitionId),
             request,
             MetricsAnswer.class,

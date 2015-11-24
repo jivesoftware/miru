@@ -17,6 +17,8 @@ import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
+import com.jivesoftware.os.miru.bitmaps.roaring5.MiruBitmapsRoaring;
+import com.jivesoftware.os.miru.bitmaps.roaring5.buffer.MiruBitmapsRoaringBuffer;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruIndexUtil;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
@@ -24,6 +26,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
+import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.test.MiruPluginTestBootstrap;
 import com.jivesoftware.os.miru.reco.plugins.distincts.Distincts;
 import com.jivesoftware.os.miru.reco.plugins.reco.CollaborativeFiltering;
@@ -31,7 +34,6 @@ import com.jivesoftware.os.miru.reco.plugins.reco.RecoAnswer;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoInjectable;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoQuery;
 import com.jivesoftware.os.miru.service.MiruService;
-import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsRoaring;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -88,7 +90,7 @@ public class MiruCollaborativeFilterNGTest {
         }
 
         MiruProvider<MiruService> miruProvider = new MiruPluginTestBootstrap().bootstrap(tenant1, partitionId, miruHost,
-            miruSchema, MiruBackingStorage.disk, new MiruBitmapsRoaring(), partitionedActivities);
+            miruSchema, MiruBackingStorage.memory, new MiruBitmapsRoaringBuffer(), partitionedActivities);
 
         this.service = miruProvider.getMiru(tenant1);
         this.injectable = new RecoInjectable(miruProvider,
@@ -184,11 +186,12 @@ public class MiruCollaborativeFilterNGTest {
             MiruFilter scorableFilter = new MiruFilter(MiruFilterOperation.and, false, Arrays.asList(docTypesFieldFilter, activityTypesFieldFilter), null);
 
             long s = System.currentTimeMillis();
-            MiruResponse<RecoAnswer> response = injectable.collaborativeFilteringRecommendations(new MiruRequest<>(
+            MiruResponse<RecoAnswer> response = injectable.collaborativeFilteringRecommendations(new MiruRequest<>("test",
                 tenant1,
                 MiruActorId.NOT_PROVIDED,
                 MiruAuthzExpression.NOT_PROVIDED,
                 new RecoQuery(
+                    new MiruTimeRange(0, time.get() + 1),
                     null,
                     myActivityFilter,
                     "doc", "doc", "doc",

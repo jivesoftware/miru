@@ -22,16 +22,12 @@ public class MiruPartitionCursor {
         return partitionId;
     }
 
-    public boolean hasNext() {
-        return index.get() < capacity;
+    public boolean isMaxCapacity() {
+        return index.get() >= capacity;
     }
 
     public int next() {
-        int next = index.incrementAndGet();
-        if (next > capacity) {
-            throw new IndexOutOfBoundsException();
-        }
-        return next;
+        return index.incrementAndGet();
     }
 
     public int last() {

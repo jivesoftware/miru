@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.plugin.solution;
 
 import com.google.common.base.Optional;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
 import com.jivesoftware.os.miru.plugin.partition.MiruQueryablePartition;
@@ -27,9 +28,10 @@ public class MiruSolvableFactory<Q, A, R> {
         this.question = question;
     }
 
-    public <BM> MiruSolvable<A> create(final MiruQueryablePartition<BM> replica, final Optional<R> report) {
+    public <BM extends IBM, IBM> MiruSolvable<A> create(final MiruQueryablePartition<BM, IBM> replica, final Optional<R> report) {
         Callable<MiruPartitionResponse<A>> callable = () -> {
-            try (MiruRequestHandle<BM, ?> handle = replica.acquireQueryHandle()) {
+            StackBuffer stackBuffer = new StackBuffer();
+            try (MiruRequestHandle<BM, IBM, ?> handle = replica.acquireQueryHandle(stackBuffer)) {
                 if (handle.isLocal()) {
                     long start = System.currentTimeMillis();
                     MiruPartitionResponse<A> response = question.askLocal(handle, report);
@@ -40,7 +42,7 @@ public class MiruSolvableFactory<Q, A, R> {
                     return response;
                 } else {
                     long start = System.currentTimeMillis();
-                    MiruPartitionResponse<A> response = question.askRemote(handle.getHttpClient(), handle.getCoord().partitionId, report);
+                    MiruPartitionResponse<A> response = question.askRemote(handle.getCoord().host, handle.getCoord().partitionId, report);
                     long latency = System.currentTimeMillis() - start;
                     miruStats.egressed(queryKey + ">remote", 1, latency);
                     miruStats.egressed(queryKey + ">remote>" + replica.getCoord().host.toStringForm(), 1, latency);
@@ -52,7 +54,7 @@ public class MiruSolvableFactory<Q, A, R> {
                 LOG.info("Partition unavailable on {}: {}", replica.getCoord(), e.getMessage());
                 throw e;
             } catch (Throwable t) {
-                LOG.info("Solvable encountered a problem", t);
+                LOG.info("Solvable encountered a problem for {}", new Object[] { replica.getCoord() }, t);
                 throw t;
             }
         };

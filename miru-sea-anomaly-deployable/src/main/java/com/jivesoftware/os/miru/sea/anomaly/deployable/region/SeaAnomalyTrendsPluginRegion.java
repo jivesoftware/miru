@@ -22,9 +22,11 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
+import com.jivesoftware.os.miru.plugin.solution.Waveform;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingAnswer;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingConstants;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery;
+import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery.Strategy;
 import com.jivesoftware.os.miru.reco.plugins.trending.Trendy;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.SeaAnomalySchemaConstants;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.endpoints.MinMaxDouble;
@@ -61,11 +63,11 @@ public class SeaAnomalyTrendsPluginRegion implements MiruPageRegion<Optional<Sea
 
     public static class TrendingPluginRegionInput {
 
-        final String logLevel;
+        final String type;
         final String service;
 
-        public TrendingPluginRegionInput(String logLevel, String service) {
-            this.logLevel = logLevel;
+        public TrendingPluginRegionInput(String type, String service) {
+            this.type = type;
             this.service = service;
         }
     }
@@ -79,7 +81,7 @@ public class SeaAnomalyTrendsPluginRegion implements MiruPageRegion<Optional<Sea
                 int fromHoursAgo = 8;
                 int toHoursAgo = 0;
 
-                data.put("logLevel", input.logLevel);
+                data.put("type", input.type);
                 data.put("service", input.service);
                 data.put("fromHoursAgo", fromHoursAgo);
 
@@ -89,7 +91,7 @@ public class SeaAnomalyTrendsPluginRegion implements MiruPageRegion<Optional<Sea
                 final long fromTime = packCurrentTime - snowflakeIdPacker.pack(TimeUnit.HOURS.toMillis(fromHoursAgo), 0, 0);
                 final long toTime = packCurrentTime - snowflakeIdPacker.pack(TimeUnit.HOURS.toMillis(toHoursAgo), 0, 0);
                 List<MiruFieldFilter> fieldFilters = Lists.newArrayList();
-                fieldFilters.add(new MiruFieldFilter(MiruFieldType.primary, "level", Arrays.asList(String.valueOf(input.logLevel))));
+                fieldFilters.add(new MiruFieldFilter(MiruFieldType.primary, "type", Arrays.asList(String.valueOf(input.type))));
                 if (input.service != null) {
                     fieldFilters.add(new MiruFieldFilter(MiruFieldType.primary, "service", Arrays.asList(input.service)));
                 }
@@ -98,22 +100,23 @@ public class SeaAnomalyTrendsPluginRegion implements MiruPageRegion<Optional<Sea
 
                 MiruResponse<TrendingAnswer> response = null;
                 MiruTenantId tenantId = SeaAnomalySchemaConstants.TENANT_ID;
+                int numberOfBuckets = 30;
                 try {
                     for (HttpRequestHelper requestHelper : miruReaders.get(Optional.<MiruHost>absent())) {
                         try {
                             @SuppressWarnings("unchecked")
                             MiruResponse<TrendingAnswer> trendingResponse = requestHelper.executeRequest(
-                                new MiruRequest<>(tenantId,
+                                new MiruRequest<>("anomalyTrends",
+                                    tenantId,
                                     MiruActorId.NOT_PROVIDED,
                                     MiruAuthzExpression.NOT_PROVIDED,
-                                    new TrendingQuery(TrendingQuery.Strategy.LINEAR_REGRESSION,
+                                    new TrendingQuery(Collections.singleton(Strategy.LINEAR_REGRESSION),
                                         new MiruTimeRange(fromTime, toTime),
                                         null,
-                                        30,
+                                        numberOfBuckets,
                                         constraintsFilter,
                                         input.service != null ? "instance" : "service",
-                                        MiruFilter.NO_FILTER,
-                                        null,
+                                        Collections.emptyList(),
                                         100),
                                     MiruSolutionLogLevel.INFO),
                                 TrendingConstants.TRENDING_PREFIX + TrendingConstants.CUSTOM_QUERY_ENDPOINT, MiruResponse.class,
@@ -136,7 +139,8 @@ public class SeaAnomalyTrendsPluginRegion implements MiruPageRegion<Optional<Sea
                 if (response != null && response.answer != null) {
                     data.put("elapse", String.valueOf(response.totalElapsed));
 
-                    List<Trendy> results = response.answer.results;
+                    Map<String, Waveform> waveforms = response.answer.waveforms;
+                    List<Trendy> results = response.answer.results.get(Strategy.LINEAR_REGRESSION.name());
                     if (results == null) {
                         results = Collections.emptyList();
                     }
@@ -145,10 +149,14 @@ public class SeaAnomalyTrendsPluginRegion implements MiruPageRegion<Optional<Sea
 
                     final MinMaxDouble mmd = new MinMaxDouble();
                     mmd.value(0);
+                    Map<String, long[]> pngWaveforms = Maps.newHashMap();
                     for (Trendy t : results) {
-                        for (long w : t.waveform) {
+                        long[] waveform = new long[numberOfBuckets];
+                        waveforms.get(t.distinctValue).mergeWaveform(waveform);
+                        for (long w : waveform) {
                             mmd.value(w);
                         }
+                        pngWaveforms.put(t.distinctValue, waveform);
                     }
 
                     data.put("results", Lists.transform(results, trendy -> ImmutableMap.of(
@@ -156,7 +164,7 @@ public class SeaAnomalyTrendsPluginRegion implements MiruPageRegion<Optional<Sea
                         "rank", String.valueOf(Math.round(trendy.rank * 100.0) / 100.0),
                         "waveform", "data:image/png;base64," + new PNGWaveforms()
                             .hitsToBase64PNGWaveform(600, 96, 10, 4,
-                                ImmutableMap.of(trendy.distinctValue, trendy.waveform),
+                                ImmutableMap.of(trendy.distinctValue, pngWaveforms.get(trendy.distinctValue)),
                                 Optional.of(mmd)))));
                     ObjectMapper mapper = new ObjectMapper();
                     mapper.enable(SerializationFeature.INDENT_OUTPUT);

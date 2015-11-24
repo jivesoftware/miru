@@ -6,7 +6,7 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.io.Files;
-import com.jivesoftware.os.amza.client.AmzaKretrProvider;
+import com.jivesoftware.os.amza.client.AmzaClientProvider;
 import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
@@ -17,7 +17,6 @@ import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
-import com.jivesoftware.os.miru.api.MiruTopologyStatus;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
@@ -25,6 +24,7 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.marshall.JacksonJsonObjectTypeMarshaller;
 import com.jivesoftware.os.miru.api.marshall.MiruVoidByte;
 import com.jivesoftware.os.miru.api.topology.MiruIngressUpdate;
+import com.jivesoftware.os.miru.api.topology.MiruTopologyStatus;
 import com.jivesoftware.os.miru.api.topology.RangeMinMax;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSet;
@@ -51,7 +51,7 @@ import static org.testng.Assert.assertTrue;
 public class AmzaClusterRegistryNGTest {
 
     private final int numReplicas = 3;
-    private final MiruTenantId tenantId = new MiruTenantId(new byte[] { 1, 2, 3, 4 });
+    private final MiruTenantId tenantId = new MiruTenantId(new byte[]{1, 2, 3, 4});
     private final MiruPartitionId partitionId = MiruPartitionId.of(0);
 
     private MiruReplicaSetDirector replicaSetDirector;
@@ -67,11 +67,11 @@ public class AmzaClusterRegistryNGTest {
         acrc.setIndexDirectories(amzaIndexDir.getAbsolutePath());
         acrc.setTakeFromNeighborsIntervalInMillis(10);
         Deployable deployable = new Deployable(new String[0]);
-        AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable, 1, "instanceKey", "localhost", 10000, "test-cluster", acrc,
+        AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable, 1, "instanceKey", "serviceName", "localhost", 10000, null, acrc,
             rowsChanged -> {
             });
         registry = new AmzaClusterRegistry(amzaService,
-            new AmzaKretrProvider(amzaService),
+            new AmzaClientProvider(amzaService),
             0,
             10_000L,
             new JacksonJsonObjectTypeMarshaller<>(MiruSchema.class, mapper),
@@ -174,14 +174,14 @@ public class AmzaClusterRegistryNGTest {
     public void testSchemaProvider() throws Exception {
         MiruTenantId tenantId1 = new MiruTenantId("tenant1".getBytes());
         MiruSchema schema1 = new MiruSchema.Builder("test1", 1)
-            .setFieldDefinitions(new MiruFieldDefinition[] {
+            .setFieldDefinitions(new MiruFieldDefinition[]{
                 new MiruFieldDefinition(0, "a", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
                 new MiruFieldDefinition(1, "b", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE)
             })
             .build();
         MiruTenantId tenantId2 = new MiruTenantId("tenant2".getBytes());
         MiruSchema schema2 = new MiruSchema.Builder("test2", 2)
-            .setFieldDefinitions(new MiruFieldDefinition[] {
+            .setFieldDefinitions(new MiruFieldDefinition[]{
                 new MiruFieldDefinition(0, "c", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
                 new MiruFieldDefinition(1, "d", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE)
             })
@@ -209,13 +209,13 @@ public class AmzaClusterRegistryNGTest {
     public void testSchemaVersions() throws Exception {
         MiruTenantId tenantId1 = new MiruTenantId("tenant1".getBytes());
         MiruSchema schema1 = new MiruSchema.Builder("test1", 1)
-            .setFieldDefinitions(new MiruFieldDefinition[] {
+            .setFieldDefinitions(new MiruFieldDefinition[]{
                 new MiruFieldDefinition(0, "a", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
                 new MiruFieldDefinition(1, "b", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE)
             })
             .build();
         MiruSchema schema2 = new MiruSchema.Builder("test1", 2)
-            .setFieldDefinitions(new MiruFieldDefinition[] {
+            .setFieldDefinitions(new MiruFieldDefinition[]{
                 new MiruFieldDefinition(0, "c", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
                 new MiruFieldDefinition(1, "d", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE)
             })

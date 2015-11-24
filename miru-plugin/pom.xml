@@ -5,16 +5,20 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-build-management</artifactId>
-        <version>0.514-SNAPSHOT</version>
+        <version>0.654-SNAPSHOT</version>
         <relativePath>../inheritance-poms/global-build-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru</groupId>
     <artifactId>miru-plugin</artifactId>
-    <version>0.514-SNAPSHOT</version>
+    <version>0.654-SNAPSHOT</version>
     <properties>
         <module.type>shared_lib</module.type>
     </properties>
     <dependencies>
+        <dependency>
+            <groupId>de.ruedigermoeller</groupId>
+            <artifactId>fst</artifactId>
+        </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.jive.utils</groupId>
             <artifactId>base</artifactId>
@@ -32,17 +36,29 @@
             <artifactId>routing-bird-http-client</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.jivesoftware.os.routing.bird</groupId>
+            <artifactId>routing-bird-shared</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.routing.bird</groupId>
+            <artifactId>merlin-config</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.jivesoftware.os.rcvs</groupId>
             <artifactId>row-column-value-store-marshall-api</artifactId>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-api</artifactId>
-            <version>0.514-SNAPSHOT</version>
+            <version>0.654-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
@@ -57,6 +73,22 @@
             <artifactId>commons-lang</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.apache.lucene</groupId>
+            <artifactId>lucene-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.lucene</groupId>
+            <artifactId>lucene-queryparser</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.lucene</groupId>
+            <artifactId>lucene-analyzers-common</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.xerial.snappy</groupId>
             <artifactId>snappy-java</artifactId>
         </dependency>
@@ -64,10 +96,6 @@
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
         </dependency>
     </dependencies>
 </project>

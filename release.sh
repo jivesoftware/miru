@@ -1,18 +1,5 @@
 #!/bin/bash
 
-VERSION=`mvn org.apache.maven.plugins:maven-help-plugin:2.1.1:evaluate -Dexpression=project.version | grep -v '\[' | grep -v 'Downloading' | tr '-' ' ' | awk '{ print $1 }'`
-
-if [ -z "$1" ]; then
-	echo ""
-	echo "You need provide the next version as the first argument."
-	echo "The current versions is: "${VERSION}
-	echo ""
-	echo "usage: ./release <nextVersions>"
-	echo ""
-	exit 1;
-fi
-
-NEXT_VERSION=$1
 
 echo "/-------------------------------------------------------"
 echo "| checking running from develop branch. "
@@ -62,7 +49,13 @@ then
 	
 fi
 
+git checkout master
+git pull
+git checkout ${ON_BRANCH}
 
+
+VERSION=`cat pom.xml | grep -m 1 "<version>" | awk -F '[>-]' '{print $2}'`
+NEXT_VERSION=`echo $VERSION | awk '{n = substr($0, match($0, /[0-9]+$/), RLENGTH) + 1; sub(/[0-9]+$/, n); print }'`
 
 echo "/-------------------------------------------------------"
 echo "| setting version to "${VERSION}

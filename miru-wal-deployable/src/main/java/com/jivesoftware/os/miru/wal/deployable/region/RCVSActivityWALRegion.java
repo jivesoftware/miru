@@ -62,16 +62,20 @@ public class RCVSActivityWALRegion implements MiruPageRegion<RCVSActivityWALRegi
                 List<MiruActivityWALStatus> partitionStatuses = Lists.newArrayList();
                 if (latestPartitionId != null) {
                     for (MiruPartitionId latest = latestPartitionId; latest != null; latest = latest.prev()) {
-                        partitionStatuses.add(miruWALDirector.getPartitionStatus(tenantId, latest));
+                        partitionStatuses.add(miruWALDirector.getActivityWALStatusForTenant(tenantId, latest));
                     }
                 }
                 Collections.reverse(partitionStatuses);
 
                 List<Map<String, String>> partitions = Lists.newArrayList();
                 for (MiruActivityWALStatus status : partitionStatuses) {
-                    partitions.add(ImmutableMap.<String, String>of(
+                    long count = 0;
+                    for (MiruActivityWALStatus.WriterCount writerCount : status.counts) {
+                        count += writerCount.count;
+                    }
+                    partitions.add(ImmutableMap.of(
                         "id", status.partitionId.toString(),
-                        "count", String.valueOf(status.count),
+                        "count", String.valueOf(count),
                         "begins", String.valueOf(status.begins.size()),
                         "ends", String.valueOf(status.ends.size())));
                 }
@@ -81,7 +85,7 @@ public class RCVSActivityWALRegion implements MiruPageRegion<RCVSActivityWALRegi
                     MiruPartitionId partitionId = optionalPartitionId.get();
                     data.put("partition", partitionId.getId());
 
-                    List<WALBean> walActivities = Lists.newArrayList();
+                    List<WALBean> walActivities = Collections.emptyList();
                     final boolean sip = RCVSActivityWALRegionInput.getSip().or(false);
                     final int limit = RCVSActivityWALRegionInput.getLimit().or(100);
                     long afterTimestamp = RCVSActivityWALRegionInput.getAfterTimestamp().or(0l);
@@ -91,10 +95,11 @@ public class RCVSActivityWALRegion implements MiruPageRegion<RCVSActivityWALRegi
                             final MiruWALClient.StreamBatch<MiruWALEntry, RCVSSipCursor> sipped = miruWALDirector.sipActivity(tenantId,
                                 partitionId,
                                 new RCVSSipCursor(MiruPartitionedActivity.Type.ACTIVITY.getSort(), afterTimestamp, 0, false),
+                                null,
                                 limit);
 
-                            walActivities = Lists.transform(sipped.batch,
-                                input -> new WALBean(input.collisionId, Optional.of(input.activity), input.version));
+                            walActivities.addAll(Lists.transform(sipped.activities,
+                                input -> new WALBean(input.collisionId, Optional.of(input.activity), input.version)));
                             lastTimestamp.set(sipped.cursor != null ? sipped.cursor.clockTimestamp : Long.MAX_VALUE);
 
                         } else {
@@ -102,8 +107,9 @@ public class RCVSActivityWALRegion implements MiruPageRegion<RCVSActivityWALRegi
                                 partitionId,
                                 new RCVSCursor(MiruPartitionedActivity.Type.ACTIVITY.getSort(), afterTimestamp, false, null),
                                 limit);
-                            walActivities = Lists.transform(gopped.batch,
-                                input -> new WALBean(input.collisionId, Optional.of(input.activity), input.version));
+                            walActivities = Lists.newArrayListWithCapacity(gopped.activities.size());
+                            walActivities.addAll(Lists.transform(gopped.activities,
+                                input -> new WALBean(input.collisionId, Optional.of(input.activity), input.version)));
                             lastTimestamp.set(gopped.cursor != null ? gopped.cursor.activityTimestamp : Long.MAX_VALUE);
 
                         }

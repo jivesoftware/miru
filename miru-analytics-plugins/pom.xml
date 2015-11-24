@@ -5,12 +5,12 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-build-management</artifactId>
-        <version>0.514-SNAPSHOT</version>
+        <version>0.654-SNAPSHOT</version>
         <relativePath>../inheritance-poms/global-build-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru</groupId>
     <artifactId>miru-analytics-plugins</artifactId>
-    <version>0.514-SNAPSHOT</version>
+    <version>0.654-SNAPSHOT</version>
     <properties>
         <module.type>shared_lib</module.type>
     </properties>
@@ -24,16 +24,8 @@
             <artifactId>core</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.jivesoftware.os.filer</groupId>
-            <artifactId>io</artifactId>
-        </dependency>
-        <dependency>
             <groupId>javax.ws.rs</groupId>
             <artifactId>javax.ws.rs-api</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.jivesoftware.os.routing.bird</groupId>
-            <artifactId>routing-bird-http-client</artifactId>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.routing.bird</groupId>
@@ -42,12 +34,12 @@
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-api</artifactId>
-            <version>0.514-SNAPSHOT</version>
+            <version>0.654-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-plugin</artifactId>
-            <version>0.514-SNAPSHOT</version>
+            <version>0.654-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
@@ -62,8 +54,8 @@
             <artifactId>jackson-databind</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.xerial.snappy</groupId>
-            <artifactId>snappy-java</artifactId>
+            <groupId>de.ruedigermoeller</groupId>
+            <artifactId>fst</artifactId>
         </dependency>
     </dependencies>
 </project>

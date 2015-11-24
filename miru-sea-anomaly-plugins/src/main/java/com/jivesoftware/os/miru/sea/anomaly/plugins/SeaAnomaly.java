@@ -6,6 +6,7 @@ import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.sea.anomaly.plugins.SeaAnomalyAnswer.Waveform;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -21,7 +22,7 @@ public class SeaAnomaly {
         this.miruProvider = miruProvider;
     }
 
-    public <BM> Waveform metricingSum(MiruBitmaps<BM> bitmaps,
+    public <BM extends IBM, IBM> Waveform metricingSum(MiruBitmaps<BM, IBM> bitmaps,
         BM rawAnswer,
         List<BM> answers,
         int[] indexes,
@@ -35,7 +36,7 @@ public class SeaAnomaly {
         return new Waveform(waveform);
     }
 
-    public <BM> Waveform metricingAvg(MiruBitmaps<BM> bitmaps,
+    public <BM extends IBM, IBM> Waveform metricingAvg(MiruBitmaps<BM, IBM> bitmaps,
         BM rawAnswer,
         List<BM> answers,
         int[] indexes,
@@ -43,7 +44,9 @@ public class SeaAnomaly {
         throws Exception {
 
         log.debug("Get metricing for answers={}", answers);
-        long[] rawCardinalities = bitmaps.boundedCardinalities(rawAnswer, indexes);
+
+        long[] rawCardinalities = new long[indexes.length - 1];
+        bitmaps.boundedCardinalities(rawAnswer, indexes, rawCardinalities);
 
         long[] waveform = sum(indexes, numBits, answers, bitmaps);
 
@@ -64,7 +67,7 @@ public class SeaAnomaly {
      -----
      12341   avg (1+2+3+4+1)/5 max 4, min 1 (cardinality 5)
      */
-    public <BM> Waveform metricingMin(MiruBitmaps<BM> bitmaps,
+    public <BM extends IBM, IBM> Waveform metricingMin(MiruBitmaps<BM, IBM> bitmaps,
         BM rawAnswer,
         List<BM> answers,
         int[] indexes,
@@ -74,7 +77,7 @@ public class SeaAnomaly {
         return null; // TODO
     }
 
-    public <BM> Waveform metricingMax(MiruBitmaps<BM> bitmaps,
+    public <BM extends IBM, IBM> Waveform metricingMax(MiruBitmaps<BM, IBM> bitmaps,
         BM rawAnswer,
         List<BM> answers,
         int[] indexes,
@@ -84,19 +87,22 @@ public class SeaAnomaly {
         return null; // TODO
     }
 
-    private <BM> long[] sum(int[] indexes, int numBits, List<BM> answers, MiruBitmaps<BM> bitmaps) {
+    private <BM extends IBM, IBM> long[] sum(int[] indexes, int numBits, List<BM> answers, MiruBitmaps<BM, IBM> bitmaps) {
         long[] waveform = null;
+        long[] rawCardinalities = new long[indexes.length - 1];
+
         for (int i = 0; i < numBits; i++) {
             BM answer = answers.get(i);
             if (answer != null) {
-                long[] cardinalities = bitmaps.boundedCardinalities(answer, indexes);
+                Arrays.fill(rawCardinalities, 0);
+                bitmaps.boundedCardinalities(answer, indexes, rawCardinalities);
                 if (waveform == null) {
-                    waveform = new long[cardinalities.length];
+                    waveform = new long[rawCardinalities.length];
                 }
                 long multiplier = (1L << i);
                 for (int j = 0; j < waveform.length; j++) {
-                    if (cardinalities[j] > 0) {
-                        long add = cardinalities[j] * multiplier;
+                    if (rawCardinalities[j] > 0) {
+                        long add = rawCardinalities[j] * multiplier;
                         try {
                             waveform[j] = LongMath.checkedAdd(waveform[j], add);
                         } catch (Exception x) {

@@ -3,13 +3,13 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-
 package com.jivesoftware.os.miru.plugin.index;
 
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 
 /** @author jonathan */
-public interface MiruInboxIndex<BM> {
+public interface MiruInboxIndex<IBM> {
 
     /**
      * Get the inbox index for a given streamId.
@@ -17,7 +17,7 @@ public interface MiruInboxIndex<BM> {
      * @param streamId the streamId that represents a given inbox
      * @return the index representing this inbox
      */
-    MiruInvertedIndex<BM> getInbox(MiruStreamId streamId) throws Exception;
+    MiruInvertedIndex<IBM> getInbox(MiruStreamId streamId) throws Exception;
 
     /**
      * Get the inbox index for a given streamId, creating if it doesn't already exist.
@@ -35,7 +35,7 @@ public interface MiruInboxIndex<BM> {
      * @param streamId the streamId representing a user's inbox
      * @return the id of the latest recorded activity in this inbox
      */
-    int getLastActivityIndex(MiruStreamId streamId) throws Exception;
+    int getLastActivityIndex(MiruStreamId streamId, StackBuffer stackBuffer) throws Exception;
 
     /**
      * Index a given activity id in the inbox matching this streamId. If the inbox doesn't exist it will be created
@@ -44,7 +44,7 @@ public interface MiruInboxIndex<BM> {
      * @param streamId the inbox to index this activity in
      * @param ids      the activity ids to index
      */
-    void append(MiruStreamId streamId, int... ids) throws Exception;
+    void append(MiruStreamId streamId, StackBuffer stackBuffer, int... ids) throws Exception;
 
     /** Frees resources used by this index. */
     void close();

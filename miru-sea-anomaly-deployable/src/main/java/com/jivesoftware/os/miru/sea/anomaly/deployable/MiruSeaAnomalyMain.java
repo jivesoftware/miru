@@ -28,6 +28,7 @@ import com.jivesoftware.os.miru.api.topology.ReaderRequestHelpers;
 import com.jivesoftware.os.miru.cluster.client.MiruClusterClientInitializer;
 import com.jivesoftware.os.miru.logappender.MiruLogAppender;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
+import com.jivesoftware.os.miru.logappender.RoutingBirdLogSenderProvider;
 import com.jivesoftware.os.miru.metric.sampler.AnomalyMetric;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.MiruSeaAnomalyIntakeInitializer.MiruSeaAnomalyIntakeConfig;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.endpoints.SeaAnomalyQueryPluginEndpoints;
@@ -51,9 +52,12 @@ import com.jivesoftware.os.routing.bird.health.api.HealthChecker;
 import com.jivesoftware.os.routing.bird.health.api.HealthFactory;
 import com.jivesoftware.os.routing.bird.health.checkers.GCLoadHealthChecker;
 import com.jivesoftware.os.routing.bird.health.checkers.ServiceStartupHealthCheck;
+import com.jivesoftware.os.routing.bird.http.client.HttpDeliveryClientHealthProvider;
+import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelperUtils;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.http.client.TenantRoutingHttpClientInitializer;
 import com.jivesoftware.os.routing.bird.server.util.Resource;
+import com.jivesoftware.os.routing.bird.shared.TenantsServiceConnectionDescriptorProvider;
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
@@ -95,7 +99,7 @@ public class MiruSeaAnomalyMain {
             deployable.addManageInjectables(HasUI.class, new HasUI(Arrays.asList(new HasUI.UI("manage", "manage", "/manage/ui"),
                 new HasUI.UI("Reset Errors", "manage", "/manage/resetErrors"),
                 new HasUI.UI("Tail", "manage", "/manage/tail"),
-                new HasUI.UI("Thead Dump", "manage", "/manage/threadDump"),
+                new HasUI.UI("Thread Dump", "manage", "/manage/threadDump"),
                 new HasUI.UI("Health", "manage", "/manage/ui"),
                 new HasUI.UI("Anomaly", "main", "/"))));
             deployable.addHealthCheck(new GCLoadHealthChecker(deployable.config(GCLoadHealthChecker.GCLoadHealthCheckerConfig.class)));
@@ -117,14 +121,22 @@ public class MiruSeaAnomalyMain {
 
             MiruSeaAnomalyIntakeConfig intakeConfig = deployable.config(MiruSeaAnomalyIntakeConfig.class);
 
+            HttpDeliveryClientHealthProvider clientHealthProvider = new HttpDeliveryClientHealthProvider(instanceConfig.getInstanceKey(),
+                HttpRequestHelperUtils.buildRequestHelper(instanceConfig.getRoutesHost(), instanceConfig.getRoutesPort()),
+                instanceConfig.getConnectionsHealth(), 5_000, 100);
+
             TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
             TenantAwareHttpClient<String> miruManageClient = tenantRoutingHttpClientInitializer.initialize(deployable
                 .getTenantRoutingProvider()
-                .getConnections("miru-manage", "main")); // TODO expose to conf
+                .getConnections("miru-manage", "main"),
+                clientHealthProvider,
+                10, 10_000); // TODO expose to conf
 
             TenantAwareHttpClient<String> miruWriteClient = tenantRoutingHttpClientInitializer.initialize(deployable
                 .getTenantRoutingProvider()
-                .getConnections("miru-writer", "main"));  // TODO expose to conf
+                .getConnections("miru-writer", "main"),
+                clientHealthProvider,
+                10, 10_000);  // TODO expose to conf
 
             // TODO add fall back to config
             //MiruClusterClientConfig clusterClientConfig = deployable.config(MiruClusterClientConfig.class);
@@ -142,29 +154,31 @@ public class MiruSeaAnomalyMain {
                 AnomalyMetric.class,
                 true,
                 null) {
-                @Override
-                void deliverSerialized(List<AnomalyMetric> serialized) {
-                    try {
-                        inTakeService.ingressEvents(serialized);
-                        LOG.inc("ingress>delivered");
-                    } catch (Exception x) {
-                        LOG.error("Encountered the following while draining seaAnomalyQueue.", x);
-                        throw new RuntimeException(x);
+                    @Override
+                    void deliverSerialized(List<AnomalyMetric> serialized) {
+                        try {
+                            inTakeService.ingressEvents(serialized);
+                            LOG.inc("ingress>delivered");
+                        } catch (Exception x) {
+                            LOG.error("Encountered the following while draining seaAnomalyQueue.", x);
+                            throw new RuntimeException(x);
+                        }
                     }
-                }
-            };
+                };
 
             IngressGuaranteedDeliveryQueueProvider ingressGuaranteedDeliveryQueueProvider = new IngressGuaranteedDeliveryQueueProvider(
                 intakeConfig.getPathToQueues(), intakeConfig.getNumberOfQueues(), intakeConfig.getNumberOfThreadsPerQueue(), deliveryCallback);
 
             MiruLogAppenderInitializer.MiruLogAppenderConfig miruLogAppenderConfig = deployable.config(MiruLogAppenderInitializer.MiruLogAppenderConfig.class);
+            TenantsServiceConnectionDescriptorProvider connections = deployable.getTenantRoutingProvider().getConnections("miru-stumptown", "main");
             MiruLogAppender miruLogAppender = new MiruLogAppenderInitializer().initialize(null, //TODO datacenter
                 instanceConfig.getClusterName(),
                 instanceConfig.getHost(),
                 instanceConfig.getServiceName(),
                 String.valueOf(instanceConfig.getInstanceName()),
                 instanceConfig.getVersion(),
-                miruLogAppenderConfig);
+                miruLogAppenderConfig,
+                new RoutingBirdLogSenderProvider<>(connections, "", miruLogAppenderConfig.getSocketTimeoutInMillis()));
             miruLogAppender.install();
 
             MiruSoyRendererConfig rendererConfig = deployable.config(MiruSoyRendererConfig.class);
@@ -208,6 +222,7 @@ public class MiruSeaAnomalyMain {
             deployable.addResource(sourceTree);
             serviceStartupHealthCheck.info("start serving...", null);
             deployable.buildServer().start();
+            clientHealthProvider.start();
             serviceStartupHealthCheck.success();
         } catch (Throwable t) {
             serviceStartupHealthCheck.info("Encountered the following failure during startup.", t);

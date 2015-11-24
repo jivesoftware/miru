@@ -7,7 +7,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Optional;
 import com.google.common.io.Files;
 import com.jivesoftware.os.amza.berkeleydb.BerkeleyDBWALIndexProvider;
-import com.jivesoftware.os.amza.client.AmzaKretrProvider;
+import com.jivesoftware.os.amza.client.AmzaClientProvider;
 import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.amza.service.AmzaServiceInitializer.AmzaServiceConfig;
 import com.jivesoftware.os.amza.service.EmbeddedAmzaServiceInitializer;
@@ -27,13 +27,13 @@ import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.jive.utils.ordered.id.TimestampedOrderIdProvider;
+import com.jivesoftware.os.miru.api.HostPortProvider;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.marshall.JacksonJsonObjectTypeMarshaller;
 import com.jivesoftware.os.miru.api.marshall.MiruVoidByte;
-import com.jivesoftware.os.miru.api.wal.MiruActivityLookupEntry;
 import com.jivesoftware.os.miru.api.wal.RCVSCursor;
 import com.jivesoftware.os.miru.api.wal.RCVSSipCursor;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
@@ -44,13 +44,11 @@ import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer.MiruSoyRendererConfig;
 import com.jivesoftware.os.miru.wal.MiruWALDirector;
-import com.jivesoftware.os.miru.wal.MiruWALInitializer;
+import com.jivesoftware.os.miru.wal.RCVSWALInitializer;
 import com.jivesoftware.os.miru.wal.activity.rcvs.RCVSActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.rcvs.RCVSActivityWALWriter;
 import com.jivesoftware.os.miru.wal.lookup.MiruWALLookup;
 import com.jivesoftware.os.miru.wal.lookup.RCVSWALLookup;
-import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
-import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALWriter;
 import com.jivesoftware.os.miru.wal.readtracking.rcvs.RCVSReadTrackingWALReader;
 import com.jivesoftware.os.miru.wal.readtracking.rcvs.RCVSReadTrackingWALWriter;
 import com.jivesoftware.os.rcvs.inmemory.InMemoryRowColumnValueStoreInitializer;
@@ -83,15 +81,19 @@ public class MiruWALUIServiceNGTest {
         InMemoryRowColumnValueStoreInitializer rowColumnValueStoreInitializer = new InMemoryRowColumnValueStoreInitializer();
         ObjectMapper mapper = new ObjectMapper();
 
-        MiruWALInitializer.MiruWAL wal = new MiruWALInitializer().initialize("test", rowColumnValueStoreInitializer, mapper);
-        wal.getActivityLookupTable().add(MiruVoidByte.INSTANCE, tenantId, -1L, new MiruActivityLookupEntry(-1, -1, -1, false), null, null);
+        RCVSWALInitializer.RCVSWAL wal = new RCVSWALInitializer().initialize("test", rowColumnValueStoreInitializer, mapper);
+        wal.getWALLookupTable().add(MiruVoidByte.INSTANCE, tenantId, partitionId, System.currentTimeMillis(), null, null);
         wal.getWriterPartitionRegistry().add(MiruVoidByte.INSTANCE, tenantId, 1, MiruPartitionId.of(0), null, null);
 
+        HostPortProvider hostPortProvider = host -> 10_000;
+
         RCVSActivityWALWriter activityWALWriter = new RCVSActivityWALWriter(wal.getActivityWAL(), wal.getActivitySipWAL());
-        RCVSActivityWALReader activityWALReader = new RCVSActivityWALReader(10_000, wal.getActivityWAL(), wal.getActivitySipWAL());
-        MiruReadTrackingWALWriter readTrackingWALWriter = new RCVSReadTrackingWALWriter(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
-        MiruReadTrackingWALReader readTrackingWALReader = new RCVSReadTrackingWALReader(10_000, wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
-        MiruWALLookup walLookup = new RCVSWALLookup(10_000, wal.getActivityLookupTable());
+        RCVSActivityWALReader activityWALReader = new RCVSActivityWALReader(hostPortProvider, wal.getActivityWAL(), wal.getActivitySipWAL());
+        RCVSReadTrackingWALWriter readTrackingWALWriter = new RCVSReadTrackingWALWriter(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
+        RCVSReadTrackingWALReader readTrackingWALReader = new RCVSReadTrackingWALReader(hostPortProvider,
+            wal.getReadTrackingWAL(),
+            wal.getReadTrackingSipWAL());
+        MiruWALLookup walLookup = new RCVSWALLookup(wal.getWALLookupTable());
 
         File amzaDataDir = Files.createTempDir();
         File amzaIndexDir = Files.createTempDir();
@@ -155,9 +157,9 @@ public class MiruWALUIServiceNGTest {
 
         amzaService.start();
 
-        AmzaKretrProvider amzaKretrProvider = new AmzaKretrProvider(amzaService);
+        AmzaClientProvider amzaClientProvider = new AmzaClientProvider(amzaService);
         MiruClusterRegistry clusterRegistry = new AmzaClusterRegistry(amzaService,
-            amzaKretrProvider,
+            amzaClientProvider,
             0,
             10_000L,
             new JacksonJsonObjectTypeMarshaller<>(MiruSchema.class, mapper),

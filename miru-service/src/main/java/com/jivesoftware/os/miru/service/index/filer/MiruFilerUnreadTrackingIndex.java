@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.service.index.filer;
 
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.io.api.KeyedFilerStore;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
@@ -11,14 +12,14 @@ import com.jivesoftware.os.miru.plugin.index.MiruUnreadTrackingIndex;
 import java.util.Collections;
 
 /** @author jonathan */
-public class MiruFilerUnreadTrackingIndex<BM> implements MiruUnreadTrackingIndex<BM> {
+public class MiruFilerUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUnreadTrackingIndex<IBM> {
 
-    private final MiruBitmaps<BM> bitmaps;
+    private final MiruBitmaps<BM, IBM> bitmaps;
     private final long indexId;
     private final KeyedFilerStore store;
     private final StripingLocksProvider<MiruStreamId> stripingLocksProvider;
 
-    public MiruFilerUnreadTrackingIndex(MiruBitmaps<BM> bitmaps,
+    public MiruFilerUnreadTrackingIndex(MiruBitmaps<BM, IBM> bitmaps,
         long indexId,
         KeyedFilerStore store,
         StripingLocksProvider<MiruStreamId> stripingLocksProvider)
@@ -30,12 +31,12 @@ public class MiruFilerUnreadTrackingIndex<BM> implements MiruUnreadTrackingIndex
     }
 
     @Override
-    public void append(MiruStreamId streamId, int... ids) throws Exception {
-        getAppender(streamId).append(ids);
+    public void append(MiruStreamId streamId, StackBuffer stackBuffer, int... ids) throws Exception {
+        getAppender(streamId).append(stackBuffer, ids);
     }
 
     @Override
-    public MiruInvertedIndex<BM> getUnread(MiruStreamId streamId) throws Exception {
+    public MiruInvertedIndex<IBM> getUnread(MiruStreamId streamId) throws Exception {
         return new MiruFilerInvertedIndex<>(bitmaps, new MiruFieldIndex.IndexKey(indexId, streamId.getBytes()), store, -1,
             stripingLocksProvider.lock(streamId, 0));
     }
@@ -46,15 +47,15 @@ public class MiruFilerUnreadTrackingIndex<BM> implements MiruUnreadTrackingIndex
     }
 
     @Override
-    public void applyRead(MiruStreamId streamId, BM readMask) throws Exception {
-        MiruInvertedIndex<BM> unread = getUnread(streamId);
-        unread.andNotToSourceSize(Collections.singletonList(readMask));
+    public void applyRead(MiruStreamId streamId, IBM readMask, StackBuffer stackBuffer) throws Exception {
+        MiruInvertedIndex<IBM> unread = getUnread(streamId);
+        unread.andNotToSourceSize(Collections.singletonList(readMask), stackBuffer);
     }
 
     @Override
-    public void applyUnread(MiruStreamId streamId, BM unreadMask) throws Exception {
-        MiruInvertedIndex<BM> unread = getUnread(streamId);
-        unread.orToSourceSize(unreadMask);
+    public void applyUnread(MiruStreamId streamId, IBM unreadMask, StackBuffer stackBuffer) throws Exception {
+        MiruInvertedIndex<IBM> unread = getUnread(streamId);
+        unread.orToSourceSize(unreadMask, stackBuffer);
     }
 
     @Override

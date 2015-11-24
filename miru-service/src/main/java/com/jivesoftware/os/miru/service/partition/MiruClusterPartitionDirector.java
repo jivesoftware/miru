@@ -2,10 +2,12 @@ package com.jivesoftware.os.miru.service.partition;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.ListMultimap;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
+import com.jivesoftware.os.miru.api.activity.CoordinateStream;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -56,13 +58,13 @@ public class MiruClusterPartitionDirector implements MiruPartitionDirector {
 
     /** All reads read from here */
     @Override
-    public Iterable<? extends OrderedPartitions<?>> allQueryablePartitionsInOrder(MiruTenantId tenantId, String queryKey) throws Exception {
+    public Iterable<? extends OrderedPartitions<?, ?>> allQueryablePartitionsInOrder(MiruTenantId tenantId, String queryKey) throws Exception {
         return expectedTenants.allQueryablePartitionsInOrder(tenantId, queryKey);
     }
 
     @Override
-    public Optional<? extends MiruQueryablePartition<?>> getQueryablePartition(MiruPartitionCoord miruPartitionCoord) throws Exception {
-        MiruTenantTopology<?> topology = expectedTenants.getLocalTopology(miruPartitionCoord.tenantId);
+    public Optional<? extends MiruQueryablePartition<?, ?>> getQueryablePartition(MiruPartitionCoord miruPartitionCoord) throws Exception {
+        MiruTenantTopology<?, ?> topology = expectedTenants.getLocalTopology(miruPartitionCoord.tenantId);
         if (topology == null) {
             return Optional.absent();
         }
@@ -83,28 +85,29 @@ public class MiruClusterPartitionDirector implements MiruPartitionDirector {
     public void setStorage(MiruTenantId tenantId, MiruPartitionId partitionId, MiruBackingStorage storage) throws Exception {
         MiruTenantTopology topology = expectedTenants.getLocalTopology(tenantId);
         if (topology != null) {
-            topology.setStorage(partitionId, storage);
+            StackBuffer stackBuffer = new StackBuffer();
+            topology.setStorage(partitionId, storage, stackBuffer);
         }
     }
 
     /** Removes host from the registry */
     @Override
     public void removeHost(MiruHost host) throws Exception {
-        clusterClient.remove(host);
+        clusterClient.removeHost(host);
     }
 
     /** Remove topology from the registry */
     @Override
     public void removeTopology(MiruTenantId tenantId, MiruPartitionId partitionId, MiruHost host) throws Exception {
-        clusterClient.remove(host, tenantId, partitionId);
+        clusterClient.removeTopology(host, tenantId, partitionId);
     }
 
     /** Check if the given tenant partition is in the desired state */
     @Override
     public boolean checkInfo(MiruTenantId tenantId, MiruPartitionId partitionId, MiruPartitionCoordInfo info) throws Exception {
-        MiruTenantTopology<?> topology = expectedTenants.getLocalTopology(tenantId);
+        MiruTenantTopology<?, ?> topology = expectedTenants.getLocalTopology(tenantId);
         if (topology != null) {
-            Optional<? extends MiruLocalHostedPartition<?, ?, ?>> partition = topology.getPartition(partitionId);
+            Optional<? extends MiruLocalHostedPartition<?, ?, ?, ?>> partition = topology.getPartition(partitionId);
             if (partition.isPresent()) {
                 return info.state == partition.get().getState()
                     && (info.storage == MiruBackingStorage.unknown || info.storage == partition.get().getStorage());
@@ -117,6 +120,11 @@ public class MiruClusterPartitionDirector implements MiruPartitionDirector {
     @Override
     public boolean prioritizeRebuild(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         return expectedTenants.prioritizeRebuild(new MiruPartitionCoord(tenantId, partitionId, host));
+    }
+
+    @Override
+    public boolean expectedTopologies(Optional<MiruTenantId> tenantId, CoordinateStream stream) throws Exception {
+        return expectedTenants.expectedTopologies(tenantId, stream);
     }
 
     /** MiruService calls this on a periodic interval */

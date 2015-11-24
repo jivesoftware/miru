@@ -1,9 +1,11 @@
 package com.jivesoftware.os.miru.service.partition;
 
+import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.jivesoftware.os.filer.io.FilerIO;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
@@ -11,6 +13,7 @@ import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
+import com.jivesoftware.os.miru.api.activity.TimeAndVersion;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaUnvailableException;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.topology.MiruPartitionActive;
@@ -36,6 +39,7 @@ import com.jivesoftware.os.routing.bird.health.api.HealthFactory;
 import com.jivesoftware.os.routing.bird.health.api.MinMaxHealthCheckConfig;
 import com.jivesoftware.os.routing.bird.health.api.MinMaxHealthChecker;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -54,12 +58,13 @@ import org.merlin.config.defaults.StringDefault;
 /**
  * @author jonathan
  */
-public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends MiruSipCursor<S>> implements MiruHostedPartition, MiruQueryablePartition<BM> {
+public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<C, S>, S extends MiruSipCursor<S>>
+    implements MiruHostedPartition, MiruQueryablePartition<BM, IBM> {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
     private final MiruStats miruStats;
-    private final MiruBitmaps<BM> bitmaps;
+    private final MiruBitmaps<BM, IBM> bitmaps;
     private final MiruPartitionCoord coord;
     private final AtomicLong expireAfterTimestamp;
     private final MiruContextFactory<S> contextFactory;
@@ -77,14 +82,14 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
     private final ExecutorService mergeExecutor;
     private final int rebuildIndexerThreads;
     private final MiruIndexRepairs indexRepairs;
-    private final MiruIndexer<BM> indexer;
+    private final MiruIndexer<BM, IBM> indexer;
     private final long partitionRebuildIfBehindByCount;
     private final int partitionRebuildBatchSize;
     private final int partitionSipBatchSize;
     private final MiruMergeChits mergeChits;
     private final Timings timings;
 
-    private final AtomicReference<MiruPartitionAccessor<BM, C, S>> accessorRef = new AtomicReference<>();
+    private final AtomicReference<MiruPartitionAccessor<BM, IBM, C, S>> accessorRef = new AtomicReference<>();
     private final Object factoryLock = new Object();
     private final AtomicBoolean firstRebuild = new AtomicBoolean(true);
     private final AtomicBoolean firstSip = new AtomicBoolean(true);
@@ -112,7 +117,7 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
 
     public MiruLocalHostedPartition(
         MiruStats miruStats,
-        MiruBitmaps<BM> bitmaps,
+        MiruBitmaps<BM, IBM> bitmaps,
         MiruPartitionCoord coord,
         long expireAfterTimestamp,
         MiruContextFactory<S> contextFactory,
@@ -128,7 +133,7 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
         ExecutorService mergeExecutor,
         int rebuildIndexerThreads,
         MiruIndexRepairs indexRepairs,
-        MiruIndexer<BM> indexer,
+        MiruIndexer<BM, IBM> indexer,
         long partitionRebuildIfBehindByCount,
         int partitionRebuildBatchSize,
         int partitionSipBatchSize,
@@ -161,11 +166,11 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
         this.futures = Lists.newCopyOnWriteArrayList(); // rebuild, sip-migrate
 
         MiruPartitionCoordInfo coordInfo = new MiruPartitionCoordInfo(MiruPartitionState.offline, contextFactory.findBackingStorage(coord));
-        MiruPartitionAccessor<BM, C, S> accessor = MiruPartitionAccessor.initialize(miruStats,
+        MiruPartitionAccessor<BM, IBM, C, S> accessor = MiruPartitionAccessor.initialize(miruStats,
             bitmaps,
             coord,
             coordInfo,
-            Optional.<MiruContext<BM, S>>absent(),
+            Optional.<MiruContext<IBM, S>>absent(),
             indexRepairs,
             indexer);
         heartbeatHandler.heartbeat(coord, Optional.of(coordInfo), Optional.<Long>absent());
@@ -178,22 +183,29 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
 
     }
 
-    private MiruPartitionAccessor<BM, C, S> open(MiruPartitionAccessor<BM, C, S> accessor, MiruPartitionCoordInfo coordInfo) throws Exception {
+    private MiruPartitionAccessor<BM, IBM, C, S> open(MiruPartitionAccessor<BM, IBM, C, S> accessor,
+        MiruPartitionCoordInfo coordInfo,
+        StackBuffer stackBuffer) throws Exception {
+
         synchronized (factoryLock) {
             MiruPartitionState openingState = coordInfo.state;
 
-            Optional<MiruContext<BM, S>> optionalContext = Optional.absent();
+            Optional<MiruContext<IBM, S>> optionalContext = Optional.absent();
             if (openingState != MiruPartitionState.offline && openingState != MiruPartitionState.bootstrap) {
                 if (accessor.context.isPresent()) {
                     optionalContext = accessor.context;
                 } else {
-                    MiruContext<BM, S> context = contextFactory.allocate(bitmaps, coord, accessor.info.storage);
+                    MiruContext<IBM, S> context = contextFactory.allocate(bitmaps, coord, accessor.info.storage, stackBuffer);
                     optionalContext = Optional.of(context);
                 }
             }
-            MiruPartitionAccessor<BM, C, S> opened = MiruPartitionAccessor.initialize(miruStats, bitmaps, coord, coordInfo.copyToState(openingState),
+            MiruPartitionAccessor<BM, IBM, C, S> opened = MiruPartitionAccessor.initialize(miruStats,
+                bitmaps,
+                coord,
+                coordInfo.copyToState(openingState),
                 optionalContext,
-                indexRepairs, indexer);
+                indexRepairs,
+                indexer);
             opened = updatePartition(accessor, opened);
             if (opened != null) {
                 if (accessor.info.state == MiruPartitionState.offline && openingState != MiruPartitionState.offline) {
@@ -212,18 +224,28 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
     }
 
     @Override
-    public MiruRequestHandle<BM, S> acquireQueryHandle() throws Exception {
+    public MiruRequestHandle<BM, IBM, S> acquireQueryHandle(StackBuffer stackBuffer) throws Exception {
         heartbeatHandler.heartbeat(coord, Optional.<MiruPartitionCoordInfo>absent(), Optional.of(System.currentTimeMillis()));
 
         if (removed.get()) {
             throw new MiruPartitionUnavailableException("Partition has been removed");
         }
 
-        MiruPartitionAccessor<BM, C, S> accessor = accessorRef.get();
+        MiruPartitionAccessor<BM, IBM, C, S> accessor = accessorRef.get();
         if (accessor.canHotDeploy()) {
             log.info("Hot deploying for query: {}", coord);
-            accessor = open(accessor, accessor.info.copyToState(MiruPartitionState.online));
+            accessor = open(accessor, accessor.info.copyToState(MiruPartitionState.online), stackBuffer);
         }
+        return accessor.getRequestHandle();
+    }
+
+    @Override
+    public MiruRequestHandle<BM, IBM, S> inspectRequestHandle() throws Exception {
+        if (removed.get()) {
+            throw new MiruPartitionUnavailableException("Partition has been removed");
+        }
+
+        MiruPartitionAccessor<BM, IBM, C, S> accessor = accessorRef.get();
         return accessor.getRequestHandle();
     }
 
@@ -237,16 +259,16 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
     private boolean close() throws Exception {
         try {
             synchronized (factoryLock) {
-                MiruPartitionAccessor<BM, C, S> existing = accessorRef.get();
+                MiruPartitionAccessor<BM, IBM, C, S> existing = accessorRef.get();
                 MiruPartitionCoordInfo coordInfo = existing.info.copyToState(MiruPartitionState.offline);
-                MiruPartitionAccessor<BM, C, S> closed = MiruPartitionAccessor.initialize(miruStats, bitmaps, coord, coordInfo,
-                    Optional.<MiruContext<BM, S>>absent(),
+                MiruPartitionAccessor<BM, IBM, C, S> closed = MiruPartitionAccessor.initialize(miruStats, bitmaps, coord, coordInfo,
+                    Optional.<MiruContext<IBM, S>>absent(),
                     indexRepairs,
                     indexer);
                 closed = updatePartition(existing, closed);
                 if (closed != null) {
                     if (existing.context != null) {
-                        Optional<MiruContext<BM, S>> closedContext = existing.close();
+                        Optional<MiruContext<IBM, S>> closedContext = existing.close();
                         if (closedContext.isPresent()) {
                             contextFactory.close(closedContext.get(), existing.info.storage);
                         }
@@ -312,11 +334,17 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
     @Override
     public void index(Iterator<MiruPartitionedActivity> partitionedActivities) throws Exception {
         // intentionally locking all stream writes for the entire batch to avoid getting a lock for each activity
-        MiruPartitionAccessor<BM, C, S> accessor = accessorRef.get();
+        MiruPartitionAccessor<BM, IBM, C, S> accessor = accessorRef.get();
         if (accessor.isOpenForWrites()) {
             ExecutorService sameThreadExecutor = MoreExecutors.sameThreadExecutor();
-            int count = accessor.indexInternal(partitionedActivities, MiruPartitionAccessor.IndexStrategy.ingress, true, mergeChits,
-                sameThreadExecutor, sameThreadExecutor);
+            StackBuffer stackBuffer = new StackBuffer();
+            int count = accessor.indexInternal(partitionedActivities,
+                MiruPartitionAccessor.IndexStrategy.ingress,
+                false,
+                mergeChits,
+                sameThreadExecutor,
+                sameThreadExecutor,
+                stackBuffer);
             if (count > 0) {
                 log.inc("indexIngress>written", count);
             }
@@ -342,17 +370,18 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
     }
 
     @Override
-    public boolean setStorage(MiruBackingStorage storage) throws Exception {
-        return updateStorage(accessorRef.get(), storage, true);
+    public boolean setStorage(MiruBackingStorage storage, StackBuffer stackBuffer) throws Exception {
+        return updateStorage(accessorRef.get(), storage, true, stackBuffer);
     }
 
-    private boolean updateStorage(MiruPartitionAccessor<BM, C, S> accessor, MiruBackingStorage destinationStorage, boolean force) throws Exception {
+    private boolean updateStorage(MiruPartitionAccessor<BM, IBM, C, S> accessor, MiruBackingStorage destinationStorage, boolean force, StackBuffer stackBuffer) throws
+        Exception {
         synchronized (factoryLock) {
             boolean updated = false;
-            try (MiruMigrationHandle<BM, C, S> handle = accessor.getMigrationHandle(timings.partitionMigrationWaitInMillis)) {
+            try (MiruMigrationHandle<BM, IBM, C, S> handle = accessor.getMigrationHandle(timings.partitionMigrationWaitInMillis)) {
                 // make sure the accessor didn't change while getting the handle, and that it's ready to migrate
                 if (accessorRef.get() == accessor && handle.canMigrateTo(destinationStorage)) {
-                    Optional<MiruContext<BM, S>> optionalFromContext = handle.getContext();
+                    Optional<MiruContext<IBM, S>> optionalFromContext = handle.getContext();
                     MiruBackingStorage existingStorage = accessor.info.storage;
                     if (existingStorage == destinationStorage && !force) {
                         log.warn("Partition at {} ignored request to migrate to same storage {}", coord, destinationStorage);
@@ -360,16 +389,16 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
                         if (!optionalFromContext.isPresent()) {
                             log.warn("Partition at {} ignored request to migrate from {} to {} for empty context", coord, existingStorage, destinationStorage);
                         }
-                        MiruContext<BM, S> fromContext = optionalFromContext.get();
+                        MiruContext<IBM, S> fromContext = optionalFromContext.get();
                         contextFactory.cleanDisk(coord);
 
-                        MiruContext<BM, S> toContext;
+                        MiruContext<IBM, S> toContext;
                         synchronized (fromContext.writeLock) {
                             handle.merge(mergeChits, mergeExecutor);
-                            toContext = contextFactory.copy(bitmaps, coord, fromContext, destinationStorage);
+                            toContext = contextFactory.copy(bitmaps, coord, fromContext, destinationStorage, stackBuffer);
                         }
 
-                        MiruPartitionAccessor<BM, C, S> migrated = handle.migrated(toContext, Optional.of(destinationStorage),
+                        MiruPartitionAccessor<BM, IBM, C, S> migrated = handle.migrated(toContext, Optional.of(destinationStorage),
                             Optional.<MiruPartitionState>absent());
 
                         migrated = updatePartition(accessor, migrated);
@@ -384,13 +413,13 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
                             contextFactory.markStorage(coord, existingStorage);
                         }
                     } else if (existingStorage == MiruBackingStorage.disk && destinationStorage == MiruBackingStorage.memory) {
-                        MiruContext<BM, S> toContext = contextFactory.allocate(bitmaps, coord, destinationStorage);
-                        MiruPartitionAccessor<BM, C, S> migrated = handle.migrated(toContext, Optional.of(destinationStorage),
+                        MiruContext<IBM, S> toContext = contextFactory.allocate(bitmaps, coord, destinationStorage, stackBuffer);
+                        MiruPartitionAccessor<BM, IBM, C, S> migrated = handle.migrated(toContext, Optional.of(destinationStorage),
                             Optional.of(MiruPartitionState.bootstrap));
 
                         migrated = updatePartition(accessor, migrated);
                         if (migrated != null) {
-                            Optional<MiruContext<BM, S>> closed = handle.closeContext();
+                            Optional<MiruContext<IBM, S>> closed = handle.closeContext();
                             if (closed.isPresent()) {
                                 contextFactory.close(closed.get(), existingStorage);
                             }
@@ -403,8 +432,8 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
                             contextFactory.markStorage(coord, existingStorage);
                         }
                     } else if (existingStorage == MiruBackingStorage.memory && destinationStorage == MiruBackingStorage.memory) {
-                        MiruContext<BM, S> toContext = contextFactory.allocate(bitmaps, coord, destinationStorage);
-                        MiruPartitionAccessor<BM, C, S> migrated = handle.migrated(toContext, Optional.of(destinationStorage),
+                        MiruContext<IBM, S> toContext = contextFactory.allocate(bitmaps, coord, destinationStorage, stackBuffer);
+                        MiruPartitionAccessor<BM, IBM, C, S> migrated = handle.migrated(toContext, Optional.of(destinationStorage),
                             Optional.of(MiruPartitionState.bootstrap));
 
                         migrated = updatePartition(accessor, migrated);
@@ -426,7 +455,9 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
         }
     }
 
-    private MiruPartitionAccessor<BM, C, S> updatePartition(MiruPartitionAccessor<BM, C, S> existing, MiruPartitionAccessor<BM, C, S> update) throws Exception {
+    private MiruPartitionAccessor<BM, IBM, C, S> updatePartition(MiruPartitionAccessor<BM, IBM, C, S> existing,
+        MiruPartitionAccessor<BM, IBM, C, S> update) throws Exception {
+
         synchronized (accessorRef) {
             if (accessorRef.get() != existing) {
                 return null;
@@ -461,7 +492,8 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
         public void run() {
             try {
                 try {
-                    checkActive();
+                    StackBuffer stackBuffer = new StackBuffer();
+                    checkActive(stackBuffer);
                 } catch (MiruSchemaUnvailableException sue) {
                     log.warn("Tenant is active but schema not available for {}", coord.tenantId);
                     log.debug("Tenant is active but schema not available", sue);
@@ -473,12 +505,12 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
             }
         }
 
-        private void checkActive() throws Exception {
+        private void checkActive(StackBuffer stackBuffer) throws Exception {
             if (removed.get() || banUnregisteredSchema.get() >= System.currentTimeMillis()) {
                 return;
             }
 
-            MiruPartitionAccessor<BM, C, S> accessor = accessorRef.get();
+            MiruPartitionAccessor<BM, IBM, C, S> accessor = accessorRef.get();
             MiruPartitionActive partitionActive = heartbeatHandler.getPartitionActive(coord);
             if (partitionActive.destroyAfterTimestamp > 0 && System.currentTimeMillis() > partitionActive.destroyAfterTimestamp) {
                 if (accessor.info.state != MiruPartitionState.offline) {
@@ -490,17 +522,17 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
                     synchronized (factoryLock) {
                         log.info("Cleaning disk for partition because it is marked for destruction: {}", coord);
 
-                        MiruPartitionAccessor<BM, C, S> existing = accessorRef.get();
+                        MiruPartitionAccessor<BM, IBM, C, S> existing = accessorRef.get();
                         MiruPartitionCoordInfo coordInfo = existing.info
                             .copyToStorage(MiruBackingStorage.memory)
                             .copyToState(MiruPartitionState.offline);
-                        MiruPartitionAccessor<BM, C, S> cleaned = MiruPartitionAccessor.initialize(miruStats, bitmaps, coord, coordInfo,
-                            Optional.<MiruContext<BM, S>>absent(),
+                        MiruPartitionAccessor<BM, IBM, C, S> cleaned = MiruPartitionAccessor.initialize(miruStats, bitmaps, coord, coordInfo,
+                            Optional.<MiruContext<IBM, S>>absent(),
                             indexRepairs, indexer);
                         cleaned = updatePartition(existing, cleaned);
                         if (cleaned != null) {
                             if (existing.context != null) {
-                                Optional<MiruContext<BM, S>> closedContext = existing.close();
+                                Optional<MiruContext<IBM, S>> closedContext = existing.close();
                                 if (closedContext.isPresent()) {
                                     contextFactory.close(closedContext.get(), existing.info.storage);
                                 }
@@ -518,7 +550,7 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
                 if (accessor.info.state == MiruPartitionState.offline) {
                     if (accessor.info.storage == MiruBackingStorage.memory) {
                         try {
-                            open(accessor, accessor.info.copyToState(MiruPartitionState.bootstrap));
+                            open(accessor, accessor.info.copyToState(MiruPartitionState.bootstrap), stackBuffer);
                         } catch (MiruPartitionUnavailableException e) {
                             log.warn("CheckActive: Partition is active for tenant {} but no schema is registered, banning for {} ms",
                                 coord.tenantId, timings.partitionBanUnregisteredSchemaMillis);
@@ -527,17 +559,15 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
                     } else if (accessor.info.storage == MiruBackingStorage.disk) {
                         if (!removed.get() && accessor.canHotDeploy()) {
                             log.info("Hot deploying for checkActive: {}", coord);
-                            open(accessor, accessor.info.copyToState(MiruPartitionState.online));
+                            open(accessor, accessor.info.copyToState(MiruPartitionState.online), stackBuffer);
                         }
                     }
                 } else if (accessor.context.isPresent() && System.currentTimeMillis() > partitionActive.idleAfterTimestamp) {
-                    MiruContext<BM, S> context = accessor.context.get();
+                    MiruContext<IBM, S> context = accessor.context.get();
                     contextFactory.releaseCaches(context, accessor.info.storage);
                 }
-            } else {
-                if (accessor.info.state != MiruPartitionState.offline) {
-                    close();
-                }
+            } else if (accessor.info.state != MiruPartitionState.offline) {
+                close();
             }
         }
 
@@ -549,21 +579,26 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
 
         @Override
         public void run() {
+            StackBuffer stackBuffer = new StackBuffer();
             try {
-                MiruPartitionAccessor<BM, C, S> accessor = accessorRef.get();
+                MiruPartitionAccessor<BM, IBM, C, S> accessor = accessorRef.get();
                 if (accessor.info.storage != MiruBackingStorage.memory || banUnregisteredSchema.get() >= System.currentTimeMillis()) {
                     return;
                 }
 
                 MiruPartitionState state = accessor.info.state;
                 if (state == MiruPartitionState.bootstrap || state == MiruPartitionState.rebuilding) {
-                    MiruActivityWALStatus status = walClient.getPartitionStatus(coord.tenantId, coord.partitionId);
-                    Optional<MiruRebuildDirector.Token> token = rebuildDirector.acquire(coord, status.count);
+                    MiruActivityWALStatus status = walClient.getActivityWALStatusForTenant(coord.tenantId, coord.partitionId);
+                    long count = -1;
+                    for (MiruActivityWALStatus.WriterCount writerCount : status.counts) {
+                        count += writerCount.count;
+                    }
+                    Optional<MiruRebuildDirector.Token> token = rebuildDirector.acquire(coord, count);
                     if (token.isPresent()) {
                         try {
-                            MiruPartitionAccessor<BM, C, S> rebuilding;
+                            MiruPartitionAccessor<BM, IBM, C, S> rebuilding;
                             if (state == MiruPartitionState.bootstrap) {
-                                rebuilding = open(accessor, accessor.info.copyToState(MiruPartitionState.rebuilding));
+                                rebuilding = open(accessor, accessor.info.copyToState(MiruPartitionState.rebuilding), stackBuffer);
                                 if (rebuilding.info.state != MiruPartitionState.rebuilding) {
                                     log.warn("Failed to transition to rebuilding for {}", coord);
                                     rebuilding = null;
@@ -581,9 +616,9 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
                                         } else {
                                             log.error("Failed to stop rebuild after corruption for {}", coord);
                                         }
-                                    } else if (rebuild(rebuilding)) {
-                                        MiruPartitionAccessor<BM, C, S> online = rebuilding.copyToState(MiruPartitionState.online);
-                                        MiruPartitionAccessor<BM, C, S> updated = updatePartition(rebuilding, online);
+                                    } else if (rebuild(rebuilding, stackBuffer)) {
+                                        MiruPartitionAccessor<BM, IBM, C, S> online = rebuilding.copyToState(MiruPartitionState.online);
+                                        MiruPartitionAccessor<BM, IBM, C, S> updated = updatePartition(rebuilding, online);
                                         if (updated != null) {
                                             updated.merge(mergeChits, mergeExecutor);
                                         }
@@ -602,7 +637,7 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
                             rebuildDirector.release(token.get());
                         }
                     } else {
-                        log.debug("Skipped rebuild because count={} available={}", status.count, rebuildDirector.available());
+                        log.debug("Skipped rebuild because count={} available={}", count, rebuildDirector.available());
                     }
                 }
             } catch (MiruSchemaUnvailableException e) {
@@ -612,7 +647,7 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
             }
         }
 
-        private boolean rebuild(final MiruPartitionAccessor<BM, C, S> accessor) throws Exception {
+        private boolean rebuild(final MiruPartitionAccessor<BM, IBM, C, S> accessor, StackBuffer stackBuffer) throws Exception {
             final ArrayBlockingQueue<MiruWALClient.StreamBatch<MiruWALEntry, C>> queue = new ArrayBlockingQueue<>(1);
             final AtomicReference<C> cursor = new AtomicReference<>(accessor.getRebuildCursor());
             final AtomicBoolean rebuilding = new AtomicBoolean(true);
@@ -630,7 +665,7 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
 
                     while (rebuilding.get() && accessorRef.get() == accessor && streamBatch != null) {
                         tryQueuePut(rebuilding, queue, streamBatch);
-                        if (streamBatch.batch.isEmpty()) {
+                        if (streamBatch.activities.isEmpty()) {
                             break;
                         }
                         streamBatch = (streamBatch.cursor != null)
@@ -663,14 +698,12 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
                     }
 
                     if (streamBatch != null) {
-                        partitionedActivities = new ArrayList<>(streamBatch.batch.size());
-                        for (MiruWALEntry batch : streamBatch.batch) {
+                        partitionedActivities = new ArrayList<>(streamBatch.activities.size());
+                        for (MiruWALEntry batch : streamBatch.activities) {
                             partitionedActivities.add(batch.activity);
                         }
                         nextCursor = streamBatch.cursor;
-                    }
-
-                    if (!rebuilding.get() || partitionedActivities == null) {
+                    } else {
                         // end of rebuild
                         log.debug("Ending rebuild for {}", coord);
                         break;
@@ -682,12 +715,17 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
                     log.debug("Indexing batch of size {} (total {}) for {}", count, totalIndexed, coord);
                     log.startTimer("rebuild>batchSize-" + partitionRebuildBatchSize);
                     boolean repair = firstRebuild.compareAndSet(true, false);
-                    accessor.indexInternal(partitionedActivities.iterator(), MiruPartitionAccessor.IndexStrategy.rebuild, repair, mergeChits,
-                        rebuildIndexExecutor, mergeExecutor);
+                    accessor.indexInternal(partitionedActivities.iterator(),
+                        MiruPartitionAccessor.IndexStrategy.rebuild,
+                        repair,
+                        mergeChits,
+                        rebuildIndexExecutor,
+                        mergeExecutor,
+                        stackBuffer);
                     accessor.merge(mergeChits, mergeExecutor);
                     accessor.setRebuildCursor(nextCursor);
                     if (nextCursor.getSipCursor() != null) {
-                        accessor.setSip(nextCursor.getSipCursor());
+                        accessor.setSip(nextCursor.getSipCursor(), stackBuffer);
                     }
 
                     log.stopTimer("rebuild>batchSize-" + partitionRebuildBatchSize);
@@ -744,11 +782,13 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
 
         @Override
         public void run() {
+            StackBuffer stackBuffer = new StackBuffer();
             try {
-                MiruPartitionAccessor<BM, C, S> accessor = accessorRef.get();
+                MiruPartitionAccessor<BM, IBM, C, S> accessor = accessorRef.get();
                 MiruPartitionState state = accessor.info.state;
                 if (state == MiruPartitionState.online) {
                     boolean forceRebuild = false;
+                    MiruActivityWALStatus status = null;
                     if (!accessor.context.isPresent()) {
                         log.info("Forcing rebuild because context is missing for {}", coord);
                         forceRebuild = true;
@@ -756,33 +796,43 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
                         log.info("Forcing rebuild because context is corrupt for {}", coord);
                         forceRebuild = true;
                     } else if (firstSip.get()) {
-                        MiruActivityWALStatus status = walClient.getPartitionStatus(coord.tenantId, coord.partitionId);
-                        if (status != null) {
-                            accessor.notifyBoundaries(status.begins, status.ends);
-                            long currentCount = accessor.context.get().activityIndex.lastId();
-                            long behindByCount = status.count - currentCount;
-                            if (behindByCount > partitionRebuildIfBehindByCount) {
-                                log.info("Forcing rebuild because partition is behind by {} for {}", behindByCount, coord);
-                                forceRebuild = true;
-                            }
-                        }
+                        status = walClient.getActivityWALStatusForTenant(coord.tenantId, coord.partitionId);
                     }
 
                     if (forceRebuild) {
-                        updateStorage(accessor, MiruBackingStorage.memory, true);
+                        updateStorage(accessor, MiruBackingStorage.memory, true, stackBuffer);
                         return;
                     }
 
                     try {
                         if (accessor.canAutoMigrate()) {
-                            updateStorage(accessor, MiruBackingStorage.disk, false);
+                            updateStorage(accessor, MiruBackingStorage.disk, false, stackBuffer);
                         }
                     } catch (Throwable t) {
                         log.error("Migrate encountered a problem for {}", new Object[] { coord }, t);
                     }
                     try {
                         if (accessor.isOpenForWrites() && accessor.hasOpenWriters()) {
-                            sip(accessor);
+                            int maxWriterId = -1;
+                            if (status != null) {
+                                for (MiruActivityWALStatus.WriterCount writerCount : status.counts) {
+                                    maxWriterId = Math.max(maxWriterId, writerCount.writerId);
+                                }
+                            }
+                            int[] counts = sip(accessor, maxWriterId, stackBuffer);
+                            if (counts != null && status != null) {
+                                for (MiruActivityWALStatus.WriterCount writerCount : status.counts) {
+                                    int currentCount = counts[writerCount.writerId];
+                                    if (currentCount > 0) {
+                                        int behindByCount = writerCount.count - currentCount;
+                                        if (behindByCount > partitionRebuildIfBehindByCount) {
+                                            log.info("Forcing rebuild because partition is behind by {} for {}", behindByCount, coord);
+                                            updateStorage(accessor, MiruBackingStorage.memory, true, stackBuffer);
+                                            return;
+                                        }
+                                    }
+                                }
+                            }
                         } else {
                             accessor.refundChits(mergeChits);
                         }
@@ -795,58 +845,106 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
             }
         }
 
-        private boolean sip(final MiruPartitionAccessor<BM, C, S> accessor) throws Exception {
+        private final MiruTenantId GLOBAL_TENANT = new MiruTenantId("global".getBytes(Charsets.UTF_8));
+
+        private int[] sip(final MiruPartitionAccessor<BM, IBM, C, S> accessor, int maxWriterId, StackBuffer stackBuffer) throws Exception {
 
             final MiruSipTracker<S> sipTracker = sipTrackerFactory.create(accessor.seenLastSip.get());
 
-            AtomicReference<S> sip = new AtomicReference<>(accessor.getSipCursor().orNull());
+            S sipCursor = accessor.getSipCursor(stackBuffer).orNull();
+            boolean first = firstSip.get();
+            int[] counts = new int[maxWriterId + 1];
+            Arrays.fill(counts, -1);
 
-            MiruWALClient.StreamBatch<MiruWALEntry, S> sippedActivity = walClient.sipActivity(coord.tenantId, coord.partitionId,
-                sip.get(),
+            MiruWALClient.StreamBatch<MiruWALEntry, S> sippedActivity = walClient.sipActivity(coord.tenantId,
+                coord.partitionId,
+                sipCursor,
+                sipTracker.getSeenLastSip(),
                 partitionSipBatchSize);
 
-            while (accessorRef.get() == accessor && sippedActivity != null && !sippedActivity.batch.isEmpty()) {
+            while (accessorRef.get() == accessor && sippedActivity != null) {
                 if (Thread.interrupted()) {
                     throw new InterruptedException("Interrupted while streaming sip");
                 }
 
-                List<MiruPartitionedActivity> partitionedActivities = Lists.newArrayListWithCapacity(sippedActivity.batch.size());
-                for (MiruWALEntry e : sippedActivity.batch) {
+                if (sippedActivity.suppressed != null) {
+                    for (TimeAndVersion timeAndVersion : sippedActivity.suppressed) {
+                        sipTracker.addSeenThisSip(timeAndVersion);
+                    }
+                }
+
+                List<MiruPartitionedActivity> partitionedActivities = Lists.newArrayListWithCapacity(sippedActivity.activities.size());
+                for (MiruWALEntry e : sippedActivity.activities) {
                     long version = e.activity.activity.isPresent() ? e.activity.activity.get().version : 0; // Smells!
                     TimeAndVersion timeAndVersion = new TimeAndVersion(e.activity.timestamp, version);
 
-                    if (e.activity.type.isBoundaryType() || !sipTracker.wasSeenLastSip(timeAndVersion)) {
+                    if (!sipTracker.wasSeenLastSip(timeAndVersion)) {
                         partitionedActivities.add(e.activity);
                     }
                     sipTracker.addSeenThisSip(timeAndVersion);
                     sipTracker.track(e.activity);
+
+                    if (counts.length > e.activity.writerId) {
+                        counts[e.activity.writerId] = Math.max(counts[e.activity.writerId], e.activity.index);
+                    }
                 }
 
-                deliver(partitionedActivities, accessor, sipTracker, sip, sippedActivity.cursor);
+                S lastCursor = sipCursor;
+                sipCursor = deliver(partitionedActivities, accessor, sipTracker, sipCursor, sippedActivity.cursor, stackBuffer);
                 partitionedActivities.clear();
 
-                sippedActivity = (sippedActivity.cursor != null)
-                    ? walClient.sipActivity(coord.tenantId, coord.partitionId, sippedActivity.cursor, partitionSipBatchSize)
-                    : null;
+                if (sippedActivity.cursor != null && sippedActivity.cursor.endOfStream()) {
+                    if (GLOBAL_TENANT.equals(coord.tenantId)) {
+                        log.info("Sipped to end of stream for {}", coord);
+                    }
+                    long threshold = first ? 0 : timings.partitionSipNotifyEndOfStreamMillis;
+                    accessor.notifyEndOfStream(threshold);
+                    break;
+                } else if (sipCursor == null) {
+                    if (GLOBAL_TENANT.equals(coord.tenantId)) {
+                        log.info("No cursor for {}", coord);
+                    }
+                    break;
+                } else if (sipCursor.equals(lastCursor)) {
+                    if (GLOBAL_TENANT.equals(coord.tenantId)) {
+                        log.info("Sipped same cursor for {}", coord);
+                    }
+                    break;
+                } else if (sippedActivity.endOfWAL) {
+                    if (GLOBAL_TENANT.equals(coord.tenantId)) {
+                        log.info("Sipped to end of WAL for {}", coord);
+                    }
+                    break;
+                }
+
+                sippedActivity = walClient.sipActivity(coord.tenantId, coord.partitionId, sipCursor, sipTracker.getSeenThisSip(), partitionSipBatchSize);
             }
 
             if (!accessor.hasOpenWriters()) {
                 accessor.merge(mergeChits, mergeExecutor);
             }
 
-            return accessorRef.get() == accessor;
+            if (accessorRef.get() == accessor) {
+                return counts;
+            } else {
+                return null;
+            }
         }
 
-        private void deliver(final List<MiruPartitionedActivity> partitionedActivities, final MiruPartitionAccessor<BM, C, S> accessor,
-            final MiruSipTracker<S> sipTracker, AtomicReference<S> sip, S nextSipCursor) throws Exception {
+        private S deliver(final List<MiruPartitionedActivity> partitionedActivities, final MiruPartitionAccessor<BM, IBM, C, S> accessor,
+            final MiruSipTracker<S> sipTracker, S sipCursor, S nextSipCursor, StackBuffer stackBuffer) throws Exception {
             boolean repair = firstSip.compareAndSet(true, false);
             int initialCount = partitionedActivities.size();
-            int count = accessor.indexInternal(partitionedActivities.iterator(), MiruPartitionAccessor.IndexStrategy.sip,
-                repair, mergeChits, sipIndexExecutor, mergeExecutor);
+            int count = accessor.indexInternal(partitionedActivities.iterator(),
+                MiruPartitionAccessor.IndexStrategy.sip,
+                repair,
+                mergeChits,
+                sipIndexExecutor,
+                mergeExecutor,
+                stackBuffer);
 
-            S suggestion = sipTracker.suggest(sip.get(), nextSipCursor);
-            if (suggestion != null && accessor.setSip(suggestion)) {
-                sip.set(suggestion);
+            S suggestion = sipTracker.suggest(sipCursor, nextSipCursor);
+            if (suggestion != null && accessor.setSip(suggestion, stackBuffer)) {
                 accessor.seenLastSip.compareAndSet(sipTracker.getSeenLastSip(), sipTracker.getSeenThisSip());
                 sipTracker.metrics(coord, suggestion);
             }
@@ -861,6 +959,7 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
             if (initialCount > 0) {
                 log.inc("sip>count>skip", (initialCount - count));
             }
+            return suggestion;
         }
 
     }
@@ -880,17 +979,20 @@ public class MiruLocalHostedPartition<BM, C extends MiruCursor<C, S>, S extends 
         private final long partitionSipMigrateIntervalInMillis;
         private final long partitionBanUnregisteredSchemaMillis;
         private final long partitionMigrationWaitInMillis;
+        private final long partitionSipNotifyEndOfStreamMillis;
 
         public Timings(long partitionBootstrapIntervalInMillis,
             long partitionRebuildIntervalInMillis,
             long partitionSipMigrateIntervalInMillis,
             long partitionBanUnregisteredSchemaMillis,
-            long partitionMigrationWaitInMillis) {
+            long partitionMigrationWaitInMillis,
+            long partitionSipNotifyEndOfStreamMillis) {
             this.partitionBootstrapIntervalInMillis = partitionBootstrapIntervalInMillis;
             this.partitionRebuildIntervalInMillis = partitionRebuildIntervalInMillis;
             this.partitionSipMigrateIntervalInMillis = partitionSipMigrateIntervalInMillis;
             this.partitionBanUnregisteredSchemaMillis = partitionBanUnregisteredSchemaMillis;
             this.partitionMigrationWaitInMillis = partitionMigrationWaitInMillis;
+            this.partitionSipNotifyEndOfStreamMillis = partitionSipNotifyEndOfStreamMillis;
         }
     }
 

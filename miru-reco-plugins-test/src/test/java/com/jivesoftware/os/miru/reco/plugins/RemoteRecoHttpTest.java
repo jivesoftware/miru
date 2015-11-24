@@ -123,16 +123,22 @@ public class RemoteRecoHttpTest {
             final int index = i;
             executorService.submit(() -> {
                 MiruTenantId tenantId = new MiruTenantId(tenants[index % tenants.length].getBytes(Charsets.UTF_8));
-                MiruRequest<TrendingQuery> query = new MiruRequest<>(tenantId, new MiruActorId(new byte[] { 3 }),
+                MiruTimeRange timeRange = new MiruTimeRange(packCurrentTime - packThreeDays, packCurrentTime);
+                MiruRequest<TrendingQuery> query = new MiruRequest<>("test",
+                    tenantId,
+                    new MiruActorId(new byte[] { 3 }),
                     MiruAuthzExpression.NOT_PROVIDED,
-                    new TrendingQuery(TrendingQuery.Strategy.LINEAR_REGRESSION,
-                        new MiruTimeRange(packCurrentTime - packThreeDays, packCurrentTime),
+                    new TrendingQuery(Collections.singleton(TrendingQuery.Strategy.LINEAR_REGRESSION),
+                        timeRange,
                         null,
                         32,
                         constraintsFilter,
                         "parent",
-                        MiruFilter.NO_FILTER,
-                        Arrays.asList("102", "2", "38"),
+                        Collections.singletonList(new DistinctsQuery(
+                            timeRange,
+                            "parent",
+                            MiruFilter.NO_FILTER,
+                            Arrays.asList("102", "2", "38"))),
                         100),
                     MiruSolutionLogLevel.INFO);
 
@@ -198,12 +204,15 @@ public class RemoteRecoHttpTest {
                     null);
 
                 MiruTenantId tenantId1 = new MiruTenantId(tenants[index % tenants.length].getBytes(Charsets.UTF_8));
-                MiruRequest<RecoQuery> request = new MiruRequest<>(tenantId1,
+                MiruTimeRange timeRange = lookBackFromNow(TimeUnit.DAYS.toMillis(7));
+                MiruRequest<RecoQuery> request = new MiruRequest<>("test",
+                    tenantId1,
                     new MiruActorId(FilerIO.intBytes(userId)),
                     MiruAuthzExpression.NOT_PROVIDED,
                     new RecoQuery(
+                        timeRange,
                         new DistinctsQuery(
-                            lookBackFromNow(TimeUnit.DAYS.toMillis(7)),
+                            timeRange,
                             "parent",
                             new MiruFilter(MiruFilterOperation.or,
                                 false,

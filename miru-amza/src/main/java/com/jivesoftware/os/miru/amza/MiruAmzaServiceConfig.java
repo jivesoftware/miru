@@ -54,7 +54,9 @@ public interface MiruAmzaServiceConfig extends Config {
     @IntDefault(1_000_000)
     int getMaxUpdatesBeforeDeltaStripeCompaction();
 
-    @IntDefault(1)
+    void setMaxUpdatesBeforeDeltaStripeCompaction(int maxUpdatesBeforeDeltaStripeCompaction);
+
+    @IntDefault(8)
     int getNumberOfCompactorThreads();
 
     @IntDefault(24)
@@ -68,4 +70,7 @@ public interface MiruAmzaServiceConfig extends Config {
 
     @BooleanDefault(false)
     boolean getHardFsync();
+
+    @LongDefault(30_000L)
+    long getDiscoveryIntervalMillis();
 }

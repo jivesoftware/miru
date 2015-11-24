@@ -2,6 +2,8 @@ package com.jivesoftware.os.miru.reco.plugins.reco;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
+import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
@@ -16,10 +18,10 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
+import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.solution.Question;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.routing.bird.http.client.HttpClient;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -48,19 +50,29 @@ public class RecoQuestion implements Question<RecoQuery, RecoAnswer, RecoReport>
     }
 
     @Override
-    public <BM> MiruPartitionResponse<RecoAnswer> askLocal(MiruRequestHandle<BM, ?> handle, Optional<RecoReport> report) throws Exception {
+    public <BM extends IBM, IBM> MiruPartitionResponse<RecoAnswer> askLocal(MiruRequestHandle<BM, IBM, ?> handle, Optional<RecoReport> report) throws Exception {
+        StackBuffer stackBuffer = new StackBuffer();
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
 
-        MiruRequestContext<BM, ?> context = handle.getRequestContext();
-        MiruBitmaps<BM> bitmaps = handle.getBitmaps();
+        MiruRequestContext<IBM, ?> context = handle.getRequestContext();
+        MiruBitmaps<BM, IBM> bitmaps = handle.getBitmaps();
+
+        MiruTimeRange timeRange = request.query.timeRange;
+        if (!context.getTimeIndex().intersects(timeRange)) {
+            solutionLog.log(MiruSolutionLogLevel.WARN, "No time index intersection. Partition {}: {} doesn't intersect with {}",
+                handle.getCoord().partitionId, context.getTimeIndex(), timeRange);
+            return new MiruPartitionResponse<>(
+                collaborativeFiltering.collaborativeFiltering(solutionLog, bitmaps, context, handle.getCoord(), request, report, bitmaps.create(),
+                    bitmaps.create(), removeDistinctsFilter),
+                solutionLog.asList());
+        }
 
         // Start building up list of bitmap operations to run
-        List<BM> okAnds = new ArrayList<>();
+        List<IBM> okAnds = new ArrayList<>();
 
         // 1) Execute the combined filter above on the given stream, add the bitmap
-        BM filtered = bitmaps.create();
-        aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), request.query.scorableFilter,
-            solutionLog, filtered, context.getActivityIndex().lastId(), -1);
+        BM filtered = aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(),
+            request.query.scorableFilter, solutionLog, null, context.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
         if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
             solutionLog.log(MiruSolutionLogLevel.INFO, "constrained scorable down to {} items.", bitmaps.cardinality(filtered));
             solutionLog.log(MiruSolutionLogLevel.TRACE, "constrained scorable down bitmap {}", filtered);
@@ -69,7 +81,7 @@ public class RecoQuestion implements Question<RecoQuery, RecoAnswer, RecoReport>
 
         // 2) Add in the authz check if we have it
         if (!MiruAuthzExpression.NOT_PROVIDED.equals(request.authzExpression)) {
-            BM compositeAuthz = context.getAuthzIndex().getCompositeAuthz(request.authzExpression);
+            IBM compositeAuthz = context.getAuthzIndex().getCompositeAuthz(request.authzExpression, stackBuffer);
             if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
                 solutionLog.log(MiruSolutionLogLevel.INFO, "compositeAuthz contains {} items.", bitmaps.cardinality(compositeAuthz));
                 solutionLog.log(MiruSolutionLogLevel.TRACE, "compositeAuthz bitmap {}", compositeAuthz);
@@ -78,7 +90,7 @@ public class RecoQuestion implements Question<RecoQuery, RecoAnswer, RecoReport>
         }
 
         // 3) Mask out anything that hasn't made it into the activityIndex yet, or that has been removed from the index
-        BM buildIndexMask = bitmaps.buildIndexMask(context.getActivityIndex().lastId(), context.getRemovalIndex().getIndex());
+        IBM buildIndexMask = bitmaps.buildIndexMask(context.getActivityIndex().lastId(stackBuffer), context.getRemovalIndex().getIndex(stackBuffer));
         if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
             solutionLog.log(MiruSolutionLogLevel.INFO, "indexMask contains {} items.", bitmaps.cardinality(buildIndexMask));
             solutionLog.log(MiruSolutionLogLevel.TRACE, "indexMask bitmap {}", buildIndexMask);
@@ -95,25 +107,24 @@ public class RecoQuestion implements Question<RecoQuery, RecoAnswer, RecoReport>
             solutionLog.log(MiruSolutionLogLevel.TRACE, "answering bitmap {}", okActivity);
         }
 
-        BM allMyActivity = bitmaps.create();
-        aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), request.query.constraintsFilter,
-            solutionLog, allMyActivity, context.getActivityIndex().lastId(), -1);
+        BM allMyActivity = aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(),
+            request.query.constraintsFilter, solutionLog, null, context.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
         if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
             solutionLog.log(MiruSolutionLogLevel.INFO, "constrained mine down to {} items.", bitmaps.cardinality(allMyActivity));
             solutionLog.log(MiruSolutionLogLevel.TRACE, "constrained mine down bitmap {}", allMyActivity);
         }
 
         return new MiruPartitionResponse<>(
-            collaborativeFiltering.collaborativeFiltering(solutionLog, bitmaps, context, request, report, allMyActivity, okActivity, removeDistinctsFilter),
-            solutionLog.asList()
-        );
+            collaborativeFiltering.collaborativeFiltering(solutionLog, bitmaps, context, handle.getCoord(), request, report, allMyActivity, okActivity,
+                removeDistinctsFilter),
+            solutionLog.asList());
     }
 
     @Override
-    public MiruPartitionResponse<RecoAnswer> askRemote(HttpClient httpClient,
+    public MiruPartitionResponse<RecoAnswer> askRemote(MiruHost host,
         MiruPartitionId partitionId,
         Optional<RecoReport> report) throws MiruQueryServiceException {
-        return remotePartition.askRemote(httpClient, partitionId, request, report);
+        return remotePartition.askRemote(host, partitionId, request, report);
     }
 
     @Override

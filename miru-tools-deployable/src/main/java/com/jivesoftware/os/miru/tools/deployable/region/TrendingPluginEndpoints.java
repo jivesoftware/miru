@@ -51,13 +51,13 @@ public class TrendingPluginEndpoints {
         }
         String rendered = toolsService.renderPlugin(trendingPluginRegion,
             Optional.of(new TrendingPluginRegionInput(
-                    tenantId,
-                    fromHoursAgo,
-                    toHoursAgo,
-                    buckets,
-                    field,
-                    fieldPrefixes,
-                    logLevel)));
+                tenantId,
+                fromHoursAgo,
+                toHoursAgo,
+                buckets,
+                field,
+                fieldPrefixes,
+                logLevel)));
         return Response.ok(rendered).build();
     }
 }

@@ -203,7 +203,8 @@ public class SeaAnomalyQueryPluginRegion implements MiruPageRegion<Optional<SeaA
 
                         @SuppressWarnings("unchecked")
                         MiruResponse<SeaAnomalyAnswer> miruResponse = requestHelper.executeRequest(
-                            new MiruRequest<>(tenantId,
+                            new MiruRequest<>("anomalyQuery",
+                                tenantId,
                                 MiruActorId.NOT_PROVIDED,
                                 MiruAuthzExpression.NOT_PROVIDED,
                                 new SeaAnomalyQuery(
@@ -217,7 +218,7 @@ public class SeaAnomalyQueryPluginRegion implements MiruPageRegion<Optional<SeaA
                                 MiruSolutionLogLevel.INFO),
                             SeaAnomalyConstants.SEA_ANOMALY_PREFIX + SeaAnomalyConstants.CUSTOM_QUERY_ENDPOINT,
                             MiruResponse.class,
-                            new Class[] { SeaAnomalyAnswer.class },
+                            new Class[]{SeaAnomalyAnswer.class},
                             null);
                         response = miruResponse;
                         if (response != null && response.answer != null) {
@@ -226,7 +227,7 @@ public class SeaAnomalyQueryPluginRegion implements MiruPageRegion<Optional<SeaA
                             log.warn("Empty seaAnomaly response from {}, trying another", requestHelper);
                         }
                     } catch (Exception e) {
-                        log.warn("Failed seaAnomaly request to {}, trying another", new Object[] { requestHelper }, e);
+                        log.warn("Failed seaAnomaly request to {}, trying another", new Object[]{requestHelper}, e);
                     }
                 }
 
@@ -261,7 +262,7 @@ public class SeaAnomalyQueryPluginRegion implements MiruPageRegion<Optional<SeaA
                     long maxTime = TimeUnit.valueOf(input.toTimeUnit).toMillis(input.toAgo);
                     long ft = Math.min(minTime, maxTime);
                     long tt = Math.max(minTime, maxTime);
-                    int numLabels = 10;
+                    int numLabels = input.buckets;
                     long ts = (tt - ft) / (numLabels - 1);
 
                     ArrayList<Map<String, Object>> results = new ArrayList<>();
@@ -273,7 +274,8 @@ public class SeaAnomalyQueryPluginRegion implements MiruPageRegion<Optional<SeaA
                             }
                         }
 
-                        Color c = new Color(Color.HSBtoRGB((float) id / (float) (rawWaveforms.size()), 1f, 1f));
+                        Color c = indexColor((float) id / (float) (rawWaveforms.size()), 0.5f);
+
                         Map<String, Object> w = waveform(t.getKey().key, c, 0.2f, t.getValue());
                         Map<String, Object> r = rates(t.getKey().key, c, 0.2f, t.getValue());
 
@@ -341,6 +343,13 @@ public class SeaAnomalyQueryPluginRegion implements MiruPageRegion<Optional<SeaA
 
     }
 
+    public static Color indexColor(double value, float sat) {
+        //String s = Integer.toHexString(Color.HSBtoRGB(0.6f, 1f - ((float) value), sat) & 0xffffff);
+        float hue = (float) value / 3f;
+        hue = (1f / 3f) + (hue * 2);
+        return new Color(Color.HSBtoRGB(hue, sat, 1f));
+    }
+
     public String hexColor(Color color) {
         String s = Integer.toHexString(color.getRGB() & 0xffffff);
         return "000000".substring(s.length()) + s;
@@ -376,6 +385,7 @@ public class SeaAnomalyQueryPluginRegion implements MiruPageRegion<Optional<SeaA
         Long last = null;
         for (long v : values) {
             if (last == null) {
+                ints.add(0);
                 last = v;
             } else {
                 ints.add((int) (last - v));

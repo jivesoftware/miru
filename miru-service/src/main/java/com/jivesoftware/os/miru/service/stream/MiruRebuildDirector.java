@@ -52,7 +52,7 @@ public class MiruRebuildDirector {
         return activityCount.get();
     }
 
-    public void prioritize(MiruLocalHostedPartition<?, ?, ?> partition) {
+    public void prioritize(MiruLocalHostedPartition<?, ?, ?, ?> partition) {
         LOG.info("Prioritizing rebuild of {}", partition.getCoord());
         prioritized.add(partition.getCoord());
     }

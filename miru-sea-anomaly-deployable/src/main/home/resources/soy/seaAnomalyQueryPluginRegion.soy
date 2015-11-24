@@ -203,6 +203,33 @@
     <div class="panel panel-default">
         <div class="panel-heading">Aggregate</div>
         <div class="panel-body">
+            <div class="container">
+
+                <div id="content" style="wdith:1070px">
+                    <ul id="tabs" class="nav nav-dark nav-pills nav-pills-dark" data-tabs="tabs">
+                        <li><a href="#value-tab" data-toggle="tab">Values</a></li>
+                        <li><a href="#rate-tab" data-toggle="tab">Rates</a></li>
+                    </ul>
+                    <div id="my-tab-content" class="tab-content" style="wdith:1070px">
+                        <div class="tab-pane active" id="value-tab" style="wdith:1070px">
+                            <canvas id="values" height="400" width="1070px"
+                                data-anom-wave-id="myValues" data-anom-wave-type="{$graphType}">
+                            </canvas>
+                            <script>
+                                anomaly.query.data['myValues'] = {$values|noAutoescape};
+                            </script>
+                        </div>
+                        <div class="tab-pane" id="rate-tab" style="wdith:1070px">
+                            <canvas id="rates" height="400" width="1070px"
+                                data-anom-wave-id="myRates" data-anom-wave-type="{$graphType}">
+                            </canvas>
+                            <script>
+                                anomaly.query.data['myRates'] = {$rates|noAutoescape};
+                            </script>
+                        </div>
+                    </div>
+                </div>
+            </div>
             {if $results}
                 <div class="container" style="margin-bottom:20px;">
                     <table cellspacing="4">
@@ -212,7 +239,7 @@
                                     <span class="glyphicon glyphicon-fullscreen"></span>
                                 </td>
                                 <td>
-                                    <div class="anom-wave-toggle" style="background:#ccc;height:20px;width:100%;position:relative;overflow:hidden;">
+                                    <div class="anom-wave-toggle" style="height:36px;position:relative;overflow:hidden;">
                                         <div>
                                             <form method="get">
                                                 <input type="hidden" name="{$result.field}" value="{$result.value}">
@@ -222,20 +249,24 @@
                                                 <input type="hidden" name="toTimeUnit" value="{$toTimeUnit}">
 
                                                 avg:{$result.avg}&nbsp;&nbsp;&nbsp;{$result.value}
-                                                <input type="submit" value="Focus"/>
+                                                <input class="btn btn-default" type="submit" value="Focus"/>
                                             </form>
                                         </div>
                                         <br>
                                         (min:{$result.min}  max:{$result.max})
-                                        <div style="background-image: linear-gradient(to bottom,#000 0,#111 100%);">
-                                            <canvas class="anom-single-wave" height="200" width="1070"
-                                                data-anom-wave-id="singleRate{$result.id|noAutoescape}"
-                                                data-anom-wave-type="{$graphType}"></canvas>
-                                        </div>
-                                        <div style="background-image: linear-gradient(to bottom,#000 0,#111 100%);">
-                                            <canvas class="anom-single-wave" height="200" width="1070"
+                                        <div>Value:</div>
+                                        <div>
+                                            <canvas class="anom-single-wave" height="200" width="1070px"
                                                 data-anom-wave-id="singleValue{$result.id|noAutoescape}"
-                                                data-anom-wave-type="{$graphType}"></canvas>
+                                                data-anom-wave-type="{$graphType}">
+                                            </canvas>
+                                        </div>
+                                        <div>Rate:</div>
+                                        <div>
+                                            <canvas class="anom-single-wave" height="200" width="1070px"
+                                                data-anom-wave-id="singleRate{$result.id|noAutoescape}"
+                                                data-anom-wave-type="{$graphType}">
+                                            </canvas>
                                         </div>
                                         <script>
                                             anomaly.query.data['singleRate{$result.id|noAutoescape}'] = {$result.rates|noAutoescape};
@@ -248,31 +279,7 @@
                     </table>
                 </div>
             {/if}
-            <div class="container">
-
-                <div id="content">
-                    <ul id="tabs" class="nav nav-dark nav-pills nav-pills-dark" data-tabs="tabs">
-                        <li><a href="#rate-tab" data-toggle="tab">Rates</a></li>
-                        <li><a href="#value-tab" data-toggle="tab">Values</a></li>
-                    </ul>
-                    <div id="my-tab-content" class="tab-content well" style="background-image: linear-gradient(to bottom,#000 0,#111 100%);">
-                        <div class="tab-pane active" id="rate-tab">
-                            <canvas id="rates" height="400" width="1070"
-                                data-anom-wave-id="myRates" data-anom-wave-type="{$graphType}"></canvas>
-                            <script>
-                                anomaly.query.data['myRates'] = {$rates|noAutoescape};
-                            </script>
-                        </div>
-                        <div class="tab-pane" id="value-tab">
-                            <canvas id="values" height="400" width="1070"
-                                data-anom-wave-id="myValues" data-anom-wave-type="{$graphType}"></canvas>
-                            <script>
-                                anomaly.query.data['myValues'] = {$values|noAutoescape};
-                            </script>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            
         </div>
     </div>
 

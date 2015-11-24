@@ -19,6 +19,8 @@ import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
+import com.jivesoftware.os.miru.bitmaps.roaring5.MiruBitmapsRoaring;
+import com.jivesoftware.os.miru.bitmaps.roaring5.buffer.MiruBitmapsRoaringBuffer;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
@@ -30,7 +32,6 @@ import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsAnswer;
 import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsInjectable;
 import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsQuery;
 import com.jivesoftware.os.miru.service.MiruService;
-import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsRoaring;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -80,7 +81,7 @@ public class MiruEjjiNGTest {
     @BeforeMethod
     public void setUpMethod() throws Exception {
         MiruProvider<MiruService> miruProvider = new MiruPluginTestBootstrap().bootstrap(tenant1, partitionId, miruHost,
-            miruSchema, MiruBackingStorage.memory, new MiruBitmapsRoaring(), Collections.<MiruPartitionedActivity>emptyList());
+            miruSchema, MiruBackingStorage.memory, new MiruBitmapsRoaringBuffer(), Collections.<MiruPartitionedActivity>emptyList());
 
         this.service = miruProvider.getMiru(tenant1);
 
@@ -153,7 +154,8 @@ public class MiruEjjiNGTest {
             List<String> sources = Arrays.asList(
                 String.valueOf(rand.nextInt(numberOfStreamSources)),
                 String.valueOf(rand.nextInt(numberOfStreamSources)));
-            MiruRequest<DistinctsQuery> request = new MiruRequest<>(tenant1,
+            MiruRequest<DistinctsQuery> request = new MiruRequest<>("test",
+                tenant1,
                 MiruActorId.NOT_PROVIDED,
                 MiruAuthzExpression.NOT_PROVIDED,
                 new DistinctsQuery(new MiruTimeRange(initialTime - 1, time.get() + 1),

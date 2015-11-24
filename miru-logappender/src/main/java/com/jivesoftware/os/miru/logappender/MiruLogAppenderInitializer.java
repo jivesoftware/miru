@@ -5,7 +5,6 @@ import org.merlin.config.Config;
 import org.merlin.config.defaults.BooleanDefault;
 import org.merlin.config.defaults.IntDefault;
 import org.merlin.config.defaults.LongDefault;
-import org.merlin.config.defaults.StringDefault;
 
 /**
  *
@@ -13,9 +12,6 @@ import org.merlin.config.defaults.StringDefault;
 public class MiruLogAppenderInitializer {
 
     public static interface MiruLogAppenderConfig extends Config {
-
-        @StringDefault("undefinedHost:-1")
-        String getMiruStumptownHostPorts();
 
         @IntDefault(60_000)
         int getSocketTimeoutInMillis();
@@ -63,20 +59,10 @@ public class MiruLogAppenderInitializer {
         String service,
         String instance,
         String version,
-        MiruLogAppenderConfig config) throws IOException {
+        MiruLogAppenderConfig config,
+        MiruLogSenderProvider logSenderProvider) throws IOException {
 
         if (config.getEnabled()) {
-
-            String[] hostPorts = config.getMiruStumptownHostPorts().split("\\s*,\\s*");
-            MiruLogSender[] logSenders = new MiruLogSender[hostPorts.length];
-
-            for (int i = 0; i < logSenders.length; i++) {
-                String[] parts = hostPorts[i].split(":");
-                int port = Integer.parseInt(parts[1]);
-                if (port > 0) {
-                    logSenders[i] = new HttpPoster(parts[0], port, config.getSocketTimeoutInMillis());
-                }
-            }
 
             return new HttpMiruLogAppender(datacenter,
                 cluster,
@@ -84,7 +70,7 @@ public class MiruLogAppenderInitializer {
                 service,
                 instance,
                 version,
-                logSenders,
+                logSenderProvider,
                 config.getQueueMaxDepth(),
                 config.getBatchSize(),
                 config.getQueueIsBlocking(),

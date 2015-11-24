@@ -3,11 +3,11 @@ package com.jivesoftware.os.miru.cluster;
 import com.google.common.base.Optional;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.google.common.collect.Lists;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartition;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
-import com.jivesoftware.os.miru.api.MiruTopologyStatus;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.TenantAndPartition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
@@ -18,16 +18,20 @@ import com.jivesoftware.os.miru.api.topology.MiruHeartbeatRequest;
 import com.jivesoftware.os.miru.api.topology.MiruHeartbeatResponse;
 import com.jivesoftware.os.miru.api.topology.MiruIngressUpdate;
 import com.jivesoftware.os.miru.api.topology.MiruPartitionActiveUpdate;
+import com.jivesoftware.os.miru.api.topology.MiruPartitionStatus;
 import com.jivesoftware.os.miru.api.topology.MiruTenantConfig;
 import com.jivesoftware.os.miru.api.topology.MiruTenantTopologyUpdate;
 import com.jivesoftware.os.miru.api.topology.MiruTopologyPartition;
 import com.jivesoftware.os.miru.api.topology.MiruTopologyResponse;
+import com.jivesoftware.os.miru.api.topology.MiruTopologyStatus;
 import com.jivesoftware.os.miru.api.topology.NamedCursorsResult;
+import com.jivesoftware.os.miru.api.topology.RangeMinMax;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -63,6 +67,16 @@ public class MiruRegistryClusterClient implements MiruClusterClient {
     }
 
     @Override
+    public List<PartitionRange> getIngressRanges(MiruTenantId tenantId) throws Exception {
+        List<PartitionRange> partitionRanges = Lists.newArrayList();
+        Map<MiruPartitionId, RangeMinMax> ingressRanges = clusterRegistry.getIngressRanges(tenantId);
+        for (Map.Entry<MiruPartitionId, RangeMinMax> entry : ingressRanges.entrySet()) {
+            partitionRanges.add(new PartitionRange(entry.getKey(), entry.getValue()));
+        }
+        return partitionRanges;
+    }
+
+    @Override
     public void registerSchema(MiruTenantId tenantId, MiruSchema schema) throws Exception {
         clusterRegistry.registerSchema(tenantId, schema);
     }
@@ -73,12 +87,12 @@ public class MiruRegistryClusterClient implements MiruClusterClient {
     }
 
     @Override
-    public void remove(MiruHost host) throws Exception {
+    public void removeHost(MiruHost host) throws Exception {
         clusterRegistry.removeHost(host);
     }
 
     @Override
-    public void remove(MiruHost host, MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+    public void removeTopology(MiruHost host, MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         clusterRegistry.removeTopology(tenantId, partitionId, host);
     }
 
@@ -102,6 +116,25 @@ public class MiruRegistryClusterClient implements MiruClusterClient {
                 replicationCache.put(tenantAndPartition, true);
             }
         }
+    }
+
+    @Override
+    public void destroyPartition(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+        LOG.info("Marking partition for destruction: {} {}", tenantId, partitionId);
+        clusterRegistry.destroyPartition(tenantId, partitionId);
+    }
+
+    @Override
+    public void removeIngress(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+        clusterRegistry.removeIngress(tenantId, partitionId);
+
+        TenantAndPartition tenantAndPartition = new TenantAndPartition(tenantId, partitionId);
+        replicationCache.invalidate(tenantAndPartition);
+    }
+
+    @Override
+    public List<MiruPartitionStatus> getPartitionStatus(MiruTenantId tenantId, MiruPartitionId largestPartitionId) throws Exception {
+        return clusterRegistry.getPartitionStatusForTenant(tenantId, largestPartitionId);
     }
 
     @Override

@@ -4,7 +4,9 @@ import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityAndId;
@@ -98,7 +100,7 @@ public class MiruIndexPairedLatest<BM> {
     }
 
     public List<Future<?>> index(final MiruContext<BM, ?> context,
-        Future<List<PairedLatestWork>> pairedLatestWorksFuture,
+        MiruTenantId tenantId, Future<List<PairedLatestWork>> pairedLatestWorksFuture,
         final boolean repair,
         ExecutorService indexExecutor)
         throws Exception {
@@ -111,6 +113,7 @@ public class MiruIndexPairedLatest<BM> {
         List<Future<?>> futures = Lists.newArrayListWithCapacity(pairedLatestWorks.size());
         for (final PairedLatestWork pairedLatestWork : pairedLatestWorks) {
             futures.add(indexExecutor.submit(() -> {
+                StackBuffer stackBuffer = new StackBuffer();
                 MiruTermId fieldValue = pairedLatestWork.fieldValue;
                 List<IdAndTerm> idAndTerms = pairedLatestWork.work;
 
@@ -125,20 +128,26 @@ public class MiruIndexPairedLatest<BM> {
                     MiruTermId aggregateFieldValue = idAndTerm.term;
                     MiruInvertedIndex<BM> aggregateInvertedIndex = allFieldIndex.getOrCreateInvertedIndex(
                         pairedLatestWork.aggregateFieldId, aggregateFieldValue);
-                    Optional<BM> aggregateBitmap = aggregateInvertedIndex.getIndexUnsafe();
+                    Optional<BM> aggregateBitmap = aggregateInvertedIndex.getIndexUnsafe(stackBuffer);
                     if (aggregateBitmap.isPresent()) {
                         aggregateBitmaps.add(aggregateBitmap.get());
                         ids.add(idAndTerm.id);
                     }
                 }
 
-                invertedIndex.andNotToSourceSize(aggregateBitmaps);
+                log.inc("count>andNot", aggregateBitmaps.size());
+                log.inc("count>andNot", aggregateBitmaps.size(), tenantId.toString());
+                invertedIndex.andNotToSourceSize(aggregateBitmaps, stackBuffer);
 
                 ids.reverse(); // we built in reverse order, so flip back to ascending
                 if (repair) {
-                    pairedLatestFieldIndex.set(pairedLatestWork.fieldId, pairedLatestTerm, ids.toArray());
+                    log.inc("count>set", 1);
+                    log.inc("count>set", 1, tenantId.toString());
+                    pairedLatestFieldIndex.set(pairedLatestWork.fieldId, pairedLatestTerm, ids.toArray(), null, stackBuffer);
                 } else {
-                    pairedLatestFieldIndex.append(pairedLatestWork.fieldId, pairedLatestTerm, ids.toArray());
+                    log.inc("count>append", 1);
+                    log.inc("count>append", 1, tenantId.toString());
+                    pairedLatestFieldIndex.append(pairedLatestWork.fieldId, pairedLatestTerm, ids.toArray(), null, stackBuffer);
                 }
 
                 return null;

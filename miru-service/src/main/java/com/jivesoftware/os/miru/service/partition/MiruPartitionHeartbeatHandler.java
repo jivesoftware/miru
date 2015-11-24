@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.service.partition;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
@@ -16,11 +17,11 @@ import com.jivesoftware.os.miru.api.topology.PartitionInfo;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.Collection;
-import java.util.Collections;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  *
@@ -31,8 +32,7 @@ public class MiruPartitionHeartbeatHandler {
 
     private final MiruClusterClient clusterClient;
 
-    private final AtomicReference<Map<MiruPartitionCoord, PartitionInfo>> heartbeats = new AtomicReference<>(
-        (Map<MiruPartitionCoord, PartitionInfo>) new ConcurrentHashMap<MiruPartitionCoord, PartitionInfo>());
+    private final Map<MiruPartitionCoord, PartitionInfo> heartbeats = new ConcurrentHashMap<>();
     private final ConcurrentMap<MiruPartitionCoord, MiruPartitionActive> active = Maps.newConcurrentMap();
 
     private final Object cursorLock = new Object();
@@ -48,31 +48,48 @@ public class MiruPartitionHeartbeatHandler {
         Optional<Long> queryTimestamp)
         throws Exception {
 
-        Map<MiruPartitionCoord, PartitionInfo> beats;
-        do {
-            beats = heartbeats.get();
-            PartitionInfo got = beats.get(coord);
+        heartbeats.compute(coord, (key, got) -> {
             if (got == null) {
-                got = new PartitionInfo(coord.tenantId,
+                return new PartitionInfo(coord.tenantId,
                     coord.partitionId.getId(),
                     queryTimestamp.or(-1L),
                     info.orNull());
-                beats.put(coord, got);
             } else {
-                got = new PartitionInfo(coord.tenantId,
+                return new PartitionInfo(coord.tenantId,
                     coord.partitionId.getId(),
-                    queryTimestamp.or(got.queryTimestamp),
+                    Math.max(queryTimestamp.or(-1L), got.queryTimestamp),
                     info.isPresent() ? info.get() : got.info);
-                beats.put(coord, got);
             }
-        }
-        while (beats != heartbeats.get());
+        });
+    }
+
+    private void retry(MiruHost host, PartitionInfo partitionInfo) throws Exception {
+        MiruPartitionCoord coord = new MiruPartitionCoord(partitionInfo.tenantId, MiruPartitionId.of(partitionInfo.partitionId), host);
+        heartbeats.compute(coord, (key, got) -> {
+            if (got == null) {
+                return partitionInfo;
+            } else {
+                return new PartitionInfo(coord.tenantId,
+                    coord.partitionId.getId(),
+                    Math.max(partitionInfo.queryTimestamp, got.queryTimestamp),
+                    got.info != null ? got.info : partitionInfo.info);
+            }
+        });
     }
 
     public MiruHeartbeatResponse thumpthump(MiruHost host) throws Exception {
         synchronized (cursorLock) {
-            MiruHeartbeatResponse thumpthump = clusterClient.thumpthump(host,
-                new MiruHeartbeatRequest(heartbeats(), partitionActiveUpdatesSinceCursors.values(), topologyUpdatesSinceCursors.values()));
+            Collection<PartitionInfo> heartbeats = heartbeats();
+            MiruHeartbeatResponse thumpthump;
+            try {
+                thumpthump = clusterClient.thumpthump(host,
+                    new MiruHeartbeatRequest(heartbeats, partitionActiveUpdatesSinceCursors.values(), topologyUpdatesSinceCursors.values()));
+            } catch (Exception e) {
+                for (PartitionInfo partitionInfo : heartbeats) {
+                    retry(host, partitionInfo);
+                }
+                throw e;
+            }
 
             if (thumpthump != null) {
                 if (thumpthump.activeHasChanged != null) {
@@ -104,13 +121,15 @@ public class MiruPartitionHeartbeatHandler {
     }
 
     private Collection<PartitionInfo> heartbeats() {
-        Map<MiruPartitionCoord, PartitionInfo> beats = heartbeats.get();
-        if (beats != null) {
-            heartbeats.compareAndSet(beats, new ConcurrentHashMap<MiruPartitionCoord, PartitionInfo>());
-            return beats.values();
-        } else {
-            return Collections.emptyList();
+        Set<MiruPartitionCoord> keys = heartbeats.keySet();
+        List<PartitionInfo> beats = Lists.newArrayListWithExpectedSize(keys.size());
+        for (MiruPartitionCoord coord : keys) {
+            PartitionInfo partitionInfo = heartbeats.remove(coord);
+            if (partitionInfo != null) {
+                beats.add(partitionInfo);
+            }
         }
+        return beats;
     }
 
     private void setActive(MiruHost host, Collection<MiruPartitionActiveUpdate> updates) {

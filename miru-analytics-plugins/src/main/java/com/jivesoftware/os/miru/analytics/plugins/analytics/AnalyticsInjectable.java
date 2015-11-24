@@ -41,7 +41,7 @@ public class AnalyticsInjectable {
                     request,
                     miruProvider.getRemotePartition(AnalyticsRemotePartition.class))),
                 new AnalyticsAnswerEvaluator(),
-                new AnalyticsAnswerMerger(request.query.timeRange),
+                new AnalyticsAnswerMerger(request.query.timeRange, request.query.divideTimeRangeIntoNSegments),
                 AnalyticsAnswer.EMPTY_RESULTS,
                 request.logLevel);
         } catch (MiruPartitionUnavailableException e) {
@@ -61,7 +61,7 @@ public class AnalyticsInjectable {
             Miru miru = miruProvider.getMiru(tenantId);
             return miru.askImmediate(tenantId,
                 partitionId,
-                new MiruSolvableFactory<>(miruProvider.getStats(), "scoreTrending", new AnalyticsQuestion(trending,
+                new MiruSolvableFactory<>(miruProvider.getStats(), "scoreAnalytics", new AnalyticsQuestion(trending,
                     requestAndReport.request,
                     miruProvider.getRemotePartition(AnalyticsRemotePartition.class))),
                 Optional.fromNullable(requestAndReport.report),

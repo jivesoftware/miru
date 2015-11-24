@@ -19,4 +19,9 @@ public class SeaAnomalyAnswerEvaluator implements MiruAnswerEvaluator<SeaAnomaly
     public boolean stopOnUnsolvablePartition() {
         return false;
     }
+
+    @Override
+    public boolean useParallelSolver() {
+        return false;
+    }
 }

@@ -60,13 +60,13 @@ miru.repair = {
         });
     },
 
-    repairRanges: function (ele) {
+    repairRanges: function (ele, fast) {
         var $button = $(ele);
         $button.attr('disabled', 'disabled');
         var value = $button.val();
         $.ajax({
             type: "POST",
-            url: "/miru/wal/repair/repairRanges",
+            url: "/miru/wal/repair/repairRanges/" + (fast ? "true" : "false"),
             data: {},
             //contentType: "application/json",
             success: function () {
@@ -91,6 +91,33 @@ miru.repair = {
         $.ajax({
             type: "POST",
             url: "/miru/wal/repair/removePartition/" + tenantId + "/" + partitionId,
+            data: {},
+            //contentType: "application/json",
+            success: function () {
+                $button.val('Success');
+                setTimeout(function () {
+                    miru.resetButton($button, value);
+                }, 2000);
+            },
+            error: function () {
+                $button.val('Failure');
+                setTimeout(function () {
+                    miru.resetButton($button, value);
+                }, 2000);
+            }
+        });
+    }
+};
+
+miru.cleanup = {
+
+    removeDestroyed: function (ele) {
+        var $button = $(ele);
+        $button.attr('disabled', 'disabled');
+        var value = $button.val();
+        $.ajax({
+            type: "POST",
+            url: "/miru/wal/cleanup/destroyed",
             data: {},
             //contentType: "application/json",
             success: function () {

@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.service.stream.allocator;
 
 import com.jivesoftware.os.filer.chunk.store.ChunkStoreInitializer;
 import com.jivesoftware.os.filer.io.ByteBufferFactory;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.filer.io.chunk.ChunkStore;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.service.locator.MiruPartitionCoordIdentifier;
@@ -61,7 +62,7 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
     }
 
     @Override
-    public ChunkStore[] allocateChunkStores(MiruPartitionCoord coord) throws Exception {
+    public ChunkStore[] allocateChunkStores(MiruPartitionCoord coord, StackBuffer stackBuffer) throws Exception {
 
         MiruResourcePartitionIdentifier identifier = new MiruPartitionCoordIdentifier(coord);
 
@@ -77,7 +78,8 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
                 resourceLocator.getOnDiskInitialChunkSize(),
                 cacheByteBufferFactory,
                 partitionInitialChunkCacheSize,
-                partitionMaxChunkCacheSize);
+                partitionMaxChunkCacheSize,
+                stackBuffer);
         }
         return chunkStores;
     }

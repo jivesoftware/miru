@@ -25,6 +25,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
+import com.jivesoftware.os.miru.bitmaps.roaring5.buffer.MiruBitmapsRoaringBuffer;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruIndexUtil;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
@@ -35,6 +36,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.test.MiruPluginTestBootstrap;
 import com.jivesoftware.os.miru.reco.plugins.distincts.Distincts;
+import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsQuery;
 import com.jivesoftware.os.miru.reco.plugins.reco.CollaborativeFiltering;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoAnswer;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoInjectable;
@@ -42,9 +44,9 @@ import com.jivesoftware.os.miru.reco.plugins.reco.RecoQuery;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingAnswer;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingInjectable;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery;
+import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery.Strategy;
 import com.jivesoftware.os.miru.reco.plugins.trending.Trendy;
 import com.jivesoftware.os.miru.service.MiruService;
-import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsRoaring;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -122,7 +124,7 @@ public class RecoCorrectnessTest {
         partitionedActivities.add(factory.begin(writerId, partitionId, tenant1, 0));
 
         MiruProvider<MiruService> miruProvider = new MiruPluginTestBootstrap().bootstrap(tenant1, partitionId, miruHost,
-            miruSchema, MiruBackingStorage.memory, new MiruBitmapsRoaring(), partitionedActivities);
+            miruSchema, MiruBackingStorage.memory, new MiruBitmapsRoaringBuffer(), partitionedActivities);
 
         this.service = miruProvider.getMiru(tenant1);
 
@@ -191,7 +193,7 @@ public class RecoCorrectnessTest {
 
         if (doSystemRecommendedContent) {
             System.out.println("Running system recommended content...");
-            testSystemRecommendedContent(authorToParents, userToParents);
+            testSystemRecommendedContent(authorToParents, userToParents, timeRange);
         }
         if (doContainerTrendingContent) {
             System.out.println("Running container trending content...");
@@ -199,7 +201,7 @@ public class RecoCorrectnessTest {
         }
     }
 
-    private void testSystemRecommendedContent(SetMultimap<String, String> authorToParents, SetMultimap<String, String> userToParents)
+    private void testSystemRecommendedContent(SetMultimap<String, String> authorToParents, SetMultimap<String, String> userToParents, MiruTimeRange timeRange)
         throws MiruQueryServiceException {
 
         Set<String> docTypes = Sets.newHashSet("50", "51", "52");
@@ -211,11 +213,12 @@ public class RecoCorrectnessTest {
             MiruFilter filter = new MiruFilter(MiruFilterOperation.or, false, Arrays.asList(miruFieldFilter), null);
 
             long s = System.currentTimeMillis();
-            MiruResponse<RecoAnswer> response = recoInjectable.collaborativeFilteringRecommendations(new MiruRequest<>(
+            MiruResponse<RecoAnswer> response = recoInjectable.collaborativeFilteringRecommendations(new MiruRequest<>("test",
                 tenant1,
                 MiruActorId.NOT_PROVIDED,
                 MiruAuthzExpression.NOT_PROVIDED,
                 new RecoQuery(
+                    timeRange,
                     null,
                     filter,
                     "parent", "parent", "parent",
@@ -228,7 +231,7 @@ public class RecoCorrectnessTest {
                             new MiruFilter(MiruFilterOperation.and,
                                 false,
                                 Arrays.asList(
-                                    new MiruFieldFilter(MiruFieldType.primary, "activityType", Arrays.asList("0", "1", "11", "65")),
+                                    new MiruFieldFilter(MiruFieldType.primary, "activityType", Arrays.asList("0", "1", "72", "65")),
                                     new MiruFieldFilter(MiruFieldType.primary, "parentType", Lists.newArrayList(docTypes))),
                                 null),
                             new MiruFilter(MiruFilterOperation.and,
@@ -262,30 +265,33 @@ public class RecoCorrectnessTest {
                 Arrays.asList(
                     new MiruFieldFilter(MiruFieldType.primary, "context", Arrays.asList(context)),
                     new MiruFieldFilter(MiruFieldType.primary, "parentType", Lists.newArrayList(docTypes)),
-                    new MiruFieldFilter(MiruFieldType.primary, "activityType", Arrays.asList("0", "1", "11", "65"))
+                    new MiruFieldFilter(MiruFieldType.primary, "activityType", Arrays.asList("0", "1", "72", "65"))
                 ),
                 null);
 
             long s = System.currentTimeMillis();
-            MiruResponse<TrendingAnswer> response = trendingInjectable.scoreTrending(new MiruRequest<>(
+            MiruResponse<TrendingAnswer> response = trendingInjectable.scoreTrending(new MiruRequest<>("test",
                 tenant1,
                 MiruActorId.NOT_PROVIDED,
                 MiruAuthzExpression.NOT_PROVIDED,
-                new TrendingQuery(TrendingQuery.Strategy.LINEAR_REGRESSION,
+                new TrendingQuery(Collections.singleton(Strategy.LINEAR_REGRESSION),
                     timeRange,
                     null,
                     27,
                     constraintsFilter,
                     "parent",
-                    MiruFilter.NO_FILTER,
-                    Lists.newArrayList(docTypes),
+                    Collections.singletonList(new DistinctsQuery(
+                        timeRange,
+                        "parent",
+                        MiruFilter.NO_FILTER,
+                        Lists.newArrayList(docTypes))),
                     10),
                 MiruSolutionLogLevel.INFO));
 
             System.out.println("trendingResult:" + response.answer.results);
             System.out.println("Took:" + (System.currentTimeMillis() - s));
             //assertTrue(response.answer.results.size() > 0, response.toString());
-            for (Trendy result : response.answer.results) {
+            for (Trendy result : response.answer.results.get(Strategy.LINEAR_REGRESSION.name())) {
                 assertTrue(docTypes.contains(result.distinctValue.substring(0, result.distinctValue.indexOf(' '))), "Didn't expect " + result.distinctValue);
                 assertTrue(contextToParents.get(context).contains(result.distinctValue));
             }

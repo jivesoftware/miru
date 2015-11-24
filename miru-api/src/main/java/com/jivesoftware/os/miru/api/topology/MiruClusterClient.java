@@ -18,17 +18,38 @@ public interface MiruClusterClient {
 
     List<MiruPartition> partitions(final MiruTenantId tenantId) throws Exception;
 
+    class PartitionRange {
+        public MiruPartitionId partitionId;
+        public RangeMinMax rangeMinMax;
+
+        public PartitionRange() {
+        }
+
+        public PartitionRange(MiruPartitionId partitionId, RangeMinMax rangeMinMax) {
+            this.partitionId = partitionId;
+            this.rangeMinMax = rangeMinMax;
+        }
+    }
+
+    List<PartitionRange> getIngressRanges(MiruTenantId tenantId) throws Exception;
+
     void registerSchema(final MiruTenantId tenantId, final MiruSchema schema) throws Exception;
 
     boolean copySchema(MiruTenantId fromTenantId, List<MiruTenantId> toTenantIds) throws Exception;
 
-    void remove(final MiruHost host) throws Exception;
+    void removeHost(final MiruHost host) throws Exception;
 
-    void remove(final MiruHost host, final MiruTenantId tenantId, final MiruPartitionId partitionId) throws Exception;
+    void removeTopology(final MiruHost host, final MiruTenantId tenantId, final MiruPartitionId partitionId) throws Exception;
 
     MiruTenantConfig tenantConfig(final MiruTenantId tenantId) throws Exception;
 
     void updateIngress(MiruIngressUpdate ingressUpdate) throws Exception;
+
+    void removeIngress(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
+
+    void destroyPartition(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
+
+    List<MiruPartitionStatus> getPartitionStatus(MiruTenantId tenantId, MiruPartitionId largestPartitionId) throws Exception;
 
     MiruHeartbeatResponse thumpthump(final MiruHost host, final MiruHeartbeatRequest heartbeatRequest) throws Exception;
 

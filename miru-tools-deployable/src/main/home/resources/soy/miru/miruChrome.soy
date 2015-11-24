@@ -18,6 +18,7 @@
         <script src="/static/scripts/Chart.StackedBar.js"></script>
         <script src="/static/scripts/legend.js"></script>
         <script src="/static/scripts/miru.js"></script>
+        <script src="/static/vendor/bootstrap-3.3.2/js/bootstrap.js"></script>
         <link href="/static/img/favicon.ico" rel="shortcut icon" type="image/x-icon"/>
 	</head>
 	<body>
@@ -34,6 +35,8 @@
                 </div>
             </div>
         </div>
+        {call .footer}
+        {/call}
 	</body>
 </html>
 {/template}
@@ -68,15 +71,34 @@
 {/template}
 
 /**
- *
- */
+ * @param cluster
+ * @param instance
+ * @param total
+ * @param services
+*/
 {template .headerRegion}
 	<div class="navbar navbar-default" role="navigation">
 	    <div class="navbar-header">
             <a class="navbar-brand" href="/">
-                <img src="/static/img/icon.png" alt="Fun with bits" width="100" height="50"><img>Tools
+                <span><img src="/static/img/icon.png" alt="Fun with bits" style="margin-top:-11px; vertical-align:top;" width="100" height="50">{$cluster}-Tools&nbsp;-{$instance}/{$total}</span>
             </a>
 	    </div>
+        <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+            {if $services}
+                <ul class="nav navbar-nav">
+                    {foreach $s in $services}
+                        <li class="dropdown">
+                            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">{$s.name} <span class="caret"></span></a>
+                            <ul class="dropdown-menu">
+                                {foreach $i in $s.instances}
+                                    <li><a href="http://{$i.host}:{$i.port}{$i.path}">{$i.name}</a></li>
+                                {/foreach}
+                            </ul>
+                        </li>
+                    {/foreach}
+                </ul>
+            {/if}
+        </div>
 	</div>
 {/template}
 
@@ -102,3 +124,11 @@
     //<link rel="icon" type="image/png" href="/static/img/favicon.png">
 {/template}
 
+/**
+ *
+ */
+{template .footer}
+    <div class="footer navbar-fixed-bottom">
+        <a class="btn btn-default btn-xs" aria-expanded="false" href="https://github.com/jivesoftware/miru">Miru on GitHub</a>
+   </div>
+{/template}

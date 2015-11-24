@@ -7,5 +7,5 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
  */
 public interface MiruBitmapsProvider {
 
-    MiruBitmaps<?> getBitmaps(MiruTenantId tenantnId);
+    <BM extends IBM, IBM> MiruBitmaps<BM, IBM> getBitmaps(MiruTenantId tenantnId);
 }

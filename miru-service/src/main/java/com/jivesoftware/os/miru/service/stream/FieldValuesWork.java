@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.service.stream;
 
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import gnu.trove.list.TIntList;
+import gnu.trove.list.TLongList;
 
 /**
  *
@@ -9,10 +10,12 @@ import gnu.trove.list.TIntList;
 class FieldValuesWork implements Comparable<FieldValuesWork> {
     final MiruTermId fieldValue;
     final TIntList ids;
+    final TLongList counts;
 
-    FieldValuesWork(MiruTermId fieldValue, TIntList ids) {
+    FieldValuesWork(MiruTermId fieldValue, TIntList ids, TLongList counts) {
         this.fieldValue = fieldValue;
         this.ids = ids;
+        this.counts = counts;
     }
 
     @Override

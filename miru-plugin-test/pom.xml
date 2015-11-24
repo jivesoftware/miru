@@ -5,16 +5,22 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-build-management</artifactId>
-        <version>0.514-SNAPSHOT</version>
+        <version>0.654-SNAPSHOT</version>
         <relativePath>../inheritance-poms/global-build-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru</groupId>
     <artifactId>miru-plugin-test</artifactId>
-    <version>0.514-SNAPSHOT</version>
+    <version>0.654-SNAPSHOT</version>
     <properties>
         <module.type>shared_lib</module.type>
     </properties>
     <dependencies>
+        <dependency>
+            <groupId>org.roaringbitmap</groupId>
+            <artifactId>RoaringBitmap</artifactId>
+            <version>0.5.11</version>
+        </dependency>
+
         <dependency>
             <groupId>com.jivesoftware.os.routing.bird</groupId>
             <artifactId>merlin-config</artifactId>
@@ -28,38 +34,51 @@
             <artifactId>routing-bird-health</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.jivesoftware.os.routing.bird</groupId>
+            <artifactId>routing-bird-shared</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.jivesoftware.os.jive.utils</groupId>
             <artifactId>ordered-id</artifactId>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-api</artifactId>
-            <version>0.514-SNAPSHOT</version>
+            <version>0.654-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-amza</artifactId>
-            <version>0.514-SNAPSHOT</version>
+            <version>0.654-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-plugin</artifactId>
-            <version>0.514-SNAPSHOT</version>
+            <version>0.654-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-wal</artifactId>
-            <version>0.514-SNAPSHOT</version>
+            <version>0.654-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-cluster</artifactId>
-            <version>0.514-SNAPSHOT</version>
+            <version>0.654-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-service</artifactId>
-            <version>0.514-SNAPSHOT</version>
+            <version>0.654-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.miru</groupId>
+            <artifactId>miru-bitmaps-roaring5</artifactId>
+            <version>0.654-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.filer</groupId>
+            <artifactId>io</artifactId>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.rcvs</groupId>
@@ -100,6 +119,11 @@
         <dependency>
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-all</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 </project>

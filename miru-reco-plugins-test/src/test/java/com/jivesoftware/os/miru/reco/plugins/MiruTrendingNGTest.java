@@ -22,6 +22,8 @@ import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
+import com.jivesoftware.os.miru.bitmaps.roaring5.MiruBitmapsRoaring;
+import com.jivesoftware.os.miru.bitmaps.roaring5.buffer.MiruBitmapsRoaringBuffer;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
@@ -29,11 +31,11 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.test.MiruPluginTestBootstrap;
 import com.jivesoftware.os.miru.reco.plugins.distincts.Distincts;
+import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsQuery;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingAnswer;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingInjectable;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery;
 import com.jivesoftware.os.miru.service.MiruService;
-import com.jivesoftware.os.miru.service.bitmap.MiruBitmapsRoaring;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Random;
@@ -81,7 +83,7 @@ public class MiruTrendingNGTest {
     @BeforeMethod
     public void setUpMethod() throws Exception {
         MiruProvider<MiruService> miruProvider = new MiruPluginTestBootstrap().bootstrap(tenant1, partitionId, miruHost,
-            miruSchema, MiruBackingStorage.memory, new MiruBitmapsRoaring(), Collections.<MiruPartitionedActivity>emptyList());
+            miruSchema, MiruBackingStorage.memory, new MiruBitmapsRoaringBuffer(), Collections.<MiruPartitionedActivity>emptyList());
 
         this.service = miruProvider.getMiru(tenant1);
 
@@ -170,17 +172,21 @@ public class MiruTrendingNGTest {
             MiruFilter filter = new MiruFilter(MiruFilterOperation.or, false, Arrays.asList(miruFieldFilter), null);
 
             long s = System.currentTimeMillis();
-            MiruRequest<TrendingQuery> request = new MiruRequest<>(tenant1,
+            MiruRequest<TrendingQuery> request = new MiruRequest<>("test",
+                tenant1,
                 MiruActorId.NOT_PROVIDED,
                 MiruAuthzExpression.NOT_PROVIDED,
-                new TrendingQuery(TrendingQuery.Strategy.LINEAR_REGRESSION,
+                new TrendingQuery(Collections.singleton(TrendingQuery.Strategy.LINEAR_REGRESSION),
                     timeRange,
                     null,
                     32,
                     filter,
                     "obj",
-                    MiruFilter.NO_FILTER,
-                    Arrays.asList("0", "2", "8", "-1"),
+                    Collections.singletonList(new DistinctsQuery(
+                        timeRange,
+                        "obj",
+                        MiruFilter.NO_FILTER,
+                        Arrays.asList("0", "2", "8", "-1"))),
                     10),
                 MiruSolutionLogLevel.INFO);
             MiruResponse<TrendingAnswer> trendingResult = injectable.scoreTrending(request);

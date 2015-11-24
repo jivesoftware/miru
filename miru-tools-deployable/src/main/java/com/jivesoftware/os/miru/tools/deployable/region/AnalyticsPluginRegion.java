@@ -27,6 +27,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
+import com.jivesoftware.os.miru.plugin.solution.Waveform;
 import com.jivesoftware.os.miru.tools.deployable.analytics.MinMaxDouble;
 import com.jivesoftware.os.miru.tools.deployable.analytics.PNGWaveforms;
 import com.jivesoftware.os.miru.ui.MiruPageRegion;
@@ -64,8 +65,10 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
     public static class AnalyticsPluginRegionInput {
 
         final String tenant;
-        final int fromHoursAgo;
-        final int toHoursAgo;
+        final long fromTimeAgo;
+        final String fromTimeUnit;
+        final long toTimeAgo;
+        final String toTimeUnit;
         final int buckets;
         final String field1;
         final String terms1;
@@ -75,16 +78,22 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
         final String logLevel;
 
         public AnalyticsPluginRegionInput(String tenant,
-            int fromHoursAgo,
-            int toHoursAgo,
+            long fromTimeAgo,
+            String fromTimeUnit,
+            long toTimeAgo,
+            String toTimeUnit,
             int buckets,
             String field1,
             String terms1,
             String field2,
-            String terms2, String filters, String logLevel) {
+            String terms2,
+            String filters,
+            String logLevel) {
             this.tenant = tenant;
-            this.fromHoursAgo = fromHoursAgo;
-            this.toHoursAgo = toHoursAgo;
+            this.fromTimeAgo = fromTimeAgo;
+            this.fromTimeUnit = fromTimeUnit;
+            this.toTimeUnit = toTimeUnit;
+            this.toTimeAgo = toTimeAgo;
             this.buckets = buckets;
             this.field1 = field1;
             this.terms1 = terms1;
@@ -101,13 +110,21 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
         try {
             if (optionalInput.isPresent()) {
                 AnalyticsPluginRegionInput input = optionalInput.get();
-                int fromHoursAgo = input.fromHoursAgo > input.toHoursAgo ? input.fromHoursAgo : input.toHoursAgo;
-                int toHoursAgo = input.fromHoursAgo > input.toHoursAgo ? input.toHoursAgo : input.fromHoursAgo;
+
+                TimeUnit fromTimeUnit = TimeUnit.valueOf(input.fromTimeUnit);
+                long fromTimeAgo = input.fromTimeAgo;
+                long fromMillisAgo = fromTimeUnit.toMillis(fromTimeAgo);
+
+                TimeUnit toTimeUnit = TimeUnit.valueOf(input.toTimeUnit);
+                long toTimeAgo = input.toTimeAgo;
+                long toMillisAgo = toTimeUnit.toMillis(toTimeAgo);
 
                 data.put("logLevel", input.logLevel);
                 data.put("tenant", input.tenant);
-                data.put("fromHoursAgo", String.valueOf(fromHoursAgo));
-                data.put("toHoursAgo", String.valueOf(toHoursAgo));
+                data.put("fromTimeAgo", String.valueOf(fromTimeAgo));
+                data.put("fromTimeUnit", String.valueOf(fromTimeUnit));
+                data.put("toTimeAgo", String.valueOf(toTimeAgo));
+                data.put("toTimeUnit", String.valueOf(toTimeUnit));
                 data.put("buckets", String.valueOf(input.buckets));
                 data.put("field1", input.field1);
                 data.put("terms1", input.terms1);
@@ -134,8 +151,14 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                 SnowflakeIdPacker snowflakeIdPacker = new SnowflakeIdPacker();
                 long jiveCurrentTime = new JiveEpochTimestampProvider().getTimestamp();
                 final long packCurrentTime = snowflakeIdPacker.pack(jiveCurrentTime, 0, 0);
-                final long fromTime = packCurrentTime - snowflakeIdPacker.pack(TimeUnit.HOURS.toMillis(fromHoursAgo), 0, 0);
-                final long toTime = packCurrentTime - snowflakeIdPacker.pack(TimeUnit.HOURS.toMillis(toHoursAgo), 0, 0);
+                final long fromTime, toTime;
+                if (fromMillisAgo > toMillisAgo) {
+                    fromTime = packCurrentTime - snowflakeIdPacker.pack(fromMillisAgo, 0, 0);
+                    toTime = packCurrentTime - snowflakeIdPacker.pack(toMillisAgo, 0, 0);
+                } else {
+                    fromTime = packCurrentTime - snowflakeIdPacker.pack(toMillisAgo, 0, 0);
+                    toTime = packCurrentTime - snowflakeIdPacker.pack(fromMillisAgo, 0, 0);
+                }
 
                 MiruFilter constraintsFilter = filterStringUtil.parse(input.filters);
 
@@ -179,7 +202,10 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
 
                             @SuppressWarnings("unchecked")
                             MiruResponse<AnalyticsAnswer> analyticsResponse = requestHelper.executeRequest(
-                                new MiruRequest<>(tenantId, MiruActorId.NOT_PROVIDED, MiruAuthzExpression.NOT_PROVIDED,
+                                new MiruRequest<>("toolsAnalytics",
+                                    tenantId,
+                                    MiruActorId.NOT_PROVIDED,
+                                    MiruAuthzExpression.NOT_PROVIDED,
                                     new AnalyticsQuery(
                                         new MiruTimeRange(fromTime, toTime),
                                         input.buckets,
@@ -202,10 +228,13 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                 }
 
                 if (response != null && response.answer != null) {
-                    Map<String, AnalyticsAnswer.Waveform> waveforms = response.answer.waveforms;
-                    if (waveforms == null) {
-                        waveforms = Collections.emptyMap();
-                    }
+                    List<Waveform> answerWaveforms = response.answer.waveforms != null ? response.answer.waveforms : Collections.emptyList();
+                    ImmutableMap<String, Waveform> uniqueIndex = Maps.uniqueIndex(answerWaveforms, w-> w.getId());
+                    Map<String, long[]> waveforms = Maps.transformValues(uniqueIndex, w -> {
+                        long[] waveform = new long[input.buckets];
+                        w.mergeWaveform(waveform);
+                        return waveform;
+                    });
                     data.put("elapse", String.valueOf(response.totalElapsed));
                     //data.put("waveform", waveform == null ? "" : waveform.toString());
 

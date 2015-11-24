@@ -5,7 +5,7 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-build-management</artifactId>
-        <version>0.514-SNAPSHOT</version>
+        <version>0.654-SNAPSHOT</version>
         <relativePath>../global-build-management/pom.xml</relativePath>
     </parent>
     <artifactId>routing-bird-deployable-management</artifactId>
@@ -110,12 +110,41 @@
                         <version>2.8.2</version>
                         <executions>
                             <execution>
+                                <id>executable pom</id>
+                                <phase>deploy</phase>
+                                <goals>
+                                    <goal>deploy-file</goal>
+                                </goals>
+                                <configuration>
+                                    <artifactId>${project.artifactId}</artifactId>
+                                    <version>${project.version}</version>
+                                    <groupId>${project.groupId}</groupId>
+                                    <classifier>git</classifier>
+                                    <repositoryId>${project.distributionManagement.repository.id}</repositoryId>
+                                    <url>${project.distributionManagement.repository.url}</url>
+                                    <file>target/build.properties</file>
+                                    <generatePom>false</generatePom>
+                                </configuration>
+                            </execution>
+                            <execution>
                                 <phase>deploy</phase>
                             </execution>
                         </executions>
                         <configuration>
                             <file>${project.build.directory}/${project.name}-${project.version}.tar.gz</file>
                         </configuration>
+                    </plugin>
+                    <plugin>
+                        <groupId>pl.project13.maven</groupId>
+                        <artifactId>git-commit-id-plugin</artifactId>
+                        <version>2.1.15</version>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>revision</goal>
+                                </goals>
+                            </execution>
+                        </executions>
                     </plugin>
                 </plugins>
             </build>

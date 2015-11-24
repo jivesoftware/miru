@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.stream.plugins;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.base.Functions;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
@@ -18,6 +19,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsAnswer;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsConstants;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsQuery;
+import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsQueryConstraint;
 import com.jivesoftware.os.routing.bird.http.client.HttpClientConfiguration;
 import com.jivesoftware.os.routing.bird.http.client.HttpClientFactory;
 import com.jivesoftware.os.routing.bird.http.client.HttpClientFactoryProvider;
@@ -56,7 +58,7 @@ public class RemoteStreamHttpTest {
     }
 
     private void query(HttpRequestHelper requestHelper, MiruTenantId tenantId) throws Exception {
-        MiruRequest<AggregateCountsQuery> query = new MiruRequest<>(
+        MiruRequest<AggregateCountsQuery> query = new MiruRequest<>("test",
             tenantId,
             MiruActorId.NOT_PROVIDED,
             MiruAuthzExpression.NOT_PROVIDED,
@@ -70,10 +72,7 @@ public class RemoteStreamHttpTest {
                         new MiruFieldFilter(MiruFieldType.primary, "activityType",
                             Lists.transform(Arrays.asList(0), Functions.toStringFunction()))),
                     null),
-                MiruFilter.NO_FILTER,
-                "parent",
-                0,
-                100),
+                ImmutableMap.of("blah", new AggregateCountsQueryConstraint(MiruFilter.NO_FILTER, "parent", 0, 100))),
             MiruSolutionLogLevel.NONE);
         AggregateCountsAnswer result = requestHelper.executeRequest(query,
             AggregateCountsConstants.FILTER_PREFIX + AggregateCountsConstants.CUSTOM_QUERY_ENDPOINT,

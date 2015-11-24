@@ -10,6 +10,7 @@ import com.jivesoftware.os.filer.chunk.store.transaction.TxMapGrower;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
 import com.jivesoftware.os.filer.io.IBA;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.filer.io.chunk.ChunkStore;
 import com.jivesoftware.os.filer.io.map.MapContext;
 import com.jivesoftware.os.filer.io.map.MapStore;
@@ -51,14 +52,15 @@ public class MiruEjjiSLSNGTest {
 
         File dir = Files.createTempDirectory("testNewChunkStore").toFile();
         HeapByteBufferFactory byteBufferFactory = new HeapByteBufferFactory();
-        ChunkStore chunkStore1 = new ChunkStoreInitializer().openOrCreate(new File[]{dir}, 0, "data1", 8, byteBufferFactory, 500, 5_000);
-        ChunkStore chunkStore2 = new ChunkStoreInitializer().openOrCreate(new File[]{dir}, 0, "data2", 8, byteBufferFactory, 500, 5_000);
-        ChunkStore chunkStore3 = new ChunkStoreInitializer().openOrCreate(new File[]{dir}, 0, "data3", 8, byteBufferFactory, 500, 5_000);
-        ChunkStore chunkStore4 = new ChunkStoreInitializer().openOrCreate(new File[]{dir}, 0, "data4", 8, byteBufferFactory, 500, 5_000);
-        ChunkStore chunkStore5 = new ChunkStoreInitializer().openOrCreate(new File[]{dir}, 0, "data5", 8, byteBufferFactory, 500, 5_000);
-        ChunkStore chunkStore6 = new ChunkStoreInitializer().openOrCreate(new File[]{dir}, 0, "data6", 8, byteBufferFactory, 500, 5_000);
-        ChunkStore chunkStore7 = new ChunkStoreInitializer().openOrCreate(new File[]{dir}, 0, "data7", 8, byteBufferFactory, 500, 5_000);
-        ChunkStore chunkStore8 = new ChunkStoreInitializer().openOrCreate(new File[]{dir}, 0, "data8", 8, byteBufferFactory, 500, 5_000);
+        StackBuffer stackBuffer = new StackBuffer();
+        ChunkStore chunkStore1 = new ChunkStoreInitializer().openOrCreate(new File[]{dir}, 0, "data1", 8, byteBufferFactory, 500, 5_000, stackBuffer);
+        ChunkStore chunkStore2 = new ChunkStoreInitializer().openOrCreate(new File[]{dir}, 0, "data2", 8, byteBufferFactory, 500, 5_000, stackBuffer);
+        ChunkStore chunkStore3 = new ChunkStoreInitializer().openOrCreate(new File[]{dir}, 0, "data3", 8, byteBufferFactory, 500, 5_000, stackBuffer);
+        ChunkStore chunkStore4 = new ChunkStoreInitializer().openOrCreate(new File[]{dir}, 0, "data4", 8, byteBufferFactory, 500, 5_000, stackBuffer);
+        ChunkStore chunkStore5 = new ChunkStoreInitializer().openOrCreate(new File[]{dir}, 0, "data5", 8, byteBufferFactory, 500, 5_000, stackBuffer);
+        ChunkStore chunkStore6 = new ChunkStoreInitializer().openOrCreate(new File[]{dir}, 0, "data6", 8, byteBufferFactory, 500, 5_000, stackBuffer);
+        ChunkStore chunkStore7 = new ChunkStoreInitializer().openOrCreate(new File[]{dir}, 0, "data7", 8, byteBufferFactory, 500, 5_000, stackBuffer);
+        ChunkStore chunkStore8 = new ChunkStoreInitializer().openOrCreate(new File[]{dir}, 0, "data8", 8, byteBufferFactory, 500, 5_000, stackBuffer);
         ChunkStore[] chunkStores = new ChunkStore[]{chunkStore1, chunkStore2, chunkStore3, chunkStore4,
             chunkStore5, chunkStore6, chunkStore7, chunkStore8};
 
@@ -130,13 +132,13 @@ public class MiruEjjiSLSNGTest {
             bstot.put(new IBA(FilerIO.intsBytes(new int[]{streamId, docType})), FilerIO.intBytes(docId));
 
             if (i > 0 && i % batchSize == 0) {
-                flush(buto, uto);
-                flush(butot, utot);
-                flush(buts, uts);
-                flush(botu, otu);
-                flush(bots, ots);
-                flush(bsto, sto);
-                flush(bstot, stot);
+                flush(buto, uto, stackBuffer);
+                flush(butot, utot, stackBuffer);
+                flush(buts, uts, stackBuffer);
+                flush(botu, otu, stackBuffer);
+                flush(bots, ots, stackBuffer);
+                flush(bsto, sto, stackBuffer);
+                flush(bstot, stot, stackBuffer);
 
                 long time = System.currentTimeMillis();
                 System.out.println("Total:" + i + " flushed " + batchSize + " in " + (time - lastTime));
@@ -145,13 +147,13 @@ public class MiruEjjiSLSNGTest {
         }
 
         if (!buto.isEmpty()) {
-            flush(buto, uto);
-            flush(butot, utot);
-            flush(buts, uts);
-            flush(botu, otu);
-            flush(bots, ots);
-            flush(bsto, sto);
-            flush(bstot, stot);
+            flush(buto, uto, stackBuffer);
+            flush(butot, utot, stackBuffer);
+            flush(buts, uts, stackBuffer);
+            flush(botu, otu, stackBuffer);
+            flush(bots, ots, stackBuffer);
+            flush(bsto, sto, stackBuffer);
+            flush(bstot, stot, stackBuffer);
 
             long time = System.currentTimeMillis();
             System.out.println("Final flush activities " + (time - lastTime));
@@ -171,17 +173,17 @@ public class MiruEjjiSLSNGTest {
 
             final AtomicLong count = new AtomicLong();
             for (Integer type : docTypes) {
-                otu.read(FilerIO.intsBytes(new int[]{type, doc}), 1, (monkey, filer, lock) -> {
+                otu.read(FilerIO.intsBytes(new int[]{type, doc}), 1, (monkey, filer, _stackBuffer, lock) -> {
                     if (lock != null) {
                         synchronized (lock) {
                             MapStore.INSTANCE.streamKeys(filer, monkey, lock, key -> {
                                 count.incrementAndGet();
                                 return true;
-                            });
+                            }, _stackBuffer);
                         }
                     }
                     return null;
-                });
+                }, stackBuffer);
             }
 
             System.out.println("distinctsResult:" + count.get());
@@ -194,19 +196,19 @@ public class MiruEjjiSLSNGTest {
 
     }
 
-    private void flush(ListMultimap<IBA, byte[]> buffer, TxKeyedFilerStore<Integer, MapContext> store) throws IOException {
+    private void flush(ListMultimap<IBA, byte[]> buffer, TxKeyedFilerStore<Integer, MapContext> store, StackBuffer stackBuffer) throws IOException {
         for (IBA k : buffer.keySet()) {
             final List<byte[]> got = buffer.get(k);
-            store.readWriteAutoGrow(k.getBytes(), got.size(), (monkey, f, lock) -> {
+            store.readWriteAutoGrow(k.getBytes(), got.size(), (monkey, f, _stackBuffer, lock) -> {
                 if (lock != null) {
                     synchronized (lock) {
                         for (byte[] g : got) {
-                            MapStore.INSTANCE.add(f, monkey, (byte) 1, g, new byte[0]);
+                            MapStore.INSTANCE.add(f, monkey, (byte) 1, g, new byte[0], _stackBuffer);
                         }
                     }
                 }
                 return null;
-            });
+            }, stackBuffer);
         }
         buffer.clear();
     }

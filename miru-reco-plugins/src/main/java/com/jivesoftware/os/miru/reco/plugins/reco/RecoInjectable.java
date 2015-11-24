@@ -54,9 +54,10 @@ public class RecoInjectable {
             MiruFilter removeDistinctsFilter = MiruFilter.NO_FILTER;
             if (request.query.removeDistinctsQuery != null) {
                 MiruResponse<DistinctsAnswer> distinctsResponse = miru.askAndMerge(tenantId,
-                    new MiruSolvableFactory<>(provider.getStats(), "recoDistincts",
+                    new MiruSolvableFactory<>(provider.getStats(), "collaborativeFilteringDistincts",
                         new DistinctsQuestion(distincts,
                             new MiruRequest<>(
+                                request.name,
                                 request.tenantId,
                                 request.actorId,
                                 request.authzExpression,

@@ -7,5 +7,5 @@ import com.jivesoftware.os.miru.api.base.MiruTermId;
  */
 public interface TermIdStream {
 
-    boolean stream(MiruTermId termId);
+    boolean stream(MiruTermId termId) throws Exception;
 }

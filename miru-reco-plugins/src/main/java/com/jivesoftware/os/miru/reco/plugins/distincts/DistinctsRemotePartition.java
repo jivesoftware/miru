@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.reco.plugins.distincts;
 
 import com.google.common.base.Optional;
+import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
@@ -10,7 +11,6 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.mlogger.core.EndPointMetrics;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.routing.bird.http.client.HttpClient;
 
 import static com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsConstants.CUSTOM_QUERY_ENDPOINT;
 import static com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsConstants.DISTINCTS_PREFIX;
@@ -34,11 +34,12 @@ public class DistinctsRemotePartition implements MiruRemotePartition<DistinctsQu
     }
 
     @Override
-    public MiruPartitionResponse<DistinctsAnswer> askRemote(HttpClient httpClient,
+    public MiruPartitionResponse<DistinctsAnswer> askRemote(MiruHost host,
         MiruPartitionId partitionId,
         MiruRequest<DistinctsQuery> request,
         Optional<DistinctsReport> report) throws MiruQueryServiceException {
-        return remotePartitionReader.read(httpClient,
+        return remotePartitionReader.read("distincts",
+            host,
             getEndpoint(partitionId),
             request,
             DistinctsAnswer.class,

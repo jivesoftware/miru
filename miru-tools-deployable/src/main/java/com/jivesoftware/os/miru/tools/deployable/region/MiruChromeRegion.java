@@ -31,6 +31,7 @@ public class MiruChromeRegion<I, R extends MiruPageRegion<I>> implements MiruReg
 
     @Override
     public String render(I input) {
+
         Map<String, Object> data = Maps.newHashMap();
         data.put("header", headerRegion.render(null));
         data.put("region", region.render(input));
@@ -38,13 +39,5 @@ public class MiruChromeRegion<I, R extends MiruPageRegion<I>> implements MiruReg
         data.put("plugins", Lists.transform(plugins,
             plugin -> ImmutableMap.of("glyphicon", plugin.glyphicon, "name", plugin.name, "path", plugin.path)));
         return renderer.render(template, data);
-
-        /*
-         // inject js page region module data
-         List<String> jsmodulesVal = Arrays.asList(JSProcessor.classToAMDPath(region.getClass()));
-
-         context.put("jsmodules").value(jsmodulesVal);
-         */
     }
-
 }

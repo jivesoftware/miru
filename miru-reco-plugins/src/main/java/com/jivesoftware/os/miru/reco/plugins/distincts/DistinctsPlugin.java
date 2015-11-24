@@ -4,8 +4,8 @@ import com.jivesoftware.os.miru.plugin.Miru;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.plugin.MiruEndpointInjectable;
 import com.jivesoftware.os.miru.plugin.plugin.MiruPlugin;
+import com.jivesoftware.os.miru.plugin.solution.FstRemotePartitionReader;
 import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
-import com.jivesoftware.os.miru.plugin.solution.SnappyJsonRemotePartitionReader;
 import java.util.Collection;
 import java.util.Collections;
 
@@ -30,7 +30,8 @@ public class DistinctsPlugin implements MiruPlugin<DistinctsEndpoints, Distincts
     }
 
     @Override
-    public Collection<MiruRemotePartition<?, ?, ?>> getRemotePartitions() {
-        return Collections.singletonList(new DistinctsRemotePartition(new SnappyJsonRemotePartitionReader()));
+    public Collection<MiruRemotePartition<?, ?, ?>> getRemotePartitions(MiruProvider<? extends Miru> miruProvider) {
+        return Collections.singletonList(new DistinctsRemotePartition(
+            new FstRemotePartitionReader(miruProvider.getReaderHttpClient(), miruProvider.getReaderStrategyCache(), false)));
     }
 }

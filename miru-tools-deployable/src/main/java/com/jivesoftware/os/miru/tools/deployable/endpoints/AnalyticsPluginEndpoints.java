@@ -34,8 +34,10 @@ public class AnalyticsPluginEndpoints {
     @Path("/")
     @Produces(MediaType.TEXT_HTML)
     public Response getAnalytics(@QueryParam("tenantId") @DefaultValue("") String tenantId,
-        @QueryParam("fromHoursAgo") @DefaultValue("720") int fromHoursAgo,
-        @QueryParam("toHoursAgo") @DefaultValue("0") int toHoursAgo,
+        @QueryParam("fromTimeAgo") @DefaultValue("720") long fromTimeAgo,
+        @QueryParam("fromTimeUnit") @DefaultValue("HOURS") String fromTimeUnit,
+        @QueryParam("toTimeAgo") @DefaultValue("0") long toTimeAgo,
+        @QueryParam("toTimeUnit") @DefaultValue("HOURS") String toTimeUnit,
         @QueryParam("buckets") @DefaultValue("30") int buckets,
         @QueryParam("field1") @DefaultValue("activityType") String field1,
         @QueryParam("terms1") @DefaultValue("0, 1, 11, 65") String terms1,
@@ -46,8 +48,10 @@ public class AnalyticsPluginEndpoints {
         String rendered = toolsService.renderPlugin(analyticsPluginRegion,
             Optional.of(new AnalyticsPluginRegionInput(
                 tenantId,
-                fromHoursAgo,
-                toHoursAgo,
+                fromTimeAgo,
+                fromTimeUnit,
+                toTimeAgo,
+                toTimeUnit,
                 buckets,
                 field1.trim(),
                 terms1.trim(),

@@ -2,10 +2,15 @@ package com.jivesoftware.os.miru.wal.activity;
 
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
+import com.jivesoftware.os.miru.api.activity.TimeAndVersion;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus;
+import com.jivesoftware.os.miru.api.wal.MiruVersionedActivityLookupEntry;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.WriterCursor;
+import com.jivesoftware.os.miru.wal.lookup.PartitionsStream;
 import com.jivesoftware.os.routing.bird.shared.HostPort;
+import java.util.List;
+import java.util.Set;
 
 /** @author jonathan */
 public interface MiruActivityWALReader<C, S> {
@@ -22,27 +27,31 @@ public interface MiruActivityWALReader<C, S> {
     S streamSip(MiruTenantId tenantId,
         MiruPartitionId partitionId,
         S afterSipCursor,
+        Set<TimeAndVersion> lastSeen,
         int batchSize,
-        StreamMiruActivityWAL streamMiruActivityWAL)
+        StreamMiruActivityWAL streamMiruActivityWAL,
+        StreamSuppressed streamSuppressed)
         throws Exception;
 
-    WriterCursor getCursorForWriterId(MiruTenantId tenantId, int writerId) throws Exception;
+    WriterCursor getCursorForWriterId(MiruTenantId tenantId, MiruPartitionId partitionId, int writerId) throws Exception;
 
     MiruActivityWALStatus getStatus(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
 
     long oldestActivityClockTimestamp(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
 
-    void allPartitions(PartitionsStream stream) throws Exception;
+    List<MiruVersionedActivityLookupEntry> getVersionedEntries(MiruTenantId tenantId, MiruPartitionId partitionId, Long[] timestamps) throws Exception;
 
-    MiruPartitionId largestPartitionId(MiruTenantId tenantId) throws Exception;
+    void allPartitions(PartitionsStream partitionsStream) throws Exception;
+
+    long clockMax(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
 
     interface StreamMiruActivityWAL {
 
         boolean stream(long collisionId, MiruPartitionedActivity partitionedActivity, long timestamp) throws Exception;
     }
 
-    interface PartitionsStream {
+    interface StreamSuppressed {
 
-        boolean stream(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
+        void stream(TimeAndVersion timeAndVersion) throws Exception;
     }
 }

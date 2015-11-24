@@ -18,6 +18,7 @@ package com.jivesoftware.os.miru.plugin.index;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
 import com.google.common.hash.HashFunction;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
@@ -30,7 +31,7 @@ import java.util.List;
  *
  * @author jonathan
  */
-public class BloomIndex<BM> {
+public class BloomIndex<BM extends IBM, IBM> {
 
     static public interface HasValue {
 
@@ -42,19 +43,19 @@ public class BloomIndex<BM> {
         void mightContain(V value);
     }
 
-    private final MiruBitmaps<BM> bitmaps;
+    private final MiruBitmaps<BM, IBM> bitmaps;
     private final HashFunction hashFunction;
     private final int numBits;
     private final int numHashFunctions;
 
-    public BloomIndex(MiruBitmaps<BM> bitmaps, HashFunction hashFunction, int expectedInsertions, float falsePositiveProbability) {
+    public BloomIndex(MiruBitmaps<BM, IBM> bitmaps, HashFunction hashFunction, int expectedInsertions, float falsePositiveProbability) {
         this.bitmaps = bitmaps;
         this.hashFunction = hashFunction;
 
         long desiredBits = optimalNumOfBits(expectedInsertions, falsePositiveProbability);
         if (desiredBits > Integer.MAX_VALUE) {
             throw new IllegalArgumentException("expectedInsertions=" + expectedInsertions + " falsePositiveProbability=" + falsePositiveProbability
-                    + " exceeds the capacity of an ewah.");
+                + " exceeds the capacity of an ewah.");
         }
         this.numBits = (int) desiredBits;
         this.numHashFunctions = optimalNumOfHashFunctions(expectedInsertions, this.numBits);
@@ -71,14 +72,14 @@ public class BloomIndex<BM> {
         return Math.max(1, (int) Math.round(m / n * Math.log(2)));
     }
 
-    public void put(MiruInvertedIndex<?> bloomIndex, List<MiruTermId> keys) throws Exception {
+    public void put(MiruInvertedIndex<?> bloomIndex, List<MiruTermId> keys, StackBuffer stackBuffer) throws Exception {
 
         int[] bitIndexes = new int[keys.size() * numHashFunctions];
         for (int i = 0; i < keys.size(); i++) {
             MiruTermId key = keys.get(i);
             createBitIndexesForValue(key.getBytes(), numHashFunctions, bitIndexes, i * numHashFunctions);
         }
-        bloomIndex.set(bitIndexes);
+        bloomIndex.set(stackBuffer, bitIndexes);
     }
 
     public <V extends HasValue> List<Mights<V>> wantBits(List<V> keys) {

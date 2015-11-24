@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.reco.plugins.distincts;
 
 import com.google.common.base.Optional;
+import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
@@ -11,7 +12,6 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.Question;
-import com.jivesoftware.os.routing.bird.http.client.HttpClient;
 
 /**
  *
@@ -31,19 +31,20 @@ public class DistinctsQuestion implements Question<DistinctsQuery, DistinctsAnsw
     }
 
     @Override
-    public <BM> MiruPartitionResponse<DistinctsAnswer> askLocal(MiruRequestHandle<BM, ?> handle, Optional<DistinctsReport> report) throws Exception {
+    public <BM extends IBM, IBM> MiruPartitionResponse<DistinctsAnswer> askLocal(MiruRequestHandle<BM, IBM, ?> handle, Optional<DistinctsReport> report) throws Exception {
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
-        MiruRequestContext<BM, ?> context = handle.getRequestContext();
-        MiruBitmaps<BM> bitmaps = handle.getBitmaps();
+        MiruRequestContext<IBM, ?> context = handle.getRequestContext();
+        MiruBitmaps<BM, IBM> bitmaps = handle.getBitmaps();
 
-        return new MiruPartitionResponse<>(distincts.gather(bitmaps, context, request.query, solutionLog), solutionLog.asList());
+        //TODO config batch size
+        return new MiruPartitionResponse<>(distincts.gather(bitmaps, context, request.query, 100, solutionLog), solutionLog.asList());
     }
 
     @Override
-    public MiruPartitionResponse<DistinctsAnswer> askRemote(HttpClient httpClient,
+    public MiruPartitionResponse<DistinctsAnswer> askRemote(MiruHost host,
         MiruPartitionId partitionId,
         Optional<DistinctsReport> report) throws MiruQueryServiceException {
-        return remotePartition.askRemote(httpClient, partitionId, request, report);
+        return remotePartition.askRemote(host, partitionId, request, report);
     }
 
     @Override

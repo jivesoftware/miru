@@ -123,13 +123,14 @@ public class RecoPluginRegion implements MiruPageRegion<Optional<RecoPluginRegio
                 final long packCurrentTime = snowflakeIdPacker.pack(jiveCurrentTime, 0, 0);
                 final long fromTime = packCurrentTime - snowflakeIdPacker.pack(TimeUnit.HOURS.toMillis(fromHoursAgo), 0, 0);
                 final long toTime = packCurrentTime - snowflakeIdPacker.pack(TimeUnit.HOURS.toMillis(toHoursAgo), 0, 0);
+                MiruTimeRange timeRange = new MiruTimeRange(fromTime, toTime);
 
                 DistinctsQuery removeDistinctsQuery = null;
                 if (input.removeDistinctsFilter != null && !input.removeDistinctsFilter.isEmpty() ||
                     input.removeDistinctsPrefixes != null && !input.removeDistinctsPrefixes.isEmpty()) {
 
                     removeDistinctsQuery = new DistinctsQuery(
-                        new MiruTimeRange(fromTime, toTime),
+                        timeRange,
                         input.recommendField,
                         filterStringUtil.parse(input.removeDistinctsFilter),
                         input.removeDistinctsPrefixes);
@@ -146,8 +147,12 @@ public class RecoPluginRegion implements MiruPageRegion<Optional<RecoPluginRegio
                         try {
                             @SuppressWarnings("unchecked")
                             MiruResponse<RecoAnswer> recoResponse = requestHelper.executeRequest(
-                                new MiruRequest<>(tenantId, MiruActorId.NOT_PROVIDED, MiruAuthzExpression.NOT_PROVIDED,
+                                new MiruRequest<>("toolsReco",
+                                    tenantId,
+                                    MiruActorId.NOT_PROVIDED,
+                                    MiruAuthzExpression.NOT_PROVIDED,
                                     new RecoQuery(
+                                        timeRange,
                                         removeDistinctsQuery,
                                         constraintsFilter,
                                         input.baseField, input.baseField, input.baseField,

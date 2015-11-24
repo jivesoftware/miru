@@ -5,13 +5,18 @@ import com.google.common.base.Optional;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.jivesoftware.os.filer.chunk.store.transaction.MapBackedKeyedFPIndex;
+import com.jivesoftware.os.filer.chunk.store.transaction.MapCreator;
+import com.jivesoftware.os.filer.chunk.store.transaction.MapOpener;
 import com.jivesoftware.os.filer.chunk.store.transaction.TxCog;
 import com.jivesoftware.os.filer.chunk.store.transaction.TxCogs;
+import com.jivesoftware.os.filer.chunk.store.transaction.TxMapGrower;
 import com.jivesoftware.os.filer.chunk.store.transaction.TxNamedMapOfFiler;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.io.api.KeyedFilerStore;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.filer.io.chunk.ChunkFiler;
 import com.jivesoftware.os.filer.io.chunk.ChunkStore;
+import com.jivesoftware.os.filer.io.map.MapContext;
 import com.jivesoftware.os.filer.io.primative.LongIntKeyValueMarshaller;
 import com.jivesoftware.os.filer.keyed.store.TxKeyValueStore;
 import com.jivesoftware.os.filer.keyed.store.TxKeyedFilerStore;
@@ -95,6 +100,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
     private final MiruBackingStorage defaultStorage;
     private final int partitionAuthzCacheSize;
     private final Cache<MiruFieldIndex.IndexKey, Optional<?>> fieldIndexCache;
+    private final Cache<MiruFieldIndex.IndexKey, Long> versionCache;
     private final AtomicLong fieldIndexIdProvider;
     private final StripingLocksProvider<MiruTermId> fieldIndexStripingLocksProvider;
     private final StripingLocksProvider<MiruStreamId> streamStripingLocksProvider;
@@ -110,6 +116,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         MiruBackingStorage defaultStorage,
         int partitionAuthzCacheSize,
         Cache<MiruFieldIndex.IndexKey, Optional<?>> fieldIndexCache,
+        Cache<MiruFieldIndex.IndexKey, Long> versionCache,
         AtomicLong fieldIndexIdProvider,
         StripingLocksProvider<MiruTermId> fieldIndexStripingLocksProvider,
         StripingLocksProvider<MiruStreamId> streamStripingLocksProvider,
@@ -125,6 +132,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         this.defaultStorage = defaultStorage;
         this.partitionAuthzCacheSize = partitionAuthzCacheSize;
         this.fieldIndexCache = fieldIndexCache;
+        this.versionCache = versionCache;
         this.fieldIndexIdProvider = fieldIndexIdProvider;
         this.fieldIndexStripingLocksProvider = fieldIndexStripingLocksProvider;
         this.streamStripingLocksProvider = streamStripingLocksProvider;
@@ -153,18 +161,26 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         }
     }
 
-    public <BM> MiruContext<BM, S> allocate(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord, MiruBackingStorage storage) throws Exception {
+    public <BM extends IBM, IBM> MiruContext<IBM, S> allocate(MiruBitmaps<BM, IBM> bitmaps,
+        MiruPartitionCoord coord,
+        MiruBackingStorage storage,
+        StackBuffer stackBuffer) throws Exception {
+
+        // check for schema first
+        MiruSchema schema = schemaProvider.getSchema(coord.tenantId);
+
         MiruChunkAllocator allocator = getAllocator(storage);
         ChunkStore[] chunkStores = allocator.allocateChunkStores(coord);
         KeyedIndexStore[] indexStores = allocator.allocateIndexStores(coord);
         return allocate(bitmaps, coord, chunkStores, indexStores);
     }
 
-    private <BM> MiruContext<BM, S> allocate(MiruBitmaps<BM> bitmaps, MiruPartitionCoord coord, ChunkStore[] chunkStores, KeyedIndexStore[] indexStores)
-        throws Exception {
+    private <BM extends IBM, IBM> MiruContext<IBM, S> allocate(MiruBitmaps<BM, IBM> bitmaps,
+        MiruPartitionCoord coord,
+        MiruSchema schema,
+        ChunkStore[] chunkStores,
+        StackBuffer stackBuffer) throws Exception {
 
-        // check for schema first
-        MiruSchema schema = schemaProvider.getSchema(coord.tenantId);
         int seed = coord.hashCode();
         TxCog<Integer, MapBackedKeyedFPIndex, ChunkFiler> skyhookCog = cogs.getSkyhookCog(seed);
         KeyedFilerStore<Long, Void> genericFilerStore = new TxKeyedFilerStore<>(cogs, seed, chunkStores, keyBytes("generic"), false,
@@ -201,7 +217,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                 new KeyedFilerProvider<>(activityFilerStore, keyBytes("activityIndex-size"))));
 
         @SuppressWarnings("unchecked")
-        MiruFieldIndex<BM>[] fieldIndexes = new MiruFieldIndex[MiruFieldType.values().length];
+        MiruFieldIndex<IBM>[] fieldIndexes = new MiruFieldIndex[MiruFieldType.values().length];
         for (MiruFieldType fieldType : MiruFieldType.values()) {
             //@SuppressWarnings("unchecked")
             //KeyedFilerStore<Long, Void>[] indexes = new KeyedFilerStore[schema.fieldCount()];
@@ -209,7 +225,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             long[] indexIds = new long[schema.fieldCount()];
             for (MiruFieldDefinition fieldDefinition : schema.getFieldDefinitions()) {
                 int fieldId = fieldDefinition.fieldId;
-                if (fieldType == MiruFieldType.latest && fieldDefinition.type != MiruFieldDefinition.Type.singleTermIndexLatest
+                if (fieldType == MiruFieldType.latest && !fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.indexedLatest)
                     || fieldType == MiruFieldType.pairedLatest && schema.getPairedLatestFieldDefinitions(fieldId).isEmpty()
                     || fieldType == MiruFieldType.bloom && schema.getBloomFieldDefinitions(fieldId).isEmpty()) {
                     indexes[fieldId] = null;
@@ -225,6 +241,17 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                     indexes[fieldId] = indexStores[fieldId % indexStores.length].open("field-" + fieldType.name() + "-" + fieldId);
                 }
                 indexIds[fieldId] = fieldIndexIdProvider.incrementAndGet();
+                if (fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.cardinality)) {
+                    cardinalities[fieldId] = new TxKeyedFilerStore<>(cogs,
+                        seed,
+                        chunkStores,
+                        keyBytes("field-c-" + fieldType.name() + "-" + fieldId),
+                        false,
+                        new MapCreator(100, 4, false, 8, false),
+                        MapOpener.INSTANCE,
+                        TxMapGrower.MAP_OVERWRITE_GROWER,
+                        TxMapGrower.MAP_REWRITE_GROWER);
+                }
             }
             fieldIndexes[fieldType.getIndex()] = new MiruDeltaFieldIndex<>(
                 bitmaps,
@@ -234,22 +261,22 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                 schema.fieldCount(),
                 fieldIndexCache);
         }
-        MiruFieldIndexProvider<BM> fieldIndexProvider = new MiruFieldIndexProvider<>(fieldIndexes);
+        MiruFieldIndexProvider<IBM> fieldIndexProvider = new MiruFieldIndexProvider<>(fieldIndexes);
 
         MiruSipIndex<S> sipIndex = new MiruDeltaSipIndex<>(new MiruFilerSipIndex<>(
             new KeyedFilerProvider<>(genericFilerStore, sipMarshaller.getSipIndexKey()),
             sipMarshaller));
 
-        MiruAuthzUtils<BM> authzUtils = new MiruAuthzUtils<>(bitmaps);
+        MiruAuthzUtils<BM, IBM> authzUtils = new MiruAuthzUtils<>(bitmaps);
 
         Cache<VersionedAuthzExpression, BM> authzCache = CacheBuilder.newBuilder()
             .maximumSize(partitionAuthzCacheSize)
             .expireAfterAccess(1, TimeUnit.MINUTES) //TODO should be adjusted with respect to tuning GC (prevent promotion from eden space)
             .build();
-        MiruAuthzCache<BM> miruAuthzCache = new MiruAuthzCache<>(bitmaps, authzCache, activityInternExtern, authzUtils);
+        MiruAuthzCache<BM, IBM> miruAuthzCache = new MiruAuthzCache<>(bitmaps, authzCache, activityInternExtern, authzUtils);
 
         long authzIndexId = fieldIndexIdProvider.incrementAndGet();
-        MiruAuthzIndex<BM> authzIndex = new MiruDeltaAuthzIndex<>(bitmaps,
+        MiruAuthzIndex<IBM> authzIndex = new MiruDeltaAuthzIndex<>(bitmaps,
             authzIndexId,
             miruAuthzCache,
             new MiruFilerAuthzIndex<>(
@@ -265,9 +292,10 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             fieldIndexCache);
 
         long removalIndexId = fieldIndexIdProvider.incrementAndGet();
-        MiruRemovalIndex<BM> removalIndex = new MiruDeltaRemovalIndex<>(
+        MiruRemovalIndex<IBM> removalIndex = new MiruDeltaRemovalIndex<>(
             bitmaps,
             fieldIndexCache,
+            versionCache,
             removalIndexId,
             new byte[] { 0 },
             new MiruFilerRemovalIndex<>(
@@ -281,10 +309,10 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                 new byte[] { 0 },
                 -1,
                 new Object()),
-            new MiruDeltaInvertedIndex.Delta<BM>());
+            new MiruDeltaInvertedIndex.Delta<IBM>());
 
         long unreadTrackingIndexId = fieldIndexIdProvider.incrementAndGet();
-        MiruUnreadTrackingIndex<BM> unreadTrackingIndex = new MiruDeltaUnreadTrackingIndex<>(
+        MiruUnreadTrackingIndex<IBM> unreadTrackingIndex = new MiruDeltaUnreadTrackingIndex<>(
             bitmaps,
             unreadTrackingIndexId,
             new MiruFilerUnreadTrackingIndex<>(
@@ -299,7 +327,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             fieldIndexCache);
 
         long inboxIndexId = fieldIndexIdProvider.incrementAndGet();
-        MiruInboxIndex<BM> inboxIndex = new MiruDeltaInboxIndex<>(
+        MiruInboxIndex<IBM> inboxIndex = new MiruDeltaInboxIndex<>(
             bitmaps,
             inboxIndexId,
             new MiruFilerInboxIndex<>(
@@ -330,10 +358,14 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             chunkStores, indexStores);
     }
 
-    public <BM> MiruContext<BM, S> copy(MiruBitmaps<BM> bitmaps,
+    public <BM extends IBM, IBM> MiruContext<IBM, S> copy(MiruBitmaps<BM, IBM> bitmaps,
         MiruPartitionCoord coord,
-        MiruContext<BM, S> from,
-        MiruBackingStorage toStorage) throws Exception {
+        MiruContext<IBM, S> from,
+        MiruBackingStorage toStorage,
+        StackBuffer stackBuffer) throws Exception {
+
+        // check for schema first
+        MiruSchema schema = schemaProvider.getSchema(coord.tenantId);
 
         ChunkStore[] fromChunks = from.chunkStores;
         KeyedIndexStore[] fromIndexStores = from.indexStores;
@@ -343,7 +375,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             throw new IllegalArgumentException("The number of from chunks:" + fromChunks.length + " must equal the number of to chunks:" + toChunks.length);
         }
         for (int i = 0; i < fromChunks.length; i++) {
-            fromChunks[i].copyTo(toChunks[i]);
+            fromChunks[i].copyTo(toChunks[i], stackBuffer);
         }
         for (int i = 0; i < fromIndexStores.length; i++) {
             fromIndexStores[i].copyTo(toIndexStores[i]);
@@ -372,7 +404,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         diskResourceLocator.clean(new MiruPartitionCoordIdentifier(coord));
     }
 
-    public <BM> void close(MiruContext<BM, S> context, MiruBackingStorage storage) throws IOException {
+    public <BM extends IBM, IBM> void close(MiruContext<BM, S> context, MiruBackingStorage storage) throws IOException {
         context.activityIndex.close();
         context.authzIndex.close();
         context.timeIndex.close();
@@ -382,7 +414,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         getAllocator(storage).close(context.chunkStores, context.indexStores);
     }
 
-    public <BM> void releaseCaches(MiruContext<BM, S> context, MiruBackingStorage storage) throws IOException {
+    public <BM extends IBM, IBM> void releaseCaches(MiruContext<BM, S> context, MiruBackingStorage storage) throws IOException {
         for (ChunkStore chunkStore : context.chunkStores) {
             chunkStore.rollCache();
         }

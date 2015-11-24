@@ -19,6 +19,8 @@ public class MiruFilter implements Serializable {
     public final List<MiruFieldFilter> fieldFilters;
     public final List<MiruFilter> subFilters;
 
+    private int hash = 0;
+
     @JsonCreator
     public MiruFilter(@JsonProperty("operation") MiruFilterOperation operation,
         @JsonProperty("inclusiveFilter") boolean inclusiveFilter,
@@ -69,10 +71,13 @@ public class MiruFilter implements Serializable {
 
     @Override
     public int hashCode() {
-        int result = operation != null ? operation.hashCode() : 0;
-        result = 31 * result + (inclusiveFilter ? 1 : 0);
-        result = 31 * result + (fieldFilters != null ? fieldFilters.hashCode() : 0);
-        result = 31 * result + (subFilters != null ? subFilters.hashCode() : 0);
-        return result;
+        if (hash == 0) {
+            int result = operation != null ? operation.hashCode() : 0;
+            result = 31 * result + (inclusiveFilter ? 1 : 0);
+            result = 31 * result + (fieldFilters != null ? fieldFilters.hashCode() : 0);
+            result = 31 * result + (subFilters != null ? subFilters.hashCode() : 0);
+            hash = result;
+        }
+        return hash;
     }
 }

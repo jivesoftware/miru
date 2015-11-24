@@ -238,7 +238,10 @@ public class StumptownQueryPluginRegion implements MiruPageRegion<Optional<Stump
 
                 @SuppressWarnings("unchecked")
                 MiruResponse<StumptownAnswer> analyticsResponse = requestHelper.executeRequest(
-                    new MiruRequest<>(tenantId, MiruActorId.NOT_PROVIDED, MiruAuthzExpression.NOT_PROVIDED,
+                    new MiruRequest<>("stumptownQuery",
+                        tenantId,
+                        MiruActorId.NOT_PROVIDED,
+                        MiruAuthzExpression.NOT_PROVIDED,
                         new StumptownQuery(
                             miruTimeRange,
                             input.buckets,

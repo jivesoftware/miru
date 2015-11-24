@@ -2,27 +2,28 @@ package com.jivesoftware.os.miru.stream.plugins.count;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
+import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
+import com.jivesoftware.os.miru.plugin.backfill.MiruJustInTimeBackfillerizer;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
-import com.jivesoftware.os.miru.plugin.index.MiruJustInTimeBackfillerizer;
-import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.solution.Question;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.routing.bird.http.client.HttpClient;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -56,30 +57,32 @@ public class DistinctCountInboxQuestion implements Question<DistinctCountQuery, 
     }
 
     @Override
-    public <BM> MiruPartitionResponse<DistinctCountAnswer> askLocal(MiruRequestHandle<BM, ?> handle, Optional<DistinctCountReport> report) throws Exception {
+    public <BM extends IBM, IBM> MiruPartitionResponse<DistinctCountAnswer> askLocal(MiruRequestHandle<BM, IBM, ?> handle, Optional<DistinctCountReport> report) throws Exception {
+        StackBuffer stackBuffer = new StackBuffer();
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
-        MiruRequestContext<BM, ?> context = handle.getRequestContext();
-        MiruBitmaps<BM> bitmaps = handle.getBitmaps();
+        MiruRequestContext<IBM, ?> context = handle.getRequestContext();
+        MiruBitmaps<BM, IBM> bitmaps = handle.getBitmaps();
 
         if (handle.canBackfill()) {
             backfillerizer.backfill(bitmaps, context, request.query.streamFilter, solutionLog, request.tenantId,
                 handle.getCoord().partitionId, request.query.streamId);
         }
 
-        List<BM> ands = new ArrayList<>();
+        List<IBM> ands = new ArrayList<>();
         if (!MiruTimeRange.ALL_TIME.equals(request.query.timeRange)) {
             MiruTimeRange timeRange = request.query.timeRange;
 
             // Short-circuit if the time range doesn't live here
-            if (!timeIndexIntersectsTimeRange(context.getTimeIndex(), timeRange)) {
-                LOG.debug("No time index intersection");
+            if (!context.getTimeIndex().intersects(timeRange)) {
+                solutionLog.log(MiruSolutionLogLevel.WARN, "No time index intersection. Partition {}: {} doesn't intersect with {}",
+                    handle.getCoord().partitionId, context.getTimeIndex(), timeRange);
                 return new MiruPartitionResponse<>(distinctCount.numberOfDistincts(
                     bitmaps, context, request, report, bitmaps.create()), solutionLog.asList());
             }
-            ands.add(bitmaps.buildTimeRangeMask(context.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp));
+            ands.add(bitmaps.buildTimeRangeMask(context.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp, stackBuffer));
         }
 
-        Optional<BM> inbox = context.getInboxIndex().getInbox(request.query.streamId).getIndex();
+        Optional<IBM> inbox = context.getInboxIndex().getInbox(request.query.streamId).getIndex(stackBuffer);
         if (inbox.isPresent()) {
             ands.add(inbox.get());
         } else {
@@ -89,21 +92,20 @@ public class DistinctCountInboxQuestion implements Question<DistinctCountQuery, 
         }
 
         if (!MiruFilter.NO_FILTER.equals(request.query.constraintsFilter)) {
-            BM filtered = bitmaps.create();
-            aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), request.query.constraintsFilter,
-                solutionLog, filtered, context.getActivityIndex().lastId(), -1);
+            BM filtered = aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(),
+                request.query.constraintsFilter, solutionLog, null, context.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
             ands.add(filtered);
         }
         if (!MiruAuthzExpression.NOT_PROVIDED.equals(request.authzExpression)) {
-            ands.add(context.getAuthzIndex().getCompositeAuthz(request.authzExpression));
+            ands.add(context.getAuthzIndex().getCompositeAuthz(request.authzExpression, stackBuffer));
         }
         if (unreadOnly) {
-            Optional<BM> unreadIndex = context.getUnreadTrackingIndex().getUnread(request.query.streamId).getIndex();
+            Optional<IBM> unreadIndex = context.getUnreadTrackingIndex().getUnread(request.query.streamId).getIndex(stackBuffer);
             if (unreadIndex.isPresent()) {
                 ands.add(unreadIndex.get());
             }
         }
-        ands.add(bitmaps.buildIndexMask(context.getActivityIndex().lastId(), context.getRemovalIndex().getIndex()));
+        ands.add(bitmaps.buildIndexMask(context.getActivityIndex().lastId(stackBuffer), context.getRemovalIndex().getIndex(stackBuffer)));
 
         BM answer = bitmaps.create();
         bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
@@ -113,10 +115,10 @@ public class DistinctCountInboxQuestion implements Question<DistinctCountQuery, 
     }
 
     @Override
-    public MiruPartitionResponse<DistinctCountAnswer> askRemote(HttpClient httpClient,
+    public MiruPartitionResponse<DistinctCountAnswer> askRemote(MiruHost host,
         MiruPartitionId partitionId,
         Optional<DistinctCountReport> report) throws MiruQueryServiceException {
-        return remotePartition.askRemote(httpClient, partitionId, request, report);
+        return remotePartition.askRemote(host, partitionId, request, report);
     }
 
     @Override
@@ -128,10 +130,5 @@ public class DistinctCountInboxQuestion implements Question<DistinctCountQuery, 
                 answer.get().collectedDistincts));
         }
         return report;
-    }
-
-    private boolean timeIndexIntersectsTimeRange(MiruTimeIndex timeIndex, MiruTimeRange timeRange) {
-        return timeRange.smallestTimestamp <= timeIndex.getLargestTimestamp() &&
-            timeRange.largestTimestamp >= timeIndex.getSmallestTimestamp();
     }
 }

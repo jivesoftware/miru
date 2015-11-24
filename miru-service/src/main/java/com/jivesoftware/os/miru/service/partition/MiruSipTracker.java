@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.service.partition;
 
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
+import com.jivesoftware.os.miru.api.activity.TimeAndVersion;
 import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import java.util.Set;
 

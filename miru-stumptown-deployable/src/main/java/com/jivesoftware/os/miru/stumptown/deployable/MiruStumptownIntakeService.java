@@ -16,6 +16,7 @@ import com.jivesoftware.os.routing.bird.health.checkers.TimerHealthChecker;
 import com.jivesoftware.os.routing.bird.http.client.HttpResponse;
 import com.jivesoftware.os.routing.bird.http.client.RoundRobinStrategy;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
+import com.jivesoftware.os.routing.bird.shared.ClientCall;
 import java.util.List;
 import org.merlin.config.defaults.DoubleDefault;
 import org.merlin.config.defaults.StringDefault;
@@ -88,13 +89,11 @@ public class MiruStumptownIntakeService {
             while (true) {
                 try {
                     // TODO expose "" tenant to config?
-                    miruWriter.call("", roundRobinStrategy, client -> {
-                        HttpResponse postJson = client.postJson(miruIngressEndpoint, jsonActivities, null);
-                        if (postJson.getStatusCode() < 200 || postJson.getStatusCode() >= 300) {
-                            throw new RuntimeException("Failed to post " + activities.size() + " to " + miruIngressEndpoint);
-                        }
-                        return null;
-                    });
+                    HttpResponse response = miruWriter.call("", roundRobinStrategy, "ingress",
+                        client -> new ClientCall.ClientResponse<>(client.postJson(miruIngressEndpoint, jsonActivities, null), true));
+                    if (response.getStatusCode() < 200 || response.getStatusCode() >= 300) {
+                        throw new RuntimeException("Failed to post " + activities.size() + " to " + miruIngressEndpoint);
+                    }
                     log.inc("ingressed");
                     break;
                 } catch (Exception x) {

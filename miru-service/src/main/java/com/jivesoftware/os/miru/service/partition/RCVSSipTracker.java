@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.service.partition;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
+import com.jivesoftware.os.miru.api.activity.TimeAndVersion;
 import com.jivesoftware.os.miru.api.wal.RCVSSipCursor;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -66,23 +67,24 @@ public class RCVSSipTracker implements MiruSipTracker<RCVSSipCursor> {
             return lastSipCursor;
         }
 
+        boolean endOfStream = nextSipCursor != null ? nextSipCursor.endOfStream : lastSipCursor.endOfStream;
         byte latestSort = sorts[lastIndex % clockTimestamps.length];
         long latestTimestamp = clockTimestamps[lastIndex % clockTimestamps.length];
         long latestMinusSkew = latestTimestamp - maxSipClockSkew;
         if (lastIndex < clockTimestamps.length) {
             // fewer than the max replay size, so sip to the more distant timestamp
             if (clockTimestamps[0] < latestMinusSkew) {
-                return new RCVSSipCursor(sorts[0], clockTimestamps[0], activityTimestamps[0], false);
+                return new RCVSSipCursor(sorts[0], clockTimestamps[0], activityTimestamps[0], endOfStream);
             } else {
-                return new RCVSSipCursor(latestSort, latestMinusSkew, 0, false);
+                return new RCVSSipCursor(latestSort, latestMinusSkew, 0, endOfStream);
             }
         } else {
             // more than the max replay size, so sip to the more recent timestamp
             int oldestIndex = index.get() % clockTimestamps.length;
             if (clockTimestamps[oldestIndex] > latestMinusSkew) {
-                return new RCVSSipCursor(sorts[oldestIndex], clockTimestamps[oldestIndex], activityTimestamps[oldestIndex], false);
+                return new RCVSSipCursor(sorts[oldestIndex], clockTimestamps[oldestIndex], activityTimestamps[oldestIndex], endOfStream);
             } else {
-                return new RCVSSipCursor(latestSort, latestMinusSkew, 0, false);
+                return new RCVSSipCursor(latestSort, latestMinusSkew, 0, endOfStream);
             }
         }
     }

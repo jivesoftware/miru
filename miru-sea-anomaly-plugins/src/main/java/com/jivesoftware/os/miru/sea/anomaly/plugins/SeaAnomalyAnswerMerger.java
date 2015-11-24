@@ -41,7 +41,7 @@ public class SeaAnomalyAnswerMerger implements MiruAnswerMerger<SeaAnomalyAnswer
                 mergedWaveforms = lastAnswer.waveforms;
             }
         } else {
-            mergedWaveforms = Maps.newHashMap();
+            mergedWaveforms = Maps.newHashMapWithExpectedSize(Math.max(currentAnswer.waveforms.size(), lastAnswer.waveforms.size()));
             mergeWaveform(mergedWaveforms, currentAnswer, solutionLog);
             mergeWaveform(mergedWaveforms, lastAnswer, solutionLog);
             solutionLog.log(MiruSolutionLogLevel.INFO, "merge: merged last answer size={}, with current answer size={}.",

@@ -8,7 +8,6 @@ miru.resetButton = function ($button, value) {
 };
 
 miru.activitywal = {
-
     sanitize: function (ele, tenantId, partitionId) {
         var $button = $(ele);
         $button.attr('disabled', 'disabled');
@@ -35,7 +34,6 @@ miru.activitywal = {
 };
 
 miru.repair = {
-
     repairBoundaries: function (ele) {
         var $button = $(ele);
         $button.attr('disabled', 'disabled');
@@ -59,7 +57,6 @@ miru.repair = {
             }
         });
     },
-
     repairRanges: function (ele) {
         var $button = $(ele);
         $button.attr('disabled', 'disabled');
@@ -83,7 +80,6 @@ miru.repair = {
             }
         });
     },
-
     removePartition: function (ele, tenantId, partitionId) {
         var $button = $(ele);
         $button.attr('disabled', 'disabled');
@@ -110,6 +106,10 @@ miru.repair = {
 };
 
 $(document).ready(function () {
+    if ($.fn.dropdown) {
+        $('.dropdown-toggle').dropdown();
+    }
+
     miru.windowFocused = true;
     miru.onWindowFocus = [];
     miru.onWindowBlur = [];
@@ -117,7 +117,7 @@ $(document).ready(function () {
     if ($('#rw-waveform').length) {
         miru.realwave.init();
     }
-    
+
     $(function () {
         var hack = {};
         $('[rel="popover"]').popover({

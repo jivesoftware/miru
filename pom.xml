@@ -3,17 +3,21 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.jivesoftware.miru</groupId>
     <artifactId>miru</artifactId>
-    <version>0.514-SNAPSHOT</version>
+    <version>0.654-SNAPSHOT</version>
     <packaging>pom</packaging>
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-repo-management</artifactId>
-        <version>0.514-SNAPSHOT</version>
+        <version>0.654-SNAPSHOT</version>
         <relativePath>inheritance-poms/global-repo-management/pom.xml</relativePath>
     </parent>
     <modules>
         <module>inheritance-poms</module>
         <module>miru-service</module>
+        <module>miru-service-test</module>
+        <module>miru-bitmaps-ewah</module>
+        <module>miru-bitmaps-roaring4</module>
+        <module>miru-bitmaps-roaring5</module>
         <module>miru-api</module>
         <module>miru-amza</module>
         <module>miru-ui</module>

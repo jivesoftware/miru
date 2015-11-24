@@ -70,7 +70,7 @@ public class SeaAnomalyStatusPluginRegion implements MiruPageRegion<Optional<Sea
                     status.put("version", serviceId.version);
 
                     Map<String, AtomicLong> levelCounts = rowMap.get(serviceId);
-                    if (levelCounts.containsKey("ingressed")) {
+                    if (levelCounts != null && levelCounts.containsKey("ingressed")) {
                         status.put("ingressed", String.valueOf(levelCounts.get("ingressed").get()));
                     } else {
                         status.put("ingressed", String.valueOf(0L));

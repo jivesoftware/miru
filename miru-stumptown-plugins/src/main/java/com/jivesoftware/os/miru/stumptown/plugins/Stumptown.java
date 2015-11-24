@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.stumptown.plugins;
 
 import com.google.common.collect.Lists;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -28,13 +29,15 @@ public class Stumptown {
         this.miruProvider = miruProvider;
     }
 
-    public <BM> Waveform stumptowning(MiruBitmaps<BM> bitmaps,
-        MiruRequestContext<BM, ?> requestContext,
+    public <BM extends IBM, IBM> Waveform stumptowning(MiruBitmaps<BM, IBM> bitmaps,
+        MiruRequestContext<IBM, ?> requestContext,
         MiruTenantId tenantId,
         BM answer,
         int desiredNumberOfResults,
         int[] indexes)
         throws Exception {
+
+        StackBuffer stackBuffer = new StackBuffer();
 
         log.debug("Get stumptowning for answer={}", answer);
 
@@ -47,11 +50,13 @@ public class Stumptown {
         for (long i = 0; i < cardinality && iter.hasNext(); i++) {
             int index = iter.next();
             if (i > (cardinality - 1 - desiredNumberOfResults)) {
-                results.add(internExtern.extern(requestContext.getActivityIndex().get(tenantId, index), schema));
+                results.add(internExtern.extern(requestContext.getActivityIndex().get(tenantId, index, stackBuffer), schema));
             }
         }
         Collections.reverse(results); // chronologically descending (for proper alignment when merging/appending older partitions)
 
-        return new Waveform(bitmaps.boundedCardinalities(answer, indexes), results);
+        long[] waveform = new long[indexes.length - 1];
+        bitmaps.boundedCardinalities(answer, indexes, waveform);
+        return new Waveform(waveform, results);
     }
 }

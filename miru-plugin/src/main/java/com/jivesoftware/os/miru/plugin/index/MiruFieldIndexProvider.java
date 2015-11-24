@@ -6,16 +6,16 @@ import com.jivesoftware.os.miru.api.field.MiruFieldType;
 /**
  *
  */
-public class MiruFieldIndexProvider<BM> {
+public class MiruFieldIndexProvider<IBM> {
 
-    private final MiruFieldIndex<BM>[] indexes;
+    private final MiruFieldIndex<IBM>[] indexes;
 
-    public MiruFieldIndexProvider(MiruFieldIndex<BM>[] indexes) {
+    public MiruFieldIndexProvider(MiruFieldIndex<IBM>[] indexes) {
         Preconditions.checkArgument(indexes.length == MiruFieldType.values().length);
         this.indexes = indexes;
     }
 
-    public MiruFieldIndex<BM> getFieldIndex(MiruFieldType type) {
+    public MiruFieldIndex<IBM> getFieldIndex(MiruFieldType type) {
         return indexes[type.getIndex()];
     }
 }

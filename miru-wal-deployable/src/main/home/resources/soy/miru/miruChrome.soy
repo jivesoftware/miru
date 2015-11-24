@@ -79,7 +79,7 @@
 	<div class="navbar navbar-default" role="navigation">
 	    <div class="navbar-header">
             <a class="navbar-brand" href="/miru/wal">
-                <img src="/static/img/icon.png" alt="Fun with bits" width="100" height="50"><img>Writer
+                <span><img src="/static/img/icon.png" alt="Fun with bits" style="margin-top:-11px; vertical-align:top;" width="100" height="50">Writer</span>
             </a>
 	    </div>
 	</div>
@@ -90,10 +90,6 @@
  */
 {template .nav}
     <div style="margin-bottom:20px;">
-        <a class="list-group-item" href="/miru/wal/lookup">
-            <span class="glyphicon glyphicon-bookmark"></span>{sp}
-            Activity Lookup
-        </a>
         <a class="list-group-item" href="/miru/wal/activity">
             <span class="glyphicon glyphicon-bookmark"></span>{sp}
             Activity WAL
@@ -105,6 +101,10 @@
         <a class="list-group-item" href="/miru/wal/repair">
             <span class="glyphicon glyphicon-wrench"></span>{sp}
             Repair
+        </a>
+        <a class="list-group-item" href="/miru/wal/cleanup">
+            <span class="glyphicon glyphicon-erase"></span>{sp}
+            Cleanup
         </a>
     </div>
 {/template}

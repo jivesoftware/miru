@@ -1,12 +1,11 @@
 package com.jivesoftware.os.miru.stream.plugins.filter;
 
 import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.plugin.solution.MiruAnswerMerger;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
-import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsAnswer.AggregateCount;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,29 +30,47 @@ public class AggregateCountsAnswerMerger implements MiruAnswerMerger<AggregateCo
 
         AggregateCountsAnswer lastAnswer = last.get();
 
-        Map<String, AggregateCount> carryOverCounts = new HashMap<>();
-        for (AggregateCount aggregateCount : currentAnswer.results) {
-            carryOverCounts.put(aggregateCount.distinctValue, aggregateCount);
-        }
+        Map<String, AggregateCountsAnswerConstraint> mergedConstraints = Maps.newHashMapWithExpectedSize(currentAnswer.constraints.size());
+        for (Map.Entry<String, AggregateCountsAnswerConstraint> entry : currentAnswer.constraints.entrySet()) {
 
-        List<AggregateCount> mergedResults = Lists.newLinkedList();
-        for (AggregateCount aggregateCount : lastAnswer.results) {
-            AggregateCount had = carryOverCounts.remove(aggregateCount.distinctValue);
-            if (had == null) {
-                mergedResults.add(aggregateCount);
+            AggregateCountsAnswerConstraint currentConstraint = entry.getValue();
+            AggregateCountsAnswerConstraint lastConstraint = lastAnswer.constraints.get(entry.getKey());
+            if (lastConstraint == null) {
+                mergedConstraints.put(entry.getKey(), currentConstraint);
             } else {
-                mergedResults.add(new AggregateCount(aggregateCount.mostRecentActivity, aggregateCount.distinctValue, aggregateCount.count + had.count,
-                    aggregateCount.unread || had.unread));
-            }
-        }
-        for (AggregateCount aggregateCount : currentAnswer.results) {
-            if (carryOverCounts.containsKey(aggregateCount.distinctValue) && aggregateCount.mostRecentActivity != null) {
-                mergedResults.add(aggregateCount);
-            }
-        }
 
-        AggregateCountsAnswer mergedAnswer = new AggregateCountsAnswer(ImmutableList.copyOf(mergedResults), currentAnswer.aggregateTerms,
-            currentAnswer.skippedDistincts, currentAnswer.collectedDistincts);
+                Map<String, AggregateCount> carryOverCounts = new HashMap<>();
+                for (AggregateCount aggregateCount : currentConstraint.results) {
+                    carryOverCounts.put(aggregateCount.distinctValue, aggregateCount);
+                }
+
+                List<AggregateCount> mergedResults = Lists.newArrayListWithCapacity(lastConstraint.results.size() + currentConstraint.results.size());
+                for (AggregateCount aggregateCount : lastConstraint.results) {
+                    AggregateCount had = carryOverCounts.remove(aggregateCount.distinctValue);
+                    if (had == null) {
+                        mergedResults.add(aggregateCount);
+                    } else {
+                        mergedResults.add(new AggregateCount(aggregateCount.mostRecentActivity, aggregateCount.distinctValue, aggregateCount.count + had.count,
+                            aggregateCount.unread || had.unread));
+                    }
+                }
+                for (AggregateCount aggregateCount : currentConstraint.results) {
+                    if (carryOverCounts.containsKey(aggregateCount.distinctValue) && aggregateCount.mostRecentActivity != null) {
+                        mergedResults.add(aggregateCount);
+                    }
+                }
+
+                AggregateCountsAnswerConstraint mergedAnswerConstraint = new AggregateCountsAnswerConstraint(
+                    mergedResults,
+                    currentConstraint.aggregateTerms,
+                    currentConstraint.skippedDistincts,
+                    currentConstraint.collectedDistincts);
+
+                mergedConstraints.put(entry.getKey(), mergedAnswerConstraint);
+            }
+
+        }
+        AggregateCountsAnswer mergedAnswer = new AggregateCountsAnswer(mergedConstraints, currentAnswer.resultsExhausted);
 
         logMergeResult(currentAnswer, lastAnswer, mergedAnswer, solutionLog);
 
@@ -70,12 +87,28 @@ public class AggregateCountsAnswerMerger implements MiruAnswerMerger<AggregateCo
         AggregateCountsAnswer mergedAnswer,
         MiruSolutionLog solutionLog) {
 
-        solutionLog.log(MiruSolutionLogLevel.INFO, "Merged:" +
-                "\n  From: terms={} results={} collected={} skipped={}" +
-                "\n  With: terms={} results={} collected={} skipped={}" +
-                "\n  To:   terms={} results={} collected={} skipped={}",
-            lastAnswer.aggregateTerms.size(), lastAnswer.results.size(), lastAnswer.collectedDistincts, lastAnswer.skippedDistincts,
-            currentAnswer.aggregateTerms.size(), currentAnswer.results.size(), currentAnswer.collectedDistincts, currentAnswer.skippedDistincts,
-            mergedAnswer.aggregateTerms.size(), mergedAnswer.results.size(), mergedAnswer.collectedDistincts, mergedAnswer.skippedDistincts);
+        if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
+
+            for (Map.Entry<String, AggregateCountsAnswerConstraint> entry : currentAnswer.constraints.entrySet()) {
+
+                AggregateCountsAnswerConstraint currentConstraint = entry.getValue();
+                AggregateCountsAnswerConstraint lastConstraint = lastAnswer.constraints.get(entry.getKey());
+                AggregateCountsAnswerConstraint mergedConstraint = mergedAnswer.constraints.get(entry.getKey());
+
+                if (lastConstraint != null) {
+
+                    solutionLog.log(MiruSolutionLogLevel.INFO, " Merged: {}"
+                            + "\n  From: terms={} results={} collected={} skipped={}"
+                            + "\n  With: terms={} results={} collected={} skipped={}"
+                            + "\n  To:   terms={} results={} collected={} skipped={}",
+                        entry.getKey(),
+                        lastConstraint.aggregateTerms.size(), lastConstraint.results.size(), lastConstraint.collectedDistincts, lastConstraint.skippedDistincts,
+                        currentConstraint.aggregateTerms.size(), currentConstraint.results.size(), currentConstraint.collectedDistincts,
+                        currentConstraint.skippedDistincts,
+                        mergedConstraint.aggregateTerms.size(), mergedConstraint.results.size(), mergedConstraint.collectedDistincts,
+                        mergedConstraint.skippedDistincts);
+                }
+            }
+        }
     }
 }

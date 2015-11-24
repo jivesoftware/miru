@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -23,9 +22,11 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
+import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCount;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsAnswer;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsConstants;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsQuery;
+import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsQueryConstraint;
 import com.jivesoftware.os.miru.ui.MiruPageRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.ISO8601DateFormat;
@@ -145,23 +146,26 @@ public class AggregateCountsPluginRegion implements MiruPageRegion<Optional<Aggr
                             try {
                                 @SuppressWarnings("unchecked")
                                 MiruResponse<AggregateCountsAnswer> aggregatesResponse = requestHelper.executeRequest(
-                                    new MiruRequest<>(tenantId, MiruActorId.NOT_PROVIDED, MiruAuthzExpression.NOT_PROVIDED,
+                                    new MiruRequest<>("toolsAggregateCounts",
+                                        tenantId,
+                                        MiruActorId.NOT_PROVIDED,
+                                        MiruAuthzExpression.NOT_PROVIDED,
                                         new AggregateCountsQuery(
                                             streamId,
                                             timeRange,
                                             MiruTimeRange.ALL_TIME,
                                             streamFilter,
-                                            constraintsFilter,
-                                            input.field,
-                                            0,
-                                            input.count),
+                                            ImmutableMap.of(input.field, new AggregateCountsQueryConstraint(constraintsFilter,
+                                                input.field,
+                                                0,
+                                                input.count))),
                                         MiruSolutionLogLevel.valueOf(input.logLevel)),
                                     endpoint,
                                     MiruResponse.class,
                                     new Class[] { AggregateCountsAnswer.class },
                                     null);
                                 if (aggregatesResponse != null && aggregatesResponse.answer != null) {
-                                    ImmutableList<AggregateCountsAnswer.AggregateCount> results = aggregatesResponse.answer.results;
+                                    List<AggregateCount> results = aggregatesResponse.answer.constraints.get(input.field).results;
                                     if (results.size() < input.count) {
                                         timeRange = null;
                                     } else {
@@ -188,7 +192,7 @@ public class AggregateCountsPluginRegion implements MiruPageRegion<Optional<Aggr
                     List<Map<String, Object>> summaries = Lists.newArrayList();
                     for (MiruResponse<AggregateCountsAnswer> response : responses) {
                         List<Map<String, Object>> page = Lists.newArrayList();
-                        for (AggregateCountsAnswer.AggregateCount result : response.answer.results) {
+                        for (AggregateCount result : response.answer.constraints.get(input.field).results) {
                             long time = result.mostRecentActivity.time;
                             long jiveEpochTime = snowflakeIdPacker.unpack(time)[0];
                             String clockTime = new ISO8601DateFormat().format(new Date(jiveEpochTime + JiveEpochTimestampProvider.JIVE_EPOCH));
