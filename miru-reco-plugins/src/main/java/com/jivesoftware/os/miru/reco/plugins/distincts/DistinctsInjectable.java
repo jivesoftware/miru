@@ -32,7 +32,7 @@ public class DistinctsInjectable {
         this.distincts = distincts;
     }
 
-    public MiruResponse<DistinctsAnswer> gatherDistincts(MiruRequest<DistinctsQuery> request) throws MiruQueryServiceException {
+    public MiruResponse<DistinctsAnswer> gatherDistincts(MiruRequest<DistinctsQuery> request) throws MiruQueryServiceException, InterruptedException {
         try {
             LOG.debug("askAndMerge: request={}", request);
             MiruTenantId tenantId = request.tenantId;
@@ -45,7 +45,7 @@ public class DistinctsInjectable {
                 new DistinctsAnswerMerger(),
                 DistinctsAnswer.EMPTY_RESULTS,
                 request.logLevel);
-        } catch (MiruPartitionUnavailableException e) {
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
             throw e;
         } catch (Exception e) {
             //TODO throw http error codes
@@ -55,7 +55,7 @@ public class DistinctsInjectable {
 
     public MiruPartitionResponse<DistinctsAnswer> gatherDistincts(MiruPartitionId partitionId,
         MiruRequestAndReport<DistinctsQuery, DistinctsReport> requestAndReport)
-        throws MiruQueryServiceException {
+        throws MiruQueryServiceException, InterruptedException {
         try {
             LOG.debug("askImmediate: partitionId={} request={}", partitionId, requestAndReport.request);
             LOG.trace("askImmediate: report={}", requestAndReport.report);
@@ -69,7 +69,7 @@ public class DistinctsInjectable {
                 Optional.fromNullable(requestAndReport.report),
                 DistinctsAnswer.EMPTY_RESULTS,
                 MiruSolutionLogLevel.NONE);
-        } catch (MiruPartitionUnavailableException e) {
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
             throw e;
         } catch (Exception e) {
             //TODO throw http error codes

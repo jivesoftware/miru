@@ -30,7 +30,7 @@ public class SeaAnomalyInjectable {
         this.seaAnomaly = seaAnomaly;
     }
 
-    public MiruResponse<SeaAnomalyAnswer> score(MiruRequest<SeaAnomalyQuery> request) throws MiruQueryServiceException {
+    public MiruResponse<SeaAnomalyAnswer> score(MiruRequest<SeaAnomalyQuery> request) throws MiruQueryServiceException, InterruptedException {
         try {
             LOG.debug("askAndMerge: request={}", request);
             MiruTenantId tenantId = request.tenantId;
@@ -43,7 +43,7 @@ public class SeaAnomalyInjectable {
                 new SeaAnomalyAnswerMerger(),
                 SeaAnomalyAnswer.EMPTY_RESULTS,
                 request.logLevel);
-        } catch (MiruPartitionUnavailableException e) {
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
             throw e;
         } catch (Exception e) {
             //TODO throw http error codes
@@ -52,7 +52,7 @@ public class SeaAnomalyInjectable {
     }
 
     public MiruPartitionResponse<SeaAnomalyAnswer> score(MiruPartitionId partitionId,
-        MiruRequestAndReport<SeaAnomalyQuery, SeaAnomalyReport> requestAndReport) throws MiruQueryServiceException {
+        MiruRequestAndReport<SeaAnomalyQuery, SeaAnomalyReport> requestAndReport) throws MiruQueryServiceException, InterruptedException {
         try {
             LOG.debug("askImmediate: partitionId={} request={}", partitionId, requestAndReport.request);
             LOG.trace("askImmediate: report={}", requestAndReport.report);
@@ -66,7 +66,7 @@ public class SeaAnomalyInjectable {
                 Optional.fromNullable(requestAndReport.report),
                 SeaAnomalyAnswer.EMPTY_RESULTS,
                 requestAndReport.request.logLevel);
-        } catch (MiruPartitionUnavailableException e) {
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
             throw e;
         } catch (Exception e) {
             //TODO throw http error codes

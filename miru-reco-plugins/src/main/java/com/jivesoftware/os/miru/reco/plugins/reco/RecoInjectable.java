@@ -46,7 +46,7 @@ public class RecoInjectable {
         this.distincts = distincts;
     }
 
-    public MiruResponse<RecoAnswer> collaborativeFilteringRecommendations(MiruRequest<RecoQuery> request) throws MiruQueryServiceException {
+    public MiruResponse<RecoAnswer> collaborativeFilteringRecommendations(MiruRequest<RecoQuery> request) throws MiruQueryServiceException, InterruptedException {
         try {
             LOG.debug("askAndMerge: request={}", request);
             MiruTenantId tenantId = request.tenantId;
@@ -90,7 +90,7 @@ public class RecoInjectable {
                 new RecoAnswerMerger(request.query.desiredNumberOfDistincts),
                 RecoAnswer.EMPTY_RESULTS,
                 request.logLevel);
-        } catch (MiruPartitionUnavailableException e) {
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
             throw e;
         } catch (Exception e) {
             //TODO throw http error codes
@@ -100,7 +100,7 @@ public class RecoInjectable {
 
     public MiruPartitionResponse<RecoAnswer> collaborativeFilteringRecommendations(MiruPartitionId partitionId,
         MiruRequestAndReport<RecoQuery, RecoReport> requestAndReport)
-        throws MiruQueryServiceException {
+        throws MiruQueryServiceException, InterruptedException {
         try {
             MiruTenantId tenantId = requestAndReport.request.tenantId;
             Miru miru = provider.getMiru(tenantId);
@@ -113,7 +113,7 @@ public class RecoInjectable {
                 Optional.fromNullable(requestAndReport.report),
                 RecoAnswer.EMPTY_RESULTS,
                 requestAndReport.request.logLevel);
-        } catch (MiruPartitionUnavailableException e) {
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
             throw e;
         } catch (Exception e) {
             //TODO throw http error codes

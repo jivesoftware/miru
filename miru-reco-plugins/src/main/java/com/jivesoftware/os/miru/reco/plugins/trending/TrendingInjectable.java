@@ -92,7 +92,7 @@ public class TrendingInjectable {
         return (double) (_long - _min) / (double) (_max - _min);
     }
 
-    public MiruResponse<TrendingAnswer> scoreTrending(MiruRequest<TrendingQuery> request) throws MiruQueryServiceException {
+    public MiruResponse<TrendingAnswer> scoreTrending(MiruRequest<TrendingQuery> request) throws MiruQueryServiceException, InterruptedException {
         try {
             WaveformRegression regression = new WaveformRegression();
             WaveformRegression relativeRegression = new WaveformRegression();
@@ -299,7 +299,7 @@ public class TrendingInjectable {
                 .addAll(firstNonNull(analyticsResponse.incompletePartitionIds, Collections.<Integer>emptyList()))
                 .build(),
                 solutionLog);
-        } catch (MiruPartitionUnavailableException e) {
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
             throw e;
         } catch (Exception e) {
             //TODO throw http error codes
@@ -309,7 +309,7 @@ public class TrendingInjectable {
 
     public MiruPartitionResponse<AnalyticsAnswer> scoreTrending(MiruPartitionId partitionId,
         MiruRequestAndReport<TrendingQuery, TrendingReport> requestAndReport)
-        throws MiruQueryServiceException {
+        throws MiruQueryServiceException, InterruptedException {
         try {
             MiruRequest<TrendingQuery> request = requestAndReport.request;
             LOG.debug("askImmediate: partitionId={} request={}", partitionId, request);
@@ -339,7 +339,7 @@ public class TrendingInjectable {
                 Optional.fromNullable(requestAndReport.report),
                 AnalyticsAnswer.EMPTY_RESULTS,
                 MiruSolutionLogLevel.NONE);
-        } catch (MiruPartitionUnavailableException e) {
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
             throw e;
         } catch (Exception e) {
             //TODO throw http error codes

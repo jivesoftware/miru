@@ -28,7 +28,7 @@ public class FullTextInjectable {
         this.fullText = fullText;
     }
 
-    public MiruResponse<FullTextAnswer> filterCustomStream(MiruRequest<FullTextQuery> request) throws MiruQueryServiceException {
+    public MiruResponse<FullTextAnswer> filterCustomStream(MiruRequest<FullTextQuery> request) throws MiruQueryServiceException, InterruptedException {
         try {
             MiruTenantId tenantId = request.tenantId;
             Miru miru = provider.getMiru(tenantId);
@@ -42,7 +42,7 @@ public class FullTextInjectable {
                 new FullTextAnswerMerger(request.query.desiredNumberOfResults),
                 FullTextAnswer.EMPTY_RESULTS,
                 request.logLevel);
-        } catch (MiruPartitionUnavailableException e) {
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
             throw e;
         } catch (Exception e) {
             //TODO throw http error codes
@@ -52,7 +52,7 @@ public class FullTextInjectable {
 
     public MiruPartitionResponse<FullTextAnswer> filterCustomStream(MiruPartitionId partitionId,
         MiruRequestAndReport<FullTextQuery, FullTextReport> requestAndReport)
-        throws MiruQueryServiceException {
+        throws MiruQueryServiceException, InterruptedException {
         try {
             MiruTenantId tenantId = requestAndReport.request.tenantId;
             Miru miru = provider.getMiru(tenantId);
@@ -66,7 +66,7 @@ public class FullTextInjectable {
                 Optional.fromNullable(requestAndReport.report),
                 FullTextAnswer.EMPTY_RESULTS,
                 MiruSolutionLogLevel.NONE);
-        } catch (MiruPartitionUnavailableException e) {
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
             throw e;
         } catch (Exception e) {
             //TODO throw http error codes

@@ -47,8 +47,8 @@ public class DistinctCountEndpoints {
 
             //log.info("countCustomStream: " + answer.collectedDistincts);
             return responseHelper.jsonResponse(result);
-        } catch (MiruPartitionUnavailableException e) {
-            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Partition unavailable").build();
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
+            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Unavailable " + e.getMessage()).build();
         } catch (Exception e) {
             log.error("Failed to gather counts for custom stream.", e);
             return Response.serverError().build();
@@ -65,8 +65,8 @@ public class DistinctCountEndpoints {
 
             //log.info("countInboxStreamAll: " + answer.collectedDistincts);
             return responseHelper.jsonResponse(result);
-        } catch (MiruPartitionUnavailableException e) {
-            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Partition unavailable").build();
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
+            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Unavailable " + e.getMessage()).build();
         } catch (Exception e) {
             log.error("Failed to gather counts for inbox.", e);
             return Response.serverError().build();
@@ -83,8 +83,8 @@ public class DistinctCountEndpoints {
 
             //log.info("countInboxStreamUnread: " + answer.collectedDistincts);
             return responseHelper.jsonResponse(result);
-        } catch (MiruPartitionUnavailableException e) {
-            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Partition unavailable").build();
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
+            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Unavailable " + e.getMessage()).build();
         } catch (Exception e) {
             log.error("Failed to gather counts for inbox (unread).", e);
             return Response.serverError().build();
@@ -101,8 +101,8 @@ public class DistinctCountEndpoints {
             MiruPartitionResponse<DistinctCountAnswer> result = injectable.countCustomStream(partitionId, requestAndReport);
 
             return responseHelper.jsonResponse(result != null ? result : new MiruPartitionResponse<>(DistinctCountAnswer.EMPTY_RESULTS, null));
-        } catch (MiruPartitionUnavailableException e) {
-            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Partition unavailable").build();
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
+            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Unavailable " + e.getMessage()).build();
         } catch (Exception e) {
             log.error("Failed to gather counts for custom stream for partition: " + partitionId.getId(), e);
             return Response.serverError().build();
@@ -119,8 +119,8 @@ public class DistinctCountEndpoints {
             MiruPartitionResponse<DistinctCountAnswer> result = injectable.countInboxStreamAll(partitionId, requestAndReport);
 
             return responseHelper.jsonResponse(result != null ? result : new MiruPartitionResponse(DistinctCountAnswer.EMPTY_RESULTS, null));
-        } catch (MiruPartitionUnavailableException e) {
-            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Partition unavailable").build();
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
+            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Unavailable " + e.getMessage()).build();
         } catch (Exception e) {
             log.error("Failed to gather counts for inbox for partition: " + partitionId.getId(), e);
             return Response.serverError().build();
@@ -137,8 +137,8 @@ public class DistinctCountEndpoints {
             MiruPartitionResponse<DistinctCountAnswer> result = injectable.countInboxStreamUnread(partitionId, requestAndReport);
 
             return responseHelper.jsonResponse(result != null ? result : new MiruPartitionResponse<>(DistinctCountAnswer.EMPTY_RESULTS, null));
-        } catch (MiruPartitionUnavailableException e) {
-            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Partition unavailable").build();
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
+            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Unavailable " + e.getMessage()).build();
         } catch (Exception e) {
             log.error("Failed to gather counts for inbox (unread) for partition: " + partitionId.getId(), e);
             return Response.serverError().build();

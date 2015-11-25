@@ -31,7 +31,7 @@ public class UniquesInjectable {
         this.provider = provider;
     }
 
-    public MiruResponse<UniquesAnswer> gatherUniques(MiruRequest<UniquesQuery> request) throws MiruQueryServiceException {
+    public MiruResponse<UniquesAnswer> gatherUniques(MiruRequest<UniquesQuery> request) throws MiruQueryServiceException, InterruptedException {
         try {
 
             UniquesQuery uniquesQuery = request.query;
@@ -56,7 +56,7 @@ public class UniquesInjectable {
                 gatherDistincts.incompletePartitionIds,
                 gatherDistincts.log);
 
-        } catch (MiruPartitionUnavailableException e) {
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
             throw e;
         } catch (Exception e) {
             //TODO throw http error codes
@@ -64,7 +64,7 @@ public class UniquesInjectable {
         }
     }
 
-    private MiruResponse<DistinctsAnswer> gatherDistincts(MiruRequest<DistinctsQuery> request) throws MiruQueryServiceException {
+    private MiruResponse<DistinctsAnswer> gatherDistincts(MiruRequest<DistinctsQuery> request) throws MiruQueryServiceException, InterruptedException {
         try {
             Distincts distincts = new Distincts(provider.getTermComposer());
 
@@ -73,13 +73,13 @@ public class UniquesInjectable {
             Miru miru = provider.getMiru(tenantId);
             return miru.askAndMerge(tenantId,
                 new MiruSolvableFactory<>(provider.getStats(), "gatherDistincts", new DistinctsQuestion(distincts,
-                        request,
-                        provider.getRemotePartition(DistinctsRemotePartition.class))),
+                    request,
+                    provider.getRemotePartition(DistinctsRemotePartition.class))),
                 new DistinctsAnswerEvaluator(),
                 new DistinctsAnswerMerger(),
                 DistinctsAnswer.EMPTY_RESULTS,
                 request.logLevel);
-        } catch (MiruPartitionUnavailableException e) {
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
             throw e;
         } catch (Exception e) {
             //TODO throw http error codes

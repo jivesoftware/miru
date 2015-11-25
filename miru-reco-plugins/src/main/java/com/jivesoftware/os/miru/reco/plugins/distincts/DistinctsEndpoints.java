@@ -61,8 +61,8 @@ public class DistinctsEndpoints {
                 log.warn("gatherDistincts: no answer for tenant: {}", request.tenantId);
             }
             return responseHelper.jsonResponse(response);
-        } catch (MiruPartitionUnavailableException e) {
-            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Partition unavailable").build();
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
+            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Unavailable " + e.getMessage()).build();
         } catch (Exception e) {
             log.error("Failed to gather distincts for tenant: {}", new Object[] { request.tenantId }, e);
             return Response.serverError().build();
@@ -92,8 +92,8 @@ public class DistinctsEndpoints {
             //byte[] responseBytes = result != null ? Snappy.compress(objectMapper.writeValueAsBytes(result)) : new byte[0];
             byte[] responseBytes = result != null ? conf.asByteArray(result) : new byte[0];
             return Response.ok(responseBytes, MediaType.APPLICATION_OCTET_STREAM).build();
-        } catch (MiruPartitionUnavailableException e) {
-            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Partition unavailable").build();
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
+            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Unavailable " + e.getMessage()).build();
         } catch (Exception e) {
             log.error("Failed to gather distincts for tenant: {} partition: {}", new Object[] { requestAndReport.request.tenantId, partitionId.getId() }, e);
             return Response.serverError().build();

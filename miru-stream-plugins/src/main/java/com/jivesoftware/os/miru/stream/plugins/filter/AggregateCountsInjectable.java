@@ -28,7 +28,8 @@ public class AggregateCountsInjectable {
         this.aggregateCounts = aggregateCounts;
     }
 
-    public MiruResponse<AggregateCountsAnswer> filterCustomStream(MiruRequest<AggregateCountsQuery> request) throws MiruQueryServiceException {
+    public MiruResponse<AggregateCountsAnswer> filterCustomStream(MiruRequest<AggregateCountsQuery> request) throws MiruQueryServiceException,
+        InterruptedException {
         try {
             MiruTenantId tenantId = request.tenantId;
             Miru miru = provider.getMiru(tenantId);
@@ -39,7 +40,7 @@ public class AggregateCountsInjectable {
                 new AggregateCountsAnswerMerger(),
                 AggregateCountsAnswer.EMPTY_RESULTS,
                 request.logLevel);
-        } catch (MiruPartitionUnavailableException e) {
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
             throw e;
         } catch (Exception e) {
             //TODO throw http error codes
@@ -47,7 +48,8 @@ public class AggregateCountsInjectable {
         }
     }
 
-    public MiruResponse<AggregateCountsAnswer> filterInboxStreamAll(MiruRequest<AggregateCountsQuery> request) throws MiruQueryServiceException {
+    public MiruResponse<AggregateCountsAnswer> filterInboxStreamAll(MiruRequest<AggregateCountsQuery> request) throws MiruQueryServiceException,
+        InterruptedException {
         try {
             MiruTenantId tenantId = request.tenantId;
             Miru miru = provider.getMiru(tenantId);
@@ -60,7 +62,7 @@ public class AggregateCountsInjectable {
                 new AggregateCountsAnswerMerger(),
                 AggregateCountsAnswer.EMPTY_RESULTS,
                 request.logLevel);
-        } catch (MiruPartitionUnavailableException e) {
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
             throw e;
         } catch (Exception e) {
             //TODO throw http error codes
@@ -68,7 +70,8 @@ public class AggregateCountsInjectable {
         }
     }
 
-    public MiruResponse<AggregateCountsAnswer> filterInboxStreamUnread(MiruRequest<AggregateCountsQuery> request) throws MiruQueryServiceException {
+    public MiruResponse<AggregateCountsAnswer> filterInboxStreamUnread(MiruRequest<AggregateCountsQuery> request) throws MiruQueryServiceException,
+        InterruptedException {
         try {
             MiruTenantId tenantId = request.tenantId;
             Miru miru = provider.getMiru(tenantId);
@@ -81,7 +84,7 @@ public class AggregateCountsInjectable {
                 new AggregateCountsAnswerMerger(),
                 AggregateCountsAnswer.EMPTY_RESULTS,
                 request.logLevel);
-        } catch (MiruPartitionUnavailableException e) {
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
             throw e;
         } catch (Exception e) {
             //TODO throw http error codes
@@ -91,7 +94,7 @@ public class AggregateCountsInjectable {
 
     public MiruPartitionResponse<AggregateCountsAnswer> filterCustomStream(MiruPartitionId partitionId,
         MiruRequestAndReport<AggregateCountsQuery, AggregateCountsReport> requestAndReport)
-        throws MiruQueryServiceException {
+        throws MiruQueryServiceException, InterruptedException {
         try {
             MiruTenantId tenantId = requestAndReport.request.tenantId;
             Miru miru = provider.getMiru(tenantId);
@@ -105,7 +108,7 @@ public class AggregateCountsInjectable {
                 Optional.fromNullable(requestAndReport.report),
                 AggregateCountsAnswer.EMPTY_RESULTS,
                 MiruSolutionLogLevel.NONE);
-        } catch (MiruPartitionUnavailableException e) {
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
             throw e;
         } catch (Exception e) {
             //TODO throw http error codes
@@ -115,7 +118,7 @@ public class AggregateCountsInjectable {
 
     public MiruPartitionResponse<AggregateCountsAnswer> filterInboxStreamAll(MiruPartitionId partitionId,
         MiruRequestAndReport<AggregateCountsQuery, AggregateCountsReport> requestAndReport)
-        throws MiruQueryServiceException {
+        throws MiruQueryServiceException, InterruptedException {
         try {
             MiruTenantId tenantId = requestAndReport.request.tenantId;
             Miru miru = provider.getMiru(tenantId);
@@ -129,7 +132,7 @@ public class AggregateCountsInjectable {
                 Optional.fromNullable(requestAndReport.report),
                 AggregateCountsAnswer.EMPTY_RESULTS,
                 MiruSolutionLogLevel.NONE);
-        } catch (MiruPartitionUnavailableException e) {
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
             throw e;
         } catch (Exception e) {
             //TODO throw http error codes
@@ -139,7 +142,7 @@ public class AggregateCountsInjectable {
 
     public MiruPartitionResponse<AggregateCountsAnswer> filterInboxStreamUnread(MiruPartitionId partitionId,
         MiruRequestAndReport<AggregateCountsQuery, AggregateCountsReport> requestAndReport)
-        throws MiruQueryServiceException {
+        throws MiruQueryServiceException, InterruptedException {
         try {
             MiruTenantId tenantId = requestAndReport.request.tenantId;
             Miru miru = provider.getMiru(tenantId);
@@ -153,7 +156,7 @@ public class AggregateCountsInjectable {
                 Optional.fromNullable(requestAndReport.report),
                 AggregateCountsAnswer.EMPTY_RESULTS,
                 MiruSolutionLogLevel.NONE);
-        } catch (MiruPartitionUnavailableException e) {
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
             throw e;
         } catch (Exception e) {
             //TODO throw http error codes
