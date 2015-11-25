@@ -9,6 +9,7 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.IOException;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 
 /**
  * @param <Q> query type
@@ -60,6 +61,13 @@ public class MiruSolvableFactory<Q, A, R> {
             } catch (IOException io) {
                 LOG.error("Solvable encountered an IOException for {}", new Object[]{replica.getCoord()}, io);
                 throw io;
+            } catch (ExecutionException ee) {
+                if (ee.getCause() instanceof InterruptedException) {
+                    LOG.debug("Solvable encountered an InterruptedException for {}", new Object[]{replica.getCoord()}, ee);
+                } else {
+                    LOG.error("Solvable encountered an ExecutionException for {}", new Object[]{replica.getCoord()}, ee);
+                    throw ee;
+                }
             } catch (Throwable t) {
                 LOG.error("Solvable encountered a problem for {}", new Object[]{replica.getCoord()}, t);
                 throw t;
