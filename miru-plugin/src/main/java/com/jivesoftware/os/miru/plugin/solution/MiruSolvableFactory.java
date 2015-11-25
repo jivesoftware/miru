@@ -66,8 +66,8 @@ public class MiruSolvableFactory<Q, A, R> {
                     LOG.debug("Solvable encountered an InterruptedException for {}", new Object[]{replica.getCoord()}, ee);
                 } else {
                     LOG.error("Solvable encountered an ExecutionException for {}", new Object[]{replica.getCoord()}, ee);
-                    throw ee;
                 }
+                throw ee;
             } catch (Throwable t) {
                 LOG.error("Solvable encountered a problem for {}", new Object[]{replica.getCoord()}, t);
                 throw t;
