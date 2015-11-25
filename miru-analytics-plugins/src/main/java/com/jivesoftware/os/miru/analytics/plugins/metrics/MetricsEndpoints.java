@@ -50,8 +50,8 @@ public class MetricsEndpoints {
                     + " in " + (System.currentTimeMillis() - t) + " ms");
             }
             return responseHelper.jsonResponse(response);
-        } catch (MiruPartitionUnavailableException e) {
-            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Partition unavailable").build();
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
+            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Unavailable " + e.getMessage()).build();
         } catch (Exception e) {
             log.error("Failed to score.", e);
             return Response.serverError().build();
@@ -67,8 +67,8 @@ public class MetricsEndpoints {
         try {
             MiruPartitionResponse<MetricsAnswer> result = injectable.score(partitionId, requestAndReport);
             return responseHelper.jsonResponse(result != null ? result : new MiruPartitionResponse<>(MetricsAnswer.EMPTY_RESULTS, null));
-        } catch (MiruPartitionUnavailableException e) {
-            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Partition unavailable").build();
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
+            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Unavailable " + e.getMessage()).build();
         } catch (Exception e) {
             log.error("Failed to score trending for partition: " + partitionId.getId(), e);
             return Response.serverError().build();

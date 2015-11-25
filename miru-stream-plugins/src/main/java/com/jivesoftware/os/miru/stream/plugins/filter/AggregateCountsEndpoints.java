@@ -47,8 +47,8 @@ public class AggregateCountsEndpoints {
 
             //log.info("filterCustomStream: " + answer.collectedDistincts);
             return responseHelper.jsonResponse(result);
-        } catch (MiruPartitionUnavailableException e) {
-            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Partition unavailable").build();
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
+            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Unavailable " + e.getMessage()).build();
         } catch (Exception e) {
             log.error("Failed to filter custom stream.", e);
             return Response.serverError().build();
@@ -65,8 +65,8 @@ public class AggregateCountsEndpoints {
 
             //log.info("filterInboxStreamAll: " + answer.collectedDistincts);
             return responseHelper.jsonResponse(result);
-        } catch (MiruPartitionUnavailableException e) {
-            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Partition unavailable").build();
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
+            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Unavailable " + e.getMessage()).build();
         } catch (Exception e) {
             log.error("Failed to filter inbox.", e);
             return Response.serverError().build();
@@ -83,8 +83,8 @@ public class AggregateCountsEndpoints {
 
             //log.info("filterInboxStreamUnread: " + answer.collectedDistincts);
             return responseHelper.jsonResponse(result);
-        } catch (MiruPartitionUnavailableException e) {
-            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Partition unavailable").build();
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
+            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Unavailable " + e.getMessage()).build();
         } catch (Exception e) {
             log.error("Failed to filter inbox (unread).", e);
             return Response.serverError().build();
@@ -101,8 +101,8 @@ public class AggregateCountsEndpoints {
             MiruPartitionResponse<AggregateCountsAnswer> result = injectable.filterCustomStream(partitionId, requestAndReport);
 
             return responseHelper.jsonResponse(result != null ? result : new MiruPartitionResponse<>(AggregateCountsAnswer.EMPTY_RESULTS, null));
-        } catch (MiruPartitionUnavailableException e) {
-            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Partition unavailable").build();
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
+            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Unavailable " + e.getMessage()).build();
         } catch (Exception e) {
             log.error("Failed to filter custom stream for partition: " + partitionId.getId(), e);
             return Response.serverError().build();
@@ -119,8 +119,8 @@ public class AggregateCountsEndpoints {
             MiruPartitionResponse<AggregateCountsAnswer> result = injectable.filterInboxStreamAll(partitionId, requestAndReport);
 
             return responseHelper.jsonResponse(result != null ? result : new MiruPartitionResponse<>(AggregateCountsAnswer.EMPTY_RESULTS, null));
-        } catch (MiruPartitionUnavailableException e) {
-            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Partition unavailable").build();
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
+            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Unavailable " + e.getMessage()).build();
         } catch (Exception e) {
             log.error("Failed to filter inbox stream all for partition: " + partitionId.getId(), e);
             return Response.serverError().build();
@@ -138,8 +138,8 @@ public class AggregateCountsEndpoints {
             MiruPartitionResponse<AggregateCountsAnswer> result = injectable.filterInboxStreamUnread(partitionId, requestAndReport);
 
             return responseHelper.jsonResponse(result != null ? result : new MiruPartitionResponse<>(AggregateCountsAnswer.EMPTY_RESULTS, null));
-        } catch (MiruPartitionUnavailableException e) {
-            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Partition unavailable").build();
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
+            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Unavailable " + e.getMessage()).build();
         } catch (Exception e) {
             log.error("Failed to filter inbox stream unread for partition: " + partitionId.getId(), e);
             return Response.serverError().build();

@@ -47,8 +47,8 @@ public class RecoEndpoints {
             log.info("collaborativeFiltering: " + (response != null && response.answer != null ? response.answer.results.size() : -1) +
                 " in " + (System.currentTimeMillis() - t) + " ms");
             return responseHelper.jsonResponse(response);
-        } catch (MiruPartitionUnavailableException e) {
-            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Partition unavailable").build();
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
+            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Unavailable " + e.getMessage()).build();
         } catch (Exception e) {
             log.error("Failed to score reco.", e);
             return Response.serverError().build();
@@ -66,8 +66,8 @@ public class RecoEndpoints {
 
             //log.info("collaborativeFiltering: " + answer.results.size());
             return responseHelper.jsonResponse(result != null ? result : new MiruPartitionResponse<>(RecoAnswer.EMPTY_RESULTS, null));
-        } catch (MiruPartitionUnavailableException e) {
-            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Partition unavailable").build();
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
+            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Unavailable " + e.getMessage()).build();
         } catch (Exception e) {
             log.error("Failed to score reco for partition: " + partitionId.getId(), e);
             return Response.serverError().build();

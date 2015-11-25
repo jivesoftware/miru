@@ -30,7 +30,7 @@ public class StumptownInjectable {
         this.stumptown = stumptown;
     }
 
-    public MiruResponse<StumptownAnswer> score(MiruRequest<StumptownQuery> request) throws MiruQueryServiceException {
+    public MiruResponse<StumptownAnswer> score(MiruRequest<StumptownQuery> request) throws MiruQueryServiceException, InterruptedException {
         try {
             LOG.debug("askAndMerge: request={}", request);
             MiruTenantId tenantId = request.tenantId;
@@ -43,7 +43,7 @@ public class StumptownInjectable {
                 new StumptownAnswerMerger(request.query.desiredNumberOfResultsPerWaveform),
                 StumptownAnswer.EMPTY_RESULTS,
                 request.logLevel);
-        } catch (MiruPartitionUnavailableException e) {
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
             throw e;
         } catch (Exception e) {
             //TODO throw http error codes
@@ -52,7 +52,7 @@ public class StumptownInjectable {
     }
 
     public MiruPartitionResponse<StumptownAnswer> score(MiruPartitionId partitionId,
-        MiruRequestAndReport<StumptownQuery, StumptownReport> requestAndReport) throws MiruQueryServiceException {
+        MiruRequestAndReport<StumptownQuery, StumptownReport> requestAndReport) throws MiruQueryServiceException, InterruptedException {
         try {
             LOG.debug("askImmediate: partitionId={} request={}", partitionId, requestAndReport.request);
             LOG.trace("askImmediate: report={}", requestAndReport.report);
@@ -66,7 +66,7 @@ public class StumptownInjectable {
                 Optional.fromNullable(requestAndReport.report),
                 StumptownAnswer.EMPTY_RESULTS,
                 requestAndReport.request.logLevel);
-        } catch (MiruPartitionUnavailableException e) {
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
             throw e;
         } catch (Exception e) {
             //TODO throw http error codes

@@ -27,7 +27,7 @@ public class DistinctCountInjectable {
         this.distinctCount = distinctCount;
     }
 
-    public MiruResponse<DistinctCountAnswer> countCustomStream(MiruRequest<DistinctCountQuery> request) throws MiruQueryServiceException {
+    public MiruResponse<DistinctCountAnswer> countCustomStream(MiruRequest<DistinctCountQuery> request) throws MiruQueryServiceException, InterruptedException {
         try {
             MiruTenantId tenantId = request.tenantId;
             Miru miru = provider.getMiru(tenantId);
@@ -39,7 +39,7 @@ public class DistinctCountInjectable {
                 new DistinctCounterAnswerMerger(),
                 DistinctCountAnswer.EMPTY_RESULTS,
                 request.logLevel);
-        } catch (MiruPartitionUnavailableException e) {
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
             throw e;
         } catch (Exception e) {
             //TODO throw http error codes
@@ -47,7 +47,7 @@ public class DistinctCountInjectable {
         }
     }
 
-    public MiruResponse<DistinctCountAnswer> countInboxStreamAll(MiruRequest<DistinctCountQuery> request) throws MiruQueryServiceException {
+    public MiruResponse<DistinctCountAnswer> countInboxStreamAll(MiruRequest<DistinctCountQuery> request) throws MiruQueryServiceException, InterruptedException {
         try {
             MiruTenantId tenantId = request.tenantId;
             Miru miru = provider.getMiru(tenantId);
@@ -61,7 +61,7 @@ public class DistinctCountInjectable {
                 new DistinctCounterAnswerMerger(),
                 DistinctCountAnswer.EMPTY_RESULTS,
                 request.logLevel);
-        } catch (MiruPartitionUnavailableException e) {
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
             throw e;
         } catch (Exception e) {
             //TODO throw http error codes
@@ -69,7 +69,8 @@ public class DistinctCountInjectable {
         }
     }
 
-    public MiruResponse<DistinctCountAnswer> countInboxStreamUnread(MiruRequest<DistinctCountQuery> request) throws MiruQueryServiceException {
+    public MiruResponse<DistinctCountAnswer> countInboxStreamUnread(MiruRequest<DistinctCountQuery> request) throws MiruQueryServiceException,
+        InterruptedException {
         try {
             MiruTenantId tenantId = request.tenantId;
             Miru miru = provider.getMiru(tenantId);
@@ -83,7 +84,7 @@ public class DistinctCountInjectable {
                 new DistinctCounterAnswerMerger(),
                 DistinctCountAnswer.EMPTY_RESULTS,
                 request.logLevel);
-        } catch (MiruPartitionUnavailableException e) {
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
             throw e;
         } catch (Exception e) {
             //TODO throw http error codes
@@ -93,7 +94,7 @@ public class DistinctCountInjectable {
 
     public MiruPartitionResponse<DistinctCountAnswer> countCustomStream(MiruPartitionId partitionId,
         MiruRequestAndReport<DistinctCountQuery, DistinctCountReport> requestAndReport)
-        throws MiruQueryServiceException {
+        throws MiruQueryServiceException, InterruptedException {
         try {
             MiruTenantId tenantId = requestAndReport.request.tenantId;
             Miru miru = provider.getMiru(tenantId);
@@ -105,7 +106,7 @@ public class DistinctCountInjectable {
                 Optional.fromNullable(requestAndReport.report),
                 DistinctCountAnswer.EMPTY_RESULTS,
                 MiruSolutionLogLevel.NONE);
-        } catch (MiruPartitionUnavailableException e) {
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
             throw e;
         } catch (Exception e) {
             //TODO throw http error codes
@@ -115,7 +116,7 @@ public class DistinctCountInjectable {
 
     public MiruPartitionResponse<DistinctCountAnswer> countInboxStreamAll(MiruPartitionId partitionId,
         MiruRequestAndReport<DistinctCountQuery, DistinctCountReport> requestAndReport)
-        throws MiruQueryServiceException {
+        throws MiruQueryServiceException, InterruptedException {
         try {
             MiruTenantId tenantId = requestAndReport.request.tenantId;
             Miru miru = provider.getMiru(tenantId);
@@ -129,7 +130,7 @@ public class DistinctCountInjectable {
                 Optional.fromNullable(requestAndReport.report),
                 DistinctCountAnswer.EMPTY_RESULTS,
                 MiruSolutionLogLevel.NONE);
-        } catch (MiruPartitionUnavailableException e) {
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
             throw e;
         } catch (Exception e) {
             //TODO throw http error codes
@@ -139,7 +140,7 @@ public class DistinctCountInjectable {
 
     public MiruPartitionResponse<DistinctCountAnswer> countInboxStreamUnread(MiruPartitionId partitionId,
         MiruRequestAndReport<DistinctCountQuery, DistinctCountReport> requestAndReport)
-        throws MiruQueryServiceException {
+        throws MiruQueryServiceException, InterruptedException {
         try {
             MiruTenantId tenantId = requestAndReport.request.tenantId;
             Miru miru = provider.getMiru(tenantId);
@@ -153,7 +154,7 @@ public class DistinctCountInjectable {
                 Optional.fromNullable(requestAndReport.report),
                 DistinctCountAnswer.EMPTY_RESULTS,
                 MiruSolutionLogLevel.NONE);
-        } catch (MiruPartitionUnavailableException e) {
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
             throw e;
         } catch (Exception e) {
             //TODO throw http error codes

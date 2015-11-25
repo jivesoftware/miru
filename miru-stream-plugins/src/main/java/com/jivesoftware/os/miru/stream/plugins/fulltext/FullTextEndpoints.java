@@ -45,8 +45,8 @@ public class FullTextEndpoints {
 
             //log.info("filterCustomStream: " + answer.collectedDistincts);
             return responseHelper.jsonResponse(result);
-        } catch (MiruPartitionUnavailableException e) {
-            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Partition unavailable").build();
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
+            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Unavailable " + e.getMessage()).build();
         } catch (Exception e) {
             log.error("Failed to filter custom stream.", e);
             return Response.serverError().build();
@@ -63,8 +63,8 @@ public class FullTextEndpoints {
             MiruPartitionResponse<FullTextAnswer> result = injectable.filterCustomStream(partitionId, requestAndReport);
 
             return responseHelper.jsonResponse(result != null ? result : new MiruPartitionResponse<>(FullTextAnswer.EMPTY_RESULTS, null));
-        } catch (MiruPartitionUnavailableException e) {
-            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Partition unavailable").build();
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
+            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Unavailable " + e.getMessage()).build();
         } catch (Exception e) {
             log.error("Failed to filter custom stream for partition: " + partitionId.getId(), e);
             return Response.serverError().build();

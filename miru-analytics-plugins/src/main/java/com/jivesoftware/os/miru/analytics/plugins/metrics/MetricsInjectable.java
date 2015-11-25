@@ -31,7 +31,7 @@ public class MetricsInjectable {
         this.metrics = trending;
     }
 
-    public MiruResponse<MetricsAnswer> score(MiruRequest<MetricsQuery> request) throws MiruQueryServiceException {
+    public MiruResponse<MetricsAnswer> score(MiruRequest<MetricsQuery> request) throws MiruQueryServiceException, InterruptedException {
         try {
             LOG.debug("askAndMerge: request={}", request);
             MiruTenantId tenantId = request.tenantId;
@@ -44,7 +44,7 @@ public class MetricsInjectable {
                 new MetricsAnswerMerger(request.query.timeRange, request.query.divideTimeRangeIntoNSegments),
                 MetricsAnswer.EMPTY_RESULTS,
                 request.logLevel);
-        } catch (MiruPartitionUnavailableException e) {
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
             throw e;
         } catch (Exception e) {
             //TODO throw http error codes
@@ -53,7 +53,7 @@ public class MetricsInjectable {
     }
 
     public MiruPartitionResponse<MetricsAnswer> score(MiruPartitionId partitionId,
-        MiruRequestAndReport<MetricsQuery, MetricsReport> requestAndReport) throws MiruQueryServiceException {
+        MiruRequestAndReport<MetricsQuery, MetricsReport> requestAndReport) throws MiruQueryServiceException, InterruptedException {
         try {
             LOG.debug("askImmediate: partitionId={} request={}", partitionId, requestAndReport.request);
             LOG.trace("askImmediate: report={}", requestAndReport.report);
@@ -67,7 +67,7 @@ public class MetricsInjectable {
                 Optional.fromNullable(requestAndReport.report),
                 MetricsAnswer.EMPTY_RESULTS,
                 requestAndReport.request.logLevel);
-        } catch (MiruPartitionUnavailableException e) {
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
             throw e;
         } catch (Exception e) {
             //TODO throw http error codes

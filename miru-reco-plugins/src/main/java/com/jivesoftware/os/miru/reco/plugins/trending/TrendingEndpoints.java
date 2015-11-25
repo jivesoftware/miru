@@ -58,8 +58,8 @@ public class TrendingEndpoints {
             log.info("scoreTrending: " + response.answer.results.size() + " / " + request.query.desiredNumberOfDistincts
                 + " in " + (System.currentTimeMillis() - t) + " ms");
             return responseHelper.jsonResponse(response);
-        } catch (MiruPartitionUnavailableException e) {
-            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Partition unavailable").build();
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
+            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Unavailable " + e.getMessage()).build();
         } catch (Exception e) {
             log.error("Failed to score trending.", e);
             return Response.serverError().build();
@@ -88,8 +88,8 @@ public class TrendingEndpoints {
             //byte[] responseBytes = result != null ? Snappy.compress(objectMapper.writeValueAsBytes(result)) : new byte[0];
             byte[] responseBytes = result != null ? conf.asByteArray(result) : new byte[0];
             return Response.ok(responseBytes, MediaType.APPLICATION_OCTET_STREAM).build();
-        } catch (MiruPartitionUnavailableException e) {
-            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Partition unavailable").build();
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
+            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Unavailable " + e.getMessage()).build();
         } catch (Exception e) {
             log.error("Failed to score trending for tenant: {} partition: {}", new Object[] { requestAndReport.request.tenantId, partitionId }, e);
             return Response.serverError().build();

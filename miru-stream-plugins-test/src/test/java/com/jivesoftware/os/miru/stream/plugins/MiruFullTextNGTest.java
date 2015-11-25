@@ -21,7 +21,6 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
-import com.jivesoftware.os.miru.bitmaps.roaring5.MiruBitmapsRoaring;
 import com.jivesoftware.os.miru.bitmaps.roaring5.buffer.MiruBitmapsRoaringBuffer;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
@@ -192,7 +191,7 @@ public class MiruFullTextNGTest {
         runQueries(rand, timespan, time.get(), FullTextQuery.Strategy.TF_IDF);
     }
 
-    private void runQueries(Random rand, long timespan, long lastTime, FullTextQuery.Strategy strategy) throws MiruQueryServiceException {
+    private void runQueries(Random rand, long timespan, long lastTime, FullTextQuery.Strategy strategy) throws MiruQueryServiceException, InterruptedException {
         System.out.println("-------- " + strategy + " --------");
         final MiruTimeRange timeRange = new MiruTimeRange(lastTime - timespan, lastTime);
 
