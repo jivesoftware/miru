@@ -82,8 +82,8 @@ public class MiruAggregateUtil {
             int lastSetBit = answerCollector == null ? bitmaps.lastSetBit(answer) : answerCollector.lastSetBit;
             LOG.trace("stream: lastSetBit={}", lastSetBit);
             if (priorLastSetBit <= lastSetBit) {
-                LOG.error("Failed to make forward progress while streaming {} removing lastSetBit:{} remaining:{}",
-                    coord, lastSetBit, bitmaps.cardinality(answer));
+                LOG.error("Failed to make forward progress while streaming {} removing lastSetBit:{} remaining:{} lastId:{}",
+                    coord, lastSetBit, bitmaps.cardinality(answer), requestContext.getActivityIndex().lastId(stackBuffer));
                 break;
             }
             priorLastSetBit = lastSetBit;

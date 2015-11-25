@@ -5,12 +5,12 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-build-management</artifactId>
-        <version>0.659</version>
+        <version>0.660</version>
         <relativePath>../inheritance-poms/global-build-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru</groupId>
     <artifactId>miru-bitmaps-ewah</artifactId>
-    <version>0.659</version>
+    <version>0.660</version>
     <properties>
         <module.type>service_lib</module.type>
     </properties>
@@ -27,7 +27,7 @@
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-plugin</artifactId>
-            <version>0.659</version>
+            <version>0.660</version>
         </dependency>
 
         <dependency>
@@ -38,13 +38,13 @@
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-api</artifactId>
-            <version>0.659</version>
+            <version>0.660</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-service</artifactId>
-            <version>0.659</version>
+            <version>0.660</version>
             <scope>test</scope>
         </dependency>
         <dependency>
