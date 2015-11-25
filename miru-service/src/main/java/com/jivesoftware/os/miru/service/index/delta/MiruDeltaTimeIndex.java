@@ -7,6 +7,7 @@ import com.jivesoftware.os.miru.service.index.Mergeable;
 import com.jivesoftware.os.miru.service.index.filer.MiruFilerTimeIndex;
 import gnu.trove.list.array.TLongArrayList;
 import gnu.trove.map.hash.TLongIntHashMap;
+import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -68,7 +69,7 @@ public class MiruDeltaTimeIndex implements MiruTimeIndex, Mergeable {
     }
 
     @Override
-    public int getClosestId(long timestamp, StackBuffer stackBuffer) {
+    public int getClosestId(long timestamp, StackBuffer stackBuffer) throws IOException, InterruptedException {
         if (timestamps.isEmpty()) {
             return backingIndex.getClosestId(timestamp, stackBuffer);
         } else {
@@ -120,7 +121,7 @@ public class MiruDeltaTimeIndex implements MiruTimeIndex, Mergeable {
     }
 
     @Override
-    public long getTimestamp(int id, StackBuffer stackBuffer) {
+    public long getTimestamp(int id, StackBuffer stackBuffer) throws IOException, InterruptedException {
         if (timestamps.isEmpty()) {
             return backingIndex.getTimestamp(id, stackBuffer);
         } else if (id < baseId.get()) {
@@ -131,7 +132,7 @@ public class MiruDeltaTimeIndex implements MiruTimeIndex, Mergeable {
     }
 
     @Override
-    public int smallestExclusiveTimestampIndex(long timestamp, StackBuffer stackBuffer) {
+    public int smallestExclusiveTimestampIndex(long timestamp, StackBuffer stackBuffer) throws IOException, InterruptedException {
         if (timestamps.isEmpty()) {
             return backingIndex.smallestExclusiveTimestampIndex(timestamp, stackBuffer);
         } else {
@@ -155,7 +156,7 @@ public class MiruDeltaTimeIndex implements MiruTimeIndex, Mergeable {
     }
 
     @Override
-    public int largestInclusiveTimestampIndex(long timestamp, StackBuffer stackBuffer) {
+    public int largestInclusiveTimestampIndex(long timestamp, StackBuffer stackBuffer) throws IOException, InterruptedException {
         if (timestamps.isEmpty()) {
             return backingIndex.largestInclusiveTimestampIndex(timestamp, stackBuffer);
         } else {

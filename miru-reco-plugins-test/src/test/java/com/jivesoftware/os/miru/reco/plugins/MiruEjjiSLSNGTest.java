@@ -196,7 +196,8 @@ public class MiruEjjiSLSNGTest {
 
     }
 
-    private void flush(ListMultimap<IBA, byte[]> buffer, TxKeyedFilerStore<Integer, MapContext> store, StackBuffer stackBuffer) throws IOException {
+    private void flush(ListMultimap<IBA, byte[]> buffer, TxKeyedFilerStore<Integer, MapContext> store, StackBuffer stackBuffer) throws IOException,
+        InterruptedException {
         for (IBA k : buffer.keySet()) {
             final List<byte[]> got = buffer.get(k);
             store.readWriteAutoGrow(k.getBytes(), got.size(), (monkey, f, _stackBuffer, lock) -> {

@@ -7,6 +7,7 @@ package com.jivesoftware.os.miru.plugin.index;
 
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
+import java.io.IOException;
 import java.util.List;
 
 /**
@@ -24,15 +25,15 @@ public interface MiruTimeIndex {
      * @param timestamp the activity timestamp
      * @return the actual index or nearest insertion point
      */
-    int getClosestId(long timestamp, StackBuffer stackBuffer);
+    int getClosestId(long timestamp, StackBuffer stackBuffer) throws IOException, InterruptedException;
 
     int getExactId(long timestamp, StackBuffer stackBuffer) throws Exception;
 
-    long getLargestTimestamp();
+    long getLargestTimestamp() throws IOException, InterruptedException;
 
-    long getSmallestTimestamp();
+    long getSmallestTimestamp() throws IOException, InterruptedException;
 
-    long getTimestamp(int id, StackBuffer stackBuffer);
+    long getTimestamp(int id, StackBuffer stackBuffer) throws IOException, InterruptedException;
 
     /**
      * Returns the smallest id satisfying the condition that {@link #getTimestamp(int)} is greater than the requested timestamp (exclusive lower bound).
@@ -40,7 +41,7 @@ public interface MiruTimeIndex {
      * @param timestamp the timestamp serving as the exclusive lower bound
      * @return the smallest id exclusive of the requested timestamp
      */
-    int smallestExclusiveTimestampIndex(long timestamp, StackBuffer stackBuffer);
+    int smallestExclusiveTimestampIndex(long timestamp, StackBuffer stackBuffer) throws IOException, InterruptedException;
 
     /**
      * Returns the largest id satisfying the condition that {@link #getTimestamp(int)} is less than or equal to the requested timestamp (inclusive upper bound).
@@ -48,7 +49,7 @@ public interface MiruTimeIndex {
      * @param timestamp the timestamp serving as the inclusive upper bound
      * @return the largest id inclusive of the requested timestamp
      */
-    int largestInclusiveTimestampIndex(long timestamp, StackBuffer stackBuffer);
+    int largestInclusiveTimestampIndex(long timestamp, StackBuffer stackBuffer) throws IOException, InterruptedException;
 
     int lastId();
 

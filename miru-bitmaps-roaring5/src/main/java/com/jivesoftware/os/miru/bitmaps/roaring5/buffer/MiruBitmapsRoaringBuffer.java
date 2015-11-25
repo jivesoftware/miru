@@ -401,7 +401,8 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
     }
 
     @Override
-    public MutableRoaringBitmap buildTimeRangeMask(MiruTimeIndex timeIndex, long smallestTimestamp, long largestTimestamp, StackBuffer stackBuffer) {
+    public MutableRoaringBitmap buildTimeRangeMask(MiruTimeIndex timeIndex, long smallestTimestamp, long largestTimestamp, StackBuffer stackBuffer) throws
+        IOException, InterruptedException {
         int smallestInclusiveId = timeIndex.smallestExclusiveTimestampIndex(smallestTimestamp, stackBuffer);
         int largestExclusiveId = timeIndex.largestInclusiveTimestampIndex(largestTimestamp, stackBuffer) + 1;
 
@@ -515,7 +516,6 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
             System.out.println("---- buffers ----");
             System.out.println((System.currentTimeMillis() - start) + " ms, " + count + " iter");
         }*/
-
         for (int i = 0; i < 1000; i++) {
 
             RoaringBitmap bitmap1 = new RoaringBitmap();

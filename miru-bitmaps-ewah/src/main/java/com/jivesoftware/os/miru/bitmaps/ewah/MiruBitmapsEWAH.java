@@ -15,7 +15,6 @@
  */
 package com.jivesoftware.os.miru.bitmaps.ewah;
 
-import com.fasterxml.jackson.databind.util.ByteBufferBackedInputStream;
 import com.google.common.base.Optional;
 import com.googlecode.javaewah.BitmapStorage;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
@@ -32,7 +31,6 @@ import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTxIndex;
 import java.io.DataInput;
-import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -442,7 +440,8 @@ public class MiruBitmapsEWAH implements MiruBitmaps<EWAHCompressedBitmap, EWAHCo
     }
 
     @Override
-    public EWAHCompressedBitmap buildTimeRangeMask(MiruTimeIndex timeIndex, long smallestTimestamp, long largestTimestamp, StackBuffer stackBuffer) {
+    public EWAHCompressedBitmap buildTimeRangeMask(MiruTimeIndex timeIndex, long smallestTimestamp, long largestTimestamp, StackBuffer stackBuffer) throws
+        IOException, InterruptedException {
         int smallestId = timeIndex.smallestExclusiveTimestampIndex(smallestTimestamp, stackBuffer);
         int largestId = timeIndex.largestInclusiveTimestampIndex(largestTimestamp, stackBuffer);
 

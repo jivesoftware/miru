@@ -14,6 +14,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.service.stream.MiruContext;
+import java.io.IOException;
 import java.util.Arrays;
 import org.apache.commons.lang.RandomStringUtils;
 import org.roaringbitmap.RoaringBitmap;
@@ -38,7 +39,7 @@ public class MiruActivityIndexTest {
         StackBuffer stackBuffer = new StackBuffer();
         MiruInternalActivity miruActivity = buildMiruActivity(new MiruTenantId(RandomStringUtils.randomAlphabetic(10).getBytes()), 1, new String[0], 5);
         try {
-            miruActivityIndex.setAndReady(Arrays.asList(new MiruActivityAndId<>(miruActivity, 0)),stackBuffer);
+            miruActivityIndex.setAndReady(Arrays.asList(new MiruActivityAndId<>(miruActivity, 0)), stackBuffer);
             if (throwsUnsupportedExceptionOnSet) {
                 fail("This implementation of the MiruActivityIndex should have thrown an UnsupportedOperationException");
             }
@@ -54,7 +55,7 @@ public class MiruActivityIndexTest {
         StackBuffer stackBuffer = new StackBuffer();
         MiruInternalActivity miruActivity = buildMiruActivity(new MiruTenantId(RandomStringUtils.randomAlphabetic(10).getBytes()), 1, new String[0], 5);
         try {
-            miruActivityIndex.setAndReady(Arrays.asList(new MiruActivityAndId<>(miruActivity, -1)),stackBuffer);
+            miruActivityIndex.setAndReady(Arrays.asList(new MiruActivityAndId<>(miruActivity, -1)), stackBuffer);
             if (throwsUnsupportedExceptionOnSet) {
                 fail("This implementation of the MiruActivityIndex should have thrown an UnsupportedOperationException");
             }
@@ -69,7 +70,7 @@ public class MiruActivityIndexTest {
     }
 
     @Test(dataProvider = "miruActivityIndexDataProviderWithData")
-    public void testGetActivity(MiruActivityIndex miruActivityIndex, MiruInternalActivity[] expectedActivities) {
+    public void testGetActivity(MiruActivityIndex miruActivityIndex, MiruInternalActivity[] expectedActivities) throws IOException, InterruptedException {
         StackBuffer stackBuffer = new StackBuffer();
         assertTrue(expectedActivities.length == 3);
         assertEquals(miruActivityIndex.get(expectedActivities[0].tenantId, 0, stackBuffer), expectedActivities[0]);
@@ -78,7 +79,8 @@ public class MiruActivityIndexTest {
     }
 
     @Test(dataProvider = "miruActivityIndexDataProviderWithData", expectedExceptions = IllegalArgumentException.class)
-    public void testGetActivityOverCapacity(MiruActivityIndex miruActivityIndex, MiruInternalActivity[] expectedActivities) {
+    public void testGetActivityOverCapacity(MiruActivityIndex miruActivityIndex, MiruInternalActivity[] expectedActivities) throws IOException,
+        InterruptedException {
         StackBuffer stackBuffer = new StackBuffer();
         miruActivityIndex.get(null, expectedActivities.length, stackBuffer); // This should throw an exception
     }

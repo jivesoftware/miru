@@ -15,7 +15,6 @@
  */
 package com.jivesoftware.os.miru.bitmaps.roaring5;
 
-import com.fasterxml.jackson.databind.util.ByteBufferBackedInputStream;
 import com.google.common.base.Optional;
 import com.jivesoftware.os.filer.io.AutoGrowingByteBufferBackedFiler;
 import com.jivesoftware.os.filer.io.ByteBufferDataInput;
@@ -31,7 +30,6 @@ import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTxIndex;
 import java.io.DataInput;
-import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.File;
 import java.io.IOException;
@@ -405,7 +403,8 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
     }
 
     @Override
-    public RoaringBitmap buildTimeRangeMask(MiruTimeIndex timeIndex, long smallestTimestamp, long largestTimestamp, StackBuffer stackBuffer) {
+    public RoaringBitmap buildTimeRangeMask(MiruTimeIndex timeIndex, long smallestTimestamp, long largestTimestamp, StackBuffer stackBuffer) throws
+        IOException, InterruptedException {
         int smallestInclusiveId = timeIndex.smallestExclusiveTimestampIndex(smallestTimestamp, stackBuffer);
         int largestExclusiveId = timeIndex.largestInclusiveTimestampIndex(largestTimestamp, stackBuffer) + 1;
 
@@ -502,7 +501,7 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
 
             File tempDir = Files.createTempDirectory("roaring5").toFile();
             AutoGrowingByteBufferBackedFiler autoFiler = new AutoGrowingByteBufferBackedFiler(
-                new FileBackedMemMappedByteBufferFactory("roaring5", 0, new File[] { tempDir }), 1024 * 1024, 1024 * 1024);
+                new FileBackedMemMappedByteBufferFactory("roaring5", 0, new File[]{tempDir}), 1024 * 1024, 1024 * 1024);
 
             autoFiler.seek(0);
             b1.serialize(new FilerDataOutput(autoFiler, new StackBuffer()));
@@ -551,7 +550,6 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
                 }
             }
             System.out.println("time=" + (System.currentTimeMillis() - start) + ", count=" + count);*/
-
             System.out.println();
 
             filer.close();

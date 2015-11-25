@@ -15,8 +15,8 @@ import java.io.IOException;
  */
 public interface MiruSipIndex<S extends MiruSipCursor<S>> {
 
-    Optional<S> getSip(StackBuffer stackBuffer) throws IOException;
+    Optional<S> getSip(StackBuffer stackBuffer) throws IOException, InterruptedException;
 
-    boolean setSip(S sip, StackBuffer stackBuffer) throws IOException;
+    boolean setSip(S sip, StackBuffer stackBuffer) throws IOException, InterruptedException;
 
 }
