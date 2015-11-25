@@ -31,7 +31,7 @@ public class MiruFilerSipIndex<S extends MiruSipCursor<S>> implements MiruSipInd
     }
 
     @Override
-    public Optional<S> getSip(StackBuffer stackBuffer) throws IOException {
+    public Optional<S> getSip(StackBuffer stackBuffer) throws IOException, InterruptedException {
         S sip = sipReference.get();
         if (sip == null && !absent.get()) {
             sipFilerProvider.read(null, (monkey, filer, _stackBuffer, lock) -> {
@@ -58,7 +58,7 @@ public class MiruFilerSipIndex<S extends MiruSipCursor<S>> implements MiruSipInd
     }
 
     @Override
-    public boolean setSip(final S sip, StackBuffer stackBuffer) throws IOException {
+    public boolean setSip(final S sip, StackBuffer stackBuffer) throws IOException, InterruptedException {
         return sipFilerProvider.readWriteAutoGrow(marshaller.expectedCapacity(sip), (monkey, filer, _stackBuffer, lock) -> {
             S existingSip = getSip(_stackBuffer).orNull();
             while (existingSip == null || sip.compareTo(existingSip) > 0) {

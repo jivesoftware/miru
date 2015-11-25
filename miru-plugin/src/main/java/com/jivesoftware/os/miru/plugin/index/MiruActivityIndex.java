@@ -8,6 +8,7 @@ package com.jivesoftware.os.miru.plugin.index;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
+import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 
@@ -21,7 +22,7 @@ public interface MiruActivityIndex {
      * @param index the index of the activity
      * @return the activity at the given index
      */
-    MiruInternalActivity get(MiruTenantId tenantId, int index, StackBuffer stackBuffer);
+    MiruInternalActivity get(MiruTenantId tenantId, int index, StackBuffer stackBuffer) throws IOException, InterruptedException;
 
     /**
      * Get the terms from the given field for the activity at the requested index.
@@ -30,7 +31,7 @@ public interface MiruActivityIndex {
      * @param fieldId the field
      * @return the terms
      */
-    MiruTermId[] get(int index, int fieldId, StackBuffer stackBuffer);
+    MiruTermId[] get(int index, int fieldId, StackBuffer stackBuffer) throws IOException, InterruptedException;
 
     /**
      * Get the terms from the given field for each activity index.
@@ -39,7 +40,7 @@ public interface MiruActivityIndex {
      * @param fieldId the field
      * @return the terms
      */
-    List<MiruTermId[]> getAll(int[] indexes, int fieldId, StackBuffer stackBuffer);
+    List<MiruTermId[]> getAll(int[] indexes, int fieldId, StackBuffer stackBuffer) throws IOException, InterruptedException;
 
     /**
      * Returns the index of the last activity.
@@ -64,7 +65,7 @@ public interface MiruActivityIndex {
      *
      * @param activityAndIds the activities to be stored and their indexes
      */
-    void set(Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds, StackBuffer stackBuffer);
+    void set(Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds, StackBuffer stackBuffer) throws IOException, InterruptedException;
 
     /**
      * Readies the index up to the provided index value.

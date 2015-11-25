@@ -51,7 +51,7 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
         MiruFilerProvider<Long, Void> filerProvider,
         KeyValueStore<Long, Integer> timestampToIndex,
         StackBuffer stackBuffer)
-        throws IOException {
+        throws IOException, InterruptedException {
 
         this.filerProvider = filerProvider;
         this.timeOrderAnomalyStream = timeOrderAnomalyStream;
@@ -60,7 +60,7 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
         init(stackBuffer);
     }
 
-    private void init(StackBuffer stackBuffer) throws IOException {
+    private void init(StackBuffer stackBuffer) throws IOException, InterruptedException {
         final AtomicBoolean initialized = new AtomicBoolean(false);
 
         //TODO consider using a custom CreateFiler in the KeyValueStore to handle the uninitialized case
@@ -205,11 +205,10 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
     }
 
     @Override
-    public long getTimestamp(final int id, StackBuffer stackBuffer) {
+    public long getTimestamp(final int id, StackBuffer stackBuffer) throws IOException, InterruptedException{
         if (id >= timestampsLength) {
             return 0l;
         }
-        try {
             long ts = filerProvider.read(null, (monkey, filer, _stackBuffer, lock) -> {
                 long timestamp;
                 synchronized (lock) {
@@ -222,9 +221,6 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
             log.inc("get>total");
             log.inc("get>bytes", 8);
             return ts;
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
     }
 
     private long readTimestamp(Object lock, Filer filer, int id, StackBuffer stackBuffer) throws IOException {
@@ -235,87 +231,83 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
     }
 
     @Override
-    public int[] nextId(StackBuffer stackBuffer, long... timestamps) throws IOException {
+    public int[] nextId(StackBuffer stackBuffer, long... timestamps) throws IOException, InterruptedException {
         final int[] nextIds = new int[timestamps.length];
 
-        try {
-            final TLongList monotonicTimestamps = new TLongArrayList(timestamps.length);
-            int firstId = id.get() + 1;
-            int lastId = -1;
-            for (int i = 0; i < timestamps.length; i++) {
-                long timestamp = timestamps[i];
-                if (timestamp == -1) {
-                    nextIds[i] = -1;
-                } else {
-                    nextIds[i] = id.incrementAndGet();
-                    lastId = nextIds[i];
+        final TLongList monotonicTimestamps = new TLongArrayList(timestamps.length);
+        int firstId = id.get() + 1;
+        int lastId = -1;
+        for (int i = 0; i < timestamps.length; i++) {
+            long timestamp = timestamps[i];
+            if (timestamp == -1) {
+                nextIds[i] = -1;
+            } else {
+                nextIds[i] = id.incrementAndGet();
+                lastId = nextIds[i];
 
-                    if (smallestTimestamp == Long.MAX_VALUE) {
-                        smallestTimestamp = timestamp;
-                    }
-                    if (largestTimestamp < timestamp) {
-                        largestTimestamp = timestamp;
-                    }
-                    monotonicTimestamps.add(largestTimestamp);
+                if (smallestTimestamp == Long.MAX_VALUE) {
+                    smallestTimestamp = timestamp;
+                }
+                if (largestTimestamp < timestamp) {
+                    largestTimestamp = timestamp;
+                }
+                monotonicTimestamps.add(largestTimestamp);
 
-                    if (timestamp < smallestTimestamp) {
-                        if (timeOrderAnomalyStream.isPresent()) {
-                            timeOrderAnomalyStream.get().underflowOfSmallestTimestamp(smallestTimestamp - timestamp);
-                        }
-                    } else if (timestamp != largestTimestamp) {
-                        if (timeOrderAnomalyStream.isPresent()) {
-                            timeOrderAnomalyStream.get().underflowOfLargestTimestamp(largestTimestamp - timestamp);
-                        }
+                if (timestamp < smallestTimestamp) {
+                    if (timeOrderAnomalyStream.isPresent()) {
+                        timeOrderAnomalyStream.get().underflowOfSmallestTimestamp(smallestTimestamp - timestamp);
+                    }
+                } else if (timestamp != largestTimestamp) {
+                    if (timeOrderAnomalyStream.isPresent()) {
+                        timeOrderAnomalyStream.get().underflowOfLargestTimestamp(largestTimestamp - timestamp);
                     }
                 }
             }
-
-            if (!monotonicTimestamps.isEmpty()) {
-                long longs = (lastId + 1) * timestampSize;
-                final int _firstId = firstId;
-                final int _lastId = lastId;
-
-                //TODO we should be concerned about potential corruption with failures during readWriteAutoGrow
-                filerProvider.readWriteAutoGrow(HEADER_SIZE_IN_BYTES + searchIndexSizeInBytes + longs, (monkey, filer, _stackBuffer, lock) -> {
-                    synchronized (lock) {
-                        filer.seek(0);
-                        FilerIO.writeInt(filer, _lastId, "int", _stackBuffer);
-                        FilerIO.writeLong(filer, smallestTimestamp, "smallestTimestamp", _stackBuffer);
-                        FilerIO.writeLong(filer, largestTimestamp, "largestTimestamp", _stackBuffer);
-                        timestampsLength = _lastId + 1;
-                        FilerIO.writeInt(filer, timestampsLength, "timestampsLength", _stackBuffer);
-
-                        filer.seek(HEADER_SIZE_IN_BYTES + searchIndexSizeInBytes + (_firstId * timestampSize));
-                        TLongIterator iter = monotonicTimestamps.iterator();
-                        while (iter.hasNext()) {
-                            FilerIO.writeLong(filer, iter.next(), "long", _stackBuffer);
-                        }
-
-                        segmentForSearch(filer, searchIndexSizeInBytes, searchIndexLevels, searchIndexSegments, HEADER_SIZE_IN_BYTES, 0, _lastId + 1,
-                            _stackBuffer);
-                    }
-                    return null;
-                }, stackBuffer);
-                log.inc("nextId>total");
-                log.inc("nextId>bytes", HEADER_SIZE_IN_BYTES + searchIndexSizeInBytes + longs);
-
-                for (int i = 0; i < nextIds.length; i++) {
-                    if (timestamps[i] != -1) {
-                        log.inc("nextId>sets");
-                        final int nextId = nextIds[i];
-                        // TODO would be nice to batch here :)
-                        timestampToIndex.execute(timestamps[i], true, keyValueContext -> {
-                            keyValueContext.set(nextId);
-                            return null;
-                        }, stackBuffer);
-                    }
-                }
-            }
-
-            return nextIds;
-        } catch (IOException e) {
-            throw new RuntimeException(e);
         }
+
+        if (!monotonicTimestamps.isEmpty()) {
+            long longs = (lastId + 1) * timestampSize;
+            final int _firstId = firstId;
+            final int _lastId = lastId;
+
+            //TODO we should be concerned about potential corruption with failures during readWriteAutoGrow
+            filerProvider.readWriteAutoGrow(HEADER_SIZE_IN_BYTES + searchIndexSizeInBytes + longs, (monkey, filer, _stackBuffer, lock) -> {
+                synchronized (lock) {
+                    filer.seek(0);
+                    FilerIO.writeInt(filer, _lastId, "int", _stackBuffer);
+                    FilerIO.writeLong(filer, smallestTimestamp, "smallestTimestamp", _stackBuffer);
+                    FilerIO.writeLong(filer, largestTimestamp, "largestTimestamp", _stackBuffer);
+                    timestampsLength = _lastId + 1;
+                    FilerIO.writeInt(filer, timestampsLength, "timestampsLength", _stackBuffer);
+
+                    filer.seek(HEADER_SIZE_IN_BYTES + searchIndexSizeInBytes + (_firstId * timestampSize));
+                    TLongIterator iter = monotonicTimestamps.iterator();
+                    while (iter.hasNext()) {
+                        FilerIO.writeLong(filer, iter.next(), "long", _stackBuffer);
+                    }
+
+                    segmentForSearch(filer, searchIndexSizeInBytes, searchIndexLevels, searchIndexSegments, HEADER_SIZE_IN_BYTES, 0, _lastId + 1,
+                        _stackBuffer);
+                }
+                return null;
+            }, stackBuffer);
+            log.inc("nextId>total");
+            log.inc("nextId>bytes", HEADER_SIZE_IN_BYTES + searchIndexSizeInBytes + longs);
+
+            for (int i = 0; i < nextIds.length; i++) {
+                if (timestamps[i] != -1) {
+                    log.inc("nextId>sets");
+                    final int nextId = nextIds[i];
+                    // TODO would be nice to batch here :)
+                    timestampToIndex.execute(timestamps[i], true, keyValueContext -> {
+                        keyValueContext.set(nextId);
+                        return null;
+                    }, stackBuffer);
+                }
+            }
+        }
+
+        return nextIds;
 
     }
 
@@ -323,7 +315,7 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
      Returns true index of activityTimestamp or where it would have been.
      */
     @Override
-    public int getClosestId(final long timestamp, StackBuffer stackBuffer) {
+    public int getClosestId(final long timestamp, StackBuffer stackBuffer) throws IOException, InterruptedException {
         try {
             int i = filerProvider.read(null, (monkey, filer, _stackBuffer, lock) -> {
                 if (filer != null) {
@@ -402,7 +394,7 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
     }
 
     @Override
-    public int smallestExclusiveTimestampIndex(final long timestamp, StackBuffer stackBuffer) {
+    public int smallestExclusiveTimestampIndex(final long timestamp, StackBuffer stackBuffer) throws IOException, InterruptedException{
         try {
             if (id.get() < 0) {
                 return 0;
@@ -433,7 +425,7 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
     }
 
     @Override
-    public int largestInclusiveTimestampIndex(final long timestamp, StackBuffer stackBuffer) {
+    public int largestInclusiveTimestampIndex(final long timestamp, StackBuffer stackBuffer) throws IOException, InterruptedException{
         try {
             if (id.get() < 0) {
                 return -1;

@@ -15,7 +15,6 @@
  */
 package com.jivesoftware.os.miru.bitmaps.roaring4;
 
-import com.fasterxml.jackson.databind.util.ByteBufferBackedInputStream;
 import com.google.common.base.Optional;
 import com.jivesoftware.os.filer.io.ByteBufferDataInput;
 import com.jivesoftware.os.filer.io.FilerDataInput;
@@ -28,7 +27,6 @@ import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTxIndex;
 import java.io.DataInput;
-import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -398,7 +396,8 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
     }
 
     @Override
-    public RoaringBitmap buildTimeRangeMask(MiruTimeIndex timeIndex, long smallestTimestamp, long largestTimestamp, StackBuffer stackBuffer) {
+    public RoaringBitmap buildTimeRangeMask(MiruTimeIndex timeIndex, long smallestTimestamp, long largestTimestamp, StackBuffer stackBuffer) throws
+        IOException, InterruptedException {
         int smallestInclusiveId = timeIndex.smallestExclusiveTimestampIndex(smallestTimestamp, stackBuffer);
         int largestExclusiveId = timeIndex.largestInclusiveTimestampIndex(largestTimestamp, stackBuffer) + 1;
 

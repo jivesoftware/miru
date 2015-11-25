@@ -9,6 +9,7 @@ import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.service.index.delta.MiruDeltaTimeIndex;
+import java.io.IOException;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
@@ -58,7 +59,7 @@ public class MiruBitmapsTimeRangeTest {
     }
 
     @Test(dataProvider = "singleEntryTimeIndexDataProvider")
-    public <BM extends IBM, IBM> void testSingleBitTimeRange(MiruBitmaps<BM, IBM> bitmaps, MiruTimeIndex miruTimeIndex) {
+    public <BM extends IBM, IBM> void testSingleBitTimeRange(MiruBitmaps<BM, IBM> bitmaps, MiruTimeIndex miruTimeIndex) throws IOException, InterruptedException {
         StackBuffer stackBuffer = new StackBuffer();
         IBM bitmap = bitmaps.buildTimeRangeMask(miruTimeIndex, 0, Long.MAX_VALUE, stackBuffer);
 

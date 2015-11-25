@@ -9,6 +9,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruActivityAndId;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
 import com.jivesoftware.os.miru.service.index.Mergeable;
+import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -30,7 +31,7 @@ public class MiruDeltaActivityIndex implements MiruActivityIndex, Mergeable {
     }
 
     @Override
-    public MiruInternalActivity get(MiruTenantId tenantId, int index, StackBuffer stackBuffer) {
+    public MiruInternalActivity get(MiruTenantId tenantId, int index, StackBuffer stackBuffer) throws IOException, InterruptedException {
         //TODO consider writing through to the backing index for old indexes to avoid the double lookup
         MiruActivityAndId<MiruInternalActivity> activityAndId = activities.get(index);
         if (activityAndId != null) {
@@ -41,7 +42,7 @@ public class MiruDeltaActivityIndex implements MiruActivityIndex, Mergeable {
     }
 
     @Override
-    public MiruTermId[] get(int index, int fieldId, StackBuffer stackBuffer) {
+    public MiruTermId[] get(int index, int fieldId, StackBuffer stackBuffer) throws IOException, InterruptedException {
         MiruActivityAndId<MiruInternalActivity> activityAndId = activities.get(index);
         if (activityAndId != null) {
             return activityAndId.activity.fieldsValues[fieldId];
@@ -51,7 +52,7 @@ public class MiruDeltaActivityIndex implements MiruActivityIndex, Mergeable {
     }
 
     @Override
-    public List<MiruTermId[]> getAll(int[] indexes, int fieldId, StackBuffer stackBuffer) {
+    public List<MiruTermId[]> getAll(int[] indexes, int fieldId, StackBuffer stackBuffer) throws IOException, InterruptedException {
         List<MiruTermId[]> allTermIds = Lists.newArrayList();
         boolean missed = false;
         for (int i = 0; i < indexes.length; i++) {

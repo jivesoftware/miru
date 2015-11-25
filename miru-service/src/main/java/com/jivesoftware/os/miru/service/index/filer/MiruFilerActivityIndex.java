@@ -42,70 +42,59 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
     }
 
     @Override
-    public MiruInternalActivity get(final MiruTenantId tenantId, int index, StackBuffer stackBuffer) {
+    public MiruInternalActivity get(final MiruTenantId tenantId, int index, StackBuffer stackBuffer) throws IOException, InterruptedException {
         int capacity = capacity(stackBuffer);
         checkArgument(index >= 0 && index < capacity, "Index parameter is out of bounds. The value %s must be >=0 and <%s", index, capacity);
-        try {
-            return keyedStore.read(FilerIO.intBytes(index), null, (monkey, filer, _stackBuffer, lock) -> {
-                if (filer != null) {
-                    synchronized (lock) {
-                        filer.seek(0);
-                        return internalActivityMarshaller.fromFiler(tenantId, filer, _stackBuffer);
-                    }
-                } else {
-                    return null;
+        return keyedStore.read(FilerIO.intBytes(index), null, (monkey, filer, _stackBuffer, lock) -> {
+            if (filer != null) {
+                synchronized (lock) {
+                    filer.seek(0);
+                    return internalActivityMarshaller.fromFiler(tenantId, filer, _stackBuffer);
                 }
-            }, stackBuffer);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+            } else {
+                return null;
+            }
+        }, stackBuffer);
     }
 
     @Override
-    public MiruTermId[] get(int index, final int fieldId, StackBuffer stackBuffer) {
+    public MiruTermId[] get(int index, final int fieldId, StackBuffer stackBuffer) throws IOException, InterruptedException {
         int capacity = capacity(stackBuffer);
         checkArgument(index >= 0 && index < capacity, "Index parameter is out of bounds. The value %s must be >=0 and <%s", index, capacity);
-        try {
-            return keyedStore.read(FilerIO.intBytes(index), null, (monkey, filer, _stackBuffer, lock) -> {
-                if (filer != null) {
-                    synchronized (lock) {
-                        filer.seek(0);
-                        return internalActivityMarshaller.fieldValueFromFiler(filer, fieldId, _stackBuffer);
-                    }
-                } else {
-                    return null;
+        return keyedStore.read(FilerIO.intBytes(index), null, (monkey, filer, _stackBuffer, lock) -> {
+            if (filer != null) {
+                synchronized (lock) {
+                    filer.seek(0);
+                    return internalActivityMarshaller.fieldValueFromFiler(filer, fieldId, _stackBuffer);
                 }
-            }, stackBuffer);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+            } else {
+                return null;
+            }
+        }, stackBuffer);
     }
 
     @Override
-    public List<MiruTermId[]> getAll(int[] indexes, final int fieldId, StackBuffer stackBuffer) {
+    public List<MiruTermId[]> getAll(int[] indexes, final int fieldId, StackBuffer stackBuffer) throws IOException, InterruptedException {
         if (indexes.length == 0) {
             return Collections.emptyList();
         }
-        try {
-            byte[][] bytesForIndexes = new byte[indexes.length][];
-            for (int i = 0; i < indexes.length; i++) {
-                if (indexes[i] >= 0) {
-                    bytesForIndexes[i] = FilerIO.intBytes(indexes[i]);
-                }
+        byte[][] bytesForIndexes = new byte[indexes.length][];
+        for (int i = 0; i < indexes.length; i++) {
+            if (indexes[i] >= 0) {
+                bytesForIndexes[i] = FilerIO.intBytes(indexes[i]);
             }
-            return keyedStore.readEach(bytesForIndexes, null, (monkey, filer, _stackBuffer, lock) -> {
-                if (filer != null) {
-                    synchronized (lock) {
-                        filer.seek(0);
-                        return internalActivityMarshaller.fieldValueFromFiler(filer, fieldId, _stackBuffer);
-                    }
-                } else {
-                    return null;
-                }
-            }, stackBuffer);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
         }
+        return keyedStore.readEach(bytesForIndexes, null, (monkey, filer, _stackBuffer, lock) -> {
+            if (filer != null) {
+                synchronized (lock) {
+                    filer.seek(0);
+                    return internalActivityMarshaller.fieldValueFromFiler(filer, fieldId, _stackBuffer);
+                }
+            } else {
+                return null;
+            }
+        }, stackBuffer);
+
     }
 
     @Override
@@ -122,13 +111,14 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
     }
 
     @Override
-    public void set(Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds, StackBuffer stackBuffer) {
+    public void set(Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds, StackBuffer stackBuffer) throws IOException, InterruptedException{
         if (!activityAndIds.isEmpty()) {
             setInternal(activityAndIds, stackBuffer);
         }
     }
 
-    private int setInternal(Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds, StackBuffer stackBuffer) {
+    private int setInternal(Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds, StackBuffer stackBuffer) throws IOException,
+        InterruptedException {
         int lastIndex = -1;
         for (MiruActivityAndId<MiruInternalActivity> activityAndId : activityAndIds) {
             int index = activityAndId.id;

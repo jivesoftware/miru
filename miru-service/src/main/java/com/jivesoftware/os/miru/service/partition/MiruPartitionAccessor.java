@@ -202,11 +202,11 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         rebuildCursor.set(cursor);
     }
 
-    Optional<S> getSipCursor(StackBuffer stackBuffer) throws IOException {
+    Optional<S> getSipCursor(StackBuffer stackBuffer) throws IOException, InterruptedException {
         return context.isPresent() ? context.get().sipIndex.getSip(stackBuffer) : null;
     }
 
-    boolean setSip(S sip, StackBuffer stackBuffer) throws IOException {
+    boolean setSip(S sip, StackBuffer stackBuffer) throws IOException, InterruptedException {
         if (sip == null) {
             throw new IllegalArgumentException("Sip cannot be null");
         }
