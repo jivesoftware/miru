@@ -18,9 +18,10 @@ package com.jivesoftware.os.miru.bitmaps.roaring5.buffer;
 import com.google.common.base.Optional;
 import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
+import com.jivesoftware.os.filer.io.ByteBufferDataInput;
+import com.jivesoftware.os.filer.io.Filer;
 import com.jivesoftware.os.filer.io.FilerDataInput;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
-import com.jivesoftware.os.filer.io.chunk.ChunkFiler;
 import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
@@ -165,24 +166,13 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
             return new MutableRoaringBitmap();
         }
 
-        MutableRoaringBitmap container = indexes.get(0).txIndex((bitmap, filer, offset, stackBuffer1) -> {
-            if (bitmap != null) {
-                MutableRoaringBitmap mutable = new MutableRoaringBitmap();
-                mutable.or(bitmap);
-                return mutable;
-            } else if (filer != null) {
-                return bitmapFromFiler(filer, offset, stackBuffer1);
-            } else {
-                return new MutableRoaringBitmap();
-            }
-        }, stackBuffer);
+        MutableRoaringBitmap container = indexes.get(0).txIndex(this::mutableOrEmpty, stackBuffer);
 
         for (MiruTxIndex<ImmutableRoaringBitmap> index : indexes.subList(1, indexes.size())) {
-            index.txIndex((bitmap, filer, offset, stackBuffer1) -> {
-                if (bitmap != null) {
-                    container.or(bitmap);
-                } else if (filer != null) {
-                    container.or(bitmapFromFiler(filer, offset, stackBuffer1));
+            index.txIndex((bitmap, buffer, filer, stackBuffer1) -> {
+                ImmutableRoaringBitmap immutable = immutableOrNull(bitmap, buffer, filer, stackBuffer1);
+                if (immutable != null) {
+                    container.or(immutable);
                 }
                 return null;
             }, stackBuffer);
@@ -207,28 +197,17 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
             return new MutableRoaringBitmap();
         }
 
-        MutableRoaringBitmap container = indexes.get(0).txIndex((bitmap, filer, offset, stackBuffer1) -> {
-            if (bitmap != null) {
-                MutableRoaringBitmap mutable = new MutableRoaringBitmap();
-                mutable.or(bitmap);
-                return mutable;
-            } else if (filer != null) {
-                return bitmapFromFiler(filer, offset, stackBuffer1);
-            } else {
-                return new MutableRoaringBitmap();
-            }
-        }, stackBuffer);
+        MutableRoaringBitmap container = indexes.get(0).txIndex(this::mutableOrEmpty, stackBuffer);
 
         if (container.isEmpty()) {
             return container;
         }
 
         for (MiruTxIndex<ImmutableRoaringBitmap> index : indexes.subList(1, indexes.size())) {
-            index.txIndex((bitmap, filer, offset, stackBuffer1) -> {
-                if (bitmap != null) {
-                    container.and(bitmap);
-                } else if (filer != null) {
-                    container.and(bitmapFromFiler(filer, offset, stackBuffer1));
+            index.txIndex((bitmap, buffer, filer, stackBuffer1) -> {
+                ImmutableRoaringBitmap immutable = immutableOrNull(bitmap, buffer, filer, stackBuffer1);
+                if (immutable != null) {
+                    container.and(immutable);
                 } else {
                     container.clear();
                 }
@@ -250,11 +229,10 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
 
     @Override
     public void inPlaceAndNot(MutableRoaringBitmap original, MiruInvertedIndex<ImmutableRoaringBitmap> not, StackBuffer stackBuffer) throws Exception {
-        not.txIndex((bitmap, filer, offset, stackBuffer1) -> {
-            if (bitmap != null) {
-                original.andNot(bitmap);
-            } else if (filer != null) {
-                original.andNot(bitmapFromFiler(filer, offset, stackBuffer1));
+        not.txIndex((bitmap, buffer, filer, stackBuffer1) -> {
+            ImmutableRoaringBitmap immutable = immutableOrNull(bitmap, buffer, filer, stackBuffer1);
+            if (immutable != null) {
+                original.andNot(immutable);
             }
             return null;
         }, stackBuffer);
@@ -285,28 +263,17 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
         List<MiruTxIndex<ImmutableRoaringBitmap>> not,
         StackBuffer stackBuffer) throws Exception {
 
-        MutableRoaringBitmap container = original.txIndex((bitmap, filer, offset, stackBuffer1) -> {
-            if (bitmap != null) {
-                MutableRoaringBitmap mutable = new MutableRoaringBitmap();
-                mutable.or(bitmap);
-                return mutable;
-            } else if (filer != null) {
-                return bitmapFromFiler(filer, offset, stackBuffer1);
-            } else {
-                return new MutableRoaringBitmap();
-            }
-        }, stackBuffer);
+        MutableRoaringBitmap container = original.txIndex(this::mutableOrEmpty, stackBuffer);
 
         if (container.isEmpty()) {
             return container;
         }
 
         for (MiruTxIndex<ImmutableRoaringBitmap> index : not) {
-            index.txIndex((bitmap, filer, offset, stackBuffer1) -> {
-                if (bitmap != null) {
+            index.txIndex((bitmap, buffer, filer, stackBuffer1) -> {
+                ImmutableRoaringBitmap immutable = immutableOrNull(bitmap, buffer, filer, stackBuffer1);
+                if (immutable != null) {
                     container.andNot(bitmap);
-                } else if (filer != null) {
-                    container.andNot(bitmapFromFiler(filer, offset, stackBuffer1));
                 }
                 return null;
             }, stackBuffer);
@@ -468,16 +435,31 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
         return last;
     }
 
-    private MutableRoaringBitmap bitmapFromFiler(ChunkFiler filer, int offset, StackBuffer stackBuffer1) throws IOException {
-        if (filer.canLeakUnsafeByteBuffer()) {
-            ByteBuffer buf = filer.leakUnsafeByteBuffer();
-            buf.position(offset);
-            return new ImmutableRoaringBitmap(buf).toMutableRoaringBitmap();
+    private MutableRoaringBitmap mutableOrEmpty(ImmutableRoaringBitmap bitmap, ByteBuffer buffer, Filer filer, StackBuffer stackBuffer) throws IOException {
+        if (bitmap != null) {
+            return bitmap.toMutableRoaringBitmap();
         } else {
-            filer.seek(offset);
-            MutableRoaringBitmap mutable = new MutableRoaringBitmap();
-            mutable.deserialize(new FilerDataInput(filer, stackBuffer1));
-            return mutable;
+            MutableRoaringBitmap deser = new MutableRoaringBitmap();
+            if (buffer != null) {
+                deser.deserialize(new ByteBufferDataInput(buffer));
+            } else if (filer != null) {
+                deser.deserialize(new FilerDataInput(filer, stackBuffer));
+            }
+            return deser;
+        }
+    }
+
+    private ImmutableRoaringBitmap immutableOrNull(ImmutableRoaringBitmap bitmap, ByteBuffer buffer, Filer filer, StackBuffer stackBuffer) throws IOException {
+        if (bitmap != null) {
+            return bitmap;
+        } else if (buffer != null) {
+            return new ImmutableRoaringBitmap(buffer);
+        } else if (filer != null) {
+            MutableRoaringBitmap deser = new MutableRoaringBitmap();
+            deser.deserialize(new FilerDataInput(filer, stackBuffer));
+            return deser;
+        } else {
+            return null;
         }
     }
 

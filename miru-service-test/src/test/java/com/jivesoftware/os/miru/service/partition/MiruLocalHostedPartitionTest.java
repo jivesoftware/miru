@@ -56,7 +56,7 @@ import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableExcepti
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
 import com.jivesoftware.os.miru.service.locator.MiruTempDirectoryResourceLocator;
-import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
+import com.jivesoftware.os.miru.service.stream.KeyedIndexContextFactory;
 import com.jivesoftware.os.miru.service.stream.MiruIndexAuthz;
 import com.jivesoftware.os.miru.service.stream.MiruIndexBloom;
 import com.jivesoftware.os.miru.service.stream.MiruIndexFieldValues;
@@ -112,7 +112,7 @@ import static org.testng.Assert.assertNotNull;
 
 public class MiruLocalHostedPartitionTest {
 
-    private MiruContextFactory<RCVSSipCursor> contextFactory;
+    private KeyedIndexContextFactory<RCVSSipCursor> contextFactory;
     private MiruSipTrackerFactory<RCVSSipCursor> sipTrackerFactory;
     private MiruSchema schema;
     private MiruSchemaProvider schemaProvider;
@@ -212,7 +212,7 @@ public class MiruLocalHostedPartitionTest {
 
         TxCogs cogs = new TxCogs(256, 64, null, null, null);
 
-        contextFactory = new MiruContextFactory<>(cogs,
+        contextFactory = new KeyedIndexContextFactory<>(cogs,
             schemaProvider,
             termComposer,
             activityInternExtern,

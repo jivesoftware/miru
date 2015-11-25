@@ -47,7 +47,7 @@ import com.jivesoftware.os.miru.service.partition.MiruTenantTopologyFactory;
 import com.jivesoftware.os.miru.service.partition.cluster.MiruClusterExpectedTenants;
 import com.jivesoftware.os.miru.service.solver.MiruLowestLatencySolver;
 import com.jivesoftware.os.miru.service.solver.MiruSolver;
-import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
+import com.jivesoftware.os.miru.service.stream.KeyedIndexContextFactory;
 import com.jivesoftware.os.miru.service.stream.MiruRebuildDirector;
 import com.jivesoftware.os.miru.service.stream.allocator.InMemoryChunkAllocator;
 import com.jivesoftware.os.miru.service.stream.allocator.MiruChunkAllocator;
@@ -169,7 +169,7 @@ public class MiruServiceInitializer {
             new NullKeyToFPCacheFactory(),
             new NullKeyToFPCacheFactory());
 
-        MiruContextFactory<S> contextFactory = new MiruContextFactory<>(cogs,
+        KeyedIndexContextFactory<S> contextFactory = new KeyedIndexContextFactory<>(cogs,
             schemaProvider,
             termComposer,
             internExtern,

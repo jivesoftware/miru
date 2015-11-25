@@ -29,7 +29,7 @@ import com.jivesoftware.os.miru.plugin.partition.MiruQueryablePartition;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
 import com.jivesoftware.os.miru.service.NamedThreadFactory;
 import com.jivesoftware.os.miru.service.stream.MiruContext;
-import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
+import com.jivesoftware.os.miru.service.stream.KeyedIndexContextFactory;
 import com.jivesoftware.os.miru.service.stream.MiruIndexer;
 import com.jivesoftware.os.miru.service.stream.MiruRebuildDirector;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
@@ -67,7 +67,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
     private final MiruBitmaps<BM, IBM> bitmaps;
     private final MiruPartitionCoord coord;
     private final AtomicLong expireAfterTimestamp;
-    private final MiruContextFactory<S> contextFactory;
+    private final KeyedIndexContextFactory<S> contextFactory;
     private final MiruSipTrackerFactory<S> sipTrackerFactory;
     private final MiruWALClient<C, S> walClient;
     private final MiruPartitionHeartbeatHandler heartbeatHandler;
@@ -120,7 +120,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
         MiruBitmaps<BM, IBM> bitmaps,
         MiruPartitionCoord coord,
         long expireAfterTimestamp,
-        MiruContextFactory<S> contextFactory,
+        KeyedIndexContextFactory<S> contextFactory,
         MiruSipTrackerFactory<S> sipTrackerFactory,
         MiruWALClient<C, S> walClient,
         MiruPartitionHeartbeatHandler heartbeatHandler,

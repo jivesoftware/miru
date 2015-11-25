@@ -87,7 +87,7 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     @Override
     public <R> R txIndex(IndexTx<R, IBM> tx, StackBuffer stackBuffer) throws Exception {
         if (lastId > Integer.MIN_VALUE && lastId <= considerIfIndexIdGreaterThanN) {
-            return tx.tx(null, null, -1, null);
+            return tx.tx(null, null, null, stackBuffer);
         }
 
         return keyedFilerStore.read(indexKey.keyBytes, null, (monkey, filer, stackBuffer1, lock) -> {
@@ -95,13 +95,17 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
                 if (filer != null) {
                     synchronized (lock) {
                         if (filer.length() < LAST_ID_LENGTH + 4) {
-                            return tx.tx(null, null, -1, null);
+                            return tx.tx(null, null, null, stackBuffer1);
                         } else {
-                            return tx.tx(null, filer, LAST_ID_LENGTH, stackBuffer1);
+                            if (filer.canLeakUnsafeByteBuffer()) {
+                                return tx.tx(null, filer.leakUnsafeByteBuffer(), null, stackBuffer1);
+                            } else {
+                                return tx.tx(null, null, filer, stackBuffer1);
+                            }
                         }
                     }
                 } else {
-                    return tx.tx(null, null, -1, null);
+                    return tx.tx(null, null, null, stackBuffer1);
                 }
             } catch (Exception e) {
                 throw new IOException(e);

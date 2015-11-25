@@ -94,7 +94,7 @@ public class MemoryKeyedIndexStore implements KeyedIndexStore {
         }
 
         @Override
-        public void streamKeys(List<KeyRange> ranges, KeyStream keyStream) {
+        public void streamKeys(List<KeyRange> ranges, KeyStream keyStream) throws Exception {
             if (ranges != null && !ranges.isEmpty()) {
                 for (KeyRange range : ranges) {
                     final Set<MiruIBA> rangeKeys = keyValues.keySet()
@@ -118,6 +118,21 @@ public class MemoryKeyedIndexStore implements KeyedIndexStore {
         @Override
         public byte[] get(byte[] keyBytes) {
             return keyValues.get(new MiruIBA(keyBytes));
+        }
+
+        @Override
+        public byte[][] multiGet(byte[][] keyBytes) {
+            byte[][] values = new byte[keyBytes.length][];
+            for (int i = 0; i < keyBytes.length; i++) {
+                values[i] = keyValues.get(new MiruIBA(keyBytes[i]));
+            }
+            return values;
+        }
+
+        @Override
+        public <R> R tx(byte[] keyBytes, KeyedIndexTx<R> tx) throws Exception {
+            byte[] value = get(keyBytes);
+            return tx.tx(value, null);
         }
 
         @Override

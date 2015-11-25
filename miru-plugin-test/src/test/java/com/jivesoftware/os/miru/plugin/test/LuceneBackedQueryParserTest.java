@@ -272,7 +272,7 @@ public class LuceneBackedQueryParserTest {
 
             @Override
             public <R> R txIndex(IndexTx<R, RoaringBitmap> tx, StackBuffer stackBuffer) throws Exception {
-                return tx.tx(indexes[fieldId].get(termId), null, -1, null);
+                return tx.tx(indexes[fieldId].get(termId), null, null, stackBuffer);
             }
         }
     }

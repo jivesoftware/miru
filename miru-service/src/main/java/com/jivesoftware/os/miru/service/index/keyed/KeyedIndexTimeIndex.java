@@ -2,7 +2,9 @@ package com.jivesoftware.os.miru.service.index.keyed;
 
 import com.google.common.base.Optional;
 import com.jivesoftware.os.filer.io.FilerIO;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
+import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.service.index.TimeOrderAnomalyStream;
 import com.jivesoftware.os.miru.service.stream.KeyedIndex;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
@@ -89,14 +91,20 @@ public class KeyedIndexTimeIndex implements MiruTimeIndex {
     }
 
     @Override
-    public long getTimestamp(int id) {
+    public boolean intersects(MiruTimeRange timeRange) {
+        return timeRange.smallestTimestamp <= getLargestTimestamp()
+            && timeRange.largestTimestamp >= getSmallestTimestamp();
+    }
+
+    @Override
+    public long getTimestamp(int id, StackBuffer stackBuffer) {
         byte[] timestampBytes = alignmentKeyedIndex.get(FilerIO.intBytes(id));
         log.inc("get>total");
         return timestampBytes == null ? 0L : FilerIO.bytesLong(timestampBytes);
     }
 
     @Override
-    public int[] nextId(long... timestamps) throws IOException {
+    public int[] nextId(StackBuffer stackBuffer, long... timestamps) throws IOException {
         final int[] nextIds = new int[timestamps.length];
 
         final TLongList monotonicTimestamps = new TLongArrayList(timestamps.length);
@@ -148,7 +156,7 @@ public class KeyedIndexTimeIndex implements MiruTimeIndex {
      Returns true index of activityTimestamp or where it would have been.
      */
     @Override
-    public int getClosestId(long timestamp) {
+    public int getClosestId(long timestamp, StackBuffer stackBuffer) {
         byte[] timestampBytes = FilerIO.longBytes(timestamp);
         byte[][] idBytes = new byte[1][];
         boolean[] miss = new boolean[1];
@@ -168,13 +176,13 @@ public class KeyedIndexTimeIndex implements MiruTimeIndex {
     }
 
     @Override
-    public int getExactId(long timestamp) throws Exception {
+    public int getExactId(long timestamp, StackBuffer stackBuffer) throws Exception {
         byte[] idBytes = timestampKeyedIndex(timestamp).get(FilerIO.longBytes(timestamp));
         return idBytes == null ? -1 : FilerIO.bytesInt(idBytes);
     }
 
     @Override
-    public boolean[] contains(List<Long> timestamps) throws Exception {
+    public boolean[] contains(List<Long> timestamps, StackBuffer stackBuffer) throws Exception {
         boolean[] contained = new boolean[timestamps.size()];
         int i = 0;
         for (Long timestamp : timestamps) {
@@ -184,11 +192,11 @@ public class KeyedIndexTimeIndex implements MiruTimeIndex {
     }
 
     @Override
-    public int smallestExclusiveTimestampIndex(final long timestamp) {
+    public int smallestExclusiveTimestampIndex(final long timestamp, StackBuffer stackBuffer) {
         if (id.get() < 0) {
             return 0;
         }
-        int index = getClosestId(timestamp);
+        int index = getClosestId(timestamp, stackBuffer);
         if (index == -1) {
             return 0;
         }
@@ -199,19 +207,19 @@ public class KeyedIndexTimeIndex implements MiruTimeIndex {
         if (index > lastId) {
             return lastId + 1;
         }
-        while (index <= lastId && getTimestamp(index) <= timestamp) {
+        while (index <= lastId && getTimestamp(index, stackBuffer) <= timestamp) {
             index++;
         }
         return index;
     }
 
     @Override
-    public int largestInclusiveTimestampIndex(final long timestamp) {
+    public int largestInclusiveTimestampIndex(final long timestamp, StackBuffer stackBuffer) {
         int lastId = id.get();
         if (lastId < 0) {
             return -1;
         }
-        int index = getClosestId(timestamp);
+        int index = getClosestId(timestamp, stackBuffer);
         if (index < 0) {
             return -(index + 1) - 1;
         }
@@ -220,7 +228,7 @@ public class KeyedIndexTimeIndex implements MiruTimeIndex {
             return lastId;
         }
 
-        while (index <= lastId && getTimestamp(index) <= timestamp) {
+        while (index <= lastId && getTimestamp(index, stackBuffer) <= timestamp) {
             index++;
         }
         return index - 1;

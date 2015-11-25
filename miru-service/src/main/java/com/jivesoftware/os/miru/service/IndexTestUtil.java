@@ -34,6 +34,7 @@ import com.jivesoftware.os.miru.plugin.schema.SingleSchemaProvider;
 import com.jivesoftware.os.miru.service.locator.MiruResourceLocator;
 import com.jivesoftware.os.miru.service.locator.MiruTempDirectoryResourceLocator;
 import com.jivesoftware.os.miru.service.stream.MiruContext;
+import com.jivesoftware.os.miru.service.stream.KeyedIndexContextFactory;
 import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
 import com.jivesoftware.os.miru.service.stream.allocator.InMemoryChunkAllocator;
 import com.jivesoftware.os.miru.service.stream.allocator.MiruChunkAllocator;
@@ -85,7 +86,7 @@ public class IndexTestUtil {
             100,
             1_000);
 
-        return new MiruContextFactory<>(cogs,
+        return new KeyedIndexContextFactory<>(cogs,
             schemaProvider,
             termComposer,
             activityInternExtern,

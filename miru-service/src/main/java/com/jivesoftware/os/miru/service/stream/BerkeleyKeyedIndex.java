@@ -77,7 +77,7 @@ public class BerkeleyKeyedIndex implements KeyedIndex {
     }
 
     @Override
-    public void streamKeys(List<KeyRange> ranges, KeyStream keyStream) {
+    public void streamKeys(List<KeyRange> ranges, KeyStream keyStream) throws Exception {
         DatabaseEntry key = new DatabaseEntry();
         DatabaseEntry value = new DatabaseEntry();
         value.setPartial(true);
@@ -114,9 +114,28 @@ public class BerkeleyKeyedIndex implements KeyedIndex {
 
     @Override
     public byte[] get(byte[] keyBytes) {
-        DatabaseEntry data = new DatabaseEntry();
-        OperationStatus status = database.get(null, new DatabaseEntry(keyBytes), data, LockMode.READ_UNCOMMITTED);
-        return (status == OperationStatus.SUCCESS) ? data.getData() : null;
+        DatabaseEntry value = new DatabaseEntry();
+        OperationStatus status = database.get(null, new DatabaseEntry(keyBytes), value, LockMode.READ_UNCOMMITTED);
+        return (status == OperationStatus.SUCCESS) ? value.getData() : null;
+    }
+
+    @Override
+    public byte[][] multiGet(byte[][] keyBytes) {
+        byte[][] values = new byte[keyBytes.length][];
+        DatabaseEntry key = new DatabaseEntry();
+        DatabaseEntry value = new DatabaseEntry();
+        for (int i = 0; i < keyBytes.length; i++) {
+            key.setData(keyBytes[i]);
+            OperationStatus status = database.get(null, key, value, LockMode.READ_UNCOMMITTED);
+            values[i] = (status == OperationStatus.SUCCESS) ? value.getData() : null;
+        }
+        return values;
+    }
+
+    @Override
+    public <R> R tx(byte[] keyBytes, KeyedIndexTx<R> tx) throws Exception {
+        byte[] value = get(keyBytes);
+        return tx.tx(value, null);
     }
 
     @Override

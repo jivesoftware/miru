@@ -32,6 +32,16 @@ public class MiruBitmapsAggregationTest {
     }
 
     @Test
+    public void testEmptyAnd() throws Exception {
+        RoaringBitmap b1 = new RoaringBitmap();
+        b1.add(1);
+        b1.remove(1);
+        RoaringBitmap b2 = RoaringBitmap.bitmapOf(1, 64*1024, 1024*1024, 64*1024*1024);
+
+        b1.and(b2);
+    }
+
+    @Test
     public void testAnd() throws Exception {
         MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
         List<RoaringBitmap> ands = Lists.newArrayList();

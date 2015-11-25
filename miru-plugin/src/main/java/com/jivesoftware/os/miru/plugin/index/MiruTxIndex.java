@@ -1,7 +1,7 @@
 package com.jivesoftware.os.miru.plugin.index;
 
+import com.jivesoftware.os.filer.io.Filer;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
-import com.jivesoftware.os.filer.io.chunk.ChunkFiler;
 import java.nio.ByteBuffer;
 
 /**
@@ -13,7 +13,7 @@ public interface MiruTxIndex<IBM> {
 
     interface IndexTx<R, IBM> {
 
-        R tx(IBM bitmap, ChunkFiler filer, int offset, StackBuffer stackBuffer) throws Exception;
+        R tx(IBM bitmap, ByteBuffer buffer, Filer filer, StackBuffer stackBuffer) throws Exception;
     }
 
 }

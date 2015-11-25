@@ -9,7 +9,7 @@ import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.BloomIndex;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
-import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
+import com.jivesoftware.os.miru.service.stream.KeyedIndexContextFactory;
 import com.jivesoftware.os.miru.service.stream.MiruIndexAuthz;
 import com.jivesoftware.os.miru.service.stream.MiruIndexBloom;
 import com.jivesoftware.os.miru.service.stream.MiruIndexFieldValues;
@@ -27,7 +27,7 @@ public class MiruLocalPartitionFactory<C extends MiruCursor<C, S>, S extends Mir
 
     private final MiruStats miruStats;
     private final MiruServiceConfig config;
-    private final MiruContextFactory<S> miruContextFactory;
+    private final KeyedIndexContextFactory<S> miruContextFactory;
     private final MiruSipTrackerFactory<S> sipTrackerFactory;
     private final MiruWALClient<C, S> walClient;
     private final MiruPartitionHeartbeatHandler partitionEventHandler;
@@ -44,7 +44,7 @@ public class MiruLocalPartitionFactory<C extends MiruCursor<C, S>, S extends Mir
 
     public MiruLocalPartitionFactory(MiruStats miruStats,
         MiruServiceConfig config,
-        MiruContextFactory<S> miruContextFactory,
+        KeyedIndexContextFactory<S> miruContextFactory,
         MiruSipTrackerFactory<S> sipTrackerFactory,
         MiruWALClient<C, S> walClient,
         MiruPartitionHeartbeatHandler partitionEventHandler,

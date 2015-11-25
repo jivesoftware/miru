@@ -407,7 +407,7 @@ public class MiruAggregateUtil {
 
         @Override
         public <R> R txIndex(IndexTx<R, IBM> tx, StackBuffer stackBuffer) throws Exception {
-            return tx.tx(bitmap, null, -1, null);
+            return tx.tx(bitmap, null, null, stackBuffer);
         }
     }
 
