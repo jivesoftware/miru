@@ -100,7 +100,7 @@ public class AggregateCountsInboxQuestion implements Question<AggregateCountsQue
         }
 
         if (!MiruAuthzExpression.NOT_PROVIDED.equals(request.authzExpression)) {
-            ands.add(context.getAuthzIndex().getCompositeAuthz(request.authzExpression,stackBuffer));
+            ands.add(context.getAuthzIndex().getCompositeAuthz(request.authzExpression, stackBuffer));
         }
 
         if (unreadOnly) {
@@ -111,9 +111,8 @@ public class AggregateCountsInboxQuestion implements Question<AggregateCountsQue
         }
         ands.add(bitmaps.buildIndexMask(context.getActivityIndex().lastId(stackBuffer), context.getRemovalIndex().getIndex(stackBuffer)));
 
-        BM answer = bitmaps.create();
         bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
-        bitmaps.and(answer, ands);
+        BM answer = bitmaps.and(ands);
 
         counterAnds.add(answer);
         if (!unreadOnly) {
@@ -123,9 +122,8 @@ public class AggregateCountsInboxQuestion implements Question<AggregateCountsQue
                 counterAnds.add(unreadIndex.get());
             }
         }
-        BM counter = bitmaps.create();
         bitmapsDebug.debug(solutionLog, bitmaps, "counterAnds", ands);
-        bitmaps.and(counter, counterAnds);
+        BM counter = bitmaps.and(counterAnds);
 
         return new MiruPartitionResponse<>(
             aggregateCounts.getAggregateCounts(solutionLog, bitmaps, context, request, report, answer, Optional.of(counter)),

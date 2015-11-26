@@ -57,7 +57,9 @@ public class DistinctCountInboxQuestion implements Question<DistinctCountQuery, 
     }
 
     @Override
-    public <BM extends IBM, IBM> MiruPartitionResponse<DistinctCountAnswer> askLocal(MiruRequestHandle<BM, IBM, ?> handle, Optional<DistinctCountReport> report) throws Exception {
+    public <BM extends IBM, IBM> MiruPartitionResponse<DistinctCountAnswer> askLocal(MiruRequestHandle<BM, IBM, ?> handle,
+        Optional<DistinctCountReport> report) throws Exception {
+
         StackBuffer stackBuffer = new StackBuffer();
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
         MiruRequestContext<IBM, ?> context = handle.getRequestContext();
@@ -107,9 +109,8 @@ public class DistinctCountInboxQuestion implements Question<DistinctCountQuery, 
         }
         ands.add(bitmaps.buildIndexMask(context.getActivityIndex().lastId(stackBuffer), context.getRemovalIndex().getIndex(stackBuffer)));
 
-        BM answer = bitmaps.create();
         bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
-        bitmaps.and(answer, ands);
+        BM answer = bitmaps.and(ands);
 
         return new MiruPartitionResponse<>(distinctCount.numberOfDistincts(bitmaps, context, request, report, answer), solutionLog.asList());
     }

@@ -35,8 +35,7 @@ public class MiruReadTracker {
             BM filtered = aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), filter, solutionLog,
                 null, context.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
 
-            BM result = bitmaps.create();
-            bitmaps.and(result, Arrays.asList(filtered, indexMask, timeMask));
+            BM result = bitmaps.and(Arrays.asList(filtered, indexMask, timeMask));
             context.getUnreadTrackingIndex().applyRead(streamId, result, stackBuffer);
         }
     }
@@ -58,8 +57,7 @@ public class MiruReadTracker {
             BM filtered = aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), filter, solutionLog,
                 null, context.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
 
-            BM result = bitmaps.create();
-            bitmaps.and(result, Arrays.asList(filtered, indexMask, timeMask));
+            BM result = bitmaps.and(Arrays.asList(filtered, indexMask, timeMask));
             context.getUnreadTrackingIndex().applyUnread(streamId, result, stackBuffer);
         }
     }

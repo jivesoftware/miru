@@ -19,7 +19,6 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.DataInput;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
 
@@ -166,8 +165,7 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
         }
         synchronized (mutationLock) {
             IBM index = getOrCreateIndex(stackBuffer);
-            BM r = bitmaps.create();
-            bitmaps.append(r, index, ids);
+            BM r = bitmaps.append(index, ids);
             int appendLastId = ids[ids.length - 1];
             if (appendLastId > lastId) {
                 lastId = appendLastId;
@@ -181,8 +179,7 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     public void appendAndExtend(List<Integer> ids, int extendToId, StackBuffer stackBuffer) throws Exception {
         synchronized (mutationLock) {
             IBM index = getOrCreateIndex(stackBuffer);
-            BM r = bitmaps.create();
-            bitmaps.extend(r, index, ids, extendToId + 1);
+            BM r = bitmaps.extend(index, ids, extendToId + 1);
 
             if (!ids.isEmpty()) {
                 int appendLastId = ids.get(ids.size() - 1);
@@ -199,8 +196,7 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     public void remove(int id, StackBuffer stackBuffer) throws Exception {
         synchronized (mutationLock) {
             IBM index = getOrCreateIndex(stackBuffer);
-            BM r = bitmaps.create();
-            bitmaps.remove(r, index, id);
+            BM r = bitmaps.remove(index, id);
             setIndex(r, lastId, stackBuffer);
         }
     }
@@ -212,8 +208,7 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
         }
         synchronized (mutationLock) {
             IBM index = getOrCreateIndex(stackBuffer);
-            BM r = bitmaps.create();
-            bitmaps.set(r, index, ids);
+            BM r = bitmaps.set(index, ids);
 
             for (int id : ids) {
                 if (id > lastId) {
@@ -249,8 +244,7 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     public void andNot(IBM mask, StackBuffer stackBuffer) throws Exception {
         synchronized (mutationLock) {
             IBM index = getOrCreateIndex(stackBuffer);
-            BM r = bitmaps.create();
-            bitmaps.andNot(r, index, mask);
+            BM r = bitmaps.andNot(index, mask);
             setIndex(r, lastId, stackBuffer);
         }
     }
@@ -259,8 +253,7 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     public void or(IBM mask, StackBuffer stackBuffer) throws Exception {
         synchronized (mutationLock) {
             IBM index = getOrCreateIndex(stackBuffer);
-            BM r = bitmaps.create();
-            bitmaps.or(r, Arrays.asList(index, mask));
+            BM r = bitmaps.or(Arrays.asList(index, mask));
             setIndex(r, Math.max(lastId, bitmaps.lastSetBit(mask)), stackBuffer);
         }
     }
@@ -269,8 +262,7 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     public void andNotToSourceSize(List<IBM> masks, StackBuffer stackBuffer) throws Exception {
         synchronized (mutationLock) {
             IBM index = getOrCreateIndex(stackBuffer);
-            BM andNot = bitmaps.create();
-            bitmaps.andNotToSourceSize(andNot, index, masks);
+            BM andNot = bitmaps.andNotToSourceSize(index, masks);
             setIndex(andNot, lastId, stackBuffer);
         }
     }
@@ -279,8 +271,7 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     public void orToSourceSize(IBM mask, StackBuffer stackBuffer) throws Exception {
         synchronized (mutationLock) {
             IBM index = getOrCreateIndex(stackBuffer);
-            BM or = bitmaps.create();
-            bitmaps.orToSourceSize(or, index, mask);
+            BM or = bitmaps.orToSourceSize(index, mask);
             setIndex(or, lastId, stackBuffer);
         }
     }

@@ -253,7 +253,8 @@ public class RecoCorrectnessTest {
         }
     }
 
-    private void testContainerTrendingContent(SetMultimap<String, String> contextToParents, MiruTimeRange timeRange) throws MiruQueryServiceException, InterruptedException {
+    private void testContainerTrendingContent(SetMultimap<String, String> contextToParents,
+        MiruTimeRange timeRange) throws MiruQueryServiceException, InterruptedException {
 
         Random rand = new Random(1_234);
         Set<String> docTypes = Sets.newHashSet("50", "51", "52");

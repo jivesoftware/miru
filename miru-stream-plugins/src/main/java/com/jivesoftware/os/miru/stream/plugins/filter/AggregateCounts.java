@@ -14,7 +14,6 @@ import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
-import com.jivesoftware.os.miru.plugin.bitmap.ReusableBuffers;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
@@ -118,18 +117,14 @@ public class AggregateCounts {
                     bitmaps.inPlaceAnd(counter.get(), filtered);
                 }
             } else {
-                BM constrained = bitmaps.create();
                 List<IBM> ands = Arrays.asList(answer, filtered);
                 bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
-                bitmaps.and(constrained, ands);
-                answer = constrained;
+                answer = bitmaps.and(ands);
 
                 if (counter.isPresent()) {
-                    constrained = bitmaps.create();
                     ands = Arrays.asList(counter.get(), filtered);
                     bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
-                    bitmaps.and(constrained, ands);
-                    counter = Optional.of(constrained);
+                    counter = Optional.of(bitmaps.and(ands));
                 }
             }
         }
@@ -149,12 +144,8 @@ public class AggregateCounts {
                 }
             }
 
-            // 2 to swap answers, 2 to swap counters, 1 to check unread
-            final int numBuffers = 2 + (counter.isPresent() ? 2 : 0) + (unreadIndex != null ? 1 : 0);
-            ReusableBuffers<BM, IBM> reusable = new ReusableBuffers<>(bitmaps, numBuffers);
-
             long beforeCount = counter.isPresent() ? bitmaps.cardinality(counter.get()) : bitmaps.cardinality(answer);
-            CardinalityAndLastSetBit answerCollector = null;
+            CardinalityAndLastSetBit<BM> answerCollector = null;
             for (String aggregateTerm : aggregateTerms) { // Consider
                 MiruTermId aggregateTermId = termComposer.compose(fieldDefinition, aggregateTerm);
                 Optional<IBM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex(stackBuffer);
@@ -167,9 +158,8 @@ public class AggregateCounts {
                 if (bitmaps.supportsInPlace()) {
                     answerCollector = bitmaps.inPlaceAndNotWithCardinalityAndLastSetBit(answer, termIndex);
                 } else {
-                    BM revisedAnswer = reusable.next();
-                    answerCollector = bitmaps.andNotWithCardinalityAndLastSetBit(revisedAnswer, answer, termIndex);
-                    answer = revisedAnswer;
+                    answerCollector = bitmaps.andNotWithCardinalityAndLastSetBit(answer, termIndex);
+                    answer = answerCollector.bitmap;
                 }
 
                 long afterCount;
@@ -178,9 +168,8 @@ public class AggregateCounts {
                         CardinalityAndLastSetBit counterCollector = bitmaps.inPlaceAndNotWithCardinalityAndLastSetBit(counter.get(), termIndex);
                         afterCount = counterCollector.cardinality;
                     } else {
-                        BM revisedCounter = reusable.next();
-                        CardinalityAndLastSetBit counterCollector = bitmaps.andNotWithCardinalityAndLastSetBit(revisedCounter, counter.get(), termIndex);
-                        counter = Optional.of(revisedCounter);
+                        CardinalityAndLastSetBit<BM> counterCollector = bitmaps.andNotWithCardinalityAndLastSetBit(counter.get(), termIndex);
+                        counter = Optional.of(counterCollector.bitmap);
                         afterCount = counterCollector.cardinality;
                     }
                 } else {
@@ -190,8 +179,7 @@ public class AggregateCounts {
                 boolean unread = false;
                 if (unreadIndex != null) {
                     //TODO much more efficient to add a bitmaps.intersects() to test for first bit in common
-                    BM unreadAnswer = reusable.next();
-                    CardinalityAndLastSetBit storage = bitmaps.andWithCardinalityAndLastSetBit(unreadAnswer, Arrays.asList(unreadIndex, termIndex));
+                    CardinalityAndLastSetBit<BM> storage = bitmaps.andWithCardinalityAndLastSetBit(Arrays.asList(unreadIndex, termIndex));
                     if (storage.cardinality > 0) {
                         unread = true;
                     }
@@ -218,9 +206,8 @@ public class AggregateCounts {
                         answerCollector = bitmaps.inPlaceAndNotWithCardinalityAndLastSetBit(answer, removeUnknownField);
                     } else {
                         BM removeUnknownField = bitmaps.createWithBits(lastSetBit);
-                        BM revisedAnswer = reusable.next();
-                        answerCollector = bitmaps.andNotWithCardinalityAndLastSetBit(revisedAnswer, answer, removeUnknownField);
-                        answer = revisedAnswer;
+                        answerCollector = bitmaps.andNotWithCardinalityAndLastSetBit(answer, removeUnknownField);
+                        answer = answerCollector.bitmap;
                     }
                     beforeCount--;
 
@@ -237,20 +224,18 @@ public class AggregateCounts {
                     if (bitmaps.supportsInPlace()) {
                         answerCollector = bitmaps.inPlaceAndNotWithCardinalityAndLastSetBit(answer, termIndex);
                     } else {
-                        BM revisedAnswer = reusable.next();
-                        answerCollector = bitmaps.andNotWithCardinalityAndLastSetBit(revisedAnswer, answer, termIndex);
-                        answer = revisedAnswer;
+                        answerCollector = bitmaps.andNotWithCardinalityAndLastSetBit(answer, termIndex);
+                        answer = answerCollector.bitmap;
                     }
 
                     long afterCount;
                     if (counter.isPresent()) {
                         if (bitmaps.supportsInPlace()) {
-                            CardinalityAndLastSetBit counterCollector = bitmaps.inPlaceAndNotWithCardinalityAndLastSetBit(counter.get(), termIndex);
+                            CardinalityAndLastSetBit<BM> counterCollector = bitmaps.inPlaceAndNotWithCardinalityAndLastSetBit(counter.get(), termIndex);
                             afterCount = counterCollector.cardinality;
                         } else {
-                            BM revisedCounter = reusable.next();
-                            CardinalityAndLastSetBit counterCollector = bitmaps.andNotWithCardinalityAndLastSetBit(revisedCounter, counter.get(), termIndex);
-                            counter = Optional.of(revisedCounter);
+                            CardinalityAndLastSetBit<BM> counterCollector = bitmaps.andNotWithCardinalityAndLastSetBit(counter.get(), termIndex);
+                            counter = Optional.of(counterCollector.bitmap);
                             afterCount = counterCollector.cardinality;
                         }
                     } else {
@@ -262,8 +247,7 @@ public class AggregateCounts {
                         boolean unread = false;
                         if (unreadIndex != null) {
                             //TODO much more efficient to add a bitmaps.intersects() to test for first bit in common
-                            BM unreadAnswer = reusable.next();
-                            CardinalityAndLastSetBit storage = bitmaps.andWithCardinalityAndLastSetBit(unreadAnswer, Arrays.asList(unreadIndex, termIndex));
+                            CardinalityAndLastSetBit<BM> storage = bitmaps.andWithCardinalityAndLastSetBit(Arrays.asList(unreadIndex, termIndex));
                             if (storage.cardinality > 0) {
                                 unread = true;
                             }

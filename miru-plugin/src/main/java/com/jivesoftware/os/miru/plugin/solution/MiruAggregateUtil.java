@@ -16,7 +16,6 @@ import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
-import com.jivesoftware.os.miru.plugin.bitmap.ReusableBuffers;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
@@ -61,9 +60,8 @@ public class MiruAggregateUtil {
         boolean debugEnabled = LOG.isDebugEnabled();
 
         if (bitmaps.supportsInPlace()) {
-            BM copy = bitmaps.create();
-            bitmaps.copy(copy, answer);
-            answer = copy;
+            // don't mutate the original
+            answer = bitmaps.copy(answer);
         }
 
         final AtomicLong bytesTraversed = new AtomicLong();
@@ -71,8 +69,7 @@ public class MiruAggregateUtil {
             bytesTraversed.addAndGet(bitmaps.sizeInBytes(answer));
         }
 
-        CardinalityAndLastSetBit answerCollector = null;
-        ReusableBuffers<BM, IBM> reusable = new ReusableBuffers<>(bitmaps, 2);
+        CardinalityAndLastSetBit<BM> answerCollector = null;
         MiruFieldIndex<IBM> fieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
         int streamFieldId = requestContext.getSchema().getFieldId(streamField);
         long beforeCount = counter.isPresent() ? bitmaps.cardinality(counter.get()) : bitmaps.cardinality(answer);
@@ -93,7 +90,7 @@ public class MiruAggregateUtil {
 
             MiruTermId[] fieldValues = requestContext.getActivityIndex().get(lastSetBit, streamFieldId, stackBuffer);
             if (traceEnabled) {
-                LOG.trace("stream: fieldValues={}", new Object[]{fieldValues});
+                LOG.trace("stream: fieldValues={}", new Object[] { fieldValues });
             }
             if (fieldValues == null || fieldValues.length == 0) {
                 // could make this a reusable buffer, but this is effectively an error case and would require 3 buffers
@@ -105,9 +102,8 @@ public class MiruAggregateUtil {
                 if (bitmaps.supportsInPlace()) {
                     answerCollector = bitmaps.inPlaceAndNotWithCardinalityAndLastSetBit(answer, removeUnknownField);
                 } else {
-                    BM revisedAnswer = reusable.next();
-                    answerCollector = bitmaps.andNotWithCardinalityAndLastSetBit(revisedAnswer, answer, removeUnknownField);
-                    answer = revisedAnswer;
+                    answerCollector = bitmaps.andNotWithCardinalityAndLastSetBit(answer, removeUnknownField);
+                    answer = answerCollector.bitmap;
                 }
             } else {
                 //TODO Ideally we should prohibit streaming of multi-term fields because the operation is inherently lossy/ambiguous.
@@ -126,20 +122,18 @@ public class MiruAggregateUtil {
                 if (bitmaps.supportsInPlace()) {
                     answerCollector = bitmaps.inPlaceAndNotWithCardinalityAndLastSetBit(answer, termIndex);
                 } else {
-                    BM revisedAnswer = reusable.next();
-                    answerCollector = bitmaps.andNotWithCardinalityAndLastSetBit(revisedAnswer, answer, termIndex);
-                    answer = revisedAnswer;
+                    answerCollector = bitmaps.andNotWithCardinalityAndLastSetBit(answer, termIndex);
+                    answer = answerCollector.bitmap;
                 }
 
                 long afterCount;
                 if (counter.isPresent()) {
                     if (bitmaps.supportsInPlace()) {
-                        CardinalityAndLastSetBit counterCollector = bitmaps.inPlaceAndNotWithCardinalityAndLastSetBit(counter.get(), termIndex);
+                        CardinalityAndLastSetBit<BM> counterCollector = bitmaps.inPlaceAndNotWithCardinalityAndLastSetBit(counter.get(), termIndex);
                         afterCount = counterCollector.cardinality;
                     } else {
-                        BM revisedCounter = reusable.next();
-                        CardinalityAndLastSetBit counterCollector = bitmaps.andNotWithCardinalityAndLastSetBit(revisedCounter, counter.get(), termIndex);
-                        counter = Optional.of(revisedCounter);
+                        CardinalityAndLastSetBit<BM> counterCollector = bitmaps.andNotWithCardinalityAndLastSetBit(counter.get(), termIndex);
+                        counter = Optional.of(counterCollector.bitmap);
                         afterCount = counterCollector.cardinality;
                     }
                 } else {
@@ -171,9 +165,8 @@ public class MiruAggregateUtil {
         MiruFieldIndex<IBM> primaryFieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
 
         if (bitmaps.supportsInPlace()) {
-            BM copy = bitmaps.create();
-            bitmaps.copy(copy, answer);
-            answer = copy;
+            // don't mutate the original
+            answer = bitmaps.copy(answer);
         }
 
         Set<MiruTermId> distincts = new HashSet<>();
@@ -238,9 +231,7 @@ public class MiruAggregateUtil {
                     }
                 }
 
-                BM reduced = bitmaps.create();
-                bitmaps.andNot(reduced, answer, andNots);
-                answer = reduced;
+                answer = bitmaps.andNot(answer, andNots);
             }
         }
         solutionLog.log(MiruSolutionLogLevel.INFO, "gather aggregate gets:{} fetched:{} used:{} results:{} getAllCost:{} andNotCost:{}",

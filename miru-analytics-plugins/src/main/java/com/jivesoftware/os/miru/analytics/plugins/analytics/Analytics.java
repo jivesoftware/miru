@@ -105,10 +105,9 @@ public class Analytics {
         solutionLog.log(MiruSolutionLogLevel.INFO, "analytics indexMask: {} millis.", System.currentTimeMillis() - start);
 
         // AND it all together to get the final constraints
-        BM constrained = bitmaps.create();
         bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
         start = System.currentTimeMillis();
-        bitmaps.and(constrained, ands);
+        BM constrained = bitmaps.and(ands);
         solutionLog.log(MiruSolutionLogLevel.INFO, "analytics constrained: {} millis.", System.currentTimeMillis() - start);
 
         if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
@@ -143,8 +142,7 @@ public class Analytics {
                     answer = waveformFiltered;
                     bitmaps.inPlaceAnd(waveformFiltered, constrained);
                 } else {
-                    answer = bitmaps.create();
-                    bitmaps.and(answer, Arrays.asList(constrained, waveformFiltered));
+                    answer = bitmaps.and(Arrays.asList(constrained, waveformFiltered));
                 }
                 if (!bitmaps.isEmpty(answer)) {
                     found = true;

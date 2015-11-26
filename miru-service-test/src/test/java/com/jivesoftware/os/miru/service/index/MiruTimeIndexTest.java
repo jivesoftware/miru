@@ -5,7 +5,7 @@ import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.bitmaps.ewah.MiruBitmapsEWAH;
+import com.jivesoftware.os.miru.bitmaps.roaring5.buffer.MiruBitmapsRoaringBuffer;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.service.IndexTestUtil;
 import com.jivesoftware.os.miru.service.index.delta.MiruDeltaTimeIndex;
@@ -21,8 +21,8 @@ import static org.testng.Assert.assertTrue;
 
 public class MiruTimeIndexTest {
 
-    private final MiruBitmapsEWAH bitmaps = new MiruBitmapsEWAH(100);
-    private final MiruTenantId tenantId = new MiruTenantId(new byte[]{1});
+    private final MiruBitmapsRoaringBuffer bitmaps = new MiruBitmapsRoaringBuffer();
+    private final MiruTenantId tenantId = new MiruTenantId(new byte[] { 1 });
     private final MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, MiruPartitionId.of(0), new MiruHost("localhost", 10000));
     private final int numberOfChunkStores = 4;
 
@@ -195,8 +195,8 @@ public class MiruTimeIndexTest {
     public void testPerformance() throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
         DecimalFormat formatter = new DecimalFormat("###,###,###");
-        int[] tryLevels = new int[]{3}; //{2, 3, 4, 5};
-        int[] trySegments = new int[]{16}; //{4, 16, 32};
+        int[] tryLevels = new int[] { 3 }; //{2, 3, 4, 5};
+        int[] trySegments = new int[] { 16 }; //{4, 16, 32};
         int capacity = 100; //1_000_000;
         long start;
 
@@ -240,9 +240,9 @@ public class MiruTimeIndexTest {
             MiruTimeIndex miruInMemoryTimeIndex = IndexTestUtil.buildInMemoryContext(numberOfChunkStores, bitmaps, coord).timeIndex;
             MiruTimeIndex miruOnDiskTimeIndex = IndexTestUtil.buildOnDiskContext(numberOfChunkStores, bitmaps, coord).timeIndex;
 
-            return new Object[][]{
-                {miruInMemoryTimeIndex},
-                {miruOnDiskTimeIndex}
+            return new Object[][] {
+                { miruInMemoryTimeIndex },
+                { miruOnDiskTimeIndex }
             };
         } catch (Exception x) {
             System.out.println("Your data provider is hosed!");
@@ -287,13 +287,13 @@ public class MiruTimeIndexTest {
                 miruOnDiskTimeIndexPartiallyMerged.nextId(stackBuffer, importValues[i]);
             }
 
-            return new Object[][]{
-                {miruInMemoryTimeIndex, capacity},
-                {miruOnDiskTimeIndex, capacity},
-                {miruInMemoryTimeIndexMerged, capacity},
-                {miruOnDiskTimeIndexMerged, capacity},
-                {miruInMemoryTimeIndexPartiallyMerged, capacity},
-                {miruOnDiskTimeIndexPartiallyMerged, capacity}
+            return new Object[][] {
+                { miruInMemoryTimeIndex, capacity },
+                { miruOnDiskTimeIndex, capacity },
+                { miruInMemoryTimeIndexMerged, capacity },
+                { miruOnDiskTimeIndexMerged, capacity },
+                { miruInMemoryTimeIndexPartiallyMerged, capacity },
+                { miruOnDiskTimeIndexPartiallyMerged, capacity }
             };
         } catch (Exception x) {
             System.out.println("Your data provider is hosed!");
@@ -306,7 +306,7 @@ public class MiruTimeIndexTest {
     public Object[][] miruTimeIndexDataProviderWithRangeData() throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
         try {
-            final long[] importValues = {1, 1, 1, 3, 3, 3, 5, 5, 5};
+            final long[] importValues = { 1, 1, 1, 3, 3, 3, 5, 5, 5 };
             MiruTimeIndex miruInMemoryTimeIndex = IndexTestUtil.buildInMemoryContext(numberOfChunkStores, bitmaps, coord).timeIndex;
             MiruTimeIndex miruOnDiskTimeIndex = IndexTestUtil.buildOnDiskContext(numberOfChunkStores, bitmaps, coord).timeIndex;
             miruOnDiskTimeIndex.nextId(stackBuffer, importValues);
@@ -333,13 +333,13 @@ public class MiruTimeIndexTest {
                 miruOnDiskTimeIndexPartiallyMerged.nextId(stackBuffer, importValues[i]);
             }
 
-            return new Object[][]{
-                {miruInMemoryTimeIndex},
-                {miruOnDiskTimeIndex},
-                {miruInMemoryTimeIndexMerged},
-                {miruOnDiskTimeIndexMerged},
-                {miruInMemoryTimeIndexPartiallyMerged},
-                {miruOnDiskTimeIndexPartiallyMerged}
+            return new Object[][] {
+                { miruInMemoryTimeIndex },
+                { miruOnDiskTimeIndex },
+                { miruInMemoryTimeIndexMerged },
+                { miruOnDiskTimeIndexMerged },
+                { miruInMemoryTimeIndexPartiallyMerged },
+                { miruOnDiskTimeIndexPartiallyMerged }
             };
         } catch (Exception x) {
             System.out.println("Your data provider is hosed!");

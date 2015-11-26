@@ -48,7 +48,9 @@ public class StumptownQuestion implements Question<StumptownQuery, StumptownAnsw
     }
 
     @Override
-    public <BM extends IBM, IBM> MiruPartitionResponse<StumptownAnswer> askLocal(MiruRequestHandle<BM, IBM, ?> handle, Optional<StumptownReport> report) throws Exception {
+    public <BM extends IBM, IBM> MiruPartitionResponse<StumptownAnswer> askLocal(MiruRequestHandle<BM, IBM, ?> handle,
+        Optional<StumptownReport> report) throws Exception {
+
         StackBuffer stackBuffer = new StackBuffer();
 
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
@@ -100,10 +102,9 @@ public class StumptownQuestion implements Question<StumptownQuery, StumptownAnsw
         solutionLog.log(MiruSolutionLogLevel.INFO, "stumptown indexMask: {} millis.", System.currentTimeMillis() - start);
 
         // AND it all together to get the final constraints
-        BM constrained = bitmaps.create();
         bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
         start = System.currentTimeMillis();
-        bitmaps.and(constrained, ands);
+        BM constrained = bitmaps.and(ands);
         solutionLog.log(MiruSolutionLogLevel.INFO, "stumptown constrained: {} millis.", System.currentTimeMillis() - start);
 
         if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
@@ -130,8 +131,7 @@ public class StumptownQuestion implements Question<StumptownQuery, StumptownAnsw
             if (!bitmaps.isEmpty(constrained)) {
                 BM waveformFiltered = aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(),
                     entry.getValue(), solutionLog, null, context.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
-                BM answer = bitmaps.create();
-                bitmaps.and(answer, Arrays.asList(constrained, waveformFiltered));
+                BM answer = bitmaps.and(Arrays.asList(constrained, waveformFiltered));
                 if (!bitmaps.isEmpty(answer)) {
                     waveform = stumptown.stumptowning(bitmaps, context, request.tenantId, answer, request.query.desiredNumberOfResultsPerWaveform, indexes);
                     if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.DEBUG)) {

@@ -30,8 +30,7 @@ public class RoaringInspectionTest {
 
         RoaringBitmap remove = bitmaps.createWithBits(0);
 
-        RoaringBitmap answer = bitmaps.create();
-        bitmaps.andNot(answer, bitmap, remove);
+        RoaringBitmap answer = bitmaps.andNot(bitmap, remove);
 
         cardinalityAndLastSetBit = RoaringInspection.cardinalityAndLastSetBit(answer);
         System.out.println("cardinalityAndLastSetBit=" + cardinalityAndLastSetBit.lastSetBit);

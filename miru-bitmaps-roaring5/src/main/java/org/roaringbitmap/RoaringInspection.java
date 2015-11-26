@@ -1,14 +1,13 @@
 package org.roaringbitmap;
 
 import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
-import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
 
 /**
  *
  */
 public class RoaringInspection {
 
-    public static CardinalityAndLastSetBit cardinalityAndLastSetBit(RoaringBitmap bitmap) {
+    public static CardinalityAndLastSetBit<RoaringBitmap> cardinalityAndLastSetBit(RoaringBitmap bitmap) {
         int pos = bitmap.highLowContainer.size() - 1;
         int lastSetBit = -1;
         while (pos >= 0) {
@@ -21,7 +20,7 @@ public class RoaringInspection {
         }
         int cardinality = bitmap.getCardinality();
         assert cardinality == 0 || lastSetBit >= 0;
-        return new CardinalityAndLastSetBit(cardinality, lastSetBit);
+        return new CardinalityAndLastSetBit<>(bitmap, cardinality, lastSetBit);
     }
 
     private static int lastSetBit(RoaringBitmap bitmap, Container container, int pos) {

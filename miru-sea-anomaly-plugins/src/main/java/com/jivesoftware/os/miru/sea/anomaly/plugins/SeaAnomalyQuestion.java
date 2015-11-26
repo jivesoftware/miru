@@ -110,10 +110,9 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyQuery, SeaAnomalyA
         solutionLog.log(MiruSolutionLogLevel.INFO, "anomaly indexMask: {} millis.", System.currentTimeMillis() - start);
 
         // AND it all together to get the final constraints
-        BM constrained = bitmaps.create();
         bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
         start = System.currentTimeMillis();
-        bitmaps.and(constrained, ands);
+        BM constrained = bitmaps.and(ands);
         solutionLog.log(MiruSolutionLogLevel.INFO, "anomaly constrained: {} millis.", System.currentTimeMillis() - start);
 
         if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
@@ -199,16 +198,13 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyQuery, SeaAnomalyA
                 BM waveformFiltered = aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(),
                     entry.getValue(), solutionLog, null, context.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
 
-                BM rawAnswer = bitmaps.create();
-
-                bitmaps.and(rawAnswer, Arrays.asList(constrained, waveformFiltered));
+                BM rawAnswer = bitmaps.and(Arrays.asList(constrained, waveformFiltered));
                 if (!bitmaps.isEmpty(rawAnswer)) {
                     List<BM> answers = Lists.newArrayList();
                     for (int i = 0; i < 64; i++) {
                         Optional<IBM> powerBitIndex = powerBitIndexes.get(i);
                         if (powerBitIndex.isPresent()) {
-                            BM answer = bitmaps.create();
-                            bitmaps.and(answer, Arrays.asList(powerBitIndex.get(), rawAnswer));
+                            BM answer = bitmaps.and(Arrays.asList(powerBitIndex.get(), rawAnswer));
                             answers.add(answer);
                         } else {
                             answers.add(null);

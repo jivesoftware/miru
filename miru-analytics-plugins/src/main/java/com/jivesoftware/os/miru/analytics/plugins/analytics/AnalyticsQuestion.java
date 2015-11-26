@@ -39,7 +39,9 @@ public class AnalyticsQuestion implements Question<AnalyticsQuery, AnalyticsAnsw
     }
 
     @Override
-    public <BM extends IBM, IBM> MiruPartitionResponse<AnalyticsAnswer> askLocal(MiruRequestHandle<BM, IBM, ?> handle, Optional<AnalyticsReport> report) throws Exception {
+    public <BM extends IBM, IBM> MiruPartitionResponse<AnalyticsAnswer> askLocal(MiruRequestHandle<BM, IBM, ?> handle,
+        Optional<AnalyticsReport> report) throws Exception {
+
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
         MiruRequestContext<IBM, ?> context = handle.getRequestContext();
         List<Waveform> waveforms = Lists.newArrayListWithCapacity(request.query.analyticsFilters.size());

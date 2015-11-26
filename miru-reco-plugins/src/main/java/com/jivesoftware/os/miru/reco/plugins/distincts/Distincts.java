@@ -105,11 +105,11 @@ public class Distincts {
                     ands.add(bitmaps.buildTimeRangeMask(requestContext.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp, stackBuffer));
                 }
 
-                BM result = bitmaps.create();
+                BM result;
                 if (ands.size() == 1) {
-                    bitmaps.copy(result, ands.get(0));
+                    result = bitmaps.copy(ands.get(0));
                 } else {
-                    bitmaps.and(result, ands);
+                    result = bitmaps.and(ands);
                 }
                 solutionLog.log(MiruSolutionLogLevel.INFO, "distincts gatherDirect: setup {} ms.", System.currentTimeMillis() - start);
 

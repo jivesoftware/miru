@@ -374,8 +374,10 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
         return updateStorage(accessorRef.get(), storage, true, stackBuffer);
     }
 
-    private boolean updateStorage(MiruPartitionAccessor<BM, IBM, C, S> accessor, MiruBackingStorage destinationStorage, boolean force, StackBuffer stackBuffer) throws
-        Exception {
+    private boolean updateStorage(MiruPartitionAccessor<BM, IBM, C, S> accessor,
+        MiruBackingStorage destinationStorage,
+        boolean force,
+        StackBuffer stackBuffer) throws Exception {
         synchronized (factoryLock) {
             boolean updated = false;
             try (MiruMigrationHandle<BM, IBM, C, S> handle = accessor.getMigrationHandle(timings.partitionMigrationWaitInMillis)) {

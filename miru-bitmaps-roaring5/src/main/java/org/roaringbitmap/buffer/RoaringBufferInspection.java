@@ -8,7 +8,7 @@ import java.nio.LongBuffer;
  */
 public class RoaringBufferInspection {
 
-    public static CardinalityAndLastSetBit cardinalityAndLastSetBit(ImmutableRoaringBitmap bitmap) {
+    public static CardinalityAndLastSetBit<MutableRoaringBitmap> cardinalityAndLastSetBit(MutableRoaringBitmap bitmap) {
         int pos = bitmap.highLowContainer.size() - 1;
         int lastSetBit = -1;
         while (pos >= 0) {
@@ -21,7 +21,7 @@ public class RoaringBufferInspection {
         }
         int cardinality = bitmap.getCardinality();
         assert cardinality == 0 || lastSetBit >= 0;
-        return new CardinalityAndLastSetBit(cardinality, lastSetBit);
+        return new CardinalityAndLastSetBit<>(bitmap, cardinality, lastSetBit);
     }
 
     private static int lastSetBit(ImmutableRoaringBitmap bitmap, MappeableContainer container, int pos) {

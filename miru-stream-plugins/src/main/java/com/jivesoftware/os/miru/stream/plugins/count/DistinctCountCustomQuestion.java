@@ -47,7 +47,9 @@ public class DistinctCountCustomQuestion implements Question<DistinctCountQuery,
     }
 
     @Override
-    public <BM extends IBM, IBM> MiruPartitionResponse<DistinctCountAnswer> askLocal(MiruRequestHandle<BM, IBM, ?> handle, Optional<DistinctCountReport> report) throws Exception {
+    public <BM extends IBM, IBM> MiruPartitionResponse<DistinctCountAnswer> askLocal(MiruRequestHandle<BM, IBM, ?> handle,
+        Optional<DistinctCountReport> report) throws Exception {
+
         StackBuffer stackBuffer = new StackBuffer();
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
         MiruRequestContext<IBM, ?> stream = handle.getRequestContext();
@@ -85,9 +87,8 @@ public class DistinctCountCustomQuestion implements Question<DistinctCountQuery,
         ands.add(bitmaps.buildIndexMask(stream.getActivityIndex().lastId(stackBuffer), stream.getRemovalIndex().getIndex(stackBuffer)));
 
         // AND it all together and return the results
-        BM answer = bitmaps.create();
         bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
-        bitmaps.and(answer, ands);
+        BM answer = bitmaps.and(ands);
 
         return new MiruPartitionResponse<>(distinctCount.numberOfDistincts(bitmaps, stream, request, report, answer), solutionLog.asList());
     }

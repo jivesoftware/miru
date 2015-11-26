@@ -57,8 +57,8 @@ public class IndexTestUtil {
 
         MiruSchemaProvider schemaProvider = new SingleSchemaProvider(
             new MiruSchema.Builder("test", 1)
-            .setFieldDefinitions(DefaultMiruSchemaDefinition.FIELDS)
-            .build());
+                .setFieldDefinitions(DefaultMiruSchemaDefinition.FIELDS)
+                .build());
         MiruTermComposer termComposer = new MiruTermComposer(Charsets.UTF_8);
         MiruActivityInternExtern activityInternExtern = new MiruActivityInternExtern(Interners.<MiruIBA>newWeakInterner(),
             Interners.<MiruTermId>newWeakInterner(),
@@ -87,9 +87,9 @@ public class IndexTestUtil {
             termComposer,
             activityInternExtern,
             ImmutableMap.<MiruBackingStorage, MiruChunkAllocator>builder()
-            .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
-            .put(MiruBackingStorage.disk, onDiskChunkAllocator)
-            .build(),
+                .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
+                .put(MiruBackingStorage.disk, onDiskChunkAllocator)
+                .build(),
             new RCVSSipIndexMarshaller(),
             new MiruTempDirectoryResourceLocator(),
             MiruBackingStorage.memory,
@@ -106,7 +106,7 @@ public class IndexTestUtil {
     public static <BM extends IBM, IBM> MiruContext<IBM, RCVSSipCursor> buildInMemoryContext(int numberOfChunkStores,
         MiruBitmaps<BM, IBM> bitmaps,
         MiruPartitionCoord coord) throws Exception {
-            StackBuffer stackBuffer = new StackBuffer();
+        StackBuffer stackBuffer = new StackBuffer();
         return factory(numberOfChunkStores).allocate(bitmaps, coord, MiruBackingStorage.memory, stackBuffer);
 
     }
@@ -114,7 +114,7 @@ public class IndexTestUtil {
     public static <BM extends IBM, IBM> MiruContext<IBM, RCVSSipCursor> buildOnDiskContext(int numberOfChunkStores,
         MiruBitmaps<BM, IBM> bitmaps,
         MiruPartitionCoord coord) throws Exception {
-            StackBuffer stackBuffer = new StackBuffer();
+        StackBuffer stackBuffer = new StackBuffer();
         return factory(numberOfChunkStores).allocate(bitmaps, coord, MiruBackingStorage.disk, stackBuffer);
 
     }

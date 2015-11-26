@@ -30,8 +30,7 @@ public class RoaringBufferInspectionTest {
 
         MutableRoaringBitmap remove = bitmaps.createWithBits(0);
 
-        MutableRoaringBitmap answer = bitmaps.create();
-        bitmaps.andNot(answer, bitmap, remove);
+        MutableRoaringBitmap answer = bitmaps.andNot(bitmap, remove);
 
         cardinalityAndLastSetBit = RoaringBufferInspection.cardinalityAndLastSetBit(answer);
         System.out.println("cardinalityAndLastSetBit=" + cardinalityAndLastSetBit.lastSetBit);

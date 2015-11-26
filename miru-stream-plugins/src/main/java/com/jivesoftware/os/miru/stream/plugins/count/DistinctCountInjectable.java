@@ -47,7 +47,8 @@ public class DistinctCountInjectable {
         }
     }
 
-    public MiruResponse<DistinctCountAnswer> countInboxStreamAll(MiruRequest<DistinctCountQuery> request) throws MiruQueryServiceException, InterruptedException {
+    public MiruResponse<DistinctCountAnswer> countInboxStreamAll(MiruRequest<DistinctCountQuery> request)
+        throws MiruQueryServiceException, InterruptedException {
         try {
             MiruTenantId tenantId = request.tenantId;
             Miru miru = provider.getMiru(tenantId);
@@ -69,8 +70,8 @@ public class DistinctCountInjectable {
         }
     }
 
-    public MiruResponse<DistinctCountAnswer> countInboxStreamUnread(MiruRequest<DistinctCountQuery> request) throws MiruQueryServiceException,
-        InterruptedException {
+    public MiruResponse<DistinctCountAnswer> countInboxStreamUnread(MiruRequest<DistinctCountQuery> request)
+        throws MiruQueryServiceException, InterruptedException {
         try {
             MiruTenantId tenantId = request.tenantId;
             Miru miru = provider.getMiru(tenantId);

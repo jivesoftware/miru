@@ -5,20 +5,16 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-build-management</artifactId>
-        <version>0.663</version>
+        <version>0.664</version>
         <relativePath>../inheritance-poms/global-build-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru</groupId>
     <artifactId>miru-reco</artifactId>
-    <version>0.663</version>
+    <version>0.664</version>
     <properties>
         <module.type>shared_lib</module.type>
     </properties>
     <dependencies>
-        <dependency>
-            <groupId>com.jivesoftware.os.jive.utils</groupId>
-            <artifactId>ordered-id</artifactId>
-        </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.mlogger</groupId>
             <artifactId>core</artifactId>

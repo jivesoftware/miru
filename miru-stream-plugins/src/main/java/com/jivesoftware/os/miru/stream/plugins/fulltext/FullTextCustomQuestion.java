@@ -77,7 +77,8 @@ public class FullTextCustomQuestion implements Question<FullTextQuery, FullTextA
         ands.add(bitmaps.buildIndexMask(context.getActivityIndex().lastId(stackBuffer), context.getRemovalIndex().getIndex(stackBuffer)));
 
         if (!MiruFilter.NO_FILTER.equals(request.query.constraintsFilter)) {
-            BM constrained = aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), request.query.constraintsFilter,
+            BM constrained = aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(),
+                request.query.constraintsFilter,
                 solutionLog, null, context.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
             ands.add(constrained);
         }
@@ -90,9 +91,8 @@ public class FullTextCustomQuestion implements Question<FullTextQuery, FullTextA
             ands.add(bitmaps.buildTimeRangeMask(context.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp, stackBuffer));
         }
 
-        BM answer = bitmaps.create();
         bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
-        bitmaps.and(answer, ands);
+        BM answer = bitmaps.and(ands);
 
         return new MiruPartitionResponse<>(fullText.getActivityScores(bitmaps, context, request, report, answer, termCollector),
             solutionLog.asList());
