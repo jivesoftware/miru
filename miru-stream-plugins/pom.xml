@@ -36,6 +36,10 @@
             <artifactId>core</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.jivesoftware.os.filer</groupId>
+            <artifactId>io</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-api</artifactId>
             <version>0.664-SNAPSHOT</version>

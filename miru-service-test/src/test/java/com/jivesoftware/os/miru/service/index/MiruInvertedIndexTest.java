@@ -18,9 +18,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.roaringbitmap.buffer.BufferFastAggregation;
 import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
 import org.roaringbitmap.buffer.MutableRoaringBitmap;
-import org.roaringbitmap.buffer.RoaringBufferAggregation;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
@@ -255,7 +255,7 @@ public class MiruInvertedIndexTest {
 
     private <BM extends IBM, IBM> MiruFilerInvertedIndex<BM, IBM> buildFilerInvertedIndex(MiruBitmaps<BM, IBM> bitmaps) throws Exception {
         return new MiruFilerInvertedIndex<>(bitmaps,
-            new MiruFieldIndex.IndexKey(0, new byte[]{0}),
+            new MiruFieldIndex.IndexKey(0, new byte[] { 0 }),
             IndexTestUtil.buildKeyedFilerStore("index",
                 IndexTestUtil.buildByteBufferBackedChunkStores(4, new HeapByteBufferFactory(), 4_096)),
             -1,
@@ -266,7 +266,7 @@ public class MiruInvertedIndexTest {
         return new MiruDeltaInvertedIndex<>(bitmaps,
             buildFilerInvertedIndex(bitmaps),
             new MiruDeltaInvertedIndex.Delta<IBM>(),
-            new MiruFieldIndex.IndexKey(0, new byte[]{0}),
+            new MiruFieldIndex.IndexKey(0, new byte[] { 0 }),
             null,
             null);
     }
@@ -325,8 +325,7 @@ public class MiruInvertedIndexTest {
 
                     try {
                         ImmutableRoaringBitmap index = invertedIndex.getIndex(stackBuffer).get();
-                        MutableRoaringBitmap container = new MutableRoaringBitmap();
-                        RoaringBufferAggregation.and(container, index, other);
+                        MutableRoaringBitmap container = BufferFastAggregation.and(index, other);
                     } catch (Exception e) {
                         done.incrementAndGet();
                         e.printStackTrace();

@@ -1,8 +1,6 @@
 package com.jivesoftware.os.miru.bitmaps.roaring5.buffer;
 
-import com.jivesoftware.os.miru.bitmaps.roaring5.MiruBitmapsRoaring;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
-import org.roaringbitmap.RoaringBitmap;
 import org.roaringbitmap.buffer.MutableRoaringBitmap;
 import org.testng.annotations.Test;
 

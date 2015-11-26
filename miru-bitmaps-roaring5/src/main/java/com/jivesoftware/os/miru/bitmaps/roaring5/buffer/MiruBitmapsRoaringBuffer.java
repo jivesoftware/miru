@@ -41,7 +41,6 @@ import org.roaringbitmap.RoaringBitmap;
 import org.roaringbitmap.buffer.BufferFastAggregation;
 import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
 import org.roaringbitmap.buffer.MutableRoaringBitmap;
-import org.roaringbitmap.buffer.RoaringBufferAggregation;
 import org.roaringbitmap.buffer.RoaringBufferInspection;
 
 /**
@@ -49,7 +48,7 @@ import org.roaringbitmap.buffer.RoaringBufferInspection;
  */
 public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitmap, ImmutableRoaringBitmap> {
 
-    private boolean append(MutableRoaringBitmap bitmap, int... indexes) {
+    private boolean appendInPlace(MutableRoaringBitmap bitmap, int... indexes) {
         if (indexes.length == 1) {
             bitmap.add(indexes[0]);
         } else if (indexes.length > 1) {
@@ -74,25 +73,28 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
     }
 
     @Override
-    public void append(MutableRoaringBitmap container, ImmutableRoaringBitmap bitmap, int... indexes) {
-        copy(container, bitmap);
-        append(container, indexes);
+    public MutableRoaringBitmap append(ImmutableRoaringBitmap bitmap, int... indexes) {
+        MutableRoaringBitmap container = copy(bitmap);
+        appendInPlace(container, indexes);
+        return container;
     }
 
     @Override
-    public void set(MutableRoaringBitmap container, ImmutableRoaringBitmap bitmap, int... indexes) {
-        copy(container, bitmap);
+    public MutableRoaringBitmap set(ImmutableRoaringBitmap bitmap, int... indexes) {
+        MutableRoaringBitmap container = copy(bitmap);
         for (int index : indexes) {
             container.add(index);
         }
+        return container;
     }
 
     @Override
-    public void remove(MutableRoaringBitmap container, ImmutableRoaringBitmap bitmap, int... indexes) {
-        copy(container, bitmap);
+    public MutableRoaringBitmap remove(ImmutableRoaringBitmap bitmap, int... indexes) {
+        MutableRoaringBitmap container = copy(bitmap);
         for (int index : indexes) {
             container.remove(index);
         }
+        return container;
     }
 
     @Override
@@ -101,11 +103,12 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
     }
 
     @Override
-    public void extend(MutableRoaringBitmap container, ImmutableRoaringBitmap bitmap, List<Integer> indexes, int extendToIndex) {
-        copy(container, bitmap);
+    public MutableRoaringBitmap extend(ImmutableRoaringBitmap bitmap, List<Integer> indexes, int extendToIndex) {
+        MutableRoaringBitmap container = copy(bitmap);
         for (int index : indexes) {
             container.add(index);
         }
+        return container;
     }
 
     @Override
@@ -119,8 +122,8 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
     }
 
     @Override
-    public void boundedCardinalities(ImmutableRoaringBitmap container, int[] indexBoundaries, long[] rawWaveform) {
-        RoaringBufferInspection.cardinalityInBuckets(container, indexBoundaries, rawWaveform);
+    public void boundedCardinalities(ImmutableRoaringBitmap bitmap, int[] indexBoundaries, long[] rawWaveform) {
+        RoaringBufferInspection.cardinalityInBuckets(bitmap, indexBoundaries, rawWaveform);
     }
 
     @Override
@@ -130,9 +133,7 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
 
     @Override
     public MutableRoaringBitmap createWithBits(int... indexes) {
-        MutableRoaringBitmap bitmap = new MutableRoaringBitmap();
-        append(bitmap, indexes);
-        return bitmap;
+        return MutableRoaringBitmap.bitmapOf(indexes);
     }
 
     @Override
@@ -155,8 +156,8 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
     }
 
     @Override
-    public void or(MutableRoaringBitmap container, Collection<ImmutableRoaringBitmap> bitmaps) {
-        RoaringBufferAggregation.or(container, bitmaps.toArray(new ImmutableRoaringBitmap[bitmaps.size()]));
+    public MutableRoaringBitmap or(Collection<ImmutableRoaringBitmap> bitmaps) {
+        return BufferFastAggregation.or(bitmaps.iterator());
     }
 
     @Override
@@ -197,8 +198,8 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
     }
 
     @Override
-    public void and(MutableRoaringBitmap container, Collection<ImmutableRoaringBitmap> bitmaps) {
-        RoaringBufferAggregation.and(container, bitmaps.toArray(new ImmutableRoaringBitmap[bitmaps.size()]));
+    public MutableRoaringBitmap and(Collection<ImmutableRoaringBitmap> bitmaps) {
+        return BufferFastAggregation.and(bitmaps.iterator());
     }
 
     @Override
@@ -261,22 +262,23 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
     }
 
     @Override
-    public void andNot(MutableRoaringBitmap container, ImmutableRoaringBitmap original, ImmutableRoaringBitmap bitmap) {
-        RoaringBufferAggregation.andNot(container, original, bitmap);
+    public MutableRoaringBitmap andNot(ImmutableRoaringBitmap original, ImmutableRoaringBitmap bitmap) {
+        return MutableRoaringBitmap.andNot(original, bitmap);
     }
 
     @Override
-    public void andNot(MutableRoaringBitmap container, ImmutableRoaringBitmap original, List<ImmutableRoaringBitmap> bitmaps) {
+    public MutableRoaringBitmap andNot(ImmutableRoaringBitmap original, List<ImmutableRoaringBitmap> bitmaps) {
         if (bitmaps.isEmpty()) {
-            copy(container, original);
+            return copy(original);
         } else {
-            RoaringBufferAggregation.andNot(container, original, bitmaps.get(0));
+            MutableRoaringBitmap container = MutableRoaringBitmap.andNot(original, bitmaps.get(0));
             for (int i = 1; i < bitmaps.size(); i++) {
                 container.andNot(bitmaps.get(i));
                 if (container.isEmpty()) {
                     break;
                 }
             }
+            return container;
         }
     }
 
@@ -320,38 +322,36 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
     }
 
     @Override
-    public CardinalityAndLastSetBit inPlaceAndNotWithCardinalityAndLastSetBit(MutableRoaringBitmap original, ImmutableRoaringBitmap not) {
+    public CardinalityAndLastSetBit<MutableRoaringBitmap> inPlaceAndNotWithCardinalityAndLastSetBit(MutableRoaringBitmap original, ImmutableRoaringBitmap not) {
         original.andNot(not);
         return RoaringBufferInspection.cardinalityAndLastSetBit(original);
     }
 
     @Override
-    public CardinalityAndLastSetBit andNotWithCardinalityAndLastSetBit(MutableRoaringBitmap container,
-        ImmutableRoaringBitmap original,
-        ImmutableRoaringBitmap not) {
-        andNot(container, original, not);
+    public CardinalityAndLastSetBit<MutableRoaringBitmap> andNotWithCardinalityAndLastSetBit(ImmutableRoaringBitmap original, ImmutableRoaringBitmap not) {
+        MutableRoaringBitmap container = andNot(original, not);
         return RoaringBufferInspection.cardinalityAndLastSetBit(container);
     }
 
     @Override
-    public CardinalityAndLastSetBit andWithCardinalityAndLastSetBit(MutableRoaringBitmap container, List<ImmutableRoaringBitmap> ands) {
-        and(container, ands);
+    public CardinalityAndLastSetBit<MutableRoaringBitmap> andWithCardinalityAndLastSetBit(List<ImmutableRoaringBitmap> ands) {
+        MutableRoaringBitmap container = and(ands);
         return RoaringBufferInspection.cardinalityAndLastSetBit(container);
     }
 
     @Override
-    public void orToSourceSize(MutableRoaringBitmap container, ImmutableRoaringBitmap source, ImmutableRoaringBitmap mask) {
-        or(container, Arrays.asList(source, mask));
+    public MutableRoaringBitmap orToSourceSize(ImmutableRoaringBitmap source, ImmutableRoaringBitmap mask) {
+        return or(Arrays.asList(source, mask));
     }
 
     @Override
-    public void andNotToSourceSize(MutableRoaringBitmap container, ImmutableRoaringBitmap source, ImmutableRoaringBitmap mask) {
-        andNot(container, source, mask);
+    public MutableRoaringBitmap andNotToSourceSize(ImmutableRoaringBitmap source, ImmutableRoaringBitmap mask) {
+        return andNot(source, mask);
     }
 
     @Override
-    public void andNotToSourceSize(MutableRoaringBitmap container, ImmutableRoaringBitmap source, List<ImmutableRoaringBitmap> masks) {
-        andNot(container, source, masks);
+    public MutableRoaringBitmap andNotToSourceSize(ImmutableRoaringBitmap source, List<ImmutableRoaringBitmap> masks) {
+        return andNot(source, masks);
     }
 
     @Override
@@ -416,8 +416,10 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
     }
 
     @Override
-    public void copy(MutableRoaringBitmap container, ImmutableRoaringBitmap original) {
+    public MutableRoaringBitmap copy(ImmutableRoaringBitmap original) {
+        MutableRoaringBitmap container = new MutableRoaringBitmap();
         container.or(original);
+        return container;
     }
 
     @Override
@@ -566,7 +568,7 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
                 BufferFastAggregation.or(buf1, buf2);
                 //BufferFastAggregation.and(buf1, buf2);
             }
-            System.out.println("---- mutable ---- ");// + buf1.getCardinality() + ", " + buf2.getCardinality());
+            System.out.println("---- mutable ---- "); // + buf1.getCardinality() + ", " + buf2.getCardinality());
             System.out.println((System.currentTimeMillis() - start) + " ms, " + count + " iter");
 
             start = System.currentTimeMillis();
@@ -575,12 +577,10 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
                 ImmutableRoaringBitmap ibuf1 = new ImmutableRoaringBitmap(ByteBuffer.wrap(bytes1));
                 ImmutableRoaringBitmap ibuf2 = new ImmutableRoaringBitmap(ByteBuffer.wrap(bytes2));
 
-                MutableRoaringBitmap container;
-                container = new MutableRoaringBitmap();
-                RoaringBufferAggregation.lazyOr(container, ibuf1, ibuf2);
+                BufferFastAggregation.or(ibuf1, ibuf2);
                 //BufferFastAggregation.and(ibuf1, ibuf2);
             }
-            System.out.println("---- immutable ---- ");// + ibuf1.getCardinality() + ", " + ibuf2.getCardinality());
+            System.out.println("---- immutable ---- "); // + ibuf1.getCardinality() + ", " + ibuf2.getCardinality());
             System.out.println((System.currentTimeMillis() - start) + " ms, " + count + " iter");
 
         }

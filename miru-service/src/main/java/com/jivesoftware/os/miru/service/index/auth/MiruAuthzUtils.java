@@ -30,11 +30,7 @@ public class MiruAuthzUtils<BM extends IBM, IBM> {
                 orClauses.add(valueIndex);
             }
         }
-        BM got = bitmaps.create();
-        if (!orClauses.isEmpty()) {
-            bitmaps.or(got, orClauses);
-        }
-        return got;
+        return bitmaps.or(orClauses);
     }
 
     public String encode(byte[] bytes) {

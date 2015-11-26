@@ -42,8 +42,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Random;
 import org.apache.commons.io.FileUtils;
+import org.roaringbitmap.FastAggregation;
 import org.roaringbitmap.IntIterator;
-import org.roaringbitmap.RoaringAggregation;
 import org.roaringbitmap.RoaringBitmap;
 import org.roaringbitmap.RoaringInspection;
 
@@ -54,7 +54,7 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
-    private boolean append(RoaringBitmap bitmap, int... indexes) {
+    private boolean appendInPlace(RoaringBitmap bitmap, int... indexes) {
         if (indexes.length == 1) {
             bitmap.add(indexes[0]);
         } else if (indexes.length > 1) {
@@ -79,25 +79,28 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
     }
 
     @Override
-    public void append(RoaringBitmap container, RoaringBitmap bitmap, int... indexes) {
-        copy(container, bitmap);
-        append(container, indexes);
+    public RoaringBitmap append(RoaringBitmap bitmap, int... indexes) {
+        RoaringBitmap container = copy(bitmap);
+        appendInPlace(container, indexes);
+        return container;
     }
 
     @Override
-    public void set(RoaringBitmap container, RoaringBitmap bitmap, int... indexes) {
-        copy(container, bitmap);
+    public RoaringBitmap set(RoaringBitmap bitmap, int... indexes) {
+        RoaringBitmap container = copy(bitmap);
         for (int index : indexes) {
             container.add(index);
         }
+        return container;
     }
 
     @Override
-    public void remove(RoaringBitmap container, RoaringBitmap bitmap, int... indexes) {
-        copy(container, bitmap);
+    public RoaringBitmap remove(RoaringBitmap bitmap, int... indexes) {
+        RoaringBitmap container = copy(bitmap);
         for (int index : indexes) {
             container.remove(index);
         }
+        return container;
     }
 
     @Override
@@ -106,11 +109,12 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
     }
 
     @Override
-    public void extend(RoaringBitmap container, RoaringBitmap bitmap, List<Integer> indexes, int extendToIndex) {
-        copy(container, bitmap);
+    public RoaringBitmap extend(RoaringBitmap bitmap, List<Integer> indexes, int extendToIndex) {
+        RoaringBitmap container = copy(bitmap);
         for (int index : indexes) {
             container.add(index);
         }
+        return container;
     }
 
     @Override
@@ -124,8 +128,8 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
     }
 
     @Override
-    public void boundedCardinalities(RoaringBitmap container, int[] indexBoundaries, long[] rawWaveform) {
-        RoaringInspection.cardinalityInBuckets(container, indexBoundaries, rawWaveform);
+    public void boundedCardinalities(RoaringBitmap bitmap, int[] indexBoundaries, long[] rawWaveform) {
+        RoaringInspection.cardinalityInBuckets(bitmap, indexBoundaries, rawWaveform);
     }
 
     @Override
@@ -135,18 +139,16 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
 
     @Override
     public RoaringBitmap createWithBits(int... indexes) {
-        RoaringBitmap bitmap = new RoaringBitmap();
-        append(bitmap, indexes);
-        return bitmap;
+        return RoaringBitmap.bitmapOf(indexes);
     }
 
     @Override
     public RoaringBitmap[] createArrayOf(int size) {
-        RoaringBitmap[] ewahs = new RoaringBitmap[size];
+        RoaringBitmap[] bitmaps = new RoaringBitmap[size];
         for (int i = 0; i < size; i++) {
-            ewahs[i] = new RoaringBitmap();
+            bitmaps[i] = new RoaringBitmap();
         }
-        return ewahs;
+        return bitmaps;
     }
 
     @Override
@@ -160,8 +162,8 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
     }
 
     @Override
-    public void or(RoaringBitmap container, Collection<RoaringBitmap> bitmaps) {
-        RoaringAggregation.or(container, bitmaps.toArray(new RoaringBitmap[bitmaps.size()]));
+    public RoaringBitmap or(Collection<RoaringBitmap> bitmaps) {
+        return FastAggregation.or(bitmaps.iterator());
     }
 
     @Override
@@ -210,8 +212,8 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
     }
 
     @Override
-    public void and(RoaringBitmap container, Collection<RoaringBitmap> bitmaps) {
-        RoaringAggregation.and(container, bitmaps.toArray(new RoaringBitmap[bitmaps.size()]));
+    public RoaringBitmap and(Collection<RoaringBitmap> bitmaps) {
+        return FastAggregation.and(bitmaps.iterator());
     }
 
     @Override
@@ -269,23 +271,24 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
     }
 
     @Override
-    public void andNot(RoaringBitmap container, RoaringBitmap original, RoaringBitmap bitmap) {
-        RoaringAggregation.andNot(container, original, bitmap);
+    public RoaringBitmap andNot(RoaringBitmap original, RoaringBitmap bitmap) {
+        return RoaringBitmap.andNot(original, bitmap);
     }
 
     @Override
-    public void andNot(RoaringBitmap container, RoaringBitmap original, List<RoaringBitmap> bitmaps) {
+    public RoaringBitmap andNot(RoaringBitmap original, List<RoaringBitmap> bitmaps) {
 
         if (bitmaps.isEmpty()) {
-            copy(container, original);
+            return copy(original);
         } else {
-            RoaringAggregation.andNot(container, original, bitmaps.get(0));
+            RoaringBitmap container = RoaringBitmap.andNot(original, bitmaps.get(0));
             for (int i = 1; i < bitmaps.size(); i++) {
                 container.andNot(bitmaps.get(i));
                 if (container.isEmpty()) {
                     break;
                 }
             }
+            return container;
         }
     }
 
@@ -333,36 +336,36 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
     }
 
     @Override
-    public CardinalityAndLastSetBit inPlaceAndNotWithCardinalityAndLastSetBit(RoaringBitmap original, RoaringBitmap not) {
+    public CardinalityAndLastSetBit<RoaringBitmap> inPlaceAndNotWithCardinalityAndLastSetBit(RoaringBitmap original, RoaringBitmap not) {
         original.andNot(not);
         return RoaringInspection.cardinalityAndLastSetBit(original);
     }
 
     @Override
-    public CardinalityAndLastSetBit andNotWithCardinalityAndLastSetBit(RoaringBitmap container, RoaringBitmap original, RoaringBitmap not) {
-        andNot(container, original, not);
+    public CardinalityAndLastSetBit<RoaringBitmap> andNotWithCardinalityAndLastSetBit(RoaringBitmap original, RoaringBitmap not) {
+        RoaringBitmap container = andNot(original, not);
         return RoaringInspection.cardinalityAndLastSetBit(container);
     }
 
     @Override
-    public CardinalityAndLastSetBit andWithCardinalityAndLastSetBit(RoaringBitmap container, List<RoaringBitmap> ands) {
-        and(container, ands);
+    public CardinalityAndLastSetBit<RoaringBitmap> andWithCardinalityAndLastSetBit(List<RoaringBitmap> ands) {
+        RoaringBitmap container = and(ands);
         return RoaringInspection.cardinalityAndLastSetBit(container);
     }
 
     @Override
-    public void orToSourceSize(RoaringBitmap container, RoaringBitmap source, RoaringBitmap mask) {
-        or(container, Arrays.asList(source, mask));
+    public RoaringBitmap orToSourceSize(RoaringBitmap source, RoaringBitmap mask) {
+        return or(Arrays.asList(source, mask));
     }
 
     @Override
-    public void andNotToSourceSize(RoaringBitmap container, RoaringBitmap source, RoaringBitmap mask) {
-        andNot(container, source, mask);
+    public RoaringBitmap andNotToSourceSize(RoaringBitmap source, RoaringBitmap mask) {
+        return andNot(source, mask);
     }
 
     @Override
-    public void andNotToSourceSize(RoaringBitmap container, RoaringBitmap source, List<RoaringBitmap> masks) {
-        andNot(container, source, masks);
+    public RoaringBitmap andNotToSourceSize(RoaringBitmap source, List<RoaringBitmap> masks) {
+        return andNot(source, masks);
     }
 
     @Override
@@ -427,8 +430,10 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
     }
 
     @Override
-    public void copy(RoaringBitmap container, RoaringBitmap original) {
+    public RoaringBitmap copy(RoaringBitmap original) {
+        RoaringBitmap container = new RoaringBitmap();
         container.or(original);
+        return container;
     }
 
     @Override
@@ -510,7 +515,7 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
 
             File tempDir = Files.createTempDirectory("roaring5").toFile();
             AutoGrowingByteBufferBackedFiler autoFiler = new AutoGrowingByteBufferBackedFiler(
-                new FileBackedMemMappedByteBufferFactory("roaring5", 0, new File[]{tempDir}), 1024 * 1024, 1024 * 1024);
+                new FileBackedMemMappedByteBufferFactory("roaring5", 0, new File[] { tempDir }), 1024 * 1024, 1024 * 1024);
 
             autoFiler.seek(0);
             b1.serialize(new FilerDataOutput(autoFiler, new StackBuffer()));

@@ -55,7 +55,7 @@ public class BloomIndex<BM extends IBM, IBM> {
         long desiredBits = optimalNumOfBits(expectedInsertions, falsePositiveProbability);
         if (desiredBits > Integer.MAX_VALUE) {
             throw new IllegalArgumentException("expectedInsertions=" + expectedInsertions + " falsePositiveProbability=" + falsePositiveProbability
-                + " exceeds the capacity of an ewah.");
+                + " exceeds the capacity of a bitmap.");
         }
         this.numBits = (int) desiredBits;
         this.numHashFunctions = optimalNumOfHashFunctions(expectedInsertions, this.numBits);

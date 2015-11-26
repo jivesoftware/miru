@@ -152,7 +152,7 @@ public class TrendingInjectable {
             List<Waveform> waveforms = (analyticsResponse.answer != null && analyticsResponse.answer.waveforms != null)
                 ? analyticsResponse.answer.waveforms
                 : Collections.<Waveform>emptyList();
-            
+
             long[] waveform = new long[divideTimeRangeIntoNSegments];
             double bucket95 = 0;
             if (request.query.strategies.contains(Strategy.PEAKS)) {
@@ -174,8 +174,8 @@ public class TrendingInjectable {
             for (Strategy strategy : request.query.strategies) {
                 strategyResults.put(strategy,
                     MinMaxPriorityQueue
-                    .maximumSize(request.query.desiredNumberOfDistincts)
-                    .create());
+                        .maximumSize(request.query.desiredNumberOfDistincts)
+                        .create());
             }
 
             for (Waveform entry : waveforms) {
@@ -291,13 +291,13 @@ public class TrendingInjectable {
 
             return new MiruResponse<>(new TrendingAnswer(distinctWaveforms, strategySortedTrendies),
                 ImmutableList.<MiruSolution>builder()
-                .addAll(firstNonNull(analyticsResponse.solutions, Collections.<MiruSolution>emptyList()))
-                .build(),
+                    .addAll(firstNonNull(analyticsResponse.solutions, Collections.<MiruSolution>emptyList()))
+                    .build(),
                 analyticsResponse.totalElapsed,
                 analyticsResponse.missingSchema,
                 ImmutableList.<Integer>builder()
-                .addAll(firstNonNull(analyticsResponse.incompletePartitionIds, Collections.<Integer>emptyList()))
-                .build(),
+                    .addAll(firstNonNull(analyticsResponse.incompletePartitionIds, Collections.<Integer>emptyList()))
+                    .build(),
                 solutionLog);
         } catch (MiruPartitionUnavailableException | InterruptedException e) {
             throw e;

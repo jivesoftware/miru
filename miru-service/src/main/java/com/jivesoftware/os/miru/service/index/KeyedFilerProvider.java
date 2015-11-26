@@ -24,7 +24,9 @@ public class KeyedFilerProvider<H, M> implements MiruFilerProvider<H, M> {
     }
 
     @Override
-    public <R> R writeNewReplace(H initialCapacity, final ChunkTransaction<M, R> transaction, StackBuffer stackBuffer) throws IOException, InterruptedException {
+    public <R> R writeNewReplace(H initialCapacity,
+        final ChunkTransaction<M, R> transaction,
+        StackBuffer stackBuffer) throws IOException, InterruptedException {
         return keyedFilerStore.writeNewReplace(key, initialCapacity, transaction, stackBuffer);
     }
 

@@ -77,7 +77,9 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
     }
 
     @Override
-    public <BM extends IBM, IBM> MiruPartitionResponse<AnalyticsAnswer> askLocal(MiruRequestHandle<BM, IBM, ?> handle, Optional<TrendingReport> report) throws Exception {
+    public <BM extends IBM, IBM> MiruPartitionResponse<AnalyticsAnswer> askLocal(MiruRequestHandle<BM, IBM, ?> handle,
+        Optional<TrendingReport> report) throws Exception {
+
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
         MiruRequestContext<IBM, ? extends MiruSipCursor<?>> context = handle.getRequestContext();
 

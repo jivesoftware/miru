@@ -205,22 +205,22 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
     }
 
     @Override
-    public long getTimestamp(final int id, StackBuffer stackBuffer) throws IOException, InterruptedException{
+    public long getTimestamp(final int id, StackBuffer stackBuffer) throws IOException, InterruptedException {
         if (id >= timestampsLength) {
             return 0l;
         }
-            long ts = filerProvider.read(null, (monkey, filer, _stackBuffer, lock) -> {
-                long timestamp;
-                synchronized (lock) {
-                    filer.seek(HEADER_SIZE_IN_BYTES + searchIndexSizeInBytes + id * timestampSize);
-                    timestamp = FilerIO.readLong(filer, "ts", _stackBuffer);
-                }
+        long ts = filerProvider.read(null, (monkey, filer, _stackBuffer, lock) -> {
+            long timestamp;
+            synchronized (lock) {
+                filer.seek(HEADER_SIZE_IN_BYTES + searchIndexSizeInBytes + id * timestampSize);
+                timestamp = FilerIO.readLong(filer, "ts", _stackBuffer);
+            }
 
-                return timestamp;
-            }, stackBuffer);
-            log.inc("get>total");
-            log.inc("get>bytes", 8);
-            return ts;
+            return timestamp;
+        }, stackBuffer);
+        log.inc("get>total");
+        log.inc("get>bytes", 8);
+        return ts;
     }
 
     private long readTimestamp(Object lock, Filer filer, int id, StackBuffer stackBuffer) throws IOException {
@@ -394,7 +394,7 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
     }
 
     @Override
-    public int smallestExclusiveTimestampIndex(final long timestamp, StackBuffer stackBuffer) throws IOException, InterruptedException{
+    public int smallestExclusiveTimestampIndex(final long timestamp, StackBuffer stackBuffer) throws IOException, InterruptedException {
         try {
             if (id.get() < 0) {
                 return 0;
@@ -425,7 +425,7 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
     }
 
     @Override
-    public int largestInclusiveTimestampIndex(final long timestamp, StackBuffer stackBuffer) throws IOException, InterruptedException{
+    public int largestInclusiveTimestampIndex(final long timestamp, StackBuffer stackBuffer) throws IOException, InterruptedException {
         try {
             if (id.get() < 0) {
                 return -1;

@@ -2,15 +2,14 @@ package com.jivesoftware.os.miru.service.index;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.bitmaps.roaring5.buffer.MiruBitmapsRoaringBuffer;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzUtils;
 import java.util.List;
 import java.util.Map;
+import org.roaringbitmap.buffer.BufferFastAggregation;
 import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
 import org.roaringbitmap.buffer.MutableRoaringBitmap;
-import org.roaringbitmap.buffer.RoaringBufferAggregation;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
@@ -48,8 +47,7 @@ public class MiruAuthzUtilsTest {
         ImmutableRoaringBitmap result = utils.getCompositeAuthz(authzExpression, authzIndexes::get);
 
         // result should be [0,2,4..] | [1,3,5..] = [0,1,2,3..]
-        MutableRoaringBitmap expected = new MutableRoaringBitmap();
-        RoaringBufferAggregation.or(expected, authzIndexes.get("seq_0_2_4_6_8_10"), authzIndexes.get("seq_1_3_5_7_9_11"));
+        MutableRoaringBitmap expected = BufferFastAggregation.or(authzIndexes.get("seq_0_2_4_6_8_10"), authzIndexes.get("seq_1_3_5_7_9_11"));
         assertEquals(result, expected);
     }
 

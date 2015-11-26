@@ -46,7 +46,8 @@ public class RecoInjectable {
         this.distincts = distincts;
     }
 
-    public MiruResponse<RecoAnswer> collaborativeFilteringRecommendations(MiruRequest<RecoQuery> request) throws MiruQueryServiceException, InterruptedException {
+    public MiruResponse<RecoAnswer> collaborativeFilteringRecommendations(MiruRequest<RecoQuery> request)
+        throws MiruQueryServiceException, InterruptedException {
         try {
             LOG.debug("askAndMerge: request={}", request);
             MiruTenantId tenantId = request.tenantId;

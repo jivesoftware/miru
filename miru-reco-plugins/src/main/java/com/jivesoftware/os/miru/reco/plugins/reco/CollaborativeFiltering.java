@@ -76,8 +76,7 @@ public class CollaborativeFiltering {
         MiruFieldDefinition fieldDefinition3 = requestContext.getSchema().getFieldDefinition(fieldId3);
 
         // myOkActivity: my activity restricted to what's ok
-        BM myOkActivity = bitmaps.create();
-        bitmaps.and(myOkActivity, Arrays.asList(allMyActivity, okActivity));
+        BM myOkActivity = bitmaps.and(Arrays.asList(allMyActivity, okActivity));
 
         MiruFieldIndex<IBM> primaryFieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
 
@@ -104,21 +103,18 @@ public class CollaborativeFiltering {
         }
 
         // allField1Activity: all activity for the distinct parents <field1> that I've touched
-        BM allField1Activity = bitmaps.create();
         log.debug("allField1Activity: toBeORed.size={}", toBeORed.size());
-        bitmaps.or(allField1Activity, toBeORed);
+        BM allField1Activity = bitmaps.or(toBeORed);
         log.trace("allField1Activity: allField1Activity={}", allField1Activity);
         if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
             solutionLog.log(MiruSolutionLogLevel.INFO, "allField1Activity {}.", bitmaps.cardinality(allField1Activity));
             solutionLog.log(MiruSolutionLogLevel.TRACE, "allField1Activity bitmap {}", allField1Activity);
         }
 
-        BM okField1Activity = bitmaps.create();
-        bitmaps.and(okField1Activity, Arrays.asList(okActivity, allField1Activity));
+        BM okField1Activity = bitmaps.and(Arrays.asList(okActivity, allField1Activity));
 
         // otherOkField1Activity: all activity *except mine* for the distinct parents <field1>
-        BM otherOkField1Activity = bitmaps.create();
-        bitmaps.andNot(otherOkField1Activity, okField1Activity, myOkActivity);
+        BM otherOkField1Activity = bitmaps.andNot(okField1Activity, myOkActivity);
         log.trace("otherOkField1Activity: otherOkField1Activity={}", otherOkField1Activity);
         if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
             solutionLog.log(MiruSolutionLogLevel.INFO, "otherOkField1Activity {}.", bitmaps.cardinality(otherOkField1Activity));
@@ -169,8 +165,7 @@ public class CollaborativeFiltering {
                 .getIndex(stackBuffer);
             if (index.isPresent()) {
                 IBM contributorAllActivity = index.get();
-                BM contributorOkActivity = bitmaps.create();
-                bitmaps.and(contributorOkActivity, Arrays.asList(okActivity, contributorAllActivity));
+                BM contributorOkActivity = bitmaps.and(Arrays.asList(okActivity, contributorAllActivity));
 
                 Set<MiruTermId> distinctContributorParents = Sets.newHashSet();
                 aggregateUtil.gather(bitmaps, requestContext, contributorOkActivity, fieldId3, gatherBatchSize, solutionLog, distinctContributorParents,

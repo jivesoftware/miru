@@ -16,10 +16,6 @@
     </properties>
     <dependencies>
         <dependency>
-            <groupId>com.jivesoftware.os.jive.utils</groupId>
-            <artifactId>ordered-id</artifactId>
-        </dependency>
-        <dependency>
             <groupId>com.jivesoftware.os.mlogger</groupId>
             <artifactId>core</artifactId>
         </dependency>

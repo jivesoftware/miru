@@ -37,15 +37,15 @@ public interface MiruBitmaps<BM extends IBM, IBM> {
 
     BM[] createArrayOf(int size);
 
-    void append(BM container, IBM bitmap, int... indexes);
+    BM append(IBM bitmap, int... indexes);
 
-    void set(BM container, IBM bitmap, int... indexes);
+    BM set(IBM bitmap, int... indexes);
 
-    void remove(BM container, IBM bitmap, int... indexes);
+    BM remove(IBM bitmap, int... indexes);
 
     boolean isSet(IBM bitmap, int index);
 
-    void extend(BM container, IBM bitmap, List<Integer> indexes, int extendToIndex);
+    BM extend(IBM bitmap, List<Integer> indexes, int extendToIndex);
 
     void clear(BM bitmap);
 
@@ -55,11 +55,11 @@ public interface MiruBitmaps<BM extends IBM, IBM> {
      * Returns cardinalities for the bitmap bounded by the given indexes. The number of cardinalities returned will be 1 less than
      * the number of boundaries, e.g. indexBoundaries { 0, 10, 20, 30 } returns cardinalities for buckets [ 0-9, 10-19, 20-29 ].
      *
-     * @param container       the bitmap
+     * @param bitmap       the bitmap
      * @param indexBoundaries lower boundary is inclusive, upper boundary is exclusive
      * @return the cardinalities
      */
-    void boundedCardinalities(IBM container, int[] indexBoundaries, long[] rawWaveform);
+    void boundedCardinalities(IBM bitmap, int[] indexBoundaries, long[] rawWaveform);
 
     boolean supportsInPlace();
 
@@ -77,13 +77,13 @@ public interface MiruBitmaps<BM extends IBM, IBM> {
 
     void inPlaceOr(BM original, IBM or);
 
-    void or(BM container, Collection<IBM> bitmaps);
+    BM or(Collection<IBM> bitmaps);
 
     BM orTx(List<MiruTxIndex<IBM>> indexes, StackBuffer stackBuffer) throws Exception;
 
     void inPlaceAnd(BM original, IBM bitmap);
 
-    void and(BM container, Collection<IBM> bitmaps);
+    BM and(Collection<IBM> bitmaps);
 
     BM andTx(List<MiruTxIndex<IBM>> indexes, StackBuffer stackBuffer) throws Exception;
 
@@ -91,25 +91,25 @@ public interface MiruBitmaps<BM extends IBM, IBM> {
 
     void inPlaceAndNot(BM original, MiruInvertedIndex<IBM> not, StackBuffer stackBuffer) throws Exception;
 
-    void andNot(BM container, IBM original, IBM not);
+    BM andNot(IBM original, IBM not);
 
-    void andNot(BM container, IBM original, List<IBM> not);
+    BM andNot(IBM original, List<IBM> not);
 
     BM andNotTx(MiruTxIndex<IBM> original, List<MiruTxIndex<IBM>> not, StackBuffer stackBuffer) throws Exception;
 
-    void copy(BM container, IBM original);
+    BM copy(IBM original);
 
-    CardinalityAndLastSetBit inPlaceAndNotWithCardinalityAndLastSetBit(BM original, IBM not);
+    CardinalityAndLastSetBit<BM> inPlaceAndNotWithCardinalityAndLastSetBit(BM original, IBM not);
 
-    CardinalityAndLastSetBit andNotWithCardinalityAndLastSetBit(BM container, IBM original, IBM not);
+    CardinalityAndLastSetBit<BM> andNotWithCardinalityAndLastSetBit(IBM original, IBM not);
 
-    CardinalityAndLastSetBit andWithCardinalityAndLastSetBit(BM container, List<IBM> ands);
+    CardinalityAndLastSetBit<BM> andWithCardinalityAndLastSetBit(List<IBM> ands);
 
-    void orToSourceSize(BM container, IBM source, IBM mask);
+    BM orToSourceSize(IBM source, IBM mask);
 
-    void andNotToSourceSize(BM container, IBM source, IBM mask);
+    BM andNotToSourceSize(IBM source, IBM mask);
 
-    void andNotToSourceSize(BM container, IBM source, List<IBM> masks);
+    BM andNotToSourceSize(IBM source, List<IBM> masks);
 
     IBM buildIndexMask(int largestIndex, Optional<IBM> andNotMask);
 

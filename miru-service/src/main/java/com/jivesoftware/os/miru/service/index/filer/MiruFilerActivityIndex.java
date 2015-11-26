@@ -111,7 +111,7 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
     }
 
     @Override
-    public void set(Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds, StackBuffer stackBuffer) throws IOException, InterruptedException{
+    public void set(Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds, StackBuffer stackBuffer) throws IOException, InterruptedException {
         if (!activityAndIds.isEmpty()) {
             setInternal(activityAndIds, stackBuffer);
         }

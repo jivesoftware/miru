@@ -50,7 +50,9 @@ public class RecoQuestion implements Question<RecoQuery, RecoAnswer, RecoReport>
     }
 
     @Override
-    public <BM extends IBM, IBM> MiruPartitionResponse<RecoAnswer> askLocal(MiruRequestHandle<BM, IBM, ?> handle, Optional<RecoReport> report) throws Exception {
+    public <BM extends IBM, IBM> MiruPartitionResponse<RecoAnswer> askLocal(MiruRequestHandle<BM, IBM, ?> handle,
+        Optional<RecoReport> report) throws Exception {
+
         StackBuffer stackBuffer = new StackBuffer();
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
 
@@ -98,9 +100,8 @@ public class RecoQuestion implements Question<RecoQuery, RecoAnswer, RecoReport>
         okAnds.add(buildIndexMask);
 
         // AND it all together and return the results
-        BM okActivity = bitmaps.create();
         bitmapsDebug.debug(solutionLog, bitmaps, "ands", okAnds);
-        bitmaps.and(okActivity, okAnds);
+        BM okActivity = bitmaps.and(okAnds);
 
         if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
             solutionLog.log(MiruSolutionLogLevel.INFO, "answering {} items.", bitmaps.cardinality(okActivity));

@@ -82,14 +82,12 @@ public class AggregateCountsCustomQuestion implements Question<AggregateCountsQu
             ands.add(bitmaps.buildTimeRangeMask(context.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp, stackBuffer));
         }
 
-        BM answer = bitmaps.create();
         bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
-        bitmaps.and(answer, ands);
+        BM answer = bitmaps.and(ands);
 
         BM counter = null;
         if (!MiruTimeRange.ALL_TIME.equals(request.query.countTimeRange)) {
-            counter = bitmaps.create();
-            bitmaps.and(counter, Arrays.asList(answer, bitmaps.buildTimeRangeMask(
+            counter = bitmaps.and(Arrays.asList(answer, bitmaps.buildTimeRangeMask(
                 context.getTimeIndex(), request.query.countTimeRange.smallestTimestamp, request.query.countTimeRange.largestTimestamp, stackBuffer)));
         }
 

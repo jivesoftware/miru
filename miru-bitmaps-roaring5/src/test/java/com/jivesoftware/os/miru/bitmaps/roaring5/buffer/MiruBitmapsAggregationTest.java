@@ -23,8 +23,7 @@ public class MiruBitmapsAggregationTest {
             MutableRoaringBitmap or = bitmaps.createWithBits(i * 137);
             ors.add(or);
         }
-        MutableRoaringBitmap container = bitmaps.create();
-        bitmaps.or(container, ors);
+        MutableRoaringBitmap container = bitmaps.or(ors);
         for (int i = 0; i < numBits; i++) {
             assertFalse(bitmaps.isSet(container, i * 137 - 1));
             assertTrue(bitmaps.isSet(container, i * 137));
@@ -45,8 +44,7 @@ public class MiruBitmapsAggregationTest {
             }
             ands.add(bitmaps.createWithBits(bits.toArray()));
         }
-        MutableRoaringBitmap container = bitmaps.create();
-        bitmaps.and(container, ands);
+        MutableRoaringBitmap container = bitmaps.and(ands);
         for (int i = 0; i < numBits; i++) {
             if (i < (numBits - andBits)) {
                 assertFalse(bitmaps.isSet(container, i * 137));
@@ -71,8 +69,7 @@ public class MiruBitmapsAggregationTest {
         }
         MutableRoaringBitmap original = bitmaps.createWithBits(originalBits.toArray());
         MutableRoaringBitmap not = bitmaps.createWithBits(notBits.toArray());
-        MutableRoaringBitmap container = bitmaps.create();
-        bitmaps.andNot(container, original, not);
+        MutableRoaringBitmap container = bitmaps.andNot(original, not);
         for (int i = 0; i < numOriginal; i++) {
             if (i < numNot) {
                 assertFalse(bitmaps.isSet(container, i * 137));
@@ -97,8 +94,7 @@ public class MiruBitmapsAggregationTest {
             }
         }
         MutableRoaringBitmap original = bitmaps.createWithBits(originalBits.toArray());
-        MutableRoaringBitmap container = bitmaps.create();
-        bitmaps.andNot(container, original, nots);
+        MutableRoaringBitmap container = bitmaps.andNot(original, nots);
         for (int i = 0; i < numOriginal; i++) {
             if (i < numNot) {
                 assertFalse(bitmaps.isSet(container, i * 137));
@@ -123,13 +119,12 @@ public class MiruBitmapsAggregationTest {
         }
         MutableRoaringBitmap original = bitmaps.createWithBits(originalBits.toArray());
         MutableRoaringBitmap not = bitmaps.createWithBits(notBits.toArray());
-        MutableRoaringBitmap container = bitmaps.create();
-        CardinalityAndLastSetBit cardinalityAndLastSetBit = bitmaps.andNotWithCardinalityAndLastSetBit(container, original, not);
+        CardinalityAndLastSetBit<MutableRoaringBitmap> cardinalityAndLastSetBit = bitmaps.andNotWithCardinalityAndLastSetBit(original, not);
         for (int i = 0; i < numOriginal; i++) {
             if (i < numNot) {
-                assertFalse(bitmaps.isSet(container, i * 137));
+                assertFalse(bitmaps.isSet(cardinalityAndLastSetBit.bitmap, i * 137));
             } else {
-                assertTrue(bitmaps.isSet(container, i * 137));
+                assertTrue(bitmaps.isSet(cardinalityAndLastSetBit.bitmap, i * 137));
             }
         }
         assertEquals(cardinalityAndLastSetBit.cardinality, numOriginal - numNot);
@@ -149,13 +144,12 @@ public class MiruBitmapsAggregationTest {
             }
             ands.add(bitmaps.createWithBits(andBits.toArray()));
         }
-        MutableRoaringBitmap container = bitmaps.create();
-        CardinalityAndLastSetBit cardinalityAndLastSetBit = bitmaps.andWithCardinalityAndLastSetBit(container, ands);
+        CardinalityAndLastSetBit<MutableRoaringBitmap> cardinalityAndLastSetBit = bitmaps.andWithCardinalityAndLastSetBit(ands);
         for (int i = 0; i < numOriginal; i++) {
             if (i < (numOriginal - numAnd)) {
-                assertFalse(bitmaps.isSet(container, i * 137));
+                assertFalse(bitmaps.isSet(cardinalityAndLastSetBit.bitmap, i * 137));
             } else {
-                assertTrue(bitmaps.isSet(container, i * 137));
+                assertTrue(bitmaps.isSet(cardinalityAndLastSetBit.bitmap, i * 137));
             }
         }
         assertEquals(cardinalityAndLastSetBit.cardinality, numAnd);
