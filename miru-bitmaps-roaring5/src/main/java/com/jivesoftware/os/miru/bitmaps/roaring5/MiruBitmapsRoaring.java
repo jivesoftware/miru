@@ -197,7 +197,12 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
 
     @Override
     public void inPlaceAnd(RoaringBitmap original, RoaringBitmap bitmap) {
-        original.and(bitmap);
+        try {
+            original.and(bitmap);
+        } catch (Throwable t) {
+            System.out.println("WTF:" + original.getCardinality() + " inPlaceAnd " + bitmap.getCardinality());
+            throw t;
+        }
     }
 
     @Override
