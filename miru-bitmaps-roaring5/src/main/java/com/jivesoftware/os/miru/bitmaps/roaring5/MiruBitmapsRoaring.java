@@ -29,6 +29,7 @@ import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTxIndex;
+import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.File;
@@ -49,6 +50,8 @@ import org.roaringbitmap.RoaringInspection;
  * @author jonathan
  */
 public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBitmap> {
+
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private boolean append(RoaringBitmap bitmap, int... indexes) {
         if (indexes.length == 1) {
@@ -200,7 +203,7 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
         try {
             original.and(bitmap);
         } catch (Throwable t) {
-            System.out.println("WTF:" + original.getCardinality() + " inPlaceAnd " + bitmap.getCardinality());
+            LOG.error("WTF:" + original.getCardinality() + " inPlaceAnd " + bitmap.getCardinality());
             throw t;
         }
     }
