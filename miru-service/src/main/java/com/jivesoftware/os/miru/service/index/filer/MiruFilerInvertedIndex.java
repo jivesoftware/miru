@@ -126,6 +126,14 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
             try {
                 return new BitmapAndLastId<>(bitmaps.deserialize(dataInput), lastId);
             } catch (Exception e) {
+                try {
+                    byte[] raw = new byte[512];
+                    filer.seek(0);
+                    filer.read(raw);
+                    log.error("Failed to deserialize, head bytes from filer: {}", Arrays.toString(raw));
+                } catch (Exception e1) {
+                    log.error("Failed to print debug info", e1);
+                }
                 throw new IOException("Failed to deserialize", e);
             }
         }
