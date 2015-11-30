@@ -4,9 +4,9 @@ import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
+import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
-import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
@@ -15,6 +15,7 @@ import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
+import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
@@ -50,6 +51,7 @@ public class AggregateCounts {
         MiruBitmaps<BM, IBM> bitmaps,
         MiruRequestContext<IBM, ?> requestContext,
         MiruRequest<AggregateCountsQuery> request,
+        MiruPartitionCoord coord,
         Optional<AggregateCountsReport> lastReport,
         BM answer,
         Optional<BM> counter)
@@ -69,7 +71,7 @@ public class AggregateCounts {
                 answerConstraint(solutionLog,
                     bitmaps,
                     requestContext,
-                    request.tenantId,
+                    coord,
                     request.query.streamId,
                     entry.getValue(),
                     lastReportConstraint,
@@ -83,10 +85,10 @@ public class AggregateCounts {
         return result;
     }
 
-    private final <BM extends IBM, IBM> AggregateCountsAnswerConstraint answerConstraint(MiruSolutionLog solutionLog,
+    private <BM extends IBM, IBM> AggregateCountsAnswerConstraint answerConstraint(MiruSolutionLog solutionLog,
         MiruBitmaps<BM, IBM> bitmaps,
         MiruRequestContext<IBM, ?> requestContext,
-        MiruTenantId tenantId,
+        MiruPartitionCoord coord,
         MiruStreamId streamId,
         AggregateCountsQueryConstraint constraint,
         Optional<AggregateCountsReportConstraint> lastReport,
@@ -129,12 +131,15 @@ public class AggregateCounts {
             }
         }
 
-        List<AggregateCount> aggregateCounts = new ArrayList<>();
         MiruTermComposer termComposer = requestContext.getTermComposer();
+        MiruActivityInternExtern activityInternExtern = miruProvider.getActivityInternExtern(coord.tenantId);
+
         MiruFieldIndex<IBM> fieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
         int fieldId = requestContext.getSchema().getFieldId(constraint.aggregateCountAroundField);
         MiruFieldDefinition fieldDefinition = requestContext.getSchema().getFieldDefinition(fieldId);
         log.debug("fieldId={}", fieldId);
+
+        List<AggregateCount> aggregateCounts = new ArrayList<>();
         if (fieldId >= 0) {
             IBM unreadIndex = null;
             if (!MiruStreamId.NULL.equals(streamId)) {
@@ -196,8 +201,12 @@ public class AggregateCounts {
                     break;
                 }
 
-                MiruInternalActivity activity = requestContext.getActivityIndex().get(tenantId, lastSetBit, stackBuffer);
-                MiruTermId[] fieldValues = activity.fieldsValues[fieldId];
+                MiruInternalActivity activity = requestContext.getActivityIndex().get(coord.tenantId, lastSetBit, stackBuffer);
+                if (activity == null) {
+                    log.warn("Missing activity for tenant: {} with id: {} size: {}",
+                        coord.tenantId, lastSetBit, requestContext.getActivityIndex().lastId(stackBuffer));
+                }
+                MiruTermId[] fieldValues = activity != null ? activity.fieldsValues[fieldId] : null;
                 log.trace("fieldValues={}", (Object) fieldValues);
                 if (fieldValues == null || fieldValues.length == 0) {
                     // could make this a reusable buffer, but this is effectively an error case and would require 3 buffers
@@ -254,7 +263,7 @@ public class AggregateCounts {
                         }
 
                         AggregateCount aggregateCount = new AggregateCount(
-                            miruProvider.getActivityInternExtern(tenantId).extern(activity, requestContext.getSchema()),
+                            activityInternExtern.extern(activity, requestContext.getSchema()),
                             aggregateTerm,
                             beforeCount - afterCount,
                             unread);

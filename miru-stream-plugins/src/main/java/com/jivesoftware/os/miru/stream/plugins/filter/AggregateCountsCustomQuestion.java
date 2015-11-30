@@ -63,7 +63,7 @@ public class AggregateCountsCustomQuestion implements Question<AggregateCountsQu
             solutionLog.log(MiruSolutionLogLevel.WARN, "No time index intersection. Partition {}: {} doesn't intersect with {}",
                 handle.getCoord().partitionId, context.getTimeIndex(), timeRange);
             return new MiruPartitionResponse<>(aggregateCounts.getAggregateCounts(solutionLog,
-                bitmaps, context, request, report, bitmaps.create(), Optional.absent()), solutionLog.asList());
+                bitmaps, context, request, handle.getCoord(), report, bitmaps.create(), Optional.absent()), solutionLog.asList());
         }
 
         List<IBM> ands = new ArrayList<>();
@@ -91,7 +91,7 @@ public class AggregateCountsCustomQuestion implements Question<AggregateCountsQu
                 context.getTimeIndex(), request.query.countTimeRange.smallestTimestamp, request.query.countTimeRange.largestTimestamp, stackBuffer)));
         }
 
-        return new MiruPartitionResponse<>(aggregateCounts.getAggregateCounts(solutionLog, bitmaps, context, request, report, answer,
+        return new MiruPartitionResponse<>(aggregateCounts.getAggregateCounts(solutionLog, bitmaps, context, request, handle.getCoord(), report, answer,
             Optional.fromNullable(counter)), solutionLog.asList());
     }
 

@@ -162,13 +162,11 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     public void remove(int id, StackBuffer stackBuffer) throws Exception {
         synchronized (delta) {
             if (delta.or != null) {
-                BM container = bitmaps.remove(delta.or, id);
-                delta.or = container;
+                delta.or = bitmaps.remove(delta.or, id);
             }
 
             if (delta.andNot != null) {
-                BM container = bitmaps.set(delta.andNot, id);
-                delta.andNot = container;
+                delta.andNot = bitmaps.set(delta.andNot, id);
             } else {
                 delta.andNot = bitmaps.createWithBits(id);
             }
@@ -183,12 +181,11 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
         }
         synchronized (delta) {
             if (delta.andNot != null) {
-                BM container = bitmaps.remove(delta.andNot, ids);
+                delta.andNot = bitmaps.remove(delta.andNot, ids);
             }
 
             if (delta.or != null) {
-                BM container = bitmaps.set(delta.or, ids);
-                delta.or = container;
+                delta.or = bitmaps.set(delta.or, ids);
             } else {
                 delta.or = bitmaps.createWithBits(ids);
             }
@@ -217,8 +214,7 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
         }
         synchronized (delta) {
             if (delta.or != null) {
-                BM container = bitmaps.andNot(delta.or, masks);
-                delta.or = container;
+                delta.or = bitmaps.andNot(delta.or, masks);
             }
 
             Optional<IBM> index = backingIndex.getIndex(stackBuffer);
