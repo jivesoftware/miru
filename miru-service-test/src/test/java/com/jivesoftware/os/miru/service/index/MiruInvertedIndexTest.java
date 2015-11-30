@@ -5,7 +5,6 @@ import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.bitmaps.roaring5.buffer.MiruBitmapsRoaringBuffer;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
-import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.IndexTestUtil;
 import com.jivesoftware.os.miru.service.index.delta.MiruDeltaInvertedIndex;
@@ -255,7 +254,7 @@ public class MiruInvertedIndexTest {
 
     private <BM extends IBM, IBM> MiruFilerInvertedIndex<BM, IBM> buildFilerInvertedIndex(MiruBitmaps<BM, IBM> bitmaps) throws Exception {
         return new MiruFilerInvertedIndex<>(bitmaps,
-            new MiruFieldIndex.IndexKey(0, new byte[] { 0 }),
+            new byte[] { 0 },
             IndexTestUtil.buildKeyedFilerStore("index",
                 IndexTestUtil.buildByteBufferBackedChunkStores(4, new HeapByteBufferFactory(), 4_096)),
             -1,
@@ -265,10 +264,7 @@ public class MiruInvertedIndexTest {
     private <BM extends IBM, IBM> MiruDeltaInvertedIndex<BM, IBM> buildDeltaInvertedIndex(MiruBitmaps<BM, IBM> bitmaps) throws Exception {
         return new MiruDeltaInvertedIndex<>(bitmaps,
             buildFilerInvertedIndex(bitmaps),
-            new MiruDeltaInvertedIndex.Delta<IBM>(),
-            new MiruFieldIndex.IndexKey(0, new byte[] { 0 }),
-            null,
-            null);
+            new MiruDeltaInvertedIndex.Delta<>());
     }
 
     @Test(groups = "slow", enabled = false, description = "Concurrency test")

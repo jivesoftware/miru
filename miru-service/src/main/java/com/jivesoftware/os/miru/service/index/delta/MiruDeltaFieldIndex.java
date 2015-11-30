@@ -1,7 +1,5 @@
 package com.jivesoftware.os.miru.service.index.delta;
 
-import com.google.common.base.Optional;
-import com.google.common.cache.Cache;
 import com.google.common.primitives.UnsignedBytes;
 import com.jivesoftware.os.filer.io.api.KeyRange;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
@@ -24,7 +22,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * DELTA FORCE
@@ -32,13 +29,9 @@ import java.util.concurrent.atomic.AtomicLong;
 public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<IBM>, Mergeable {
 
     private final MiruBitmaps<BM, IBM> bitmaps;
-    private final long[] indexIds;
     private final MiruFieldIndex<IBM> backingFieldIndex;
     private final ConcurrentSkipListMap<MiruTermId, MiruDeltaInvertedIndex.Delta<IBM>>[] fieldIndexDeltas;
     private final ConcurrentHashMap<MiruTermId, TIntLongMap>[] cardinalities;
-    private final Cache<IndexKey, Optional<?>> fieldIndexCache;
-    private final Cache<MiruFieldIndex.IndexKey, Long> versionCache;
-    private final AtomicLong version;
 
     private static final Comparator<MiruTermId> COMPARATOR = new Comparator<MiruTermId>() {
 
@@ -51,14 +44,9 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
     };
 
     public MiruDeltaFieldIndex(MiruBitmaps<BM, IBM> bitmaps,
-        long[] indexIds,
         MiruFieldIndex<IBM> backingFieldIndex,
-        MiruFieldDefinition[] fieldDefinitions,
-        Cache<IndexKey, Optional<?>> fieldIndexCache,
-        Cache<IndexKey, Long> versionCache,
-        AtomicLong version) {
+        MiruFieldDefinition[] fieldDefinitions) {
         this.bitmaps = bitmaps;
-        this.indexIds = indexIds;
         this.backingFieldIndex = backingFieldIndex;
         this.fieldIndexDeltas = new ConcurrentSkipListMap[fieldDefinitions.length];
         this.cardinalities = new ConcurrentHashMap[fieldDefinitions.length];
@@ -68,14 +56,6 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
                 cardinalities[i] = new ConcurrentHashMap<>();
             }
         }
-        this.fieldIndexCache = fieldIndexCache;
-        this.versionCache = versionCache;
-        this.version = version;
-    }
-
-    @Override
-    public long getVersion(int fieldId, MiruTermId termId) throws Exception {
-        return versionCache.get(getIndexKey(fieldId, termId), version::incrementAndGet);
     }
 
     @Override
@@ -94,7 +74,7 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
     public void remove(int fieldId, MiruTermId termId, int id, StackBuffer stackBuffer) throws Exception {
         MiruInvertedIndex<IBM> got = get(fieldId, termId);
         got.remove(id, stackBuffer);
-        putCardinalities(fieldId, termId, new int[]{id}, cardinalities[fieldId] != null ? new long[1] : null, false, stackBuffer);
+        putCardinalities(fieldId, termId, new int[] { id }, cardinalities[fieldId] != null ? new long[1] : null, false, stackBuffer);
     }
 
     @Override
@@ -139,12 +119,7 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
                 delta = existing;
             }
         }
-        return new MiruDeltaInvertedIndex<>(bitmaps, backingFieldIndex.get(fieldId, termId), delta, getIndexKey(fieldId, termId),
-            fieldIndexCache, versionCache);
-    }
-
-    private IndexKey getIndexKey(int fieldId, MiruTermId termId) {
-        return new IndexKey(indexIds[fieldId], termId.getBytes());
+        return new MiruDeltaInvertedIndex<>(bitmaps, backingFieldIndex.get(fieldId, termId), delta);
     }
 
     @Override
@@ -157,8 +132,7 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
                 delta = existing;
             }
         }
-        return new MiruDeltaInvertedIndex<>(bitmaps, backingFieldIndex.get(fieldId, termId, considerIfIndexIdGreaterThanN), delta,
-            getIndexKey(fieldId, termId), fieldIndexCache, versionCache);
+        return new MiruDeltaInvertedIndex<>(bitmaps, backingFieldIndex.get(fieldId, termId, considerIfIndexIdGreaterThanN), delta);
     }
 
     @Override
@@ -175,13 +149,12 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
                 delta = existing;
             }
         }
-        return new MiruDeltaInvertedIndex<>(bitmaps, backingFieldIndex.getOrCreateInvertedIndex(fieldId, termId), delta, getIndexKey(fieldId, termId),
-            fieldIndexCache, versionCache);
+        return new MiruDeltaInvertedIndex<>(bitmaps, backingFieldIndex.getOrCreateInvertedIndex(fieldId, termId), delta);
     }
 
     @Override
     public long getCardinality(int fieldId, MiruTermId termId, int id, StackBuffer stackBuffer) throws Exception {
-        long[] result = {-1};
+        long[] result = { -1 };
         cardinalities[fieldId].computeIfPresent(termId, (key, idCounts) -> {
             result[0] = idCounts.get(id);
             return idCounts;
@@ -229,7 +202,7 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
     @Override
     public long getGlobalCardinality(int fieldId, MiruTermId termId, StackBuffer stackBuffer) throws Exception {
         if (cardinalities[fieldId] != null) {
-            long[] count = {-1};
+            long[] count = { -1 };
             cardinalities[fieldId].compute(termId, (key, idCounts) -> {
                 if (idCounts != null) {
                     count[0] = idCounts.get(-1);
@@ -293,9 +266,7 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
                 MiruDeltaInvertedIndex.Delta<IBM> delta = entry.getValue();
                 MiruDeltaInvertedIndex<BM, IBM> invertedIndex = new MiruDeltaInvertedIndex<>(bitmaps,
                     backingFieldIndex.getOrCreateInvertedIndex(fieldId, entry.getKey()),
-                    delta,
-                    getIndexKey(fieldId, entry.getKey()),
-                    fieldIndexCache, versionCache);
+                    delta);
                 invertedIndex.merge(stackBuffer);
             }
             deltaMap.clear();

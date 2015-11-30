@@ -6,7 +6,6 @@ import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruAuthzIndex;
-import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzCache;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzUtils;
@@ -15,20 +14,17 @@ import com.jivesoftware.os.miru.service.index.auth.MiruAuthzUtils;
 public class MiruFilerAuthzIndex<BM extends IBM, IBM> implements MiruAuthzIndex<IBM> {
 
     private final MiruBitmaps<BM, IBM> bitmaps;
-    private final long indexId;
-    private final KeyedFilerStore keyedStore;
+    private final KeyedFilerStore<Long, Void> keyedStore;
     private final MiruAuthzCache<BM, IBM> cache;
     private final StripingLocksProvider<String> stripingLocksProvider;
 
     public MiruFilerAuthzIndex(MiruBitmaps<BM, IBM> bitmaps,
-        long indexId,
-        KeyedFilerStore keyedStore,
+        KeyedFilerStore<Long, Void> keyedStore,
         MiruAuthzCache<BM, IBM> cache,
         StripingLocksProvider<String> stripingLocksProvider)
         throws Exception {
 
         this.bitmaps = bitmaps;
-        this.indexId = indexId;
         this.keyedStore = keyedStore;
         this.cache = cache;
         this.stripingLocksProvider = stripingLocksProvider;
@@ -37,8 +33,7 @@ public class MiruFilerAuthzIndex<BM extends IBM, IBM> implements MiruAuthzIndex<
 
     @Override
     public MiruInvertedIndex<IBM> getAuthz(String authz) throws Exception {
-        return new MiruFilerInvertedIndex<>(bitmaps, new MiruFieldIndex.IndexKey(indexId, MiruAuthzUtils.key(authz)), keyedStore, -1,
-            stripingLocksProvider.lock(authz, 0));
+        return new MiruFilerInvertedIndex<>(bitmaps, MiruAuthzUtils.key(authz), keyedStore, -1, stripingLocksProvider.lock(authz, 0));
     }
 
     @Override

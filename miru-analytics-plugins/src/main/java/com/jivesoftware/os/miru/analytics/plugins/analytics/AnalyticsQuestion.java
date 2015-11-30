@@ -54,13 +54,13 @@ public class AnalyticsQuestion implements Question<AnalyticsQuery, AnalyticsAnsw
             request.query.constraintsFilter, segments,
             (Analytics.ToAnalyze<String> toAnalyze) -> {
                 for (Map.Entry<String, MiruFilter> entry : request.query.analyticsFilters.entrySet()) {
-                    if (!toAnalyze.analyze(entry.getKey(), -1L, entry.getValue())) {
+                    if (!toAnalyze.analyze(entry.getKey(), entry.getValue())) {
                         return false;
                     }
                 }
                 return true;
             },
-            (String term, long version, long[] waveformBuffer) -> {
+            (String term, long[] waveformBuffer) -> {
                 if (waveformBuffer == null) {
                     waveforms.add(Waveform.empty(term, segments));
                 } else {

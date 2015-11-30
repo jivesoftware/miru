@@ -1,12 +1,9 @@
 package com.jivesoftware.os.miru.service.index.delta;
 
-import com.google.common.base.Optional;
-import com.google.common.cache.Cache;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
-import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInboxIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndexAppender;
@@ -19,19 +16,13 @@ import java.util.concurrent.ConcurrentMap;
 public class MiruDeltaInboxIndex<BM extends IBM, IBM> implements MiruInboxIndex<IBM>, Mergeable {
 
     private final MiruBitmaps<BM, IBM> bitmaps;
-    private final long indexId;
     private final MiruInboxIndex<IBM> backingIndex;
-    private final Cache<MiruFieldIndex.IndexKey, Optional<?>> fieldIndexCache;
     private final ConcurrentMap<MiruStreamId, MiruDeltaInvertedIndex<BM, IBM>> inboxDeltas = Maps.newConcurrentMap();
 
     public MiruDeltaInboxIndex(MiruBitmaps<BM, IBM> bitmaps,
-        long indexId,
-        MiruInboxIndex<IBM> backingIndex,
-        Cache<MiruFieldIndex.IndexKey, Optional<?>> fieldIndexCache) {
+        MiruInboxIndex<IBM> backingIndex) {
         this.bitmaps = bitmaps;
-        this.indexId = indexId;
         this.backingIndex = backingIndex;
-        this.fieldIndexCache = fieldIndexCache;
     }
 
     @Override
@@ -43,8 +34,7 @@ public class MiruDeltaInboxIndex<BM extends IBM, IBM> implements MiruInboxIndex<
     public MiruInvertedIndex<IBM> getInbox(MiruStreamId streamId) throws Exception {
         MiruDeltaInvertedIndex<BM, IBM> delta = inboxDeltas.get(streamId);
         if (delta == null) {
-            delta = new MiruDeltaInvertedIndex<>(bitmaps, backingIndex.getInbox(streamId), new MiruDeltaInvertedIndex.Delta<IBM>(),
-                new MiruFieldIndex.IndexKey(indexId, streamId.getBytes()), fieldIndexCache, null);
+            delta = new MiruDeltaInvertedIndex<>(bitmaps, backingIndex.getInbox(streamId), new MiruDeltaInvertedIndex.Delta<>());
             MiruDeltaInvertedIndex<BM, IBM> existing = inboxDeltas.putIfAbsent(streamId, delta);
             if (existing != null) {
                 delta = existing;

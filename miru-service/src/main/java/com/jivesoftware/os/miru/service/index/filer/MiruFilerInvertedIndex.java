@@ -12,7 +12,6 @@ import com.jivesoftware.os.filer.io.api.KeyedFilerStore;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.filer.io.chunk.ChunkFiler;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
-import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.index.BitmapAndLastId;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
@@ -32,7 +31,7 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     private static final int LAST_ID_LENGTH = 4;
 
     private final MiruBitmaps<BM, IBM> bitmaps;
-    private final MiruFieldIndex.IndexKey indexKey;
+    private final byte[] indexKeyBytes;
     private final KeyedFilerStore<Long, Void> keyedFilerStore;
     private final int considerIfIndexIdGreaterThanN;
     private final Object mutationLock;
@@ -41,12 +40,12 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     private final ChunkTransaction<Void, BitmapAndLastId<BM>> getTransaction;
 
     public MiruFilerInvertedIndex(MiruBitmaps<BM, IBM> bitmaps,
-        MiruFieldIndex.IndexKey indexKey,
+        byte[] indexKeyBytes,
         KeyedFilerStore<Long, Void> keyedFilerStore,
         int considerIfIndexIdGreaterThanN,
         Object mutationLock) {
         this.bitmaps = bitmaps;
-        this.indexKey = Preconditions.checkNotNull(indexKey);
+        this.indexKeyBytes = Preconditions.checkNotNull(indexKeyBytes);
         this.keyedFilerStore = Preconditions.checkNotNull(keyedFilerStore);
         this.considerIfIndexIdGreaterThanN = considerIfIndexIdGreaterThanN;
         this.mutationLock = mutationLock;
@@ -68,7 +67,7 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
             return Optional.absent();
         }
 
-        BitmapAndLastId<BM> bitmapAndLastId = keyedFilerStore.read(indexKey.keyBytes, null, getTransaction, stackBuffer);
+        BitmapAndLastId<BM> bitmapAndLastId = keyedFilerStore.read(indexKeyBytes, null, getTransaction, stackBuffer);
 
         if (bitmapAndLastId != null) {
             log.inc("get>hit");
@@ -89,7 +88,7 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
             return tx.tx(null, null, -1, null);
         }
 
-        return keyedFilerStore.read(indexKey.keyBytes, null, (monkey, filer, stackBuffer1, lock) -> {
+        return keyedFilerStore.read(indexKeyBytes, null, (monkey, filer, stackBuffer1, lock) -> {
             try {
                 if (filer != null) {
                     synchronized (lock) {
@@ -156,7 +155,7 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
         bitmaps.serialize(index, dataOutput);
         final byte[] bytes = dataOutput.toByteArray();
 
-        keyedFilerStore.writeNewReplace(indexKey.keyBytes, filerSizeInBytes, new SetTransaction(bytes), stackBuffer);
+        keyedFilerStore.writeNewReplace(indexKeyBytes, filerSizeInBytes, new SetTransaction(bytes), stackBuffer);
         log.inc("set>total");
         log.inc("set>bytes", bytes.length);
     }
@@ -232,7 +231,7 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     public int lastId(StackBuffer stackBuffer) throws Exception {
         if (lastId == Integer.MIN_VALUE) {
             synchronized (mutationLock) {
-                lastId = keyedFilerStore.read(indexKey.keyBytes, null, lastIdTransaction, stackBuffer);
+                lastId = keyedFilerStore.read(indexKeyBytes, null, lastIdTransaction, stackBuffer);
             }
             log.inc("lastId>total");
             log.inc("lastId>bytes", 4);
