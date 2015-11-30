@@ -1,12 +1,9 @@
 package com.jivesoftware.os.miru.service.index.delta;
 
-import com.google.common.base.Optional;
-import com.google.common.cache.Cache;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
-import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndexAppender;
 import com.jivesoftware.os.miru.plugin.index.MiruUnreadTrackingIndex;
@@ -18,19 +15,13 @@ import java.util.concurrent.ConcurrentMap;
 public class MiruDeltaUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUnreadTrackingIndex<IBM>, Mergeable {
 
     private final MiruBitmaps<BM, IBM> bitmaps;
-    private final long indexId;
     private final MiruUnreadTrackingIndex<IBM> backingIndex;
-    private final Cache<MiruFieldIndex.IndexKey, Optional<?>> fieldIndexCache;
     private final ConcurrentMap<MiruStreamId, MiruDeltaInvertedIndex<BM, IBM>> unreadDeltas = Maps.newConcurrentMap();
 
     public MiruDeltaUnreadTrackingIndex(MiruBitmaps<BM, IBM> bitmaps,
-        long indexId,
-        MiruUnreadTrackingIndex<IBM> backingIndex,
-        Cache<MiruFieldIndex.IndexKey, Optional<?>> fieldIndexCache) {
+        MiruUnreadTrackingIndex<IBM> backingIndex) {
         this.bitmaps = bitmaps;
-        this.indexId = indexId;
         this.backingIndex = backingIndex;
-        this.fieldIndexCache = fieldIndexCache;
     }
 
     @Override
@@ -42,8 +33,7 @@ public class MiruDeltaUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUn
     public MiruInvertedIndex<IBM> getUnread(MiruStreamId streamId) throws Exception {
         MiruDeltaInvertedIndex<BM, IBM> delta = unreadDeltas.get(streamId);
         if (delta == null) {
-            delta = new MiruDeltaInvertedIndex<>(bitmaps, backingIndex.getUnread(streamId), new MiruDeltaInvertedIndex.Delta<IBM>(),
-                new MiruFieldIndex.IndexKey(indexId, streamId.getBytes()), fieldIndexCache, null);
+            delta = new MiruDeltaInvertedIndex<>(bitmaps, backingIndex.getUnread(streamId), new MiruDeltaInvertedIndex.Delta<>());
             MiruDeltaInvertedIndex<BM, IBM> existing = unreadDeltas.putIfAbsent(streamId, delta);
             if (existing != null) {
                 delta = existing;

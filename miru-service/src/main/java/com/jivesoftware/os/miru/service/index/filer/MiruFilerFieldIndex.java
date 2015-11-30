@@ -40,11 +40,6 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
     }
 
     @Override
-    public long getVersion(int fieldId, MiruTermId termId) throws Exception {
-        return -1;
-    }
-
-    @Override
     public void append(int fieldId, MiruTermId termId, int[] ids, long[] counts, StackBuffer stackBuffer) throws Exception {
         getIndex(fieldId, termId, -1).append(stackBuffer, ids);
         mergeCardinalities(fieldId, termId, ids, counts, stackBuffer);
@@ -59,7 +54,7 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
     @Override
     public void remove(int fieldId, MiruTermId termId, int id, StackBuffer stackBuffer) throws Exception {
         getIndex(fieldId, termId, -1).remove(id, stackBuffer);
-        mergeCardinalities(fieldId, termId, new int[]{id}, cardinalities[fieldId] != null ? new long[1] : null, stackBuffer);
+        mergeCardinalities(fieldId, termId, new int[] { id }, cardinalities[fieldId] != null ? new long[1] : null, stackBuffer);
     }
 
     @Override
@@ -89,7 +84,7 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
     }
 
     private MiruInvertedIndex<IBM> getIndex(int fieldId, MiruTermId termId, int considerIfIndexIdGreaterThanN) throws Exception {
-        return new MiruFilerInvertedIndex<>(bitmaps, new IndexKey(indexIds[fieldId], termId.getBytes()), indexes[fieldId],
+        return new MiruFilerInvertedIndex<>(bitmaps, termId.getBytes(), indexes[fieldId],
             considerIfIndexIdGreaterThanN, stripingLocksProvider.lock(termId, 0));
     }
 

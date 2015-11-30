@@ -164,25 +164,10 @@ public interface MiruServiceConfig extends Config {
     int getMergeIndexThreads();
 
     @BooleanDefault(true)
-    public boolean getUseOffHeapBuffers();
+    boolean getUseOffHeapBuffers();
 
     @LongDefault(10_000_000)
     long getMaxRebuildActivityCount();
-
-    @LongDefault(600_000)
-    long getFieldIndexCacheExpireAfterMillis();
-
-    @LongDefault(1_000_000)
-    long getFieldIndexCacheMaxSize();
-
-    @IntDefault(512)
-    int getFieldIndexCacheConcurrencyLevel();
-
-    @LongDefault(1_000_000)
-    long getVersionCacheMaxSize();
-
-    @IntDefault(512)
-    int getVersionCacheConcurrencyLevel();
 
     @ClassDefault(IllegalStateException.class)
     Class<? extends MiruBitmaps<?, ?>> getBitmapsClass();

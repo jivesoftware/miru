@@ -36,12 +36,12 @@ public class Analytics {
 
     public interface ToAnalyze<T> {
 
-        boolean analyze(T term, long version, MiruFilter filter) throws Exception;
+        boolean analyze(T term, MiruFilter filter) throws Exception;
     }
 
     public interface Analyzed<T> {
 
-        boolean analyzed(T term, long version, long[] waveformBuffer) throws Exception;
+        boolean analyzed(T term, long[] waveformBuffer) throws Exception;
     }
 
     public <BM extends IBM, IBM, T> boolean analyze(MiruSolutionLog solutionLog,
@@ -63,7 +63,7 @@ public class Analytics {
         // Short-circuit if this is not a properly bounded query
         if (timeRange.largestTimestamp == Long.MAX_VALUE || timeRange.smallestTimestamp == 0) {
             solutionLog.log(MiruSolutionLogLevel.WARN, "Improperly bounded query: {}", timeRange);
-            analysis.consume((termId, version, filter) -> analyzed.analyzed(termId, version, null));
+            analysis.consume((termId, filter) -> analyzed.analyzed(termId, null));
             return true;
         }
 
@@ -72,7 +72,7 @@ public class Analytics {
         if (!timeIndex.intersects(timeRange)) {
             solutionLog.log(MiruSolutionLogLevel.WARN, "No time index intersection. Partition {}: {} doesn't intersect with {}",
                 coord.partitionId, timeIndex, timeRange);
-            analysis.consume((termId, version, filter) -> analyzed.analyzed(termId, version, null));
+            analysis.consume((termId, filter) -> analyzed.analyzed(termId, null));
             return resultsExhausted;
         }
 
@@ -132,7 +132,7 @@ public class Analytics {
         int[] count = new int[1];
         long[] rawWaveformBuffer = new long[divideTimeRangeIntoNSegments];
 
-        analysis.consume((term, version, filter) -> {
+        analysis.consume((term, filter) -> {
             boolean found = false;
             if (!bitmaps.isEmpty(constrained)) {
                 BM waveformFiltered = aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), filter,
@@ -158,7 +158,7 @@ public class Analytics {
                 }
             }
             count[0]++;
-            return analyzed.analyzed(term, version, found ? rawWaveformBuffer : null);
+            return analyzed.analyzed(term, found ? rawWaveformBuffer : null);
         });
         solutionLog.log(MiruSolutionLogLevel.INFO, "analytics answered: {} millis.", System.currentTimeMillis() - start);
         solutionLog.log(MiruSolutionLogLevel.INFO, "analytics answered: {} iterations.", count[0]);

@@ -7,7 +7,6 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- *
  * @author jonathan
  */
 public interface MiruFieldIndex<IBM> {
@@ -17,8 +16,6 @@ public interface MiruFieldIndex<IBM> {
     MiruInvertedIndex<IBM> get(int fieldId, MiruTermId termId, int considerIfIndexIdGreaterThanN) throws Exception;
 
     MiruInvertedIndex<IBM> getOrCreateInvertedIndex(int fieldId, MiruTermId term) throws Exception;
-
-    long getVersion(int fieldId, MiruTermId termId) throws Exception;
 
     void append(int fieldId, MiruTermId termId, int[] ids, long[] counts, StackBuffer stackBuffer) throws Exception;
 

@@ -1,11 +1,7 @@
 package com.jivesoftware.os.miru.reco.plugins.trending;
 
 import com.google.common.base.Optional;
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Interner;
-import com.google.common.collect.Interners;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
@@ -17,7 +13,6 @@ import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsAnswerMerge
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.Miru;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
@@ -57,8 +52,6 @@ public class TrendingInjectable {
     private final int gatherDistinctsBatchSize;
 
     private final PeakDet peakDet = new PeakDet();
-    private final Cache<TrendingWaveformKey, TrendingVersionedWaveform> queryCache;
-    private final Interner<MiruFilter> constraintsInterner;
 
     public TrendingInjectable(MiruProvider<? extends Miru> miruProvider,
         Distincts distincts,
@@ -69,14 +62,6 @@ public class TrendingInjectable {
 
         TrendingPluginConfig config = miruProvider.getConfig(TrendingPluginConfig.class);
         this.gatherDistinctsBatchSize = config.getGatherDistinctsBatchSize();
-
-        if (config.getQueryCacheMaxSize() > 0) {
-            this.queryCache = CacheBuilder.newBuilder().maximumSize(config.getQueryCacheMaxSize()).build();
-            this.constraintsInterner = Interners.newWeakInterner();
-        } else {
-            this.queryCache = null;
-            this.constraintsInterner = null;
-        }
     }
 
     double zeroToOne(long _min, long _max, long _long) {
@@ -141,9 +126,7 @@ public class TrendingInjectable {
                     gatherDistinctsBatchSize,
                     combinedTimeRange,
                     request,
-                    provider.getRemotePartition(TrendingRemotePartition.class),
-                    queryCache,
-                    constraintsInterner)),
+                    provider.getRemotePartition(TrendingRemotePartition.class))),
                 new AnalyticsAnswerEvaluator(),
                 new AnalyticsAnswerMerger(combinedTimeRange, request.query.divideTimeRangeIntoNSegments),
                 AnalyticsAnswer.EMPTY_RESULTS,
@@ -333,9 +316,7 @@ public class TrendingInjectable {
                         gatherDistinctsBatchSize,
                         combinedTimeRange,
                         request,
-                        provider.getRemotePartition(TrendingRemotePartition.class),
-                        queryCache,
-                        constraintsInterner)),
+                        provider.getRemotePartition(TrendingRemotePartition.class))),
                 Optional.fromNullable(requestAndReport.report),
                 AnalyticsAnswer.EMPTY_RESULTS,
                 MiruSolutionLogLevel.NONE);

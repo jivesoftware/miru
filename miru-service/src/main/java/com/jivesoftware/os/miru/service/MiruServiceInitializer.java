@@ -3,9 +3,6 @@ package com.jivesoftware.os.miru.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
-import com.google.common.base.Optional;
-import com.google.common.cache.Cache;
-import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.filer.chunk.store.transaction.KeyToFPCacheFactory;
@@ -29,7 +26,6 @@ import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
-import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruSipIndexMarshaller;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.service.locator.MiruResourceLocator;
@@ -146,21 +142,6 @@ public class MiruServiceInitializer {
             config.getPartitionInitialChunkCacheSize(),
             config.getPartitionMaxChunkCacheSize());
 
-        Cache<MiruFieldIndex.IndexKey, Optional<?>> fieldIndexCache = null;
-        if (config.getFieldIndexCacheMaxSize() > 0) {
-            fieldIndexCache = CacheBuilder.newBuilder()
-                .expireAfterAccess(config.getFieldIndexCacheExpireAfterMillis(), TimeUnit.MILLISECONDS)
-                .maximumSize(config.getFieldIndexCacheMaxSize())
-                .concurrencyLevel(config.getFieldIndexCacheConcurrencyLevel())
-                .softValues()
-                .build();
-        }
-
-        Cache<MiruFieldIndex.IndexKey, Long> versionCache = CacheBuilder.newBuilder()
-            .maximumSize(config.getVersionCacheMaxSize())
-            .concurrencyLevel(config.getVersionCacheConcurrencyLevel())
-            .build();
-
         TxCogs cogs = new TxCogs(256, 64,
             new ConcurrentKeyToFPCacheFactory(),
             new NullKeyToFPCacheFactory(),
@@ -178,8 +159,6 @@ public class MiruServiceInitializer {
             resourceLocator,
             MiruBackingStorage.valueOf(config.getDefaultStorage()),
             config.getPartitionAuthzCacheSize(),
-            fieldIndexCache,
-            versionCache,
             new AtomicLong(0),
             fieldIndexStripingLocksProvider,
             streamStripingLocksProvider,
