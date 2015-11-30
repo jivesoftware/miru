@@ -487,14 +487,14 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
 
     private RoaringBitmap bitmapFromFiler(ChunkFiler filer, int offset, StackBuffer stackBuffer1) throws IOException {
         RoaringBitmap deser = new RoaringBitmap();
-        if (filer.canLeakUnsafeByteBuffer()) {
+        /*if (filer.canLeakUnsafeByteBuffer()) {
             ByteBuffer buf = filer.leakUnsafeByteBuffer();
             buf.position(offset);
             deser.deserialize(new ByteBufferDataInput(buf));
-        } else {
+        } else {*/
             filer.seek(offset);
             deser.deserialize(new FilerDataInput(filer, stackBuffer1));
-        }
+        /*}*/
         return deser;
     }
 
