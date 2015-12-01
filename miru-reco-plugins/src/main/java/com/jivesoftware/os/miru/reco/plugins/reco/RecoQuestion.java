@@ -65,7 +65,7 @@ public class RecoQuestion implements Question<RecoQuery, RecoAnswer, RecoReport>
                 handle.getCoord().partitionId, context.getTimeIndex(), timeRange);
             return new MiruPartitionResponse<>(
                 collaborativeFiltering.collaborativeFiltering(solutionLog, bitmaps, context, handle.getCoord(), request, report, bitmaps.create(),
-                    bitmaps.create(), removeDistinctsFilter),
+                    bitmaps.create(), removeDistinctsFilter, false),
                 solutionLog.asList());
         }
 
@@ -115,10 +115,34 @@ public class RecoQuestion implements Question<RecoQuery, RecoAnswer, RecoReport>
             solutionLog.log(MiruSolutionLogLevel.TRACE, "constrained mine down bitmap {}", allMyActivity);
         }
 
-        return new MiruPartitionResponse<>(
-            collaborativeFiltering.collaborativeFiltering(solutionLog, bitmaps, context, handle.getCoord(), request, report, allMyActivity, okActivity,
-                removeDistinctsFilter),
-            solutionLog.asList());
+        boolean failOnNoForwardProgress = true;
+        int numberOfRetries = 10;
+        int retries = 0;
+        while (true) {
+            try {
+                return new MiruPartitionResponse<>(
+                    collaborativeFiltering.collaborativeFiltering(solutionLog,
+                        bitmaps,
+                        context,
+                        handle.getCoord(),
+                        request,
+                        report,
+                        allMyActivity,
+                        okActivity,
+                        removeDistinctsFilter,
+                        failOnNoForwardProgress),
+                    solutionLog.asList());
+            } catch (MiruQueryServiceException e) {
+                retries++;
+                LOG.error("Failed to execute query for {} attempts={}", handle.getCoord(), retries);
+                if (retries == numberOfRetries) {
+                    failOnNoForwardProgress = false;
+                } else if (retries > numberOfRetries) {
+                    throw e;
+                }
+                Thread.sleep(1_000);
+            }
+        }
     }
 
     @Override
