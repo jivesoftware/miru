@@ -120,6 +120,9 @@ public class MiruAggregateUtil {
                 Optional<IBM> optionalTermIndex = invertedIndex.getIndex(stackBuffer);
                 checkState(optionalTermIndex.isPresent(), "Unable to load inverted index for aggregateTermId: " + pivotTerm);
                 IBM termIndex = optionalTermIndex.get();
+                if (bitmaps.isEmpty(termIndex)) {
+                    LOG.error("Empty bitmap for {} field:{} term:{} id:{}", coord, streamField, pivotTerm, lastSetBit);
+                }
 
                 if (debugEnabled) {
                     bytesTraversed.addAndGet(Math.max(bitmaps.sizeInBytes(answer), bitmaps.sizeInBytes(termIndex)));
