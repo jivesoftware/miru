@@ -161,6 +161,12 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
         bitmaps.serialize(index, dataOutput);
         final byte[] bytes = dataOutput.toByteArray();
 
+        BM check = bitmaps.deserialize(ByteStreams.newDataInput(bytes));
+        BM checked = bitmaps.or(Arrays.asList(index, check));
+        if (bitmaps.cardinality(index) != bitmaps.cardinality(check) || bitmaps.cardinality(index) != bitmaps.cardinality(checked)) {
+            log.error("BAD BITS index:{} check:{} checked:{}", index, check, checked);
+        }
+
         keyedFilerStore.writeNewReplace(indexKeyBytes, filerSizeInBytes, new SetTransaction(bytes), stackBuffer);
         log.inc("set>total");
         log.inc("set>bytes", bytes.length);

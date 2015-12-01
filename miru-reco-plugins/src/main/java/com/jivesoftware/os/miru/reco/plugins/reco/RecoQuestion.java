@@ -53,28 +53,6 @@ public class RecoQuestion implements Question<RecoQuery, RecoAnswer, RecoReport>
     public <BM extends IBM, IBM> MiruPartitionResponse<RecoAnswer> askLocal(MiruRequestHandle<BM, IBM, ?> handle,
         Optional<RecoReport> report) throws Exception {
 
-        boolean failOnNoForwardProgress = true;
-        int numberOfRetries = 100;
-        int retries = 0;
-        while (true) {
-            try {
-                return askLocalInternal(handle, report, failOnNoForwardProgress);
-            } catch (MiruQueryServiceException e) {
-                retries++;
-                LOG.error("PROGRESS Failed to execute query for {} attempts={}", handle.getCoord(), retries);
-                if (retries == numberOfRetries) {
-                    failOnNoForwardProgress = false;
-                } else if (retries > numberOfRetries) {
-                    throw e;
-                }
-                Thread.sleep(1_000);
-            }
-        }
-    }
-
-    private <BM extends IBM, IBM> MiruPartitionResponse<RecoAnswer> askLocalInternal(MiruRequestHandle<BM, IBM, ?> handle,
-        Optional<RecoReport> report, boolean failOnNoForwardProgress) throws Exception {
-
         StackBuffer stackBuffer = new StackBuffer();
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
 
@@ -87,7 +65,7 @@ public class RecoQuestion implements Question<RecoQuery, RecoAnswer, RecoReport>
                 handle.getCoord().partitionId, context.getTimeIndex(), timeRange);
             return new MiruPartitionResponse<>(
                 collaborativeFiltering.collaborativeFiltering(solutionLog, bitmaps, context, handle.getCoord(), request, report, bitmaps.create(),
-                    bitmaps.create(), removeDistinctsFilter, false),
+                    bitmaps.create(), removeDistinctsFilter),
                 solutionLog.asList());
         }
 
@@ -146,8 +124,7 @@ public class RecoQuestion implements Question<RecoQuery, RecoAnswer, RecoReport>
                 report,
                 allMyActivity,
                 okActivity,
-                removeDistinctsFilter,
-                failOnNoForwardProgress),
+                removeDistinctsFilter),
             solutionLog.asList());
     }
 
