@@ -54,14 +54,14 @@ public class RecoQuestion implements Question<RecoQuery, RecoAnswer, RecoReport>
         Optional<RecoReport> report) throws Exception {
 
         boolean failOnNoForwardProgress = true;
-        int numberOfRetries = 10;
+        int numberOfRetries = 100;
         int retries = 0;
         while (true) {
             try {
                 return askLocalInternal(handle, report, failOnNoForwardProgress);
             } catch (MiruQueryServiceException e) {
                 retries++;
-                LOG.error("Failed to execute query for {} attempts={}", handle.getCoord(), retries);
+                LOG.error("PROGRESS Failed to execute query for {} attempts={}", handle.getCoord(), retries);
                 if (retries == numberOfRetries) {
                     failOnNoForwardProgress = false;
                 } else if (retries > numberOfRetries) {
