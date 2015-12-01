@@ -31,29 +31,43 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
 
     @Override
     public Optional<IBM> getIndex(StackBuffer stackBuffer) throws Exception {
-        Optional<IBM> index = delta.replaced ? Optional.<IBM>absent() : backingIndex.getIndex(stackBuffer);
+        boolean replaced;
+        IBM or;
+        IBM andNot;
+        synchronized (delta) {
+            replaced = delta.replaced;
+            or = delta.or;
+            andNot = delta.andNot;
+        }
+        Optional<IBM> index = replaced ? Optional.<IBM>absent() : backingIndex.getIndex(stackBuffer);
         if (index.isPresent()) {
             IBM got = index.get();
-            IBM exclude = delta.andNot;
-            if (exclude != null) {
-                got = bitmaps.andNot(got, exclude);
+            if (andNot != null) {
+                got = bitmaps.andNot(got, andNot);
             }
-            IBM include = delta.or;
-            if (include != null) {
-                got = bitmaps.or(Arrays.asList(got, include));
+            if (or != null) {
+                got = bitmaps.or(Arrays.asList(got, or));
             }
             return Optional.of(got);
         } else {
-            return Optional.fromNullable(delta.or);
+            return Optional.fromNullable(or);
         }
     }
 
     @Override
     public <R> R txIndex(IndexTx<R, IBM> tx, StackBuffer stackBuffer) throws Exception {
-        if (delta.replaced) {
+        boolean replaced;
+        IBM or;
+        IBM andNot;
+        synchronized (delta) {
+            replaced = delta.replaced;
+            or = delta.or;
+            andNot = delta.andNot;
+        }
+        if (replaced) {
             LOG.inc("txIndex>replaced", 1);
-            return tx.tx(delta.or, null, -1, null);
-        } else if (delta.or != null || delta.andNot != null) {
+            return tx.tx(or, null, -1, null);
+        } else if (or != null || andNot != null) {
             LOG.inc("txIndex>delta", 1);
             Optional<IBM> index = getIndex(stackBuffer);
             return tx.tx(index.orNull(), null, -1, null);
