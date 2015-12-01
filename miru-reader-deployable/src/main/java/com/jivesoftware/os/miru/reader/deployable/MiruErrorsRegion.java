@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
+import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
 import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.miru.service.partition.PartitionErrorTracker;
 import com.jivesoftware.os.miru.ui.MiruPageRegion;
@@ -40,24 +41,23 @@ public class MiruErrorsRegion implements MiruPageRegion<Void> {
             List<Map<String, Object>> sinceRebuild = Lists.newArrayList();
             for (Map.Entry<MiruPartitionCoord, List<String>> entry : partitionErrorTracker.getErrorsSinceRebuild().entrySet()) {
                 MiruPartitionCoord coord = entry.getKey();
-                service.introspect(coord.tenantId, coord.partitionId, (requestContext, state, storage) -> {
-                    sinceRebuild.add(ImmutableMap.of("tenantId", coord.tenantId.toString(),
-                        "partitionId", coord.partitionId.toString(),
-                        "state", state != null ? state.name() : "unknown",
-                        "storage", storage != null ? storage.name() : "unknown",
-                        "reasons", entry.getValue()));
-                });
+                MiruPartitionCoordInfo info = service.getInfo(coord.tenantId, coord.partitionId);
+                sinceRebuild.add(ImmutableMap.of("tenantId", coord.tenantId.toString(),
+                    "partitionId", coord.partitionId.toString(),
+                    "state", info != null ? info.state.name() : "unknown",
+                    "storage", info != null ? info.storage.name() : "unknown",
+                    "reasons", entry.getValue()));
             }
 
             data.put("sinceRebuild", sinceRebuild);
 
-            List<Map<String, Object>> sinceStartup = Lists.newArrayList();
-            for (MiruPartitionCoord coord : partitionErrorTracker.getErrorsSinceStartup()) {
-                sinceStartup.add(ImmutableMap.of("tenantId", coord.tenantId.toString(),
+            List<Map<String, Object>> beforeRebuild = Lists.newArrayList();
+            for (MiruPartitionCoord coord : partitionErrorTracker.getErrorsBeforeRebuild()) {
+                beforeRebuild.add(ImmutableMap.of("tenantId", coord.tenantId.toString(),
                     "partitionId", coord.partitionId.toString()));
             }
 
-            data.put("sinceStartup", sinceStartup);
+            data.put("beforeRebuild", beforeRebuild);
 
         } catch (Exception e) {
             LOG.error("Failed to render partitions region", e);

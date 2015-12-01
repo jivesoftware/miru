@@ -264,6 +264,10 @@ public class MiruService implements Miru {
         return partitionDirector.checkInfo(tenantId, partitionId, info);
     }
 
+    public MiruPartitionCoordInfo getInfo(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+        return partitionDirector.getInfo(tenantId, partitionId);
+    }
+
     public boolean prioritizeRebuild(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         return partitionDirector.prioritizeRebuild(tenantId, partitionId);
     }
@@ -282,7 +286,7 @@ public class MiruService implements Miru {
         if (partition.isPresent()) {
             MiruQueryablePartition<?, ?> hostedPartition = partition.get();
             try (MiruRequestHandle<?, ?, ? extends MiruSipCursor<?>> handle = hostedPartition.inspectRequestHandle()) {
-                callback.call(handle.getRequestContext(), handle.getState(), handle.getStorage());
+                callback.call(handle.getRequestContext());
             }
         }
     }

@@ -32,6 +32,8 @@ public interface MiruPartitionDirector {
 
     boolean checkInfo(MiruTenantId tenantId, MiruPartitionId partitionId, MiruPartitionCoordInfo info) throws Exception;
 
+    MiruPartitionCoordInfo getInfo(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
+
     boolean prioritizeRebuild(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
 
     boolean expectedTopologies(Optional<MiruTenantId> tenantId, CoordinateStream stream) throws Exception;

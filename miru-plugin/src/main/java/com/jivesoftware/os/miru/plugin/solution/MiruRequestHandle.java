@@ -21,8 +21,4 @@ public interface MiruRequestHandle<BM extends IBM, IBM, S extends MiruSipCursor<
     boolean canBackfill();
 
     MiruPartitionCoord getCoord();
-
-    MiruPartitionState getState();
-
-    MiruBackingStorage getStorage();
 }
