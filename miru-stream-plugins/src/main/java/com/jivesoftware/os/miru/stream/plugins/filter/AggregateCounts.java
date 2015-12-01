@@ -190,7 +190,7 @@ public class AggregateCounts {
                     }
                 }
 
-                aggregateCounts.add(new AggregateCount(null, aggregateTerm, beforeCount - afterCount, unread));
+                aggregateCounts.add(new AggregateCount(null, aggregateTerm, beforeCount - afterCount, -1L, unread));
                 beforeCount = afterCount;
             }
 
@@ -263,9 +263,10 @@ public class AggregateCounts {
                         }
 
                         AggregateCount aggregateCount = new AggregateCount(
-                            activityInternExtern.extern(activity, requestContext.getSchema()),
+                            constraint.includeMostRecentActivity ? activityInternExtern.extern(activity, requestContext.getSchema()) : null,
                             aggregateTerm,
                             beforeCount - afterCount,
+                            activity.time,
                             unread);
                         aggregateCounts.add(aggregateCount);
 

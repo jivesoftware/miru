@@ -400,7 +400,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
 
                         MiruContext<IBM, S> toContext;
                         synchronized (fromContext.writeLock) {
-                            handle.merge(mergeChits, mergeExecutor, trackError);
+                            handle.merge(mergeChits, mergeExecutor, trackError, stackBuffer);
                             toContext = contextFactory.copy(bitmaps, coord, fromContext, destinationStorage, stackBuffer);
                         }
 
@@ -626,7 +626,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                                         MiruPartitionAccessor<BM, IBM, C, S> online = rebuilding.copyToState(MiruPartitionState.online);
                                         MiruPartitionAccessor<BM, IBM, C, S> updated = updatePartition(rebuilding, online);
                                         if (updated != null) {
-                                            updated.merge(mergeChits, mergeExecutor, trackError);
+                                            updated.merge(mergeChits, mergeExecutor, trackError, stackBuffer);
                                             trackError.reset();
                                         }
                                     } else {
@@ -730,7 +730,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                         mergeExecutor,
                         trackError,
                         stackBuffer);
-                    accessor.merge(mergeChits, mergeExecutor, trackError);
+                    accessor.merge(mergeChits, mergeExecutor, trackError, stackBuffer);
                     accessor.setRebuildCursor(nextCursor);
                     if (nextCursor.getSipCursor() != null) {
                         accessor.setSip(nextCursor.getSipCursor(), stackBuffer);
@@ -929,7 +929,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
             }
 
             if (!accessor.hasOpenWriters()) {
-                accessor.merge(mergeChits, mergeExecutor, trackError);
+                accessor.merge(mergeChits, mergeExecutor, trackError, stackBuffer);
             }
 
             if (accessorRef.get() == accessor) {

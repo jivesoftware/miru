@@ -51,7 +51,7 @@ public class AggregateCountsAnswerMerger implements MiruAnswerMerger<AggregateCo
                         mergedResults.add(aggregateCount);
                     } else {
                         mergedResults.add(new AggregateCount(aggregateCount.mostRecentActivity, aggregateCount.distinctValue, aggregateCount.count + had.count,
-                            aggregateCount.unread || had.unread));
+                            aggregateCount.timestamp, aggregateCount.unread || had.unread));
                     }
                 }
                 for (AggregateCount aggregateCount : currentConstraint.results) {

@@ -36,7 +36,8 @@ public interface MiruTimeIndex {
     long getTimestamp(int id, StackBuffer stackBuffer) throws IOException, InterruptedException;
 
     /**
-     * Returns the smallest id satisfying the condition that {@link #getTimestamp(int)} is greater than the requested timestamp (exclusive lower bound).
+     * Returns the smallest id satisfying the condition that {@link #getTimestamp(int, StackBuffer)}
+     * is greater than the requested timestamp (exclusive lower bound).
      *
      * @param timestamp the timestamp serving as the exclusive lower bound
      * @return the smallest id exclusive of the requested timestamp
@@ -44,7 +45,8 @@ public interface MiruTimeIndex {
     int smallestExclusiveTimestampIndex(long timestamp, StackBuffer stackBuffer) throws IOException, InterruptedException;
 
     /**
-     * Returns the largest id satisfying the condition that {@link #getTimestamp(int)} is less than or equal to the requested timestamp (inclusive upper bound).
+     * Returns the largest id satisfying the condition that {@link #getTimestamp(int, StackBuffer)}
+     * is less than or equal to the requested timestamp (inclusive upper bound).
      *
      * @param timestamp the timestamp serving as the inclusive upper bound
      * @return the largest id inclusive of the requested timestamp

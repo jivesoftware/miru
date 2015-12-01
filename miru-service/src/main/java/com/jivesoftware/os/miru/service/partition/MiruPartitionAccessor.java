@@ -234,7 +234,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
 
     private final AtomicLong merges = new AtomicLong(0);
 
-    void merge(MiruMergeChits chits, ExecutorService mergeExecutor, TrackError trackError) throws Exception {
+    void merge(MiruMergeChits chits, ExecutorService mergeExecutor, TrackError trackError, StackBuffer stackBuffer) throws Exception {
         if (context.isPresent()) {
             final MiruContext<IBM, S> got = context.get();
             long elapsed;
@@ -259,10 +259,14 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
                         future.get();
                     }
                 } catch (Exception e) {
-                    trackError.error("Failed to merge: " + e.getMessage());
+                    if (!(e instanceof InterruptedException)) {
+                        trackError.error("Failed to merge: " + e.getMessage());
+                    }
                     checkCorruption(got, e);
                     throw e;
                 }
+
+                got.markDeltaMinId(got.activityIndex.lastId(stackBuffer));
 
                 elapsed = System.currentTimeMillis() - start;
                 log.info("Merged {} in {} ms", coord, elapsed);
@@ -358,7 +362,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         }
 
         if (chits.take(coord, consumedCount)) {
-            merge(chits, mergeExecutor, trackError);
+            merge(chits, mergeExecutor, trackError, stackBuffer);
         }
 
         return consumedCount;
@@ -639,8 +643,8 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
             }
 
             @Override
-            public void merge(MiruMergeChits chits, ExecutorService mergeExecutor, TrackError trackError) throws Exception {
-                MiruPartitionAccessor.this.merge(chits, mergeExecutor, trackError);
+            public void merge(MiruMergeChits chits, ExecutorService mergeExecutor, TrackError trackError, StackBuffer stackBuffer) throws Exception {
+                MiruPartitionAccessor.this.merge(chits, mergeExecutor, trackError, stackBuffer);
             }
 
             @Override

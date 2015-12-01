@@ -129,7 +129,8 @@ public class InMemoryEndpointsTest {
                     MiruFilter.NO_FILTER,
                     OBJECT_ID.getFieldName(),
                     0,
-                    100))),
+                    100,
+                    true))),
             MiruSolutionLogLevel.NONE));
         assertNotNull(getResponse);
         MiruResponse<AggregateCountsAnswer> result = objectMapper.readValue(getResponse.getEntity().toString(), type);
@@ -154,7 +155,8 @@ public class InMemoryEndpointsTest {
                     MiruFilter.NO_FILTER,
                     OBJECT_ID.getFieldName(),
                     0,
-                    100))),
+                    100,
+                    true))),
             MiruSolutionLogLevel.NONE));
         assertNotNull(getResponse);
         result = objectMapper.readValue(getResponse.getEntity().toString(), type);

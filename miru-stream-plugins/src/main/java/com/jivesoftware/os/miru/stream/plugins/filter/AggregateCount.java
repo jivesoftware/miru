@@ -12,17 +12,20 @@ public class AggregateCount {
     public final MiruActivity mostRecentActivity;
     public final String distinctValue;
     public final long count;
+    public final long timestamp;
     public boolean unread;
 
     @JsonCreator
     public AggregateCount(
-        @JsonProperty(value = "mostRecentActivity") MiruActivity mostRecentActivity,
-        @JsonProperty(value = "distinctValue") String distinctValue,
-        @JsonProperty(value = "count") long count,
-        @JsonProperty(value = "unread") boolean unread) {
+        @JsonProperty("mostRecentActivity") MiruActivity mostRecentActivity,
+        @JsonProperty("distinctValue") String distinctValue,
+        @JsonProperty("count") long count,
+        @JsonProperty("timestamp") long timestamp,
+        @JsonProperty("unread") boolean unread) {
         this.mostRecentActivity = mostRecentActivity;
         this.distinctValue = distinctValue;
         this.count = count;
+        this.timestamp = timestamp;
         this.unread = unread;
     }
 
@@ -34,9 +37,11 @@ public class AggregateCount {
     public String toString() {
         return "AggregateCount{" +
             "mostRecentActivity=" + mostRecentActivity +
-            ", distinctValue=" + distinctValue +
+            ", distinctValue='" + distinctValue + '\'' +
             ", count=" + count +
-            ", unread=" + unread + '}';
+            ", timestamp=" + timestamp +
+            ", unread=" + unread +
+            '}';
     }
 
     @Override
@@ -47,20 +52,23 @@ public class AggregateCount {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
+
         AggregateCount that = (AggregateCount) o;
+
         if (count != that.count) {
+            return false;
+        }
+        if (timestamp != that.timestamp) {
             return false;
         }
         if (unread != that.unread) {
             return false;
         }
-        if (distinctValue != null ? !distinctValue.equals(that.distinctValue) : that.distinctValue != null) {
-            return false;
-        }
         if (mostRecentActivity != null ? !mostRecentActivity.equals(that.mostRecentActivity) : that.mostRecentActivity != null) {
             return false;
         }
-        return true;
+        return !(distinctValue != null ? !distinctValue.equals(that.distinctValue) : that.distinctValue != null);
+
     }
 
     @Override
@@ -68,8 +76,8 @@ public class AggregateCount {
         int result = mostRecentActivity != null ? mostRecentActivity.hashCode() : 0;
         result = 31 * result + (distinctValue != null ? distinctValue.hashCode() : 0);
         result = 31 * result + (int) (count ^ (count >>> 32));
+        result = 31 * result + (int) (timestamp ^ (timestamp >>> 32));
         result = 31 * result + (unread ? 1 : 0);
         return result;
     }
-
 }

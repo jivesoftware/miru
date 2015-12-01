@@ -173,7 +173,9 @@ public class MiruStreamServiceNGTest {
                         filter,
                         ImmutableMap.of("blah", new AggregateCountsQueryConstraint(MiruFilter.NO_FILTER,
                             "container",
-                            0, 51))),
+                            0,
+                            51,
+                            true))),
                     MiruSolutionLogLevel.NONE);
 
                 long start = System.currentTimeMillis();
@@ -277,8 +279,7 @@ public class MiruStreamServiceNGTest {
                 new MiruTimeRange(0, 1_000),
                 new MiruTimeRange(0, 1_000),
                 filter,
-                ImmutableMap.of("blah", new AggregateCountsQueryConstraint(MiruFilter.NO_FILTER,
-                    "container", 0, 10))),
+                ImmutableMap.of("blah", new AggregateCountsQueryConstraint(MiruFilter.NO_FILTER, "container", 0, 10, true))),
                 MiruSolutionLogLevel.NONE);
             MiruResponse<AggregateCountsAnswer> results = aggregateCountsInjectable.filterInboxStreamAll(query);
             for (AggregateCount a : results.answer.constraints.get("blah").results) {
@@ -321,7 +322,7 @@ public class MiruStreamServiceNGTest {
                 new MiruTimeRange(0, 1_000),
                 filter,
                 ImmutableMap.of("blah", new AggregateCountsQueryConstraint(MiruFilter.NO_FILTER,
-                    "container", 0, 10))),
+                    "container", 0, 10, true))),
                 MiruSolutionLogLevel.NONE);
             MiruResponse<AggregateCountsAnswer> results = aggregateCountsInjectable.filterInboxStreamAll(query);
             for (AggregateCount a : results.answer.constraints.get("blah").results) {

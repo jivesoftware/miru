@@ -17,6 +17,8 @@ import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruUnreadTrackingIndex;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Composes the building blocks of a MiruContext together for convenience.
@@ -41,6 +43,8 @@ public class MiruContext<IBM, S extends MiruSipCursor<S>> implements MiruRequest
     public final ChunkStore[] chunkStores;
     public final Object writeLock = new Object();
     public final AtomicBoolean corrupt = new AtomicBoolean(false);
+    public final AtomicInteger deltaMinId = new AtomicInteger(-1);
+    public final AtomicInteger lastDeltaMinId = new AtomicInteger(-1);
 
     public MiruContext(MiruSchema schema,
         MiruTermComposer termComposer,
@@ -123,6 +127,20 @@ public class MiruContext<IBM, S extends MiruSipCursor<S>> implements MiruRequest
     @Override
     public StripingLocksProvider<MiruStreamId> getStreamLocks() {
         return streamLocks;
+    }
+
+    @Override
+    public int getDeltaMinId() {
+        return deltaMinId.get();
+    }
+
+    @Override
+    public int getLastDeltaMinId() {
+        return lastDeltaMinId.get();
+    }
+
+    public void markDeltaMinId(int id) {
+        lastDeltaMinId.set(deltaMinId.getAndSet(id));
     }
 
     public boolean isCorrupt() {
