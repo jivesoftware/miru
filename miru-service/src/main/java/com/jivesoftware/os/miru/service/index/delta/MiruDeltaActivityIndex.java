@@ -9,6 +9,8 @@ import com.jivesoftware.os.miru.plugin.index.MiruActivityAndId;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
 import com.jivesoftware.os.miru.service.index.Mergeable;
+import com.jivesoftware.os.mlogger.core.MetricLogger;
+import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
@@ -21,6 +23,8 @@ import static com.google.common.base.Preconditions.checkArgument;
  * DELTA FORCE
  */
 public class MiruDeltaActivityIndex implements MiruActivityIndex, Mergeable {
+
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final MiruActivityIndex backingIndex;
     private final Map<Integer, MiruActivityAndId<MiruInternalActivity>> activities = Maps.newConcurrentMap();
@@ -109,7 +113,14 @@ public class MiruDeltaActivityIndex implements MiruActivityIndex, Mergeable {
 
     @Override
     public void ready(int index, StackBuffer stackBuffer) throws Exception {
-        lastId.set(index);
+        lastId.updateAndGet(existing -> {
+            if (existing >= index) {
+                LOG.warn("Attempted to ready id {} but already readied id {}", index, existing);
+                return existing;
+            } else {
+                return index;
+            }
+        });
     }
 
     @Override
