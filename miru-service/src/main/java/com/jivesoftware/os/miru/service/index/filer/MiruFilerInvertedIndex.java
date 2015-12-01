@@ -14,7 +14,6 @@ import com.jivesoftware.os.filer.io.chunk.ChunkFiler;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.index.BitmapAndLastId;
-import com.jivesoftware.os.miru.service.partition.PartitionErrorTracker;
 import com.jivesoftware.os.miru.service.partition.TrackError;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -33,6 +32,7 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     private static final int LAST_ID_LENGTH = 4;
 
     private final MiruBitmaps<BM, IBM> bitmaps;
+    private final TrackError trackError;
     private final byte[] indexKeyBytes;
     private final KeyedFilerStore<Long, Void> keyedFilerStore;
     private final int considerIfIndexIdGreaterThanN;
@@ -48,6 +48,7 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
         int considerIfIndexIdGreaterThanN,
         Object mutationLock) {
         this.bitmaps = bitmaps;
+        this.trackError = trackError;
         this.indexKeyBytes = Preconditions.checkNotNull(indexKeyBytes);
         this.keyedFilerStore = Preconditions.checkNotNull(keyedFilerStore);
         this.considerIfIndexIdGreaterThanN = considerIfIndexIdGreaterThanN;
@@ -165,6 +166,10 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
         BM checked = bitmaps.or(Arrays.asList(index, check));
         if (bitmaps.cardinality(index) != bitmaps.cardinality(check) || bitmaps.cardinality(index) != bitmaps.cardinality(checked)) {
             log.error("BAD BITS index:{} check:{} checked:{}", index, check, checked);
+            trackError.error("Bad bits" +
+                " index:" + bitmaps.cardinality(index) +
+                " check:" + bitmaps.cardinality(check) +
+                " checked:" + bitmaps.cardinality(checked));
         }
 
         keyedFilerStore.writeNewReplace(indexKeyBytes, filerSizeInBytes, new SetTransaction(bytes), stackBuffer);
