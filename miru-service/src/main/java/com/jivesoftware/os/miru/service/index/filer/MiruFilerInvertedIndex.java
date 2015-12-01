@@ -162,14 +162,19 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
         bitmaps.serialize(index, dataOutput);
         final byte[] bytes = dataOutput.toByteArray();
 
-        BM check = bitmaps.deserialize(ByteStreams.newDataInput(bytes));
-        BM checked = bitmaps.or(Arrays.asList(index, check));
-        if (bitmaps.cardinality(index) != bitmaps.cardinality(check) || bitmaps.cardinality(index) != bitmaps.cardinality(checked)) {
-            log.error("BAD BITS index:{} check:{} checked:{}", index, check, checked);
-            trackError.error("Bad bits" +
-                " index:" + bitmaps.cardinality(index) +
-                " check:" + bitmaps.cardinality(check) +
-                " checked:" + bitmaps.cardinality(checked));
+        try {
+            BM check = bitmaps.deserialize(ByteStreams.newDataInput(bytes));
+            BM checked = bitmaps.or(Arrays.asList(index, check));
+            if (bitmaps.cardinality(index) != bitmaps.cardinality(check) || bitmaps.cardinality(index) != bitmaps.cardinality(checked)) {
+                log.error("BAD BITS bitmap mismatch index:{} check:{} checked:{}", index, check, checked);
+                trackError.error("Bad bits bitmap mismatch" +
+                    " index:" + bitmaps.cardinality(index) +
+                    " check:" + bitmaps.cardinality(check) +
+                    " checked:" + bitmaps.cardinality(checked));
+            }
+        } catch (Exception e) {
+            log.error("BAD BITS failed to check index:{} bytes:{}", new Object[] { index, Arrays.toString(bytes) }, e);
+            trackError.error("Bad bits failed to check index:" + bitmaps.cardinality(index) + " bytes:" + bytes.length);
         }
 
         keyedFilerStore.writeNewReplace(indexKeyBytes, filerSizeInBytes, new SetTransaction(bytes), stackBuffer);
