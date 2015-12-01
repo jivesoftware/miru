@@ -75,12 +75,15 @@ public class MiruAggregateUtil {
         long beforeCount = counter.isPresent() ? bitmaps.cardinality(counter.get()) : bitmaps.cardinality(answer);
         LOG.debug("stream: streamField={} streamFieldId={} pivotFieldId={} beforeCount={}", streamField, streamFieldId, pivotFieldId, beforeCount);
         int priorLastSetBit = Integer.MAX_VALUE;
+        int count = 0;
         while (true) {
             int lastSetBit = answerCollector == null ? bitmaps.lastSetBit(answer) : answerCollector.lastSetBit;
             LOG.trace("stream: lastSetBit={}", lastSetBit);
             if (priorLastSetBit <= lastSetBit) {
-                LOG.error("Failed to make forward progress while streaming {} removing lastSetBit:{} remaining:{} lastId:{}",
-                    coord, lastSetBit, bitmaps.cardinality(answer), requestContext.getActivityIndex().lastId(stackBuffer));
+                LOG.error("Failed to make forward progress while streaming {} removing lastSetBit:{}" +
+                        " lastId:{} streamed:{} remaining:{} deltaMin:{} lastDeltaMin:{}",
+                    coord, lastSetBit, requestContext.getActivityIndex().lastId(stackBuffer), count, bitmaps.cardinality(answer),
+                    requestContext.getDeltaMinId(), requestContext.getLastDeltaMinId());
                 break;
             }
             priorLastSetBit = lastSetBit;
@@ -88,6 +91,7 @@ public class MiruAggregateUtil {
                 break;
             }
 
+            count++;
             MiruTermId[] fieldValues = requestContext.getActivityIndex().get(lastSetBit, streamFieldId, stackBuffer);
             if (traceEnabled) {
                 LOG.trace("stream: fieldValues={}", new Object[] { fieldValues });

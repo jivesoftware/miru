@@ -40,4 +40,8 @@ public interface MiruRequestContext<IBM, S extends MiruSipCursor<S>> {
     MiruInboxIndex<IBM> getInboxIndex();
 
     StripingLocksProvider<MiruStreamId> getStreamLocks();
+
+    int getDeltaMinId();
+
+    int getLastDeltaMinId();
 }

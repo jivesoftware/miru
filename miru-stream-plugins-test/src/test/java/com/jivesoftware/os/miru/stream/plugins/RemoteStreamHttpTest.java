@@ -72,7 +72,7 @@ public class RemoteStreamHttpTest {
                         new MiruFieldFilter(MiruFieldType.primary, "activityType",
                             Lists.transform(Arrays.asList(0), Functions.toStringFunction()))),
                     null),
-                ImmutableMap.of("blah", new AggregateCountsQueryConstraint(MiruFilter.NO_FILTER, "parent", 0, 100))),
+                ImmutableMap.of("blah", new AggregateCountsQueryConstraint(MiruFilter.NO_FILTER, "parent", 0, 100, true))),
             MiruSolutionLogLevel.NONE);
         AggregateCountsAnswer result = requestHelper.executeRequest(query,
             AggregateCountsConstants.FILTER_PREFIX + AggregateCountsConstants.CUSTOM_QUERY_ENDPOINT,

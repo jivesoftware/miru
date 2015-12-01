@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.service.partition;
 
 import com.google.common.base.Optional;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.wal.MiruCursor;
@@ -19,7 +20,7 @@ public interface MiruMigrationHandle<BM extends IBM, IBM, C extends MiruCursor<C
 
     Optional<MiruContext<IBM, S>> closeContext();
 
-    void merge(MiruMergeChits chits, ExecutorService mergeExecutor, TrackError trackError) throws Exception;
+    void merge(MiruMergeChits chits, ExecutorService mergeExecutor, TrackError trackError, StackBuffer stackBuffer) throws Exception;
 
     MiruPartitionAccessor<BM, IBM, C, S> migrated(MiruContext<IBM, S> stream, Optional<MiruBackingStorage> storage, Optional<MiruPartitionState> state);
 }
