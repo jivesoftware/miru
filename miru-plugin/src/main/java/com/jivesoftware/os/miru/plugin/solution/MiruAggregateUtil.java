@@ -83,7 +83,7 @@ public class MiruAggregateUtil {
             int lastSetBit = answerCollector == null ? bitmaps.lastSetBit(answer) : answerCollector.lastSetBit;
             LOG.trace("stream: lastSetBit={}", lastSetBit);
             if (priorLastSetBit <= lastSetBit) {
-                LOG.error("Failed to make forward progress while streaming {} removing lastSetBit:{} lastCount:{}" +
+                LOG.error("PROGRESS Failed to make forward progress while streaming {} removing lastSetBit:{} lastCount:{}" +
                         " lastId:{} streamed:{} remaining:{} deltaMin:{} lastDeltaMin:{} field:{}",
                     coord, lastSetBit, lastCount, requestContext.getActivityIndex().lastId(stackBuffer), count, bitmaps.cardinality(answer),
                     requestContext.getDeltaMinId(), requestContext.getLastDeltaMinId(), streamField);
@@ -126,7 +126,7 @@ public class MiruAggregateUtil {
                 checkState(optionalTermIndex.isPresent(), "Unable to load inverted index for aggregateTermId: " + pivotTerm);
                 IBM termIndex = optionalTermIndex.get();
                 if (bitmaps.isEmpty(termIndex)) {
-                    LOG.error("Empty bitmap for {} field:{} term:{} id:{}", coord, streamField, pivotTerm, lastSetBit);
+                    LOG.error("PROGRESS Empty bitmap for {} field:{} term:{} id:{}", coord, streamField, pivotTerm, lastSetBit);
                 }
 
                 if (debugEnabled) {
