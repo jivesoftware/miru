@@ -305,7 +305,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
 
         StripingLocksProvider<MiruStreamId> streamLocks = new StripingLocksProvider<>(64);
 
-        return new MiruContext<>(schema,
+        MiruContext<IBM, S> context = new MiruContext<>(schema,
             termComposer,
             timeIndex,
             activityIndex,
@@ -318,6 +318,10 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             activityInternExtern,
             streamLocks,
             chunkStores);
+
+        context.markStartOfDelta(stackBuffer);
+
+        return context;
     }
 
     public <BM extends IBM, IBM> MiruContext<IBM, S> copy(MiruBitmaps<BM, IBM> bitmaps,
