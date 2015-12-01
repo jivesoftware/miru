@@ -92,7 +92,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import org.merlin.config.BindInterfaceToConfiguration;
 import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
@@ -136,6 +135,7 @@ public class MiruLocalHostedPartitionTest {
     private MiruTenantId tenantId;
     private MiruHost host;
     private MiruBitmapsRoaringBuffer bitmaps;
+    private TrackError trackError;
     private MiruIndexer<MutableRoaringBitmap, ImmutableRoaringBitmap> indexer;
     private MiruLocalHostedPartition.Timings timings;
     private long topologyIsStaleAfterMillis = TimeUnit.HOURS.toMillis(1);
@@ -173,6 +173,8 @@ public class MiruLocalHostedPartitionTest {
         when(schemaProvider.getSchema(any(MiruTenantId.class))).thenReturn(schema);
 
         bitmaps = new MiruBitmapsRoaringBuffer();
+        trackError = new PartitionErrorTracker().track(coord);
+
         indexer = new MiruIndexer<>(new MiruIndexAuthz<>(),
             new MiruIndexFieldValues<>(),
             new MiruIndexBloom<>(new BloomIndex<>(bitmaps, Hashing.murmur3_128(), 100_000, 0.01f)),
@@ -219,10 +221,10 @@ public class MiruLocalHostedPartitionTest {
             new MiruTempDirectoryResourceLocator(),
             defaultStorage,
             config.getPartitionAuthzCacheSize(),
-            new AtomicLong(0),
             new StripingLocksProvider<>(8),
             new StripingLocksProvider<>(8),
-            new StripingLocksProvider<>(8));
+            new StripingLocksProvider<>(8),
+            new PartitionErrorTracker());
         sipTrackerFactory = new RCVSSipTrackerFactory();
 
         ObjectMapper mapper = new ObjectMapper();
@@ -445,7 +447,7 @@ public class MiruLocalHostedPartitionTest {
 
     private MiruLocalHostedPartition<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSCursor, RCVSSipCursor> getRoaringLocalHostedPartition()
         throws Exception {
-        return new MiruLocalHostedPartition<>(new MiruStats(), bitmaps, coord, -1, contextFactory, sipTrackerFactory,
+        return new MiruLocalHostedPartition<>(new MiruStats(), bitmaps, trackError, coord, -1, contextFactory, sipTrackerFactory,
             walClient, partitionEventHandler, rebuildDirector, scheduledBootstrapService, scheduledRebuildService,
             scheduledSipMigrateService, rebuildExecutor, sipIndexExecutor, mergeExecutor, 1, new NoOpMiruIndexRepairs(),
             indexer, 100_000, 100, 100, new MiruMergeChits(100_000, 10_000), timings);

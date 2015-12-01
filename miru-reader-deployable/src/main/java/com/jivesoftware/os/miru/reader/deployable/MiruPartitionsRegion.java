@@ -64,7 +64,7 @@ public class MiruPartitionsRegion implements MiruPageRegion<Optional<String>> {
     private boolean inspect(MiruTenantId tenantId, MiruPartitionId partitionId, List<Map<String, Object>> partitions) {
         try {
             StackBuffer stackBuffer = new StackBuffer();
-            service.introspect(tenantId, partitionId, requestContext -> {
+            service.introspect(tenantId, partitionId, (requestContext, state, storage) -> {
                 Optional<? extends MiruSipCursor<?>> sip = requestContext.getSipIndex().getSip(stackBuffer);
                 partitions.add(ImmutableMap.<String, Object>builder()
                     .put("tenantId", tenantId.toString())

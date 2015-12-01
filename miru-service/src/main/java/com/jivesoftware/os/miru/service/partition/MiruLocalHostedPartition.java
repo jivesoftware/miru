@@ -65,6 +65,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
 
     private final MiruStats miruStats;
     private final MiruBitmaps<BM, IBM> bitmaps;
+    private final TrackError trackError;
     private final MiruPartitionCoord coord;
     private final AtomicLong expireAfterTimestamp;
     private final MiruContextFactory<S> contextFactory;
@@ -118,6 +119,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
     public MiruLocalHostedPartition(
         MiruStats miruStats,
         MiruBitmaps<BM, IBM> bitmaps,
+        TrackError trackError,
         MiruPartitionCoord coord,
         long expireAfterTimestamp,
         MiruContextFactory<S> contextFactory,
@@ -143,6 +145,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
 
         this.miruStats = miruStats;
         this.bitmaps = bitmaps;
+        this.trackError = trackError;
         this.coord = coord;
         this.expireAfterTimestamp = new AtomicLong(expireAfterTimestamp);
         this.contextFactory = contextFactory;
@@ -344,6 +347,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                 mergeChits,
                 sameThreadExecutor,
                 sameThreadExecutor,
+                trackError,
                 stackBuffer);
             if (count > 0) {
                 log.inc("indexIngress>written", count);
@@ -396,7 +400,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
 
                         MiruContext<IBM, S> toContext;
                         synchronized (fromContext.writeLock) {
-                            handle.merge(mergeChits, mergeExecutor);
+                            handle.merge(mergeChits, mergeExecutor, trackError);
                             toContext = contextFactory.copy(bitmaps, coord, fromContext, destinationStorage, stackBuffer);
                         }
 
@@ -622,7 +626,8 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                                         MiruPartitionAccessor<BM, IBM, C, S> online = rebuilding.copyToState(MiruPartitionState.online);
                                         MiruPartitionAccessor<BM, IBM, C, S> updated = updatePartition(rebuilding, online);
                                         if (updated != null) {
-                                            updated.merge(mergeChits, mergeExecutor);
+                                            updated.merge(mergeChits, mergeExecutor, trackError);
+                                            trackError.reset();
                                         }
                                     } else {
                                         log.error("Rebuild did not finish for {} isAccessor={}", coord, (rebuilding == accessorRef.get()));
@@ -723,8 +728,9 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                         mergeChits,
                         rebuildIndexExecutor,
                         mergeExecutor,
+                        trackError,
                         stackBuffer);
-                    accessor.merge(mergeChits, mergeExecutor);
+                    accessor.merge(mergeChits, mergeExecutor, trackError);
                     accessor.setRebuildCursor(nextCursor);
                     if (nextCursor.getSipCursor() != null) {
                         accessor.setSip(nextCursor.getSipCursor(), stackBuffer);
@@ -923,7 +929,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
             }
 
             if (!accessor.hasOpenWriters()) {
-                accessor.merge(mergeChits, mergeExecutor);
+                accessor.merge(mergeChits, mergeExecutor, trackError);
             }
 
             if (accessorRef.get() == accessor) {
@@ -943,6 +949,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                 mergeChits,
                 sipIndexExecutor,
                 mergeExecutor,
+                trackError,
                 stackBuffer);
 
             S suggestion = sipTracker.suggest(sipCursor, nextSipCursor);

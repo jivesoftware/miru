@@ -33,6 +33,7 @@ import com.jivesoftware.os.miru.plugin.marshaller.RCVSSipIndexMarshaller;
 import com.jivesoftware.os.miru.plugin.schema.SingleSchemaProvider;
 import com.jivesoftware.os.miru.service.locator.MiruResourceLocator;
 import com.jivesoftware.os.miru.service.locator.MiruTempDirectoryResourceLocator;
+import com.jivesoftware.os.miru.service.partition.PartitionErrorTracker;
 import com.jivesoftware.os.miru.service.stream.MiruContext;
 import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
 import com.jivesoftware.os.miru.service.stream.allocator.InMemoryChunkAllocator;
@@ -94,11 +95,10 @@ public class IndexTestUtil {
             new MiruTempDirectoryResourceLocator(),
             MiruBackingStorage.memory,
             1024,
-            new AtomicLong(0),
             fieldIndexStripingLocksProvider,
             streamStripingLocksProvider,
-            authzStripingLocksProvider
-        );
+            authzStripingLocksProvider,
+            new PartitionErrorTracker());
     }
 
     public static <BM extends IBM, IBM> MiruContext<IBM, RCVSSipCursor> buildInMemoryContext(int numberOfChunkStores,

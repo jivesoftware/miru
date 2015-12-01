@@ -14,6 +14,8 @@ import com.jivesoftware.os.filer.io.chunk.ChunkFiler;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.index.BitmapAndLastId;
+import com.jivesoftware.os.miru.service.partition.PartitionErrorTracker;
+import com.jivesoftware.os.miru.service.partition.TrackError;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.DataInput;
@@ -40,6 +42,7 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     private final ChunkTransaction<Void, BitmapAndLastId<BM>> getTransaction;
 
     public MiruFilerInvertedIndex(MiruBitmaps<BM, IBM> bitmaps,
+        TrackError trackError,
         byte[] indexKeyBytes,
         KeyedFilerStore<Long, Void> keyedFilerStore,
         int considerIfIndexIdGreaterThanN,
@@ -54,7 +57,7 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
             if (filer != null) {
                 synchronized (lock) {
                     filer.seek(0);
-                    return deser(bitmaps, filer, stackBuffer);
+                    return deser(bitmaps, trackError, filer, stackBuffer);
                 }
             }
             return null;
@@ -116,6 +119,7 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     }
 
     private static <BM extends IBM, IBM> BitmapAndLastId<BM> deser(MiruBitmaps<BM, IBM> bitmaps,
+        TrackError trackError,
         ChunkFiler filer,
         StackBuffer stackBuffer) throws IOException {
 
@@ -126,6 +130,8 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
                 return new BitmapAndLastId<>(bitmaps.deserialize(dataInput), lastId);
             } catch (Exception e) {
                 try {
+                    trackError.error("Failed to deserialize a bitmap, length=" + filer.length());
+
                     byte[] raw = new byte[512];
                     filer.seek(0);
                     filer.read(raw);

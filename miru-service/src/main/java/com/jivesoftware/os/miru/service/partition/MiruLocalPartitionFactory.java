@@ -41,6 +41,7 @@ public class MiruLocalPartitionFactory<C extends MiruCursor<C, S>, S extends Mir
     private final int rebuildIndexerThreads;
     private final MiruIndexRepairs indexRepairs;
     private final MiruMergeChits mergeChits;
+    private final PartitionErrorTracker partitionErrorTracker;
 
     public MiruLocalPartitionFactory(MiruStats miruStats,
         MiruServiceConfig config,
@@ -57,7 +58,8 @@ public class MiruLocalPartitionFactory<C extends MiruCursor<C, S>, S extends Mir
         ExecutorService mergeExecutor,
         int rebuildIndexerThreads,
         MiruIndexRepairs indexRepairs,
-        MiruMergeChits mergeChits) {
+        MiruMergeChits mergeChits,
+        PartitionErrorTracker partitionErrorTracker) {
 
         this.miruStats = miruStats;
         this.config = config;
@@ -75,6 +77,7 @@ public class MiruLocalPartitionFactory<C extends MiruCursor<C, S>, S extends Mir
         this.rebuildIndexerThreads = rebuildIndexerThreads;
         this.indexRepairs = indexRepairs;
         this.mergeChits = mergeChits;
+        this.partitionErrorTracker = partitionErrorTracker;
     }
 
     public <BM extends IBM, IBM> MiruLocalHostedPartition<BM, IBM, C, S> create(MiruBitmaps<BM, IBM> bitmaps,
@@ -83,6 +86,7 @@ public class MiruLocalPartitionFactory<C extends MiruCursor<C, S>, S extends Mir
 
         return new MiruLocalHostedPartition<>(miruStats,
             bitmaps,
+            partitionErrorTracker.track(coord),
             coord,
             expireAfterMillis > 0 ? System.currentTimeMillis() + expireAfterMillis : -1,
             miruContextFactory,

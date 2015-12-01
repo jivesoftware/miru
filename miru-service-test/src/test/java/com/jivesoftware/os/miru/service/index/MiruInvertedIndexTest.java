@@ -9,6 +9,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.IndexTestUtil;
 import com.jivesoftware.os.miru.service.index.delta.MiruDeltaInvertedIndex;
 import com.jivesoftware.os.miru.service.index.filer.MiruFilerInvertedIndex;
+import com.jivesoftware.os.miru.service.partition.TrackError;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -254,6 +255,15 @@ public class MiruInvertedIndexTest {
 
     private <BM extends IBM, IBM> MiruFilerInvertedIndex<BM, IBM> buildFilerInvertedIndex(MiruBitmaps<BM, IBM> bitmaps) throws Exception {
         return new MiruFilerInvertedIndex<>(bitmaps,
+            new TrackError() {
+                @Override
+                public void error(String reason) {
+                }
+
+                @Override
+                public void reset() {
+                }
+            },
             new byte[] { 0 },
             IndexTestUtil.buildKeyedFilerStore("index",
                 IndexTestUtil.buildByteBufferBackedChunkStores(4, new HeapByteBufferFactory(), 4_096)),

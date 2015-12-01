@@ -53,6 +53,7 @@ import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
 import com.jivesoftware.os.miru.service.MiruServiceInitializer;
 import com.jivesoftware.os.miru.service.locator.MiruTempDirectoryResourceLocator;
+import com.jivesoftware.os.miru.service.partition.PartitionErrorTracker;
 import com.jivesoftware.os.miru.service.partition.RCVSSipTrackerFactory;
 import com.jivesoftware.os.miru.wal.MiruWALDirector;
 import com.jivesoftware.os.miru.wal.RCVSWALInitializer;
@@ -205,7 +206,8 @@ public class MiruPluginTestBootstrap {
             new MiruTempDirectoryResourceLocator(),
             termComposer,
             activityInternExtern,
-            new SingleBitmapsProvider(bitmaps));
+            new SingleBitmapsProvider(bitmaps),
+            new PartitionErrorTracker());
 
         miruServiceLifecyle.start();
         final MiruService miruService = miruServiceLifecyle.getService();

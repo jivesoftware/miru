@@ -1,0 +1,86 @@
+{namespace soy.miru.page}
+
+/**
+ * Errors
+ *
+ * @param? sinceStartup
+ * @param? sinceRebuild
+ */
+{template .errorsRegion}
+    {if $sinceRebuild}
+        <div class="panel panel-default">
+            <div class="panel-heading">Errors since rebuild</div>
+            <div class="panel-body">
+                <table class="table table-condensed">
+                    <thead>
+                        <tr>
+                            <th>Tenant</th>
+                            <th>Partition</th>
+                            <th>State</th>
+                            <th>Storage</th>
+                            <th>Reasons</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {foreach $partition in $sinceRebuild}
+                            <tr>
+                                <td>{$partition.tenantId}</td>
+                                <td>{$partition.partitionId}</td>
+                                <td>{$partition.state}</td>
+                                <td>{$partition.storage}</td>
+                                <td>
+                                    {if $partition.reasons}
+                                        <ul>
+                                            {foreach $reason in $partition.reasons}
+                                                <li>{$reason}</li>
+                                            {ifempty}
+                                                <li>No reason!</li>
+                                            {/foreach}
+                                        </ul>
+                                    {/if}
+                                </td>
+                                <td>
+                                    <input type="button" value="Rebuild" onclick="miru.errors.rebuild(this, '{$partition.tenantId}', {$partition.partitionId})" />
+                                </td>
+                            </tr>
+                        {ifempty}
+                            <tr>
+                                <td colspan="3">No partitions in error</td>
+                            </tr>
+                        {/foreach}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {/if}
+
+    {if $sinceStartup}
+        <div class="panel panel-default">
+            <div class="panel-heading">Errors since startup</div>
+            <div class="panel-body">
+                <table class="table table-condensed">
+                    <thead>
+                        <tr>
+                            <th>Tenant</th>
+                            <th>Partition</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {foreach $partition in $sinceStartup}
+                            <tr>
+                                <td>{$partition.tenantId}</td>
+                                <td>{$partition.partitionId}</td>
+                            </tr>
+                        {ifempty}
+                            <tr>
+                                <td colspan="3">No partitions in error</td>
+                            </tr>
+                        {/foreach}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {/if}
+
+{/template}
