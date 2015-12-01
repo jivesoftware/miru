@@ -5,7 +5,6 @@ import com.jivesoftware.os.filer.io.api.KeyRange;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.jive.utils.base.interfaces.CallbackStream;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
-import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -54,7 +53,6 @@ public class MiruAggregateUtil {
         int pivotFieldId,
         String streamField,
         StackBuffer stackBuffer,
-        boolean failOnNoForwardProgress,
         CallbackStream<MiruTermCount> terms)
         throws Exception {
 
@@ -83,13 +81,10 @@ public class MiruAggregateUtil {
             int lastSetBit = answerCollector == null ? bitmaps.lastSetBit(answer) : answerCollector.lastSetBit;
             LOG.trace("stream: lastSetBit={}", lastSetBit);
             if (priorLastSetBit <= lastSetBit) {
-                LOG.error("PROGRESS Failed to make forward progress while streaming {} removing lastSetBit:{} lastCount:{}" +
+                LOG.error("Failed to make forward progress while streaming {} removing lastSetBit:{} lastCount:{}" +
                         " lastId:{} streamed:{} remaining:{} deltaMin:{} lastDeltaMin:{} field:{}",
                     coord, lastSetBit, lastCount, requestContext.getActivityIndex().lastId(stackBuffer), count, bitmaps.cardinality(answer),
                     requestContext.getDeltaMinId(), requestContext.getLastDeltaMinId(), streamField);
-                if (failOnNoForwardProgress) {
-                    throw new MiruQueryServiceException("Failed to make forward progress");
-                }
                 break;
             }
             priorLastSetBit = lastSetBit;

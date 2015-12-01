@@ -61,8 +61,7 @@ public class CollaborativeFiltering {
         Optional<RecoReport> report,
         IBM allMyActivity,
         IBM okActivity,
-        MiruFilter removeDistinctsFilter,
-        boolean failOnNoForwardProgress) throws Exception {
+        MiruFilter removeDistinctsFilter) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
 
         log.debug("Get collaborative filtering for allMyActivity={} okActivity={} query={}", allMyActivity, okActivity, request);
@@ -133,7 +132,6 @@ public class CollaborativeFiltering {
             fieldId2,
             request.query.aggregateFieldName2,
             stackBuffer,
-            failOnNoForwardProgress,
             miruTermCount -> {
                 if (miruTermCount != null) {
                     contributorHeap.add(miruTermCount);

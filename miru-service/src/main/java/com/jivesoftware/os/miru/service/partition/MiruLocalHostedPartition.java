@@ -857,7 +857,6 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
 
         private int[] sip(final MiruPartitionAccessor<BM, IBM, C, S> accessor, int maxWriterId, StackBuffer stackBuffer) throws Exception {
 
-            log.info("PROGRESS Sip begins for {}", coord);
             final MiruSipTracker<S> sipTracker = sipTrackerFactory.create(accessor.seenLastSip.get());
 
             S sipCursor = accessor.getSipCursor(stackBuffer).orNull();
@@ -933,8 +932,6 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
             if (!accessor.hasOpenWriters()) {
                 accessor.merge(mergeChits, mergeExecutor, trackError, stackBuffer);
             }
-
-            log.info("PROGRESS Sip ends for {}", coord);
 
             if (accessorRef.get() == accessor) {
                 return counts;
