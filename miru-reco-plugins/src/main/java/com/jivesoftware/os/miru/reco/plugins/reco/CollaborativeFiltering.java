@@ -16,6 +16,7 @@ import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruIndexUtil;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
+import com.jivesoftware.os.miru.plugin.partition.TrackError;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
@@ -55,6 +56,7 @@ public class CollaborativeFiltering {
      */
     public <BM extends IBM, IBM> RecoAnswer collaborativeFiltering(MiruSolutionLog solutionLog,
         MiruBitmaps<BM, IBM> bitmaps,
+        TrackError trackError,
         MiruRequestContext<IBM, ?> requestContext,
         MiruPartitionCoord coord,
         final MiruRequest<RecoQuery> request,
@@ -125,6 +127,7 @@ public class CollaborativeFiltering {
             .maximumSize(request.query.desiredNumberOfDistincts) // overloaded :(
             .create();
         aggregateUtil.stream(bitmaps,
+            trackError,
             requestContext,
             coord,
             otherOkField1Activity,

@@ -6,6 +6,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruAuthzIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
+import com.jivesoftware.os.miru.plugin.partition.TrackError;
 import com.jivesoftware.os.miru.service.index.Mergeable;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzCache;
 import java.util.Map;
@@ -17,14 +18,17 @@ import java.util.concurrent.ConcurrentMap;
 public class MiruDeltaAuthzIndex<BM extends IBM, IBM> implements MiruAuthzIndex<IBM>, Mergeable {
 
     private final MiruBitmaps<BM, IBM> bitmaps;
+    private final TrackError trackError;
     private final MiruAuthzCache<BM, IBM> cache;
     private final MiruAuthzIndex<IBM> backingIndex;
     private final ConcurrentMap<String, MiruDeltaInvertedIndex<BM, IBM>> authzDeltas = Maps.newConcurrentMap();
 
     public MiruDeltaAuthzIndex(MiruBitmaps<BM, IBM> bitmaps,
+        TrackError trackError,
         MiruAuthzCache<BM, IBM> cache,
         MiruAuthzIndex<IBM> backingIndex) {
         this.bitmaps = bitmaps;
+        this.trackError = trackError;
         this.cache = cache;
         this.backingIndex = backingIndex;
     }
@@ -65,7 +69,7 @@ public class MiruDeltaAuthzIndex<BM extends IBM, IBM> implements MiruAuthzIndex<
     private MiruDeltaInvertedIndex<BM, IBM> getOrCreate(String authz) throws Exception {
         MiruDeltaInvertedIndex<BM, IBM> delta = authzDeltas.get(authz);
         if (delta == null) {
-            delta = new MiruDeltaInvertedIndex<>(bitmaps, backingIndex.getAuthz(authz), new MiruDeltaInvertedIndex.Delta<IBM>());
+            delta = new MiruDeltaInvertedIndex<>(bitmaps, trackError, backingIndex.getAuthz(authz), new MiruDeltaInvertedIndex.Delta<IBM>());
             MiruDeltaInvertedIndex<BM, IBM> existing = authzDeltas.putIfAbsent(authz, delta);
             if (existing != null) {
                 delta = existing;

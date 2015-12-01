@@ -22,6 +22,7 @@ import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityAndId;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
+import com.jivesoftware.os.miru.plugin.partition.TrackError;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
 import com.jivesoftware.os.miru.service.index.Mergeable;
 import com.jivesoftware.os.miru.service.index.delta.MiruDeltaActivityIndex;
@@ -548,7 +549,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         return count;
     }
 
-    MiruRequestHandle<BM, IBM, S> getRequestHandle() {
+    MiruRequestHandle<BM, IBM, S> getRequestHandle(TrackError trackError) {
         log.debug("Request handle requested for {}", coord);
 
         if (closed.get()) {
@@ -601,6 +602,11 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
             @Override
             public MiruPartitionCoord getCoord() {
                 return coord;
+            }
+
+            @Override
+            public TrackError getTrackError() {
+                return trackError;
             }
 
             @Override

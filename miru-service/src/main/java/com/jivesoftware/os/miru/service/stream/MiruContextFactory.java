@@ -44,6 +44,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruSipIndexMarshaller;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruUnreadTrackingIndex;
+import com.jivesoftware.os.miru.plugin.partition.TrackError;
 import com.jivesoftware.os.miru.service.index.KeyedFilerProvider;
 import com.jivesoftware.os.miru.service.index.MiruInternalActivityMarshaller;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzCache;
@@ -70,7 +71,6 @@ import com.jivesoftware.os.miru.service.locator.MiruPartitionCoordIdentifier;
 import com.jivesoftware.os.miru.service.locator.MiruResourceLocator;
 import com.jivesoftware.os.miru.service.locator.MiruResourcePartitionIdentifier;
 import com.jivesoftware.os.miru.service.partition.PartitionErrorTracker;
-import com.jivesoftware.os.miru.service.partition.TrackError;
 import com.jivesoftware.os.miru.service.stream.allocator.MiruChunkAllocator;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -234,6 +234,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             }
             fieldIndexes[fieldType.getIndex()] = new MiruDeltaFieldIndex<>(
                 bitmaps,
+                trackError,
                 new MiruFilerFieldIndex<>(bitmaps, trackError, indexes, cardinalities, fieldIndexStripingLocksProvider),
                 schema.getFieldDefinitions());
         }
@@ -252,6 +253,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         MiruAuthzCache<BM, IBM> miruAuthzCache = new MiruAuthzCache<>(bitmaps, authzCache, activityInternExtern, authzUtils);
 
         MiruAuthzIndex<IBM> authzIndex = new MiruDeltaAuthzIndex<>(bitmaps,
+            trackError,
             miruAuthzCache,
             new MiruFilerAuthzIndex<>(
                 bitmaps,
@@ -266,6 +268,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
 
         MiruRemovalIndex<IBM> removalIndex = new MiruDeltaRemovalIndex<>(
             bitmaps,
+            trackError,
             new MiruFilerRemovalIndex<>(
                 bitmaps,
                 trackError,
@@ -281,6 +284,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
 
         MiruUnreadTrackingIndex<IBM> unreadTrackingIndex = new MiruDeltaUnreadTrackingIndex<>(
             bitmaps,
+            trackError,
             new MiruFilerUnreadTrackingIndex<>(
                 bitmaps,
                 trackError,
@@ -293,6 +297,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
 
         MiruInboxIndex<IBM> inboxIndex = new MiruDeltaInboxIndex<>(
             bitmaps,
+            trackError,
             new MiruFilerInboxIndex<>(
                 bitmaps,
                 trackError,

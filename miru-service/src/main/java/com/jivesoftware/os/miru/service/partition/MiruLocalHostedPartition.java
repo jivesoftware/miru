@@ -26,6 +26,7 @@ import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.partition.MiruHostedPartition;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
 import com.jivesoftware.os.miru.plugin.partition.MiruQueryablePartition;
+import com.jivesoftware.os.miru.plugin.partition.TrackError;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
 import com.jivesoftware.os.miru.service.NamedThreadFactory;
 import com.jivesoftware.os.miru.service.stream.MiruContext;
@@ -239,7 +240,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
             log.info("Hot deploying for query: {}", coord);
             accessor = open(accessor, accessor.info.copyToState(MiruPartitionState.online), stackBuffer);
         }
-        return accessor.getRequestHandle();
+        return accessor.getRequestHandle(trackError);
     }
 
     @Override
@@ -249,7 +250,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
         }
 
         MiruPartitionAccessor<BM, IBM, C, S> accessor = accessorRef.get();
-        return accessor.getRequestHandle();
+        return accessor.getRequestHandle(trackError);
     }
 
     @Override

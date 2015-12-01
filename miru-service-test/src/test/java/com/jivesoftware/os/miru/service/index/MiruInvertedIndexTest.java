@@ -6,10 +6,10 @@ import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.bitmaps.roaring5.buffer.MiruBitmapsRoaringBuffer;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
+import com.jivesoftware.os.miru.plugin.partition.TrackError;
 import com.jivesoftware.os.miru.service.IndexTestUtil;
 import com.jivesoftware.os.miru.service.index.delta.MiruDeltaInvertedIndex;
 import com.jivesoftware.os.miru.service.index.filer.MiruFilerInvertedIndex;
-import com.jivesoftware.os.miru.service.partition.TrackError;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -273,6 +273,15 @@ public class MiruInvertedIndexTest {
 
     private <BM extends IBM, IBM> MiruDeltaInvertedIndex<BM, IBM> buildDeltaInvertedIndex(MiruBitmaps<BM, IBM> bitmaps) throws Exception {
         return new MiruDeltaInvertedIndex<>(bitmaps,
+            new TrackError() {
+                @Override
+                public void error(String reason) {
+                }
+
+                @Override
+                public void reset() {
+                }
+            },
             buildFilerInvertedIndex(bitmaps),
             new MiruDeltaInvertedIndex.Delta<>());
     }
