@@ -54,6 +54,11 @@ public class MiruMergeChits {
         return canMerge(coord);
     }
 
+    public long taken(MiruPartitionCoord coord) {
+        AtomicLong taken = mergeQueue.get(coord);
+        return taken != null ? taken.get() : -1;
+    }
+
     private boolean canMerge(MiruPartitionCoord coord) {
         long chitsFree = numberOfChitsRemaining.get();
 

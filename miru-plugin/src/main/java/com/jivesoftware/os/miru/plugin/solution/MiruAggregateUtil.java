@@ -75,15 +75,16 @@ public class MiruAggregateUtil {
         long beforeCount = counter.isPresent() ? bitmaps.cardinality(counter.get()) : bitmaps.cardinality(answer);
         LOG.debug("stream: streamField={} streamFieldId={} pivotFieldId={} beforeCount={}", streamField, streamFieldId, pivotFieldId, beforeCount);
         int priorLastSetBit = Integer.MAX_VALUE;
+        long lastCount = -1;
         int count = 0;
         while (true) {
             int lastSetBit = answerCollector == null ? bitmaps.lastSetBit(answer) : answerCollector.lastSetBit;
             LOG.trace("stream: lastSetBit={}", lastSetBit);
             if (priorLastSetBit <= lastSetBit) {
-                LOG.error("Failed to make forward progress while streaming {} removing lastSetBit:{}" +
-                        " lastId:{} streamed:{} remaining:{} deltaMin:{} lastDeltaMin:{}",
-                    coord, lastSetBit, requestContext.getActivityIndex().lastId(stackBuffer), count, bitmaps.cardinality(answer),
-                    requestContext.getDeltaMinId(), requestContext.getLastDeltaMinId());
+                LOG.error("Failed to make forward progress while streaming {} removing lastSetBit:{} lastCount:{}" +
+                        " lastId:{} streamed:{} remaining:{} deltaMin:{} lastDeltaMin:{} field:{}",
+                    coord, lastSetBit, lastCount, requestContext.getActivityIndex().lastId(stackBuffer), count, bitmaps.cardinality(answer),
+                    requestContext.getDeltaMinId(), requestContext.getLastDeltaMinId(), streamField);
                 break;
             }
             priorLastSetBit = lastSetBit;
@@ -97,7 +98,6 @@ public class MiruAggregateUtil {
                 LOG.trace("stream: fieldValues={}", new Object[] { fieldValues });
             }
             if (fieldValues == null || fieldValues.length == 0) {
-                // could make this a reusable buffer, but this is effectively an error case and would require 3 buffers
                 BM removeUnknownField = bitmaps.createWithBits(lastSetBit);
                 if (debugEnabled) {
                     bytesTraversed.addAndGet(Math.max(bitmaps.sizeInBytes(answer), bitmaps.sizeInBytes(removeUnknownField)));
@@ -109,6 +109,8 @@ public class MiruAggregateUtil {
                     answerCollector = bitmaps.andNotWithCardinalityAndLastSetBit(answer, removeUnknownField);
                     answer = answerCollector.bitmap;
                 }
+
+                lastCount = -1;
             } else {
                 //TODO Ideally we should prohibit streaming of multi-term fields because the operation is inherently lossy/ambiguous.
                 //TODO Each andNot iteration can potentially mask/remove other distincts which will therefore never be streamed.
@@ -144,7 +146,8 @@ public class MiruAggregateUtil {
                     afterCount = answerCollector.cardinality;
                 }
 
-                MiruTermCount termCount = new MiruTermCount(pivotTerm, fieldValues, beforeCount - afterCount);
+                lastCount = beforeCount - afterCount;
+                MiruTermCount termCount = new MiruTermCount(pivotTerm, fieldValues, lastCount);
                 if (termCount != terms.callback(termCount)) { // Stop stream
                     return;
                 }

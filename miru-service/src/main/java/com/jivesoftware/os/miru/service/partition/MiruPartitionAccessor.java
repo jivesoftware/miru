@@ -239,7 +239,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
             final MiruContext<IBM, S> got = context.get();
             long elapsed;
             synchronized (got.writeLock) {
-                log.info("Merging {} (remaining: {}) (merges: {})", coord, chits.remaining(), merges.incrementAndGet());
+                log.info("Merging {} (taken: {}) (remaining: {}) (merges: {})", coord, chits.taken(coord), chits.remaining(), merges.incrementAndGet());
                 long start = System.currentTimeMillis();
 
                 List<Future<?>> futures = Lists.newArrayList();
@@ -266,10 +266,10 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
                     throw e;
                 }
 
-                got.markDeltaMinId(got.activityIndex.lastId(stackBuffer));
+                int lastId = got.markStartOfDelta(stackBuffer);
 
                 elapsed = System.currentTimeMillis() - start;
-                log.info("Merged {} in {} ms", coord, elapsed);
+                log.info("Merged {} at id {} in {} ms", coord, lastId, elapsed);
 
                 chits.refundAll(coord);
                 timestampOfLastMerge.set(System.currentTimeMillis());

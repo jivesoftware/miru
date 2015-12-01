@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.service.stream;
 
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.filer.io.chunk.ChunkStore;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
@@ -18,7 +19,6 @@ import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruUnreadTrackingIndex;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Composes the building blocks of a MiruContext together for convenience.
@@ -139,8 +139,10 @@ public class MiruContext<IBM, S extends MiruSipCursor<S>> implements MiruRequest
         return lastDeltaMinId.get();
     }
 
-    public void markDeltaMinId(int id) {
-        lastDeltaMinId.set(deltaMinId.getAndSet(id));
+    public int markStartOfDelta(StackBuffer stackBuffer) {
+        int lastId = activityIndex.lastId(stackBuffer);
+        lastDeltaMinId.set(deltaMinId.getAndSet(lastId));
+        return lastId;
     }
 
     public boolean isCorrupt() {
