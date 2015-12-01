@@ -163,7 +163,7 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
         final byte[] bytes = dataOutput.toByteArray();
 
         try {
-            BM check = bitmaps.deserialize(ByteStreams.newDataInput(bytes));
+            BM check = bitmaps.deserialize(ByteStreams.newDataInput(bytes, LAST_ID_LENGTH));
             BM checked = bitmaps.or(Arrays.asList(index, check));
             if (bitmaps.cardinality(index) != bitmaps.cardinality(check) || bitmaps.cardinality(index) != bitmaps.cardinality(checked)) {
                 log.error("BAD BITS bitmap mismatch index:{} check:{} checked:{}", index, check, checked);
