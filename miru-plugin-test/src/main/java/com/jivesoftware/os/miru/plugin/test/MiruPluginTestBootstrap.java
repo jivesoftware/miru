@@ -207,7 +207,7 @@ public class MiruPluginTestBootstrap {
             termComposer,
             activityInternExtern,
             new SingleBitmapsProvider(bitmaps),
-            new PartitionErrorTracker());
+            new PartitionErrorTracker(BindInterfaceToConfiguration.bindDefault(PartitionErrorTracker.PartitionErrorTrackerConfig.class)));
 
         miruServiceLifecyle.start();
         final MiruService miruService = miruServiceLifecyle.getService();

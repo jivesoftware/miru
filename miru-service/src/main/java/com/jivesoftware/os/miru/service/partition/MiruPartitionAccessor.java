@@ -599,16 +599,6 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
             }
 
             @Override
-            public MiruPartitionState getState() {
-                return info.state;
-            }
-
-            @Override
-            public MiruBackingStorage getStorage() {
-                return info.storage;
-            }
-
-            @Override
             public void close() throws Exception {
                 readSemaphore.release();
             }

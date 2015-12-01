@@ -220,7 +220,11 @@ public class MiruReaderMain {
             MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize(miruStats, "", manageHttpClient, mapper);
             MiruSchemaProvider miruSchemaProvider = new ClusterSchemaProvider(clusterClient, 10000); // TODO config
 
-            PartitionErrorTracker partitionErrorTracker = new PartitionErrorTracker();
+            PartitionErrorTracker.PartitionErrorTrackerConfig partitionErrorTrackerConfig = deployable
+                .config(PartitionErrorTracker.PartitionErrorTrackerConfig.class);
+            PartitionErrorTracker partitionErrorTracker = new PartitionErrorTracker(partitionErrorTrackerConfig);
+
+            deployable.addHealthCheck(partitionErrorTracker);
 
             MiruInboxReadTracker inboxReadTracker;
             MiruLifecyle<MiruService> miruServiceLifecyle;

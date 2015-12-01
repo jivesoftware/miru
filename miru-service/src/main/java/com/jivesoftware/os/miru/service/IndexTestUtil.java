@@ -42,6 +42,7 @@ import com.jivesoftware.os.miru.service.stream.allocator.OnDiskChunkAllocator;
 import java.io.File;
 import java.nio.file.Files;
 import java.util.concurrent.atomic.AtomicLong;
+import org.merlin.config.BindInterfaceToConfiguration;
 
 /**
  *
@@ -98,7 +99,7 @@ public class IndexTestUtil {
             fieldIndexStripingLocksProvider,
             streamStripingLocksProvider,
             authzStripingLocksProvider,
-            new PartitionErrorTracker());
+            new PartitionErrorTracker(BindInterfaceToConfiguration.bindDefault(PartitionErrorTracker.PartitionErrorTrackerConfig.class)));
     }
 
     public static <BM extends IBM, IBM> MiruContext<IBM, RCVSSipCursor> buildInMemoryContext(int numberOfChunkStores,

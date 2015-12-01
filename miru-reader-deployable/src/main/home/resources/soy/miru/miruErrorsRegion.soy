@@ -3,8 +3,8 @@
 /**
  * Errors
  *
- * @param? sinceStartup
  * @param? sinceRebuild
+ * @param? beforeRebuild
  */
 {template .errorsRegion}
     {if $sinceRebuild}
@@ -55,9 +55,9 @@
         </div>
     {/if}
 
-    {if $sinceStartup}
+    {if $beforeRebuild}
         <div class="panel panel-default">
-            <div class="panel-heading">Errors since startup</div>
+            <div class="panel-heading">Errors before rebuild</div>
             <div class="panel-body">
                 <table class="table table-condensed">
                     <thead>
@@ -67,7 +67,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {foreach $partition in $sinceStartup}
+                        {foreach $partition in $beforeRebuild}
                             <tr>
                                 <td>{$partition.tenantId}</td>
                                 <td>{$partition.partitionId}</td>

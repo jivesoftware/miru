@@ -173,7 +173,7 @@ public class MiruLocalHostedPartitionTest {
         when(schemaProvider.getSchema(any(MiruTenantId.class))).thenReturn(schema);
 
         bitmaps = new MiruBitmapsRoaringBuffer();
-        trackError = new PartitionErrorTracker().track(coord);
+        trackError = new PartitionErrorTracker(BindInterfaceToConfiguration.bindDefault(PartitionErrorTracker.PartitionErrorTrackerConfig.class)).track(coord);
 
         indexer = new MiruIndexer<>(new MiruIndexAuthz<>(),
             new MiruIndexFieldValues<>(),
@@ -224,7 +224,7 @@ public class MiruLocalHostedPartitionTest {
             new StripingLocksProvider<>(8),
             new StripingLocksProvider<>(8),
             new StripingLocksProvider<>(8),
-            new PartitionErrorTracker());
+            new PartitionErrorTracker(BindInterfaceToConfiguration.bindDefault(PartitionErrorTracker.PartitionErrorTrackerConfig.class)));
         sipTrackerFactory = new RCVSSipTrackerFactory();
 
         ObjectMapper mapper = new ObjectMapper();

@@ -116,6 +116,18 @@ public class MiruClusterPartitionDirector implements MiruPartitionDirector {
         return false;
     }
 
+    @Override
+    public MiruPartitionCoordInfo getInfo(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+        MiruTenantTopology<?, ?> topology = expectedTenants.getLocalTopology(tenantId);
+        if (topology != null) {
+            Optional<? extends MiruLocalHostedPartition<?, ?, ?, ?>> partition = topology.getPartition(partitionId);
+            if (partition.isPresent()) {
+                return new MiruPartitionCoordInfo(partition.get().getState(), partition.get().getStorage());
+            }
+        }
+        return null;
+    }
+
     /** If the given coordinate is expected on this host, prioritizes the partition's rebuild. */
     @Override
     public boolean prioritizeRebuild(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {

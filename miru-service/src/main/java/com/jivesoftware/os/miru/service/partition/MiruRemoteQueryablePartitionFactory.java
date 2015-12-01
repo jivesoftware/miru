@@ -28,6 +28,16 @@ public class MiruRemoteQueryablePartitionFactory {
             }
 
             @Override
+            public MiruPartitionState getState() {
+                return null;
+            }
+
+            @Override
+            public MiruBackingStorage getStorage() {
+                return null;
+            }
+
+            @Override
             public MiruRequestHandle<BM, IBM, ?> inspectRequestHandle() throws Exception {
                 throw new UnsupportedOperationException("Remote partitions cannot be inspected");
             }
@@ -59,16 +69,6 @@ public class MiruRemoteQueryablePartitionFactory {
                     @Override
                     public MiruPartitionCoord getCoord() {
                         return coord;
-                    }
-
-                    @Override
-                    public MiruPartitionState getState() {
-                        return null;
-                    }
-
-                    @Override
-                    public MiruBackingStorage getStorage() {
-                        return null;
                     }
 
                     @Override
