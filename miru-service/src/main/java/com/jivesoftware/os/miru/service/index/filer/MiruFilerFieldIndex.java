@@ -12,6 +12,8 @@ import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.TermIdStream;
+import com.jivesoftware.os.miru.service.partition.PartitionErrorTracker;
+import com.jivesoftware.os.miru.service.partition.TrackError;
 import java.util.Arrays;
 import java.util.List;
 
@@ -21,19 +23,19 @@ import java.util.List;
 public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<IBM> {
 
     private final MiruBitmaps<BM, IBM> bitmaps;
-    private final long[] indexIds;
+    private final TrackError trackError;
     private final KeyedFilerStore<Long, Void>[] indexes;
     private final KeyedFilerStore<Integer, MapContext>[] cardinalities;
     // We could lock on both field + termId for improved hash/striping, but we favor just termId to reduce object creation
     private final StripingLocksProvider<MiruTermId> stripingLocksProvider;
 
     public MiruFilerFieldIndex(MiruBitmaps<BM, IBM> bitmaps,
-        long[] indexIds,
+        TrackError trackError,
         KeyedFilerStore<Long, Void>[] indexes,
         KeyedFilerStore<Integer, MapContext>[] cardinalities,
         StripingLocksProvider<MiruTermId> stripingLocksProvider) throws Exception {
         this.bitmaps = bitmaps;
-        this.indexIds = indexIds;
+        this.trackError = trackError;
         this.indexes = indexes;
         this.cardinalities = cardinalities;
         this.stripingLocksProvider = stripingLocksProvider;
@@ -84,7 +86,7 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
     }
 
     private MiruInvertedIndex<IBM> getIndex(int fieldId, MiruTermId termId, int considerIfIndexIdGreaterThanN) throws Exception {
-        return new MiruFilerInvertedIndex<>(bitmaps, termId.getBytes(), indexes[fieldId],
+        return new MiruFilerInvertedIndex<>(bitmaps, trackError, termId.getBytes(), indexes[fieldId],
             considerIfIndexIdGreaterThanN, stripingLocksProvider.lock(termId, 0));
     }
 

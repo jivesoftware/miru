@@ -47,4 +47,12 @@ public class MiruReaderUIEndpoints {
         return Response.ok(rendered).build();
     }
 
+    @GET
+    @Path("/errors")
+    @Produces(MediaType.TEXT_HTML)
+    public Response getErrors() {
+        String rendered = service.renderErrors();
+        return Response.ok(rendered).build();
+    }
+
 }

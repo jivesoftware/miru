@@ -19,7 +19,7 @@ public interface MiruMigrationHandle<BM extends IBM, IBM, C extends MiruCursor<C
 
     Optional<MiruContext<IBM, S>> closeContext();
 
-    void merge(MiruMergeChits chits, ExecutorService mergeExecutor) throws Exception;
+    void merge(MiruMergeChits chits, ExecutorService mergeExecutor, TrackError trackError) throws Exception;
 
     MiruPartitionAccessor<BM, IBM, C, S> migrated(MiruContext<IBM, S> stream, Optional<MiruBackingStorage> storage, Optional<MiruPartitionState> state);
 }

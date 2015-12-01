@@ -69,6 +69,8 @@ import com.jivesoftware.os.miru.service.index.filer.MiruFilerUnreadTrackingIndex
 import com.jivesoftware.os.miru.service.locator.MiruPartitionCoordIdentifier;
 import com.jivesoftware.os.miru.service.locator.MiruResourceLocator;
 import com.jivesoftware.os.miru.service.locator.MiruResourcePartitionIdentifier;
+import com.jivesoftware.os.miru.service.partition.PartitionErrorTracker;
+import com.jivesoftware.os.miru.service.partition.TrackError;
 import com.jivesoftware.os.miru.service.stream.allocator.MiruChunkAllocator;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -76,7 +78,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * @author jonathan
@@ -94,10 +95,10 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
     private final MiruResourceLocator diskResourceLocator;
     private final MiruBackingStorage defaultStorage;
     private final int partitionAuthzCacheSize;
-    private final AtomicLong fieldIndexIdProvider;
     private final StripingLocksProvider<MiruTermId> fieldIndexStripingLocksProvider;
     private final StripingLocksProvider<MiruStreamId> streamStripingLocksProvider;
     private final StripingLocksProvider<String> authzStripingLocksProvider;
+    private final PartitionErrorTracker partitionErrorTracker;
 
     public MiruContextFactory(TxCogs cogs,
         MiruSchemaProvider schemaProvider,
@@ -108,10 +109,10 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         MiruResourceLocator diskResourceLocator,
         MiruBackingStorage defaultStorage,
         int partitionAuthzCacheSize,
-        AtomicLong fieldIndexIdProvider,
         StripingLocksProvider<MiruTermId> fieldIndexStripingLocksProvider,
         StripingLocksProvider<MiruStreamId> streamStripingLocksProvider,
-        StripingLocksProvider<String> authzStripingLocksProvider) {
+        StripingLocksProvider<String> authzStripingLocksProvider,
+        PartitionErrorTracker partitionErrorTracker) {
 
         this.cogs = cogs;
         this.schemaProvider = schemaProvider;
@@ -122,10 +123,10 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         this.diskResourceLocator = diskResourceLocator;
         this.defaultStorage = defaultStorage;
         this.partitionAuthzCacheSize = partitionAuthzCacheSize;
-        this.fieldIndexIdProvider = fieldIndexIdProvider;
         this.fieldIndexStripingLocksProvider = fieldIndexStripingLocksProvider;
         this.streamStripingLocksProvider = streamStripingLocksProvider;
         this.authzStripingLocksProvider = authzStripingLocksProvider;
+        this.partitionErrorTracker = partitionErrorTracker;
     }
 
     public MiruBackingStorage findBackingStorage(MiruPartitionCoord coord) throws Exception {
@@ -196,6 +197,8 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                 new MiruInternalActivityMarshaller(),
                 new KeyedFilerProvider<>(activityFilerStore, keyBytes("activityIndex-size"))));
 
+        TrackError trackError = partitionErrorTracker.track(coord);
+
         @SuppressWarnings("unchecked")
         MiruFieldIndex<IBM>[] fieldIndexes = new MiruFieldIndex[MiruFieldType.values().length];
         for (MiruFieldType fieldType : MiruFieldType.values()) {
@@ -203,7 +206,6 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             KeyedFilerStore<Long, Void>[] indexes = new KeyedFilerStore[schema.fieldCount()];
             @SuppressWarnings("unchecked")
             KeyedFilerStore<Integer, MapContext>[] cardinalities = new KeyedFilerStore[schema.fieldCount()];
-            long[] indexIds = new long[schema.fieldCount()];
             for (MiruFieldDefinition fieldDefinition : schema.getFieldDefinitions()) {
                 int fieldId = fieldDefinition.fieldId;
                 if (fieldType == MiruFieldType.latest && !fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.indexedLatest)
@@ -218,7 +220,6 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                         TxNamedMapOfFiler.OVERWRITE_GROWER_PROVIDER,
                         TxNamedMapOfFiler.REWRITE_GROWER_PROVIDER);
                 }
-                indexIds[fieldId] = fieldIndexIdProvider.incrementAndGet();
                 if (fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.cardinality)) {
                     cardinalities[fieldId] = new TxKeyedFilerStore<>(cogs,
                         seed,
@@ -233,7 +234,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             }
             fieldIndexes[fieldType.getIndex()] = new MiruDeltaFieldIndex<>(
                 bitmaps,
-                new MiruFilerFieldIndex<>(bitmaps, indexIds, indexes, cardinalities, fieldIndexStripingLocksProvider),
+                new MiruFilerFieldIndex<>(bitmaps, trackError, indexes, cardinalities, fieldIndexStripingLocksProvider),
                 schema.getFieldDefinitions());
         }
         MiruFieldIndexProvider<IBM> fieldIndexProvider = new MiruFieldIndexProvider<>(fieldIndexes);
@@ -254,6 +255,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             miruAuthzCache,
             new MiruFilerAuthzIndex<>(
                 bitmaps,
+                trackError,
                 new TxKeyedFilerStore<>(cogs, seed, chunkStores, keyBytes("authzIndex"), false,
                     TxNamedMapOfFiler.CHUNK_FILER_CREATOR,
                     TxNamedMapOfFiler.CHUNK_FILER_OPENER,
@@ -266,6 +268,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             bitmaps,
             new MiruFilerRemovalIndex<>(
                 bitmaps,
+                trackError,
                 new TxKeyedFilerStore<>(cogs, seed, chunkStores, keyBytes("removalIndex"), false,
                     TxNamedMapOfFiler.CHUNK_FILER_CREATOR,
                     TxNamedMapOfFiler.CHUNK_FILER_OPENER,
@@ -280,6 +283,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             bitmaps,
             new MiruFilerUnreadTrackingIndex<>(
                 bitmaps,
+                trackError,
                 new TxKeyedFilerStore<>(cogs, seed, chunkStores, keyBytes("unreadTrackingIndex"), false,
                     TxNamedMapOfFiler.CHUNK_FILER_CREATOR,
                     TxNamedMapOfFiler.CHUNK_FILER_OPENER,
@@ -291,6 +295,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             bitmaps,
             new MiruFilerInboxIndex<>(
                 bitmaps,
+                trackError,
                 new TxKeyedFilerStore<>(cogs, seed, chunkStores, keyBytes("inboxIndex"), false,
                     TxNamedMapOfFiler.CHUNK_FILER_CREATOR,
                     TxNamedMapOfFiler.CHUNK_FILER_OPENER,

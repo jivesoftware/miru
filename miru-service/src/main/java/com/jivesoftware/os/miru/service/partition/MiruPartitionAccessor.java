@@ -234,7 +234,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
 
     private final AtomicLong merges = new AtomicLong(0);
 
-    void merge(MiruMergeChits chits, ExecutorService mergeExecutor) throws Exception {
+    void merge(MiruMergeChits chits, ExecutorService mergeExecutor, TrackError trackError) throws Exception {
         if (context.isPresent()) {
             final MiruContext<IBM, S> got = context.get();
             long elapsed;
@@ -259,6 +259,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
                         future.get();
                     }
                 } catch (Exception e) {
+                    trackError.error("Failed to merge: " + e.getMessage());
                     checkCorruption(got, e);
                     throw e;
                 }
@@ -288,6 +289,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         MiruMergeChits chits,
         ExecutorService indexExecutor,
         ExecutorService mergeExecutor,
+        TrackError trackError,
         StackBuffer stackBuffer)
         throws Exception {
 
@@ -356,7 +358,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         }
 
         if (chits.take(coord, consumedCount)) {
-            merge(chits, mergeExecutor);
+            merge(chits, mergeExecutor, trackError);
         }
 
         return consumedCount;
@@ -597,6 +599,16 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
             }
 
             @Override
+            public MiruPartitionState getState() {
+                return info.state;
+            }
+
+            @Override
+            public MiruBackingStorage getStorage() {
+                return info.storage;
+            }
+
+            @Override
             public void close() throws Exception {
                 readSemaphore.release();
             }
@@ -637,8 +649,8 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
             }
 
             @Override
-            public void merge(MiruMergeChits chits, ExecutorService mergeExecutor) throws Exception {
-                MiruPartitionAccessor.this.merge(chits, mergeExecutor);
+            public void merge(MiruMergeChits chits, ExecutorService mergeExecutor, TrackError trackError) throws Exception {
+                MiruPartitionAccessor.this.merge(chits, mergeExecutor, trackError);
             }
 
             @Override

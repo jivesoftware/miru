@@ -70,6 +70,7 @@ import com.jivesoftware.os.miru.service.endpoint.MiruWriterEndpoints;
 import com.jivesoftware.os.miru.service.locator.MiruResourceLocator;
 import com.jivesoftware.os.miru.service.locator.MiruResourceLocatorInitializer;
 import com.jivesoftware.os.miru.service.partition.AmzaSipTrackerFactory;
+import com.jivesoftware.os.miru.service.partition.PartitionErrorTracker;
 import com.jivesoftware.os.miru.service.partition.RCVSSipTrackerFactory;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer;
@@ -219,14 +220,14 @@ public class MiruReaderMain {
             MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize(miruStats, "", manageHttpClient, mapper);
             MiruSchemaProvider miruSchemaProvider = new ClusterSchemaProvider(clusterClient, 10000); // TODO config
 
-            MiruWALClient<?, ?> walClient;
+            PartitionErrorTracker partitionErrorTracker = new PartitionErrorTracker();
+
             MiruInboxReadTracker inboxReadTracker;
             MiruLifecyle<MiruService> miruServiceLifecyle;
             if (walConfig.getActivityWALType().equals("rcvs") || walConfig.getActivityWALType().equals("rcvs_amza")) {
                 MiruWALClient<RCVSCursor, RCVSSipCursor> rcvsWALClient = new MiruWALClientInitializer().initialize("", walHttpClient, mapper, 10_000,
                     "/miru/wal/rcvs", RCVSCursor.class, RCVSSipCursor.class);
 
-                walClient = rcvsWALClient;
                 inboxReadTracker = new RCVSInboxReadTracker(rcvsWALClient);
                 miruServiceLifecyle = new MiruServiceInitializer().initialize(miruServiceConfig,
                     miruStats,
@@ -239,12 +240,12 @@ public class MiruReaderMain {
                     miruResourceLocator,
                     termComposer,
                     internExtern,
-                    new SingleBitmapsProvider(bitmaps));
+                    new SingleBitmapsProvider(bitmaps),
+                    partitionErrorTracker);
             } else if (walConfig.getActivityWALType().equals("amza") || walConfig.getActivityWALType().equals("amza_rcvs")) {
                 MiruWALClient<AmzaCursor, AmzaSipCursor> amzaWALClient = new MiruWALClientInitializer().initialize("", walHttpClient, mapper, 10_000,
                     "/miru/wal/amza", AmzaCursor.class, AmzaSipCursor.class);
 
-                walClient = amzaWALClient;
                 inboxReadTracker = new AmzaInboxReadTracker(amzaWALClient);
                 miruServiceLifecyle = new MiruServiceInitializer().initialize(miruServiceConfig,
                     miruStats,
@@ -257,7 +258,8 @@ public class MiruReaderMain {
                     miruResourceLocator,
                     termComposer,
                     internExtern,
-                    new SingleBitmapsProvider(bitmaps));
+                    new SingleBitmapsProvider(bitmaps),
+                    partitionErrorTracker);
             } else {
                 throw new IllegalStateException("Invalid activity WAL type: " + walConfig.getActivityWALType());
             }
@@ -285,6 +287,7 @@ public class MiruReaderMain {
                 renderer,
                 miruStats,
                 miruService,
+                partitionErrorTracker,
                 tenantRoutingProvider);
 
             deployable.addEndpoints(MiruReaderUIEndpoints.class);

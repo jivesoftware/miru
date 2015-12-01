@@ -40,6 +40,7 @@ import com.jivesoftware.os.miru.service.partition.MiruPartitionHeartbeatHandler;
 import com.jivesoftware.os.miru.service.partition.MiruRemoteQueryablePartitionFactory;
 import com.jivesoftware.os.miru.service.partition.MiruSipTrackerFactory;
 import com.jivesoftware.os.miru.service.partition.MiruTenantTopologyFactory;
+import com.jivesoftware.os.miru.service.partition.PartitionErrorTracker;
 import com.jivesoftware.os.miru.service.partition.cluster.MiruClusterExpectedTenants;
 import com.jivesoftware.os.miru.service.solver.MiruLowestLatencySolver;
 import com.jivesoftware.os.miru.service.solver.MiruSolver;
@@ -59,7 +60,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
 
 public class MiruServiceInitializer {
 
@@ -76,7 +76,8 @@ public class MiruServiceInitializer {
         MiruResourceLocator resourceLocator,
         MiruTermComposer termComposer,
         MiruActivityInternExtern internExtern,
-        MiruBitmapsProvider bitmapsProvider) throws IOException {
+        MiruBitmapsProvider bitmapsProvider,
+        PartitionErrorTracker partitionErrorTracker) throws IOException {
 
         final ThreadGroup threadGroup = Thread.currentThread().getThreadGroup();
 
@@ -159,11 +160,10 @@ public class MiruServiceInitializer {
             resourceLocator,
             MiruBackingStorage.valueOf(config.getDefaultStorage()),
             config.getPartitionAuthzCacheSize(),
-            new AtomicLong(0),
             fieldIndexStripingLocksProvider,
             streamStripingLocksProvider,
-            authzStripingLocksProvider
-        );
+            authzStripingLocksProvider,
+            partitionErrorTracker);
 
         MiruPartitionHeartbeatHandler heartbeatHandler = new MiruPartitionHeartbeatHandler(clusterClient);
         MiruRebuildDirector rebuildDirector = new MiruRebuildDirector(config.getMaxRebuildActivityCount());
@@ -206,7 +206,8 @@ public class MiruServiceInitializer {
             mergeExecutor,
             config.getRebuildIndexerThreads(),
             indexRepairs,
-            miruMergeChits);
+            miruMergeChits,
+            partitionErrorTracker);
 
         MiruRemoteQueryablePartitionFactory remotePartitionFactory = new MiruRemoteQueryablePartitionFactory();
 

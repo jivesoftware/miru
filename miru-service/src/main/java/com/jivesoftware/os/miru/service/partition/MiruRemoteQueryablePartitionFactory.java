@@ -1,7 +1,9 @@
 package com.jivesoftware.os.miru.service.partition;
 
 import com.jivesoftware.os.filer.io.api.StackBuffer;
+import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
+import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
@@ -57,6 +59,16 @@ public class MiruRemoteQueryablePartitionFactory {
                     @Override
                     public MiruPartitionCoord getCoord() {
                         return coord;
+                    }
+
+                    @Override
+                    public MiruPartitionState getState() {
+                        return null;
+                    }
+
+                    @Override
+                    public MiruBackingStorage getStorage() {
+                        return null;
                     }
 
                     @Override

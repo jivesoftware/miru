@@ -8,20 +8,24 @@ import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndexAppender;
 import com.jivesoftware.os.miru.plugin.index.MiruUnreadTrackingIndex;
+import com.jivesoftware.os.miru.service.partition.TrackError;
 import java.util.Collections;
 
 /** @author jonathan */
 public class MiruFilerUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUnreadTrackingIndex<IBM> {
 
     private final MiruBitmaps<BM, IBM> bitmaps;
+    private final TrackError trackError;
     private final KeyedFilerStore<Long, Void> store;
     private final StripingLocksProvider<MiruStreamId> stripingLocksProvider;
 
     public MiruFilerUnreadTrackingIndex(MiruBitmaps<BM, IBM> bitmaps,
+        TrackError trackError,
         KeyedFilerStore<Long, Void> store,
         StripingLocksProvider<MiruStreamId> stripingLocksProvider)
         throws Exception {
         this.bitmaps = bitmaps;
+        this.trackError = trackError;
         this.store = store;
         this.stripingLocksProvider = stripingLocksProvider;
     }
@@ -33,7 +37,7 @@ public class MiruFilerUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUn
 
     @Override
     public MiruInvertedIndex<IBM> getUnread(MiruStreamId streamId) throws Exception {
-        return new MiruFilerInvertedIndex<>(bitmaps, streamId.getBytes(), store, -1, stripingLocksProvider.lock(streamId, 0));
+        return new MiruFilerInvertedIndex<>(bitmaps, trackError, streamId.getBytes(), store, -1, stripingLocksProvider.lock(streamId, 0));
     }
 
     @Override
