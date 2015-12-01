@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.service.partition;
 
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
+import com.jivesoftware.os.miru.plugin.partition.TrackError;
 import com.jivesoftware.os.routing.bird.health.HealthCheck;
 import com.jivesoftware.os.routing.bird.health.HealthCheckResponse;
 import com.jivesoftware.os.routing.bird.health.HealthCheckResponseImpl;

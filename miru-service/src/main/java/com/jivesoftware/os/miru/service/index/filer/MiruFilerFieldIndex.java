@@ -12,8 +12,7 @@ import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.TermIdStream;
-import com.jivesoftware.os.miru.service.partition.PartitionErrorTracker;
-import com.jivesoftware.os.miru.service.partition.TrackError;
+import com.jivesoftware.os.miru.plugin.partition.TrackError;
 import java.util.Arrays;
 import java.util.List;
 

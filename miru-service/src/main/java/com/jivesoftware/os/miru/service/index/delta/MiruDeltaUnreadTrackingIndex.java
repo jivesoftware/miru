@@ -7,6 +7,7 @@ import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndexAppender;
 import com.jivesoftware.os.miru.plugin.index.MiruUnreadTrackingIndex;
+import com.jivesoftware.os.miru.plugin.partition.TrackError;
 import com.jivesoftware.os.miru.service.index.Mergeable;
 import java.util.Collections;
 import java.util.concurrent.ConcurrentMap;
@@ -15,12 +16,15 @@ import java.util.concurrent.ConcurrentMap;
 public class MiruDeltaUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUnreadTrackingIndex<IBM>, Mergeable {
 
     private final MiruBitmaps<BM, IBM> bitmaps;
+    private final TrackError trackError;
     private final MiruUnreadTrackingIndex<IBM> backingIndex;
     private final ConcurrentMap<MiruStreamId, MiruDeltaInvertedIndex<BM, IBM>> unreadDeltas = Maps.newConcurrentMap();
 
     public MiruDeltaUnreadTrackingIndex(MiruBitmaps<BM, IBM> bitmaps,
+        TrackError trackError,
         MiruUnreadTrackingIndex<IBM> backingIndex) {
         this.bitmaps = bitmaps;
+        this.trackError = trackError;
         this.backingIndex = backingIndex;
     }
 
@@ -33,7 +37,7 @@ public class MiruDeltaUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUn
     public MiruInvertedIndex<IBM> getUnread(MiruStreamId streamId) throws Exception {
         MiruDeltaInvertedIndex<BM, IBM> delta = unreadDeltas.get(streamId);
         if (delta == null) {
-            delta = new MiruDeltaInvertedIndex<>(bitmaps, backingIndex.getUnread(streamId), new MiruDeltaInvertedIndex.Delta<>());
+            delta = new MiruDeltaInvertedIndex<>(bitmaps, trackError, backingIndex.getUnread(streamId), new MiruDeltaInvertedIndex.Delta<>());
             MiruDeltaInvertedIndex<BM, IBM> existing = unreadDeltas.putIfAbsent(streamId, delta);
             if (existing != null) {
                 delta = existing;

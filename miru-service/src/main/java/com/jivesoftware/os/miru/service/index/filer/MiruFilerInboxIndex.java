@@ -8,7 +8,7 @@ import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruInboxIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndexAppender;
-import com.jivesoftware.os.miru.service.partition.TrackError;
+import com.jivesoftware.os.miru.plugin.partition.TrackError;
 
 /** @author jonathan */
 public class MiruFilerInboxIndex<BM extends IBM, IBM> implements MiruInboxIndex<IBM> {

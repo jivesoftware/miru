@@ -8,6 +8,7 @@ import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.partition.MiruQueryablePartition;
+import com.jivesoftware.os.miru.plugin.partition.TrackError;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
 
 /** @author jonathan */
@@ -69,6 +70,11 @@ public class MiruRemoteQueryablePartitionFactory {
                     @Override
                     public MiruPartitionCoord getCoord() {
                         return coord;
+                    }
+
+                    @Override
+                    public TrackError getTrackError() {
+                        return null;
                     }
 
                     @Override

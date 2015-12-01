@@ -8,7 +8,7 @@ import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndexAppender;
 import com.jivesoftware.os.miru.plugin.index.MiruUnreadTrackingIndex;
-import com.jivesoftware.os.miru.service.partition.TrackError;
+import com.jivesoftware.os.miru.plugin.partition.TrackError;
 import java.util.Collections;
 
 /** @author jonathan */

@@ -6,6 +6,7 @@ import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
+import com.jivesoftware.os.miru.plugin.partition.TrackError;
 
 /**
  *
@@ -21,4 +22,6 @@ public interface MiruRequestHandle<BM extends IBM, IBM, S extends MiruSipCursor<
     boolean canBackfill();
 
     MiruPartitionCoord getCoord();
+
+    TrackError getTrackError();
 }

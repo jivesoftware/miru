@@ -5,6 +5,7 @@ import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.index.Mergeable;
+import com.jivesoftware.os.miru.plugin.partition.TrackError;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.Arrays;
@@ -18,13 +19,16 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final MiruBitmaps<BM, IBM> bitmaps;
+    private final TrackError trackError;
     private final MiruInvertedIndex<IBM> backingIndex;
     private final Delta<IBM> delta;
 
     public MiruDeltaInvertedIndex(MiruBitmaps<BM, IBM> bitmaps,
+        TrackError trackError,
         MiruInvertedIndex<IBM> backingIndex,
         Delta<IBM> delta) {
         this.bitmaps = bitmaps;
+        this.trackError = trackError;
         this.backingIndex = backingIndex;
         this.delta = delta;
     }
@@ -42,15 +46,27 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
         Optional<IBM> index = replaced ? Optional.<IBM>absent() : backingIndex.getIndex(stackBuffer);
         if (index.isPresent()) {
             IBM got = index.get();
+            if (bitmaps.isEmpty(got)) {
+                trackError.error("Merging into empty bitmap," +
+                    " andNot:" + (andNot != null ? bitmaps.cardinality(andNot) : -1) +
+                    " or:" + (or != null ? bitmaps.cardinality(or) : -1));
+            }
             if (andNot != null) {
                 got = bitmaps.andNot(got, andNot);
             }
             if (or != null) {
                 got = bitmaps.or(Arrays.asList(got, or));
             }
+            if (bitmaps.isEmpty(got)) {
+                trackError.error("Merged into empty bitmap," +
+                    " andNot:" + (andNot != null ? bitmaps.cardinality(andNot) : -1) +
+                    " or:" + (or != null ? bitmaps.cardinality(or) : -1));
+            }
             return Optional.of(got);
+        } else if (or != null) {
+            return Optional.of(bitmaps.copy(or));
         } else {
-            return Optional.fromNullable(or);
+            return Optional.absent();
         }
     }
 
@@ -66,7 +82,7 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
         }
         if (replaced) {
             LOG.inc("txIndex>replaced", 1);
-            return tx.tx(or, null, -1, null);
+            return tx.tx(or != null ? bitmaps.copy(or) : null, null, -1, null);
         } else if (or != null || andNot != null) {
             LOG.inc("txIndex>delta", 1);
             Optional<IBM> index = getIndex(stackBuffer);

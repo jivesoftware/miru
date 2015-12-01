@@ -23,6 +23,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruFieldIndexProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.index.MiruTxIndex;
+import com.jivesoftware.os.miru.plugin.partition.TrackError;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
@@ -46,6 +47,7 @@ public class MiruAggregateUtil {
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     public <BM extends IBM, IBM, S extends MiruSipCursor<S>> void stream(MiruBitmaps<BM, IBM> bitmaps,
+        TrackError trackError,
         MiruRequestContext<IBM, S> requestContext,
         MiruPartitionCoord coord,
         BM answer,
@@ -81,6 +83,7 @@ public class MiruAggregateUtil {
             int lastSetBit = answerCollector == null ? bitmaps.lastSetBit(answer) : answerCollector.lastSetBit;
             LOG.trace("stream: lastSetBit={}", lastSetBit);
             if (priorLastSetBit <= lastSetBit) {
+                trackError.error("Failed to make forward progress");
                 LOG.error("Failed to make forward progress while streaming {} removing lastSetBit:{} lastCount:{}" +
                         " lastId:{} streamed:{} remaining:{} deltaMin:{} lastDeltaMin:{} field:{}",
                     coord, lastSetBit, lastCount, requestContext.getActivityIndex().lastId(stackBuffer), count, bitmaps.cardinality(answer),

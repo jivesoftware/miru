@@ -1,4 +1,4 @@
-package com.jivesoftware.os.miru.service.partition;
+package com.jivesoftware.os.miru.plugin.partition;
 
 /**
  *
