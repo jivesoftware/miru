@@ -5,6 +5,7 @@ import com.jivesoftware.os.filer.io.api.KeyRange;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.jive.utils.base.interfaces.CallbackStream;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
+import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -52,8 +53,9 @@ public class MiruAggregateUtil {
         Optional<BM> counter,
         int pivotFieldId,
         String streamField,
-        CallbackStream<MiruTermCount> terms,
-        StackBuffer stackBuffer)
+        StackBuffer stackBuffer,
+        boolean failOnNoForwardProgress,
+        CallbackStream<MiruTermCount> terms)
         throws Exception {
 
         boolean traceEnabled = LOG.isTraceEnabled();
@@ -85,6 +87,9 @@ public class MiruAggregateUtil {
                         " lastId:{} streamed:{} remaining:{} deltaMin:{} lastDeltaMin:{} field:{}",
                     coord, lastSetBit, lastCount, requestContext.getActivityIndex().lastId(stackBuffer), count, bitmaps.cardinality(answer),
                     requestContext.getDeltaMinId(), requestContext.getLastDeltaMinId(), streamField);
+                if (failOnNoForwardProgress) {
+                    throw new MiruQueryServiceException("Failed to make forward progress");
+                }
                 break;
             }
             priorLastSetBit = lastSetBit;

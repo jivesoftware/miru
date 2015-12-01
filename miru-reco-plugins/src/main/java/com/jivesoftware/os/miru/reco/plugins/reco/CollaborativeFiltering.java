@@ -61,8 +61,8 @@ public class CollaborativeFiltering {
         Optional<RecoReport> report,
         IBM allMyActivity,
         IBM okActivity,
-        MiruFilter removeDistinctsFilter)
-        throws Exception {
+        MiruFilter removeDistinctsFilter,
+        boolean failOnNoForwardProgress) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
 
         log.debug("Get collaborative filtering for allMyActivity={} okActivity={} query={}", allMyActivity, okActivity, request);
@@ -125,13 +125,21 @@ public class CollaborativeFiltering {
         final MinMaxPriorityQueue<MiruTermCount> contributorHeap = MinMaxPriorityQueue.orderedBy(highestCountComparator)
             .maximumSize(request.query.desiredNumberOfDistincts) // overloaded :(
             .create();
-        aggregateUtil.stream(bitmaps, requestContext, coord, otherOkField1Activity, Optional.<BM>absent(), fieldId2, request.query.aggregateFieldName2,
+        aggregateUtil.stream(bitmaps,
+            requestContext,
+            coord,
+            otherOkField1Activity,
+            Optional.<BM>absent(),
+            fieldId2,
+            request.query.aggregateFieldName2,
+            stackBuffer,
+            failOnNoForwardProgress,
             miruTermCount -> {
                 if (miruTermCount != null) {
                     contributorHeap.add(miruTermCount);
                 }
                 return miruTermCount;
-            }, stackBuffer);
+            });
 
         if (request.query.aggregateFieldName2.equals(request.query.aggregateFieldName3)) {
             // special case where the ranked users <field2> are the desired parents <field3>
@@ -197,7 +205,7 @@ public class CollaborativeFiltering {
     private <BM extends IBM, IBM> RecoAnswer composeAnswer(MiruRequestContext<IBM, ?> requestContext,
         MiruRequest<RecoQuery> request,
         MiruFieldDefinition fieldDefinition,
-        MinMaxPriorityQueue<MiruTermCount> heap)  throws IOException, InterruptedException {
+        MinMaxPriorityQueue<MiruTermCount> heap) throws IOException, InterruptedException {
 
         MiruTermComposer termComposer = requestContext.getTermComposer();
         List<Recommendation> results = new ArrayList<>();
