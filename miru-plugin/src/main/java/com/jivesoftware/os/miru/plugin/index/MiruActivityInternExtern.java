@@ -145,6 +145,10 @@ public class MiruActivityInternExtern {
         for (int i = 0; i < fields.length; i++) {
             MiruTermId[] values = fields[i];
             if (values != null) {
+                MiruSchema.CompositeFieldDefinitions compositeFieldDefinitions = schema.getCompositeFieldDefinitions(i);
+                if (compositeFieldDefinitions != null) {
+                    continue;
+                }
                 MiruFieldDefinition fieldDefinition = schema.getFieldDefinition(i);
                 List<String> externValues = new ArrayList<>();
                 for (MiruTermId value : values) {

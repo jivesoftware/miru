@@ -37,6 +37,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolvable;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolvableFactory;
+import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.service.partition.MiruHostedPartitionComparison;
 import com.jivesoftware.os.miru.service.solver.MiruSolved;
 import com.jivesoftware.os.miru.service.solver.MiruSolver;
@@ -271,6 +272,11 @@ public class MiruService implements Miru {
     public boolean prioritizeRebuild(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         return partitionDirector.prioritizeRebuild(tenantId, partitionId);
     }
+
+    public boolean rebuildTimeRange(MiruTimeRange miruTimeRange) throws Exception {
+        return partitionDirector.rebuildTimeRange(miruTimeRange);
+    }
+
 
     private Optional<? extends MiruQueryablePartition<?, ?>> getLocalTenantPartition(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         MiruPartitionCoord localPartitionCoord = new MiruPartitionCoord(tenantId, partitionId, localhost);

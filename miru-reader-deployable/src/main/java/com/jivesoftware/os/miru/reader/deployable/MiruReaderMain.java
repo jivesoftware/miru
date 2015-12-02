@@ -21,6 +21,11 @@ import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.base.Charsets;
 import com.google.common.collect.Interners;
 import com.google.common.collect.Maps;
+import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
+import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
+import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
+import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
+import com.jivesoftware.os.jive.utils.ordered.id.TimestampedOrderIdProvider;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruLifecyle;
 import com.jivesoftware.os.miru.api.MiruStats;
@@ -299,6 +304,9 @@ public class MiruReaderMain {
             miruServiceLifecyle.start();
             final MiruService miruService = miruServiceLifecyle.getService();
 
+            TimestampedOrderIdProvider timestampedOrderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(0), new SnowflakeIdPacker(),
+                new JiveEpochTimestampProvider());
+
             MiruSoyRendererConfig rendererConfig = deployable.config(MiruSoyRendererConfig.class);
 
             File staticResourceDir = new File(System.getProperty("user.dir"));
@@ -394,6 +402,7 @@ public class MiruReaderMain {
             }
 
             deployable.addEndpoints(MiruReaderConfigEndpoints.class);
+            deployable.addInjectables(TimestampedOrderIdProvider.class, timestampedOrderIdProvider);
             deployable.addResource(sourceTree);
 
             deployable.buildServer().start();

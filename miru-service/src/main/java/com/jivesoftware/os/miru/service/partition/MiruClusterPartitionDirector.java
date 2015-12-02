@@ -15,6 +15,7 @@ import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionDirector;
 import com.jivesoftware.os.miru.plugin.partition.MiruQueryablePartition;
 import com.jivesoftware.os.miru.plugin.partition.OrderedPartitions;
+import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.service.partition.cluster.MiruTenantTopology;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -132,6 +133,11 @@ public class MiruClusterPartitionDirector implements MiruPartitionDirector {
     @Override
     public boolean prioritizeRebuild(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         return expectedTenants.prioritizeRebuild(new MiruPartitionCoord(tenantId, partitionId, host));
+    }
+
+    @Override
+    public boolean rebuildTimeRange(MiruTimeRange miruTimeRange) throws Exception {
+        return expectedTenants.rebuildTimeRange(miruTimeRange);
     }
 
     @Override

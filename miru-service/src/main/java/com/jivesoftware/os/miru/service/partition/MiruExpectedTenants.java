@@ -5,6 +5,7 @@ import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.CoordinateStream;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.partition.OrderedPartitions;
+import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.service.partition.cluster.MiruTenantTopology;
 
 /**
@@ -20,9 +21,12 @@ public interface MiruExpectedTenants {
 
     boolean prioritizeRebuild(MiruPartitionCoord coord) throws Exception;
 
+    boolean rebuildTimeRange(MiruTimeRange miruTimeRange) throws Exception;
+
     void thumpthump() throws Exception;
 
     Iterable<? extends OrderedPartitions<?, ?>> allQueryablePartitionsInOrder(MiruTenantId tenantId, String queryKey) throws Exception;
 
     boolean expectedTopologies(Optional<MiruTenantId> tenantId, CoordinateStream stream) throws Exception;
+
 }

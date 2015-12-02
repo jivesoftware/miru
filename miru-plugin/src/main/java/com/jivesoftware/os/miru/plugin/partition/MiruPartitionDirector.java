@@ -10,6 +10,7 @@ import com.jivesoftware.os.miru.api.activity.CoordinateStream;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 
 /**
  *
@@ -36,5 +37,8 @@ public interface MiruPartitionDirector {
 
     boolean prioritizeRebuild(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
 
+    boolean rebuildTimeRange(MiruTimeRange miruTimeRange) throws Exception;
+
     boolean expectedTopologies(Optional<MiruTenantId> tenantId, CoordinateStream stream) throws Exception;
+
 }

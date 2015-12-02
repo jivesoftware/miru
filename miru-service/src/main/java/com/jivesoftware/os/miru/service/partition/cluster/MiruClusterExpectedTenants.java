@@ -24,9 +24,12 @@ import com.jivesoftware.os.miru.api.topology.MiruPartitionActiveUpdate;
 import com.jivesoftware.os.miru.api.topology.MiruTenantTopologyUpdate;
 import com.jivesoftware.os.miru.api.topology.MiruTopologyPartition;
 import com.jivesoftware.os.miru.api.topology.MiruTopologyResponse;
+import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.partition.MiruQueryablePartition;
 import com.jivesoftware.os.miru.plugin.partition.MiruRoutablePartition;
 import com.jivesoftware.os.miru.plugin.partition.OrderedPartitions;
+import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
+import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.service.partition.MiruExpectedTenants;
 import com.jivesoftware.os.miru.service.partition.MiruHostedPartitionComparison;
 import com.jivesoftware.os.miru.service.partition.MiruLocalHostedPartition;
@@ -208,6 +211,27 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
     }
 
     @Override
+    public boolean rebuildTimeRange(MiruTimeRange miruTimeRange) throws Exception {
+        StackBuffer stackBuffer = new StackBuffer();
+        for (Map.Entry<MiruTenantId, MiruTenantTopology<?, ?>> entry : localTopologies.entrySet()) {
+            MiruTenantTopology<?, ?> topology = entry.getValue();
+            for (MiruLocalHostedPartition<?, ?, ?, ?> hostedPartition : entry.getValue().allPartitions()) {
+                MiruPartitionCoord coord = hostedPartition.getCoord();
+                try (MiruRequestHandle<?, ?, ?> handle = hostedPartition.acquireQueryHandle(stackBuffer)) {
+                    MiruTimeIndex timeIndex = handle.getRequestContext().getTimeIndex();
+                    if (timeIndex.intersects(miruTimeRange)) {
+                        LOG.info("Rebuild requested for {}", coord);
+                        topology.updateStorage(coord.partitionId, MiruBackingStorage.memory, stackBuffer);
+                    }
+                } catch (Exception x) {
+                    LOG.warn("Attempt to rebuild offline non disk partition was ignored for {}.", coord, x);
+                }
+            }
+        }
+        return true;
+    }
+
+    @Override
     public boolean expectedTopologies(Optional<MiruTenantId> tenantId, CoordinateStream stream) throws Exception {
         if (tenantId.isPresent()) {
             MiruTenantTopology<?, ?> tenantTopology = localTopologies.get(tenantId.get());
@@ -231,4 +255,5 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
         }
         return true;
     }
+
 }
