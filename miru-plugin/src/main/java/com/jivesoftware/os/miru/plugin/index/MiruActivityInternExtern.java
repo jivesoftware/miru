@@ -10,6 +10,7 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
+import com.jivesoftware.os.miru.plugin.MiruInterner;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
@@ -25,19 +26,16 @@ public class MiruActivityInternExtern {
 
     private static final int MAX_TERM_LENGTH = 4_096; //TODO add to schema
 
-    private final Interner<MiruIBA> ibaInterner;
-    private final Interner<MiruTermId> termInterner;
-    private final Interner<MiruTenantId> tenantInterner;
+    private final MiruInterner<MiruIBA> ibaInterner;
+    private final MiruInterner<MiruTenantId> tenantInterner;
     private final Interner<String> stringInterner;
     private final MiruTermComposer termComposer;
 
-    public MiruActivityInternExtern(Interner<MiruIBA> ibaInterner,
-        Interner<MiruTermId> termInterner,
-        Interner<MiruTenantId> tenantInterner,
+    public MiruActivityInternExtern(MiruInterner<MiruIBA> ibaInterner,
+        MiruInterner<MiruTenantId> tenantInterner,
         Interner<String> stringInterner,
         MiruTermComposer termComposer) {
         this.ibaInterner = ibaInterner;
-        this.termInterner = termInterner;
         this.tenantInterner = tenantInterner;
         this.stringInterner = stringInterner;
         this.termComposer = termComposer;
@@ -65,7 +63,7 @@ public class MiruActivityInternExtern {
             MiruActivity activity = activiyAndId.activity;
             internedActivityAndIds.set(i, new MiruActivityAndId<>(
                 new MiruInternalActivity.Builder(schema,
-                    tenantInterner.intern(activity.tenantId),
+                    tenantInterner.intern(activity.tenantId.getBytes()),
                     termComposer,
                     activity.time,
                     internAuthz(activity.authz),
@@ -107,7 +105,7 @@ public class MiruActivityInternExtern {
                 }
                 MiruTermId[] values = new MiruTermId[fieldValues.size()];
                 for (int i = 0; i < values.length; i++) {
-                    values[i] = termInterner.intern(termComposer.compose(fieldDefinition, fieldValues.get(i)));
+                    values[i] = termComposer.compose(fieldDefinition, fieldValues.get(i));
                 }
                 fieldsValues[fieldId] = values;
             }
@@ -122,15 +120,11 @@ public class MiruActivityInternExtern {
             List<String> propValues = properties.get(propertyName);
             MiruIBA[] values = new MiruIBA[propValues.size()];
             for (int i = 0; i < values.length; i++) {
-                values[i] = ibaInterner.intern(new MiruIBA(propValues.get(i).getBytes(Charsets.UTF_8)));
+                values[i] = ibaInterner.intern(propValues.get(i).getBytes(Charsets.UTF_8));
             }
             propertyValues[propertyId] = values;
         }
         return propertyValues;
-    }
-
-    public MiruTermId internTermId(MiruTermId termId) {
-        return termInterner.intern(termId);
     }
 
     public String internString(String string) {

@@ -8,7 +8,9 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.schema.DefaultMiruSchemaDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.bitmaps.roaring5.MiruBitmapsRoaring;
+import com.jivesoftware.os.miru.plugin.MiruInterner;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityAndId;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
@@ -29,10 +31,17 @@ import static org.testng.Assert.fail;
 
 public class MiruActivityIndexTest {
 
+    MiruInterner<MiruTermId> termInterner = new MiruInterner<MiruTermId>(true) {
+        @Override
+        public MiruTermId create(byte[] bytes) {
+            return new MiruTermId(bytes);
+        }
+    };
+
     MiruSchema schema = new MiruSchema.Builder("test", 1)
         .setFieldDefinitions(DefaultMiruSchemaDefinition.FIELDS)
         .build();
-    MiruTermComposer termComposer = new MiruTermComposer(Charsets.UTF_8);
+    MiruTermComposer termComposer = new MiruTermComposer(Charsets.UTF_8, termInterner);
 
     @Test(dataProvider = "miruActivityIndexDataProvider")
     public void testSetActivity(MiruActivityIndex miruActivityIndex, boolean throwsUnsupportedExceptionOnSet) throws Exception {

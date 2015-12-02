@@ -2,15 +2,25 @@ package com.jivesoftware.os.miru.plugin.index;
 
 import com.google.common.base.Charsets;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
+import com.jivesoftware.os.miru.api.base.MiruTermId;
+import com.jivesoftware.os.miru.plugin.MiruInterner;
 import org.testng.annotations.Test;
 
 import static org.testng.Assert.assertEquals;
 
 public class MiruTermComposerTest {
 
+    MiruInterner<MiruTermId> termInterner = new MiruInterner<MiruTermId>(true) {
+        @Override
+        public MiruTermId create(byte[] bytes) {
+            return new MiruTermId(bytes);
+        }
+    };
+
     @Test
     public void testRawComposeDecompose() throws Exception {
-        MiruTermComposer composer = new MiruTermComposer(Charsets.UTF_8);
+
+        MiruTermComposer composer = new MiruTermComposer(Charsets.UTF_8, termInterner);
         MiruFieldDefinition fieldDefinition = new MiruFieldDefinition(0,
             "field1",
             MiruFieldDefinition.Type.singleTerm,
@@ -24,7 +34,7 @@ public class MiruTermComposerTest {
 
     @Test(expectedExceptions = IllegalArgumentException.class)
     public void testRawComposeDecompose_overflow() throws Exception {
-        MiruTermComposer composer = new MiruTermComposer(Charsets.UTF_8);
+        MiruTermComposer composer = new MiruTermComposer(Charsets.UTF_8, termInterner);
         MiruFieldDefinition fieldDefinition = new MiruFieldDefinition(0,
             "field1",
             MiruFieldDefinition.Type.singleTerm,
@@ -35,7 +45,7 @@ public class MiruTermComposerTest {
 
     @Test
     public void testNumericComposeDecompose() throws Exception {
-        MiruTermComposer composer = new MiruTermComposer(Charsets.UTF_8);
+        MiruTermComposer composer = new MiruTermComposer(Charsets.UTF_8, termInterner);
         MiruFieldDefinition fieldDefinition = new MiruFieldDefinition(0,
             "field1",
             MiruFieldDefinition.Type.singleTerm,
@@ -49,7 +59,7 @@ public class MiruTermComposerTest {
 
     @Test(expectedExceptions = NumberFormatException.class)
     public void testNumericComposeDecompose_overflow() throws Exception {
-        MiruTermComposer composer = new MiruTermComposer(Charsets.UTF_8);
+        MiruTermComposer composer = new MiruTermComposer(Charsets.UTF_8, termInterner);
         MiruFieldDefinition fieldDefinition = new MiruFieldDefinition(0,
             "field1",
             MiruFieldDefinition.Type.singleTerm,
@@ -60,7 +70,7 @@ public class MiruTermComposerTest {
 
     @Test(expectedExceptions = IllegalStateException.class)
     public void testNumericComposeDecompose_nonIntLong() throws Exception {
-        MiruTermComposer composer = new MiruTermComposer(Charsets.UTF_8);
+        MiruTermComposer composer = new MiruTermComposer(Charsets.UTF_8, termInterner);
         MiruFieldDefinition fieldDefinition = new MiruFieldDefinition(0,
             "field1",
             MiruFieldDefinition.Type.singleTerm,
@@ -71,7 +81,7 @@ public class MiruTermComposerTest {
 
     @Test(expectedExceptions = IllegalArgumentException.class)
     public void testNumericComposeDecompose_nonNumeric() throws Exception {
-        MiruTermComposer composer = new MiruTermComposer(Charsets.UTF_8);
+        MiruTermComposer composer = new MiruTermComposer(Charsets.UTF_8, termInterner);
         MiruFieldDefinition fieldDefinition = new MiruFieldDefinition(0,
             "field1",
             MiruFieldDefinition.Type.singleTerm,

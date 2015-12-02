@@ -20,12 +20,14 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivityFactory;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.bitmaps.roaring5.buffer.MiruBitmapsRoaringBuffer;
+import com.jivesoftware.os.miru.plugin.MiruInterner;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruIndexUtil;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
@@ -69,22 +71,29 @@ import static org.testng.Assert.assertTrue;
  */
 public class RecoCorrectnessTest {
 
+    MiruInterner<MiruTermId> termInterner = new MiruInterner<MiruTermId>(true) {
+        @Override
+        public MiruTermId create(byte[] bytes) {
+            return new MiruTermId(bytes);
+        }
+    };
+
     final MiruFieldDefinition.Prefix TYPED_PREFIX = new MiruFieldDefinition.Prefix(MiruFieldDefinition.Prefix.Type.numeric, 4, ' ');
 
     MiruSchema miruSchema = new MiruSchema.Builder("reco", 1)
-        .setFieldDefinitions(new MiruFieldDefinition[] {
-            new MiruFieldDefinition(0, "locale", singleTerm, MiruFieldDefinition.Prefix.NONE),
-            new MiruFieldDefinition(1, "mode", singleTerm, MiruFieldDefinition.Prefix.NONE),
-            new MiruFieldDefinition(2, "activityType", singleTerm, MiruFieldDefinition.Prefix.NONE),
-            new MiruFieldDefinition(3, "contextType", singleTerm, MiruFieldDefinition.Prefix.NONE),
-            new MiruFieldDefinition(4, "context", singleTerm, TYPED_PREFIX),
-            new MiruFieldDefinition(5, "objectType", singleTerm, MiruFieldDefinition.Prefix.NONE),
-            new MiruFieldDefinition(6, "object", singleTerm, TYPED_PREFIX),
-            new MiruFieldDefinition(7, "parentType", singleTerm, MiruFieldDefinition.Prefix.NONE),
-            new MiruFieldDefinition(8, "parent", singleTerm, TYPED_PREFIX),
-            new MiruFieldDefinition(9, "user", singleTerm, MiruFieldDefinition.Prefix.NONE),
-            new MiruFieldDefinition(10, "authors", multiTerm, MiruFieldDefinition.Prefix.NONE)
-        })
+        .setFieldDefinitions(new MiruFieldDefinition[]{
+        new MiruFieldDefinition(0, "locale", singleTerm, MiruFieldDefinition.Prefix.NONE),
+        new MiruFieldDefinition(1, "mode", singleTerm, MiruFieldDefinition.Prefix.NONE),
+        new MiruFieldDefinition(2, "activityType", singleTerm, MiruFieldDefinition.Prefix.NONE),
+        new MiruFieldDefinition(3, "contextType", singleTerm, MiruFieldDefinition.Prefix.NONE),
+        new MiruFieldDefinition(4, "context", singleTerm, TYPED_PREFIX),
+        new MiruFieldDefinition(5, "objectType", singleTerm, MiruFieldDefinition.Prefix.NONE),
+        new MiruFieldDefinition(6, "object", singleTerm, TYPED_PREFIX),
+        new MiruFieldDefinition(7, "parentType", singleTerm, MiruFieldDefinition.Prefix.NONE),
+        new MiruFieldDefinition(8, "parent", singleTerm, TYPED_PREFIX),
+        new MiruFieldDefinition(9, "user", singleTerm, MiruFieldDefinition.Prefix.NONE),
+        new MiruFieldDefinition(10, "authors", multiTerm, MiruFieldDefinition.Prefix.NONE)
+    })
         .setPairedLatest(ImmutableMap.of(
             "parent", Arrays.asList("user"),
             "user", Arrays.asList("parent", "context", "user")))
@@ -94,7 +103,7 @@ public class RecoCorrectnessTest {
             "user", Arrays.asList("user")))
         .build();
 
-    MiruTermComposer termComposer = new MiruTermComposer(Charsets.UTF_8);
+    MiruTermComposer termComposer = new MiruTermComposer(Charsets.UTF_8, termInterner);
     MiruTenantId tenant1 = new MiruTenantId("tenant1".getBytes());
     MiruPartitionId partitionId = MiruPartitionId.of(1);
     MiruHost miruHost = new MiruHost("logicalName", 1_234);

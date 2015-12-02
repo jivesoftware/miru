@@ -171,4 +171,7 @@ public interface MiruServiceConfig extends Config {
 
     @ClassDefault(IllegalStateException.class)
     Class<? extends MiruBitmaps<?, ?>> getBitmapsClass();
+
+    @BooleanDefault(true)
+    boolean getEnableTermInterning();
 }

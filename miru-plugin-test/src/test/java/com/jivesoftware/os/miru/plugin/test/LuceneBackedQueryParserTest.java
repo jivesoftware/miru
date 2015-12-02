@@ -9,6 +9,7 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.bitmaps.roaring5.MiruBitmapsRoaring;
+import com.jivesoftware.os.miru.plugin.MiruInterner;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndexProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
@@ -35,16 +36,23 @@ import static org.testng.Assert.assertTrue;
  */
 public class LuceneBackedQueryParserTest {
 
+    MiruInterner<MiruTermId> termInterner = new MiruInterner<MiruTermId>(true) {
+        @Override
+        public MiruTermId create(byte[] bytes) {
+            return new MiruTermId(bytes);
+        }
+    };
+
     private final MiruSchema schema = new MiruSchema.Builder("test", 0)
-        .setFieldDefinitions(new MiruFieldDefinition[] {
-            new MiruFieldDefinition(0, "a", MiruFieldDefinition.Type.multiTerm, MiruFieldDefinition.Prefix.WILDCARD),
-            new MiruFieldDefinition(1, "b", MiruFieldDefinition.Type.multiTerm, MiruFieldDefinition.Prefix.WILDCARD)
-        })
+        .setFieldDefinitions(new MiruFieldDefinition[]{
+        new MiruFieldDefinition(0, "a", MiruFieldDefinition.Type.multiTerm, MiruFieldDefinition.Prefix.WILDCARD),
+        new MiruFieldDefinition(1, "b", MiruFieldDefinition.Type.multiTerm, MiruFieldDefinition.Prefix.WILDCARD)
+    })
         .build();
 
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
     private final MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
-    private final MiruTermComposer termComposer = new MiruTermComposer(StandardCharsets.UTF_8);
+    private final MiruTermComposer termComposer = new MiruTermComposer(StandardCharsets.UTF_8, termInterner);
 
     private TestFieldIndex fieldIndex;
     private MiruFieldIndexProvider<RoaringBitmap> fieldIndexProvider;
@@ -53,7 +61,7 @@ public class LuceneBackedQueryParserTest {
     public void setUp() throws Exception {
         fieldIndex = new TestFieldIndex(2);
         @SuppressWarnings("unchecked")
-        MiruFieldIndex<RoaringBitmap>[] indexes = (MiruFieldIndex<RoaringBitmap>[]) new MiruFieldIndex[] {
+        MiruFieldIndex<RoaringBitmap>[] indexes = (MiruFieldIndex<RoaringBitmap>[]) new MiruFieldIndex[]{
             fieldIndex,
             null,
             null,
@@ -206,6 +214,7 @@ public class LuceneBackedQueryParserTest {
         }
 
         private class TestInvertedIndex implements MiruInvertedIndex<RoaringBitmap> {
+
             private final int fieldId;
             private final MiruTermId termId;
 

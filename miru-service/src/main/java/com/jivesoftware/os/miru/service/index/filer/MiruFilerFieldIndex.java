@@ -8,6 +8,7 @@ import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.filer.io.map.MapContext;
 import com.jivesoftware.os.filer.io.map.MapStore;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
+import com.jivesoftware.os.miru.plugin.MiruInterner;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
@@ -27,17 +28,20 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
     private final KeyedFilerStore<Integer, MapContext>[] cardinalities;
     // We could lock on both field + termId for improved hash/striping, but we favor just termId to reduce object creation
     private final StripingLocksProvider<MiruTermId> stripingLocksProvider;
+    private final MiruInterner<MiruTermId> termInterner;
 
     public MiruFilerFieldIndex(MiruBitmaps<BM, IBM> bitmaps,
         TrackError trackError,
         KeyedFilerStore<Long, Void>[] indexes,
         KeyedFilerStore<Integer, MapContext>[] cardinalities,
-        StripingLocksProvider<MiruTermId> stripingLocksProvider) throws Exception {
+        StripingLocksProvider<MiruTermId> stripingLocksProvider,
+        MiruInterner<MiruTermId> termInterner) throws Exception {
         this.bitmaps = bitmaps;
         this.trackError = trackError;
         this.indexes = indexes;
         this.cardinalities = cardinalities;
         this.stripingLocksProvider = stripingLocksProvider;
+        this.termInterner = termInterner;
     }
 
     @Override
@@ -55,14 +59,14 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
     @Override
     public void remove(int fieldId, MiruTermId termId, int id, StackBuffer stackBuffer) throws Exception {
         getIndex(fieldId, termId, -1).remove(id, stackBuffer);
-        mergeCardinalities(fieldId, termId, new int[] { id }, cardinalities[fieldId] != null ? new long[1] : null, stackBuffer);
+        mergeCardinalities(fieldId, termId, new int[]{id}, cardinalities[fieldId] != null ? new long[1] : null, stackBuffer);
     }
 
     @Override
     public void streamTermIdsForField(int fieldId, List<KeyRange> ranges, final TermIdStream termIdStream, StackBuffer stackBuffer) throws Exception {
         indexes[fieldId].streamKeys(ranges, rawKey -> {
             try {
-                return termIdStream.stream(new MiruTermId(rawKey));
+                return termIdStream.stream(termInterner.intern(rawKey));
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
