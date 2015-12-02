@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.plugin.index;
 
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
+import com.jivesoftware.os.miru.plugin.MiruInterner;
 import com.jivesoftware.os.rcvs.marshall.api.UtilLexMarshaller;
 import java.nio.charset.Charset;
 import java.util.Collection;
@@ -12,9 +13,11 @@ import java.util.Collection;
 public class MiruTermComposer {
 
     private final Charset charset;
+    private final MiruInterner<MiruTermId> termInterner;
 
-    public MiruTermComposer(final Charset charset) {
+    public MiruTermComposer(final Charset charset,  MiruInterner<MiruTermId> termInterner) {
         this.charset = charset;
+        this.termInterner = termInterner;
     }
 
     public MiruTermId compose(MiruFieldDefinition fieldDefinition, String value) {
@@ -32,9 +35,9 @@ public class MiruTermComposer {
             byte[] termBytes = new byte[p.length + sufBytes.length];
             writePrefixBytes(p, pre, termBytes);
             System.arraycopy(sufBytes, 0, termBytes, p.length, sufBytes.length);
-            return new MiruTermId(termBytes);
+            return termInterner.intern(termBytes);
         } else {
-            return new MiruTermId(value.getBytes(charset));
+            return termInterner.intern(value.getBytes(charset));
         }
     }
 

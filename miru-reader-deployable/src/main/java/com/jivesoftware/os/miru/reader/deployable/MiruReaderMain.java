@@ -21,6 +21,11 @@ import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.base.Charsets;
 import com.google.common.collect.Interners;
 import com.google.common.collect.Maps;
+import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
+import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
+import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
+import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
+import com.jivesoftware.os.jive.utils.ordered.id.TimestampedOrderIdProvider;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruLifecyle;
 import com.jivesoftware.os.miru.api.MiruStats;
@@ -45,6 +50,7 @@ import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer.MiruMetricSamplerConfig;
 import com.jivesoftware.os.miru.metric.sampler.RoutingBirdMetricSampleSenderProvider;
 import com.jivesoftware.os.miru.plugin.Miru;
+import com.jivesoftware.os.miru.plugin.MiruInterner;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.backfill.AmzaInboxReadTracker;
 import com.jivesoftware.os.miru.plugin.backfill.MiruInboxReadTracker;
@@ -123,16 +129,16 @@ public class MiruReaderMain {
             HealthFactory.initialize(
                 deployable::config,
                 new HealthCheckRegistry() {
-                    @Override
-                    public void register(HealthChecker healthChecker) {
-                        deployable.addHealthCheck(healthChecker);
-                    }
+                @Override
+                public void register(HealthChecker healthChecker) {
+                    deployable.addHealthCheck(healthChecker);
+                }
 
-                    @Override
-                    public void unregister(HealthChecker healthChecker) {
-                        throw new UnsupportedOperationException("Not supported yet.");
-                    }
-                });
+                @Override
+                public void unregister(HealthChecker healthChecker) {
+                    throw new UnsupportedOperationException("Not supported yet.");
+                }
+            });
             deployable.addErrorHealthChecks();
             deployable.buildStatusReporter(null).start();
             deployable.addManageInjectables(HasUI.class, new HasUI(Arrays.asList(new HasUI.UI("manage", "manage", "/manage/ui"),
@@ -184,11 +190,30 @@ public class MiruReaderMain {
 
             MiruResourceLocator miruResourceLocator = new MiruResourceLocatorInitializer().initialize(miruServiceConfig);
 
-            final MiruTermComposer termComposer = new MiruTermComposer(Charsets.UTF_8);
+            MiruInterner<MiruTermId> termInterner = new MiruInterner<MiruTermId>(miruServiceConfig.getEnableTermInterning()) {
+                @Override
+                public MiruTermId create(byte[] bytes) {
+                    return new MiruTermId(bytes);
+                }
+            };
+            MiruInterner<MiruIBA> ibaInterner = new MiruInterner<MiruIBA>(true) {
+                @Override
+                public MiruIBA create(byte[] bytes) {
+                    return new MiruIBA(bytes);
+                }
+            };
+
+            MiruInterner<MiruTenantId> tenantInterner = new MiruInterner<MiruTenantId>(true) {
+                @Override
+                public MiruTenantId create(byte[] bytes) {
+                    return new MiruTenantId(bytes);
+                }
+            };
+
+            final MiruTermComposer termComposer = new MiruTermComposer(Charsets.UTF_8, termInterner);
             final MiruActivityInternExtern internExtern = new MiruActivityInternExtern(
-                Interners.<MiruIBA>newWeakInterner(),
-                Interners.<MiruTermId>newWeakInterner(),
-                Interners.<MiruTenantId>newStrongInterner(),
+                ibaInterner,
+                tenantInterner,
                 // makes sense to share string internment as this is authz in both cases
                 Interners.<String>newWeakInterner(),
                 termComposer);
@@ -201,17 +226,17 @@ public class MiruReaderMain {
 
             TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
             TenantAwareHttpClient<String> walHttpClient = tenantRoutingHttpClientInitializer.initialize(tenantRoutingProvider
-                    .getConnections("miru-wal", "main"),
+                .getConnections("miru-wal", "main"),
                 clientHealthProvider,
                 10, 10_000); // TODO expose to conf
 
             TenantAwareHttpClient<String> manageHttpClient = tenantRoutingHttpClientInitializer.initialize(tenantRoutingProvider
-                    .getConnections("miru-manage", "main"),
+                .getConnections("miru-manage", "main"),
                 clientHealthProvider,
                 10, 10_000);  // TODO expose to conf
 
             TenantAwareHttpClient<String> readerHttpClient = tenantRoutingHttpClientInitializer.initialize(tenantRoutingProvider
-                    .getConnections("miru-reader", "main"),
+                .getConnections("miru-reader", "main"),
                 clientHealthProvider,
                 10, 10_000);  // TODO expose to conf
 
@@ -245,7 +270,8 @@ public class MiruReaderMain {
                     termComposer,
                     internExtern,
                     new SingleBitmapsProvider(bitmaps),
-                    partitionErrorTracker);
+                    partitionErrorTracker,
+                    termInterner);
             } else if (walConfig.getActivityWALType().equals("amza") || walConfig.getActivityWALType().equals("amza_rcvs")) {
                 MiruWALClient<AmzaCursor, AmzaSipCursor> amzaWALClient = new MiruWALClientInitializer().initialize("", walHttpClient, mapper, 10_000,
                     "/miru/wal/amza", AmzaCursor.class, AmzaSipCursor.class);
@@ -263,7 +289,8 @@ public class MiruReaderMain {
                     termComposer,
                     internExtern,
                     new SingleBitmapsProvider(bitmaps),
-                    partitionErrorTracker);
+                    partitionErrorTracker,
+                    termInterner);
             } else {
                 throw new IllegalStateException("Invalid activity WAL type: " + walConfig.getActivityWALType());
             }
@@ -276,6 +303,9 @@ public class MiruReaderMain {
 
             miruServiceLifecyle.start();
             final MiruService miruService = miruServiceLifecyle.getService();
+
+            TimestampedOrderIdProvider timestampedOrderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(0), new SnowflakeIdPacker(),
+                new JiveEpochTimestampProvider());
 
             MiruSoyRendererConfig rendererConfig = deployable.config(MiruSoyRendererConfig.class);
 
@@ -372,6 +402,7 @@ public class MiruReaderMain {
             }
 
             deployable.addEndpoints(MiruReaderConfigEndpoints.class);
+            deployable.addInjectables(TimestampedOrderIdProvider.class, timestampedOrderIdProvider);
             deployable.addResource(sourceTree);
 
             deployable.buildServer().start();

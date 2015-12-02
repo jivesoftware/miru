@@ -18,11 +18,16 @@ public class MiruIBA implements Comparable<MiruIBA>, Serializable {
     private static final Comparator<byte[]> LEX_COMPARATOR = UnsignedBytes.lexicographicalComparator();
 
     private int hashCode = 0;
-    private final byte[] bytes;
+    private byte[] bytes;
 
     @JsonCreator
     public MiruIBA(@JsonProperty("bytes") byte[] _bytes) {
         bytes = _bytes;
+    }
+
+    public void mutate(byte[] exactBytes, int hashCode) {
+        this.bytes = exactBytes;
+        this.hashCode = hashCode;
     }
 
     // this should return a copy to make IBA truly Immutable
@@ -56,21 +61,23 @@ public class MiruIBA implements Comparable<MiruIBA>, Serializable {
             return 0;
         }
 
+        int hash = hashCode(bytes, 0, bytes.length);
+        hashCode = hash;
+        return hash;
+    }
+
+    public static int hashCode(byte[] bytes, int offset, int length) {
         int hash = 0;
         long randMult = 0x5_DEEC_E66DL;
         long randAdd = 0xBL;
         long randMask = (1L << 48) - 1;
         long seed = bytes.length;
-
-        for (int i = 0; i < bytes.length; i++) {
+        for (int i = offset; i < offset + length; i++) {
             long x = (seed * randMult + randAdd) & randMask;
 
             seed = x;
             hash += (bytes[i] + 128) * x;
         }
-
-        hashCode = hash;
-
         return hash;
     }
 
@@ -79,7 +86,7 @@ public class MiruIBA implements Comparable<MiruIBA>, Serializable {
         if (obj == null) {
             return false;
         }
-        if (getClass() != obj.getClass()) {
+        if (!(obj instanceof MiruIBA)) {
             return false;
         }
         final MiruIBA other = (MiruIBA) obj;
@@ -93,4 +100,5 @@ public class MiruIBA implements Comparable<MiruIBA>, Serializable {
     public int compareTo(MiruIBA o) {
         return LEX_COMPARATOR.compare(bytes, o.bytes);
     }
+
 }

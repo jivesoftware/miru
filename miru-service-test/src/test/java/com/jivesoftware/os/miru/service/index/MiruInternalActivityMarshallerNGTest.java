@@ -20,7 +20,9 @@ import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
+import com.jivesoftware.os.miru.plugin.MiruInterner;
 import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
+import java.util.Arrays;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
@@ -29,6 +31,13 @@ import org.testng.annotations.Test;
  */
 public class MiruInternalActivityMarshallerNGTest {
 
+    MiruInterner<MiruTermId> termInterner = new MiruInterner<MiruTermId>(true) {
+        @Override
+        public MiruTermId create(byte[] bytes) {
+            return new MiruTermId(bytes);
+        }
+    };
+
     /**
      * Test of fieldValueFromFiler method, of class MiruInternalActivityMarshaller.
      */
@@ -36,14 +45,16 @@ public class MiruInternalActivityMarshallerNGTest {
     public void testFieldValueFromFiler() throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
         System.out.println("fieldValueFromFiler");
-        MiruInternalActivityMarshaller instance = new MiruInternalActivityMarshaller();
+        MiruInternalActivityMarshaller instance = new MiruInternalActivityMarshaller(termInterner);
         MiruInternalActivity expResult = activity();
         ByteArrayFiler filer = new ByteArrayFiler(instance.toBytes(expResult, stackBuffer));
         filer.seek(0);
 
         int fieldId = 3;
         MiruTermId[] fieldValueFromFiler = instance.fieldValueFromFiler(filer, fieldId, stackBuffer);
-        Assert.assertEquals(fieldValueFromFiler, new MiruTermId[]{new MiruTermId("b".getBytes()), new MiruTermId("c".getBytes())});
+        MiruTermId[] expected = new MiruTermId[]{new MiruTermId("b".getBytes()), new MiruTermId("c".getBytes())};
+        Assert.assertEquals(fieldValueFromFiler, expected,
+            Arrays.toString(fieldValueFromFiler)+"vs"+Arrays.toString(expected));
 
         filer.seek(0);
         int propId = 2;
@@ -58,7 +69,7 @@ public class MiruInternalActivityMarshallerNGTest {
     public void testToBytesThenFromFiler() throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
         System.out.println("fromFiler");
-        MiruInternalActivityMarshaller instance = new MiruInternalActivityMarshaller();
+        MiruInternalActivityMarshaller instance = new MiruInternalActivityMarshaller(termInterner);
         MiruInternalActivity expResult = activity();
         ByteArrayFiler filer = new ByteArrayFiler(instance.toBytes(expResult, stackBuffer));
         MiruInternalActivity result = instance.fromFiler(new MiruTenantId("abc".getBytes()), filer, stackBuffer);

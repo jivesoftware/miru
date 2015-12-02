@@ -35,6 +35,7 @@ import com.jivesoftware.os.miru.cluster.MiruRegistryClusterClient;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSet;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSetDirector;
 import com.jivesoftware.os.miru.cluster.amza.AmzaClusterRegistry;
+import com.jivesoftware.os.miru.plugin.MiruInterner;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.backfill.MiruInboxReadTracker;
 import com.jivesoftware.os.miru.plugin.backfill.MiruJustInTimeBackfillerizer;
@@ -93,6 +94,13 @@ import org.testng.Assert;
  */
 public class MiruPluginTestBootstrap {
 
+    MiruInterner<MiruTermId> termInterner = new MiruInterner<MiruTermId>(true) {
+        @Override
+        public MiruTermId create(byte[] bytes) {
+            return new MiruTermId(bytes);
+        }
+    };
+
     public <BM extends IBM, IBM> MiruProvider<MiruService> bootstrap(MiruTenantId tenantId,
         MiruPartitionId partitionId,
         MiruHost miruHost,
@@ -105,14 +113,14 @@ public class MiruPluginTestBootstrap {
         HealthFactory.initialize(
             BindInterfaceToConfiguration::bindDefault,
             new HealthCheckRegistry() {
-                @Override
-                public void register(HealthChecker healthChecker) {
-                }
+            @Override
+            public void register(HealthChecker healthChecker) {
+            }
 
-                @Override
-                public void unregister(HealthChecker healthChecker) {
-                }
-            });
+            @Override
+            public void unregister(HealthChecker healthChecker) {
+            }
+        });
 
         MiruServiceConfig config = BindInterfaceToConfiguration.bindDefault(MiruServiceConfig.class);
         config.setDefaultStorage(desiredStorage.name());
@@ -188,10 +196,24 @@ public class MiruPluginTestBootstrap {
         backfillerizerLifecycle.start();
         final MiruJustInTimeBackfillerizer backfillerizer = backfillerizerLifecycle.getService();
 
-        final MiruTermComposer termComposer = new MiruTermComposer(Charsets.UTF_8);
-        final MiruActivityInternExtern activityInternExtern = new MiruActivityInternExtern(Interners.<MiruIBA>newWeakInterner(),
-            Interners.<MiruTermId>newWeakInterner(),
-            Interners.<MiruTenantId>newWeakInterner(),
+        final MiruTermComposer termComposer = new MiruTermComposer(Charsets.UTF_8, termInterner);
+
+        MiruInterner<MiruIBA> ibaInterner = new MiruInterner<MiruIBA>(true) {
+            @Override
+            public MiruIBA create(byte[] bytes) {
+                return new MiruIBA(bytes);
+            }
+        };
+
+        MiruInterner<MiruTenantId> tenantInterner = new MiruInterner<MiruTenantId>(true) {
+            @Override
+            public MiruTenantId create(byte[] bytes) {
+                return new MiruTenantId(bytes);
+            }
+        };
+
+        final MiruActivityInternExtern activityInternExtern = new MiruActivityInternExtern(ibaInterner,
+            tenantInterner,
             Interners.<String>newWeakInterner(),
             termComposer);
         final MiruStats miruStats = new MiruStats();
@@ -207,7 +229,8 @@ public class MiruPluginTestBootstrap {
             termComposer,
             activityInternExtern,
             new SingleBitmapsProvider(bitmaps),
-            new PartitionErrorTracker(BindInterfaceToConfiguration.bindDefault(PartitionErrorTracker.PartitionErrorTrackerConfig.class)));
+            new PartitionErrorTracker(BindInterfaceToConfiguration.bindDefault(PartitionErrorTracker.PartitionErrorTrackerConfig.class)),
+            termInterner);
 
         miruServiceLifecyle.start();
         final MiruService miruService = miruServiceLifecyle.getService();

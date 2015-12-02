@@ -26,6 +26,7 @@ import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.wal.RCVSSipCursor;
+import com.jivesoftware.os.miru.plugin.MiruInterner;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
@@ -41,13 +42,19 @@ import com.jivesoftware.os.miru.service.stream.allocator.MiruChunkAllocator;
 import com.jivesoftware.os.miru.service.stream.allocator.OnDiskChunkAllocator;
 import java.io.File;
 import java.nio.file.Files;
-import java.util.concurrent.atomic.AtomicLong;
 import org.merlin.config.BindInterfaceToConfiguration;
 
 /**
  *
  */
 public class IndexTestUtil {
+
+    private static MiruInterner<MiruTermId> termInterner = new MiruInterner<MiruTermId>(true) {
+        @Override
+        public MiruTermId create(byte[] bytes) {
+            return new MiruTermId(bytes);
+        }
+    };
 
     public static TxCogs cogs = new TxCogs(256, 64, null, null, null);
 
@@ -59,12 +66,25 @@ public class IndexTestUtil {
 
         MiruSchemaProvider schemaProvider = new SingleSchemaProvider(
             new MiruSchema.Builder("test", 1)
-                .setFieldDefinitions(DefaultMiruSchemaDefinition.FIELDS)
-                .build());
-        MiruTermComposer termComposer = new MiruTermComposer(Charsets.UTF_8);
-        MiruActivityInternExtern activityInternExtern = new MiruActivityInternExtern(Interners.<MiruIBA>newWeakInterner(),
-            Interners.<MiruTermId>newWeakInterner(),
-            Interners.<MiruTenantId>newWeakInterner(),
+            .setFieldDefinitions(DefaultMiruSchemaDefinition.FIELDS)
+            .build());
+        MiruTermComposer termComposer = new MiruTermComposer(Charsets.UTF_8, termInterner);
+
+        MiruInterner<MiruIBA> ibaInterner = new MiruInterner<MiruIBA>(true) {
+            @Override
+            public MiruIBA create(byte[] bytes) {
+                return new MiruIBA(bytes);
+            }
+        };
+        MiruInterner<MiruTenantId> tenantInterner = new MiruInterner<MiruTenantId>(true) {
+            @Override
+            public MiruTenantId create(byte[] bytes) {
+                return new MiruTenantId(bytes);
+            }
+        };
+        MiruActivityInternExtern activityInternExtern = new MiruActivityInternExtern(
+            ibaInterner,
+            tenantInterner,
             Interners.<String>newWeakInterner(),
             termComposer);
 
@@ -89,9 +109,9 @@ public class IndexTestUtil {
             termComposer,
             activityInternExtern,
             ImmutableMap.<MiruBackingStorage, MiruChunkAllocator>builder()
-                .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
-                .put(MiruBackingStorage.disk, onDiskChunkAllocator)
-                .build(),
+            .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
+            .put(MiruBackingStorage.disk, onDiskChunkAllocator)
+            .build(),
             new RCVSSipIndexMarshaller(),
             new MiruTempDirectoryResourceLocator(),
             MiruBackingStorage.memory,
@@ -99,7 +119,8 @@ public class IndexTestUtil {
             fieldIndexStripingLocksProvider,
             streamStripingLocksProvider,
             authzStripingLocksProvider,
-            new PartitionErrorTracker(BindInterfaceToConfiguration.bindDefault(PartitionErrorTracker.PartitionErrorTrackerConfig.class)));
+            new PartitionErrorTracker(BindInterfaceToConfiguration.bindDefault(PartitionErrorTracker.PartitionErrorTrackerConfig.class)),
+            termInterner);
     }
 
     public static <BM extends IBM, IBM> MiruContext<IBM, RCVSSipCursor> buildInMemoryContext(int numberOfChunkStores,

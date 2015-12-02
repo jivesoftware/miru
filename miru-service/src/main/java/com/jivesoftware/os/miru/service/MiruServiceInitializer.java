@@ -24,6 +24,7 @@ import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.api.wal.MiruCursor;
 import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
+import com.jivesoftware.os.miru.plugin.MiruInterner;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.index.MiruSipIndexMarshaller;
@@ -77,7 +78,8 @@ public class MiruServiceInitializer {
         MiruTermComposer termComposer,
         MiruActivityInternExtern internExtern,
         MiruBitmapsProvider bitmapsProvider,
-        PartitionErrorTracker partitionErrorTracker) throws IOException {
+        PartitionErrorTracker partitionErrorTracker,
+        MiruInterner<MiruTermId> termInterner) throws IOException {
 
         final ThreadGroup threadGroup = Thread.currentThread().getThreadGroup();
 
@@ -163,7 +165,8 @@ public class MiruServiceInitializer {
             fieldIndexStripingLocksProvider,
             streamStripingLocksProvider,
             authzStripingLocksProvider,
-            partitionErrorTracker);
+            partitionErrorTracker,
+            termInterner);
 
         MiruPartitionHeartbeatHandler heartbeatHandler = new MiruPartitionHeartbeatHandler(clusterClient);
         MiruRebuildDirector rebuildDirector = new MiruRebuildDirector(config.getMaxRebuildActivityCount());

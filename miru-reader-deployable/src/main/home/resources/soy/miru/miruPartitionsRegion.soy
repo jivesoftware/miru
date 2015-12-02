@@ -7,6 +7,19 @@
  * @param? partitions
  */
 {template .partitionsRegion}
+
+    <div class="panel panel-default">
+        <div class="panel-heading">Rebuild</div>
+        <div class="panel-body">
+            <label for="tenantPicker">Select Tenant</label>
+            <form id="tenantPickerForm" method="post" name="tenantPickerForm" action="/miru/config/rebuild">
+                <input type="text" autocomplete="off" placeholder="Days" value="3" name="days" title="">
+                <input type="submit" value="Rebuild">
+            </form>
+        </div>
+    </div>
+
+
     <div class="panel panel-default">
         <div class="panel-heading">Tenant</div>
         <div class="panel-body">

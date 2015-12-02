@@ -22,6 +22,7 @@ import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
+import com.jivesoftware.os.miru.plugin.MiruInterner;
 import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
 import java.io.IOException;
 
@@ -30,6 +31,12 @@ import java.io.IOException;
  * @author jonathan
  */
 public class MiruInternalActivityMarshaller {
+
+    private final MiruInterner<MiruTermId> termInterner;
+
+    public MiruInternalActivityMarshaller(MiruInterner<MiruTermId> termInterner) {
+        this.termInterner = termInterner;
+    }
 
     public MiruTermId[] fieldValueFromFiler(Filer filer, int fieldId, StackBuffer stackBuffer) throws IOException {
         filer.seek((4 + 4) + (fieldId * 4));
@@ -71,12 +78,15 @@ public class MiruInternalActivityMarshaller {
         if (length <= 0) {
             return null;
         }
+        byte[] bufferMiruTerm = null;
         MiruTermId[] terms = new MiruTermId[length];
         for (int i = 0; i < length; i++) {
             int l = FilerIO.readInt(filer, "length", stackBuffer);
-            byte[] bytes = new byte[l];
-            FilerIO.read(filer, bytes);
-            terms[i] = new MiruTermId(bytes);
+            if (bufferMiruTerm == null || bufferMiruTerm.length < l) {
+                bufferMiruTerm = new byte[l];
+            }
+            FilerIO.read(filer, bufferMiruTerm, 0, l);
+            terms[i] = termInterner.intern(bufferMiruTerm, 0, l);
         }
 
         return terms;

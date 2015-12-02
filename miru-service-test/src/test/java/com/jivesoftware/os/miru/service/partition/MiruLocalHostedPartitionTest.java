@@ -48,6 +48,7 @@ import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruRegistryClusterClient;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSetDirector;
 import com.jivesoftware.os.miru.cluster.amza.AmzaClusterRegistry;
+import com.jivesoftware.os.miru.plugin.MiruInterner;
 import com.jivesoftware.os.miru.plugin.index.BloomIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
@@ -112,6 +113,13 @@ import static org.testng.Assert.assertNotNull;
 
 public class MiruLocalHostedPartitionTest {
 
+    MiruInterner<MiruTermId> termInterner = new MiruInterner<MiruTermId>(true) {
+        @Override
+        public MiruTermId create(byte[] bytes) {
+            return new MiruTermId(bytes);
+        }
+    };
+
     private MiruContextFactory<RCVSSipCursor> contextFactory;
     private MiruSipTrackerFactory<RCVSSipCursor> sipTrackerFactory;
     private MiruSchema schema;
@@ -152,14 +160,14 @@ public class MiruLocalHostedPartitionTest {
         HealthFactory.initialize(
             BindInterfaceToConfiguration::bindDefault,
             new HealthCheckRegistry() {
-                @Override
-                public void register(HealthChecker healthChecker) {
-                }
+            @Override
+            public void register(HealthChecker healthChecker) {
+            }
 
-                @Override
-                public void unregister(HealthChecker healthChecker) {
-                }
-            });
+            @Override
+            public void unregister(HealthChecker healthChecker) {
+            }
+        });
 
         MiruServiceConfig config = mock(MiruServiceConfig.class);
         when(config.getBitsetBufferSize()).thenReturn(32);
@@ -183,11 +191,23 @@ public class MiruLocalHostedPartitionTest {
             new MiruIndexPairedLatest<>());
         timings = new MiruLocalHostedPartition.Timings(5_000, 5_000, 5_000, 30_000, 3_000, 30_000);
 
-        MiruTermComposer termComposer = new MiruTermComposer(Charsets.UTF_8);
+        MiruInterner<MiruIBA> ibaInterner = new MiruInterner<MiruIBA>(true) {
+            @Override
+            public MiruIBA create(byte[] bytes) {
+                return new MiruIBA(bytes);
+            }
+        };
+        MiruInterner<MiruTenantId> tenantInterner = new MiruInterner<MiruTenantId>(true) {
+            @Override
+            public MiruTenantId create(byte[] bytes) {
+                return new MiruTenantId(bytes);
+            }
+        };
+
+        MiruTermComposer termComposer = new MiruTermComposer(Charsets.UTF_8, termInterner);
         MiruActivityInternExtern activityInternExtern = new MiruActivityInternExtern(
-            Interners.<MiruIBA>newWeakInterner(),
-            Interners.<MiruTermId>newWeakInterner(),
-            Interners.<MiruTenantId>newStrongInterner(),
+            ibaInterner,
+            tenantInterner,
             // makes sense to share string internment as this is authz in both cases
             Interners.<String>newWeakInterner(),
             termComposer);
@@ -215,9 +235,9 @@ public class MiruLocalHostedPartitionTest {
             termComposer,
             activityInternExtern,
             ImmutableMap.<MiruBackingStorage, MiruChunkAllocator>builder()
-                .put(MiruBackingStorage.memory, hybridContextAllocator)
-                .put(MiruBackingStorage.disk, diskContextAllocator)
-                .build(),
+            .put(MiruBackingStorage.memory, hybridContextAllocator)
+            .put(MiruBackingStorage.disk, diskContextAllocator)
+            .build(),
             new RCVSSipIndexMarshaller(),
             new MiruTempDirectoryResourceLocator(),
             defaultStorage,
@@ -225,7 +245,9 @@ public class MiruLocalHostedPartitionTest {
             new StripingLocksProvider<>(8),
             new StripingLocksProvider<>(8),
             new StripingLocksProvider<>(8),
-            new PartitionErrorTracker(BindInterfaceToConfiguration.bindDefault(PartitionErrorTracker.PartitionErrorTrackerConfig.class)));
+            new PartitionErrorTracker(BindInterfaceToConfiguration.bindDefault(PartitionErrorTracker.PartitionErrorTrackerConfig.class)),
+            termInterner
+        );
         sipTrackerFactory = new RCVSSipTrackerFactory();
 
         ObjectMapper mapper = new ObjectMapper();

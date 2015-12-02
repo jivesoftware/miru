@@ -31,6 +31,7 @@ import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.context.MiruContextConstants;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
+import com.jivesoftware.os.miru.plugin.MiruInterner;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
@@ -99,6 +100,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
     private final StripingLocksProvider<MiruStreamId> streamStripingLocksProvider;
     private final StripingLocksProvider<String> authzStripingLocksProvider;
     private final PartitionErrorTracker partitionErrorTracker;
+    private final MiruInterner<MiruTermId> termInterner;
 
     public MiruContextFactory(TxCogs cogs,
         MiruSchemaProvider schemaProvider,
@@ -112,7 +114,8 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         StripingLocksProvider<MiruTermId> fieldIndexStripingLocksProvider,
         StripingLocksProvider<MiruStreamId> streamStripingLocksProvider,
         StripingLocksProvider<String> authzStripingLocksProvider,
-        PartitionErrorTracker partitionErrorTracker) {
+        PartitionErrorTracker partitionErrorTracker,
+        MiruInterner<MiruTermId> termInterner) {
 
         this.cogs = cogs;
         this.schemaProvider = schemaProvider;
@@ -127,6 +130,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         this.streamStripingLocksProvider = streamStripingLocksProvider;
         this.authzStripingLocksProvider = authzStripingLocksProvider;
         this.partitionErrorTracker = partitionErrorTracker;
+        this.termInterner = termInterner;
     }
 
     public MiruBackingStorage findBackingStorage(MiruPartitionCoord coord) throws Exception {
@@ -194,7 +198,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         MiruActivityIndex activityIndex = new MiruDeltaActivityIndex(
             new MiruFilerActivityIndex(
                 activityFilerStore,
-                new MiruInternalActivityMarshaller(),
+                new MiruInternalActivityMarshaller(termInterner),
                 new KeyedFilerProvider<>(activityFilerStore, keyBytes("activityIndex-size"))));
 
         TrackError trackError = partitionErrorTracker.track(coord);
@@ -235,7 +239,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             fieldIndexes[fieldType.getIndex()] = new MiruDeltaFieldIndex<>(
                 bitmaps,
                 trackError,
-                new MiruFilerFieldIndex<>(bitmaps, trackError, indexes, cardinalities, fieldIndexStripingLocksProvider),
+                new MiruFilerFieldIndex<>(bitmaps, trackError, indexes, cardinalities, fieldIndexStripingLocksProvider, termInterner),
                 schema.getFieldDefinitions());
         }
         MiruFieldIndexProvider<IBM> fieldIndexProvider = new MiruFieldIndexProvider<>(fieldIndexes);
@@ -277,7 +281,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                     TxNamedMapOfFiler.CHUNK_FILER_OPENER,
                     TxNamedMapOfFiler.OVERWRITE_GROWER_PROVIDER,
                     TxNamedMapOfFiler.REWRITE_GROWER_PROVIDER),
-                new byte[] { 0 },
+                new byte[]{0},
                 -1,
                 new Object()),
             new MiruDeltaInvertedIndex.Delta<>());
