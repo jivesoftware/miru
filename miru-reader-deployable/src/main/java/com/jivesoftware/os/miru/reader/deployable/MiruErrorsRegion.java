@@ -13,6 +13,7 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  *
@@ -39,7 +40,7 @@ public class MiruErrorsRegion implements MiruPageRegion<Void> {
 
         try {
             List<Map<String, Object>> sinceRebuild = Lists.newArrayList();
-            for (Map.Entry<MiruPartitionCoord, List<String>> entry : partitionErrorTracker.getErrorsSinceRebuild().entrySet()) {
+            for (Map.Entry<MiruPartitionCoord, Set<String>> entry : partitionErrorTracker.getErrorsSinceRebuild().entrySet()) {
                 MiruPartitionCoord coord = entry.getKey();
                 MiruPartitionCoordInfo info = service.getInfo(coord.tenantId, coord.partitionId);
                 sinceRebuild.add(ImmutableMap.of("tenantId", coord.tenantId.toString(),

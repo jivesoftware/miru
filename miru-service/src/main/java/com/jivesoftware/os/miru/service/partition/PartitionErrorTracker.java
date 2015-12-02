@@ -1,6 +1,6 @@
 package com.jivesoftware.os.miru.service.partition;
 
-import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.plugin.partition.TrackError;
 import com.jivesoftware.os.routing.bird.health.HealthCheck;
@@ -8,7 +8,6 @@ import com.jivesoftware.os.routing.bird.health.HealthCheckResponse;
 import com.jivesoftware.os.routing.bird.health.HealthCheckResponseImpl;
 import com.jivesoftware.os.routing.bird.health.api.HealthCheckConfig;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -37,7 +36,7 @@ public class PartitionErrorTracker implements HealthCheck {
     private final PartitionErrorTrackerConfig config;
 
     private final Set<MiruPartitionCoord> errorsBeforeRebuild = Collections.newSetFromMap(new ConcurrentHashMap<>());
-    private final Map<MiruPartitionCoord, List<String>> errorsSinceRebuild = new ConcurrentHashMap<>();
+    private final Map<MiruPartitionCoord, Set<String>> errorsSinceRebuild = new ConcurrentHashMap<>();
 
     public PartitionErrorTracker(PartitionErrorTrackerConfig config) {
         this.config = config;
@@ -54,7 +53,7 @@ public class PartitionErrorTracker implements HealthCheck {
     public void error(MiruPartitionCoord coord, String reason) {
         errorsSinceRebuild.compute(coord, (key, reasons) -> {
             if (reasons == null) {
-                reasons = Lists.newArrayList();
+                reasons = Sets.newHashSet();
             }
             reasons.add(reason);
             return reasons;
@@ -70,7 +69,7 @@ public class PartitionErrorTracker implements HealthCheck {
         return Collections.unmodifiableSet(errorsBeforeRebuild);
     }
 
-    public Map<MiruPartitionCoord, List<String>> getErrorsSinceRebuild() {
+    public Map<MiruPartitionCoord, Set<String>> getErrorsSinceRebuild() {
         return Collections.unmodifiableMap(errorsSinceRebuild);
     }
 
