@@ -47,7 +47,7 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
         if (index.isPresent()) {
             IBM got = index.get();
             if (bitmaps.isEmpty(got)) {
-                trackError.error("Merging into empty bitmap," +
+                trackError.error("Delta backed by empty bitmap," +
                     " andNot:" + (andNot != null ? bitmaps.cardinality(andNot) : -1) +
                     " or:" + (or != null ? bitmaps.cardinality(or) : -1));
             }
@@ -58,7 +58,7 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
                 got = bitmaps.or(Arrays.asList(got, or));
             }
             if (bitmaps.isEmpty(got)) {
-                trackError.error("Merged into empty bitmap," +
+                trackError.error("Delta merged to empty bitmap," +
                     " andNot:" + (andNot != null ? bitmaps.cardinality(andNot) : -1) +
                     " or:" + (or != null ? bitmaps.cardinality(or) : -1));
             }
