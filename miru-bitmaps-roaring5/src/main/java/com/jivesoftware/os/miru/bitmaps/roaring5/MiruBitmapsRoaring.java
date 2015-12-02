@@ -16,14 +16,11 @@
 package com.jivesoftware.os.miru.bitmaps.roaring5;
 
 import com.google.common.base.Optional;
-import com.google.common.io.ByteArrayDataInput;
-import com.google.common.io.ByteStreams;
 import com.jivesoftware.os.filer.io.AutoGrowingByteBufferBackedFiler;
 import com.jivesoftware.os.filer.io.ByteBufferDataInput;
 import com.jivesoftware.os.filer.io.FileBackedMemMappedByteBufferFactory;
 import com.jivesoftware.os.filer.io.FilerDataInput;
 import com.jivesoftware.os.filer.io.FilerDataOutput;
-import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.filer.io.chunk.ChunkFiler;
 import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
@@ -38,6 +35,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.Collection;
@@ -155,7 +153,7 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
 
     @Override
     public boolean supportsInPlace() {
-        return false;
+        return true;
     }
 
     @Override
@@ -489,68 +487,15 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
 
     private RoaringBitmap bitmapFromFiler(ChunkFiler filer, int offset, StackBuffer stackBuffer1) throws IOException {
         RoaringBitmap deser = new RoaringBitmap();
-        /*if (filer.canLeakUnsafeByteBuffer()) {
+        if (filer.canLeakUnsafeByteBuffer()) {
             ByteBuffer buf = filer.leakUnsafeByteBuffer();
             buf.position(offset);
             deser.deserialize(new ByteBufferDataInput(buf));
-        } else {*/
+        } else {
             filer.seek(offset);
             deser.deserialize(new FilerDataInput(filer, stackBuffer1));
-        /*}*/
-        return deser;
-    }
-
-    public static void main(String[] args) throws Exception {
-
-
-        byte[] bytes = new byte[] { 59, 48, 5, 0, 3, 0, 0, 0, 0, 0, -1, -1, 1, 0, 2, 0, 2, 0, 2, 0, 32,
-            0, 0, 0, 32, 0, 0, 0, 38, 0, 0, 0, -111, 63, -108, -91, -124, -81, 105, 15, 10, 18, -37, 18,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-            , 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-
-        for (int size = 0; size < 1_000; size++) {
-
-            short SERIAL_COOKIE = 12347;
-            //int size = 2;
-            int cookie = Integer.reverseBytes(SERIAL_COOKIE | ((size - 1) << 16));
-            System.out.println(Arrays.toString(FilerIO.intBytes(cookie)));
-            FilerIO.intBytes(cookie, bytes, 0);
-
-            ByteArrayDataInput byteArrayDataInput = ByteStreams.newDataInput(bytes);
-            RoaringBitmap bitmap = new RoaringBitmap();
-            try {
-                bitmap.deserialize(byteArrayDataInput);
-                System.out.println("YAY!!!!! at " + size);
-                System.out.println("YAY!!!!! at " + size);
-                System.out.println("YAY!!!!! at " + size);
-                System.out.println("YAY!!!!! at " + size);
-                System.out.println("YAY!!!!! at " + size);
-                System.out.println("YAY!!!!! at " + size);
-                System.out.println("YAY!!!!! at " + size);
-                System.out.println("YAY!!!!! at " + size);
-                System.out.println("YAY!!!!! at " + size);
-                System.out.println("YAY!!!!! at " + size);
-            } catch (Exception e) {
-                System.out.println("Sucked for size " + size + ": " + e.getClass().getSimpleName() + ": " + e.getMessage());
-            }
         }
-
+        return deser;
     }
 
     public static void main0(String[] args) throws Exception {

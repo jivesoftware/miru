@@ -368,7 +368,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
 
     @Override
     public void warm() throws Exception {
-        //TODO this should tell us to sip
+        heartbeatHandler.heartbeat(coord, Optional.<MiruPartitionCoordInfo>absent(), Optional.of(System.currentTimeMillis()));
         log.inc("warm", 1);
         log.inc("warm", 1, coord.tenantId.toString());
         log.inc("warm>partition>" + coord.partitionId, 1, coord.tenantId.toString());
