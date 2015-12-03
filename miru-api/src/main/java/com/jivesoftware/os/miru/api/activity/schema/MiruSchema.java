@@ -6,7 +6,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
-import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -211,10 +210,10 @@ public class MiruSchema {
 
     public static class CompositeFieldDefinitions {
 
-        public final byte[] delimiter;
+        public final String delimiter;
         public final MiruFieldDefinition[] fieldDefinitions;
 
-        public CompositeFieldDefinitions(byte[] delimiter, MiruFieldDefinition[] fieldDefinitions) {
+        public CompositeFieldDefinitions(String delimiter, MiruFieldDefinition[] fieldDefinitions) {
             this.delimiter = delimiter;
             this.fieldDefinitions = fieldDefinitions;
         }
@@ -331,7 +330,7 @@ public class MiruSchema {
                     for (int i = 0; i < got.fields.length; i++) {
                         compositeFieldDefinition[i] = fieldDefinitions[fieldNameToId.get(got.fields[i])];
                     }
-                    fieldToCompositeFieldDefinitions[fieldDefinition.fieldId] = new CompositeFieldDefinitions(got.delimiter.getBytes(StandardCharsets.UTF_8),
+                    fieldToCompositeFieldDefinitions[fieldDefinition.fieldId] = new CompositeFieldDefinitions(got.delimiter,
                         compositeFieldDefinition);
                 }
             }
