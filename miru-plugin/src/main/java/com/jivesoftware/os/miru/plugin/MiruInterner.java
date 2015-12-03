@@ -12,14 +12,19 @@ public abstract class MiruInterner<T extends MiruIBA> {
 
     public abstract T create(byte[] bytes);
 
-    private final WeakHashMap<T, WeakReference<T>> pool = new WeakHashMap<>();
-    private final MiruIBA[] stripingLocks;
+    private final WeakHashMap<T, WeakReference<T>>[] pools;
+    private final MiruIBA[] keys;
     private final boolean enabled;
 
     public MiruInterner(boolean enabled) {
-        this.stripingLocks = new MiruIBA[1024]; // TODO config
-        for (int i = 0; i < stripingLocks.length; i++) {
-            stripingLocks[i] = new MiruIBA(new byte[0]);
+        int concurencyLevel = 1024;
+        this.keys = new MiruIBA[concurencyLevel]; // TODO config
+        for (int i = 0; i < keys.length; i++) {
+            keys[i] = new MiruIBA(new byte[0]);
+        }
+        this.pools = new WeakHashMap[concurencyLevel];
+        for (int i = 0; i < pools.length; i++) {
+            pools[i] = new WeakHashMap<>();
         }
         this.enabled = enabled;
     }
@@ -44,14 +49,16 @@ public abstract class MiruInterner<T extends MiruIBA> {
     // He likes to watch.
     private T doIntern(byte[] bytes, int offset, int length) {
         int hashCode = MiruIBA.hashCode(bytes, offset, length);
-        MiruIBA lock = stripingLocks[Math.abs(hashCode % stripingLocks.length)];
-        synchronized (lock) {
+        int index = Math.abs(hashCode % keys.length);
+        MiruIBA key = keys[index];
+        WeakHashMap<T, WeakReference<T>> pool = pools[index];
+        synchronized (pool) {
             byte[] exactBytes = new byte[length];
             System.arraycopy(bytes, offset, exactBytes, 0, length);
-            lock.mutate(exactBytes, hashCode);
+            key.mutate(exactBytes, hashCode);
 
             T res;
-            WeakReference<T> ref = pool.get(lock);
+            WeakReference<T> ref = pool.get(key);
             if (ref != null) {
                 res = ref.get();
             } else {
