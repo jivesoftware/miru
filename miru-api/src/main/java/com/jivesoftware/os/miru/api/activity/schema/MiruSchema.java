@@ -118,6 +118,10 @@ public class MiruSchema {
         return bloom;
     }
 
+    public Map<String, Composite> getComposite() {
+        return composite;
+    }
+
     @JsonIgnore
     public int getFieldId(String fieldName) {
         Integer fieldId = fieldNameToId.get(fieldName);
