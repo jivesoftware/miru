@@ -90,8 +90,35 @@ public class MiruActivityInternExtern {
         for (String fieldName : fields.keySet()) {
             int fieldId = schema.getFieldId(fieldName);
             if (fieldId >= 0) {
+                List<String> fieldValues;
+
+                MiruSchema.CompositeFieldDefinitions compositeFieldDefinitions = schema.getCompositeFieldDefinitions(fieldId);
+                if (compositeFieldDefinitions != null) {
+                    List<String> accumFieldValues = Lists.newArrayList();
+                    for (MiruFieldDefinition field : compositeFieldDefinitions.fieldDefinitions) {
+                        List<String> compositeFieldValues = fields.get(field.name);
+                        if (compositeFieldValues != null) {
+                            if (accumFieldValues.isEmpty()) {
+                                accumFieldValues.addAll(compositeFieldValues);
+                            } else {
+                                List<String> tmpFieldValues = Lists.newArrayList();
+                                for (String accumFieldValue : accumFieldValues) {
+                                    for (String compositeFieldValue : compositeFieldValues) {
+                                        String concat = accumFieldValue + compositeFieldDefinitions.delimiter + compositeFieldValue;
+                                        tmpFieldValues.add(concat);
+                                    }
+                                }
+                                accumFieldValues = tmpFieldValues;
+                            }
+                        }
+                    }
+                    fieldValues = accumFieldValues;
+
+                } else {
+                    fieldValues = fields.get(fieldName);
+                }
+
                 MiruFieldDefinition fieldDefinition = schema.getFieldDefinition(fieldId);
-                List<String> fieldValues = fields.get(fieldName);
                 for (int i = 0; i < fieldValues.size(); i++) {
                     String fieldValue = fieldValues.get(i);
                     if (fieldValue.length() > MAX_TERM_LENGTH || fieldValue.length() == 0) {
@@ -108,6 +135,7 @@ public class MiruActivityInternExtern {
                     values[i] = termComposer.compose(fieldDefinition, fieldValues.get(i));
                 }
                 fieldsValues[fieldId] = values;
+
             }
         }
         return fieldsValues;

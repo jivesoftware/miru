@@ -4,10 +4,8 @@ import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multiset;
-import com.google.common.primitives.Bytes;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
-import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
@@ -21,7 +19,6 @@ import gnu.trove.list.TLongList;
 import gnu.trove.list.array.TIntArrayList;
 import gnu.trove.list.array.TLongArrayList;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -53,32 +50,7 @@ public class MiruIndexFieldValues<BM> {
                 for (MiruActivityAndId<MiruInternalActivity> internalActivityAndId : internalActivityAndIds) {
                     MiruInternalActivity activity = internalActivityAndId.activity;
 
-                    MiruTermId[] fieldValues;
-                    MiruSchema.CompositeFieldDefinitions compositeFieldDefinitions = context.schema.getCompositeFieldDefinitions(fieldDefinition.fieldId);
-                    if (compositeFieldDefinitions != null) {
-                        List<MiruTermId> accumFieldValues = Lists.newArrayList();
-                        for (MiruFieldDefinition field : compositeFieldDefinitions.fieldDefinitions) {
-                            MiruTermId[] compositeFieldValues = activity.fieldsValues[field.fieldId];
-                            if (compositeFieldValues != null) {
-                                if (accumFieldValues.isEmpty()) {
-                                    accumFieldValues.addAll(Arrays.asList(compositeFieldValues));
-                                } else {
-                                    List<MiruTermId> tmpFieldValues = Lists.newArrayList();
-                                    for (MiruTermId accumFieldValue : accumFieldValues) {
-                                        for (MiruTermId compositeFieldValue : compositeFieldValues) {
-                                            byte[] concat = Bytes.concat(accumFieldValue.getBytes(), compositeFieldDefinitions.delimiter, compositeFieldValue
-                                                .getBytes());
-                                            tmpFieldValues.add(new MiruTermId(concat));
-                                        }
-                                    }
-                                    accumFieldValues = tmpFieldValues;
-                                }
-                            }
-                        }
-                        fieldValues = accumFieldValues.toArray(new MiruTermId[accumFieldValues.size()]);
-                    } else {
-                        fieldValues = activity.fieldsValues[fieldDefinition.fieldId];
-                    }
+                    MiruTermId[] fieldValues = activity.fieldsValues[fieldDefinition.fieldId];
                     if (fieldValues != null) {
                         if (fieldValues.length > 1 && !fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.multiValued)) {
                             log.warn("Activity {} field {} type {} is not multi-valued but was given {} terms", internalActivityAndId.activity.time,
