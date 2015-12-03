@@ -156,7 +156,7 @@ public class MiruManageServiceTest {
 
     @Test
     public void testRenderSchemaWithLookup() throws Exception {
-        String rendered = miruManageService.renderSchema(new MiruSchemaRegion.SchemaInput(null, "test", 1));
+        String rendered = miruManageService.renderSchema(new MiruSchemaRegion.SchemaInput(null, "test", 1, "lookup"));
         //System.out.println(rendered);
         assertTrue(rendered.contains("<tr><td>1</td><td>0</td></tr>"));
     }

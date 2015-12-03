@@ -233,11 +233,6 @@ public class SipTest {
         }
 
         @Override
-        public boolean copySchema(MiruTenantId fromTenantId, List<MiruTenantId> toTenantIds) throws Exception {
-            return false;
-        }
-
-        @Override
         public void removeHost(MiruHost host) throws Exception {
 
         }

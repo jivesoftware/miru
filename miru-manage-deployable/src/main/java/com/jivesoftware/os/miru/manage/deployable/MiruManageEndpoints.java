@@ -5,6 +5,7 @@ import com.google.common.base.Optional;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.manage.deployable.balancer.CaterpillarSelectHostsStrategy;
 import com.jivesoftware.os.miru.manage.deployable.balancer.MiruRebalanceDirector;
 import com.jivesoftware.os.miru.manage.deployable.balancer.ShiftPredicate;
@@ -43,11 +44,14 @@ public class MiruManageEndpoints {
 
     private final MiruManageService miruManageService;
     private final MiruRebalanceDirector rebalanceDirector;
+    private final MiruClusterRegistry clusterRegistry;
 
     public MiruManageEndpoints(@Context MiruManageService miruManageService,
-        @Context MiruRebalanceDirector rebalanceDirector) {
+        @Context MiruRebalanceDirector rebalanceDirector,
+        @Context MiruClusterRegistry clusterRegistry) {
         this.miruManageService = miruManageService;
         this.rebalanceDirector = rebalanceDirector;
+        this.clusterRegistry = clusterRegistry;
     }
 
     @GET
@@ -110,7 +114,7 @@ public class MiruManageEndpoints {
     @Path("/schema")
     @Produces(MediaType.TEXT_HTML)
     public Response getSchema() {
-        String rendered = miruManageService.renderSchema(new MiruSchemaRegion.SchemaInput(null, null, -1));
+        String rendered = miruManageService.renderSchema(new MiruSchemaRegion.SchemaInput(null, null, -1, "lookup"));
         return Response.ok(rendered).build();
     }
 
@@ -120,11 +124,13 @@ public class MiruManageEndpoints {
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     public Response getSchemaWithLookup(@FormParam("tenantId") @DefaultValue("") String tenantId,
         @FormParam("lookupName") String lookupName,
-        @FormParam("lookupVersion") @DefaultValue("-1") String lookupVersion) {
+        @FormParam("lookupVersion") @DefaultValue("-1") String lookupVersion,
+        @FormParam("action") @DefaultValue("lookup") String action) {
         String rendered = miruManageService.renderSchema(new MiruSchemaRegion.SchemaInput(
             tenantId != null && !tenantId.trim().isEmpty() ? new MiruTenantId(tenantId.trim().getBytes(Charsets.UTF_8)) : null,
             lookupName != null && !lookupName.trim().isEmpty() ? lookupName.trim() : null,
-            lookupVersion != null && !lookupVersion.trim().isEmpty() ? Integer.parseInt(lookupVersion.trim()) : -1));
+            lookupVersion != null && !lookupVersion.trim().isEmpty() ? Integer.parseInt(lookupVersion.trim()) : -1,
+            action));
         return Response.ok(rendered).build();
     }
 

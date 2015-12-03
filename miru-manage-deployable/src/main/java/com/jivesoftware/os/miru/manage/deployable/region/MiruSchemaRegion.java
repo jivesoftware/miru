@@ -44,11 +44,13 @@ public class MiruSchemaRegion implements MiruPageRegion<MiruSchemaRegion.SchemaI
         public final MiruTenantId tenantId;
         public final String lookupName;
         public final int lookupVersion;
+        public final String action;
 
-        public SchemaInput(MiruTenantId tenantId, String lookupName, int lookupVersion) {
+        public SchemaInput(MiruTenantId tenantId, String lookupName, int lookupVersion, String action) {
             this.tenantId = tenantId;
             this.lookupName = lookupName;
             this.lookupVersion = lookupVersion;
+            this.action = action;
         }
     }
 
@@ -63,8 +65,13 @@ public class MiruSchemaRegion implements MiruPageRegion<MiruSchemaRegion.SchemaI
             if (input.tenantId != null) {
                 MiruSchema schema = clusterRegistry.getSchema(input.tenantId);
                 data.put("tenantSchema", schema != null ? mapper.writerWithDefaultPrettyPrinter().writeValueAsString(schema) : "(unregistered)");
-            }
-            if (input.lookupName != null) {
+
+                if (input.action.equals("upgrade")) {
+                    int count = clusterRegistry.upgradeSchema(schema);
+                    data.put("tenantUpgrades", count);
+                }
+            } else if (input.lookupName != null) {
+                MiruSchema matchingSchema = null;
                 List<MiruTenantId> tenantIds = miruWALClient.getAllTenantIds();
                 int matchingCount = 0;
                 int missingCount = 0;
@@ -73,6 +80,9 @@ public class MiruSchemaRegion implements MiruPageRegion<MiruSchemaRegion.SchemaI
                     if (schema != null &&
                         schema.getName().equals(input.lookupName) &&
                         (input.lookupVersion == -1 || schema.getVersion() == input.lookupVersion)) {
+                        if (matchingSchema == null || schema.getVersion() > matchingSchema.getVersion()) {
+                            matchingSchema = schema;
+                        }
                         matchingCount++;
                     } else {
                         missingCount++;
@@ -80,6 +90,14 @@ public class MiruSchemaRegion implements MiruPageRegion<MiruSchemaRegion.SchemaI
                 }
                 data.put("lookupMatching", matchingCount);
                 data.put("lookupMissing", missingCount);
+
+                if (input.action.equals("upgrade")) {
+                    int count = 0;
+                    if (matchingSchema != null) {
+                        count = clusterRegistry.upgradeSchema(matchingSchema);
+                    }
+                    data.put("lookupUpgrades", count);
+                }
             }
         } catch (Exception e) {
             log.error("Unable to retrieve data");
