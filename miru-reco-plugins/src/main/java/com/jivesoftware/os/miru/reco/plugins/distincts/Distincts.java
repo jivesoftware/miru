@@ -121,12 +121,12 @@ public class Distincts {
                         byte[] termBytes = termId.getBytes();
                         for (byte[] prefixAsBytes : prefixesAsBytes) {
                             if (arrayStartsWith(termBytes, prefixAsBytes)) {
-                                return termBitmapStream.stream(termId, bitmap);
+                                return termBitmapStream.stream(termId, bitmaps.copy(bitmap));
                             }
                         }
                         return true;
                     } else {
-                        return termBitmapStream.stream(termId, bitmap);
+                        return termBitmapStream.stream(termId, bitmaps.copy(bitmap));
                     }
                 }, stackBuffer);
                 solutionLog.log(MiruSolutionLogLevel.INFO, "distincts gatherDirect: gather {} ms.", System.currentTimeMillis() - start);
