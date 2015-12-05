@@ -84,7 +84,7 @@ public class CollaborativeFiltering {
         // distinctParents: distinct parents <field1> that I've touched
         Set<MiruTermId> distinctParents = Sets.newHashSet();
 
-        aggregateUtil.gather(bitmaps, requestContext, myOkActivity, fieldId1, gatherBatchSize, solutionLog, (termId, bitmap) -> {
+        aggregateUtil.gather(bitmaps, requestContext, myOkActivity, fieldId1, gatherBatchSize, solutionLog, termId -> {
             distinctParents.add(termId);
             return true;
         }, stackBuffer);
@@ -159,7 +159,7 @@ public class CollaborativeFiltering {
                 solutionLog.log(MiruSolutionLogLevel.TRACE, "remove bitmap {}", remove);
             }
 
-            aggregateUtil.gather(bitmaps, requestContext, remove, fieldId3, gatherBatchSize, solutionLog, (termId, bitmap) -> {
+            aggregateUtil.gather(bitmaps, requestContext, remove, fieldId3, gatherBatchSize, solutionLog, termId -> {
                 distinctParents.add(termId);
                 return true;
             }, stackBuffer);
@@ -184,7 +184,7 @@ public class CollaborativeFiltering {
 
                 Set<MiruTermId> distinctContributorParents = Sets.newHashSet();
                 aggregateUtil.gather(bitmaps, requestContext, contributorOkActivity, fieldId3, gatherBatchSize, solutionLog,
-                    (termId, bitmap) -> {
+                    termId -> {
                         distinctContributorParents.add(termId);
                         return true;
                     },

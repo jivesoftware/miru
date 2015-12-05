@@ -13,9 +13,6 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
-import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
-import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
-import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
@@ -31,6 +28,8 @@ import com.jivesoftware.os.miru.plugin.solution.Question;
 import com.jivesoftware.os.miru.plugin.solution.Waveform;
 import com.jivesoftware.os.miru.reco.plugins.distincts.Distincts;
 import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsQuery;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -61,24 +60,17 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
         this.remotePartition = remotePartition;
     }
 
-    public static void main(String[] args) {
-        double p = 0.0001;
-        int n = 3_000_000;
-
-        System.out.println("bits: " + (long) (-n * Math.log(p) / (Math.log(2) * Math.log(2))));
-    }
-
     @Override
     public <BM extends IBM, IBM> MiruPartitionResponse<AnalyticsAnswer> askLocal(MiruRequestHandle<BM, IBM, ?> handle,
         Optional<TrendingReport> report) throws Exception {
 
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
         MiruRequestContext<BM, IBM, ? extends MiruSipCursor<?>> context = handle.getRequestContext();
-        StackBuffer stackBuffer = new StackBuffer();
 
         MiruSchema schema = context.getSchema();
         int fieldId = schema.getFieldId(request.query.aggregateCountAroundField);
         MiruFieldDefinition fieldDefinition = schema.getFieldDefinition(fieldId);
+        StackBuffer stackBuffer = new StackBuffer();
 
         MiruTermComposer termComposer = context.getTermComposer();
 
@@ -89,7 +81,40 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
         }
 
         long start = System.currentTimeMillis();
-        List<Waveform> waveforms = Lists.newArrayList();
+        Collection<MiruTermId> termIds = Collections.emptyList();
+        if (request.query.distinctQueries.size() == 1) {
+            ArrayList<MiruTermId> termIdsList = Lists.newArrayList();
+            distincts.gatherDirect(handle.getBitmaps(), handle.getRequestContext(), request.query.distinctQueries.get(0), gatherDistinctsBatchSize, solutionLog,
+                termId -> {
+                    termIdsList.add(termId);
+                    return true;
+                });
+            termIds = termIdsList;
+        } else if (request.query.distinctQueries.size() > 1) {
+            Set<MiruTermId> joinTerms = null;
+            for (DistinctsQuery distinctQuery : request.query.distinctQueries) {
+                Set<MiruTermId> queryTerms = Sets.newHashSet();
+                distincts.gatherDirect(handle.getBitmaps(), handle.getRequestContext(), distinctQuery, gatherDistinctsBatchSize, solutionLog,
+                    termId -> {
+                        queryTerms.add(termId);
+                        return true;
+                    });
+                if (joinTerms == null) {
+                    joinTerms = queryTerms;
+                } else {
+                    joinTerms.retainAll(queryTerms);
+                }
+            }
+            if (joinTerms != null) {
+                termIds = joinTerms;
+            }
+        }
+        solutionLog.log(MiruSolutionLogLevel.INFO, "Gathered {} distincts for {} queries in {} ms.",
+            termIds.size(), request.query.distinctQueries.size(), (System.currentTimeMillis() - start));
+
+        start = System.currentTimeMillis();
+        Collection<MiruTermId> _termIds = termIds;
+        List<Waveform> waveforms = Lists.newArrayListWithExpectedSize(termIds.size());
         boolean resultsExhausted = analytics.analyze(solutionLog,
             handle,
             context,
@@ -99,52 +124,13 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
             request.query.divideTimeRangeIntoNSegments,
             stackBuffer,
             (Analytics.ToAnalyze<MiruTermId, BM> toAnalyze) -> {
-                if (request.query.distinctQueries.size() == 1) {
-                    distincts.gatherDirect(handle.getBitmaps(),
-                        handle.getRequestContext(),
-                        request.query.distinctQueries.get(0),
-                        gatherDistinctsBatchSize,
-                        solutionLog,
-                        (termId, bitmap) -> {
-                            if (bitmap == null) {
-                                MiruInvertedIndex<BM, IBM> invertedIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary).get(
-                                    fieldId, termId);
-                                Optional<BM> gotIndex = invertedIndex.getIndex(stackBuffer);
-                                if (gotIndex.isPresent()) {
-                                    bitmap = gotIndex.get();
-                                }
-                            }
-                            return bitmap == null || toAnalyze.analyze(termId, bitmap);
-                        });
-                } else if (request.query.distinctQueries.size() > 1) {
-                    //TODO this is really ugly
-                    Set<MiruTermId> joinTerms = null;
-                    for (DistinctsQuery distinctQuery : request.query.distinctQueries) {
-                        Set<MiruTermId> queryTerms = Sets.newHashSet();
-                        distincts.gatherDirect(handle.getBitmaps(), handle.getRequestContext(), distinctQuery, gatherDistinctsBatchSize, solutionLog,
-                            (termId, bitmap) -> {
-                                // might have a bitmap, seems wasteful
-                                queryTerms.add(termId);
-                                return true;
-                            });
-                        if (joinTerms == null) {
-                            joinTerms = queryTerms;
-                        } else {
-                            joinTerms.retainAll(queryTerms);
+                for (MiruTermId termId : _termIds) {
+                    MiruInvertedIndex<BM, IBM> invertedIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary).get(fieldId, termId);
+                    Optional<BM> index = invertedIndex.getIndex(stackBuffer);
+                    if (index.isPresent()) {
+                        if (!toAnalyze.analyze(termId, index.get())) {
+                            return false;
                         }
-                    }
-                    if (joinTerms != null) {
-                        for (MiruTermId termId : joinTerms) {
-                            MiruInvertedIndex<BM, IBM> invertedIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary).get(
-                                fieldId, termId);
-                            Optional<BM> gotIndex = invertedIndex.getIndex(stackBuffer);
-                            if (gotIndex.isPresent()) {
-                                if (!toAnalyze.analyze(termId, gotIndex.get())) {
-                                    break;
-                                }
-                            }
-                        }
-
                     }
                 }
                 return true;
