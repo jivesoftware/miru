@@ -27,11 +27,11 @@ import java.util.concurrent.ConcurrentSkipListMap;
 /**
  * DELTA FORCE
  */
-public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<IBM>, Mergeable {
+public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IBM>, Mergeable {
 
     private final MiruBitmaps<BM, IBM> bitmaps;
     private final TrackError trackError;
-    private final MiruFieldIndex<IBM> backingFieldIndex;
+    private final MiruFieldIndex<BM, IBM> backingFieldIndex;
     private final ConcurrentSkipListMap<MiruTermId, MiruDeltaInvertedIndex.Delta<IBM>>[] fieldIndexDeltas;
     private final ConcurrentHashMap<MiruTermId, TIntLongMap>[] cardinalities;
 
@@ -46,7 +46,8 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
     };
 
     public MiruDeltaFieldIndex(MiruBitmaps<BM, IBM> bitmaps,
-        TrackError trackError, MiruFieldIndex<IBM> backingFieldIndex,
+        TrackError trackError,
+        MiruFieldIndex<BM, IBM> backingFieldIndex,
         MiruFieldDefinition[] fieldDefinitions) {
         this.bitmaps = bitmaps;
         this.trackError = trackError;
@@ -75,7 +76,7 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
 
     @Override
     public void remove(int fieldId, MiruTermId termId, int id, StackBuffer stackBuffer) throws Exception {
-        MiruInvertedIndex<IBM> got = get(fieldId, termId);
+        MiruInvertedIndex<BM, IBM> got = get(fieldId, termId);
         got.remove(id, stackBuffer);
         putCardinalities(fieldId, termId, new int[] { id }, cardinalities[fieldId] != null ? new long[1] : null, false, stackBuffer);
     }
@@ -113,7 +114,7 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
     }
 
     @Override
-    public MiruInvertedIndex<IBM> get(int fieldId, MiruTermId termId) throws Exception {
+    public MiruInvertedIndex<BM, IBM> get(int fieldId, MiruTermId termId) throws Exception {
         MiruDeltaInvertedIndex.Delta<IBM> delta = fieldIndexDeltas[fieldId].get(termId);
         if (delta == null) {
             delta = new MiruDeltaInvertedIndex.Delta<>();
@@ -126,7 +127,7 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
     }
 
     @Override
-    public MiruInvertedIndex<IBM> get(int fieldId, MiruTermId termId, int considerIfIndexIdGreaterThanN) throws Exception {
+    public MiruInvertedIndex<BM, IBM> get(int fieldId, MiruTermId termId, int considerIfIndexIdGreaterThanN) throws Exception {
         MiruDeltaInvertedIndex.Delta<IBM> delta = fieldIndexDeltas[fieldId].get(termId);
         if (delta == null) {
             delta = new MiruDeltaInvertedIndex.Delta<>();
@@ -139,11 +140,11 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
     }
 
     @Override
-    public MiruInvertedIndex<IBM> getOrCreateInvertedIndex(int fieldId, MiruTermId termId) throws Exception {
+    public MiruInvertedIndex<BM, IBM> getOrCreateInvertedIndex(int fieldId, MiruTermId termId) throws Exception {
         return getOrAllocate(fieldId, termId);
     }
 
-    private MiruInvertedIndex<IBM> getOrAllocate(int fieldId, MiruTermId termId) throws Exception {
+    private MiruInvertedIndex<BM, IBM> getOrAllocate(int fieldId, MiruTermId termId) throws Exception {
         MiruDeltaInvertedIndex.Delta<IBM> delta = fieldIndexDeltas[fieldId].get(termId);
         if (delta == null) {
             delta = new MiruDeltaInvertedIndex.Delta<>();

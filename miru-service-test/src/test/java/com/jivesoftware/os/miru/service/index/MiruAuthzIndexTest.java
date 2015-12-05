@@ -31,8 +31,10 @@ import static org.testng.Assert.assertTrue;
 public class MiruAuthzIndexTest {
 
     @Test(dataProvider = "miruAuthzIndexDataProviderWithData")
-    public void storeAndGetAuthz(MiruAuthzIndex<ImmutableRoaringBitmap> miruAuthzIndex, MiruAuthzUtils miruAuthzUtils, Map<String, List<Integer>> bitsIn)
-        throws Exception {
+    public void storeAndGetAuthz(MiruAuthzIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> miruAuthzIndex,
+        MiruAuthzUtils miruAuthzUtils,
+        Map<String, List<Integer>> bitsIn) throws Exception {
+
         StackBuffer stackBuffer = new StackBuffer();
         for (Map.Entry<String, List<Integer>> entry : bitsIn.entrySet()) {
             String authz = entry.getKey();
@@ -56,23 +58,25 @@ public class MiruAuthzIndexTest {
         MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, MiruPartitionId.of(1), new MiruHost("localhost", 10000));
         MiruAuthzUtils<MutableRoaringBitmap, ImmutableRoaringBitmap> miruAuthzUtils = new MiruAuthzUtils<>(bitmaps);
 
-        MiruAuthzIndex<ImmutableRoaringBitmap> unmergedLargeMiruHybridAuthzIndex = buildInMemoryContext(4, bitmaps, coord).authzIndex;
+        MiruAuthzIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> unmergedLargeMiruHybridAuthzIndex = buildInMemoryContext(4, bitmaps, coord).authzIndex;
         Map<String, List<Integer>> unmergedLargeHybridBitsIn = populateAuthzIndex(unmergedLargeMiruHybridAuthzIndex, miruAuthzUtils, 2, false, false);
 
-        MiruAuthzIndex<ImmutableRoaringBitmap> unmergedLargeMiruOnDiskAuthzIndex = buildOnDiskContext(4, bitmaps, coord).authzIndex;
+        MiruAuthzIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> unmergedLargeMiruOnDiskAuthzIndex = buildOnDiskContext(4, bitmaps, coord).authzIndex;
         Map<String, List<Integer>> unmergedLargeOnDiskBitsIn = populateAuthzIndex(unmergedLargeMiruOnDiskAuthzIndex, miruAuthzUtils, 2, false, false);
 
-        MiruAuthzIndex<ImmutableRoaringBitmap> mergedLargeMiruHybridAuthzIndex = buildInMemoryContext(4, bitmaps, coord).authzIndex;
+        MiruAuthzIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> mergedLargeMiruHybridAuthzIndex = buildInMemoryContext(4, bitmaps, coord).authzIndex;
         Map<String, List<Integer>> mergedLargeHybridBitsIn = populateAuthzIndex(mergedLargeMiruHybridAuthzIndex, miruAuthzUtils, 2, false, true);
 
-        MiruAuthzIndex<ImmutableRoaringBitmap> mergedLargeMiruOnDiskAuthzIndex = buildOnDiskContext(4, bitmaps, coord).authzIndex;
+        MiruAuthzIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> mergedLargeMiruOnDiskAuthzIndex = buildOnDiskContext(4, bitmaps, coord).authzIndex;
         Map<String, List<Integer>> mergedLargeOnDiskBitsIn = populateAuthzIndex(mergedLargeMiruOnDiskAuthzIndex, miruAuthzUtils, 2, false, true);
 
-        MiruAuthzIndex<ImmutableRoaringBitmap> partiallyMergedLargeMiruHybridAuthzIndex = buildInMemoryContext(4, bitmaps, coord).authzIndex;
+        MiruAuthzIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> partiallyMergedLargeMiruHybridAuthzIndex = buildInMemoryContext(4, bitmaps,
+            coord).authzIndex;
         Map<String, List<Integer>> partiallyMergedLargeHybridBitsIn = populateAuthzIndex(partiallyMergedLargeMiruHybridAuthzIndex, miruAuthzUtils, 2,
             true, false);
 
-        MiruAuthzIndex<ImmutableRoaringBitmap> partiallyMergedLargeMiruOnDiskAuthzIndex = buildOnDiskContext(4, bitmaps, coord).authzIndex;
+        MiruAuthzIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> partiallyMergedLargeMiruOnDiskAuthzIndex = buildOnDiskContext(4, bitmaps,
+            coord).authzIndex;
         Map<String, List<Integer>> partiallyMergedLargeOnDiskBitsIn = populateAuthzIndex(partiallyMergedLargeMiruOnDiskAuthzIndex, miruAuthzUtils, 2,
             true, false);
 
@@ -86,7 +90,7 @@ public class MiruAuthzIndexTest {
         };
     }
 
-    private <BM extends IBM, IBM> Map<String, List<Integer>> populateAuthzIndex(MiruAuthzIndex<ImmutableRoaringBitmap> authzIndex,
+    private <BM extends IBM, IBM> Map<String, List<Integer>> populateAuthzIndex(MiruAuthzIndex<BM, IBM> authzIndex,
         MiruAuthzUtils<BM, IBM> miruAuthzUtils,
         int size,
         boolean mergeMiddle,

@@ -12,7 +12,7 @@ import com.jivesoftware.os.miru.service.index.auth.MiruAuthzUtils;
 import com.jivesoftware.os.miru.plugin.partition.TrackError;
 
 /** @author jonathan */
-public class MiruFilerAuthzIndex<BM extends IBM, IBM> implements MiruAuthzIndex<IBM> {
+public class MiruFilerAuthzIndex<BM extends IBM, IBM> implements MiruAuthzIndex<BM, IBM> {
 
     private final MiruBitmaps<BM, IBM> bitmaps;
     private final TrackError trackError;
@@ -36,7 +36,7 @@ public class MiruFilerAuthzIndex<BM extends IBM, IBM> implements MiruAuthzIndex<
     }
 
     @Override
-    public MiruInvertedIndex<IBM> getAuthz(String authz) throws Exception {
+    public MiruInvertedIndex<BM, IBM> getAuthz(String authz) throws Exception {
         return new MiruFilerInvertedIndex<>(bitmaps, trackError, MiruAuthzUtils.key(authz), keyedStore, -1, stripingLocksProvider.lock(authz, 0));
     }
 

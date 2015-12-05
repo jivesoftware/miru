@@ -20,7 +20,7 @@ import java.util.List;
 /**
  * @author jonathan
  */
-public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<IBM> {
+public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IBM> {
 
     private final MiruBitmaps<BM, IBM> bitmaps;
     private final TrackError trackError;
@@ -74,21 +74,21 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
     }
 
     @Override
-    public MiruInvertedIndex<IBM> get(int fieldId, MiruTermId termId) throws Exception {
+    public MiruInvertedIndex<BM, IBM> get(int fieldId, MiruTermId termId) throws Exception {
         return getIndex(fieldId, termId, -1);
     }
 
     @Override
-    public MiruInvertedIndex<IBM> get(int fieldId, MiruTermId termId, int considerIfIndexIdGreaterThanN) throws Exception {
+    public MiruInvertedIndex<BM, IBM> get(int fieldId, MiruTermId termId, int considerIfIndexIdGreaterThanN) throws Exception {
         return getIndex(fieldId, termId, considerIfIndexIdGreaterThanN);
     }
 
     @Override
-    public MiruInvertedIndex<IBM> getOrCreateInvertedIndex(int fieldId, MiruTermId term) throws Exception {
+    public MiruInvertedIndex<BM, IBM> getOrCreateInvertedIndex(int fieldId, MiruTermId term) throws Exception {
         return getIndex(fieldId, term, -1);
     }
 
-    private MiruInvertedIndex<IBM> getIndex(int fieldId, MiruTermId termId, int considerIfIndexIdGreaterThanN) throws Exception {
+    private MiruInvertedIndex<BM, IBM> getIndex(int fieldId, MiruTermId termId, int considerIfIndexIdGreaterThanN) throws Exception {
         return new MiruFilerInvertedIndex<>(bitmaps, trackError, termId.getBytes(), indexes[fieldId],
             considerIfIndexIdGreaterThanN, stripingLocksProvider.lock(termId, 0));
     }

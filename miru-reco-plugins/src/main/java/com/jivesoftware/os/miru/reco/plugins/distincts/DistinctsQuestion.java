@@ -35,7 +35,7 @@ public class DistinctsQuestion implements Question<DistinctsQuery, DistinctsAnsw
         Optional<DistinctsReport> report) throws Exception {
 
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
-        MiruRequestContext<IBM, ?> context = handle.getRequestContext();
+        MiruRequestContext<BM, IBM, ?> context = handle.getRequestContext();
         MiruBitmaps<BM, IBM> bitmaps = handle.getBitmaps();
 
         //TODO config batch size

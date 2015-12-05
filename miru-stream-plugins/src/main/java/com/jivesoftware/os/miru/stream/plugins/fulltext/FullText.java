@@ -45,7 +45,7 @@ public class FullText {
     }
 
     public <BM extends IBM, IBM> FullTextAnswer getActivityScores(MiruBitmaps<BM, IBM> bitmaps,
-        MiruRequestContext<IBM, ?> requestContext,
+        MiruRequestContext<BM, IBM, ?> requestContext,
         MiruRequest<FullTextQuery> request,
         Optional<FullTextReport> lastReport,
         BM answer,
@@ -74,7 +74,7 @@ public class FullText {
     }
 
     private <BM extends IBM, IBM> List<ActivityScore> collectTfIdf(MiruBitmaps<BM, IBM> bitmaps,
-        MiruRequestContext<IBM, ?> requestContext,
+        MiruRequestContext<BM, IBM, ?> requestContext,
         MiruRequest<FullTextQuery> request,
         Optional<FullTextReport> lastReport,
         BM answer,
@@ -82,7 +82,7 @@ public class FullText {
         StackBuffer stackBuffer) throws Exception {
 
         MiruActivityInternExtern internExtern = miruProvider.getActivityInternExtern(request.tenantId);
-        MiruFieldIndex<IBM> primaryFieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
+        MiruFieldIndex<BM, IBM> primaryFieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
 
         int desiredNumberOfResults = request.query.desiredNumberOfResults;
         int alreadyScoredCount = lastReport.isPresent() ? lastReport.get().scoredActivities : 0;
@@ -140,10 +140,10 @@ public class FullText {
         return activityScores;
     }
 
-    private <BM extends IBM, IBM> void batchTfIdf(MiruRequestContext<IBM, ?> requestContext,
+    private <BM extends IBM, IBM> void batchTfIdf(MiruRequestContext<BM, IBM, ?> requestContext,
         MiruRequest<FullTextQuery> request,
         MiruActivityInternExtern internExtern,
-        MiruFieldIndex<BM> primaryFieldIndex,
+        MiruFieldIndex<BM, IBM> primaryFieldIndex,
         Map<FieldAndTermId, Float> termMultipliers,
         MinMaxPriorityQueue<RawBitScore> scored,
         float minScore,
@@ -184,7 +184,7 @@ public class FullText {
     }
 
     private <BM extends IBM, IBM> List<ActivityScore> collectTime(MiruBitmaps<BM, IBM> bitmaps,
-        MiruRequestContext<IBM, ?> requestContext,
+        MiruRequestContext<BM, IBM, ?> requestContext,
         MiruRequest<FullTextQuery> request,
         Optional<FullTextReport> lastReport,
         BM answer,

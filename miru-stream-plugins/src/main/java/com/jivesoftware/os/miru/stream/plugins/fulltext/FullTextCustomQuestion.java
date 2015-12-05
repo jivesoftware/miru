@@ -55,7 +55,7 @@ public class FullTextCustomQuestion implements Question<FullTextQuery, FullTextA
         throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
-        MiruRequestContext<IBM, ?> context = handle.getRequestContext();
+        MiruRequestContext<BM, IBM, ?> context = handle.getRequestContext();
         MiruBitmaps<BM, IBM> bitmaps = handle.getBitmaps();
 
         MiruTimeRange timeRange = request.query.timeRange;

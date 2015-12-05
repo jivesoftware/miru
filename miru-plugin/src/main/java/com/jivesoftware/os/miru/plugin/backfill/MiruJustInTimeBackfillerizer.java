@@ -48,7 +48,7 @@ public class MiruJustInTimeBackfillerizer {
     }
 
     public <BM extends IBM, IBM> void backfill(final MiruBitmaps<BM, IBM> bitmaps,
-        final MiruRequestContext<IBM, ?> requestContext,
+        final MiruRequestContext<BM, IBM, ?> requestContext,
         final MiruFilter streamFilter,
         final MiruSolutionLog solutionLog,
         final MiruTenantId tenantId,

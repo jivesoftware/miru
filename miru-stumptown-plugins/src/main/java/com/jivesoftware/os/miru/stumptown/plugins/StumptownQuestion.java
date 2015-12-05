@@ -54,7 +54,7 @@ public class StumptownQuestion implements Question<StumptownQuery, StumptownAnsw
         StackBuffer stackBuffer = new StackBuffer();
 
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
-        MiruRequestContext<IBM, ?> context = handle.getRequestContext();
+        MiruRequestContext<BM, IBM, ?> context = handle.getRequestContext();
         MiruBitmaps<BM, IBM> bitmaps = handle.getBitmaps();
 
         // Start building up list of bitmap operations to run

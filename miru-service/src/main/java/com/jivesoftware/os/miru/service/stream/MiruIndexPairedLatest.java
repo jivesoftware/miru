@@ -28,7 +28,7 @@ import java.util.concurrent.Future;
 /**
  *
  */
-public class MiruIndexPairedLatest<BM> {
+public class MiruIndexPairedLatest<BM extends IBM, IBM> {
 
     private final static MetricLogger log = MetricLoggerFactory.getLogger();
 
@@ -36,7 +36,7 @@ public class MiruIndexPairedLatest<BM> {
 
     // Answers the question,
     // "For each distinct value of this field, what is the latest activity against each distinct value of the related field?"
-    public List<Future<List<PairedLatestWork>>> compose(MiruContext<BM, ?> context,
+    public List<Future<List<PairedLatestWork>>> compose(MiruContext<BM, IBM, ?> context,
         final List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds,
         ExecutorService indexExecutor)
         throws Exception {
@@ -85,7 +85,7 @@ public class MiruIndexPairedLatest<BM> {
         return workFutures;
     }
 
-    public Future<List<PairedLatestWork>> prepare(final MiruContext<BM, ?> context,
+    public Future<List<PairedLatestWork>> prepare(final MiruContext<BM, IBM, ?> context,
         final List<Future<List<PairedLatestWork>>> pairedLatestWorkFutures,
         ExecutorService indexExecutor) throws Exception {
 
@@ -99,7 +99,7 @@ public class MiruIndexPairedLatest<BM> {
         });
     }
 
-    public List<Future<?>> index(final MiruContext<BM, ?> context,
+    public List<Future<?>> index(final MiruContext<BM, IBM, ?> context,
         MiruTenantId tenantId, Future<List<PairedLatestWork>> pairedLatestWorksFuture,
         final boolean repair,
         ExecutorService indexExecutor)
@@ -107,8 +107,8 @@ public class MiruIndexPairedLatest<BM> {
 
         List<PairedLatestWork> pairedLatestWorks = pairedLatestWorksFuture.get();
 
-        final MiruFieldIndex<BM> allFieldIndex = context.fieldIndexProvider.getFieldIndex(MiruFieldType.primary);
-        final MiruFieldIndex<BM> pairedLatestFieldIndex = context.fieldIndexProvider.getFieldIndex(MiruFieldType.pairedLatest);
+        final MiruFieldIndex<BM, IBM> allFieldIndex = context.fieldIndexProvider.getFieldIndex(MiruFieldType.primary);
+        final MiruFieldIndex<BM, IBM> pairedLatestFieldIndex = context.fieldIndexProvider.getFieldIndex(MiruFieldType.pairedLatest);
         int callableCount = 0;
         List<Future<?>> futures = Lists.newArrayListWithCapacity(pairedLatestWorks.size());
         for (final PairedLatestWork pairedLatestWork : pairedLatestWorks) {
@@ -119,14 +119,14 @@ public class MiruIndexPairedLatest<BM> {
 
                 MiruFieldDefinition aggregateFieldDefinition = context.schema.getFieldDefinition(pairedLatestWork.aggregateFieldId);
                 MiruTermId pairedLatestTerm = indexUtil.makePairedLatestTerm(fieldValue, aggregateFieldDefinition.name);
-                MiruInvertedIndex<BM> invertedIndex = pairedLatestFieldIndex
+                MiruInvertedIndex<BM, IBM> invertedIndex = pairedLatestFieldIndex
                     .getOrCreateInvertedIndex(pairedLatestWork.fieldId, pairedLatestTerm);
 
-                List<BM> aggregateBitmaps = Lists.newArrayListWithCapacity(idAndTerms.size());
+                List<IBM> aggregateBitmaps = Lists.newArrayListWithCapacity(idAndTerms.size());
                 TIntList ids = new TIntArrayList(idAndTerms.size());
                 for (IdAndTerm idAndTerm : idAndTerms) {
                     MiruTermId aggregateFieldValue = idAndTerm.term;
-                    MiruInvertedIndex<BM> aggregateInvertedIndex = allFieldIndex.getOrCreateInvertedIndex(
+                    MiruInvertedIndex<BM, IBM> aggregateInvertedIndex = allFieldIndex.getOrCreateInvertedIndex(
                         pairedLatestWork.aggregateFieldId, aggregateFieldValue);
                     Optional<BM> aggregateBitmap = aggregateInvertedIndex.getIndexUnsafe(stackBuffer);
                     if (aggregateBitmap.isPresent()) {

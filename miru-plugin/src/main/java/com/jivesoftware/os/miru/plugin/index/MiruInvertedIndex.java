@@ -8,16 +8,7 @@ import java.util.List;
  *
  * @author jonathan
  */
-public interface MiruInvertedIndex<IBM> extends MiruInvertedIndexAppender, MiruTxIndex<IBM> {
-
-    /**
-     * Gets the raw index in a safe manner. The returned index is guaranteed to be free of concurrent writes,
-     * so this method is safe to use even if the calling thread does not hold the context's write lock.
-     *
-     * @return the raw safe index
-     * @throws Exception
-     */
-    Optional<IBM> getIndex(StackBuffer stackBuffer) throws Exception;
+public interface MiruInvertedIndex<BM extends IBM, IBM> extends MiruInvertedIndexAppender, MiruGetIndex<BM>, MiruTxIndex<IBM> {
 
     /**
      * Gets the raw index in an unsafe manner. The returned index is not guaranteed to be free of concurrent writes,
@@ -26,7 +17,7 @@ public interface MiruInvertedIndex<IBM> extends MiruInvertedIndexAppender, MiruT
      * @return the raw unsafe index
      * @throws Exception
      */
-    Optional<IBM> getIndexUnsafe(StackBuffer stackBuffer) throws Exception;
+    Optional<BM> getIndexUnsafe(StackBuffer stackBuffer) throws Exception;
 
     void replaceIndex(IBM index, int setLastId, StackBuffer stackBuffer) throws Exception;
 

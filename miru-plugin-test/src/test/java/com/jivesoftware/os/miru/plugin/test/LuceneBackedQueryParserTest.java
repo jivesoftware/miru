@@ -55,13 +55,13 @@ public class LuceneBackedQueryParserTest {
     private final MiruTermComposer termComposer = new MiruTermComposer(StandardCharsets.UTF_8, termInterner);
 
     private TestFieldIndex fieldIndex;
-    private MiruFieldIndexProvider<RoaringBitmap> fieldIndexProvider;
+    private MiruFieldIndexProvider<RoaringBitmap, RoaringBitmap> fieldIndexProvider;
 
     @BeforeMethod
     public void setUp() throws Exception {
         fieldIndex = new TestFieldIndex(2);
         @SuppressWarnings("unchecked")
-        MiruFieldIndex<RoaringBitmap>[] indexes = (MiruFieldIndex<RoaringBitmap>[]) new MiruFieldIndex[]{
+        MiruFieldIndex<RoaringBitmap, RoaringBitmap>[] indexes = (MiruFieldIndex<RoaringBitmap, RoaringBitmap>[]) new MiruFieldIndex[]{
             fieldIndex,
             null,
             null,
@@ -132,7 +132,7 @@ public class LuceneBackedQueryParserTest {
         return new MiruTermId(term.getBytes(StandardCharsets.UTF_8));
     }
 
-    private static class TestFieldIndex implements MiruFieldIndex<RoaringBitmap> {
+    private static class TestFieldIndex implements MiruFieldIndex<RoaringBitmap, RoaringBitmap> {
 
         private final NavigableMap<MiruTermId, RoaringBitmap>[] indexes;
 
@@ -151,12 +151,12 @@ public class LuceneBackedQueryParserTest {
         }
 
         @Override
-        public MiruInvertedIndex<RoaringBitmap> get(int fieldId, MiruTermId termId) throws Exception {
+        public MiruInvertedIndex<RoaringBitmap, RoaringBitmap> get(int fieldId, MiruTermId termId) throws Exception {
             return new TestInvertedIndex(fieldId, termId);
         }
 
         @Override
-        public MiruInvertedIndex<RoaringBitmap> get(int fieldId, MiruTermId termId, int considerIfIndexIdGreaterThanN) throws Exception {
+        public MiruInvertedIndex<RoaringBitmap, RoaringBitmap> get(int fieldId, MiruTermId termId, int considerIfIndexIdGreaterThanN) throws Exception {
             return new TestInvertedIndex(fieldId, termId);
         }
 
@@ -174,7 +174,7 @@ public class LuceneBackedQueryParserTest {
         }
 
         @Override
-        public MiruInvertedIndex<RoaringBitmap> getOrCreateInvertedIndex(int fieldId, MiruTermId term) throws Exception {
+        public MiruInvertedIndex<RoaringBitmap, RoaringBitmap> getOrCreateInvertedIndex(int fieldId, MiruTermId term) throws Exception {
             throw new UnsupportedOperationException("Nope");
         }
 
@@ -213,7 +213,7 @@ public class LuceneBackedQueryParserTest {
             throw new UnsupportedOperationException("Nope");
         }
 
-        private class TestInvertedIndex implements MiruInvertedIndex<RoaringBitmap> {
+        private class TestInvertedIndex implements MiruInvertedIndex<RoaringBitmap, RoaringBitmap> {
 
             private final int fieldId;
             private final MiruTermId termId;

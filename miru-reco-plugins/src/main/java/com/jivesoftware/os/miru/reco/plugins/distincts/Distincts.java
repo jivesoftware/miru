@@ -11,7 +11,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
-import com.jivesoftware.os.miru.plugin.index.TermIdStream;
+import com.jivesoftware.os.miru.plugin.index.TermBitmapStream;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
@@ -36,7 +36,7 @@ public class Distincts {
     }
 
     public <BM extends IBM, IBM> DistinctsAnswer gather(MiruBitmaps<BM, IBM> bitmaps,
-        MiruRequestContext<IBM, ?> requestContext,
+        MiruRequestContext<BM, IBM, ?> requestContext,
         final DistinctsQuery query,
         int gatherBatchSize,
         MiruSolutionLog solutionLog)
@@ -46,7 +46,8 @@ public class Distincts {
         MiruFieldDefinition fieldDefinition = requestContext.getSchema().getFieldDefinition(fieldId);
 
         List<String> results = Lists.newArrayList();
-        gatherDirect(bitmaps, requestContext, query, gatherBatchSize, solutionLog, input -> results.add(termComposer.decompose(fieldDefinition, input)));
+        gatherDirect(bitmaps, requestContext, query, gatherBatchSize, solutionLog,
+            (termId, bitmap) -> results.add(termComposer.decompose(fieldDefinition, termId)));
 
         boolean resultsExhausted = query.timeRange.smallestTimestamp > requestContext.getTimeIndex().getLargestTimestamp();
         int collectedDistincts = results.size();
@@ -56,11 +57,11 @@ public class Distincts {
     }
 
     public <BM extends IBM, IBM> void gatherDirect(MiruBitmaps<BM, IBM> bitmaps,
-        MiruRequestContext<IBM, ?> requestContext,
+        MiruRequestContext<BM, IBM, ?> requestContext,
         DistinctsQuery query,
         int gatherBatchSize,
         MiruSolutionLog solutionLog,
-        TermIdStream termIdStream) throws Exception {
+        TermBitmapStream<BM> termBitmapStream) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
 
         log.debug("Gather distincts for query={}", query);
@@ -81,7 +82,7 @@ public class Distincts {
                 }
 
                 requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary)
-                    .streamTermIdsForField(fieldId, ranges, termIdStream, stackBuffer);
+                    .streamTermIdsForField(fieldId, ranges, termId -> termBitmapStream.stream(termId, null), stackBuffer);
             } else {
                 long start = System.currentTimeMillis();
                 final byte[][] prefixesAsBytes;
@@ -114,32 +115,21 @@ public class Distincts {
                 solutionLog.log(MiruSolutionLogLevel.INFO, "distincts gatherDirect: setup {} ms.", System.currentTimeMillis() - start);
 
                 start = System.currentTimeMillis();
-                Set<MiruTermId> termIds = Sets.newHashSet();
                 //TODO expose batch size to query?
-                aggregateUtil.gather(bitmaps, requestContext, result, fieldId, gatherBatchSize, solutionLog, termIds, stackBuffer);
-                solutionLog.log(MiruSolutionLogLevel.INFO, "distincts gatherDirect: gather {} ms.", System.currentTimeMillis() - start);
-
-                if (prefixesAsBytes.length > 0) {
-                    start = System.currentTimeMillis();
-                    termIds = Sets.filter(termIds, input -> {
-                        if (input != null) {
-                            byte[] termBytes = input.getBytes();
-                            for (byte[] prefixAsBytes : prefixesAsBytes) {
-                                if (arrayStartsWith(termBytes, prefixAsBytes)) {
-                                    return true;
-                                }
+                aggregateUtil.gather(bitmaps, requestContext, result, fieldId, gatherBatchSize, solutionLog, (termId, bitmap) -> {
+                    if (prefixesAsBytes.length > 0) {
+                        byte[] termBytes = termId.getBytes();
+                        for (byte[] prefixAsBytes : prefixesAsBytes) {
+                            if (arrayStartsWith(termBytes, prefixAsBytes)) {
+                                return termBitmapStream.stream(termId, bitmap);
                             }
                         }
-                        return false;
-                    });
-                    solutionLog.log(MiruSolutionLogLevel.INFO, "distincts gatherDirect: prefix {} ms.", System.currentTimeMillis() - start);
-                }
-
-                start = System.currentTimeMillis();
-                for (MiruTermId termId : termIds) {
-                    termIdStream.stream(termId);
-                }
-                solutionLog.log(MiruSolutionLogLevel.INFO, "distincts gatherDirect: stream {} ms.", System.currentTimeMillis() - start);
+                        return true;
+                    } else {
+                        return termBitmapStream.stream(termId, bitmap);
+                    }
+                }, stackBuffer);
+                solutionLog.log(MiruSolutionLogLevel.INFO, "distincts gatherDirect: gather {} ms.", System.currentTimeMillis() - start);
             }
         }
     }

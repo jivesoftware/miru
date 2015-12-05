@@ -2,10 +2,12 @@ package com.jivesoftware.os.miru.analytics.plugins.analytics;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
+import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
@@ -43,7 +45,10 @@ public class AnalyticsQuestion implements Question<AnalyticsQuery, AnalyticsAnsw
         Optional<AnalyticsReport> report) throws Exception {
 
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
-        MiruRequestContext<IBM, ?> context = handle.getRequestContext();
+        MiruRequestContext<BM, IBM, ?> context = handle.getRequestContext();
+        MiruBitmaps<BM, IBM> bitmaps = handle.getBitmaps();
+        StackBuffer stackBuffer = new StackBuffer();
+
         List<Waveform> waveforms = Lists.newArrayListWithCapacity(request.query.analyticsFilters.size());
         int segments = request.query.divideTimeRangeIntoNSegments;
         boolean resultsExhausted = analytics.analyze(solutionLog,
@@ -51,10 +56,15 @@ public class AnalyticsQuestion implements Question<AnalyticsQuery, AnalyticsAnsw
             context,
             request.authzExpression,
             request.query.timeRange,
-            request.query.constraintsFilter, segments,
-            (Analytics.ToAnalyze<String> toAnalyze) -> {
+            request.query.constraintsFilter,
+            segments,
+            stackBuffer,
+            (Analytics.ToAnalyze<String, BM> toAnalyze) -> {
                 for (Map.Entry<String, MiruFilter> entry : request.query.analyticsFilters.entrySet()) {
-                    if (!toAnalyze.analyze(entry.getKey(), entry.getValue())) {
+                    BM waveformFiltered = aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(),
+                        entry.getValue(), solutionLog, null, context.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
+
+                    if (!toAnalyze.analyze(entry.getKey(), waveformFiltered)) {
                         return false;
                     }
                 }

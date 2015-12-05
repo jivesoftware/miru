@@ -229,11 +229,11 @@ public class MiruService implements Miru {
 
     private <BM extends IBM, IBM> String inspect(MiruQueryablePartition<BM, IBM> partition, String fieldName, String termValue) throws Exception {
         try (MiruRequestHandle<BM, IBM, ?> handle = partition.inspectRequestHandle()) {
-            MiruRequestContext<IBM, ?> requestContext = handle.getRequestContext();
+            MiruRequestContext<BM, IBM, ?> requestContext = handle.getRequestContext();
             int fieldId = requestContext.getSchema().getFieldId(fieldName);
             MiruFieldDefinition fieldDefinition = requestContext.getSchema().getFieldDefinition(fieldId);
             StackBuffer stackBuffer = new StackBuffer();
-            Optional<IBM> index = requestContext.getFieldIndexProvider()
+            Optional<BM> index = requestContext.getFieldIndexProvider()
                 .getFieldIndex(MiruFieldType.primary)
                 .get(fieldId, requestContext.getTermComposer().compose(fieldDefinition, termValue))
                 .getIndex(stackBuffer);

@@ -9,13 +9,13 @@ import java.util.List;
 /**
  * @author jonathan
  */
-public interface MiruFieldIndex<IBM> {
+public interface MiruFieldIndex<BM extends IBM, IBM> {
 
-    MiruInvertedIndex<IBM> get(int fieldId, MiruTermId termId) throws Exception;
+    MiruInvertedIndex<BM, IBM> get(int fieldId, MiruTermId termId) throws Exception;
 
-    MiruInvertedIndex<IBM> get(int fieldId, MiruTermId termId, int considerIfIndexIdGreaterThanN) throws Exception;
+    MiruInvertedIndex<BM, IBM> get(int fieldId, MiruTermId termId, int considerIfIndexIdGreaterThanN) throws Exception;
 
-    MiruInvertedIndex<IBM> getOrCreateInvertedIndex(int fieldId, MiruTermId term) throws Exception;
+    MiruInvertedIndex<BM, IBM> getOrCreateInvertedIndex(int fieldId, MiruTermId term) throws Exception;
 
     void append(int fieldId, MiruTermId termId, int[] ids, long[] counts, StackBuffer stackBuffer) throws Exception;
 
@@ -33,42 +33,4 @@ public interface MiruFieldIndex<IBM> {
 
     void mergeCardinalities(int fieldId, MiruTermId termId, int[] ids, long[] counts, StackBuffer stackBuffer) throws Exception;
 
-    class IndexKey {
-
-        public final long id;
-        public final byte[] keyBytes;
-
-        public IndexKey(long id, byte[] keyBytes) {
-            this.id = id;
-            this.keyBytes = keyBytes;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
-            }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
-            }
-
-            IndexKey indexKey = (IndexKey) o;
-
-            if (id != indexKey.id) {
-                return false;
-            }
-            if (!Arrays.equals(keyBytes, indexKey.keyBytes)) {
-                return false;
-            }
-
-            return true;
-        }
-
-        @Override
-        public int hashCode() {
-            int result = (int) (id ^ (id >>> 32));
-            result = 31 * result + (keyBytes != null ? Arrays.hashCode(keyBytes) : 0);
-            return result;
-        }
-    }
 }

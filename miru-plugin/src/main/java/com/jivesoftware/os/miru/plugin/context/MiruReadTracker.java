@@ -19,7 +19,7 @@ public class MiruReadTracker {
     }
 
     public <BM extends IBM, IBM> void read(MiruBitmaps<BM, IBM> bitmaps,
-        MiruRequestContext<IBM, ?> context,
+        MiruRequestContext<BM, IBM, ?> context,
         MiruStreamId streamId,
         MiruFilter filter,
         MiruSolutionLog solutionLog,
@@ -41,7 +41,7 @@ public class MiruReadTracker {
     }
 
     public <BM extends IBM, IBM> void unread(MiruBitmaps<BM, IBM> bitmaps,
-        MiruRequestContext<IBM, ?> context,
+        MiruRequestContext<BM, IBM, ?> context,
         MiruStreamId streamId,
         MiruFilter filter,
         MiruSolutionLog solutionLog,
@@ -63,7 +63,7 @@ public class MiruReadTracker {
     }
 
     public <BM extends IBM, IBM> void markAllRead(MiruBitmaps<BM, IBM> bitmaps,
-        MiruRequestContext<IBM, ?> context,
+        MiruRequestContext<BM, IBM, ?> context,
         MiruStreamId streamId,
         long timestamp,
         StackBuffer stackBuffer)

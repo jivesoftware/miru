@@ -13,7 +13,7 @@ public interface MiruRequestHandle<BM extends IBM, IBM, S extends MiruSipCursor<
 
     MiruBitmaps<BM, IBM> getBitmaps();
 
-    MiruRequestContext<IBM, S> getRequestContext();
+    MiruRequestContext<BM, IBM, S> getRequestContext();
 
     boolean isLocal();
 

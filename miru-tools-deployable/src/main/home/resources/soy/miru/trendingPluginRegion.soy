@@ -9,8 +9,9 @@
  * @param? toHoursAgo
  * @param? buckets
  * @param? field
- * @param? fieldPrefixes
  * @param? filter
+ * @param? fieldPrefixes
+ * @param? distinctsFilter
  * @param? results
  * @param? summary
  * @param? elapse
@@ -78,6 +79,14 @@
                         </td>
                     </tr>
                     <tr>
+                        <td>Filter</td>
+                        <td>
+                        <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                            class="j-filter-autocomplete j-autocomplete-input j-ui-elem" placeholder="Filter" value="{$filter?:''}"
+                            name="filter" id="filterPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
                         <td>Field Prefixes</td>
                         <td>
                         <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
@@ -86,11 +95,11 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>Filter</td>
+                        <td>Distincts Filter</td>
                         <td>
                         <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
-                            class="j-buckets-autocomplete j-autocomplete-input j-ui-elem" placeholder="Filter" value="{$filter?:''}"
-                            name="filter" id="filterPicker" data-original-title="" title="">
+                            class="j-distinctsFilter-autocomplete j-autocomplete-input j-ui-elem" placeholder="Distincts Filter" value="{$distinctsFilter?:''}"
+                            name="distinctsFilter" id="distinctsFilterPicker" data-original-title="" title="">
                         </td>
                     </tr>
                 </table>

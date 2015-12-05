@@ -6,9 +6,9 @@ import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 /**
  * @author jonathan
  */
-public interface MiruAuthzIndex<IBM> {
+public interface MiruAuthzIndex<BM extends IBM, IBM> {
 
-    MiruInvertedIndex<IBM> getAuthz(String authz) throws Exception;
+    MiruInvertedIndex<BM, IBM> getAuthz(String authz) throws Exception;
 
     IBM getCompositeAuthz(MiruAuthzExpression authzExpression, StackBuffer stackBuffer) throws Exception;
 

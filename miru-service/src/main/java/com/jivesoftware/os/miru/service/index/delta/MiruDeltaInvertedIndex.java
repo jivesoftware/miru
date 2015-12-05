@@ -14,18 +14,18 @@ import java.util.List;
 /**
  * DELTA FORCE
  */
-public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<IBM>, Mergeable {
+public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<BM, IBM>, Mergeable {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final MiruBitmaps<BM, IBM> bitmaps;
     private final TrackError trackError;
-    private final MiruInvertedIndex<IBM> backingIndex;
+    private final MiruInvertedIndex<BM, IBM> backingIndex;
     private final Delta<IBM> delta;
 
     public MiruDeltaInvertedIndex(MiruBitmaps<BM, IBM> bitmaps,
         TrackError trackError,
-        MiruInvertedIndex<IBM> backingIndex,
+        MiruInvertedIndex<BM, IBM> backingIndex,
         Delta<IBM> delta) {
         this.bitmaps = bitmaps;
         this.trackError = trackError;
@@ -34,7 +34,7 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     }
 
     @Override
-    public Optional<IBM> getIndex(StackBuffer stackBuffer) throws Exception {
+    public Optional<BM> getIndex(StackBuffer stackBuffer) throws Exception {
         boolean replaced;
         IBM or;
         IBM andNot;
@@ -43,9 +43,9 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
             or = delta.or;
             andNot = delta.andNot;
         }
-        Optional<IBM> index = replaced ? Optional.<IBM>absent() : backingIndex.getIndex(stackBuffer);
+        Optional<BM> index = replaced ? Optional.<BM>absent() : backingIndex.getIndex(stackBuffer);
         if (index.isPresent()) {
-            IBM got = index.get();
+            BM got = index.get();
             if (bitmaps.isEmpty(got)) {
                 trackError.error("Delta backed by empty bitmap," +
                     " andNot:" + (andNot != null ? bitmaps.cardinality(andNot) : -1) +
@@ -85,7 +85,7 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
             return tx.tx(or != null ? bitmaps.copy(or) : null, null, -1, null);
         } else if (or != null || andNot != null) {
             LOG.inc("txIndex>delta", 1);
-            Optional<IBM> index = getIndex(stackBuffer);
+            Optional<BM> index = getIndex(stackBuffer);
             return tx.tx(index.orNull(), null, -1, null);
         } else {
             LOG.inc("txIndex>backing", 1);
@@ -94,7 +94,7 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     }
 
     @Override
-    public Optional<IBM> getIndexUnsafe(StackBuffer stackBuffer) throws Exception {
+    public Optional<BM> getIndexUnsafe(StackBuffer stackBuffer) throws Exception {
         return getIndex(stackBuffer);
     }
 
@@ -201,7 +201,7 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
                 delta.or = bitmaps.andNot(delta.or, masks);
             }
 
-            Optional<IBM> index = backingIndex.getIndex(stackBuffer);
+            Optional<BM> index = backingIndex.getIndex(stackBuffer);
             if (index.isPresent() || delta.replaced) {
                 BM container = bitmaps.or(masks);
 
@@ -237,10 +237,10 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
                 container = mask;
             }
 
-            Optional<IBM> index = delta.replaced ? Optional.<IBM>absent() : backingIndex.getIndex(stackBuffer);
+            Optional<BM> index = delta.replaced ? Optional.<BM>absent() : backingIndex.getIndex(stackBuffer);
             if (index.isPresent()) {
                 // reduce size of delta
-                IBM got = index.get();
+                BM got = index.get();
                 container = bitmaps.andNotToSourceSize(container, got);
             }
 
@@ -255,7 +255,7 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
                 delta.or = bitmaps.andNot(delta.or, mask);
             }
 
-            Optional<IBM> index = backingIndex.getIndex(stackBuffer);
+            Optional<BM> index = backingIndex.getIndex(stackBuffer);
             if (index.isPresent() || delta.replaced) {
                 IBM container = mask;
 
@@ -291,7 +291,7 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
                 container = mask;
             }
 
-            Optional<IBM> index = delta.replaced ? Optional.<IBM>absent() : backingIndex.getIndex(stackBuffer);
+            Optional<BM> index = delta.replaced ? Optional.<BM>absent() : backingIndex.getIndex(stackBuffer);
             if (index.isPresent()) {
                 // reduce size of delta
                 IBM got = index.get();
@@ -309,7 +309,7 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
         }
 
         synchronized (delta) {
-            Optional<IBM> index = getIndex(stackBuffer);
+            Optional<BM> index = getIndex(stackBuffer);
             if (index.isPresent()) {
                 backingIndex.replaceIndex(index.get(), Math.max(backingIndex.lastId(stackBuffer), delta.lastId), stackBuffer);
             }

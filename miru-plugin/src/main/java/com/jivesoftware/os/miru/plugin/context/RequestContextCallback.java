@@ -8,5 +8,5 @@ import com.jivesoftware.os.miru.api.MiruPartitionState;
  */
 public interface RequestContextCallback {
 
-    void call(MiruRequestContext<?, ?> requestContext) throws Exception;
+    void call(MiruRequestContext<?, ?, ?> requestContext) throws Exception;
 }

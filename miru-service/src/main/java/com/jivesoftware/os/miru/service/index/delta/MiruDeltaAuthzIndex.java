@@ -15,18 +15,18 @@ import java.util.concurrent.ConcurrentMap;
 /**
  * DELTA FORCE
  */
-public class MiruDeltaAuthzIndex<BM extends IBM, IBM> implements MiruAuthzIndex<IBM>, Mergeable {
+public class MiruDeltaAuthzIndex<BM extends IBM, IBM> implements MiruAuthzIndex<BM, IBM>, Mergeable {
 
     private final MiruBitmaps<BM, IBM> bitmaps;
     private final TrackError trackError;
     private final MiruAuthzCache<BM, IBM> cache;
-    private final MiruAuthzIndex<IBM> backingIndex;
+    private final MiruAuthzIndex<BM, IBM> backingIndex;
     private final ConcurrentMap<String, MiruDeltaInvertedIndex<BM, IBM>> authzDeltas = Maps.newConcurrentMap();
 
     public MiruDeltaAuthzIndex(MiruBitmaps<BM, IBM> bitmaps,
         TrackError trackError,
         MiruAuthzCache<BM, IBM> cache,
-        MiruAuthzIndex<IBM> backingIndex) {
+        MiruAuthzIndex<BM, IBM> backingIndex) {
         this.bitmaps = bitmaps;
         this.trackError = trackError;
         this.cache = cache;
@@ -34,7 +34,7 @@ public class MiruDeltaAuthzIndex<BM extends IBM, IBM> implements MiruAuthzIndex<
     }
 
     @Override
-    public MiruInvertedIndex<IBM> getAuthz(String authz) throws Exception {
+    public MiruInvertedIndex<BM, IBM> getAuthz(String authz) throws Exception {
         MiruDeltaInvertedIndex<BM, IBM> delta = authzDeltas.get(authz);
         if (delta != null) {
             return delta;

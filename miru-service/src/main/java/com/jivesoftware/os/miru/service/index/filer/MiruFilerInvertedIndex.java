@@ -25,7 +25,7 @@ import java.util.List;
 /**
  * @author jonathan
  */
-public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<IBM> {
+public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<BM, IBM> {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
@@ -66,7 +66,7 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     }
 
     @Override
-    public Optional<IBM> getIndex(StackBuffer stackBuffer) throws Exception {
+    public Optional<BM> getIndex(StackBuffer stackBuffer) throws Exception {
         if (lastId > Integer.MIN_VALUE && lastId <= considerIfIndexIdGreaterThanN) {
             return Optional.absent();
         }
@@ -146,8 +146,8 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
         return null;
     }
 
-    private IBM getOrCreateIndex(StackBuffer stackBuffer) throws Exception {
-        Optional<IBM> index = getIndex(stackBuffer);
+    private BM getOrCreateIndex(StackBuffer stackBuffer) throws Exception {
+        Optional<BM> index = getIndex(stackBuffer);
         return index.isPresent() ? index.get() : bitmaps.create();
     }
 
@@ -183,7 +183,7 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     }
 
     @Override
-    public Optional<IBM> getIndexUnsafe(StackBuffer stackBuffer) throws Exception {
+    public Optional<BM> getIndexUnsafe(StackBuffer stackBuffer) throws Exception {
         return getIndex(stackBuffer);
     }
 
@@ -193,7 +193,7 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
             return;
         }
         synchronized (mutationLock) {
-            IBM index = getOrCreateIndex(stackBuffer);
+            BM index = getOrCreateIndex(stackBuffer);
             BM r = bitmaps.append(index, ids);
             int appendLastId = ids[ids.length - 1];
             if (appendLastId > lastId) {
@@ -207,7 +207,7 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     @Override
     public void appendAndExtend(List<Integer> ids, int extendToId, StackBuffer stackBuffer) throws Exception {
         synchronized (mutationLock) {
-            IBM index = getOrCreateIndex(stackBuffer);
+            BM index = getOrCreateIndex(stackBuffer);
             BM r = bitmaps.extend(index, ids, extendToId + 1);
 
             if (!ids.isEmpty()) {
@@ -224,7 +224,7 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     @Override
     public void remove(int id, StackBuffer stackBuffer) throws Exception {
         synchronized (mutationLock) {
-            IBM index = getOrCreateIndex(stackBuffer);
+            BM index = getOrCreateIndex(stackBuffer);
             BM r = bitmaps.remove(index, id);
             setIndex(r, lastId, stackBuffer);
         }
@@ -236,7 +236,7 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
             return;
         }
         synchronized (mutationLock) {
-            IBM index = getOrCreateIndex(stackBuffer);
+            BM index = getOrCreateIndex(stackBuffer);
             BM r = bitmaps.set(index, ids);
 
             for (int id : ids) {
@@ -272,7 +272,7 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     @Override
     public void andNot(IBM mask, StackBuffer stackBuffer) throws Exception {
         synchronized (mutationLock) {
-            IBM index = getOrCreateIndex(stackBuffer);
+            BM index = getOrCreateIndex(stackBuffer);
             BM r = bitmaps.andNot(index, mask);
             setIndex(r, lastId, stackBuffer);
         }
@@ -281,7 +281,7 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     @Override
     public void or(IBM mask, StackBuffer stackBuffer) throws Exception {
         synchronized (mutationLock) {
-            IBM index = getOrCreateIndex(stackBuffer);
+            BM index = getOrCreateIndex(stackBuffer);
             BM r = bitmaps.or(Arrays.asList(index, mask));
             setIndex(r, Math.max(lastId, bitmaps.lastSetBit(mask)), stackBuffer);
         }
@@ -290,7 +290,7 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     @Override
     public void andNotToSourceSize(List<IBM> masks, StackBuffer stackBuffer) throws Exception {
         synchronized (mutationLock) {
-            IBM index = getOrCreateIndex(stackBuffer);
+            BM index = getOrCreateIndex(stackBuffer);
             BM andNot = bitmaps.andNotToSourceSize(index, masks);
             setIndex(andNot, lastId, stackBuffer);
         }
@@ -299,7 +299,7 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     @Override
     public void orToSourceSize(IBM mask, StackBuffer stackBuffer) throws Exception {
         synchronized (mutationLock) {
-            IBM index = getOrCreateIndex(stackBuffer);
+            BM index = getOrCreateIndex(stackBuffer);
             BM or = bitmaps.orToSourceSize(index, mask);
             setIndex(or, lastId, stackBuffer);
         }

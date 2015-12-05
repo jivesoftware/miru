@@ -22,20 +22,20 @@ import java.util.concurrent.Future;
 /**
  *
  */
-public class MiruIndexLatest<BM> {
+public class MiruIndexLatest<BM extends IBM, IBM> {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
     private final MiruTermId fieldAggregateTermId = new MiruIndexUtil().makeLatestTerm();
 
-    public List<Future<?>> index(final MiruContext<BM, ?> context,
+    public List<Future<?>> index(final MiruContext<BM, IBM, ?> context,
         MiruTenantId tenantId, List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds,
         final boolean repair,
         ExecutorService indexExecutor)
         throws Exception {
 
-        final MiruFieldIndex<BM> allFieldIndex = context.fieldIndexProvider.getFieldIndex(MiruFieldType.primary);
-        final MiruFieldIndex<BM> latestFieldIndex = context.fieldIndexProvider.getFieldIndex(MiruFieldType.latest);
+        final MiruFieldIndex<BM, IBM> allFieldIndex = context.fieldIndexProvider.getFieldIndex(MiruFieldType.primary);
+        final MiruFieldIndex<BM, IBM> latestFieldIndex = context.fieldIndexProvider.getFieldIndex(MiruFieldType.latest);
         List<MiruFieldDefinition> writeTimeAggregateFields = context.schema.getFieldsWithLatest();
         // rough estimate of necessary capacity
         List<Future<?>> futures = Lists.newArrayListWithCapacity(internalActivityAndIds.size() * writeTimeAggregateFields.size());
@@ -47,12 +47,12 @@ public class MiruIndexLatest<BM> {
                         StackBuffer stackBuffer = new StackBuffer();
                         // Answers the question,
                         // "What is the latest activity against each distinct value of this field?"
-                        MiruInvertedIndex<BM> aggregateIndex = latestFieldIndex.getOrCreateInvertedIndex(
+                        MiruInvertedIndex<BM, IBM> aggregateIndex = latestFieldIndex.getOrCreateInvertedIndex(
                             fieldDefinition.fieldId, fieldAggregateTermId);
 
                         // ["doc"] -> "d1", "d2", "d3", "d4" -> [0, 1(d1), 0, 0, 1(d2), 0, 0, 1(d3), 0, 0, 1(d4)]
                         for (MiruTermId fieldValue : fieldValues) {
-                            MiruInvertedIndex<BM> fieldValueIndex = allFieldIndex.get(fieldDefinition.fieldId, fieldValue);
+                            MiruInvertedIndex<BM, IBM> fieldValueIndex = allFieldIndex.get(fieldDefinition.fieldId, fieldValue);
                             Optional<BM> optionalIndex = fieldValueIndex.getIndexUnsafe(stackBuffer);
                             if (optionalIndex.isPresent()) {
                                 log.inc("count>andNot", 1);

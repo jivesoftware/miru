@@ -53,7 +53,7 @@ public class MiruRemoteQueryablePartitionFactory {
                     }
 
                     @Override
-                    public MiruRequestContext<IBM, S> getRequestContext() {
+                    public MiruRequestContext<BM, IBM, S> getRequestContext() {
                         return null;
                     }
 

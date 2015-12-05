@@ -89,7 +89,7 @@ public interface MiruBitmaps<BM extends IBM, IBM> {
 
     void inPlaceAndNot(BM original, IBM not);
 
-    void inPlaceAndNot(BM original, MiruInvertedIndex<IBM> not, StackBuffer stackBuffer) throws Exception;
+    void inPlaceAndNot(BM original, MiruInvertedIndex<BM, IBM> not, StackBuffer stackBuffer) throws Exception;
 
     BM andNot(IBM original, IBM not);
 
@@ -111,7 +111,7 @@ public interface MiruBitmaps<BM extends IBM, IBM> {
 
     BM andNotToSourceSize(IBM source, List<IBM> masks);
 
-    IBM buildIndexMask(int largestIndex, Optional<IBM> andNotMask);
+    IBM buildIndexMask(int largestIndex, Optional<? extends IBM> andNotMask);
 
     IBM buildTimeRangeMask(MiruTimeIndex timeIndex, long smallestTimestamp, long largestTimestamp, StackBuffer stackBuffer) throws
         IOException, InterruptedException;
