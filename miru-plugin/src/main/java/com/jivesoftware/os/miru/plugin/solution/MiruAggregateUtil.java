@@ -31,6 +31,7 @@ import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -203,25 +204,29 @@ public class MiruAggregateUtil {
             System.arraycopy(ids, 0, actualIds, 0, added);
             BM seen = bitmaps.createWithBits(actualIds);
 
+            Set<MiruTermId> distincts = new HashSet<>();
             gets++;
             if (bitmaps.supportsInPlace()) {
                 bitmaps.inPlaceAndNot(answer, seen);
                 long start = System.nanoTime();
                 List<MiruTermId[]> all = activityIndex.getAll(actualIds, pivotFieldId, stackBuffer);
                 getAllCost += (System.nanoTime() - start);
+                distincts.clear();
                 for (MiruTermId[] termIds : all) {
                     if (termIds != null && termIds.length > 0) {
                         for (MiruTermId termId : termIds) {
-                            MiruInvertedIndex<BM, IBM> invertedIndex = primaryFieldIndex.get(pivotFieldId, termId);
-                            Optional<BM> gotIndex = invertedIndex.getIndex(stackBuffer);
-                            if (gotIndex.isPresent()) {
-                                BM bitmap = gotIndex.get();
-                                if (!termBitmapStream.stream(termId, bitmap)) {
-                                    break done;
+                            if (distincts.add(termId)) {
+                                MiruInvertedIndex<BM, IBM> invertedIndex = primaryFieldIndex.get(pivotFieldId, termId);
+                                Optional<BM> gotIndex = invertedIndex.getIndex(stackBuffer);
+                                if (gotIndex.isPresent()) {
+                                    BM bitmap = gotIndex.get();
+                                    if (!termBitmapStream.stream(termId, bitmap)) {
+                                        break done;
+                                    }
+                                    start = System.nanoTime();
+                                    bitmaps.inPlaceAndNot(answer, bitmap);
+                                    andNotCost += (System.nanoTime() - start);
                                 }
-                                start = System.nanoTime();
-                                bitmaps.inPlaceAndNot(answer, bitmap);
-                                andNotCost += (System.nanoTime() - start);
                             }
                         }
                     }
@@ -229,8 +234,8 @@ public class MiruAggregateUtil {
             } else {
                 List<IBM> andNots = new ArrayList<>();
                 andNots.add(seen);
-                Set<MiruTermId> distincts = Sets.newHashSet();
                 List<MiruTermId[]> all = activityIndex.getAll(actualIds, pivotFieldId, stackBuffer);
+                distincts.clear();
                 for (MiruTermId[] termIds : all) {
                     if (termIds != null && termIds.length > 0) {
                         used++;
