@@ -97,6 +97,10 @@ public class AggregateCounts {
 
         StackBuffer stackBuffer = new StackBuffer();
 
+        if (bitmaps.supportsInPlace()) {
+            answer = bitmaps.copy(answer);
+        }
+
         int collectedDistincts = 0;
         int skippedDistincts = 0;
         Set<String> aggregateTerms;

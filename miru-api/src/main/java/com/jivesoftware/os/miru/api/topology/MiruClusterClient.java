@@ -35,8 +35,6 @@ public interface MiruClusterClient {
 
     void registerSchema(final MiruTenantId tenantId, final MiruSchema schema) throws Exception;
 
-    boolean copySchema(MiruTenantId fromTenantId, List<MiruTenantId> toTenantIds) throws Exception;
-
     void removeHost(final MiruHost host) throws Exception;
 
     void removeTopology(final MiruHost host, final MiruTenantId tenantId, final MiruPartitionId partitionId) throws Exception;

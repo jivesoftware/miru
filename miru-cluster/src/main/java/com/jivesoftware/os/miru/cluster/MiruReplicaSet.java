@@ -28,6 +28,15 @@ public class MiruReplicaSet {
         return partitionsByState.get(state);
     }
 
+    public boolean hasPartitionInStates(MiruPartitionState... states) {
+        for (MiruPartitionState state : states) {
+            if (!partitionsByState.get(state).isEmpty()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public List<MiruPartition> getAll() {
         return ImmutableList.copyOf(partitionsByState.values());
     }

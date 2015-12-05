@@ -122,7 +122,7 @@ public class MiruReplicaSetDirector {
         Map<MiruPartitionId, MiruReplicaSet> replicaSets = clusterRegistry.getReplicaSets(tenantId, Collections.singletonList(partitionId));
         MiruReplicaSet replicaSet = replicaSets.get(partitionId);
 
-        return new MiruReplicaHosts(!replicaSet.get(MiruPartitionState.online).isEmpty(),
+        return new MiruReplicaHosts(!replicaSet.hasPartitionInStates(MiruPartitionState.onlineStates()),
             replicaSet.getHostsWithReplica(),
             replicaSet.getCountOfMissingReplicas());
     }

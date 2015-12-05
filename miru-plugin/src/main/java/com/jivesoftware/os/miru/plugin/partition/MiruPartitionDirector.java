@@ -2,7 +2,6 @@ package com.jivesoftware.os.miru.plugin.partition;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.ListMultimap;
-import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
@@ -24,8 +23,6 @@ public interface MiruPartitionDirector {
     Iterable<? extends OrderedPartitions<?, ?>> allQueryablePartitionsInOrder(MiruTenantId tenantId, String queryKey) throws Exception;
 
     void warm(MiruTenantId tenantId) throws Exception;
-
-    void setStorage(MiruTenantId tenantId, MiruPartitionId partitionId, MiruBackingStorage storage) throws Exception;
 
     void removeHost(MiruHost host) throws Exception;
 

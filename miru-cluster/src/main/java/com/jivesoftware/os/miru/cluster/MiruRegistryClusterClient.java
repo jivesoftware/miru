@@ -82,11 +82,6 @@ public class MiruRegistryClusterClient implements MiruClusterClient {
     }
 
     @Override
-    public boolean copySchema(MiruTenantId fromTenantId, List<MiruTenantId> toTenantIds) throws Exception {
-        return clusterRegistry.copySchema(fromTenantId, toTenantIds);
-    }
-
-    @Override
     public void removeHost(MiruHost host) throws Exception {
         clusterRegistry.removeHost(host);
     }

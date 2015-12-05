@@ -94,7 +94,6 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
     private final Map<MiruBackingStorage, MiruChunkAllocator> allocators;
     private final MiruSipIndexMarshaller<S> sipMarshaller;
     private final MiruResourceLocator diskResourceLocator;
-    private final MiruBackingStorage defaultStorage;
     private final int partitionAuthzCacheSize;
     private final StripingLocksProvider<MiruTermId> fieldIndexStripingLocksProvider;
     private final StripingLocksProvider<MiruStreamId> streamStripingLocksProvider;
@@ -109,7 +108,6 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         Map<MiruBackingStorage, MiruChunkAllocator> allocators,
         MiruSipIndexMarshaller<S> sipMarshaller,
         MiruResourceLocator diskResourceLocator,
-        MiruBackingStorage defaultStorage,
         int partitionAuthzCacheSize,
         StripingLocksProvider<MiruTermId> fieldIndexStripingLocksProvider,
         StripingLocksProvider<MiruStreamId> streamStripingLocksProvider,
@@ -124,7 +122,6 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         this.allocators = allocators;
         this.sipMarshaller = sipMarshaller;
         this.diskResourceLocator = diskResourceLocator;
-        this.defaultStorage = defaultStorage;
         this.partitionAuthzCacheSize = partitionAuthzCacheSize;
         this.fieldIndexStripingLocksProvider = fieldIndexStripingLocksProvider;
         this.streamStripingLocksProvider = streamStripingLocksProvider;
@@ -143,7 +140,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         } catch (MiruSchemaUnvailableException e) {
             log.warn("Schema not registered for tenant {}, using default storage", coord.tenantId);
         }
-        return defaultStorage;
+        return MiruBackingStorage.memory;
     }
 
     private MiruChunkAllocator getAllocator(MiruBackingStorage storage) {
@@ -164,13 +161,14 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         MiruSchema schema = schemaProvider.getSchema(coord.tenantId);
 
         ChunkStore[] chunkStores = getAllocator(storage).allocateChunkStores(coord, stackBuffer);
-        return allocate(bitmaps, coord, schema, chunkStores, stackBuffer);
+        return allocate(bitmaps, coord, schema, chunkStores, storage, stackBuffer);
     }
 
     private <BM extends IBM, IBM> MiruContext<IBM, S> allocate(MiruBitmaps<BM, IBM> bitmaps,
         MiruPartitionCoord coord,
         MiruSchema schema,
         ChunkStore[] chunkStores,
+        MiruBackingStorage storage,
         StackBuffer stackBuffer) throws Exception {
 
         int seed = coord.hashCode();
@@ -326,7 +324,8 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             inboxIndex,
             activityInternExtern,
             streamLocks,
-            chunkStores);
+            chunkStores,
+            storage);
 
         context.markStartOfDelta(stackBuffer);
 
@@ -350,7 +349,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         for (int i = 0; i < fromChunks.length; i++) {
             fromChunks[i].copyTo(toChunks[i], stackBuffer);
         }
-        return allocate(bitmaps, coord, schema, toChunks, stackBuffer);
+        return allocate(bitmaps, coord, schema, toChunks, toStorage, stackBuffer);
     }
 
     public void markStorage(MiruPartitionCoord coord, MiruBackingStorage marked) throws Exception {
@@ -374,17 +373,17 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         diskResourceLocator.clean(new MiruPartitionCoordIdentifier(coord));
     }
 
-    public <BM extends IBM, IBM> void close(MiruContext<BM, S> context, MiruBackingStorage storage) {
+    public <BM extends IBM, IBM> void close(MiruContext<BM, S> context) {
         context.activityIndex.close();
         context.authzIndex.close();
         context.timeIndex.close();
         context.unreadTrackingIndex.close();
         context.inboxIndex.close();
 
-        getAllocator(storage).close(context.chunkStores);
+        getAllocator(context.storage).close(context.chunkStores);
     }
 
-    public <BM extends IBM, IBM> void releaseCaches(MiruContext<BM, S> context, MiruBackingStorage storage) throws IOException {
+    public <BM extends IBM, IBM> void releaseCaches(MiruContext<BM, S> context) throws IOException {
         for (ChunkStore chunkStore : context.chunkStores) {
             chunkStore.rollCache();
         }

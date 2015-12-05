@@ -7,8 +7,10 @@
  * @param? lookupName
  * @param? lookupVersion
  * @param? tenantSchema
+ * @param? tenantUpgrades
  * @param? lookupMatching
  * @param? lookupMissing
+ * @param? lookupUpgrades
  */
 {template .schemaRegion}
     <div class="panel panel-default">
@@ -16,23 +18,32 @@
         <div class="panel-body">
             <form id="requestPickerForm" class="j-form" data-active-class="btn-default" data-input-el="#requestPicker" data-form-el="#requestPickerForm"
                 data-jive-ui="jive/ui/typeahead/request_typeahead" method="post" name="requestPickerForm">
-                <label for="tenantPicker">Select Tenant</label>
-                <br/>
-                <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
-                    class="j-tenant-autocomplete j-autocomplete-input j-ui-elem" placeholder="Tenant" value="{$tenantId?:''}"
-                    name="tenantId" id="tenantPicker" data-original-title="" title="">
-                <br/>
-                <br/>
-                <label for="lookupNamePicker">Lookup Schema</label>
-                <br/>
-                <input type="text" autocomplete="off" role="combobox" style="width:200px; padding-left:10px;"
-                    class="j-name-autocomplete j-autocomplete-input j-ui-elem" placeholder="Name" value="{$lookupName?:''}"
-                    name="lookupName" id="lookupNamePicker" data-original-title="" title="">
-                &nbsp;
-                <input type="text" autocomplete="off" role="combobox" style="width:75px; padding-left:10px;"
-                    class="j-name-autocomplete j-autocomplete-input j-ui-elem" placeholder="Version" value="{$lookupVersion?:''}"
-                    name="lookupVersion" id="lookupVersionPicker" data-original-title="" title="">
-                <input type="submit" value="Submit" style="display:none;"/>
+                <div style="float:left; margin-right:15px;">
+                    <label for="tenantPicker">Select Tenant</label>
+                    <br/>
+                    <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                        class="j-tenant-autocomplete j-autocomplete-input j-ui-elem" placeholder="Tenant" value="{$tenantId?:''}"
+                        name="tenantId" id="tenantPicker" data-original-title="" title="">
+                </div>
+                <div style="float:left; margin-right:15px;">
+                    <label for="lookupNamePicker">Lookup Schema</label>
+                    <br/>
+                    <input type="text" autocomplete="off" role="combobox" style="width:200px; padding-left:10px;"
+                        class="j-name-autocomplete j-autocomplete-input j-ui-elem" placeholder="Name" value="{$lookupName?:''}"
+                        name="lookupName" id="lookupNamePicker" data-original-title="" title="">
+                    &nbsp;
+                    <input type="text" autocomplete="off" role="combobox" style="width:75px; padding-left:10px;"
+                        class="j-name-autocomplete j-autocomplete-input j-ui-elem" placeholder="Version" value="{$lookupVersion?:''}"
+                        name="lookupVersion" id="lookupVersionPicker" data-original-title="" title="">
+                </div>
+                <div style="float:left; margin-right:15px;">
+                    <div class="btn-group" role="group">
+                        <button title="Lookup" type="submit" name="action" value="lookup" class="btn btn-default"><span class="glyphicon glyphicon-search"></span></button>
+                    </div>
+                    <div class="btn-group" role="group">
+                        <button title="Upgrade" type="submit" name="action" value="upgrade" class="btn btn-default"><span class="glyphicon glyphicon-copy"></span></button>
+                    </div>
+                </div>
             </form>
         </div>
     </div>
@@ -40,6 +51,9 @@
         <div class="panel panel-default">
             <div class="panel-heading">Schema for tenant: {$tenantId?:''}</div>
             <div class="panel-body">
+                {if $tenantUpgrades}
+                    <p><strong>Upgraded schemas for {$tenantUpgrades} related tenants</strong></p>
+                {/if}
                 <pre>{$tenantSchema}</pre>
             </div>
         </div>
@@ -52,10 +66,12 @@
                     <tr>
                         <td>Number Matching</td>
                         <td>Number Missing</td>
+                        {if $lookupUpgrades}<td>Number Upgraded</td>{/if}
                     </tr>
                     <tr>
                         <td>{$lookupMatching?:''}</td>
                         <td>{$lookupMissing?:''}</td>
+                        {if $lookupUpgrades}<td>{$lookupUpgrades}</td>{/if}
                     </tr>
                 </table>
             </div>

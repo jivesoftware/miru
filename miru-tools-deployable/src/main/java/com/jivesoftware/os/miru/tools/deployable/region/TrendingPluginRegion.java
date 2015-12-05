@@ -15,6 +15,7 @@ import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
+import com.jivesoftware.os.miru.api.query.filter.FilterStringUtil;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
@@ -55,6 +56,7 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
     private final String template;
     private final MiruSoyRenderer renderer;
     private final ReaderRequestHelpers readerRequestHelpers;
+    private final FilterStringUtil filterStringUtil = new FilterStringUtil();
 
     public TrendingPluginRegion(String template,
         MiruSoyRenderer renderer,
@@ -72,6 +74,7 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
         final int buckets;
         final String field;
         final List<String> fieldPrefixes;
+        final String filter;
         final String logLevel;
 
         public TrendingPluginRegionInput(String tenant,
@@ -80,6 +83,7 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
             int buckets,
             String field,
             List<String> fieldPrefixes,
+            String filter,
             String logLevel) {
             this.tenant = tenant;
             this.fromHoursAgo = fromHoursAgo;
@@ -87,6 +91,7 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
             this.buckets = buckets;
             this.field = field;
             this.fieldPrefixes = fieldPrefixes;
+            this.filter = filter;
             this.logLevel = logLevel;
         }
     }
@@ -107,6 +112,7 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
                 data.put("buckets", String.valueOf(input.buckets));
                 data.put("field", input.field);
                 data.put("fieldPrefixes", input.fieldPrefixes != null ? Joiner.on(", ").join(input.fieldPrefixes) : "");
+                data.put("filter", input.filter);
 
                 SnowflakeIdPacker snowflakeIdPacker = new SnowflakeIdPacker();
                 long jiveCurrentTime = new JiveEpochTimestampProvider().getTimestamp();
@@ -119,7 +125,11 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
                         Arrays.asList(0, 1, 11, 65),
                         Functions.toStringFunction())));
 
-                MiruFilter constraintsFilter = new MiruFilter(MiruFilterOperation.and, false, fieldFilters, null);
+                List<MiruFilter> constraintsSubFilters = null;
+                if (!input.filter.isEmpty()) {
+                    constraintsSubFilters = Collections.singletonList(filterStringUtil.parse(input.filter));
+                }
+                MiruFilter constraintsFilter = new MiruFilter(MiruFilterOperation.and, false, fieldFilters, constraintsSubFilters);
 
                 List<HttpRequestHelper> requestHelpers = readerRequestHelpers.get(Optional.<MiruHost>absent());
                 MiruResponse<TrendingAnswer> response = null;

@@ -71,6 +71,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
 import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
 import com.jivesoftware.os.miru.service.MiruServiceInitializer;
+import com.jivesoftware.os.miru.service.NamedThreadFactory;
 import com.jivesoftware.os.miru.service.endpoint.MiruReaderEndpoints;
 import com.jivesoftware.os.miru.service.endpoint.MiruWriterEndpoints;
 import com.jivesoftware.os.miru.service.locator.MiruResourceLocator;
@@ -106,6 +107,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import org.merlin.config.Config;
 import org.reflections.Reflections;
 import org.reflections.scanners.SubTypesScanner;
@@ -251,6 +254,18 @@ public class MiruReaderMain {
 
             deployable.addHealthCheck(partitionErrorTracker);
 
+            final ThreadGroup threadGroup = Thread.currentThread().getThreadGroup();
+            final ScheduledExecutorService scheduledBootstrapExecutor = Executors.newScheduledThreadPool(miruServiceConfig
+                .getPartitionScheduledBootstrapThreads(),
+                new NamedThreadFactory(threadGroup, "scheduled_bootstrap"));
+
+            final ScheduledExecutorService scheduledRebuildExecutor = Executors.newScheduledThreadPool(miruServiceConfig.getPartitionScheduledRebuildThreads(),
+                new NamedThreadFactory(threadGroup, "scheduled_rebuild"));
+
+            final ScheduledExecutorService scheduledSipMigrateExecutor = Executors.newScheduledThreadPool(miruServiceConfig
+                .getPartitionScheduledSipMigrateThreads(),
+                new NamedThreadFactory(threadGroup, "scheduled_sip_migrate"));
+
             MiruInboxReadTracker inboxReadTracker;
             MiruLifecyle<MiruService> miruServiceLifecyle;
             if (walConfig.getActivityWALType().equals("rcvs") || walConfig.getActivityWALType().equals("rcvs_amza")) {
@@ -260,6 +275,9 @@ public class MiruReaderMain {
                 inboxReadTracker = new RCVSInboxReadTracker(rcvsWALClient);
                 miruServiceLifecyle = new MiruServiceInitializer().initialize(miruServiceConfig,
                     miruStats,
+                    scheduledBootstrapExecutor,
+                    scheduledRebuildExecutor,
+                    scheduledSipMigrateExecutor,
                     clusterClient,
                     miruHost,
                     miruSchemaProvider,
@@ -279,6 +297,9 @@ public class MiruReaderMain {
                 inboxReadTracker = new AmzaInboxReadTracker(amzaWALClient);
                 miruServiceLifecyle = new MiruServiceInitializer().initialize(miruServiceConfig,
                     miruStats,
+                    scheduledBootstrapExecutor,
+                    scheduledRebuildExecutor,
+                    scheduledSipMigrateExecutor,
                     clusterClient,
                     miruHost,
                     miruSchemaProvider,

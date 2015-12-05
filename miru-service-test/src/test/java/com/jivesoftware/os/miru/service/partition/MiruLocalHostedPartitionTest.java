@@ -94,6 +94,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import org.merlin.config.BindInterfaceToConfiguration;
 import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
@@ -109,7 +110,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertTrue;
 
 public class MiruLocalHostedPartitionTest {
 
@@ -171,7 +174,6 @@ public class MiruLocalHostedPartitionTest {
 
         MiruServiceConfig config = mock(MiruServiceConfig.class);
         when(config.getBitsetBufferSize()).thenReturn(32);
-        when(config.getDefaultStorage()).thenReturn(defaultStorage.name());
         when(config.getPartitionNumberOfChunkStores()).thenReturn(1);
         when(config.getPartitionDeleteChunkStoreOnClose()).thenReturn(false);
 
@@ -240,7 +242,6 @@ public class MiruLocalHostedPartitionTest {
             .build(),
             new RCVSSipIndexMarshaller(),
             new MiruTempDirectoryResourceLocator(),
-            defaultStorage,
             config.getPartitionAuthzCacheSize(),
             new StripingLocksProvider<>(8),
             new StripingLocksProvider<>(8),
@@ -340,6 +341,46 @@ public class MiruLocalHostedPartitionTest {
 
         assertEquals(localHostedPartition.getState(), MiruPartitionState.online);
         assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.disk);
+
+    }
+
+    @Test
+    public void testBootstrapToOnlineToUpgradeToOnline() throws Exception {
+        MiruLocalHostedPartition<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSCursor, RCVSSipCursor> localHostedPartition =
+            getRoaringLocalHostedPartition();
+
+        setActive(true);
+        waitForRef(bootstrapRunnable).run();
+
+        assertEquals(localHostedPartition.getState(), MiruPartitionState.bootstrap);
+        assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.memory);
+
+        waitForRef(rebuildIndexRunnable).run();
+
+        assertTrue(localHostedPartition.needsToMigrate());
+        assertEquals(localHostedPartition.getState(), MiruPartitionState.online);
+        assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.memory);
+        waitForRef(sipMigrateIndexRunnable).run();
+
+        assertFalse(localHostedPartition.needsToMigrate());
+        assertEquals(localHostedPartition.getState(), MiruPartitionState.online);
+        assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.disk);
+        assertTrue(localHostedPartition.rebuild());
+
+
+        assertEquals(localHostedPartition.getState(), MiruPartitionState.obsolete);
+        assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.disk);
+        waitForRef(rebuildIndexRunnable).run();
+        
+        assertTrue(localHostedPartition.needsToMigrate());
+        assertEquals(localHostedPartition.getState(), MiruPartitionState.online);
+        assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.disk);
+        waitForRef(sipMigrateIndexRunnable).run();
+
+        assertFalse(localHostedPartition.needsToMigrate());
+        assertEquals(localHostedPartition.getState(), MiruPartitionState.online);
+        assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.disk);
+
 
     }
 
@@ -470,10 +511,14 @@ public class MiruLocalHostedPartitionTest {
 
     private MiruLocalHostedPartition<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSCursor, RCVSSipCursor> getRoaringLocalHostedPartition()
         throws Exception {
+        AtomicLong numberOfChitsRemaining = new AtomicLong(100_000);
+        MiruMergeChits persistentMergeChits = new MiruMergeChits(numberOfChitsRemaining, 100_000, 10_000);
+        MiruMergeChits transientMergeChits = new MiruMergeChits(numberOfChitsRemaining, 100_000, 10_000);
+
         return new MiruLocalHostedPartition<>(new MiruStats(), bitmaps, trackError, coord, -1, contextFactory, sipTrackerFactory,
             walClient, partitionEventHandler, rebuildDirector, scheduledBootstrapService, scheduledRebuildService,
             scheduledSipMigrateService, rebuildExecutor, sipIndexExecutor, mergeExecutor, 1, new NoOpMiruIndexRepairs(),
-            indexer, 100_000, 100, 100, new MiruMergeChits(100_000, 10_000), timings);
+            indexer, 100_000, 100, 100, persistentMergeChits, transientMergeChits, timings);
     }
 
     private void setActive(boolean active) throws Exception {

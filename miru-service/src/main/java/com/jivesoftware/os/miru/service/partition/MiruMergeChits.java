@@ -23,8 +23,8 @@ public class MiruMergeChits {
     private final StripingLocksProvider<MiruPartitionCoord> stripingLocks = new StripingLocksProvider<>(128);
     private final Map<MiruPartitionCoord, AtomicLong> mergeQueue = Collections.synchronizedMap(Maps.<MiruPartitionCoord, AtomicLong>newLinkedHashMap());
 
-    public MiruMergeChits(long maxChits, long maxOverage) {
-        this.numberOfChitsRemaining = new AtomicLong(maxChits);
+    public MiruMergeChits(AtomicLong numberOfChitsRemaining, long maxChits, long maxOverage) {
+        this.numberOfChitsRemaining = numberOfChitsRemaining;
         this.maxOverage = maxOverage >= 0 ? maxOverage : maxChits;
     }
 

@@ -10,6 +10,7 @@
  * @param? buckets
  * @param? field
  * @param? fieldPrefixes
+ * @param? filter
  * @param? results
  * @param? summary
  * @param? elapse
@@ -72,7 +73,7 @@
                         <td>Field</td>
                         <td>
                         <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
-                            class="j-buckets-autocomplete j-autocomplete-input j-ui-elem" placeholder="Field" value="{$field?:''}"
+                            class="j-field-autocomplete j-autocomplete-input j-ui-elem" placeholder="Field" value="{$field?:''}"
                             name="field" id="fieldPicker" data-original-title="" title="">
                         </td>
                     </tr>
@@ -80,8 +81,16 @@
                         <td>Field Prefixes</td>
                         <td>
                         <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
-                            class="j-buckets-autocomplete j-autocomplete-input j-ui-elem" placeholder="Field Prefixes" value="{$fieldPrefixes?:''}"
+                            class="j-prefixes-autocomplete j-autocomplete-input j-ui-elem" placeholder="Field Prefixes" value="{$fieldPrefixes?:''}"
                             name="fieldPrefixes" id="fieldPrefixesPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Filter</td>
+                        <td>
+                        <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                            class="j-buckets-autocomplete j-autocomplete-input j-ui-elem" placeholder="Filter" value="{$filter?:''}"
+                            name="filter" id="filterPicker" data-original-title="" title="">
                         </td>
                     </tr>
                 </table>

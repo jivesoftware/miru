@@ -133,7 +133,7 @@ public class RecoCorrectnessTest {
         partitionedActivities.add(factory.begin(writerId, partitionId, tenant1, 0));
 
         MiruProvider<MiruService> miruProvider = new MiruPluginTestBootstrap().bootstrap(tenant1, partitionId, miruHost,
-            miruSchema, MiruBackingStorage.memory, new MiruBitmapsRoaringBuffer(), partitionedActivities);
+            miruSchema, MiruBackingStorage.disk, new MiruBitmapsRoaringBuffer(), partitionedActivities);
 
         this.service = miruProvider.getMiru(tenant1);
 

@@ -257,6 +257,7 @@ public class MiruRebalanceDirector {
         COLORS[MiruPartitionState.bootstrap.ordinal()] = Color.BLUE;
         COLORS[MiruPartitionState.rebuilding.ordinal()] = Color.MAGENTA;
         COLORS[MiruPartitionState.online.ordinal()] = Color.GREEN;
+        COLORS[MiruPartitionState.upgrading.ordinal()] = Color.ORANGE;
     }
 
     public void rebuildTenantPartition(MiruHost miruHost, MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
@@ -345,7 +346,7 @@ public class MiruRebalanceDirector {
                 if (status.partition.info.state == MiruPartitionState.offline) {
                     offlinePartitions++;
                 }
-                if (status.partition.info.state == MiruPartitionState.online) {
+                if (status.partition.info.state.isOnline()) {
                     onlinePartitions++;
                 }
             }
@@ -437,7 +438,7 @@ public class MiruRebalanceDirector {
                 if (status.partition.info.state == MiruPartitionState.offline) {
                     offlinePartitions++;
                 }
-                if (status.partition.info.state == MiruPartitionState.online) {
+                if (status.partition.info.state.isOnline()) {
                     onlinePartitions++;
                 }
             }

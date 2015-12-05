@@ -120,11 +120,6 @@ public interface MiruServiceConfig extends Config {
     @IntDefault(65_536)
     int getKeyedFilerNumberOfLocks();
 
-    @StringDefault("memory")
-    String getDefaultStorage();
-
-    void setDefaultStorage(String storageType);
-
     @IntDefault(1_000)
     int getLongTailSolverWindowSize();
 

@@ -6,11 +6,12 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import java.util.List;
 
 /**
-*
-*/
+ *
+ */
 public class TenantBean {
 
     private final String tenantId;
+    private final List<PartitionCoordBean> upgrading = Lists.newArrayList();
     private final List<PartitionCoordBean> online = Lists.newArrayList();
     private final List<PartitionCoordBean> rebuilding = Lists.newArrayList();
     private final List<PartitionCoordBean> bootstrap = Lists.newArrayList();
@@ -22,6 +23,10 @@ public class TenantBean {
 
     public String getTenantId() {
         return tenantId;
+    }
+
+    public List<PartitionCoordBean> getUpgrading() {
+        return upgrading;
     }
 
     public List<PartitionCoordBean> getOnline() {

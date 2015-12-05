@@ -962,6 +962,27 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
     }
 
     @Override
+    public int upgradeSchema(MiruSchema schema) throws Exception {
+        Set<MiruTenantId> toTenantIds = Sets.newHashSet();
+        schemasClient().scan(null, null, null, null, (rowTxId, prefix, key, timestampedValue) -> {
+            toTenantIds.add(fromTenantKey(key));
+            return true;
+        });
+
+        byte[] schemaBytes = schemaMarshaller.toBytes(schema);
+        AmzaPartitionUpdates updates = new AmzaPartitionUpdates();
+        for (MiruTenantId to : toTenantIds) {
+            MiruSchema existing = getSchema(to);
+            if (existing.getName().equals(schema.getName()) && existing.getVersion() != schema.getVersion()) {
+                updates.set(toTenantKey(to), schemaBytes);
+            }
+        }
+        LOG.info("Upgrading schema for {} tenants to name:{} version:{}", updates.size(), schema.getName(), schema.getVersion());
+        schemasClient().commit(null, updates, replicateTakeQuorum, replicateTimeoutMillis, TimeUnit.MILLISECONDS);
+        return updates.size();
+    }
+
+    @Override
     public Map<MiruPartitionId, RangeMinMax> getIngressRanges(MiruTenantId tenantId) throws Exception {
         final Map<MiruPartitionId, RangeMinMax> partitionLookupRange = Maps.newHashMap();
         streamRanges(tenantId, null, (partitionId, type, timestamp) -> {

@@ -222,18 +222,6 @@ public class MiruHttpClusterClient implements MiruClusterClient {
         });
     }
 
-    @Override
-    public boolean copySchema(MiruTenantId fromTenantId, List<MiruTenantId> toTenantIds) throws Exception {
-        String jsonTenantIds = requestMapper.writeValueAsString(toTenantIds);
-        return sendRoundRobin("copySchema", client -> {
-            long start = System.currentTimeMillis();
-            HttpResponse response = client.postJson("/miru/topology/copyschema/" + fromTenantId.toString(), jsonTenantIds, null);
-            Boolean r = responseMapper.extractResultFromResponse(response, Boolean.class, null);
-            miruStats.egressed("/miru/topology/copyschema/" + fromTenantId.toString(), 1, System.currentTimeMillis() - start);
-            return new ClientResponse<>(Boolean.TRUE.equals(r), true);
-        });
-    }
-
     private <R> R sendRoundRobin(String family, ClientCall<HttpClient, R, HttpClientException> call) {
         try {
             return clusterClient.call(routingTenantId, roundRobinStrategy, family, call);

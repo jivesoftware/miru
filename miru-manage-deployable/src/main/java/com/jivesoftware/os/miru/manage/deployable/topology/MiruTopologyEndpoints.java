@@ -295,21 +295,4 @@ public class MiruTopologyEndpoints {
             return ResponseHelper.INSTANCE.errorResponse(msg, x);
         }
     }
-
-    @POST
-    @Path("/copyschema/{fromTenantId}")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response copySchema(@PathParam("fromTenantId") String fromTenantId, List<MiruTenantId> toTenantIds) {
-        try {
-            long start = System.currentTimeMillis();
-            boolean r = registry.copySchema(new MiruTenantId(fromTenantId.getBytes(StandardCharsets.UTF_8)), toTenantIds);
-            stats.ingressed("/copyschema/" + fromTenantId, 1, System.currentTimeMillis() - start);
-            return ResponseHelper.INSTANCE.jsonResponse(r);
-        } catch (Exception x) {
-            String msg = "Failed to copySchema for " + fromTenantId;
-            LOG.error(msg, x);
-            return ResponseHelper.INSTANCE.errorResponse(msg, x);
-        }
-    }
 }

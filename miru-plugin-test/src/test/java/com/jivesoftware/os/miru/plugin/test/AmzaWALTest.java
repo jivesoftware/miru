@@ -74,7 +74,6 @@ public class AmzaWALTest {
             });
 
         MiruServiceConfig config = BindInterfaceToConfiguration.bindDefault(MiruServiceConfig.class);
-        config.setDefaultStorage("disk");
         config.setDefaultFailAfterNMillis(TimeUnit.HOURS.toMillis(1));
         config.setMergeChitCount(10_000);
 

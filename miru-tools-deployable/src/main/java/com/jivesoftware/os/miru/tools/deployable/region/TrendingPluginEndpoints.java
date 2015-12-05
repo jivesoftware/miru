@@ -40,6 +40,7 @@ public class TrendingPluginEndpoints {
         @QueryParam("buckets") @DefaultValue("30") int buckets,
         @QueryParam("field") @DefaultValue("authors") String field,
         @QueryParam("fieldPrefixes") @DefaultValue("") String fieldPrefixesString,
+        @QueryParam("filter") @DefaultValue("") String filter,
         @QueryParam("logLevel") @DefaultValue("NONE") String logLevel) {
 
         List<String> fieldPrefixes = null;
@@ -57,6 +58,7 @@ public class TrendingPluginEndpoints {
                 buckets,
                 field,
                 fieldPrefixes,
+                filter,
                 logLevel)));
         return Response.ok(rendered).build();
     }
