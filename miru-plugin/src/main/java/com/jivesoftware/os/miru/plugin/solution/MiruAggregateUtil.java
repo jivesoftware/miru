@@ -25,6 +25,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.index.MiruTxIndex;
 import com.jivesoftware.os.miru.plugin.index.TermBitmapStream;
+import com.jivesoftware.os.miru.plugin.index.TermIdStream;
 import com.jivesoftware.os.miru.plugin.partition.TrackError;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -172,7 +173,7 @@ public class MiruAggregateUtil {
         int pivotFieldId,
         int batchSize,
         MiruSolutionLog solutionLog,
-        TermBitmapStream<IBM> termBitmapStream,
+        TermIdStream termIdStream,
         StackBuffer stackBuffer) throws Exception {
 
         MiruActivityIndex activityIndex = requestContext.getActivityIndex();
@@ -219,10 +220,10 @@ public class MiruAggregateUtil {
                                 MiruInvertedIndex<BM, IBM> invertedIndex = primaryFieldIndex.get(pivotFieldId, termId);
                                 Optional<BM> gotIndex = invertedIndex.getIndex(stackBuffer);
                                 if (gotIndex.isPresent()) {
-                                    BM bitmap = gotIndex.get();
-                                    if (!termBitmapStream.stream(termId, bitmap)) {
+                                    if (!termIdStream.stream(termId)) {
                                         break done;
                                     }
+                                    BM bitmap = gotIndex.get();
                                     start = System.nanoTime();
                                     bitmaps.inPlaceAndNot(answer, bitmap);
                                     andNotCost += (System.nanoTime() - start);
@@ -244,10 +245,10 @@ public class MiruAggregateUtil {
                                 MiruInvertedIndex<BM, IBM> invertedIndex = primaryFieldIndex.get(pivotFieldId, termId);
                                 Optional<BM> gotIndex = invertedIndex.getIndex(stackBuffer);
                                 if (gotIndex.isPresent()) {
-                                    BM bitmap = gotIndex.get();
-                                    if (!termBitmapStream.stream(termId, bitmap)) {
+                                    if (!termIdStream.stream(termId)) {
                                         break done;
                                     }
+                                    BM bitmap = gotIndex.get();
                                     andNots.add(bitmap);
                                 }
                             }
@@ -258,7 +259,7 @@ public class MiruAggregateUtil {
                 answer = bitmaps.andNot(answer, andNots);
             }
         }
-        solutionLog.log(MiruSolutionLogLevel.INFO, "gather aggregate gets:{} fetched:{} used:{} results:{} getAllCost:{} andNotCost:{}",
+        solutionLog.log(MiruSolutionLogLevel.INFO, "gather aggregate gets:{} fetched:{} used:{} getAllCost:{} andNotCost:{}",
             gets, fetched, used, getAllCost, andNotCost);
     }
 
