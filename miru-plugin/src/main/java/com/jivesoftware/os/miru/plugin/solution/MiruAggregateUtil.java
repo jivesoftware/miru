@@ -172,7 +172,7 @@ public class MiruAggregateUtil {
         int pivotFieldId,
         int batchSize,
         MiruSolutionLog solutionLog,
-        TermBitmapStream<BM> termBitmapStream,
+        TermBitmapStream<IBM> termBitmapStream,
         StackBuffer stackBuffer) throws Exception {
 
         MiruActivityIndex activityIndex = requestContext.getActivityIndex();
