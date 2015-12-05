@@ -67,6 +67,18 @@
                         {call .tenantEntryPartitions}
                             {param tenantId: $tenant /}
                             {param partitionId: $p.partitionId /}
+                            {param type: 'upgrading' /}
+                            {param partitions: $p.upgrading /}
+                        {/call}
+                        {call .tenantEntryPartitions}
+                            {param tenantId: $tenant /}
+                            {param partitionId: $p.partitionId /}
+                            {param type: 'obsolete' /}
+                            {param partitions: $p.obsolete /}
+                        {/call}
+                        {call .tenantEntryPartitions}
+                            {param tenantId: $tenant /}
+                            {param partitionId: $p.partitionId /}
                             {param type: 'online' /}
                             {param partitions: $p.online /}
                         {/call}

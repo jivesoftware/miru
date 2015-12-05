@@ -24,6 +24,16 @@
                     {foreach $tenant in $tenants}
                         {call .hostFocusPartitions}
                             {param tenantId: $tenant.tenantId /}
+                            {param type: 'upgrading' /}
+                            {param partitions: $tenant.upgrading /}
+                        {/call}
+                        {call .hostFocusPartitions}
+                            {param tenantId: $tenant.tenantId /}
+                            {param type: 'obsolete' /}
+                            {param partitions: $tenant.obsolete /}
+                        {/call}
+                        {call .hostFocusPartitions}
+                            {param tenantId: $tenant.tenantId /}
                             {param type: 'online' /}
                             {param partitions: $tenant.online /}
                         {/call}

@@ -53,17 +53,27 @@ td.balancer-offline {
 }
 
 td.balancer-bootstrap {
-    background-color: #00f;
+    background-color: blue;
     color: white;
 }
 
 td.balancer-rebuilding {
-    background-color: #f0f;
+    background-color: magenta;
     color: black;
 }
 
 td.balancer-online {
-    background-color: #0f0;
+    background-color: lime;
+    color: black;
+}
+
+td.balancer-obsolete {
+    background-color: pink;
+    color: black;
+}
+
+td.balancer-upgrading {
+    background-color: cyan;
     color: black;
 }
 

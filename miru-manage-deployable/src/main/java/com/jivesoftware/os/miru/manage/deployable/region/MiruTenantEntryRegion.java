@@ -78,6 +78,8 @@ public class MiruTenantEntryRegion implements MiruRegion<MiruTenantId> {
                         partitionBean.getOnline().add(partitionCoordBean);
                     } else if (state == MiruPartitionState.upgrading) {
                         partitionBean.getUpgrading().add(partitionCoordBean);
+                    } else if (state == MiruPartitionState.obsolete) {
+                        partitionBean.getObsolete().add(partitionCoordBean);
                     } else if (state == MiruPartitionState.rebuilding) {
                         partitionBean.getRebuilding().add(partitionCoordBean);
                     } else if (state == MiruPartitionState.bootstrap) {

@@ -257,7 +257,8 @@ public class MiruRebalanceDirector {
         COLORS[MiruPartitionState.bootstrap.ordinal()] = Color.BLUE;
         COLORS[MiruPartitionState.rebuilding.ordinal()] = Color.MAGENTA;
         COLORS[MiruPartitionState.online.ordinal()] = Color.GREEN;
-        COLORS[MiruPartitionState.upgrading.ordinal()] = Color.ORANGE;
+        COLORS[MiruPartitionState.obsolete.ordinal()] = Color.CYAN;
+        COLORS[MiruPartitionState.upgrading.ordinal()] = Color.PINK;
     }
 
     public void rebuildTenantPartition(MiruHost miruHost, MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {

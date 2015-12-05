@@ -55,7 +55,13 @@
                             {/foreach}
                         </tr>
                         <tr>
-                            <td class="balancer-label balancer-online">Upgrading</td>
+                            <td class="balancer-label balancer-obsolete">Obsolete</td>
+                            {foreach $host in $hosts}
+                                <td>{$host.numObsolete}</td>
+                            {/foreach}
+                        </tr>
+                        <tr>
+                            <td class="balancer-label balancer-upgrading">Upgrading</td>
                             {foreach $host in $hosts}
                                 <td>{$host.numUpgrading}</td>
                             {/foreach}
