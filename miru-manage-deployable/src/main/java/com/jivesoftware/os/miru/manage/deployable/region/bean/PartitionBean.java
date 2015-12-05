@@ -13,6 +13,7 @@ public class PartitionBean {
     private int begins;
     private int ends;
     private final List<PartitionCoordBean> upgrading = Lists.newArrayList();
+    private final List<PartitionCoordBean> obsolete = Lists.newArrayList();
     private final List<PartitionCoordBean> online = Lists.newArrayList();
     private final List<PartitionCoordBean> rebuilding = Lists.newArrayList();
     private final List<PartitionCoordBean> bootstrap = Lists.newArrayList();
@@ -57,6 +58,10 @@ public class PartitionBean {
 
     public List<PartitionCoordBean> getUpgrading() {
         return upgrading;
+    }
+
+    public List<PartitionCoordBean> getObsolete() {
+        return obsolete;
     }
 
     public List<PartitionCoordBean> getOnline() {

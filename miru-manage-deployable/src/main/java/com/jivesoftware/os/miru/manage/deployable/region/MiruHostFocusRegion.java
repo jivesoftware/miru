@@ -76,6 +76,8 @@ public class MiruHostFocusRegion implements MiruRegion<MiruHost> {
                     tenantBean.getOnline().add(partitionCoordBean);
                 } else if (state == MiruPartitionState.upgrading) {
                     tenantBean.getUpgrading().add(partitionCoordBean);
+                } else if (state == MiruPartitionState.obsolete) {
+                    tenantBean.getObsolete().add(partitionCoordBean);
                 } else if (state == MiruPartitionState.rebuilding) {
                     tenantBean.getRebuilding().add(partitionCoordBean);
                 } else if (state == MiruPartitionState.bootstrap) {
