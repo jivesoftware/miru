@@ -33,12 +33,12 @@ import java.util.List;
  */
 public class BloomIndex<BM extends IBM, IBM> {
 
-    static public interface HasValue {
+    public interface HasValue {
 
         byte[] getBloomValue();
     }
 
-    static public interface MightContain<V> {
+    public interface MightContain<V> {
 
         void mightContain(V value);
     }
@@ -72,7 +72,7 @@ public class BloomIndex<BM extends IBM, IBM> {
         return Math.max(1, (int) Math.round(m / n * Math.log(2)));
     }
 
-    public void put(MiruInvertedIndex<?> bloomIndex, List<MiruTermId> keys, StackBuffer stackBuffer) throws Exception {
+    public void put(MiruInvertedIndex<?, ?> bloomIndex, List<MiruTermId> keys, StackBuffer stackBuffer) throws Exception {
 
         int[] bitIndexes = new int[keys.size() * numHashFunctions];
         for (int i = 0; i < keys.size(); i++) {

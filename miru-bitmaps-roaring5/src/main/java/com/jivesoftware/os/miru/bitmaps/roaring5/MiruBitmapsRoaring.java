@@ -263,7 +263,7 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
     }
 
     @Override
-    public void inPlaceAndNot(RoaringBitmap original, MiruInvertedIndex<RoaringBitmap> not, StackBuffer stackBuffer) throws Exception {
+    public void inPlaceAndNot(RoaringBitmap original, MiruInvertedIndex<RoaringBitmap, RoaringBitmap> not, StackBuffer stackBuffer) throws Exception {
         Optional<RoaringBitmap> index = not.getIndex(stackBuffer);
         if (index.isPresent()) {
             original.andNot(index.get());
@@ -401,7 +401,7 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
     }
 
     @Override
-    public RoaringBitmap buildIndexMask(int largestIndex, Optional<RoaringBitmap> andNotMask) {
+    public RoaringBitmap buildIndexMask(int largestIndex, Optional<? extends RoaringBitmap> andNotMask) {
         RoaringBitmap mask = new RoaringBitmap();
         if (largestIndex < 0) {
             return mask;

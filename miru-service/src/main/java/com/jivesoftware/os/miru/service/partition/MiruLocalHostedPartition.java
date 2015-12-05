@@ -179,8 +179,8 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
             coord,
             initialState,
             initialStorage == MiruBackingStorage.disk,
-            Optional.<MiruContext<IBM, S>>absent(),
-            Optional.<MiruContext<IBM, S>>absent(),
+            Optional.<MiruContext<BM, IBM, S>>absent(),
+            Optional.<MiruContext<BM, IBM, S>>absent(),
             indexRepairs,
             indexer);
 
@@ -199,8 +199,8 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
         MiruPartitionState state,
         StackBuffer stackBuffer) throws Exception {
 
-        Optional<MiruContext<IBM, S>> optionalPersistentContext = Optional.absent();
-        Optional<MiruContext<IBM, S>> optionalTransientContext = Optional.absent();
+        Optional<MiruContext<BM, IBM, S>> optionalPersistentContext = Optional.absent();
+        Optional<MiruContext<BM, IBM, S>> optionalTransientContext = Optional.absent();
 
 
         synchronized (factoryLock) {
@@ -210,7 +210,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                 if (accessor.persistentContext.isPresent()) {
                     optionalPersistentContext = accessor.persistentContext;
                 } else {
-                    MiruContext<IBM, S> context = contextFactory.allocate(bitmaps, coord, MiruBackingStorage.disk, stackBuffer);
+                    MiruContext<BM, IBM, S> context = contextFactory.allocate(bitmaps, coord, MiruBackingStorage.disk, stackBuffer);
                     optionalPersistentContext = Optional.of(context);
                     refundPersistentChits = true;
                 }
@@ -221,7 +221,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                 if (accessor.transientContext.isPresent()) {
                     optionalTransientContext = accessor.transientContext;
                 } else {
-                    MiruContext<IBM, S> context = contextFactory.allocate(bitmaps, coord, MiruBackingStorage.memory, stackBuffer);
+                    MiruContext<BM, IBM, S> context = contextFactory.allocate(bitmaps, coord, MiruBackingStorage.memory, stackBuffer);
                     optionalTransientContext = Optional.of(context);
                     refundTransientChits = true;
                 }
@@ -332,8 +332,8 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                     coord,
                     MiruPartitionState.offline,
                     existing.hasPersistentStorage,
-                    Optional.<MiruContext<IBM, S>>absent(),
-                    Optional.<MiruContext<IBM, S>>absent(),
+                    Optional.<MiruContext<BM, IBM, S>>absent(),
+                    Optional.<MiruContext<BM, IBM, S>>absent(),
                     indexRepairs,
                     indexer);
                 closed = updatePartition(existing, closed);
@@ -410,7 +410,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
             ExecutorService sameThreadExecutor = MoreExecutors.sameThreadExecutor();
             StackBuffer stackBuffer = new StackBuffer();
 
-            Optional<MiruContext<IBM, S>> context;
+            Optional<MiruContext<BM, IBM, S>> context;
             MiruMergeChits mergeChits;
             if (accessor.persistentContext.isPresent()) {
                 context = accessor.persistentContext;
@@ -469,8 +469,8 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                     }
                 }
 
-                Optional<MiruContext<IBM, S>> newPersistentContext = accessor.persistentContext;
-                Optional<MiruContext<IBM, S>> newTransientContext = Optional.absent();
+                Optional<MiruContext<BM, IBM, S>> newPersistentContext = accessor.persistentContext;
+                Optional<MiruContext<BM, IBM, S>> newTransientContext = Optional.absent();
                 Optional<MiruPartitionState> newState = Optional.of(
                     newPersistentContext.isPresent() ? MiruPartitionState.obsolete : MiruPartitionState.bootstrap);
                 Optional<Boolean> newHasPersistentStorage = Optional.absent();
@@ -499,16 +499,16 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                     handle.closePersistentContext(contextFactory);
                     contextFactory.cleanDisk(coord);
 
-                    MiruContext<IBM, S> toContext;
-                    MiruContext<IBM, S> fromContext = accessor.transientContext.get();
+                    MiruContext<BM, IBM, S> toContext;
+                    MiruContext<BM, IBM, S> fromContext = accessor.transientContext.get();
                     synchronized (fromContext.writeLock) {
                         handle.merge(mergeExecutor, accessor.transientContext, transientMergeChits, trackError);
                         toContext = contextFactory.copy(bitmaps, coord, fromContext, MiruBackingStorage.disk, stackBuffer);
                         contextFactory.markStorage(coord, MiruBackingStorage.disk);
                     }
 
-                    Optional<MiruContext<IBM, S>> newPersistentContext = Optional.of(toContext);
-                    Optional<MiruContext<IBM, S>> newTransientContext = Optional.absent();
+                    Optional<MiruContext<BM, IBM, S>> newPersistentContext = Optional.of(toContext);
+                    Optional<MiruContext<BM, IBM, S>> newTransientContext = Optional.absent();
                     Optional<MiruPartitionState> newState = Optional.of(MiruPartitionState.online);
                     Optional<Boolean> newHasPersistentStorage = Optional.of(true);
 
@@ -580,8 +580,8 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                             coord,
                             MiruPartitionState.offline,
                             false,
-                            Optional.<MiruContext<IBM, S>>absent(),
-                            Optional.<MiruContext<IBM, S>>absent(),
+                            Optional.<MiruContext<BM, IBM, S>>absent(),
+                            Optional.<MiruContext<BM, IBM, S>>absent(),
                             indexRepairs,
                             indexer);
                         cleaned = updatePartition(existing, cleaned);

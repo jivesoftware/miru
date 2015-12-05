@@ -7,6 +7,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
+import com.jivesoftware.os.miru.plugin.index.MiruGetIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
@@ -29,14 +30,14 @@ public class Analytics {
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
 
-    public interface Analysis<T> {
+    public interface Analysis<T, BM> {
 
-        boolean consume(ToAnalyze<T> toAnalyze) throws Exception;
+        boolean consume(ToAnalyze<T, BM> toAnalyze) throws Exception;
     }
 
-    public interface ToAnalyze<T> {
+    public interface ToAnalyze<T, BM> {
 
-        boolean analyze(T term, MiruFilter filter) throws Exception;
+        boolean analyze(T term, BM bitmap) throws Exception;
     }
 
     public interface Analyzed<T> {
@@ -46,15 +47,14 @@ public class Analytics {
 
     public <BM extends IBM, IBM, T> boolean analyze(MiruSolutionLog solutionLog,
         MiruRequestHandle<BM, IBM, ?> handle,
-        MiruRequestContext<IBM, ?> context,
+        MiruRequestContext<BM, IBM, ?> context,
         MiruAuthzExpression authzExpression,
         MiruTimeRange timeRange,
         MiruFilter constraintsFilter,
         int divideTimeRangeIntoNSegments,
-        Analysis<T> analysis,
+        StackBuffer stackBuffer,
+        Analysis<T, BM> analysis,
         Analyzed<T> analyzed) throws Exception {
-
-        StackBuffer stackBuffer = new StackBuffer();
 
         MiruBitmaps<BM, IBM> bitmaps = handle.getBitmaps();
         MiruPartitionCoord coord = handle.getCoord();
@@ -132,11 +132,9 @@ public class Analytics {
         int[] count = new int[1];
         long[] rawWaveformBuffer = new long[divideTimeRangeIntoNSegments];
 
-        analysis.consume((term, filter) -> {
+        analysis.consume((term, waveformFiltered) -> {
             boolean found = false;
             if (!bitmaps.isEmpty(constrained)) {
-                BM waveformFiltered = aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), filter,
-                    solutionLog, null, context.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
                 BM answer;
                 if (bitmaps.supportsInPlace()) {
                     answer = waveformFiltered;

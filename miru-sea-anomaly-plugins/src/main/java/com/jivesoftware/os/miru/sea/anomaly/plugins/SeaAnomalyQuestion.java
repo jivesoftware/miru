@@ -63,7 +63,7 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyQuery, SeaAnomalyA
 
         StackBuffer stackBuffer = new StackBuffer();
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
-        MiruRequestContext<IBM, ?> context = handle.getRequestContext();
+        MiruRequestContext<BM, IBM, ?> context = handle.getRequestContext();
         MiruBitmaps<BM, IBM> bitmaps = handle.getBitmaps();
 
         // Start building up list of bitmap operations to run
@@ -135,7 +135,7 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyQuery, SeaAnomalyA
         int fieldId = context.getSchema().getFieldId(request.query.expansionField);
         MiruFieldDefinition fieldDefinition = context.getSchema().getFieldDefinition(fieldId);
 
-        MiruFieldIndex<IBM> fieldIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
+        MiruFieldIndex<BM, IBM> fieldIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
         final Map<String, MiruFilter> expandable = new LinkedHashMap<>();
         for (String expansion : request.query.expansionValues) {
             if (expansion.endsWith("*")) {
@@ -179,13 +179,13 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyQuery, SeaAnomalyA
             expand = request.query.filters;
         }
 
-        MiruFieldIndex<IBM> primaryFieldIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
+        MiruFieldIndex<BM, IBM> primaryFieldIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
         int powerBitsFieldId = context.getSchema().getFieldId(request.query.powerBitsFieldName);
         MiruFieldDefinition powerBitsFieldDefinition = context.getSchema().getFieldDefinition(powerBitsFieldId);
-        List<Optional<IBM>> powerBitIndexes = new ArrayList<>();
+        List<Optional<BM>> powerBitIndexes = new ArrayList<>();
         for (int i = 0; i < 64; i++) {
             MiruTermId powerBitTerm = context.getTermComposer().compose(powerBitsFieldDefinition, String.valueOf(i));
-            MiruInvertedIndex<IBM> invertedIndex = primaryFieldIndex.get(powerBitsFieldId, powerBitTerm);
+            MiruInvertedIndex<BM, IBM> invertedIndex = primaryFieldIndex.get(powerBitsFieldId, powerBitTerm);
             powerBitIndexes.add(invertedIndex.getIndex(stackBuffer));
         }
 
@@ -202,7 +202,7 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyQuery, SeaAnomalyA
                 if (!bitmaps.isEmpty(rawAnswer)) {
                     List<BM> answers = Lists.newArrayList();
                     for (int i = 0; i < 64; i++) {
-                        Optional<IBM> powerBitIndex = powerBitIndexes.get(i);
+                        Optional<BM> powerBitIndex = powerBitIndexes.get(i);
                         if (powerBitIndex.isPresent()) {
                             BM answer = bitmaps.and(Arrays.asList(powerBitIndex.get(), rawAnswer));
                             answers.add(answer);

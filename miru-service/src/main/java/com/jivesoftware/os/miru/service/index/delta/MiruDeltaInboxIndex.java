@@ -14,16 +14,16 @@ import java.util.concurrent.ConcurrentMap;
 /**
  * DELTA FORCE
  */
-public class MiruDeltaInboxIndex<BM extends IBM, IBM> implements MiruInboxIndex<IBM>, Mergeable {
+public class MiruDeltaInboxIndex<BM extends IBM, IBM> implements MiruInboxIndex<BM, IBM>, Mergeable {
 
     private final MiruBitmaps<BM, IBM> bitmaps;
     private final TrackError trackError;
-    private final MiruInboxIndex<IBM> backingIndex;
+    private final MiruInboxIndex<BM, IBM> backingIndex;
     private final ConcurrentMap<MiruStreamId, MiruDeltaInvertedIndex<BM, IBM>> inboxDeltas = Maps.newConcurrentMap();
 
     public MiruDeltaInboxIndex(MiruBitmaps<BM, IBM> bitmaps,
         TrackError trackError,
-        MiruInboxIndex<IBM> backingIndex) {
+        MiruInboxIndex<BM, IBM> backingIndex) {
         this.bitmaps = bitmaps;
         this.trackError = trackError;
         this.backingIndex = backingIndex;
@@ -35,7 +35,7 @@ public class MiruDeltaInboxIndex<BM extends IBM, IBM> implements MiruInboxIndex<
     }
 
     @Override
-    public MiruInvertedIndex<IBM> getInbox(MiruStreamId streamId) throws Exception {
+    public MiruInvertedIndex<BM, IBM> getInbox(MiruStreamId streamId) throws Exception {
         MiruDeltaInvertedIndex<BM, IBM> delta = inboxDeltas.get(streamId);
         if (delta == null) {
             delta = new MiruDeltaInvertedIndex<>(bitmaps, trackError, backingIndex.getInbox(streamId), new MiruDeltaInvertedIndex.Delta<>());

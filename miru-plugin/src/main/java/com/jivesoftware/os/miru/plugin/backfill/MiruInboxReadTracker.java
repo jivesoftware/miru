@@ -12,7 +12,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 public interface MiruInboxReadTracker {
 
     <BM extends IBM, IBM> void sipAndApplyReadTracking(final MiruBitmaps<BM, IBM> bitmaps,
-        final MiruRequestContext<IBM, ?> requestContext,
+        final MiruRequestContext<BM, IBM, ?> requestContext,
         MiruTenantId tenantId,
         MiruPartitionId partitionId,
         MiruStreamId streamId,

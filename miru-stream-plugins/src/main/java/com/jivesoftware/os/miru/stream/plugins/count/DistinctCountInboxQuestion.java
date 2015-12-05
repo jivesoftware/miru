@@ -62,7 +62,7 @@ public class DistinctCountInboxQuestion implements Question<DistinctCountQuery, 
 
         StackBuffer stackBuffer = new StackBuffer();
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
-        MiruRequestContext<IBM, ?> context = handle.getRequestContext();
+        MiruRequestContext<BM, IBM, ?> context = handle.getRequestContext();
         MiruBitmaps<BM, IBM> bitmaps = handle.getBitmaps();
 
         if (handle.canBackfill()) {
@@ -84,7 +84,7 @@ public class DistinctCountInboxQuestion implements Question<DistinctCountQuery, 
             ands.add(bitmaps.buildTimeRangeMask(context.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp, stackBuffer));
         }
 
-        Optional<IBM> inbox = context.getInboxIndex().getInbox(request.query.streamId).getIndex(stackBuffer);
+        Optional<BM> inbox = context.getInboxIndex().getInbox(request.query.streamId).getIndex(stackBuffer);
         if (inbox.isPresent()) {
             ands.add(inbox.get());
         } else {
@@ -102,7 +102,7 @@ public class DistinctCountInboxQuestion implements Question<DistinctCountQuery, 
             ands.add(context.getAuthzIndex().getCompositeAuthz(request.authzExpression, stackBuffer));
         }
         if (unreadOnly) {
-            Optional<IBM> unreadIndex = context.getUnreadTrackingIndex().getUnread(request.query.streamId).getIndex(stackBuffer);
+            Optional<BM> unreadIndex = context.getUnreadTrackingIndex().getUnread(request.query.streamId).getIndex(stackBuffer);
             if (unreadIndex.isPresent()) {
                 ands.add(unreadIndex.get());
             }

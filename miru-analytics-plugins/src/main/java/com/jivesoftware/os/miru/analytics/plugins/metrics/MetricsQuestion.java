@@ -58,7 +58,7 @@ public class MetricsQuestion implements Question<MetricsQuery, MetricsAnswer, Me
 
         StackBuffer stackBuffer = new StackBuffer();
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
-        MiruRequestContext<IBM, ?> context = handle.getRequestContext();
+        MiruRequestContext<BM, IBM, ?> context = handle.getRequestContext();
         MiruBitmaps<BM, IBM> bitmaps = handle.getBitmaps();
 
         // Start building up list of bitmap operations to run
@@ -128,13 +128,13 @@ public class MetricsQuestion implements Question<MetricsQuery, MetricsAnswer, Me
             currentTime += segmentDuration;
         }
 
-        MiruFieldIndex<IBM> primaryFieldIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
+        MiruFieldIndex<BM, IBM> primaryFieldIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
         int powerBitsFieldId = context.getSchema().getFieldId(request.query.powerBitsFieldName);
         MiruFieldDefinition powerBitsFieldDefinition = context.getSchema().getFieldDefinition(powerBitsFieldId);
-        List<Optional<IBM>> powerBitIndexes = new ArrayList<>();
+        List<Optional<BM>> powerBitIndexes = new ArrayList<>();
         for (int i = 0; i < 64; i++) {
             MiruTermId powerBitTerm = context.getTermComposer().compose(powerBitsFieldDefinition, String.valueOf(i));
-            MiruInvertedIndex<IBM> invertedIndex = primaryFieldIndex.get(powerBitsFieldId, powerBitTerm);
+            MiruInvertedIndex<BM, IBM> invertedIndex = primaryFieldIndex.get(powerBitsFieldId, powerBitTerm);
             powerBitIndexes.add(invertedIndex.getIndex(stackBuffer));
         }
 
@@ -150,7 +150,7 @@ public class MetricsQuestion implements Question<MetricsQuery, MetricsAnswer, Me
                 if (!bitmaps.isEmpty(rawAnswer)) {
                     List<BM> answers = Lists.newArrayList();
                     for (int i = 0; i < 64; i++) {
-                        Optional<IBM> powerBitIndex = powerBitIndexes.get(i);
+                        Optional<BM> powerBitIndex = powerBitIndexes.get(i);
                         if (powerBitIndex.isPresent()) {
                             BM answer = bitmaps.and(Arrays.asList(powerBitIndex.get(), rawAnswer));
                             answers.add(answer);

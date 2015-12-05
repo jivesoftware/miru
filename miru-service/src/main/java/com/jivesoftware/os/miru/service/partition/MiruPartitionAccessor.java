@@ -66,8 +66,8 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
     public final MiruPartitionCoord coord;
     public final MiruPartitionState state;
     public final boolean hasPersistentStorage;
-    public final Optional<MiruContext<IBM, S>> persistentContext;
-    public final Optional<MiruContext<IBM, S>> transientContext;
+    public final Optional<MiruContext<BM, IBM, S>> persistentContext;
+    public final Optional<MiruContext<BM, IBM, S>> transientContext;
 
     public final AtomicReference<Set<TimeAndVersion>> seenLastSip;
 
@@ -89,8 +89,8 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         MiruPartitionCoord coord,
         MiruPartitionState state,
         boolean hasPersistentStorage,
-        Optional<MiruContext<IBM, S>> persistentContext,
-        Optional<MiruContext<IBM, S>> transientContext,
+        Optional<MiruContext<BM, IBM, S>> persistentContext,
+        Optional<MiruContext<BM, IBM, S>> transientContext,
         AtomicReference<C> rebuildCursor,
         Set<TimeAndVersion> seenLastSip,
         AtomicLong endOfStream,
@@ -126,8 +126,8 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         MiruPartitionCoord coord,
         MiruPartitionState state,
         boolean hasPersistentStorage,
-        Optional<MiruContext<IBM, S>> persistentContext,
-        Optional<MiruContext<IBM, S>> transientContext,
+        Optional<MiruContext<BM, IBM, S>> persistentContext,
+        Optional<MiruContext<BM, IBM, S>> transientContext,
         MiruIndexRepairs indexRepairs,
         MiruIndexer<BM, IBM> indexer) {
         return new MiruPartitionAccessor<BM, IBM, C, S>(miruStats,
@@ -174,7 +174,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         closed.set(true);
     }
 
-    private void closeImmediate(MiruContextFactory<S> contextFactory, Optional<MiruContext<IBM, S>> context) {
+    private void closeImmediate(MiruContextFactory<S> contextFactory, Optional<MiruContext<BM, IBM, S>> context) {
         if (context != null && context.isPresent()) {
             contextFactory.close(context.get());
         }
@@ -259,9 +259,9 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         }
     }
 
-    void merge(ExecutorService mergeExecutor, Optional<MiruContext<IBM, S>> context, MiruMergeChits chits, TrackError trackError) throws Exception {
+    void merge(ExecutorService mergeExecutor, Optional<MiruContext<BM, IBM, S>> context, MiruMergeChits chits, TrackError trackError) throws Exception {
         if (context.isPresent()) {
-            final MiruContext<IBM, S> got = context.get();
+            final MiruContext<BM, IBM, S> got = context.get();
             long elapsed;
             synchronized (got.writeLock) {
                 /*log.info("Merging {} (taken: {}) (remaining: {}) (merges: {})",
@@ -309,7 +309,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
     }
 
     int indexInternal(
-        Optional<MiruContext<IBM, S>> context,
+        Optional<MiruContext<BM, IBM, S>> context,
         Iterator<MiruPartitionedActivity> partitionedActivities,
         IndexStrategy strategy,
         boolean recovery,
@@ -323,7 +323,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         if (!context.isPresent()) {
             return -1;
         }
-        MiruContext<IBM, S> got = context.get();
+        MiruContext<BM, IBM, S> got = context.get();
 
         int consumedCount = 0;
         writeSemaphore.acquire();
@@ -391,7 +391,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         return consumedCount;
     }
 
-    private void checkCorruption(MiruContext<IBM, S> got, Exception e) {
+    private void checkCorruption(MiruContext<BM, IBM, S> got, Exception e) {
         Throwable t = e;
         while (t != null) {
             if (t instanceof CorruptionException) {
@@ -403,7 +403,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         }
     }
 
-    private int consumeTypedBatch(MiruContext<IBM, S> got,
+    private int consumeTypedBatch(MiruContext<BM, IBM, S> got,
         MiruPartitionedActivity.Type batchType,
         List<MiruPartitionedActivity> batch,
         IndexStrategy strategy,
@@ -441,7 +441,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         return 0;
     }
 
-    private int handleActivityType(MiruContext<IBM, S> got,
+    private int handleActivityType(MiruContext<BM, IBM, S> got,
         List<MiruPartitionedActivity> partitionedActivities,
         ExecutorService indexExecutor,
         StackBuffer stackBuffer)
@@ -487,7 +487,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         return activityCount;
     }
 
-    private int handleRepairType(MiruContext<IBM, S> got,
+    private int handleRepairType(MiruContext<BM, IBM, S> got,
         List<MiruPartitionedActivity> partitionedActivities,
         ExecutorService indexExecutor,
         StackBuffer stackBuffer)
@@ -537,7 +537,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         return count;
     }
 
-    private int handleRemoveType(MiruContext<IBM, S> got,
+    private int handleRemoveType(MiruContext<BM, IBM, S> got,
         List<MiruPartitionedActivity> partitionedActivities,
         IndexStrategy strategy,
         StackBuffer stackBuffer)
@@ -599,7 +599,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
             }
 
             @Override
-            public MiruRequestContext<IBM, S> getRequestContext() {
+            public MiruRequestContext<BM, IBM, S> getRequestContext() {
                 if (!state.isOnline()) {
                     throw new MiruPartitionUnavailableException("Partition is not online");
                 }
@@ -660,7 +660,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
             }
 
             @Override
-            public Optional<MiruContext<IBM, S>> getContext() {
+            public Optional<MiruContext<BM, IBM, S>> getContext() {
                 return persistentContext;
             }
 
@@ -676,14 +676,14 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
             }
 
             @Override
-            public void merge(ExecutorService mergeExecutor, Optional<MiruContext<IBM, S>> context, MiruMergeChits chits, TrackError trackError) throws
+            public void merge(ExecutorService mergeExecutor, Optional<MiruContext<BM, IBM, S>> context, MiruMergeChits chits, TrackError trackError) throws
                 Exception {
                 MiruPartitionAccessor.this.merge(mergeExecutor, context, chits, trackError);
             }
 
             @Override
-            public MiruPartitionAccessor<BM, IBM, C, S> migrated(Optional<MiruContext<IBM, S>> newPersistentContext,
-                Optional<MiruContext<IBM, S>> newTransientContext,
+            public MiruPartitionAccessor<BM, IBM, C, S> migrated(Optional<MiruContext<BM, IBM, S>> newPersistentContext,
+                Optional<MiruContext<BM, IBM, S>> newTransientContext,
                 Optional<MiruPartitionState> newState,
                 Optional<Boolean> newHasPersistentStorage) {
 

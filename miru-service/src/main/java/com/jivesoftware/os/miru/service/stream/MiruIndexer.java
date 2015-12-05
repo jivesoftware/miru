@@ -21,17 +21,17 @@ public class MiruIndexer<BM extends IBM, IBM> {
 
     private final static MetricLogger log = MetricLoggerFactory.getLogger();
 
-    private final MiruIndexAuthz<IBM> indexAuthz;
-    private final MiruIndexFieldValues<IBM> indexFieldValues;
+    private final MiruIndexAuthz<BM, IBM> indexAuthz;
+    private final MiruIndexFieldValues<BM, IBM> indexFieldValues;
     private final MiruIndexBloom<BM, IBM> indexBloom;
-    private final MiruIndexLatest<IBM> indexLatest;
-    private final MiruIndexPairedLatest<IBM> indexPairedLatest;
+    private final MiruIndexLatest<BM, IBM> indexLatest;
+    private final MiruIndexPairedLatest<BM, IBM> indexPairedLatest;
 
-    public MiruIndexer(MiruIndexAuthz<IBM> indexAuthz,
-        MiruIndexFieldValues<IBM> indexFieldValues,
+    public MiruIndexer(MiruIndexAuthz<BM, IBM> indexAuthz,
+        MiruIndexFieldValues<BM, IBM> indexFieldValues,
         MiruIndexBloom<BM, IBM> indexBloom,
-        MiruIndexLatest<IBM> indexLatest,
-        MiruIndexPairedLatest<IBM> indexPairedLatest) {
+        MiruIndexLatest<BM, IBM> indexLatest,
+        MiruIndexPairedLatest<BM, IBM> indexPairedLatest) {
         this.indexAuthz = indexAuthz;
         this.indexFieldValues = indexFieldValues;
         this.indexBloom = indexBloom;
@@ -39,7 +39,7 @@ public class MiruIndexer<BM extends IBM, IBM> {
         this.indexPairedLatest = indexPairedLatest;
     }
 
-    public void index(final MiruContext<IBM, ?> context,
+    public void index(final MiruContext<BM, IBM, ?> context,
         final MiruPartitionCoord coord,
         final List<MiruActivityAndId<MiruActivity>> activityAndIds,
         boolean repair,
@@ -126,7 +126,7 @@ public class MiruIndexer<BM extends IBM, IBM> {
         log.debug("End: Index batch of {}", internalActivityAndIds.size());
     }
 
-    public void set(MiruContext<IBM, ?> context, List<MiruActivityAndId<MiruActivity>> activityAndIds) throws Exception {
+    public void set(MiruContext<BM, IBM, ?> context, List<MiruActivityAndId<MiruActivity>> activityAndIds) throws Exception {
         @SuppressWarnings("unchecked")
         List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds = Arrays.<MiruActivityAndId<MiruInternalActivity>>asList(
             new MiruActivityAndId[activityAndIds.size()]);
@@ -176,7 +176,7 @@ public class MiruIndexer<BM extends IBM, IBM> {
         context.activityIndex.setAndReady(internalActivityAndIds);
     }
      */
-    public void remove(MiruContext<IBM, ?> context, MiruActivity activity, int id) throws Exception {
+    public void remove(MiruContext<BM, IBM, ?> context, MiruActivity activity, int id) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
         MiruInternalActivity existing = context.activityIndex.get(activity.tenantId, id, stackBuffer);
         if (existing == null) {

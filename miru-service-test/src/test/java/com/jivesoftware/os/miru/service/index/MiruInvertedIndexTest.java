@@ -35,7 +35,7 @@ public class MiruInvertedIndexTest {
 
     @Test(dataProvider = "miruInvertedIndexDataProviderWithData",
         groups = "slow", enabled = false, description = "Performance test")
-    public void testSetId(MiruInvertedIndex<ImmutableRoaringBitmap> miruInvertedIndex, int appends, int sets) throws Exception {
+    public void testSetId(MiruInvertedIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> miruInvertedIndex, int appends, int sets) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
         Random r = new Random(1_234);
         int id = 0;
@@ -73,7 +73,7 @@ public class MiruInvertedIndexTest {
     }
 
     @Test(dataProvider = "miruInvertedIndexDataProviderWithData")
-    public void testAppend(MiruInvertedIndex<ImmutableRoaringBitmap> miruInvertedIndex, List<Integer> ids) throws Exception {
+    public void testAppend(MiruInvertedIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> miruInvertedIndex, List<Integer> ids) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
         MiruBitmaps<MutableRoaringBitmap, ImmutableRoaringBitmap> bitmaps = new MiruBitmapsRoaringBuffer();
 
@@ -92,7 +92,7 @@ public class MiruInvertedIndexTest {
     }
 
     @Test(dataProvider = "miruInvertedIndexDataProviderWithData")
-    public void testRemove(MiruInvertedIndex<ImmutableRoaringBitmap> miruInvertedIndex, List<Integer> ids) throws Exception {
+    public void testRemove(MiruInvertedIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> miruInvertedIndex, List<Integer> ids) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
         ImmutableRoaringBitmap index = miruInvertedIndex.getIndex(stackBuffer).get();
         assertEquals(index.getCardinality(), ids.size());
@@ -114,7 +114,7 @@ public class MiruInvertedIndexTest {
     }
 
     @Test(dataProvider = "miruInvertedIndexDataProviderWithData")
-    public void testSet(MiruInvertedIndex<ImmutableRoaringBitmap> miruInvertedIndex, List<Integer> ids) throws Exception {
+    public void testSet(MiruInvertedIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> miruInvertedIndex, List<Integer> ids) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
         MiruBitmaps<MutableRoaringBitmap, ImmutableRoaringBitmap> bitmaps = new MiruBitmapsRoaringBuffer();
 
@@ -131,7 +131,8 @@ public class MiruInvertedIndexTest {
     }
 
     @Test(dataProvider = "miruInvertedIndexDataProviderWithData")
-    public void testSetNonIntermediateBit(MiruInvertedIndex<ImmutableRoaringBitmap> miruInvertedIndex, List<Integer> ids) throws Exception {
+    public void testSetNonIntermediateBit(MiruInvertedIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> miruInvertedIndex,
+        List<Integer> ids) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
         MiruBitmaps<MutableRoaringBitmap, ImmutableRoaringBitmap> bitmaps = new MiruBitmapsRoaringBuffer();
 
@@ -148,7 +149,7 @@ public class MiruInvertedIndexTest {
     }
 
     @Test(dataProvider = "miruInvertedIndexDataProviderWithData")
-    public void testAndNot(MiruInvertedIndex<ImmutableRoaringBitmap> miruInvertedIndex, List<Integer> ids) throws Exception {
+    public void testAndNot(MiruInvertedIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> miruInvertedIndex, List<Integer> ids) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
         MiruBitmaps<MutableRoaringBitmap, ImmutableRoaringBitmap> bitmaps = new MiruBitmapsRoaringBuffer();
 
@@ -167,7 +168,7 @@ public class MiruInvertedIndexTest {
     }
 
     @Test(dataProvider = "miruInvertedIndexDataProviderWithData")
-    public void testAndNotToSourceSize(MiruInvertedIndex<ImmutableRoaringBitmap> miruInvertedIndex, List<Integer> ids) throws Exception {
+    public void testAndNotToSourceSize(MiruInvertedIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> miruInvertedIndex, List<Integer> ids) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
         MiruBitmaps<MutableRoaringBitmap, ImmutableRoaringBitmap> bitmaps = new MiruBitmapsRoaringBuffer();
 
@@ -186,7 +187,7 @@ public class MiruInvertedIndexTest {
     }
 
     @Test(dataProvider = "miruInvertedIndexDataProviderWithData")
-    public void testOr(MiruInvertedIndex<ImmutableRoaringBitmap> miruInvertedIndex, List<Integer> ids) throws Exception {
+    public void testOr(MiruInvertedIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> miruInvertedIndex, List<Integer> ids) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
         MiruBitmaps<MutableRoaringBitmap, ImmutableRoaringBitmap> bitmaps = new MiruBitmapsRoaringBuffer();
 
@@ -208,7 +209,7 @@ public class MiruInvertedIndexTest {
     }
 
     @Test(dataProvider = "miruInvertedIndexDataProviderWithData")
-    public void testOrToSourceSize(MiruInvertedIndex<ImmutableRoaringBitmap> miruInvertedIndex, List<Integer> ids) throws Exception {
+    public void testOrToSourceSize(MiruInvertedIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> miruInvertedIndex, List<Integer> ids) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
         MiruBitmaps<MutableRoaringBitmap, ImmutableRoaringBitmap> bitmaps = new MiruBitmapsRoaringBuffer();
 

@@ -250,7 +250,10 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
     }
 
     @Override
-    public void inPlaceAndNot(MutableRoaringBitmap original, MiruInvertedIndex<ImmutableRoaringBitmap> not, StackBuffer stackBuffer) throws Exception {
+    public void inPlaceAndNot(MutableRoaringBitmap original,
+        MiruInvertedIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> not,
+        StackBuffer stackBuffer) throws Exception {
+
         not.txIndex((bitmap, filer, offset, stackBuffer1) -> {
             if (bitmap != null) {
                 original.andNot(bitmap);
@@ -387,7 +390,7 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
     }
 
     @Override
-    public MutableRoaringBitmap buildIndexMask(int largestIndex, Optional<ImmutableRoaringBitmap> andNotMask) {
+    public MutableRoaringBitmap buildIndexMask(int largestIndex, Optional<? extends ImmutableRoaringBitmap> andNotMask) {
         MutableRoaringBitmap mask = new MutableRoaringBitmap();
         if (largestIndex < 0) {
             return mask;

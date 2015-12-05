@@ -26,7 +26,7 @@ public class DistinctCount {
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
     public <BM extends IBM, IBM> DistinctCountAnswer numberOfDistincts(MiruBitmaps<BM, IBM> bitmaps,
-        MiruRequestContext<IBM, ?> requestContext,
+        MiruRequestContext<BM, IBM, ?> requestContext,
         MiruRequest<DistinctCountQuery> request,
         Optional<DistinctCountReport> lastReport,
         BM answer)
@@ -50,11 +50,11 @@ public class DistinctCount {
         MiruFieldDefinition fieldDefinition = requestContext.getSchema().getFieldDefinition(fieldId);
         log.debug("fieldId={}", fieldId);
         if (fieldId >= 0) {
-            MiruFieldIndex<IBM> fieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
+            MiruFieldIndex<BM, IBM> fieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
 
             for (String aggregateTerm : aggregateTerms) {
                 MiruTermId aggregateTermId = termComposer.compose(fieldDefinition, aggregateTerm);
-                Optional<IBM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex(stackBuffer);
+                Optional<BM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex(stackBuffer);
                 if (!optionalTermIndex.isPresent()) {
                     continue;
                 }
@@ -83,7 +83,7 @@ public class DistinctCount {
                     String aggregateTerm = termComposer.decompose(fieldDefinition, aggregateTermId);
 
                     aggregateTerms.add(aggregateTerm);
-                    Optional<IBM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex(stackBuffer);
+                    Optional<BM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex(stackBuffer);
                     checkState(optionalTermIndex.isPresent(), "Unable to load inverted index for aggregateTermId: " + aggregateTermId);
 
                     answerCollector = bitmaps.andNotWithCardinalityAndLastSetBit(answer, optionalTermIndex.get());

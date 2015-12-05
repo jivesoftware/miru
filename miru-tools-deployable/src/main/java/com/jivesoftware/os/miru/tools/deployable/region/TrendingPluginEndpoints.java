@@ -39,8 +39,9 @@ public class TrendingPluginEndpoints {
         @QueryParam("toHoursAgo") @DefaultValue("0") int toHoursAgo,
         @QueryParam("buckets") @DefaultValue("30") int buckets,
         @QueryParam("field") @DefaultValue("authors") String field,
-        @QueryParam("fieldPrefixes") @DefaultValue("") String fieldPrefixesString,
         @QueryParam("filter") @DefaultValue("") String filter,
+        @QueryParam("fieldPrefixes") @DefaultValue("") String fieldPrefixesString,
+        @QueryParam("distinctsFilter") @DefaultValue("") String distinctsFilter,
         @QueryParam("logLevel") @DefaultValue("NONE") String logLevel) {
 
         List<String> fieldPrefixes = null;
@@ -52,13 +53,14 @@ public class TrendingPluginEndpoints {
         }
         String rendered = toolsService.renderPlugin(trendingPluginRegion,
             Optional.of(new TrendingPluginRegionInput(
-                tenantId,
+                tenantId.trim(),
                 fromHoursAgo,
                 toHoursAgo,
                 buckets,
-                field,
+                field.trim(),
+                filter.trim(),
                 fieldPrefixes,
-                filter,
+                distinctsFilter.trim(),
                 logLevel)));
         return Response.ok(rendered).build();
     }

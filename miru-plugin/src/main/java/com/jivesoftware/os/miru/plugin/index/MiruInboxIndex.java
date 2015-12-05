@@ -9,7 +9,7 @@ import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 
 /** @author jonathan */
-public interface MiruInboxIndex<IBM> {
+public interface MiruInboxIndex<BM extends IBM, IBM> {
 
     /**
      * Get the inbox index for a given streamId.
@@ -17,7 +17,7 @@ public interface MiruInboxIndex<IBM> {
      * @param streamId the streamId that represents a given inbox
      * @return the index representing this inbox
      */
-    MiruInvertedIndex<IBM> getInbox(MiruStreamId streamId) throws Exception;
+    MiruInvertedIndex<BM, IBM> getInbox(MiruStreamId streamId) throws Exception;
 
     /**
      * Get the inbox index for a given streamId, creating if it doesn't already exist.

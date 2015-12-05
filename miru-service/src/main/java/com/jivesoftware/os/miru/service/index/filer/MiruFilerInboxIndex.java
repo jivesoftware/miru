@@ -11,7 +11,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndexAppender;
 import com.jivesoftware.os.miru.plugin.partition.TrackError;
 
 /** @author jonathan */
-public class MiruFilerInboxIndex<BM extends IBM, IBM> implements MiruInboxIndex<IBM> {
+public class MiruFilerInboxIndex<BM extends IBM, IBM> implements MiruInboxIndex<BM, IBM> {
 
     private final MiruBitmaps<BM, IBM> bitmaps;
     private final TrackError trackError;
@@ -35,7 +35,7 @@ public class MiruFilerInboxIndex<BM extends IBM, IBM> implements MiruInboxIndex<
     }
 
     @Override
-    public MiruInvertedIndex<IBM> getInbox(MiruStreamId streamId) {
+    public MiruInvertedIndex<BM, IBM> getInbox(MiruStreamId streamId) {
         return new MiruFilerInvertedIndex<>(bitmaps,
             trackError,
             streamId.getBytes(),

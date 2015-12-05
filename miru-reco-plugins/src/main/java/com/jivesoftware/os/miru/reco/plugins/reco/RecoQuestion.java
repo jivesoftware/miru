@@ -56,7 +56,7 @@ public class RecoQuestion implements Question<RecoQuery, RecoAnswer, RecoReport>
         StackBuffer stackBuffer = new StackBuffer();
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
 
-        MiruRequestContext<IBM, ?> context = handle.getRequestContext();
+        MiruRequestContext<BM, IBM, ?> context = handle.getRequestContext();
         MiruBitmaps<BM, IBM> bitmaps = handle.getBitmaps();
 
         MiruTimeRange timeRange = request.query.timeRange;

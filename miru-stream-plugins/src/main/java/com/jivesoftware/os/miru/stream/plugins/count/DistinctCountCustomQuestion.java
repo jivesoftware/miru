@@ -52,7 +52,7 @@ public class DistinctCountCustomQuestion implements Question<DistinctCountQuery,
 
         StackBuffer stackBuffer = new StackBuffer();
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
-        MiruRequestContext<IBM, ?> stream = handle.getRequestContext();
+        MiruRequestContext<BM, IBM, ?> stream = handle.getRequestContext();
         MiruBitmaps<BM, IBM> bitmaps = handle.getBitmaps();
 
         // First grab the stream filter (required)

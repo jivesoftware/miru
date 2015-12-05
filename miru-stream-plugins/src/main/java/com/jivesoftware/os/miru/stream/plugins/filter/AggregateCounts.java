@@ -49,7 +49,7 @@ public class AggregateCounts {
 
     public <BM extends IBM, IBM> AggregateCountsAnswer getAggregateCounts(MiruSolutionLog solutionLog,
         MiruBitmaps<BM, IBM> bitmaps,
-        MiruRequestContext<IBM, ?> requestContext,
+        MiruRequestContext<BM, IBM, ?> requestContext,
         MiruRequest<AggregateCountsQuery> request,
         MiruPartitionCoord coord,
         Optional<AggregateCountsReport> lastReport,
@@ -87,7 +87,7 @@ public class AggregateCounts {
 
     private <BM extends IBM, IBM> AggregateCountsAnswerConstraint answerConstraint(MiruSolutionLog solutionLog,
         MiruBitmaps<BM, IBM> bitmaps,
-        MiruRequestContext<IBM, ?> requestContext,
+        MiruRequestContext<BM, IBM, ?> requestContext,
         MiruPartitionCoord coord,
         MiruStreamId streamId,
         AggregateCountsQueryConstraint constraint,
@@ -98,6 +98,7 @@ public class AggregateCounts {
         StackBuffer stackBuffer = new StackBuffer();
 
         if (bitmaps.supportsInPlace()) {
+            // don't mutate the original
             answer = bitmaps.copy(answer);
         }
 
@@ -138,7 +139,7 @@ public class AggregateCounts {
         MiruTermComposer termComposer = requestContext.getTermComposer();
         MiruActivityInternExtern activityInternExtern = miruProvider.getActivityInternExtern(coord.tenantId);
 
-        MiruFieldIndex<IBM> fieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
+        MiruFieldIndex<BM, IBM> fieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
         int fieldId = requestContext.getSchema().getFieldId(constraint.aggregateCountAroundField);
         MiruFieldDefinition fieldDefinition = requestContext.getSchema().getFieldDefinition(fieldId);
         log.debug("fieldId={}", fieldId);
@@ -147,7 +148,7 @@ public class AggregateCounts {
         if (fieldId >= 0) {
             IBM unreadIndex = null;
             if (!MiruStreamId.NULL.equals(streamId)) {
-                Optional<IBM> unread = requestContext.getUnreadTrackingIndex().getUnread(streamId).getIndex(stackBuffer);
+                Optional<BM> unread = requestContext.getUnreadTrackingIndex().getUnread(streamId).getIndex(stackBuffer);
                 if (unread.isPresent()) {
                     unreadIndex = unread.get();
                 }
@@ -157,7 +158,7 @@ public class AggregateCounts {
             CardinalityAndLastSetBit<BM> answerCollector = null;
             for (String aggregateTerm : aggregateTerms) { // Consider
                 MiruTermId aggregateTermId = termComposer.compose(fieldDefinition, aggregateTerm);
-                Optional<IBM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex(stackBuffer);
+                Optional<BM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex(stackBuffer);
                 if (!optionalTermIndex.isPresent()) {
                     continue;
                 }
@@ -229,7 +230,7 @@ public class AggregateCounts {
                     String aggregateTerm = termComposer.decompose(fieldDefinition, aggregateTermId);
                     aggregateTerms.add(aggregateTerm);
 
-                    Optional<IBM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex(stackBuffer);
+                    Optional<BM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex(stackBuffer);
                     checkState(optionalTermIndex.isPresent(), "Unable to load inverted index for aggregateTermId: " + aggregateTermId);
 
                     IBM termIndex = optionalTermIndex.get();

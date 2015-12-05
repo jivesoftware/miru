@@ -7,9 +7,9 @@ import com.jivesoftware.os.miru.api.base.MiruStreamId;
  *
  * @author jonathan
  */
-public interface MiruUnreadTrackingIndex<IBM> {
+public interface MiruUnreadTrackingIndex<BM extends IBM, IBM> {
 
-    MiruInvertedIndex<IBM> getUnread(MiruStreamId streamId) throws Exception;
+    MiruInvertedIndex<BM, IBM> getUnread(MiruStreamId streamId) throws Exception;
 
     MiruInvertedIndexAppender getAppender(MiruStreamId streamId) throws Exception;
 

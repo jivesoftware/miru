@@ -17,16 +17,16 @@ public interface MiruMigrationHandle<BM extends IBM, IBM, C extends MiruCursor<C
 
     boolean canMigrateTo(MiruBackingStorage destinationStorage);
 
-    Optional<MiruContext<IBM, S>> getContext();
+    Optional<MiruContext<BM, IBM, S>> getContext();
 
     void closePersistentContext(MiruContextFactory<S> contextFactory);
 
     void closeTransientContext(MiruContextFactory<S> contextFactory);
 
-    void merge(ExecutorService mergeExecutor, Optional<MiruContext<IBM, S>> context, MiruMergeChits chits, TrackError trackError) throws Exception;
+    void merge(ExecutorService mergeExecutor, Optional<MiruContext<BM, IBM, S>> context, MiruMergeChits chits, TrackError trackError) throws Exception;
 
-    MiruPartitionAccessor<BM, IBM, C, S> migrated(Optional<MiruContext<IBM, S>> newPersistentContext,
-                Optional<MiruContext<IBM, S>> newTransientContext,
+    MiruPartitionAccessor<BM, IBM, C, S> migrated(Optional<MiruContext<BM, IBM, S>> newPersistentContext,
+                Optional<MiruContext<BM, IBM, S>> newTransientContext,
                 Optional<MiruPartitionState> newState,
                 Optional<Boolean> newHasPersistentStorage);
 }

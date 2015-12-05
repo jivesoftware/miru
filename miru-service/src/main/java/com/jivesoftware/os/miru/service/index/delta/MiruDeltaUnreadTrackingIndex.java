@@ -13,16 +13,16 @@ import java.util.Collections;
 import java.util.concurrent.ConcurrentMap;
 
 /** @author jonathan */
-public class MiruDeltaUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUnreadTrackingIndex<IBM>, Mergeable {
+public class MiruDeltaUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUnreadTrackingIndex<BM, IBM>, Mergeable {
 
     private final MiruBitmaps<BM, IBM> bitmaps;
     private final TrackError trackError;
-    private final MiruUnreadTrackingIndex<IBM> backingIndex;
+    private final MiruUnreadTrackingIndex<BM, IBM> backingIndex;
     private final ConcurrentMap<MiruStreamId, MiruDeltaInvertedIndex<BM, IBM>> unreadDeltas = Maps.newConcurrentMap();
 
     public MiruDeltaUnreadTrackingIndex(MiruBitmaps<BM, IBM> bitmaps,
         TrackError trackError,
-        MiruUnreadTrackingIndex<IBM> backingIndex) {
+        MiruUnreadTrackingIndex<BM, IBM> backingIndex) {
         this.bitmaps = bitmaps;
         this.trackError = trackError;
         this.backingIndex = backingIndex;
@@ -34,7 +34,7 @@ public class MiruDeltaUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUn
     }
 
     @Override
-    public MiruInvertedIndex<IBM> getUnread(MiruStreamId streamId) throws Exception {
+    public MiruInvertedIndex<BM, IBM> getUnread(MiruStreamId streamId) throws Exception {
         MiruDeltaInvertedIndex<BM, IBM> delta = unreadDeltas.get(streamId);
         if (delta == null) {
             delta = new MiruDeltaInvertedIndex<>(bitmaps, trackError, backingIndex.getUnread(streamId), new MiruDeltaInvertedIndex.Delta<>());
@@ -53,13 +53,13 @@ public class MiruDeltaUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUn
 
     @Override
     public void applyRead(MiruStreamId streamId, IBM readMask, StackBuffer stackBuffer) throws Exception {
-        MiruInvertedIndex<IBM> unread = getUnread(streamId);
+        MiruInvertedIndex<BM, IBM> unread = getUnread(streamId);
         unread.andNotToSourceSize(Collections.singletonList(readMask), stackBuffer);
     }
 
     @Override
     public void applyUnread(MiruStreamId streamId, IBM unreadMask, StackBuffer stackBuffer) throws Exception {
-        MiruInvertedIndex<IBM> unread = getUnread(streamId);
+        MiruInvertedIndex<BM, IBM> unread = getUnread(streamId);
         unread.orToSourceSize(unreadMask, stackBuffer);
     }
 

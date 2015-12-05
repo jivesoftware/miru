@@ -12,7 +12,7 @@ import com.jivesoftware.os.miru.plugin.partition.TrackError;
 import java.util.Collections;
 
 /** @author jonathan */
-public class MiruFilerUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUnreadTrackingIndex<IBM> {
+public class MiruFilerUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUnreadTrackingIndex<BM, IBM> {
 
     private final MiruBitmaps<BM, IBM> bitmaps;
     private final TrackError trackError;
@@ -36,7 +36,7 @@ public class MiruFilerUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUn
     }
 
     @Override
-    public MiruInvertedIndex<IBM> getUnread(MiruStreamId streamId) throws Exception {
+    public MiruInvertedIndex<BM, IBM> getUnread(MiruStreamId streamId) throws Exception {
         return new MiruFilerInvertedIndex<>(bitmaps, trackError, streamId.getBytes(), store, -1, stripingLocksProvider.lock(streamId, 0));
     }
 
@@ -47,13 +47,13 @@ public class MiruFilerUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUn
 
     @Override
     public void applyRead(MiruStreamId streamId, IBM readMask, StackBuffer stackBuffer) throws Exception {
-        MiruInvertedIndex<IBM> unread = getUnread(streamId);
+        MiruInvertedIndex<BM, IBM> unread = getUnread(streamId);
         unread.andNotToSourceSize(Collections.singletonList(readMask), stackBuffer);
     }
 
     @Override
     public void applyUnread(MiruStreamId streamId, IBM unreadMask, StackBuffer stackBuffer) throws Exception {
-        MiruInvertedIndex<IBM> unread = getUnread(streamId);
+        MiruInvertedIndex<BM, IBM> unread = getUnread(streamId);
         unread.orToSourceSize(unreadMask, stackBuffer);
     }
 

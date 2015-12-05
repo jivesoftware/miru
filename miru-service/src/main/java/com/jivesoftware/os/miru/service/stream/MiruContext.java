@@ -27,18 +27,18 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @param <IBM>
  * @author jonathan
  */
-public class MiruContext<IBM, S extends MiruSipCursor<S>> implements MiruRequestContext<IBM, S> {
+public class MiruContext<BM extends IBM, IBM, S extends MiruSipCursor<S>> implements MiruRequestContext<BM, IBM, S> {
 
     public final MiruSchema schema;
     public final MiruTermComposer termComposer;
     public final MiruTimeIndex timeIndex;
     public final MiruActivityIndex activityIndex;
-    public final MiruFieldIndexProvider<IBM> fieldIndexProvider;
+    public final MiruFieldIndexProvider<BM, IBM> fieldIndexProvider;
     public final MiruSipIndex<S> sipIndex;
-    public final MiruAuthzIndex<IBM> authzIndex;
-    public final MiruRemovalIndex<IBM> removalIndex;
-    public final MiruUnreadTrackingIndex<IBM> unreadTrackingIndex;
-    public final MiruInboxIndex<IBM> inboxIndex;
+    public final MiruAuthzIndex<BM, IBM> authzIndex;
+    public final MiruRemovalIndex<BM, IBM> removalIndex;
+    public final MiruUnreadTrackingIndex<BM, IBM> unreadTrackingIndex;
+    public final MiruInboxIndex<BM, IBM> inboxIndex;
     public final MiruActivityInternExtern activityInternExtern;
     public final StripingLocksProvider<MiruStreamId> streamLocks;
     public final ChunkStore[] chunkStores;
@@ -52,12 +52,12 @@ public class MiruContext<IBM, S extends MiruSipCursor<S>> implements MiruRequest
         MiruTermComposer termComposer,
         MiruTimeIndex timeIndex,
         MiruActivityIndex activityIndex,
-        MiruFieldIndexProvider<IBM> fieldIndexProvider,
+        MiruFieldIndexProvider<BM, IBM> fieldIndexProvider,
         MiruSipIndex<S> sipIndex,
-        MiruAuthzIndex<IBM> authzIndex,
-        MiruRemovalIndex<IBM> removalIndex,
-        MiruUnreadTrackingIndex<IBM> unreadTrackingIndex,
-        MiruInboxIndex<IBM> inboxIndex,
+        MiruAuthzIndex<BM, IBM> authzIndex,
+        MiruRemovalIndex<BM, IBM> removalIndex,
+        MiruUnreadTrackingIndex<BM, IBM> unreadTrackingIndex,
+        MiruInboxIndex<BM, IBM> inboxIndex,
         MiruActivityInternExtern activityInternExtern,
         StripingLocksProvider<MiruStreamId> streamLocks,
         ChunkStore[] chunkStores,
@@ -99,7 +99,7 @@ public class MiruContext<IBM, S extends MiruSipCursor<S>> implements MiruRequest
     }
 
     @Override
-    public MiruFieldIndexProvider<IBM> getFieldIndexProvider() {
+    public MiruFieldIndexProvider<BM, IBM> getFieldIndexProvider() {
         return fieldIndexProvider;
     }
 
@@ -109,22 +109,22 @@ public class MiruContext<IBM, S extends MiruSipCursor<S>> implements MiruRequest
     }
 
     @Override
-    public MiruAuthzIndex<IBM> getAuthzIndex() {
+    public MiruAuthzIndex<BM, IBM> getAuthzIndex() {
         return authzIndex;
     }
 
     @Override
-    public MiruRemovalIndex<IBM> getRemovalIndex() {
+    public MiruRemovalIndex<BM, IBM> getRemovalIndex() {
         return removalIndex;
     }
 
     @Override
-    public MiruUnreadTrackingIndex<IBM> getUnreadTrackingIndex() {
+    public MiruUnreadTrackingIndex<BM, IBM> getUnreadTrackingIndex() {
         return unreadTrackingIndex;
     }
 
     @Override
-    public MiruInboxIndex<IBM> getInboxIndex() {
+    public MiruInboxIndex<BM, IBM> getInboxIndex() {
         return inboxIndex;
     }
 

@@ -29,11 +29,11 @@ import java.util.concurrent.Future;
 /**
  *
  */
-public class MiruIndexFieldValues<BM> {
+public class MiruIndexFieldValues<BM extends IBM, IBM> {
 
     private final static MetricLogger log = MetricLoggerFactory.getLogger();
 
-    public List<Future<List<FieldValuesWork>>> compose(MiruContext<BM, ?> context,
+    public List<Future<List<FieldValuesWork>>> compose(MiruContext<BM, IBM, ?> context,
         final List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds,
         ExecutorService indexExecutor)
         throws Exception {
@@ -92,7 +92,7 @@ public class MiruIndexFieldValues<BM> {
         return workFutures;
     }
 
-    public List<Future<?>> index(final MiruContext<BM, ?> context,
+    public List<Future<?>> index(final MiruContext<BM, IBM, ?> context,
         MiruTenantId tenantId,
         List<Future<List<FieldValuesWork>>> fieldWorkFutures,
         final boolean repair,
@@ -101,7 +101,7 @@ public class MiruIndexFieldValues<BM> {
 
         List<FieldValuesWork>[] work = awaitFieldWorkFutures(fieldWorkFutures);
 
-        final MiruFieldIndex<BM> fieldIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
+        final MiruFieldIndex<BM, IBM> fieldIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
         List<Integer> fieldIds = context.schema.getFieldIds();
         List<Future<?>> futures = new ArrayList<>(fieldIds.size());
         for (int fieldId = 0; fieldId < work.length; fieldId++) {

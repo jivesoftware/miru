@@ -122,7 +122,7 @@ public class IndexTestUtil {
             termInterner);
     }
 
-    public static <BM extends IBM, IBM> MiruContext<IBM, RCVSSipCursor> buildInMemoryContext(int numberOfChunkStores,
+    public static <BM extends IBM, IBM> MiruContext<BM, IBM, RCVSSipCursor> buildInMemoryContext(int numberOfChunkStores,
         MiruBitmaps<BM, IBM> bitmaps,
         MiruPartitionCoord coord) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
@@ -130,7 +130,7 @@ public class IndexTestUtil {
 
     }
 
-    public static <BM extends IBM, IBM> MiruContext<IBM, RCVSSipCursor> buildOnDiskContext(int numberOfChunkStores,
+    public static <BM extends IBM, IBM> MiruContext<BM, IBM, RCVSSipCursor> buildOnDiskContext(int numberOfChunkStores,
         MiruBitmaps<BM, IBM> bitmaps,
         MiruPartitionCoord coord) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
