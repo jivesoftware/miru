@@ -55,6 +55,12 @@
                             {/foreach}
                         </tr>
                         <tr>
+                            <td class="balancer-label balancer-online">Upgrading</td>
+                            {foreach $host in $hosts}
+                                <td>{$host.numUpgrading}</td>
+                            {/foreach}
+                        </tr>
+                        <tr>
                             <td class="balancer-label balancer-action">Action</td>
                             {foreach $host in $hosts}
                                 <td>

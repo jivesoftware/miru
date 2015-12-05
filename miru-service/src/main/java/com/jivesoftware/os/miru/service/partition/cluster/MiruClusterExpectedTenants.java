@@ -11,7 +11,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
-import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
@@ -203,8 +202,8 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
             } else if (partition.getState() == MiruPartitionState.offline) {
                 topology.warm(coord.partitionId);
                 return true;
-            } else if (partition.getState() == MiruPartitionState.online) {
-                return topology.updateStorage(coord.partitionId, MiruBackingStorage.memory, stackBuffer);
+            } else if (partition.getState().isOnline()) {
+                return topology.rebuild(coord.partitionId);
             }
         }
         return false;
@@ -221,7 +220,7 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
                     MiruTimeIndex timeIndex = handle.getRequestContext().getTimeIndex();
                     if (timeIndex.intersects(miruTimeRange)) {
                         LOG.info("Rebuild requested for {}", coord);
-                        topology.updateStorage(coord.partitionId, MiruBackingStorage.memory, stackBuffer);
+                        topology.rebuild(coord.partitionId);
                     }
                 } catch (Exception x) {
                     LOG.warn("Attempt to rebuild offline non disk partition was ignored for {}.", coord, x);

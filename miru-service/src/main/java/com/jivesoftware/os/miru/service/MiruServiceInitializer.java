@@ -61,6 +61,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class MiruServiceInitializer {
 
@@ -68,6 +69,9 @@ public class MiruServiceInitializer {
 
     public <C extends MiruCursor<C, S>, S extends MiruSipCursor<S>> MiruLifecyle<MiruService> initialize(final MiruServiceConfig config,
         MiruStats miruStats,
+        ScheduledExecutorService scheduledBootstrapExecutor,
+        ScheduledExecutorService scheduledRebuildExecutor,
+        ScheduledExecutorService scheduledSipMigrateExecutor,
         MiruClusterClient clusterClient,
         MiruHost miruHost,
         MiruSchemaProvider schemaProvider,
@@ -86,15 +90,6 @@ public class MiruServiceInitializer {
         // heartbeat and ensurePartitions
         final ScheduledExecutorService serviceScheduledExecutor = Executors.newScheduledThreadPool(2,
             new NamedThreadFactory(threadGroup, "service"));
-
-        final ScheduledExecutorService scheduledBootstrapExecutor = Executors.newScheduledThreadPool(config.getPartitionScheduledBootstrapThreads(),
-            new NamedThreadFactory(threadGroup, "scheduled_bootstrap"));
-
-        final ScheduledExecutorService scheduledRebuildExecutor = Executors.newScheduledThreadPool(config.getPartitionScheduledRebuildThreads(),
-            new NamedThreadFactory(threadGroup, "scheduled_rebuild"));
-
-        final ScheduledExecutorService scheduledSipMigrateExecutor = Executors.newScheduledThreadPool(config.getPartitionScheduledSipMigrateThreads(),
-            new NamedThreadFactory(threadGroup, "scheduled_sip_migrate"));
 
         // query solvers
         final ExecutorService solverExecutor = Executors.newFixedThreadPool(config.getSolverExecutorThreads(),
@@ -155,12 +150,11 @@ public class MiruServiceInitializer {
             termComposer,
             internExtern,
             ImmutableMap.<MiruBackingStorage, MiruChunkAllocator>builder()
-                .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
-                .put(MiruBackingStorage.disk, onDiskChunkAllocator)
-                .build(),
+            .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
+            .put(MiruBackingStorage.disk, onDiskChunkAllocator)
+            .build(),
             sipIndexMarshaller,
             resourceLocator,
-            MiruBackingStorage.valueOf(config.getDefaultStorage()),
             config.getPartitionAuthzCacheSize(),
             fieldIndexStripingLocksProvider,
             streamStripingLocksProvider,
@@ -193,7 +187,9 @@ public class MiruServiceInitializer {
             }
         };
 
-        MiruMergeChits miruMergeChits = new MiruMergeChits(config.getMergeChitCount(), config.getMergeMaxOverage());
+        AtomicLong numberOfChitsRemaining = new AtomicLong(config.getMergeChitCount());
+        MiruMergeChits persistentMergeChits = new MiruMergeChits(numberOfChitsRemaining, config.getMergeChitCount(), config.getMergeMaxOverage());
+        MiruMergeChits transientMergeChits = new MiruMergeChits(numberOfChitsRemaining, config.getMergeChitCount(), config.getMergeMaxOverage());
         MiruLocalPartitionFactory<C, S> localPartitionFactory = new MiruLocalPartitionFactory<>(miruStats,
             config,
             contextFactory,
@@ -209,7 +205,8 @@ public class MiruServiceInitializer {
             mergeExecutor,
             config.getRebuildIndexerThreads(),
             indexRepairs,
-            miruMergeChits,
+            persistentMergeChits,
+            transientMergeChits,
             partitionErrorTracker);
 
         MiruRemoteQueryablePartitionFactory remotePartitionFactory = new MiruRemoteQueryablePartitionFactory();

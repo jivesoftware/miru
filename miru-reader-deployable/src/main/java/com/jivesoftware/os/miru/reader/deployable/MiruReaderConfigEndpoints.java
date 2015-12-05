@@ -45,27 +45,6 @@ public class MiruReaderConfigEndpoints {
         this.timestampedOrderIdProvider = timestampedOrderIdProvider;
     }
 
-    @POST
-    @Path("/storage/{tenantId}/{partitionId}/{storage}")
-    @Produces(MediaType.TEXT_HTML)
-    public Response setStorage(
-        @PathParam("tenantId") String tenantId,
-        @PathParam("partitionId") Integer partitionId,
-        @PathParam("storage") String storage) {
-        try {
-            long start = System.currentTimeMillis();
-            miruService.setStorage(
-                new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
-                MiruPartitionId.of(partitionId),
-                MiruBackingStorage.valueOf(storage));
-            stats.ingressed("POST:/storage/" + tenantId + "/" + partitionId + "/" + storage, 1, System.currentTimeMillis() - start);
-            return Response.ok(storage).build();
-        } catch (Throwable t) {
-            log.error("Failed to set storage to {} for tenant {} partition {}", new Object[]{storage, tenantId, partitionId}, t);
-            return Response.serverError().entity(t.getMessage()).build();
-        }
-    }
-
     @DELETE
     @Path("/hosts/{logicalName}/{port}")
     @Produces(MediaType.TEXT_HTML)

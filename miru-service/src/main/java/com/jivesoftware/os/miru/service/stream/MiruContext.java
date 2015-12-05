@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.service.stream;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.filer.io.chunk.ChunkStore;
+import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
@@ -41,6 +42,7 @@ public class MiruContext<IBM, S extends MiruSipCursor<S>> implements MiruRequest
     public final MiruActivityInternExtern activityInternExtern;
     public final StripingLocksProvider<MiruStreamId> streamLocks;
     public final ChunkStore[] chunkStores;
+    public final MiruBackingStorage storage;
     public final Object writeLock = new Object();
     public final AtomicBoolean corrupt = new AtomicBoolean(false);
     public final AtomicInteger deltaMinId = new AtomicInteger(-1);
@@ -58,7 +60,8 @@ public class MiruContext<IBM, S extends MiruSipCursor<S>> implements MiruRequest
         MiruInboxIndex<IBM> inboxIndex,
         MiruActivityInternExtern activityInternExtern,
         StripingLocksProvider<MiruStreamId> streamLocks,
-        ChunkStore[] chunkStores) {
+        ChunkStore[] chunkStores,
+        MiruBackingStorage storage) {
         this.schema = schema;
         this.termComposer = termComposer;
         this.timeIndex = timeIndex;
@@ -72,6 +75,7 @@ public class MiruContext<IBM, S extends MiruSipCursor<S>> implements MiruRequest
         this.activityInternExtern = activityInternExtern;
         this.streamLocks = streamLocks;
         this.chunkStores = chunkStores;
+        this.storage = storage;
     }
 
     @Override

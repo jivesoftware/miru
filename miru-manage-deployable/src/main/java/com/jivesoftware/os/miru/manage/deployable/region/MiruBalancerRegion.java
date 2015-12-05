@@ -74,6 +74,7 @@ public class MiruBalancerRegion implements MiruPageRegion<Void> {
                     .put("numBootstrap", String.valueOf(stateCounts.count(MiruPartitionState.bootstrap)))
                     .put("numRebuilding", String.valueOf(stateCounts.count(MiruPartitionState.rebuilding)))
                     .put("numOnline", String.valueOf(stateCounts.count(MiruPartitionState.online)))
+                    .put("numUpgrading", String.valueOf(stateCounts.count(MiruPartitionState.upgrading)))
                     .build();
             }));
             data.put("numHosts", String.valueOf(hostHeartbeats.size()));

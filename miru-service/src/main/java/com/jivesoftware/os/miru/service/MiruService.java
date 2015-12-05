@@ -6,7 +6,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
-import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
@@ -249,10 +248,6 @@ public class MiruService implements Miru {
     /**
      * Manage topology and configuration.
      */
-    public void setStorage(MiruTenantId tenantId, MiruPartitionId partitionId, MiruBackingStorage storage) throws Exception {
-        partitionDirector.setStorage(tenantId, partitionId, storage);
-    }
-
     public void removeHost(MiruHost host) throws Exception {
         partitionDirector.removeHost(host);
     }

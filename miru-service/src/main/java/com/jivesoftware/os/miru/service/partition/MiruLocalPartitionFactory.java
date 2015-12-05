@@ -40,7 +40,8 @@ public class MiruLocalPartitionFactory<C extends MiruCursor<C, S>, S extends Mir
     private final ExecutorService mergeExecutor;
     private final int rebuildIndexerThreads;
     private final MiruIndexRepairs indexRepairs;
-    private final MiruMergeChits mergeChits;
+    private final MiruMergeChits persistentMergeChits;
+    private final MiruMergeChits transientMergeChits;
     private final PartitionErrorTracker partitionErrorTracker;
 
     public MiruLocalPartitionFactory(MiruStats miruStats,
@@ -58,7 +59,8 @@ public class MiruLocalPartitionFactory<C extends MiruCursor<C, S>, S extends Mir
         ExecutorService mergeExecutor,
         int rebuildIndexerThreads,
         MiruIndexRepairs indexRepairs,
-        MiruMergeChits mergeChits,
+        MiruMergeChits persistentMergeChits,
+        MiruMergeChits transientMergeChits,
         PartitionErrorTracker partitionErrorTracker) {
 
         this.miruStats = miruStats;
@@ -76,7 +78,8 @@ public class MiruLocalPartitionFactory<C extends MiruCursor<C, S>, S extends Mir
         this.mergeExecutor = mergeExecutor;
         this.rebuildIndexerThreads = rebuildIndexerThreads;
         this.indexRepairs = indexRepairs;
-        this.mergeChits = mergeChits;
+        this.persistentMergeChits = persistentMergeChits;
+        this.transientMergeChits = transientMergeChits;
         this.partitionErrorTracker = partitionErrorTracker;
     }
 
@@ -111,7 +114,8 @@ public class MiruLocalPartitionFactory<C extends MiruCursor<C, S>, S extends Mir
             config.getPartitionRebuildIfBehindByCount(),
             config.getPartitionRebuildBatchSize(),
             config.getPartitionSipBatchSize(),
-            mergeChits,
+            persistentMergeChits,
+            transientMergeChits,
             new MiruLocalHostedPartition.Timings(
                 config.getPartitionBootstrapIntervalInMillis(),
                 config.getPartitionRebuildIntervalInMillis(),

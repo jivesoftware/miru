@@ -114,7 +114,6 @@ public class IndexTestUtil {
             .build(),
             new RCVSSipIndexMarshaller(),
             new MiruTempDirectoryResourceLocator(),
-            MiruBackingStorage.memory,
             1024,
             fieldIndexStripingLocksProvider,
             streamStripingLocksProvider,

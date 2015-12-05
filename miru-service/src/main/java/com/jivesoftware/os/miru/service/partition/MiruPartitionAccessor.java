@@ -8,7 +8,6 @@ import com.jivesoftware.os.filer.io.api.CorruptionException;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
-import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
@@ -34,6 +33,7 @@ import com.jivesoftware.os.miru.service.index.delta.MiruDeltaSipIndex;
 import com.jivesoftware.os.miru.service.index.delta.MiruDeltaTimeIndex;
 import com.jivesoftware.os.miru.service.index.delta.MiruDeltaUnreadTrackingIndex;
 import com.jivesoftware.os.miru.service.stream.MiruContext;
+import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
 import com.jivesoftware.os.miru.service.stream.MiruIndexer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -64,8 +64,10 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
     public final MiruStats miruStats;
     public final MiruBitmaps<BM, IBM> bitmaps;
     public final MiruPartitionCoord coord;
-    public final MiruPartitionCoordInfo info;
-    public final Optional<MiruContext<IBM, S>> context;
+    public final MiruPartitionState state;
+    public final boolean hasPersistentStorage;
+    public final Optional<MiruContext<IBM, S>> persistentContext;
+    public final Optional<MiruContext<IBM, S>> transientContext;
 
     public final AtomicReference<Set<TimeAndVersion>> seenLastSip;
 
@@ -85,8 +87,10 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
     private MiruPartitionAccessor(MiruStats miruStats,
         MiruBitmaps<BM, IBM> bitmaps,
         MiruPartitionCoord coord,
-        MiruPartitionCoordInfo info,
-        Optional<MiruContext<IBM, S>> context,
+        MiruPartitionState state,
+        boolean hasPersistentStorage,
+        Optional<MiruContext<IBM, S>> persistentContext,
+        Optional<MiruContext<IBM, S>> transientContext,
         AtomicReference<C> rebuildCursor,
         Set<TimeAndVersion> seenLastSip,
         AtomicLong endOfStream,
@@ -101,8 +105,10 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         this.miruStats = miruStats;
         this.bitmaps = bitmaps;
         this.coord = coord;
-        this.info = info;
-        this.context = context;
+        this.state = state;
+        this.hasPersistentStorage = hasPersistentStorage;
+        this.persistentContext = persistentContext;
+        this.transientContext = transientContext;
         this.rebuildCursor = rebuildCursor;
         this.seenLastSip = new AtomicReference<>(seenLastSip);
         this.endOfStream = endOfStream;
@@ -118,15 +124,19 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
     static <BM extends IBM, IBM, C extends MiruCursor<C, S>, S extends MiruSipCursor<S>> MiruPartitionAccessor<BM, IBM, C, S> initialize(MiruStats miruStats,
         MiruBitmaps<BM, IBM> bitmaps,
         MiruPartitionCoord coord,
-        MiruPartitionCoordInfo info,
-        Optional<MiruContext<IBM, S>> context,
+        MiruPartitionState state,
+        boolean hasPersistentStorage,
+        Optional<MiruContext<IBM, S>> persistentContext,
+        Optional<MiruContext<IBM, S>> transientContext,
         MiruIndexRepairs indexRepairs,
         MiruIndexer<BM, IBM> indexer) {
         return new MiruPartitionAccessor<BM, IBM, C, S>(miruStats,
             bitmaps,
             coord,
-            info,
-            context,
+            state,
+            hasPersistentStorage,
+            persistentContext,
+            transientContext,
             new AtomicReference<>(),
             Sets.<TimeAndVersion>newHashSet(),
             new AtomicLong(0),
@@ -140,39 +150,55 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
     }
 
     MiruPartitionAccessor<BM, IBM, C, S> copyToState(MiruPartitionState toState) {
-        return new MiruPartitionAccessor<>(miruStats, bitmaps, coord, info.copyToState(toState), context, rebuildCursor,
+        return new MiruPartitionAccessor<>(miruStats, bitmaps, coord, toState, hasPersistentStorage, persistentContext, transientContext, rebuildCursor,
             seenLastSip.get(), endOfStream, hasOpenWriters, readSemaphore, writeSemaphore, closed, indexRepairs, indexer, timestampOfLastMerge);
     }
 
-    Optional<MiruContext<IBM, S>> close() throws InterruptedException {
+    void close(MiruContextFactory<S> contextFactory) throws InterruptedException {
         writeSemaphore.acquire(PERMITS);
         try {
             readSemaphore.acquire(PERMITS);
             try {
-                return closeImmediate();
+                markClosed();
             } finally {
                 readSemaphore.release(PERMITS);
             }
         } finally {
             writeSemaphore.release(PERMITS);
         }
+        closeImmediate(contextFactory, persistentContext);
+        closeImmediate(contextFactory, transientContext);
     }
 
-    private Optional<MiruContext<IBM, S>> closeImmediate() {
+    private void markClosed() {
         closed.set(true);
-        return context;
+    }
+
+    private void closeImmediate(MiruContextFactory<S> contextFactory, Optional<MiruContext<IBM, S>> context) {
+        if (context != null && context.isPresent()) {
+            contextFactory.close(context.get());
+        }
+    }
+
+    MiruBackingStorage getBackingStorage() {
+        return hasPersistentStorage ? MiruBackingStorage.disk : MiruBackingStorage.memory;
+    }
+
+    boolean isCorrupt() {
+        return (persistentContext.isPresent() && persistentContext.get().isCorrupt() && !transientContext.isPresent())
+            || (transientContext.isPresent() && transientContext.get().isCorrupt());
     }
 
     boolean canHotDeploy() {
-        return (info.state == MiruPartitionState.offline || info.state == MiruPartitionState.bootstrap) && info.storage == MiruBackingStorage.disk;
+        return (state == MiruPartitionState.offline || state == MiruPartitionState.bootstrap) && hasPersistentStorage;
     }
 
     boolean canHandleQueries() {
-        return info.state == MiruPartitionState.online;
+        return state.isOnline();
     }
 
     boolean isOpenForWrites() {
-        return info.state == MiruPartitionState.online;
+        return persistentContext.isPresent();
     }
 
     void notifyEndOfStream(long threshold) {
@@ -188,11 +214,11 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
     }
 
     boolean isEligibleToBackfill() {
-        return info.state == MiruPartitionState.online;
+        return state.isOnline();
     }
 
     boolean canAutoMigrate() {
-        return info.storage == MiruBackingStorage.memory && info.state == MiruPartitionState.online;
+        return transientContext.isPresent() && state == MiruPartitionState.online;
     }
 
     C getRebuildCursor() throws IOException {
@@ -204,14 +230,14 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
     }
 
     Optional<S> getSipCursor(StackBuffer stackBuffer) throws IOException, InterruptedException {
-        return context.isPresent() ? context.get().sipIndex.getSip(stackBuffer) : null;
+        return persistentContext.isPresent() ? persistentContext.get().sipIndex.getSip(stackBuffer) : null;
     }
 
     boolean setSip(S sip, StackBuffer stackBuffer) throws IOException, InterruptedException {
         if (sip == null) {
             throw new IllegalArgumentException("Sip cannot be null");
         }
-        return (context.isPresent() && context.get().sipIndex.setSip(sip, stackBuffer));
+        return (persistentContext.isPresent() && persistentContext.get().sipIndex.setSip(sip, stackBuffer));
     }
 
     private static class MergeRunnable implements Runnable {
@@ -233,15 +259,13 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         }
     }
 
-    private final AtomicLong merges = new AtomicLong(0);
-
-    void merge(MiruMergeChits chits, ExecutorService mergeExecutor, TrackError trackError, StackBuffer stackBuffer) throws Exception {
+    void merge(ExecutorService mergeExecutor, Optional<MiruContext<IBM, S>> context, MiruMergeChits chits, TrackError trackError) throws Exception {
         if (context.isPresent()) {
             final MiruContext<IBM, S> got = context.get();
             long elapsed;
             synchronized (got.writeLock) {
                 /*log.info("Merging {} (taken: {}) (remaining: {}) (merges: {})",
-                    coord, chits.taken(coord), chits.remaining(), merges.incrementAndGet());*/
+                coord, chits.taken(coord), chits.remaining(), merges.incrementAndGet());*/
                 long start = System.currentTimeMillis();
 
                 List<Future<?>> futures = Lists.newArrayList();
@@ -267,14 +291,9 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
                     checkCorruption(got, e);
                     throw e;
                 }
-
-                elapsed = System.currentTimeMillis() - start;
-
-                /*int lastId = got.markStartOfDelta(stackBuffer);
-                log.info("Merged {} at id {} in {} ms", coord, lastId, elapsed);*/
-
-                chits.refundAll(coord);
                 timestampOfLastMerge.set(System.currentTimeMillis());
+                elapsed = System.currentTimeMillis() - start;
+                chits.refundAll(coord);
             }
             log.inc("merge>time>pow>" + FilerIO.chunkPower(elapsed, 0));
         }
@@ -289,7 +308,9 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         ingress, rebuild, sip;
     }
 
-    int indexInternal(Iterator<MiruPartitionedActivity> partitionedActivities,
+    int indexInternal(
+        Optional<MiruContext<IBM, S>> context,
+        Iterator<MiruPartitionedActivity> partitionedActivities,
         IndexStrategy strategy,
         boolean recovery,
         MiruMergeChits chits,
@@ -364,7 +385,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         }
 
         if (chits.take(coord, consumedCount)) {
-            merge(chits, mergeExecutor, trackError, stackBuffer);
+            merge(mergeExecutor, context, chits, trackError);
         }
 
         return consumedCount;
@@ -579,14 +600,14 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
 
             @Override
             public MiruRequestContext<IBM, S> getRequestContext() {
-                if (info.state != MiruPartitionState.online) {
+                if (!state.isOnline()) {
                     throw new MiruPartitionUnavailableException("Partition is not online");
                 }
 
-                if (!context.isPresent()) {
+                if (!persistentContext.isPresent()) {
                     throw new MiruPartitionUnavailableException("Context not set");
                 }
-                return context.get();
+                return persistentContext.get();
             }
 
             @Override
@@ -632,41 +653,48 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
 
             @Override
             public boolean canMigrateTo(MiruBackingStorage destinationStorage) {
-                if (info.storage == MiruBackingStorage.disk && destinationStorage == MiruBackingStorage.disk) {
+                if (persistentContext.isPresent() && destinationStorage == MiruBackingStorage.disk) {
                     return false;
                 }
-                return info.state == MiruPartitionState.online;
+                return state.isOnline();
             }
 
             @Override
             public Optional<MiruContext<IBM, S>> getContext() {
-                return context;
+                return persistentContext;
             }
 
             @Override
-            public Optional<MiruContext<IBM, S>> closeContext() {
-                // we have all the semaphores so we can close immediately
-                return MiruPartitionAccessor.this.closeImmediate();
+            public void closePersistentContext(MiruContextFactory<S> contextFactory) {
+                MiruPartitionAccessor.this.markClosed();
+                MiruPartitionAccessor.this.closeImmediate(contextFactory, persistentContext);
             }
 
             @Override
-            public void merge(MiruMergeChits chits, ExecutorService mergeExecutor, TrackError trackError, StackBuffer stackBuffer) throws Exception {
-                MiruPartitionAccessor.this.merge(chits, mergeExecutor, trackError, stackBuffer);
+            public void closeTransientContext(MiruContextFactory<S> contextFactory) {
+                MiruPartitionAccessor.this.closeImmediate(contextFactory, transientContext);
             }
 
             @Override
-            public MiruPartitionAccessor<BM, IBM, C, S> migrated(MiruContext<IBM, S> context,
-                Optional<MiruBackingStorage> storage,
-                Optional<MiruPartitionState> state) {
+            public void merge(ExecutorService mergeExecutor, Optional<MiruContext<IBM, S>> context, MiruMergeChits chits, TrackError trackError) throws
+                Exception {
+                MiruPartitionAccessor.this.merge(mergeExecutor, context, chits, trackError);
+            }
 
-                MiruPartitionCoordInfo migratedInfo = info;
-                if (storage.isPresent()) {
-                    migratedInfo = migratedInfo.copyToStorage(storage.get());
-                }
-                if (state.isPresent()) {
-                    migratedInfo = migratedInfo.copyToState(state.get());
-                }
-                return MiruPartitionAccessor.initialize(miruStats, bitmaps, coord, migratedInfo, Optional.of(context), indexRepairs, indexer);
+            @Override
+            public MiruPartitionAccessor<BM, IBM, C, S> migrated(Optional<MiruContext<IBM, S>> newPersistentContext,
+                Optional<MiruContext<IBM, S>> newTransientContext,
+                Optional<MiruPartitionState> newState,
+                Optional<Boolean> newHasPersistentStorage) {
+
+                return MiruPartitionAccessor.initialize(miruStats,
+                    bitmaps,
+                    coord,
+                    newState.or(state),
+                    newHasPersistentStorage.or(hasPersistentStorage),
+                    newPersistentContext,
+                    newTransientContext,
+                    indexRepairs, indexer);
             }
 
             @Override
@@ -680,7 +708,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
     public String toString() {
         return "MiruPartitionAccessor{"
             + "coord=" + coord
-            + ", info=" + info
+            + ", state=" + state
             + ", rebuildCursor=" + rebuildCursor
             + ", closed=" + closed
             + '}';

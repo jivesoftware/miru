@@ -76,9 +76,13 @@ import com.jivesoftware.os.routing.bird.health.api.HealthFactory;
 import com.jivesoftware.os.routing.bird.http.client.ConnectionDescriptorSelectiveStrategy;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import java.io.File;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
@@ -87,7 +91,6 @@ import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.config.LoggerConfig;
 import org.merlin.config.BindInterfaceToConfiguration;
 import org.merlin.config.Config;
-import org.testng.Assert;
 
 /**
  *
@@ -123,7 +126,6 @@ public class MiruPluginTestBootstrap {
         });
 
         MiruServiceConfig config = BindInterfaceToConfiguration.bindDefault(MiruServiceConfig.class);
-        config.setDefaultStorage(desiredStorage.name());
         config.setDefaultFailAfterNMillis(TimeUnit.HOURS.toMillis(1));
         config.setMergeChitCount(10_000);
 
@@ -218,7 +220,44 @@ public class MiruPluginTestBootstrap {
             termComposer);
         final MiruStats miruStats = new MiruStats();
 
-        MiruLifecyle<MiruService> miruServiceLifecyle = new MiruServiceInitializer().initialize(config, miruStats,
+        List<Runnable> scheduledBootstrapExecutorRunnables = new ArrayList<>();
+        final ScheduledExecutorService scheduledBootstrapExecutor = new ScheduledThreadPoolExecutor(3) {
+            @Override
+            public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit) {
+                synchronized (scheduledBootstrapExecutorRunnables) {
+                    scheduledBootstrapExecutorRunnables.add(command);
+                }
+                return null;
+            }
+        };
+
+        List<Runnable> scheduledRebuildExecutorRunnables = new ArrayList<>();
+        final ScheduledExecutorService scheduledRebuildExecutor = new ScheduledThreadPoolExecutor(3) {
+            @Override
+            public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit) {
+                synchronized (scheduledRebuildExecutorRunnables) {
+                    scheduledRebuildExecutorRunnables.add(command);
+                }
+                return null;
+            }
+        };
+
+        List<Runnable> scheduledSipMigrateExecutorRunnables = new ArrayList<>();
+        final ScheduledExecutorService scheduledSipMigrateExecutor = new ScheduledThreadPoolExecutor(3) {
+            @Override
+            public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit) {
+                synchronized (scheduledSipMigrateExecutorRunnables) {
+                    scheduledSipMigrateExecutorRunnables.add(command);
+                }
+                return null;
+            }
+        };
+
+        MiruLifecyle<MiruService> miruServiceLifecyle = new MiruServiceInitializer().initialize(config,
+            miruStats,
+            scheduledBootstrapExecutor,
+            scheduledRebuildExecutor,
+            scheduledSipMigrateExecutor,
             clusterClient,
             miruHost,
             new SingleSchemaProvider(miruSchema),
@@ -233,15 +272,37 @@ public class MiruPluginTestBootstrap {
             termInterner);
 
         miruServiceLifecyle.start();
+
         final MiruService miruService = miruServiceLifecyle.getService();
 
-        long t = System.currentTimeMillis();
-        int maxSecondsToComeOnline = 10 + partitionedActivities.size() / 1_000; // suppose 1K activities/sec
-        while (!miruService.checkInfo(tenantId, partitionId, new MiruPartitionCoordInfo(MiruPartitionState.online, desiredStorage))) {
-            Thread.sleep(10);
-            if (System.currentTimeMillis() - t > TimeUnit.SECONDS.toMillis(maxSecondsToComeOnline)) {
-                Assert.fail("Partition failed to come online");
+        while (!miruService.checkInfo(tenantId, partitionId, new MiruPartitionCoordInfo(MiruPartitionState.bootstrap, MiruBackingStorage.memory))) {
+            System.out.println("Waiting to move out of bootstrap....");
+            synchronized (scheduledBootstrapExecutorRunnables) {
+                for (Runnable runnable : scheduledBootstrapExecutorRunnables) {
+                    runnable.run();
+                }
             }
+            Thread.sleep(10);
+        }
+
+        while (!miruService.checkInfo(tenantId, partitionId, new MiruPartitionCoordInfo(MiruPartitionState.online, MiruBackingStorage.memory))) {
+            System.out.println("Waiting to move to online memory....");
+            synchronized (scheduledRebuildExecutorRunnables) {
+                for (Runnable runnable : scheduledRebuildExecutorRunnables) {
+                    runnable.run();
+                }
+            }
+            Thread.sleep(10);
+        }
+
+        while (!miruService.checkInfo(tenantId, partitionId, new MiruPartitionCoordInfo(MiruPartitionState.online, desiredStorage))) {
+            System.out.println("Waiting to move online " + desiredStorage + "....");
+            synchronized (scheduledSipMigrateExecutorRunnables) {
+                for (Runnable runnable : scheduledSipMigrateExecutorRunnables) {
+                    runnable.run();
+                }
+            }
+            Thread.sleep(10);
         }
 
         return new MiruProvider<MiruService>() {
