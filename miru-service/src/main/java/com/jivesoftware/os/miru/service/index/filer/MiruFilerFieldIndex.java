@@ -10,9 +10,9 @@ import com.jivesoftware.os.filer.io.map.MapStore;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.MiruInterner;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
-import com.jivesoftware.os.miru.plugin.index.IndexTx;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
+import com.jivesoftware.os.miru.plugin.index.MultiIndexTx;
 import com.jivesoftware.os.miru.plugin.index.TermIdStream;
 import com.jivesoftware.os.miru.plugin.partition.TrackError;
 import com.jivesoftware.os.miru.service.index.BitmapAndLastId;
@@ -104,7 +104,7 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
                 termIdBytes[i] = termIds[i].getBytes();
             }
         }
-        indexes[fieldId].readEach(termIdBytes, null, (monkey, filer, _stackBuffer, lock) -> {
+        indexes[fieldId].readEach(termIdBytes, null, (monkey, filer, _stackBuffer, lock, index) -> {
             if (filer != null) {
                 BitmapAndLastId<BM> bitmapAndLastId = MiruFilerInvertedIndex.deser(bitmaps, trackError, filer, _stackBuffer);
                 if (bitmapAndLastId != null) {
@@ -116,17 +116,17 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
     }
 
     @Override
-    public void multiTxIndex(int fieldId, MiruTermId[] termIds, StackBuffer stackBuffer, IndexTx<Void, IBM> indexTx) throws Exception {
+    public void multiTxIndex(int fieldId, MiruTermId[] termIds, StackBuffer stackBuffer, MultiIndexTx<IBM> indexTx) throws Exception {
         byte[][] termIdBytes = new byte[termIds.length][];
         for (int i = 0; i < termIds.length; i++) {
             if (termIds[i] != null) {
                 termIdBytes[i] = termIds[i].getBytes();
             }
         }
-        indexes[fieldId].readEach(termIdBytes, null, (monkey, filer, _stackBuffer, lock) -> {
+        indexes[fieldId].readEach(termIdBytes, null, (monkey, filer, _stackBuffer, lock, index) -> {
             if (filer != null) {
                 try {
-                    indexTx.tx(null, filer, MiruFilerInvertedIndex.LAST_ID_LENGTH, _stackBuffer);
+                    indexTx.tx(index, null, filer, MiruFilerInvertedIndex.LAST_ID_LENGTH, _stackBuffer);
                 } catch (Exception e) {
                     throw new IOException(e);
                 }

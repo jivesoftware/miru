@@ -15,6 +15,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndexProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
+import com.jivesoftware.os.miru.plugin.index.MultiIndexTx;
 import com.jivesoftware.os.miru.plugin.index.TermIdStream;
 import com.jivesoftware.os.miru.plugin.query.LuceneBackedQueryParser;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
@@ -185,7 +186,7 @@ public class LuceneBackedQueryParserTest {
         }
 
         @Override
-        public void multiTxIndex(int fieldId, MiruTermId[] termIds, StackBuffer stackBuffer, IndexTx<Void, RoaringBitmap> indexTx) throws Exception {
+        public void multiTxIndex(int fieldId, MiruTermId[] termIds, StackBuffer stackBuffer, MultiIndexTx<RoaringBitmap> indexTx) throws Exception {
             throw new UnsupportedOperationException("Nope");
         }
 

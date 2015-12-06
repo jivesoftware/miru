@@ -5,7 +5,7 @@ import com.jivesoftware.os.miru.api.base.MiruTermId;
 /**
  *
  */
-public interface TermBitmapStream<BM> {
+public interface IndexAlignedBitmapStream<BM> {
 
-    boolean stream(MiruTermId termId, BM bitmap) throws Exception;
+    void stream(int index, BM bitmap) throws Exception;
 }

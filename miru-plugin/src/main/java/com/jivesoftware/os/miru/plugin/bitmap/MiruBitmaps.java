@@ -18,6 +18,7 @@ package com.jivesoftware.os.miru.plugin.bitmap;
 import com.google.common.base.Optional;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.plugin.index.FieldMultiTermTxIndex;
+import com.jivesoftware.os.miru.plugin.index.IndexAlignedBitmapStream;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruMultiTxIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
@@ -100,6 +101,8 @@ public interface MiruBitmaps<BM extends IBM, IBM> {
     BM andNotMultiTx(BM original, FieldMultiTermTxIndex<BM, IBM> multiTermTxIndex, StackBuffer stackBuffer) throws Exception;
 
     void inPlaceAndNotMultiTx(BM original, MiruMultiTxIndex<IBM> multiTermTxIndex, StackBuffer stackBuffer) throws Exception;
+
+    void multiTx(MiruMultiTxIndex<IBM> multiTermTxIndex, IndexAlignedBitmapStream<BM> stream, StackBuffer stackBuffer) throws Exception;
 
     BM andNot(IBM original, IBM not);
 

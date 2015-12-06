@@ -26,9 +26,6 @@ public class FieldMultiTermTxIndex<BM extends IBM, IBM> implements MiruMultiTxIn
         if (termIds == null) {
             throw new IllegalStateException("Terms need to be set before invoking txIndex");
         }
-        fieldIndex.multiTxIndex(fieldId, termIds, stackBuffer, (bitmap, filer, offset, stackBuffer1) -> {
-            tx.tx(bitmap, filer, offset, stackBuffer1);
-            return null;
-        });
+        fieldIndex.multiTxIndex(fieldId, termIds, stackBuffer, tx);
     }
 }

@@ -87,7 +87,7 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
         }
 
         MiruTermId[][] results = new MiruTermId[indexes.length][];
-        keyedStore.readEach(bytesForIndexes, null, (monkey, filer, _stackBuffer, lock) -> {
+        keyedStore.readEach(bytesForIndexes, null, (monkey, filer, _stackBuffer, lock, index) -> {
             if (filer != null) {
                 synchronized (lock) {
                     filer.seek(0);

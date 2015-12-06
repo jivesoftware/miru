@@ -83,7 +83,7 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
         }
 
         long start = System.currentTimeMillis();
-        List<MiruTermId> termIds;
+        MiruTermId[] termIds;
         if (request.query.distinctQueries.size() == 1) {
             ArrayList<MiruTermId> termIdsList = Lists.newArrayList();
             distincts.gatherDirect(bitmaps, handle.getRequestContext(), request.query.distinctQueries.get(0), gatherDistinctsBatchSize, solutionLog,
@@ -91,7 +91,7 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
                     termIdsList.add(termId);
                     return true;
                 });
-            termIds = termIdsList;
+            termIds = termIdsList.toArray(new MiruTermId[termIdsList.size()]);
         } else if (request.query.distinctQueries.size() > 1) {
             Set<MiruTermId> joinTerms = null;
             for (DistinctsQuery distinctQuery : request.query.distinctQueries) {
@@ -108,18 +108,18 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
                 }
             }
             if (joinTerms != null) {
-                termIds = Lists.newArrayList(joinTerms);
+                termIds = joinTerms.toArray(new MiruTermId[joinTerms.size()]);
             } else {
-                termIds = Collections.emptyList();
+                termIds = new MiruTermId[0];
             }
         } else {
-            termIds = Collections.emptyList();
+            termIds = new MiruTermId[0];
         }
         solutionLog.log(MiruSolutionLogLevel.INFO, "Gathered {} distincts for {} queries in {} ms.",
-            termIds.size(), request.query.distinctQueries.size(), (System.currentTimeMillis() - start));
+            termIds.length, request.query.distinctQueries.size(), (System.currentTimeMillis() - start));
 
         start = System.currentTimeMillis();
-        List<Waveform> waveforms = Lists.newArrayListWithExpectedSize(termIds.size());
+        List<Waveform> waveforms = Lists.newArrayListWithExpectedSize(termIds.length);
         boolean resultsExhausted = analytics.analyze(solutionLog,
             handle,
             context,
@@ -129,19 +129,10 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
             request.query.divideTimeRangeIntoNSegments,
             stackBuffer,
             (Analytics.ToAnalyze<MiruTermId, BM> toAnalyze) -> {
-                int batchSize = 100; //TODO configure
-                for (List<MiruTermId> partition : Lists.partition(termIds, batchSize)) {
-                    MiruTermId[] batch = partition.toArray(new MiruTermId[partition.size()]);
-                    BM[] results = bitmaps.createArrayOf(batchSize);
-                    primaryFieldIndex.multiGet(fieldId, batch, results, stackBuffer);
-                    for (int i = 0; i < batch.length; i++) {
-                        if (results[i] != null) {
-                            if (!toAnalyze.analyze(batch[i], results[i])) {
-                                return false;
-                            }
-                        }
-                    }
-                }
+                bitmaps.multiTx(
+                    (tx, stackBuffer1) -> primaryFieldIndex.multiTxIndex(fieldId, termIds, stackBuffer1, tx),
+                    (index, bitmap) -> toAnalyze.analyze(termIds[index], bitmap),
+                    stackBuffer);
                 return true;
             },
             (MiruTermId termId, long[] waveformBuffer) -> {

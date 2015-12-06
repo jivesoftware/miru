@@ -18,7 +18,7 @@ public interface MiruFieldIndex<BM extends IBM, IBM> {
 
     void multiGet(int fieldId, MiruTermId[] termIds, BM[] results, StackBuffer stackBuffer) throws Exception;
 
-    void multiTxIndex(int fieldId, MiruTermId[] termIds, StackBuffer stackBuffer, IndexTx<Void, IBM> indexTx) throws Exception;
+    void multiTxIndex(int fieldId, MiruTermId[] termIds, StackBuffer stackBuffer, MultiIndexTx<IBM> indexTx) throws Exception;
 
     void append(int fieldId, MiruTermId termId, int[] ids, long[] counts, StackBuffer stackBuffer) throws Exception;
 
