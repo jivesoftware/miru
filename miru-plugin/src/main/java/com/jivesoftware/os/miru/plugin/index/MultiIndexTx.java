@@ -8,5 +8,5 @@ import com.jivesoftware.os.filer.io.chunk.ChunkFiler;
  */
 public interface MultiIndexTx<IBM> {
 
-    void tx(IBM bitmap, ChunkFiler filer, int offset, StackBuffer stackBuffer) throws Exception;
+    void tx(int index, IBM bitmap, ChunkFiler filer, int offset, StackBuffer stackBuffer) throws Exception;
 }

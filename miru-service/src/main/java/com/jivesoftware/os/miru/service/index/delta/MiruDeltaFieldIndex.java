@@ -7,9 +7,9 @@ import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
-import com.jivesoftware.os.miru.plugin.index.IndexTx;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
+import com.jivesoftware.os.miru.plugin.index.MultiIndexTx;
 import com.jivesoftware.os.miru.plugin.index.TermIdStream;
 import com.jivesoftware.os.miru.plugin.partition.TrackError;
 import com.jivesoftware.os.miru.service.index.Mergeable;
@@ -205,7 +205,7 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
     }
 
     @Override
-    public void multiTxIndex(int fieldId, MiruTermId[] termIds, StackBuffer stackBuffer, IndexTx<Void, IBM> indexTx) throws Exception {
+    public void multiTxIndex(int fieldId, MiruTermId[] termIds, StackBuffer stackBuffer, MultiIndexTx<IBM> indexTx) throws Exception {
         for (int i = 0; i < termIds.length; i++) {
             if (termIds[i] != null) {
                 MiruDeltaInvertedIndex.Delta<IBM> delta = fieldIndexDeltas[fieldId].get(termIds[i]);
@@ -213,7 +213,7 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
                     MiruInvertedIndex<BM, IBM> backingIndex = backingFieldIndex.get(fieldId, termIds[i]);
                     Optional<BM> index = MiruDeltaInvertedIndex.overlayDelta(bitmaps, delta, backingIndex, trackError, stackBuffer);
                     if (index.isPresent()) {
-                        indexTx.tx(index.get(), null, -1, stackBuffer);
+                        indexTx.tx(i, index.get(), null, -1, stackBuffer);
                     }
                     termIds[i] = null;
                 }
