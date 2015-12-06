@@ -24,7 +24,9 @@ import com.jivesoftware.os.filer.io.chunk.ChunkFiler;
 import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
+import com.jivesoftware.os.miru.plugin.index.FieldMultiTermTxIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
+import com.jivesoftware.os.miru.plugin.index.MiruMultiTxIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTxIndex;
 import java.io.DataInput;
@@ -86,6 +88,16 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
             container.add(index);
         }
         return container;
+    }
+
+    @Override
+    public MutableRoaringBitmap removeRange(MutableRoaringBitmap original, int rangeStartInclusive, int rangeEndExclusive) {
+        return MutableRoaringBitmap.remove(original, rangeStartInclusive, rangeEndExclusive);
+    }
+
+    @Override
+    public void inPlaceRemoveRange(MutableRoaringBitmap original, int rangeStartInclusive, int rangeEndExclusive) {
+        original.remove(rangeStartInclusive, rangeEndExclusive);
     }
 
     @Override
@@ -261,6 +273,29 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
                 original.andNot(bitmapFromFiler(filer, offset, stackBuffer1));
             }
             return null;
+        }, stackBuffer);
+    }
+
+    @Override
+    public MutableRoaringBitmap andNotMultiTx(MutableRoaringBitmap original,
+        FieldMultiTermTxIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> multiTermTxIndex,
+        StackBuffer stackBuffer) throws Exception {
+
+        MutableRoaringBitmap container = copy(original);
+        inPlaceAndNotMultiTx(container, multiTermTxIndex, stackBuffer);
+        return container;
+    }
+
+    @Override
+    public void inPlaceAndNotMultiTx(MutableRoaringBitmap original,
+        MiruMultiTxIndex<ImmutableRoaringBitmap> multiTermTxIndex,
+        StackBuffer stackBuffer) throws Exception {
+        multiTermTxIndex.txIndex((bitmap, filer, offset, stackBuffer1) -> {
+            if (bitmap != null) {
+                original.andNot(bitmap);
+            } else if (filer != null) {
+                original.andNot(bitmapFromFiler(filer, offset, stackBuffer1));
+            }
         }, stackBuffer);
     }
 

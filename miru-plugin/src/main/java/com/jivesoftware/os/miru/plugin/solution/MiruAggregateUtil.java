@@ -1,7 +1,6 @@
 package com.jivesoftware.os.miru.plugin.solution;
 
 import com.google.common.base.Optional;
-import com.google.common.collect.Sets;
 import com.jivesoftware.os.filer.io.api.KeyRange;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.jive.utils.base.interfaces.CallbackStream;
@@ -18,13 +17,14 @@ import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
+import com.jivesoftware.os.miru.plugin.index.FieldMultiTermTxIndex;
+import com.jivesoftware.os.miru.plugin.index.IndexTx;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndexProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.index.MiruTxIndex;
-import com.jivesoftware.os.miru.plugin.index.TermBitmapStream;
 import com.jivesoftware.os.miru.plugin.index.TermIdStream;
 import com.jivesoftware.os.miru.plugin.partition.TrackError;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
@@ -184,6 +184,8 @@ public class MiruAggregateUtil {
             answer = bitmaps.copy(answer);
         }
 
+        FieldMultiTermTxIndex<BM, IBM> multiTermTxIndex = new FieldMultiTermTxIndex<>(primaryFieldIndex, pivotFieldId);
+
         int[] ids = new int[batchSize];
         int gets = 0;
         int fetched = 0;
@@ -203,61 +205,42 @@ public class MiruAggregateUtil {
 
             int[] actualIds = new int[added];
             System.arraycopy(ids, 0, actualIds, 0, added);
-            BM seen = bitmaps.createWithBits(actualIds);
 
             Set<MiruTermId> distincts = new HashSet<>();
             gets++;
-            if (bitmaps.supportsInPlace()) {
-                bitmaps.inPlaceAndNot(answer, seen);
-                long start = System.nanoTime();
-                List<MiruTermId[]> all = activityIndex.getAll(actualIds, pivotFieldId, stackBuffer);
-                getAllCost += (System.nanoTime() - start);
-                distincts.clear();
-                for (MiruTermId[] termIds : all) {
-                    if (termIds != null && termIds.length > 0) {
-                        for (MiruTermId termId : termIds) {
-                            if (distincts.add(termId)) {
-                                MiruInvertedIndex<BM, IBM> invertedIndex = primaryFieldIndex.get(pivotFieldId, termId);
-                                Optional<BM> gotIndex = invertedIndex.getIndex(stackBuffer);
-                                if (gotIndex.isPresent()) {
-                                    if (!termIdStream.stream(termId)) {
-                                        break done;
-                                    }
-                                    BM bitmap = gotIndex.get();
-                                    start = System.nanoTime();
-                                    bitmaps.inPlaceAndNot(answer, bitmap);
-                                    andNotCost += (System.nanoTime() - start);
-                                }
-                            }
-                        }
-                    }
-                }
-            } else {
-                List<IBM> andNots = new ArrayList<>();
-                andNots.add(seen);
-                List<MiruTermId[]> all = activityIndex.getAll(actualIds, pivotFieldId, stackBuffer);
-                distincts.clear();
-                for (MiruTermId[] termIds : all) {
-                    if (termIds != null && termIds.length > 0) {
-                        used++;
-                        for (MiruTermId termId : termIds) {
-                            if (distincts.add(termId)) {
-                                MiruInvertedIndex<BM, IBM> invertedIndex = primaryFieldIndex.get(pivotFieldId, termId);
-                                Optional<BM> gotIndex = invertedIndex.getIndex(stackBuffer);
-                                if (gotIndex.isPresent()) {
-                                    if (!termIdStream.stream(termId)) {
-                                        break done;
-                                    }
-                                    BM bitmap = gotIndex.get();
-                                    andNots.add(bitmap);
-                                }
-                            }
-                        }
-                    }
-                }
 
-                answer = bitmaps.andNot(answer, andNots);
+            if (bitmaps.supportsInPlace()) {
+                bitmaps.inPlaceRemoveRange(answer, actualIds[0], actualIds[actualIds.length - 1] + 1);
+            } else {
+                answer = bitmaps.removeRange(answer, actualIds[0], actualIds[actualIds.length - 1] + 1);
             }
+
+            long start = System.nanoTime();
+            List<MiruTermId[]> all = activityIndex.getAll(actualIds, pivotFieldId, stackBuffer);
+            getAllCost += (System.nanoTime() - start);
+            distincts.clear();
+            for (MiruTermId[] termIds : all) {
+                if (termIds != null && termIds.length > 0) {
+                    for (MiruTermId termId : termIds) {
+                        if (distincts.add(termId)) {
+                            if (!termIdStream.stream(termId)) {
+                                break done;
+                            }
+                        }
+                    }
+                }
+            }
+
+            MiruTermId[] termIds = distincts.toArray(new MiruTermId[distincts.size()]);
+            multiTermTxIndex.setTermIds(termIds);
+
+            start = System.nanoTime();
+            if (bitmaps.supportsInPlace()) {
+                bitmaps.inPlaceAndNotMultiTx(answer, multiTermTxIndex, stackBuffer);
+            } else {
+                answer = bitmaps.andNotMultiTx(answer, multiTermTxIndex, stackBuffer);
+            }
+            andNotCost += (System.nanoTime() - start);
         }
         solutionLog.log(MiruSolutionLogLevel.INFO, "gather aggregate gets:{} fetched:{} used:{} getAllCost:{} andNotCost:{}",
             gets, fetched, used, getAllCost, andNotCost);

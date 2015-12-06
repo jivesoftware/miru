@@ -26,7 +26,9 @@ import com.jivesoftware.os.filer.io.chunk.ChunkFiler;
 import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
+import com.jivesoftware.os.miru.plugin.index.FieldMultiTermTxIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
+import com.jivesoftware.os.miru.plugin.index.MiruMultiTxIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTxIndex;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
@@ -92,6 +94,16 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
             container.add(index);
         }
         return container;
+    }
+
+    @Override
+    public RoaringBitmap removeRange(RoaringBitmap original, int rangeStartInclusive, int rangeEndExclusive) {
+        return RoaringBitmap.remove(original, rangeStartInclusive, rangeEndExclusive);
+    }
+
+    @Override
+    public void inPlaceRemoveRange(RoaringBitmap original, int rangeStartInclusive, int rangeEndExclusive) {
+        original.remove(rangeStartInclusive, rangeEndExclusive);
     }
 
     @Override
@@ -268,6 +280,27 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
         if (index.isPresent()) {
             original.andNot(index.get());
         }
+    }
+
+    @Override
+    public RoaringBitmap andNotMultiTx(RoaringBitmap original,
+        FieldMultiTermTxIndex<RoaringBitmap, RoaringBitmap> multiTermTxIndex,
+        StackBuffer stackBuffer) throws Exception {
+
+        RoaringBitmap container = copy(original);
+        inPlaceAndNotMultiTx(container, multiTermTxIndex, stackBuffer);
+        return container;
+    }
+
+    @Override
+    public void inPlaceAndNotMultiTx(RoaringBitmap original, MiruMultiTxIndex<RoaringBitmap> multiTermTxIndex, StackBuffer stackBuffer) throws Exception {
+        multiTermTxIndex.txIndex((bitmap, filer, offset, stackBuffer1) -> {
+            if (bitmap != null) {
+                original.andNot(bitmap);
+            } else if (filer != null) {
+                original.andNot(bitmapFromFiler(filer, offset, stackBuffer1));
+            }
+        }, stackBuffer);
     }
 
     @Override

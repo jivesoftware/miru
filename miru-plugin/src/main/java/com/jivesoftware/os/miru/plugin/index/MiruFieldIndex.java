@@ -3,7 +3,6 @@ package com.jivesoftware.os.miru.plugin.index;
 import com.jivesoftware.os.filer.io.api.KeyRange;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -16,6 +15,10 @@ public interface MiruFieldIndex<BM extends IBM, IBM> {
     MiruInvertedIndex<BM, IBM> get(int fieldId, MiruTermId termId, int considerIfIndexIdGreaterThanN) throws Exception;
 
     MiruInvertedIndex<BM, IBM> getOrCreateInvertedIndex(int fieldId, MiruTermId term) throws Exception;
+
+    void multiGet(int fieldId, MiruTermId[] termIds, BM[] results, StackBuffer stackBuffer) throws Exception;
+
+    void multiTxIndex(int fieldId, MiruTermId[] termIds, StackBuffer stackBuffer, IndexTx<Void, IBM> indexTx) throws Exception;
 
     void append(int fieldId, MiruTermId termId, int[] ids, long[] counts, StackBuffer stackBuffer) throws Exception;
 

@@ -12,6 +12,7 @@ import com.jivesoftware.os.filer.io.api.KeyedFilerStore;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.filer.io.chunk.ChunkFiler;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.plugin.index.IndexTx;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.plugin.partition.TrackError;
@@ -29,7 +30,7 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
-    private static final int LAST_ID_LENGTH = 4;
+    public static final int LAST_ID_LENGTH = 4;
 
     private final MiruBitmaps<BM, IBM> bitmaps;
     private final TrackError trackError;
@@ -119,7 +120,7 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
         }
     }
 
-    private static <BM extends IBM, IBM> BitmapAndLastId<BM> deser(MiruBitmaps<BM, IBM> bitmaps,
+    public static <BM extends IBM, IBM> BitmapAndLastId<BM> deser(MiruBitmaps<BM, IBM> bitmaps,
         TrackError trackError,
         ChunkFiler filer,
         StackBuffer stackBuffer) throws IOException {
