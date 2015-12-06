@@ -14,8 +14,9 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
+import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
-import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
+import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
@@ -29,7 +30,6 @@ import com.jivesoftware.os.miru.plugin.solution.Waveform;
 import com.jivesoftware.os.miru.reco.plugins.distincts.Distincts;
 import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsQuery;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -66,10 +66,12 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
 
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
         MiruRequestContext<BM, IBM, ? extends MiruSipCursor<?>> context = handle.getRequestContext();
+        MiruBitmaps<BM, IBM> bitmaps = handle.getBitmaps();
 
         MiruSchema schema = context.getSchema();
         int fieldId = schema.getFieldId(request.query.aggregateCountAroundField);
         MiruFieldDefinition fieldDefinition = schema.getFieldDefinition(fieldId);
+        MiruFieldIndex<BM, IBM> primaryFieldIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
         StackBuffer stackBuffer = new StackBuffer();
 
         MiruTermComposer termComposer = context.getTermComposer();
@@ -81,10 +83,10 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
         }
 
         long start = System.currentTimeMillis();
-        Collection<MiruTermId> termIds = Collections.emptyList();
+        List<MiruTermId> termIds;
         if (request.query.distinctQueries.size() == 1) {
             ArrayList<MiruTermId> termIdsList = Lists.newArrayList();
-            distincts.gatherDirect(handle.getBitmaps(), handle.getRequestContext(), request.query.distinctQueries.get(0), gatherDistinctsBatchSize, solutionLog,
+            distincts.gatherDirect(bitmaps, handle.getRequestContext(), request.query.distinctQueries.get(0), gatherDistinctsBatchSize, solutionLog,
                 termId -> {
                     termIdsList.add(termId);
                     return true;
@@ -94,7 +96,7 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
             Set<MiruTermId> joinTerms = null;
             for (DistinctsQuery distinctQuery : request.query.distinctQueries) {
                 Set<MiruTermId> queryTerms = Sets.newHashSet();
-                distincts.gatherDirect(handle.getBitmaps(), handle.getRequestContext(), distinctQuery, gatherDistinctsBatchSize, solutionLog,
+                distincts.gatherDirect(bitmaps, handle.getRequestContext(), distinctQuery, gatherDistinctsBatchSize, solutionLog,
                     termId -> {
                         queryTerms.add(termId);
                         return true;
@@ -106,14 +108,17 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
                 }
             }
             if (joinTerms != null) {
-                termIds = joinTerms;
+                termIds = Lists.newArrayList(joinTerms);
+            } else {
+                termIds = Collections.emptyList();
             }
+        } else {
+            termIds = Collections.emptyList();
         }
         solutionLog.log(MiruSolutionLogLevel.INFO, "Gathered {} distincts for {} queries in {} ms.",
             termIds.size(), request.query.distinctQueries.size(), (System.currentTimeMillis() - start));
 
         start = System.currentTimeMillis();
-        Collection<MiruTermId> _termIds = termIds;
         List<Waveform> waveforms = Lists.newArrayListWithExpectedSize(termIds.size());
         boolean resultsExhausted = analytics.analyze(solutionLog,
             handle,
@@ -124,12 +129,16 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
             request.query.divideTimeRangeIntoNSegments,
             stackBuffer,
             (Analytics.ToAnalyze<MiruTermId, BM> toAnalyze) -> {
-                for (MiruTermId termId : _termIds) {
-                    MiruInvertedIndex<BM, IBM> invertedIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary).get(fieldId, termId);
-                    Optional<BM> index = invertedIndex.getIndex(stackBuffer);
-                    if (index.isPresent()) {
-                        if (!toAnalyze.analyze(termId, index.get())) {
-                            return false;
+                int batchSize = 100; //TODO configure
+                for (List<MiruTermId> partition : Lists.partition(termIds, batchSize)) {
+                    MiruTermId[] batch = partition.toArray(new MiruTermId[partition.size()]);
+                    BM[] results = bitmaps.createArrayOf(batchSize);
+                    primaryFieldIndex.multiGet(fieldId, batch, results, stackBuffer);
+                    for (int i = 0; i < batch.length; i++) {
+                        if (results[i] != null) {
+                            if (!toAnalyze.analyze(batch[i], results[i])) {
+                                return false;
+                            }
                         }
                     }
                 }
