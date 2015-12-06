@@ -17,7 +17,9 @@ package com.jivesoftware.os.miru.plugin.bitmap;
 
 import com.google.common.base.Optional;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
+import com.jivesoftware.os.miru.plugin.index.FieldMultiTermTxIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
+import com.jivesoftware.os.miru.plugin.index.MiruMultiTxIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTxIndex;
 import java.io.DataInput;
@@ -40,6 +42,10 @@ public interface MiruBitmaps<BM extends IBM, IBM> {
     BM append(IBM bitmap, int... indexes);
 
     BM set(IBM bitmap, int... indexes);
+
+    BM removeRange(BM original, int rangeStartInclusive, int rangeEndExclusive);
+
+    void inPlaceRemoveRange(BM original, int rangeStartInclusive, int rangeEndExclusive);
 
     BM remove(IBM bitmap, int... indexes);
 
@@ -90,6 +96,10 @@ public interface MiruBitmaps<BM extends IBM, IBM> {
     void inPlaceAndNot(BM original, IBM not);
 
     void inPlaceAndNot(BM original, MiruInvertedIndex<BM, IBM> not, StackBuffer stackBuffer) throws Exception;
+
+    BM andNotMultiTx(BM original, FieldMultiTermTxIndex<BM, IBM> multiTermTxIndex, StackBuffer stackBuffer) throws Exception;
+
+    void inPlaceAndNotMultiTx(BM original, MiruMultiTxIndex<IBM> multiTermTxIndex, StackBuffer stackBuffer) throws Exception;
 
     BM andNot(IBM original, IBM not);
 

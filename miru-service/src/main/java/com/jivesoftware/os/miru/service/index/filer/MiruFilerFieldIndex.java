@@ -10,10 +10,13 @@ import com.jivesoftware.os.filer.io.map.MapStore;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.MiruInterner;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.plugin.index.IndexTx;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.TermIdStream;
 import com.jivesoftware.os.miru.plugin.partition.TrackError;
+import com.jivesoftware.os.miru.service.index.BitmapAndLastId;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
@@ -91,6 +94,45 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
     private MiruInvertedIndex<BM, IBM> getIndex(int fieldId, MiruTermId termId, int considerIfIndexIdGreaterThanN) throws Exception {
         return new MiruFilerInvertedIndex<>(bitmaps, trackError, termId.getBytes(), indexes[fieldId],
             considerIfIndexIdGreaterThanN, stripingLocksProvider.lock(termId, 0));
+    }
+
+    @Override
+    public void multiGet(int fieldId, MiruTermId[] termIds, BM[] results, StackBuffer stackBuffer) throws Exception {
+        byte[][] termIdBytes = new byte[termIds.length][];
+        for (int i = 0; i < termIds.length; i++) {
+            if (termIds[i] != null) {
+                termIdBytes[i] = termIds[i].getBytes();
+            }
+        }
+        indexes[fieldId].readEach(termIdBytes, null, (monkey, filer, _stackBuffer, lock) -> {
+            if (filer != null) {
+                BitmapAndLastId<BM> bitmapAndLastId = MiruFilerInvertedIndex.deser(bitmaps, trackError, filer, _stackBuffer);
+                if (bitmapAndLastId != null) {
+                    return bitmapAndLastId.bitmap;
+                }
+            }
+            return null;
+        }, results, stackBuffer);
+    }
+
+    @Override
+    public void multiTxIndex(int fieldId, MiruTermId[] termIds, StackBuffer stackBuffer, IndexTx<Void, IBM> indexTx) throws Exception {
+        byte[][] termIdBytes = new byte[termIds.length][];
+        for (int i = 0; i < termIds.length; i++) {
+            if (termIds[i] != null) {
+                termIdBytes[i] = termIds[i].getBytes();
+            }
+        }
+        indexes[fieldId].readEach(termIdBytes, null, (monkey, filer, _stackBuffer, lock) -> {
+            if (filer != null) {
+                try {
+                    indexTx.tx(null, filer, MiruFilerInvertedIndex.LAST_ID_LENGTH, _stackBuffer);
+                } catch (Exception e) {
+                    throw new IOException(e);
+                }
+            }
+            return null;
+        }, new Void[termIds.length], stackBuffer);
     }
 
     @Override

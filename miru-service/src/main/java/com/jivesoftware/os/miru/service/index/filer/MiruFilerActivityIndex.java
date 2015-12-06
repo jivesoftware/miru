@@ -13,6 +13,7 @@ import com.jivesoftware.os.miru.service.index.MiruInternalActivityMarshaller;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -84,7 +85,9 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
                 bytesForIndexes[i] = FilerIO.intBytes(indexes[i]);
             }
         }
-        return keyedStore.readEach(bytesForIndexes, null, (monkey, filer, _stackBuffer, lock) -> {
+
+        MiruTermId[][] results = new MiruTermId[indexes.length][];
+        keyedStore.readEach(bytesForIndexes, null, (monkey, filer, _stackBuffer, lock) -> {
             if (filer != null) {
                 synchronized (lock) {
                     filer.seek(0);
@@ -93,7 +96,8 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
             } else {
                 return null;
             }
-        }, stackBuffer);
+        }, results, stackBuffer);
+        return Arrays.asList(results);
 
     }
 

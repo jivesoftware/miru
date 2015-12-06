@@ -3,9 +3,10 @@ package com.jivesoftware.os.miru.service.index.delta;
 import com.google.common.base.Optional;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.plugin.index.IndexTx;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
-import com.jivesoftware.os.miru.service.index.Mergeable;
 import com.jivesoftware.os.miru.plugin.partition.TrackError;
+import com.jivesoftware.os.miru.service.index.Mergeable;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.Arrays;
@@ -35,6 +36,15 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
 
     @Override
     public Optional<BM> getIndex(StackBuffer stackBuffer) throws Exception {
+        return overlayDelta(bitmaps, delta, backingIndex, trackError, stackBuffer);
+    }
+
+    public static <BM extends IBM, IBM> Optional<BM> overlayDelta(MiruBitmaps<BM, IBM> bitmaps,
+        Delta<IBM> delta,
+        MiruInvertedIndex<BM, IBM> backingIndex,
+        TrackError trackError,
+        StackBuffer stackBuffer) throws Exception {
+
         boolean replaced;
         IBM or;
         IBM andNot;
@@ -51,12 +61,7 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
                     " andNot:" + (andNot != null ? bitmaps.cardinality(andNot) : -1) +
                     " or:" + (or != null ? bitmaps.cardinality(or) : -1));
             }
-            if (andNot != null) {
-                got = bitmaps.andNot(got, andNot);
-            }
-            if (or != null) {
-                got = bitmaps.or(Arrays.asList(got, or));
-            }
+            got = overlay(bitmaps, got, or, andNot);
             if (bitmaps.isEmpty(got)) {
                 trackError.error("Delta merged to empty bitmap," +
                     " andNot:" + (andNot != null ? bitmaps.cardinality(andNot) : -1) +
@@ -68,6 +73,17 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
         } else {
             return Optional.absent();
         }
+    }
+
+    public static <BM extends IBM, IBM> BM overlay(MiruBitmaps<BM, IBM> bitmaps, BM backing, IBM or, IBM andNot) {
+        BM got = backing;
+        if (andNot != null) {
+            got = bitmaps.andNot(got, andNot);
+        }
+        if (or != null) {
+            got = bitmaps.or(Arrays.asList(got, or));
+        }
+        return got;
     }
 
     @Override
@@ -322,9 +338,9 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
 
     public static class Delta<IBM> {
 
-        private int lastId = -1;
-        private IBM andNot;
-        private IBM or;
-        private boolean replaced = false;
+        public int lastId = -1;
+        public IBM andNot;
+        public IBM or;
+        public boolean replaced = false;
     }
 }

@@ -1,16 +1,18 @@
 package com.jivesoftware.os.miru.service.index.delta;
 
+import com.google.common.base.Optional;
 import com.google.common.primitives.UnsignedBytes;
 import com.jivesoftware.os.filer.io.api.KeyRange;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.plugin.index.IndexTx;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.TermIdStream;
-import com.jivesoftware.os.miru.service.index.Mergeable;
 import com.jivesoftware.os.miru.plugin.partition.TrackError;
+import com.jivesoftware.os.miru.service.index.Mergeable;
 import gnu.trove.impl.Constants;
 import gnu.trove.iterator.TIntLongIterator;
 import gnu.trove.map.TIntLongMap;
@@ -154,6 +156,72 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
             }
         }
         return new MiruDeltaInvertedIndex<>(bitmaps, trackError, backingFieldIndex.getOrCreateInvertedIndex(fieldId, termId), delta);
+    }
+
+    @Override
+    public void multiGet(int fieldId, MiruTermId[] termIds, BM[] results, StackBuffer stackBuffer) throws Exception {
+
+        for (int i = 0; i < termIds.length; i++) {
+            if (termIds[i] != null) {
+                MiruDeltaInvertedIndex.Delta<IBM> delta = fieldIndexDeltas[fieldId].get(termIds[i]);
+                if (delta != null && delta.replaced) {
+                    boolean replaced;
+                    IBM or;
+                    synchronized (delta) {
+                        replaced = delta.replaced;
+                        or = delta.or;
+                    }
+                    // double check now that we have a stack copy
+                    if (replaced) {
+                        termIds[i] = null;
+                        results[i] = bitmaps.copy(or);
+                    }
+                }
+            }
+        }
+
+        backingFieldIndex.multiGet(fieldId, termIds, results, stackBuffer);
+
+        for (int i = 0; i < termIds.length; i++) {
+            if (termIds[i] != null) {
+                MiruDeltaInvertedIndex.Delta<IBM> delta = fieldIndexDeltas[fieldId].get(termIds[i]);
+                if (delta != null) {
+                    boolean replaced;
+                    IBM or;
+                    IBM andNot;
+                    synchronized (delta) {
+                        replaced = delta.replaced;
+                        or = delta.or;
+                        andNot = delta.andNot;
+                    }
+                    if (replaced || results[i] == null) {
+                        results[i] = bitmaps.copy(or);
+                    } else {
+                        results[i] = MiruDeltaInvertedIndex.overlay(bitmaps, results[i], or, andNot);
+                    }
+                }
+            }
+        }
+    }
+
+    @Override
+    public void multiTxIndex(int fieldId, MiruTermId[] termIds, StackBuffer stackBuffer, IndexTx<Void, IBM> indexTx) throws Exception {
+        for (int i = 0; i < termIds.length; i++) {
+            if (termIds[i] != null) {
+                MiruDeltaInvertedIndex.Delta<IBM> delta = fieldIndexDeltas[fieldId].get(termIds[i]);
+                if (delta != null) {
+                    MiruInvertedIndex<BM, IBM> backingIndex = backingFieldIndex.get(fieldId, termIds[i]);
+                    Optional<BM> index = MiruDeltaInvertedIndex.overlayDelta(bitmaps, delta, backingIndex, trackError, stackBuffer);
+                    if (index.isPresent()) {
+                        indexTx.tx(index.get(), null, -1, stackBuffer);
+                    }
+                    termIds[i] = null;
+                }
+            }
+        }
+
+        // the remaining termIds have no delta overlay
+        backingFieldIndex.multiTxIndex(fieldId, termIds, stackBuffer, indexTx);
     }
 
     @Override

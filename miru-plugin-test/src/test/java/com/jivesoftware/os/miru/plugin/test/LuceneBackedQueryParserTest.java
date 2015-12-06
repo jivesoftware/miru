@@ -10,6 +10,7 @@ import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.bitmaps.roaring5.MiruBitmapsRoaring;
 import com.jivesoftware.os.miru.plugin.MiruInterner;
+import com.jivesoftware.os.miru.plugin.index.IndexTx;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndexProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
@@ -175,6 +176,16 @@ public class LuceneBackedQueryParserTest {
 
         @Override
         public MiruInvertedIndex<RoaringBitmap, RoaringBitmap> getOrCreateInvertedIndex(int fieldId, MiruTermId term) throws Exception {
+            throw new UnsupportedOperationException("Nope");
+        }
+
+        @Override
+        public void multiGet(int fieldId, MiruTermId[] termIds, RoaringBitmap[] results, StackBuffer stackBuffer) throws Exception {
+            throw new UnsupportedOperationException("Nope");
+        }
+
+        @Override
+        public void multiTxIndex(int fieldId, MiruTermId[] termIds, StackBuffer stackBuffer, IndexTx<Void, RoaringBitmap> indexTx) throws Exception {
             throw new UnsupportedOperationException("Nope");
         }
 
