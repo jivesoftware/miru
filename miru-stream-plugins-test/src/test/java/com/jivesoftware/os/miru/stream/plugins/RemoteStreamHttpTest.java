@@ -68,7 +68,7 @@ public class RemoteStreamHttpTest {
                 MiruTimeRange.ALL_TIME,
                 new MiruFilter(MiruFilterOperation.or,
                     false,
-                    Collections.singletonList(MiruFieldFilter.of(MiruFieldType.primary, "activityType", 0)),
+                    Collections.singletonList(MiruFieldFilter.ofTerms(MiruFieldType.primary, "activityType", 0)),
                     null),
                 ImmutableMap.of("blah", new AggregateCountsQueryConstraint(MiruFilter.NO_FILTER, "parent", 0, 100, true))),
             MiruSolutionLogLevel.NONE);

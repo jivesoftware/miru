@@ -25,20 +25,24 @@ public class MiruFieldFilter implements Serializable {
         this.values = values;
     }
 
-    public static MiruFieldFilter of(MiruFieldType fieldType, String fieldName, Object... values) {
+    public static MiruFieldFilter ofTerms(MiruFieldType fieldType, String fieldName, String... values) {
         return of(fieldType, fieldName, Arrays.asList(values));
     }
 
-    public static MiruFieldFilter of(MiruFieldType fieldType, String fieldName, Collection<Object> values) {
+    public static MiruFieldFilter ofTerms(MiruFieldType fieldType, String fieldName, Integer... values) {
+        return of(fieldType, fieldName, Arrays.asList(values));
+    }
+
+    public static MiruFieldFilter ofValues(MiruFieldType fieldType, String fieldName, MiruValue... values) {
+        return new MiruFieldFilter(fieldType, fieldName, Arrays.asList(values));
+    }
+
+    public static <T> MiruFieldFilter of(MiruFieldType fieldType, String fieldName, Collection<T> values) {
         List<MiruValue> miruValues = Lists.newArrayListWithCapacity(values.size());
         for (Object value : values) {
             miruValues.add(new MiruValue(value.toString()));
         }
         return new MiruFieldFilter(fieldType, fieldName, miruValues);
-    }
-
-    public static MiruFieldFilter of(MiruFieldType fieldType, String fieldName, MiruValue... values) {
-        return new MiruFieldFilter(fieldType, fieldName, Arrays.asList(values));
     }
 
     @Override

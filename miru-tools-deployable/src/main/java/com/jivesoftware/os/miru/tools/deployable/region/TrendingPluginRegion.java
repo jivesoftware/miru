@@ -125,7 +125,7 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
                 final long fromTime = packCurrentTime - snowflakeIdPacker.pack(TimeUnit.HOURS.toMillis(fromHoursAgo), 0, 0);
                 final long toTime = packCurrentTime - snowflakeIdPacker.pack(TimeUnit.HOURS.toMillis(toHoursAgo), 0, 0);
                 List<MiruFieldFilter> fieldFilters = Lists.newArrayList();
-                fieldFilters.add(MiruFieldFilter.of(MiruFieldType.primary, "activityType", 0, 1, 11, 65));
+                fieldFilters.add(MiruFieldFilter.ofTerms(MiruFieldType.primary, "activityType", 0, 1, 11, 65));
 
                 List<MiruFilter> constraintsSubFilters = null;
                 if (!input.filter.isEmpty()) {

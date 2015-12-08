@@ -106,7 +106,7 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
                 } else {
                     return tx.tx(null, null, -1, null);
                 }
-            } catch (Exception e) {
+            } catch (Exception e) {// [3_2638]
                 throw new IOException(e);
             }
         }, stackBuffer);
