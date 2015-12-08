@@ -199,7 +199,7 @@ public class AggregateCountsPluginRegion implements MiruPageRegion<Optional<Aggr
                             String clockTime = new ISO8601DateFormat().format(new Date(jiveEpochTime + JiveEpochTimestampProvider.JIVE_EPOCH));
 
                             page.add(ImmutableMap.<String, Object>of(
-                                "aggregate", result.distinctValue,
+                                "aggregate", result.distinctValue.last(),
                                 "time", String.valueOf(time),
                                 "date", clockTime,
                                 "count", String.valueOf(result.count),

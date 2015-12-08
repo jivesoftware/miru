@@ -261,10 +261,10 @@ public class TrendingInjectable {
                 }
             }
 
-            Map<MiruValue, Waveform> distinctWaveforms = Maps.newHashMap();
+            List<Waveform> distinctWaveforms = Lists.newArrayListWithCapacity(retainKeys.size());
             for (Waveform entry : waveforms) {
                 if (retainKeys.contains(entry.getId())) {
-                    distinctWaveforms.put(entry.getId(), entry);
+                    distinctWaveforms.add(entry);
                 }
             }
 
