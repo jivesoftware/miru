@@ -202,7 +202,7 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
                     }
 
                     data.put("results", Lists.transform(results, trendy -> ImmutableMap.of(
-                        "name", trendy.distinctValue,
+                        "name", trendy.distinctValue.last(),
                         "rank", String.valueOf(trendy.rank),
                         "waveform", "data:image/png;base64," + new PNGWaveforms()
                             .hitsToBase64PNGWaveform(600, 128, 10,

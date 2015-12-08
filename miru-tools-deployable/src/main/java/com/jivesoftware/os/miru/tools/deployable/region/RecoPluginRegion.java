@@ -186,7 +186,7 @@ public class RecoPluginRegion implements MiruPageRegion<Optional<RecoPluginRegio
                     data.put("elapse", String.valueOf(response.totalElapsed));
 
                     data.put("results", Lists.transform(results, recommendation -> ImmutableMap.of(
-                        "name", recommendation.distinctValue,
+                        "name", recommendation.distinctValue.last(),
                         "rank", String.valueOf(recommendation.rank))));
                     ObjectMapper mapper = new ObjectMapper();
                     mapper.enable(SerializationFeature.INDENT_OUTPUT);
