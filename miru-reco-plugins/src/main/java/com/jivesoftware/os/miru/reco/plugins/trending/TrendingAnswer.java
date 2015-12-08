@@ -14,13 +14,13 @@ import java.util.Map;
  */
 public class TrendingAnswer implements Serializable {
 
-    public static final TrendingAnswer EMPTY_RESULTS = new TrendingAnswer(Collections.emptyMap(), Collections.emptyMap());
+    public static final TrendingAnswer EMPTY_RESULTS = new TrendingAnswer(Collections.emptyList(), Collections.emptyMap());
 
-    public final Map<MiruValue, Waveform> waveforms;
+    public final List<Waveform> waveforms;
     public final Map<String, List<Trendy>> results;
 
     @JsonCreator
-    public TrendingAnswer(@JsonProperty("waveforms") Map<MiruValue, Waveform> waveforms,
+    public TrendingAnswer(@JsonProperty("waveforms") List<Waveform> waveforms,
         @JsonProperty("results") Map<String, List<Trendy>> results) {
         this.waveforms = waveforms;
         this.results = results;

@@ -140,7 +140,8 @@ public class SeaAnomalyTrendsPluginRegion implements MiruPageRegion<Optional<Sea
                 if (response != null && response.answer != null) {
                     data.put("elapse", String.valueOf(response.totalElapsed));
 
-                    Map<MiruValue, Waveform> waveforms = response.answer.waveforms;
+                    List<Waveform> answerWaveforms = response.answer.waveforms;
+                    Map<MiruValue, Waveform> waveforms = Maps.uniqueIndex(answerWaveforms, Waveform::getId);
                     List<Trendy> results = response.answer.results.get(Strategy.LINEAR_REGRESSION.name());
                     if (results == null) {
                         results = Collections.emptyList();
