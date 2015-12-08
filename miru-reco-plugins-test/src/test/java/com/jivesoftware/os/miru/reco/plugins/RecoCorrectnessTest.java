@@ -218,8 +218,8 @@ public class RecoCorrectnessTest {
         MiruFieldDefinition userFieldDefinition = miruSchema.getFieldDefinition(miruSchema.getFieldId("user"));
         for (int i = 0; i < numqueries; i++) {
             String user = "bob" + i;
-            MiruFieldFilter miruFieldFilter = MiruFieldFilter.of(MiruFieldType.pairedLatest, "user",
-                indexUtil.makePairedLatestTerm(termComposer.compose(miruSchema, userFieldDefinition, stackBuffer, user), "parent"));
+            MiruFieldFilter miruFieldFilter = MiruFieldFilter.ofTerms(MiruFieldType.pairedLatest, "user",
+                indexUtil.makePairedLatestTerm(termComposer.compose(miruSchema, userFieldDefinition, stackBuffer, user), "parent").toString());
             MiruFilter filter = new MiruFilter(MiruFilterOperation.or, false, Arrays.asList(miruFieldFilter), null);
 
             long s = System.currentTimeMillis();
@@ -241,13 +241,13 @@ public class RecoCorrectnessTest {
                             new MiruFilter(MiruFilterOperation.and,
                                 false,
                                 Arrays.asList(
-                                    MiruFieldFilter.of(MiruFieldType.primary, "activityType", "0", "1", "72", "65"),
+                                    MiruFieldFilter.ofTerms(MiruFieldType.primary, "activityType", "0", "1", "72", "65"),
                                     MiruFieldFilter.of(MiruFieldType.primary, "parentType", docTypes)),
                                 null),
                             new MiruFilter(MiruFilterOperation.and,
                                 false,
                                 Collections.singletonList(
-                                    MiruFieldFilter.of(MiruFieldType.primary, "authors", user)),
+                                    MiruFieldFilter.ofTerms(MiruFieldType.primary, "authors", user)),
                                 null))),
                     10),
                 MiruSolutionLogLevel.INFO));
@@ -275,9 +275,9 @@ public class RecoCorrectnessTest {
             MiruFilter constraintsFilter = new MiruFilter(MiruFilterOperation.and,
                 false,
                 Arrays.asList(
-                    MiruFieldFilter.of(MiruFieldType.primary, "context", context),
+                    MiruFieldFilter.ofTerms(MiruFieldType.primary, "context", context),
                     MiruFieldFilter.of(MiruFieldType.primary, "parentType", docTypes),
-                    MiruFieldFilter.of(MiruFieldType.primary, "activityType", "0", "1", "72", "65")),
+                    MiruFieldFilter.ofTerms(MiruFieldType.primary, "activityType", "0", "1", "72", "65")),
                 null);
 
             long s = System.currentTimeMillis();

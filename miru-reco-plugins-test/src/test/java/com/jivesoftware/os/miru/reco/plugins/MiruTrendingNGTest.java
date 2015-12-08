@@ -167,7 +167,7 @@ public class MiruTrendingNGTest {
         final MiruTimeRange timeRange = new MiruTimeRange(lastTime - timespan, lastTime);
         for (int i = 0; i < numqueries; i++) {
             String user = "bob" + rand.nextInt(numberOfUsers);
-            MiruFieldFilter miruFieldFilter = MiruFieldFilter.of(MiruFieldType.primary, "user", user);
+            MiruFieldFilter miruFieldFilter = MiruFieldFilter.ofTerms(MiruFieldType.primary, "user", user);
             MiruFilter filter = new MiruFilter(MiruFilterOperation.or, false, Collections.singletonList(miruFieldFilter), null);
 
             long s = System.currentTimeMillis();

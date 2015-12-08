@@ -120,7 +120,7 @@ public class MiruSeaAnomalyNGTest {
         final MiruTimeRange timeRange = new MiruTimeRange(smallestTime, lastTime);
         for (int i = 0; i < numberOfUsers; i++) {
             String user = "bob" + i;
-            MiruFieldFilter miruFieldFilter = MiruFieldFilter.of(MiruFieldType.primary, "user", user);
+            MiruFieldFilter miruFieldFilter = MiruFieldFilter.ofTerms(MiruFieldType.primary, "user", user);
             MiruFilter filter = new MiruFilter(MiruFilterOperation.or, false, Collections.singletonList(miruFieldFilter), null);
 
             MiruRequest<SeaAnomalyQuery> request = new MiruRequest<>("test",

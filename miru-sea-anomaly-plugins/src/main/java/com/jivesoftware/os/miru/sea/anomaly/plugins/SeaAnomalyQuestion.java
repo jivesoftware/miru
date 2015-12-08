@@ -153,7 +153,7 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyQuery, SeaAnomalyA
                     for (Entry<String, MiruFilter> entry : request.query.filters.entrySet()) {
                         ArrayList<MiruFieldFilter> join = new ArrayList<>();
                         join.addAll(entry.getValue().fieldFilters);
-                        join.add(MiruFieldFilter.of(MiruFieldType.primary,
+                        join.add(MiruFieldFilter.ofTerms(MiruFieldType.primary,
                             request.query.expansionField, new String(termId.getBytes(), StandardCharsets.UTF_8)));
 
                         expandable.put(entry.getKey() + "-" + new String(termId.getBytes(), StandardCharsets.UTF_8),
@@ -167,7 +167,7 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyQuery, SeaAnomalyA
 
                     ArrayList<MiruFieldFilter> join = new ArrayList<>();
                     join.addAll(entry.getValue().fieldFilters);
-                    join.add(MiruFieldFilter.of(MiruFieldType.primary, request.query.expansionField, expansion));
+                    join.add(MiruFieldFilter.ofTerms(MiruFieldType.primary, request.query.expansionField, expansion));
 
                     expandable.put(entry.getKey() + "-" + expansion,
                         new MiruFilter(entry.getValue().operation, entry.getValue().inclusiveFilter, join, entry.getValue().subFilters));

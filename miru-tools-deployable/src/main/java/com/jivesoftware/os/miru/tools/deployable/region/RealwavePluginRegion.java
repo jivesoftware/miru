@@ -178,7 +178,7 @@ public class RealwavePluginRegion implements MiruPageRegion<Optional<RealwavePlu
                                 new MiruFilter(MiruFilterOperation.and,
                                     false,
                                     Collections.singletonList(
-                                        MiruFieldFilter.of(MiruFieldType.primary, input.field1, term1)),
+                                        MiruFieldFilter.ofTerms(MiruFieldType.primary, input.field1, term1)),
                                     null));
                         } else {
                             for (String term2 : terms2) {
@@ -187,8 +187,8 @@ public class RealwavePluginRegion implements MiruPageRegion<Optional<RealwavePlu
                                     new MiruFilter(MiruFilterOperation.and,
                                         false,
                                         Arrays.asList(
-                                            MiruFieldFilter.of(MiruFieldType.primary, input.field1, term1),
-                                            MiruFieldFilter.of(MiruFieldType.primary, input.field2, term2)),
+                                            MiruFieldFilter.ofTerms(MiruFieldType.primary, input.field1, term1),
+                                            MiruFieldFilter.ofTerms(MiruFieldType.primary, input.field2, term2)),
                                         null));
                             }
                         }

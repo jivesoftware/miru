@@ -185,11 +185,11 @@ public class MiruCollaborativeFilterNGTest {
         for (int i = 0; i < numqueries; i++) {
             String user = "bob" + (i % numberOfUsers);
 
-            MiruFieldFilter userFieldFilter = MiruFieldFilter.of(MiruFieldType.primary, "user", user);
+            MiruFieldFilter userFieldFilter = MiruFieldFilter.ofTerms(MiruFieldType.primary, "user", user);
             MiruFilter myActivityFilter = new MiruFilter(MiruFilterOperation.and, false, Collections.singletonList(userFieldFilter), null);
 
-            MiruFieldFilter docTypesFieldFilter = MiruFieldFilter.of(MiruFieldType.primary, "docType", 0, 1, 2, 3);
-            MiruFieldFilter activityTypesFieldFilter = MiruFieldFilter.of(MiruFieldType.primary, "activityType", 0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
+            MiruFieldFilter docTypesFieldFilter = MiruFieldFilter.ofTerms(MiruFieldType.primary, "docType", 0, 1, 2, 3);
+            MiruFieldFilter activityTypesFieldFilter = MiruFieldFilter.ofTerms(MiruFieldType.primary, "activityType", 0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
             MiruFilter scorableFilter = new MiruFilter(MiruFilterOperation.and, false, Arrays.asList(docTypesFieldFilter, activityTypesFieldFilter), null);
 
             long s = System.currentTimeMillis();

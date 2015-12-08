@@ -92,9 +92,9 @@ public class SeaAnomalyTrendsPluginRegion implements MiruPageRegion<Optional<Sea
                 final long fromTime = packCurrentTime - snowflakeIdPacker.pack(TimeUnit.HOURS.toMillis(fromHoursAgo), 0, 0);
                 final long toTime = packCurrentTime - snowflakeIdPacker.pack(TimeUnit.HOURS.toMillis(toHoursAgo), 0, 0);
                 List<MiruFieldFilter> fieldFilters = Lists.newArrayList();
-                fieldFilters.add(MiruFieldFilter.of(MiruFieldType.primary, "type", input.type));
+                fieldFilters.add(MiruFieldFilter.ofTerms(MiruFieldType.primary, "type", input.type));
                 if (input.service != null) {
-                    fieldFilters.add(MiruFieldFilter.of(MiruFieldType.primary, "service", input.service));
+                    fieldFilters.add(MiruFieldFilter.ofTerms(MiruFieldType.primary, "service", input.service));
                 }
 
                 MiruFilter constraintsFilter = new MiruFilter(MiruFilterOperation.and, false, fieldFilters, null);

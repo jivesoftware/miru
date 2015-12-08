@@ -114,7 +114,7 @@ public class InMemoryEndpointsTest {
                 MiruTimeRange.ALL_TIME,
                 new MiruFilter(MiruFilterOperation.or,
                     false,
-                    Collections.singletonList(MiruFieldFilter.of(MiruFieldType.primary, OBJECT_ID.getFieldName(), "value2")),
+                    Collections.singletonList(MiruFieldFilter.ofTerms(MiruFieldType.primary, OBJECT_ID.getFieldName(), "value2")),
                     null),
                 ImmutableMap.of("blah", new AggregateCountsQueryConstraint(
                     MiruFilter.NO_FILTER,
@@ -140,8 +140,8 @@ public class InMemoryEndpointsTest {
                 new MiruFilter(MiruFilterOperation.or,
                     false,
                     Arrays.asList(
-                        MiruFieldFilter.of(MiruFieldType.primary, OBJECT_ID.getFieldName(), "value2"),
-                        MiruFieldFilter.of(MiruFieldType.primary, AUTHOR_ID.getFieldName(), "value2")),
+                        MiruFieldFilter.ofTerms(MiruFieldType.primary, OBJECT_ID.getFieldName(), "value2"),
+                        MiruFieldFilter.ofTerms(MiruFieldType.primary, AUTHOR_ID.getFieldName(), "value2")),
                     null),
                 ImmutableMap.of("blah", new AggregateCountsQueryConstraint(
                     MiruFilter.NO_FILTER,

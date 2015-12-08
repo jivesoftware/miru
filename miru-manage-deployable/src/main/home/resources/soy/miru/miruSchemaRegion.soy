@@ -47,11 +47,11 @@
                     <div role="group">
                         <button title="Upgrade" type="submit" name="action" value="upgrade" class="btn btn-default" style="margin:0 8px 4px 0;"><span class="glyphicon glyphicon-copy"></span></button>
                         Copy matching schema to all tenants with the same schema name<br/>
-                        <input class="form-control" type="checkbox" name="upgradeOnMissing" id="upgradeOnMissingPicker" value="true">
+                        <input type="checkbox" name="upgradeOnMissing" id="upgradeOnMissingPicker" value="true">
                         {sp}
                         <label for="upgradeOnMissingPicker">Upgrade missing schemas</label>
-                        {sp}
-                        <input class="form-control" type="checkbox" name="upgradeOnError" id="upgradeOnErrorPicker" value="true">
+                        {sp}{sp}
+                        <input type="checkbox" name="upgradeOnError" id="upgradeOnErrorPicker" value="true">
                         {sp}
                         <label for="upgradeOnErrorPicker">Upgrade schemas in error</label>
                     </div>

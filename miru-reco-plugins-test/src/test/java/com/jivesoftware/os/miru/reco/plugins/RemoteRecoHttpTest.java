@@ -101,8 +101,8 @@ public class RemoteRecoHttpTest {
         final MiruFilter constraintsFilter = new MiruFilter(MiruFilterOperation.and,
             false,
             Arrays.asList(
-                MiruFieldFilter.of(MiruFieldType.primary, "objectType", 102, 1, 18, 38, 801, 1_464_927_464, -960_826_044),
-                MiruFieldFilter.of(MiruFieldType.primary, "activityType", 0, 1, 11, 65)),
+                MiruFieldFilter.ofTerms(MiruFieldType.primary, "objectType", 102, 1, 18, 38, 801, 1_464_927_464, -960_826_044),
+                MiruFieldFilter.ofTerms(MiruFieldType.primary, "activityType", 0, 1, 11, 65)),
             null);
 
         SnowflakeIdPacker snowflakeIdPacker = new SnowflakeIdPacker();
@@ -187,14 +187,14 @@ public class RemoteRecoHttpTest {
                 MiruFilter constraintsFilter = new MiruFilter(MiruFilterOperation.and,
                     false,
                     Arrays.asList(
-                        MiruFieldFilter.of(MiruFieldType.primary, "user", "3 " + userId)),
+                        MiruFieldFilter.ofTerms(MiruFieldType.primary, "user", "3 " + userId)),
                     null);
 
                 MiruFilter scorableFilter = new MiruFilter(MiruFilterOperation.and,
                     false,
                     Arrays.asList(
-                        MiruFieldFilter.of(MiruFieldType.primary, "parentType", "102", "38", "2", "1464927464", "96891546", "1100"),
-                        MiruFieldFilter.of(MiruFieldType.primary, "activityType", "0", "1", "65")),
+                        MiruFieldFilter.ofTerms(MiruFieldType.primary, "parentType", "102", "38", "2", "1464927464", "96891546", "1100"),
+                        MiruFieldFilter.ofTerms(MiruFieldType.primary, "activityType", "0", "1", "65")),
                     null);
 
                 MiruTenantId tenantId1 = new MiruTenantId(tenants[index % tenants.length].getBytes(Charsets.UTF_8));
@@ -215,13 +215,13 @@ public class RemoteRecoHttpTest {
                                     new MiruFilter(MiruFilterOperation.and,
                                         false,
                                         Arrays.asList(
-                                            MiruFieldFilter.of(MiruFieldType.primary, "user", "3 " + userId),
-                                            MiruFieldFilter.of(MiruFieldType.primary, "activityType", "0", "16")),
+                                            MiruFieldFilter.ofTerms(MiruFieldType.primary, "user", "3 " + userId),
+                                            MiruFieldFilter.ofTerms(MiruFieldType.primary, "activityType", "0", "16")),
                                         null),
                                     new MiruFilter(MiruFilterOperation.and,
                                         false,
                                         Collections.singletonList(
-                                            MiruFieldFilter.of(MiruFieldType.primary, "authors", "3 " + userId)),
+                                            MiruFieldFilter.ofTerms(MiruFieldType.primary, "authors", "3 " + userId)),
                                         null))),
                             null),
                         constraintsFilter,

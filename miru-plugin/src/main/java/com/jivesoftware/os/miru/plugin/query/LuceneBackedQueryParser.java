@@ -60,13 +60,13 @@ public class LuceneBackedQueryParser implements MiruQueryParser {
             TermQuery tq = (TermQuery) query;
             Term term = tq.getTerm();
             return new MiruFilter(MiruFilterOperation.and, false,
-                Collections.singletonList(MiruFieldFilter.of(MiruFieldType.primary, term.field(), term.text())),
+                Collections.singletonList(MiruFieldFilter.ofTerms(MiruFieldType.primary, term.field(), term.text())),
                 Collections.<MiruFilter>emptyList());
         } else if (query instanceof PrefixQuery) {
             PrefixQuery pq = (PrefixQuery) query;
             Term term = pq.getPrefix();
             return new MiruFilter(MiruFilterOperation.and, false,
-                Collections.singletonList(MiruFieldFilter.of(MiruFieldType.primary, term.field(), new MiruValue(term.text(), "*"))),
+                Collections.singletonList(MiruFieldFilter.ofValues(MiruFieldType.primary, term.field(), new MiruValue(term.text(), "*"))),
                 Collections.<MiruFilter>emptyList());
         } else {
             throw new IllegalArgumentException("Unsupported query type: " + query.getClass());
