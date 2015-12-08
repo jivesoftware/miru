@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.plugin.solution;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.filer.io.api.KeyRange;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
@@ -15,7 +16,6 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
-import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
@@ -39,8 +39,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.lang.mutable.MutableInt;
-
-import static com.google.common.base.Preconditions.checkState;
+import org.apache.commons.lang.mutable.MutableLong;
 
 /**
  *
@@ -53,9 +52,10 @@ public class MiruAggregateUtil {
         TrackError trackError,
         MiruRequestContext<BM, IBM, S> requestContext,
         MiruPartitionCoord coord,
-        BM answer,
-        Optional<BM> counter,
+        BM initialAnswer,
+        Optional<BM> optionalCounter,
         int pivotFieldId,
+        int batchSize,
         String streamField,
         StackBuffer stackBuffer,
         CallbackStream<MiruTermCount> terms)
@@ -66,103 +66,102 @@ public class MiruAggregateUtil {
 
         if (bitmaps.supportsInPlace()) {
             // don't mutate the original
-            answer = bitmaps.copy(answer);
+            initialAnswer = bitmaps.copy(initialAnswer);
         }
 
         final AtomicLong bytesTraversed = new AtomicLong();
         if (debugEnabled) {
-            bytesTraversed.addAndGet(bitmaps.sizeInBytes(answer));
+            bytesTraversed.addAndGet(bitmaps.sizeInBytes(initialAnswer));
         }
 
-        CardinalityAndLastSetBit<BM> answerCollector = null;
-        MiruFieldIndex<BM, IBM> fieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
+        BM[] answer = bitmaps.createArrayOf(1);
+        answer[0] = initialAnswer;
+
+        BM[] counter;
+        if (optionalCounter.isPresent()) {
+            counter = bitmaps.createArrayOf(1);
+            counter[0] = optionalCounter.orNull();
+        } else {
+            counter = null;
+        }
+
+        MiruActivityIndex activityIndex = requestContext.getActivityIndex();
+        MiruFieldIndex<BM, IBM> primaryFieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
         int streamFieldId = requestContext.getSchema().getFieldId(streamField);
-        long beforeCount = counter.isPresent() ? bitmaps.cardinality(counter.get()) : bitmaps.cardinality(answer);
+
+        MutableLong beforeCount = new MutableLong(counter != null ? bitmaps.cardinality(counter[0]) : bitmaps.cardinality(answer[0]));
         LOG.debug("stream: streamField={} streamFieldId={} pivotFieldId={} beforeCount={}", streamField, streamFieldId, pivotFieldId, beforeCount);
-        int priorLastSetBit = Integer.MAX_VALUE;
-        long lastCount = -1;
-        int count = 0;
-        while (true) {
-            int lastSetBit = answerCollector == null ? bitmaps.lastSetBit(answer) : answerCollector.lastSetBit;
-            LOG.trace("stream: lastSetBit={}", lastSetBit);
-            if (priorLastSetBit <= lastSetBit) {
-                trackError.error("Failed to make forward progress");
-                LOG.error("Failed to make forward progress while streaming {} removing lastSetBit:{} lastCount:{}" +
-                        " lastId:{} streamed:{} remaining:{} deltaMin:{} lastDeltaMin:{} field:{}",
-                    coord, lastSetBit, lastCount, requestContext.getActivityIndex().lastId(stackBuffer), count, bitmaps.cardinality(answer),
-                    requestContext.getDeltaMinId(), requestContext.getLastDeltaMinId(), streamField);
-                break;
-            }
-            priorLastSetBit = lastSetBit;
-            if (lastSetBit < 0) {
-                break;
+
+        FieldMultiTermTxIndex<BM, IBM> multiTermTxIndex = new FieldMultiTermTxIndex<>(primaryFieldIndex, pivotFieldId);
+        Map<MiruTermId, MiruTermId[]> distincts = Maps.newHashMapWithExpectedSize(batchSize);
+
+        int[] ids = new int[batchSize];
+        while (!bitmaps.isEmpty(answer[0])) {
+            MiruIntIterator intIterator = bitmaps.intIterator(answer[0]);
+            int added = 0;
+            Arrays.fill(ids, -1);
+            while (intIterator.hasNext() && added < batchSize) {
+                ids[added] = intIterator.next();
+                added++;
             }
 
-            count++;
-            MiruTermId[] fieldValues = requestContext.getActivityIndex().get(lastSetBit, streamFieldId, stackBuffer);
-            if (traceEnabled) {
-                LOG.trace("stream: fieldValues={}", new Object[] { fieldValues });
-            }
-            if (fieldValues == null || fieldValues.length == 0) {
-                BM removeUnknownField = bitmaps.createWithBits(lastSetBit);
-                if (debugEnabled) {
-                    bytesTraversed.addAndGet(Math.max(bitmaps.sizeInBytes(answer), bitmaps.sizeInBytes(removeUnknownField)));
-                }
+            int[] actualIds = new int[added];
+            System.arraycopy(ids, 0, actualIds, 0, added);
 
-                if (bitmaps.supportsInPlace()) {
-                    answerCollector = bitmaps.inPlaceAndNotWithCardinalityAndLastSetBit(answer, removeUnknownField);
-                } else {
-                    answerCollector = bitmaps.andNotWithCardinalityAndLastSetBit(answer, removeUnknownField);
-                    answer = answerCollector.bitmap;
-                }
-
-                lastCount = -1;
+            if (bitmaps.supportsInPlace()) {
+                bitmaps.inPlaceRemoveRange(answer[0], actualIds[0], actualIds[actualIds.length - 1] + 1);
             } else {
-                //TODO Ideally we should prohibit streaming of multi-term fields because the operation is inherently lossy/ambiguous.
-                //TODO Each andNot iteration can potentially mask/remove other distincts which will therefore never be streamed.
-                MiruTermId pivotTerm = fieldValues[0];
+                answer[0] = bitmaps.removeRange(answer[0], actualIds[0], actualIds[actualIds.length - 1] + 1);
+            }
 
-                MiruInvertedIndex<BM, IBM> invertedIndex = fieldIndex.get(pivotFieldId, pivotTerm);
-                Optional<BM> optionalTermIndex = invertedIndex.getIndex(stackBuffer);
-                checkState(optionalTermIndex.isPresent(), "Unable to load inverted index for aggregateTermId: " + pivotTerm);
-                IBM termIndex = optionalTermIndex.get();
-                if (bitmaps.isEmpty(termIndex)) {
-                    LOG.error("PROGRESS Empty bitmap for {} field:{} term:{} id:{}", coord, streamField, pivotTerm, lastSetBit);
-                }
-
-                if (debugEnabled) {
-                    bytesTraversed.addAndGet(Math.max(bitmaps.sizeInBytes(answer), bitmaps.sizeInBytes(termIndex)));
-                }
-
-                if (bitmaps.supportsInPlace()) {
-                    answerCollector = bitmaps.inPlaceAndNotWithCardinalityAndLastSetBit(answer, termIndex);
-                } else {
-                    answerCollector = bitmaps.andNotWithCardinalityAndLastSetBit(answer, termIndex);
-                    answer = answerCollector.bitmap;
-                }
-
-                long afterCount;
-                if (counter.isPresent()) {
-                    if (bitmaps.supportsInPlace()) {
-                        CardinalityAndLastSetBit<BM> counterCollector = bitmaps.inPlaceAndNotWithCardinalityAndLastSetBit(counter.get(), termIndex);
-                        afterCount = counterCollector.cardinality;
-                    } else {
-                        CardinalityAndLastSetBit<BM> counterCollector = bitmaps.andNotWithCardinalityAndLastSetBit(counter.get(), termIndex);
-                        counter = Optional.of(counterCollector.bitmap);
-                        afterCount = counterCollector.cardinality;
+            List<MiruTermId[]> all = activityIndex.getAll(actualIds, pivotFieldId, stackBuffer);
+            List<MiruTermId[]> streamAll;
+            if (streamFieldId != pivotFieldId) {
+                streamAll = activityIndex.getAll(actualIds, streamFieldId, stackBuffer);
+            } else {
+                streamAll = all;
+            }
+            distincts.clear();
+            for (int i = 0; i < all.size(); i++) {
+                MiruTermId[] termIds = all.get(i);
+                MiruTermId[] streamTermIds = streamAll.get(i);
+                if (termIds != null && termIds.length > 0) {
+                    for (int j = 0; j < termIds.length; j++) {
+                        distincts.put(termIds[j], streamTermIds);
                     }
-                } else {
-                    afterCount = answerCollector.cardinality;
                 }
+            }
 
-                lastCount = beforeCount - afterCount;
-                MiruTermCount termCount = new MiruTermCount(pivotTerm, fieldValues, lastCount);
-                if (termCount != terms.callback(termCount)) { // Stop stream
+            MiruTermId[] termIds = distincts.keySet().toArray(new MiruTermId[distincts.size()]);
+            long[] termCounts = new long[termIds.length];
+            multiTermTxIndex.setTermIds(termIds);
+
+            bitmaps.multiTx(
+                (tx, stackBuffer1) -> primaryFieldIndex.multiTxIndex(pivotFieldId, termIds, stackBuffer1, tx),
+                (index, bitmap) -> {
+                    if (bitmaps.supportsInPlace()) {
+                        bitmaps.inPlaceAndNot(answer[0], bitmap);
+                        if (counter != null) {
+                            bitmaps.inPlaceAndNot(counter[0], bitmap);
+                        }
+                    } else {
+                        answer[0] = bitmaps.andNot(answer[0], bitmap);
+                        if (counter != null) {
+                            counter[0] = bitmaps.andNot(counter[0], bitmap);
+                        }
+                    }
+                    long afterCount = (counter != null) ? bitmaps.cardinality(counter[0]) : bitmaps.cardinality(answer[0]);
+                    termCounts[index] = beforeCount.longValue() - afterCount;
+                    beforeCount.setValue(afterCount);
+                },
+                stackBuffer);
+
+            for (int i = 0; i < termIds.length; i++) {
+                MiruTermCount termCount = new MiruTermCount(termIds[i], distincts.get(termIds[i]), termCounts[i]);
+                if (terms.callback(termCount) != termCount) {
                     return;
                 }
-                beforeCount = afterCount;
             }
-
         }
         terms.callback(null); // EOS
         LOG.debug("stream: bytesTraversed={}", bytesTraversed.longValue());

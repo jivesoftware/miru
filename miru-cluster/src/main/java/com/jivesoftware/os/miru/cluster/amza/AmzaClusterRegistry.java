@@ -962,7 +962,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
     }
 
     @Override
-    public int upgradeSchema(MiruSchema schema) throws Exception {
+    public int upgradeSchema(MiruSchema schema, boolean upgradeOnMissing, boolean upgradeOnError) throws Exception {
         Set<MiruTenantId> toTenantIds = Sets.newHashSet();
         schemasClient().scan(null, null, null, null, (rowTxId, prefix, key, timestampedValue) -> {
             toTenantIds.add(fromTenantKey(key));
@@ -972,8 +972,17 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
         byte[] schemaBytes = schemaMarshaller.toBytes(schema);
         AmzaPartitionUpdates updates = new AmzaPartitionUpdates();
         for (MiruTenantId to : toTenantIds) {
-            MiruSchema existing = getSchema(to);
-            if (existing.getName().equals(schema.getName()) && existing.getVersion() != schema.getVersion()) {
+            MiruSchema existing = null;
+            boolean error = false;
+            try {
+                existing = getSchema(to);
+            } catch (Exception e) {
+                LOG.warn("Failed to deserialize schema for {}", to);
+                error = true;
+            }
+            if (existing != null && existing.getName().equals(schema.getName()) && existing.getVersion() != schema.getVersion()
+                || existing == null && !error && upgradeOnMissing
+                || existing == null && error && upgradeOnError) {
                 updates.set(toTenantKey(to), schemaBytes);
             }
         }

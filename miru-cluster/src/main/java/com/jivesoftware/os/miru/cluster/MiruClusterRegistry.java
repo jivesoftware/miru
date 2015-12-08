@@ -84,7 +84,7 @@ public interface MiruClusterRegistry {
 
     boolean copySchema(MiruTenantId fromTenantId, List<MiruTenantId> toTenantIds) throws Exception;
 
-    int upgradeSchema(MiruSchema schema) throws Exception;
+    int upgradeSchema(MiruSchema schema, boolean upgradeOnMissing, boolean upgradeOnError) throws Exception;
 
     Map<MiruPartitionId, RangeMinMax> getIngressRanges(MiruTenantId tenantId) throws Exception;
 
