@@ -114,7 +114,7 @@ public class MiruManageEndpoints {
     @Path("/schema")
     @Produces(MediaType.TEXT_HTML)
     public Response getSchema() {
-        String rendered = miruManageService.renderSchema(new MiruSchemaRegion.SchemaInput(null, null, -1, "lookup"));
+        String rendered = miruManageService.renderSchema(new MiruSchemaRegion.SchemaInput(null, null, -1, "lookup", false, false));
         return Response.ok(rendered).build();
     }
 
@@ -125,12 +125,14 @@ public class MiruManageEndpoints {
     public Response getSchemaWithLookup(@FormParam("tenantId") @DefaultValue("") String tenantId,
         @FormParam("lookupName") String lookupName,
         @FormParam("lookupVersion") @DefaultValue("-1") String lookupVersion,
-        @FormParam("action") @DefaultValue("lookup") String action) {
+        @FormParam("action") @DefaultValue("lookup") String action,
+        @FormParam("upgradeOnMissing") @DefaultValue("false") boolean upgradeOnMissing,
+        @FormParam("upgradeOnError") @DefaultValue("false") boolean upgradeOnError) {
         String rendered = miruManageService.renderSchema(new MiruSchemaRegion.SchemaInput(
             tenantId != null && !tenantId.trim().isEmpty() ? new MiruTenantId(tenantId.trim().getBytes(Charsets.UTF_8)) : null,
             lookupName != null && !lookupName.trim().isEmpty() ? lookupName.trim() : null,
             lookupVersion != null && !lookupVersion.trim().isEmpty() ? Integer.parseInt(lookupVersion.trim()) : -1,
-            action));
+            action, upgradeOnMissing, upgradeOnError));
         return Response.ok(rendered).build();
     }
 

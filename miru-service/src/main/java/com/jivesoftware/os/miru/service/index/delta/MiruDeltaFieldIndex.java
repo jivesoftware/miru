@@ -210,6 +210,11 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
 
     @Override
     public void multiTxIndex(int fieldId, MiruTermId[] termIds, StackBuffer stackBuffer, MultiIndexTx<IBM> indexTx) throws Exception {
+        // we are destructive of terms, so make a copy
+        MiruTermId[] copy = new MiruTermId[termIds.length];
+        System.arraycopy(termIds, 0, copy, 0, termIds.length);
+        termIds = copy;
+
         for (int i = 0; i < termIds.length; i++) {
             if (termIds[i] != null) {
                 MiruDeltaInvertedIndex.Delta<IBM> delta = fieldIndexDeltas[fieldId].get(termIds[i]);

@@ -138,6 +138,7 @@ public class CollaborativeFiltering {
             otherOkField1Activity,
             Optional.<BM>absent(),
             fieldId2,
+            gatherBatchSize,
             request.query.aggregateFieldName2,
             stackBuffer,
             miruTermCount -> {

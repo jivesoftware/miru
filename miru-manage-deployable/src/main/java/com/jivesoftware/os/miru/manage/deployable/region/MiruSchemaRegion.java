@@ -45,12 +45,16 @@ public class MiruSchemaRegion implements MiruPageRegion<MiruSchemaRegion.SchemaI
         public final String lookupName;
         public final int lookupVersion;
         public final String action;
+        public final boolean upgradeOnMissing;
+        public final boolean upgradeOnError;
 
-        public SchemaInput(MiruTenantId tenantId, String lookupName, int lookupVersion, String action) {
+        public SchemaInput(MiruTenantId tenantId, String lookupName, int lookupVersion, String action, boolean upgradeOnMissing, boolean upgradeOnError) {
             this.tenantId = tenantId;
             this.lookupName = lookupName;
             this.lookupVersion = lookupVersion;
             this.action = action;
+            this.upgradeOnMissing = upgradeOnMissing;
+            this.upgradeOnError = upgradeOnError;
         }
     }
 
@@ -67,7 +71,7 @@ public class MiruSchemaRegion implements MiruPageRegion<MiruSchemaRegion.SchemaI
                 data.put("tenantSchema", schema != null ? mapper.writerWithDefaultPrettyPrinter().writeValueAsString(schema) : "(unregistered)");
 
                 if (input.action.equals("upgrade")) {
-                    int count = clusterRegistry.upgradeSchema(schema);
+                    int count = clusterRegistry.upgradeSchema(schema, input.upgradeOnMissing, input.upgradeOnError);
                     data.put("tenantUpgrades", count);
                 }
             } else if (input.lookupName != null) {
@@ -75,26 +79,32 @@ public class MiruSchemaRegion implements MiruPageRegion<MiruSchemaRegion.SchemaI
                 List<MiruTenantId> tenantIds = miruWALClient.getAllTenantIds();
                 int matchingCount = 0;
                 int missingCount = 0;
+                int errorCount = 0;
                 for (MiruTenantId tenantId : tenantIds) {
-                    MiruSchema schema = clusterRegistry.getSchema(tenantId);
-                    if (schema != null &&
-                        schema.getName().equals(input.lookupName) &&
-                        (input.lookupVersion == -1 || schema.getVersion() == input.lookupVersion)) {
-                        if (matchingSchema == null || schema.getVersion() > matchingSchema.getVersion()) {
-                            matchingSchema = schema;
+                    try {
+                        MiruSchema schema = clusterRegistry.getSchema(tenantId);
+                        if (schema != null &&
+                            schema.getName().equals(input.lookupName) &&
+                            (input.lookupVersion == -1 || schema.getVersion() == input.lookupVersion)) {
+                            if (matchingSchema == null || schema.getVersion() > matchingSchema.getVersion()) {
+                                matchingSchema = schema;
+                            }
+                            matchingCount++;
+                        } else {
+                            missingCount++;
                         }
-                        matchingCount++;
-                    } else {
-                        missingCount++;
+                    } catch (Exception e) {
+                        errorCount++;
                     }
                 }
                 data.put("lookupMatching", matchingCount);
                 data.put("lookupMissing", missingCount);
+                data.put("lookupErrors", errorCount);
 
                 if (input.action.equals("upgrade")) {
                     int count = 0;
                     if (matchingSchema != null) {
-                        count = clusterRegistry.upgradeSchema(matchingSchema);
+                        count = clusterRegistry.upgradeSchema(matchingSchema, input.upgradeOnMissing, input.upgradeOnError);
                     }
                     data.put("lookupUpgrades", count);
                 }
