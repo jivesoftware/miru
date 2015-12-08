@@ -16,6 +16,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
+import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.miru.api.topology.ReaderRequestHelpers;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
@@ -173,7 +174,7 @@ public class StumptownTrendsPluginRegion implements MiruPageRegion<Optional<Stum
                 if (response != null && response.answer != null) {
                     data.put("elapse", String.valueOf(response.totalElapsed));
 
-                    Map<String, Waveform> waveforms = response.answer.waveforms;
+                    Map<MiruValue, Waveform> waveforms = response.answer.waveforms;
                     List<Trendy> results = response.answer.results.get(strategy.name());
                     if (results == null) {
                         results = Collections.emptyList();
@@ -190,7 +191,7 @@ public class StumptownTrendsPluginRegion implements MiruPageRegion<Optional<Stum
                         for (long w : waveform) {
                             mmd.value(w);
                         }
-                        pngWaveforms.put(t.distinctValue, waveform);
+                        pngWaveforms.put(t.distinctValue.last(), waveform);
                     }
 
                     data.put("results", Lists.transform(results, trendy -> ImmutableMap.of(
@@ -198,7 +199,7 @@ public class StumptownTrendsPluginRegion implements MiruPageRegion<Optional<Stum
                         "rank", String.valueOf(Math.round(trendy.rank * 100.0) / 100.0),
                         "waveform", "data:image/png;base64," + new PNGWaveforms()
                             .hitsToBase64PNGWaveform(600, 96, 10, 4,
-                                ImmutableMap.of(trendy.distinctValue, pngWaveforms.get(trendy.distinctValue)),
+                                ImmutableMap.of(trendy.distinctValue.last(), pngWaveforms.get(trendy.distinctValue.last())),
                                 Optional.of(mmd)))));
                     ObjectMapper mapper = new ObjectMapper();
                     mapper.enable(SerializationFeature.INDENT_OUTPUT);

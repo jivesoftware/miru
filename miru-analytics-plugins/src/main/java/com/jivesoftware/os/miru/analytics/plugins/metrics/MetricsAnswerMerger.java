@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.analytics.plugins.metrics;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
+import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.miru.plugin.solution.MiruAnswerMerger;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
@@ -52,7 +53,7 @@ public class MetricsAnswerMerger implements MiruAnswerMerger<MetricsAnswer> {
         } else {
 
             List<Waveform> biggerList = lastAnswer.waveforms.size() > currentAnswer.waveforms.size() ? lastAnswer.waveforms : currentAnswer.waveforms;
-            Map<String, Waveform> smallerSet = lastAnswer.waveforms.size() > currentAnswer.waveforms.size()
+            Map<MiruValue, Waveform> smallerSet = lastAnswer.waveforms.size() > currentAnswer.waveforms.size()
                 ? toMap(currentAnswer.waveforms)
                 : toMap(lastAnswer.waveforms);
 
@@ -66,15 +67,15 @@ public class MetricsAnswerMerger implements MiruAnswerMerger<MetricsAnswer> {
 
     }
 
-    private Map<String, Waveform> toMap(List<Waveform> waveforms) {
-        Map<String, Waveform> map = Maps.newHashMapWithExpectedSize(waveforms.size());
+    private Map<MiruValue, Waveform> toMap(List<Waveform> waveforms) {
+        Map<MiruValue, Waveform> map = Maps.newHashMapWithExpectedSize(waveforms.size());
         for (Waveform waveform : waveforms) {
             map.put(waveform.getId(), waveform);
         }
         return map;
     }
 
-    private void mergeWaveform(Map<String, Waveform> mergedWaveforms, List<Waveform> waveforms, MiruSolutionLog solutionLog) {
+    private void mergeWaveform(Map<MiruValue, Waveform> mergedWaveforms, List<Waveform> waveforms, MiruSolutionLog solutionLog) {
         long[] mergedWaveform = new long[divideTimeRangeIntoNSegments];
         for (Waveform waveform : waveforms) {
 

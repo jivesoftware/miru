@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.stumptown.plugins;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
@@ -121,8 +120,8 @@ public class MiruSeaAnomalyNGTest {
         final MiruTimeRange timeRange = new MiruTimeRange(smallestTime, lastTime);
         for (int i = 0; i < numberOfUsers; i++) {
             String user = "bob" + i;
-            MiruFieldFilter miruFieldFilter = new MiruFieldFilter(MiruFieldType.primary, "user", ImmutableList.of(user));
-            MiruFilter filter = new MiruFilter(MiruFilterOperation.or, false, Arrays.asList(miruFieldFilter), null);
+            MiruFieldFilter miruFieldFilter = MiruFieldFilter.of(MiruFieldType.primary, "user", user);
+            MiruFilter filter = new MiruFilter(MiruFilterOperation.or, false, Collections.singletonList(miruFieldFilter), null);
 
             MiruRequest<SeaAnomalyQuery> request = new MiruRequest<>("test",
                 tenant1,

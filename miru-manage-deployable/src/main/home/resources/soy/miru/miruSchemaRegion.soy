@@ -37,11 +37,15 @@
                         name="lookupVersion" id="lookupVersionPicker" data-original-title="" title="">
                 </div>
                 <div style="float:left; margin-right:15px;">
-                    <div class="btn-group" role="group">
-                        <button title="Lookup" type="submit" name="action" value="lookup" class="btn btn-default"><span class="glyphicon glyphicon-search"></span></button>
+                    <label for="lookupNamePicker">Action</label>
+                    <br/>
+                    <div role="group">
+                        <button title="Lookup" type="submit" name="action" value="lookup" class="btn btn-default" style="margin:0 8px 4px 0;"><span class="glyphicon glyphicon-search"></span></button>
+                        Look for matching schemas
                     </div>
-                    <div class="btn-group" role="group">
-                        <button title="Upgrade" type="submit" name="action" value="upgrade" class="btn btn-default"><span class="glyphicon glyphicon-copy"></span></button>
+                    <div role="group">
+                        <button title="Upgrade" type="submit" name="action" value="upgrade" class="btn btn-default" style="margin:0 8px 4px 0;"><span class="glyphicon glyphicon-copy"></span></button>
+                        Copy matching schema to all tenants with the same schema name
                     </div>
                 </div>
             </form>

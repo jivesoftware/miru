@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Interners;
@@ -58,6 +59,10 @@ public class IndexTestUtil {
 
     public static TxCogs cogs = new TxCogs(256, 64, null, null, null);
 
+    private static final MiruSchema schema = new MiruSchema.Builder("test", 1)
+        .setFieldDefinitions(DefaultMiruSchemaDefinition.FIELDS)
+        .build();
+
     private static MiruContextFactory<RCVSSipCursor> factory(int numberOfChunkStores) {
 
         StripingLocksProvider<MiruTermId> fieldIndexStripingLocksProvider = new StripingLocksProvider<>(1024);
@@ -65,9 +70,7 @@ public class IndexTestUtil {
         StripingLocksProvider<String> authzStripingLocksProvider = new StripingLocksProvider<>(1024);
 
         MiruSchemaProvider schemaProvider = new SingleSchemaProvider(
-            new MiruSchema.Builder("test", 1)
-            .setFieldDefinitions(DefaultMiruSchemaDefinition.FIELDS)
-            .build());
+            schema);
         MiruTermComposer termComposer = new MiruTermComposer(Charsets.UTF_8, termInterner);
 
         MiruInterner<MiruIBA> ibaInterner = new MiruInterner<MiruIBA>(true) {
@@ -109,9 +112,9 @@ public class IndexTestUtil {
             termComposer,
             activityInternExtern,
             ImmutableMap.<MiruBackingStorage, MiruChunkAllocator>builder()
-            .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
-            .put(MiruBackingStorage.disk, onDiskChunkAllocator)
-            .build(),
+                .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
+                .put(MiruBackingStorage.disk, onDiskChunkAllocator)
+                .build(),
             new RCVSSipIndexMarshaller(),
             new MiruTempDirectoryResourceLocator(),
             1024,
@@ -119,14 +122,15 @@ public class IndexTestUtil {
             streamStripingLocksProvider,
             authzStripingLocksProvider,
             new PartitionErrorTracker(BindInterfaceToConfiguration.bindDefault(PartitionErrorTracker.PartitionErrorTrackerConfig.class)),
-            termInterner);
+            termInterner,
+            new ObjectMapper());
     }
 
     public static <BM extends IBM, IBM> MiruContext<BM, IBM, RCVSSipCursor> buildInMemoryContext(int numberOfChunkStores,
         MiruBitmaps<BM, IBM> bitmaps,
         MiruPartitionCoord coord) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
-        return factory(numberOfChunkStores).allocate(bitmaps, coord, MiruBackingStorage.memory, stackBuffer);
+        return factory(numberOfChunkStores).allocate(bitmaps, schema, coord, MiruBackingStorage.memory, stackBuffer);
 
     }
 
@@ -134,7 +138,7 @@ public class IndexTestUtil {
         MiruBitmaps<BM, IBM> bitmaps,
         MiruPartitionCoord coord) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
-        return factory(numberOfChunkStores).allocate(bitmaps, coord, MiruBackingStorage.disk, stackBuffer);
+        return factory(numberOfChunkStores).allocate(bitmaps, schema, coord, MiruBackingStorage.disk, stackBuffer);
 
     }
 

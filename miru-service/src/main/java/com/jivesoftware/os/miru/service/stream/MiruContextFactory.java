@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.service.stream;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.google.common.cache.Cache;
@@ -27,6 +28,7 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaProvider;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaUnvailableException;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.context.MiruContextConstants;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
@@ -100,6 +102,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
     private final StripingLocksProvider<String> authzStripingLocksProvider;
     private final PartitionErrorTracker partitionErrorTracker;
     private final MiruInterner<MiruTermId> termInterner;
+    private final ObjectMapper objectMapper;
 
     public MiruContextFactory(TxCogs cogs,
         MiruSchemaProvider schemaProvider,
@@ -113,7 +116,8 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         StripingLocksProvider<MiruStreamId> streamStripingLocksProvider,
         StripingLocksProvider<String> authzStripingLocksProvider,
         PartitionErrorTracker partitionErrorTracker,
-        MiruInterner<MiruTermId> termInterner) {
+        MiruInterner<MiruTermId> termInterner,
+        ObjectMapper objectMapper) {
 
         this.cogs = cogs;
         this.schemaProvider = schemaProvider;
@@ -128,14 +132,13 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         this.authzStripingLocksProvider = authzStripingLocksProvider;
         this.partitionErrorTracker = partitionErrorTracker;
         this.termInterner = termInterner;
+        this.objectMapper = objectMapper;
     }
 
     public MiruBackingStorage findBackingStorage(MiruPartitionCoord coord) throws Exception {
         try {
-            for (MiruBackingStorage storage : MiruBackingStorage.values()) {
-                if (checkMarkedStorage(coord, storage)) {
-                    return storage;
-                }
+            if (checkForPersistentStorage(coord)) {
+                return MiruBackingStorage.disk;
             }
         } catch (MiruSchemaUnvailableException e) {
             log.warn("Schema not registered for tenant {}, using default storage", coord.tenantId);
@@ -153,12 +156,10 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
     }
 
     public <BM extends IBM, IBM> MiruContext<BM, IBM, S> allocate(MiruBitmaps<BM, IBM> bitmaps,
+        MiruSchema schema,
         MiruPartitionCoord coord,
         MiruBackingStorage storage,
         StackBuffer stackBuffer) throws Exception {
-
-        // check for schema first
-        MiruSchema schema = schemaProvider.getSchema(coord.tenantId);
 
         ChunkStore[] chunkStores = getAllocator(storage).allocateChunkStores(coord, stackBuffer);
         return allocate(bitmaps, coord, schema, chunkStores, storage, stackBuffer);
@@ -279,7 +280,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                     TxNamedMapOfFiler.CHUNK_FILER_OPENER,
                     TxNamedMapOfFiler.OVERWRITE_GROWER_PROVIDER,
                     TxNamedMapOfFiler.REWRITE_GROWER_PROVIDER),
-                new byte[]{0},
+                new byte[] { 0 },
                 -1,
                 new Object()),
             new MiruDeltaInvertedIndex.Delta<>());
@@ -333,13 +334,11 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
     }
 
     public <BM extends IBM, IBM> MiruContext<BM, IBM, S> copy(MiruBitmaps<BM, IBM> bitmaps,
+        MiruSchema schema,
         MiruPartitionCoord coord,
         MiruContext<BM, IBM, S> from,
         MiruBackingStorage toStorage,
         StackBuffer stackBuffer) throws Exception {
-
-        // check for schema first
-        MiruSchema schema = schemaProvider.getSchema(coord.tenantId);
 
         ChunkStore[] fromChunks = from.chunkStores;
         ChunkStore[] toChunks = getAllocator(toStorage).allocateChunkStores(coord, stackBuffer);
@@ -352,21 +351,51 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         return allocate(bitmaps, coord, schema, toChunks, toStorage, stackBuffer);
     }
 
-    public void markStorage(MiruPartitionCoord coord, MiruBackingStorage marked) throws Exception {
+    public void saveSchema(MiruPartitionCoord coord, MiruSchema schema) throws IOException {
         MiruResourcePartitionIdentifier identifier = new MiruPartitionCoordIdentifier(coord);
+        File schemaFile = diskResourceLocator.getFilerFile(identifier, "schema");
+        if (schemaFile.exists()) {
+            schemaFile.delete();
+        }
+        objectMapper.writeValue(schemaFile, schema);
+    }
 
-        for (MiruBackingStorage storage : MiruBackingStorage.values()) {
-            if (storage != marked) {
-                diskResourceLocator.getFilerFile(identifier, storage.name()).delete();
+    public MiruSchema loadPersistentSchema(MiruPartitionCoord coord) throws IOException {
+        MiruResourcePartitionIdentifier identifier = new MiruPartitionCoordIdentifier(coord);
+        File schemaFile = diskResourceLocator.getFilerFile(identifier, "schema");
+        if (schemaFile.exists()) {
+            return objectMapper.readValue(schemaFile, MiruSchema.class);
+        } else {
+            return null;
+        }
+    }
+
+    public MiruSchema lookupLatestSchema(MiruTenantId tenantId) throws MiruSchemaUnvailableException {
+        return schemaProvider.getSchema(tenantId);
+    }
+
+    private boolean checkForPersistentStorage(MiruPartitionCoord coord) throws Exception {
+        MiruPartitionCoordIdentifier identifier = new MiruPartitionCoordIdentifier(coord);
+        File schemaFile = diskResourceLocator.getFilerFile(identifier, "schema");
+        if (!schemaFile.exists()) {
+            // legacy check
+            File storageFile = diskResourceLocator.getFilerFile(identifier, MiruBackingStorage.disk.name());
+            if (!storageFile.exists()) {
+                return false;
             }
         }
 
-        diskResourceLocator.getFilerFile(identifier, marked.name()).createNewFile();
+        return getAllocator(MiruBackingStorage.disk).checkExists(coord);
     }
 
-    private boolean checkMarkedStorage(MiruPartitionCoord coord, MiruBackingStorage storage) throws Exception {
-        File file = diskResourceLocator.getFilerFile(new MiruPartitionCoordIdentifier(coord), storage.name());
-        return file.exists() && getAllocator(storage).checkExists(coord);
+    public void markObsolete(MiruPartitionCoord coord) throws Exception {
+        MiruResourcePartitionIdentifier identifier = new MiruPartitionCoordIdentifier(coord);
+        diskResourceLocator.getFilerFile(identifier, "obsolete").createNewFile();
+    }
+
+    public boolean checkObsolete(MiruPartitionCoord coord) throws Exception {
+        MiruResourcePartitionIdentifier identifier = new MiruPartitionCoordIdentifier(coord);
+        return diskResourceLocator.getFilerFile(identifier, "obsolete").exists();
     }
 
     public void cleanDisk(MiruPartitionCoord coord) throws IOException {

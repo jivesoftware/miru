@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.stream.plugins.filter;
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.miru.plugin.solution.MiruAnswerMerger;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
@@ -39,7 +40,7 @@ public class AggregateCountsAnswerMerger implements MiruAnswerMerger<AggregateCo
                 mergedConstraints.put(entry.getKey(), currentConstraint);
             } else {
 
-                Map<String, AggregateCount> carryOverCounts = new HashMap<>();
+                Map<MiruValue, AggregateCount> carryOverCounts = new HashMap<>();
                 for (AggregateCount aggregateCount : currentConstraint.results) {
                     carryOverCounts.put(aggregateCount.distinctValue, aggregateCount);
                 }

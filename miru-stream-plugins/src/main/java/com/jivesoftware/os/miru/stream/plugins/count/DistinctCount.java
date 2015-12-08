@@ -4,8 +4,10 @@ import com.google.common.base.Optional;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
+import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
@@ -37,7 +39,7 @@ public class DistinctCount {
         log.debug("Get number of distincts for answer={} query={}", answer, request);
 
         int collectedDistincts = 0;
-        Set<String> aggregateTerms;
+        Set<MiruValue> aggregateTerms;
         if (lastReport.isPresent()) {
             collectedDistincts = lastReport.get().collectedDistincts;
             aggregateTerms = Sets.newHashSet(lastReport.get().aggregateTerms);
@@ -46,14 +48,16 @@ public class DistinctCount {
         }
 
         MiruTermComposer termComposer = requestContext.getTermComposer();
-        int fieldId = requestContext.getSchema().getFieldId(request.query.aggregateCountAroundField);
-        MiruFieldDefinition fieldDefinition = requestContext.getSchema().getFieldDefinition(fieldId);
+        MiruSchema schema = requestContext.getSchema();
+
+        int fieldId = schema.getFieldId(request.query.aggregateCountAroundField);
+        MiruFieldDefinition fieldDefinition = schema.getFieldDefinition(fieldId);
         log.debug("fieldId={}", fieldId);
         if (fieldId >= 0) {
             MiruFieldIndex<BM, IBM> fieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
 
-            for (String aggregateTerm : aggregateTerms) {
-                MiruTermId aggregateTermId = termComposer.compose(fieldDefinition, aggregateTerm);
+            for (MiruValue aggregateTerm : aggregateTerms) {
+                MiruTermId aggregateTermId = termComposer.compose(schema, fieldDefinition, stackBuffer, aggregateTerm.parts);
                 Optional<BM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex(stackBuffer);
                 if (!optionalTermIndex.isPresent()) {
                     continue;
@@ -80,7 +84,7 @@ public class DistinctCount {
 
                 } else {
                     MiruTermId aggregateTermId = fieldValues[0];
-                    String aggregateTerm = termComposer.decompose(fieldDefinition, aggregateTermId);
+                    MiruValue aggregateTerm = new MiruValue(termComposer.decompose(schema, fieldDefinition, stackBuffer, aggregateTermId));
 
                     aggregateTerms.add(aggregateTerm);
                     Optional<BM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex(stackBuffer);

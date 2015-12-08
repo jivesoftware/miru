@@ -52,10 +52,10 @@ public class QueryUtils {
                 }
             }
             if (!terms.isEmpty()) {
-                fieldFilters.add(new MiruFieldFilter(MiruFieldType.primary, fieldName, terms));
+                fieldFilters.add(MiruFieldFilter.of(MiruFieldType.primary, fieldName, terms));
             }
             if (!notTerms.isEmpty()) {
-                notFilters.add(new MiruFieldFilter(MiruFieldType.primary, fieldName, notTerms));
+                notFilters.add(MiruFieldFilter.of(MiruFieldType.primary, fieldName, notTerms));
             }
         }
     }

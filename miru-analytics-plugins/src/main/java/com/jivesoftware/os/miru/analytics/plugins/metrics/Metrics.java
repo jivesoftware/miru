@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.analytics.plugins.metrics;
 
+import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.solution.Waveform;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
@@ -26,7 +27,7 @@ public class Metrics {
 
         long[] waveform = sum(indexes, numBits, answers, bitmaps);
 
-        return Waveform.compressed(id, waveform);
+        return Waveform.compressed(new MiruValue(id), waveform);
     }
 
     public <BM extends IBM, IBM> Waveform metricingAvg(String id,
@@ -46,7 +47,7 @@ public class Metrics {
         for (int i = 0; i < waveform.length; i++) {
             waveform[i] /= rawCardinalities[i];
         }
-        return Waveform.compressed(id, waveform);
+        return Waveform.compressed(new MiruValue(id), waveform);
     }
 
     /*

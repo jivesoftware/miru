@@ -25,7 +25,7 @@ public class ClusterSchemaProvider implements MiruSchemaProvider {
         this.client = client;
         this.cache = CacheBuilder.newBuilder()
             .concurrencyLevel(24)
-            .expireAfterAccess(1, TimeUnit.HOURS)
+            .expireAfterWrite(5, TimeUnit.MINUTES)
             .maximumSize(maxInMemory)
             .build();
     }

@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.stream.plugins.count;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import java.util.Set;
 
 /**
@@ -9,12 +10,12 @@ import java.util.Set;
  */
 public class DistinctCountReport {
 
-    public final Set<String> aggregateTerms;
+    public final Set<MiruValue> aggregateTerms;
     public final int collectedDistincts;
 
     @JsonCreator
     public DistinctCountReport(
-        @JsonProperty("aggregateTerms") Set<String> aggregateTerms,
+        @JsonProperty("aggregateTerms") Set<MiruValue> aggregateTerms,
         @JsonProperty("collectedDistincts") int collectedDistincts) {
         this.aggregateTerms = aggregateTerms;
         this.collectedDistincts = collectedDistincts;

@@ -4,8 +4,10 @@ import com.google.common.collect.Lists;
 import com.jivesoftware.os.filer.io.api.KeyRange;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
+import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
@@ -36,15 +38,17 @@ public class Distincts {
         MiruRequestContext<BM, IBM, ?> requestContext,
         final DistinctsQuery query,
         int gatherBatchSize,
+        StackBuffer stackBuffer,
         MiruSolutionLog solutionLog)
         throws Exception {
 
-        int fieldId = requestContext.getSchema().getFieldId(query.gatherDistinctsForField);
-        MiruFieldDefinition fieldDefinition = requestContext.getSchema().getFieldDefinition(fieldId);
+        MiruSchema schema = requestContext.getSchema();
+        int fieldId = schema.getFieldId(query.gatherDistinctsForField);
+        MiruFieldDefinition fieldDefinition = schema.getFieldDefinition(fieldId);
 
-        List<String> results = Lists.newArrayList();
+        List<MiruValue> results = Lists.newArrayList();
         gatherDirect(bitmaps, requestContext, query, gatherBatchSize, solutionLog,
-            termId -> results.add(termComposer.decompose(fieldDefinition, termId)));
+            termId -> results.add(new MiruValue(termComposer.decompose(schema, fieldDefinition, stackBuffer, termId))));
 
         boolean resultsExhausted = query.timeRange.smallestTimestamp > requestContext.getTimeIndex().getLargestTimestamp();
         int collectedDistincts = results.size();
@@ -63,8 +67,9 @@ public class Distincts {
 
         log.debug("Gather distincts for query={}", query);
 
-        int fieldId = requestContext.getSchema().getFieldId(query.gatherDistinctsForField);
-        MiruFieldDefinition fieldDefinition = requestContext.getSchema().getFieldDefinition(fieldId);
+        MiruSchema schema = requestContext.getSchema();
+        int fieldId = schema.getFieldId(query.gatherDistinctsForField);
+        MiruFieldDefinition fieldDefinition = schema.getFieldDefinition(fieldId);
 
         if (requestContext.getTimeIndex().intersects(query.timeRange)) {
             if (MiruFilter.NO_FILTER.equals(query.constraintsFilter)) {
@@ -73,8 +78,8 @@ public class Distincts {
                     ranges = Lists.newArrayListWithCapacity(query.prefixes.size());
                     for (String prefix : query.prefixes) {
                         ranges.add(new KeyRange(
-                            termComposer.prefixLowerInclusive(fieldDefinition.prefix, prefix),
-                            termComposer.prefixUpperExclusive(fieldDefinition.prefix, prefix)));
+                            termComposer.prefixLowerInclusive(schema, fieldDefinition, stackBuffer, prefix),
+                            termComposer.prefixUpperExclusive(schema, fieldDefinition, stackBuffer, prefix)));
                     }
                 }
 
@@ -87,14 +92,14 @@ public class Distincts {
                     prefixesAsBytes = new byte[query.prefixes.size()][];
                     int i = 0;
                     for (String prefix : query.prefixes) {
-                        prefixesAsBytes[i++] = termComposer.prefixLowerInclusive(fieldDefinition.prefix, prefix);
+                        prefixesAsBytes[i++] = termComposer.prefixLowerInclusive(schema, fieldDefinition,  stackBuffer, prefix);
                     }
                 } else {
                     prefixesAsBytes = new byte[0][];
                 }
 
                 List<IBM> ands = Lists.newArrayList();
-                BM constrained = aggregateUtil.filter(bitmaps, requestContext.getSchema(), termComposer, requestContext.getFieldIndexProvider(),
+                BM constrained = aggregateUtil.filter(bitmaps, schema, termComposer, requestContext.getFieldIndexProvider(),
                     query.constraintsFilter, solutionLog, null, requestContext.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
                 ands.add(constrained);
 

@@ -2,12 +2,12 @@ package com.jivesoftware.os.miru.reco.plugins;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.analytics.plugins.analytics.Analytics;
 import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
@@ -81,19 +81,19 @@ public class RecoCorrectnessTest {
     final MiruFieldDefinition.Prefix TYPED_PREFIX = new MiruFieldDefinition.Prefix(MiruFieldDefinition.Prefix.Type.numeric, 4, ' ');
 
     MiruSchema miruSchema = new MiruSchema.Builder("reco", 1)
-        .setFieldDefinitions(new MiruFieldDefinition[]{
-        new MiruFieldDefinition(0, "locale", singleTerm, MiruFieldDefinition.Prefix.NONE),
-        new MiruFieldDefinition(1, "mode", singleTerm, MiruFieldDefinition.Prefix.NONE),
-        new MiruFieldDefinition(2, "activityType", singleTerm, MiruFieldDefinition.Prefix.NONE),
-        new MiruFieldDefinition(3, "contextType", singleTerm, MiruFieldDefinition.Prefix.NONE),
-        new MiruFieldDefinition(4, "context", singleTerm, TYPED_PREFIX),
-        new MiruFieldDefinition(5, "objectType", singleTerm, MiruFieldDefinition.Prefix.NONE),
-        new MiruFieldDefinition(6, "object", singleTerm, TYPED_PREFIX),
-        new MiruFieldDefinition(7, "parentType", singleTerm, MiruFieldDefinition.Prefix.NONE),
-        new MiruFieldDefinition(8, "parent", singleTerm, TYPED_PREFIX),
-        new MiruFieldDefinition(9, "user", singleTerm, MiruFieldDefinition.Prefix.NONE),
-        new MiruFieldDefinition(10, "authors", multiTerm, MiruFieldDefinition.Prefix.NONE)
-    })
+        .setFieldDefinitions(new MiruFieldDefinition[] {
+            new MiruFieldDefinition(0, "locale", singleTerm, MiruFieldDefinition.Prefix.NONE),
+            new MiruFieldDefinition(1, "mode", singleTerm, MiruFieldDefinition.Prefix.NONE),
+            new MiruFieldDefinition(2, "activityType", singleTerm, MiruFieldDefinition.Prefix.NONE),
+            new MiruFieldDefinition(3, "contextType", singleTerm, MiruFieldDefinition.Prefix.NONE),
+            new MiruFieldDefinition(4, "context", singleTerm, TYPED_PREFIX),
+            new MiruFieldDefinition(5, "objectType", singleTerm, MiruFieldDefinition.Prefix.NONE),
+            new MiruFieldDefinition(6, "object", singleTerm, TYPED_PREFIX),
+            new MiruFieldDefinition(7, "parentType", singleTerm, MiruFieldDefinition.Prefix.NONE),
+            new MiruFieldDefinition(8, "parent", singleTerm, TYPED_PREFIX),
+            new MiruFieldDefinition(9, "user", singleTerm, MiruFieldDefinition.Prefix.NONE),
+            new MiruFieldDefinition(10, "authors", multiTerm, MiruFieldDefinition.Prefix.NONE)
+        })
         .setPairedLatest(ImmutableMap.of(
             "parent", Arrays.asList("user"),
             "user", Arrays.asList("parent", "context", "user")))
@@ -211,14 +211,15 @@ public class RecoCorrectnessTest {
     }
 
     private void testSystemRecommendedContent(SetMultimap<String, String> authorToParents, SetMultimap<String, String> userToParents, MiruTimeRange timeRange)
-        throws MiruQueryServiceException, InterruptedException {
+        throws Exception {
 
         Set<String> docTypes = Sets.newHashSet("50", "51", "52");
+        StackBuffer stackBuffer = new StackBuffer();
         MiruFieldDefinition userFieldDefinition = miruSchema.getFieldDefinition(miruSchema.getFieldId("user"));
         for (int i = 0; i < numqueries; i++) {
             String user = "bob" + i;
-            MiruFieldFilter miruFieldFilter = new MiruFieldFilter(MiruFieldType.pairedLatest, "user", ImmutableList.of(
-                indexUtil.makePairedLatestTerm(termComposer.compose(userFieldDefinition, user), "parent").toString()));
+            MiruFieldFilter miruFieldFilter = MiruFieldFilter.of(MiruFieldType.pairedLatest, "user",
+                indexUtil.makePairedLatestTerm(termComposer.compose(miruSchema, userFieldDefinition, stackBuffer, user), "parent"));
             MiruFilter filter = new MiruFilter(MiruFilterOperation.or, false, Arrays.asList(miruFieldFilter), null);
 
             long s = System.currentTimeMillis();
@@ -240,13 +241,13 @@ public class RecoCorrectnessTest {
                             new MiruFilter(MiruFilterOperation.and,
                                 false,
                                 Arrays.asList(
-                                    new MiruFieldFilter(MiruFieldType.primary, "activityType", Arrays.asList("0", "1", "72", "65")),
-                                    new MiruFieldFilter(MiruFieldType.primary, "parentType", Lists.newArrayList(docTypes))),
+                                    MiruFieldFilter.of(MiruFieldType.primary, "activityType", "0", "1", "72", "65"),
+                                    MiruFieldFilter.of(MiruFieldType.primary, "parentType", docTypes)),
                                 null),
                             new MiruFilter(MiruFilterOperation.and,
                                 false,
-                                Arrays.asList(
-                                    new MiruFieldFilter(MiruFieldType.primary, "authors", Arrays.asList(user))),
+                                Collections.singletonList(
+                                    MiruFieldFilter.of(MiruFieldType.primary, "authors", user)),
                                 null))),
                     10),
                 MiruSolutionLogLevel.INFO));
@@ -255,7 +256,8 @@ public class RecoCorrectnessTest {
             System.out.println("Took:" + (System.currentTimeMillis() - s));
             //assertTrue(response.answer.results.size() > 0, response.toString());
             for (RecoAnswer.Recommendation result : response.answer.results) {
-                assertTrue(docTypes.contains(result.distinctValue.substring(0, result.distinctValue.indexOf(' '))), "Didn't expect " + result.distinctValue);
+                String value = result.distinctValue.last();
+                assertTrue(docTypes.contains(value.substring(0, value.indexOf(' '))), "Didn't expect " + result.distinctValue);
                 assertFalse(authorToParents.containsEntry(user, result.distinctValue));
                 assertFalse(userToParents.containsEntry(user, result.distinctValue));
             }
@@ -273,10 +275,9 @@ public class RecoCorrectnessTest {
             MiruFilter constraintsFilter = new MiruFilter(MiruFilterOperation.and,
                 false,
                 Arrays.asList(
-                    new MiruFieldFilter(MiruFieldType.primary, "context", Arrays.asList(context)),
-                    new MiruFieldFilter(MiruFieldType.primary, "parentType", Lists.newArrayList(docTypes)),
-                    new MiruFieldFilter(MiruFieldType.primary, "activityType", Arrays.asList("0", "1", "72", "65"))
-                ),
+                    MiruFieldFilter.of(MiruFieldType.primary, "context", context),
+                    MiruFieldFilter.of(MiruFieldType.primary, "parentType", docTypes),
+                    MiruFieldFilter.of(MiruFieldType.primary, "activityType", "0", "1", "72", "65")),
                 null);
 
             long s = System.currentTimeMillis();
@@ -302,8 +303,9 @@ public class RecoCorrectnessTest {
             System.out.println("Took:" + (System.currentTimeMillis() - s));
             //assertTrue(response.answer.results.size() > 0, response.toString());
             for (Trendy result : response.answer.results.get(Strategy.LINEAR_REGRESSION.name())) {
-                assertTrue(docTypes.contains(result.distinctValue.substring(0, result.distinctValue.indexOf(' '))), "Didn't expect " + result.distinctValue);
-                assertTrue(contextToParents.get(context).contains(result.distinctValue));
+                String value = result.distinctValue.last();
+                assertTrue(docTypes.contains(value.substring(0, value.indexOf(' '))), "Didn't expect " + result.distinctValue);
+                assertTrue(contextToParents.get(context).contains(value));
             }
         }
     }

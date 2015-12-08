@@ -176,9 +176,7 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                                         new MiruFilter(MiruFilterOperation.and,
                                             false,
                                             Collections.singletonList(
-                                                new MiruFieldFilter(MiruFieldType.primary,
-                                                    input.field1,
-                                                    Collections.singletonList(term1))),
+                                                MiruFieldFilter.of(MiruFieldType.primary, input.field1, term1)),
                                             null));
                                 } else {
                                     for (String term2 : terms2) {
@@ -187,13 +185,8 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                                             new MiruFilter(MiruFilterOperation.and,
                                                 false,
                                                 Arrays.asList(
-                                                    new MiruFieldFilter(MiruFieldType.primary,
-                                                        input.field1,
-                                                        Collections.singletonList(term1)),
-                                                    new MiruFieldFilter(MiruFieldType.primary,
-                                                        input.field2,
-                                                        Collections.singletonList(term2))
-                                                ),
+                                                    MiruFieldFilter.of(MiruFieldType.primary, input.field1, term1),
+                                                    MiruFieldFilter.of(MiruFieldType.primary, input.field2, term2)),
                                                 null));
                                     }
                                 }
@@ -229,7 +222,7 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
 
                 if (response != null && response.answer != null) {
                     List<Waveform> answerWaveforms = response.answer.waveforms != null ? response.answer.waveforms : Collections.emptyList();
-                    ImmutableMap<String, Waveform> uniqueIndex = Maps.uniqueIndex(answerWaveforms, w-> w.getId());
+                    ImmutableMap<String, Waveform> uniqueIndex = Maps.uniqueIndex(answerWaveforms, w -> w.getId().last());
                     Map<String, long[]> waveforms = Maps.transformValues(uniqueIndex, w -> {
                         long[] waveform = new long[input.buckets];
                         w.mergeWaveform(waveform);

@@ -20,6 +20,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
+import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.miru.api.topology.ReaderRequestHelpers;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
@@ -124,10 +125,7 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
                 final long fromTime = packCurrentTime - snowflakeIdPacker.pack(TimeUnit.HOURS.toMillis(fromHoursAgo), 0, 0);
                 final long toTime = packCurrentTime - snowflakeIdPacker.pack(TimeUnit.HOURS.toMillis(toHoursAgo), 0, 0);
                 List<MiruFieldFilter> fieldFilters = Lists.newArrayList();
-                fieldFilters.add(new MiruFieldFilter(MiruFieldType.primary, "activityType",
-                    Lists.transform(
-                        Arrays.asList(0, 1, 11, 65),
-                        Functions.toStringFunction())));
+                fieldFilters.add(MiruFieldFilter.of(MiruFieldType.primary, "activityType", 0, 1, 11, 65));
 
                 List<MiruFilter> constraintsSubFilters = null;
                 if (!input.filter.isEmpty()) {
@@ -182,7 +180,7 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
                 if (response != null && response.answer != null) {
                     data.put("elapse", String.valueOf(response.totalElapsed));
 
-                    Map<String, Waveform> waveforms = response.answer.waveforms;
+                    Map<MiruValue, Waveform> waveforms = response.answer.waveforms;
                     List<Trendy> results = response.answer.results.get(Strategy.LINEAR_REGRESSION.name());
                     if (results == null) {
                         results = Collections.emptyList();
@@ -199,7 +197,7 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
                         for (long w : waveform) {
                             mmd.value(w);
                         }
-                        pngWaveforms.put(t.distinctValue, waveform);
+                        pngWaveforms.put(t.distinctValue.last(), waveform);
                     }
 
                     data.put("results", Lists.transform(results, trendy -> ImmutableMap.of(
@@ -207,7 +205,7 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
                         "rank", String.valueOf(trendy.rank),
                         "waveform", "data:image/png;base64," + new PNGWaveforms()
                             .hitsToBase64PNGWaveform(600, 128, 10,
-                                ImmutableMap.of(trendy.distinctValue, pngWaveforms.get(trendy.distinctValue)),
+                                ImmutableMap.of(trendy.distinctValue.last(), pngWaveforms.get(trendy.distinctValue.last())),
                                 Optional.of(mmd)))));
                     ObjectMapper mapper = new ObjectMapper();
                     mapper.enable(SerializationFeature.INDENT_OUTPUT);

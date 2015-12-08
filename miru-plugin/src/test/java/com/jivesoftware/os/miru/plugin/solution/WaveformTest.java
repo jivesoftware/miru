@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.plugin.solution;
 
+import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import java.util.Arrays;
 import java.util.Random;
 import org.testng.Assert;
@@ -44,7 +45,7 @@ public class WaveformTest {
     }
 
     private void assertWaveform(long[] expected) {
-        Waveform waveform = Waveform.compressed("", expected);
+        Waveform waveform = Waveform.compressed(new MiruValue(""), expected);
         long[] actual = new long[expected.length];
         waveform.mergeWaveform(actual);
         Assert.assertTrue(Arrays.equals(expected, actual), Arrays.toString(expected) + " != " + Arrays.toString(actual));

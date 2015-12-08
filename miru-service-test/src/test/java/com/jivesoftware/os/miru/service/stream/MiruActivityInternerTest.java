@@ -5,6 +5,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Interner;
 import com.google.common.collect.Interners;
 import com.google.common.collect.Lists;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruPropertyDefinition;
@@ -78,19 +79,21 @@ public class MiruActivityInternerTest {
     @Test
     public void testIntern_complete() throws Exception {
 
+        StackBuffer stackBuffer = new StackBuffer();
+
         List<MiruActivityAndId<MiruInternalActivity>> internalActivity1 = Arrays.<MiruActivityAndId<MiruInternalActivity>>asList(new MiruActivityAndId[1]);
         interner.intern(Arrays.asList(new MiruActivityAndId<>(
             new MiruActivity.Builder(tenantId, 1, new String[]{"a", "b", "c"}, 0)
             .putAllFieldValues("f", ImmutableList.of("t1", "t2"))
             .putAllPropValues("p", ImmutableList.of("v1", "v2"))
-            .build(), 0)), 0, 1, internalActivity1, schema);
+            .build(), 0)), 0, 1, internalActivity1, schema, stackBuffer);
 
         List<MiruActivityAndId<MiruInternalActivity>> internalActivity2 = Arrays.<MiruActivityAndId<MiruInternalActivity>>asList(new MiruActivityAndId[1]);
         interner.intern(Arrays.asList(new MiruActivityAndId<>(
             new MiruActivity.Builder(tenantId, 2, new String[]{"a", "b", "c"}, 0)
             .putAllFieldValues("f", ImmutableList.of("t1", "t2"))
             .putAllPropValues("p", ImmutableList.of("v1", "v2"))
-            .build(), 1)), 0, 1, internalActivity2, schema);
+            .build(), 1)), 0, 1, internalActivity2, schema, stackBuffer);
 
         MiruInternalActivity activity1 = internalActivity1.get(0).activity;
         MiruInternalActivity activity2 = internalActivity2.get(0).activity;
@@ -112,9 +115,10 @@ public class MiruActivityInternerTest {
 
     @Test
     public void testIntern_nullAuthz() throws Exception {
+        StackBuffer stackBuffer = new StackBuffer();
         List<MiruActivityAndId<MiruInternalActivity>> activity1 = Arrays.<MiruActivityAndId<MiruInternalActivity>>asList(new MiruActivityAndId[1]);
         interner.intern(Arrays.asList(new MiruActivityAndId<>(
-            new MiruActivity.Builder(tenantId, 1, null, 0).build(), 0)), 0, 1, activity1, schema);
+            new MiruActivity.Builder(tenantId, 1, null, 0).build(), 0)), 0, 1, activity1, schema, stackBuffer);
 
         assertNull(activity1.get(0).activity.authz);
     }

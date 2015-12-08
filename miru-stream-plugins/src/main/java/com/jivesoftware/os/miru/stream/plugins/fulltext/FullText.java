@@ -7,6 +7,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
@@ -151,6 +152,8 @@ public class FullText {
         int[] ids,
         StackBuffer stackBuffer) throws Exception {
 
+        MiruSchema schema = requestContext.getSchema();
+
         float[] scores = new float[ids.length];
         for (Map.Entry<FieldAndTermId, Float> entry : termMultipliers.entrySet()) {
             FieldAndTermId fieldAndTermId = entry.getKey();
@@ -169,13 +172,13 @@ public class FullText {
             if (scores[i] > minScore) {
                 RawBitScore bitScore = new RawBitScore(new Promise<>(() -> {
                     MiruInternalActivity internalActivity = requestContext.getActivityIndex().get(request.tenantId, ids[_i], stackBuffer);
-                    return internExtern.extern(internalActivity, requestContext.getSchema());
+                    return internExtern.extern(internalActivity, schema, stackBuffer);
                 }), ids[i], scores[i]);
                 scored.add(bitScore);
             } else if (acceptableBelowMin.intValue() > 0) {
                 RawBitScore bitScore = new RawBitScore(new Promise<>(() -> {
                     MiruInternalActivity internalActivity = requestContext.getActivityIndex().get(request.tenantId, ids[_i], stackBuffer);
-                    return internExtern.extern(internalActivity, requestContext.getSchema());
+                    return internExtern.extern(internalActivity, schema, stackBuffer);
                 }), ids[i], scores[i]);
                 scored.add(bitScore);
                 acceptableBelowMin.decrement();
@@ -191,6 +194,7 @@ public class FullText {
         StackBuffer stackBuffer) throws Exception {
 
         MiruActivityInternExtern internExtern = miruProvider.getActivityInternExtern(request.tenantId);
+        MiruSchema schema = requestContext.getSchema();
 
         int desiredNumberOfResults = request.query.desiredNumberOfResults;
         int collectedResults = lastReport.isPresent() ? lastReport.get().scoredActivities : 0;
@@ -201,7 +205,7 @@ public class FullText {
             int lastSetBit = iter.next();
             MiruInternalActivity internalActivity = requestContext.getActivityIndex().get(request.tenantId, lastSetBit, stackBuffer);
             float score = 0f; //TODO ?
-            ActivityScore activityScore = new ActivityScore(internExtern.extern(internalActivity, requestContext.getSchema()), score);
+            ActivityScore activityScore = new ActivityScore(internExtern.extern(internalActivity, schema, stackBuffer), score);
             activityScores.add(activityScore);
             collectedResults++;
             if (collectedResults >= desiredNumberOfResults) {

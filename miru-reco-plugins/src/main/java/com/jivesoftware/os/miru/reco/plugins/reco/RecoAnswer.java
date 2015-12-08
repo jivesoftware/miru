@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.reco.plugins.reco;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
+import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import java.util.List;
 
 /**
@@ -36,17 +37,17 @@ public class RecoAnswer {
 
     public static class Recommendation implements Comparable<Recommendation> {
 
-        public final String distinctValue;
+        public final MiruValue distinctValue;
         public final float rank;
 
-        public Recommendation(String distinctValue, float rank) {
+        public Recommendation(MiruValue distinctValue, float rank) {
             this.distinctValue = distinctValue;
             this.rank = rank;
         }
 
         @JsonCreator
         public static Recommendation fromJson(
-            @JsonProperty("distinctValue") String distinctValue,
+            @JsonProperty("distinctValue") MiruValue distinctValue,
             @JsonProperty("rank") float rank)
             throws Exception {
             return new Recommendation(distinctValue, rank);

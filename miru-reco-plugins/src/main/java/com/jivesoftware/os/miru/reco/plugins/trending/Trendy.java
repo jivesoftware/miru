@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.reco.plugins.trending;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import java.io.Serializable;
 
 /**
@@ -9,13 +10,13 @@ import java.io.Serializable;
  */
 public class Trendy implements Comparable<Trendy>, Serializable {
 
-    public final String distinctValue;
+    public final MiruValue distinctValue;
     public final double rank;
     public final Double rankDelta; // nullable
 
     @JsonCreator
     public Trendy(
-        @JsonProperty("distinctValue") String distinctValue,
+        @JsonProperty("distinctValue") MiruValue distinctValue,
         @JsonProperty("rank") double rank,
         @JsonProperty("rankDelta") Double rankDelta) {
         this.distinctValue = distinctValue;

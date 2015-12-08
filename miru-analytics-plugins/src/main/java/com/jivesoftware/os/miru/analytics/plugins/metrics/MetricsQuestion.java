@@ -7,10 +7,12 @@ import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
+import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
@@ -60,6 +62,7 @@ public class MetricsQuestion implements Question<MetricsQuery, MetricsAnswer, Me
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
         MiruRequestContext<BM, IBM, ?> context = handle.getRequestContext();
         MiruBitmaps<BM, IBM> bitmaps = handle.getBitmaps();
+        MiruSchema schema = context.getSchema();
 
         // Start building up list of bitmap operations to run
         List<IBM> ands = new ArrayList<>();
@@ -75,7 +78,7 @@ public class MetricsQuestion implements Question<MetricsQuery, MetricsAnswer, Me
             Set<String> keys = request.query.filters.keySet();
             List<Waveform> waveforms = Lists.newArrayListWithCapacity(keys.size());
             for (String key : keys) {
-                waveforms.add(Waveform.empty(key, request.query.divideTimeRangeIntoNSegments));
+                waveforms.add(Waveform.empty(new MiruValue(key), request.query.divideTimeRangeIntoNSegments));
             }
             return new MiruPartitionResponse<>(new MetricsAnswer(waveforms, resultsExhausted), solutionLog.asList());
         }
@@ -133,7 +136,7 @@ public class MetricsQuestion implements Question<MetricsQuery, MetricsAnswer, Me
         MiruFieldDefinition powerBitsFieldDefinition = context.getSchema().getFieldDefinition(powerBitsFieldId);
         List<Optional<BM>> powerBitIndexes = new ArrayList<>();
         for (int i = 0; i < 64; i++) {
-            MiruTermId powerBitTerm = context.getTermComposer().compose(powerBitsFieldDefinition, String.valueOf(i));
+            MiruTermId powerBitTerm = context.getTermComposer().compose(schema, powerBitsFieldDefinition, stackBuffer, String.valueOf(i));
             MiruInvertedIndex<BM, IBM> invertedIndex = primaryFieldIndex.get(powerBitsFieldId, powerBitTerm);
             powerBitIndexes.add(invertedIndex.getIndex(stackBuffer));
         }
@@ -176,7 +179,7 @@ public class MetricsQuestion implements Question<MetricsQuery, MetricsAnswer, Me
                 }
             }
             if (waveform == null) {
-                waveform = Waveform.empty(entry.getKey(), request.query.divideTimeRangeIntoNSegments);
+                waveform = Waveform.empty(new MiruValue(entry.getKey()), request.query.divideTimeRangeIntoNSegments);
             }
             waveforms.add(waveform);
         }

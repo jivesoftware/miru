@@ -235,7 +235,7 @@ public class MiruService implements Miru {
             StackBuffer stackBuffer = new StackBuffer();
             Optional<BM> index = requestContext.getFieldIndexProvider()
                 .getFieldIndex(MiruFieldType.primary)
-                .get(fieldId, requestContext.getTermComposer().compose(fieldDefinition, termValue))
+                .get(fieldId, requestContext.getTermComposer().compose(requestContext.getSchema(), fieldDefinition, stackBuffer, termValue))
                 .getIndex(stackBuffer);
             if (index.isPresent()) {
                 return bitmapsDebug.toString(handle.getBitmaps(), index.get());

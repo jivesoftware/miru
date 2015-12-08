@@ -5,7 +5,6 @@
  */
 package com.jivesoftware.os.miru.stream.plugins;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -159,7 +158,7 @@ public class MiruStreamServiceNGTest {
                 //fieldFilters.add(new MiruFieldFilter("author", ImmutableList.of(FilerIO.intBytes(rand.nextInt(1000)))));
                 List<String> following = generateDisticts(rand, 10_000, 1_000_000);
                 //System.out.println("Following:"+new MiruFieldFilter("target", ImmutableList.copyOf(following)));
-                fieldFilters.add(new MiruFieldFilter(MiruFieldType.primary, "target", ImmutableList.copyOf(following)));
+                fieldFilters.add(MiruFieldFilter.of(MiruFieldType.primary, "target", following));
 
                 MiruFilter filter = new MiruFilter(MiruFilterOperation.or, false, fieldFilters, null);
                 MiruRequest<AggregateCountsQuery> query = new MiruRequest<>("test",
@@ -258,13 +257,13 @@ public class MiruStreamServiceNGTest {
         List<MiruFieldFilter> fieldFilters = new ArrayList<>();
         List<String> following = new ArrayList<>();
         following.add(String.valueOf(container1));
-        fieldFilters.add(new MiruFieldFilter(MiruFieldType.primary, "container", ImmutableList.copyOf(following)));
+        fieldFilters.add(MiruFieldFilter.of(MiruFieldType.primary, "container", following));
         MiruFilter followingFilter = new MiruFilter(MiruFilterOperation.or, false, fieldFilters, null);
 
         fieldFilters = new ArrayList<>();
         List<String> authors = new ArrayList<>();
         authors.add(String.valueOf(author1));
-        fieldFilters.add(new MiruFieldFilter(MiruFieldType.primary, "author", ImmutableList.copyOf(authors)));
+        fieldFilters.add(MiruFieldFilter.of(MiruFieldType.primary, "author", authors));
         MiruFilter authoredByFilter = new MiruFilter(MiruFilterOperation.or, false, fieldFilters, null);
 
         MiruFilter filter = new MiruFilter(MiruFilterOperation.and, false, null, Arrays.asList(followingFilter, authoredByFilter));

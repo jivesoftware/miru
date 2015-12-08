@@ -5,17 +5,12 @@ import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Charsets;
-import com.google.common.base.Function;
-import com.google.common.collect.Collections2;
 import com.jivesoftware.os.filer.io.FilerIO;
-import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -130,19 +125,15 @@ public class MiruInternalActivity {
 
     public static class Builder {
 
-        private final MiruSchema schema;
         private final MiruTenantId tenantId;
-        private final MiruTermComposer composer;
         private final long time;
         private final String[] authz;
         private final long version;
         private final MiruTermId[][] fieldsValues;
         private final MiruIBA[][] propsValues;
 
-        public Builder(MiruSchema schema, MiruTenantId tenantId, MiruTermComposer composer, long time, String[] authz, long version) {
-            this.schema = schema;
+        public Builder(MiruSchema schema, MiruTenantId tenantId, long time, String[] authz, long version) {
             this.tenantId = tenantId;
-            this.composer = composer;
             this.time = time;
             this.authz = authz;
             this.version = version;
@@ -150,82 +141,9 @@ public class MiruInternalActivity {
             this.propsValues = new MiruIBA[schema.propertyCount()][];
         }
 
-        public Builder putFieldValue(String field, String value) {
-            int fieldId = schema.getFieldId(field);
-            MiruFieldDefinition fieldDefinition = schema.getFieldDefinition(fieldId);
-            MiruTermId[] oldValues = this.fieldsValues[fieldId];
-            if (oldValues == null || oldValues.length == 0) {
-                this.fieldsValues[fieldId] = new MiruTermId[] { composer.compose(fieldDefinition, value) };
-            } else {
-                MiruTermId[] newValues = new MiruTermId[oldValues.length + 1];
-                System.arraycopy(oldValues, 0, newValues, 0, oldValues.length);
-                newValues[newValues.length - 1] = composer.compose(fieldDefinition, value);
-                this.fieldsValues[fieldId] = newValues;
-            }
-            return this;
-        }
-
-        public Builder putAllFieldValues(String field, MiruTermId[] values) {
-            int fieldId = schema.getFieldId(field);
-            MiruTermId[] oldValues = this.fieldsValues[fieldId];
-            if (oldValues == null || oldValues.length == 0) {
-                this.fieldsValues[fieldId] = values;
-            } else {
-                MiruTermId[] newValues = new MiruTermId[oldValues.length + values.length];
-                System.arraycopy(oldValues, 0, newValues, 0, oldValues.length);
-                System.arraycopy(values, 0, newValues, oldValues.length, values.length);
-                this.fieldsValues[fieldId] = newValues;
-            }
-            return this;
-        }
-
-        public Builder putAllFieldValues(String field, Collection<String> values) {
-            MiruFieldDefinition fieldDefinition = schema.getFieldDefinition(schema.getFieldId(field));
-            return putAllFieldValues(field, composer.composeAll(fieldDefinition, values));
-        }
-
         public Builder putFieldsValues(MiruTermId[][] fieldsValues) {
             System.arraycopy(fieldsValues, 0, this.fieldsValues, 0, fieldsValues.length);
             return this;
-        }
-
-        public Builder putFieldsValues(Map<String, MiruTermId[]> fieldsValues) {
-            for (Map.Entry<String, MiruTermId[]> entry : fieldsValues.entrySet()) {
-                putAllFieldValues(entry.getKey(), entry.getValue());
-            }
-            return this;
-        }
-
-        public Builder putPropValue(String prop, String value) {
-            int propId = schema.getPropertyId(prop);
-            MiruIBA[] oldValues = this.propsValues[propId];
-            if (oldValues == null || oldValues.length == 0) {
-                this.propsValues[propId] = new MiruIBA[] { STRING_TO_IBA.apply(value) };
-            } else {
-                MiruIBA[] newValues = new MiruIBA[oldValues.length + 1];
-                System.arraycopy(oldValues, 0, newValues, 0, oldValues.length);
-                newValues[newValues.length - 1] = STRING_TO_IBA.apply(value);
-                this.propsValues[propId] = newValues;
-            }
-            return this;
-        }
-
-        public Builder putAllPropValues(String prop, MiruIBA[] values) {
-            int propId = schema.getPropertyId(prop);
-            MiruIBA[] oldValues = this.propsValues[propId];
-            if (oldValues == null || oldValues.length == 0) {
-                this.propsValues[propId] = values;
-            } else {
-                MiruIBA[] newValues = new MiruIBA[oldValues.length + values.length];
-                System.arraycopy(oldValues, 0, newValues, 0, oldValues.length);
-                System.arraycopy(values, 0, newValues, oldValues.length, values.length);
-                this.propsValues[propId] = newValues;
-            }
-            return this;
-        }
-
-        public Builder putAllPropValues(String field, Collection<String> values) {
-            return putAllPropValues(field, Collections2.transform(values, STRING_TO_IBA).toArray(new MiruIBA[values.size()]));
         }
 
         public Builder putPropsValues(MiruIBA[][] propsValues) {
@@ -233,17 +151,8 @@ public class MiruInternalActivity {
             return this;
         }
 
-        public Builder putPropsValues(Map<String, MiruIBA[]> propsValues) {
-            for (Map.Entry<String, MiruIBA[]> entry : propsValues.entrySet()) {
-                putAllPropValues(entry.getKey(), entry.getValue());
-            }
-            return this;
-        }
-
         public MiruInternalActivity build() {
             return new MiruInternalActivity(tenantId, time, authz, version, fieldsValues, propsValues);
         }
-
-        private static final Function<String, MiruIBA> STRING_TO_IBA = input -> input != null ? new MiruIBA(input.getBytes(Charsets.UTF_8)) : null;
     }
 }

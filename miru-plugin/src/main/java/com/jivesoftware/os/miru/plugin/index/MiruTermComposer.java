@@ -1,11 +1,16 @@
 package com.jivesoftware.os.miru.plugin.index;
 
+import com.google.common.primitives.Bytes;
+import com.jivesoftware.os.filer.io.ByteArrayFiler;
+import com.jivesoftware.os.filer.io.FilerIO;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.MiruInterner;
 import com.jivesoftware.os.rcvs.marshall.api.UtilLexMarshaller;
+import java.io.IOException;
 import java.nio.charset.Charset;
-import java.util.Collection;
 
 /**
  *
@@ -15,51 +20,93 @@ public class MiruTermComposer {
     private final Charset charset;
     private final MiruInterner<MiruTermId> termInterner;
 
-    public MiruTermComposer(final Charset charset,  MiruInterner<MiruTermId> termInterner) {
+    public MiruTermComposer(final Charset charset, MiruInterner<MiruTermId> termInterner) {
         this.charset = charset;
         this.termInterner = termInterner;
     }
 
-    public MiruTermId compose(MiruFieldDefinition fieldDefinition, String value) {
-        MiruFieldDefinition.Prefix p = fieldDefinition.prefix;
+    public MiruTermId compose(MiruSchema schema, MiruFieldDefinition fieldDefinition, StackBuffer stackBuffer, String... parts) throws Exception {
+        return termInterner.intern(compose(schema, fieldDefinition, stackBuffer, parts, 0, parts.length));
+    }
+
+    private byte[] compose(MiruSchema schema,
+        MiruFieldDefinition fieldDefinition,
+        StackBuffer stackBuffer,
+        String[] parts,
+        int offset,
+        int length) throws Exception {
+
+        MiruFieldDefinition[] compositeFieldDefinitions = schema.getCompositeFieldDefinitions(fieldDefinition.fieldId);
+        if (compositeFieldDefinitions != null) {
+            ByteArrayFiler filer = new ByteArrayFiler(new byte[length * (4 + 1)]); // minimal predicted size
+            for (int i = 0; i < length; i++) {
+                //TODO optimize
+                byte[] bytes = composeBytes(compositeFieldDefinitions[i].prefix, parts[offset + i]);
+                // all but last part are length prefixed
+                if (i < compositeFieldDefinitions.length - 1) {
+                    FilerIO.writeInt(filer, bytes.length, "length", stackBuffer);
+                }
+                filer.write(bytes);
+            }
+            return filer.getBytes();
+        } else {
+            return composeBytes(fieldDefinition.prefix, parts[offset]);
+        }
+    }
+
+    private byte[] composeBytes(MiruFieldDefinition.Prefix p, String part) {
+        byte[] termBytes;
         if (p != null && p.type.isAnalyzed()) {
-            int sepIndex = value.indexOf(p.separator);
+            int sepIndex = part.indexOf(p.separator);
             if (sepIndex < 0) {
-                throw new IllegalArgumentException("Term missing separator: " + value);
+                throw new IllegalArgumentException("Term missing separator: " + part);
             }
 
-            String pre = value.substring(0, sepIndex);
-            String suf = value.substring(sepIndex + 1);
+            String pre = part.substring(0, sepIndex);
+            String suf = part.substring(sepIndex + 1);
             byte[] sufBytes = suf.getBytes(charset);
 
-            byte[] termBytes = new byte[p.length + sufBytes.length];
+            termBytes = new byte[p.length + sufBytes.length];
             writePrefixBytes(p, pre, termBytes);
             System.arraycopy(sufBytes, 0, termBytes, p.length, sufBytes.length);
-            return termInterner.intern(termBytes);
         } else {
-            return termInterner.intern(value.getBytes(charset));
+            termBytes = part.getBytes(charset);
+        }
+        return termBytes;
+    }
+
+    public String[] decompose(MiruSchema schema, MiruFieldDefinition fieldDefinition, StackBuffer stackBuffer, MiruTermId term) throws IOException {
+        MiruFieldDefinition[] compositeFieldDefinitions = schema.getCompositeFieldDefinitions(fieldDefinition.fieldId);
+        if (compositeFieldDefinitions != null) {
+            String[] parts = new String[compositeFieldDefinitions.length];
+            byte[] termBytes = term.getBytes();
+            ByteArrayFiler filer = new ByteArrayFiler(termBytes);
+            for (int i = 0; i < compositeFieldDefinitions.length; i++) {
+                //TODO optimize
+                // all but last part are length prefixed
+                if (i < compositeFieldDefinitions.length - 1) {
+                    int length = FilerIO.readInt(filer, "length", stackBuffer);
+                    parts[i] = decomposeBytes(compositeFieldDefinitions[i], termBytes, (int) filer.getFilePointer(), length);
+                    filer.skip(length);
+                } else {
+                    parts[i] = decomposeBytes(compositeFieldDefinitions[i], termBytes, (int) filer.getFilePointer(), (int) (filer.length() - filer.getFilePointer()));
+                }
+            }
+            return parts;
+        } else {
+            byte[] bytes = term.getBytes();
+            return new String[] { decomposeBytes(fieldDefinition, bytes, 0, bytes.length) };
         }
     }
 
-    public MiruTermId[] composeAll(MiruFieldDefinition fieldDefinition, Collection<String> values) {
-        MiruTermId[] terms = new MiruTermId[values.size()];
-        int i = 0;
-        for (String value : values) {
-            terms[i] = compose(fieldDefinition, value);
-            i++;
-        }
-        return terms;
-    }
-
-    public String decompose(MiruFieldDefinition fieldDefinition, MiruTermId term) {
+    private String decomposeBytes(MiruFieldDefinition fieldDefinition, byte[] termBytes, int offset, int length) {
         MiruFieldDefinition.Prefix p = fieldDefinition.prefix;
-        byte[] termBytes = term.getBytes();
         if (p != null && p.type.isAnalyzed()) {
-            String pre = readPrefixBytes(p, termBytes);
-            String suf = new String(termBytes, p.length, termBytes.length - p.length, charset);
+            String pre = readPrefixBytes(p, termBytes, offset);
+            String suf = new String(termBytes, offset + p.length, length - p.length, charset);
             return pre + (char) p.separator + suf;
         } else {
-            return new String(termBytes, charset);
+            return new String(termBytes, offset, length, charset);
         }
     }
 
@@ -89,16 +136,16 @@ public class MiruTermComposer {
         }
     }
 
-    private String readPrefixBytes(MiruFieldDefinition.Prefix p, byte[] termBytes) {
+    private String readPrefixBytes(MiruFieldDefinition.Prefix p, byte[] termBytes, int offset) {
         if (p.type == MiruFieldDefinition.Prefix.Type.raw) {
-            int length = (int) termBytes[p.length - 1];
-            return new String(termBytes, 0, length, charset);
+            int length = (int) termBytes[offset + p.length - 1];
+            return new String(termBytes, offset, length, charset);
         } else if (p.type == MiruFieldDefinition.Prefix.Type.numeric) {
             if (p.length == 4) {
-                int value = UtilLexMarshaller.intFromLex(termBytes, 0);
+                int value = UtilLexMarshaller.intFromLex(termBytes, offset);
                 return String.valueOf(value);
             } else if (p.length == 8) {
-                long value = UtilLexMarshaller.longFromLex(termBytes, 0);
+                long value = UtilLexMarshaller.longFromLex(termBytes, offset);
                 return String.valueOf(value);
             } else {
                 throw new IllegalStateException("Numeric prefix only supports int and long");
@@ -108,7 +155,20 @@ public class MiruTermComposer {
         }
     }
 
-    public byte[] prefixLowerInclusive(MiruFieldDefinition.Prefix p, String pre) {
+    public byte[] prefixLowerInclusive(MiruSchema schema, MiruFieldDefinition fieldDefinition, StackBuffer stackBuffer, String... parts) throws Exception {
+        MiruFieldDefinition[] compositeFieldDefinitions = schema.getCompositeFieldDefinitions(fieldDefinition.fieldId);
+        if (compositeFieldDefinitions != null) {
+            //TODO optimize
+            byte[] headBytes = compose(schema, fieldDefinition, stackBuffer, parts, 0, parts.length - 1);
+            byte[] tailBytes = prefixLowerInclusiveBytes(fieldDefinition, parts[parts.length - 1]);
+            return Bytes.concat(headBytes, tailBytes);
+        } else {
+            return prefixLowerInclusiveBytes(fieldDefinition, parts[0]);
+        }
+    }
+
+    private byte[] prefixLowerInclusiveBytes(MiruFieldDefinition fieldDefinition, String pre) {
+        MiruFieldDefinition.Prefix p = fieldDefinition.prefix;
         if (p.type == MiruFieldDefinition.Prefix.Type.raw || p.type == MiruFieldDefinition.Prefix.Type.wildcard) {
             return pre.getBytes(charset);
         } else if (p.type == MiruFieldDefinition.Prefix.Type.numeric) {
@@ -119,7 +179,20 @@ public class MiruTermComposer {
         }
     }
 
-    public byte[] prefixUpperExclusive(MiruFieldDefinition.Prefix p, String pre) {
+    public byte[] prefixUpperExclusive(MiruSchema schema, MiruFieldDefinition fieldDefinition, StackBuffer stackBuffer, String... parts) throws Exception {
+        MiruFieldDefinition[] compositeFieldDefinitions = schema.getCompositeFieldDefinitions(fieldDefinition.fieldId);
+        if (compositeFieldDefinitions != null) {
+            //TODO optimize
+            byte[] headBytes = compose(schema, fieldDefinition, stackBuffer, parts, 0, parts.length - 1);
+            byte[] tailBytes = prefixUpperExclusiveBytes(fieldDefinition, parts[parts.length - 1]);
+            return Bytes.concat(headBytes, tailBytes);
+        } else {
+            return prefixUpperExclusiveBytes(fieldDefinition, parts[0]);
+        }
+    }
+
+    public byte[] prefixUpperExclusiveBytes(MiruFieldDefinition fieldDefinition, String pre) {
+        MiruFieldDefinition.Prefix p = fieldDefinition.prefix;
         if (p.type == MiruFieldDefinition.Prefix.Type.wildcard) {
             byte[] raw = pre.getBytes(charset);
             for (int i = raw.length - 1; i >= 0; i--) {

@@ -9,6 +9,7 @@ import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
@@ -65,6 +66,7 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyQuery, SeaAnomalyA
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
         MiruRequestContext<BM, IBM, ?> context = handle.getRequestContext();
         MiruBitmaps<BM, IBM> bitmaps = handle.getBitmaps();
+        MiruSchema schema = context.getSchema();
 
         // Start building up list of bitmap operations to run
         List<IBM> ands = new ArrayList<>();
@@ -93,7 +95,7 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyQuery, SeaAnomalyA
             solutionLog.log(MiruSolutionLogLevel.INFO, "anomaly filter: no constraints.");
         } else {
             start = System.currentTimeMillis();
-            BM filtered = aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(),
+            BM filtered = aggregateUtil.filter(bitmaps, schema, context.getTermComposer(), context.getFieldIndexProvider(),
                 request.query.constraintsFilter, solutionLog, null, context.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
             solutionLog.log(MiruSolutionLogLevel.INFO, "anomaly filter: {} millis.", System.currentTimeMillis() - start);
             ands.add(filtered);
@@ -132,8 +134,8 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyQuery, SeaAnomalyA
             currentTime += segmentDuration;
         }
 
-        int fieldId = context.getSchema().getFieldId(request.query.expansionField);
-        MiruFieldDefinition fieldDefinition = context.getSchema().getFieldDefinition(fieldId);
+        int fieldId = schema.getFieldId(request.query.expansionField);
+        MiruFieldDefinition fieldDefinition = schema.getFieldDefinition(fieldId);
 
         MiruFieldIndex<BM, IBM> fieldIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
         final Map<String, MiruFilter> expandable = new LinkedHashMap<>();
@@ -143,16 +145,16 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyQuery, SeaAnomalyA
                 String baseTerm = expansion.substring(0, expansion.length() - 1);
                 if (baseTerm.length() > 0) {
                     MiruTermComposer termComposer = context.getTermComposer();
-                    byte[] lowerInclusive = termComposer.prefixLowerInclusive(fieldDefinition.prefix, baseTerm);
-                    byte[] upperExclusive = termComposer.prefixUpperExclusive(fieldDefinition.prefix, baseTerm);
+                    byte[] lowerInclusive = termComposer.prefixLowerInclusive(schema, fieldDefinition, stackBuffer, baseTerm);
+                    byte[] upperExclusive = termComposer.prefixUpperExclusive(schema, fieldDefinition, stackBuffer, baseTerm);
                     keyRange = new KeyRange(lowerInclusive, upperExclusive);
                 }
                 fieldIndex.streamTermIdsForField(fieldId, (keyRange == null ? null : Arrays.asList(keyRange)), termId -> {
                     for (Entry<String, MiruFilter> entry : request.query.filters.entrySet()) {
                         ArrayList<MiruFieldFilter> join = new ArrayList<>();
                         join.addAll(entry.getValue().fieldFilters);
-                        join.add(new MiruFieldFilter(MiruFieldType.primary,
-                            request.query.expansionField, Lists.newArrayList(new String(termId.getBytes(), StandardCharsets.UTF_8))));
+                        join.add(MiruFieldFilter.of(MiruFieldType.primary,
+                            request.query.expansionField, new String(termId.getBytes(), StandardCharsets.UTF_8)));
 
                         expandable.put(entry.getKey() + "-" + new String(termId.getBytes(), StandardCharsets.UTF_8),
                             new MiruFilter(entry.getValue().operation, entry.getValue().inclusiveFilter, join, entry.getValue().subFilters));
@@ -165,8 +167,7 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyQuery, SeaAnomalyA
 
                     ArrayList<MiruFieldFilter> join = new ArrayList<>();
                     join.addAll(entry.getValue().fieldFilters);
-                    join.add(new MiruFieldFilter(MiruFieldType.primary,
-                        request.query.expansionField, Lists.newArrayList(expansion)));
+                    join.add(MiruFieldFilter.of(MiruFieldType.primary, request.query.expansionField, expansion));
 
                     expandable.put(entry.getKey() + "-" + expansion,
                         new MiruFilter(entry.getValue().operation, entry.getValue().inclusiveFilter, join, entry.getValue().subFilters));
@@ -180,11 +181,11 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyQuery, SeaAnomalyA
         }
 
         MiruFieldIndex<BM, IBM> primaryFieldIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
-        int powerBitsFieldId = context.getSchema().getFieldId(request.query.powerBitsFieldName);
-        MiruFieldDefinition powerBitsFieldDefinition = context.getSchema().getFieldDefinition(powerBitsFieldId);
+        int powerBitsFieldId = schema.getFieldId(request.query.powerBitsFieldName);
+        MiruFieldDefinition powerBitsFieldDefinition = schema.getFieldDefinition(powerBitsFieldId);
         List<Optional<BM>> powerBitIndexes = new ArrayList<>();
         for (int i = 0; i < 64; i++) {
-            MiruTermId powerBitTerm = context.getTermComposer().compose(powerBitsFieldDefinition, String.valueOf(i));
+            MiruTermId powerBitTerm = context.getTermComposer().compose(schema, powerBitsFieldDefinition, stackBuffer, String.valueOf(i));
             MiruInvertedIndex<BM, IBM> invertedIndex = primaryFieldIndex.get(powerBitsFieldId, powerBitTerm);
             powerBitIndexes.add(invertedIndex.getIndex(stackBuffer));
         }
@@ -195,7 +196,7 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyQuery, SeaAnomalyA
         for (Map.Entry<String, MiruFilter> entry : expand.entrySet()) {
             SeaAnomalyAnswer.Waveform waveform = null;
             if (!bitmaps.isEmpty(constrained)) {
-                BM waveformFiltered = aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(),
+                BM waveformFiltered = aggregateUtil.filter(bitmaps, schema, context.getTermComposer(), context.getFieldIndexProvider(),
                     entry.getValue(), solutionLog, null, context.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
 
                 BM rawAnswer = bitmaps.and(Arrays.asList(constrained, waveformFiltered));

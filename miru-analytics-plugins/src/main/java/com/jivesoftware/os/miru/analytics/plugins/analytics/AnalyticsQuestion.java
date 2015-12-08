@@ -7,6 +7,7 @@ import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
+import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
@@ -59,18 +60,18 @@ public class AnalyticsQuestion implements Question<AnalyticsQuery, AnalyticsAnsw
             request.query.constraintsFilter,
             segments,
             stackBuffer,
-            (Analytics.ToAnalyze<String, BM> toAnalyze) -> {
+            (Analytics.ToAnalyze<MiruValue, BM> toAnalyze) -> {
                 for (Map.Entry<String, MiruFilter> entry : request.query.analyticsFilters.entrySet()) {
                     BM waveformFiltered = aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(),
                         entry.getValue(), solutionLog, null, context.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
 
-                    if (!toAnalyze.analyze(entry.getKey(), waveformFiltered)) {
+                    if (!toAnalyze.analyze(new MiruValue(entry.getKey()), waveformFiltered)) {
                         return false;
                     }
                 }
                 return true;
             },
-            (String term, long[] waveformBuffer) -> {
+            (MiruValue term, long[] waveformBuffer) -> {
                 if (waveformBuffer == null) {
                     waveforms.add(Waveform.empty(term, segments));
                 } else {

@@ -18,6 +18,7 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
+import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.miru.bitmaps.roaring5.buffer.MiruBitmapsRoaringBuffer;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
@@ -206,9 +207,10 @@ public class MiruDistinctsNGTest {
             new DistinctsQuery(timeRange, fieldDefinition.name, MiruFilter.NO_FILTER, Lists.newArrayList(types)),
             MiruSolutionLogLevel.INFO);
         MiruResponse<DistinctsAnswer> distinctsResult = injectable.gatherDistincts(request);
-        for (String result : distinctsResult.answer.results) {
+        for (MiruValue result : distinctsResult.answer.results) {
             //System.out.println("Got " + result);
-            String type = result.substring(0, result.indexOf(' '));
+            String value = result.last();
+            String type = value.substring(0, value.indexOf(' '));
             assertTrue(types.contains(type), "Unexpected type " + type);
         }
 
@@ -246,9 +248,9 @@ public class MiruDistinctsNGTest {
             new DistinctsQuery(timeRange, fieldDefinition.name, MiruFilter.NO_FILTER, Lists.newArrayList(wildcards)),
             MiruSolutionLogLevel.INFO);
         MiruResponse<DistinctsAnswer> distinctsResult = injectable.gatherDistincts(request);
-        for (String result : distinctsResult.answer.results) {
+        for (MiruValue result : distinctsResult.answer.results) {
             //System.out.println("Got " + result);
-            String wildcard = result.substring(0, 2);
+            String wildcard = result.last().substring(0, 2);
             assertTrue(wildcards.contains(wildcard), "Unexpected wildcard " + wildcard);
         }
 

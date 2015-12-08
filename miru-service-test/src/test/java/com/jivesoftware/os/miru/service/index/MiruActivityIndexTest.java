@@ -6,6 +6,7 @@ import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.schema.DefaultMiruSchemaDefinition;
+import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -146,13 +147,16 @@ public class MiruActivityIndexTest {
         return hybridContext.activityIndex;
     }
 
-    private MiruInternalActivity buildMiruActivity(MiruTenantId tenantId, long time, String[] authz, int numberOfRandomFields) {
+    private MiruInternalActivity buildMiruActivity(MiruTenantId tenantId, long time, String[] authz, int numberOfRandomFields) throws Exception {
         assertTrue(numberOfRandomFields <= schema.fieldCount());
-        MiruInternalActivity.Builder builder = new MiruInternalActivity.Builder(schema, tenantId, termComposer, time, authz, 0);
-
+        MiruInternalActivity.Builder builder = new MiruInternalActivity.Builder(schema, tenantId, time, authz, 0);
+        StackBuffer stackBuffer = new StackBuffer();
+        MiruTermId[][] terms = new MiruTermId[numberOfRandomFields][];
         for (int i = 0; i < numberOfRandomFields; i++) {
-            builder.putFieldValue(schema.getFieldDefinition(i).name, RandomStringUtils.randomAlphanumeric(5));
+            MiruFieldDefinition fieldDefinition = schema.getFieldDefinition(i);
+            terms[i] = new MiruTermId[] { termComposer.compose(schema, fieldDefinition, stackBuffer, RandomStringUtils.randomAlphanumeric(5)) };
         }
+        builder.putFieldsValues(terms);
         return builder.build();
     }
 }

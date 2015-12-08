@@ -8,9 +8,11 @@ import com.google.common.collect.Sets;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
+import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
@@ -147,7 +149,7 @@ public class CollaborativeFiltering {
 
         if (request.query.aggregateFieldName2.equals(request.query.aggregateFieldName3)) {
             // special case where the ranked users <field2> are the desired parents <field3>
-            return composeAnswer(requestContext, request, fieldDefinition3, contributorHeap);
+            return composeAnswer(requestContext, request, fieldDefinition3, contributorHeap, stackBuffer);
         }
 
         // augment distinctParents with additional distinct parents <field1> for exclusion below
@@ -210,18 +212,20 @@ public class CollaborativeFiltering {
             scoredHeap.add(new MiruTermCount(entry.getElement(), null, entry.getCount()));
         }
 
-        return composeAnswer(requestContext, request, fieldDefinition3, scoredHeap);
+        return composeAnswer(requestContext, request, fieldDefinition3, scoredHeap, stackBuffer);
     }
 
     private <BM extends IBM, IBM> RecoAnswer composeAnswer(MiruRequestContext<BM, IBM, ?> requestContext,
         MiruRequest<RecoQuery> request,
         MiruFieldDefinition fieldDefinition,
-        MinMaxPriorityQueue<MiruTermCount> heap) throws IOException, InterruptedException {
+        MinMaxPriorityQueue<MiruTermCount> heap,
+        StackBuffer stackBuffer) throws IOException, InterruptedException {
 
+        MiruSchema schema = requestContext.getSchema();
         MiruTermComposer termComposer = requestContext.getTermComposer();
         List<Recommendation> results = new ArrayList<>();
         for (MiruTermCount result : heap) {
-            String term = termComposer.decompose(fieldDefinition, result.termId);
+            MiruValue term = new MiruValue(termComposer.decompose(schema, fieldDefinition, stackBuffer, result.termId));
             results.add(new Recommendation(term, result.count));
         }
         log.debug("score: results.size={}", results.size());

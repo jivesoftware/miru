@@ -5,6 +5,7 @@ import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
+import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import java.util.Collections;
 import java.util.List;
 import org.apache.lucene.analysis.Analyzer;
@@ -59,13 +60,13 @@ public class LuceneBackedQueryParser implements MiruQueryParser {
             TermQuery tq = (TermQuery) query;
             Term term = tq.getTerm();
             return new MiruFilter(MiruFilterOperation.and, false,
-                Collections.singletonList(new MiruFieldFilter(MiruFieldType.primary, term.field(), Collections.singletonList(term.text()))),
+                Collections.singletonList(MiruFieldFilter.of(MiruFieldType.primary, term.field(), term.text())),
                 Collections.<MiruFilter>emptyList());
         } else if (query instanceof PrefixQuery) {
             PrefixQuery pq = (PrefixQuery) query;
             Term term = pq.getPrefix();
             return new MiruFilter(MiruFilterOperation.and, false,
-                Collections.singletonList(new MiruFieldFilter(MiruFieldType.primary, term.field(), Collections.singletonList(term.text() + "*"))),
+                Collections.singletonList(MiruFieldFilter.of(MiruFieldType.primary, term.field(), new MiruValue(term.text(), "*"))),
                 Collections.<MiruFilter>emptyList());
         } else {
             throw new IllegalArgumentException("Unsupported query type: " + query.getClass());

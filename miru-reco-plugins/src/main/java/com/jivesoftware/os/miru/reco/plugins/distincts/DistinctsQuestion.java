@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.reco.plugins.distincts;
 
 import com.google.common.base.Optional;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
@@ -37,9 +38,10 @@ public class DistinctsQuestion implements Question<DistinctsQuery, DistinctsAnsw
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
         MiruRequestContext<BM, IBM, ?> context = handle.getRequestContext();
         MiruBitmaps<BM, IBM> bitmaps = handle.getBitmaps();
+        StackBuffer stackBuffer = new StackBuffer();
 
         //TODO config batch size
-        return new MiruPartitionResponse<>(distincts.gather(bitmaps, context, request.query, 100, solutionLog), solutionLog.asList());
+        return new MiruPartitionResponse<>(distincts.gather(bitmaps, context, request.query, 100, stackBuffer, solutionLog), solutionLog.asList());
     }
 
     @Override

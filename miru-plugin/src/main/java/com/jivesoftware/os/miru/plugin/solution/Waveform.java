@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import java.io.Serializable;
 import java.util.Arrays;
 
@@ -14,33 +15,33 @@ public class Waveform implements Serializable {
 
     private static final byte[] EMPTY = new byte[0];
 
-    public static Waveform empty(String id, int length) {
+    public static Waveform empty(MiruValue id, int length) {
         return new Waveform(id, length, EMPTY);
     }
 
-    public static Waveform compressed(String id, long[] rawWaveform) {
+    public static Waveform compressed(MiruValue id, long[] rawWaveform) {
         return new Waveform(id, -1, null).compress(rawWaveform);
     }
 
-    private String id;
+    private MiruValue id;
     private int offset;
     private byte[] waveform;
 
-    private Waveform(String id, int offset, byte[] waveform) {
+    private Waveform(MiruValue id, int offset, byte[] waveform) {
         this.id = id;
         this.offset = offset;
         this.waveform = waveform;
     }
 
     @JsonCreator
-    public static Waveform fromJson(@JsonProperty("id") String id,
+    public static Waveform fromJson(@JsonProperty("id") MiruValue id,
         @JsonProperty("offset") int offset,
         @JsonProperty("waveform") byte[] waveform) throws Exception {
         return new Waveform(id, offset, waveform);
     }
 
     @JsonGetter("id")
-    public String getId() {
+    public MiruValue getId() {
         return id;
     }
 

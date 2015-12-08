@@ -145,14 +145,18 @@ public class MiruServiceInitializer {
             new NullKeyToFPCacheFactory(),
             new NullKeyToFPCacheFactory());
 
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
+        objectMapper.registerModule(new GuavaModule());
+
         MiruContextFactory<S> contextFactory = new MiruContextFactory<>(cogs,
             schemaProvider,
             termComposer,
             internExtern,
             ImmutableMap.<MiruBackingStorage, MiruChunkAllocator>builder()
-            .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
-            .put(MiruBackingStorage.disk, onDiskChunkAllocator)
-            .build(),
+                .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
+                .put(MiruBackingStorage.disk, onDiskChunkAllocator)
+                .build(),
             sipIndexMarshaller,
             resourceLocator,
             config.getPartitionAuthzCacheSize(),
@@ -160,13 +164,11 @@ public class MiruServiceInitializer {
             streamStripingLocksProvider,
             authzStripingLocksProvider,
             partitionErrorTracker,
-            termInterner);
+            termInterner,
+            objectMapper);
 
         MiruPartitionHeartbeatHandler heartbeatHandler = new MiruPartitionHeartbeatHandler(clusterClient);
         MiruRebuildDirector rebuildDirector = new MiruRebuildDirector(config.getMaxRebuildActivityCount());
-        ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
-        objectMapper.registerModule(new GuavaModule());
 
         MiruIndexRepairs indexRepairs = new MiruIndexRepairs() {
             private final AtomicBoolean current = new AtomicBoolean(false);
