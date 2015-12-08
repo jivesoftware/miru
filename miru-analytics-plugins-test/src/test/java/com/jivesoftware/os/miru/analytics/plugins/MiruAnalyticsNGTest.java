@@ -115,7 +115,7 @@ public class MiruAnalyticsNGTest {
         final MiruTimeRange timeRange = new MiruTimeRange(smallestTime, lastTime);
         for (int i = 0; i < numberOfUsers; i++) {
             String user = "bob" + i;
-            MiruFieldFilter miruFieldFilter = new MiruFieldFilter(MiruFieldType.primary, "user", ImmutableList.of(user));
+            MiruFieldFilter miruFieldFilter = MiruFieldFilter.of(MiruFieldType.primary, "user", user);
             MiruFilter filter = new MiruFilter(MiruFilterOperation.or, false, Arrays.asList(miruFieldFilter), null);
 
             long s = System.currentTimeMillis();

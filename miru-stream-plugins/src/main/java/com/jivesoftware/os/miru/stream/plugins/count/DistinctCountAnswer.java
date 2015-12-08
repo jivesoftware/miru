@@ -3,20 +3,21 @@ package com.jivesoftware.os.miru.stream.plugins.count;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSet;
+import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import java.util.Set;
 
 /** @author jonathan */
 public class DistinctCountAnswer {
 
-    public static final DistinctCountAnswer EMPTY_RESULTS = new DistinctCountAnswer(ImmutableSet.<String>of(), 0, true);
+    public static final DistinctCountAnswer EMPTY_RESULTS = new DistinctCountAnswer(ImmutableSet.<MiruValue>of(), 0, true);
 
-    public final Set<String> aggregateTerms;
+    public final Set<MiruValue> aggregateTerms;
     public final int collectedDistincts;
     public final boolean resultsExhausted;
 
     @JsonCreator
     public DistinctCountAnswer(
-        @JsonProperty("aggregateTerms") Set<String> aggregateTerms,
+        @JsonProperty("aggregateTerms") Set<MiruValue> aggregateTerms,
         @JsonProperty("collectedDistincts") int collectedDistincts,
         @JsonProperty("resultsExhausted") boolean resultsExhausted) {
         this.aggregateTerms = aggregateTerms;

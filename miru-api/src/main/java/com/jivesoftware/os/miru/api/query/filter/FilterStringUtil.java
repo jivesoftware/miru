@@ -40,7 +40,7 @@ public class FilterStringUtil {
                 fieldType = MiruFieldType.bloom;
             }
 
-            fieldFilters.add(new MiruFieldFilter(fieldType, fieldName, Arrays.asList(values)));
+            fieldFilters.add(MiruFieldFilter.of(fieldType, fieldName, values));
         }
 
         return new MiruFilter(MiruFilterOperation.and, false, fieldFilters, Arrays.<MiruFilter>asList());

@@ -13,6 +13,8 @@ import com.jivesoftware.os.miru.plugin.index.MultiIndexTx;
 import com.jivesoftware.os.miru.plugin.index.TermIdStream;
 import com.jivesoftware.os.miru.plugin.partition.TrackError;
 import com.jivesoftware.os.miru.service.index.Mergeable;
+import com.jivesoftware.os.mlogger.core.MetricLogger;
+import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import gnu.trove.impl.Constants;
 import gnu.trove.iterator.TIntLongIterator;
 import gnu.trove.map.TIntLongMap;
@@ -30,6 +32,8 @@ import java.util.concurrent.ConcurrentSkipListMap;
  * DELTA FORCE
  */
 public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IBM>, Mergeable {
+
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final MiruBitmaps<BM, IBM> bitmaps;
     private final TrackError trackError;
@@ -216,6 +220,9 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
                         indexTx.tx(i, index.get(), null, -1, stackBuffer);
                     }
                     termIds[i] = null;
+                    LOG.inc("multiTxIndex>delta");
+                } else {
+                    LOG.inc("multiTxIndex>backing");
                 }
             }
         }

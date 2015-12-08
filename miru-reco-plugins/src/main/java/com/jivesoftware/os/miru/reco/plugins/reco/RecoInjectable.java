@@ -8,6 +8,7 @@ import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
+import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.miru.plugin.Miru;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
@@ -70,13 +71,13 @@ public class RecoInjectable {
                     DistinctsAnswer.EMPTY_RESULTS,
                     request.logLevel);
 
-                List<String> distinctTerms = (distinctsResponse.answer != null && distinctsResponse.answer.results != null)
+                List<MiruValue> distinctTerms = (distinctsResponse.answer != null && distinctsResponse.answer.results != null)
                     ? distinctsResponse.answer.results
-                    : Collections.<String>emptyList();
+                    : Collections.<MiruValue>emptyList();
                 if (!distinctTerms.isEmpty()) {
                     removeDistinctsFilter = new MiruFilter(MiruFilterOperation.and,
                         false,
-                        Collections.singletonList(new MiruFieldFilter(
+                        Collections.singletonList(MiruFieldFilter.of(
                             MiruFieldType.primary, request.query.removeDistinctsQuery.gatherDistinctsForField, distinctTerms)),
                         null);
                 }

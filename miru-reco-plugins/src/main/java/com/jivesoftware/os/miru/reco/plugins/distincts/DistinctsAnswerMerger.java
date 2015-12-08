@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.reco.plugins.distincts;
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.miru.plugin.solution.MiruAnswerMerger;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
@@ -27,7 +28,7 @@ public class DistinctsAnswerMerger implements MiruAnswerMerger<DistinctsAnswer> 
         }
 
         DistinctsAnswer lastAnswer = last.get();
-        Set<String> terms = Sets.newHashSet(lastAnswer.results);
+        Set<MiruValue> terms = Sets.newHashSet(lastAnswer.results);
         terms.addAll(currentAnswer.results);
 
         DistinctsAnswer mergedAnswer = new DistinctsAnswer(Lists.newArrayList(terms), terms.size(), currentAnswer.resultsExhausted);

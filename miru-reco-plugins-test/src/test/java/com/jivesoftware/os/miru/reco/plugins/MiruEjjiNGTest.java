@@ -162,9 +162,9 @@ public class MiruEjjiNGTest {
                     new MiruFilter(MiruFilterOperation.and,
                         false,
                         Arrays.asList(
-                            new MiruFieldFilter(MiruFieldType.primary, "user", Arrays.asList(user)),
-                            new MiruFieldFilter(MiruFieldType.primary, "docType", docTypes),
-                            new MiruFieldFilter(MiruFieldType.primary, "source", sources)),
+                            MiruFieldFilter.of(MiruFieldType.primary, "user", user),
+                            MiruFieldFilter.of(MiruFieldType.primary, "docType", docTypes),
+                            MiruFieldFilter.of(MiruFieldType.primary, "source", sources)),
                         null),
                     null),
                 MiruSolutionLogLevel.NONE);

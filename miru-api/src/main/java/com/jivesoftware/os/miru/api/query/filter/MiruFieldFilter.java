@@ -2,9 +2,11 @@ package com.jivesoftware.os.miru.api.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.jivesoftware.os.miru.api.base.MiruTermId;
+import com.google.common.collect.Lists;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import java.io.Serializable;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 
 /** @author jonathan */
@@ -12,28 +14,31 @@ public class MiruFieldFilter implements Serializable {
 
     public final MiruFieldType fieldType;
     public final String fieldName;
-    public final List<String> values;
-    public final List<MiruTermId> rawValues;
+    public final List<MiruValue> values;
 
     @JsonCreator
     public MiruFieldFilter(@JsonProperty("fieldType") MiruFieldType fieldType,
         @JsonProperty("fieldName") String fieldName,
-        @JsonProperty("values") List<String> values) {
+        @JsonProperty("values") List<MiruValue> values) {
         this.fieldType = fieldType;
         this.fieldName = fieldName;
         this.values = values;
-        this.rawValues = null;
     }
 
-    private MiruFieldFilter(MiruFieldType fieldType, String fieldName, List<String> values, List<MiruTermId> rawValues) {
-        this.fieldType = fieldType;
-        this.fieldName = fieldName;
-        this.values = values;
-        this.rawValues = rawValues;
+    public static MiruFieldFilter of(MiruFieldType fieldType, String fieldName, Object... values) {
+        return of(fieldType, fieldName, Arrays.asList(values));
     }
 
-    public static MiruFieldFilter raw(MiruFieldType fieldType, String fieldName, List<MiruTermId> rawValues) {
-        return new MiruFieldFilter(fieldType, fieldName, null, rawValues);
+    public static MiruFieldFilter of(MiruFieldType fieldType, String fieldName, Collection<Object> values) {
+        List<MiruValue> miruValues = Lists.newArrayListWithCapacity(values.size());
+        for (Object value : values) {
+            miruValues.add(new MiruValue(value.toString()));
+        }
+        return new MiruFieldFilter(fieldType, fieldName, miruValues);
+    }
+
+    public static MiruFieldFilter of(MiruFieldType fieldType, String fieldName, MiruValue... values) {
+        return new MiruFieldFilter(fieldType, fieldName, Arrays.asList(values));
     }
 
     @Override
@@ -42,7 +47,6 @@ public class MiruFieldFilter implements Serializable {
             "fieldType=" + fieldType +
             ", fieldName='" + fieldName + '\'' +
             ", values=" + values +
-            ", rawValues=" + rawValues +
             '}';
     }
 
@@ -63,10 +67,7 @@ public class MiruFieldFilter implements Serializable {
         if (fieldName != null ? !fieldName.equals(that.fieldName) : that.fieldName != null) {
             return false;
         }
-        if (values != null ? !values.equals(that.values) : that.values != null) {
-            return false;
-        }
-        return !(rawValues != null ? !rawValues.equals(that.rawValues) : that.rawValues != null);
+        return !(values != null ? !values.equals(that.values) : that.values != null);
 
     }
 
@@ -75,7 +76,6 @@ public class MiruFieldFilter implements Serializable {
         int result = fieldType != null ? fieldType.hashCode() : 0;
         result = 31 * result + (fieldName != null ? fieldName.hashCode() : 0);
         result = 31 * result + (values != null ? values.hashCode() : 0);
-        result = 31 * result + (rawValues != null ? rawValues.hashCode() : 0);
         return result;
     }
 }

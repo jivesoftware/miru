@@ -4,15 +4,18 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.Interner;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
+import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.miru.plugin.MiruInterner;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -55,7 +58,8 @@ public class MiruActivityInternExtern {
         int fromOffset,
         int length,
         List<MiruActivityAndId<MiruInternalActivity>> internedActivityAndIds,
-        final MiruSchema schema) {
+        final MiruSchema schema,
+        StackBuffer stackBuffer) throws Exception {
 
         for (int i = fromOffset; i < fromOffset + length && i < activityAndIds.size(); i++) {
             MiruActivityAndId<MiruActivity> activiyAndId = activityAndIds.get(i);
@@ -64,11 +68,10 @@ public class MiruActivityInternExtern {
             internedActivityAndIds.set(i, new MiruActivityAndId<>(
                 new MiruInternalActivity.Builder(schema,
                     tenantInterner.intern(activity.tenantId.getBytes()),
-                    termComposer,
                     activity.time,
                     internAuthz(activity.authz),
                     activity.version)
-                .putFieldsValues(internFields(activity.fieldsValues, schema))
+                .putFieldsValues(internFields(activity.fieldsValues, schema, stackBuffer))
                 .putPropsValues(internProps(activity.propsValues, schema))
                 .build(),
                 activiyAndId.id));
@@ -85,25 +88,31 @@ public class MiruActivityInternExtern {
         return activityAuthz;
     }
 
-    private MiruTermId[][] internFields(Map<String, List<String>> fields, MiruSchema schema) {
+    private MiruTermId[][] internFields(Map<String, List<String>> fields, MiruSchema schema, StackBuffer stackBuffer) throws Exception {
         MiruTermId[][] fieldsValues = new MiruTermId[schema.fieldCount()][];
         for (MiruFieldDefinition fieldDefinition : schema.getFieldDefinitions()) {
-            List<String> fieldValues;
+            List<String[]> fieldValues;
 
-            MiruSchema.CompositeFieldDefinitions compositeFieldDefinitions = schema.getCompositeFieldDefinitions(fieldDefinition.fieldId);
+            MiruFieldDefinition[] compositeFieldDefinitions = schema.getCompositeFieldDefinitions(fieldDefinition.fieldId);
             if (compositeFieldDefinitions != null) {
-                List<String> accumFieldValues = Lists.newArrayList();
-                for (MiruFieldDefinition field : compositeFieldDefinitions.fieldDefinitions) {
+                List<String[]> accumFieldValues = Lists.newArrayList();
+                for (MiruFieldDefinition field : compositeFieldDefinitions) {
                     List<String> compositeFieldValues = fields.get(field.name);
                     if (compositeFieldValues != null) {
                         if (accumFieldValues.isEmpty()) {
-                            accumFieldValues.addAll(compositeFieldValues);
+                            for (String compositeFieldValue : compositeFieldValues) {
+                                accumFieldValues.add(new String[] { compositeFieldValue });
+                            }
                         } else {
-                            List<String> tmpFieldValues = Lists.newArrayList();
-                            for (String accumFieldValue : accumFieldValues) {
+                            List<String[]> tmpFieldValues = Lists.newArrayList();
+                            for (String[] accumFieldValue : accumFieldValues) {
                                 for (String compositeFieldValue : compositeFieldValues) {
-                                    String concat = accumFieldValue + compositeFieldDefinitions.delimiter + compositeFieldValue;
-                                    tmpFieldValues.add(concat);
+                                    if (compositeFieldValue.length() <= MAX_TERM_LENGTH && compositeFieldValue.length() > 0) {
+                                        String[] concat = new String[accumFieldValue.length + 1];
+                                        System.arraycopy(accumFieldValue, 0, concat, 0, accumFieldValue.length);
+                                        concat[concat.length - 1] = compositeFieldValue;
+                                        tmpFieldValues.add(concat);
+                                    }
                                 }
                             }
                             accumFieldValues = tmpFieldValues;
@@ -112,24 +121,33 @@ public class MiruActivityInternExtern {
                 }
                 fieldValues = accumFieldValues;
             } else {
-                fieldValues = fields.get(fieldDefinition.name);
+                List<String> values = fields.get(fieldDefinition.name);
+                if (values != null) {
+                    for (int i = 0; i < values.size(); i++) {
+                        String fieldValue = values.get(i);
+                        if (fieldValue.length() > MAX_TERM_LENGTH || fieldValue.length() == 0) {
+                            log.warn("Ignored term {} because its length is zero or greater than {}.", fieldValue.length(), MAX_TERM_LENGTH);
+                            // heavy-handed copy for removal from list, but the original list may be immutable, and this should be a rare occurrence
+                            List<String> snip = Lists.newArrayListWithCapacity(values.size() - 1);
+                            snip.addAll(values.subList(0, i));
+                            snip.addAll(values.subList(i + 1, values.size()));
+                            values = snip;
+                            i--; //TODO barf
+                        }
+                    }
+                    fieldValues = Lists.newArrayListWithCapacity(values.size());
+                    for (String value : values) {
+                        fieldValues.add(new String[] { value });
+                    }
+                } else {
+                    fieldValues = null;
+                }
             }
 
             if (fieldValues != null && !fieldValues.isEmpty()) {
-                for (int i = 0; i < fieldValues.size(); i++) {
-                    String fieldValue = fieldValues.get(i);
-                    if (fieldValue.length() > MAX_TERM_LENGTH || fieldValue.length() == 0) {
-                        log.warn("Ignored term {} because its length is zero or greater than {}.", fieldValue.length(), MAX_TERM_LENGTH);
-                        // heavy-handed copy for removal from list, but the original list may be immutable, and this should be a rare occurrence
-                        List<String> snip = Lists.newArrayListWithCapacity(fieldValues.size() - 1);
-                        snip.addAll(fieldValues.subList(0, i));
-                        snip.addAll(fieldValues.subList(i + 1, fieldValues.size()));
-                        fieldValues = snip;
-                    }
-                }
                 MiruTermId[] values = new MiruTermId[fieldValues.size()];
                 for (int i = 0; i < values.length; i++) {
-                    values[i] = termComposer.compose(fieldDefinition, fieldValues.get(i));
+                    values[i] = termComposer.compose(schema, fieldDefinition, stackBuffer, fieldValues.get(i));
                 }
                 fieldsValues[fieldDefinition.fieldId] = values;
             }
@@ -156,28 +174,28 @@ public class MiruActivityInternExtern {
         return stringInterner.intern(string);
     }
 
-    public MiruActivity extern(MiruInternalActivity activity, MiruSchema schema) {
+    public MiruActivity extern(MiruInternalActivity activity, MiruSchema schema, StackBuffer stackBuffer) throws IOException {
         return new MiruActivity(activity.tenantId,
             activity.time,
             activity.authz,
             activity.version,
-            externFields(activity.fieldsValues, schema),
+            externFields(activity.fieldsValues, schema, stackBuffer),
             externProps(activity.propsValues, schema));
     }
 
-    private Map<String, List<String>> externFields(MiruTermId[][] fields, MiruSchema schema) {
+    private Map<String, List<String>> externFields(MiruTermId[][] fields, MiruSchema schema, StackBuffer stackBuffer) throws IOException {
         Map<String, List<String>> externFields = Maps.newHashMapWithExpectedSize(fields.length);
         for (int i = 0; i < fields.length; i++) {
             MiruTermId[] values = fields[i];
             if (values != null) {
-                MiruSchema.CompositeFieldDefinitions compositeFieldDefinitions = schema.getCompositeFieldDefinitions(i);
+                MiruFieldDefinition[] compositeFieldDefinitions = schema.getCompositeFieldDefinitions(i);
                 if (compositeFieldDefinitions != null) {
                     continue;
                 }
                 MiruFieldDefinition fieldDefinition = schema.getFieldDefinition(i);
                 List<String> externValues = new ArrayList<>();
                 for (MiruTermId value : values) {
-                    externValues.add(termComposer.decompose(fieldDefinition, value));
+                    externValues.add(termComposer.decompose(schema, fieldDefinition, stackBuffer, value)[0]);
                 }
                 externFields.put(fieldDefinition.name, externValues);
             }

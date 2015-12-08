@@ -6,10 +6,12 @@ import com.google.common.collect.Sets;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
+import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
@@ -104,7 +106,7 @@ public class AggregateCounts {
 
         int collectedDistincts = 0;
         int skippedDistincts = 0;
-        Set<String> aggregateTerms;
+        Set<MiruValue> aggregateTerms;
         if (lastReport.isPresent()) {
             collectedDistincts = lastReport.get().collectedDistincts;
             skippedDistincts = lastReport.get().skippedDistincts;
@@ -113,8 +115,9 @@ public class AggregateCounts {
             aggregateTerms = Sets.newHashSet();
         }
 
+        MiruSchema schema = requestContext.getSchema();
         if (!MiruFilter.NO_FILTER.equals(constraint.constraintsFilter)) {
-            BM filtered = aggregateUtil.filter(bitmaps, requestContext.getSchema(), requestContext.getTermComposer(), requestContext.getFieldIndexProvider(),
+            BM filtered = aggregateUtil.filter(bitmaps, schema, requestContext.getTermComposer(), requestContext.getFieldIndexProvider(),
                 constraint.constraintsFilter, solutionLog, null, requestContext.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
 
             if (bitmaps.supportsInPlace()) {
@@ -140,8 +143,8 @@ public class AggregateCounts {
         MiruActivityInternExtern activityInternExtern = miruProvider.getActivityInternExtern(coord.tenantId);
 
         MiruFieldIndex<BM, IBM> fieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
-        int fieldId = requestContext.getSchema().getFieldId(constraint.aggregateCountAroundField);
-        MiruFieldDefinition fieldDefinition = requestContext.getSchema().getFieldDefinition(fieldId);
+        int fieldId = schema.getFieldId(constraint.aggregateCountAroundField);
+        MiruFieldDefinition fieldDefinition = schema.getFieldDefinition(fieldId);
         log.debug("fieldId={}", fieldId);
 
         List<AggregateCount> aggregateCounts = new ArrayList<>();
@@ -156,8 +159,8 @@ public class AggregateCounts {
 
             long beforeCount = counter.isPresent() ? bitmaps.cardinality(counter.get()) : bitmaps.cardinality(answer);
             CardinalityAndLastSetBit<BM> answerCollector = null;
-            for (String aggregateTerm : aggregateTerms) { // Consider
-                MiruTermId aggregateTermId = termComposer.compose(fieldDefinition, aggregateTerm);
+            for (MiruValue aggregateTerm : aggregateTerms) { // Consider
+                MiruTermId aggregateTermId = termComposer.compose(schema, fieldDefinition, stackBuffer, aggregateTerm.parts);
                 Optional<BM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex(stackBuffer);
                 if (!optionalTermIndex.isPresent()) {
                     continue;
@@ -227,7 +230,7 @@ public class AggregateCounts {
 
                 } else {
                     MiruTermId aggregateTermId = fieldValues[0]; // Kinda lame but for now we don't see a need for multi field aggregation.
-                    String aggregateTerm = termComposer.decompose(fieldDefinition, aggregateTermId);
+                    MiruValue aggregateTerm = new MiruValue(termComposer.decompose(schema, fieldDefinition, stackBuffer, aggregateTermId));
                     aggregateTerms.add(aggregateTerm);
 
                     Optional<BM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex(stackBuffer);
@@ -268,7 +271,7 @@ public class AggregateCounts {
                         }
 
                         AggregateCount aggregateCount = new AggregateCount(
-                            constraint.includeMostRecentActivity ? activityInternExtern.extern(activity, requestContext.getSchema()) : null,
+                            constraint.includeMostRecentActivity ? activityInternExtern.extern(activity, schema, stackBuffer) : null,
                             aggregateTerm,
                             beforeCount - afterCount,
                             activity.time,

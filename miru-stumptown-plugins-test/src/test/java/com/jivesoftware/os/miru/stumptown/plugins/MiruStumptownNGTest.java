@@ -115,8 +115,8 @@ public class MiruStumptownNGTest {
         final MiruTimeRange timeRange = new MiruTimeRange(smallestTime, lastTime);
         for (int i = 0; i < numberOfUsers; i++) {
             String user = "bob" + i;
-            MiruFieldFilter miruFieldFilter = new MiruFieldFilter(MiruFieldType.primary, "user", ImmutableList.of(user));
-            MiruFilter filter = new MiruFilter(MiruFilterOperation.or, false, Arrays.asList(miruFieldFilter), null);
+            MiruFieldFilter miruFieldFilter = MiruFieldFilter.of(MiruFieldType.primary, "user", user);
+            MiruFilter filter = new MiruFilter(MiruFilterOperation.or, false, Collections.singletonList(miruFieldFilter), null);
 
             long s = System.currentTimeMillis();
             MiruRequest<AnalyticsQuery> request = new MiruRequest<>("test",

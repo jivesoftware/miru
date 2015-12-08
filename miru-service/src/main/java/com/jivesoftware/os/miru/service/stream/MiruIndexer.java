@@ -9,6 +9,7 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -60,11 +61,12 @@ public class MiruIndexer<BM extends IBM, IBM> {
         final int numActivities = internalActivityAndIds.size();
         final int partitionSize = (numActivities + numPartitions - 1) / numPartitions;
 
+        StackBuffer stackBuffer = new StackBuffer();
         List<Future<?>> internFutures = new ArrayList<>(numPartitions);
         for (int i = 0; i < activityAndIds.size(); i += partitionSize) {
             final int startOfSubList = i;
             internFutures.add(indexExecutor.submit(() -> {
-                context.activityInternExtern.intern(activityAndIds, startOfSubList, partitionSize, internalActivityAndIds, context.schema);
+                context.activityInternExtern.intern(activityAndIds, startOfSubList, partitionSize, internalActivityAndIds, context.schema, stackBuffer);
                 return null;
             }));
         }
@@ -97,7 +99,6 @@ public class MiruIndexer<BM extends IBM, IBM> {
 
         // 6. Update activity index
         otherFutures.add(indexExecutor.submit(() -> {
-            StackBuffer stackBuffer = new StackBuffer();
             context.activityIndex.set(internalActivityAndIds, stackBuffer);
             return null;
         }));
@@ -105,7 +106,6 @@ public class MiruIndexer<BM extends IBM, IBM> {
         // 7. Update removal index
         if (repair) {
             otherFutures.add(indexExecutor.submit(() -> {
-                StackBuffer stackBuffer = new StackBuffer();
                 // repairs also unhide (remove from removal)
                 log.inc("count>remove", activityAndIds.size());
                 log.inc("count>remove", activityAndIds.size(), coord.tenantId.toString());
@@ -120,7 +120,6 @@ public class MiruIndexer<BM extends IBM, IBM> {
         awaitFutures(otherFutures, "indexOther");
 
         // 9. Mark as ready
-        StackBuffer stackBuffer = new StackBuffer();
         context.activityIndex.ready(internalActivityAndIds.get(internalActivityAndIds.size() - 1).id, stackBuffer);
 
         log.debug("End: Index batch of {}", internalActivityAndIds.size());
@@ -131,13 +130,12 @@ public class MiruIndexer<BM extends IBM, IBM> {
         List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds = Arrays.<MiruActivityAndId<MiruInternalActivity>>asList(
             new MiruActivityAndId[activityAndIds.size()]);
 
-        context.activityInternExtern.intern(activityAndIds, 0, activityAndIds.size(), internalActivityAndIds, context.schema);
         StackBuffer stackBuffer = new StackBuffer();
+        context.activityInternExtern.intern(activityAndIds, 0, activityAndIds.size(), internalActivityAndIds, context.schema, stackBuffer);
         context.activityIndex.setAndReady(internalActivityAndIds, stackBuffer);
     }
 
-    /*
-    public void repair(final MiruContext<BM> context,
+    /*public void repair(final MiruContext<BM> context,
         final List<MiruActivityAndId<MiruActivity>> activityAndIds,
         ExecutorService indexExecutor)
         throws Exception {
@@ -174,8 +172,8 @@ public class MiruIndexer<BM extends IBM, IBM> {
 
         // finally, update the activity index
         context.activityIndex.setAndReady(internalActivityAndIds);
-    }
-     */
+    }*/
+
     public void remove(MiruContext<BM, IBM, ?> context, MiruActivity activity, int id) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
         MiruInternalActivity existing = context.activityIndex.get(activity.tenantId, id, stackBuffer);
@@ -188,7 +186,8 @@ public class MiruIndexer<BM extends IBM, IBM> {
             @SuppressWarnings("unchecked")
             List<MiruActivityAndId<MiruInternalActivity>> internalActivity = Arrays.<MiruActivityAndId<MiruInternalActivity>>asList(
                 new MiruActivityAndId[1]);
-            context.activityInternExtern.intern(Arrays.asList(new MiruActivityAndId<>(activity, id)), 0, 1, internalActivity, context.schema);
+            context.activityInternExtern.intern(Collections.singletonList(new MiruActivityAndId<>(activity, id)), 0, 1, internalActivity, context.schema,
+                stackBuffer);
 
             //TODO apply field changes?
             // hide (add to removal)

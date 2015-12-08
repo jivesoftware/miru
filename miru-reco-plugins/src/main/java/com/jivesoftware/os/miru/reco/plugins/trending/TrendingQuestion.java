@@ -13,6 +13,7 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
+import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
@@ -137,7 +138,8 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
             },
             (MiruTermId termId, long[] waveformBuffer) -> {
                 if (waveformBuffer != null) {
-                    Waveform waveform = Waveform.compressed(termComposer.decompose(fieldDefinition, termId), waveformBuffer);
+                    Waveform waveform = Waveform.compressed(new MiruValue(termComposer.decompose(schema, fieldDefinition, stackBuffer, termId)),
+                        waveformBuffer);
                     waveforms.add(waveform);
                 }
                 return true;

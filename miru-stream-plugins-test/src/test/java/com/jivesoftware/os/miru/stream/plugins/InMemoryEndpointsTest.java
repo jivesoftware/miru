@@ -38,6 +38,7 @@ import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsInjectable;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsQuery;
 import com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsQueryConstraint;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -113,8 +114,7 @@ public class InMemoryEndpointsTest {
                 MiruTimeRange.ALL_TIME,
                 new MiruFilter(MiruFilterOperation.or,
                     false,
-                    Arrays.asList(
-                        new MiruFieldFilter(MiruFieldType.primary, OBJECT_ID.getFieldName(), ImmutableList.of("value2"))),
+                    Collections.singletonList(MiruFieldFilter.of(MiruFieldType.primary, OBJECT_ID.getFieldName(), "value2")),
                     null),
                 ImmutableMap.of("blah", new AggregateCountsQueryConstraint(
                     MiruFilter.NO_FILTER,
@@ -140,8 +140,8 @@ public class InMemoryEndpointsTest {
                 new MiruFilter(MiruFilterOperation.or,
                     false,
                     Arrays.asList(
-                        new MiruFieldFilter(MiruFieldType.primary, OBJECT_ID.getFieldName(), ImmutableList.of("value2")),
-                        new MiruFieldFilter(MiruFieldType.primary, AUTHOR_ID.getFieldName(), ImmutableList.of("value2"))),
+                        MiruFieldFilter.of(MiruFieldType.primary, OBJECT_ID.getFieldName(), "value2"),
+                        MiruFieldFilter.of(MiruFieldType.primary, AUTHOR_ID.getFieldName(), "value2")),
                     null),
                 ImmutableMap.of("blah", new AggregateCountsQueryConstraint(
                     MiruFilter.NO_FILTER,

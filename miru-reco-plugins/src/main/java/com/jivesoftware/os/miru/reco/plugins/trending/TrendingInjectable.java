@@ -13,6 +13,7 @@ import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsAnswerMerge
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.miru.plugin.Miru;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
@@ -249,7 +250,7 @@ public class TrendingInjectable {
                 }
             }
 
-            Set<String> retainKeys = Sets.newHashSet();
+            Set<MiruValue> retainKeys = Sets.newHashSet();
             Map<String, List<Trendy>> strategySortedTrendies = Maps.newHashMapWithExpectedSize(strategyResults.size());
             for (Map.Entry<Strategy, MinMaxPriorityQueue<Trendy>> entry : strategyResults.entrySet()) {
                 List<Trendy> sortedTrendies = Lists.newArrayList(entry.getValue());
@@ -260,7 +261,7 @@ public class TrendingInjectable {
                 }
             }
 
-            Map<String, Waveform> distinctWaveforms = Maps.newHashMap();
+            Map<MiruValue, Waveform> distinctWaveforms = Maps.newHashMap();
             for (Waveform entry : waveforms) {
                 if (retainKeys.contains(entry.getId())) {
                     distinctWaveforms.put(entry.getId(), entry);

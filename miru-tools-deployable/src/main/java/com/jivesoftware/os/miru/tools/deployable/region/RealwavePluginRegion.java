@@ -178,9 +178,7 @@ public class RealwavePluginRegion implements MiruPageRegion<Optional<RealwavePlu
                                 new MiruFilter(MiruFilterOperation.and,
                                     false,
                                     Collections.singletonList(
-                                        new MiruFieldFilter(MiruFieldType.primary,
-                                            input.field1,
-                                            Collections.singletonList(term1))),
+                                        MiruFieldFilter.of(MiruFieldType.primary, input.field1, term1)),
                                     null));
                         } else {
                             for (String term2 : terms2) {
@@ -189,13 +187,8 @@ public class RealwavePluginRegion implements MiruPageRegion<Optional<RealwavePlu
                                     new MiruFilter(MiruFilterOperation.and,
                                         false,
                                         Arrays.asList(
-                                            new MiruFieldFilter(MiruFieldType.primary,
-                                                input.field1,
-                                                Collections.singletonList(term1)),
-                                            new MiruFieldFilter(MiruFieldType.primary,
-                                                input.field2,
-                                                Collections.singletonList(term2))
-                                        ),
+                                            MiruFieldFilter.of(MiruFieldType.primary, input.field1, term1),
+                                            MiruFieldFilter.of(MiruFieldType.primary, input.field2, term2)),
                                         null));
                             }
                         }
@@ -247,7 +240,7 @@ public class RealwavePluginRegion implements MiruPageRegion<Optional<RealwavePlu
                 for (int i = 0; i < counts.length; i++) {
                     counts[i] = (int) Math.min(waveform[i], Integer.MAX_VALUE);
                 }
-                waveformData.put(entry.getId(), counts);
+                waveformData.put(entry.getId().last(), counts);
             }
             data.put("waveforms", waveformData);
         }

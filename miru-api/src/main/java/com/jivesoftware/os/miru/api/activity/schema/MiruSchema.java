@@ -24,7 +24,7 @@ public class MiruSchema {
     private final MiruPropertyDefinition[] propertyDefinitions;
     private final Map<String, List<String>> pairedLatest;
     private final Map<String, List<String>> bloom;
-    private final Map<String, Composite> composite;
+    private final Map<String, String[]> composite;
 
     // Lookup fields
     private final Map<String, Integer> fieldNameToId;
@@ -33,7 +33,7 @@ public class MiruSchema {
     private final ImmutableList<MiruFieldDefinition>[] fieldToBloomFieldDefinitions;
 
     // Composites
-    private final CompositeFieldDefinitions[] fieldToCompositeDefinitions;
+    private final MiruFieldDefinition[][] fieldToCompositeDefinitions;
 
     // Traversal fields
     private final ImmutableList<Integer> fieldIds;
@@ -47,12 +47,12 @@ public class MiruSchema {
         MiruPropertyDefinition[] propertyDefinitions,
         Map<String, List<String>> pairedLatest,
         Map<String, List<String>> bloom,
-        Map<String, Composite> composite,
+        Map<String, String[]> composite,
         ImmutableMap<String, Integer> fieldNameToId,
         ImmutableMap<String, Integer> propNameToId,
         ImmutableList<MiruFieldDefinition>[] fieldToPairedLatestFieldDefinitions,
         ImmutableList<MiruFieldDefinition>[] fieldToBloomFieldDefinitions,
-        CompositeFieldDefinitions[] fieldToCompositeDefinitions,
+        MiruFieldDefinition[][] fieldToCompositeDefinitions,
         ImmutableList<Integer> fieldIds,
         ImmutableList<MiruFieldDefinition> fieldsWithLatest,
         ImmutableList<MiruFieldDefinition> fieldsWithPairedLatest,
@@ -82,7 +82,7 @@ public class MiruSchema {
         @JsonProperty("propertyDefinitions") MiruPropertyDefinition[] propertyDefinitions,
         @JsonProperty("pairedLatest") Map<String, List<String>> pairedLatest,
         @JsonProperty("bloom") Map<String, List<String>> bloom,
-        @JsonProperty("composite") Map<String, Composite> composite) {
+        @JsonProperty("composite") Map<String, String[]> composite) {
 
         return new Builder(name, version)
             .setFieldDefinitions(fieldDefinitions)
@@ -117,7 +117,7 @@ public class MiruSchema {
         return bloom;
     }
 
-    public Map<String, Composite> getComposite() {
+    public Map<String, String[]> getComposite() {
         return composite;
     }
 
@@ -190,31 +190,19 @@ public class MiruSchema {
     }
 
     @JsonIgnore
-    public CompositeFieldDefinitions getCompositeFieldDefinitions(int fieldId) {
+    public MiruFieldDefinition[] getCompositeFieldDefinitions(int fieldId) {
         return fieldToCompositeDefinitions[fieldId];
     }
 
-    public static class Composite {
-
-        public final String delimiter;
-        public final String[] fields;
-
-        @JsonCreator
-        public Composite(@JsonProperty("delimiter") String delimiter,
-            @JsonProperty("fields") String[] fields) {
-            this.delimiter = delimiter;
-            this.fields = fields;
-        }
-
+    public static boolean checkEquals(MiruSchema a, MiruSchema b) {
+        return a.version == b.version && a.name.equals(b.name);
     }
 
     public static class CompositeFieldDefinitions {
 
-        public final String delimiter;
         public final MiruFieldDefinition[] fieldDefinitions;
 
-        public CompositeFieldDefinitions(String delimiter, MiruFieldDefinition[] fieldDefinitions) {
-            this.delimiter = delimiter;
+        public CompositeFieldDefinitions(MiruFieldDefinition[] fieldDefinitions) {
             this.fieldDefinitions = fieldDefinitions;
         }
 
@@ -229,7 +217,7 @@ public class MiruSchema {
         private MiruPropertyDefinition[] propertyDefinitions = new MiruPropertyDefinition[0];
         private Map<String, List<String>> pairedLatest = Collections.emptyMap();
         private Map<String, List<String>> bloom = Collections.emptyMap();
-        private Map<String, Composite> composites = Collections.emptyMap();
+        private Map<String, String[]> composites = Collections.emptyMap();
 
         public Builder(String name, int version) {
             this.name = name;
@@ -260,7 +248,7 @@ public class MiruSchema {
             return this;
         }
 
-        public Builder setComposite(Map<String, Composite> composites) {
+        public Builder setComposite(Map<String, String[]> composites) {
             if (composites != null) {
                 this.composites = composites;
             }
@@ -277,7 +265,7 @@ public class MiruSchema {
             Map<String, Integer> propNameToId = Maps.newHashMap();
             ImmutableList<MiruFieldDefinition>[] fieldToPairedLatestFieldDefinitions = new ImmutableList[fieldDefinitions.length];
             ImmutableList<MiruFieldDefinition>[] fieldToBloomFieldDefinitions = new ImmutableList[fieldDefinitions.length];
-            CompositeFieldDefinitions[] fieldToCompositeFieldDefinitions = new CompositeFieldDefinitions[fieldDefinitions.length];
+            MiruFieldDefinition[][] fieldToCompositeFieldDefinitions = new MiruFieldDefinition[fieldDefinitions.length][];
 
             for (MiruFieldDefinition fieldDefinition : fieldDefinitions) {
                 fieldNameToId.put(fieldDefinition.name, fieldDefinition.fieldId);
@@ -324,14 +312,13 @@ public class MiruSchema {
                 }
                 fieldToBloomFieldDefinitions[fieldDefinition.fieldId] = bloomFieldDefinitionsBuilder.build();
 
-                Composite got = composites.get(fieldDefinition.name);
+                String[] got = composites.get(fieldDefinition.name);
                 if (got != null) {
-                    MiruFieldDefinition[] compositeFieldDefinition = new MiruFieldDefinition[got.fields.length];
-                    for (int i = 0; i < got.fields.length; i++) {
-                        compositeFieldDefinition[i] = fieldDefinitions[fieldNameToId.get(got.fields[i])];
+                    MiruFieldDefinition[] compositeFieldDefinition = new MiruFieldDefinition[got.length];
+                    for (int i = 0; i < got.length; i++) {
+                        compositeFieldDefinition[i] = fieldDefinitions[fieldNameToId.get(got[i])];
                     }
-                    fieldToCompositeFieldDefinitions[fieldDefinition.fieldId] = new CompositeFieldDefinitions(got.delimiter,
-                        compositeFieldDefinition);
+                    fieldToCompositeFieldDefinitions[fieldDefinition.fieldId] = compositeFieldDefinition;
                 }
             }
 

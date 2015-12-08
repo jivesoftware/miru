@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.stream.plugins.filter;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
+import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 
 /**
  * @author jonathan.colt
@@ -10,7 +11,7 @@ import com.jivesoftware.os.miru.api.activity.MiruActivity;
 public class AggregateCount {
 
     public final MiruActivity mostRecentActivity;
-    public final String distinctValue;
+    public final MiruValue distinctValue;
     public final long count;
     public final long timestamp;
     public boolean unread;
@@ -18,7 +19,7 @@ public class AggregateCount {
     @JsonCreator
     public AggregateCount(
         @JsonProperty("mostRecentActivity") MiruActivity mostRecentActivity,
-        @JsonProperty("distinctValue") String distinctValue,
+        @JsonProperty("distinctValue") MiruValue distinctValue,
         @JsonProperty("count") long count,
         @JsonProperty("timestamp") long timestamp,
         @JsonProperty("unread") boolean unread) {

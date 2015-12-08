@@ -163,14 +163,14 @@ public class MiruLocalHostedPartitionTest {
         HealthFactory.initialize(
             BindInterfaceToConfiguration::bindDefault,
             new HealthCheckRegistry() {
-            @Override
-            public void register(HealthChecker healthChecker) {
-            }
+                @Override
+                public void register(HealthChecker healthChecker) {
+                }
 
-            @Override
-            public void unregister(HealthChecker healthChecker) {
-            }
-        });
+                @Override
+                public void unregister(HealthChecker healthChecker) {
+                }
+            });
 
         MiruServiceConfig config = mock(MiruServiceConfig.class);
         when(config.getBitsetBufferSize()).thenReturn(32);
@@ -231,15 +231,16 @@ public class MiruLocalHostedPartitionTest {
             1_000);
 
         TxCogs cogs = new TxCogs(256, 64, null, null, null);
+        ObjectMapper mapper = new ObjectMapper();
 
         contextFactory = new MiruContextFactory<>(cogs,
             schemaProvider,
             termComposer,
             activityInternExtern,
             ImmutableMap.<MiruBackingStorage, MiruChunkAllocator>builder()
-            .put(MiruBackingStorage.memory, hybridContextAllocator)
-            .put(MiruBackingStorage.disk, diskContextAllocator)
-            .build(),
+                .put(MiruBackingStorage.memory, hybridContextAllocator)
+                .put(MiruBackingStorage.disk, diskContextAllocator)
+                .build(),
             new RCVSSipIndexMarshaller(),
             new MiruTempDirectoryResourceLocator(),
             config.getPartitionAuthzCacheSize(),
@@ -247,11 +248,10 @@ public class MiruLocalHostedPartitionTest {
             new StripingLocksProvider<>(8),
             new StripingLocksProvider<>(8),
             new PartitionErrorTracker(BindInterfaceToConfiguration.bindDefault(PartitionErrorTracker.PartitionErrorTrackerConfig.class)),
-            termInterner
-        );
+            termInterner,
+            mapper);
         sipTrackerFactory = new RCVSSipTrackerFactory();
 
-        ObjectMapper mapper = new ObjectMapper();
         InMemoryRowColumnValueStoreInitializer inMemoryRowColumnValueStoreInitializer = new InMemoryRowColumnValueStoreInitializer();
 
         RCVSWALInitializer.RCVSWAL wal = new RCVSWALInitializer().initialize("test", inMemoryRowColumnValueStoreInitializer, mapper);
@@ -371,7 +371,7 @@ public class MiruLocalHostedPartitionTest {
         assertEquals(localHostedPartition.getState(), MiruPartitionState.obsolete);
         assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.disk);
         waitForRef(rebuildIndexRunnable).run();
-        
+
         assertTrue(localHostedPartition.needsToMigrate());
         assertEquals(localHostedPartition.getState(), MiruPartitionState.online);
         assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.disk);

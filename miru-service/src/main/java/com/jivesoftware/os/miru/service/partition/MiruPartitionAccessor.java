@@ -83,6 +83,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
     private final MiruIndexer<BM, IBM> indexer;
 
     private final AtomicLong timestampOfLastMerge;
+    private final AtomicBoolean obsolete;
 
     private MiruPartitionAccessor(MiruStats miruStats,
         MiruBitmaps<BM, IBM> bitmaps,
@@ -100,7 +101,8 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         AtomicBoolean closed,
         MiruIndexRepairs indexRepairs,
         MiruIndexer<BM, IBM> indexer,
-        AtomicLong timestampOfLastMerge) {
+        AtomicLong timestampOfLastMerge,
+        AtomicBoolean obsolete) {
 
         this.miruStats = miruStats;
         this.bitmaps = bitmaps;
@@ -119,6 +121,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         this.indexRepairs = indexRepairs;
         this.indexer = indexer;
         this.timestampOfLastMerge = timestampOfLastMerge;
+        this.obsolete = obsolete;
     }
 
     static <BM extends IBM, IBM, C extends MiruCursor<C, S>, S extends MiruSipCursor<S>> MiruPartitionAccessor<BM, IBM, C, S> initialize(MiruStats miruStats,
@@ -129,7 +132,8 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         Optional<MiruContext<BM, IBM, S>> persistentContext,
         Optional<MiruContext<BM, IBM, S>> transientContext,
         MiruIndexRepairs indexRepairs,
-        MiruIndexer<BM, IBM> indexer) {
+        MiruIndexer<BM, IBM> indexer,
+        boolean obsolete) {
         return new MiruPartitionAccessor<BM, IBM, C, S>(miruStats,
             bitmaps,
             coord,
@@ -146,12 +150,13 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
             new AtomicBoolean(),
             indexRepairs,
             indexer,
-            new AtomicLong(System.currentTimeMillis()));
+            new AtomicLong(System.currentTimeMillis()),
+            new AtomicBoolean(obsolete));
     }
 
     MiruPartitionAccessor<BM, IBM, C, S> copyToState(MiruPartitionState toState) {
         return new MiruPartitionAccessor<>(miruStats, bitmaps, coord, toState, hasPersistentStorage, persistentContext, transientContext, rebuildCursor,
-            seenLastSip.get(), endOfStream, hasOpenWriters, readSemaphore, writeSemaphore, closed, indexRepairs, indexer, timestampOfLastMerge);
+            seenLastSip.get(), endOfStream, hasOpenWriters, readSemaphore, writeSemaphore, closed, indexRepairs, indexer, timestampOfLastMerge, obsolete);
     }
 
     void close(MiruContextFactory<S> contextFactory) throws InterruptedException {
@@ -187,6 +192,14 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
     boolean isCorrupt() {
         return (persistentContext.isPresent() && persistentContext.get().isCorrupt() && !transientContext.isPresent())
             || (transientContext.isPresent() && transientContext.get().isCorrupt());
+    }
+
+    public boolean isObsolete() {
+        return obsolete.get();
+    }
+
+    public void markObsolete() {
+        obsolete.set(true);
     }
 
     boolean canHotDeploy() {
@@ -694,7 +707,9 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
                     newHasPersistentStorage.or(hasPersistentStorage),
                     newPersistentContext,
                     newTransientContext,
-                    indexRepairs, indexer);
+                    indexRepairs,
+                    indexer,
+                    false);
             }
 
             @Override
