@@ -11,7 +11,6 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
-import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.miru.plugin.MiruInterner;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -71,9 +70,9 @@ public class MiruActivityInternExtern {
                     activity.time,
                     internAuthz(activity.authz),
                     activity.version)
-                .putFieldsValues(internFields(activity.fieldsValues, schema, stackBuffer))
-                .putPropsValues(internProps(activity.propsValues, schema))
-                .build(),
+                    .putFieldsValues(internFields(activity.fieldsValues, schema, stackBuffer))
+                    .putPropsValues(internProps(activity.propsValues, schema))
+                    .build(),
                 activiyAndId.id));
         }
     }
@@ -98,7 +97,11 @@ public class MiruActivityInternExtern {
                 List<String[]> accumFieldValues = Lists.newArrayList();
                 for (MiruFieldDefinition field : compositeFieldDefinitions) {
                     List<String> compositeFieldValues = fields.get(field.name);
-                    if (compositeFieldValues != null) {
+                    if (compositeFieldValues == null || compositeFieldValues.isEmpty()) {
+                        // missing terms for a composite field, we cannot construct a composite term for this activity
+                        accumFieldValues.clear();
+                        break;
+                    } else {
                         if (accumFieldValues.isEmpty()) {
                             for (String compositeFieldValue : compositeFieldValues) {
                                 accumFieldValues.add(new String[] { compositeFieldValue });
