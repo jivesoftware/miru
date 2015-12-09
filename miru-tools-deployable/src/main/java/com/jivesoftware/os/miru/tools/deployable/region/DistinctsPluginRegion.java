@@ -15,6 +15,7 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.FilterStringUtil;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
+import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.miru.api.topology.ReaderRequestHelpers;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
@@ -157,9 +158,10 @@ public class DistinctsPluginRegion implements MiruPageRegion<Optional<DistinctsP
                 }
 
                 if (response != null && response.answer != null) {
+                    List<MiruValue> firstNValues = response.answer.results.subList(0, Math.min(input.maxCount, response.answer.results.size()));
                     data.put("elapse", String.valueOf(response.totalElapsed));
                     data.put("count", response.answer.results.size());
-                    data.put("distincts", response.answer.results.subList(0, Math.min(1_000, response.answer.results.size())));
+                    data.put("distincts", Lists.transform(firstNValues, MiruValue::last));
 
                     ObjectMapper mapper = new ObjectMapper();
                     mapper.enable(SerializationFeature.INDENT_OUTPUT);
