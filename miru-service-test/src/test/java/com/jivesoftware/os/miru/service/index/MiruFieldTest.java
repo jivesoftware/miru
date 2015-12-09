@@ -57,7 +57,7 @@ public class MiruFieldTest {
         int median = ids.get(ids.size() / 2);
 
         for (int id : ids) {
-            Optional<BM> optional = fieldIndex.get(fieldId, new MiruTermId(FilerIO.intBytes(id)), median).getIndex(stackBuffer);
+            Optional<BM> optional = fieldIndex.get(fieldId, new MiruTermId(FilerIO.intBytes(id))).getIndex(median, stackBuffer);
             assertEquals(optional.isPresent(), id > median, "Should be " + optional.isPresent() + ": " + id + " > " + median);
         }
     }

@@ -11,9 +11,8 @@ public class MiruFilerRemovalIndex<BM extends IBM, IBM> extends MiruFilerInverte
         TrackError trackError,
         KeyedFilerStore<Long, Void> keyedFilerStore,
         byte[] keyBytes,
-        int considerIfIndexIdGreaterThanN,
         Object mutationLock) {
 
-        super(bitmaps, trackError, keyBytes, keyedFilerStore, considerIfIndexIdGreaterThanN, mutationLock);
+        super(bitmaps, trackError, keyBytes, keyedFilerStore, mutationLock);
     }
 }

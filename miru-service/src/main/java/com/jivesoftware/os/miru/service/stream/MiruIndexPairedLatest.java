@@ -128,7 +128,7 @@ public class MiruIndexPairedLatest<BM extends IBM, IBM> {
                     MiruTermId aggregateFieldValue = idAndTerm.term;
                     MiruInvertedIndex<BM, IBM> aggregateInvertedIndex = allFieldIndex.getOrCreateInvertedIndex(
                         pairedLatestWork.aggregateFieldId, aggregateFieldValue);
-                    Optional<BM> aggregateBitmap = aggregateInvertedIndex.getIndexUnsafe(stackBuffer);
+                    Optional<BM> aggregateBitmap = aggregateInvertedIndex.getIndex(stackBuffer);
                     if (aggregateBitmap.isPresent()) {
                         aggregateBitmaps.add(aggregateBitmap.get());
                         ids.add(idAndTerm.id);

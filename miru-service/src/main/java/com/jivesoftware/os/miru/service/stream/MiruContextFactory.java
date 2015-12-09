@@ -281,7 +281,6 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                     TxNamedMapOfFiler.OVERWRITE_GROWER_PROVIDER,
                     TxNamedMapOfFiler.REWRITE_GROWER_PROVIDER),
                 new byte[] { 0 },
-                -1,
                 new Object()),
             new MiruDeltaInvertedIndex.Delta<>());
 

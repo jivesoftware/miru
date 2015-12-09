@@ -12,13 +12,15 @@ public interface MiruFieldIndex<BM extends IBM, IBM> {
 
     MiruInvertedIndex<BM, IBM> get(int fieldId, MiruTermId termId) throws Exception;
 
-    MiruInvertedIndex<BM, IBM> get(int fieldId, MiruTermId termId, int considerIfIndexIdGreaterThanN) throws Exception;
-
     MiruInvertedIndex<BM, IBM> getOrCreateInvertedIndex(int fieldId, MiruTermId term) throws Exception;
 
     void multiGet(int fieldId, MiruTermId[] termIds, BM[] results, StackBuffer stackBuffer) throws Exception;
 
-    void multiTxIndex(int fieldId, MiruTermId[] termIds, StackBuffer stackBuffer, MultiIndexTx<IBM> indexTx) throws Exception;
+    void multiTxIndex(int fieldId,
+        MiruTermId[] termIds,
+        int considerIfLastIdGreaterThanN,
+        StackBuffer stackBuffer,
+        MultiIndexTx<IBM> indexTx) throws Exception;
 
     void append(int fieldId, MiruTermId termId, int[] ids, long[] counts, StackBuffer stackBuffer) throws Exception;
 

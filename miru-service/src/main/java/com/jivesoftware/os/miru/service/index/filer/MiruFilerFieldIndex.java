@@ -49,20 +49,20 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
 
     @Override
     public void append(int fieldId, MiruTermId termId, int[] ids, long[] counts, StackBuffer stackBuffer) throws Exception {
-        getIndex(fieldId, termId, -1).append(stackBuffer, ids);
+        getIndex(fieldId, termId).append(stackBuffer, ids);
         mergeCardinalities(fieldId, termId, ids, counts, stackBuffer);
     }
 
     @Override
     public void set(int fieldId, MiruTermId termId, int[] ids, long[] counts, StackBuffer stackBuffer) throws Exception {
-        getIndex(fieldId, termId, -1).set(stackBuffer, ids);
+        getIndex(fieldId, termId).set(stackBuffer, ids);
         mergeCardinalities(fieldId, termId, ids, counts, stackBuffer);
     }
 
     @Override
     public void remove(int fieldId, MiruTermId termId, int id, StackBuffer stackBuffer) throws Exception {
-        getIndex(fieldId, termId, -1).remove(id, stackBuffer);
-        mergeCardinalities(fieldId, termId, new int[]{id}, cardinalities[fieldId] != null ? new long[1] : null, stackBuffer);
+        getIndex(fieldId, termId).remove(id, stackBuffer);
+        mergeCardinalities(fieldId, termId, new int[] { id }, cardinalities[fieldId] != null ? new long[1] : null, stackBuffer);
     }
 
     @Override
@@ -78,22 +78,16 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
 
     @Override
     public MiruInvertedIndex<BM, IBM> get(int fieldId, MiruTermId termId) throws Exception {
-        return getIndex(fieldId, termId, -1);
-    }
-
-    @Override
-    public MiruInvertedIndex<BM, IBM> get(int fieldId, MiruTermId termId, int considerIfIndexIdGreaterThanN) throws Exception {
-        return getIndex(fieldId, termId, considerIfIndexIdGreaterThanN);
+        return getIndex(fieldId, termId);
     }
 
     @Override
     public MiruInvertedIndex<BM, IBM> getOrCreateInvertedIndex(int fieldId, MiruTermId term) throws Exception {
-        return getIndex(fieldId, term, -1);
+        return getIndex(fieldId, term);
     }
 
-    private MiruInvertedIndex<BM, IBM> getIndex(int fieldId, MiruTermId termId, int considerIfIndexIdGreaterThanN) throws Exception {
-        return new MiruFilerInvertedIndex<>(bitmaps, trackError, termId.getBytes(), indexes[fieldId],
-            considerIfIndexIdGreaterThanN, stripingLocksProvider.lock(termId, 0));
+    private MiruInvertedIndex<BM, IBM> getIndex(int fieldId, MiruTermId termId) throws Exception {
+        return new MiruFilerInvertedIndex<>(bitmaps, trackError, termId.getBytes(), indexes[fieldId], stripingLocksProvider.lock(termId, 0));
     }
 
     @Override
@@ -106,7 +100,7 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
         }
         indexes[fieldId].readEach(termIdBytes, null, (monkey, filer, _stackBuffer, lock, index) -> {
             if (filer != null) {
-                BitmapAndLastId<BM> bitmapAndLastId = MiruFilerInvertedIndex.deser(bitmaps, trackError, filer, _stackBuffer);
+                BitmapAndLastId<BM> bitmapAndLastId = MiruFilerInvertedIndex.deser(bitmaps, trackError, filer, -1, _stackBuffer);
                 if (bitmapAndLastId != null) {
                     return bitmapAndLastId.bitmap;
                 }
@@ -116,7 +110,12 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
     }
 
     @Override
-    public void multiTxIndex(int fieldId, MiruTermId[] termIds, StackBuffer stackBuffer, MultiIndexTx<IBM> indexTx) throws Exception {
+    public void multiTxIndex(int fieldId,
+        MiruTermId[] termIds,
+        int considerIfLastIdGreaterThanN,
+        StackBuffer stackBuffer,
+        MultiIndexTx<IBM> indexTx) throws Exception {
+
         byte[][] termIdBytes = new byte[termIds.length][];
         for (int i = 0; i < termIds.length; i++) {
             if (termIds[i] != null) {
@@ -126,7 +125,14 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
         indexes[fieldId].readEach(termIdBytes, null, (monkey, filer, _stackBuffer, lock, index) -> {
             if (filer != null) {
                 try {
-                    indexTx.tx(index, null, filer, MiruFilerInvertedIndex.LAST_ID_LENGTH, _stackBuffer);
+                    int lastId = -1;
+                    if (considerIfLastIdGreaterThanN >= 0) {
+                        lastId = filer.readInt();
+                        filer.seek(0);
+                    }
+                    if (lastId < 0 || lastId > considerIfLastIdGreaterThanN) {
+                        indexTx.tx(index, null, filer, MiruFilerInvertedIndex.LAST_ID_LENGTH, _stackBuffer);
+                    }
                 } catch (Exception e) {
                     throw new IOException(e);
                 }

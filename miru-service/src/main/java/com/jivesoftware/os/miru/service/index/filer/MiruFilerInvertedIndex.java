@@ -14,8 +14,8 @@ import com.jivesoftware.os.filer.io.chunk.ChunkFiler;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.IndexTx;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
-import com.jivesoftware.os.miru.service.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.plugin.partition.TrackError;
+import com.jivesoftware.os.miru.service.index.BitmapAndLastId;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.DataInput;
@@ -36,7 +36,6 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     private final TrackError trackError;
     private final byte[] indexKeyBytes;
     private final KeyedFilerStore<Long, Void> keyedFilerStore;
-    private final int considerIfIndexIdGreaterThanN;
     private final Object mutationLock;
     private volatile int lastId = Integer.MIN_VALUE;
 
@@ -46,20 +45,18 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
         TrackError trackError,
         byte[] indexKeyBytes,
         KeyedFilerStore<Long, Void> keyedFilerStore,
-        int considerIfIndexIdGreaterThanN,
         Object mutationLock) {
         this.bitmaps = bitmaps;
         this.trackError = trackError;
         this.indexKeyBytes = Preconditions.checkNotNull(indexKeyBytes);
         this.keyedFilerStore = Preconditions.checkNotNull(keyedFilerStore);
-        this.considerIfIndexIdGreaterThanN = considerIfIndexIdGreaterThanN;
         this.mutationLock = mutationLock;
         //TODO pass in
         this.getTransaction = (monkey, filer, stackBuffer, lock) -> {
             if (filer != null) {
                 synchronized (lock) {
                     filer.seek(0);
-                    return deser(bitmaps, trackError, filer, stackBuffer);
+                    return deser(bitmaps, trackError, filer, -1, stackBuffer);
                 }
             }
             return null;
@@ -68,11 +65,30 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
 
     @Override
     public Optional<BM> getIndex(StackBuffer stackBuffer) throws Exception {
-        if (lastId > Integer.MIN_VALUE && lastId <= considerIfIndexIdGreaterThanN) {
-            return Optional.absent();
-        }
+        return getIndexInternal(getTransaction, stackBuffer);
+    }
 
-        BitmapAndLastId<BM> bitmapAndLastId = keyedFilerStore.read(indexKeyBytes, null, getTransaction, stackBuffer);
+    @Override
+    public Optional<BM> getIndex(int considerIfLastIdGreaterThanN, StackBuffer stackBuffer) throws Exception {
+        if (considerIfLastIdGreaterThanN < 0) {
+            return getIndexInternal(getTransaction, stackBuffer);
+        } else {
+            return getIndexInternal((monkey, filer, stackBuffer1, lock) -> {
+                if (filer != null) {
+                    synchronized (lock) {
+                        filer.seek(0);
+                        return deser(bitmaps, trackError, filer, considerIfLastIdGreaterThanN, stackBuffer);
+                    }
+                }
+                return null;
+            }, stackBuffer);
+        }
+    }
+
+    private Optional<BM> getIndexInternal(ChunkTransaction<Void, BitmapAndLastId<BM>> chunkTransaction,
+        StackBuffer stackBuffer) throws IOException, InterruptedException {
+
+        BitmapAndLastId<BM> bitmapAndLastId = keyedFilerStore.read(indexKeyBytes, null, chunkTransaction, stackBuffer);
 
         if (bitmapAndLastId != null) {
             log.inc("get>hit");
@@ -89,10 +105,6 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
 
     @Override
     public <R> R txIndex(IndexTx<R, IBM> tx, StackBuffer stackBuffer) throws Exception {
-        if (lastId > Integer.MIN_VALUE && lastId <= considerIfIndexIdGreaterThanN) {
-            return tx.tx(null, null, -1, null);
-        }
-
         return keyedFilerStore.read(indexKeyBytes, null, (monkey, filer, stackBuffer1, lock) -> {
             try {
                 if (filer != null) {
@@ -123,25 +135,28 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     public static <BM extends IBM, IBM> BitmapAndLastId<BM> deser(MiruBitmaps<BM, IBM> bitmaps,
         TrackError trackError,
         ChunkFiler filer,
+        int considerIfLastIdGreaterThanN,
         StackBuffer stackBuffer) throws IOException {
 
         if (filer.length() > LAST_ID_LENGTH + 4) {
             int lastId = filer.readInt();
-            DataInput dataInput = new FilerDataInput(filer, stackBuffer);
-            try {
-                return new BitmapAndLastId<>(bitmaps.deserialize(dataInput), lastId);
-            } catch (Exception e) {
+            if (considerIfLastIdGreaterThanN < 0 || lastId > considerIfLastIdGreaterThanN) {
+                DataInput dataInput = new FilerDataInput(filer, stackBuffer);
                 try {
-                    trackError.error("Failed to deserialize a bitmap, length=" + filer.length());
+                    return new BitmapAndLastId<>(bitmaps.deserialize(dataInput), lastId);
+                } catch (Exception e) {
+                    try {
+                        trackError.error("Failed to deserialize a bitmap, length=" + filer.length());
 
-                    byte[] raw = new byte[512];
-                    filer.seek(0);
-                    filer.read(raw);
-                    log.error("Failed to deserialize, head bytes from filer: {}", Arrays.toString(raw));
-                } catch (Exception e1) {
-                    log.error("Failed to print debug info", e1);
+                        byte[] raw = new byte[512];
+                        filer.seek(0);
+                        filer.read(raw);
+                        log.error("Failed to deserialize, head bytes from filer: {}", Arrays.toString(raw));
+                    } catch (Exception e1) {
+                        log.error("Failed to print debug info", e1);
+                    }
+                    throw new IOException("Failed to deserialize", e);
                 }
-                throw new IOException("Failed to deserialize", e);
             }
         }
         return null;
@@ -181,11 +196,6 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
         keyedFilerStore.writeNewReplace(indexKeyBytes, filerSizeInBytes, new SetTransaction(bytes), stackBuffer);
         log.inc("set>total");
         log.inc("set>bytes", bytes.length);
-    }
-
-    @Override
-    public Optional<BM> getIndexUnsafe(StackBuffer stackBuffer) throws Exception {
-        return getIndex(stackBuffer);
     }
 
     @Override
