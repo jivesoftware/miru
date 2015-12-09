@@ -29,6 +29,7 @@ import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelper;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -103,13 +104,7 @@ public class DistinctsPluginRegion implements MiruPageRegion<Optional<DistinctsP
                 data.put("maxCount", input.maxCount);
                 data.put("filters", input.filters);
 
-                List<String> fieldTypes = Lists.newArrayList();
-                for (String fieldType : input.types.split(",")) {
-                    String trimmed = fieldType.trim();
-                    if (!trimmed.isEmpty()) {
-                        fieldTypes.add(trimmed);
-                    }
-                }
+                List<MiruValue> fieldTypes = filterStringUtil.buildFieldPrefixes(Arrays.asList(input.types.split(",")));
 
                 SnowflakeIdPacker snowflakeIdPacker = new SnowflakeIdPacker();
                 long jiveCurrentTime = new JiveEpochTimestampProvider().getTimestamp();

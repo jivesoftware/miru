@@ -26,6 +26,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
+import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.miru.bitmaps.roaring5.buffer.MiruBitmapsRoaringBuffer;
 import com.jivesoftware.os.miru.plugin.MiruInterner;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
@@ -231,9 +232,9 @@ public class RecoCorrectnessTest {
                     timeRange,
                     null,
                     filter,
-                    "parent", "parent", "parent",
-                    "user", "user", "user",
-                    "parent", "parent",
+                    "parent",
+                    "user",
+                    "parent",
                     new MiruFilter(MiruFilterOperation.pButNotQ,
                         false,
                         null,
@@ -295,7 +296,7 @@ public class RecoCorrectnessTest {
                         timeRange,
                         "parent",
                         MiruFilter.NO_FILTER,
-                        Lists.newArrayList(docTypes))),
+                        Lists.transform(Lists.newArrayList(docTypes), MiruValue::new))),
                     10),
                 MiruSolutionLogLevel.INFO));
 

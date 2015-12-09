@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.reco.plugins;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
+import com.google.common.collect.Lists;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
@@ -12,6 +13,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
+import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
@@ -132,7 +134,7 @@ public class RemoteRecoHttpTest {
                             timeRange,
                             "parent",
                             MiruFilter.NO_FILTER,
-                            Arrays.asList("102", "2", "38"))),
+                            Lists.transform(Arrays.asList("102", "2", "38"), MiruValue::new))),
                         100),
                     MiruSolutionLogLevel.INFO);
 
@@ -225,9 +227,9 @@ public class RemoteRecoHttpTest {
                                         null))),
                             null),
                         constraintsFilter,
-                        "parent", "parent", "parent",
-                        "user", "user", "user",
-                        "parent", "parent",
+                        "parent",
+                        "user",
+                        "parent",
                         scorableFilter,
                         100),
                     MiruSolutionLogLevel.INFO);

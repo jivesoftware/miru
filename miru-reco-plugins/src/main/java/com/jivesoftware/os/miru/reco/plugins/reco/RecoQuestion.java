@@ -2,15 +2,20 @@ package com.jivesoftware.os.miru.reco.plugins.reco;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Sets;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
+import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
+import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
+import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
@@ -23,7 +28,9 @@ import com.jivesoftware.os.miru.plugin.solution.Question;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 /**
  *
@@ -35,18 +42,18 @@ public class RecoQuestion implements Question<RecoQuery, RecoAnswer, RecoReport>
     private final CollaborativeFiltering collaborativeFiltering;
     private final MiruRequest<RecoQuery> request;
     private final MiruRemotePartition<RecoQuery, RecoAnswer, RecoReport> remotePartition;
-    private final MiruFilter removeDistinctsFilter;
+    private final List<MiruValue> removeDistincts;
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
 
     public RecoQuestion(CollaborativeFiltering collaborativeFiltering,
         MiruRequest<RecoQuery> query,
         MiruRemotePartition<RecoQuery, RecoAnswer, RecoReport> remotePartition,
-        MiruFilter removeDistinctsFilter) {
+        List<MiruValue> removeDistincts) {
         this.collaborativeFiltering = Preconditions.checkNotNull(collaborativeFiltering);
         this.request = Preconditions.checkNotNull(query);
         this.remotePartition = remotePartition;
-        this.removeDistinctsFilter = Preconditions.checkNotNull(removeDistinctsFilter);
+        this.removeDistincts = Preconditions.checkNotNull(removeDistincts);
     }
 
     @Override
@@ -58,6 +65,8 @@ public class RecoQuestion implements Question<RecoQuery, RecoAnswer, RecoReport>
 
         MiruRequestContext<BM, IBM, ?> context = handle.getRequestContext();
         MiruBitmaps<BM, IBM> bitmaps = handle.getBitmaps();
+        MiruTermComposer termComposer = context.getTermComposer();
+        MiruSchema schema = context.getSchema();
 
         MiruTimeRange timeRange = request.query.timeRange;
         if (!context.getTimeIndex().intersects(timeRange)) {
@@ -73,7 +82,7 @@ public class RecoQuestion implements Question<RecoQuery, RecoAnswer, RecoReport>
                     report,
                     bitmaps.create(),
                     bitmaps.create(),
-                    removeDistinctsFilter),
+                    removeDistincts),
                 solutionLog.asList());
         }
 
@@ -81,7 +90,7 @@ public class RecoQuestion implements Question<RecoQuery, RecoAnswer, RecoReport>
         List<IBM> okAnds = new ArrayList<>();
 
         // 1) Execute the combined filter above on the given stream, add the bitmap
-        BM filtered = aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(),
+        BM filtered = aggregateUtil.filter(bitmaps, schema, termComposer, context.getFieldIndexProvider(),
             request.query.scorableFilter, solutionLog, null, context.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
         if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
             solutionLog.log(MiruSolutionLogLevel.INFO, "constrained scorable down to {} items.", bitmaps.cardinality(filtered));
@@ -116,7 +125,7 @@ public class RecoQuestion implements Question<RecoQuery, RecoAnswer, RecoReport>
             solutionLog.log(MiruSolutionLogLevel.TRACE, "answering bitmap {}", okActivity);
         }
 
-        BM allMyActivity = aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(),
+        BM allMyActivity = aggregateUtil.filter(bitmaps, schema, termComposer, context.getFieldIndexProvider(),
             request.query.constraintsFilter, solutionLog, null, context.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
         if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
             solutionLog.log(MiruSolutionLogLevel.INFO, "constrained mine down to {} items.", bitmaps.cardinality(allMyActivity));
@@ -133,7 +142,7 @@ public class RecoQuestion implements Question<RecoQuery, RecoAnswer, RecoReport>
                 report,
                 allMyActivity,
                 okActivity,
-                removeDistinctsFilter),
+                removeDistincts),
             solutionLog.asList());
     }
 
@@ -148,9 +157,9 @@ public class RecoQuestion implements Question<RecoQuery, RecoAnswer, RecoReport>
     public Optional<RecoReport> createReport(Optional<RecoAnswer> answer) {
         Optional<RecoReport> report;
         if (answer.isPresent()) {
-            report = Optional.of(new RecoReport(removeDistinctsFilter, answer.get().results.size()));
+            report = Optional.of(new RecoReport(removeDistincts, answer.get().results.size()));
         } else {
-            report = Optional.of(new RecoReport(removeDistinctsFilter, 0));
+            report = Optional.of(new RecoReport(removeDistincts, 0));
         }
         return report;
     }

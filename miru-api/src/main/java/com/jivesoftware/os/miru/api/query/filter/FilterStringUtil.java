@@ -46,4 +46,17 @@ public class FilterStringUtil {
         return new MiruFilter(MiruFilterOperation.and, false, fieldFilters, Arrays.<MiruFilter>asList());
     }
 
+    public List<MiruValue> buildFieldPrefixes(List<String> inputFieldPrefixes) {
+        List<MiruValue> fieldPrefixes = null;
+        if (inputFieldPrefixes != null) {
+            fieldPrefixes = Lists.newArrayListWithCapacity(inputFieldPrefixes.size());
+            for (String prefix : inputFieldPrefixes) {
+                String[] parts = prefix.trim().split("\\+");
+                if (parts.length > 0 && !parts[0].isEmpty()) {
+                    fieldPrefixes.add(new MiruValue(parts));
+                }
+            }
+        }
+        return fieldPrefixes;
+    }
 }

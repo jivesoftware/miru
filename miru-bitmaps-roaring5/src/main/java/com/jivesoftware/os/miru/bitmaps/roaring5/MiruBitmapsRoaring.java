@@ -26,7 +26,6 @@ import com.jivesoftware.os.filer.io.chunk.ChunkFiler;
 import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
-import com.jivesoftware.os.miru.plugin.index.FieldMultiTermTxIndex;
 import com.jivesoftware.os.miru.plugin.index.IndexAlignedBitmapStream;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruMultiTxIndex;
@@ -215,6 +214,19 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
     }
 
     @Override
+    public RoaringBitmap orMultiTx(MiruMultiTxIndex<RoaringBitmap> multiTermTxIndex, StackBuffer stackBuffer) throws Exception {
+        RoaringBitmap container = new RoaringBitmap();
+        multiTermTxIndex.txIndex((index, bitmap, filer, offset, stackBuffer1) -> {
+            if (bitmap != null) {
+                container.or(bitmap);
+            } else if (filer != null) {
+                container.or(bitmapFromFiler(filer, offset, stackBuffer1));
+            }
+        }, stackBuffer);
+        return container;
+    }
+
+    @Override
     public void inPlaceAnd(RoaringBitmap original, RoaringBitmap bitmap) {
         try {
             original.and(bitmap);
@@ -285,7 +297,7 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
 
     @Override
     public RoaringBitmap andNotMultiTx(RoaringBitmap original,
-        FieldMultiTermTxIndex<RoaringBitmap, RoaringBitmap> multiTermTxIndex,
+        MiruMultiTxIndex<RoaringBitmap> multiTermTxIndex,
         StackBuffer stackBuffer) throws Exception {
 
         RoaringBitmap container = copy(original);

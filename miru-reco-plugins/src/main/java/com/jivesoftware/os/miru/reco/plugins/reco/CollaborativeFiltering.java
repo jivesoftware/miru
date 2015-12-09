@@ -15,6 +15,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
+import com.jivesoftware.os.miru.plugin.index.FieldMultiTermTxIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruIndexUtil;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
@@ -65,7 +66,7 @@ public class CollaborativeFiltering {
         Optional<RecoReport> report,
         IBM allMyActivity,
         IBM okActivity,
-        MiruFilter removeDistinctsFilter) throws Exception {
+        List<MiruValue> removeDistincts) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
 
         log.debug("Get collaborative filtering for allMyActivity={} okActivity={} query={}", allMyActivity, okActivity, request);
@@ -73,15 +74,17 @@ public class CollaborativeFiltering {
         //TODO expose to query?
         int gatherBatchSize = 100;
 
-        int fieldId1 = requestContext.getSchema().getFieldId(request.query.aggregateFieldName1);
-        int fieldId2 = requestContext.getSchema().getFieldId(request.query.aggregateFieldName2);
-        int fieldId3 = requestContext.getSchema().getFieldId(request.query.aggregateFieldName3);
-        MiruFieldDefinition fieldDefinition3 = requestContext.getSchema().getFieldDefinition(fieldId3);
+        MiruSchema schema = requestContext.getSchema();
+        int fieldId1 = schema.getFieldId(request.query.aggregateFieldName1);
+        int fieldId2 = schema.getFieldId(request.query.aggregateFieldName2);
+        int fieldId3 = schema.getFieldId(request.query.aggregateFieldName3);
+        MiruFieldDefinition fieldDefinition3 = schema.getFieldDefinition(fieldId3);
 
         // myOkActivity: my activity restricted to what's ok
         BM myOkActivity = bitmaps.and(Arrays.asList(allMyActivity, okActivity));
 
         MiruFieldIndex<BM, IBM> primaryFieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
+        MiruTermComposer termComposer = requestContext.getTermComposer();
 
         // distinctParents: distinct parents <field1> that I've touched
         Set<MiruTermId> distinctParents = Sets.newHashSet();
@@ -91,26 +94,11 @@ public class CollaborativeFiltering {
             return true;
         }, stackBuffer);
 
-//        int[] indexes = bitmaps.indexes(myOkActivity);
-//        List<MiruTermId[]> allFieldValues = requestContext.getActivityIndex().getAll(request.tenantId, indexes, fieldId1);
-//        for (MiruTermId[] fieldValues : allFieldValues) {
-//            Collections.addAll(distinctParents, fieldValues);
-//        }
-        List<IBM> toBeORed = new ArrayList<>();
         log.debug("allField1Activity: fieldId={}", fieldId1);
-        for (MiruTermId parent : distinctParents) {
-            Optional<BM> index = primaryFieldIndex.get(
-                fieldId1,
-                parent)
-                .getIndex(stackBuffer);
-            if (index.isPresent()) {
-                toBeORed.add(index.get());
-            }
-        }
+        FieldMultiTermTxIndex<BM, IBM> field1MultiTermTxIndex = new FieldMultiTermTxIndex<>(primaryFieldIndex, fieldId1);
+        field1MultiTermTxIndex.setTermIds(distinctParents.toArray(new MiruTermId[distinctParents.size()]));
+        BM allField1Activity = bitmaps.orMultiTx(field1MultiTermTxIndex, stackBuffer);
 
-        // allField1Activity: all activity for the distinct parents <field1> that I've touched
-        log.debug("allField1Activity: toBeORed.size={}", toBeORed.size());
-        BM allField1Activity = bitmaps.or(toBeORed);
         log.trace("allField1Activity: allField1Activity={}", allField1Activity);
         if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
             solutionLog.log(MiruSolutionLogLevel.INFO, "allField1Activity {}.", bitmaps.cardinality(allField1Activity));
@@ -153,55 +141,49 @@ public class CollaborativeFiltering {
             return composeAnswer(requestContext, request, fieldDefinition3, contributorHeap, stackBuffer);
         }
 
-        // augment distinctParents with additional distinct parents <field1> for exclusion below
-        if (!MiruFilter.NO_FILTER.equals(removeDistinctsFilter)) {
-            BM remove = aggregateUtil.filter(bitmaps, requestContext.getSchema(), requestContext.getTermComposer(), requestContext.getFieldIndexProvider(),
-                removeDistinctsFilter, solutionLog, null, requestContext.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
-            if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
-                solutionLog.log(MiruSolutionLogLevel.INFO, "remove {}.", bitmaps.cardinality(remove));
-                solutionLog.log(MiruSolutionLogLevel.TRACE, "remove bitmap {}", remove);
+        // augment distinctParents with additional distinct parents <field3> for exclusion below
+        if (removeDistincts != null) {
+            Set<MiruTermId> removeDistinctTermIds = Sets.newHashSet();
+            for (MiruValue distinct : removeDistincts) {
+                removeDistinctTermIds.add(termComposer.compose(schema, fieldDefinition3, stackBuffer, distinct.parts));
             }
 
-            aggregateUtil.gather(bitmaps, requestContext, remove, fieldId3, gatherBatchSize, solutionLog, termId -> {
-                distinctParents.add(termId);
-                return true;
-            }, stackBuffer);
-
-//            int[] removeIndexes = bitmaps.indexes(remove);
-//            List<MiruTermId[]> removeFieldValues = requestContext.getActivityIndex().getAll(request.tenantId, removeIndexes, fieldId3);
-//            for (MiruTermId[] fieldValues : removeFieldValues) {
-//                Collections.addAll(distinctParents, fieldValues);
-//            }
+            distinctParents.addAll(removeDistinctTermIds);
         }
 
+        MiruTermCount[] contributorTermCounts = contributorHeap.toArray(new MiruTermCount[contributorHeap.size()]);
+        MiruTermId[] contributorTermIds = new MiruTermId[contributorTermCounts.length];
+        for (int i = 0; i < contributorTermCounts.length; i++) {
+            contributorTermIds[i] = contributorTermCounts[i].termId;
+        }
+
+        BM[] contributorBitmaps = bitmaps.createArrayOf(contributorTermCounts.length);
+        FieldMultiTermTxIndex<BM, IBM> field2MultiTermTxIndex = new FieldMultiTermTxIndex<>(primaryFieldIndex, fieldId2);
+        field2MultiTermTxIndex.setTermIds(contributorTermIds);
+        bitmaps.multiTx(field2MultiTermTxIndex, (index, contributorActivity) -> {
+            if (bitmaps.supportsInPlace()) {
+                bitmaps.inPlaceAnd(contributorActivity, okActivity);
+            } else {
+                contributorActivity = bitmaps.and(Arrays.asList(contributorActivity, okActivity));
+            }
+            contributorBitmaps[index] = contributorActivity;
+        }, stackBuffer);
+
         Multiset<MiruTermId> scoredParents = HashMultiset.create();
-
-        for (MiruTermCount tc : contributorHeap) {
-            Optional<BM> index = primaryFieldIndex.get(
-                fieldId2,
-                tc.termId)
-                .getIndex(stackBuffer);
-            if (index.isPresent()) {
-                IBM contributorAllActivity = index.get();
-                BM contributorOkActivity = bitmaps.and(Arrays.asList(okActivity, contributorAllActivity));
-
+        for (int i = 0; i < contributorBitmaps.length; i++) {
+            if (contributorBitmaps[i] != null) {
                 Set<MiruTermId> distinctContributorParents = Sets.newHashSet();
-                aggregateUtil.gather(bitmaps, requestContext, contributorOkActivity, fieldId3, gatherBatchSize, solutionLog,
+                aggregateUtil.gather(bitmaps, requestContext, contributorBitmaps[i], fieldId3, gatherBatchSize, solutionLog,
                     termId -> {
                         distinctContributorParents.add(termId);
                         return true;
                     },
                     stackBuffer);
 
-//                int[] contributorIndexes = bitmaps.indexes(contributorOkActivity);
-//                List<MiruTermId[]> contributorFieldValues = requestContext.getActivityIndex().getAll(request.tenantId, contributorIndexes, fieldId3);
-//                for (MiruTermId[] fieldValues : contributorFieldValues) {
-//                    Collections.addAll(distinctContributorParents, fieldValues);
-//                }
                 distinctContributorParents.removeAll(distinctParents);
 
                 for (MiruTermId parent : distinctContributorParents) {
-                    scoredParents.add(parent, (int) tc.count);
+                    scoredParents.add(parent, (int) contributorTermCounts[i].count);
                 }
             }
         }
