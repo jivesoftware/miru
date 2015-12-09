@@ -77,7 +77,7 @@ public class RecoInjectable {
                 if (!distinctTerms.isEmpty()) {
                     removeDistinctsFilter = new MiruFilter(MiruFilterOperation.and,
                         false,
-                        Collections.singletonList(MiruFieldFilter.of(
+                        Collections.singletonList(new MiruFieldFilter(
                             MiruFieldType.primary, request.query.removeDistinctsQuery.gatherDistinctsForField, distinctTerms)),
                         null);
                 }
