@@ -20,7 +20,7 @@ public class MiruMergeChitsTest {
     public void testMerge() throws Exception {
 
         final AtomicLong numberOfChitsRemaining = new AtomicLong(500_000);
-        final MiruMergeChits mergeChits = new MiruMergeChits(numberOfChitsRemaining, 500_000, -1);
+        final MiruMergeChits mergeChits = new MiruMergeChits("test", numberOfChitsRemaining, 500_000, -1);
 
         ScheduledExecutorService scheduledInfo = Executors.newScheduledThreadPool(1);
         ScheduledExecutorService scheduledMergers = Executors.newScheduledThreadPool(8);

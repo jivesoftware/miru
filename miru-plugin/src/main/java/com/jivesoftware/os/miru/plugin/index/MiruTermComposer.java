@@ -201,6 +201,7 @@ public class MiruTermComposer {
                 byte[] tailBytes = prefixUpperExclusiveBytes(fieldDefinition, parts[parts.length - 1]);
                 return Bytes.concat(headBytes, tailBytes);
             } else {
+                makeUpperExclusive(headBytes);
                 return headBytes;
             }
         } else {
@@ -213,14 +214,7 @@ public class MiruTermComposer {
         MiruFieldDefinition.Prefix p = fieldDefinition.prefix;
         if (p.type == MiruFieldDefinition.Prefix.Type.wildcard) {
             byte[] raw = pre.getBytes(charset);
-            for (int i = raw.length - 1; i >= 0; i--) {
-                if (raw[i] == Byte.MAX_VALUE) {
-                    raw[i] = Byte.MIN_VALUE;
-                } else {
-                    raw[i]++;
-                    break;
-                }
-            }
+            makeUpperExclusive(raw);
             return raw;
         } else if (p.type == MiruFieldDefinition.Prefix.Type.raw) {
             byte[] preBytes = pre.getBytes(charset);
@@ -229,20 +223,24 @@ public class MiruTermComposer {
 
             // given: [64,72,96,127]
             // want: [64,72,97,-128]
-            for (int i = raw.length - 1; i >= 0; i--) {
-                if (raw[i] == Byte.MAX_VALUE) {
-                    raw[i] = Byte.MIN_VALUE;
-                } else {
-                    raw[i]++;
-                    break;
-                }
-            }
+            makeUpperExclusive(raw);
             return raw;
         } else if (p.type == MiruFieldDefinition.Prefix.Type.numeric) {
             int v = Integer.parseInt(pre) + 1;
             return UtilLexMarshaller.intToLex(v);
         } else {
             throw new IllegalArgumentException("Can't range filter this field!");
+        }
+    }
+
+    private void makeUpperExclusive(byte[] raw) {
+        for (int i = raw.length - 1; i >= 0; i--) {
+            if (raw[i] == Byte.MAX_VALUE) {
+                raw[i] = Byte.MIN_VALUE;
+            } else {
+                raw[i]++;
+                break;
+            }
         }
     }
 }

@@ -75,7 +75,8 @@ public class AmzaWALTest {
 
         MiruServiceConfig config = BindInterfaceToConfiguration.bindDefault(MiruServiceConfig.class);
         config.setDefaultFailAfterNMillis(TimeUnit.HOURS.toMillis(1));
-        config.setMergeChitCount(10_000);
+        config.setPersistentMergeChitCount(10_000);
+        config.setTransientMergeChitCount(10_000);
 
         Logger rootLogger = LogManager.getRootLogger();
         if (rootLogger instanceof org.apache.logging.log4j.core.Logger) {

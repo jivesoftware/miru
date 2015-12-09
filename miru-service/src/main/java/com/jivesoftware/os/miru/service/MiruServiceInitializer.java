@@ -104,8 +104,11 @@ public class MiruServiceInitializer {
         final ExecutorService sipIndexExecutor = Executors.newFixedThreadPool(config.getSipIndexerThreads(),
             new NamedThreadFactory(threadGroup, "sip_index"));
 
-        final ExecutorService mergeExecutor = Executors.newFixedThreadPool(config.getMergeIndexThreads(),
-            new NamedThreadFactory(threadGroup, "merge_index"));
+        final ExecutorService persistentMergeExecutor = Executors.newFixedThreadPool(config.getMergeIndexThreads(),
+            new NamedThreadFactory(threadGroup, "persistent_merge_index"));
+
+        final ExecutorService transientMergeExecutor = Executors.newFixedThreadPool(config.getMergeIndexThreads(),
+            new NamedThreadFactory(threadGroup, "transient_merge_index"));
 
         final ExecutorService streamFactoryExecutor = Executors.newFixedThreadPool(config.getStreamFactoryExecutorCount(),
             new NamedThreadFactory(threadGroup, "stream_factory"));
@@ -189,9 +192,10 @@ public class MiruServiceInitializer {
             }
         };
 
-        AtomicLong numberOfChitsRemaining = new AtomicLong(config.getMergeChitCount());
-        MiruMergeChits persistentMergeChits = new MiruMergeChits(numberOfChitsRemaining, config.getMergeChitCount(), config.getMergeMaxOverage());
-        MiruMergeChits transientMergeChits = new MiruMergeChits(numberOfChitsRemaining, config.getMergeChitCount(), config.getMergeMaxOverage());
+        MiruMergeChits persistentMergeChits = new MiruMergeChits("persistent", new AtomicLong(config.getPersistentMergeChitCount()),
+            config.getPersistentMergeChitCount(), config.getMergeMaxOverage());
+        MiruMergeChits transientMergeChits = new MiruMergeChits("transient", new AtomicLong(config.getTransientMergeChitCount()),
+            config.getTransientMergeChitCount(), config.getMergeMaxOverage());
         MiruLocalPartitionFactory<C, S> localPartitionFactory = new MiruLocalPartitionFactory<>(miruStats,
             config,
             contextFactory,
@@ -204,7 +208,8 @@ public class MiruServiceInitializer {
             scheduledSipMigrateExecutor,
             rebuildExecutors,
             sipIndexExecutor,
-            mergeExecutor,
+            persistentMergeExecutor,
+            transientMergeExecutor,
             config.getRebuildIndexerThreads(),
             indexRepairs,
             persistentMergeChits,

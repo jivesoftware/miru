@@ -18,12 +18,14 @@ public class MiruMergeChits {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
+    private final String name;
     private final AtomicLong numberOfChitsRemaining;
     private final long maxOverage;
     private final StripingLocksProvider<MiruPartitionCoord> stripingLocks = new StripingLocksProvider<>(128);
     private final Map<MiruPartitionCoord, AtomicLong> mergeQueue = Collections.synchronizedMap(Maps.<MiruPartitionCoord, AtomicLong>newLinkedHashMap());
 
-    public MiruMergeChits(AtomicLong numberOfChitsRemaining, long maxChits, long maxOverage) {
+    public MiruMergeChits(String name, AtomicLong numberOfChitsRemaining, long maxChits, long maxOverage) {
+        this.name = name;
         this.numberOfChitsRemaining = numberOfChitsRemaining;
         this.maxOverage = maxOverage >= 0 ? maxOverage : maxChits;
     }
@@ -32,7 +34,7 @@ public class MiruMergeChits {
         AtomicLong taken = mergeQueue.remove(coord);
         if (taken != null) {
             long chitsFree = numberOfChitsRemaining.addAndGet(taken.get());
-            log.set(ValueType.COUNT, "chit>free", chitsFree);
+            log.set(ValueType.COUNT, "chit>" + name + ">free", chitsFree);
         }
     }
 
@@ -49,7 +51,7 @@ public class MiruMergeChits {
             }
         }
         taken.addAndGet(count);
-        log.set(ValueType.COUNT, "chit>free", chitsFree);
+        log.set(ValueType.COUNT, "chit>" + name + ">free", chitsFree);
 
         return canMerge(coord);
     }
@@ -78,8 +80,8 @@ public class MiruMergeChits {
                 long requiredOverage = Math.min(maxOverage, got / 2);
                 if (entry.getKey().equals(coord)) {
                     if (overage >= requiredOverage) {
-                        log.inc("chit>merged>total");
-                        log.inc("chit>merged>power>" + FilerIO.chunkPower(got, 0));
+                        log.inc("chit>" + name + ">merged>total");
+                        log.inc("chit>" + name + ">merged>power>" + FilerIO.chunkPower(got, 0));
                         return true;
                     } else {
                         break;

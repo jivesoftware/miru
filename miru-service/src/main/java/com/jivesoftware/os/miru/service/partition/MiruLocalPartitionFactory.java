@@ -37,7 +37,8 @@ public class MiruLocalPartitionFactory<C extends MiruCursor<C, S>, S extends Mir
     private final ScheduledExecutorService scheduledSipMigrateExecutor;
     private final ExecutorService rebuildExecutors;
     private final ExecutorService sipIndexExecutor;
-    private final ExecutorService mergeExecutor;
+    private final ExecutorService persistentMergeExecutor;
+    private final ExecutorService transientMergeExecutor;
     private final int rebuildIndexerThreads;
     private final MiruIndexRepairs indexRepairs;
     private final MiruMergeChits persistentMergeChits;
@@ -56,7 +57,8 @@ public class MiruLocalPartitionFactory<C extends MiruCursor<C, S>, S extends Mir
         ScheduledExecutorService scheduledSipMigrateExecutor,
         ExecutorService rebuildExecutors,
         ExecutorService sipIndexExecutor,
-        ExecutorService mergeExecutor,
+        ExecutorService persistentMergeExecutor,
+        ExecutorService transientMergeExecutor,
         int rebuildIndexerThreads,
         MiruIndexRepairs indexRepairs,
         MiruMergeChits persistentMergeChits,
@@ -75,7 +77,8 @@ public class MiruLocalPartitionFactory<C extends MiruCursor<C, S>, S extends Mir
         this.scheduledSipMigrateExecutor = scheduledSipMigrateExecutor;
         this.rebuildExecutors = rebuildExecutors;
         this.sipIndexExecutor = sipIndexExecutor;
-        this.mergeExecutor = mergeExecutor;
+        this.persistentMergeExecutor = persistentMergeExecutor;
+        this.transientMergeExecutor = transientMergeExecutor;
         this.rebuildIndexerThreads = rebuildIndexerThreads;
         this.indexRepairs = indexRepairs;
         this.persistentMergeChits = persistentMergeChits;
@@ -102,7 +105,8 @@ public class MiruLocalPartitionFactory<C extends MiruCursor<C, S>, S extends Mir
             scheduledSipMigrateExecutor,
             rebuildExecutors,
             sipIndexExecutor,
-            mergeExecutor,
+            persistentMergeExecutor,
+            transientMergeExecutor,
             rebuildIndexerThreads,
             indexRepairs,
             new MiruIndexer<>(

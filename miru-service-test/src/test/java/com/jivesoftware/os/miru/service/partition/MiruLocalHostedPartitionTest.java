@@ -138,7 +138,8 @@ public class MiruLocalHostedPartitionTest {
     private ScheduledExecutorService scheduledSipMigrateService;
     private ExecutorService rebuildExecutor;
     private ExecutorService sipIndexExecutor;
-    private ExecutorService mergeExecutor;
+    private ExecutorService persistentMergeExecutor;
+    private ExecutorService transientMergeExecutor;
     private AtomicReference<MiruLocalHostedPartition.BootstrapRunnable> bootstrapRunnable;
     private AtomicReference<MiruLocalHostedPartition.RebuildIndexRunnable> rebuildIndexRunnable;
     private AtomicReference<MiruLocalHostedPartition.SipMigrateIndexRunnable> sipMigrateIndexRunnable;
@@ -309,7 +310,8 @@ public class MiruLocalHostedPartitionTest {
         scheduledSipMigrateService = mock(ScheduledExecutorService.class);
         rebuildExecutor = Executors.newSingleThreadExecutor();
         sipIndexExecutor = Executors.newSingleThreadExecutor();
-        mergeExecutor = Executors.newSingleThreadExecutor();
+        transientMergeExecutor = Executors.newSingleThreadExecutor();
+        persistentMergeExecutor = Executors.newSingleThreadExecutor();
 
         bootstrapRunnable = new AtomicReference<>();
         captureRunnable(scheduledBootstrapService, bootstrapRunnable, MiruLocalHostedPartition.BootstrapRunnable.class);
@@ -512,12 +514,12 @@ public class MiruLocalHostedPartitionTest {
     private MiruLocalHostedPartition<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSCursor, RCVSSipCursor> getRoaringLocalHostedPartition()
         throws Exception {
         AtomicLong numberOfChitsRemaining = new AtomicLong(100_000);
-        MiruMergeChits persistentMergeChits = new MiruMergeChits(numberOfChitsRemaining, 100_000, 10_000);
-        MiruMergeChits transientMergeChits = new MiruMergeChits(numberOfChitsRemaining, 100_000, 10_000);
+        MiruMergeChits persistentMergeChits = new MiruMergeChits("persistent", numberOfChitsRemaining, 100_000, 10_000);
+        MiruMergeChits transientMergeChits = new MiruMergeChits("transient", numberOfChitsRemaining, 100_000, 10_000);
 
         return new MiruLocalHostedPartition<>(new MiruStats(), bitmaps, trackError, coord, -1, contextFactory, sipTrackerFactory,
             walClient, partitionEventHandler, rebuildDirector, scheduledBootstrapService, scheduledRebuildService,
-            scheduledSipMigrateService, rebuildExecutor, sipIndexExecutor, mergeExecutor, 1, new NoOpMiruIndexRepairs(),
+            scheduledSipMigrateService, rebuildExecutor, sipIndexExecutor, persistentMergeExecutor, transientMergeExecutor, 1, new NoOpMiruIndexRepairs(),
             indexer, 100_000, 100, 100, persistentMergeChits, transientMergeChits, timings);
     }
 

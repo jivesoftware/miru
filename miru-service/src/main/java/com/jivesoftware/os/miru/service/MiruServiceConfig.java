@@ -63,9 +63,14 @@ public interface MiruServiceConfig extends Config {
     int getPartitionSipBatchSize();
 
     @LongDefault(1_000_000)
-    long getMergeChitCount();
+    long getPersistentMergeChitCount();
 
-    void setMergeChitCount(long mergeChitCount);
+    void setPersistentMergeChitCount(long mergeChitCount);
+
+    @LongDefault(1_000_000)
+    long getTransientMergeChitCount();
+
+    void setTransientMergeChitCount(long mergeChitCount);
 
     @LongDefault(-1)
     long getMergeMaxOverage();
