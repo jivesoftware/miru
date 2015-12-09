@@ -246,11 +246,11 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         return persistentContext.isPresent() ? persistentContext.get().sipIndex.getSip(stackBuffer) : null;
     }
 
-    boolean setSip(S sip, StackBuffer stackBuffer) throws IOException, InterruptedException {
+    boolean setSip(Optional<MiruContext<BM, IBM, S>> context, S sip, StackBuffer stackBuffer) throws IOException, InterruptedException {
         if (sip == null) {
             throw new IllegalArgumentException("Sip cannot be null");
         }
-        return (persistentContext.isPresent() && persistentContext.get().sipIndex.setSip(sip, stackBuffer));
+        return (context.isPresent() && context.get().sipIndex.setSip(sip, stackBuffer));
     }
 
     private static class MergeRunnable implements Runnable {

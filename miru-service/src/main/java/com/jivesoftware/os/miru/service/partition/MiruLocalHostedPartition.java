@@ -793,7 +793,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                     accessor.merge(mergeExecutor, accessor.transientContext, transientMergeChits, trackError);
                     accessor.setRebuildCursor(nextCursor);
                     if (nextCursor.getSipCursor() != null) {
-                        accessor.setSip(nextCursor.getSipCursor(), stackBuffer);
+                        accessor.setSip(accessor.transientContext, nextCursor.getSipCursor(), stackBuffer);
                     }
 
                     log.stopTimer("rebuild>batchSize-" + partitionRebuildBatchSize);
@@ -1039,7 +1039,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                 stackBuffer);
 
             S suggestion = sipTracker.suggest(sipCursor, nextSipCursor);
-            if (suggestion != null && accessor.setSip(suggestion, stackBuffer)) {
+            if (suggestion != null && accessor.setSip(accessor.persistentContext, suggestion, stackBuffer)) {
                 accessor.seenLastSip.compareAndSet(sipTracker.getSeenLastSip(), sipTracker.getSeenThisSip());
                 sipTracker.metrics(coord, suggestion);
             }
