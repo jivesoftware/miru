@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.api.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Functions;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import java.io.Serializable;
@@ -30,14 +31,14 @@ public class MiruFieldFilter implements Serializable {
     }
 
     public static MiruFieldFilter ofTerms(MiruFieldType fieldType, String fieldName, Integer... values) {
-        return of(fieldType, fieldName, Arrays.asList(values));
+        return of(fieldType, fieldName, Lists.transform(Arrays.asList(values), Functions.toStringFunction()));
     }
 
     public static MiruFieldFilter ofValues(MiruFieldType fieldType, String fieldName, MiruValue... values) {
         return new MiruFieldFilter(fieldType, fieldName, Arrays.asList(values));
     }
 
-    public static <T> MiruFieldFilter of(MiruFieldType fieldType, String fieldName, Collection<T> values) {
+    public static MiruFieldFilter of(MiruFieldType fieldType, String fieldName, Collection<String> values) {
         List<MiruValue> miruValues = Lists.newArrayListWithCapacity(values.size());
         for (Object value : values) {
             miruValues.add(new MiruValue(value.toString()));
