@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.plugin.index;
 
+import com.google.common.base.Preconditions;
 import com.google.common.primitives.Bytes;
 import com.jivesoftware.os.filer.io.ByteArrayFiler;
 import com.jivesoftware.os.filer.io.FilerIO;
@@ -89,7 +90,8 @@ public class MiruTermComposer {
                     parts[i] = decomposeBytes(compositeFieldDefinitions[i], termBytes, (int) filer.getFilePointer(), length);
                     filer.skip(length);
                 } else {
-                    parts[i] = decomposeBytes(compositeFieldDefinitions[i], termBytes, (int) filer.getFilePointer(), (int) (filer.length() - filer.getFilePointer()));
+                    parts[i] = decomposeBytes(compositeFieldDefinitions[i], termBytes, (int) filer.getFilePointer(),
+                        (int) (filer.length() - filer.getFilePointer()));
                 }
             }
             return parts;
@@ -158,11 +160,19 @@ public class MiruTermComposer {
     public byte[] prefixLowerInclusive(MiruSchema schema, MiruFieldDefinition fieldDefinition, StackBuffer stackBuffer, String... parts) throws Exception {
         MiruFieldDefinition[] compositeFieldDefinitions = schema.getCompositeFieldDefinitions(fieldDefinition.fieldId);
         if (compositeFieldDefinitions != null) {
+            Preconditions.checkArgument(parts.length <= compositeFieldDefinitions.length,
+                "Provided more value parts than we have composite field definitions");
             //TODO optimize
-            byte[] headBytes = compose(schema, fieldDefinition, stackBuffer, parts, 0, parts.length - 1);
-            byte[] tailBytes = prefixLowerInclusiveBytes(fieldDefinition, parts[parts.length - 1]);
-            return Bytes.concat(headBytes, tailBytes);
+            int tailIndex = Math.min(compositeFieldDefinitions.length - 1, parts.length);
+            byte[] headBytes = compose(schema, fieldDefinition, stackBuffer, parts, 0, tailIndex);
+            if (parts.length == compositeFieldDefinitions.length) {
+                byte[] tailBytes = prefixLowerInclusiveBytes(fieldDefinition, parts[parts.length - 1]);
+                return Bytes.concat(headBytes, tailBytes);
+            } else {
+                return headBytes;
+            }
         } else {
+            Preconditions.checkArgument(parts.length == 1, "Provided multiple value parts for a non-composite field");
             return prefixLowerInclusiveBytes(fieldDefinition, parts[0]);
         }
     }
@@ -182,11 +192,19 @@ public class MiruTermComposer {
     public byte[] prefixUpperExclusive(MiruSchema schema, MiruFieldDefinition fieldDefinition, StackBuffer stackBuffer, String... parts) throws Exception {
         MiruFieldDefinition[] compositeFieldDefinitions = schema.getCompositeFieldDefinitions(fieldDefinition.fieldId);
         if (compositeFieldDefinitions != null) {
+            Preconditions.checkArgument(parts.length <= compositeFieldDefinitions.length,
+                "Provided more value parts than we have composite field definitions");
             //TODO optimize
-            byte[] headBytes = compose(schema, fieldDefinition, stackBuffer, parts, 0, parts.length - 1);
-            byte[] tailBytes = prefixUpperExclusiveBytes(fieldDefinition, parts[parts.length - 1]);
-            return Bytes.concat(headBytes, tailBytes);
+            int tailIndex = Math.min(compositeFieldDefinitions.length - 1, parts.length);
+            byte[] headBytes = compose(schema, fieldDefinition, stackBuffer, parts, 0, tailIndex);
+            if (parts.length == compositeFieldDefinitions.length) {
+                byte[] tailBytes = prefixUpperExclusiveBytes(fieldDefinition, parts[parts.length - 1]);
+                return Bytes.concat(headBytes, tailBytes);
+            } else {
+                return headBytes;
+            }
         } else {
+            Preconditions.checkArgument(parts.length == 1, "Provided multiple value parts for a non-composite field");
             return prefixUpperExclusiveBytes(fieldDefinition, parts[0]);
         }
     }
