@@ -133,19 +133,6 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
     }
 
     @Override
-    public MiruInvertedIndex<BM, IBM> get(int fieldId, MiruTermId termId, int considerIfIndexIdGreaterThanN) throws Exception {
-        MiruDeltaInvertedIndex.Delta<IBM> delta = fieldIndexDeltas[fieldId].get(termId);
-        if (delta == null) {
-            delta = new MiruDeltaInvertedIndex.Delta<>();
-            MiruDeltaInvertedIndex.Delta<IBM> existing = fieldIndexDeltas[fieldId].putIfAbsent(termId, delta);
-            if (existing != null) {
-                delta = existing;
-            }
-        }
-        return new MiruDeltaInvertedIndex<>(bitmaps, trackError, backingFieldIndex.get(fieldId, termId, considerIfIndexIdGreaterThanN), delta);
-    }
-
-    @Override
     public MiruInvertedIndex<BM, IBM> getOrCreateInvertedIndex(int fieldId, MiruTermId termId) throws Exception {
         return getOrAllocate(fieldId, termId);
     }
@@ -209,7 +196,12 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
     }
 
     @Override
-    public void multiTxIndex(int fieldId, MiruTermId[] termIds, StackBuffer stackBuffer, MultiIndexTx<IBM> indexTx) throws Exception {
+    public void multiTxIndex(int fieldId,
+        MiruTermId[] termIds,
+        int considerIfLastIdGreaterThanN,
+        StackBuffer stackBuffer,
+        MultiIndexTx<IBM> indexTx) throws Exception {
+
         // we are destructive of terms, so make a copy
         MiruTermId[] copy = new MiruTermId[termIds.length];
         System.arraycopy(termIds, 0, copy, 0, termIds.length);
@@ -220,7 +212,8 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
                 MiruDeltaInvertedIndex.Delta<IBM> delta = fieldIndexDeltas[fieldId].get(termIds[i]);
                 if (delta != null) {
                     MiruInvertedIndex<BM, IBM> backingIndex = backingFieldIndex.get(fieldId, termIds[i]);
-                    Optional<BM> index = MiruDeltaInvertedIndex.overlayDelta(bitmaps, delta, backingIndex, trackError, stackBuffer);
+                    Optional<BM> index = MiruDeltaInvertedIndex.overlayDelta(bitmaps, delta, backingIndex, considerIfLastIdGreaterThanN,
+                        trackError, stackBuffer);
                     if (index.isPresent()) {
                         indexTx.tx(i, index.get(), null, -1, stackBuffer);
                     }
@@ -233,7 +226,7 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
         }
 
         // the remaining termIds have no delta overlay
-        backingFieldIndex.multiTxIndex(fieldId, termIds, stackBuffer, indexTx);
+        backingFieldIndex.multiTxIndex(fieldId, termIds, considerIfLastIdGreaterThanN, stackBuffer, indexTx);
     }
 
     @Override

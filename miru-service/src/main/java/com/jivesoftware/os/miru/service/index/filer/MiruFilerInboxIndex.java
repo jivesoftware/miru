@@ -40,7 +40,6 @@ public class MiruFilerInboxIndex<BM extends IBM, IBM> implements MiruInboxIndex<
             trackError,
             streamId.getBytes(),
             store,
-            -1,
             stripingLocksProvider.lock(streamId, 0));
     }
 

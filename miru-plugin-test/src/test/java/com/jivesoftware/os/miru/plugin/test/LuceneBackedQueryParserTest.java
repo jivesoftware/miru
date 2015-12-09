@@ -46,10 +46,10 @@ public class LuceneBackedQueryParserTest {
     };
 
     private final MiruSchema schema = new MiruSchema.Builder("test", 0)
-        .setFieldDefinitions(new MiruFieldDefinition[]{
-        new MiruFieldDefinition(0, "a", MiruFieldDefinition.Type.multiTerm, MiruFieldDefinition.Prefix.WILDCARD),
-        new MiruFieldDefinition(1, "b", MiruFieldDefinition.Type.multiTerm, MiruFieldDefinition.Prefix.WILDCARD)
-    })
+        .setFieldDefinitions(new MiruFieldDefinition[] {
+            new MiruFieldDefinition(0, "a", MiruFieldDefinition.Type.multiTerm, MiruFieldDefinition.Prefix.WILDCARD),
+            new MiruFieldDefinition(1, "b", MiruFieldDefinition.Type.multiTerm, MiruFieldDefinition.Prefix.WILDCARD)
+        })
         .build();
 
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
@@ -63,7 +63,7 @@ public class LuceneBackedQueryParserTest {
     public void setUp() throws Exception {
         fieldIndex = new TestFieldIndex(2);
         @SuppressWarnings("unchecked")
-        MiruFieldIndex<RoaringBitmap, RoaringBitmap>[] indexes = (MiruFieldIndex<RoaringBitmap, RoaringBitmap>[]) new MiruFieldIndex[]{
+        MiruFieldIndex<RoaringBitmap, RoaringBitmap>[] indexes = (MiruFieldIndex<RoaringBitmap, RoaringBitmap>[]) new MiruFieldIndex[] {
             fieldIndex,
             null,
             null,
@@ -158,11 +158,6 @@ public class LuceneBackedQueryParserTest {
         }
 
         @Override
-        public MiruInvertedIndex<RoaringBitmap, RoaringBitmap> get(int fieldId, MiruTermId termId, int considerIfIndexIdGreaterThanN) throws Exception {
-            return new TestInvertedIndex(fieldId, termId);
-        }
-
-        @Override
         public void streamTermIdsForField(int fieldId, List<KeyRange> ranges, TermIdStream termIdStream, StackBuffer stackBuffer) throws Exception {
             for (KeyRange range : ranges) {
                 MiruTermId fromKey = new MiruTermId(range.getStartInclusiveKey());
@@ -186,8 +181,21 @@ public class LuceneBackedQueryParserTest {
         }
 
         @Override
-        public void multiTxIndex(int fieldId, MiruTermId[] termIds, StackBuffer stackBuffer, MultiIndexTx<RoaringBitmap> indexTx) throws Exception {
-            throw new UnsupportedOperationException("Nope");
+        public void multiTxIndex(int fieldId,
+            MiruTermId[] termIds,
+            int considerIfLastIdGreaterThanN,
+            StackBuffer stackBuffer,
+            MultiIndexTx<RoaringBitmap> indexTx) throws Exception {
+            NavigableMap<MiruTermId, RoaringBitmap> terms = indexes[fieldId];
+            for (int i = 0; i < termIds.length; i++) {
+                MiruTermId termId = termIds[i];
+                if (termId != null) {
+                    RoaringBitmap bitmap = terms.get(termId);
+                    if (bitmap != null) {
+                        indexTx.tx(i, bitmap, null, -1, stackBuffer);
+                    }
+                }
+            }
         }
 
         @Override
@@ -241,8 +249,13 @@ public class LuceneBackedQueryParserTest {
             }
 
             @Override
-            public Optional<RoaringBitmap> getIndexUnsafe(StackBuffer stackBuffer) throws Exception {
-                return getIndex(stackBuffer);
+            public Optional<RoaringBitmap> getIndex(int considerIfLastIdGreaterThanN, StackBuffer stackBuffer) throws Exception {
+                RoaringBitmap bitmap = indexes[fieldId].get(termId);
+                if (bitmap != null && !bitmap.isEmpty() && bitmap.getReverseIntIterator().next() > considerIfLastIdGreaterThanN) {
+                    return Optional.of(bitmap);
+                } else {
+                    return Optional.absent();
+                }
             }
 
             @Override

@@ -36,24 +36,34 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
 
     @Override
     public Optional<BM> getIndex(StackBuffer stackBuffer) throws Exception {
-        return overlayDelta(bitmaps, delta, backingIndex, trackError, stackBuffer);
+        return overlayDelta(bitmaps, delta, backingIndex, -1, trackError, stackBuffer);
+    }
+
+    @Override
+    public Optional<BM> getIndex(int considerIfLastIdGreaterThanN, StackBuffer stackBuffer) throws Exception {
+        return overlayDelta(bitmaps, delta, backingIndex, considerIfLastIdGreaterThanN, trackError, stackBuffer);
     }
 
     public static <BM extends IBM, IBM> Optional<BM> overlayDelta(MiruBitmaps<BM, IBM> bitmaps,
         Delta<IBM> delta,
         MiruInvertedIndex<BM, IBM> backingIndex,
+        int considerIfLastIdGreaterThanN,
         TrackError trackError,
         StackBuffer stackBuffer) throws Exception {
 
+        int lastId = -1;
         boolean replaced;
         IBM or;
         IBM andNot;
         synchronized (delta) {
+            lastId = delta.lastId;
             replaced = delta.replaced;
             or = delta.or;
             andNot = delta.andNot;
         }
-        Optional<BM> index = replaced ? Optional.<BM>absent() : backingIndex.getIndex(stackBuffer);
+
+        int backingLastIdGreaterThanN = (lastId > considerIfLastIdGreaterThanN) ? -1 : considerIfLastIdGreaterThanN;
+        Optional<BM> index = replaced ? Optional.<BM>absent() : backingIndex.getIndex(backingLastIdGreaterThanN, stackBuffer);
         if (index.isPresent()) {
             BM got = index.get();
             if (bitmaps.isEmpty(got)) {
@@ -68,7 +78,7 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
                     " or:" + (or != null ? bitmaps.cardinality(or) : -1));
             }
             return Optional.of(got);
-        } else if (or != null) {
+        } else if (or != null && (lastId > considerIfLastIdGreaterThanN)) {
             return Optional.of(bitmaps.copy(or));
         } else {
             return Optional.absent();
@@ -110,11 +120,6 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     }
 
     @Override
-    public Optional<BM> getIndexUnsafe(StackBuffer stackBuffer) throws Exception {
-        return getIndex(stackBuffer);
-    }
-
-    @Override
     public void replaceIndex(IBM index, int setLastId, StackBuffer stackBuffer) throws Exception {
         synchronized (delta) {
             delta.replaced = true;
@@ -130,7 +135,6 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
             return;
         }
         synchronized (delta) {
-
             BM container;
             if (delta.or != null) {
                 container = bitmaps.append(delta.or, ids);
@@ -139,7 +143,6 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
             }
             delta.or = container;
             delta.lastId = Math.max(delta.lastId, ids[ids.length - 1]);
-
         }
     }
 
@@ -201,10 +204,7 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
 
     @Override
     public int lastId(StackBuffer stackBuffer) throws Exception {
-        if (delta.lastId < 0) {
-            delta.lastId = backingIndex.lastId(stackBuffer);
-        }
-        return delta.lastId;
+        return Math.max(delta.lastId, backingIndex.lastId(stackBuffer));
     }
 
     @Override

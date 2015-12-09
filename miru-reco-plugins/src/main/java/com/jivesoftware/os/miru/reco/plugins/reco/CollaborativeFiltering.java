@@ -95,7 +95,7 @@ public class CollaborativeFiltering {
         }, stackBuffer);
 
         log.debug("allField1Activity: fieldId={}", fieldId1);
-        FieldMultiTermTxIndex<BM, IBM> field1MultiTermTxIndex = new FieldMultiTermTxIndex<>(primaryFieldIndex, fieldId1);
+        FieldMultiTermTxIndex<BM, IBM> field1MultiTermTxIndex = new FieldMultiTermTxIndex<>(primaryFieldIndex, fieldId1, -1);
         field1MultiTermTxIndex.setTermIds(distinctParents.toArray(new MiruTermId[distinctParents.size()]));
         BM allField1Activity = bitmaps.orMultiTx(field1MultiTermTxIndex, stackBuffer);
 
@@ -158,7 +158,7 @@ public class CollaborativeFiltering {
         }
 
         BM[] contributorBitmaps = bitmaps.createArrayOf(contributorTermCounts.length);
-        FieldMultiTermTxIndex<BM, IBM> field2MultiTermTxIndex = new FieldMultiTermTxIndex<>(primaryFieldIndex, fieldId2);
+        FieldMultiTermTxIndex<BM, IBM> field2MultiTermTxIndex = new FieldMultiTermTxIndex<>(primaryFieldIndex, fieldId2, -1);
         field2MultiTermTxIndex.setTermIds(contributorTermIds);
         bitmaps.multiTx(field2MultiTermTxIndex, (index, contributorActivity) -> {
             if (bitmaps.supportsInPlace()) {

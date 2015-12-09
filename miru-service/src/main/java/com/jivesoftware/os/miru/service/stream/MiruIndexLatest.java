@@ -53,7 +53,7 @@ public class MiruIndexLatest<BM extends IBM, IBM> {
                         // ["doc"] -> "d1", "d2", "d3", "d4" -> [0, 1(d1), 0, 0, 1(d2), 0, 0, 1(d3), 0, 0, 1(d4)]
                         for (MiruTermId fieldValue : fieldValues) {
                             MiruInvertedIndex<BM, IBM> fieldValueIndex = allFieldIndex.get(fieldDefinition.fieldId, fieldValue);
-                            Optional<BM> optionalIndex = fieldValueIndex.getIndexUnsafe(stackBuffer);
+                            Optional<BM> optionalIndex = fieldValueIndex.getIndex(stackBuffer);
                             if (optionalIndex.isPresent()) {
                                 log.inc("count>andNot", 1);
                                 log.inc("count>andNot", 1, tenantId.toString());

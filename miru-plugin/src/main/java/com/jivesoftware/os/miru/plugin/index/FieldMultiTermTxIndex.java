@@ -10,11 +10,14 @@ public class FieldMultiTermTxIndex<BM extends IBM, IBM> implements MiruMultiTxIn
 
     private final MiruFieldIndex<BM, IBM> fieldIndex;
     private final int fieldId;
+    private final int considerIfLastIdGreaterThanN;
+
     private MiruTermId[] termIds;
 
-    public FieldMultiTermTxIndex(MiruFieldIndex<BM, IBM> fieldIndex, int fieldId) {
+    public FieldMultiTermTxIndex(MiruFieldIndex<BM, IBM> fieldIndex, int fieldId, int considerIfLastIdGreaterThanN) {
         this.fieldIndex = fieldIndex;
         this.fieldId = fieldId;
+        this.considerIfLastIdGreaterThanN = considerIfLastIdGreaterThanN;
     }
 
     public void setTermIds(MiruTermId[] termIds) {
@@ -26,6 +29,6 @@ public class FieldMultiTermTxIndex<BM extends IBM, IBM> implements MiruMultiTxIn
         if (termIds == null) {
             throw new IllegalStateException("Terms need to be set before invoking txIndex");
         }
-        fieldIndex.multiTxIndex(fieldId, termIds, stackBuffer, tx);
+        fieldIndex.multiTxIndex(fieldId, termIds, considerIfLastIdGreaterThanN, stackBuffer, tx);
     }
 }
