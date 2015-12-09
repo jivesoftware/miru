@@ -7,6 +7,7 @@ package com.jivesoftware.os.miru.reco.plugins;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.miru.analytics.plugins.analytics.Analytics;
 import com.jivesoftware.os.miru.api.MiruActorId;
@@ -22,6 +23,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
+import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.miru.bitmaps.roaring5.buffer.MiruBitmapsRoaringBuffer;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
@@ -185,7 +187,7 @@ public class MiruTrendingNGTest {
                         timeRange,
                         "obj",
                         MiruFilter.NO_FILTER,
-                        Arrays.asList("0", "2", "8", "-1"))),
+                        Lists.transform(Arrays.asList("0", "2", "8", "-1"), MiruValue::new))),
                     10),
                 MiruSolutionLogLevel.INFO);
             MiruResponse<TrendingAnswer> trendingResult = injectable.scoreTrending(request);

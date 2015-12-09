@@ -76,10 +76,10 @@ public class Distincts {
                 List<KeyRange> ranges = null;
                 if (query.prefixes != null && !query.prefixes.isEmpty()) {
                     ranges = Lists.newArrayListWithCapacity(query.prefixes.size());
-                    for (String prefix : query.prefixes) {
+                    for (MiruValue prefix : query.prefixes) {
                         ranges.add(new KeyRange(
-                            termComposer.prefixLowerInclusive(schema, fieldDefinition, stackBuffer, prefix),
-                            termComposer.prefixUpperExclusive(schema, fieldDefinition, stackBuffer, prefix)));
+                            termComposer.prefixLowerInclusive(schema, fieldDefinition, stackBuffer, prefix.parts),
+                            termComposer.prefixUpperExclusive(schema, fieldDefinition, stackBuffer, prefix.parts)));
                     }
                 }
 
@@ -91,8 +91,8 @@ public class Distincts {
                 if (query.prefixes != null) {
                     prefixesAsBytes = new byte[query.prefixes.size()][];
                     int i = 0;
-                    for (String prefix : query.prefixes) {
-                        prefixesAsBytes[i++] = termComposer.prefixLowerInclusive(schema, fieldDefinition,  stackBuffer, prefix);
+                    for (MiruValue prefix : query.prefixes) {
+                        prefixesAsBytes[i++] = termComposer.prefixLowerInclusive(schema, fieldDefinition,  stackBuffer, prefix.parts);
                     }
                 } else {
                     prefixesAsBytes = new byte[0][];

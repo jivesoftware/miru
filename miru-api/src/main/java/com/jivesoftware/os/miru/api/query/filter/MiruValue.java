@@ -2,12 +2,13 @@ package com.jivesoftware.os.miru.api.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.io.Serializable;
 import java.util.Arrays;
 
 /**
  *
  */
-public class MiruValue {
+public class MiruValue implements Serializable {
 
     public final String[] parts;
 

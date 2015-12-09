@@ -201,9 +201,9 @@ public class MiruCollaborativeFilterNGTest {
                     new MiruTimeRange(0, time.get() + 1),
                     null,
                     myActivityFilter,
-                    "doc", "doc", "doc",
-                    "user", "user", "user",
-                    "doc", "doc",
+                    "doc",
+                    "user",
+                    "doc",
                     scorableFilter,
                     10),
                 MiruSolutionLogLevel.INFO));

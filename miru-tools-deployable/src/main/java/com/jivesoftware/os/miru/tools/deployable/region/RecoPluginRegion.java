@@ -133,7 +133,7 @@ public class RecoPluginRegion implements MiruPageRegion<Optional<RecoPluginRegio
                         timeRange,
                         input.recommendField,
                         filterStringUtil.parse(input.removeDistinctsFilter),
-                        input.removeDistinctsPrefixes);
+                        filterStringUtil.buildFieldPrefixes(input.removeDistinctsPrefixes));
                 }
 
                 MiruFilter constraintsFilter = filterStringUtil.parse(input.constraintsFilter);
@@ -155,9 +155,9 @@ public class RecoPluginRegion implements MiruPageRegion<Optional<RecoPluginRegio
                                         timeRange,
                                         removeDistinctsQuery,
                                         constraintsFilter,
-                                        input.baseField, input.baseField, input.baseField,
-                                        input.contributorField, input.contributorField, input.contributorField,
-                                        input.recommendField, input.recommendField,
+                                        input.baseField,
+                                        input.contributorField,
+                                        input.recommendField,
                                         scorableFilter,
                                         100),
                                     MiruSolutionLogLevel.valueOf(input.logLevel)),
