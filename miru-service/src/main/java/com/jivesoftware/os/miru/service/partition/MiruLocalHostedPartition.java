@@ -82,7 +82,8 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
     private final ScheduledExecutorService scheduledSipExecutor;
     private final ExecutorService rebuildWALExecutors;
     private final ExecutorService sipIndexExecutor;
-    private final ExecutorService mergeExecutor;
+    private final ExecutorService persistentMergeExecutor;
+    private final ExecutorService transientMergeExecutor;
     private final int rebuildIndexerThreads;
     private final MiruIndexRepairs indexRepairs;
     private final MiruIndexer<BM, IBM> indexer;
@@ -135,7 +136,8 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
         ScheduledExecutorService scheduledSipExecutor,
         ExecutorService rebuildWALExecutors,
         ExecutorService sipIndexExecutor,
-        ExecutorService mergeExecutor,
+        ExecutorService persistentMergeExecutor,
+        ExecutorService transientMergeExecutor,
         int rebuildIndexerThreads,
         MiruIndexRepairs indexRepairs,
         MiruIndexer<BM, IBM> indexer,
@@ -161,7 +163,8 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
         this.scheduledSipExecutor = scheduledSipExecutor;
         this.rebuildWALExecutors = rebuildWALExecutors;
         this.sipIndexExecutor = sipIndexExecutor;
-        this.mergeExecutor = mergeExecutor;
+        this.persistentMergeExecutor = persistentMergeExecutor;
+        this.transientMergeExecutor = transientMergeExecutor;
         this.rebuildIndexerThreads = rebuildIndexerThreads;
         this.indexRepairs = indexRepairs;
         this.indexer = indexer;
@@ -517,7 +520,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                     MiruContext<BM, IBM, S> toContext;
                     MiruContext<BM, IBM, S> fromContext = accessor.transientContext.get();
                     synchronized (fromContext.writeLock) {
-                        handle.merge(mergeExecutor, accessor.transientContext, transientMergeChits, trackError);
+                        handle.merge(transientMergeExecutor, accessor.transientContext, transientMergeChits, trackError);
                         toContext = contextFactory.copy(bitmaps, fromContext.schema, coord, fromContext, MiruBackingStorage.disk, stackBuffer);
                         contextFactory.saveSchema(coord, fromContext.schema);
                     }
@@ -685,7 +688,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                                         MiruPartitionAccessor<BM, IBM, C, S> online = rebuilding.copyToState(MiruPartitionState.online);
                                         MiruPartitionAccessor<BM, IBM, C, S> updated = updatePartition(rebuilding, online);
                                         if (updated != null) {
-                                            updated.merge(mergeExecutor, rebuilding.transientContext, transientMergeChits, trackError);
+                                            updated.merge(transientMergeExecutor, rebuilding.transientContext, transientMergeChits, trackError);
                                             trackError.reset();
                                         }
                                     } else {
@@ -787,10 +790,10 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                         repair,
                         transientMergeChits,
                         rebuildIndexExecutor,
-                        mergeExecutor,
+                        transientMergeExecutor,
                         trackError,
                         stackBuffer);
-                    accessor.merge(mergeExecutor, accessor.transientContext, transientMergeChits, trackError);
+                    accessor.merge(transientMergeExecutor, accessor.transientContext, transientMergeChits, trackError);
                     accessor.setRebuildCursor(nextCursor);
                     if (nextCursor.getSipCursor() != null) {
                         accessor.setSip(accessor.transientContext, nextCursor.getSipCursor(), stackBuffer);
@@ -853,6 +856,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
         private void checkObsolete(MiruPartitionAccessor<BM, IBM, C, S> accessor) throws Exception {
             if (checkedObsolete.compareAndSet(false, true)) {
                 if (contextFactory.checkObsolete(coord)) {
+                    log.warn("Found obsolete context for {}", coord);
                     accessor.markObsolete();
                     return;
                 }
@@ -862,6 +866,8 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                 MiruSchema latestSchema = contextFactory.lookupLatestSchema(coord.tenantId);
                 MiruContext<BM, IBM, S> context = accessor.persistentContext.get();
                 if (!MiruSchema.checkEquals(latestSchema, context.schema)) {
+                    log.warn("Found obsolete schema for {}: {} {} vs {} {}",
+                        coord, latestSchema.getName(), latestSchema.getVersion(), context.schema.getName(), context.schema.getVersion());
                     accessor.markObsolete();
                 }
             }
@@ -1013,7 +1019,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
             }
 
             if (!accessor.hasOpenWriters()) {
-                accessor.merge(mergeExecutor, accessor.persistentContext, persistentMergeChits, trackError);
+                accessor.merge(persistentMergeExecutor, accessor.persistentContext, persistentMergeChits, trackError);
             }
 
             if (accessorRef.get() == accessor) {
@@ -1034,7 +1040,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                 repair,
                 persistentMergeChits,
                 sipIndexExecutor,
-                mergeExecutor,
+                persistentMergeExecutor,
                 trackError,
                 stackBuffer);
 
