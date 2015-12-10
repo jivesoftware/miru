@@ -634,7 +634,11 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                     contextFactory.releaseCaches(accessor.persistentContext.get());
                 }
             } else if (accessor.state != MiruPartitionState.offline) {
-                close();
+                if (accessor.transientContext.isPresent()) {
+                    log.info("Partition {} is idle but still has a transient context, closure will be deferred", coord);
+                } else {
+                    close();
+                }
             }
         }
 

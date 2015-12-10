@@ -438,7 +438,7 @@ public class MiruLocalHostedPartitionTest {
         waitForRef(bootstrapRunnable).run(); // enters bootstrap
         waitForRef(rebuildIndexRunnable).run(); // enters rebuilding
 
-        setActive(false);
+        setDestroyed(); // need to destroy in order to tear down
         waitForRef(bootstrapRunnable).run();
 
         assertEquals(localHostedPartition.getState(), MiruPartitionState.offline);
@@ -447,6 +447,30 @@ public class MiruLocalHostedPartitionTest {
         try (MiruRequestHandle queryHandle = localHostedPartition.acquireQueryHandle(stackBuffer)) {
             queryHandle.getRequestContext(); // throws exception
         }
+    }
+
+    @Test
+    public void testInactiveFinishesRebuilding() throws Exception {
+        MiruLocalHostedPartition<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSCursor, RCVSSipCursor> localHostedPartition =
+            getRoaringLocalHostedPartition();
+
+        setActive(true);
+        waitForRef(bootstrapRunnable).run(); // enters bootstrap
+        waitForRef(rebuildIndexRunnable).run(); // enters rebuilding
+
+        setActive(false); // won't go offline yet
+        assertEquals(localHostedPartition.getState(), MiruPartitionState.online);
+        assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.memory);
+
+        waitForRef(sipMigrateIndexRunnable).run();
+
+        assertEquals(localHostedPartition.getState(), MiruPartitionState.online);
+        assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.disk);
+
+        waitForRef(bootstrapRunnable).run(); // finally goes offline
+
+        assertEquals(localHostedPartition.getState(), MiruPartitionState.offline);
+        assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.disk);
     }
 
     @Test
@@ -530,6 +554,11 @@ public class MiruLocalHostedPartitionTest {
             refreshTimestamp -= topologyIsStaleAfterMillis * 2;
         }
         clusterRegistry.updateIngress(new MiruIngressUpdate(tenantId, partitionId, new RangeMinMax(), refreshTimestamp, false));
+        partitionEventHandler.thumpthump(host);
+    }
+
+    private void setDestroyed() throws Exception {
+        clusterRegistry.destroyPartition(tenantId, partitionId);
         partitionEventHandler.thumpthump(host);
     }
 
