@@ -793,7 +793,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                         transientMergeExecutor,
                         trackError,
                         stackBuffer);
-                    accessor.merge(transientMergeExecutor, accessor.transientContext, transientMergeChits, trackError);
+                    //accessor.merge(transientMergeExecutor, accessor.transientContext, transientMergeChits, trackError);
                     accessor.setRebuildCursor(nextCursor);
                     if (nextCursor.getSipCursor() != null) {
                         accessor.setSip(accessor.transientContext, nextCursor.getSipCursor(), stackBuffer);
