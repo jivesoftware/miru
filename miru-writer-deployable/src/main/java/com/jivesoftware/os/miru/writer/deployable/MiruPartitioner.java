@@ -82,6 +82,7 @@ public class MiruPartitioner {
                 partitionedActivities.put(largestPartitionIdAcrossAllWriters,
                     partitionedActivityFactory.begin(writerId, largestPartitionIdAcrossAllWriters, tenantId, latestIndex));
 
+                log.info("Cursor for {} is out of alignment: {}", tenantId, partitionCursor);
                 flushActivities(tenantId, largestPartitionIdAcrossAllWriters, latestIndex, true,
                     new PartitionedLists(Collections.emptyList(), partitionedActivities));
             } else {
@@ -117,6 +118,7 @@ public class MiruPartitioner {
             synchronized (locks.lock(tenantId, 0)) {
                 MiruPartitionCursor partitionCursor = partitionIdProvider.getCursor(tenantId, writerId);
                 if (partitionCursor.isMaxCapacity()) {
+                    log.info("Cursor for {} is at max capacity: {}", tenantId, partitionCursor);
                     end = new TenantAndPartition(tenantId, partitionCursor.getPartitionId());
                     partitionCursor = partitionIdProvider.nextCursor(tenantId, partitionCursor, writerId);
                     partitionRolloverOccurred = true;
