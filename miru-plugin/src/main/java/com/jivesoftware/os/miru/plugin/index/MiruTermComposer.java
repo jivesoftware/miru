@@ -163,10 +163,11 @@ public class MiruTermComposer {
             Preconditions.checkArgument(parts.length <= compositeFieldDefinitions.length,
                 "Provided more value parts than we have composite field definitions");
             //TODO optimize
-            int tailIndex = Math.min(compositeFieldDefinitions.length - 1, parts.length);
-            byte[] headBytes = compose(schema, fieldDefinition, stackBuffer, parts, 0, tailIndex);
+            int headUpperBound = Math.min(compositeFieldDefinitions.length - 1, parts.length);
+            byte[] headBytes = compose(schema, fieldDefinition, stackBuffer, parts, 0, headUpperBound);
             if (parts.length == compositeFieldDefinitions.length) {
-                byte[] tailBytes = prefixLowerInclusiveBytes(fieldDefinition, parts[parts.length - 1]);
+                int tailIndex = parts.length - 1;
+                byte[] tailBytes = prefixLowerInclusiveBytes(compositeFieldDefinitions[tailIndex], parts[tailIndex]);
                 return Bytes.concat(headBytes, tailBytes);
             } else {
                 return headBytes;
@@ -195,10 +196,11 @@ public class MiruTermComposer {
             Preconditions.checkArgument(parts.length <= compositeFieldDefinitions.length,
                 "Provided more value parts than we have composite field definitions");
             //TODO optimize
-            int tailIndex = Math.min(compositeFieldDefinitions.length - 1, parts.length);
-            byte[] headBytes = compose(schema, fieldDefinition, stackBuffer, parts, 0, tailIndex);
+            int headUpperBound = Math.min(compositeFieldDefinitions.length - 1, parts.length);
+            byte[] headBytes = compose(schema, fieldDefinition, stackBuffer, parts, 0, headUpperBound);
             if (parts.length == compositeFieldDefinitions.length) {
-                byte[] tailBytes = prefixUpperExclusiveBytes(fieldDefinition, parts[parts.length - 1]);
+                int tailIndex = parts.length - 1;
+                byte[] tailBytes = prefixUpperExclusiveBytes(compositeFieldDefinitions[tailIndex], parts[tailIndex]);
                 return Bytes.concat(headBytes, tailBytes);
             } else {
                 makeUpperExclusive(headBytes);
