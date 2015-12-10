@@ -250,7 +250,18 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
     public void writeActivity(MiruTenantId tenantId, MiruPartitionId partitionId, List<MiruPartitionedActivity> partitionedActivities) throws Exception {
         RangeMinMax partitionMinMax = activityWALWriter.write(tenantId, partitionId, partitionedActivities);
         walLookup.add(tenantId, partitionId);
-        clusterClient.updateIngress(new MiruIngressUpdate(tenantId, partitionId, partitionMinMax, System.currentTimeMillis(), false));
+
+        boolean onlyBoundaries = true;
+        for (MiruPartitionedActivity partitionedActivity : partitionedActivities) {
+            if (!partitionedActivity.type.isBoundaryType()) {
+                onlyBoundaries = false;
+                break;
+            }
+        }
+
+        if (!onlyBoundaries) {
+            clusterClient.updateIngress(new MiruIngressUpdate(tenantId, partitionId, partitionMinMax, System.currentTimeMillis(), false));
+        }
     }
 
     @Override
