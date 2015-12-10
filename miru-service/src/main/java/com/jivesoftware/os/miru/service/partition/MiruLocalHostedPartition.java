@@ -854,6 +854,10 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
         private final AtomicBoolean checkedObsolete = new AtomicBoolean(false);
 
         private void checkObsolete(MiruPartitionAccessor<BM, IBM, C, S> accessor) throws Exception {
+            if (accessor.transientContext.isPresent()) {
+                return;
+            }
+
             if (checkedObsolete.compareAndSet(false, true)) {
                 if (contextFactory.checkObsolete(coord)) {
                     log.warn("Found obsolete context for {}", coord);
@@ -890,7 +894,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                     } else if (accessor.isCorrupt()) {
                         log.info("Forcing rebuild because context is corrupt for {}", coord);
                         forceRebuild = true;
-                    } else if (!accessor.state.isRebuilding() && accessor.isObsolete()) {
+                    } else if (!accessor.transientContext.isPresent() && accessor.isObsolete()) {
                         log.info("Forcing rebuild because context is obsolete for {}", coord);
                         forceRebuild = true;
                     } else if (firstSip.get()) {
