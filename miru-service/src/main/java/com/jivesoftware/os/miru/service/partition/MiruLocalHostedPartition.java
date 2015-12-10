@@ -890,7 +890,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                     } else if (accessor.isCorrupt()) {
                         log.info("Forcing rebuild because context is corrupt for {}", coord);
                         forceRebuild = true;
-                    } else if (accessor.isObsolete()) {
+                    } else if (!accessor.state.isRebuilding() && accessor.isObsolete()) {
                         log.info("Forcing rebuild because context is obsolete for {}", coord);
                         forceRebuild = true;
                     } else if (firstSip.get()) {
