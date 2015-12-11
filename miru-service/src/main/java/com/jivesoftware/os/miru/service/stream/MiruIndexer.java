@@ -61,11 +61,11 @@ public class MiruIndexer<BM extends IBM, IBM> {
         final int numActivities = internalActivityAndIds.size();
         final int partitionSize = (numActivities + numPartitions - 1) / numPartitions;
 
-        StackBuffer stackBuffer = new StackBuffer();
         List<Future<?>> internFutures = new ArrayList<>(numPartitions);
         for (int i = 0; i < activityAndIds.size(); i += partitionSize) {
             final int startOfSubList = i;
             internFutures.add(indexExecutor.submit(() -> {
+                StackBuffer stackBuffer = new StackBuffer();
                 context.activityInternExtern.intern(activityAndIds, startOfSubList, partitionSize, internalActivityAndIds, context.schema, stackBuffer);
                 return null;
             }));
@@ -99,6 +99,7 @@ public class MiruIndexer<BM extends IBM, IBM> {
 
         // 6. Update activity index
         otherFutures.add(indexExecutor.submit(() -> {
+            StackBuffer stackBuffer = new StackBuffer();
             context.activityIndex.set(internalActivityAndIds, stackBuffer);
             return null;
         }));
@@ -109,6 +110,7 @@ public class MiruIndexer<BM extends IBM, IBM> {
                 // repairs also unhide (remove from removal)
                 log.inc("count>remove", activityAndIds.size());
                 log.inc("count>remove", activityAndIds.size(), coord.tenantId.toString());
+                StackBuffer stackBuffer = new StackBuffer();
                 for (MiruActivityAndId<MiruActivity> activityAndId : activityAndIds) {
                     context.removalIndex.remove(activityAndId.id, stackBuffer);
                 }
@@ -120,6 +122,7 @@ public class MiruIndexer<BM extends IBM, IBM> {
         awaitFutures(otherFutures, "indexOther");
 
         // 9. Mark as ready
+        StackBuffer stackBuffer = new StackBuffer();
         context.activityIndex.ready(internalActivityAndIds.get(internalActivityAndIds.size() - 1).id, stackBuffer);
 
         log.debug("End: Index batch of {}", internalActivityAndIds.size());
