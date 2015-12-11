@@ -134,6 +134,7 @@ public class DistinctsPluginRegion implements MiruPageRegion<Optional<DistinctsP
                                     new DistinctsQuery(
                                         new MiruTimeRange(fromTime, toTime),
                                         input.field,
+                                        null,
                                         constraintsFilter,
                                         fieldTypes),
                                     MiruSolutionLogLevel.valueOf(input.logLevel)),

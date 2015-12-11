@@ -38,6 +38,7 @@ public class UniquesInjectable {
 
             DistinctsQuery distinctsQuery = new DistinctsQuery(uniquesQuery.timeRange,
                 uniquesQuery.gatherUniquesForField,
+                uniquesQuery.gatherDistinctParts,
                 uniquesQuery.constraintsFilter,
                 uniquesQuery.prefixes);
 

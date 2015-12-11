@@ -132,6 +132,7 @@ public class RecoPluginRegion implements MiruPageRegion<Optional<RecoPluginRegio
                     removeDistinctsQuery = new DistinctsQuery(
                         timeRange,
                         input.recommendField,
+                        null,
                         filterStringUtil.parse(input.removeDistinctsFilter),
                         filterStringUtil.buildFieldPrefixes(input.removeDistinctsPrefixes));
                 }

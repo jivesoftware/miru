@@ -1,10 +1,12 @@
 package com.jivesoftware.os.miru.reco.plugins.distincts;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.jivesoftware.os.filer.io.api.KeyRange;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
+import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruValue;
@@ -19,6 +21,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.List;
+import java.util.Set;
 
 /**
  *
@@ -48,7 +51,11 @@ public class Distincts {
 
         List<MiruValue> results = Lists.newArrayList();
         gatherDirect(bitmaps, requestContext, query, gatherBatchSize, solutionLog,
-            termId -> results.add(new MiruValue(termComposer.decompose(schema, fieldDefinition, stackBuffer, termId))));
+            termId -> {
+                String[] in = termComposer.decompose(schema, fieldDefinition, stackBuffer, termId);
+                String[] out = recomposeParts(query, in);
+                return results.add(new MiruValue(out));
+            });
 
         boolean resultsExhausted = query.timeRange.smallestTimestamp > requestContext.getTimeIndex().getLargestTimestamp();
         int collectedDistincts = results.size();
@@ -147,4 +154,42 @@ public class Distincts {
         }
         return true;
     }
+
+    public Set<MiruTermId> recomposeDistincts(MiruSchema schema,
+        MiruFieldDefinition fromFieldDefinition,
+        StackBuffer stackBuffer,
+        MiruTermComposer termComposer,
+        Set<MiruTermId> distinctTerms,
+        DistinctsQuery distinctsQuery) throws Exception {
+
+        int distinctFieldId = schema.getFieldId(distinctsQuery.gatherDistinctsForField);
+        if (distinctFieldId == fromFieldDefinition.fieldId
+            || distinctsQuery.gatherDistinctParts == null
+            || distinctsQuery.gatherDistinctParts.length == 0) {
+            return distinctTerms;
+        } else {
+            Set<MiruTermId> joinTerms = Sets.newHashSet();
+            MiruFieldDefinition distinctFieldDefinition = schema.getFieldDefinition(distinctFieldId);
+
+            for (MiruTermId term : distinctTerms) {
+                String[] in = termComposer.decompose(schema, distinctFieldDefinition, stackBuffer, term);
+                String[] out = recomposeParts(distinctsQuery, in);
+                joinTerms.add(termComposer.compose(schema, fromFieldDefinition, stackBuffer, out));
+            }
+
+            return joinTerms;
+        }
+    }
+
+    private String[] recomposeParts(DistinctsQuery query, String[] in) {
+        if (query.gatherDistinctParts == null || query.gatherDistinctParts.length == 0 || (in.length <= 1 && query.gatherDistinctParts.length == 1)) {
+            return in;
+        }
+        String[] out = new String[query.gatherDistinctParts.length];
+        for (int i = 0; i < query.gatherDistinctParts.length; i++) {
+            out[i] = in[query.gatherDistinctParts[i]];
+        }
+        return out;
+    }
+
 }

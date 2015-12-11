@@ -36,7 +36,6 @@ import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelper;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;

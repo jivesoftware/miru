@@ -295,6 +295,7 @@ public class RecoCorrectnessTest {
                     Collections.singletonList(new DistinctsQuery(
                         timeRange,
                         "parent",
+                        null,
                         MiruFilter.NO_FILTER,
                         Lists.transform(Lists.newArrayList(docTypes), MiruValue::new))),
                     10),

@@ -168,7 +168,7 @@ public class MiruDistinctsNGTest {
                 tenant1,
                 MiruActorId.NOT_PROVIDED,
                 MiruAuthzExpression.NOT_PROVIDED,
-                new DistinctsQuery(timeRange, fieldDefinition.name, MiruFilter.NO_FILTER, null),
+                new DistinctsQuery(timeRange, fieldDefinition.name, null, MiruFilter.NO_FILTER, null),
                 MiruSolutionLogLevel.INFO);
             MiruResponse<DistinctsAnswer> distinctsResult = injectable.gatherDistincts(request);
 
@@ -206,6 +206,7 @@ public class MiruDistinctsNGTest {
             MiruAuthzExpression.NOT_PROVIDED,
             new DistinctsQuery(timeRange,
                 fieldDefinition.name,
+                null,
                 MiruFilter.NO_FILTER,
                 Lists.transform(Lists.newArrayList(types), MiruValue::new)),
             MiruSolutionLogLevel.INFO);
@@ -250,6 +251,7 @@ public class MiruDistinctsNGTest {
             MiruAuthzExpression.NOT_PROVIDED,
             new DistinctsQuery(timeRange,
                 fieldDefinition.name,
+                null,
                 MiruFilter.NO_FILTER,
                 Lists.transform(Lists.newArrayList(wildcards), MiruValue::new)),
             MiruSolutionLogLevel.INFO);

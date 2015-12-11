@@ -16,6 +16,7 @@ public class UniquesQuery implements Serializable {
 
     public final MiruTimeRange timeRange;
     public final String gatherUniquesForField;
+    public final int[] gatherDistinctParts;
     public final MiruFilter constraintsFilter;
     public final List<MiruValue> prefixes;
 
@@ -23,8 +24,10 @@ public class UniquesQuery implements Serializable {
     public UniquesQuery(
         @JsonProperty("timeRange") MiruTimeRange timeRange,
         @JsonProperty("gatherUniquesForField") String gatherUniquesForField,
+        @JsonProperty("gatherDistinctParts") int[] gatherDistinctParts,
         @JsonProperty("constraints") MiruFilter constraintsFilter,
         @JsonProperty("prefixes") List<MiruValue> prefixes) {
+        this.gatherDistinctParts = gatherDistinctParts;
         Preconditions.checkArgument(!MiruTimeRange.ALL_TIME.equals(timeRange), "Requires an explicit time range");
         this.timeRange = Preconditions.checkNotNull(timeRange);
         this.gatherUniquesForField = Preconditions.checkNotNull(gatherUniquesForField);

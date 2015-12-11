@@ -5,7 +5,6 @@
  */
 package com.jivesoftware.os.miru.reco.plugins;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
@@ -186,6 +185,7 @@ public class MiruTrendingNGTest {
                     Collections.singletonList(new DistinctsQuery(
                         timeRange,
                         "obj",
+                        null,
                         MiruFilter.NO_FILTER,
                         Lists.transform(Arrays.asList("0", "2", "8", "-1"), MiruValue::new))),
                     10),
