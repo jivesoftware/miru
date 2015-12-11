@@ -8,8 +8,14 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.miru.plugin.MiruInterner;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.Random;
+import junit.framework.Assert;
 import org.testng.annotations.Test;
 
+import static com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition.Type.multiTerm;
+import static com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition.Type.singleTerm;
 import static org.testng.Assert.assertEquals;
 
 public class MiruTermComposerTest {
@@ -20,6 +26,43 @@ public class MiruTermComposerTest {
             return new MiruTermId(bytes);
         }
     };
+
+    @Test
+    public void testCompose() throws Exception {
+        MiruTermComposer termComposer = new MiruTermComposer(StandardCharsets.UTF_8, new MiruInterner<MiruTermId>(true) {
+            @Override
+            public MiruTermId create(byte[] bytes) {
+                return new MiruTermId(bytes);
+            }
+        });
+        MiruFieldDefinition.Prefix TYPED_PREFIX = new MiruFieldDefinition.Prefix(MiruFieldDefinition.Prefix.Type.numeric, 4, ' ');
+        MiruSchema SCHEMA = new MiruSchema.Builder("test", 1)
+            .setFieldDefinitions(new MiruFieldDefinition[] {
+                new MiruFieldDefinition(0, "context", singleTerm, TYPED_PREFIX),
+                new MiruFieldDefinition(1, "parent", singleTerm, TYPED_PREFIX),
+                new MiruFieldDefinition(2, "contextParent", singleTerm, MiruFieldDefinition.Prefix.WILDCARD)
+            })
+            .setComposite(ImmutableMap.of("contextParent", new String[] { "context", "parent" }))
+            .build();
+
+        Random r = new Random();
+        for (int i = 0; i < 100; i++) {
+            int type1 = r.nextInt(2);
+            long id1 = Math.abs(r.nextLong() % 10);
+            int type2 = r.nextInt(2);
+            long id2 = Math.abs(r.nextLong() % 10);
+            String[] partsIn = { type1 + " " + id1, type2 + " " + id2 };
+            MiruTermId composed = termComposer.compose(SCHEMA, SCHEMA.getFieldDefinition(2), new StackBuffer(), partsIn);
+            //System.out.println("composed: " + Arrays.toString(composed.getBytes()));
+            String[] partsOut = termComposer.decompose(SCHEMA, SCHEMA.getFieldDefinition(2), new StackBuffer(), composed);
+            //System.out.println("decomposed: " + Arrays.toString(partsOut));
+            Assert.assertTrue(Arrays.equals(partsIn, partsOut));
+            /*System.out.println("-----");
+            parts = termComposer.decompose(SCHEMA, SCHEMA.getFieldDefinition(12), new StackBuffer(),
+                new MiruTermId(new byte[] { 0, 0, 0, 6, 127, -1, -1, -2, 49, 55, -128, 0, 0, 109, 45, 49 }));
+            System.out.println("decomposed: " + Arrays.toString(parts));*/
+        }
+    }
 
     @Test
     public void testRawComposeDecompose() throws Exception {
