@@ -14,6 +14,7 @@ import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.rcvs.marshall.api.UtilLexMarshaller;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.util.Arrays;
 
 /**
  *
@@ -48,12 +49,23 @@ public class MiruTermComposer {
                 //TODO optimize
                 byte[] bytes = composeBytes(compositeFieldDefinitions[i].prefix, parts[offset + i]);
                 // all but last part are length prefixed
-                if (i < compositeFieldDefinitions.length - 1) {
+                if ((offset + i) < compositeFieldDefinitions.length - 1) {
                     FilerIO.writeInt(filer, bytes.length, "length", stackBuffer);
                 }
                 filer.write(bytes);
             }
-            return filer.getBytes();
+            byte[] bytes = filer.getBytes();
+
+            try {
+                String[] decomposed = decompose(schema, fieldDefinition, stackBuffer, new MiruTermId(bytes));
+                if (!Arrays.equals(parts, decomposed)) {
+                    LOG.warn("Composition mismatch, {} != {}", Arrays.toString(parts), Arrays.toString(decomposed));
+                }
+            } catch (Exception e) {
+                LOG.warn("Composition exception", e);
+            }
+
+            return bytes;
         } else {
             return composeBytes(fieldDefinition.prefix, parts[offset]);
         }
