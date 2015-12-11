@@ -182,12 +182,12 @@ public class MiruTrendingNGTest {
                     32,
                     filter,
                     "obj",
-                    Collections.singletonList(new DistinctsQuery(
+                    Collections.singletonList(Collections.singletonList(new DistinctsQuery(
                         timeRange,
                         "obj",
                         null,
                         MiruFilter.NO_FILTER,
-                        Lists.transform(Arrays.asList("0", "2", "8", "-1"), MiruValue::new))),
+                        Lists.transform(Arrays.asList("0", "2", "8", "-1"), MiruValue::new)))),
                     10),
                 MiruSolutionLogLevel.INFO);
             MiruResponse<TrendingAnswer> trendingResult = injectable.scoreTrending(request);

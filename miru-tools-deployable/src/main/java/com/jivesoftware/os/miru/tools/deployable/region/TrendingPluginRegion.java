@@ -153,12 +153,12 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
                                         input.buckets,
                                         constraintsFilter,
                                         input.field,
-                                        Collections.singletonList(new DistinctsQuery(
+                                        Collections.singletonList(Collections.singletonList(new DistinctsQuery(
                                             timeRange,
                                             input.field,
                                             null,
                                             distinctsFilter,
-                                            filterStringUtil.buildFieldPrefixes(input.fieldPrefixes))),
+                                            filterStringUtil.buildFieldPrefixes(input.fieldPrefixes)))),
                                         100),
                                     MiruSolutionLogLevel.valueOf(input.logLevel)),
                                 TrendingConstants.TRENDING_PREFIX + TrendingConstants.CUSTOM_QUERY_ENDPOINT, MiruResponse.class,

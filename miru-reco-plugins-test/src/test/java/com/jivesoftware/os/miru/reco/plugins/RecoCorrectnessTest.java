@@ -292,12 +292,12 @@ public class RecoCorrectnessTest {
                     27,
                     constraintsFilter,
                     "parent",
-                    Collections.singletonList(new DistinctsQuery(
+                    Collections.singletonList(Collections.singletonList(new DistinctsQuery(
                         timeRange,
                         "parent",
                         null,
                         MiruFilter.NO_FILTER,
-                        Lists.transform(Lists.newArrayList(docTypes), MiruValue::new))),
+                        Lists.transform(Lists.newArrayList(docTypes), MiruValue::new)))),
                     10),
                 MiruSolutionLogLevel.INFO));
 
