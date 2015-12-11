@@ -68,12 +68,12 @@ td.balancer-online {
 }
 
 td.balancer-obsolete {
-    background-color: pink;
+    background-color: cyan;
     color: black;
 }
 
 td.balancer-upgrading {
-    background-color: cyan;
+    background-color: pink;
     color: black;
 }
 
