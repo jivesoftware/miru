@@ -54,23 +54,7 @@ public class MiruTermComposer {
                 }
                 filer.write(bytes);
             }
-            byte[] bytes = filer.getBytes();
-
-            try {
-                String[] decomposed = decompose(schema, fieldDefinition, stackBuffer, new MiruTermId(bytes));
-                if (!Arrays.equals(parts, decomposed)) {
-                    LOG.warn("Composition mismatch, {} != {}", Arrays.toString(parts), Arrays.toString(decomposed));
-                    for (int i = 0; i < length; i++) {
-                        //TODO optimize
-                        byte[] bytes2 = composeBytes(compositeFieldDefinitions[i].prefix, parts[offset + i]);
-                        LOG.info("Part {} = {} length {}", i, Arrays.toString(bytes2), bytes2.length);
-                    }
-                }
-            } catch (Exception e) {
-                LOG.warn("Composition exception", e);
-            }
-
-            return bytes;
+            return filer.getBytes();
         } else {
             return composeBytes(fieldDefinition.prefix, parts[offset]);
         }
