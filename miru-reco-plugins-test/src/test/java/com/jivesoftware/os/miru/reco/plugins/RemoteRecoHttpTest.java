@@ -130,12 +130,12 @@ public class RemoteRecoHttpTest {
                         32,
                         constraintsFilter,
                         "parent",
-                        Collections.singletonList(new DistinctsQuery(
+                        Collections.singletonList(Collections.singletonList(new DistinctsQuery(
                             timeRange,
                             "parent",
                             null,
                             MiruFilter.NO_FILTER,
-                            Lists.transform(Arrays.asList("102", "2", "38"), MiruValue::new))),
+                            Lists.transform(Arrays.asList("102", "2", "38"), MiruValue::new)))),
                         100),
                     MiruSolutionLogLevel.INFO);
 

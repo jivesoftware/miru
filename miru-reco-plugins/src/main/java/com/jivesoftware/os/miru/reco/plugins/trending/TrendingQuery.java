@@ -26,7 +26,7 @@ public class TrendingQuery implements Serializable {
     public final int divideTimeRangeIntoNSegments;
     public final MiruFilter constraintsFilter;
     public final String aggregateCountAroundField;
-    public final List<DistinctsQuery> distinctQueries;
+    public final List<List<DistinctsQuery>> distinctQueries; // inner lists are OR'd together, outer list is AND'd together
     public final int desiredNumberOfDistincts;
 
     @JsonCreator
@@ -37,7 +37,7 @@ public class TrendingQuery implements Serializable {
         @JsonProperty("divideTimeRangeIntoNSegments") int divideTimeRangeIntoNSegments,
         @JsonProperty("constraintsFilter") MiruFilter constraintsFilter,
         @JsonProperty("aggregateCountAroundField") String aggregateCountAroundField,
-        @JsonProperty("distinctQueries") List<DistinctsQuery> distinctQueries,
+        @JsonProperty("distinctQueries") List<List<DistinctsQuery>> distinctQueries,
         @JsonProperty("desiredNumberOfDistincts") int desiredNumberOfDistincts) {
         Preconditions.checkArgument(strategies != null && !strategies.isEmpty(), "Must specify at least one strategy");
         this.strategies = strategies;

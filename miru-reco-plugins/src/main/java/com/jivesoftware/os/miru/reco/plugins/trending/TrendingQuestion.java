@@ -84,44 +84,41 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
 
         long start = System.currentTimeMillis();
         MiruTermId[] termIds;
-        if (request.query.distinctQueries.size() == 1) {
-            Set<MiruTermId> distinctTerms = Sets.newHashSet();
-            DistinctsQuery distinctsQuery = request.query.distinctQueries.get(0);
-            distincts.gatherDirect(bitmaps, handle.getRequestContext(), distinctsQuery, gatherDistinctsBatchSize, solutionLog,
-                termId -> {
-                    distinctTerms.add(termId);
-                    return true;
-                });
 
-            Set<MiruTermId> recomposed = distincts.recomposeDistincts(schema, fieldDefinition, stackBuffer, termComposer, distinctTerms, distinctsQuery);
-            termIds = recomposed.toArray(new MiruTermId[recomposed.size()]);
-
-        } else if (request.query.distinctQueries.size() > 1) {
-            Set<MiruTermId> joinTerms = null;
-            for (DistinctsQuery distinctQuery : request.query.distinctQueries) {
-                Set<MiruTermId> queryTerms = Sets.newHashSet();
-                distincts.gatherDirect(bitmaps, handle.getRequestContext(), distinctQuery, gatherDistinctsBatchSize, solutionLog,
+        Set<MiruTermId> andTerms = null;
+        for (List<DistinctsQuery> distinctsQueries : request.query.distinctQueries) {
+            Set<MiruTermId> orTerms = null;
+            for (DistinctsQuery distinctsQuery : distinctsQueries) {
+                Set<MiruTermId> distinctTerms = Sets.newHashSet();
+                distincts.gatherDirect(bitmaps, handle.getRequestContext(), distinctsQuery, gatherDistinctsBatchSize, solutionLog,
                     termId -> {
-                        queryTerms.add(termId);
+                        distinctTerms.add(termId);
                         return true;
                     });
 
-                Set<MiruTermId> recomposed = distincts.recomposeDistincts(schema, fieldDefinition, stackBuffer, termComposer, queryTerms, distinctQuery);
-
-                if (joinTerms == null) {
-                    joinTerms = recomposed;
+                Set<MiruTermId> recomposed = distincts.recomposeDistincts(schema, fieldDefinition, stackBuffer, termComposer, distinctTerms, distinctsQuery);
+                if (orTerms == null) {
+                    orTerms = recomposed;
                 } else {
-                    joinTerms.retainAll(recomposed);
+                    orTerms.addAll(recomposed);
                 }
             }
-            if (joinTerms != null) {
-                termIds = joinTerms.toArray(new MiruTermId[joinTerms.size()]);
-            } else {
-                termIds = new MiruTermId[0];
+
+            if (orTerms != null) {
+                if (andTerms == null) {
+                    andTerms = orTerms;
+                } else {
+                    andTerms.retainAll(orTerms);
+                }
             }
+        }
+
+        if (andTerms != null) {
+            termIds = andTerms.toArray(new MiruTermId[andTerms.size()]);
         } else {
             termIds = new MiruTermId[0];
         }
+
         solutionLog.log(MiruSolutionLogLevel.INFO, "Gathered {} distincts for {} queries in {} ms.",
             termIds.length, request.query.distinctQueries.size(), (System.currentTimeMillis() - start));
 
