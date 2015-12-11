@@ -30,7 +30,6 @@ import com.jivesoftware.os.miru.plugin.solution.Question;
 import com.jivesoftware.os.miru.plugin.solution.Waveform;
 import com.jivesoftware.os.miru.reco.plugins.distincts.Distincts;
 import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsQuery;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -86,13 +85,17 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
         long start = System.currentTimeMillis();
         MiruTermId[] termIds;
         if (request.query.distinctQueries.size() == 1) {
-            ArrayList<MiruTermId> termIdsList = Lists.newArrayList();
-            distincts.gatherDirect(bitmaps, handle.getRequestContext(), request.query.distinctQueries.get(0), gatherDistinctsBatchSize, solutionLog,
+            Set<MiruTermId> distinctTerms = Sets.newHashSet();
+            DistinctsQuery distinctsQuery = request.query.distinctQueries.get(0);
+            distincts.gatherDirect(bitmaps, handle.getRequestContext(), distinctsQuery, gatherDistinctsBatchSize, solutionLog,
                 termId -> {
-                    termIdsList.add(termId);
+                    distinctTerms.add(termId);
                     return true;
                 });
-            termIds = termIdsList.toArray(new MiruTermId[termIdsList.size()]);
+
+            Set<MiruTermId> recomposed = distincts.recomposeDistincts(schema, fieldDefinition, stackBuffer, termComposer, distinctTerms, distinctsQuery);
+            termIds = recomposed.toArray(new MiruTermId[recomposed.size()]);
+
         } else if (request.query.distinctQueries.size() > 1) {
             Set<MiruTermId> joinTerms = null;
             for (DistinctsQuery distinctQuery : request.query.distinctQueries) {
@@ -102,10 +105,13 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
                         queryTerms.add(termId);
                         return true;
                     });
+
+                Set<MiruTermId> recomposed = distincts.recomposeDistincts(schema, fieldDefinition, stackBuffer, termComposer, queryTerms, distinctQuery);
+
                 if (joinTerms == null) {
-                    joinTerms = queryTerms;
+                    joinTerms = recomposed;
                 } else {
-                    joinTerms.retainAll(queryTerms);
+                    joinTerms.retainAll(recomposed);
                 }
             }
             if (joinTerms != null) {

@@ -133,6 +133,7 @@ public class RemoteRecoHttpTest {
                         Collections.singletonList(new DistinctsQuery(
                             timeRange,
                             "parent",
+                            null,
                             MiruFilter.NO_FILTER,
                             Lists.transform(Arrays.asList("102", "2", "38"), MiruValue::new))),
                         100),
@@ -210,6 +211,7 @@ public class RemoteRecoHttpTest {
                         new DistinctsQuery(
                             timeRange,
                             "parent",
+                            null,
                             new MiruFilter(MiruFilterOperation.or,
                                 false,
                                 null,

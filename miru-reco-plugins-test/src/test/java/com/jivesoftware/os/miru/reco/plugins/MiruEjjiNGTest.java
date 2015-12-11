@@ -159,6 +159,7 @@ public class MiruEjjiNGTest {
                 MiruAuthzExpression.NOT_PROVIDED,
                 new DistinctsQuery(new MiruTimeRange(initialTime - 1, time.get() + 1),
                     "doc",
+                    null,
                     new MiruFilter(MiruFilterOperation.and,
                         false,
                         Arrays.asList(

@@ -3,7 +3,6 @@ package com.jivesoftware.os.miru.tools.deployable.region;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Charsets;
-import com.google.common.base.Functions;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
@@ -40,7 +39,6 @@ import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelper;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -158,6 +156,7 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
                                         Collections.singletonList(new DistinctsQuery(
                                             timeRange,
                                             input.field,
+                                            null,
                                             distinctsFilter,
                                             filterStringUtil.buildFieldPrefixes(input.fieldPrefixes))),
                                         100),
