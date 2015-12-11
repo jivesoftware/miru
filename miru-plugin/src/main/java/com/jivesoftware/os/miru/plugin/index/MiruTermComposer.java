@@ -9,6 +9,8 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.MiruInterner;
+import com.jivesoftware.os.mlogger.core.MetricLogger;
+import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.rcvs.marshall.api.UtilLexMarshaller;
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -17,6 +19,8 @@ import java.nio.charset.Charset;
  *
  */
 public class MiruTermComposer {
+
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final Charset charset;
     private final MiruInterner<MiruTermId> termInterner;
@@ -144,11 +148,21 @@ public class MiruTermComposer {
             return new String(termBytes, offset, length, charset);
         } else if (p.type == MiruFieldDefinition.Prefix.Type.numeric) {
             if (p.length == 4) {
-                int value = UtilLexMarshaller.intFromLex(termBytes, offset);
-                return String.valueOf(value);
+                try {
+                    int value = UtilLexMarshaller.intFromLex(termBytes, offset);
+                    return String.valueOf(value);
+                } catch (ArrayIndexOutOfBoundsException e) {
+                    LOG.error("Failed to deserialize prefix", e);
+                    throw e;
+                }
             } else if (p.length == 8) {
-                long value = UtilLexMarshaller.longFromLex(termBytes, offset);
-                return String.valueOf(value);
+                try {
+                    long value = UtilLexMarshaller.longFromLex(termBytes, offset);
+                    return String.valueOf(value);
+                } catch (ArrayIndexOutOfBoundsException e) {
+                    LOG.error("Failed to deserialize prefix", e);
+                    throw e;
+                }
             } else {
                 throw new IllegalStateException("Numeric prefix only supports int and long");
             }
