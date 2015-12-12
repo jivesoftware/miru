@@ -208,10 +208,9 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
                 }
             }
             BitmapAndLastId<BM> merged = merger.merge(index, backing);
-            long sizeInBytes = bitmaps.serializedSizeInBytes(merged.bitmap);
             try {
                 MiruFilerInvertedIndex.SizeAndBytes sizeAndBytes = MiruFilerInvertedIndex.getSizeAndBytes(bitmaps, merged.bitmap, merged.lastId);
-                return new HintAndTransaction<>(sizeInBytes, new MiruFilerInvertedIndex.SetTransaction(sizeAndBytes.bytes));
+                return new HintAndTransaction<>(sizeAndBytes.filerSizeInBytes, new MiruFilerInvertedIndex.SetTransaction(sizeAndBytes.bytes));
             } catch (Exception e) {
                 throw new IOException("Failed to serialize bitmap", e);
             }
