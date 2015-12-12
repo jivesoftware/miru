@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.service.index.delta;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.Lists;
 import com.google.common.primitives.UnsignedBytes;
 import com.jivesoftware.os.filer.io.api.KeyRange;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
@@ -31,7 +32,7 @@ import java.util.concurrent.ConcurrentSkipListMap;
 /**
  * DELTA FORCE
  */
-public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IBM>, Mergeable {
+public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IBM> {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
@@ -335,41 +336,45 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
         }
     }
 
-    @Override
-    public void merge(StackBuffer stackBuffer) throws Exception {
+    public List<Mergeable> getMergeables() {
+        List<Mergeable> mergeables = Lists.newArrayListWithCapacity(fieldIndexDeltas.length);
         for (int fieldId = 0; fieldId < fieldIndexDeltas.length; fieldId++) {
-            ConcurrentMap<MiruTermId, MiruDeltaInvertedIndex.Delta<IBM>> deltaMap = fieldIndexDeltas[fieldId];
-            for (Map.Entry<MiruTermId, MiruDeltaInvertedIndex.Delta<IBM>> entry : deltaMap.entrySet()) {
-                MiruDeltaInvertedIndex.Delta<IBM> delta = entry.getValue();
-                MiruDeltaInvertedIndex<BM, IBM> invertedIndex = new MiruDeltaInvertedIndex<>(bitmaps,
-                    trackError, backingFieldIndex.getOrCreateInvertedIndex(fieldId, entry.getKey()),
-                    delta);
-                invertedIndex.merge(stackBuffer);
-            }
-            deltaMap.clear();
-
-            ConcurrentHashMap<MiruTermId, TIntLongMap> cardinality = cardinalities[fieldId];
-            if (cardinality != null) {
-                for (Map.Entry<MiruTermId, TIntLongMap> entry : cardinality.entrySet()) {
-                    MiruTermId termId = entry.getKey();
-                    TIntLongMap idCounts = entry.getValue();
-                    int[] ids = new int[idCounts.size() - 1];
-                    long[] counts = new long[idCounts.size() - 1];
-                    int i = 0;
-                    TIntLongIterator iter = idCounts.iterator();
-                    while (iter.hasNext()) {
-                        iter.advance();
-                        int id = iter.key();
-                        if (id >= 0) {
-                            ids[i] = id;
-                            counts[i] = iter.value();
-                            i++;
-                        }
-                    }
-                    backingFieldIndex.mergeCardinalities(fieldId, termId, ids, counts, stackBuffer);
+            int _fieldId = fieldId;
+            mergeables.add(stackBuffer -> {
+                ConcurrentMap<MiruTermId, MiruDeltaInvertedIndex.Delta<IBM>> deltaMap = fieldIndexDeltas[_fieldId];
+                for (Map.Entry<MiruTermId, MiruDeltaInvertedIndex.Delta<IBM>> entry : deltaMap.entrySet()) {
+                    MiruDeltaInvertedIndex.Delta<IBM> delta = entry.getValue();
+                    MiruDeltaInvertedIndex<BM, IBM> invertedIndex = new MiruDeltaInvertedIndex<>(bitmaps,
+                        trackError, backingFieldIndex.getOrCreateInvertedIndex(_fieldId, entry.getKey()),
+                        delta);
+                    invertedIndex.merge(stackBuffer);
                 }
-                cardinality.clear();
-            }
+                deltaMap.clear();
+
+                ConcurrentHashMap<MiruTermId, TIntLongMap> cardinality = cardinalities[_fieldId];
+                if (cardinality != null) {
+                    for (Map.Entry<MiruTermId, TIntLongMap> entry : cardinality.entrySet()) {
+                        MiruTermId termId = entry.getKey();
+                        TIntLongMap idCounts = entry.getValue();
+                        int[] ids = new int[idCounts.size() - 1];
+                        long[] counts = new long[idCounts.size() - 1];
+                        int i = 0;
+                        TIntLongIterator iter = idCounts.iterator();
+                        while (iter.hasNext()) {
+                            iter.advance();
+                            int id = iter.key();
+                            if (id >= 0) {
+                                ids[i] = id;
+                                counts[i] = iter.value();
+                                i++;
+                            }
+                        }
+                        backingFieldIndex.mergeCardinalities(_fieldId, termId, ids, counts, stackBuffer);
+                    }
+                    cardinality.clear();
+                }
+            });
         }
+        return mergeables;
     }
 }
