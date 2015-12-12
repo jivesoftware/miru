@@ -81,6 +81,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import org.apache.commons.lang.builder.HashCodeBuilder;
 
 /**
  * @author jonathan
@@ -172,7 +173,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         MiruBackingStorage storage,
         StackBuffer stackBuffer) throws Exception {
 
-        int seed = coord.hashCode();
+        int seed = new HashCodeBuilder().append(coord).append(storage).toHashCode();
         TxCog<Integer, MapBackedKeyedFPIndex, ChunkFiler> skyhookCog = cogs.getSkyhookCog(seed);
         KeyedFilerStore<Long, Void> genericFilerStore = new TxKeyedFilerStore<>(cogs, seed, chunkStores, keyBytes("generic"), false,
             TxNamedMapOfFiler.CHUNK_FILER_CREATOR,
