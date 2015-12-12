@@ -15,7 +15,7 @@ import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.IndexTx;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.partition.TrackError;
-import com.jivesoftware.os.miru.service.index.BitmapAndLastId;
+import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.DataInput;
@@ -171,14 +171,19 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
         return LAST_ID_LENGTH + bitmaps.serializedSizeInBytes(index);
     }
 
-    private void setIndex(IBM index, int setLastId, StackBuffer stackBuffer) throws Exception {
+    public static <BM extends IBM, IBM> SizeAndBytes getSizeAndBytes(MiruBitmaps<BM, IBM> bitmaps, IBM index, int lastId) throws Exception {
         long filerSizeInBytes = serializedSizeInBytes(bitmaps, index);
         ByteArrayDataOutput dataOutput = ByteStreams.newDataOutput((int) filerSizeInBytes);
-        dataOutput.write(FilerIO.intBytes(setLastId));
+        dataOutput.write(FilerIO.intBytes(lastId));
         bitmaps.serialize(index, dataOutput);
         final byte[] bytes = dataOutput.toByteArray();
+        return new SizeAndBytes(filerSizeInBytes, bytes);
+    }
 
-        try {
+    private void setIndex(IBM index, int setLastId, StackBuffer stackBuffer) throws Exception {
+        SizeAndBytes sizeAndBytes = getSizeAndBytes(bitmaps, index, setLastId);
+
+        /*try {
             BM check = bitmaps.deserialize(ByteStreams.newDataInput(bytes, LAST_ID_LENGTH));
             BM checked = bitmaps.or(Arrays.asList(index, check));
             if (bitmaps.cardinality(index) != bitmaps.cardinality(check) || bitmaps.cardinality(index) != bitmaps.cardinality(checked)) {
@@ -191,11 +196,11 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
         } catch (Exception e) {
             log.error("BAD BITS failed to check index:{} bytes:{}", new Object[] { index, Arrays.toString(bytes) }, e);
             trackError.error("Bad bits failed to check index:" + bitmaps.cardinality(index) + " bytes:" + bytes.length);
-        }
+        }*/
 
-        keyedFilerStore.writeNewReplace(indexKeyBytes, filerSizeInBytes, new SetTransaction(bytes), stackBuffer);
+        keyedFilerStore.writeNewReplace(indexKeyBytes, sizeAndBytes.filerSizeInBytes, new SetTransaction(sizeAndBytes.bytes), stackBuffer);
         log.inc("set>total");
-        log.inc("set>bytes", bytes.length);
+        log.inc("set>bytes", sizeAndBytes.bytes.length);
     }
 
     @Override
@@ -324,11 +329,21 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
         }
     };
 
-    private static class SetTransaction implements ChunkTransaction<Void, Void> {
+    public static class SizeAndBytes {
+        public final long filerSizeInBytes;
+        public final byte[] bytes;
+
+        public SizeAndBytes(long filerSizeInBytes, byte[] bytes) {
+            this.filerSizeInBytes = filerSizeInBytes;
+            this.bytes = bytes;
+        }
+    }
+
+    public static class SetTransaction implements ChunkTransaction<Void, Void> {
 
         private final byte[] bytes;
 
-        private SetTransaction(byte[] bytes) {
+        public SetTransaction(byte[] bytes) {
             this.bytes = bytes;
         }
 

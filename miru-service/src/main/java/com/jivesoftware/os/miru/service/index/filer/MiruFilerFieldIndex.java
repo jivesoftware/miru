@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.service.index.filer;
 
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
+import com.jivesoftware.os.filer.io.api.HintAndTransaction;
 import com.jivesoftware.os.filer.io.api.KeyRange;
 import com.jivesoftware.os.filer.io.api.KeyedFilerStore;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
@@ -10,12 +11,13 @@ import com.jivesoftware.os.filer.io.map.MapStore;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.MiruInterner;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.plugin.index.IndexAlignedBitmapMerger;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MultiIndexTx;
 import com.jivesoftware.os.miru.plugin.index.TermIdStream;
 import com.jivesoftware.os.miru.plugin.partition.TrackError;
-import com.jivesoftware.os.miru.service.index.BitmapAndLastId;
+import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
@@ -191,6 +193,32 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
     }
 
     @Override
+    public void multiMerge(int fieldId, MiruTermId[] termIds, IndexAlignedBitmapMerger<BM> merger, StackBuffer stackBuffer) throws Exception {
+        byte[][] termIdBytes = new byte[termIds.length][];
+        for (int i = 0; i < termIds.length; i++) {
+            termIdBytes[i] = termIds[i].getBytes();
+        }
+
+        indexes[fieldId].multiWriteNewReplace(termIdBytes, (monkey, filer, stackBuffer1, lock, index) -> {
+            BitmapAndLastId<BM> backing = null;
+            if (filer != null) {
+                synchronized (lock) {
+                    filer.seek(0);
+                    backing = MiruFilerInvertedIndex.deser(bitmaps, trackError, filer, -1, stackBuffer1);
+                }
+            }
+            BitmapAndLastId<BM> merged = merger.merge(index, backing);
+            long sizeInBytes = bitmaps.serializedSizeInBytes(merged.bitmap);
+            try {
+                MiruFilerInvertedIndex.SizeAndBytes sizeAndBytes = MiruFilerInvertedIndex.getSizeAndBytes(bitmaps, merged.bitmap, merged.lastId);
+                return new HintAndTransaction<>(sizeInBytes, new MiruFilerInvertedIndex.SetTransaction(sizeAndBytes.bytes));
+            } catch (Exception e) {
+                throw new IOException("Failed to serialize bitmap", e);
+            }
+        }, new Void[termIdBytes.length], stackBuffer);
+    }
+
+    @Override
     public void mergeCardinalities(int fieldId, MiruTermId termId, int[] ids, long[] counts, StackBuffer stackBuffer) throws Exception {
         if (cardinalities[fieldId] != null && counts != null) {
             cardinalities[fieldId].readWriteAutoGrow(termId.getBytes(), ids.length, (monkey, filer, _stackBuffer, lock) -> {
@@ -214,4 +242,5 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
             }, stackBuffer);
         }
     }
+
 }
