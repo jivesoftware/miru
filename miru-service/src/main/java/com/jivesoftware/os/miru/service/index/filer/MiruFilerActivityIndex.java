@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.service.index.filer;
 
 import com.jivesoftware.os.filer.io.FilerIO;
+import com.jivesoftware.os.filer.io.api.HintAndTransaction;
 import com.jivesoftware.os.filer.io.api.KeyedFilerStore;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -121,29 +122,36 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
         }
     }
 
-    private int setInternal(Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds, StackBuffer stackBuffer) throws IOException,
-        InterruptedException {
+    private int setInternal(Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds,
+        StackBuffer stackBuffer) throws IOException, InterruptedException {
+
         int lastIndex = -1;
-        for (MiruActivityAndId<MiruInternalActivity> activityAndId : activityAndIds) {
-            int index = activityAndId.id;
-            lastIndex = Math.max(index, lastIndex);
-            MiruInternalActivity activity = activityAndId.activity;
+        @SuppressWarnings("unchecked")
+        MiruActivityAndId<MiruInternalActivity>[] activityAndIdsArray = activityAndIds.toArray(new MiruActivityAndId[activityAndIds.size()]);
+        byte[][] keyBytes = new byte[activityAndIdsArray.length][];
+        for (int i = 0; i < activityAndIdsArray.length; i++) {
+            int index = activityAndIdsArray[i].id;
             checkArgument(index >= 0, "Index parameter is out of bounds. The value %s must be >=0", index);
-            try {
-                final byte[] bytes = internalActivityMarshaller.toBytes(activity, stackBuffer);
-                keyedStore.writeNewReplace(FilerIO.intBytes(index), (long) 4 + bytes.length, (monkey, newFiler, _stackBuffer, newLock) -> {
+            lastIndex = Math.max(index, lastIndex);
+            keyBytes[i] = FilerIO.intBytes(activityAndIdsArray[i].id);
+        }
+        keyedStore.multiWriteNewReplace(keyBytes,
+            (oldMonkey, oldFiler, stackBuffer1, oldLock, index) -> {
+                final byte[] bytes = internalActivityMarshaller.toBytes(activityAndIdsArray[index].activity, stackBuffer1);
+                long filerSize = (long) 4 + bytes.length;
+                log.inc("set>total");
+                log.inc("set>bytes", bytes.length);
+                return new HintAndTransaction<>(filerSize, (newMonkey, newFiler, stackBuffer2, newLock) -> {
                     synchronized (newLock) {
                         newFiler.seek(0);
                         FilerIO.write(newFiler, bytes);
                     }
                     return null;
-                }, stackBuffer);
-                log.inc("set>total");
-                log.inc("set>bytes", bytes.length);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }
+                });
+            },
+            new Void[activityAndIdsArray.length],
+            stackBuffer);
+
         return lastIndex;
     }
 
