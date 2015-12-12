@@ -870,7 +870,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                 }
             }
 
-            if (accessor.persistentContext.isPresent()) {
+            if (accessor.persistentContext.isPresent() && !accessor.isObsolete()) {
                 MiruSchema latestSchema = contextFactory.lookupLatestSchema(coord.tenantId);
                 MiruContext<BM, IBM, S> context = accessor.persistentContext.get();
                 if (!MiruSchema.checkEquals(latestSchema, context.schema)) {
@@ -898,7 +898,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                     } else if (accessor.isCorrupt()) {
                         log.info("Forcing rebuild because context is corrupt for {}", coord);
                         forceRebuild = true;
-                    } else if (!accessor.transientContext.isPresent() && accessor.isObsolete()) {
+                    } else if (!accessor.transientContext.isPresent() && accessor.isObsolete() && accessor.state != MiruPartitionState.obsolete) {
                         log.info("Forcing rebuild because context is obsolete for {}", coord);
                         forceRebuild = true;
                     } else if (firstSip.get()) {
