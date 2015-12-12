@@ -659,11 +659,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
 
                 MiruPartitionState state = accessor.state;
                 if (state.isRebuildable() || state.isRebuilding()) {
-                    MiruActivityWALStatus status = walClient.getActivityWALStatusForTenant(coord.tenantId, coord.partitionId);
-                    long count = -1;
-                    for (MiruActivityWALStatus.WriterCount writerCount : status.counts) {
-                        count += writerCount.count;
-                    }
+                    long count = estimateActivityCount();
                     Optional<MiruRebuildDirector.Token> token = rebuildDirector.acquire(coord, count);
                     if (token.isPresent()) {
                         try {
@@ -718,6 +714,24 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
             } catch (Throwable t) {
                 log.error("RebuildIndex encountered a problem for {}", new Object[] { coord }, t);
             }
+        }
+
+        private final AtomicLong lastActivityCount = new AtomicLong(-1);
+        private final AtomicLong lastActivityCountTimestamp = new AtomicLong(-1);
+
+        private long estimateActivityCount() throws Exception {
+            long count = lastActivityCount.get();
+            long nextEstimateAfterTimestamp = lastActivityCountTimestamp.get() + timings.partitionRebuildEstimateActivityCountIntervalInMillis;
+            if (count < 0 || System.currentTimeMillis() > nextEstimateAfterTimestamp) {
+                MiruActivityWALStatus status = walClient.getActivityWALStatusForTenant(coord.tenantId, coord.partitionId);
+                count = 0;
+                for (MiruActivityWALStatus.WriterCount writerCount : status.counts) {
+                    count += writerCount.count;
+                }
+                lastActivityCount.set(count);
+                lastActivityCountTimestamp.set(System.currentTimeMillis());
+            }
+            return count;
         }
 
         private boolean rebuild(final MiruPartitionAccessor<BM, IBM, C, S> accessor, StackBuffer stackBuffer) throws Exception {
@@ -1089,19 +1103,22 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
         private final long partitionBanUnregisteredSchemaMillis;
         private final long partitionMigrationWaitInMillis;
         private final long partitionSipNotifyEndOfStreamMillis;
+        private final long partitionRebuildEstimateActivityCountIntervalInMillis;
 
         public Timings(long partitionBootstrapIntervalInMillis,
             long partitionRebuildIntervalInMillis,
             long partitionSipMigrateIntervalInMillis,
             long partitionBanUnregisteredSchemaMillis,
             long partitionMigrationWaitInMillis,
-            long partitionSipNotifyEndOfStreamMillis) {
+            long partitionSipNotifyEndOfStreamMillis,
+            long partitionRebuildEstimateActivityCountIntervalInMillis) {
             this.partitionBootstrapIntervalInMillis = partitionBootstrapIntervalInMillis;
             this.partitionRebuildIntervalInMillis = partitionRebuildIntervalInMillis;
             this.partitionSipMigrateIntervalInMillis = partitionSipMigrateIntervalInMillis;
             this.partitionBanUnregisteredSchemaMillis = partitionBanUnregisteredSchemaMillis;
             this.partitionMigrationWaitInMillis = partitionMigrationWaitInMillis;
             this.partitionSipNotifyEndOfStreamMillis = partitionSipNotifyEndOfStreamMillis;
+            this.partitionRebuildEstimateActivityCountIntervalInMillis = partitionRebuildEstimateActivityCountIntervalInMillis;
         }
     }
 

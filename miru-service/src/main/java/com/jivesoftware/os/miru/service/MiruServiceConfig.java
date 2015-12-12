@@ -93,6 +93,9 @@ public interface MiruServiceConfig extends Config {
     @LongDefault(30_000)
     long getPartitionSipNotifyEndOfStreamMillis();
 
+    @LongDefault(300_000)
+    long getPartitionRebuildEstimateActivityCountIntervalInMillis();
+
     @IntDefault(3)
     int getPartitionNumberOfChunkStores();
 
