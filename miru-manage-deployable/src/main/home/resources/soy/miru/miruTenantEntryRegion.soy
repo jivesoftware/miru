@@ -136,7 +136,7 @@
                 {if $type == 'offline'}
                     <input type="button" value="Warm" onclick="miru.tenants.rebuild(this, '{$partition.host.logicalName}', {$partition.host.port}, '{$tenantId}', {$partitionId})" />
                 {/if}
-                {if $type == 'bootstrap'}
+                {if $type == 'bootstrap' or $type == 'obsolete'}
                     <input type="button" value="Prioritize" onclick="miru.tenants.rebuild(this, '{$partition.host.logicalName}', {$partition.host.port}, '{$tenantId}', {$partitionId})" />
                 {/if}
                 {if $type == 'online'}
