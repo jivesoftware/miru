@@ -10,6 +10,7 @@ import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.bitmaps.roaring5.MiruBitmapsRoaring;
 import com.jivesoftware.os.miru.plugin.MiruInterner;
+import com.jivesoftware.os.miru.plugin.index.IndexAlignedBitmapMerger;
 import com.jivesoftware.os.miru.plugin.index.IndexTx;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndexProvider;
@@ -225,6 +226,11 @@ public class LuceneBackedQueryParserTest {
 
         @Override
         public long getGlobalCardinality(int fieldId, MiruTermId termId, StackBuffer stackBuffer) throws Exception {
+            throw new UnsupportedOperationException("Nope");
+        }
+
+        @Override
+        public void multiMerge(int fieldId, MiruTermId[] termIds, IndexAlignedBitmapMerger<RoaringBitmap> merger, StackBuffer stackBuffer) throws Exception {
             throw new UnsupportedOperationException("Nope");
         }
 

@@ -36,6 +36,7 @@ public interface MiruFieldIndex<BM extends IBM, IBM> {
 
     long getGlobalCardinality(int fieldId, MiruTermId termId, StackBuffer stackBuffer) throws Exception;
 
-    void mergeCardinalities(int fieldId, MiruTermId termId, int[] ids, long[] counts, StackBuffer stackBuffer) throws Exception;
+    void multiMerge(int fieldId, MiruTermId[] termIds, IndexAlignedBitmapMerger<BM> merger, StackBuffer stackBuffer) throws Exception;
 
+    void mergeCardinalities(int fieldId, MiruTermId termId, int[] ids, long[] counts, StackBuffer stackBuffer) throws Exception;
 }

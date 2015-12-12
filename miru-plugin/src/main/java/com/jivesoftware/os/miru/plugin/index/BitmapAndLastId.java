@@ -1,4 +1,4 @@
-package com.jivesoftware.os.miru.service.index;
+package com.jivesoftware.os.miru.plugin.index;
 
 /**
  *
