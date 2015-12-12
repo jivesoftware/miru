@@ -284,7 +284,10 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
                 List<Future<?>> futures = Lists.newArrayList();
                 futures.add(mergeExecutor.submit(new MergeRunnable((MiruDeltaTimeIndex) got.timeIndex)));
                 for (MiruFieldType fieldType : MiruFieldType.values()) {
-                    futures.add(mergeExecutor.submit(new MergeRunnable((MiruDeltaFieldIndex<BM, IBM>) got.fieldIndexProvider.getFieldIndex(fieldType))));
+                    MiruDeltaFieldIndex<BM, IBM> deltaFieldIndex = (MiruDeltaFieldIndex<BM, IBM>) got.fieldIndexProvider.getFieldIndex(fieldType);
+                    for (Mergeable mergeable : deltaFieldIndex.getMergeables()) {
+                        futures.add(mergeExecutor.submit(new MergeRunnable(mergeable)));
+                    }
                 }
                 futures.add(mergeExecutor.submit(new MergeRunnable((MiruDeltaAuthzIndex<BM, IBM>) got.authzIndex)));
                 futures.add(mergeExecutor.submit(new MergeRunnable((MiruDeltaRemovalIndex<BM, IBM>) got.removalIndex)));
