@@ -49,6 +49,7 @@ public class MiruHeaderRegion implements MiruRegion<Void> {
                 List<Map<String, Object>> services = new ArrayList<>();
                 addPeers(services, "miru-reader", "main", "/");
                 addPeers(services, "miru-writer", "main", "/miru/writer");
+                addPeers(services, "miru-wal", "main", "/miru/wal");
                 data.put("total", String.valueOf(addPeers(services, "miru-manage", "main", "/miru/manage")));
                 addPeers(services, "miru-tools", "main", "/");
                 data.put("services", services);
