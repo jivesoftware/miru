@@ -402,7 +402,14 @@ public class MiruWALMain {
             MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
 
             MiruWALUIService miruWALUIService = new MiruWriterUIServiceInitializer()
-                .initialize(renderer, rcvsWALDirector, amzaWALDirector, activityWALReader, miruStats);
+                .initialize(instanceConfig.getClusterName(),
+                    instanceConfig.getInstanceName(),
+                    renderer,
+                    tenantRoutingProvider,
+                    rcvsWALDirector,
+                    amzaWALDirector,
+                    activityWALReader,
+                    miruStats);
 
             deployable.addEndpoints(MiruWALEndpoints.class);
             deployable.addInjectables(MiruWALUIService.class, miruWALUIService);

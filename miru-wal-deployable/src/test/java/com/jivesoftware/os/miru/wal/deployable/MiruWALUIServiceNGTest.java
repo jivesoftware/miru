@@ -52,6 +52,10 @@ import com.jivesoftware.os.miru.wal.lookup.RCVSWALLookup;
 import com.jivesoftware.os.miru.wal.readtracking.rcvs.RCVSReadTrackingWALReader;
 import com.jivesoftware.os.miru.wal.readtracking.rcvs.RCVSReadTrackingWALWriter;
 import com.jivesoftware.os.rcvs.inmemory.InMemoryRowColumnValueStoreInitializer;
+import com.jivesoftware.os.routing.bird.shared.ConnectionDescriptorsProvider;
+import com.jivesoftware.os.routing.bird.shared.ConnectionDescriptorsRequest;
+import com.jivesoftware.os.routing.bird.shared.ConnectionDescriptorsResponse;
+import com.jivesoftware.os.routing.bird.shared.TenantRoutingProvider;
 import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
@@ -108,7 +112,7 @@ public class MiruWALUIServiceNGTest {
         mapper.configure(SerializationFeature.INDENT_OUTPUT, false);
 
         WALIndexProviderRegistry indexProviderRegistry = new WALIndexProviderRegistry();
-        String[] walIndexDirs = new String[] { amzaIndexDir.getAbsolutePath() };
+        String[] walIndexDirs = new String[]{amzaIndexDir.getAbsolutePath()};
         indexProviderRegistry.register("berkeleydb", new BerkeleyDBWALIndexProvider(walIndexDirs, walIndexDirs.length));
 
         AmzaStats amzaStats = new AmzaStats();
@@ -116,7 +120,7 @@ public class MiruWALUIServiceNGTest {
         RowsTakerFactory rowsTakerFactory = () -> new HttpRowsTaker(amzaStats);
 
         final AmzaServiceConfig amzaServiceConfig = new AmzaServiceConfig();
-        amzaServiceConfig.workingDirectories = new String[] { amzaDataDir.getAbsolutePath() };
+        amzaServiceConfig.workingDirectories = new String[]{amzaDataDir.getAbsolutePath()};
         amzaServiceConfig.numberOfDeltaStripes = amzaServiceConfig.workingDirectories.length;
         amzaServiceConfig.numberOfTakerThreads = 1;
 
@@ -177,7 +181,12 @@ public class MiruWALUIServiceNGTest {
             clusterClient);
 
         MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(config);
-        service = new MiruWriterUIServiceInitializer().initialize(renderer, director, null, activityWALReader, new MiruStats());
+        service = new MiruWriterUIServiceInitializer().initialize("cluster", 1, renderer, new TenantRoutingProvider("1", new ConnectionDescriptorsProvider() {
+            @Override
+            public ConnectionDescriptorsResponse requestConnections(ConnectionDescriptorsRequest cdr) {
+                return null;
+            }
+        }), director, null, activityWALReader, new MiruStats());
     }
 
     @Test
