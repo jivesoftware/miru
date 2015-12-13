@@ -294,17 +294,16 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
             log.inc("nextId>total");
             log.inc("nextId>bytes", HEADER_SIZE_IN_BYTES + searchIndexSizeInBytes + longs);
 
+            Long[] keys = new Long[nextIds.length];
             for (int i = 0; i < nextIds.length; i++) {
                 if (timestamps[i] != -1) {
+                    keys[i] = timestamps[i];
                     log.inc("nextId>sets");
-                    final int nextId = nextIds[i];
-                    // TODO would be nice to batch here :)
-                    timestampToIndex.execute(timestamps[i], true, keyValueContext -> {
-                        keyValueContext.set(nextId);
-                        return null;
-                    }, stackBuffer);
                 }
             }
+            timestampToIndex.multiExecute(keys, (keyValueContext, index) -> {
+                keyValueContext.set(nextIds[index]);
+            }, stackBuffer);
         }
 
         return nextIds;

@@ -143,7 +143,7 @@ public class MiruServiceInitializer {
             config.getPartitionInitialChunkCacheSize(),
             config.getPartitionMaxChunkCacheSize());
 
-        TxCogs cogs = new TxCogs(256, 64,
+        TxCogs cogs = new TxCogs(1024, 1024,
             new ConcurrentKeyToFPCacheFactory(),
             new NullKeyToFPCacheFactory(),
             new NullKeyToFPCacheFactory());
