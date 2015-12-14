@@ -143,7 +143,12 @@ public class MiruServiceInitializer {
             config.getPartitionInitialChunkCacheSize(),
             config.getPartitionMaxChunkCacheSize());
 
-        TxCogs cogs = new TxCogs(1024, 1024,
+        TxCogs persistentCogs = new TxCogs(1024, 1024,
+            new ConcurrentKeyToFPCacheFactory(),
+            new NullKeyToFPCacheFactory(),
+            new NullKeyToFPCacheFactory());
+
+        TxCogs transientCogs = new TxCogs(1024, 1024,
             new ConcurrentKeyToFPCacheFactory(),
             new NullKeyToFPCacheFactory(),
             new NullKeyToFPCacheFactory());
@@ -152,7 +157,8 @@ public class MiruServiceInitializer {
         objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
         objectMapper.registerModule(new GuavaModule());
 
-        MiruContextFactory<S> contextFactory = new MiruContextFactory<>(cogs,
+        MiruContextFactory<S> contextFactory = new MiruContextFactory<>(persistentCogs,
+            transientCogs,
             schemaProvider,
             termComposer,
             internExtern,

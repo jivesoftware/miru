@@ -90,7 +90,8 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
-    private final TxCogs cogs;
+    private final TxCogs persistentCogs;
+    private final TxCogs transientCogs;
     private final MiruSchemaProvider schemaProvider;
     private final MiruTermComposer termComposer;
     private final MiruActivityInternExtern activityInternExtern;
@@ -105,7 +106,8 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
     private final MiruInterner<MiruTermId> termInterner;
     private final ObjectMapper objectMapper;
 
-    public MiruContextFactory(TxCogs cogs,
+    public MiruContextFactory(TxCogs persistentCogs,
+        TxCogs transientCogs,
         MiruSchemaProvider schemaProvider,
         MiruTermComposer termComposer,
         MiruActivityInternExtern activityInternExtern,
@@ -120,7 +122,8 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         MiruInterner<MiruTermId> termInterner,
         ObjectMapper objectMapper) {
 
-        this.cogs = cogs;
+        this.persistentCogs = persistentCogs;
+        this.transientCogs = transientCogs;
         this.schemaProvider = schemaProvider;
         this.termComposer = termComposer;
         this.activityInternExtern = activityInternExtern;
@@ -173,6 +176,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         MiruBackingStorage storage,
         StackBuffer stackBuffer) throws Exception {
 
+        TxCogs cogs = storage == MiruBackingStorage.disk ? persistentCogs : transientCogs;
         int seed = new HashCodeBuilder().append(coord).append(storage).toHashCode();
         TxCog<Integer, MapBackedKeyedFPIndex, ChunkFiler> skyhookCog = cogs.getSkyhookCog(seed);
         KeyedFilerStore<Long, Void> genericFilerStore = new TxKeyedFilerStore<>(cogs, seed, chunkStores, keyBytes("generic"), false,
