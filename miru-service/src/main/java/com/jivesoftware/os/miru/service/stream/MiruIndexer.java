@@ -77,12 +77,12 @@ public class MiruIndexer<BM extends IBM, IBM> {
 
         // 1. Compose work
         List<Future<List<FieldValuesWork>>> fieldValuesComposed = indexFieldValues.compose(context, internalActivityAndIds, indexExecutor);
-        List<Future<List<BloomWork>>> bloomComposed = indexBloom.compose(context, internalActivityAndIds, indexExecutor);
-        List<Future<List<PairedLatestWork>>> pairedLatestComposed = indexPairedLatest.compose(context, internalActivityAndIds, indexExecutor);
+        //List<Future<List<BloomWork>>> bloomComposed = indexBloom.compose(context, internalActivityAndIds, indexExecutor);
+        //List<Future<List<PairedLatestWork>>> pairedLatestComposed = indexPairedLatest.compose(context, internalActivityAndIds, indexExecutor);
 
         // 2. Prepare work
-        Future<List<BloomWork>> bloomPrepared = indexBloom.prepare(context, bloomComposed, indexExecutor);
-        Future<List<PairedLatestWork>> pairedLatestPrepared = indexPairedLatest.prepare(context, pairedLatestComposed, indexExecutor);
+        //Future<List<BloomWork>> bloomPrepared = indexBloom.prepare(context, bloomComposed, indexExecutor);
+        //Future<List<PairedLatestWork>> pairedLatestPrepared = indexPairedLatest.prepare(context, pairedLatestComposed, indexExecutor);
 
         // 3. Index field values work
         List<Future<?>> fieldFutures = indexFieldValues.index(context, coord.tenantId, fieldValuesComposed, repair, indexExecutor);
@@ -93,9 +93,9 @@ public class MiruIndexer<BM extends IBM, IBM> {
         // 5. Index remaining work
         final List<Future<?>> otherFutures = new ArrayList<>();
         otherFutures.addAll(indexAuthz.index(context, coord.tenantId, internalActivityAndIds, repair, indexExecutor));
-        otherFutures.addAll(indexBloom.index(context, coord.tenantId, bloomPrepared, repair, indexExecutor));
+        //otherFutures.addAll(indexBloom.index(context, coord.tenantId, bloomPrepared, repair, indexExecutor));
         otherFutures.addAll(indexLatest.index(context, coord.tenantId, internalActivityAndIds, repair, indexExecutor));
-        otherFutures.addAll(indexPairedLatest.index(context, coord.tenantId, pairedLatestPrepared, repair, indexExecutor));
+        //otherFutures.addAll(indexPairedLatest.index(context, coord.tenantId, pairedLatestPrepared, repair, indexExecutor));
 
         // 6. Update activity index
         otherFutures.add(indexExecutor.submit(() -> {
