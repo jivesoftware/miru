@@ -317,7 +317,7 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
         throw new UnsupportedOperationException("Cannot merge to delta");
     }
 
-    public List<Mergeable> getMergeables() {
+    /*public List<Mergeable> getMergeables() {
         List<Mergeable> mergeables = Lists.newArrayListWithCapacity(fieldIndexDeltas.length);
         for (int fieldId = 0; fieldId < fieldIndexDeltas.length; fieldId++) {
             int _fieldId = fieldId;
@@ -357,9 +357,9 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
             });
         }
         return mergeables;
-    }
+    }*/
 
-    public List<Mergeable> realGetMergeables() {
+    public List<Mergeable> getMergeables() {
         List<Mergeable> mergeables = Lists.newArrayListWithCapacity(fieldIndexDeltas.length);
         for (int fieldId = 0; fieldId < fieldIndexDeltas.length; fieldId++) {
             int _fieldId = fieldId;
