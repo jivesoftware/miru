@@ -211,6 +211,11 @@ public class LuceneBackedQueryParserTest {
         }
 
         @Override
+        public void setIfEmpty(int fieldId, MiruTermId termId, int id, long count, StackBuffer stackBuffer) throws Exception {
+            throw new UnsupportedOperationException("Nope");
+        }
+
+        @Override
         public void remove(int fieldId, MiruTermId termId, int id, StackBuffer stackBuffer) throws Exception {
             throw new UnsupportedOperationException("Nope");
         }
@@ -278,7 +283,8 @@ public class LuceneBackedQueryParserTest {
             }
 
             @Override
-            public void setIfEmpty(StackBuffer stackBuffer, int id) throws Exception {
+            public boolean setIfEmpty(StackBuffer stackBuffer, int id) throws Exception {
+                return false;
             }
 
             @Override

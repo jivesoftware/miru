@@ -26,6 +26,8 @@ public interface MiruFieldIndex<BM extends IBM, IBM> {
 
     void set(int fieldId, MiruTermId termId, int[] ids, long[] counts, StackBuffer stackBuffer) throws Exception;
 
+    void setIfEmpty(int fieldId, MiruTermId termId, int id, long count, StackBuffer stackBuffer) throws Exception;
+
     void remove(int fieldId, MiruTermId termId, int id, StackBuffer stackBuffer) throws Exception;
 
     void streamTermIdsForField(int fieldId, List<KeyRange> ranges, TermIdStream termIdStream, StackBuffer stackBuffer) throws Exception;
