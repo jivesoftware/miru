@@ -108,6 +108,7 @@ public class IndexTestUtil {
             1_000);
 
         return new MiruContextFactory<>(cogs,
+            cogs,
             schemaProvider,
             termComposer,
             activityInternExtern,

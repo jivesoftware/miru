@@ -237,6 +237,7 @@ public class MiruLocalHostedPartitionTest {
         ObjectMapper mapper = new ObjectMapper();
 
         contextFactory = new MiruContextFactory<>(cogs,
+            cogs,
             schemaProvider,
             termComposer,
             activityInternExtern,
