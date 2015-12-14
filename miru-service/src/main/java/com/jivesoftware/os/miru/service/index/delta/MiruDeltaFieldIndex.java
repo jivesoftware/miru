@@ -338,8 +338,8 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
                         } else if (backing != null
                             && !replaced
                             && backing.lastId >= lastId
-                            && bitmaps.containsAll(backing.bitmap, or)
-                            && !bitmaps.containsAny(backing.bitmap, andNot)) {
+                            && (or == null || bitmaps.containsAll(backing.bitmap, or))
+                            && (andNot == null || !bitmaps.containsAny(backing.bitmap, andNot))) {
                             return null;
                         }
 
