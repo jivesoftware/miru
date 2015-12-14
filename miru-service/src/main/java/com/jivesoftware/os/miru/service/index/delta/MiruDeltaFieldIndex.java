@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.service.index.delta;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.google.common.primitives.UnsignedBytes;
 import com.jivesoftware.os.filer.io.api.KeyRange;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
@@ -81,6 +82,13 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
     public void set(int fieldId, MiruTermId termId, int[] ids, long[] counts, StackBuffer stackBuffer) throws Exception {
         getOrAllocate(fieldId, termId).set(stackBuffer, ids);
         putCardinalities(fieldId, termId, ids, counts, false, stackBuffer);
+    }
+
+    @Override
+    public void setIfEmpty(int fieldId, MiruTermId termId, int id, long count, StackBuffer stackBuffer) throws Exception {
+        if (getOrAllocate(fieldId, termId).setIfEmpty(stackBuffer, id)) {
+            putCardinalities(fieldId, termId, new int[] { id }, new long[] { count }, false, stackBuffer);
+        }
     }
 
     @Override
@@ -315,11 +323,15 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
             int _fieldId = fieldId;
             mergeables.add(stackBuffer -> {
                 ConcurrentMap<MiruTermId, MiruDeltaInvertedIndex.Delta<IBM>> deltaMap = fieldIndexDeltas[_fieldId];
+                ConcurrentHashMap<MiruTermId, TIntLongMap> cardinality = cardinalities[_fieldId];
+
+                Set<MiruTermId> skipped = cardinality != null ? Sets.newHashSet() : null;
                 if (!deltaMap.isEmpty()) {
                     Set<MiruTermId> termIdSet = deltaMap.keySet();
                     MiruTermId[] termIds = termIdSet.toArray(new MiruTermId[termIdSet.size()]);
                     backingFieldIndex.multiMerge(_fieldId, termIds, (index, backing) -> {
-                        MiruDeltaInvertedIndex.Delta<IBM> delta = deltaMap.get(termIds[index]);
+                        MiruTermId termId = termIds[index];
+                        MiruDeltaInvertedIndex.Delta<IBM> delta = deltaMap.get(termId);
                         int lastId;
                         boolean replaced;
                         boolean ifEmpty;
@@ -334,6 +346,9 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
                         }
 
                         if (ifEmpty && (backing == null || bitmaps.isEmpty(backing.bitmap))) {
+                            if (skipped != null) {
+                                skipped.add(termId);
+                            }
                             return null;
                         } else if (backing != null
                             && !replaced
@@ -345,7 +360,7 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
 
                         BitmapAndLastId<BM> overlayed;
                         if (replaced || backing == null) {
-                            overlayed = new BitmapAndLastId<BM>(
+                            overlayed = new BitmapAndLastId<>(
                                 (or != null) ? bitmaps.copy(or) : bitmaps.create(),
                                 lastId);
                         } else {
@@ -358,10 +373,12 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
                 }
 
                 //TODO add a multiMerge
-                ConcurrentHashMap<MiruTermId, TIntLongMap> cardinality = cardinalities[_fieldId];
                 if (cardinality != null) {
                     for (Map.Entry<MiruTermId, TIntLongMap> entry : cardinality.entrySet()) {
                         MiruTermId termId = entry.getKey();
+                        if (skipped.contains(termId)) {
+                            continue;
+                        }
                         TIntLongMap idCounts = entry.getValue();
                         int[] ids = new int[idCounts.size() - 1];
                         long[] counts = new long[idCounts.size() - 1];

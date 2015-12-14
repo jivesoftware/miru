@@ -266,13 +266,15 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     }
 
     @Override
-    public void setIfEmpty(StackBuffer stackBuffer, int id) throws Exception {
+    public boolean setIfEmpty(StackBuffer stackBuffer, int id) throws Exception {
         synchronized (mutationLock) {
             int lastId = lastId(stackBuffer);
             if (lastId < 0) {
                 set(stackBuffer, id);
+                return true;
             }
         }
+        return false;
     }
 
     @Override

@@ -25,20 +25,17 @@ public class MiruIndexer<BM extends IBM, IBM> {
     private final MiruIndexAuthz<BM, IBM> indexAuthz;
     private final MiruIndexFieldValues<BM, IBM> indexFieldValues;
     private final MiruIndexBloom<BM, IBM> indexBloom;
-    private final MiruIndexFirst<BM, IBM> indexFirst;
     private final MiruIndexLatest<BM, IBM> indexLatest;
     private final MiruIndexPairedLatest<BM, IBM> indexPairedLatest;
 
     public MiruIndexer(MiruIndexAuthz<BM, IBM> indexAuthz,
         MiruIndexFieldValues<BM, IBM> indexFieldValues,
         MiruIndexBloom<BM, IBM> indexBloom,
-        MiruIndexFirst<BM, IBM> indexFirst,
         MiruIndexLatest<BM, IBM> indexLatest,
         MiruIndexPairedLatest<BM, IBM> indexPairedLatest) {
         this.indexAuthz = indexAuthz;
         this.indexFieldValues = indexFieldValues;
         this.indexBloom = indexBloom;
-        this.indexFirst = indexFirst;
         this.indexLatest = indexLatest;
         this.indexPairedLatest = indexPairedLatest;
     }
@@ -97,7 +94,6 @@ public class MiruIndexer<BM extends IBM, IBM> {
         final List<Future<?>> otherFutures = new ArrayList<>();
         otherFutures.addAll(indexAuthz.index(context, coord.tenantId, internalActivityAndIds, repair, indexExecutor));
         otherFutures.addAll(indexBloom.index(context, coord.tenantId, bloomPrepared, repair, indexExecutor));
-        otherFutures.addAll(indexFirst.index(context, coord.tenantId, internalActivityAndIds, repair, indexExecutor));
         otherFutures.addAll(indexLatest.index(context, coord.tenantId, internalActivityAndIds, repair, indexExecutor));
         otherFutures.addAll(indexPairedLatest.index(context, coord.tenantId, pairedLatestPrepared, repair, indexExecutor));
 

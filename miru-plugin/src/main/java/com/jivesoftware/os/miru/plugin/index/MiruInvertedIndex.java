@@ -33,7 +33,7 @@ public interface MiruInvertedIndex<BM extends IBM, IBM> extends MiruInvertedInde
      * @param id the index of the bit to set
      * @throws Exception
      */
-    void setIfEmpty(StackBuffer stackBuffer, int id) throws Exception;
+    boolean setIfEmpty(StackBuffer stackBuffer, int id) throws Exception;
 
     /**
      * Returns the index of the highest bit ever set in the bitmap, even if that bit has been removed.

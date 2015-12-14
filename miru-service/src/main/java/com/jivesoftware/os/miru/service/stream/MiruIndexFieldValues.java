@@ -41,7 +41,8 @@ public class MiruIndexFieldValues<BM extends IBM, IBM> {
         MiruFieldDefinition[] fieldDefinitions = context.schema.getFieldDefinitions();
         List<Future<List<FieldValuesWork>>> workFutures = new ArrayList<>(fieldDefinitions.length);
         for (final MiruFieldDefinition fieldDefinition : fieldDefinitions) {
-            if (!fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.indexed)) {
+            if (!fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.indexed)
+                && !fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.indexedFirst)) {
                 continue;
             }
             boolean hasCardinality = fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.cardinality);
@@ -106,25 +107,35 @@ public class MiruIndexFieldValues<BM extends IBM, IBM> {
         List<Future<?>> futures = new ArrayList<>(fieldIds.size());
         for (int fieldId = 0; fieldId < work.length; fieldId++) {
             List<FieldValuesWork> fieldWork = work[fieldId];
+            MiruFieldDefinition fieldDefinition = context.schema.getFieldDefinition(fieldId);
             final int finalFieldId = fieldId;
             for (final FieldValuesWork fieldValuesWork : fieldWork) {
                 futures.add(indexExecutor.submit(() -> {
                     StackBuffer stackBuffer = new StackBuffer();
-                    if (repair) {
-                        log.inc("count>set", fieldValuesWork.ids.size());
-                        log.inc("count>set", fieldValuesWork.ids.size(), tenantId.toString());
-                        fieldIndex.set(finalFieldId,
+                    if (fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.indexed)) {
+                        if (repair) {
+                            log.inc("count>set", fieldValuesWork.ids.size());
+                            log.inc("count>set", fieldValuesWork.ids.size(), tenantId.toString());
+                            fieldIndex.set(finalFieldId,
+                                fieldValuesWork.fieldValue,
+                                fieldValuesWork.ids.toArray(),
+                                fieldValuesWork.counts != null ? fieldValuesWork.counts.toArray() : null,
+                                stackBuffer);
+                        } else {
+                            log.inc("count>append", fieldValuesWork.ids.size());
+                            log.inc("count>append", fieldValuesWork.ids.size(), tenantId.toString());
+                            fieldIndex.append(finalFieldId,
+                                fieldValuesWork.fieldValue,
+                                fieldValuesWork.ids.toArray(),
+                                fieldValuesWork.counts != null ? fieldValuesWork.counts.toArray() : null,
+                                stackBuffer);
+                        }
+                    } else if (fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.indexedFirst)) {
+                        log.inc("count>setIfEmpty", 1);
+                        fieldIndex.setIfEmpty(finalFieldId,
                             fieldValuesWork.fieldValue,
-                            fieldValuesWork.ids.toArray(),
-                            fieldValuesWork.counts != null ? fieldValuesWork.counts.toArray() : null,
-                            stackBuffer);
-                    } else {
-                        log.inc("count>append", fieldValuesWork.ids.size());
-                        log.inc("count>append", fieldValuesWork.ids.size(), tenantId.toString());
-                        fieldIndex.append(finalFieldId,
-                            fieldValuesWork.fieldValue,
-                            fieldValuesWork.ids.toArray(),
-                            fieldValuesWork.counts != null ? fieldValuesWork.counts.toArray() : null,
+                            fieldValuesWork.ids.get(0),
+                            fieldValuesWork.counts != null ? fieldValuesWork.counts.get(0) : -1,
                             stackBuffer);
                     }
                     return null;

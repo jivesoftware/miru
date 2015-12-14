@@ -538,6 +538,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                     if (migrated != null) {
                         migrated = updatePartition(accessor, migrated);
                         if (migrated != null) {
+                            log.info("Partition at {} has transitioned to persistent storage", coord);
                             contextFactory.close(fromContext);
                             updated = migrated;
                         } else {

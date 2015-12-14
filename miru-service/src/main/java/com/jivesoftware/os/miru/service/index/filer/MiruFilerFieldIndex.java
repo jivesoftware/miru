@@ -11,13 +11,13 @@ import com.jivesoftware.os.filer.io.map.MapStore;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.MiruInterner;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.plugin.index.IndexAlignedBitmapMerger;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MultiIndexTx;
 import com.jivesoftware.os.miru.plugin.index.TermIdStream;
 import com.jivesoftware.os.miru.plugin.partition.TrackError;
-import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
@@ -59,6 +59,13 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
     public void set(int fieldId, MiruTermId termId, int[] ids, long[] counts, StackBuffer stackBuffer) throws Exception {
         getIndex(fieldId, termId).set(stackBuffer, ids);
         mergeCardinalities(fieldId, termId, ids, counts, stackBuffer);
+    }
+
+    @Override
+    public void setIfEmpty(int fieldId, MiruTermId termId, int id, long count, StackBuffer stackBuffer) throws Exception {
+        if (getIndex(fieldId, termId).setIfEmpty(stackBuffer, id)) {
+            mergeCardinalities(fieldId, termId, new int[] { id }, new long[] { count }, stackBuffer);
+        }
     }
 
     @Override

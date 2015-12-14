@@ -227,14 +227,16 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     }
 
     @Override
-    public void setIfEmpty(StackBuffer stackBuffer, int id) throws Exception {
+    public boolean setIfEmpty(StackBuffer stackBuffer, int id) throws Exception {
         synchronized (delta) {
             if (delta.lastId == -1 && delta.or == null && delta.andNot == null && !delta.replaced && !delta.ifEmpty) {
                 delta.lastId = id;
                 delta.or = bitmaps.createWithBits(id);
                 delta.ifEmpty = true;
+                return true;
             }
         }
+        return false;
     }
 
     private void clearIfEmpty() {
