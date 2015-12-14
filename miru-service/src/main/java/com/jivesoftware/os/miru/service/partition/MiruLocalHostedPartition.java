@@ -690,6 +690,14 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                                         MiruPartitionAccessor<BM, IBM, C, S> updated = updatePartition(rebuilding, online);
                                         if (updated != null) {
                                             updated.merge(transientMergeExecutor, rebuilding.transientContext, transientMergeChits, trackError);
+                                            while (true) {
+                                                MiruPartitionAccessor<BM, IBM, C, S> check = accessorRef.get();
+                                                if (check == null || !check.transientContext.isPresent()) {
+                                                    break;
+                                                }
+                                                log.info("Rebuild finished for {}, waiting for transient context to transition to disk", coord);
+                                                Thread.sleep(1000);
+                                            }
                                             trackError.reset();
                                         }
                                     } else {
