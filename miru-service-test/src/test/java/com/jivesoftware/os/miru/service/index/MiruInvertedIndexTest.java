@@ -230,6 +230,68 @@ public class MiruInvertedIndexTest {
         assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex(stackBuffer).get(), lastId + 3)); // roaring ignores source size requirement
     }
 
+    @Test
+    public void testSetIfEmpty() throws Exception {
+        StackBuffer stackBuffer = new StackBuffer();
+        MiruBitmapsRoaringBuffer bitmaps = new MiruBitmapsRoaringBuffer();
+
+        MiruDeltaInvertedIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> index = buildDeltaInvertedIndex(bitmaps);
+
+        // setIfEmpty index 1
+        index.setIfEmpty(stackBuffer, 1);
+        MutableRoaringBitmap got = index.getIndex(stackBuffer).get();
+        assertEquals(got.getCardinality(), 1);
+        assertTrue(got.contains(1));
+
+        // setIfEmpty index 2 noops
+        index.setIfEmpty(stackBuffer, 2);
+        got = index.getIndex(stackBuffer).get();
+        assertEquals(got.getCardinality(), 1);
+        assertTrue(got.contains(1));
+        assertFalse(got.contains(2));
+
+        // merge the index
+        index.merge(stackBuffer);
+
+        // check index 1 is still set after merge
+        got = index.getIndex(stackBuffer).get();
+        assertEquals(got.getCardinality(), 1);
+        assertTrue(got.contains(1));
+
+        // setIfEmpty index 3 noops
+        index.setIfEmpty(stackBuffer, 3);
+        got = index.getIndex(stackBuffer).get();
+        assertEquals(got.getCardinality(), 1);
+        assertTrue(got.contains(1));
+        assertFalse(got.contains(3));
+
+        // set index 4
+        index.set(stackBuffer, 4);
+        got = index.getIndex(stackBuffer).get();
+        assertEquals(got.getCardinality(), 2);
+        assertTrue(got.contains(1));
+        assertTrue(got.contains(4));
+
+        // remove index 1, 4
+        index.remove(1, stackBuffer);
+        index.remove(4, stackBuffer);
+        got = index.getIndex(stackBuffer).get();
+        assertEquals(got.getCardinality(), 0);
+
+        // setIfEmpty index 5 noops
+        index.setIfEmpty(stackBuffer, 5);
+        got = index.getIndex(stackBuffer).get();
+        assertEquals(got.getCardinality(), 0);
+
+        // merge the index
+        index.merge(stackBuffer);
+
+        // setIfEmpty index 6 noops
+        index.setIfEmpty(stackBuffer, 6);
+        got = index.getIndex(stackBuffer).get();
+        assertEquals(got.getCardinality(), 0);
+    }
+
     @DataProvider(name = "miruInvertedIndexDataProviderWithData")
     public Object[][] miruInvertedIndexDataProviderWithData() throws Exception {
         StackBuffer stackBuffer = new StackBuffer();

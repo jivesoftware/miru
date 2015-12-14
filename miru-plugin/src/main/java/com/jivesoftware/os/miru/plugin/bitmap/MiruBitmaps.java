@@ -139,4 +139,7 @@ public interface MiruBitmaps<BM extends IBM, IBM> {
 
     int lastSetBit(IBM bitmap);
 
+    boolean containsAll(IBM container, IBM contained);
+
+    boolean containsAny(IBM container, IBM contained);
 }

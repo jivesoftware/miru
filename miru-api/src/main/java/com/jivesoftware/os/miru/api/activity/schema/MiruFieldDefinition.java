@@ -30,8 +30,10 @@ public class MiruFieldDefinition {
     public enum Type {
         singleTerm(Feature.indexed),
         singleTermIndexLatest(Feature.indexed, Feature.indexedLatest),
+        singleTermIndexFirst(Feature.indexedFirst),
         multiTerm(Feature.indexed, Feature.multiValued),
         multiTermCardinality(Feature.indexed, Feature.multiValued, Feature.cardinality),
+        multiTermIndexFirst(Feature.indexedFirst, Feature.multiValued),
         nonIndexed();
 
         private final Set<Feature> features;
@@ -47,6 +49,7 @@ public class MiruFieldDefinition {
 
     public enum Feature {
         indexed,
+        indexedFirst,
         indexedLatest,
         multiValued,
         cardinality;

@@ -153,7 +153,7 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
     }
 
     @Override
-    public void multiGet(int fieldId, MiruTermId[] termIds, BM[] results, StackBuffer stackBuffer) throws Exception {
+    public void multiGet(int fieldId, MiruTermId[] termIds, BitmapAndLastId<BM>[] results, StackBuffer stackBuffer) throws Exception {
 
         for (int i = 0; i < termIds.length; i++) {
             if (termIds[i] != null) {
@@ -161,14 +161,16 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
                 if (delta != null && delta.replaced) {
                     boolean replaced;
                     IBM or;
+                    int lastId;
                     synchronized (delta) {
                         replaced = delta.replaced;
                         or = delta.or;
+                        lastId = delta.lastId;
                     }
                     // double check now that we have a stack copy
                     if (replaced) {
                         termIds[i] = null;
-                        results[i] = bitmaps.copy(or);
+                        results[i] = new BitmapAndLastId<>(bitmaps.copy(or), lastId);
                     }
                 }
             }
@@ -181,17 +183,21 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
                 MiruDeltaInvertedIndex.Delta<IBM> delta = fieldIndexDeltas[fieldId].get(termIds[i]);
                 if (delta != null) {
                     boolean replaced;
+                    boolean ifEmpty;
                     IBM or;
                     IBM andNot;
+                    int lastId;
                     synchronized (delta) {
                         replaced = delta.replaced;
+                        ifEmpty = delta.ifEmpty;
                         or = delta.or;
                         andNot = delta.andNot;
+                        lastId = delta.lastId;
                     }
                     if (replaced || results[i] == null) {
-                        results[i] = bitmaps.copy(or);
+                        results[i] = new BitmapAndLastId<>(bitmaps.copy(or), lastId);
                     } else {
-                        results[i] = MiruDeltaInvertedIndex.overlay(bitmaps, results[i], or, andNot);
+                        results[i] = MiruDeltaInvertedIndex.overlay(bitmaps, results[i], ifEmpty, or, andNot, lastId);
                     }
                 }
             }
@@ -215,10 +221,10 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
                 MiruDeltaInvertedIndex.Delta<IBM> delta = fieldIndexDeltas[fieldId].get(termIds[i]);
                 if (delta != null) {
                     MiruInvertedIndex<BM, IBM> backingIndex = backingFieldIndex.get(fieldId, termIds[i]);
-                    Optional<BM> index = MiruDeltaInvertedIndex.overlayDelta(bitmaps, delta, backingIndex, considerIfLastIdGreaterThanN,
+                    Optional<BitmapAndLastId<BM>> index = MiruDeltaInvertedIndex.overlayDelta(bitmaps, delta, backingIndex, considerIfLastIdGreaterThanN,
                         trackError, stackBuffer);
                     if (index.isPresent()) {
-                        indexTx.tx(i, index.get(), null, -1, stackBuffer);
+                        indexTx.tx(i, index.get().bitmap, null, -1, stackBuffer);
                     }
                     termIds[i] = null;
                     LOG.inc("multiTxIndex>delta");
@@ -303,6 +309,82 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
         throw new UnsupportedOperationException("Cannot merge to delta");
     }
 
+    public List<Mergeable> getMergeables() {
+        List<Mergeable> mergeables = Lists.newArrayListWithCapacity(fieldIndexDeltas.length);
+        for (int fieldId = 0; fieldId < fieldIndexDeltas.length; fieldId++) {
+            int _fieldId = fieldId;
+            mergeables.add(stackBuffer -> {
+                ConcurrentMap<MiruTermId, MiruDeltaInvertedIndex.Delta<IBM>> deltaMap = fieldIndexDeltas[_fieldId];
+                if (!deltaMap.isEmpty()) {
+                    Set<MiruTermId> termIdSet = deltaMap.keySet();
+                    MiruTermId[] termIds = termIdSet.toArray(new MiruTermId[termIdSet.size()]);
+                    backingFieldIndex.multiMerge(_fieldId, termIds, (index, backing) -> {
+                        MiruDeltaInvertedIndex.Delta<IBM> delta = deltaMap.get(termIds[index]);
+                        int lastId;
+                        boolean replaced;
+                        boolean ifEmpty;
+                        IBM or;
+                        IBM andNot;
+                        synchronized (delta) {
+                            lastId = delta.lastId;
+                            replaced = delta.replaced;
+                            ifEmpty = delta.ifEmpty;
+                            or = delta.or;
+                            andNot = delta.andNot;
+                        }
+
+                        if (ifEmpty && (backing == null || bitmaps.isEmpty(backing.bitmap))) {
+                            return null;
+                        } else if (backing != null
+                            && !replaced
+                            && backing.lastId >= lastId
+                            && bitmaps.containsAll(backing.bitmap, or)
+                            && !bitmaps.containsAny(backing.bitmap, andNot)) {
+                            return null;
+                        }
+
+                        BitmapAndLastId<BM> overlayed;
+                        if (replaced || backing == null) {
+                            overlayed = new BitmapAndLastId<BM>(
+                                (or != null) ? bitmaps.copy(or) : bitmaps.create(),
+                                lastId);
+                        } else {
+                            overlayed = MiruDeltaInvertedIndex.overlay(bitmaps, backing, ifEmpty, or, andNot, lastId);
+                        }
+                        return overlayed;
+                    }, stackBuffer);
+
+                    deltaMap.clear();
+                }
+
+                //TODO add a multiMerge
+                ConcurrentHashMap<MiruTermId, TIntLongMap> cardinality = cardinalities[_fieldId];
+                if (cardinality != null) {
+                    for (Map.Entry<MiruTermId, TIntLongMap> entry : cardinality.entrySet()) {
+                        MiruTermId termId = entry.getKey();
+                        TIntLongMap idCounts = entry.getValue();
+                        int[] ids = new int[idCounts.size() - 1];
+                        long[] counts = new long[idCounts.size() - 1];
+                        int i = 0;
+                        TIntLongIterator iter = idCounts.iterator();
+                        while (iter.hasNext()) {
+                            iter.advance();
+                            int id = iter.key();
+                            if (id >= 0) {
+                                ids[i] = id;
+                                counts[i] = iter.value();
+                                i++;
+                            }
+                        }
+                        backingFieldIndex.mergeCardinalities(_fieldId, termId, ids, counts, stackBuffer);
+                    }
+                    cardinality.clear();
+                }
+            });
+        }
+        return mergeables;
+    }
+
     @Override
     public void mergeCardinalities(int fieldId, MiruTermId termId, int[] ids, long[] counts, StackBuffer stackBuffer) throws Exception {
         putCardinalities(fieldId, termId, ids, counts, false, stackBuffer);
@@ -341,69 +423,5 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
                 return idCounts;
             });
         }
-    }
-
-    public List<Mergeable> getMergeables() {
-        List<Mergeable> mergeables = Lists.newArrayListWithCapacity(fieldIndexDeltas.length);
-        for (int fieldId = 0; fieldId < fieldIndexDeltas.length; fieldId++) {
-            int _fieldId = fieldId;
-            mergeables.add(stackBuffer -> {
-                ConcurrentMap<MiruTermId, MiruDeltaInvertedIndex.Delta<IBM>> deltaMap = fieldIndexDeltas[_fieldId];
-                if (!deltaMap.isEmpty()) {
-                    Set<MiruTermId> termIdSet = deltaMap.keySet();
-                    MiruTermId[] termIds = termIdSet.toArray(new MiruTermId[termIdSet.size()]);
-                    backingFieldIndex.multiMerge(_fieldId, termIds, (index, backing) -> {
-                        MiruDeltaInvertedIndex.Delta<IBM> delta = deltaMap.get(termIds[index]);
-                        int lastId;
-                        boolean replaced;
-                        IBM or;
-                        IBM andNot;
-                        synchronized (delta) {
-                            lastId = delta.lastId;
-                            replaced = delta.replaced;
-                            or = delta.or;
-                            andNot = delta.andNot;
-                        }
-                        BM mergedBitmap;
-                        int mergedLastId;
-                        if (replaced || backing == null) {
-                            mergedBitmap = (or != null) ? bitmaps.copy(or) : bitmaps.create();
-                            mergedLastId = lastId;
-                        } else {
-                            mergedBitmap = MiruDeltaInvertedIndex.overlay(bitmaps, backing.bitmap, or, andNot);
-                            mergedLastId = Math.max(backing.lastId, lastId);
-                        }
-                        return new BitmapAndLastId<>(mergedBitmap, mergedLastId);
-                    }, stackBuffer);
-
-                    deltaMap.clear();
-                }
-
-                //TODO add a multiMerge
-                ConcurrentHashMap<MiruTermId, TIntLongMap> cardinality = cardinalities[_fieldId];
-                if (cardinality != null) {
-                    for (Map.Entry<MiruTermId, TIntLongMap> entry : cardinality.entrySet()) {
-                        MiruTermId termId = entry.getKey();
-                        TIntLongMap idCounts = entry.getValue();
-                        int[] ids = new int[idCounts.size() - 1];
-                        long[] counts = new long[idCounts.size() - 1];
-                        int i = 0;
-                        TIntLongIterator iter = idCounts.iterator();
-                        while (iter.hasNext()) {
-                            iter.advance();
-                            int id = iter.key();
-                            if (id >= 0) {
-                                ids[i] = id;
-                                counts[i] = iter.value();
-                                i++;
-                            }
-                        }
-                        backingFieldIndex.mergeCardinalities(_fieldId, termId, ids, counts, stackBuffer);
-                    }
-                    cardinality.clear();
-                }
-            });
-        }
-        return mergeables;
     }
 }

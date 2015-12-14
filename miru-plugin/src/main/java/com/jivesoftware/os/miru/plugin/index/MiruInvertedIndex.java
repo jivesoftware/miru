@@ -11,7 +11,7 @@ public interface MiruInvertedIndex<BM extends IBM, IBM> extends MiruInvertedInde
 
     Optional<BM> getIndex(StackBuffer stackBuffer) throws Exception;
 
-    Optional<BM> getIndex(int considerIfLastIdGreaterThanN, StackBuffer stackBuffer) throws Exception;
+    Optional<BitmapAndLastId<BM>> getIndexAndLastId(int considerIfLastIdGreaterThanN, StackBuffer stackBuffer) throws Exception;
 
     void replaceIndex(IBM index, int setLastId, StackBuffer stackBuffer) throws Exception;
 
@@ -25,6 +25,23 @@ public interface MiruInvertedIndex<BM extends IBM, IBM> extends MiruInvertedInde
      */
     void set(StackBuffer stackBuffer, int... ids) throws Exception;
 
+    /**
+     * Sets a single bit if the index has never been modified. NOTE: If the index is empty as a result of previous removals,
+     * the index remains unchanged. Effectively, the index is modified if and only if {@link #lastId(StackBuffer)} returns -1.
+     *
+     * @param stackBuffer the stack buffer
+     * @param id the index of the bit to set
+     * @throws Exception
+     */
+    void setIfEmpty(StackBuffer stackBuffer, int id) throws Exception;
+
+    /**
+     * Returns the index of the highest bit ever set in the bitmap, even if that bit has been removed.
+     *
+     * @param stackBuffer the stack  buffer
+     * @return the last id
+     * @throws Exception
+     */
     int lastId(StackBuffer stackBuffer) throws Exception;
 
     void andNotToSourceSize(List<IBM> masks, StackBuffer stackBuffer) throws Exception;
