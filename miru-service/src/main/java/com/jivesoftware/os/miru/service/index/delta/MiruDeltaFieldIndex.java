@@ -387,7 +387,7 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
                             andNot = delta.andNot;
                         }
 
-                        if (ifEmpty && (backing == null || bitmaps.isEmpty(backing.bitmap))) {
+                        if (ifEmpty && (backing != null && !bitmaps.isEmpty(backing.bitmap))) {
                             if (skipped != null) {
                                 skipped.add(termId);
                             }
