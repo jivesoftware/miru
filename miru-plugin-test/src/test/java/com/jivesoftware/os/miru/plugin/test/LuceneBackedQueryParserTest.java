@@ -10,6 +10,7 @@ import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.bitmaps.roaring5.MiruBitmapsRoaring;
 import com.jivesoftware.os.miru.plugin.MiruInterner;
+import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.plugin.index.IndexAlignedBitmapMerger;
 import com.jivesoftware.os.miru.plugin.index.IndexTx;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
@@ -177,7 +178,7 @@ public class LuceneBackedQueryParserTest {
         }
 
         @Override
-        public void multiGet(int fieldId, MiruTermId[] termIds, RoaringBitmap[] results, StackBuffer stackBuffer) throws Exception {
+        public void multiGet(int fieldId, MiruTermId[] termIds, BitmapAndLastId<RoaringBitmap>[] results, StackBuffer stackBuffer) throws Exception {
             throw new UnsupportedOperationException("Nope");
         }
 
@@ -255,10 +256,10 @@ public class LuceneBackedQueryParserTest {
             }
 
             @Override
-            public Optional<RoaringBitmap> getIndex(int considerIfLastIdGreaterThanN, StackBuffer stackBuffer) throws Exception {
+            public Optional<BitmapAndLastId<RoaringBitmap>> getIndexAndLastId(int considerIfLastIdGreaterThanN, StackBuffer stackBuffer) throws Exception {
                 RoaringBitmap bitmap = indexes[fieldId].get(termId);
                 if (bitmap != null && !bitmap.isEmpty() && bitmap.getReverseIntIterator().next() > considerIfLastIdGreaterThanN) {
-                    return Optional.of(bitmap);
+                    return Optional.of(new BitmapAndLastId<>(bitmap, 0));
                 } else {
                     return Optional.absent();
                 }
@@ -274,6 +275,10 @@ public class LuceneBackedQueryParserTest {
 
             @Override
             public void set(StackBuffer stackBuffer, int... ids) throws Exception {
+            }
+
+            @Override
+            public void setIfEmpty(StackBuffer stackBuffer, int id) throws Exception {
             }
 
             @Override

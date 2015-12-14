@@ -62,6 +62,7 @@ import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
 import com.jivesoftware.os.miru.service.stream.MiruIndexAuthz;
 import com.jivesoftware.os.miru.service.stream.MiruIndexBloom;
 import com.jivesoftware.os.miru.service.stream.MiruIndexFieldValues;
+import com.jivesoftware.os.miru.service.stream.MiruIndexFirst;
 import com.jivesoftware.os.miru.service.stream.MiruIndexLatest;
 import com.jivesoftware.os.miru.service.stream.MiruIndexPairedLatest;
 import com.jivesoftware.os.miru.service.stream.MiruIndexer;
@@ -190,6 +191,7 @@ public class MiruLocalHostedPartitionTest {
         indexer = new MiruIndexer<>(new MiruIndexAuthz<>(),
             new MiruIndexFieldValues<>(),
             new MiruIndexBloom<>(new BloomIndex<>(bitmaps, Hashing.murmur3_128(), 100_000, 0.01f)),
+            new MiruIndexFirst<>(),
             new MiruIndexLatest<>(),
             new MiruIndexPairedLatest<>());
         timings = new MiruLocalHostedPartition.Timings(5_000, 5_000, 5_000, 30_000, 3_000, 30_000, 300_000);

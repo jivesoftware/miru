@@ -13,6 +13,7 @@ import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.bitmaps.roaring5.buffer.MiruBitmapsRoaringBuffer;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.service.IndexTestUtil;
 import com.jivesoftware.os.miru.service.stream.MiruContext;
@@ -57,7 +58,7 @@ public class MiruFieldTest {
         int median = ids.get(ids.size() / 2);
 
         for (int id : ids) {
-            Optional<BM> optional = fieldIndex.get(fieldId, new MiruTermId(FilerIO.intBytes(id))).getIndex(median, stackBuffer);
+            Optional<BitmapAndLastId<BM>> optional = fieldIndex.get(fieldId, new MiruTermId(FilerIO.intBytes(id))).getIndexAndLastId(median, stackBuffer);
             assertEquals(optional.isPresent(), id > median, "Should be " + optional.isPresent() + ": " + id + " > " + median);
         }
     }

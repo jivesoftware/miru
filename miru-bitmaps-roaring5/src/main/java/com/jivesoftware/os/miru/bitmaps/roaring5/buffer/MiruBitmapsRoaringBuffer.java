@@ -536,6 +536,18 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
         return last;
     }
 
+    @Override
+    public boolean containsAll(ImmutableRoaringBitmap container, ImmutableRoaringBitmap contained) {
+        MutableRoaringBitmap intersection = ImmutableRoaringBitmap.and(container, contained);
+        return intersection.getCardinality() == contained.getCardinality();
+    }
+
+    @Override
+    public boolean containsAny(ImmutableRoaringBitmap container, ImmutableRoaringBitmap contained) {
+        MutableRoaringBitmap intersection = ImmutableRoaringBitmap.and(container, contained);
+        return !intersection.isEmpty();
+    }
+
     private MutableRoaringBitmap bitmapFromFiler(ChunkFiler filer, int offset, StackBuffer stackBuffer1) throws IOException {
         if (filer.canLeakUnsafeByteBuffer()) {
             ByteBuffer buf = filer.leakUnsafeByteBuffer();

@@ -14,7 +14,7 @@ public interface MiruFieldIndex<BM extends IBM, IBM> {
 
     MiruInvertedIndex<BM, IBM> getOrCreateInvertedIndex(int fieldId, MiruTermId term) throws Exception;
 
-    void multiGet(int fieldId, MiruTermId[] termIds, BM[] results, StackBuffer stackBuffer) throws Exception;
+    void multiGet(int fieldId, MiruTermId[] termIds, BitmapAndLastId<BM>[] results, StackBuffer stackBuffer) throws Exception;
 
     void multiTxIndex(int fieldId,
         MiruTermId[] termIds,

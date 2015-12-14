@@ -108,9 +108,13 @@ public class MiruAggregateUtil {
             System.arraycopy(ids, 0, actualIds, 0, added);
 
             if (bitmaps.supportsInPlace()) {
-                bitmaps.inPlaceRemoveRange(answer[0], actualIds[0], actualIds[actualIds.length - 1] + 1);
+                bitmaps.inPlaceAndNot(answer[0], bitmaps.createWithBits(actualIds));
+                //TODO possibly buggy, need to reevaluate
+                /*bitmaps.inPlaceRemoveRange(answer[0], actualIds[0], actualIds[actualIds.length - 1] + 1);*/
             } else {
-                answer[0] = bitmaps.removeRange(answer[0], actualIds[0], actualIds[actualIds.length - 1] + 1);
+                answer[0] = bitmaps.andNot(answer[0], bitmaps.createWithBits(actualIds));
+                //TODO possibly buggy, need to reevaluate
+                /*answer[0] = bitmaps.removeRange(answer[0], actualIds[0], actualIds[actualIds.length - 1] + 1);*/
             }
 
             List<MiruTermId[]> all = activityIndex.getAll(actualIds, pivotFieldId, stackBuffer);
@@ -209,9 +213,13 @@ public class MiruAggregateUtil {
             gets++;
 
             if (bitmaps.supportsInPlace()) {
-                bitmaps.inPlaceRemoveRange(answer, actualIds[0], actualIds[actualIds.length - 1] + 1);
+                bitmaps.inPlaceAndNot(answer, bitmaps.createWithBits(actualIds));
+                //TODO possibly buggy, need to reevaluate
+                /*bitmaps.inPlaceRemoveRange(answer, actualIds[0], actualIds[actualIds.length - 1] + 1);*/
             } else {
-                answer = bitmaps.removeRange(answer, actualIds[0], actualIds[actualIds.length - 1] + 1);
+                answer = bitmaps.andNot(answer, bitmaps.createWithBits(actualIds));
+                //TODO possibly buggy, need to reevaluate
+                /*answer = bitmaps.removeRange(answer, actualIds[0], actualIds[actualIds.length - 1] + 1);*/
             }
 
             long start = System.nanoTime();

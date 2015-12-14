@@ -12,10 +12,10 @@ import com.jivesoftware.os.filer.io.api.KeyedFilerStore;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.filer.io.chunk.ChunkFiler;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.plugin.index.IndexTx;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.partition.TrackError;
-import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.DataInput;
@@ -65,11 +65,11 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
 
     @Override
     public Optional<BM> getIndex(StackBuffer stackBuffer) throws Exception {
-        return getIndexInternal(getTransaction, stackBuffer);
+        return getIndexInternal(getTransaction, stackBuffer).transform(input -> input.bitmap);
     }
 
     @Override
-    public Optional<BM> getIndex(int considerIfLastIdGreaterThanN, StackBuffer stackBuffer) throws Exception {
+    public Optional<BitmapAndLastId<BM>> getIndexAndLastId(int considerIfLastIdGreaterThanN, StackBuffer stackBuffer) throws Exception {
         if (considerIfLastIdGreaterThanN < 0) {
             return getIndexInternal(getTransaction, stackBuffer);
         } else {
@@ -85,7 +85,7 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
         }
     }
 
-    private Optional<BM> getIndexInternal(ChunkTransaction<Void, BitmapAndLastId<BM>> chunkTransaction,
+    private Optional<BitmapAndLastId<BM>> getIndexInternal(ChunkTransaction<Void, BitmapAndLastId<BM>> chunkTransaction,
         StackBuffer stackBuffer) throws IOException, InterruptedException {
 
         BitmapAndLastId<BM> bitmapAndLastId = keyedFilerStore.read(indexKeyBytes, null, chunkTransaction, stackBuffer);
@@ -95,7 +95,7 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
             if (lastId == Integer.MIN_VALUE) {
                 lastId = bitmapAndLastId.lastId;
             }
-            return Optional.of(bitmapAndLastId.bitmap);
+            return Optional.of(bitmapAndLastId);
         } else {
             log.inc("get>miss");
             lastId = -1;
@@ -262,6 +262,16 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
             }
 
             setIndex(r, lastId, stackBuffer);
+        }
+    }
+
+    @Override
+    public void setIfEmpty(StackBuffer stackBuffer, int id) throws Exception {
+        synchronized (mutationLock) {
+            int lastId = lastId(stackBuffer);
+            if (lastId < 0) {
+                set(stackBuffer, id);
+            }
         }
     }
 

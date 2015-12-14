@@ -37,6 +37,7 @@ public class MiruSchema {
 
     // Traversal fields
     private final ImmutableList<Integer> fieldIds;
+    private final ImmutableList<MiruFieldDefinition> fieldsWithFirst;
     private final ImmutableList<MiruFieldDefinition> fieldsWithLatest;
     private final ImmutableList<MiruFieldDefinition> fieldsWithPairedLatest;
     private final ImmutableList<MiruFieldDefinition> fieldsWithBloom;
@@ -54,6 +55,7 @@ public class MiruSchema {
         ImmutableList<MiruFieldDefinition>[] fieldToBloomFieldDefinitions,
         MiruFieldDefinition[][] fieldToCompositeDefinitions,
         ImmutableList<Integer> fieldIds,
+        ImmutableList<MiruFieldDefinition> fieldsWithFirst,
         ImmutableList<MiruFieldDefinition> fieldsWithLatest,
         ImmutableList<MiruFieldDefinition> fieldsWithPairedLatest,
         ImmutableList<MiruFieldDefinition> fieldsWithBloom) {
@@ -70,6 +72,7 @@ public class MiruSchema {
         this.fieldToBloomFieldDefinitions = fieldToBloomFieldDefinitions;
         this.fieldToCompositeDefinitions = fieldToCompositeDefinitions;
         this.fieldIds = fieldIds;
+        this.fieldsWithFirst = fieldsWithFirst;
         this.fieldsWithLatest = fieldsWithLatest;
         this.fieldsWithPairedLatest = fieldsWithPairedLatest;
         this.fieldsWithBloom = fieldsWithBloom;
@@ -162,6 +165,11 @@ public class MiruSchema {
     @JsonIgnore
     public ImmutableList<Integer> getFieldIds() {
         return fieldIds;
+    }
+
+    @JsonIgnore
+    public List<MiruFieldDefinition> getFieldsWithFirst() {
+        return fieldsWithFirst;
     }
 
     @JsonIgnore
@@ -276,12 +284,17 @@ public class MiruSchema {
             }
 
             ImmutableList.Builder<Integer> fieldIdsBuilder = new ImmutableList.Builder<>();
+            ImmutableList.Builder<MiruFieldDefinition> fieldsWithFirstBuilder = new ImmutableList.Builder<>();
             ImmutableList.Builder<MiruFieldDefinition> fieldsWithLatestBuilder = new ImmutableList.Builder<>();
             ImmutableList.Builder<MiruFieldDefinition> fieldsWithPairedLatestBuilder = new ImmutableList.Builder<>();
             ImmutableList.Builder<MiruFieldDefinition> fieldsWithBloomBuilder = new ImmutableList.Builder<>();
 
             for (MiruFieldDefinition fieldDefinition : fieldDefinitions) {
                 fieldIdsBuilder.add(fieldDefinition.fieldId);
+
+                if (fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.indexedFirst)) {
+                    fieldsWithFirstBuilder.add(fieldDefinition);
+                }
 
                 if (fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.indexedLatest)) {
                     fieldsWithLatestBuilder.add(fieldDefinition);
@@ -323,13 +336,14 @@ public class MiruSchema {
             }
 
             ImmutableList<Integer> fieldIds = fieldIdsBuilder.build();
+            ImmutableList<MiruFieldDefinition> fieldsWithFirst = fieldsWithFirstBuilder.build();
             ImmutableList<MiruFieldDefinition> fieldsWithLatest = fieldsWithLatestBuilder.build();
             ImmutableList<MiruFieldDefinition> fieldsWithPairedLatest = fieldsWithPairedLatestBuilder.build();
             ImmutableList<MiruFieldDefinition> fieldsWithBloom = fieldsWithBloomBuilder.build();
 
             return new MiruSchema(name, version, fieldDefinitions, propertyDefinitions, pairedLatest, bloom, composites, ImmutableMap.copyOf(fieldNameToId),
                 ImmutableMap.copyOf(propNameToId), fieldToPairedLatestFieldDefinitions, fieldToBloomFieldDefinitions, fieldToCompositeFieldDefinitions,
-                fieldIds, fieldsWithLatest, fieldsWithPairedLatest, fieldsWithBloom);
+                fieldIds, fieldsWithFirst, fieldsWithLatest, fieldsWithPairedLatest, fieldsWithBloom);
         }
 
     }

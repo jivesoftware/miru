@@ -181,6 +181,7 @@ public class MiruIndexerTest {
         MiruIndexer<MutableRoaringBitmap, ImmutableRoaringBitmap> miruIndexer = new MiruIndexer<>(new MiruIndexAuthz<>(),
             new MiruIndexFieldValues<>(),
             new MiruIndexBloom<>(new BloomIndex<>(bitmaps, Hashing.murmur3_128(), 100_000, 0.01f)),
+            new MiruIndexFirst<>(),
             new MiruIndexLatest<>(),
             new MiruIndexPairedLatest<>());
 
