@@ -13,6 +13,6 @@ public class MiruFilerRemovalIndex<BM extends IBM, IBM> extends MiruFilerInverte
         byte[] keyBytes,
         Object mutationLock) {
 
-        super(bitmaps, trackError, keyBytes, keyedFilerStore, mutationLock);
+        super(bitmaps, trackError, -4, keyBytes, keyedFilerStore, mutationLock);
     }
 }

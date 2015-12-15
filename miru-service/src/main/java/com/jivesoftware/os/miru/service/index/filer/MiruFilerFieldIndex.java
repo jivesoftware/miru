@@ -18,14 +18,19 @@ import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MultiIndexTx;
 import com.jivesoftware.os.miru.plugin.index.TermIdStream;
 import com.jivesoftware.os.miru.plugin.partition.TrackError;
+import com.jivesoftware.os.mlogger.core.MetricLogger;
+import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import org.apache.commons.lang.mutable.MutableLong;
 
 /**
  * @author jonathan
  */
 public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IBM> {
+
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final MiruBitmaps<BM, IBM> bitmaps;
     private final TrackError trackError;
@@ -76,13 +81,17 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
 
     @Override
     public void streamTermIdsForField(int fieldId, List<KeyRange> ranges, final TermIdStream termIdStream, StackBuffer stackBuffer) throws Exception {
+        MutableLong bytes = new MutableLong();
         indexes[fieldId].streamKeys(ranges, rawKey -> {
             try {
+                bytes.add(rawKey.length);
                 return termIdStream.stream(termInterner.intern(rawKey));
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
         }, stackBuffer);
+        LOG.inc("count>streamTermIdsForField>" + fieldId);
+        LOG.inc("bytes>streamTermIdsForField>" + fieldId, bytes.longValue());
     }
 
     @Override
@@ -96,7 +105,7 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
     }
 
     private MiruInvertedIndex<BM, IBM> getIndex(int fieldId, MiruTermId termId) throws Exception {
-        return new MiruFilerInvertedIndex<>(bitmaps, trackError, termId.getBytes(), indexes[fieldId], stripingLocksProvider.lock(termId, 0));
+        return new MiruFilerInvertedIndex<>(bitmaps, trackError, fieldId, termId.getBytes(), indexes[fieldId], stripingLocksProvider.lock(termId, 0));
     }
 
     @Override
@@ -107,8 +116,10 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
                 termIdBytes[i] = termIds[i].getBytes();
             }
         }
+        MutableLong bytes = new MutableLong();
         indexes[fieldId].readEach(termIdBytes, null, (monkey, filer, _stackBuffer, lock, index) -> {
             if (filer != null) {
+                bytes.add(filer.length());
                 BitmapAndLastId<BM> bitmapAndLastId = MiruFilerInvertedIndex.deser(bitmaps, trackError, filer, -1, _stackBuffer);
                 if (bitmapAndLastId != null) {
                     return bitmapAndLastId.bitmap;
@@ -116,6 +127,8 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
             }
             return null;
         }, results, stackBuffer);
+        LOG.inc("count>multiGet>" + fieldId);
+        LOG.inc("bytes>multiGet>" + fieldId, bytes.longValue());
     }
 
     @Override
@@ -131,9 +144,11 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
                 termIdBytes[i] = termIds[i].getBytes();
             }
         }
+        MutableLong bytes = new MutableLong();
         indexes[fieldId].readEach(termIdBytes, null, (monkey, filer, _stackBuffer, lock, index) -> {
             if (filer != null) {
                 try {
+                    bytes.add(filer.length());
                     int lastId = -1;
                     if (considerIfLastIdGreaterThanN >= 0) {
                         lastId = filer.readInt();
@@ -148,6 +163,8 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
             }
             return null;
         }, new Void[termIds.length], stackBuffer);
+        LOG.inc("count>multiTxIndex>" + fieldId);
+        LOG.inc("bytes>multiTxIndex>" + fieldId, bytes.longValue());
     }
 
     @Override
@@ -206,9 +223,12 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
             termIdBytes[i] = termIds[i].getBytes();
         }
 
+        MutableLong bytesRead = new MutableLong();
+        MutableLong bytesWrite = new MutableLong();
         indexes[fieldId].multiWriteNewReplace(termIdBytes, (monkey, filer, stackBuffer1, lock, index) -> {
             BitmapAndLastId<BM> backing = null;
             if (filer != null) {
+                bytesRead.add(filer.length());
                 synchronized (lock) {
                     filer.seek(0);
                     backing = MiruFilerInvertedIndex.deser(bitmaps, trackError, filer, -1, stackBuffer1);
@@ -220,11 +240,15 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
             }
             try {
                 MiruFilerInvertedIndex.SizeAndBytes sizeAndBytes = MiruFilerInvertedIndex.getSizeAndBytes(bitmaps, merged.bitmap, merged.lastId);
+                bytesWrite.add(sizeAndBytes.filerSizeInBytes);
                 return new HintAndTransaction<>(sizeAndBytes.filerSizeInBytes, new MiruFilerInvertedIndex.SetTransaction(sizeAndBytes.bytes));
             } catch (Exception e) {
                 throw new IOException("Failed to serialize bitmap", e);
             }
         }, new Void[termIdBytes.length], stackBuffer);
+        LOG.inc("count>multiMerge>" + fieldId);
+        LOG.inc("bytes>multiMergeRead>" + fieldId, bytesRead.longValue());
+        LOG.inc("bytes>multiMergeWrite>" + fieldId, bytesWrite.longValue());
     }
 
     @Override
