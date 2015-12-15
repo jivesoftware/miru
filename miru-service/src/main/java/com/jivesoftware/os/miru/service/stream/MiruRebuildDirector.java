@@ -6,6 +6,7 @@ import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.service.partition.MiruLocalHostedPartition;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import com.jivesoftware.os.mlogger.core.ValueType;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -28,7 +29,8 @@ public class MiruRebuildDirector {
             if (isPermitted(coord)) {
                 synchronized (activityCount) {
                     if (activityCount.get() >= count) {
-                        activityCount.addAndGet(-count);
+                        long remaining = activityCount.addAndGet(-count);
+                        LOG.set(ValueType.COUNT, "count", remaining);
                         if (prioritized.remove(coord)) {
                             LOG.info("Prioritized rebuild of {} has begun", coord);
                         }
@@ -43,9 +45,12 @@ public class MiruRebuildDirector {
     }
 
     public void release(Token token) {
-        activityCount.addAndGet(token.count);
-        // prioritization should already have been removed on token acquire, but remove just in case priority was given while partition was rebuilding.
-        prioritized.remove(token.coord);
+        synchronized (activityCount) {
+            long remaining = activityCount.addAndGet(token.count);
+            LOG.set(ValueType.COUNT, "count", remaining);
+            // prioritization should already have been removed on token acquire, but remove just in case priority was given while partition was rebuilding.
+            prioritized.remove(token.coord);
+        }
     }
 
     public long available() {

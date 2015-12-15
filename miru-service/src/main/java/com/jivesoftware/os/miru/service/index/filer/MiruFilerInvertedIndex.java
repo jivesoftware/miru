@@ -22,59 +22,75 @@ import java.io.DataInput;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import org.apache.commons.lang.mutable.MutableLong;
 
 /**
  * @author jonathan
  */
 public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<BM, IBM> {
 
-    private static final MetricLogger log = MetricLoggerFactory.getLogger();
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     public static final int LAST_ID_LENGTH = 4;
 
     private final MiruBitmaps<BM, IBM> bitmaps;
     private final TrackError trackError;
+    private final int fieldId;
     private final byte[] indexKeyBytes;
     private final KeyedFilerStore<Long, Void> keyedFilerStore;
     private final Object mutationLock;
     private volatile int lastId = Integer.MIN_VALUE;
 
-    private final ChunkTransaction<Void, BitmapAndLastId<BM>> getTransaction;
-
     public MiruFilerInvertedIndex(MiruBitmaps<BM, IBM> bitmaps,
         TrackError trackError,
-        byte[] indexKeyBytes,
+        int fieldId, byte[] indexKeyBytes,
         KeyedFilerStore<Long, Void> keyedFilerStore,
         Object mutationLock) {
         this.bitmaps = bitmaps;
         this.trackError = trackError;
+        this.fieldId = fieldId;
         this.indexKeyBytes = Preconditions.checkNotNull(indexKeyBytes);
         this.keyedFilerStore = Preconditions.checkNotNull(keyedFilerStore);
         this.mutationLock = mutationLock;
-        //TODO pass in
-        this.getTransaction = (monkey, filer, stackBuffer, lock) -> {
-            if (filer != null) {
-                synchronized (lock) {
-                    filer.seek(0);
-                    return deser(bitmaps, trackError, filer, -1, stackBuffer);
-                }
-            }
-            return null;
-        };
     }
 
     @Override
     public Optional<BM> getIndex(StackBuffer stackBuffer) throws Exception {
-        return getIndexInternal(getTransaction, stackBuffer).transform(input -> input.bitmap);
+        MutableLong bytes = new MutableLong();
+        Optional<BM> index = getIndexInternal((monkey, filer, stackBuffer1, lock) -> {
+            if (filer != null) {
+                bytes.add(filer.length());
+                synchronized (lock) {
+                    filer.seek(0);
+                    return deser(bitmaps, trackError, filer, -1, stackBuffer1);
+                }
+            }
+            return null;
+        }, stackBuffer).transform(input -> input.bitmap);
+        LOG.inc("count>getIndex>" + fieldId);
+        LOG.inc("bytes>getIndex>" + fieldId, bytes.longValue());
+        return index;
     }
 
     @Override
     public Optional<BitmapAndLastId<BM>> getIndexAndLastId(int considerIfLastIdGreaterThanN, StackBuffer stackBuffer) throws Exception {
+        Optional<BitmapAndLastId<BM>> index;
+        MutableLong bytes = new MutableLong();
         if (considerIfLastIdGreaterThanN < 0) {
-            return getIndexInternal(getTransaction, stackBuffer);
-        } else {
-            return getIndexInternal((monkey, filer, stackBuffer1, lock) -> {
+            index = getIndexInternal((monkey, filer, stackBuffer1, lock) -> {
                 if (filer != null) {
+                    bytes.add(filer.length());
+                    synchronized (lock) {
+                        filer.seek(0);
+                        return deser(bitmaps, trackError, filer, -1, stackBuffer1);
+                    }
+                }
+                return null;
+            }, stackBuffer);
+        } else {
+            index = getIndexInternal((monkey, filer, stackBuffer1, lock) -> {
+                if (filer != null) {
+                    bytes.add(filer.length());
                     synchronized (lock) {
                         filer.seek(0);
                         return deser(bitmaps, trackError, filer, considerIfLastIdGreaterThanN, stackBuffer);
@@ -83,6 +99,9 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
                 return null;
             }, stackBuffer);
         }
+        LOG.inc("count>getIndexAndLastId>" + fieldId);
+        LOG.inc("bytes>getIndexAndLastId>" + fieldId, bytes.longValue());
+        return index;
     }
 
     private Optional<BitmapAndLastId<BM>> getIndexInternal(ChunkTransaction<Void, BitmapAndLastId<BM>> chunkTransaction,
@@ -91,13 +110,13 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
         BitmapAndLastId<BM> bitmapAndLastId = keyedFilerStore.read(indexKeyBytes, null, chunkTransaction, stackBuffer);
 
         if (bitmapAndLastId != null) {
-            log.inc("get>hit");
+            LOG.inc("get>hit");
             if (lastId == Integer.MIN_VALUE) {
                 lastId = bitmapAndLastId.lastId;
             }
             return Optional.of(bitmapAndLastId);
         } else {
-            log.inc("get>miss");
+            LOG.inc("get>miss");
             lastId = -1;
             return Optional.absent();
         }
@@ -105,9 +124,11 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
 
     @Override
     public <R> R txIndex(IndexTx<R, IBM> tx, StackBuffer stackBuffer) throws Exception {
-        return keyedFilerStore.read(indexKeyBytes, null, (monkey, filer, stackBuffer1, lock) -> {
+        MutableLong bytes = new MutableLong();
+        R result = keyedFilerStore.read(indexKeyBytes, null, (monkey, filer, stackBuffer1, lock) -> {
             try {
                 if (filer != null) {
+                    bytes.add(filer.length());
                     synchronized (lock) {
                         if (filer.length() < LAST_ID_LENGTH + 4) {
                             return tx.tx(null, null, -1, null);
@@ -118,10 +139,13 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
                 } else {
                     return tx.tx(null, null, -1, null);
                 }
-            } catch (Exception e) {// [3_2638]
+            } catch (Exception e) {
                 throw new IOException(e);
             }
         }, stackBuffer);
+        LOG.inc("count>txIndex>" + fieldId);
+        LOG.inc("bytes>txIndex>" + fieldId, bytes.longValue());
+        return result;
     }
 
     @Override
@@ -151,9 +175,9 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
                         byte[] raw = new byte[512];
                         filer.seek(0);
                         filer.read(raw);
-                        log.error("Failed to deserialize, head bytes from filer: {}", Arrays.toString(raw));
+                        LOG.error("Failed to deserialize, head bytes from filer: {}", Arrays.toString(raw));
                     } catch (Exception e1) {
-                        log.error("Failed to print debug info", e1);
+                        LOG.error("Failed to print debug info", e1);
                     }
                     throw new IOException("Failed to deserialize", e);
                 }
@@ -182,25 +206,9 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
 
     private void setIndex(IBM index, int setLastId, StackBuffer stackBuffer) throws Exception {
         SizeAndBytes sizeAndBytes = getSizeAndBytes(bitmaps, index, setLastId);
-
-        /*try {
-            BM check = bitmaps.deserialize(ByteStreams.newDataInput(bytes, LAST_ID_LENGTH));
-            BM checked = bitmaps.or(Arrays.asList(index, check));
-            if (bitmaps.cardinality(index) != bitmaps.cardinality(check) || bitmaps.cardinality(index) != bitmaps.cardinality(checked)) {
-                log.error("BAD BITS bitmap mismatch index:{} check:{} checked:{}", index, check, checked);
-                trackError.error("Bad bits bitmap mismatch" +
-                    " index:" + bitmaps.cardinality(index) +
-                    " check:" + bitmaps.cardinality(check) +
-                    " checked:" + bitmaps.cardinality(checked));
-            }
-        } catch (Exception e) {
-            log.error("BAD BITS failed to check index:{} bytes:{}", new Object[] { index, Arrays.toString(bytes) }, e);
-            trackError.error("Bad bits failed to check index:" + bitmaps.cardinality(index) + " bytes:" + bytes.length);
-        }*/
-
         keyedFilerStore.writeNewReplace(indexKeyBytes, sizeAndBytes.filerSizeInBytes, new SetTransaction(sizeAndBytes.bytes), stackBuffer);
-        log.inc("set>total");
-        log.inc("set>bytes", sizeAndBytes.bytes.length);
+        LOG.inc("count>set>" + fieldId);
+        LOG.inc("bytes>set>" + fieldId, sizeAndBytes.bytes.length);
     }
 
     @Override
@@ -280,12 +288,19 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     @Override
     public int lastId(StackBuffer stackBuffer) throws Exception {
         if (lastId == Integer.MIN_VALUE) {
+            MutableLong bytes = new MutableLong();
             synchronized (mutationLock) {
-                lastId = keyedFilerStore.read(indexKeyBytes, null, lastIdTransaction, stackBuffer);
+                lastId = keyedFilerStore.read(indexKeyBytes, null, (monkey, filer, stackBuffer1, lock) -> {
+                    if (filer != null) {
+                        bytes.add(filer.length());
+                        return getLastId(lock, filer, stackBuffer1);
+                    } else {
+                        return -1;
+                    }
+                }, stackBuffer);
             }
-            log.inc("lastId>total");
-            log.inc("lastId>bytes", 4);
-
+            LOG.inc("count>lastId>" + fieldId);
+            LOG.inc("bytes>lastId>" + fieldId, bytes.longValue());
         }
         return lastId;
     }
@@ -332,14 +347,6 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
             setIndex(or, lastId, stackBuffer);
         }
     }
-
-    private static final ChunkTransaction<Void, Integer> lastIdTransaction = (monkey, filer, stackBuffer, lock) -> {
-        if (filer != null) {
-            return getLastId(lock, filer, stackBuffer);
-        } else {
-            return -1;
-        }
-    };
 
     public static class SizeAndBytes {
         public final long filerSizeInBytes;
