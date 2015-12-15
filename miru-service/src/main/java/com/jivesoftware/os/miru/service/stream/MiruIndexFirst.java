@@ -41,7 +41,7 @@ public class MiruIndexFirst<BM extends IBM, IBM> {
                         StackBuffer stackBuffer = new StackBuffer();
                         for (MiruTermId termId : fieldValues) {
                             // SetIfEmpty ensures only the first occurrence of the term appears in the index.
-                            MiruInvertedIndex<BM, IBM> aggregateIndex = primaryFieldIndex.getOrCreateInvertedIndex(
+                            MiruInvertedIndex<BM, IBM> aggregateIndex = primaryFieldIndex.getOrCreateInvertedIndex("indexFirst",
                                 fieldDefinition.fieldId, termId);
                             aggregateIndex.setIfEmpty(stackBuffer, internalActivityAndId.id);
                         }

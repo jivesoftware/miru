@@ -93,7 +93,8 @@ public class LuceneBackedQueryParserTest {
         // ((0, 2, 4, 6, 8) AND (2, 3, 6, 7)) OR ((0, 2, 4, 6, 8) NOT (2, 3, 6, 7))
         // (2, 6) OR (0, 4, 8)
         // (0, 2, 4, 6, 8)
-        RoaringBitmap storage = aggregateUtil.filter(bitmaps, schema, termComposer, fieldIndexProvider, filter, new MiruSolutionLog(MiruSolutionLogLevel.NONE),
+        RoaringBitmap storage = aggregateUtil.filter("test", bitmaps, schema, termComposer, fieldIndexProvider, filter,
+            new MiruSolutionLog(MiruSolutionLogLevel.NONE),
             null, 9, -1, stackBuffer);
         Assert.assertEquals(storage.getCardinality(), 5);
         assertTrue(storage.contains(0));
@@ -122,7 +123,8 @@ public class LuceneBackedQueryParserTest {
         // ((0, 2, 4, 6, 8) AND (2, 3, 6, 7)) OR ((0, 2, 4, 6, 8) NOT (2, 3, 6, 7))
         // (2, 6) OR (0, 4, 8)
         // (0, 2, 4, 6, 8)
-        RoaringBitmap storage = aggregateUtil.filter(bitmaps, schema, termComposer, fieldIndexProvider, filter, new MiruSolutionLog(MiruSolutionLogLevel.NONE),
+        RoaringBitmap storage = aggregateUtil.filter("test", bitmaps, schema, termComposer, fieldIndexProvider, filter,
+            new MiruSolutionLog(MiruSolutionLogLevel.NONE),
             null, 9, -1, stackBuffer);
         Assert.assertEquals(storage.getCardinality(), 5);
         assertTrue(storage.contains(0));
@@ -155,12 +157,16 @@ public class LuceneBackedQueryParserTest {
         }
 
         @Override
-        public MiruInvertedIndex<RoaringBitmap, RoaringBitmap> get(int fieldId, MiruTermId termId) throws Exception {
+        public MiruInvertedIndex<RoaringBitmap, RoaringBitmap> get(String name, int fieldId, MiruTermId termId) throws Exception {
             return new TestInvertedIndex(fieldId, termId);
         }
 
         @Override
-        public void streamTermIdsForField(int fieldId, List<KeyRange> ranges, TermIdStream termIdStream, StackBuffer stackBuffer) throws Exception {
+        public void streamTermIdsForField(String name,
+            int fieldId,
+            List<KeyRange> ranges,
+            TermIdStream termIdStream,
+            StackBuffer stackBuffer) throws Exception {
             for (KeyRange range : ranges) {
                 MiruTermId fromKey = new MiruTermId(range.getStartInclusiveKey());
                 MiruTermId toKey = new MiruTermId(range.getStopExclusiveKey());
@@ -173,17 +179,22 @@ public class LuceneBackedQueryParserTest {
         }
 
         @Override
-        public MiruInvertedIndex<RoaringBitmap, RoaringBitmap> getOrCreateInvertedIndex(int fieldId, MiruTermId term) throws Exception {
+        public MiruInvertedIndex<RoaringBitmap, RoaringBitmap> getOrCreateInvertedIndex(String name, int fieldId, MiruTermId term) throws Exception {
             throw new UnsupportedOperationException("Nope");
         }
 
         @Override
-        public void multiGet(int fieldId, MiruTermId[] termIds, BitmapAndLastId<RoaringBitmap>[] results, StackBuffer stackBuffer) throws Exception {
+        public void multiGet(String name,
+            int fieldId,
+            MiruTermId[] termIds,
+            BitmapAndLastId<RoaringBitmap>[] results,
+            StackBuffer stackBuffer) throws Exception {
             throw new UnsupportedOperationException("Nope");
         }
 
         @Override
-        public void multiTxIndex(int fieldId,
+        public void multiTxIndex(String name,
+            int fieldId,
             MiruTermId[] termIds,
             int considerIfLastIdGreaterThanN,
             StackBuffer stackBuffer,

@@ -47,12 +47,12 @@ public class MiruIndexLatest<BM extends IBM, IBM> {
                         StackBuffer stackBuffer = new StackBuffer();
                         // Answers the question,
                         // "What is the latest activity against each distinct value of this field?"
-                        MiruInvertedIndex<BM, IBM> aggregateIndex = latestFieldIndex.getOrCreateInvertedIndex(
+                        MiruInvertedIndex<BM, IBM> aggregateIndex = latestFieldIndex.getOrCreateInvertedIndex("indexLatest",
                             fieldDefinition.fieldId, fieldAggregateTermId);
 
                         // ["doc"] -> "d1", "d2", "d3", "d4" -> [0, 1(d1), 0, 0, 1(d2), 0, 0, 1(d3), 0, 0, 1(d4)]
                         for (MiruTermId fieldValue : fieldValues) {
-                            MiruInvertedIndex<BM, IBM> fieldValueIndex = allFieldIndex.get(fieldDefinition.fieldId, fieldValue);
+                            MiruInvertedIndex<BM, IBM> fieldValueIndex = allFieldIndex.get("indexLatest", fieldDefinition.fieldId, fieldValue);
                             Optional<BM> optionalIndex = fieldValueIndex.getIndex(stackBuffer);
                             if (optionalIndex.isPresent()) {
                                 log.inc("count>andNot", 1);

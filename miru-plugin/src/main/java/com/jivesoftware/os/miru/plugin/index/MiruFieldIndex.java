@@ -10,13 +10,14 @@ import java.util.List;
  */
 public interface MiruFieldIndex<BM extends IBM, IBM> {
 
-    MiruInvertedIndex<BM, IBM> get(int fieldId, MiruTermId termId) throws Exception;
+    MiruInvertedIndex<BM, IBM> get(String name, int fieldId, MiruTermId termId) throws Exception;
 
-    MiruInvertedIndex<BM, IBM> getOrCreateInvertedIndex(int fieldId, MiruTermId term) throws Exception;
+    MiruInvertedIndex<BM, IBM> getOrCreateInvertedIndex(String name, int fieldId, MiruTermId term) throws Exception;
 
-    void multiGet(int fieldId, MiruTermId[] termIds, BitmapAndLastId<BM>[] results, StackBuffer stackBuffer) throws Exception;
+    void multiGet(String name, int fieldId, MiruTermId[] termIds, BitmapAndLastId<BM>[] results, StackBuffer stackBuffer) throws Exception;
 
-    void multiTxIndex(int fieldId,
+    void multiTxIndex(String name,
+        int fieldId,
         MiruTermId[] termIds,
         int considerIfLastIdGreaterThanN,
         StackBuffer stackBuffer,
@@ -30,7 +31,7 @@ public interface MiruFieldIndex<BM extends IBM, IBM> {
 
     void remove(int fieldId, MiruTermId termId, int id, StackBuffer stackBuffer) throws Exception;
 
-    void streamTermIdsForField(int fieldId, List<KeyRange> ranges, TermIdStream termIdStream, StackBuffer stackBuffer) throws Exception;
+    void streamTermIdsForField(String name, int fieldId, List<KeyRange> ranges, TermIdStream termIdStream, StackBuffer stackBuffer) throws Exception;
 
     long getCardinality(int fieldId, MiruTermId termId, int id, StackBuffer stackBuffer) throws Exception;
 

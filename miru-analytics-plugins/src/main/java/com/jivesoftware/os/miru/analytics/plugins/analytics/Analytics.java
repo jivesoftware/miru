@@ -44,7 +44,8 @@ public class Analytics {
         boolean analyzed(T term, long[] waveformBuffer) throws Exception;
     }
 
-    public <BM extends IBM, IBM, T> boolean analyze(MiruSolutionLog solutionLog,
+    public <BM extends IBM, IBM, T> boolean analyze(String name,
+        MiruSolutionLog solutionLog,
         MiruRequestHandle<BM, IBM, ?> handle,
         MiruRequestContext<BM, IBM, ?> context,
         MiruAuthzExpression authzExpression,
@@ -87,8 +88,8 @@ public class Analytics {
             solutionLog.log(MiruSolutionLogLevel.INFO, "analytics filter: no constraints.");
         } else {
             start = System.currentTimeMillis();
-            BM filtered = aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), constraintsFilter,
-                solutionLog, null, context.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
+            BM filtered = aggregateUtil.filter(name, bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(),
+                constraintsFilter, solutionLog, null, context.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
             solutionLog.log(MiruSolutionLogLevel.INFO, "analytics filter: {} millis.", System.currentTimeMillis() - start);
             ands.add(filtered);
         }

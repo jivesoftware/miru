@@ -35,6 +35,7 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
 
     private final MiruBitmaps<BM, IBM> bitmaps;
     private final TrackError trackError;
+    private final String name;
     private final int fieldId;
     private final byte[] indexKeyBytes;
     private final KeyedFilerStore<Long, Void> keyedFilerStore;
@@ -43,11 +44,14 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
 
     public MiruFilerInvertedIndex(MiruBitmaps<BM, IBM> bitmaps,
         TrackError trackError,
-        int fieldId, byte[] indexKeyBytes,
+        String name,
+        int fieldId,
+        byte[] indexKeyBytes,
         KeyedFilerStore<Long, Void> keyedFilerStore,
         Object mutationLock) {
         this.bitmaps = bitmaps;
         this.trackError = trackError;
+        this.name = name;
         this.fieldId = fieldId;
         this.indexKeyBytes = Preconditions.checkNotNull(indexKeyBytes);
         this.keyedFilerStore = Preconditions.checkNotNull(keyedFilerStore);
@@ -67,8 +71,12 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
             }
             return null;
         }, stackBuffer).transform(input -> input.bitmap);
-        LOG.inc("count>getIndex>" + fieldId);
-        LOG.inc("bytes>getIndex>" + fieldId, bytes.longValue());
+        LOG.inc("count>getIndex>total");
+        LOG.inc("count>getIndex>" + name + ">total");
+        LOG.inc("count>getIndex>" + name + ">" + fieldId);
+        LOG.inc("bytes>getIndex>total", bytes.longValue());
+        LOG.inc("bytes>getIndex>" + name + ">total", bytes.longValue());
+        LOG.inc("bytes>getIndex>" + name + ">" + fieldId, bytes.longValue());
         return index;
     }
 
@@ -99,8 +107,12 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
                 return null;
             }, stackBuffer);
         }
-        LOG.inc("count>getIndexAndLastId>" + fieldId);
-        LOG.inc("bytes>getIndexAndLastId>" + fieldId, bytes.longValue());
+        LOG.inc("count>getIndexAndLastId>total");
+        LOG.inc("count>getIndexAndLastId>" + name + ">total");
+        LOG.inc("count>getIndexAndLastId>" + name + ">" + fieldId);
+        LOG.inc("bytes>getIndexAndLastId>total", bytes.longValue());
+        LOG.inc("bytes>getIndexAndLastId>" + name + ">total", bytes.longValue());
+        LOG.inc("bytes>getIndexAndLastId>" + name + ">" + fieldId, bytes.longValue());
         return index;
     }
 
@@ -143,8 +155,12 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
                 throw new IOException(e);
             }
         }, stackBuffer);
-        LOG.inc("count>txIndex>" + fieldId);
-        LOG.inc("bytes>txIndex>" + fieldId, bytes.longValue());
+        LOG.inc("count>txIndex>total");
+        LOG.inc("count>txIndex>" + name + ">total");
+        LOG.inc("count>txIndex>" + name + ">" + fieldId);
+        LOG.inc("bytes>txIndex>total", bytes.longValue());
+        LOG.inc("bytes>txIndex>" + name + ">total", bytes.longValue());
+        LOG.inc("bytes>txIndex>" + name + ">" + fieldId, bytes.longValue());
         return result;
     }
 
@@ -207,8 +223,12 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     private void setIndex(IBM index, int setLastId, StackBuffer stackBuffer) throws Exception {
         SizeAndBytes sizeAndBytes = getSizeAndBytes(bitmaps, index, setLastId);
         keyedFilerStore.writeNewReplace(indexKeyBytes, sizeAndBytes.filerSizeInBytes, new SetTransaction(sizeAndBytes.bytes), stackBuffer);
-        LOG.inc("count>set>" + fieldId);
-        LOG.inc("bytes>set>" + fieldId, sizeAndBytes.bytes.length);
+        LOG.inc("count>set>total");
+        LOG.inc("count>set>" + name + ">total");
+        LOG.inc("count>set>" + name + ">" + fieldId);
+        LOG.inc("bytes>set>total", sizeAndBytes.bytes.length);
+        LOG.inc("bytes>set>" + name + ">total", sizeAndBytes.bytes.length);
+        LOG.inc("bytes>set>" + name + ">" + fieldId, sizeAndBytes.bytes.length);
     }
 
     @Override
@@ -299,8 +319,12 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
                     }
                 }, stackBuffer);
             }
-            LOG.inc("count>lastId>" + fieldId);
-            LOG.inc("bytes>lastId>" + fieldId, bytes.longValue());
+            LOG.inc("count>lastId>total");
+            LOG.inc("count>lastId>" + name + ">total");
+            LOG.inc("count>lastId>" + name + ">" + fieldId);
+            LOG.inc("bytes>lastId>total", bytes.longValue());
+            LOG.inc("bytes>lastId>" + name + ">total", bytes.longValue());
+            LOG.inc("bytes>lastId>" + name + ">" + fieldId, bytes.longValue());
         }
         return lastId;
     }

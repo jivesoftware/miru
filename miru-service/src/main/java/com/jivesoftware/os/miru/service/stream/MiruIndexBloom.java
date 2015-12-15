@@ -109,7 +109,7 @@ public class MiruIndexBloom<BM extends IBM, IBM> {
                 log.inc("count", bloomWork.bloomFieldValues.size(), tenantId.toString());
                 MiruFieldDefinition bloomFieldDefinition = context.schema.getFieldDefinition(bloomWork.bloomFieldId);
                 MiruTermId compositeBloomId = indexUtil.makeBloomTerm(bloomWork.fieldValue, bloomFieldDefinition.name);
-                MiruInvertedIndex<BM, IBM> invertedIndex = bloomFieldIndex.getOrCreateInvertedIndex(bloomWork.fieldId, compositeBloomId);
+                MiruInvertedIndex<BM, IBM> invertedIndex = bloomFieldIndex.getOrCreateInvertedIndex("indexBloom", bloomWork.fieldId, compositeBloomId);
                 bloomIndex.put(invertedIndex, bloomWork.bloomFieldValues, stackBuffer);
                 return null;
             }));

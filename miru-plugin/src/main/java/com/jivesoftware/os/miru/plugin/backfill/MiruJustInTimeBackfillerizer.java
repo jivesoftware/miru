@@ -63,7 +63,7 @@ public class MiruJustInTimeBackfillerizer {
                 synchronized (requestContext.getStreamLocks().lock(streamId, 0)) {
                     int lastActivityIndex = requestContext.getInboxIndex().getLastActivityIndex(streamId, stackBuffer);
                     int lastId = Math.min(requestContext.getTimeIndex().lastId(), requestContext.getActivityIndex().lastId(stackBuffer));
-                    BM answer = aggregateUtil.filter(bitmaps, requestContext.getSchema(), requestContext.getTermComposer(),
+                    BM answer = aggregateUtil.filter("justInTimeBackfillerizer", bitmaps, requestContext.getSchema(), requestContext.getTermComposer(),
                         requestContext.getFieldIndexProvider(), streamFilter, solutionLog, null, requestContext.getActivityIndex().lastId(stackBuffer),
                         lastActivityIndex, stackBuffer);
 

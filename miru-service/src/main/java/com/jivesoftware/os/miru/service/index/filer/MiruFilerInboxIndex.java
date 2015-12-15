@@ -38,6 +38,7 @@ public class MiruFilerInboxIndex<BM extends IBM, IBM> implements MiruInboxIndex<
     public MiruInvertedIndex<BM, IBM> getInbox(MiruStreamId streamId) {
         return new MiruFilerInvertedIndex<>(bitmaps,
             trackError,
+            "inbox",
             -2,
             streamId.getBytes(),
             store,

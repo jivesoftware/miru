@@ -52,7 +52,8 @@ public class AnalyticsQuestion implements Question<AnalyticsQuery, AnalyticsAnsw
 
         List<Waveform> waveforms = Lists.newArrayListWithCapacity(request.query.analyticsFilters.size());
         int segments = request.query.divideTimeRangeIntoNSegments;
-        boolean resultsExhausted = analytics.analyze(solutionLog,
+        boolean resultsExhausted = analytics.analyze("analytics",
+            solutionLog,
             handle,
             context,
             request.authzExpression,
@@ -62,8 +63,8 @@ public class AnalyticsQuestion implements Question<AnalyticsQuery, AnalyticsAnsw
             stackBuffer,
             (Analytics.ToAnalyze<MiruValue, BM> toAnalyze) -> {
                 for (Map.Entry<String, MiruFilter> entry : request.query.analyticsFilters.entrySet()) {
-                    BM waveformFiltered = aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(),
-                        entry.getValue(), solutionLog, null, context.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
+                    BM waveformFiltered = aggregateUtil.filter("analytics", bitmaps, context.getSchema(), context.getTermComposer(),
+                        context.getFieldIndexProvider(), entry.getValue(), solutionLog, null, context.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
 
                     if (!toAnalyze.analyze(new MiruValue(entry.getKey()), waveformFiltered)) {
                         return false;

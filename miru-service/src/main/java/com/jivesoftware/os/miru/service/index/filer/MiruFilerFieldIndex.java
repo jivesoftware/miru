@@ -56,31 +56,35 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
 
     @Override
     public void append(int fieldId, MiruTermId termId, int[] ids, long[] counts, StackBuffer stackBuffer) throws Exception {
-        getIndex(fieldId, termId).append(stackBuffer, ids);
+        getIndex("append", fieldId, termId).append(stackBuffer, ids);
         mergeCardinalities(fieldId, termId, ids, counts, stackBuffer);
     }
 
     @Override
     public void set(int fieldId, MiruTermId termId, int[] ids, long[] counts, StackBuffer stackBuffer) throws Exception {
-        getIndex(fieldId, termId).set(stackBuffer, ids);
+        getIndex("set", fieldId, termId).set(stackBuffer, ids);
         mergeCardinalities(fieldId, termId, ids, counts, stackBuffer);
     }
 
     @Override
     public void setIfEmpty(int fieldId, MiruTermId termId, int id, long count, StackBuffer stackBuffer) throws Exception {
-        if (getIndex(fieldId, termId).setIfEmpty(stackBuffer, id)) {
+        if (getIndex("setIfEmpty", fieldId, termId).setIfEmpty(stackBuffer, id)) {
             mergeCardinalities(fieldId, termId, new int[] { id }, new long[] { count }, stackBuffer);
         }
     }
 
     @Override
     public void remove(int fieldId, MiruTermId termId, int id, StackBuffer stackBuffer) throws Exception {
-        getIndex(fieldId, termId).remove(id, stackBuffer);
+        getIndex("remove", fieldId, termId).remove(id, stackBuffer);
         mergeCardinalities(fieldId, termId, new int[] { id }, cardinalities[fieldId] != null ? new long[1] : null, stackBuffer);
     }
 
     @Override
-    public void streamTermIdsForField(int fieldId, List<KeyRange> ranges, final TermIdStream termIdStream, StackBuffer stackBuffer) throws Exception {
+    public void streamTermIdsForField(String name,
+        int fieldId,
+        List<KeyRange> ranges,
+        final TermIdStream termIdStream,
+        StackBuffer stackBuffer) throws Exception {
         MutableLong bytes = new MutableLong();
         indexes[fieldId].streamKeys(ranges, rawKey -> {
             try {
@@ -90,26 +94,30 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
                 throw new RuntimeException(e);
             }
         }, stackBuffer);
-        LOG.inc("count>streamTermIdsForField>" + fieldId);
-        LOG.inc("bytes>streamTermIdsForField>" + fieldId, bytes.longValue());
+        LOG.inc("count>streamTermIdsForField>total");
+        LOG.inc("count>streamTermIdsForField>" + name + ">total");
+        LOG.inc("count>streamTermIdsForField>" + name + ">" + fieldId);
+        LOG.inc("bytes>streamTermIdsForField>total", bytes.longValue());
+        LOG.inc("bytes>streamTermIdsForField>" + name + ">total", bytes.longValue());
+        LOG.inc("bytes>streamTermIdsForField>" + name + ">" + fieldId, bytes.longValue());
     }
 
     @Override
-    public MiruInvertedIndex<BM, IBM> get(int fieldId, MiruTermId termId) throws Exception {
-        return getIndex(fieldId, termId);
+    public MiruInvertedIndex<BM, IBM> get(String name, int fieldId, MiruTermId termId) throws Exception {
+        return getIndex(name, fieldId, termId);
     }
 
     @Override
-    public MiruInvertedIndex<BM, IBM> getOrCreateInvertedIndex(int fieldId, MiruTermId term) throws Exception {
-        return getIndex(fieldId, term);
+    public MiruInvertedIndex<BM, IBM> getOrCreateInvertedIndex(String name, int fieldId, MiruTermId term) throws Exception {
+        return getIndex(name, fieldId, term);
     }
 
-    private MiruInvertedIndex<BM, IBM> getIndex(int fieldId, MiruTermId termId) throws Exception {
-        return new MiruFilerInvertedIndex<>(bitmaps, trackError, fieldId, termId.getBytes(), indexes[fieldId], stripingLocksProvider.lock(termId, 0));
+    private MiruInvertedIndex<BM, IBM> getIndex(String name, int fieldId, MiruTermId termId) throws Exception {
+        return new MiruFilerInvertedIndex<>(bitmaps, trackError, name, fieldId, termId.getBytes(), indexes[fieldId], stripingLocksProvider.lock(termId, 0));
     }
 
     @Override
-    public void multiGet(int fieldId, MiruTermId[] termIds, BitmapAndLastId<BM>[] results, StackBuffer stackBuffer) throws Exception {
+    public void multiGet(String name, int fieldId, MiruTermId[] termIds, BitmapAndLastId<BM>[] results, StackBuffer stackBuffer) throws Exception {
         byte[][] termIdBytes = new byte[termIds.length][];
         for (int i = 0; i < termIds.length; i++) {
             if (termIds[i] != null) {
@@ -127,12 +135,17 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
             }
             return null;
         }, results, stackBuffer);
-        LOG.inc("count>multiGet>" + fieldId);
-        LOG.inc("bytes>multiGet>" + fieldId, bytes.longValue());
+        LOG.inc("count>multiGet>total");
+        LOG.inc("count>multiGet>" + name + ">total");
+        LOG.inc("count>multiGet>" + name + ">" + fieldId);
+        LOG.inc("bytes>multiGet>total", bytes.longValue());
+        LOG.inc("bytes>multiGet>" + name + ">total", bytes.longValue());
+        LOG.inc("bytes>multiGet>" + name + ">" + fieldId, bytes.longValue());
     }
 
     @Override
-    public void multiTxIndex(int fieldId,
+    public void multiTxIndex(String name,
+        int fieldId,
         MiruTermId[] termIds,
         int considerIfLastIdGreaterThanN,
         StackBuffer stackBuffer,
@@ -163,8 +176,12 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
             }
             return null;
         }, new Void[termIds.length], stackBuffer);
-        LOG.inc("count>multiTxIndex>" + fieldId);
-        LOG.inc("bytes>multiTxIndex>" + fieldId, bytes.longValue());
+        LOG.inc("count>multiTxIndex>total");
+        LOG.inc("count>multiTxIndex>" + name + ">total");
+        LOG.inc("count>multiTxIndex>" + name + ">" + fieldId);
+        LOG.inc("bytes>multiTxIndex>total", bytes.longValue());
+        LOG.inc("bytes>multiTxIndex>" + name + ">total", bytes.longValue());
+        LOG.inc("bytes>multiTxIndex>" + name + ">" + fieldId, bytes.longValue());
     }
 
     @Override
@@ -246,8 +263,11 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
                 throw new IOException("Failed to serialize bitmap", e);
             }
         }, new Void[termIdBytes.length], stackBuffer);
+        LOG.inc("count>multiMerge>total");
         LOG.inc("count>multiMerge>" + fieldId);
+        LOG.inc("bytes>multiMergeRead>total", bytesRead.longValue());
         LOG.inc("bytes>multiMergeRead>" + fieldId, bytesRead.longValue());
+        LOG.inc("bytes>multiMergeWrite>total", bytesWrite.longValue());
         LOG.inc("bytes>multiMergeWrite>" + fieldId, bytesWrite.longValue());
     }
 

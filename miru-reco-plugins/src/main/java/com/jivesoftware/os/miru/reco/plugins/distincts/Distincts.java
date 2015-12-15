@@ -37,7 +37,8 @@ public class Distincts {
         this.termComposer = termComposer;
     }
 
-    public <BM extends IBM, IBM> DistinctsAnswer gather(MiruBitmaps<BM, IBM> bitmaps,
+    public <BM extends IBM, IBM> DistinctsAnswer gather(String name,
+        MiruBitmaps<BM, IBM> bitmaps,
         MiruRequestContext<BM, IBM, ?> requestContext,
         final DistinctsQuery query,
         int gatherBatchSize,
@@ -50,7 +51,7 @@ public class Distincts {
         MiruFieldDefinition fieldDefinition = schema.getFieldDefinition(fieldId);
 
         List<MiruValue> results = Lists.newArrayList();
-        gatherDirect(bitmaps, requestContext, query, gatherBatchSize, solutionLog,
+        gatherDirect(name, bitmaps, requestContext, query, gatherBatchSize, solutionLog,
             termId -> {
                 String[] in = termComposer.decompose(schema, fieldDefinition, stackBuffer, termId);
                 String[] out = recomposeParts(query, in);
@@ -64,7 +65,8 @@ public class Distincts {
         return result;
     }
 
-    public <BM extends IBM, IBM> void gatherDirect(MiruBitmaps<BM, IBM> bitmaps,
+    public <BM extends IBM, IBM> void gatherDirect(String name,
+        MiruBitmaps<BM, IBM> bitmaps,
         MiruRequestContext<BM, IBM, ?> requestContext,
         DistinctsQuery query,
         int gatherBatchSize,
@@ -91,7 +93,7 @@ public class Distincts {
                 }
 
                 requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary)
-                    .streamTermIdsForField(fieldId, ranges, termIdStream, stackBuffer);
+                    .streamTermIdsForField(name, fieldId, ranges, termIdStream, stackBuffer);
             } else {
                 long start = System.currentTimeMillis();
                 final byte[][] prefixesAsBytes;
@@ -106,7 +108,7 @@ public class Distincts {
                 }
 
                 List<IBM> ands = Lists.newArrayList();
-                BM constrained = aggregateUtil.filter(bitmaps, schema, termComposer, requestContext.getFieldIndexProvider(),
+                BM constrained = aggregateUtil.filter(name, bitmaps, schema, termComposer, requestContext.getFieldIndexProvider(),
                     query.constraintsFilter, solutionLog, null, requestContext.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
                 ands.add(constrained);
 
@@ -125,7 +127,7 @@ public class Distincts {
 
                 start = System.currentTimeMillis();
                 //TODO expose batch size to query?
-                aggregateUtil.gather(bitmaps, requestContext, result, fieldId, gatherBatchSize, solutionLog, termId -> {
+                aggregateUtil.gather(name, bitmaps, requestContext, result, fieldId, gatherBatchSize, solutionLog, termId -> {
                     if (prefixesAsBytes.length > 0) {
                         byte[] termBytes = termId.getBytes();
                         for (byte[] prefixAsBytes : prefixesAsBytes) {

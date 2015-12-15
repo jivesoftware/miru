@@ -37,7 +37,7 @@ public class MiruFilerUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUn
 
     @Override
     public MiruInvertedIndex<BM, IBM> getUnread(MiruStreamId streamId) throws Exception {
-        return new MiruFilerInvertedIndex<>(bitmaps, trackError, -1, streamId.getBytes(), store, stripingLocksProvider.lock(streamId, 0));
+        return new MiruFilerInvertedIndex<>(bitmaps, trackError, "unread", -1, streamId.getBytes(), store, stripingLocksProvider.lock(streamId, 0));
     }
 
     @Override

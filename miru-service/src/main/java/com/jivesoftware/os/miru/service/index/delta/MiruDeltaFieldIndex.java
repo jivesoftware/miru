@@ -74,32 +74,36 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
 
     @Override
     public void append(int fieldId, MiruTermId termId, int[] ids, long[] counts, StackBuffer stackBuffer) throws Exception {
-        getOrAllocate(fieldId, termId).append(stackBuffer, ids);
+        getOrAllocate("append", fieldId, termId).append(stackBuffer, ids);
         putCardinalities(fieldId, termId, ids, counts, true, stackBuffer);
     }
 
     @Override
     public void set(int fieldId, MiruTermId termId, int[] ids, long[] counts, StackBuffer stackBuffer) throws Exception {
-        getOrAllocate(fieldId, termId).set(stackBuffer, ids);
+        getOrAllocate("set", fieldId, termId).set(stackBuffer, ids);
         putCardinalities(fieldId, termId, ids, counts, false, stackBuffer);
     }
 
     @Override
     public void setIfEmpty(int fieldId, MiruTermId termId, int id, long count, StackBuffer stackBuffer) throws Exception {
-        if (getOrAllocate(fieldId, termId).setIfEmpty(stackBuffer, id)) {
+        if (getOrAllocate("setIfEmpty", fieldId, termId).setIfEmpty(stackBuffer, id)) {
             putCardinalities(fieldId, termId, new int[] { id }, new long[] { count }, false, stackBuffer);
         }
     }
 
     @Override
     public void remove(int fieldId, MiruTermId termId, int id, StackBuffer stackBuffer) throws Exception {
-        MiruInvertedIndex<BM, IBM> got = get(fieldId, termId);
+        MiruInvertedIndex<BM, IBM> got = get("remove", fieldId, termId);
         got.remove(id, stackBuffer);
         putCardinalities(fieldId, termId, new int[] { id }, cardinalities[fieldId] != null ? new long[1] : null, false, stackBuffer);
     }
 
     @Override
-    public void streamTermIdsForField(int fieldId, List<KeyRange> ranges, final TermIdStream termIdStream, StackBuffer stackBuffer) throws Exception {
+    public void streamTermIdsForField(String name,
+        int fieldId, List<KeyRange> ranges,
+        final TermIdStream termIdStream,
+        StackBuffer stackBuffer) throws Exception {
+
         final Set<MiruTermId> indexKeys = fieldIndexDeltas[fieldId].keySet();
         if (ranges != null && !ranges.isEmpty()) {
             for (KeyRange range : ranges) {
@@ -118,7 +122,7 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
                 }
             }
         }
-        backingFieldIndex.streamTermIdsForField(fieldId, ranges, termId -> {
+        backingFieldIndex.streamTermIdsForField(name, fieldId, ranges, termId -> {
             if (termId != null) {
                 if (!indexKeys.contains(termId)) {
                     if (!termIdStream.stream(termId)) {
@@ -131,7 +135,7 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
     }
 
     @Override
-    public MiruInvertedIndex<BM, IBM> get(int fieldId, MiruTermId termId) throws Exception {
+    public MiruInvertedIndex<BM, IBM> get(String name, int fieldId, MiruTermId termId) throws Exception {
         MiruDeltaInvertedIndex.Delta<IBM> delta = fieldIndexDeltas[fieldId].get(termId);
         if (delta == null) {
             delta = new MiruDeltaInvertedIndex.Delta<>();
@@ -140,15 +144,15 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
                 delta = existing;
             }
         }
-        return new MiruDeltaInvertedIndex<>(bitmaps, trackError, backingFieldIndex.get(fieldId, termId), delta);
+        return new MiruDeltaInvertedIndex<>(bitmaps, trackError, backingFieldIndex.get(name, fieldId, termId), delta);
     }
 
     @Override
-    public MiruInvertedIndex<BM, IBM> getOrCreateInvertedIndex(int fieldId, MiruTermId termId) throws Exception {
-        return getOrAllocate(fieldId, termId);
+    public MiruInvertedIndex<BM, IBM> getOrCreateInvertedIndex(String name, int fieldId, MiruTermId termId) throws Exception {
+        return getOrAllocate(name, fieldId, termId);
     }
 
-    private MiruInvertedIndex<BM, IBM> getOrAllocate(int fieldId, MiruTermId termId) throws Exception {
+    private MiruInvertedIndex<BM, IBM> getOrAllocate(String name, int fieldId, MiruTermId termId) throws Exception {
         MiruDeltaInvertedIndex.Delta<IBM> delta = fieldIndexDeltas[fieldId].get(termId);
         if (delta == null) {
             delta = new MiruDeltaInvertedIndex.Delta<>();
@@ -157,11 +161,11 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
                 delta = existing;
             }
         }
-        return new MiruDeltaInvertedIndex<>(bitmaps, trackError, backingFieldIndex.getOrCreateInvertedIndex(fieldId, termId), delta);
+        return new MiruDeltaInvertedIndex<>(bitmaps, trackError, backingFieldIndex.getOrCreateInvertedIndex(name, fieldId, termId), delta);
     }
 
     @Override
-    public void multiGet(int fieldId, MiruTermId[] termIds, BitmapAndLastId<BM>[] results, StackBuffer stackBuffer) throws Exception {
+    public void multiGet(String name, int fieldId, MiruTermId[] termIds, BitmapAndLastId<BM>[] results, StackBuffer stackBuffer) throws Exception {
 
         for (int i = 0; i < termIds.length; i++) {
             if (termIds[i] != null) {
@@ -184,7 +188,7 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
             }
         }
 
-        backingFieldIndex.multiGet(fieldId, termIds, results, stackBuffer);
+        backingFieldIndex.multiGet(name, fieldId, termIds, results, stackBuffer);
 
         for (int i = 0; i < termIds.length; i++) {
             if (termIds[i] != null) {
@@ -213,7 +217,8 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
     }
 
     @Override
-    public void multiTxIndex(int fieldId,
+    public void multiTxIndex(String name,
+        int fieldId,
         MiruTermId[] termIds,
         int considerIfLastIdGreaterThanN,
         StackBuffer stackBuffer,
@@ -228,7 +233,7 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
             if (termIds[i] != null) {
                 MiruDeltaInvertedIndex.Delta<IBM> delta = fieldIndexDeltas[fieldId].get(termIds[i]);
                 if (delta != null) {
-                    MiruInvertedIndex<BM, IBM> backingIndex = backingFieldIndex.get(fieldId, termIds[i]);
+                    MiruInvertedIndex<BM, IBM> backingIndex = backingFieldIndex.get(name, fieldId, termIds[i]);
                     Optional<BitmapAndLastId<BM>> index = MiruDeltaInvertedIndex.overlayDelta(bitmaps, delta, backingIndex, considerIfLastIdGreaterThanN,
                         trackError, stackBuffer);
                     if (index.isPresent()) {
@@ -243,7 +248,7 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
         }
 
         // the remaining termIds have no delta overlay
-        backingFieldIndex.multiTxIndex(fieldId, termIds, considerIfLastIdGreaterThanN, stackBuffer, indexTx);
+        backingFieldIndex.multiTxIndex(name, fieldId, termIds, considerIfLastIdGreaterThanN, stackBuffer, indexTx);
     }
 
     @Override

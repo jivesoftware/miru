@@ -154,7 +154,7 @@ public class MiruIndexerTest {
         for (MiruTermId fieldValue : fieldValues) {
             MiruInvertedIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> invertedIndex = context.getFieldIndexProvider()
                 .getFieldIndex(MiruFieldType.primary)
-                .get(fieldId, fieldValue);
+                .get("test", fieldId, fieldValue);
             assertNotNull(invertedIndex);
             ImmutableRoaringBitmap bitmap = invertedIndex.getIndex(stackBuffer).get();
             assertNotNull(bitmap);

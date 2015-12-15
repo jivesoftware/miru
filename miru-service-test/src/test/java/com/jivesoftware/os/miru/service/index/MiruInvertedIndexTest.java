@@ -327,6 +327,7 @@ public class MiruInvertedIndexTest {
                 public void reset() {
                 }
             },
+            "test",
             0,
             new byte[] { 0 },
             IndexTestUtil.buildKeyedFilerStore("index",

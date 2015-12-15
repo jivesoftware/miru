@@ -2,15 +2,12 @@ package com.jivesoftware.os.miru.reco.plugins.reco;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Sets;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
-import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
-import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
@@ -28,9 +25,7 @@ import com.jivesoftware.os.miru.plugin.solution.Question;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 
 /**
  *
@@ -73,7 +68,8 @@ public class RecoQuestion implements Question<RecoQuery, RecoAnswer, RecoReport>
             solutionLog.log(MiruSolutionLogLevel.WARN, "No time index intersection. Partition {}: {} doesn't intersect with {}",
                 handle.getCoord().partitionId, context.getTimeIndex(), timeRange);
             return new MiruPartitionResponse<>(
-                collaborativeFiltering.collaborativeFiltering(solutionLog,
+                collaborativeFiltering.collaborativeFiltering("reco",
+                    solutionLog,
                     bitmaps,
                     handle.getTrackError(),
                     context,
@@ -90,7 +86,7 @@ public class RecoQuestion implements Question<RecoQuery, RecoAnswer, RecoReport>
         List<IBM> okAnds = new ArrayList<>();
 
         // 1) Execute the combined filter above on the given stream, add the bitmap
-        BM filtered = aggregateUtil.filter(bitmaps, schema, termComposer, context.getFieldIndexProvider(),
+        BM filtered = aggregateUtil.filter("reco", bitmaps, schema, termComposer, context.getFieldIndexProvider(),
             request.query.scorableFilter, solutionLog, null, context.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
         if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
             solutionLog.log(MiruSolutionLogLevel.INFO, "constrained scorable down to {} items.", bitmaps.cardinality(filtered));
@@ -125,7 +121,7 @@ public class RecoQuestion implements Question<RecoQuery, RecoAnswer, RecoReport>
             solutionLog.log(MiruSolutionLogLevel.TRACE, "answering bitmap {}", okActivity);
         }
 
-        BM allMyActivity = aggregateUtil.filter(bitmaps, schema, termComposer, context.getFieldIndexProvider(),
+        BM allMyActivity = aggregateUtil.filter("reco", bitmaps, schema, termComposer, context.getFieldIndexProvider(),
             request.query.constraintsFilter, solutionLog, null, context.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
         if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
             solutionLog.log(MiruSolutionLogLevel.INFO, "constrained mine down to {} items.", bitmaps.cardinality(allMyActivity));
@@ -133,7 +129,8 @@ public class RecoQuestion implements Question<RecoQuery, RecoAnswer, RecoReport>
         }
 
         return new MiruPartitionResponse<>(
-            collaborativeFiltering.collaborativeFiltering(solutionLog,
+            collaborativeFiltering.collaborativeFiltering("reco",
+                solutionLog,
                 bitmaps,
                 handle.getTrackError(),
                 context,

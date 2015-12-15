@@ -11,7 +11,6 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
-import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
@@ -57,7 +56,8 @@ public class CollaborativeFiltering {
     /*
      * I have viewed these things; among others who have also viewed these things, what have they viewed that I have not?
      */
-    public <BM extends IBM, IBM> RecoAnswer collaborativeFiltering(MiruSolutionLog solutionLog,
+    public <BM extends IBM, IBM> RecoAnswer collaborativeFiltering(String name,
+        MiruSolutionLog solutionLog,
         MiruBitmaps<BM, IBM> bitmaps,
         TrackError trackError,
         MiruRequestContext<BM, IBM, ?> requestContext,
@@ -89,13 +89,13 @@ public class CollaborativeFiltering {
         // distinctParents: distinct parents <field1> that I've touched
         Set<MiruTermId> distinctParents = Sets.newHashSet();
 
-        aggregateUtil.gather(bitmaps, requestContext, myOkActivity, fieldId1, gatherBatchSize, solutionLog, termId -> {
+        aggregateUtil.gather(name, bitmaps, requestContext, myOkActivity, fieldId1, gatherBatchSize, solutionLog, termId -> {
             distinctParents.add(termId);
             return true;
         }, stackBuffer);
 
         log.debug("allField1Activity: fieldId={}", fieldId1);
-        FieldMultiTermTxIndex<BM, IBM> field1MultiTermTxIndex = new FieldMultiTermTxIndex<>(primaryFieldIndex, fieldId1, -1);
+        FieldMultiTermTxIndex<BM, IBM> field1MultiTermTxIndex = new FieldMultiTermTxIndex<>(name, primaryFieldIndex, fieldId1, -1);
         field1MultiTermTxIndex.setTermIds(distinctParents.toArray(new MiruTermId[distinctParents.size()]));
         BM allField1Activity = bitmaps.orMultiTx(field1MultiTermTxIndex, stackBuffer);
 
@@ -119,7 +119,8 @@ public class CollaborativeFiltering {
         final MinMaxPriorityQueue<MiruTermCount> contributorHeap = MinMaxPriorityQueue.orderedBy(highestCountComparator)
             .maximumSize(request.query.desiredNumberOfDistincts) // overloaded :(
             .create();
-        aggregateUtil.stream(bitmaps,
+        aggregateUtil.stream(name,
+            bitmaps,
             trackError,
             requestContext,
             coord,
@@ -158,7 +159,7 @@ public class CollaborativeFiltering {
         }
 
         BM[] contributorBitmaps = bitmaps.createArrayOf(contributorTermCounts.length);
-        FieldMultiTermTxIndex<BM, IBM> field2MultiTermTxIndex = new FieldMultiTermTxIndex<>(primaryFieldIndex, fieldId2, -1);
+        FieldMultiTermTxIndex<BM, IBM> field2MultiTermTxIndex = new FieldMultiTermTxIndex<>(name, primaryFieldIndex, fieldId2, -1);
         field2MultiTermTxIndex.setTermIds(contributorTermIds);
         bitmaps.multiTx(field2MultiTermTxIndex, (index, contributorActivity) -> {
             if (bitmaps.supportsInPlace()) {
@@ -173,7 +174,7 @@ public class CollaborativeFiltering {
         for (int i = 0; i < contributorBitmaps.length; i++) {
             if (contributorBitmaps[i] != null) {
                 Set<MiruTermId> distinctContributorParents = Sets.newHashSet();
-                aggregateUtil.gather(bitmaps, requestContext, contributorBitmaps[i], fieldId3, gatherBatchSize, solutionLog,
+                aggregateUtil.gather(name, bitmaps, requestContext, contributorBitmaps[i], fieldId3, gatherBatchSize, solutionLog,
                     termId -> {
                         distinctContributorParents.add(termId);
                         return true;
