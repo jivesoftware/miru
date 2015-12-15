@@ -131,7 +131,7 @@ public class IndexTestUtil {
         MiruBitmaps<BM, IBM> bitmaps,
         MiruPartitionCoord coord) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
-        return factory(numberOfChunkStores).allocate(bitmaps, schema, coord, MiruBackingStorage.memory, stackBuffer);
+        return factory(numberOfChunkStores).allocate(bitmaps, schema, coord, MiruBackingStorage.memory, null, stackBuffer);
 
     }
 
@@ -139,7 +139,7 @@ public class IndexTestUtil {
         MiruBitmaps<BM, IBM> bitmaps,
         MiruPartitionCoord coord) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
-        return factory(numberOfChunkStores).allocate(bitmaps, schema, coord, MiruBackingStorage.disk, stackBuffer);
+        return factory(numberOfChunkStores).allocate(bitmaps, schema, coord, MiruBackingStorage.disk, null, stackBuffer);
 
     }
 

@@ -53,9 +53,6 @@ public interface MiruServiceConfig extends Config {
 
     void setDefaultFailAfterNMillis(long millis);
 
-    @LongDefault(100_000)
-    long getPartitionRebuildIfBehindByCount();
-
     @IntDefault(10_000)
     int getPartitionRebuildBatchSize();
 
@@ -74,6 +71,9 @@ public interface MiruServiceConfig extends Config {
 
     @LongDefault(-1)
     long getMergeMaxOverage();
+
+    @BooleanDefault(true)
+    boolean getPartitionAllowNonLatestSchemaInteractions();
 
     @LongDefault(5_000)
     long getPartitionBootstrapIntervalInMillis();

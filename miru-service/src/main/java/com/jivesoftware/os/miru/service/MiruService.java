@@ -245,6 +245,11 @@ public class MiruService implements Miru {
         }
     }
 
+    public boolean isAvailable(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+        Optional<? extends MiruQueryablePartition<?, ?>> partition = getLocalTenantPartition(tenantId, partitionId);
+        return partition.isPresent() && partition.get().isAvailable();
+    }
+
     /**
      * Manage topology and configuration.
      */

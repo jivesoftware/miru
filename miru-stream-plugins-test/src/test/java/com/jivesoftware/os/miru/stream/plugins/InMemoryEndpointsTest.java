@@ -61,7 +61,7 @@ public class InMemoryEndpointsTest {
     private AggregateCountsEndpoints aggregateCountsEndpoints;
     private MiruWriterEndpoints miruWriterEndpoints;
 
-    @Test(enabled = true, description = "Disabled until we can figure out a  better solution for bootstrapping instead of sleeping.")
+    @Test(enabled = true)
     public void testSimpleAddActivities() throws Exception {
 
         MiruBackingStorage desiredStorage = MiruBackingStorage.disk;
