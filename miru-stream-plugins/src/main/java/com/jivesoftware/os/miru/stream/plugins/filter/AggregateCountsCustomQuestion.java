@@ -62,14 +62,14 @@ public class AggregateCountsCustomQuestion implements Question<AggregateCountsQu
         if (!context.getTimeIndex().intersects(timeRange)) {
             solutionLog.log(MiruSolutionLogLevel.WARN, "No time index intersection. Partition {}: {} doesn't intersect with {}",
                 handle.getCoord().partitionId, context.getTimeIndex(), timeRange);
-            return new MiruPartitionResponse<>(aggregateCounts.getAggregateCounts(solutionLog,
+            return new MiruPartitionResponse<>(aggregateCounts.getAggregateCounts("aggregateCountsCustom", solutionLog,
                 bitmaps, context, request, handle.getCoord(), report, bitmaps.create(), Optional.absent()), solutionLog.asList());
         }
 
         List<IBM> ands = new ArrayList<>();
 
-        BM filtered = aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), request.query.streamFilter,
-            solutionLog, null, context.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
+        BM filtered = aggregateUtil.filter("aggregateCountsCustom", bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(),
+            request.query.streamFilter, solutionLog, null, context.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
         ands.add(filtered);
 
         ands.add(bitmaps.buildIndexMask(context.getActivityIndex().lastId(stackBuffer), context.getRemovalIndex().getIndex(stackBuffer)));
@@ -91,8 +91,8 @@ public class AggregateCountsCustomQuestion implements Question<AggregateCountsQu
                 context.getTimeIndex(), request.query.countTimeRange.smallestTimestamp, request.query.countTimeRange.largestTimestamp, stackBuffer)));
         }
 
-        return new MiruPartitionResponse<>(aggregateCounts.getAggregateCounts(solutionLog, bitmaps, context, request, handle.getCoord(), report, answer,
-            Optional.fromNullable(counter)), solutionLog.asList());
+        return new MiruPartitionResponse<>(aggregateCounts.getAggregateCounts("aggregateCountsCustom", solutionLog, bitmaps, context, request,
+            handle.getCoord(), report, answer, Optional.fromNullable(counter)), solutionLog.asList());
     }
 
     @Override

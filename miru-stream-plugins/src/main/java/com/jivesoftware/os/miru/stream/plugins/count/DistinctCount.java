@@ -27,7 +27,8 @@ public class DistinctCount {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
-    public <BM extends IBM, IBM> DistinctCountAnswer numberOfDistincts(MiruBitmaps<BM, IBM> bitmaps,
+    public <BM extends IBM, IBM> DistinctCountAnswer numberOfDistincts(String name,
+        MiruBitmaps<BM, IBM> bitmaps,
         MiruRequestContext<BM, IBM, ?> requestContext,
         MiruRequest<DistinctCountQuery> request,
         Optional<DistinctCountReport> lastReport,
@@ -58,7 +59,7 @@ public class DistinctCount {
 
             for (MiruValue aggregateTerm : aggregateTerms) {
                 MiruTermId aggregateTermId = termComposer.compose(schema, fieldDefinition, stackBuffer, aggregateTerm.parts);
-                Optional<BM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex(stackBuffer);
+                Optional<BM> optionalTermIndex = fieldIndex.get(name, fieldId, aggregateTermId).getIndex(stackBuffer);
                 if (!optionalTermIndex.isPresent()) {
                     continue;
                 }
@@ -87,7 +88,7 @@ public class DistinctCount {
                     MiruValue aggregateTerm = new MiruValue(termComposer.decompose(schema, fieldDefinition, stackBuffer, aggregateTermId));
 
                     aggregateTerms.add(aggregateTerm);
-                    Optional<BM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex(stackBuffer);
+                    Optional<BM> optionalTermIndex = fieldIndex.get(name, fieldId, aggregateTermId).getIndex(stackBuffer);
                     checkState(optionalTermIndex.isPresent(), "Unable to load inverted index for aggregateTermId: " + aggregateTermId);
 
                     answerCollector = bitmaps.andNotWithCardinalityAndLastSetBit(answer, optionalTermIndex.get());

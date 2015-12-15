@@ -92,7 +92,7 @@ public class MetricsQuestion implements Question<MetricsQuery, MetricsAnswer, Me
             solutionLog.log(MiruSolutionLogLevel.INFO, "metrics filter: no constraints.");
         } else {
             start = System.currentTimeMillis();
-            BM filtered = aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(),
+            BM filtered = aggregateUtil.filter("metrics", bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(),
                 request.query.constraintsFilter, solutionLog, null, context.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
             solutionLog.log(MiruSolutionLogLevel.INFO, "metrics filter: {} millis.", System.currentTimeMillis() - start);
             ands.add(filtered);
@@ -137,7 +137,7 @@ public class MetricsQuestion implements Question<MetricsQuery, MetricsAnswer, Me
         List<Optional<BM>> powerBitIndexes = new ArrayList<>();
         for (int i = 0; i < 64; i++) {
             MiruTermId powerBitTerm = context.getTermComposer().compose(schema, powerBitsFieldDefinition, stackBuffer, String.valueOf(i));
-            MiruInvertedIndex<BM, IBM> invertedIndex = primaryFieldIndex.get(powerBitsFieldId, powerBitTerm);
+            MiruInvertedIndex<BM, IBM> invertedIndex = primaryFieldIndex.get("metrics", powerBitsFieldId, powerBitTerm);
             powerBitIndexes.add(invertedIndex.getIndex(stackBuffer));
         }
 
@@ -146,7 +146,7 @@ public class MetricsQuestion implements Question<MetricsQuery, MetricsAnswer, Me
         for (Map.Entry<String, MiruFilter> entry : request.query.filters.entrySet()) {
             Waveform waveform = null;
             if (!bitmaps.isEmpty(constrained)) {
-                BM waveformFiltered = aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(),
+                BM waveformFiltered = aggregateUtil.filter("metrics", bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(),
                     entry.getValue(), solutionLog, null, context.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
 
                 BM rawAnswer = bitmaps.and(Arrays.asList(constrained, waveformFiltered));

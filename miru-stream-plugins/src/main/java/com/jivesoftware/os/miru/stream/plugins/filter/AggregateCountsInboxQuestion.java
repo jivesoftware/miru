@@ -74,7 +74,8 @@ public class AggregateCountsInboxQuestion implements Question<AggregateCountsQue
         if (!context.getTimeIndex().intersects(request.query.answerTimeRange)) {
             LOG.debug("No answer time index intersection");
             return new MiruPartitionResponse<>(
-                aggregateCounts.getAggregateCounts(solutionLog, bitmaps, context, request, handle.getCoord(), report, bitmaps.create(), Optional.absent()),
+                aggregateCounts.getAggregateCounts("aggregateCountsInbox", solutionLog, bitmaps, context, request, handle.getCoord(), report,
+                    bitmaps.create(), Optional.absent()),
                 solutionLog.asList());
         }
 
@@ -95,8 +96,8 @@ public class AggregateCountsInboxQuestion implements Question<AggregateCountsQue
             // Short-circuit if the user doesn't have an inbox here
             LOG.debug("No user inbox");
             return new MiruPartitionResponse<>(
-                aggregateCounts.getAggregateCounts(solutionLog, bitmaps, context, request, handle.getCoord(), report, bitmaps.create(),
-                    Optional.of(bitmaps.create())),
+                aggregateCounts.getAggregateCounts("aggregateCountsInbox", solutionLog, bitmaps, context, request, handle.getCoord(), report,
+                    bitmaps.create(), Optional.of(bitmaps.create())),
                 solutionLog.asList());
         }
 
@@ -127,7 +128,8 @@ public class AggregateCountsInboxQuestion implements Question<AggregateCountsQue
         BM counter = bitmaps.and(counterAnds);
 
         return new MiruPartitionResponse<>(
-            aggregateCounts.getAggregateCounts(solutionLog, bitmaps, context, request, handle.getCoord(), report, answer, Optional.of(counter)),
+            aggregateCounts.getAggregateCounts("aggregateCountsInbox", solutionLog, bitmaps, context, request, handle.getCoord(), report,
+                answer, Optional.of(counter)),
             solutionLog.asList());
     }
 

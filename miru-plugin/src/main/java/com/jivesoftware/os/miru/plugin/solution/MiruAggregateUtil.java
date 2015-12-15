@@ -47,7 +47,8 @@ public class MiruAggregateUtil {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
-    public <BM extends IBM, IBM, S extends MiruSipCursor<S>> void stream(MiruBitmaps<BM, IBM> bitmaps,
+    public <BM extends IBM, IBM, S extends MiruSipCursor<S>> void stream(String name,
+        MiruBitmaps<BM, IBM> bitmaps,
         TrackError trackError,
         MiruRequestContext<BM, IBM, S> requestContext,
         MiruPartitionCoord coord,
@@ -91,7 +92,7 @@ public class MiruAggregateUtil {
         MutableLong beforeCount = new MutableLong(counter != null ? bitmaps.cardinality(counter[0]) : bitmaps.cardinality(answer[0]));
         LOG.debug("stream: streamField={} streamFieldId={} pivotFieldId={} beforeCount={}", streamField, streamFieldId, pivotFieldId, beforeCount);
 
-        FieldMultiTermTxIndex<BM, IBM> multiTermTxIndex = new FieldMultiTermTxIndex<>(primaryFieldIndex, pivotFieldId, -1);
+        FieldMultiTermTxIndex<BM, IBM> multiTermTxIndex = new FieldMultiTermTxIndex<>(name, primaryFieldIndex, pivotFieldId, -1);
         Map<MiruTermId, MiruTermId[]> distincts = Maps.newHashMapWithExpectedSize(batchSize);
 
         int[] ids = new int[batchSize];
@@ -140,7 +141,7 @@ public class MiruAggregateUtil {
             multiTermTxIndex.setTermIds(termIds);
 
             bitmaps.multiTx(
-                (tx, stackBuffer1) -> primaryFieldIndex.multiTxIndex(pivotFieldId, termIds, -1, stackBuffer1, tx),
+                (tx, stackBuffer1) -> primaryFieldIndex.multiTxIndex(name, pivotFieldId, termIds, -1, stackBuffer1, tx),
                 (index, bitmap) -> {
                     if (bitmaps.supportsInPlace()) {
                         bitmaps.inPlaceAndNot(answer[0], bitmap);
@@ -170,7 +171,8 @@ public class MiruAggregateUtil {
         LOG.debug("stream: bytesTraversed={}", bytesTraversed.longValue());
     }
 
-    public <BM extends IBM, IBM, S extends MiruSipCursor<S>> void gather(MiruBitmaps<BM, IBM> bitmaps,
+    public <BM extends IBM, IBM, S extends MiruSipCursor<S>> void gather(String name,
+        MiruBitmaps<BM, IBM> bitmaps,
         MiruRequestContext<BM, IBM, S> requestContext,
         BM answer,
         int pivotFieldId,
@@ -187,7 +189,7 @@ public class MiruAggregateUtil {
             answer = bitmaps.copy(answer);
         }
 
-        FieldMultiTermTxIndex<BM, IBM> multiTermTxIndex = new FieldMultiTermTxIndex<>(primaryFieldIndex, pivotFieldId, -1);
+        FieldMultiTermTxIndex<BM, IBM> multiTermTxIndex = new FieldMultiTermTxIndex<>(name, primaryFieldIndex, pivotFieldId, -1);
         Set<MiruTermId> distincts = Sets.newHashSetWithExpectedSize(batchSize);
 
         int[] ids = new int[batchSize];
@@ -253,7 +255,8 @@ public class MiruAggregateUtil {
             gets, fetched, used, getAllCost, andNotCost);
     }
 
-    public <BM extends IBM, IBM> BM filter(MiruBitmaps<BM, IBM> bitmaps,
+    public <BM extends IBM, IBM> BM filter(String name,
+        MiruBitmaps<BM, IBM> bitmaps,
         MiruSchema schema,
         final MiruTermComposer termComposer,
         final MiruFieldIndexProvider<BM, IBM> fieldIndexProvider,
@@ -264,11 +267,12 @@ public class MiruAggregateUtil {
         final int considerIfIndexIdGreaterThanN,
         StackBuffer stackBuffer)
         throws Exception {
-        return filterInOut(bitmaps, schema, termComposer, fieldIndexProvider, filter, solutionLog, termCollector, true,
+        return filterInOut(name, bitmaps, schema, termComposer, fieldIndexProvider, filter, solutionLog, termCollector, true,
             largestIndex, considerIfIndexIdGreaterThanN, stackBuffer);
     }
 
-    private <BM extends IBM, IBM> BM filterInOut(MiruBitmaps<BM, IBM> bitmaps,
+    private <BM extends IBM, IBM> BM filterInOut(String name,
+        MiruBitmaps<BM, IBM> bitmaps,
         MiruSchema schema,
         final MiruTermComposer termComposer,
         final MiruFieldIndexProvider<BM, IBM> fieldIndexProvider,
@@ -301,7 +305,7 @@ public class MiruAggregateUtil {
                             String[] baseParts = value.slice(0, value.parts.length - 1);
                             byte[] lowerInclusive = termComposer.prefixLowerInclusive(schema, fieldDefinition, stackBuffer, baseParts);
                             byte[] upperExclusive = termComposer.prefixUpperExclusive(schema, fieldDefinition, stackBuffer, baseParts);
-                            fieldIndex.streamTermIdsForField(fieldId,
+                            fieldIndex.streamTermIdsForField(name, fieldId,
                                 Collections.singletonList(new KeyRange(lowerInclusive, upperExclusive)),
                                 termId -> {
                                     if (termId != null) {
@@ -322,7 +326,7 @@ public class MiruAggregateUtil {
                     } else if (!fieldTermIds.isEmpty()) {
                         start = System.currentTimeMillis();
                         MiruTermId[] termIds = fieldTermIds.toArray(new MiruTermId[fieldTermIds.size()]);
-                        FieldMultiTermTxIndex<BM, IBM> multiTxIndex = new FieldMultiTermTxIndex<>(fieldIndex, fieldId, considerIfLastIdGreaterThanN);
+                        FieldMultiTermTxIndex<BM, IBM> multiTxIndex = new FieldMultiTermTxIndex<>(name, fieldIndex, fieldId, considerIfLastIdGreaterThanN);
                         multiTxIndex.setTermIds(termIds);
                         BM r = bitmaps.orMultiTx(multiTxIndex, stackBuffer);
                         filterBitmaps.add(new SimpleInvertedIndex<>(r));
@@ -335,7 +339,7 @@ public class MiruAggregateUtil {
         if (filter.subFilters != null) {
             for (MiruFilter subFilter : filter.subFilters) {
                 boolean subTermIn = (filter.operation == MiruFilterOperation.pButNotQ && !filterBitmaps.isEmpty()) ? !termIn : termIn;
-                BM subStorage = filterInOut(bitmaps, schema, termComposer, fieldIndexProvider, subFilter, solutionLog,
+                BM subStorage = filterInOut(name, bitmaps, schema, termComposer, fieldIndexProvider, subFilter, solutionLog,
                     termCollector, subTermIn, largestIndex, considerIfLastIdGreaterThanN, stackBuffer);
                 filterBitmaps.add(new SimpleInvertedIndex<>(subStorage));
             }

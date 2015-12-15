@@ -68,8 +68,8 @@ public class DistinctCountCustomQuestion implements Question<DistinctCountQuery,
         List<IBM> ands = new ArrayList<>();
 
         // 1) Execute the combined filter above on the given stream, add the bitmap
-        BM filtered = aggregateUtil.filter(bitmaps, stream.getSchema(), stream.getTermComposer(), stream.getFieldIndexProvider(), combinedFilter, solutionLog,
-            null, stream.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
+        BM filtered = aggregateUtil.filter("distinctCountCustom", bitmaps, stream.getSchema(), stream.getTermComposer(), stream.getFieldIndexProvider(),
+            combinedFilter, solutionLog, null, stream.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
         ands.add(filtered);
 
         // 2) Add in the authz check if we have it
@@ -90,7 +90,8 @@ public class DistinctCountCustomQuestion implements Question<DistinctCountQuery,
         bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
         BM answer = bitmaps.and(ands);
 
-        return new MiruPartitionResponse<>(distinctCount.numberOfDistincts(bitmaps, stream, request, report, answer), solutionLog.asList());
+        return new MiruPartitionResponse<>(distinctCount.numberOfDistincts("distinctCountCustom", bitmaps, stream, request, report, answer),
+            solutionLog.asList());
     }
 
     @Override

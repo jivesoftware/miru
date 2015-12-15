@@ -49,7 +49,8 @@ public class AggregateCounts {
         this.miruProvider = miruProvider;
     }
 
-    public <BM extends IBM, IBM> AggregateCountsAnswer getAggregateCounts(MiruSolutionLog solutionLog,
+    public <BM extends IBM, IBM> AggregateCountsAnswer getAggregateCounts(String name,
+        MiruSolutionLog solutionLog,
         MiruBitmaps<BM, IBM> bitmaps,
         MiruRequestContext<BM, IBM, ?> requestContext,
         MiruRequest<AggregateCountsQuery> request,
@@ -70,7 +71,8 @@ public class AggregateCounts {
             }
 
             results.put(entry.getKey(),
-                answerConstraint(solutionLog,
+                answerConstraint(name,
+                    solutionLog,
                     bitmaps,
                     requestContext,
                     coord,
@@ -87,7 +89,8 @@ public class AggregateCounts {
         return result;
     }
 
-    private <BM extends IBM, IBM> AggregateCountsAnswerConstraint answerConstraint(MiruSolutionLog solutionLog,
+    private <BM extends IBM, IBM> AggregateCountsAnswerConstraint answerConstraint(String name,
+        MiruSolutionLog solutionLog,
         MiruBitmaps<BM, IBM> bitmaps,
         MiruRequestContext<BM, IBM, ?> requestContext,
         MiruPartitionCoord coord,
@@ -117,7 +120,7 @@ public class AggregateCounts {
 
         MiruSchema schema = requestContext.getSchema();
         if (!MiruFilter.NO_FILTER.equals(constraint.constraintsFilter)) {
-            BM filtered = aggregateUtil.filter(bitmaps, schema, requestContext.getTermComposer(), requestContext.getFieldIndexProvider(),
+            BM filtered = aggregateUtil.filter(name, bitmaps, schema, requestContext.getTermComposer(), requestContext.getFieldIndexProvider(),
                 constraint.constraintsFilter, solutionLog, null, requestContext.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
 
             if (bitmaps.supportsInPlace()) {
@@ -161,7 +164,7 @@ public class AggregateCounts {
             CardinalityAndLastSetBit<BM> answerCollector = null;
             for (MiruValue aggregateTerm : aggregateTerms) { // Consider
                 MiruTermId aggregateTermId = termComposer.compose(schema, fieldDefinition, stackBuffer, aggregateTerm.parts);
-                Optional<BM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex(stackBuffer);
+                Optional<BM> optionalTermIndex = fieldIndex.get(name, fieldId, aggregateTermId).getIndex(stackBuffer);
                 if (!optionalTermIndex.isPresent()) {
                     continue;
                 }
@@ -233,7 +236,7 @@ public class AggregateCounts {
                     MiruValue aggregateTerm = new MiruValue(termComposer.decompose(schema, fieldDefinition, stackBuffer, aggregateTermId));
                     aggregateTerms.add(aggregateTerm);
 
-                    Optional<BM> optionalTermIndex = fieldIndex.get(fieldId, aggregateTermId).getIndex(stackBuffer);
+                    Optional<BM> optionalTermIndex = fieldIndex.get(name, fieldId, aggregateTermId).getIndex(stackBuffer);
                     checkState(optionalTermIndex.isPresent(), "Unable to load inverted index for aggregateTermId: " + aggregateTermId);
 
                     IBM termIndex = optionalTermIndex.get();

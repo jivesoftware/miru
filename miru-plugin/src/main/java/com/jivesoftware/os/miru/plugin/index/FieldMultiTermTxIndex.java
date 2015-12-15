@@ -8,13 +8,15 @@ import com.jivesoftware.os.miru.api.base.MiruTermId;
  */
 public class FieldMultiTermTxIndex<BM extends IBM, IBM> implements MiruMultiTxIndex<IBM> {
 
+    private final String name;
     private final MiruFieldIndex<BM, IBM> fieldIndex;
     private final int fieldId;
     private final int considerIfLastIdGreaterThanN;
 
     private MiruTermId[] termIds;
 
-    public FieldMultiTermTxIndex(MiruFieldIndex<BM, IBM> fieldIndex, int fieldId, int considerIfLastIdGreaterThanN) {
+    public FieldMultiTermTxIndex(String name, MiruFieldIndex<BM, IBM> fieldIndex, int fieldId, int considerIfLastIdGreaterThanN) {
+        this.name = name;
         this.fieldIndex = fieldIndex;
         this.fieldId = fieldId;
         this.considerIfLastIdGreaterThanN = considerIfLastIdGreaterThanN;
@@ -29,6 +31,6 @@ public class FieldMultiTermTxIndex<BM extends IBM, IBM> implements MiruMultiTxIn
         if (termIds == null) {
             throw new IllegalStateException("Terms need to be set before invoking txIndex");
         }
-        fieldIndex.multiTxIndex(fieldId, termIds, considerIfLastIdGreaterThanN, stackBuffer, tx);
+        fieldIndex.multiTxIndex(name, fieldId, termIds, considerIfLastIdGreaterThanN, stackBuffer, tx);
     }
 }

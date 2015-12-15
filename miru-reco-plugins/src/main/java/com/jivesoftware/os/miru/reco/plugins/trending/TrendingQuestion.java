@@ -90,7 +90,7 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
             Set<MiruTermId> orTerms = null;
             for (DistinctsQuery distinctsQuery : distinctsQueries) {
                 Set<MiruTermId> distinctTerms = Sets.newHashSet();
-                distincts.gatherDirect(bitmaps, handle.getRequestContext(), distinctsQuery, gatherDistinctsBatchSize, solutionLog,
+                distincts.gatherDirect("trending", bitmaps, handle.getRequestContext(), distinctsQuery, gatherDistinctsBatchSize, solutionLog,
                     termId -> {
                         distinctTerms.add(termId);
                         return true;
@@ -124,7 +124,8 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
 
         start = System.currentTimeMillis();
         List<Waveform> waveforms = Lists.newArrayListWithExpectedSize(termIds.length);
-        boolean resultsExhausted = analytics.analyze(solutionLog,
+        boolean resultsExhausted = analytics.analyze("trending",
+            solutionLog,
             handle,
             context,
             request.authzExpression,
@@ -134,7 +135,7 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
             stackBuffer,
             (Analytics.ToAnalyze<MiruTermId, BM> toAnalyze) -> {
                 bitmaps.multiTx(
-                    (tx, stackBuffer1) -> primaryFieldIndex.multiTxIndex(fieldId, termIds, -1, stackBuffer1, tx),
+                    (tx, stackBuffer1) -> primaryFieldIndex.multiTxIndex("trending", fieldId, termIds, -1, stackBuffer1, tx),
                     (index, bitmap) -> toAnalyze.analyze(termIds[index], bitmap),
                     stackBuffer);
                 return true;

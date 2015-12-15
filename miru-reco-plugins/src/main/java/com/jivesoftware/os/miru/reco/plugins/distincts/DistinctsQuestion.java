@@ -41,7 +41,8 @@ public class DistinctsQuestion implements Question<DistinctsQuery, DistinctsAnsw
         StackBuffer stackBuffer = new StackBuffer();
 
         //TODO config batch size
-        return new MiruPartitionResponse<>(distincts.gather(bitmaps, context, request.query, 100, stackBuffer, solutionLog), solutionLog.asList());
+        return new MiruPartitionResponse<>(distincts.gather("distincts", bitmaps, context, request.query, 100, stackBuffer, solutionLog),
+            solutionLog.asList());
     }
 
     @Override

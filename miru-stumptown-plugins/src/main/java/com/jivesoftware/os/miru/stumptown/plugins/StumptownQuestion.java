@@ -85,7 +85,7 @@ public class StumptownQuestion implements Question<StumptownQuery, StumptownAnsw
             solutionLog.log(MiruSolutionLogLevel.INFO, "stumptown filter: no constraints.");
         } else {
             start = System.currentTimeMillis();
-            BM filtered = aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(),
+            BM filtered = aggregateUtil.filter("stumptown", bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(),
                 request.query.constraintsFilter, solutionLog, null, context.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
             solutionLog.log(MiruSolutionLogLevel.INFO, "stumptown filter: {} millis.", System.currentTimeMillis() - start);
             ands.add(filtered);
@@ -129,8 +129,8 @@ public class StumptownQuestion implements Question<StumptownQuery, StumptownAnsw
         for (Map.Entry<String, MiruFilter> entry : request.query.stumptownFilters.entrySet()) {
             StumptownAnswer.Waveform waveform = null;
             if (!bitmaps.isEmpty(constrained)) {
-                BM waveformFiltered = aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(),
-                    entry.getValue(), solutionLog, null, context.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
+                BM waveformFiltered = aggregateUtil.filter("stumptown", bitmaps, context.getSchema(), context.getTermComposer(),
+                    context.getFieldIndexProvider(), entry.getValue(), solutionLog, null, context.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
                 BM answer = bitmaps.and(Arrays.asList(constrained, waveformFiltered));
                 if (!bitmaps.isEmpty(answer)) {
                     waveform = stumptown.stumptowning(bitmaps, context, request.tenantId, answer, request.query.desiredNumberOfResultsPerWaveform, indexes);

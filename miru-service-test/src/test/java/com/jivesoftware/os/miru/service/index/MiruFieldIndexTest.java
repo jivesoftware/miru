@@ -40,7 +40,7 @@ public class MiruFieldIndexTest {
         MiruBackingStorage miruBackingStorage) throws
         Exception {
         StackBuffer stackBuffer = new StackBuffer();
-        MiruInvertedIndex<BM, IBM> invertedIndex = miruFieldIndex.get(0, new MiruTermId(FilerIO.intBytes(1)));
+        MiruInvertedIndex<BM, IBM> invertedIndex = miruFieldIndex.get("test", 0, new MiruTermId(FilerIO.intBytes(1)));
         assertNotNull(invertedIndex);
         assertFalse(invertedIndex.getIndex(stackBuffer).isPresent());
     }
@@ -51,7 +51,7 @@ public class MiruFieldIndexTest {
         MiruBackingStorage miruBackingStorage) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
         miruFieldIndex.append(0, new MiruTermId(FilerIO.intBytes(2)), new int[] { 3 }, null, stackBuffer);
-        MiruInvertedIndex<BM, IBM> invertedIndex = miruFieldIndex.get(0, new MiruTermId(FilerIO.intBytes(2)));
+        MiruInvertedIndex<BM, IBM> invertedIndex = miruFieldIndex.get("test", 0, new MiruTermId(FilerIO.intBytes(2)));
         assertNotNull(invertedIndex);
         assertTrue(invertedIndex.getIndex(stackBuffer).isPresent());
         assertTrue(bitmaps.isSet(invertedIndex.getIndex(stackBuffer).get(), 3));
@@ -66,7 +66,7 @@ public class MiruFieldIndexTest {
         StackBuffer stackBuffer = new StackBuffer();
         byte[] key = "term1".getBytes();
 
-        MiruInvertedIndex<BM, IBM> invertedIndex = miruFieldIndex.get(0, new MiruTermId(key));
+        MiruInvertedIndex<BM, IBM> invertedIndex = miruFieldIndex.get("test", 0, new MiruTermId(key));
         assertNotNull(invertedIndex);
         assertTrue(invertedIndex.getIndex(stackBuffer).isPresent());
 

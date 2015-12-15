@@ -39,7 +39,7 @@ public class MiruFieldTest {
         List<Integer> ids) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
         for (int id : ids) {
-            Optional<BM> optional = fieldIndex.get(fieldId, new MiruTermId(FilerIO.intBytes(id))).getIndex(stackBuffer);
+            Optional<BM> optional = fieldIndex.get("test", fieldId, new MiruTermId(FilerIO.intBytes(id))).getIndex(stackBuffer);
             assertTrue(optional.isPresent());
             assertEquals(bitmaps.cardinality(optional.get()), 1);
             assertTrue(bitmaps.isSet(optional.get(), id));
@@ -58,7 +58,7 @@ public class MiruFieldTest {
         int median = ids.get(ids.size() / 2);
 
         for (int id : ids) {
-            Optional<BitmapAndLastId<BM>> optional = fieldIndex.get(fieldId, new MiruTermId(FilerIO.intBytes(id))).getIndexAndLastId(median, stackBuffer);
+            Optional<BitmapAndLastId<BM>> optional = fieldIndex.get("test", fieldId, new MiruTermId(FilerIO.intBytes(id))).getIndexAndLastId(median, stackBuffer);
             assertEquals(optional.isPresent(), id > median, "Should be " + optional.isPresent() + ": " + id + " > " + median);
         }
     }

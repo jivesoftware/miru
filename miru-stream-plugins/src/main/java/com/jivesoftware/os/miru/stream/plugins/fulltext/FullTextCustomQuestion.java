@@ -69,15 +69,15 @@ public class FullTextCustomQuestion implements Question<FullTextQuery, FullTextA
         MiruFilter filter = fullText.parseQuery(request.query.defaultField, request.query.query);
         Map<FieldAndTermId, MutableInt> termCollector = request.query.strategy == FullTextQuery.Strategy.TF_IDF ? Maps.newHashMap() : null;
 
-        BM filtered = aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(), filter, solutionLog,
-            termCollector, context.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
+        BM filtered = aggregateUtil.filter("fullTestCustom", bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(),
+            filter, solutionLog, termCollector, context.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
 
         List<IBM> ands = new ArrayList<>();
         ands.add(filtered);
         ands.add(bitmaps.buildIndexMask(context.getActivityIndex().lastId(stackBuffer), context.getRemovalIndex().getIndex(stackBuffer)));
 
         if (!MiruFilter.NO_FILTER.equals(request.query.constraintsFilter)) {
-            BM constrained = aggregateUtil.filter(bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(),
+            BM constrained = aggregateUtil.filter("fullTestCustom", bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(),
                 request.query.constraintsFilter,
                 solutionLog, null, context.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
             ands.add(constrained);

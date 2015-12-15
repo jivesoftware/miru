@@ -120,13 +120,13 @@ public class MiruIndexPairedLatest<BM extends IBM, IBM> {
                 MiruFieldDefinition aggregateFieldDefinition = context.schema.getFieldDefinition(pairedLatestWork.aggregateFieldId);
                 MiruTermId pairedLatestTerm = indexUtil.makePairedLatestTerm(fieldValue, aggregateFieldDefinition.name);
                 MiruInvertedIndex<BM, IBM> invertedIndex = pairedLatestFieldIndex
-                    .getOrCreateInvertedIndex(pairedLatestWork.fieldId, pairedLatestTerm);
+                    .getOrCreateInvertedIndex("indexPairedLatest", pairedLatestWork.fieldId, pairedLatestTerm);
 
                 List<IBM> aggregateBitmaps = Lists.newArrayListWithCapacity(idAndTerms.size());
                 TIntList ids = new TIntArrayList(idAndTerms.size());
                 for (IdAndTerm idAndTerm : idAndTerms) {
                     MiruTermId aggregateFieldValue = idAndTerm.term;
-                    MiruInvertedIndex<BM, IBM> aggregateInvertedIndex = allFieldIndex.getOrCreateInvertedIndex(
+                    MiruInvertedIndex<BM, IBM> aggregateInvertedIndex = allFieldIndex.getOrCreateInvertedIndex("indexPairedLatest",
                         pairedLatestWork.aggregateFieldId, aggregateFieldValue);
                     Optional<BM> aggregateBitmap = aggregateInvertedIndex.getIndex(stackBuffer);
                     if (aggregateBitmap.isPresent()) {
