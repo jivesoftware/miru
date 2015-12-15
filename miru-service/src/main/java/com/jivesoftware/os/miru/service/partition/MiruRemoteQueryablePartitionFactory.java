@@ -44,6 +44,11 @@ public class MiruRemoteQueryablePartitionFactory {
             }
 
             @Override
+            public boolean isAvailable() {
+                return false;
+            }
+
+            @Override
             public MiruRequestHandle<BM, IBM, S> acquireQueryHandle(StackBuffer stackBuffer) throws Exception {
                 return new MiruRequestHandle<BM, IBM, S>() {
 

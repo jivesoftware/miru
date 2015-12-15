@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Interners;
+import com.google.common.collect.Lists;
 import com.google.common.io.Files;
 import com.jivesoftware.os.amza.client.AmzaClientProvider;
 import com.jivesoftware.os.amza.service.AmzaService;
@@ -20,6 +21,7 @@ import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivityFactory;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -110,20 +112,20 @@ public class MiruPluginTestBootstrap {
         MiruSchema miruSchema,
         MiruBackingStorage desiredStorage,
         final MiruBitmaps<BM, IBM> bitmaps,
-        List<MiruPartitionedActivity> partitionedActivities)
+        List<MiruPartitionedActivity> includeActivities)
         throws Exception {
 
         HealthFactory.initialize(
             BindInterfaceToConfiguration::bindDefault,
             new HealthCheckRegistry() {
-            @Override
-            public void register(HealthChecker healthChecker) {
-            }
+                @Override
+                public void register(HealthChecker healthChecker) {
+                }
 
-            @Override
-            public void unregister(HealthChecker healthChecker) {
-            }
-        });
+                @Override
+                public void unregister(HealthChecker healthChecker) {
+                }
+            });
 
         MiruServiceConfig config = BindInterfaceToConfiguration.bindDefault(MiruServiceConfig.class);
         config.setDefaultFailAfterNMillis(TimeUnit.HOURS.toMillis(1));
@@ -141,14 +143,15 @@ public class MiruPluginTestBootstrap {
 
         InMemoryRowColumnValueStoreInitializer inMemoryRowColumnValueStoreInitializer = new InMemoryRowColumnValueStoreInitializer();
         RCVSWALInitializer.RCVSWAL wal = new RCVSWALInitializer().initialize("test", inMemoryRowColumnValueStoreInitializer, mapper);
-        if (!partitionedActivities.isEmpty()) {
-            MiruActivityWALWriter activityWALWriter = new RCVSActivityWALWriter(wal.getActivityWAL(), wal.getActivitySipWAL());
-            activityWALWriter.write(tenantId, partitionId, partitionedActivities);
-        }
+        List<MiruPartitionedActivity> partitionedActivities = Lists.newArrayList();
+        partitionedActivities.add(new MiruPartitionedActivityFactory().begin(1, partitionId, tenantId, 0));
+        partitionedActivities.addAll(includeActivities);
+
+        MiruActivityWALWriter activityWALWriter = new RCVSActivityWALWriter(wal.getActivityWAL(), wal.getActivitySipWAL());
+        activityWALWriter.write(tenantId, partitionId, partitionedActivities);
 
         HostPortProvider hostPortProvider = host -> 10_000;
 
-        MiruActivityWALWriter activityWALWriter = new RCVSActivityWALWriter(wal.getActivityWAL(), wal.getActivitySipWAL());
         MiruActivityWALReader<RCVSCursor, RCVSSipCursor> activityWALReader = new RCVSActivityWALReader(hostPortProvider,
             wal.getActivityWAL(),
             wal.getActivitySipWAL());
@@ -277,7 +280,7 @@ public class MiruPluginTestBootstrap {
         final MiruService miruService = miruServiceLifecyle.getService();
 
         while (!miruService.checkInfo(tenantId, partitionId, new MiruPartitionCoordInfo(MiruPartitionState.bootstrap, MiruBackingStorage.memory))) {
-            System.out.println("Waiting to move out of bootstrap....");
+            System.out.println("Waiting to move out of bootstrap...");
             synchronized (scheduledBootstrapExecutorRunnables) {
                 for (Runnable runnable : scheduledBootstrapExecutorRunnables) {
                     runnable.run();
@@ -287,7 +290,7 @@ public class MiruPluginTestBootstrap {
         }
 
         while (!miruService.checkInfo(tenantId, partitionId, new MiruPartitionCoordInfo(MiruPartitionState.online, MiruBackingStorage.memory))) {
-            System.out.println("Waiting to move to online memory....");
+            System.out.println("Waiting to move to online memory...");
             synchronized (scheduledRebuildExecutorRunnables) {
                 for (Runnable runnable : scheduledRebuildExecutorRunnables) {
                     runnable.run();
@@ -297,7 +300,17 @@ public class MiruPluginTestBootstrap {
         }
 
         while (!miruService.checkInfo(tenantId, partitionId, new MiruPartitionCoordInfo(MiruPartitionState.online, desiredStorage))) {
-            System.out.println("Waiting to move online " + desiredStorage + "....");
+            System.out.println("Waiting to move online " + desiredStorage + "...");
+            synchronized (scheduledSipMigrateExecutorRunnables) {
+                for (Runnable runnable : scheduledSipMigrateExecutorRunnables) {
+                    runnable.run();
+                }
+            }
+            Thread.sleep(10);
+        }
+
+        while (!miruService.isAvailable(tenantId, partitionId)) {
+            System.out.println("Waiting to become available... ");
             synchronized (scheduledSipMigrateExecutorRunnables) {
                 for (Runnable runnable : scheduledSipMigrateExecutorRunnables) {
                     runnable.run();

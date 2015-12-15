@@ -20,6 +20,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruUnreadTrackingIndex;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Composes the building blocks of a MiruContext together for convenience.
@@ -47,6 +48,7 @@ public class MiruContext<BM extends IBM, IBM, S extends MiruSipCursor<S>> implem
     public final AtomicBoolean corrupt = new AtomicBoolean(false);
     public final AtomicInteger deltaMinId = new AtomicInteger(-1);
     public final AtomicInteger lastDeltaMinId = new AtomicInteger(-1);
+    public final MiruRebuildDirector.Token rebuildToken;
 
     public MiruContext(MiruSchema schema,
         MiruTermComposer termComposer,
@@ -61,7 +63,8 @@ public class MiruContext<BM extends IBM, IBM, S extends MiruSipCursor<S>> implem
         MiruActivityInternExtern activityInternExtern,
         StripingLocksProvider<MiruStreamId> streamLocks,
         ChunkStore[] chunkStores,
-        MiruBackingStorage storage) {
+        MiruBackingStorage storage,
+        MiruRebuildDirector.Token rebuildToken) {
         this.schema = schema;
         this.termComposer = termComposer;
         this.timeIndex = timeIndex;
@@ -76,6 +79,7 @@ public class MiruContext<BM extends IBM, IBM, S extends MiruSipCursor<S>> implem
         this.streamLocks = streamLocks;
         this.chunkStores = chunkStores;
         this.storage = storage;
+        this.rebuildToken = rebuildToken;
     }
 
     @Override

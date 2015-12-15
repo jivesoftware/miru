@@ -163,10 +163,11 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         MiruSchema schema,
         MiruPartitionCoord coord,
         MiruBackingStorage storage,
+        MiruRebuildDirector.Token rebuildToken,
         StackBuffer stackBuffer) throws Exception {
 
         ChunkStore[] chunkStores = getAllocator(storage).allocateChunkStores(coord, stackBuffer);
-        return allocate(bitmaps, coord, schema, chunkStores, storage, stackBuffer);
+        return allocate(bitmaps, coord, schema, chunkStores, storage, rebuildToken, stackBuffer);
     }
 
     private <BM extends IBM, IBM> MiruContext<BM, IBM, S> allocate(MiruBitmaps<BM, IBM> bitmaps,
@@ -174,6 +175,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         MiruSchema schema,
         ChunkStore[] chunkStores,
         MiruBackingStorage storage,
+        MiruRebuildDirector.Token rebuildToken,
         StackBuffer stackBuffer) throws Exception {
 
         TxCogs cogs = storage == MiruBackingStorage.disk ? persistentCogs : transientCogs;
@@ -330,7 +332,8 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             activityInternExtern,
             streamLocks,
             chunkStores,
-            storage);
+            storage,
+            rebuildToken);
 
         context.markStartOfDelta(stackBuffer);
 
@@ -352,7 +355,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         for (int i = 0; i < fromChunks.length; i++) {
             fromChunks[i].copyTo(toChunks[i], stackBuffer);
         }
-        return allocate(bitmaps, coord, schema, toChunks, toStorage, stackBuffer);
+        return allocate(bitmaps, coord, schema, toChunks, toStorage, null, stackBuffer);
     }
 
     public void saveSchema(MiruPartitionCoord coord, MiruSchema schema) throws IOException {
@@ -406,7 +409,11 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         diskResourceLocator.clean(new MiruPartitionCoordIdentifier(coord));
     }
 
-    public <BM extends IBM, IBM> void close(MiruContext<BM, IBM, S> context) {
+    public <BM extends IBM, IBM> void close(MiruContext<BM, IBM, S> context, MiruRebuildDirector rebuildDirector) {
+        if (context.rebuildToken != null) {
+            rebuildDirector.release(context.rebuildToken);
+        }
+
         context.activityIndex.close();
         context.authzIndex.close();
         context.timeIndex.close();

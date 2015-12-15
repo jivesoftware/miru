@@ -409,12 +409,16 @@ public class MiruLocalHostedPartitionTest {
         StackBuffer stackBuffer = new StackBuffer();
         MiruLocalHostedPartition<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSCursor, RCVSSipCursor> localHostedPartition =
             getRoaringLocalHostedPartition();
+        walClient.writeActivity(tenantId, partitionId, Lists.newArrayList(
+            factory.begin(1, partitionId, tenantId, 0),
+            factory.end(1, partitionId, tenantId, 0)
+        ));
 
         setActive(true);
         waitForRef(bootstrapRunnable).run(); // enters bootstrap
         waitForRef(rebuildIndexRunnable).run(); // enters rebuilding
         waitForRef(sipMigrateIndexRunnable).run(); // enters online memory
-        indexBoundaryActivity(localHostedPartition); // eligible for disk
+        //indexBoundaryActivity(localHostedPartition); // eligible for disk
         waitForRef(sipMigrateIndexRunnable).run(); // enters online disk (hot deployable)
 
         setActive(false);
@@ -545,7 +549,7 @@ public class MiruLocalHostedPartitionTest {
         return new MiruLocalHostedPartition<>(new MiruStats(), bitmaps, trackError, coord, -1, contextFactory, sipTrackerFactory,
             walClient, partitionEventHandler, rebuildDirector, scheduledBootstrapService, scheduledRebuildService,
             scheduledSipMigrateService, rebuildExecutor, sipIndexExecutor, persistentMergeExecutor, transientMergeExecutor, 1, new NoOpMiruIndexRepairs(),
-            indexer, 100_000, 100, 100, persistentMergeChits, transientMergeChits, timings);
+            indexer, true, 100, 100, persistentMergeChits, transientMergeChits, timings);
     }
 
     private void setActive(boolean active) throws Exception {

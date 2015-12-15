@@ -35,6 +35,7 @@ import com.jivesoftware.os.miru.service.index.delta.MiruDeltaUnreadTrackingIndex
 import com.jivesoftware.os.miru.service.stream.MiruContext;
 import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
 import com.jivesoftware.os.miru.service.stream.MiruIndexer;
+import com.jivesoftware.os.miru.service.stream.MiruRebuildDirector;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.mlogger.core.ValueType;
@@ -159,7 +160,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
             seenLastSip.get(), endOfStream, hasOpenWriters, readSemaphore, writeSemaphore, closed, indexRepairs, indexer, timestampOfLastMerge, obsolete);
     }
 
-    void close(MiruContextFactory<S> contextFactory) throws InterruptedException {
+    void close(MiruContextFactory<S> contextFactory, MiruRebuildDirector rebuildDirector) throws InterruptedException {
         writeSemaphore.acquire(PERMITS);
         try {
             readSemaphore.acquire(PERMITS);
@@ -171,17 +172,17 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         } finally {
             writeSemaphore.release(PERMITS);
         }
-        closeImmediate(contextFactory, persistentContext);
-        closeImmediate(contextFactory, transientContext);
+        closeImmediate(contextFactory, persistentContext, rebuildDirector);
+        closeImmediate(contextFactory, transientContext, rebuildDirector);
     }
 
     private void markClosed() {
         closed.set(true);
     }
 
-    private void closeImmediate(MiruContextFactory<S> contextFactory, Optional<MiruContext<BM, IBM, S>> context) {
+    private void closeImmediate(MiruContextFactory<S> contextFactory, Optional<MiruContext<BM, IBM, S>> context, MiruRebuildDirector rebuildDirector) {
         if (context != null && context.isPresent()) {
-            contextFactory.close(context.get());
+            contextFactory.close(context.get(), rebuildDirector);
         }
     }
 
@@ -232,6 +233,10 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
 
     boolean canAutoMigrate() {
         return transientContext.isPresent() && state == MiruPartitionState.online;
+    }
+
+    Optional<MiruRebuildDirector.Token> getRebuildToken() {
+        return transientContext.isPresent() ? Optional.fromNullable(transientContext.get().rebuildToken) : Optional.<MiruRebuildDirector.Token>absent();
     }
 
     C getRebuildCursor() throws IOException {
@@ -681,14 +686,14 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
             }
 
             @Override
-            public void closePersistentContext(MiruContextFactory<S> contextFactory) {
+            public void closePersistentContext(MiruContextFactory<S> contextFactory, MiruRebuildDirector rebuildDirector) {
                 MiruPartitionAccessor.this.markClosed();
-                MiruPartitionAccessor.this.closeImmediate(contextFactory, persistentContext);
+                MiruPartitionAccessor.this.closeImmediate(contextFactory, persistentContext, rebuildDirector);
             }
 
             @Override
-            public void closeTransientContext(MiruContextFactory<S> contextFactory) {
-                MiruPartitionAccessor.this.closeImmediate(contextFactory, transientContext);
+            public void closeTransientContext(MiruContextFactory<S> contextFactory, MiruRebuildDirector rebuildDirector) {
+                MiruPartitionAccessor.this.closeImmediate(contextFactory, transientContext, rebuildDirector);
             }
 
             @Override

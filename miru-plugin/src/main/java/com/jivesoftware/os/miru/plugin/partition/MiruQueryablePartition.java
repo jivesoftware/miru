@@ -22,4 +22,6 @@ public interface MiruQueryablePartition<BM extends IBM, IBM> {
     MiruRequestHandle<BM, IBM, ?> acquireQueryHandle(StackBuffer stackBuffer) throws Exception;
 
     MiruRequestHandle<BM, IBM, ?> inspectRequestHandle() throws Exception;
+
+    boolean isAvailable();
 }
