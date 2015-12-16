@@ -185,10 +185,10 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
             },
             new Void[activityAndIdsArray.length],
             stackBuffer);
-        LOG.inc("count>get>total");
-        LOG.inc("count>get>" + name);
-        LOG.inc("bytes>get>total", bytesWrite.longValue());
-        LOG.inc("bytes>get>" + name, bytesWrite.longValue());
+        LOG.inc("count>set>total");
+        LOG.inc("count>set>" + name);
+        LOG.inc("bytes>set>total", bytesWrite.longValue());
+        LOG.inc("bytes>set>" + name, bytesWrite.longValue());
 
         return lastIndex;
     }
