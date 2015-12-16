@@ -19,6 +19,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.apache.commons.lang.mutable.MutableLong;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
@@ -27,7 +28,7 @@ import static com.google.common.base.Preconditions.checkArgument;
  */
 public class MiruFilerActivityIndex implements MiruActivityIndex {
 
-    private static final MetricLogger log = MetricLoggerFactory.getLogger();
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final KeyedFilerStore<Long, Void> keyedStore;
     private final AtomicInteger indexSize = new AtomicInteger(-1);
@@ -44,11 +45,13 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
     }
 
     @Override
-    public MiruInternalActivity get(final MiruTenantId tenantId, int index, StackBuffer stackBuffer) throws IOException, InterruptedException {
+    public MiruInternalActivity get(String name, final MiruTenantId tenantId, int index, StackBuffer stackBuffer) throws IOException, InterruptedException {
         int capacity = capacity(stackBuffer);
         checkArgument(index >= 0 && index < capacity, "Index parameter is out of bounds. The value %s must be >=0 and <%s", index, capacity);
-        return keyedStore.read(FilerIO.intBytes(index), null, (monkey, filer, _stackBuffer, lock) -> {
+        MutableLong bytes = new MutableLong();
+        MiruInternalActivity activity = keyedStore.read(FilerIO.intBytes(index), null, (monkey, filer, _stackBuffer, lock) -> {
             if (filer != null) {
+                bytes.add(filer.length());
                 synchronized (lock) {
                     filer.seek(0);
                     return internalActivityMarshaller.fromFiler(tenantId, filer, _stackBuffer);
@@ -57,13 +60,18 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
                 return null;
             }
         }, stackBuffer);
+        LOG.inc("count>get>total");
+        LOG.inc("count>get>" + name);
+        LOG.inc("bytes>get>total", bytes.longValue());
+        LOG.inc("bytes>get>" + name, bytes.longValue());
+        return activity;
     }
 
     @Override
-    public MiruTermId[] get(int index, final int fieldId, StackBuffer stackBuffer) throws IOException, InterruptedException {
+    public MiruTermId[] get(String name, int index, final int fieldId, StackBuffer stackBuffer) throws IOException, InterruptedException {
         int capacity = capacity(stackBuffer);
         checkArgument(index >= 0 && index < capacity, "Index parameter is out of bounds. The value %s must be >=0 and <%s", index, capacity);
-        return keyedStore.read(FilerIO.intBytes(index), null, (monkey, filer, _stackBuffer, lock) -> {
+        MiruTermId[] termIds = keyedStore.read(FilerIO.intBytes(index), null, (monkey, filer, _stackBuffer, lock) -> {
             if (filer != null) {
                 synchronized (lock) {
                     filer.seek(0);
@@ -73,10 +81,19 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
                 return null;
             }
         }, stackBuffer);
+        long bytes = 0;
+        for (MiruTermId termId : termIds) {
+            bytes += termId.length();
+        }
+        LOG.inc("count>get>total");
+        LOG.inc("count>get>" + name);
+        LOG.inc("bytes>get>total", bytes);
+        LOG.inc("bytes>get>" + name, bytes);
+        return termIds;
     }
 
     @Override
-    public List<MiruTermId[]> getAll(int[] indexes, final int fieldId, StackBuffer stackBuffer) throws IOException, InterruptedException {
+    public List<MiruTermId[]> getAll(String name, int[] indexes, final int fieldId, StackBuffer stackBuffer) throws IOException, InterruptedException {
         if (indexes.length == 0) {
             return Collections.emptyList();
         }
@@ -98,6 +115,21 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
                 return null;
             }
         }, results, stackBuffer);
+
+        long bytes = 0;
+        for (MiruTermId[] termIds : results) {
+            if (termIds != null) {
+                for (MiruTermId termId : termIds) {
+                    if (termId != null) {
+                        bytes += termId.length();
+                    }
+                }
+            }
+        }
+        LOG.inc("count>get>total");
+        LOG.inc("count>get>" + name);
+        LOG.inc("bytes>get>total", bytes);
+        LOG.inc("bytes>get>" + name, bytes);
         return Arrays.asList(results);
 
     }
@@ -110,7 +142,7 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
     @Override
     public void setAndReady(Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds, StackBuffer stackBuffer) throws Exception {
         if (!activityAndIds.isEmpty()) {
-            int lastIndex = setInternal(activityAndIds, stackBuffer);
+            int lastIndex = setInternal("setAndReady", activityAndIds, stackBuffer);
             ready(lastIndex, stackBuffer);
         }
     }
@@ -118,11 +150,11 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
     @Override
     public void set(Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds, StackBuffer stackBuffer) throws IOException, InterruptedException {
         if (!activityAndIds.isEmpty()) {
-            setInternal(activityAndIds, stackBuffer);
+            setInternal("set", activityAndIds, stackBuffer);
         }
     }
 
-    private int setInternal(Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds,
+    private int setInternal(String name, Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds,
         StackBuffer stackBuffer) throws IOException, InterruptedException {
 
         int lastIndex = -1;
@@ -135,12 +167,14 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
             lastIndex = Math.max(index, lastIndex);
             keyBytes[i] = FilerIO.intBytes(activityAndIdsArray[i].id);
         }
+        MutableLong bytesWrite = new MutableLong();
         keyedStore.multiWriteNewReplace(keyBytes,
             (oldMonkey, oldFiler, stackBuffer1, oldLock, index) -> {
                 final byte[] bytes = internalActivityMarshaller.toBytes(activityAndIdsArray[index].activity, stackBuffer1);
                 long filerSize = (long) 4 + bytes.length;
-                log.inc("set>total");
-                log.inc("set>bytes", bytes.length);
+                bytesWrite.add(filerSize);
+                LOG.inc("set>total");
+                LOG.inc("set>bytes", bytes.length);
                 return new HintAndTransaction<>(filerSize, (newMonkey, newFiler, stackBuffer2, newLock) -> {
                     synchronized (newLock) {
                         newFiler.seek(0);
@@ -151,13 +185,17 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
             },
             new Void[activityAndIdsArray.length],
             stackBuffer);
+        LOG.inc("count>get>total");
+        LOG.inc("count>get>" + name);
+        LOG.inc("bytes>get>total", bytesWrite.longValue());
+        LOG.inc("bytes>get>" + name, bytesWrite.longValue());
 
         return lastIndex;
     }
 
     @Override
     public void ready(int index, StackBuffer stackBuffer) throws Exception {
-        log.trace("Check if index {} should extend capacity {}", index, indexSize);
+        LOG.trace("Check if index {} should extend capacity {}", index, indexSize);
         final int size = index + 1;
         synchronized (indexSize) {
             if (size > indexSize.get()) {
@@ -168,9 +206,9 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
                     }
                     return null;
                 }, stackBuffer);
-                log.inc("ready>total");
-                log.inc("ready>bytes", 4);
-                log.debug("Capacity extended to {}", size);
+                LOG.inc("ready>total");
+                LOG.inc("ready>bytes", 4);
+                LOG.debug("Capacity extended to {}", size);
                 indexSize.set(size);
             }
         }
@@ -192,8 +230,8 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
                         return 0;
                     }
                 }, stackBuffer);
-                log.inc("capacity>total");
-                log.inc("capacity>bytes", 4);
+                LOG.inc("capacity>total");
+                LOG.inc("capacity>bytes", 4);
                 indexSize.set(size);
             }
             return size;

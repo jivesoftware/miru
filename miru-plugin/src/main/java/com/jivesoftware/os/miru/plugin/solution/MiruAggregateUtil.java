@@ -118,10 +118,10 @@ public class MiruAggregateUtil {
                 /*answer[0] = bitmaps.removeRange(answer[0], actualIds[0], actualIds[actualIds.length - 1] + 1);*/
             }
 
-            List<MiruTermId[]> all = activityIndex.getAll(actualIds, pivotFieldId, stackBuffer);
+            List<MiruTermId[]> all = activityIndex.getAll(name, actualIds, pivotFieldId, stackBuffer);
             List<MiruTermId[]> streamAll;
             if (streamFieldId != pivotFieldId) {
-                streamAll = activityIndex.getAll(actualIds, streamFieldId, stackBuffer);
+                streamAll = activityIndex.getAll(name, actualIds, streamFieldId, stackBuffer);
             } else {
                 streamAll = all;
             }
@@ -225,7 +225,7 @@ public class MiruAggregateUtil {
             }
 
             long start = System.nanoTime();
-            List<MiruTermId[]> all = activityIndex.getAll(actualIds, pivotFieldId, stackBuffer);
+            List<MiruTermId[]> all = activityIndex.getAll(name, actualIds, pivotFieldId, stackBuffer);
             getAllCost += (System.nanoTime() - start);
             distincts.clear();
             for (MiruTermId[] termIds : all) {
