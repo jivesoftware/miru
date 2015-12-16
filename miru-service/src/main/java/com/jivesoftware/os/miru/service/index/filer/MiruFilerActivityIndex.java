@@ -60,10 +60,10 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
                 return null;
             }
         }, stackBuffer);
-        LOG.inc("count>get>total");
-        LOG.inc("count>get>" + name);
-        LOG.inc("bytes>get>total", bytes.longValue());
-        LOG.inc("bytes>get>" + name, bytes.longValue());
+        LOG.inc("count>getActivity>total");
+        LOG.inc("count>getActivity>" + name);
+        LOG.inc("bytes>getActivity>total", bytes.longValue());
+        LOG.inc("bytes>getActivity>" + name, bytes.longValue());
         return activity;
     }
 
@@ -85,10 +85,10 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
         for (MiruTermId termId : termIds) {
             bytes += termId.length();
         }
-        LOG.inc("count>get>total");
-        LOG.inc("count>get>" + name);
-        LOG.inc("bytes>get>total", bytes);
-        LOG.inc("bytes>get>" + name, bytes);
+        LOG.inc("count>getTerms>total");
+        LOG.inc("count>getTerms>" + name);
+        LOG.inc("bytes>getTerms>total", bytes);
+        LOG.inc("bytes>getTerms>" + name, bytes);
         return termIds;
     }
 
@@ -126,10 +126,10 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
                 }
             }
         }
-        LOG.inc("count>get>total");
-        LOG.inc("count>get>" + name);
-        LOG.inc("bytes>get>total", bytes);
-        LOG.inc("bytes>get>" + name, bytes);
+        LOG.inc("count>getAllTerms>total");
+        LOG.inc("count>getAllTerms>" + name);
+        LOG.inc("bytes>getAllTerms>total", bytes);
+        LOG.inc("bytes>getAllTerms>" + name, bytes);
         return Arrays.asList(results);
 
     }
