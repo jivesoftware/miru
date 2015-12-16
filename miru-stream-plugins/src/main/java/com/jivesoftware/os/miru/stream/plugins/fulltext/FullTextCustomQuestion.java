@@ -62,7 +62,7 @@ public class FullTextCustomQuestion implements Question<FullTextQuery, FullTextA
         if (!context.getTimeIndex().intersects(timeRange)) {
             solutionLog.log(MiruSolutionLogLevel.WARN, "No time index intersection. Partition {}: {} doesn't intersect with {}",
                 handle.getCoord().partitionId, context.getTimeIndex(), timeRange);
-            return new MiruPartitionResponse<>(fullText.getActivityScores(bitmaps, context, request, report, bitmaps.create(), null),
+            return new MiruPartitionResponse<>(fullText.getActivityScores("fullText", bitmaps, context, request, report, bitmaps.create(), null),
                 solutionLog.asList());
         }
 
@@ -94,7 +94,7 @@ public class FullTextCustomQuestion implements Question<FullTextQuery, FullTextA
         bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
         BM answer = bitmaps.and(ands);
 
-        return new MiruPartitionResponse<>(fullText.getActivityScores(bitmaps, context, request, report, answer, termCollector),
+        return new MiruPartitionResponse<>(fullText.getActivityScores("fullText", bitmaps, context, request, report, answer, termCollector),
             solutionLog.asList());
     }
 

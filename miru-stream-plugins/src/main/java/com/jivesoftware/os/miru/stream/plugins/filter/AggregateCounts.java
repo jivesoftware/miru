@@ -212,7 +212,7 @@ public class AggregateCounts {
                     break;
                 }
 
-                MiruInternalActivity activity = requestContext.getActivityIndex().get(coord.tenantId, lastSetBit, stackBuffer);
+                MiruInternalActivity activity = requestContext.getActivityIndex().get(name, coord.tenantId, lastSetBit, stackBuffer);
                 if (activity == null) {
                     log.warn("Missing activity for tenant: {} with id: {} size: {}",
                         coord.tenantId, lastSetBit, requestContext.getActivityIndex().lastId(stackBuffer));

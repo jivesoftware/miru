@@ -35,28 +35,28 @@ public class MiruDeltaActivityIndex implements MiruActivityIndex, Mergeable {
     }
 
     @Override
-    public MiruInternalActivity get(MiruTenantId tenantId, int index, StackBuffer stackBuffer) throws IOException, InterruptedException {
+    public MiruInternalActivity get(String name, MiruTenantId tenantId, int index, StackBuffer stackBuffer) throws IOException, InterruptedException {
         //TODO consider writing through to the backing index for old indexes to avoid the double lookup
         MiruActivityAndId<MiruInternalActivity> activityAndId = activities.get(index);
         if (activityAndId != null) {
             return activityAndId.activity;
         } else {
-            return backingIndex.get(tenantId, index, stackBuffer);
+            return backingIndex.get(name, tenantId, index, stackBuffer);
         }
     }
 
     @Override
-    public MiruTermId[] get(int index, int fieldId, StackBuffer stackBuffer) throws IOException, InterruptedException {
+    public MiruTermId[] get(String name, int index, int fieldId, StackBuffer stackBuffer) throws IOException, InterruptedException {
         MiruActivityAndId<MiruInternalActivity> activityAndId = activities.get(index);
         if (activityAndId != null) {
             return activityAndId.activity.fieldsValues[fieldId];
         } else {
-            return backingIndex.get(index, fieldId, stackBuffer);
+            return backingIndex.get(name, index, fieldId, stackBuffer);
         }
     }
 
     @Override
-    public List<MiruTermId[]> getAll(int[] indexes, int fieldId, StackBuffer stackBuffer) throws IOException, InterruptedException {
+    public List<MiruTermId[]> getAll(String name, int[] indexes, int fieldId, StackBuffer stackBuffer) throws IOException, InterruptedException {
         List<MiruTermId[]> allTermIds = Lists.newArrayList();
         boolean missed = false;
         for (int i = 0; i < indexes.length; i++) {
@@ -71,7 +71,7 @@ public class MiruDeltaActivityIndex implements MiruActivityIndex, Mergeable {
             }
         }
         if (missed) {
-            allTermIds.addAll(backingIndex.getAll(indexes, fieldId, stackBuffer));
+            allTermIds.addAll(backingIndex.getAll(name, indexes, fieldId, stackBuffer));
         }
         return allTermIds;
     }

@@ -83,16 +83,16 @@ public class MiruActivityIndexTest {
     public void testGetActivity(MiruActivityIndex miruActivityIndex, MiruInternalActivity[] expectedActivities) throws IOException, InterruptedException {
         StackBuffer stackBuffer = new StackBuffer();
         assertTrue(expectedActivities.length == 3);
-        assertEquals(miruActivityIndex.get(expectedActivities[0].tenantId, 0, stackBuffer), expectedActivities[0]);
-        assertEquals(miruActivityIndex.get(expectedActivities[1].tenantId, 1, stackBuffer), expectedActivities[1]);
-        assertEquals(miruActivityIndex.get(expectedActivities[2].tenantId, 2, stackBuffer), expectedActivities[2]);
+        assertEquals(miruActivityIndex.get("test", expectedActivities[0].tenantId, 0, stackBuffer), expectedActivities[0]);
+        assertEquals(miruActivityIndex.get("test", expectedActivities[1].tenantId, 1, stackBuffer), expectedActivities[1]);
+        assertEquals(miruActivityIndex.get("test", expectedActivities[2].tenantId, 2, stackBuffer), expectedActivities[2]);
     }
 
     @Test(dataProvider = "miruActivityIndexDataProviderWithData", expectedExceptions = IllegalArgumentException.class)
     public void testGetActivityOverCapacity(MiruActivityIndex miruActivityIndex, MiruInternalActivity[] expectedActivities) throws IOException,
         InterruptedException {
         StackBuffer stackBuffer = new StackBuffer();
-        miruActivityIndex.get(null, expectedActivities.length, stackBuffer); // This should throw an exception
+        miruActivityIndex.get("test", null, expectedActivities.length, stackBuffer); // This should throw an exception
     }
 
     @DataProvider(name = "miruActivityIndexDataProvider")

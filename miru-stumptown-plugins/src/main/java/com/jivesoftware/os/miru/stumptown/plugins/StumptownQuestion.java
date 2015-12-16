@@ -133,7 +133,8 @@ public class StumptownQuestion implements Question<StumptownQuery, StumptownAnsw
                     context.getFieldIndexProvider(), entry.getValue(), solutionLog, null, context.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
                 BM answer = bitmaps.and(Arrays.asList(constrained, waveformFiltered));
                 if (!bitmaps.isEmpty(answer)) {
-                    waveform = stumptown.stumptowning(bitmaps, context, request.tenantId, answer, request.query.desiredNumberOfResultsPerWaveform, indexes);
+                    waveform = stumptown.stumptowning("stumptown", bitmaps, context, request.tenantId, answer, request.query.desiredNumberOfResultsPerWaveform,
+                        indexes);
                     if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.DEBUG)) {
                         solutionLog.log(MiruSolutionLogLevel.DEBUG, "stumptown answer: {} items.", bitmaps.cardinality(answer));
                         solutionLog.log(MiruSolutionLogLevel.DEBUG, "stumptown name: {}, waveform: {}.", entry.getKey(), Arrays.toString(waveform.waveform));

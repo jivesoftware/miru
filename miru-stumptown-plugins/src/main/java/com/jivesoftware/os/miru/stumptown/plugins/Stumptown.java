@@ -29,7 +29,8 @@ public class Stumptown {
         this.miruProvider = miruProvider;
     }
 
-    public <BM extends IBM, IBM> Waveform stumptowning(MiruBitmaps<BM, IBM> bitmaps,
+    public <BM extends IBM, IBM> Waveform stumptowning(String name,
+        MiruBitmaps<BM, IBM> bitmaps,
         MiruRequestContext<BM, IBM, ?> requestContext,
         MiruTenantId tenantId,
         BM answer,
@@ -50,7 +51,7 @@ public class Stumptown {
         for (long i = 0; i < cardinality && iter.hasNext(); i++) {
             int index = iter.next();
             if (i > (cardinality - 1 - desiredNumberOfResults)) {
-                results.add(internExtern.extern(requestContext.getActivityIndex().get(tenantId, index, stackBuffer), schema, stackBuffer));
+                results.add(internExtern.extern(requestContext.getActivityIndex().get(name, tenantId, index, stackBuffer), schema, stackBuffer));
             }
         }
         Collections.reverse(results); // chronologically descending (for proper alignment when merging/appending older partitions)

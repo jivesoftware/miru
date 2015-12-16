@@ -22,7 +22,7 @@ public interface MiruActivityIndex {
      * @param index the index of the activity
      * @return the activity at the given index
      */
-    MiruInternalActivity get(MiruTenantId tenantId, int index, StackBuffer stackBuffer) throws IOException, InterruptedException;
+    MiruInternalActivity get(String name, MiruTenantId tenantId, int index, StackBuffer stackBuffer) throws IOException, InterruptedException;
 
     /**
      * Get the terms from the given field for the activity at the requested index.
@@ -31,7 +31,7 @@ public interface MiruActivityIndex {
      * @param fieldId the field
      * @return the terms
      */
-    MiruTermId[] get(int index, int fieldId, StackBuffer stackBuffer) throws IOException, InterruptedException;
+    MiruTermId[] get(String name, int index, int fieldId, StackBuffer stackBuffer) throws IOException, InterruptedException;
 
     /**
      * Get the terms from the given field for each activity index.
@@ -40,7 +40,7 @@ public interface MiruActivityIndex {
      * @param fieldId the field
      * @return the terms
      */
-    List<MiruTermId[]> getAll(int[] indexes, int fieldId, StackBuffer stackBuffer) throws IOException, InterruptedException;
+    List<MiruTermId[]> getAll(String name, int[] indexes, int fieldId, StackBuffer stackBuffer) throws IOException, InterruptedException;
 
     /**
      * Returns the index of the last activity.

@@ -45,7 +45,8 @@ public class FullText {
         return miruProvider.getQueryParser(defaultField).parse(query);
     }
 
-    public <BM extends IBM, IBM> FullTextAnswer getActivityScores(MiruBitmaps<BM, IBM> bitmaps,
+    public <BM extends IBM, IBM> FullTextAnswer getActivityScores(String name,
+        MiruBitmaps<BM, IBM> bitmaps,
         MiruRequestContext<BM, IBM, ?> requestContext,
         MiruRequest<FullTextQuery> request,
         Optional<FullTextReport> lastReport,
@@ -59,9 +60,9 @@ public class FullText {
 
         List<ActivityScore> activityScores;
         if (request.query.strategy == FullTextQuery.Strategy.TF_IDF) {
-            activityScores = collectTfIdf(bitmaps, requestContext, request, lastReport, answer, termCollector, stackBuffer);
+            activityScores = collectTfIdf(name, bitmaps, requestContext, request, lastReport, answer, termCollector, stackBuffer);
         } else if (request.query.strategy == FullTextQuery.Strategy.TIME) {
-            activityScores = collectTime(bitmaps, requestContext, request, lastReport, answer, stackBuffer);
+            activityScores = collectTime(name, bitmaps, requestContext, request, lastReport, answer, stackBuffer);
         } else {
             activityScores = Collections.emptyList();
         }
@@ -74,7 +75,8 @@ public class FullText {
         return result;
     }
 
-    private <BM extends IBM, IBM> List<ActivityScore> collectTfIdf(MiruBitmaps<BM, IBM> bitmaps,
+    private <BM extends IBM, IBM> List<ActivityScore> collectTfIdf(String name,
+        MiruBitmaps<BM, IBM> bitmaps,
         MiruRequestContext<BM, IBM, ?> requestContext,
         MiruRequest<FullTextQuery> request,
         Optional<FullTextReport> lastReport,
@@ -117,7 +119,8 @@ public class FullText {
             i++;
 
             if (i == batchSize) {
-                batchTfIdf(requestContext, request, internExtern, primaryFieldIndex, termMultipliers, scored, minScore, acceptableBelowMin, ids, stackBuffer);
+                batchTfIdf(name, requestContext, request, internExtern, primaryFieldIndex, termMultipliers, scored, minScore, acceptableBelowMin, ids,
+                    stackBuffer);
                 i = 0;
             }
         }
@@ -125,7 +128,7 @@ public class FullText {
         if (i > 0) {
             int[] remainder = new int[i];
             System.arraycopy(ids, 0, remainder, 0, i);
-            batchTfIdf(requestContext, request, internExtern, primaryFieldIndex, termMultipliers, scored, minScore, acceptableBelowMin, remainder,
+            batchTfIdf(name, requestContext, request, internExtern, primaryFieldIndex, termMultipliers, scored, minScore, acceptableBelowMin, remainder,
                 stackBuffer);
         }
 
@@ -141,7 +144,8 @@ public class FullText {
         return activityScores;
     }
 
-    private <BM extends IBM, IBM> void batchTfIdf(MiruRequestContext<BM, IBM, ?> requestContext,
+    private <BM extends IBM, IBM> void batchTfIdf(String name,
+        MiruRequestContext<BM, IBM, ?> requestContext,
         MiruRequest<FullTextQuery> request,
         MiruActivityInternExtern internExtern,
         MiruFieldIndex<BM, IBM> primaryFieldIndex,
@@ -171,13 +175,13 @@ public class FullText {
             int _i = i;
             if (scores[i] > minScore) {
                 RawBitScore bitScore = new RawBitScore(new Promise<>(() -> {
-                    MiruInternalActivity internalActivity = requestContext.getActivityIndex().get(request.tenantId, ids[_i], stackBuffer);
+                    MiruInternalActivity internalActivity = requestContext.getActivityIndex().get(name, request.tenantId, ids[_i], stackBuffer);
                     return internExtern.extern(internalActivity, schema, stackBuffer);
                 }), ids[i], scores[i]);
                 scored.add(bitScore);
             } else if (acceptableBelowMin.intValue() > 0) {
                 RawBitScore bitScore = new RawBitScore(new Promise<>(() -> {
-                    MiruInternalActivity internalActivity = requestContext.getActivityIndex().get(request.tenantId, ids[_i], stackBuffer);
+                    MiruInternalActivity internalActivity = requestContext.getActivityIndex().get(name, request.tenantId, ids[_i], stackBuffer);
                     return internExtern.extern(internalActivity, schema, stackBuffer);
                 }), ids[i], scores[i]);
                 scored.add(bitScore);
@@ -186,7 +190,8 @@ public class FullText {
         }
     }
 
-    private <BM extends IBM, IBM> List<ActivityScore> collectTime(MiruBitmaps<BM, IBM> bitmaps,
+    private <BM extends IBM, IBM> List<ActivityScore> collectTime(String name,
+        MiruBitmaps<BM, IBM> bitmaps,
         MiruRequestContext<BM, IBM, ?> requestContext,
         MiruRequest<FullTextQuery> request,
         Optional<FullTextReport> lastReport,
@@ -203,7 +208,7 @@ public class FullText {
         MiruIntIterator iter = bitmaps.descendingIntIterator(answer);
         while (iter.hasNext()) {
             int lastSetBit = iter.next();
-            MiruInternalActivity internalActivity = requestContext.getActivityIndex().get(request.tenantId, lastSetBit, stackBuffer);
+            MiruInternalActivity internalActivity = requestContext.getActivityIndex().get(name, request.tenantId, lastSetBit, stackBuffer);
             float score = 0f; //TODO ?
             ActivityScore activityScore = new ActivityScore(internExtern.extern(internalActivity, schema, stackBuffer), score);
             activityScores.add(activityScore);

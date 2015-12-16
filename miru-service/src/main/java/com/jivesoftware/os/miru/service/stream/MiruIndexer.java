@@ -179,7 +179,7 @@ public class MiruIndexer<BM extends IBM, IBM> {
 
     public void remove(MiruContext<BM, IBM, ?> context, MiruActivity activity, int id) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
-        MiruInternalActivity existing = context.activityIndex.get(activity.tenantId, id, stackBuffer);
+        MiruInternalActivity existing = context.activityIndex.get("remove", activity.tenantId, id, stackBuffer);
         if (existing == null) {
             log.debug("Can't remove nonexistent activity at {}\n- offered: {}", id, activity);
         } else if (activity.version <= existing.version) {

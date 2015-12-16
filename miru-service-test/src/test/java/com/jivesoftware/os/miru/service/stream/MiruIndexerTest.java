@@ -46,11 +46,11 @@ public class MiruIndexerTest {
 
         // First check existing data
         verifyFieldValues(tenantId, context, 0, 0, stackBuffer);
-        verifyAuthzValues(context.getAuthzIndex(), context.getActivityIndex().get(tenantId, 0, stackBuffer).authz, 0, stackBuffer);
+        verifyAuthzValues(context.getAuthzIndex(), context.getActivityIndex().get("test", tenantId, 0, stackBuffer).authz, 0, stackBuffer);
         verifyFieldValues(tenantId, context, 1, 0, stackBuffer);
-        verifyAuthzValues(context.getAuthzIndex(), context.getActivityIndex().get(tenantId, 1, stackBuffer).authz, 1, stackBuffer);
+        verifyAuthzValues(context.getAuthzIndex(), context.getActivityIndex().get("test", tenantId, 1, stackBuffer).authz, 1, stackBuffer);
         verifyFieldValues(tenantId, context, 2, 0, stackBuffer);
-        verifyAuthzValues(context.getAuthzIndex(), context.getActivityIndex().get(tenantId, 2, stackBuffer).authz, 2, stackBuffer);
+        verifyAuthzValues(context.getAuthzIndex(), context.getActivityIndex().get("test", tenantId, 2, stackBuffer).authz, 2, stackBuffer);
 
         // Next add new data and check it
         miruIndexer.index(
@@ -65,7 +65,7 @@ public class MiruIndexerTest {
             MoreExecutors.sameThreadExecutor());
         verifyFieldValues(tenantId, context, 3, 0, stackBuffer);
         verifyFieldValues(tenantId, context, 3, 1, stackBuffer);
-        verifyAuthzValues(context.getAuthzIndex(), context.getActivityIndex().get(tenantId, 3, stackBuffer).authz, 3, stackBuffer);
+        verifyAuthzValues(context.getAuthzIndex(), context.getActivityIndex().get("test", tenantId, 3, stackBuffer).authz, 3, stackBuffer);
 
         miruIndexer.index(
             context,
@@ -79,7 +79,7 @@ public class MiruIndexerTest {
             MoreExecutors.sameThreadExecutor());
         verifyFieldValues(tenantId, context, 4, 0, stackBuffer);
         verifyFieldValues(tenantId, context, 4, 2, stackBuffer);
-        verifyAuthzValues(context.getAuthzIndex(), context.getActivityIndex().get(tenantId, 4, stackBuffer).authz, 4, stackBuffer);
+        verifyAuthzValues(context.getAuthzIndex(), context.getActivityIndex().get("test", tenantId, 4, stackBuffer).authz, 4, stackBuffer);
     }
 
     @Test(dataProvider = "miruIndexContextDataProvider")
@@ -129,14 +129,14 @@ public class MiruIndexerTest {
         for (MiruActivityAndId<MiruActivity> activityAndId : activityList) {
             verifyFieldValues(tenantId, context, activityAndId.id, 0, stackBuffer);
             verifyFieldValues(tenantId, context, activityAndId.id, 1, stackBuffer);
-            verifyAuthzValues(context.getAuthzIndex(), context.getActivityIndex().get(tenantId, activityAndId.id, stackBuffer).authz, activityAndId.id,
+            verifyAuthzValues(context.getAuthzIndex(), context.getActivityIndex().get("test", tenantId, activityAndId.id, stackBuffer).authz, activityAndId.id,
                 stackBuffer);
         }
 
         // And check new data
         verifyFieldValues(tenantId, context, nextId, 0, stackBuffer);
         verifyFieldValues(tenantId, context, nextId, 1, stackBuffer);
-        verifyAuthzValues(context.getAuthzIndex(), context.getActivityIndex().get(tenantId, nextId, stackBuffer).authz, nextId, stackBuffer);
+        verifyAuthzValues(context.getAuthzIndex(), context.getActivityIndex().get("test", tenantId, nextId, stackBuffer).authz, nextId, stackBuffer);
     }
 
     private void verifyFieldValues(MiruTenantId tenantId,
@@ -145,7 +145,7 @@ public class MiruIndexerTest {
         int fieldId,
         StackBuffer stackBuffer) throws Exception {
 
-        MiruInternalActivity miruActivity = context.getActivityIndex().get(tenantId, activityId, stackBuffer);
+        MiruInternalActivity miruActivity = context.getActivityIndex().get("test", tenantId, activityId, stackBuffer);
 
         MiruTermId[] fieldValues = miruActivity.fieldsValues[fieldId];
         if (fieldValues == null) {
