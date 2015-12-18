@@ -1023,7 +1023,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                     sippedEndOfWAL = true;
                     break;
                 } else if (sipCursor.equals(lastCursor)) {
-                    log.warn("Sipped same cursor for {}", coord);
+                    log.debug("Sipped same cursor for {}", coord);
                     sippedEndOfWAL = true;
                     break;
                 } else if (sippedActivity.endOfWAL) {

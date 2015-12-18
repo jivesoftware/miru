@@ -2,13 +2,14 @@ package com.jivesoftware.os.miru.reco.plugins.trending;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
 
 /**
  *
  */
-public class TrendingAnswerScoreSet {
+public class TrendingAnswerScoreSet implements Serializable {
 
     public final Map<String, List<Trendy>> results;
 
@@ -19,8 +20,8 @@ public class TrendingAnswerScoreSet {
 
     @Override
     public String toString() {
-        return "TrendingAnswerScoreSet{" +
-            "results=" + results +
-            '}';
+        return "TrendingAnswerScoreSet{"
+            + "results=" + results
+            + '}';
     }
 }
