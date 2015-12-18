@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.analytics.plugins.analytics;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
@@ -17,6 +18,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
+import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.solution.Question;
 import com.jivesoftware.os.miru.plugin.solution.Waveform;
 import java.util.List;
@@ -50,16 +52,32 @@ public class AnalyticsQuestion implements Question<AnalyticsQuery, AnalyticsAnsw
         MiruBitmaps<BM, IBM> bitmaps = handle.getBitmaps();
         StackBuffer stackBuffer = new StackBuffer();
 
-        List<Waveform> waveforms = Lists.newArrayListWithCapacity(request.query.analyticsFilters.size());
-        int segments = request.query.divideTimeRangeIntoNSegments;
+        List<AnalyticsQueryScoreSet> scoreSets = request.query.scoreSets;
+
+        String[] keys = new String[scoreSets.size()];
+        @SuppressWarnings("unchecked")
+        List<Waveform>[] waveforms = new List[scoreSets.size()];
+        Analytics.AnalyticsScoreable[] scoreables = new Analytics.AnalyticsScoreable[scoreSets.size()];
+        long minTimestamp = Long.MAX_VALUE;
+        long maxTimestamp = Long.MIN_VALUE;
+
+        int ssi = 0;
+        for (AnalyticsQueryScoreSet scoreSet : scoreSets) {
+            keys[ssi] = scoreSet.key;
+            waveforms[ssi] = Lists.newArrayListWithExpectedSize(request.query.analyticsFilters.size());
+            scoreables[ssi] = new Analytics.AnalyticsScoreable(scoreSet.timeRange, scoreSet.divideTimeRangeIntoNSegments);
+            minTimestamp = Math.min(minTimestamp, scoreSet.timeRange.smallestTimestamp);
+            maxTimestamp = Math.max(maxTimestamp, scoreSet.timeRange.largestTimestamp);
+        }
+
         boolean resultsExhausted = analytics.analyze("analytics",
             solutionLog,
             handle,
             context,
             request.authzExpression,
-            request.query.timeRange,
+            new MiruTimeRange(minTimestamp, maxTimestamp),
             request.query.constraintsFilter,
-            segments,
+            scoreables,
             stackBuffer,
             (Analytics.ToAnalyze<MiruValue, BM> toAnalyze) -> {
                 for (Map.Entry<String, MiruFilter> entry : request.query.analyticsFilters.entrySet()) {
@@ -72,16 +90,20 @@ public class AnalyticsQuestion implements Question<AnalyticsQuery, AnalyticsAnsw
                 }
                 return true;
             },
-            (MiruValue term, long[] waveformBuffer) -> {
+            (int index, MiruValue term, long[] waveformBuffer) -> {
                 if (waveformBuffer == null) {
-                    waveforms.add(Waveform.empty(term, segments));
+                    waveforms[index].add(Waveform.empty(term, scoreables[index].divideTimeRangeIntoNSegments));
                 } else {
-                    waveforms.add(Waveform.compressed(term, waveformBuffer));
+                    waveforms[index].add(Waveform.compressed(term, waveformBuffer));
                 }
                 return true;
             });
 
-        AnalyticsAnswer result = new AnalyticsAnswer(waveforms, resultsExhausted);
+        Map<String, List<Waveform>> resultWaveforms = Maps.newHashMap();
+        for (int i = 0; i < waveforms.length; i++) {
+            resultWaveforms.put(keys[i], waveforms[i]);
+        }
+        AnalyticsAnswer result = new AnalyticsAnswer(resultWaveforms, resultsExhausted);
 
         return new MiruPartitionResponse<>(result, solutionLog.asList());
     }

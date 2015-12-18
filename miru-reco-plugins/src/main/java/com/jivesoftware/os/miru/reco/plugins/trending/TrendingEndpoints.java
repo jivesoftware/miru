@@ -12,6 +12,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.shared.ResponseHelper;
+import java.util.List;
 import javax.inject.Singleton;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
@@ -55,8 +56,20 @@ public class TrendingEndpoints {
             long t = System.currentTimeMillis();
             MiruResponse<TrendingAnswer> response = injectable.scoreTrending(request);
 
-            log.info("scoreTrending: " + response.answer.results.size() + " / " + request.query.desiredNumberOfDistincts
-                + " in " + (System.currentTimeMillis() - t) + " ms");
+            if (log.isInfoEnabled()) {
+                int resultsCount = 0;
+                int desiredCount = 0;
+                for (TrendingQueryScoreSet queryScoreSet : request.query.scoreSets) {
+                    TrendingAnswerScoreSet answerScoreSet = response.answer.scoreSets.get(queryScoreSet.key);
+                    if (answerScoreSet != null) {
+                        for (List<Trendy> trendies : answerScoreSet.results.values()) {
+                            resultsCount += trendies.size();
+                        }
+                    }
+                    desiredCount += queryScoreSet.desiredNumberOfDistincts;
+                }
+                log.info("scoreTrending: {} / {} in {} ms", resultsCount, desiredCount, (System.currentTimeMillis() - t));
+            }
             return responseHelper.jsonResponse(response);
         } catch (MiruPartitionUnavailableException | InterruptedException e) {
             return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Unavailable " + e.getMessage()).build();

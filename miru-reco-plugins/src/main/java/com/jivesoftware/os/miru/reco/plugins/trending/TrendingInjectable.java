@@ -81,44 +81,15 @@ public class TrendingInjectable {
     public MiruResponse<TrendingAnswer> scoreTrending(MiruRequest<TrendingQuery> request) throws MiruQueryServiceException, InterruptedException {
         try {
             WaveformRegression regression = new WaveformRegression();
-            WaveformRegression relativeRegression = new WaveformRegression();
             LOG.debug("askAndMerge: request={}", request);
             MiruTenantId tenantId = request.tenantId;
             Miru miru = provider.getMiru(tenantId);
 
-            MiruTimeRange combinedTimeRange = request.query.timeRange;
-            int divideTimeRangeIntoNSegments = request.query.divideTimeRangeIntoNSegments;
-            int firstBucket = 0;
-            int lastBucket = divideTimeRangeIntoNSegments;
+            MiruTimeRange combinedTimeRange = getCombinedTimeRange(request);
 
-            int firstRelativeBucket = -1;
-            int lastRelativeBucket = -1;
-            if (request.query.relativeChangeTimeRange != null) {
-                long range = request.query.timeRange.largestTimestamp - request.query.timeRange.smallestTimestamp;
-                combinedTimeRange = new MiruTimeRange(
-                    Math.min(request.query.timeRange.smallestTimestamp, request.query.relativeChangeTimeRange.smallestTimestamp),
-                    Math.max(request.query.timeRange.largestTimestamp, request.query.relativeChangeTimeRange.largestTimestamp));
-
-                long combinedRange = combinedTimeRange.largestTimestamp - combinedTimeRange.smallestTimestamp;
-                divideTimeRangeIntoNSegments = (int) (combinedRange / (range / divideTimeRangeIntoNSegments));
-
-                firstBucket = (int) (divideTimeRangeIntoNSegments * zeroToOne(combinedTimeRange.smallestTimestamp, combinedTimeRange.largestTimestamp,
-                    request.query.timeRange.smallestTimestamp));
-
-                lastBucket = (int) (divideTimeRangeIntoNSegments * zeroToOne(combinedTimeRange.smallestTimestamp, combinedTimeRange.largestTimestamp,
-                    request.query.timeRange.largestTimestamp));
-
-                firstRelativeBucket = (int) (divideTimeRangeIntoNSegments * zeroToOne(combinedTimeRange.smallestTimestamp, combinedTimeRange.largestTimestamp,
-                    request.query.relativeChangeTimeRange.smallestTimestamp));
-
-                lastRelativeBucket = (int) (divideTimeRangeIntoNSegments * zeroToOne(combinedTimeRange.smallestTimestamp, combinedTimeRange.largestTimestamp,
-                    request.query.relativeChangeTimeRange.largestTimestamp));
-
-                divideTimeRangeIntoNSegments = Math.max(lastBucket, lastRelativeBucket);
-
-                LOG.debug("BUCKETS: {} - {} {} - {} segs:{} newSegs:{}",
-                    firstBucket, lastBucket, firstRelativeBucket, lastRelativeBucket,
-                    request.query.divideTimeRangeIntoNSegments, divideTimeRangeIntoNSegments);
+            Map<String, Integer> keyedSegments = Maps.newHashMap();
+            for (TrendingQueryScoreSet scoreSet : request.query.scoreSets) {
+                keyedSegments.put(scoreSet.key, scoreSet.divideTimeRangeIntoNSegments);
             }
 
             MiruResponse<AnalyticsAnswer> analyticsResponse = miru.askAndMerge(tenantId,
@@ -129,143 +100,115 @@ public class TrendingInjectable {
                     request,
                     provider.getRemotePartition(TrendingRemotePartition.class))),
                 new AnalyticsAnswerEvaluator(),
-                new AnalyticsAnswerMerger(combinedTimeRange, request.query.divideTimeRangeIntoNSegments),
+                new AnalyticsAnswerMerger(keyedSegments),
                 AnalyticsAnswer.EMPTY_RESULTS,
                 request.logLevel);
 
-            List<Waveform> waveforms = (analyticsResponse.answer != null && analyticsResponse.answer.waveforms != null)
+            Map<String, List<Waveform>> keyedWaveforms = (analyticsResponse.answer != null && analyticsResponse.answer.waveforms != null)
                 ? analyticsResponse.answer.waveforms
-                : Collections.<Waveform>emptyList();
+                : Collections.emptyMap();
 
-            long[] waveform = new long[divideTimeRangeIntoNSegments];
-            double bucket95 = 0;
-            if (request.query.strategies.contains(Strategy.PEAKS)) {
-                double[] highestBuckets = new double[waveforms.size()];
-                int i = 0;
+            Map<String, List<Waveform>> keyedDistinctWaveforms = Maps.newHashMap();
+            Map<String, TrendingAnswerScoreSet> keyedScoreSets = Maps.newHashMap();
+
+            Set<MiruValue> consumed = Sets.newHashSet();
+
+            for (TrendingQueryScoreSet queryScoreSet : request.query.scoreSets) {
+                List<Waveform> waveforms = keyedWaveforms.get(queryScoreSet.key);
+                if (waveforms == null) {
+                    continue;
+                }
+
+                long[] waveform = new long[queryScoreSet.divideTimeRangeIntoNSegments];
+                double bucket95 = 0;
+                if (queryScoreSet.strategies.contains(Strategy.PEAKS)) {
+                    double[] highestBuckets = new double[waveforms.size()];
+                    int i = 0;
+                    for (Waveform entry : waveforms) {
+                        Arrays.fill(waveform, 0);
+                        entry.mergeWaveform(waveform);
+                        for (long w : waveform) {
+                            highestBuckets[i] = Math.max(highestBuckets[i], w);
+                        }
+                        i++;
+                    }
+                    Percentile percentile = new Percentile();
+                    bucket95 = percentile.evaluate(highestBuckets, 0.95);
+                }
+
+                Map<Strategy, MinMaxPriorityQueue<Trendy>> strategyResults = Maps.newHashMapWithExpectedSize(queryScoreSet.strategies.size());
+                for (Strategy strategy : queryScoreSet.strategies) {
+                    strategyResults.put(strategy,
+                        MinMaxPriorityQueue
+                            .maximumSize(queryScoreSet.desiredNumberOfDistincts)
+                            .create());
+                }
+
                 for (Waveform entry : waveforms) {
+                    if (consumed.contains(entry.getId())) {
+                        continue;
+                    }
+
                     Arrays.fill(waveform, 0);
                     entry.mergeWaveform(waveform);
+                    boolean hasCounts = false;
+                    double highestBucket = Double.MIN_VALUE;
                     for (long w : waveform) {
-                        highestBuckets[i] = Math.max(highestBuckets[i], w);
+                        if (w > 0) {
+                            hasCounts = true;
+                        }
+                        highestBucket = Math.max(w, highestBucket);
                     }
-                    i++;
-                }
-                Percentile percentile = new Percentile();
-                bucket95 = percentile.evaluate(highestBuckets, 0.95);
-            }
 
-            Map<Strategy, MinMaxPriorityQueue<Trendy>> strategyResults = Maps.newHashMapWithExpectedSize(request.query.strategies.size());
-            for (Strategy strategy : request.query.strategies) {
-                strategyResults.put(strategy,
-                    MinMaxPriorityQueue
-                        .maximumSize(request.query.desiredNumberOfDistincts)
-                        .create());
-            }
-
-            for (Waveform entry : waveforms) {
-                Arrays.fill(waveform, 0);
-                entry.mergeWaveform(waveform);
-                boolean hasCounts = false;
-                double highestBucket = Double.MIN_VALUE;
-                for (long w : waveform) {
-                    if (w > 0) {
-                        hasCounts = true;
-                    }
-                    highestBucket = Math.max(w, highestBucket);
-                }
-
-                if (request.query.relativeChangeTimeRange != null) {
-                    int buckets = Math.max(lastBucket - firstBucket, 1);
-                    long[] actualWaveform = new long[buckets];
-                    System.arraycopy(waveform, firstBucket, actualWaveform, 0, buckets);
-                    entry.compress(actualWaveform);
-                }
-
-                if (hasCounts) {
-                    if (request.query.strategies.contains(Strategy.LINEAR_REGRESSION)) {
-                        if (request.query.relativeChangeTimeRange != null) {
-                            regression.clear();
-                            regression.add(waveform, firstBucket, lastBucket);
-                            relativeRegression.clear();
-                            relativeRegression.add(waveform, firstRelativeBucket, lastRelativeBucket);
-                            double rankDelta = regression.slope() - relativeRegression.slope();
-                            strategyResults.get(Strategy.LINEAR_REGRESSION).add(new Trendy(entry.getId(), regression.slope(), rankDelta));
-                        } else {
+                    if (hasCounts) {
+                        if (queryScoreSet.strategies.contains(Strategy.LINEAR_REGRESSION)) {
                             regression.clear();
                             regression.add(waveform, 0, waveform.length);
-                            strategyResults.get(Strategy.LINEAR_REGRESSION).add(new Trendy(entry.getId(), regression.slope(), null));
+                            strategyResults.get(Strategy.LINEAR_REGRESSION).add(new Trendy(entry.getId(), regression.slope()));
                         }
-                    }
-                    if (request.query.strategies.contains(Strategy.LEADER)) {
-                        if (request.query.relativeChangeTimeRange != null) {
-                            long sum = 0;
-                            for (int i = firstBucket; i < lastBucket; i++) {
-                                sum += waveform[i];
-                            }
-                            long relativeSum = 0;
-                            for (int i = firstRelativeBucket; i < lastRelativeBucket; i++) {
-                                relativeSum += waveform[i];
-                            }
-                            double rankDelta = sum - relativeSum;
-                            strategyResults.get(Strategy.LEADER).add(new Trendy(entry.getId(), (double) sum, rankDelta));
-                        } else {
+                        if (queryScoreSet.strategies.contains(Strategy.LEADER)) {
                             long sum = 0;
                             for (long w : waveform) {
                                 sum += w;
                             }
-                            strategyResults.get(Strategy.LEADER).add(new Trendy(entry.getId(), (double) sum, null));
+                            strategyResults.get(Strategy.LEADER).add(new Trendy(entry.getId(), (double) sum));
                         }
-                    }
-                    if (request.query.strategies.contains(Strategy.PEAKS)) {
-                        double threshold = (highestBucket / 6) + (bucket95 / 100);
-                        if (request.query.relativeChangeTimeRange != null) {
-                            List<PeakDet.Peak> peaks = peakDet.peakdet(waveform, firstBucket, lastBucket, threshold);
-                            List<PeakDet.Peak> peaksRelative = peakDet.peakdet(waveform, firstRelativeBucket, lastRelativeBucket, threshold);
-                            double rankDelta = peaks.size() - peaksRelative.size();
-                            strategyResults.get(Strategy.PEAKS).add(new Trendy(entry.getId(), (double) peaks.size(), rankDelta));
-                        } else {
+                        if (queryScoreSet.strategies.contains(Strategy.PEAKS)) {
+                            double threshold = (highestBucket / 6) + (bucket95 / 100);
                             List<PeakDet.Peak> peaks = peakDet.peakdet(waveform, threshold);
-                            strategyResults.get(Strategy.PEAKS).add(new Trendy(entry.getId(), (double) peaks.size(), null));
+                            strategyResults.get(Strategy.PEAKS).add(new Trendy(entry.getId(), (double) peaks.size()));
                         }
-                    }
-                    if (request.query.strategies.contains(Strategy.HIGHEST_PEAK)) {
-                        if (request.query.relativeChangeTimeRange != null) {
-                            double max = 0;
-                            for (int i = firstBucket; i < lastBucket; i++) {
-                                max = Math.max(max, waveform[i]);
-                            }
-                            double relativeMax = 0;
-                            for (int i = firstRelativeBucket; i < lastRelativeBucket; i++) {
-                                relativeMax = Math.max(relativeMax, waveform[i]);
-                            }
-                            strategyResults.get(Strategy.HIGHEST_PEAK).add(new Trendy(entry.getId(), max, max - relativeMax));
-                        } else {
+                        if (queryScoreSet.strategies.contains(Strategy.HIGHEST_PEAK)) {
                             double max = 0;
                             for (int i = 0; i < waveform.length; i++) {
                                 max = Math.max(max, waveform[i]);
                             }
-                            strategyResults.get(Strategy.HIGHEST_PEAK).add(new Trendy(entry.getId(), max, null));
+                            strategyResults.get(Strategy.HIGHEST_PEAK).add(new Trendy(entry.getId(), max));
                         }
                     }
                 }
-            }
 
-            Set<MiruValue> retainKeys = Sets.newHashSet();
-            Map<String, List<Trendy>> strategySortedTrendies = Maps.newHashMapWithExpectedSize(strategyResults.size());
-            for (Map.Entry<Strategy, MinMaxPriorityQueue<Trendy>> entry : strategyResults.entrySet()) {
-                List<Trendy> sortedTrendies = Lists.newArrayList(entry.getValue());
-                Collections.sort(sortedTrendies);
-                strategySortedTrendies.put(entry.getKey().name(), sortedTrendies);
-                for (Trendy trendy : sortedTrendies) {
-                    retainKeys.add(trendy.distinctValue);
+                Set<MiruValue> retainKeys = Sets.newHashSet();
+                Map<String, List<Trendy>> strategySortedTrendies = Maps.newHashMapWithExpectedSize(strategyResults.size());
+                for (Map.Entry<Strategy, MinMaxPriorityQueue<Trendy>> entry : strategyResults.entrySet()) {
+                    List<Trendy> sortedTrendies = Lists.newArrayList(entry.getValue());
+                    Collections.sort(sortedTrendies);
+                    strategySortedTrendies.put(entry.getKey().name(), sortedTrendies);
+                    for (Trendy trendy : sortedTrendies) {
+                        retainKeys.add(trendy.distinctValue);
+                    }
                 }
-            }
 
-            List<Waveform> distinctWaveforms = Lists.newArrayListWithCapacity(retainKeys.size());
-            for (Waveform entry : waveforms) {
-                if (retainKeys.contains(entry.getId())) {
-                    distinctWaveforms.add(entry);
+                List<Waveform> distinctWaveforms = Lists.newArrayListWithCapacity(retainKeys.size());
+                for (Waveform entry : waveforms) {
+                    if (retainKeys.contains(entry.getId())) {
+                        distinctWaveforms.add(entry);
+                    }
                 }
+
+                consumed.addAll(retainKeys);
+                keyedDistinctWaveforms.put(queryScoreSet.key, distinctWaveforms);
+                keyedScoreSets.put(queryScoreSet.key, new TrendingAnswerScoreSet(strategySortedTrendies));
             }
 
             ImmutableList<String> solutionLog = ImmutableList.<String>builder()
@@ -273,7 +216,7 @@ public class TrendingInjectable {
                 .build();
             LOG.debug("Solution:\n{}", solutionLog);
 
-            return new MiruResponse<>(new TrendingAnswer(distinctWaveforms, strategySortedTrendies),
+            return new MiruResponse<>(new TrendingAnswer(keyedDistinctWaveforms, keyedScoreSets),
                 ImmutableList.<MiruSolution>builder()
                     .addAll(firstNonNull(analyticsResponse.solutions, Collections.<MiruSolution>emptyList()))
                     .build(),
@@ -301,12 +244,7 @@ public class TrendingInjectable {
             MiruTenantId tenantId = request.tenantId;
             Miru miru = provider.getMiru(tenantId);
 
-            MiruTimeRange combinedTimeRange = request.query.timeRange;
-            if (request.query.relativeChangeTimeRange != null) {
-                combinedTimeRange = new MiruTimeRange(
-                    Math.min(request.query.timeRange.smallestTimestamp, request.query.relativeChangeTimeRange.smallestTimestamp),
-                    Math.max(request.query.timeRange.largestTimestamp, request.query.relativeChangeTimeRange.largestTimestamp));
-            }
+            MiruTimeRange combinedTimeRange = getCombinedTimeRange(request);
 
             return miru.askImmediate(tenantId,
                 partitionId,
@@ -327,5 +265,15 @@ public class TrendingInjectable {
             //TODO throw http error codes
             throw new MiruQueryServiceException("Failed to score trending stream for partition: " + partitionId.getId(), e);
         }
+    }
+
+    private MiruTimeRange getCombinedTimeRange(MiruRequest<TrendingQuery> request) {
+        long minTimestamp = Long.MAX_VALUE;
+        long maxTimestamp = Long.MIN_VALUE;
+        for (TrendingQueryScoreSet scoreSet : request.query.scoreSets) {
+            minTimestamp = Math.min(minTimestamp, scoreSet.timeRange.smallestTimestamp);
+            maxTimestamp = Math.max(maxTimestamp, scoreSet.timeRange.largestTimestamp);
+        }
+        return new MiruTimeRange(minTimestamp, maxTimestamp);
     }
 }

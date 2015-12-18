@@ -5,21 +5,21 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.jivesoftware.os.miru.plugin.solution.Waveform;
 import java.io.Serializable;
 import java.util.List;
+import java.util.Map;
 
 /**
  *
  */
 public class AnalyticsAnswer implements Serializable {
 
-    public static final AnalyticsAnswer EMPTY_RESULTS = new AnalyticsAnswer(null,
-        true);
+    public static final AnalyticsAnswer EMPTY_RESULTS = new AnalyticsAnswer(null, true);
 
-    public final List<Waveform> waveforms;
+    public final Map<String, List<Waveform>> waveforms;
     public final boolean resultsExhausted;
 
     @JsonCreator
     public AnalyticsAnswer(
-        @JsonProperty("waveforms") List<Waveform> waveforms,
+        @JsonProperty("waveforms") Map<String, List<Waveform>> waveforms,
         @JsonProperty("resultsExhausted") boolean resultsExhausted) {
         this.waveforms = waveforms;
         this.resultsExhausted = resultsExhausted;

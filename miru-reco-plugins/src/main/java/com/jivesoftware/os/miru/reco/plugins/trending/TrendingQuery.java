@@ -8,63 +8,42 @@ import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsQuery;
 import java.io.Serializable;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 
 /**
  *
  */
 public class TrendingQuery implements Serializable {
 
-    public static enum Strategy {
+    public enum Strategy {
 
         LINEAR_REGRESSION, LEADER, PEAKS, HIGHEST_PEAK;
     }
 
-    public final Set<Strategy> strategies;
-    public final MiruTimeRange timeRange;
-    public final MiruTimeRange relativeChangeTimeRange; // nullable
-    public final int divideTimeRangeIntoNSegments;
+    public final List<TrendingQueryScoreSet> scoreSets;
     public final MiruFilter constraintsFilter;
     public final String aggregateCountAroundField;
     public final List<List<DistinctsQuery>> distinctQueries; // inner lists are OR'd together, outer list is AND'd together
-    public final int desiredNumberOfDistincts;
 
     @JsonCreator
     public TrendingQuery(
-        @JsonProperty("strategies") Set<Strategy> strategies,
-        @JsonProperty("timeRange") MiruTimeRange timeRange,
-        @JsonProperty("relativeChangeTimeRange") MiruTimeRange relativeChangeTimeRange,
-        @JsonProperty("divideTimeRangeIntoNSegments") int divideTimeRangeIntoNSegments,
+        @JsonProperty("scoreSets") List<TrendingQueryScoreSet> scoreSets,
         @JsonProperty("constraintsFilter") MiruFilter constraintsFilter,
         @JsonProperty("aggregateCountAroundField") String aggregateCountAroundField,
-        @JsonProperty("distinctQueries") List<List<DistinctsQuery>> distinctQueries,
-        @JsonProperty("desiredNumberOfDistincts") int desiredNumberOfDistincts) {
-        Preconditions.checkArgument(strategies != null && !strategies.isEmpty(), "Must specify at least one strategy");
-        this.strategies = strategies;
-
-        Preconditions.checkArgument(!MiruTimeRange.ALL_TIME.equals(timeRange), "Requires an explicit time range");
-        this.timeRange = Preconditions.checkNotNull(timeRange);
-        this.relativeChangeTimeRange = relativeChangeTimeRange;
-
-        this.divideTimeRangeIntoNSegments = divideTimeRangeIntoNSegments;
+        @JsonProperty("distinctQueries") List<List<DistinctsQuery>> distinctQueries) {
+        this.scoreSets = Preconditions.checkNotNull(scoreSets);
         this.constraintsFilter = Preconditions.checkNotNull(constraintsFilter);
         this.aggregateCountAroundField = Preconditions.checkNotNull(aggregateCountAroundField);
         this.distinctQueries = Preconditions.checkNotNull(distinctQueries);
-        Preconditions.checkArgument(desiredNumberOfDistincts > 0, "Number of distincts must be at least 1");
-        this.desiredNumberOfDistincts = desiredNumberOfDistincts;
     }
 
     @Override
     public String toString() {
-        return "TrendingQuery{"
-            + "strategies=" + strategies
-            + ", timeRange=" + timeRange
-            + ", relativeChangeTimeRange=" + relativeChangeTimeRange
-            + ", divideTimeRangeIntoNSegments=" + divideTimeRangeIntoNSegments
-            + ", constraintsFilter=" + constraintsFilter
-            + ", aggregateCountAroundField='" + aggregateCountAroundField + '\''
-            + ", distinctQueries=" + distinctQueries
-            + ", desiredNumberOfDistincts=" + desiredNumberOfDistincts
-            + '}';
+        return "TrendingQuery{" +
+            "scoreSets=" + scoreSets +
+            ", constraintsFilter=" + constraintsFilter +
+            ", aggregateCountAroundField='" + aggregateCountAroundField + '\'' +
+            ", distinctQueries=" + distinctQueries +
+            '}';
     }
 }

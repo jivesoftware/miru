@@ -1,12 +1,12 @@
 package com.jivesoftware.os.miru.stumptown.plugins;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.miru.analytics.plugins.analytics.Analytics;
 import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsAnswer;
 import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsInjectable;
 import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsQuery;
+import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsQueryScoreSet;
 import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
@@ -124,8 +124,10 @@ public class MiruStumptownNGTest {
                 MiruActorId.NOT_PROVIDED,
                 MiruAuthzExpression.NOT_PROVIDED,
                 new AnalyticsQuery(
-                    timeRange,
-                    8,
+                    Collections.singletonList(new AnalyticsQueryScoreSet(
+                        "test",
+                        timeRange,
+                        8)),
                     MiruFilter.NO_FILTER,
                     ImmutableMap.<String, MiruFilter>builder()
                         .put(user, filter)

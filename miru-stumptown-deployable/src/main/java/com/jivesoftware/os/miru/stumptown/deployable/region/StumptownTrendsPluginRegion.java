@@ -27,6 +27,7 @@ import com.jivesoftware.os.miru.reco.plugins.trending.TrendingAnswer;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingConstants;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery.Strategy;
+import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQueryScoreSet;
 import com.jivesoftware.os.miru.reco.plugins.trending.Trendy;
 import com.jivesoftware.os.miru.stumptown.deployable.StumptownSchemaConstants;
 import com.jivesoftware.os.miru.stumptown.deployable.endpoints.MinMaxDouble;
@@ -148,14 +149,16 @@ public class StumptownTrendsPluginRegion implements MiruPageRegion<Optional<Stum
                                 tenantId,
                                 MiruActorId.NOT_PROVIDED,
                                 MiruAuthzExpression.NOT_PROVIDED,
-                                new TrendingQuery(Collections.singleton(strategy),
-                                    miruTimeRange,
-                                    null,
-                                    30,
+                                new TrendingQuery(
+                                    Collections.singletonList(new TrendingQueryScoreSet(
+                                        "stumptown",
+                                        Collections.singleton(strategy),
+                                        miruTimeRange,
+                                        30,
+                                        100)),
                                     constraintsFilter,
                                     input.aggregateAroundField,
-                                    Collections.emptyList(),
-                                    100),
+                                    Collections.emptyList()),
                                 MiruSolutionLogLevel.INFO),
                             TrendingConstants.TRENDING_PREFIX + TrendingConstants.CUSTOM_QUERY_ENDPOINT, MiruResponse.class,
                             new Class[] { TrendingAnswer.class },
@@ -174,9 +177,9 @@ public class StumptownTrendsPluginRegion implements MiruPageRegion<Optional<Stum
                 if (response != null && response.answer != null) {
                     data.put("elapse", String.valueOf(response.totalElapsed));
 
-                    List<Waveform> answerWaveforms = response.answer.waveforms;
+                    List<Waveform> answerWaveforms = response.answer.waveforms.get("stumptown");
                     Map<MiruValue, Waveform> waveforms = Maps.uniqueIndex(answerWaveforms, Waveform::getId);
-                    List<Trendy> results = response.answer.results.get(strategy.name());
+                    List<Trendy> results = response.answer.scoreSets.get("stumptown").results.get(strategy.name());
                     if (results == null) {
                         results = Collections.emptyList();
                     }

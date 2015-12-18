@@ -41,7 +41,17 @@ public class Analytics {
 
     public interface Analyzed<T> {
 
-        boolean analyzed(T term, long[] waveformBuffer) throws Exception;
+        boolean analyzed(int index, T term, long[] waveformBuffer) throws Exception;
+    }
+
+    public static class AnalyticsScoreable {
+        public final MiruTimeRange timeRange;
+        public final int divideTimeRangeIntoNSegments;
+
+        public AnalyticsScoreable(MiruTimeRange timeRange, int divideTimeRangeIntoNSegments) {
+            this.timeRange = timeRange;
+            this.divideTimeRangeIntoNSegments = divideTimeRangeIntoNSegments;
+        }
     }
 
     public <BM extends IBM, IBM, T> boolean analyze(String name,
@@ -51,7 +61,7 @@ public class Analytics {
         MiruAuthzExpression authzExpression,
         MiruTimeRange timeRange,
         MiruFilter constraintsFilter,
-        int divideTimeRangeIntoNSegments,
+        AnalyticsScoreable[] scoreables,
         StackBuffer stackBuffer,
         Analysis<T, BM> analysis,
         Analyzed<T> analyzed) throws Exception {
@@ -63,7 +73,14 @@ public class Analytics {
         // Short-circuit if this is not a properly bounded query
         if (timeRange.largestTimestamp == Long.MAX_VALUE || timeRange.smallestTimestamp == 0) {
             solutionLog.log(MiruSolutionLogLevel.WARN, "Improperly bounded query: {}", timeRange);
-            analysis.consume((termId, filter) -> analyzed.analyzed(termId, null));
+            analysis.consume((termId, filter) -> {
+                for (int i = 0; i < scoreables.length; i++) {
+                    if (!analyzed.analyzed(i, termId, null)) {
+                        return false;
+                    }
+                }
+                return true;
+            });
             return true;
         }
 
@@ -72,7 +89,14 @@ public class Analytics {
         if (!timeIndex.intersects(timeRange)) {
             solutionLog.log(MiruSolutionLogLevel.WARN, "No time index intersection. Partition {}: {} doesn't intersect with {}",
                 coord.partitionId, timeIndex, timeRange);
-            analysis.consume((termId, filter) -> analyzed.analyzed(termId, null));
+            analysis.consume((termId, filter) -> {
+                for (int i = 0; i < scoreables.length; i++) {
+                    if (!analyzed.analyzed(i, termId, null)) {
+                        return false;
+                    }
+                }
+                return true;
+            });
             return resultsExhausted;
         }
 
@@ -114,23 +138,28 @@ public class Analytics {
             solutionLog.log(MiruSolutionLogLevel.INFO, "analytics constrained {} items.", bitmaps.cardinality(constrained));
         }
 
-        long currentTime = timeRange.smallestTimestamp;
-        long segmentDuration = (timeRange.largestTimestamp - timeRange.smallestTimestamp) / divideTimeRangeIntoNSegments;
-        if (segmentDuration < 1) {
-            throw new RuntimeException("Time range is insufficient to be divided into " + divideTimeRangeIntoNSegments + " segments");
-        }
-
         start = System.currentTimeMillis();
-        int[] indexes = new int[divideTimeRangeIntoNSegments + 1];
-        for (int i = 0; i < indexes.length; i++) {
-            indexes[i] = Math.abs(timeIndex.getClosestId(currentTime, stackBuffer)); // handle negative "theoretical insertion" index
-            currentTime += segmentDuration;
+        int[][] indexes = new int[scoreables.length][];
+        long[][] rawWaveformBuffer = new long[scoreables.length][];
+        for (int i = 0; i < scoreables.length; i++) {
+            AnalyticsScoreable scoreable = scoreables[i];
+            long currentTime = scoreable.timeRange.smallestTimestamp;
+            long segmentDuration = (scoreable.timeRange.largestTimestamp - scoreable.timeRange.smallestTimestamp) / scoreable.divideTimeRangeIntoNSegments;
+            if (segmentDuration < 1) {
+                throw new RuntimeException("Time range is insufficient to be divided into " + scoreable.divideTimeRangeIntoNSegments + " segments");
+            }
+
+            indexes[i] = new int[scoreable.divideTimeRangeIntoNSegments + 1];
+            rawWaveformBuffer[i] = new long[scoreable.divideTimeRangeIntoNSegments];
+            for (int j = 0; j < indexes[i].length; j++) {
+                indexes[i][j] = Math.abs(timeIndex.getClosestId(currentTime, stackBuffer)); // handle negative "theoretical insertion" index
+                currentTime += segmentDuration;
+            }
         }
         solutionLog.log(MiruSolutionLogLevel.INFO, "analytics bucket boundaries: {} millis.", System.currentTimeMillis() - start);
 
         start = System.currentTimeMillis();
         int[] count = new int[1];
-        long[] rawWaveformBuffer = new long[divideTimeRangeIntoNSegments];
 
         analysis.consume((term, waveformFiltered) -> {
             boolean found = false;
@@ -144,7 +173,9 @@ public class Analytics {
                 }
                 if (!bitmaps.isEmpty(answer)) {
                     found = true;
-                    Arrays.fill(rawWaveformBuffer, 0);
+                    for (int i = 0; i < rawWaveformBuffer.length; i++) {
+                        Arrays.fill(rawWaveformBuffer[i], 0);
+                    }
                     bitmaps.boundedCardinalities(answer, indexes, rawWaveformBuffer);
 
                     if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.DEBUG)) {
@@ -156,7 +187,12 @@ public class Analytics {
                 }
             }
             count[0]++;
-            return analyzed.analyzed(term, found ? rawWaveformBuffer : null);
+            for (int i = 0; i < scoreables.length; i++) {
+                if (!analyzed.analyzed(i, term, found ? rawWaveformBuffer[i] : null)) {
+                    return false;
+                }
+            }
+            return true;
         });
         solutionLog.log(MiruSolutionLogLevel.INFO, "analytics answered: {} millis.", System.currentTimeMillis() - start);
         solutionLog.log(MiruSolutionLogLevel.INFO, "analytics answered: {} iterations.", count[0]);

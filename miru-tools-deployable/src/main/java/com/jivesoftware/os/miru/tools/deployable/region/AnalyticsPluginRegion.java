@@ -13,6 +13,7 @@ import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsAnswer;
 import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsConstants;
 import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsQuery;
+import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsQueryScoreSet;
 import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -200,8 +201,9 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                                     MiruActorId.NOT_PROVIDED,
                                     MiruAuthzExpression.NOT_PROVIDED,
                                     new AnalyticsQuery(
-                                        new MiruTimeRange(fromTime, toTime),
-                                        input.buckets,
+                                        Collections.singletonList(new AnalyticsQueryScoreSet("tools",
+                                            new MiruTimeRange(fromTime, toTime),
+                                            input.buckets)),
                                         constraintsFilter,
                                         analyticsFilters),
                                     MiruSolutionLogLevel.valueOf(input.logLevel)),
@@ -221,7 +223,7 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                 }
 
                 if (response != null && response.answer != null) {
-                    List<Waveform> answerWaveforms = response.answer.waveforms != null ? response.answer.waveforms : Collections.emptyList();
+                    List<Waveform> answerWaveforms = response.answer.waveforms != null ? response.answer.waveforms.get("tools") : Collections.emptyList();
                     ImmutableMap<String, Waveform> uniqueIndex = Maps.uniqueIndex(answerWaveforms, w -> w.getId().last());
                     Map<String, long[]> waveforms = Maps.transformValues(uniqueIndex, w -> {
                         long[] waveform = new long[input.buckets];

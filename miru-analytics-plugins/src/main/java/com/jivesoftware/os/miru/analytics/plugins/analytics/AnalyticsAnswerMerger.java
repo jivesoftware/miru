@@ -6,7 +6,6 @@ import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.miru.plugin.solution.MiruAnswerMerger;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
-import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.solution.Waveform;
 import java.util.Arrays;
 import java.util.List;
@@ -17,12 +16,10 @@ import java.util.Map;
  */
 public class AnalyticsAnswerMerger implements MiruAnswerMerger<AnalyticsAnswer> {
 
-    private final MiruTimeRange timeRange;
-    private final int divideTimeRangeIntoNSegments;
+    private final Map<String, Integer> scoreSets;
 
-    public AnalyticsAnswerMerger(MiruTimeRange timeRange, int divideTimeRangeIntoNSegments) {
-        this.timeRange = timeRange;
-        this.divideTimeRangeIntoNSegments = divideTimeRangeIntoNSegments;
+    public AnalyticsAnswerMerger(Map<String, Integer> scoreSets) {
+        this.scoreSets = scoreSets;
     }
 
     /**
@@ -40,30 +37,38 @@ public class AnalyticsAnswerMerger implements MiruAnswerMerger<AnalyticsAnswer> 
             return currentAnswer;
         }
 
-        List<Waveform> mergedWaveforms;
-        AnalyticsAnswer lastAnswer = last.get();
-        if (currentAnswer.waveforms == null) {
-            if (lastAnswer.waveforms == null) {
-                solutionLog.log(MiruSolutionLogLevel.WARN, "merge: current and last waveforms are null.");
-                mergedWaveforms = null;
+        Map<String, List<Waveform>> keyedMergedWaveforms = Maps.newHashMap();
+        for (Map.Entry<String, Integer> entry : scoreSets.entrySet()) {
+            String key = entry.getKey();
+            int divideTimeRangeIntoNSegments = entry.getValue();
+
+            List<Waveform> mergedWaveforms;
+            AnalyticsAnswer lastAnswer = last.get();
+            List<Waveform> currentWaveforms = currentAnswer.waveforms.get(key);
+            List<Waveform> lastWaveforms = lastAnswer.waveforms.get(key);
+            if (currentWaveforms == null) {
+                if (lastWaveforms == null) {
+                    solutionLog.log(MiruSolutionLogLevel.WARN, "merge: current and last waveforms are null.");
+                    mergedWaveforms = null;
+                } else {
+                    solutionLog.log(MiruSolutionLogLevel.WARN, "merge: current waveforms are null, using last answer.");
+                    mergedWaveforms = lastWaveforms;
+                }
             } else {
-                solutionLog.log(MiruSolutionLogLevel.WARN, "merge: current waveforms are null, using last answer.");
-                mergedWaveforms = lastAnswer.waveforms;
+                List<Waveform> biggerList = lastWaveforms.size() > currentWaveforms.size() ? lastWaveforms : currentWaveforms;
+                Map<MiruValue, Waveform> smallerSet = lastWaveforms.size() > currentWaveforms.size()
+                    ? toMap(currentWaveforms)
+                    : toMap(lastWaveforms);
+
+                mergeWaveform(smallerSet, biggerList, divideTimeRangeIntoNSegments, solutionLog);
+                mergedWaveforms = biggerList;
+                solutionLog.log(MiruSolutionLogLevel.INFO, "merge: merged key={}, last answer size={}, with current answer size={}.",
+                    key, lastWaveforms.size(), currentWaveforms.size());
             }
-        } else {
-
-            List<Waveform> biggerList = lastAnswer.waveforms.size() > currentAnswer.waveforms.size() ? lastAnswer.waveforms : currentAnswer.waveforms;
-            Map<MiruValue, Waveform> smallerSet = lastAnswer.waveforms.size() > currentAnswer.waveforms.size()
-                ? toMap(currentAnswer.waveforms)
-                : toMap(lastAnswer.waveforms);
-
-            mergeWaveform(smallerSet, biggerList, solutionLog);
-            mergedWaveforms = biggerList;
-            solutionLog.log(MiruSolutionLogLevel.INFO, "merge: merged last answer size={}, with current answer size={}.",
-                lastAnswer.waveforms.size(), currentAnswer.waveforms.size());
+            keyedMergedWaveforms.put(key, mergedWaveforms);
         }
 
-        return new AnalyticsAnswer(mergedWaveforms, currentAnswer.resultsExhausted);
+        return new AnalyticsAnswer(keyedMergedWaveforms, currentAnswer.resultsExhausted);
     }
 
     private Map<MiruValue, Waveform> toMap(List<Waveform> waveforms) {
@@ -74,7 +79,11 @@ public class AnalyticsAnswerMerger implements MiruAnswerMerger<AnalyticsAnswer> 
         return map;
     }
 
-    private void mergeWaveform(Map<MiruValue, Waveform> mergedWaveforms, List<Waveform> waveforms, MiruSolutionLog solutionLog) {
+    private void mergeWaveform(Map<MiruValue, Waveform> mergedWaveforms,
+        List<Waveform> waveforms,
+        int divideTimeRangeIntoNSegments,
+        MiruSolutionLog solutionLog) {
+
         long[] mergedWaveform = new long[divideTimeRangeIntoNSegments];
         for (Waveform waveform : waveforms) {
 

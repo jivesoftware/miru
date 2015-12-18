@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.analytics.plugins.analytics;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -14,6 +15,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolvableFactory;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import java.util.Map;
 
 /**
  *
@@ -36,12 +38,18 @@ public class AnalyticsInjectable {
             LOG.debug("askAndMerge: request={}", request);
             MiruTenantId tenantId = request.tenantId;
             Miru miru = miruProvider.getMiru(tenantId);
+
+            Map<String, Integer> keyedSegments = Maps.newHashMap();
+            for (AnalyticsQueryScoreSet scoreSet : request.query.scoreSets) {
+                keyedSegments.put(scoreSet.key, scoreSet.divideTimeRangeIntoNSegments);
+            }
+
             return miru.askAndMerge(tenantId,
                 new MiruSolvableFactory<>(miruProvider.getStats(), "scoreAnalytics", new AnalyticsQuestion(trending,
                     request,
                     miruProvider.getRemotePartition(AnalyticsRemotePartition.class))),
                 new AnalyticsAnswerEvaluator(),
-                new AnalyticsAnswerMerger(request.query.timeRange, request.query.divideTimeRangeIntoNSegments),
+                new AnalyticsAnswerMerger(keyedSegments),
                 AnalyticsAnswer.EMPTY_RESULTS,
                 request.logLevel);
         } catch (MiruPartitionUnavailableException | InterruptedException e) {

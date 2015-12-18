@@ -31,6 +31,7 @@ import com.jivesoftware.os.miru.reco.plugins.trending.TrendingAnswer;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingConstants;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery.Strategy;
+import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQueryScoreSet;
 import com.jivesoftware.os.miru.reco.plugins.trending.Trendy;
 import com.jivesoftware.os.miru.tools.deployable.analytics.MinMaxDouble;
 import com.jivesoftware.os.miru.tools.deployable.analytics.PNGWaveforms;
@@ -147,10 +148,11 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
                                     MiruActorId.NOT_PROVIDED,
                                     MiruAuthzExpression.NOT_PROVIDED,
                                     new TrendingQuery(
-                                        Collections.singleton(Strategy.LINEAR_REGRESSION),
-                                        timeRange,
-                                        null,
-                                        input.buckets,
+                                        Collections.singletonList(new TrendingQueryScoreSet("tools",
+                                            Collections.singleton(Strategy.LINEAR_REGRESSION),
+                                            timeRange,
+                                            input.buckets,
+                                            100)),
                                         constraintsFilter,
                                         input.field,
                                         Collections.singletonList(Collections.singletonList(new DistinctsQuery(
@@ -158,8 +160,7 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
                                             input.field,
                                             null,
                                             distinctsFilter,
-                                            filterStringUtil.buildFieldPrefixes(input.fieldPrefixes)))),
-                                        100),
+                                            filterStringUtil.buildFieldPrefixes(input.fieldPrefixes))))),
                                     MiruSolutionLogLevel.valueOf(input.logLevel)),
                                 TrendingConstants.TRENDING_PREFIX + TrendingConstants.CUSTOM_QUERY_ENDPOINT, MiruResponse.class,
                                 new Class[] { TrendingAnswer.class },
@@ -176,12 +177,12 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
                     }
                 }
 
-                if (response != null && response.answer != null) {
+                if (response != null && response.answer != null && response.answer.waveforms != null) {
                     data.put("elapse", String.valueOf(response.totalElapsed));
 
-                    List<Waveform> answerWaveforms = response.answer.waveforms;
+                    List<Waveform> answerWaveforms = response.answer.waveforms.get("tools");
                     Map<MiruValue, Waveform> waveforms = Maps.uniqueIndex(answerWaveforms, Waveform::getId);
-                    List<Trendy> results = response.answer.results.get(Strategy.LINEAR_REGRESSION.name());
+                    List<Trendy> results = response.answer.scoreSets.get("tools").results.get(Strategy.LINEAR_REGRESSION.name());
                     if (results == null) {
                         results = Collections.emptyList();
                     }

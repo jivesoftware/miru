@@ -62,11 +62,11 @@ public interface MiruBitmaps<BM extends IBM, IBM> {
      * Returns cardinalities for the bitmap bounded by the given indexes. The number of cardinalities returned will be 1 less than
      * the number of boundaries, e.g. indexBoundaries { 0, 10, 20, 30 } returns cardinalities for buckets [ 0-9, 10-19, 20-29 ].
      *
-     * @param bitmap       the bitmap
-     * @param indexBoundaries lower boundary is inclusive, upper boundary is exclusive
-     * @return the cardinalities
+     * @param bitmap          the bitmap
+     * @param indexBoundaries index aligned boundaries, lower boundary is inclusive, upper boundary is exclusive
+     * @param rawWaveform     index aligned destination to write the waveform results
      */
-    void boundedCardinalities(IBM bitmap, int[] indexBoundaries, long[] rawWaveform);
+    void boundedCardinalities(IBM bitmap, int[][] indexBoundaries, long[][] rawWaveform);
 
     boolean supportsInPlace();
 

@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.reco.plugins.trending;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.analytics.plugins.analytics.Analytics;
@@ -32,6 +33,7 @@ import com.jivesoftware.os.miru.reco.plugins.distincts.Distincts;
 import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsQuery;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -79,7 +81,11 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
         long upperTime = combinedTimeRange.largestTimestamp;
         long lowerTime = combinedTimeRange.smallestTimestamp;
         if (upperTime == Long.MAX_VALUE || lowerTime == 0) {
-            return new MiruPartitionResponse<>(new AnalyticsAnswer(Collections.emptyList(), true), solutionLog.asList());
+            Map<String, List<Waveform>> emptyResults = Maps.newHashMap();
+            for (TrendingQueryScoreSet scoreSet : request.query.scoreSets) {
+                emptyResults.put(scoreSet.key, Collections.emptyList());
+            }
+            return new MiruPartitionResponse<>(new AnalyticsAnswer(emptyResults, true), solutionLog.asList());
         }
 
         long start = System.currentTimeMillis();
@@ -123,7 +129,22 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
             termIds.length, request.query.distinctQueries.size(), (System.currentTimeMillis() - start));
 
         start = System.currentTimeMillis();
-        List<Waveform> waveforms = Lists.newArrayListWithExpectedSize(termIds.length);
+
+        List<TrendingQueryScoreSet> scoreSets = request.query.scoreSets;
+
+        String[] keys = new String[scoreSets.size()];
+        @SuppressWarnings("unchecked")
+        List<Waveform>[] waveforms = new List[scoreSets.size()];
+        Analytics.AnalyticsScoreable[] scoreables = new Analytics.AnalyticsScoreable[scoreSets.size()];
+
+        int ssi = 0;
+        for (TrendingQueryScoreSet scoreSet : scoreSets) {
+            keys[ssi] = scoreSet.key;
+            waveforms[ssi] = Lists.newArrayListWithExpectedSize(termIds.length);
+            scoreables[ssi] = new Analytics.AnalyticsScoreable(scoreSet.timeRange, scoreSet.divideTimeRangeIntoNSegments);
+        }
+
+        int[] count = new int[1];
         boolean resultsExhausted = analytics.analyze("trending",
             solutionLog,
             handle,
@@ -131,7 +152,7 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
             request.authzExpression,
             combinedTimeRange,
             request.query.constraintsFilter,
-            request.query.divideTimeRangeIntoNSegments,
+            scoreables,
             stackBuffer,
             (Analytics.ToAnalyze<MiruTermId, BM> toAnalyze) -> {
                 bitmaps.multiTx(
@@ -140,17 +161,22 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
                     stackBuffer);
                 return true;
             },
-            (MiruTermId termId, long[] waveformBuffer) -> {
+            (int index, MiruTermId termId, long[] waveformBuffer) -> {
                 if (waveformBuffer != null) {
                     Waveform waveform = Waveform.compressed(new MiruValue(termComposer.decompose(schema, fieldDefinition, stackBuffer, termId)),
                         waveformBuffer);
-                    waveforms.add(waveform);
+                    waveforms[index].add(waveform);
+                    count[0]++;
                 }
                 return true;
             });
-        solutionLog.log(MiruSolutionLogLevel.INFO, "Analyzed {} waveforms in {} ms.", waveforms.size(), (System.currentTimeMillis() - start));
+        solutionLog.log(MiruSolutionLogLevel.INFO, "Analyzed {} waveforms in {} ms.", count[0], (System.currentTimeMillis() - start));
 
-        AnalyticsAnswer result = new AnalyticsAnswer(waveforms, resultsExhausted);
+        Map<String, List<Waveform>> resultWaveforms = Maps.newHashMap();
+        for (int i = 0; i < waveforms.length; i++) {
+            resultWaveforms.put(keys[i], waveforms[i]);
+        }
+        AnalyticsAnswer result = new AnalyticsAnswer(resultWaveforms, resultsExhausted);
         return new MiruPartitionResponse<>(result, solutionLog.asList());
     }
 

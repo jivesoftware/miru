@@ -57,7 +57,7 @@ public class Stumptown {
         Collections.reverse(results); // chronologically descending (for proper alignment when merging/appending older partitions)
 
         long[] waveform = new long[indexes.length - 1];
-        bitmaps.boundedCardinalities(answer, indexes, waveform);
+        bitmaps.boundedCardinalities(answer, new int[][] { indexes }, new long[][] { waveform });
         return new Waveform(waveform, results);
     }
 }

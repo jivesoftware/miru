@@ -10,6 +10,7 @@ import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsAnswer;
 import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsConstants;
 import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsQuery;
+import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsQueryScoreSet;
 import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -202,13 +203,14 @@ public class RealwavePluginRegion implements MiruPageRegion<Optional<RealwavePlu
                             MiruActorId.NOT_PROVIDED,
                             MiruAuthzExpression.NOT_PROVIDED,
                             new AnalyticsQuery(
-                                new MiruTimeRange(packLookbackTime, packCeilingTime),
-                                input.buckets,
+                                Collections.singletonList(new AnalyticsQueryScoreSet("tools",
+                                    new MiruTimeRange(packLookbackTime, packCeilingTime),
+                                    input.buckets)),
                                 constraintsFilter,
                                 analyticsFilters),
                             MiruSolutionLogLevel.NONE),
                         AnalyticsConstants.ANALYTICS_PREFIX + AnalyticsConstants.CUSTOM_QUERY_ENDPOINT, MiruResponse.class,
-                        new Class[]{AnalyticsAnswer.class},
+                        new Class[] { AnalyticsAnswer.class },
                         null);
                     response = analyticsResponse;
                     if (response != null && response.answer != null) {
@@ -217,16 +219,16 @@ public class RealwavePluginRegion implements MiruPageRegion<Optional<RealwavePlu
                         log.warn("Empty analytics response from {}, trying another", requestHelper);
                     }
                 } catch (Exception e) {
-                    log.warn("Failed analytics request to {}, trying another", new Object[]{requestHelper}, e);
+                    log.warn("Failed analytics request to {}, trying another", new Object[] { requestHelper }, e);
                 }
             }
         }
 
         Map<String, Object> data = Maps.newHashMap();
-        if (response != null && response.answer != null) {
+        if (response != null && response.answer != null && response.answer.waveforms != null) {
             data.put("elapse", String.valueOf(response.totalElapsed));
 
-            List<Waveform> waveforms = response.answer.waveforms;
+            List<Waveform> waveforms = response.answer.waveforms.get("tools");
             if (waveforms == null) {
                 waveforms = Collections.emptyList();
             }
