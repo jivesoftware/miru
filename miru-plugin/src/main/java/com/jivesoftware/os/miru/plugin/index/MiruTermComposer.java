@@ -14,7 +14,6 @@ import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.rcvs.marshall.api.UtilLexMarshaller;
 import java.io.IOException;
 import java.nio.charset.Charset;
-import java.util.Arrays;
 
 /**
  *
@@ -102,7 +101,7 @@ public class MiruTermComposer {
             return parts;
         } else {
             byte[] bytes = term.getBytes();
-            return new String[] { decomposeBytes(fieldDefinition, bytes, 0, bytes.length) };
+            return new String[]{decomposeBytes(fieldDefinition, bytes, 0, bytes.length)};
         }
     }
 
@@ -182,7 +181,12 @@ public class MiruTermComposer {
             byte[] headBytes = compose(schema, fieldDefinition, stackBuffer, parts, 0, headUpperBound);
             if (parts.length == compositeFieldDefinitions.length) {
                 int tailIndex = parts.length - 1;
-                byte[] tailBytes = prefixLowerInclusiveBytes(compositeFieldDefinitions[tailIndex], parts[tailIndex]);
+                byte[] tailBytes;
+                if (parts[tailIndex].indexOf(compositeFieldDefinitions[tailIndex].prefix.separator) > -1) {
+                    tailBytes = composeBytes(compositeFieldDefinitions[tailIndex].prefix, parts[tailIndex]);
+                } else {
+                    tailBytes = prefixLowerInclusiveBytes(compositeFieldDefinitions[tailIndex], parts[tailIndex]);
+                }
                 return Bytes.concat(headBytes, tailBytes);
             } else {
                 return headBytes;
@@ -205,6 +209,8 @@ public class MiruTermComposer {
         }
     }
 
+    private static final byte[] NULL_BYTE = new byte[]{0};
+
     public byte[] prefixUpperExclusive(MiruSchema schema, MiruFieldDefinition fieldDefinition, StackBuffer stackBuffer, String... parts) throws Exception {
         MiruFieldDefinition[] compositeFieldDefinitions = schema.getCompositeFieldDefinitions(fieldDefinition.fieldId);
         if (compositeFieldDefinitions != null) {
@@ -215,7 +221,13 @@ public class MiruTermComposer {
             byte[] headBytes = compose(schema, fieldDefinition, stackBuffer, parts, 0, headUpperBound);
             if (parts.length == compositeFieldDefinitions.length) {
                 int tailIndex = parts.length - 1;
-                byte[] tailBytes = prefixUpperExclusiveBytes(compositeFieldDefinitions[tailIndex], parts[tailIndex]);
+                byte[] tailBytes;
+                if (parts[tailIndex].indexOf(compositeFieldDefinitions[tailIndex].prefix.separator) > -1) {
+                    // OMG  need new byte[]{0} to make exclusive
+                    tailBytes = Bytes.concat(composeBytes(compositeFieldDefinitions[tailIndex].prefix, parts[tailIndex]), NULL_BYTE);
+                } else {
+                    tailBytes = prefixUpperExclusiveBytes(compositeFieldDefinitions[tailIndex], parts[tailIndex]);
+                }
                 return Bytes.concat(headBytes, tailBytes);
             } else {
                 makeUpperExclusive(headBytes);
