@@ -93,7 +93,7 @@ public class TrendingInjectable {
             }
 
             MiruResponse<AnalyticsAnswer> analyticsResponse = miru.askAndMerge(tenantId,
-                new MiruSolvableFactory<>(provider.getStats(), "trending", new TrendingQuestion(distincts,
+                new MiruSolvableFactory<>(request.name, provider.getStats(), "trending", new TrendingQuestion(distincts,
                     analytics,
                     gatherDistinctsBatchSize,
                     combinedTimeRange,
@@ -248,7 +248,7 @@ public class TrendingInjectable {
 
             return miru.askImmediate(tenantId,
                 partitionId,
-                new MiruSolvableFactory<>(provider.getStats(),
+                new MiruSolvableFactory<>(request.name, provider.getStats(),
                     "scoreTrending",
                     new TrendingQuestion(distincts,
                         analytics,

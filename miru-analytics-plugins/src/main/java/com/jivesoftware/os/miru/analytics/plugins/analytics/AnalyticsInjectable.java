@@ -45,7 +45,7 @@ public class AnalyticsInjectable {
             }
 
             return miru.askAndMerge(tenantId,
-                new MiruSolvableFactory<>(miruProvider.getStats(), "scoreAnalytics", new AnalyticsQuestion(trending,
+                new MiruSolvableFactory<>(request.name, miruProvider.getStats(), "scoreAnalytics", new AnalyticsQuestion(trending,
                     request,
                     miruProvider.getRemotePartition(AnalyticsRemotePartition.class))),
                 new AnalyticsAnswerEvaluator(),
@@ -69,7 +69,7 @@ public class AnalyticsInjectable {
             Miru miru = miruProvider.getMiru(tenantId);
             return miru.askImmediate(tenantId,
                 partitionId,
-                new MiruSolvableFactory<>(miruProvider.getStats(), "scoreAnalytics", new AnalyticsQuestion(trending,
+                new MiruSolvableFactory<>(requestAndReport.request.name, miruProvider.getStats(), "scoreAnalytics", new AnalyticsQuestion(trending,
                     requestAndReport.request,
                     miruProvider.getRemotePartition(AnalyticsRemotePartition.class))),
                 Optional.fromNullable(requestAndReport.report),

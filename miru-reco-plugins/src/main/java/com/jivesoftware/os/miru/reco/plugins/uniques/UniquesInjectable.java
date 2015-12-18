@@ -73,7 +73,7 @@ public class UniquesInjectable {
             MiruTenantId tenantId = request.tenantId;
             Miru miru = provider.getMiru(tenantId);
             return miru.askAndMerge(tenantId,
-                new MiruSolvableFactory<>(provider.getStats(), "gatherDistincts", new DistinctsQuestion(distincts,
+                new MiruSolvableFactory<>(request.name, provider.getStats(), "gatherDistincts", new DistinctsQuestion(distincts,
                     request,
                     provider.getRemotePartition(DistinctsRemotePartition.class))),
                 new DistinctsAnswerEvaluator(),

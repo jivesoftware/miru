@@ -38,7 +38,7 @@ public class DistinctsInjectable {
             MiruTenantId tenantId = request.tenantId;
             Miru miru = provider.getMiru(tenantId);
             return miru.askAndMerge(tenantId,
-                new MiruSolvableFactory<>(provider.getStats(), "gatherDistincts", new DistinctsQuestion(distincts,
+                new MiruSolvableFactory<>(request.name, provider.getStats(), "gatherDistincts", new DistinctsQuestion(distincts,
                     request,
                     provider.getRemotePartition(DistinctsRemotePartition.class))),
                 new DistinctsAnswerEvaluator(),
@@ -63,7 +63,7 @@ public class DistinctsInjectable {
             Miru miru = provider.getMiru(tenantId);
             return miru.askImmediate(tenantId,
                 partitionId,
-                new MiruSolvableFactory<>(provider.getStats(), "gatherDistincts", new DistinctsQuestion(distincts,
+                new MiruSolvableFactory<>(requestAndReport.request.name, provider.getStats(), "gatherDistincts", new DistinctsQuestion(distincts,
                     requestAndReport.request,
                     provider.getRemotePartition(DistinctsRemotePartition.class))),
                 Optional.fromNullable(requestAndReport.report),
