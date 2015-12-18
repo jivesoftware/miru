@@ -28,6 +28,7 @@ import com.jivesoftware.os.miru.reco.plugins.trending.TrendingAnswer;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingConstants;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery.Strategy;
+import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQueryScoreSet;
 import com.jivesoftware.os.miru.reco.plugins.trending.Trendy;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.SeaAnomalySchemaConstants;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.endpoints.MinMaxDouble;
@@ -110,14 +111,16 @@ public class SeaAnomalyTrendsPluginRegion implements MiruPageRegion<Optional<Sea
                                     tenantId,
                                     MiruActorId.NOT_PROVIDED,
                                     MiruAuthzExpression.NOT_PROVIDED,
-                                    new TrendingQuery(Collections.singleton(Strategy.LINEAR_REGRESSION),
-                                        new MiruTimeRange(fromTime, toTime),
-                                        null,
-                                        numberOfBuckets,
+                                    new TrendingQuery(
+                                        Collections.singletonList(new TrendingQueryScoreSet(
+                                            "anomaly",
+                                            Collections.singleton(Strategy.LINEAR_REGRESSION),
+                                            new MiruTimeRange(fromTime, toTime),
+                                            numberOfBuckets,
+                                            100)),
                                         constraintsFilter,
                                         input.service != null ? "instance" : "service",
-                                        Collections.emptyList(),
-                                        100),
+                                        Collections.emptyList()),
                                     MiruSolutionLogLevel.INFO),
                                 TrendingConstants.TRENDING_PREFIX + TrendingConstants.CUSTOM_QUERY_ENDPOINT, MiruResponse.class,
                                 new Class[] { TrendingAnswer.class },
@@ -139,9 +142,9 @@ public class SeaAnomalyTrendsPluginRegion implements MiruPageRegion<Optional<Sea
                 if (response != null && response.answer != null) {
                     data.put("elapse", String.valueOf(response.totalElapsed));
 
-                    List<Waveform> answerWaveforms = response.answer.waveforms;
+                    List<Waveform> answerWaveforms = response.answer.waveforms.get("anomaly");
                     Map<MiruValue, Waveform> waveforms = Maps.uniqueIndex(answerWaveforms, Waveform::getId);
-                    List<Trendy> results = response.answer.results.get(Strategy.LINEAR_REGRESSION.name());
+                    List<Trendy> results = response.answer.scoreSets.get("anomaly").results.get(Strategy.LINEAR_REGRESSION.name());
                     if (results == null) {
                         results = Collections.emptyList();
                     }

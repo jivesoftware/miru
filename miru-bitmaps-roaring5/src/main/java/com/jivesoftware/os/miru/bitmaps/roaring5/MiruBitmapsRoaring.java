@@ -140,8 +140,8 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
     }
 
     @Override
-    public void boundedCardinalities(RoaringBitmap bitmap, int[] indexBoundaries, long[] rawWaveform) {
-        RoaringInspection.cardinalityInBuckets(bitmap, indexBoundaries, rawWaveform);
+    public void boundedCardinalities(RoaringBitmap bitmap, int[][] indexBoundaries, long[][] rawWaveforms) {
+        RoaringInspection.cardinalityInBuckets(bitmap, indexBoundaries, rawWaveforms);
     }
 
     @Override

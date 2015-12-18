@@ -35,6 +35,7 @@ import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsQuery;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingAnswer;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingInjectable;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery;
+import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQueryScoreSet;
 import com.jivesoftware.os.miru.service.MiruService;
 import java.util.Arrays;
 import java.util.Collections;
@@ -176,10 +177,13 @@ public class MiruTrendingNGTest {
                 tenant1,
                 MiruActorId.NOT_PROVIDED,
                 MiruAuthzExpression.NOT_PROVIDED,
-                new TrendingQuery(Collections.singleton(TrendingQuery.Strategy.LINEAR_REGRESSION),
-                    timeRange,
-                    null,
-                    32,
+                new TrendingQuery(
+                    Collections.singletonList(new TrendingQueryScoreSet(
+                        "test",
+                        Collections.singleton(TrendingQuery.Strategy.LINEAR_REGRESSION),
+                        timeRange,
+                        32,
+                        10)),
                     filter,
                     "obj",
                     Collections.singletonList(Collections.singletonList(new DistinctsQuery(
@@ -187,8 +191,7 @@ public class MiruTrendingNGTest {
                         "obj",
                         null,
                         MiruFilter.NO_FILTER,
-                        Lists.transform(Arrays.asList("0", "2", "8", "-1"), MiruValue::new)))),
-                    10),
+                        Lists.transform(Arrays.asList("0", "2", "8", "-1"), MiruValue::new))))),
                 MiruSolutionLogLevel.INFO);
             MiruResponse<TrendingAnswer> trendingResult = injectable.scoreTrending(request);
 

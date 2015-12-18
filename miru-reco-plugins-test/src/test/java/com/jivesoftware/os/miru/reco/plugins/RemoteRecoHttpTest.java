@@ -25,6 +25,7 @@ import com.jivesoftware.os.miru.reco.plugins.reco.RecoQuery;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingAnswer;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingConstants;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery;
+import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQueryScoreSet;
 import com.jivesoftware.os.routing.bird.http.client.HttpClientConfiguration;
 import com.jivesoftware.os.routing.bird.http.client.HttpClientFactory;
 import com.jivesoftware.os.routing.bird.http.client.HttpClientFactoryProvider;
@@ -124,10 +125,13 @@ public class RemoteRecoHttpTest {
                     tenantId,
                     new MiruActorId(new byte[] { 3 }),
                     MiruAuthzExpression.NOT_PROVIDED,
-                    new TrendingQuery(Collections.singleton(TrendingQuery.Strategy.LINEAR_REGRESSION),
-                        timeRange,
-                        null,
-                        32,
+                    new TrendingQuery(
+                        Collections.singletonList(new TrendingQueryScoreSet(
+                            "test",
+                            Collections.singleton(TrendingQuery.Strategy.LINEAR_REGRESSION),
+                            timeRange,
+                            32,
+                            100)),
                         constraintsFilter,
                         "parent",
                         Collections.singletonList(Collections.singletonList(new DistinctsQuery(
@@ -135,8 +139,7 @@ public class RemoteRecoHttpTest {
                             "parent",
                             null,
                             MiruFilter.NO_FILTER,
-                            Lists.transform(Arrays.asList("102", "2", "38"), MiruValue::new)))),
-                        100),
+                            Lists.transform(Arrays.asList("102", "2", "38"), MiruValue::new))))),
                     MiruSolutionLogLevel.INFO);
 
                 @SuppressWarnings("unchecked")

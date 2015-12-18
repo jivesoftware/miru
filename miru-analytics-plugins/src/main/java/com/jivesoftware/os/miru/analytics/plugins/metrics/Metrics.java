@@ -40,7 +40,7 @@ public class Metrics {
 
         log.debug("Get metricing for answers={}", answers);
         long[] rawCardinalities = new long[indexes.length - 1];
-        bitmaps.boundedCardinalities(rawAnswer, indexes, rawCardinalities);
+        bitmaps.boundedCardinalities(rawAnswer, new int[][] { indexes }, new long[][] { rawCardinalities });
 
         long[] waveform = sum(indexes, numBits, answers, bitmaps);
 
@@ -87,7 +87,7 @@ public class Metrics {
             if (answer != null) {
                 int multiplier = 1 << (numBits - 1 - i);
                 Arrays.fill(cardinalities, 0);
-                bitmaps.boundedCardinalities(answer, indexes, cardinalities);
+                bitmaps.boundedCardinalities(answer, new int[][] { indexes }, new long[][] { cardinalities });
                 for (int j = 0; j < indexes.length; j++) {
                     waveform[j] += multiplier * cardinalities[j];
                 }

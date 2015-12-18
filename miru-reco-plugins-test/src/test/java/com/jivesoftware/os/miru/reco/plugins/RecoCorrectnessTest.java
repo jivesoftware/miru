@@ -48,6 +48,7 @@ import com.jivesoftware.os.miru.reco.plugins.trending.TrendingAnswer;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingInjectable;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery.Strategy;
+import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQueryScoreSet;
 import com.jivesoftware.os.miru.reco.plugins.trending.Trendy;
 import com.jivesoftware.os.miru.service.MiruService;
 import java.util.ArrayList;
@@ -96,12 +97,12 @@ public class RecoCorrectnessTest {
             new MiruFieldDefinition(10, "authors", multiTerm, MiruFieldDefinition.Prefix.NONE)
         })
         .setPairedLatest(ImmutableMap.of(
-            "parent", Arrays.asList("user"),
+            "parent", Collections.singletonList("user"),
             "user", Arrays.asList("parent", "context", "user")))
         .setBloom(ImmutableMap.of(
-            "context", Arrays.asList("user"),
-            "parent", Arrays.asList("user"),
-            "user", Arrays.asList("user")))
+            "context", Collections.singletonList("user"),
+            "parent", Collections.singletonList("user"),
+            "user", Collections.singletonList("user")))
         .build();
 
     MiruTermComposer termComposer = new MiruTermComposer(Charsets.UTF_8, termInterner);
@@ -221,7 +222,7 @@ public class RecoCorrectnessTest {
             String user = "bob" + i;
             MiruFieldFilter miruFieldFilter = MiruFieldFilter.ofTerms(MiruFieldType.pairedLatest, "user",
                 indexUtil.makePairedLatestTerm(termComposer.compose(miruSchema, userFieldDefinition, stackBuffer, user), "parent").toString());
-            MiruFilter filter = new MiruFilter(MiruFilterOperation.or, false, Arrays.asList(miruFieldFilter), null);
+            MiruFilter filter = new MiruFilter(MiruFilterOperation.or, false, Collections.singletonList(miruFieldFilter), null);
 
             long s = System.currentTimeMillis();
             MiruResponse<RecoAnswer> response = recoInjectable.collaborativeFilteringRecommendations(new MiruRequest<>("test",
@@ -286,10 +287,13 @@ public class RecoCorrectnessTest {
                 tenant1,
                 MiruActorId.NOT_PROVIDED,
                 MiruAuthzExpression.NOT_PROVIDED,
-                new TrendingQuery(Collections.singleton(Strategy.LINEAR_REGRESSION),
-                    timeRange,
-                    null,
-                    27,
+                new TrendingQuery(
+                    Collections.singletonList(new TrendingQueryScoreSet(
+                        "test",
+                        Collections.singleton(Strategy.LINEAR_REGRESSION),
+                        timeRange,
+                        27,
+                        10)),
                     constraintsFilter,
                     "parent",
                     Collections.singletonList(Collections.singletonList(new DistinctsQuery(
@@ -297,14 +301,14 @@ public class RecoCorrectnessTest {
                         "parent",
                         null,
                         MiruFilter.NO_FILTER,
-                        Lists.transform(Lists.newArrayList(docTypes), MiruValue::new)))),
-                    10),
+                        Lists.transform(Lists.newArrayList(docTypes), MiruValue::new))))),
                 MiruSolutionLogLevel.INFO));
 
-            System.out.println("trendingResult:" + response.answer.results);
+            Map<String, List<Trendy>> results = response.answer.scoreSets.get("test").results;
+            System.out.println("trendingResult:" + results);
             System.out.println("Took:" + (System.currentTimeMillis() - s));
             //assertTrue(response.answer.results.size() > 0, response.toString());
-            for (Trendy result : response.answer.results.get(Strategy.LINEAR_REGRESSION.name())) {
+            for (Trendy result : results.get(Strategy.LINEAR_REGRESSION.name())) {
                 String value = result.distinctValue.last();
                 assertTrue(docTypes.contains(value.substring(0, value.indexOf(' '))), "Didn't expect " + result.distinctValue);
                 assertTrue(contextToParents.get(context).contains(value));
@@ -326,16 +330,16 @@ public class RecoCorrectnessTest {
         int index) {
 
         Map<String, List<String>> fieldsValues = Maps.newHashMap();
-        fieldsValues.put("locale", Arrays.asList("en"));
-        fieldsValues.put("mode", Arrays.asList("LIVE"));
-        fieldsValues.put("activityType", Arrays.asList("0"));
-        fieldsValues.put("contextType", Arrays.asList(String.valueOf(contextType)));
-        fieldsValues.put("context", Arrays.asList(context));
-        fieldsValues.put("objectType", Arrays.asList(String.valueOf(parentType)));
-        fieldsValues.put("object", Arrays.asList(parent));
-        fieldsValues.put("parentType", Arrays.asList(String.valueOf(parentType)));
-        fieldsValues.put("parent", Arrays.asList(parent));
-        fieldsValues.put("user", Arrays.asList(user));
+        fieldsValues.put("locale", Collections.singletonList("en"));
+        fieldsValues.put("mode", Collections.singletonList("LIVE"));
+        fieldsValues.put("activityType", Collections.singletonList("0"));
+        fieldsValues.put("contextType", Collections.singletonList(String.valueOf(contextType)));
+        fieldsValues.put("context", Collections.singletonList(context));
+        fieldsValues.put("objectType", Collections.singletonList(String.valueOf(parentType)));
+        fieldsValues.put("object", Collections.singletonList(parent));
+        fieldsValues.put("parentType", Collections.singletonList(String.valueOf(parentType)));
+        fieldsValues.put("parent", Collections.singletonList(parent));
+        fieldsValues.put("user", Collections.singletonList(user));
         fieldsValues.put("authors", authors);
 
         MiruActivity activity = new MiruActivity(tenantId, time, new String[0], 0, fieldsValues, Collections.<String, List<String>>emptyMap());

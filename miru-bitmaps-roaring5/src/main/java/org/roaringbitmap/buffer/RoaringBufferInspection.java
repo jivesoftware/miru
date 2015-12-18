@@ -2,6 +2,13 @@ package org.roaringbitmap.buffer;
 
 import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
 import java.nio.LongBuffer;
+import java.util.Arrays;
+import org.roaringbitmap.ArrayContainer;
+import org.roaringbitmap.BitmapContainer;
+import org.roaringbitmap.Container;
+import org.roaringbitmap.RoaringBitmap;
+import org.roaringbitmap.RunContainer;
+import org.roaringbitmap.Util;
 
 /**
  *
@@ -68,92 +75,157 @@ public class RoaringBufferInspection {
         }
     }
 
-    public static void cardinalityInBuckets(ImmutableRoaringBitmap bitmap, int[] indexes, long[] buckets) {
+    public static void cardinalityInBuckets(ImmutableRoaringBitmap bitmap, int[][] indexes, long[][] buckets) {
         // indexes = { 10, 20, 30, 40, 50 } length=5
         // buckets = { 10-19, 20-29, 30-39, 40-49 } length=4
         int numContainers = bitmap.highLowContainer.size();
         //System.out.println("NumContainers=" + numContainers);
-        int currentBucket = 0;
-        int currentBucketStart = indexes[currentBucket];
-        int currentBucketEnd = indexes[currentBucket + 1];
-        done:
+        int bucketLength = buckets.length;
+        int[] currentBucket = new int[bucketLength];
+        Arrays.fill(currentBucket, 0);
+        int[] currentBucketStart = new int[bucketLength];
+        int[] currentBucketEnd = new int[bucketLength];
+        for (int bi = 0; bi < bucketLength; bi++) {
+            currentBucketStart[bi] = indexes[bi][currentBucket[bi]];
+            currentBucketEnd[bi] = indexes[bi][currentBucket[bi] + 1];
+        }
+
+        int numExhausted = 0;
+        boolean[] exhausted = new boolean[bucketLength];
+
         for (int pos = 0; pos < numContainers; pos++) {
             //System.out.println("pos=" + pos);
             int min = containerMin(bitmap, pos);
-            while (min >= currentBucketEnd) {
-                //System.out.println("Advance1 min:" + min + " >= currentBucketEnd:" + currentBucketEnd);
-                currentBucket++;
-                if (currentBucket == buckets.length) {
-                    break done;
+            for (int bi = 0; bi < bucketLength; bi++) {
+                while (!exhausted[bi] && min >= currentBucketEnd[bi]) {
+                    //System.out.println("Advance1 min:" + min + " >= currentBucketEnd:" + currentBucketEnd);
+                    currentBucket[bi]++;
+                    if (currentBucket[bi] == buckets[bi].length) {
+                        numExhausted++;
+                        exhausted[bi] = true;
+                        break;
+                    }
+                    currentBucketStart[bi] = indexes[bi][currentBucket[bi]];
+                    currentBucketEnd[bi] = indexes[bi][currentBucket[bi] + 1];
                 }
-                currentBucketStart = indexes[currentBucket];
-                currentBucketEnd = indexes[currentBucket + 1];
+            }
+            if (numExhausted == bucketLength) {
+                break;
             }
 
-            if (min < currentBucketEnd) {
+            boolean[] candidate = new boolean[bucketLength];
+            boolean anyCandidates = false;
+            for (int bi = 0; bi < bucketLength; bi++) {
+                candidate[bi] = (min < currentBucketEnd[bi]);
+                anyCandidates |= candidate[bi];
+            }
+
+            if (anyCandidates) {
                 MappeableContainer container = bitmap.highLowContainer.getContainerAtIndex(pos);
                 int max = min + (1 << 16);
-                boolean bucketContainsPos = (currentBucketStart <= min && max <= currentBucketEnd);
-                if (bucketContainsPos) {
-                    //System.out.println("BucketContainsPos");
-                    buckets[currentBucket] += container.getCardinality();
-                } else if (container instanceof MappeableArrayContainer) {
-                    //System.out.println("ArrayContainer");
-                    MappeableArrayContainer arrayContainer = (MappeableArrayContainer) container;
-                    for (int i = 0; i < arrayContainer.cardinality; i++) {
-                        int index = BufferUtil.toIntUnsigned(arrayContainer.content.get(i)) | min;
-                        while (index >= currentBucketEnd) {
-                            //System.out.println("Advance2 index:" + index + " >= currentBucketEnd:" + currentBucketEnd);
-                            currentBucket++;
-                            if (currentBucket == buckets.length) {
-                                break done;
-                            }
-                            currentBucketStart = indexes[currentBucket];
-                            currentBucketEnd = indexes[currentBucket + 1];
-                        }
-                        if (index >= currentBucketStart) {
-                            buckets[currentBucket]++;
+                boolean[] bucketContainsPos = new boolean[bucketLength];
+                boolean allContainPos = true;
+                boolean anyContainPos = false;
+                for (int bi = 0; bi < bucketLength; bi++) {
+                    bucketContainsPos[bi] = (currentBucketStart[bi] <= min && max <= currentBucketEnd[bi]);
+                    allContainPos &= bucketContainsPos[bi];
+                    anyContainPos |= bucketContainsPos[bi];
+                }
+
+                if (anyContainPos) {
+                    int cardinality = container.getCardinality();
+                    for (int bi = 0; bi < bucketLength; bi++) {
+                        if (bucketContainsPos[bi]) {
+                            //System.out.println("BucketContainsPos");
+                            buckets[bi][currentBucket[bi]] += cardinality;
                         }
                     }
-                } else if (container instanceof MappeableRunContainer) {
-                    MappeableRunContainer runContainer = (MappeableRunContainer) container;
-                    for (int i = 0; i < runContainer.nbrruns; i++) {
-                        int maxlength = BufferUtil.toIntUnsigned(runContainer.getLength(i));
-                        int base = BufferUtil.toIntUnsigned(runContainer.getValue(i));
-                        int index = (maxlength + base) | min;
-                        while (index >= currentBucketEnd) {
-                            //System.out.println("Advance3 index:" + index + " >= currentBucketEnd:" + currentBucketEnd);
-                            currentBucket++;
-                            if (currentBucket == buckets.length) {
-                                break done;
+                }
+
+                if (!allContainPos) {
+                    if (container instanceof MappeableArrayContainer) {
+                        //System.out.println("ArrayContainer");
+                        MappeableArrayContainer arrayContainer = (MappeableArrayContainer) container;
+                        for (int i = 0; i < arrayContainer.cardinality && numExhausted < bucketLength; i++) {
+                            int index = BufferUtil.toIntUnsigned(arrayContainer.content.get(i)) | min;
+                            next:
+                            for (int bi = 0; bi < bucketLength; bi++) {
+                                if (!candidate[bi] || bucketContainsPos[bi] || exhausted[bi]) {
+                                    continue;
+                                }
+                                while (index >= currentBucketEnd[bi]) {
+                                    //System.out.println("Advance2 index:" + index + " >= currentBucketEnd:" + currentBucketEnd);
+                                    currentBucket[bi]++;
+                                    if (currentBucket[bi] == buckets[bi].length) {
+                                        numExhausted++;
+                                        exhausted[bi] = true;
+                                        continue next;
+                                    }
+                                    currentBucketStart[bi] = indexes[bi][currentBucket[bi]];
+                                    currentBucketEnd[bi] = indexes[bi][currentBucket[bi] + 1];
+                                }
+                                if (index >= currentBucketStart[bi]) {
+                                    buckets[bi][currentBucket[bi]]++;
+                                }
                             }
-                            currentBucketStart = indexes[currentBucket];
-                            currentBucketEnd = indexes[currentBucket + 1];
+
                         }
-                        if (index >= currentBucketStart) {
-                            buckets[currentBucket]++;
-                        }
-                    }
-                } else {
-                    //System.out.println("BitmapContainer");
-                    MappeableBitmapContainer bitmapContainer = (MappeableBitmapContainer) container;
-                    // nextSetBit no longer performs a bounds check
-                    int maxIndex = bitmapContainer.bitmap.limit() << 6;
-                    for (int i = bitmapContainer.nextSetBit(0);
-                        i >= 0;
-                        i = (i + 1 >= maxIndex) ? -1 : bitmapContainer.nextSetBit(i + 1)) {
-                        int index = BufferUtil.toIntUnsigned((short) i) | min;
-                        while (index >= currentBucketEnd) {
-                            //System.out.println("Advance3 index:" + index + " >= currentBucketEnd:" + currentBucketEnd);
-                            currentBucket++;
-                            if (currentBucket == buckets.length) {
-                                break done;
+                    } else if (container instanceof MappeableRunContainer) {
+                        MappeableRunContainer runContainer = (MappeableRunContainer) container;
+                        for (int i = 0; i < runContainer.nbrruns && numExhausted < bucketLength; i++) {
+                            int maxlength = BufferUtil.toIntUnsigned(runContainer.getLength(i));
+                            int base = BufferUtil.toIntUnsigned(runContainer.getValue(i));
+                            int index = (maxlength + base) | min;
+                            next:
+                            for (int bi = 0; bi < bucketLength; bi++) {
+                                if (!candidate[bi] || bucketContainsPos[bi] || exhausted[bi]) {
+                                    continue;
+                                }
+                                while (index >= currentBucketEnd[bi]) {
+                                    //System.out.println("Advance3 index:" + index + " >= currentBucketEnd:" + currentBucketEnd);
+                                    currentBucket[bi]++;
+                                    if (currentBucket[bi] == buckets[bi].length) {
+                                        numExhausted++;
+                                        exhausted[bi] = true;
+                                        continue next;
+                                    }
+                                    currentBucketStart[bi] = indexes[bi][currentBucket[bi]];
+                                    currentBucketEnd[bi] = indexes[bi][currentBucket[bi] + 1];
+                                }
+                                if (index >= currentBucketStart[bi]) {
+                                    buckets[bi][currentBucket[bi]]++;
+                                }
                             }
-                            currentBucketStart = indexes[currentBucket];
-                            currentBucketEnd = indexes[currentBucket + 1];
                         }
-                        if (index >= currentBucketStart) {
-                            buckets[currentBucket]++;
+                    } else {
+                        //System.out.println("BitmapContainer");
+                        MappeableBitmapContainer bitmapContainer = (MappeableBitmapContainer) container;
+                        // nextSetBit no longer performs a bounds check
+                        int maxIndex = bitmapContainer.bitmap.limit() << 6;
+                        for (int i = bitmapContainer.nextSetBit(0);
+                             i >= 0 && numExhausted < bucketLength;
+                             i = (i + 1 >= maxIndex) ? -1 : bitmapContainer.nextSetBit(i + 1)) {
+                            int index = BufferUtil.toIntUnsigned((short) i) | min;
+                            next:
+                            for (int bi = 0; bi < bucketLength; bi++) {
+                                if (!candidate[bi] || bucketContainsPos[bi] || exhausted[bi]) {
+                                    continue;
+                                }
+                                while (index >= currentBucketEnd[bi]) {
+                                    //System.out.println("Advance3 index:" + index + " >= currentBucketEnd:" + currentBucketEnd);
+                                    currentBucket[bi]++;
+                                    if (currentBucket[bi] == buckets[bi].length) {
+                                        numExhausted++;
+                                        exhausted[bi] = true;
+                                        continue next;
+                                    }
+                                    currentBucketStart[bi] = indexes[bi][currentBucket[bi]];
+                                    currentBucketEnd[bi] = indexes[bi][currentBucket[bi] + 1];
+                                }
+                                if (index >= currentBucketStart[bi]) {
+                                    buckets[bi][currentBucket[bi]]++;
+                                }
+                            }
                         }
                     }
                 }

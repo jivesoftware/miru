@@ -12,16 +12,13 @@ public class Trendy implements Comparable<Trendy>, Serializable {
 
     public final MiruValue distinctValue;
     public final double rank;
-    public final Double rankDelta; // nullable
 
     @JsonCreator
     public Trendy(
         @JsonProperty("distinctValue") MiruValue distinctValue,
-        @JsonProperty("rank") double rank,
-        @JsonProperty("rankDelta") Double rankDelta) {
+        @JsonProperty("rank") double rank) {
         this.distinctValue = distinctValue;
         this.rank = rank;
-        this.rankDelta = rankDelta;
     }
 
     @Override
@@ -35,7 +32,6 @@ public class Trendy implements Comparable<Trendy>, Serializable {
         return "Trendy{"
             + "distinctValue=" + distinctValue
             + ", rank=" + rank
-            + ", rankDelta=" + rankDelta
             + '}';
     }
 }

@@ -46,7 +46,7 @@ public class SeaAnomaly {
         log.debug("Get metricing for answers={}", answers);
 
         long[] rawCardinalities = new long[indexes.length - 1];
-        bitmaps.boundedCardinalities(rawAnswer, indexes, rawCardinalities);
+        bitmaps.boundedCardinalities(rawAnswer, new int[][] { indexes }, new long[][] { rawCardinalities });
 
         long[] waveform = sum(indexes, numBits, answers, bitmaps);
 
@@ -95,7 +95,7 @@ public class SeaAnomaly {
             BM answer = answers.get(i);
             if (answer != null) {
                 Arrays.fill(rawCardinalities, 0);
-                bitmaps.boundedCardinalities(answer, indexes, rawCardinalities);
+                bitmaps.boundedCardinalities(answer, new int[][] { indexes }, new long[][] { rawCardinalities });
                 if (waveform == null) {
                     waveform = new long[rawCardinalities.length];
                 }
