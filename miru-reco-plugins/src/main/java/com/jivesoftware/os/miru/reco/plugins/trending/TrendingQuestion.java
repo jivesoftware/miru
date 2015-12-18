@@ -137,11 +137,11 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
         List<Waveform>[] waveforms = new List[scoreSets.size()];
         Analytics.AnalyticsScoreable[] scoreables = new Analytics.AnalyticsScoreable[scoreSets.size()];
 
-        int ssi = 0;
-        for (TrendingQueryScoreSet scoreSet : scoreSets) {
-            keys[ssi] = scoreSet.key;
-            waveforms[ssi] = Lists.newArrayListWithExpectedSize(termIds.length);
-            scoreables[ssi] = new Analytics.AnalyticsScoreable(scoreSet.timeRange, scoreSet.divideTimeRangeIntoNSegments);
+        for (int i = 0; i < scoreSets.size(); i++) {
+            TrendingQueryScoreSet scoreSet = scoreSets.get(i);
+            keys[i] = scoreSet.key;
+            waveforms[i] = Lists.newArrayListWithExpectedSize(termIds.length);
+            scoreables[i] = new Analytics.AnalyticsScoreable(scoreSet.timeRange, scoreSet.divideTimeRangeIntoNSegments);
         }
 
         int[] count = new int[1];
