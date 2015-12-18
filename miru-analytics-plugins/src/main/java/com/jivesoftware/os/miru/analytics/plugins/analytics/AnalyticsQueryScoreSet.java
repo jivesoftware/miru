@@ -4,11 +4,12 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
+import java.io.Serializable;
 
 /**
  *
  */
-public class AnalyticsQueryScoreSet {
+public class AnalyticsQueryScoreSet implements Serializable {
 
     public final String key;
     public final MiruTimeRange timeRange;

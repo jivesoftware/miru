@@ -4,12 +4,13 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
+import java.io.Serializable;
 import java.util.Set;
 
 /**
  *
  */
-public class TrendingQueryScoreSet {
+public class TrendingQueryScoreSet implements Serializable {
 
     public final String key;
     public final Set<TrendingQuery.Strategy> strategies;
