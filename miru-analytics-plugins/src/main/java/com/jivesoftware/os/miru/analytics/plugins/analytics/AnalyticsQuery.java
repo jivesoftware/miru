@@ -19,7 +19,7 @@ public class AnalyticsQuery implements Serializable {
 
     @JsonCreator
     public AnalyticsQuery(
-        @JsonProperty("constraints") List<AnalyticsQueryScoreSet> scoreSets,
+        @JsonProperty("scoreSets") List<AnalyticsQueryScoreSet> scoreSets,
         @JsonProperty("constraintsFilter") MiruFilter constraintsFilter,
         @JsonProperty("analyticsFilters") Map<String, MiruFilter> analyticsFilters) {
         this.scoreSets = Preconditions.checkNotNull(scoreSets);
