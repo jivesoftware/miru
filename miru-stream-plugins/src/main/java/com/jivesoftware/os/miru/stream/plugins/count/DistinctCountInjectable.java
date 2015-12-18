@@ -32,7 +32,7 @@ public class DistinctCountInjectable {
             MiruTenantId tenantId = request.tenantId;
             Miru miru = provider.getMiru(tenantId);
             return miru.askAndMerge(tenantId,
-                new MiruSolvableFactory<>(provider.getStats(), "countCustomStream", new DistinctCountCustomQuestion(distinctCount,
+                new MiruSolvableFactory<>(request.name, provider.getStats(), "countCustomStream", new DistinctCountCustomQuestion(distinctCount,
                     request,
                     provider.getRemotePartition(DistinctCountCustomRemotePartition.class))),
                 new DistinctCountAnswerEvaluator(request.query),
@@ -53,7 +53,7 @@ public class DistinctCountInjectable {
             MiruTenantId tenantId = request.tenantId;
             Miru miru = provider.getMiru(tenantId);
             return miru.askAndMerge(tenantId,
-                new MiruSolvableFactory<>(provider.getStats(), "countInboxStreamAll", new DistinctCountInboxQuestion(distinctCount,
+                new MiruSolvableFactory<>(request.name, provider.getStats(), "countInboxStreamAll", new DistinctCountInboxQuestion(distinctCount,
                     provider.getBackfillerizer(tenantId),
                     request,
                     provider.getRemotePartition(DistinctCountInboxAllRemotePartition.class),
@@ -76,7 +76,7 @@ public class DistinctCountInjectable {
             MiruTenantId tenantId = request.tenantId;
             Miru miru = provider.getMiru(tenantId);
             return miru.askAndMerge(tenantId,
-                new MiruSolvableFactory<>(provider.getStats(), "countInboxStreamUnread", new DistinctCountInboxQuestion(distinctCount,
+                new MiruSolvableFactory<>(request.name, provider.getStats(), "countInboxStreamUnread", new DistinctCountInboxQuestion(distinctCount,
                     provider.getBackfillerizer(tenantId),
                     request,
                     provider.getRemotePartition(DistinctCountInboxUnreadRemotePartition.class),
@@ -101,9 +101,10 @@ public class DistinctCountInjectable {
             Miru miru = provider.getMiru(tenantId);
             return miru.askImmediate(tenantId,
                 partitionId,
-                new MiruSolvableFactory<>(provider.getStats(), "countCustomStream", new DistinctCountCustomQuestion(distinctCount,
-                    requestAndReport.request,
-                    provider.getRemotePartition(DistinctCountCustomRemotePartition.class))),
+                new MiruSolvableFactory<>(requestAndReport.request.name, provider.getStats(), "countCustomStream",
+                    new DistinctCountCustomQuestion(distinctCount,
+                        requestAndReport.request,
+                        provider.getRemotePartition(DistinctCountCustomRemotePartition.class))),
                 Optional.fromNullable(requestAndReport.report),
                 DistinctCountAnswer.EMPTY_RESULTS,
                 MiruSolutionLogLevel.NONE);
@@ -123,7 +124,8 @@ public class DistinctCountInjectable {
             Miru miru = provider.getMiru(tenantId);
             return miru.askImmediate(tenantId,
                 partitionId,
-                new MiruSolvableFactory<>(provider.getStats(), "countInboxStreamAll", new DistinctCountInboxQuestion(distinctCount,
+                new MiruSolvableFactory<>(requestAndReport.request.name, provider.getStats(), "countInboxStreamAll", new DistinctCountInboxQuestion(
+                    distinctCount,
                     provider.getBackfillerizer(tenantId),
                     requestAndReport.request,
                     provider.getRemotePartition(DistinctCountInboxAllRemotePartition.class),
@@ -147,7 +149,8 @@ public class DistinctCountInjectable {
             Miru miru = provider.getMiru(tenantId);
             return miru.askImmediate(tenantId,
                 partitionId,
-                new MiruSolvableFactory<>(provider.getStats(), "countInboxStreamUnread", new DistinctCountInboxQuestion(distinctCount,
+                new MiruSolvableFactory<>(requestAndReport.request.name, provider.getStats(), "countInboxStreamUnread", new DistinctCountInboxQuestion(
+                    distinctCount,
                     provider.getBackfillerizer(tenantId),
                     requestAndReport.request,
                     provider.getRemotePartition(DistinctCountInboxUnreadRemotePartition.class),

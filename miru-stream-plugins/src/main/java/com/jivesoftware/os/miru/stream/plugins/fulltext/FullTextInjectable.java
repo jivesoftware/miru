@@ -33,7 +33,7 @@ public class FullTextInjectable {
             MiruTenantId tenantId = request.tenantId;
             Miru miru = provider.getMiru(tenantId);
             return miru.askAndMerge(tenantId,
-                new MiruSolvableFactory<>(provider.getStats(),
+                new MiruSolvableFactory<>(request.name, provider.getStats(),
                     "filterCustomStream",
                     new FullTextCustomQuestion(fullText,
                         request,
@@ -58,7 +58,7 @@ public class FullTextInjectable {
             Miru miru = provider.getMiru(tenantId);
             return miru.askImmediate(tenantId,
                 partitionId,
-                new MiruSolvableFactory<>(provider.getStats(),
+                new MiruSolvableFactory<>(requestAndReport.request.name, provider.getStats(),
                     "filterCustomStream",
                     new FullTextCustomQuestion(fullText,
                         requestAndReport.request,

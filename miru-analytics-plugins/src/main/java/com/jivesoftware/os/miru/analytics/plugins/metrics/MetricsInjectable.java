@@ -37,7 +37,7 @@ public class MetricsInjectable {
             MiruTenantId tenantId = request.tenantId;
             Miru miru = provider.getMiru(tenantId);
             return miru.askAndMerge(tenantId,
-                new MiruSolvableFactory<>(provider.getStats(), "metrics", new MetricsQuestion(metrics,
+                new MiruSolvableFactory<>(request.name, provider.getStats(), "metrics", new MetricsQuestion(metrics,
                     request,
                     provider.getRemotePartition(MetricsRemotePartition.class))),
                 new MetricsAnswerEvaluator(),
@@ -61,7 +61,7 @@ public class MetricsInjectable {
             Miru miru = provider.getMiru(tenantId);
             return miru.askImmediate(tenantId,
                 partitionId,
-                new MiruSolvableFactory<>(provider.getStats(), "metrics", new MetricsQuestion(metrics,
+                new MiruSolvableFactory<>(requestAndReport.request.name, provider.getStats(), "metrics", new MetricsQuestion(metrics,
                     requestAndReport.request,
                     provider.getRemotePartition(MetricsRemotePartition.class))),
                 Optional.fromNullable(requestAndReport.report),

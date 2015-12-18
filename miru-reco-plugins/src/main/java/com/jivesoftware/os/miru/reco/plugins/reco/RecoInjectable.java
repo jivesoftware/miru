@@ -52,7 +52,7 @@ public class RecoInjectable {
             List<MiruValue> distinctTerms = Collections.emptyList();
             if (request.query.removeDistinctsQuery != null) {
                 MiruResponse<DistinctsAnswer> distinctsResponse = miru.askAndMerge(tenantId,
-                    new MiruSolvableFactory<>(provider.getStats(), "collaborativeFilteringDistincts",
+                    new MiruSolvableFactory<>(request.name, provider.getStats(), "collaborativeFilteringDistincts",
                         new DistinctsQuestion(distincts,
                             new MiruRequest<>(
                                 request.name,
@@ -73,7 +73,7 @@ public class RecoInjectable {
             }
 
             return miru.askAndMerge(tenantId,
-                new MiruSolvableFactory<>(provider.getStats(), "collaborativeFilteringRecommendations", new RecoQuestion(collaborativeFiltering,
+                new MiruSolvableFactory<>(request.name, provider.getStats(), "collaborativeFilteringRecommendations", new RecoQuestion(collaborativeFiltering,
                     request,
                     provider.getRemotePartition(RecoRemotePartition.class),
                     distinctTerms)),
@@ -97,7 +97,7 @@ public class RecoInjectable {
             Miru miru = provider.getMiru(tenantId);
             return miru.askImmediate(tenantId,
                 partitionId,
-                new MiruSolvableFactory<>(provider.getStats(), "collaborativeFilteringRecommendations", new RecoQuestion(collaborativeFiltering,
+                new MiruSolvableFactory<>(requestAndReport.request.name, provider.getStats(), "collaborativeFilteringRecommendations", new RecoQuestion(collaborativeFiltering,
                     requestAndReport.request,
                     provider.getRemotePartition(RecoRemotePartition.class),
                     requestAndReport.report.removeDistincts)),
