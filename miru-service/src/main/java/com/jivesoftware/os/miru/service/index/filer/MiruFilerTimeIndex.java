@@ -335,6 +335,10 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
         long fp = HEADER_SIZE_IN_BYTES;
         if (id.get() < 0) {
             return -1;
+        } else if (timestamp > largestTimestamp) {
+            return -(id.get() + 2);
+        } else if (timestamp < smallestTimestamp) {
+            return -1;
         }
         synchronized (lock) {
             filer.seek(fp);
