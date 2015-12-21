@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.plugin.index;
 
 import com.google.common.base.Charsets;
+import com.google.common.base.Splitter;
 import com.google.common.collect.Interner;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -8,6 +9,7 @@ import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema.CompositeFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -16,6 +18,7 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -70,9 +73,9 @@ public class MiruActivityInternExtern {
                     activity.time,
                     internAuthz(activity.authz),
                     activity.version)
-                    .putFieldsValues(internFields(activity.fieldsValues, schema, stackBuffer))
-                    .putPropsValues(internProps(activity.propsValues, schema))
-                    .build(),
+                .putFieldsValues(internFields(activity.fieldsValues, schema, stackBuffer))
+                .putPropsValues(internProps(activity.propsValues, schema))
+                .build(),
                 activiyAndId.id));
         }
     }
@@ -92,34 +95,50 @@ public class MiruActivityInternExtern {
         for (MiruFieldDefinition fieldDefinition : schema.getFieldDefinitions()) {
             List<String[]> fieldValues;
 
-            MiruFieldDefinition[] compositeFieldDefinitions = schema.getCompositeFieldDefinitions(fieldDefinition.fieldId);
+            MiruSchema.CompositeFieldDefinition[] compositeFieldDefinitions = schema.getCompositeFieldDefinitions(fieldDefinition.fieldId);
             if (compositeFieldDefinitions != null) {
                 List<String[]> accumFieldValues = Lists.newArrayList();
-                for (MiruFieldDefinition field : compositeFieldDefinitions) {
-                    List<String> compositeFieldValues = fields.get(field.name);
+                for (MiruSchema.CompositeFieldDefinition field : compositeFieldDefinitions) {
+                    List<String> compositeFieldValues = fields.get(field.definition.name);
+
+                    if (field.whitelist != null) {
+                        List<String> filteredCompositeFieldValues = Lists.newArrayListWithCapacity(compositeFieldValues.size());
+                        for (String compositeFieldValue : compositeFieldValues) {
+                            if (field.definition.prefix != MiruFieldDefinition.Prefix.NONE) {
+                                Iterator<String> iterator = Splitter.on((char) fieldDefinition.prefix.separator).split(compositeFieldValue).iterator();
+                                if (iterator.hasNext() && field.whitelist.contains(iterator.next())) {
+                                    filteredCompositeFieldValues.add(compositeFieldValue);
+                                }
+                            } else {
+                                if (field.whitelist.contains(compositeFieldValue)) {
+                                    filteredCompositeFieldValues.add(compositeFieldValue);
+                                }
+                            }
+                        }
+                        compositeFieldValues = filteredCompositeFieldValues;
+                    }
+
                     if (compositeFieldValues == null || compositeFieldValues.isEmpty()) {
                         // missing terms for a composite field, we cannot construct a composite term for this activity
                         accumFieldValues.clear();
                         break;
+                    } else if (accumFieldValues.isEmpty()) {
+                        for (String compositeFieldValue : compositeFieldValues) {
+                            accumFieldValues.add(new String[]{compositeFieldValue});
+                        }
                     } else {
-                        if (accumFieldValues.isEmpty()) {
+                        List<String[]> tmpFieldValues = Lists.newArrayList();
+                        for (String[] accumFieldValue : accumFieldValues) {
                             for (String compositeFieldValue : compositeFieldValues) {
-                                accumFieldValues.add(new String[] { compositeFieldValue });
-                            }
-                        } else {
-                            List<String[]> tmpFieldValues = Lists.newArrayList();
-                            for (String[] accumFieldValue : accumFieldValues) {
-                                for (String compositeFieldValue : compositeFieldValues) {
-                                    if (compositeFieldValue.length() <= MAX_TERM_LENGTH && compositeFieldValue.length() > 0) {
-                                        String[] concat = new String[accumFieldValue.length + 1];
-                                        System.arraycopy(accumFieldValue, 0, concat, 0, accumFieldValue.length);
-                                        concat[concat.length - 1] = compositeFieldValue;
-                                        tmpFieldValues.add(concat);
-                                    }
+                                if (compositeFieldValue.length() <= MAX_TERM_LENGTH && compositeFieldValue.length() > 0) {
+                                    String[] concat = new String[accumFieldValue.length + 1];
+                                    System.arraycopy(accumFieldValue, 0, concat, 0, accumFieldValue.length);
+                                    concat[concat.length - 1] = compositeFieldValue;
+                                    tmpFieldValues.add(concat);
                                 }
                             }
-                            accumFieldValues = tmpFieldValues;
                         }
+                        accumFieldValues = tmpFieldValues;
                     }
                 }
                 fieldValues = accumFieldValues;
@@ -140,7 +159,7 @@ public class MiruActivityInternExtern {
                     }
                     fieldValues = Lists.newArrayListWithCapacity(values.size());
                     for (String value : values) {
-                        fieldValues.add(new String[] { value });
+                        fieldValues.add(new String[]{value});
                     }
                 } else {
                     fieldValues = null;
@@ -191,7 +210,7 @@ public class MiruActivityInternExtern {
         for (int i = 0; i < fields.length; i++) {
             MiruTermId[] values = fields[i];
             if (values != null) {
-                MiruFieldDefinition[] compositeFieldDefinitions = schema.getCompositeFieldDefinitions(i);
+                CompositeFieldDefinition[] compositeFieldDefinitions = schema.getCompositeFieldDefinitions(i);
                 if (compositeFieldDefinitions != null) {
                     continue;
                 }

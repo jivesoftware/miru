@@ -6,7 +6,9 @@ import com.jivesoftware.os.filer.io.ByteArrayFiler;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
+import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition.Prefix;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema.CompositeFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.MiruInterner;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
@@ -41,12 +43,12 @@ public class MiruTermComposer {
         int offset,
         int length) throws Exception {
 
-        MiruFieldDefinition[] compositeFieldDefinitions = schema.getCompositeFieldDefinitions(fieldDefinition.fieldId);
+        CompositeFieldDefinition[] compositeFieldDefinitions = schema.getCompositeFieldDefinitions(fieldDefinition.fieldId);
         if (compositeFieldDefinitions != null) {
             ByteArrayFiler filer = new ByteArrayFiler(new byte[length * (4 + 1)]); // minimal predicted size
             for (int i = 0; i < length; i++) {
                 //TODO optimize
-                byte[] bytes = composeBytes(compositeFieldDefinitions[i].prefix, parts[offset + i]);
+                byte[] bytes = composeBytes(compositeFieldDefinitions[i].definition.prefix, parts[offset + i]);
                 // all but last part are length prefixed
                 if ((offset + i) < compositeFieldDefinitions.length - 1) {
                     FilerIO.writeInt(filer, bytes.length, "length", stackBuffer);
@@ -81,7 +83,7 @@ public class MiruTermComposer {
     }
 
     public String[] decompose(MiruSchema schema, MiruFieldDefinition fieldDefinition, StackBuffer stackBuffer, MiruTermId term) throws IOException {
-        MiruFieldDefinition[] compositeFieldDefinitions = schema.getCompositeFieldDefinitions(fieldDefinition.fieldId);
+        CompositeFieldDefinition[] compositeFieldDefinitions = schema.getCompositeFieldDefinitions(fieldDefinition.fieldId);
         if (compositeFieldDefinitions != null) {
             String[] parts = new String[compositeFieldDefinitions.length];
             byte[] termBytes = term.getBytes();
@@ -91,10 +93,10 @@ public class MiruTermComposer {
                 // all but last part are length prefixed
                 if (i < compositeFieldDefinitions.length - 1) {
                     int length = FilerIO.readInt(filer, "length", stackBuffer);
-                    parts[i] = decomposeBytes(compositeFieldDefinitions[i], termBytes, (int) filer.getFilePointer(), length);
+                    parts[i] = decomposeBytes(compositeFieldDefinitions[i].definition, termBytes, (int) filer.getFilePointer(), length);
                     filer.skip(length);
                 } else {
-                    parts[i] = decomposeBytes(compositeFieldDefinitions[i], termBytes, (int) filer.getFilePointer(),
+                    parts[i] = decomposeBytes(compositeFieldDefinitions[i].definition, termBytes, (int) filer.getFilePointer(),
                         (int) (filer.length() - filer.getFilePointer()));
                 }
             }
@@ -172,7 +174,7 @@ public class MiruTermComposer {
     }
 
     public byte[] prefixLowerInclusive(MiruSchema schema, MiruFieldDefinition fieldDefinition, StackBuffer stackBuffer, String... parts) throws Exception {
-        MiruFieldDefinition[] compositeFieldDefinitions = schema.getCompositeFieldDefinitions(fieldDefinition.fieldId);
+        CompositeFieldDefinition[] compositeFieldDefinitions = schema.getCompositeFieldDefinitions(fieldDefinition.fieldId);
         if (compositeFieldDefinitions != null) {
             Preconditions.checkArgument(parts.length <= compositeFieldDefinitions.length,
                 "Provided more value parts than we have composite field definitions");
@@ -182,10 +184,10 @@ public class MiruTermComposer {
             if (parts.length == compositeFieldDefinitions.length) {
                 int tailIndex = parts.length - 1;
                 byte[] tailBytes;
-                if (parts[tailIndex].indexOf(compositeFieldDefinitions[tailIndex].prefix.separator) > -1) {
-                    tailBytes = composeBytes(compositeFieldDefinitions[tailIndex].prefix, parts[tailIndex]);
+                if (parts[tailIndex].indexOf(compositeFieldDefinitions[tailIndex].definition.prefix.separator) > -1) {
+                    tailBytes = composeBytes(compositeFieldDefinitions[tailIndex].definition.prefix, parts[tailIndex]);
                 } else {
-                    tailBytes = prefixLowerInclusiveBytes(compositeFieldDefinitions[tailIndex], parts[tailIndex]);
+                    tailBytes = prefixLowerInclusiveBytes(compositeFieldDefinitions[tailIndex].definition.prefix, parts[tailIndex]);
                 }
                 return Bytes.concat(headBytes, tailBytes);
             } else {
@@ -193,12 +195,11 @@ public class MiruTermComposer {
             }
         } else {
             Preconditions.checkArgument(parts.length == 1, "Provided multiple value parts for a non-composite field");
-            return prefixLowerInclusiveBytes(fieldDefinition, parts[0]);
+            return prefixLowerInclusiveBytes(fieldDefinition.prefix, parts[0]);
         }
     }
 
-    private byte[] prefixLowerInclusiveBytes(MiruFieldDefinition fieldDefinition, String pre) {
-        MiruFieldDefinition.Prefix p = fieldDefinition.prefix;
+    private byte[] prefixLowerInclusiveBytes(MiruFieldDefinition.Prefix p, String pre) {
         if (p.type == MiruFieldDefinition.Prefix.Type.raw || p.type == MiruFieldDefinition.Prefix.Type.wildcard) {
             return pre.getBytes(charset);
         } else if (p.type == MiruFieldDefinition.Prefix.Type.numeric) {
@@ -212,7 +213,7 @@ public class MiruTermComposer {
     private static final byte[] NULL_BYTE = new byte[]{0};
 
     public byte[] prefixUpperExclusive(MiruSchema schema, MiruFieldDefinition fieldDefinition, StackBuffer stackBuffer, String... parts) throws Exception {
-        MiruFieldDefinition[] compositeFieldDefinitions = schema.getCompositeFieldDefinitions(fieldDefinition.fieldId);
+        CompositeFieldDefinition[] compositeFieldDefinitions = schema.getCompositeFieldDefinitions(fieldDefinition.fieldId);
         if (compositeFieldDefinitions != null) {
             Preconditions.checkArgument(parts.length <= compositeFieldDefinitions.length,
                 "Provided more value parts than we have composite field definitions");
@@ -222,11 +223,11 @@ public class MiruTermComposer {
             if (parts.length == compositeFieldDefinitions.length) {
                 int tailIndex = parts.length - 1;
                 byte[] tailBytes;
-                if (parts[tailIndex].indexOf(compositeFieldDefinitions[tailIndex].prefix.separator) > -1) {
+                if (parts[tailIndex].indexOf(compositeFieldDefinitions[tailIndex].definition.prefix.separator) > -1) {
                     // OMG  need new byte[]{0} to make exclusive
-                    tailBytes = Bytes.concat(composeBytes(compositeFieldDefinitions[tailIndex].prefix, parts[tailIndex]), NULL_BYTE);
+                    tailBytes = Bytes.concat(composeBytes(compositeFieldDefinitions[tailIndex].definition.prefix, parts[tailIndex]), NULL_BYTE);
                 } else {
-                    tailBytes = prefixUpperExclusiveBytes(compositeFieldDefinitions[tailIndex], parts[tailIndex]);
+                    tailBytes = prefixUpperExclusiveBytes(compositeFieldDefinitions[tailIndex].definition.prefix, parts[tailIndex]);
                 }
                 return Bytes.concat(headBytes, tailBytes);
             } else {
@@ -235,12 +236,11 @@ public class MiruTermComposer {
             }
         } else {
             Preconditions.checkArgument(parts.length == 1, "Provided multiple value parts for a non-composite field");
-            return prefixUpperExclusiveBytes(fieldDefinition, parts[0]);
+            return prefixUpperExclusiveBytes(fieldDefinition.prefix, parts[0]);
         }
     }
 
-    public byte[] prefixUpperExclusiveBytes(MiruFieldDefinition fieldDefinition, String pre) {
-        MiruFieldDefinition.Prefix p = fieldDefinition.prefix;
+    public byte[] prefixUpperExclusiveBytes(Prefix p, String pre) {
         if (p.type == MiruFieldDefinition.Prefix.Type.wildcard) {
             byte[] raw = pre.getBytes(charset);
             makeUpperExclusive(raw);

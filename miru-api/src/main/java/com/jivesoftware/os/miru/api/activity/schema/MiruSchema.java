@@ -6,9 +6,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * @author jonathan
@@ -25,6 +27,7 @@ public class MiruSchema {
     private final Map<String, List<String>> pairedLatest;
     private final Map<String, List<String>> bloom;
     private final Map<String, String[]> composite;
+    private final Map<String, String[][]> compositePrefixWhitelist;
 
     // Lookup fields
     private final Map<String, Integer> fieldNameToId;
@@ -33,7 +36,7 @@ public class MiruSchema {
     private final ImmutableList<MiruFieldDefinition>[] fieldToBloomFieldDefinitions;
 
     // Composites
-    private final MiruFieldDefinition[][] fieldToCompositeDefinitions;
+    private final CompositeFieldDefinition[][] fieldToCompositeDefinitions;
 
     // Traversal fields
     private final ImmutableList<Integer> fieldIds;
@@ -49,11 +52,12 @@ public class MiruSchema {
         Map<String, List<String>> pairedLatest,
         Map<String, List<String>> bloom,
         Map<String, String[]> composite,
+        Map<String, String[][]> compositePrefixWhitelist,
         ImmutableMap<String, Integer> fieldNameToId,
         ImmutableMap<String, Integer> propNameToId,
         ImmutableList<MiruFieldDefinition>[] fieldToPairedLatestFieldDefinitions,
         ImmutableList<MiruFieldDefinition>[] fieldToBloomFieldDefinitions,
-        MiruFieldDefinition[][] fieldToCompositeDefinitions,
+        CompositeFieldDefinition[][] fieldToCompositeDefinitions,
         ImmutableList<Integer> fieldIds,
         ImmutableList<MiruFieldDefinition> fieldsWithFirst,
         ImmutableList<MiruFieldDefinition> fieldsWithLatest,
@@ -66,6 +70,7 @@ public class MiruSchema {
         this.pairedLatest = pairedLatest;
         this.bloom = bloom;
         this.composite = composite;
+        this.compositePrefixWhitelist = compositePrefixWhitelist;
         this.fieldNameToId = fieldNameToId;
         this.propNameToId = propNameToId;
         this.fieldToPairedLatestFieldDefinitions = fieldToPairedLatestFieldDefinitions;
@@ -85,7 +90,8 @@ public class MiruSchema {
         @JsonProperty("propertyDefinitions") MiruPropertyDefinition[] propertyDefinitions,
         @JsonProperty("pairedLatest") Map<String, List<String>> pairedLatest,
         @JsonProperty("bloom") Map<String, List<String>> bloom,
-        @JsonProperty("composite") Map<String, String[]> composite) {
+        @JsonProperty("composite") Map<String, String[]> composite,
+        @JsonProperty("compositePrefixWhitelist") Map<String, String[][]> compositePrefixWhitelist) {
 
         return new Builder(name, version)
             .setFieldDefinitions(fieldDefinitions)
@@ -93,6 +99,7 @@ public class MiruSchema {
             .setPairedLatest(pairedLatest)
             .setBloom(bloom)
             .setComposite(composite)
+            .setCompositeWhitelist(compositePrefixWhitelist)
             .build();
     }
 
@@ -122,6 +129,10 @@ public class MiruSchema {
 
     public Map<String, String[]> getComposite() {
         return composite;
+    }
+
+    public Map<String, String[][]> getCompositePrefixWhitelist() {
+        return compositePrefixWhitelist;
     }
 
     @JsonIgnore
@@ -198,7 +209,7 @@ public class MiruSchema {
     }
 
     @JsonIgnore
-    public MiruFieldDefinition[] getCompositeFieldDefinitions(int fieldId) {
+    public CompositeFieldDefinition[] getCompositeFieldDefinitions(int fieldId) {
         return fieldToCompositeDefinitions[fieldId];
     }
 
@@ -226,6 +237,7 @@ public class MiruSchema {
         private Map<String, List<String>> pairedLatest = Collections.emptyMap();
         private Map<String, List<String>> bloom = Collections.emptyMap();
         private Map<String, String[]> composites = Collections.emptyMap();
+        private Map<String, String[][]> compositePrefixWhitelist = Collections.emptyMap();
 
         public Builder(String name, int version) {
             this.name = name;
@@ -263,6 +275,13 @@ public class MiruSchema {
             return this;
         }
 
+        public Builder setCompositeWhitelist(Map<String, String[][]> compositePrefixWhitelist) {
+            if (compositePrefixWhitelist != null) {
+                this.compositePrefixWhitelist = compositePrefixWhitelist;
+            }
+            return this;
+        }
+
         public MiruSchema build() {
             int largestFieldId = -1;
             for (MiruFieldDefinition fieldDefinition : fieldDefinitions) {
@@ -273,7 +292,7 @@ public class MiruSchema {
             Map<String, Integer> propNameToId = Maps.newHashMap();
             ImmutableList<MiruFieldDefinition>[] fieldToPairedLatestFieldDefinitions = new ImmutableList[fieldDefinitions.length];
             ImmutableList<MiruFieldDefinition>[] fieldToBloomFieldDefinitions = new ImmutableList[fieldDefinitions.length];
-            MiruFieldDefinition[][] fieldToCompositeFieldDefinitions = new MiruFieldDefinition[fieldDefinitions.length][];
+            CompositeFieldDefinition[][] fieldToCompositeFieldDefinitions = new CompositeFieldDefinition[fieldDefinitions.length][];
 
             for (MiruFieldDefinition fieldDefinition : fieldDefinitions) {
                 fieldNameToId.put(fieldDefinition.name, fieldDefinition.fieldId);
@@ -326,10 +345,13 @@ public class MiruSchema {
                 fieldToBloomFieldDefinitions[fieldDefinition.fieldId] = bloomFieldDefinitionsBuilder.build();
 
                 String[] got = composites.get(fieldDefinition.name);
+                String[][] whitelists = compositePrefixWhitelist.get(fieldDefinition.name);
                 if (got != null) {
-                    MiruFieldDefinition[] compositeFieldDefinition = new MiruFieldDefinition[got.length];
+                    CompositeFieldDefinition[] compositeFieldDefinition = new CompositeFieldDefinition[got.length];
                     for (int i = 0; i < got.length; i++) {
-                        compositeFieldDefinition[i] = fieldDefinitions[fieldNameToId.get(got[i])];
+                        String[] whitelist = whitelists == null ? null : whitelists[i];
+                        compositeFieldDefinition[i] = new CompositeFieldDefinition(fieldDefinitions[fieldNameToId.get(got[i])],
+                            whitelist == null ? null : Sets.newHashSet(whitelist));
                     }
                     fieldToCompositeFieldDefinitions[fieldDefinition.fieldId] = compositeFieldDefinition;
                 }
@@ -341,9 +363,36 @@ public class MiruSchema {
             ImmutableList<MiruFieldDefinition> fieldsWithPairedLatest = fieldsWithPairedLatestBuilder.build();
             ImmutableList<MiruFieldDefinition> fieldsWithBloom = fieldsWithBloomBuilder.build();
 
-            return new MiruSchema(name, version, fieldDefinitions, propertyDefinitions, pairedLatest, bloom, composites, ImmutableMap.copyOf(fieldNameToId),
-                ImmutableMap.copyOf(propNameToId), fieldToPairedLatestFieldDefinitions, fieldToBloomFieldDefinitions, fieldToCompositeFieldDefinitions,
-                fieldIds, fieldsWithFirst, fieldsWithLatest, fieldsWithPairedLatest, fieldsWithBloom);
+            return new MiruSchema(name,
+                version,
+                fieldDefinitions,
+                propertyDefinitions,
+                pairedLatest,
+                bloom,
+                composites,
+                compositePrefixWhitelist,
+                ImmutableMap.copyOf(fieldNameToId),
+                ImmutableMap.copyOf(propNameToId),
+                fieldToPairedLatestFieldDefinitions,
+                fieldToBloomFieldDefinitions,
+                fieldToCompositeFieldDefinitions,
+                fieldIds,
+                fieldsWithFirst,
+                fieldsWithLatest,
+                fieldsWithPairedLatest,
+                fieldsWithBloom);
+        }
+
+    }
+
+    public static class CompositeFieldDefinition {
+
+        final public MiruFieldDefinition definition;
+        final public Set<String> whitelist;
+
+        public CompositeFieldDefinition(MiruFieldDefinition definition, Set<String> whitelist) {
+            this.definition = definition;
+            this.whitelist = whitelist;
         }
 
     }
