@@ -152,7 +152,11 @@ public class Analytics {
             indexes[i] = new int[scoreable.divideTimeRangeIntoNSegments + 1];
             rawWaveformBuffer[i] = new long[scoreable.divideTimeRangeIntoNSegments];
             for (int j = 0; j < indexes[i].length; j++) {
-                indexes[i][j] = Math.abs(timeIndex.getClosestId(currentTime, stackBuffer)); // handle negative "theoretical insertion" index
+                int closestId = timeIndex.getClosestId(currentTime, stackBuffer);
+                if (closestId < 0) {
+                    closestId = -(closestId + 1); // handle negative "theoretical insertion" index
+                }
+                indexes[i][j] = closestId;
                 currentTime += segmentDuration;
             }
         }

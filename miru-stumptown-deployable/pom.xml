@@ -5,12 +5,12 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>routing-bird-deployable-management</artifactId>
-        <version>0.764</version>
+        <version>0.765</version>
         <relativePath>../inheritance-poms/routing-bird-deployable-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru</groupId>
     <artifactId>miru-stumptown-deployable</artifactId>
-    <version>0.764</version>
+    <version>0.765</version>
     <properties>
         <java.main>com.jivesoftware.os.miru.stumptown.deployable.MiruStumptownMain</java.main>
         <assembly.home>${project.basedir}</assembly.home>
@@ -97,28 +97,28 @@
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-api</artifactId>
-            <version>0.764</version>
+            <version>0.765</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-ui</artifactId>
-            <version>0.764</version>
+            <version>0.765</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-stumptown-plugins</artifactId>
-            <version>0.764</version>
+            <version>0.765</version>
             <type>jar</type>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-plugin</artifactId>
-            <version>0.764</version>
+            <version>0.765</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-logappender</artifactId>
-            <version>0.764</version>
+            <version>0.765</version>
         </dependency>
         <dependency>
             <groupId>org.testng</groupId>
@@ -128,7 +128,7 @@
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-reco-plugins</artifactId>
-            <version>0.764</version>
+            <version>0.765</version>
         </dependency>
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
@@ -154,7 +154,7 @@
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-cluster-client</artifactId>
-            <version>0.764</version>
+            <version>0.765</version>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
