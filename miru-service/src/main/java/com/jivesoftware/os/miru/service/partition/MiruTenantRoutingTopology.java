@@ -22,7 +22,7 @@ public class MiruTenantRoutingTopology {
         this.topology = topology;
     }
 
-    public List<PartitionGroup> allPartitionsInOrder(MiruTenantId tenantId, String queryKey) {
+    public List<PartitionGroup> allPartitionsInOrder(MiruTenantId tenantId, String requestName, String queryKey) {
         List<MiruRoutablePartition> allPartitions = Lists.newArrayList(topology.values());
 
         ListMultimap<MiruPartitionId, MiruRoutablePartition> partitionsPerId = Multimaps.index(allPartitions,
@@ -34,7 +34,7 @@ public class MiruTenantRoutingTopology {
         Collections.reverse(partitionIds);
         for (MiruPartitionId partitionId : partitionIds) {
             List<MiruRoutablePartition> partitions = partitionsPerId.get(partitionId);
-            List<MiruRoutablePartition> orderedPartitions = partitionComparison.orderPartitions(tenantId, partitionId, queryKey, partitions);
+            List<MiruRoutablePartition> orderedPartitions = partitionComparison.orderPartitions(tenantId, partitionId, requestName, queryKey, partitions);
             allOrderedPartitions.add(new PartitionGroup(tenantId, partitionId, orderedPartitions));
         }
 

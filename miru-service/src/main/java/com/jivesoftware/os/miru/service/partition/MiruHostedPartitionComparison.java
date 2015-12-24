@@ -5,8 +5,6 @@ import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Ordering;
-import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -46,12 +44,13 @@ public class MiruHostedPartitionComparison {
         return ComparisonChain
             .start()
             .compare(p2.partitionId, p1.partitionId) // flipped p1 and p2 so that we get descending order.
-            .compareTrueFirst(p1.local, p2.local)
-            .compare(p1.storage, p2.storage, Ordering.explicit(
+            /*.compareTrueFirst(p1.local, p2.local)*/
+            /*.compare(p1.storage, p2.storage, Ordering.explicit(
                 MiruBackingStorage.memory,
                 MiruBackingStorage.disk,
-                MiruBackingStorage.unknown))
+                MiruBackingStorage.unknown))*/
             .compare(t2, t1) // descending order
+            .compare(p1.host, p2.host)
             .result();
     };
 
@@ -70,16 +69,17 @@ public class MiruHostedPartitionComparison {
      *
      * @param tenantId    the tenant
      * @param partitionId the partition
+     * @param requestName the request name
      * @param queryKey    the query key
-     * @param partitions  the partitions to order
-     * @return a stable comparator
+     * @param partitions  the partitions to order   @return a stable comparator
      */
     public List<MiruRoutablePartition> orderPartitions(MiruTenantId tenantId,
         MiruPartitionId partitionId,
+        String requestName,
         String queryKey,
         Collection<MiruRoutablePartition> partitions) {
 
-        ConcurrentSkipListMap<PartitionAndHost, Long> skipList = coordRecency.get(new TenantPartitionAndQuery(tenantId, partitionId, queryKey));
+        ConcurrentSkipListMap<PartitionAndHost, Long> skipList = coordRecency.get(new TenantPartitionAndQuery(tenantId, partitionId, requestName, queryKey));
         Iterator<Map.Entry<PartitionAndHost, Long>> skipIter = skipList != null
             ? skipList.entrySet().iterator() : Iterators.<Map.Entry<PartitionAndHost, Long>>emptyIterator();
         Map.Entry<PartitionAndHost, Long> skipEntry = skipIter.hasNext() ? skipIter.next() : null;
@@ -110,12 +110,12 @@ public class MiruHostedPartitionComparison {
      * Analyzes the latest winning solutions for a replica set.
      *
      * @param solutions  the latest winning solutions
-     * @param queryClass the query class
+     * @param queryKey   the query key
      */
-    public void analyzeSolutions(List<MiruSolution> solutions, String queryClass) {
+    public void analyzeSolutions(List<MiruSolution> solutions, String requestName, String queryKey) {
         for (MiruSolution solution : solutions) {
             MiruPartitionCoord coord = solution.usedPartition;
-            TenantPartitionAndQuery key = new TenantPartitionAndQuery(coord.tenantId, coord.partitionId, queryClass);
+            TenantPartitionAndQuery key = new TenantPartitionAndQuery(coord.tenantId, coord.partitionId, requestName, queryKey);
             ConcurrentSkipListMap<PartitionAndHost, Long> skipList = coordRecency.get(key);
             if (skipList == null) {
                 skipList = new ConcurrentSkipListMap<>();
@@ -135,12 +135,12 @@ public class MiruHostedPartitionComparison {
         }
     }
 
-    public Optional<Long> suggestTimeout(MiruTenantId tenantId, MiruPartitionId partitionId, String queryClass) {
-        RunningPercentile runningPercentile = queryPercentile.get(new TenantPartitionAndQuery(tenantId, partitionId, queryClass));
+    public Optional<Long> suggestTimeout(MiruTenantId tenantId, MiruPartitionId partitionId, String requestName, String queryKey) {
+        RunningPercentile runningPercentile = queryPercentile.get(new TenantPartitionAndQuery(tenantId, partitionId, requestName, queryKey));
         if (runningPercentile != null) {
             long suggestion = runningPercentile.get();
             if (suggestion > 0) {
-                log.debug("Suggested {} for {} {} {}", suggestion, tenantId, partitionId, queryClass);
+                log.debug("Suggested {} for {} {} {}", suggestion, tenantId, partitionId, queryKey);
                 return Optional.of(suggestion);
             }
         }
@@ -151,12 +151,14 @@ public class MiruHostedPartitionComparison {
 
         private final MiruTenantId tenantId;
         private final MiruPartitionId partitionId;
-        private final String queryClass;
+        private final String requestName;
+        private final String queryKey;
 
-        private TenantPartitionAndQuery(MiruTenantId tenantId, MiruPartitionId partitionId, String queryClass) {
+        private TenantPartitionAndQuery(MiruTenantId tenantId, MiruPartitionId partitionId, String requestName, String queryKey) {
             this.tenantId = tenantId;
             this.partitionId = partitionId;
-            this.queryClass = queryClass;
+            this.requestName = requestName;
+            this.queryKey = queryKey;
         }
 
         @Override
@@ -170,20 +172,25 @@ public class MiruHostedPartitionComparison {
 
             TenantPartitionAndQuery that = (TenantPartitionAndQuery) o;
 
+            if (tenantId != null ? !tenantId.equals(that.tenantId) : that.tenantId != null) {
+                return false;
+            }
             if (partitionId != null ? !partitionId.equals(that.partitionId) : that.partitionId != null) {
                 return false;
             }
-            if (queryClass != null ? !queryClass.equals(that.queryClass) : that.queryClass != null) {
+            if (requestName != null ? !requestName.equals(that.requestName) : that.requestName != null) {
                 return false;
             }
-            return !(tenantId != null ? !tenantId.equals(that.tenantId) : that.tenantId != null);
+            return !(queryKey != null ? !queryKey.equals(that.queryKey) : that.queryKey != null);
+
         }
 
         @Override
         public int hashCode() {
             int result = tenantId != null ? tenantId.hashCode() : 0;
             result = 31 * result + (partitionId != null ? partitionId.hashCode() : 0);
-            result = 31 * result + (queryClass != null ? queryClass.hashCode() : 0);
+            result = 31 * result + (requestName != null ? requestName.hashCode() : 0);
+            result = 31 * result + (queryKey != null ? queryKey.hashCode() : 0);
             return result;
         }
     }

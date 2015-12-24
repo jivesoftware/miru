@@ -86,6 +86,7 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
 
     @Override
     public Iterable<? extends OrderedPartitions<?, ?>> allQueryablePartitionsInOrder(final MiruTenantId tenantId,
+        String requestName,
         String queryKey) throws Exception {
 
         MiruTenantRoutingTopology topology = routingTopologies.get(tenantId, () -> {
@@ -105,15 +106,16 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
             return Collections.emptyList();
         }
         final MiruTenantTopology<?, ?> localTopology = localTopologies.get(tenantId);
-        return getOrderedPartitions(tenantId, queryKey, topology, (MiruTenantTopology) localTopology);
+        return getOrderedPartitions(tenantId, requestName, queryKey, topology, (MiruTenantTopology) localTopology);
     }
 
     private <BM extends IBM, IBM> List<OrderedPartitions<BM, IBM>> getOrderedPartitions(MiruTenantId tenantId,
+        String requestName,
         String queryKey,
         MiruTenantRoutingTopology topology,
         MiruTenantTopology<BM, IBM> localTopology) {
 
-        List<PartitionGroup> allPartitionsInOrder = topology.allPartitionsInOrder(tenantId, queryKey);
+        List<PartitionGroup> allPartitionsInOrder = topology.allPartitionsInOrder(tenantId, requestName, queryKey);
         return Lists.transform(allPartitionsInOrder, input -> {
             List<MiruQueryablePartition<BM, IBM>> partitions = Lists.transform(input.partitions,
                 routablePartition -> {

@@ -9,6 +9,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolvable;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import com.jivesoftware.os.mlogger.core.ValueType;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -46,7 +47,9 @@ public class MiruLowestLatencySolver implements MiruSolver {
     }
 
     @Override
-    public <R> MiruSolved<R> solve(Iterator<MiruSolvable<R>> solvables,
+    public <R> MiruSolved<R> solve(String requestName,
+        String queryKey,
+        Iterator<MiruSolvable<R>> solvables,
         Optional<Long> suggestedTimeoutInMillis,
         MiruSolutionLog solutionLog)
         throws InterruptedException {
@@ -62,11 +65,16 @@ public class MiruLowestLatencySolver implements MiruSolver {
         List<MiruPartitionCoord> triedPartitions = new ArrayList<>(initialSolvers);
         MiruSolved<R> solved = null;
         try {
+            log.set(ValueType.COUNT, "solve>timeout>" + requestName + ">" + queryKey, suggestedTimeoutInMillis.or(-1L));
+            log.inc("solve>calls");
+            log.inc("solve>calls>" + requestName + ">" + queryKey);
             while (solvables.hasNext() && solversAdded < initialSolvers) {
                 MiruSolvable<R> solvable = solvables.next();
                 solutionLog.log(MiruSolutionLogLevel.INFO, "Initial solver index={} coord={}", solversAdded, solvable.getCoord());
                 triedPartitions.add(solvable.getCoord());
                 futures.add(new SolvableFuture<>(solvable, completionService.submit(solvable), System.currentTimeMillis()));
+                log.inc("solve>initial");
+                log.inc("solve>initial>" + requestName + ">" + queryKey);
                 solversAdded++;
             }
             while (solversFailed < maxNumberOfSolvers && System.currentTimeMillis() < failAfterTime) {
@@ -97,6 +105,8 @@ public class MiruLowestLatencySolver implements MiruSolver {
                                             triedPartitions,
                                             response.log),
                                         response.answer);
+                                    log.inc("solve>success");
+                                    log.inc("solve>success>" + requestName + ">" + queryKey);
                                     if (response.log != null) {
                                         for (String l : response.log) {
                                             solutionLog.log(MiruSolutionLogLevel.INFO, "[{}] {}", f.solvable.getCoord(), l);
@@ -124,6 +134,8 @@ public class MiruLowestLatencySolver implements MiruSolver {
                 if (mayAddSolver) {
                     MiruSolvable<R> solvable = solvables.next();
                     solutionLog.log(MiruSolutionLogLevel.INFO, "Added a solver coord={}", solvable.getCoord());
+                    log.inc("solve>added");
+                    log.inc("solve>added>" + requestName + ">" + queryKey);
                     triedPartitions.add(solvable.getCoord());
                     futures.add(new SolvableFuture<>(solvable, completionService.submit(solvable), System.currentTimeMillis()));
                     solversAdded++;

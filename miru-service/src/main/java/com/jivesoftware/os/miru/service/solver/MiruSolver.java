@@ -10,9 +10,11 @@ import java.util.Iterator;
  */
 public interface MiruSolver {
 
-    <R> MiruSolved<R> solve(Iterator<MiruSolvable<R>> solvables,
-            Optional<Long> suggestedTimeoutInMillis,
-            MiruSolutionLog solutionLog)
-            throws InterruptedException;
+    <R> MiruSolved<R> solve(String requestName,
+        String queryKey,
+        Iterator<MiruSolvable<R>> solvables,
+        Optional<Long> suggestedTimeoutInMillis,
+        MiruSolutionLog solutionLog)
+        throws InterruptedException;
 
 }

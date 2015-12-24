@@ -20,7 +20,7 @@ public interface MiruPartitionDirector {
 
     void index(ListMultimap<MiruTenantId, MiruPartitionedActivity> perTenantPartitionedActivities) throws Exception;
 
-    Iterable<? extends OrderedPartitions<?, ?>> allQueryablePartitionsInOrder(MiruTenantId tenantId, String queryKey) throws Exception;
+    Iterable<? extends OrderedPartitions<?, ?>> allQueryablePartitionsInOrder(MiruTenantId tenantId, String requestName, String queryKey) throws Exception;
 
     void warm(MiruTenantId tenantId) throws Exception;
 

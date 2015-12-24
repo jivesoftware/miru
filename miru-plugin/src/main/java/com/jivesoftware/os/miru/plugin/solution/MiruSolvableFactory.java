@@ -88,6 +88,10 @@ public class MiruSolvableFactory<Q, A, R> {
         return question.createReport(answer);
     }
 
+    public String getRequestName() {
+        return requestName;
+    }
+
     public String getQueryKey() {
         return queryKey;
     }

@@ -58,8 +58,10 @@ public class MiruClusterPartitionDirector implements MiruPartitionDirector {
 
     /** All reads read from here */
     @Override
-    public Iterable<? extends OrderedPartitions<?, ?>> allQueryablePartitionsInOrder(MiruTenantId tenantId, String queryKey) throws Exception {
-        return expectedTenants.allQueryablePartitionsInOrder(tenantId, queryKey);
+    public Iterable<? extends OrderedPartitions<?, ?>> allQueryablePartitionsInOrder(MiruTenantId tenantId,
+        String requestName,
+        String queryKey) throws Exception {
+        return expectedTenants.allQueryablePartitionsInOrder(tenantId, requestName, queryKey);
     }
 
     @Override

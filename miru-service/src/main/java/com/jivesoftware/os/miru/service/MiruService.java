@@ -114,14 +114,14 @@ public class MiruService implements Miru {
 
         try {
             Iterable<? extends OrderedPartitions<?, ?>> partitionReplicas = partitionDirector.allQueryablePartitionsInOrder(
-                tenantId, solvableFactory.getQueryKey());
+                tenantId, solvableFactory.getRequestName(), solvableFactory.getQueryKey());
 
             Optional<A> lastAnswer = Optional.absent();
 
             List<ExpectedSolution<A>> expectedSolutions = Lists.newArrayList();
             for (OrderedPartitions<?, ?> orderedPartitions : partitionReplicas) {
                 Optional<Long> suggestedTimeoutInMillis = partitionComparison.suggestTimeout(orderedPartitions.tenantId, orderedPartitions.partitionId,
-                    solvableFactory.getQueryKey());
+                    solvableFactory.getRequestName(), solvableFactory.getQueryKey());
                 solutionLog.log(MiruSolutionLogLevel.INFO, "Solving partition:{} for tenant:{} with timeout:{}",
                     orderedPartitions.partitionId.getId(), orderedPartitions.tenantId, suggestedTimeoutInMillis.or(-1L));
 
@@ -166,7 +166,7 @@ public class MiruService implements Miru {
                 }
             }
 
-            partitionComparison.analyzeSolutions(solutions, solvableFactory.getQueryKey());
+            partitionComparison.analyzeSolutions(solutions, solvableFactory.getRequestName(), solvableFactory.getQueryKey());
 
             answer = merger.done(lastAnswer, defaultValue, solutionLog);
 
@@ -328,7 +328,11 @@ public class MiruService implements Miru {
 
             this.orderedPartitions = orderedPartitions;
             this.start = System.currentTimeMillis();
-            this.future = parallelExecutor.submit(() -> solver.solve(solvables.iterator(), suggestedTimeoutInMillis, solutionLog));
+            this.future = parallelExecutor.submit(() -> solver.solve(solvableFactory.getRequestName(),
+                solvableFactory.getQueryKey(),
+                solvables.iterator(),
+                suggestedTimeoutInMillis,
+                solutionLog));
         }
 
         @Override
@@ -386,7 +390,11 @@ public class MiruService implements Miru {
             });
 
             start = System.currentTimeMillis();
-            return solver.solve(solvables.iterator(), suggestedTimeoutInMillis, solutionLog);
+            return solver.solve(solvableFactory.getRequestName(),
+                solvableFactory.getQueryKey(),
+                solvables.iterator(),
+                suggestedTimeoutInMillis,
+                solutionLog);
         }
 
         @Override
