@@ -61,7 +61,7 @@ public class MiruLowestLatencySolverTest {
         Collections.shuffle(solvables, new Random(1_234)); // randomize the solvers
 
         MiruSolutionLog solutionLog = new MiruSolutionLog(MiruSolutionLogLevel.ERROR);
-        MiruSolved<Integer> solved = solver.solve(solvables.iterator(), Optional.<Long>absent(), solutionLog);
+        MiruSolved<Integer> solved = solver.solve("a", "b", solvables.iterator(), Optional.<Long>absent(), solutionLog);
         assertNotNull(solved.answer, "The answer was null, this probably means that the solver timed out when it shouldn't have.");
         assertEquals((int) solved.answer, 0);
         assertNotNull(solved.solution, "The solution was null");

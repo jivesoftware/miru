@@ -25,7 +25,7 @@ public interface MiruExpectedTenants {
 
     void thumpthump() throws Exception;
 
-    Iterable<? extends OrderedPartitions<?, ?>> allQueryablePartitionsInOrder(MiruTenantId tenantId, String queryKey) throws Exception;
+    Iterable<? extends OrderedPartitions<?, ?>> allQueryablePartitionsInOrder(MiruTenantId tenantId, String requestName, String queryKey) throws Exception;
 
     boolean expectedTopologies(Optional<MiruTenantId> tenantId, CoordinateStream stream) throws Exception;
 

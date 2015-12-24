@@ -23,6 +23,7 @@ public class MiruHostedPartitionComparisonTest {
 
     private final int windowSize = 1_000;
     private final int percentile = 95;
+    private final String requestName = "test";
     private final String queryKey = "TestExecuteQuery";
 
     private MiruHostedPartitionComparison partitionComparison;
@@ -47,25 +48,25 @@ public class MiruHostedPartitionComparisonTest {
         skipList.put(new PartitionAndHost(p2.partitionId, p2.host), p2);
 
         // with no data, ordering is unaffected
-        List<MiruRoutablePartition> ordered = partitionComparison.orderPartitions(tenantId, partitionId, queryKey, skipList.values());
+        List<MiruRoutablePartition> ordered = partitionComparison.orderPartitions(tenantId, partitionId, requestName, queryKey, skipList.values());
         assertEquals(ordered.get(0).host, p1.host);
         assertEquals(ordered.get(1).host, p2.host);
 
         timestamper.set(0);
         partitionComparison.analyzeSolutions(Collections.singletonList(new MiruSolution(new MiruPartitionCoord(tenantId, partitionId, p2.host), 0, 0,
-            Collections.<MiruPartitionCoord>emptyList(), null)), queryKey);
+            Collections.<MiruPartitionCoord>emptyList(), null)), requestName, queryKey);
 
         // p2 answered, so now it's on top
-        ordered = partitionComparison.orderPartitions(tenantId, partitionId, queryKey, skipList.values());
+        ordered = partitionComparison.orderPartitions(tenantId, partitionId, requestName, queryKey, skipList.values());
         assertEquals(ordered.get(0).host, p2.host);
         assertEquals(ordered.get(1).host, p1.host);
 
         timestamper.set(1);
         partitionComparison.analyzeSolutions(Collections.singletonList(new MiruSolution(new MiruPartitionCoord(tenantId, partitionId, p1.host), 0, 0,
-            Collections.<MiruPartitionCoord>emptyList(), null)), queryKey);
+            Collections.<MiruPartitionCoord>emptyList(), null)), requestName, queryKey);
 
         // p1 answered, so now it's on top
-        ordered = partitionComparison.orderPartitions(tenantId, partitionId, queryKey, skipList.values());
+        ordered = partitionComparison.orderPartitions(tenantId, partitionId, requestName, queryKey, skipList.values());
         assertEquals(ordered.get(0).host, p1.host);
         assertEquals(ordered.get(1).host, p2.host);
     }
@@ -77,8 +78,8 @@ public class MiruHostedPartitionComparisonTest {
             MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, partitionId, new MiruHost("localhost", 49_600 + i));
             solutions.add(new MiruSolution(coord, i, i, Collections.<MiruPartitionCoord>emptyList(), null));
         }
-        partitionComparison.analyzeSolutions(solutions, queryKey);
-        assertEquals(partitionComparison.suggestTimeout(tenantId, partitionId, queryKey).get().longValue(), percentile);
+        partitionComparison.analyzeSolutions(solutions, requestName, queryKey);
+        assertEquals(partitionComparison.suggestTimeout(tenantId, partitionId, requestName, queryKey).get().longValue(), percentile);
     }
 
     private MiruRoutablePartition create(int port) {
