@@ -3,16 +3,16 @@ package com.jivesoftware.os.miru.wal;
 import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
-import com.jivesoftware.os.amza.client.AmzaClientProvider;
-import com.jivesoftware.os.amza.client.AmzaClientProvider.AmzaClient;
+import com.jivesoftware.os.amza.api.partition.PartitionName;
+import com.jivesoftware.os.amza.api.partition.PartitionProperties;
+import com.jivesoftware.os.amza.api.partition.VersionedPartitionName;
+import com.jivesoftware.os.amza.api.ring.RingMember;
+import com.jivesoftware.os.amza.api.stream.KeyValueTimestampStream;
+import com.jivesoftware.os.amza.api.stream.TxKeyValueStream;
+import com.jivesoftware.os.amza.api.take.TakeCursors;
 import com.jivesoftware.os.amza.service.AmzaService;
-import com.jivesoftware.os.amza.shared.TimestampedValue;
-import com.jivesoftware.os.amza.shared.partition.PartitionName;
-import com.jivesoftware.os.amza.shared.partition.PartitionProperties;
-import com.jivesoftware.os.amza.shared.partition.VersionedPartitionName;
-import com.jivesoftware.os.amza.shared.ring.RingMember;
-import com.jivesoftware.os.amza.shared.scan.Scan;
-import com.jivesoftware.os.amza.shared.take.TakeCursors;
+import com.jivesoftware.os.amza.shared.EmbeddedClientProvider;
+import com.jivesoftware.os.amza.shared.EmbeddedClientProvider.EmbeddedClient;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.TenantAndPartition;
@@ -37,15 +37,15 @@ public class AmzaWALUtil {
         "lookup-partitions".getBytes(Charsets.UTF_8));
 
     private final AmzaService amzaService;
-    private final AmzaClientProvider amzaClientProvider;
+    private final EmbeddedClientProvider clientProvider;
     private final PartitionProperties defaultProperties;
-    private final Map<PartitionName, AmzaClient> clientMap = Maps.newConcurrentMap();
+    private final Map<PartitionName, EmbeddedClient> clientMap = Maps.newConcurrentMap();
 
     public AmzaWALUtil(AmzaService amzaService,
-        AmzaClientProvider amzaClientProvider,
+        EmbeddedClientProvider embeddedClientProvider,
         PartitionProperties defaultProperties) {
         this.amzaService = amzaService;
-        this.amzaClientProvider = amzaClientProvider;
+        this.clientProvider = embeddedClientProvider;
         this.defaultProperties = defaultProperties;
     }
 
@@ -117,39 +117,38 @@ public class AmzaWALUtil {
         amzaService.setPropertiesIfAbsent(partitionName, regionProperties.or(defaultProperties));
         return amzaClientProvider.getClient(partitionName);
     }
-    */
-
-    private AmzaClient getClient(PartitionName partitionName) throws Exception {
-        return amzaClientProvider.getClient(partitionName);
+     */
+    private EmbeddedClient getClient(PartitionName partitionName) throws Exception {
+        return clientProvider.getClient(partitionName);
     }
 
-    public AmzaClient getActivityClient(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+    public EmbeddedClient getActivityClient(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         return getClient(getActivityPartitionName(tenantId, partitionId));
     }
 
-    public AmzaClient getReadTrackingClient(MiruTenantId tenantId) throws Exception {
+    public EmbeddedClient getReadTrackingClient(MiruTenantId tenantId) throws Exception {
         return getClient(getReadTrackingPartitionName(tenantId));
     }
 
-    public AmzaClient getLookupClient(MiruTenantId tenantId) throws Exception {
+    public EmbeddedClient getLookupClient(MiruTenantId tenantId) throws Exception {
         return getClient(getLookupPartitionName(tenantId));
     }
 
-    public AmzaClient getLookupTenantsClient() throws Exception {
+    public EmbeddedClient getLookupTenantsClient() throws Exception {
         return getOrCreateMaximalClient(LOOKUP_TENANTS_PARTITION_NAME, Optional.<PartitionProperties>absent());
     }
 
-    public AmzaClient getLookupPartitionsClient() throws Exception {
+    public EmbeddedClient getLookupPartitionsClient() throws Exception {
         return getOrCreateMaximalClient(LOOKUP_PARTITIONS_PARTITION_NAME, Optional.<PartitionProperties>absent());
     }
 
-    private AmzaClient getOrCreateMaximalClient(PartitionName partitionName, Optional<PartitionProperties> partitionProperties) throws Exception {
+    private EmbeddedClient getOrCreateMaximalClient(PartitionName partitionName, Optional<PartitionProperties> partitionProperties) throws Exception {
         return clientMap.computeIfAbsent(partitionName, key -> {
             try {
-                amzaService.getRingWriter().ensureMaximalSubRing(partitionName.getRingName());
+                amzaService.getRingWriter().ensureMaximalRing(partitionName.getRingName());
                 amzaService.setPropertiesIfAbsent(partitionName, partitionProperties.or(defaultProperties));
                 amzaService.awaitOnline(partitionName, 10_000); //TODO config
-                return amzaClientProvider.getClient(partitionName);
+                return clientProvider.getClient(partitionName);
             } catch (Exception e) {
                 throw new RuntimeException("Failed to create maximal client", e);
             }
@@ -164,7 +163,7 @@ public class AmzaWALUtil {
         amzaService.destroyPartition(getActivityPartitionName(tenantId, partitionId));
     }
 
-    public TakeCursors take(AmzaClient client, Map<String, NamedCursor> cursorsByName, Scan<TimestampedValue> scan) throws Exception {
+    public TakeCursors take(EmbeddedClient client, Map<String, NamedCursor> cursorsByName, TxKeyValueStream scan) throws Exception {
         String localRingMemberName = amzaService.getRingReader().getRingMember().getMember();
         NamedCursor localNamedCursor = cursorsByName.get(localRingMemberName);
         long transactionId = (localNamedCursor != null) ? localNamedCursor.id : 0;
@@ -172,7 +171,7 @@ public class AmzaWALUtil {
         return client.takeFromTransactionId(transactionId, scan);
     }
 
-    public TakeCursors take(AmzaClient client, Map<String, NamedCursor> cursorsByName, byte[] prefix, Scan<TimestampedValue> scan) throws Exception {
+    public TakeCursors take(EmbeddedClient client, Map<String, NamedCursor> cursorsByName, byte[] prefix, TxKeyValueStream scan) throws Exception {
         String localRingMemberName = amzaService.getRingReader().getRingMember().getMember();
         NamedCursor localNamedCursor = cursorsByName.get(localRingMemberName);
         long transactionId = (localNamedCursor != null) ? localNamedCursor.id : 0;
@@ -180,10 +179,10 @@ public class AmzaWALUtil {
         return client.takeFromTransactionId(prefix, transactionId, scan);
     }
 
-    public AmzaCursor scan(AmzaClient client,
+    public AmzaCursor scan(EmbeddedClient client,
         Map<String, NamedCursor> cursorsByName,
         byte[] prefix,
-        Scan<TimestampedValue> scan) throws Exception {
+        KeyValueTimestampStream scan) throws Exception {
 
         RingMember localRingMember = amzaService.getRingReader().getRingMember();
         String localRingMemberName = localRingMember.getMember();
@@ -191,10 +190,11 @@ public class AmzaWALUtil {
         long id = (localNamedCursor != null) ? localNamedCursor.id : 0;
 
         long[] nextId = new long[1];
-        client.scan(prefix, FilerIO.longBytes(id), prefix, FilerIO.longBytes(Long.MAX_VALUE), (rowTxId, _prefix, key, scanned) -> {
-            nextId[0] = FilerIO.bytesLong(key);
-            return scan.row(rowTxId, prefix, key, scanned);
-        });
+        client.scan(prefix, FilerIO.longBytes(id), prefix, FilerIO.longBytes(Long.MAX_VALUE),
+            (byte[] prefix1, byte[] key, byte[] value, long timestamp, long version) -> {
+                nextId[0] = FilerIO.bytesLong(key);
+                return scan.stream(prefix1, key, value, timestamp, version);
+            });
         cursorsByName.put(localRingMemberName, new NamedCursor(localRingMemberName, nextId[0]));
         return new AmzaCursor(cursorsByName.values(), null);
     }

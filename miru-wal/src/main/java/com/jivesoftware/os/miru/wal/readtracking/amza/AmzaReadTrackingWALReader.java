@@ -3,9 +3,9 @@ package com.jivesoftware.os.miru.wal.readtracking.amza;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
-import com.jivesoftware.os.amza.client.AmzaClientProvider;
-import com.jivesoftware.os.amza.shared.partition.PartitionProperties;
-import com.jivesoftware.os.amza.shared.take.TakeCursors;
+import com.jivesoftware.os.amza.api.partition.PartitionProperties;
+import com.jivesoftware.os.amza.api.take.TakeCursors;
+import com.jivesoftware.os.amza.shared.EmbeddedClientProvider.EmbeddedClient;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -39,34 +39,36 @@ public class AmzaReadTrackingWALReader implements MiruReadTrackingWALReader<Amza
     }
 
     private AmzaCursor scanCursors(MiruReadTrackingWALReader.StreamReadTrackingWAL streamMiruReadTrackingWAL,
-        AmzaClientProvider.AmzaClient client,
+        EmbeddedClient client,
         MiruStreamId streamId,
         Map<String, NamedCursor> cursorsByName) throws Exception {
-        return amzaWALUtil.scan(client, cursorsByName, streamId.getBytes(), (rowTxId, prefix, key, value) -> {
-            MiruPartitionedActivity partitionedActivity = partitionedActivityMarshaller.fromBytes(value.getValue());
-            if (partitionedActivity != null) {
-                if (!streamMiruReadTrackingWAL.stream(partitionedActivity.timestamp, partitionedActivity, value.getTimestampId())) {
-                    return false;
+        return amzaWALUtil.scan(client, cursorsByName, streamId.getBytes(),
+            (byte[] prefix, byte[] key, byte[] value, long timestamp, long version) -> {
+                MiruPartitionedActivity partitionedActivity = partitionedActivityMarshaller.fromBytes(value);
+                if (partitionedActivity != null) {
+                    if (!streamMiruReadTrackingWAL.stream(partitionedActivity.timestamp, partitionedActivity, timestamp)) {
+                        return false;
+                    }
                 }
-            }
-            return true;
-        });
+                return true;
+            });
     }
 
     private TakeCursors takeSipCursors(MiruReadTrackingWALReader.StreamReadTrackingSipWAL streamMiruReadTrackingSipWAL,
-        AmzaClientProvider.AmzaClient client,
+        EmbeddedClient client,
         MiruStreamId streamId,
         Map<String, NamedCursor> cursorsByName) throws Exception {
-        return amzaWALUtil.take(client, cursorsByName, streamId.getBytes(), (rowTxId, prefix, key, value) -> {
-            MiruPartitionedActivity partitionedActivity = partitionedActivityMarshaller.fromBytes(value.getValue());
-            if (partitionedActivity != null) {
-                //TODO key->bytes is sufficient for the activity timestamp, so technically we don't need values at all
-                if (!streamMiruReadTrackingSipWAL.stream(partitionedActivity.timestamp, rowTxId)) {
-                    return false;
+        return amzaWALUtil.take(client, cursorsByName, streamId.getBytes(),
+            (long rowTxId, byte[] prefix, byte[] key, byte[] value, long valueTimestamp, boolean valueTombstoned, long valueVersion) -> {
+                MiruPartitionedActivity partitionedActivity = partitionedActivityMarshaller.fromBytes(value);
+                if (partitionedActivity != null) {
+                    //TODO key->bytes is sufficient for the activity timestamp, so technically we don't need values at all
+                    if (!streamMiruReadTrackingSipWAL.stream(partitionedActivity.timestamp, rowTxId)) {
+                        return false;
+                    }
                 }
-            }
-            return true;
-        });
+                return true;
+            });
     }
 
     @Override
@@ -86,7 +88,7 @@ public class AmzaReadTrackingWALReader implements MiruReadTrackingWALReader<Amza
         int batchSize,
         StreamReadTrackingWAL streamReadTrackingWAL) throws Exception {
 
-        AmzaClientProvider.AmzaClient client = amzaWALUtil.getReadTrackingClient(tenantId);
+        EmbeddedClient client = amzaWALUtil.getReadTrackingClient(tenantId);
         if (client == null) {
             return cursor;
         }
@@ -103,7 +105,7 @@ public class AmzaReadTrackingWALReader implements MiruReadTrackingWALReader<Amza
         int batchSize,
         StreamReadTrackingSipWAL streamReadTrackingSipWAL) throws Exception {
 
-        AmzaClientProvider.AmzaClient client = amzaWALUtil.getReadTrackingClient(tenantId);
+        EmbeddedClient client = amzaWALUtil.getReadTrackingClient(tenantId);
         if (client == null) {
             return sipCursor;
         }

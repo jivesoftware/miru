@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.wal.readtracking.amza;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
+import com.jivesoftware.os.amza.api.Consistency;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
@@ -45,18 +46,17 @@ public class AmzaReadTrackingWALWriter implements MiruReadTrackingWALWriter {
 
     @Override
     public void write(MiruTenantId tenantId, MiruStreamId streamId, List<MiruPartitionedActivity> partitionedActivities) throws Exception {
-        amzaWALUtil.getReadTrackingClient(tenantId).commit(streamId.getBytes(),
+        amzaWALUtil.getReadTrackingClient(tenantId).commit(Consistency.leader_quorum, streamId.getBytes(),
             (highwaters, txKeyValueStream) -> {
                 for (MiruPartitionedActivity activity : partitionedActivities) {
                     byte[] key = readTrackingWALKeyFunction.apply(activity);
                     byte[] value = activitySerializerFunction.apply(activity);
-                    if (!txKeyValueStream.row(-1, key, value, System.currentTimeMillis(), false)) {
+                    if (!txKeyValueStream.row(-1, key, value, System.currentTimeMillis(), false, -1)) {
                         return false;
                     }
                 }
                 return true;
             },
-            replicateRequireNReplicas,
             replicateTimeoutMillis,
             TimeUnit.MILLISECONDS);
     }

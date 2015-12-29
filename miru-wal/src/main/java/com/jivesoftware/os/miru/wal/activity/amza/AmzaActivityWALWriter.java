@@ -2,7 +2,8 @@ package com.jivesoftware.os.miru.wal.activity.amza;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
-import com.jivesoftware.os.amza.client.AmzaClientProvider;
+import com.jivesoftware.os.amza.api.Consistency;
+import com.jivesoftware.os.amza.shared.EmbeddedClientProvider.EmbeddedClient;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -69,17 +70,16 @@ public class AmzaActivityWALWriter implements MiruActivityWALWriter {
 
         RangeMinMax partitionMinMax = new RangeMinMax();
 
-        amzaWALUtil.getActivityClient(tenantId, partitionId).commit(null,
+        amzaWALUtil.getActivityClient(tenantId, partitionId).commit(Consistency.leader_quorum, null,
             (highwaters, txKeyValueStream) -> {
                 for (MiruPartitionedActivity activity : partitionedActivities) {
                     long timestamp = activity.activity.isPresent() ? activity.activity.get().version : System.currentTimeMillis();
-                    if (!txKeyValueStream.row(-1, activityWALKeyFunction.apply(activity), activitySerializerFunction.apply(activity), timestamp, false)) {
+                    if (!txKeyValueStream.row(-1, activityWALKeyFunction.apply(activity), activitySerializerFunction.apply(activity), timestamp, false, -1)) {
                         return false;
                     }
                 }
                 return true;
             },
-            replicateRequireNReplicas,
             replicateTimeoutMillis,
             TimeUnit.MILLISECONDS);
 
@@ -94,17 +94,18 @@ public class AmzaActivityWALWriter implements MiruActivityWALWriter {
 
     @Override
     public void delete(MiruTenantId tenantId, MiruPartitionId partitionId, Collection<MiruActivityWALColumnKey> keys) throws Exception {
-        AmzaClientProvider.AmzaClient client = amzaWALUtil.getActivityClient(tenantId, partitionId);
+        EmbeddedClient client = amzaWALUtil.getActivityClient(tenantId, partitionId);
         if (client != null) {
-            client.commit(null, (highwaters, txKeyValueStream) -> {
+            client.commit(Consistency.leader_quorum,
+                null,
+                (highwaters, txKeyValueStream) -> {
                     for (MiruActivityWALColumnKey columnKey : keys) {
-                        if (!txKeyValueStream.row(-1, columnKeyMarshaller.toLexBytes(columnKey), null, -1, true)) {
+                        if (!txKeyValueStream.row(-1, columnKeyMarshaller.toLexBytes(columnKey), null, -1, true, -1)) {
                             return false;
                         }
                     }
                     return true;
                 },
-                replicateRequireNReplicas,
                 replicateTimeoutMillis,
                 TimeUnit.MILLISECONDS);
         }
