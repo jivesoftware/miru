@@ -5,6 +5,8 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.TimeAndVersion;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus;
+import com.jivesoftware.os.miru.api.wal.MiruCursor;
+import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.api.wal.MiruVersionedActivityLookupEntry;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.WriterCursor;
 import com.jivesoftware.os.miru.wal.lookup.PartitionsStream;
@@ -13,7 +15,7 @@ import java.util.List;
 import java.util.Set;
 
 /** @author jonathan */
-public interface MiruActivityWALReader<C, S> {
+public interface MiruActivityWALReader<C extends MiruCursor<C, S>, S extends MiruSipCursor<S>> {
 
     HostPort[] getRoutingGroup(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
 

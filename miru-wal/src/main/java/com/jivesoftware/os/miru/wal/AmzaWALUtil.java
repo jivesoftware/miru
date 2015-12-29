@@ -55,18 +55,28 @@ public class AmzaWALUtil {
         PartitionName partitionName = getActivityPartitionName(tenantId, partitionId);
         amzaService.getRingWriter().ensureSubRing(partitionName.getRingName(), 3); //TODO config numberOfReplicas
         amzaService.setPropertiesIfAbsent(partitionName, regionProperties.or(defaultProperties));
-        return amzaService.getPartitionRoute(partitionName).orderedPartitionHosts.stream()
-            .map(ringHost -> new HostPort(ringHost.getHost(), ringHost.getPort()))
-            .toArray(HostPort[]::new);
+        AmzaService.AmzaPartitionRoute partitionRoute = amzaService.getPartitionRoute(partitionName);
+        if (partitionRoute.leader != null) {
+            return new HostPort[] { new HostPort(partitionRoute.leader.ringHost.getHost(), partitionRoute.leader.ringHost.getPort()) };
+        } else {
+            return partitionRoute.orderedMembers.stream()
+                .map(ringMemberAndHost -> new HostPort(ringMemberAndHost.ringHost.getHost(), ringMemberAndHost.ringHost.getPort()))
+                .toArray(HostPort[]::new);
+        }
     }
 
     public HostPort[] getReadTrackingRoutingGroup(MiruTenantId tenantId, Optional<PartitionProperties> partitionProperties) throws Exception {
         PartitionName partitionName = getReadTrackingPartitionName(tenantId);
         amzaService.getRingWriter().ensureSubRing(partitionName.getRingName(), 3); //TODO config numberOfReplicas
         amzaService.setPropertiesIfAbsent(partitionName, partitionProperties.or(defaultProperties));
-        return amzaService.getPartitionRoute(partitionName).orderedPartitionHosts.stream()
-            .map(ringHost -> new HostPort(ringHost.getHost(), ringHost.getPort()))
-            .toArray(HostPort[]::new);
+        AmzaService.AmzaPartitionRoute partitionRoute = amzaService.getPartitionRoute(partitionName);
+        if (partitionRoute.leader != null) {
+            return new HostPort[] { new HostPort(partitionRoute.leader.ringHost.getHost(), partitionRoute.leader.ringHost.getPort()) };
+        } else {
+            return partitionRoute.orderedMembers.stream()
+                .map(ringMemberAndHost -> new HostPort(ringMemberAndHost.ringHost.getHost(), ringMemberAndHost.ringHost.getPort()))
+                .toArray(HostPort[]::new);
+        }
     }
 
     //TODO slit my wrists

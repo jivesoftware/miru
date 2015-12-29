@@ -48,6 +48,7 @@ import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer.MiruSoyRendererCon
 import com.jivesoftware.os.miru.wal.AmzaWALUtil;
 import com.jivesoftware.os.miru.wal.MiruWALDirector;
 import com.jivesoftware.os.miru.wal.RCVSWALInitializer;
+import com.jivesoftware.os.miru.wal.activity.ForkingActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.ForkingActivityWALWriter;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.amza.AmzaActivityWALReader;
@@ -59,6 +60,7 @@ import com.jivesoftware.os.miru.wal.deployable.endpoints.RCVSWALEndpoints;
 import com.jivesoftware.os.miru.wal.lookup.AmzaWALLookup;
 import com.jivesoftware.os.miru.wal.lookup.ForkingWALLookup;
 import com.jivesoftware.os.miru.wal.lookup.RCVSWALLookup;
+import com.jivesoftware.os.miru.wal.readtracking.ForkingReadTrackingWALReader;
 import com.jivesoftware.os.miru.wal.readtracking.ForkingReadTrackingWALWriter;
 import com.jivesoftware.os.miru.wal.readtracking.amza.AmzaReadTrackingWALReader;
 import com.jivesoftware.os.miru.wal.readtracking.amza.AmzaReadTrackingWALWriter;
@@ -134,16 +136,16 @@ public class MiruWALMain {
             HealthFactory.initialize(deployable::config,
                 new HealthCheckRegistry() {
 
-                @Override
-                public void register(HealthChecker healthChecker) {
-                    deployable.addHealthCheck(healthChecker);
-                }
+                    @Override
+                    public void register(HealthChecker healthChecker) {
+                        deployable.addHealthCheck(healthChecker);
+                    }
 
-                @Override
-                public void unregister(HealthChecker healthChecker) {
-                    throw new UnsupportedOperationException("Not supported yet.");
-                }
-            });
+                    @Override
+                    public void unregister(HealthChecker healthChecker) {
+                        throw new UnsupportedOperationException("Not supported yet.");
+                    }
+                });
             deployable.addErrorHealthChecks();
             deployable.addManageInjectables(HasUI.class, new HasUI(Arrays.asList(
                 new HasUI.UI("Reset Errors", "manage", "/manage/resetErrors"),
@@ -244,7 +246,7 @@ public class MiruWALMain {
 
             TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
             TenantAwareHttpClient<String> manageHttpClient = tenantRoutingHttpClientInitializer.initialize(tenantRoutingProvider
-                .getConnections("miru-manage", "main"),
+                    .getConnections("miru-manage", "main"),
                 clientHealthProvider,
                 10, 10_000); // TODO expose to conf
 
@@ -319,9 +321,13 @@ public class MiruWALMain {
                     amzaServiceConfig.getReplicateTimeoutMillis(),
                     mapper);
                 ForkingActivityWALWriter forkingActivityWALWriter = new ForkingActivityWALWriter(rcvsActivityWALWriter, amzaActivityWALWriter);
+
                 RCVSActivityWALReader rcvsActivityWALReader = new RCVSActivityWALReader(hostPortProvider,
                     rcvsWAL.getActivityWAL(),
                     rcvsWAL.getActivitySipWAL());
+                AmzaActivityWALReader amzaActivityWALReader = new AmzaActivityWALReader(amzaWALUtil, mapper);
+                ForkingActivityWALReader<RCVSCursor, RCVSSipCursor> forkingActivityWALReader = new ForkingActivityWALReader<>(rcvsActivityWALReader,
+                    amzaActivityWALReader);
 
                 RCVSWALLookup rcvsWALLookup = new RCVSWALLookup(rcvsWAL.getWALLookupTable());
                 AmzaWALLookup amzaWALLookup = new AmzaWALLookup(amzaWALUtil,
@@ -337,14 +343,19 @@ public class MiruWALMain {
                     mapper);
                 ForkingReadTrackingWALWriter forkingReadTrackingWALWriter = new ForkingReadTrackingWALWriter(rcvsReadTrackingWALWriter,
                     amzaReadTrackingWALWriter);
-                RCVSReadTrackingWALReader readTrackingWALReader = new RCVSReadTrackingWALReader(hostPortProvider,
+
+                RCVSReadTrackingWALReader rcvsReadTrackingWALReader = new RCVSReadTrackingWALReader(hostPortProvider,
                     rcvsWAL.getReadTrackingWAL(),
                     rcvsWAL.getReadTrackingSipWAL());
+                AmzaReadTrackingWALReader amzaReadTrackingWALReader = new AmzaReadTrackingWALReader(amzaWALUtil, mapper);
+                ForkingReadTrackingWALReader<RCVSCursor, RCVSSipCursor> forkingReadTrackingWALReader = new ForkingReadTrackingWALReader<>(
+                    rcvsReadTrackingWALReader,
+                    amzaReadTrackingWALReader);
 
                 rcvsWALDirector = new MiruWALDirector<>(forkingWALLookup,
-                    rcvsActivityWALReader,
+                    forkingActivityWALReader,
                     forkingActivityWALWriter,
-                    readTrackingWALReader,
+                    forkingReadTrackingWALReader,
                     forkingReadTrackingWALWriter,
                     clusterClient);
 
@@ -362,7 +373,10 @@ public class MiruWALMain {
                     amzaServiceConfig.getReplicateTimeoutMillis(),
                     mapper);
                 ForkingActivityWALWriter forkingActivityWALWriter = new ForkingActivityWALWriter(amzaActivityWALWriter, rcvsActivityWALWriter);
+
                 AmzaActivityWALReader amzaActivityWALReader = new AmzaActivityWALReader(amzaWALUtil, mapper);
+                ForkingActivityWALReader<AmzaCursor, AmzaSipCursor> forkingActivityWALReader = new ForkingActivityWALReader<>(amzaActivityWALReader,
+                    amzaActivityWALReader);
 
                 RCVSWALLookup rcvsWALLookup = new RCVSWALLookup(rcvsWAL.getWALLookupTable());
                 AmzaWALLookup amzaWALLookup = new AmzaWALLookup(amzaWALUtil,
@@ -378,12 +392,17 @@ public class MiruWALMain {
                     mapper);
                 ForkingReadTrackingWALWriter forkingReadTrackingWALWriter = new ForkingReadTrackingWALWriter(amzaReadTrackingWALWriter,
                     rcvsReadTrackingWALWriter);
-                AmzaReadTrackingWALReader readTrackingWALReader = new AmzaReadTrackingWALReader(amzaWALUtil, mapper);
+
+                AmzaReadTrackingWALReader amzaReadTrackingWALReader = new AmzaReadTrackingWALReader(amzaWALUtil, mapper);
+                // technically this is pointless, but at least it's consistent
+                ForkingReadTrackingWALReader<AmzaCursor, AmzaSipCursor> forkingReadTrackingWALReader = new ForkingReadTrackingWALReader<>(
+                    amzaReadTrackingWALReader,
+                    amzaReadTrackingWALReader);
 
                 amzaWALDirector = new MiruWALDirector<>(forkingWALLookup,
-                    amzaActivityWALReader,
+                    forkingActivityWALReader,
                     forkingActivityWALWriter,
-                    readTrackingWALReader,
+                    forkingReadTrackingWALReader,
                     forkingReadTrackingWALWriter,
                     clusterClient);
 
