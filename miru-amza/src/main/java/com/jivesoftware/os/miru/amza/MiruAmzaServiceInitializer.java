@@ -6,7 +6,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Optional;
 import com.google.common.base.Strings;
+import com.jivesoftware.os.amza.api.partition.PartitionProperties;
+import com.jivesoftware.os.amza.api.ring.RingHost;
+import com.jivesoftware.os.amza.api.ring.RingMember;
 import com.jivesoftware.os.amza.berkeleydb.BerkeleyDBWALIndexProvider;
+import com.jivesoftware.os.amza.client.http.AmzaClientProvider;
+import com.jivesoftware.os.amza.client.http.HttpPartitionClientFactory;
+import com.jivesoftware.os.amza.client.http.HttpPartitionHostsProvider;
+import com.jivesoftware.os.amza.client.http.RingHostHttpClientProvider;
 import com.jivesoftware.os.amza.service.AmzaRingStoreWriter;
 import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.amza.service.AmzaServiceInitializer.AmzaServiceConfig;
@@ -15,12 +22,10 @@ import com.jivesoftware.os.amza.service.WALIndexProviderRegistry;
 import com.jivesoftware.os.amza.service.discovery.AmzaDiscovery;
 import com.jivesoftware.os.amza.service.replication.TakeFailureListener;
 import com.jivesoftware.os.amza.service.storage.PartitionPropertyMarshaller;
+import com.jivesoftware.os.amza.service.storage.binary.RowIOProvider;
 import com.jivesoftware.os.amza.shared.AmzaInstance;
-import com.jivesoftware.os.amza.shared.partition.PartitionProperties;
 import com.jivesoftware.os.amza.shared.ring.AmzaRingReader;
 import com.jivesoftware.os.amza.shared.ring.AmzaRingWriter;
-import com.jivesoftware.os.amza.shared.ring.RingHost;
-import com.jivesoftware.os.amza.shared.ring.RingMember;
 import com.jivesoftware.os.amza.shared.scan.RowChanges;
 import com.jivesoftware.os.amza.shared.stats.AmzaStats;
 import com.jivesoftware.os.amza.shared.take.AvailableRowsTaker;
@@ -37,6 +42,12 @@ import com.jivesoftware.os.jive.utils.ordered.id.TimestampedOrderIdProvider;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.deployable.Deployable;
+import com.jivesoftware.os.routing.bird.http.client.HttpClient;
+import com.jivesoftware.os.routing.bird.http.client.HttpClientException;
+import com.jivesoftware.os.routing.bird.http.client.HttpDeliveryClientHealthProvider;
+import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelperUtils;
+import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
+import com.jivesoftware.os.routing.bird.http.client.TenantRoutingHttpClientInitializer;
 import com.jivesoftware.os.routing.bird.server.util.Resource;
 import com.jivesoftware.os.routing.bird.shared.ConnectionDescriptor;
 import com.jivesoftware.os.routing.bird.shared.ConnectionDescriptors;
@@ -55,6 +66,9 @@ import java.util.concurrent.TimeUnit;
 public class MiruAmzaServiceInitializer {
 
     public AmzaService initialize(Deployable deployable,
+        String routesHost,
+        int routesPort,
+        String connectionsHealthEndpoint,
         int instanceId,
         String instanceKey,
         String serviceName,
@@ -79,10 +93,6 @@ public class MiruAmzaServiceInitializer {
         ObjectMapper mapper = new ObjectMapper();
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         mapper.configure(SerializationFeature.INDENT_OUTPUT, false);
-
-        WALIndexProviderRegistry indexProviderRegistry = new WALIndexProviderRegistry();
-        String[] walIndexDirs = config.getIndexDirectories().split(",");
-        indexProviderRegistry.register("berkeleydb", new BerkeleyDBWALIndexProvider(walIndexDirs, walIndexDirs.length));
 
         AmzaStats amzaStats = new AmzaStats();
         RowsTakerFactory rowsTakerFactory = () -> new HttpRowsTaker(amzaStats);
@@ -128,7 +138,10 @@ public class MiruAmzaServiceInitializer {
             orderIdProvider,
             idPacker,
             partitionPropertyMarshaller,
-            indexProviderRegistry,
+            (WALIndexProviderRegistry indexProviderRegistry, RowIOProvider<?> ephemeralRowIOProvider, RowIOProvider<?> persistentRowIOProvider) -> {
+                String[] walIndexDirs = config.getIndexDirectories().split(",");
+                indexProviderRegistry.register("berkeleydb", new BerkeleyDBWALIndexProvider(walIndexDirs, walIndexDirs.length), persistentRowIOProvider);
+            },
             availableRowsTaker,
             rowsTakerFactory,
             Optional.<TakeFailureListener>absent(),
@@ -140,7 +153,25 @@ public class MiruAmzaServiceInitializer {
         System.out.println("|      Amza Service Online");
         System.out.println("-----------------------------------------------------------------------");
 
-        new AmzaUIInitializer().initialize(clusterName, ringHost, amzaService, amzaStats, new AmzaUIInitializer.InjectionCallback() {
+        HttpDeliveryClientHealthProvider clientHealthProvider = new HttpDeliveryClientHealthProvider(instanceKey,
+            HttpRequestHelperUtils.buildRequestHelper(routesHost, routesPort),
+            connectionsHealthEndpoint, 5_000, 100);
+
+        TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
+        TenantAwareHttpClient<String> httpClient = tenantRoutingHttpClientInitializer.initialize(
+            deployable.getTenantRoutingProvider().getConnections(serviceName, "main"),
+            clientHealthProvider,
+            10,
+            10_000); // TODO expose to conf
+
+        AmzaClientProvider<HttpClient, HttpClientException> clientProvider = new AmzaClientProvider<>(
+            new HttpPartitionClientFactory(),
+            new HttpPartitionHostsProvider(httpClient, mapper),
+            new RingHostHttpClientProvider(httpClient),
+            Executors.newCachedThreadPool(),
+            10_000); //TODO expose to conf
+
+        new AmzaUIInitializer().initialize(clusterName, ringHost, amzaService, clientProvider, amzaStats, new AmzaUIInitializer.InjectionCallback() {
 
             @Override
             public void addEndpoint(Class clazz) {
@@ -228,7 +259,7 @@ public class MiruAmzaServiceInitializer {
 
                     HostPort hostPort = connectionDescriptor.getHostPort();
                     AmzaRingStoreWriter ringWriter = amzaService.getRingWriter();
-                    ringWriter.register(routingRingMember, new RingHost(hostPort.getHost(), hostPort.getPort()));
+                    ringWriter.register(routingRingMember, new RingHost(hostPort.getHost(), hostPort.getPort()), -1);
                     ringWriter.addRingMember(AmzaRingReader.SYSTEM_RING, routingRingMember);
 
                 }

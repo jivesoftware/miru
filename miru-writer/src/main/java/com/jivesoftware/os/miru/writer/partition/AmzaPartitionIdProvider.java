@@ -1,14 +1,15 @@
 package com.jivesoftware.os.miru.writer.partition;
 
 import com.google.common.base.Charsets;
-import com.jivesoftware.os.amza.client.AmzaClientProvider;
-import com.jivesoftware.os.amza.client.AmzaClientProvider.AmzaClient;
+import com.jivesoftware.os.amza.api.Consistency;
+import com.jivesoftware.os.amza.api.partition.PartitionName;
+import com.jivesoftware.os.amza.api.partition.PartitionProperties;
+import com.jivesoftware.os.amza.api.partition.WALStorageDescriptor;
 import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.amza.shared.AmzaPartitionUpdates;
-import com.jivesoftware.os.amza.shared.partition.PartitionName;
-import com.jivesoftware.os.amza.shared.partition.PartitionProperties;
+import com.jivesoftware.os.amza.shared.EmbeddedClientProvider;
+import com.jivesoftware.os.amza.shared.EmbeddedClientProvider.EmbeddedClient;
 import com.jivesoftware.os.amza.shared.wal.WALKey;
-import com.jivesoftware.os.amza.shared.wal.WALStorageDescriptor;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -37,7 +38,7 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
         "cursors".getBytes(Charsets.UTF_8));
 
     private final AmzaService amzaService;
-    private final AmzaClientProvider amzaClientProvider;
+    private final EmbeddedClientProvider clientProvider;
     private final int replicateLatestPartitionQuorum;
     private final long replicateLatestPartitionTimeoutMillis;
     private final WALStorageDescriptor amzaStorageDescriptor;
@@ -46,7 +47,7 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
     private final AtomicBoolean ringInitialized = new AtomicBoolean(false);
 
     public AmzaPartitionIdProvider(AmzaService amzaService,
-        AmzaClientProvider amzaClientProvider,
+        EmbeddedClientProvider clientProvider,
         int replicateLatestPartitionQuorum,
         long replicateLatestPartitionTimeoutMillis,
         WALStorageDescriptor amzaStorageDescriptor,
@@ -54,7 +55,7 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
         MiruWALClient<?, ?> walClient)
         throws Exception {
         this.amzaService = amzaService;
-        this.amzaClientProvider = amzaClientProvider;
+        this.clientProvider = clientProvider;
         this.replicateLatestPartitionQuorum = replicateLatestPartitionQuorum;
         this.replicateLatestPartitionTimeoutMillis = replicateLatestPartitionTimeoutMillis;
         this.amzaStorageDescriptor = amzaStorageDescriptor;
@@ -79,21 +80,22 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
         return new MiruTenantId(tenantBytes);
     }
 
-    private AmzaClient ensureClient(PartitionName partitionName) throws Exception {
+    private EmbeddedClient ensureClient(PartitionName partitionName, Consistency consistency,
+        boolean requireConsistency) throws Exception {
         if (!ringInitialized.get()) {
-            amzaService.getRingWriter().ensureMaximalSubRing(AMZA_RING_NAME);
+            amzaService.getRingWriter().ensureMaximalRing(AMZA_RING_NAME);
             ringInitialized.set(true);
         }
 
-        amzaService.setPropertiesIfAbsent(partitionName, new PartitionProperties(amzaStorageDescriptor, 1, false)); //TODO config?
+        amzaService.setPropertiesIfAbsent(partitionName, new PartitionProperties(amzaStorageDescriptor, consistency, requireConsistency, 1, false));
         amzaService.awaitOnline(partitionName, 10_000L); //TODO config
-        return amzaClientProvider.getClient(partitionName);
+        return clientProvider.getClient(partitionName);
     }
 
     @Override
     public MiruPartitionCursor getCursor(MiruTenantId tenantId, int writerId) throws Exception {
         byte[] key = key(tenantId, writerId);
-        byte[] rawPartitionId = ensureClient(LATEST_PARTITIONS_PARTITION_NAME).getValue(null, key);
+        byte[] rawPartitionId = ensureClient(LATEST_PARTITIONS_PARTITION_NAME, Consistency.none, false).getValue(Consistency.none, null, key);
         if (rawPartitionId == null) {
             MiruPartitionId largestPartitionId = walClient.getLargestPartitionId(tenantId);
             WriterCursor cursor;
@@ -118,8 +120,9 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
     @Override
     public void saveCursor(MiruTenantId tenantId, MiruPartitionCursor cursor, int writerId) throws Exception {
         byte[] cursorKey = key(tenantId, writerId, cursor.getPartitionId());
-        ensureClient(CURSORS_PARTITION_NAME).commit(null, new AmzaPartitionUpdates().set(cursorKey, FilerIO.intBytes(cursor.last())),
-            0,
+        ensureClient(CURSORS_PARTITION_NAME, Consistency.none, false).commit(Consistency.none,
+            null,
+            new AmzaPartitionUpdates().set(cursorKey, FilerIO.intBytes(cursor.last())),
             0,
             TimeUnit.MILLISECONDS);
     }
@@ -132,16 +135,17 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
     }
 
     private MiruPartitionCursor setCursor(MiruTenantId tenantId, int writerId, MiruPartitionCursor cursor) throws Exception {
-        AmzaClient latestPartitions = ensureClient(LATEST_PARTITIONS_PARTITION_NAME);
+        EmbeddedClient latestPartitions = ensureClient(LATEST_PARTITIONS_PARTITION_NAME, Consistency.none, false);
         byte[] latestPartitionKey = key(tenantId, writerId);
-        byte[] latestPartitionValue = latestPartitions.getValue(null, latestPartitionKey);
+        byte[] latestPartitionValue = latestPartitions.getValue(Consistency.none, null, latestPartitionKey);
         if (latestPartitionValue == null || FilerIO.bytesInt(latestPartitionValue) < cursor.getPartitionId().getId()) {
-            latestPartitions.commit(null, new AmzaPartitionUpdates().set(latestPartitionKey, FilerIO.intBytes(cursor.getPartitionId().getId())),
-                replicateLatestPartitionQuorum, replicateLatestPartitionTimeoutMillis, TimeUnit.MILLISECONDS);
+            latestPartitions.commit(Consistency.none, null,
+                new AmzaPartitionUpdates().set(latestPartitionKey, FilerIO.intBytes(cursor.getPartitionId().getId())),
+                replicateLatestPartitionTimeoutMillis, TimeUnit.MILLISECONDS);
         }
         byte[] cursorKey = key(tenantId, writerId, cursor.getPartitionId());
-        ensureClient(CURSORS_PARTITION_NAME).commit(null, new AmzaPartitionUpdates().set(cursorKey, FilerIO.intBytes(cursor.last())),
-            0,
+        ensureClient(CURSORS_PARTITION_NAME, Consistency.none, false).commit(Consistency.none, null,
+            new AmzaPartitionUpdates().set(cursorKey, FilerIO.intBytes(cursor.last())),
             0,
             TimeUnit.MILLISECONDS);
         return cursor;
@@ -170,11 +174,11 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
 
     @Override
     public int getLatestIndex(MiruTenantId tenantId, MiruPartitionId partitionId, int writerId) throws Exception {
-        AmzaClient cursors = ensureClient(CURSORS_PARTITION_NAME);
+        EmbeddedClient cursors = ensureClient(CURSORS_PARTITION_NAME, Consistency.none, false);
         byte[] cursorKey = key(tenantId, writerId, partitionId);
-        byte[] got = cursors.getValue(null, cursorKey);
+        byte[] got = cursors.getValue(Consistency.none, null, cursorKey);
         if (got == null) {
-            cursors.commit(null, new AmzaPartitionUpdates().set(cursorKey, FilerIO.intBytes(0)), 0, 0, TimeUnit.MILLISECONDS);
+            cursors.commit(Consistency.none, null, new AmzaPartitionUpdates().set(cursorKey, FilerIO.intBytes(0)), 0, TimeUnit.MILLISECONDS);
             return 0;
         } else {
             return FilerIO.bytesInt(got);
@@ -192,13 +196,14 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
         final AtomicInteger largestPartitionId = new AtomicInteger(0);
         byte[] from = tenantId.getBytes();
         byte[] to = WALKey.prefixUpperExclusive(from);
-        ensureClient(LATEST_PARTITIONS_PARTITION_NAME).scan(null, from, null, to, (rowTxId, prefix, key, value) -> {
-            int partitionId = FilerIO.bytesInt(value.getValue());
-            if (largestPartitionId.get() < partitionId) {
-                largestPartitionId.set(partitionId);
-            }
-            return true;
-        });
+        ensureClient(LATEST_PARTITIONS_PARTITION_NAME, Consistency.none, false).scan(null, from, null, to,
+            (byte[] prefix, byte[] key, byte[] value, long timestamp, long version) -> {
+                int partitionId = FilerIO.bytesInt(value);
+                if (largestPartitionId.get() < partitionId) {
+                    largestPartitionId.set(partitionId);
+                }
+                return true;
+            });
         return MiruPartitionId.of(largestPartitionId.get());
     }
 

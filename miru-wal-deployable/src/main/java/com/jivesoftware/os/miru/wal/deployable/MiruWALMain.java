@@ -18,11 +18,12 @@ package com.jivesoftware.os.miru.wal.deployable;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
-import com.jivesoftware.os.amza.client.AmzaClientProvider;
+import com.jivesoftware.os.amza.api.Consistency;
+import com.jivesoftware.os.amza.api.partition.PartitionProperties;
+import com.jivesoftware.os.amza.api.partition.PrimaryIndexDescriptor;
+import com.jivesoftware.os.amza.api.partition.WALStorageDescriptor;
 import com.jivesoftware.os.amza.service.AmzaService;
-import com.jivesoftware.os.amza.shared.partition.PartitionProperties;
-import com.jivesoftware.os.amza.shared.partition.PrimaryIndexDescriptor;
-import com.jivesoftware.os.amza.shared.wal.WALStorageDescriptor;
+import com.jivesoftware.os.amza.shared.EmbeddedClientProvider;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceConfig;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceInitializer;
 import com.jivesoftware.os.miru.api.HostPortProvider;
@@ -203,6 +204,9 @@ public class MiruWALMain {
 
             WALAmzaServiceConfig amzaServiceConfig = deployable.config(WALAmzaServiceConfig.class);
             AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable,
+                instanceConfig.getRoutesHost(),
+                instanceConfig.getRoutesPort(),
+                instanceConfig.getConnectionsHealth(),
                 instanceConfig.getInstanceName(),
                 instanceConfig.getInstanceKey(),
                 instanceConfig.getServiceName(),
@@ -212,13 +216,13 @@ public class MiruWALMain {
                 amzaServiceConfig,
                 changes -> {
                 });
-            WALStorageDescriptor storageDescriptor = new WALStorageDescriptor(new PrimaryIndexDescriptor("berkeleydb", 0, false, null),
+            WALStorageDescriptor storageDescriptor = new WALStorageDescriptor(false, new PrimaryIndexDescriptor("berkeleydb", 0, false, null),
                 null, 1000, 1000);
 
-            AmzaClientProvider amzaClientProvider = new AmzaClientProvider(amzaService);
+            EmbeddedClientProvider clientProvider = new EmbeddedClientProvider(amzaService);
             AmzaWALUtil amzaWALUtil = new AmzaWALUtil(amzaService,
-                amzaClientProvider,
-                new PartitionProperties(storageDescriptor, amzaServiceConfig.getTakeFromFactor(), false));
+                clientProvider,
+                new PartitionProperties(storageDescriptor, Consistency.leader_quorum, true, amzaServiceConfig.getTakeFromFactor(), false));
 
             HttpDeliveryClientHealthProvider clientHealthProvider = new HttpDeliveryClientHealthProvider(instanceConfig.getInstanceKey(),
                 HttpRequestHelperUtils.buildRequestHelper(instanceConfig.getRoutesHost(), instanceConfig.getRoutesPort()),

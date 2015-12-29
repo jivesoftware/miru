@@ -6,8 +6,8 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.io.Files;
-import com.jivesoftware.os.amza.client.AmzaClientProvider;
 import com.jivesoftware.os.amza.service.AmzaService;
+import com.jivesoftware.os.amza.shared.EmbeddedClientProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceConfig;
@@ -67,12 +67,12 @@ public class AmzaClusterRegistryNGTest {
         acrc.setIndexDirectories(amzaIndexDir.getAbsolutePath());
         acrc.setTakeFromNeighborsIntervalInMillis(10);
         Deployable deployable = new Deployable(new String[0]);
-        AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable, 1, "instanceKey", "serviceName", "localhost", 10000, null, acrc,
+        AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable, "routesHost", 1, "connectionHealthPath",
+            1, "instanceKey", "serviceName", "localhost", 10000, null, acrc,
             rowsChanged -> {
             });
         registry = new AmzaClusterRegistry(amzaService,
-            new AmzaClientProvider(amzaService),
-            0,
+            new EmbeddedClientProvider(amzaService),
             10_000L,
             new JacksonJsonObjectTypeMarshaller<>(MiruSchema.class, mapper),
             3,
@@ -175,16 +175,16 @@ public class AmzaClusterRegistryNGTest {
         MiruTenantId tenantId1 = new MiruTenantId("tenant1".getBytes());
         MiruSchema schema1 = new MiruSchema.Builder("test1", 1)
             .setFieldDefinitions(new MiruFieldDefinition[]{
-                new MiruFieldDefinition(0, "a", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
-                new MiruFieldDefinition(1, "b", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE)
-            })
+            new MiruFieldDefinition(0, "a", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
+            new MiruFieldDefinition(1, "b", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE)
+        })
             .build();
         MiruTenantId tenantId2 = new MiruTenantId("tenant2".getBytes());
         MiruSchema schema2 = new MiruSchema.Builder("test2", 2)
             .setFieldDefinitions(new MiruFieldDefinition[]{
-                new MiruFieldDefinition(0, "c", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
-                new MiruFieldDefinition(1, "d", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE)
-            })
+            new MiruFieldDefinition(0, "c", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
+            new MiruFieldDefinition(1, "d", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE)
+        })
             .build();
 
         InMemoryRowColumnValueStore<MiruVoidByte, MiruTenantId, MiruSchemaColumnKey, MiruSchema> schemaRegistry = new InMemoryRowColumnValueStore<>();
@@ -210,15 +210,15 @@ public class AmzaClusterRegistryNGTest {
         MiruTenantId tenantId1 = new MiruTenantId("tenant1".getBytes());
         MiruSchema schema1 = new MiruSchema.Builder("test1", 1)
             .setFieldDefinitions(new MiruFieldDefinition[]{
-                new MiruFieldDefinition(0, "a", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
-                new MiruFieldDefinition(1, "b", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE)
-            })
+            new MiruFieldDefinition(0, "a", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
+            new MiruFieldDefinition(1, "b", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE)
+        })
             .build();
         MiruSchema schema2 = new MiruSchema.Builder("test1", 2)
             .setFieldDefinitions(new MiruFieldDefinition[]{
-                new MiruFieldDefinition(0, "c", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
-                new MiruFieldDefinition(1, "d", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE)
-            })
+            new MiruFieldDefinition(0, "c", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
+            new MiruFieldDefinition(1, "d", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE)
+        })
             .build();
 
         registry.registerSchema(tenantId1, schema1);

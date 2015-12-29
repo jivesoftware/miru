@@ -19,11 +19,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.collect.Maps;
-import com.jivesoftware.os.amza.client.AmzaClientProvider;
+import com.jivesoftware.os.amza.api.partition.PrimaryIndexDescriptor;
+import com.jivesoftware.os.amza.api.partition.WALStorageDescriptor;
 import com.jivesoftware.os.amza.service.AmzaService;
-import com.jivesoftware.os.amza.shared.partition.PrimaryIndexDescriptor;
+import com.jivesoftware.os.amza.shared.EmbeddedClientProvider;
 import com.jivesoftware.os.amza.shared.wal.WALKey;
-import com.jivesoftware.os.amza.shared.wal.WALStorageDescriptor;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceConfig;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceInitializer;
 import com.jivesoftware.os.miru.api.MiruStats;
@@ -188,6 +188,9 @@ public class MiruWriterMain {
 
             WriterAmzaServiceConfig miruAmzaServiceConfig = deployable.config(WriterAmzaServiceConfig.class);
             AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable,
+                instanceConfig.getRoutesHost(),
+                instanceConfig.getRoutesPort(),
+                instanceConfig.getConnectionsHealth(),
                 instanceConfig.getInstanceName(),
                 instanceConfig.getInstanceKey(),
                 instanceConfig.getServiceName(),
@@ -218,12 +221,12 @@ public class MiruWriterMain {
                 throw new IllegalStateException("Invalid activity WAL type: " + walConfig.getActivityWALType());
             }
 
-            WALStorageDescriptor storageDescriptor = new WALStorageDescriptor(new PrimaryIndexDescriptor("berkeleydb", 0, false, null),
+            WALStorageDescriptor storageDescriptor = new WALStorageDescriptor(false, new PrimaryIndexDescriptor("berkeleydb", 0, false, null),
                 null, 1000, 1000);
 
-            AmzaClientProvider amzaClientProvider = new AmzaClientProvider(amzaService);
+            EmbeddedClientProvider clientProvider = new EmbeddedClientProvider(amzaService);
             AmzaPartitionIdProvider amzaPartitionIdProvider = new AmzaPartitionIdProvider(amzaService,
-                amzaClientProvider,
+                clientProvider,
                 miruAmzaServiceConfig.getReplicateCursorQuorum(),
                 miruAmzaServiceConfig.getReplicateCursorTimeoutMillis(),
                 storageDescriptor,

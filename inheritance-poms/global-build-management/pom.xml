@@ -4,12 +4,12 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-repo-management</artifactId>
-        <version>0.767</version>
+        <version>0.768</version>
         <relativePath>../global-repo-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
     <artifactId>global-build-management</artifactId>
-    <version>0.767</version>
+    <version>0.768</version>
     <packaging>pom</packaging>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -18,7 +18,7 @@
         <rcvs-version>0.18</rcvs-version>
         <filer-version>0.92</filer-version>
         <routing-bird-version>0.34</routing-bird-version>
-        <amza-version>0.126</amza-version>
+        <amza-version>0.155</amza-version>
         <jackson-version>2.5.3</jackson-version>
         <jersey-version>2.13</jersey-version>
         <jetty-version>9.1.1.v20140108</jetty-version>
@@ -76,6 +76,11 @@
             </dependency>
             <dependency>
                 <groupId>com.jivesoftware.os.amza</groupId>
+                <artifactId>amza-api</artifactId>
+                <version>${amza-version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.jivesoftware.os.amza</groupId>
                 <artifactId>amza-berkeleydb-storage</artifactId>
                 <version>${amza-version}</version>
             </dependency>
@@ -100,7 +105,7 @@
             <dependency>
                 <groupId>com.jivesoftware.os.miru</groupId>
                 <artifactId>miru-reco</artifactId>
-                <version>0.767</version>
+                <version>0.768</version>
             </dependency>
             <dependency>
                 <groupId>commons-cli</groupId>

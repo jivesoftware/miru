@@ -6,17 +6,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Optional;
 import com.google.common.io.Files;
+import com.jivesoftware.os.amza.api.partition.PartitionProperties;
+import com.jivesoftware.os.amza.api.ring.RingHost;
+import com.jivesoftware.os.amza.api.ring.RingMember;
 import com.jivesoftware.os.amza.berkeleydb.BerkeleyDBWALIndexProvider;
-import com.jivesoftware.os.amza.client.AmzaClientProvider;
 import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.amza.service.AmzaServiceInitializer.AmzaServiceConfig;
 import com.jivesoftware.os.amza.service.EmbeddedAmzaServiceInitializer;
 import com.jivesoftware.os.amza.service.WALIndexProviderRegistry;
 import com.jivesoftware.os.amza.service.replication.TakeFailureListener;
 import com.jivesoftware.os.amza.service.storage.PartitionPropertyMarshaller;
-import com.jivesoftware.os.amza.shared.partition.PartitionProperties;
-import com.jivesoftware.os.amza.shared.ring.RingHost;
-import com.jivesoftware.os.amza.shared.ring.RingMember;
+import com.jivesoftware.os.amza.service.storage.binary.RowIOProvider;
+import com.jivesoftware.os.amza.shared.EmbeddedClientProvider;
 import com.jivesoftware.os.amza.shared.stats.AmzaStats;
 import com.jivesoftware.os.amza.shared.take.AvailableRowsTaker;
 import com.jivesoftware.os.amza.shared.take.RowsTakerFactory;
@@ -111,10 +112,6 @@ public class MiruWALUIServiceNGTest {
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         mapper.configure(SerializationFeature.INDENT_OUTPUT, false);
 
-        WALIndexProviderRegistry indexProviderRegistry = new WALIndexProviderRegistry();
-        String[] walIndexDirs = new String[]{amzaIndexDir.getAbsolutePath()};
-        indexProviderRegistry.register("berkeleydb", new BerkeleyDBWALIndexProvider(walIndexDirs, walIndexDirs.length));
-
         AmzaStats amzaStats = new AmzaStats();
         AvailableRowsTaker availableRowsTaker = new HttpAvailableRowsTaker(amzaStats);
         RowsTakerFactory rowsTakerFactory = () -> new HttpRowsTaker(amzaStats);
@@ -152,7 +149,10 @@ public class MiruWALUIServiceNGTest {
             orderIdProvider,
             idPacker,
             partitionPropertyMarshaller,
-            indexProviderRegistry,
+            (WALIndexProviderRegistry indexProviderRegistry1, RowIOProvider<?> ephemeralRowIOProvider, RowIOProvider<?> persistentRowIOProvider) -> {
+                String[] walIndexDirs = new String[]{amzaIndexDir.getAbsolutePath()};
+                indexProviderRegistry1.register("berkeleydb", new BerkeleyDBWALIndexProvider(walIndexDirs, walIndexDirs.length), persistentRowIOProvider);
+            },
             availableRowsTaker,
             rowsTakerFactory,
             Optional.<TakeFailureListener>absent(),
@@ -161,10 +161,9 @@ public class MiruWALUIServiceNGTest {
 
         amzaService.start();
 
-        AmzaClientProvider amzaClientProvider = new AmzaClientProvider(amzaService);
+        EmbeddedClientProvider clientProvider = new EmbeddedClientProvider(amzaService);
         MiruClusterRegistry clusterRegistry = new AmzaClusterRegistry(amzaService,
-            amzaClientProvider,
-            0,
+            clientProvider,
             10_000L,
             new JacksonJsonObjectTypeMarshaller<>(MiruSchema.class, mapper),
             3,

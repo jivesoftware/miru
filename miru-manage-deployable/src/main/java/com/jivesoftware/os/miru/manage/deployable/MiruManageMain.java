@@ -18,9 +18,9 @@ package com.jivesoftware.os.miru.manage.deployable;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
-import com.jivesoftware.os.amza.client.AmzaClientProvider;
 import com.jivesoftware.os.amza.service.AmzaService;
-import com.jivesoftware.os.amza.service.storage.PartitionProvider;
+import com.jivesoftware.os.amza.service.storage.PartitionCreator;
+import com.jivesoftware.os.amza.shared.EmbeddedClientProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
@@ -117,16 +117,16 @@ public class MiruManageMain {
             HealthFactory.initialize(deployable::config,
                 new HealthCheckRegistry() {
 
-                    @Override
-                    public void register(HealthChecker healthChecker) {
-                        deployable.addHealthCheck(healthChecker);
-                    }
+                @Override
+                public void register(HealthChecker healthChecker) {
+                    deployable.addHealthCheck(healthChecker);
+                }
 
-                    @Override
-                    public void unregister(HealthChecker healthChecker) {
-                        throw new UnsupportedOperationException("Not supported yet.");
-                    }
-                });
+                @Override
+                public void unregister(HealthChecker healthChecker) {
+                    throw new UnsupportedOperationException("Not supported yet.");
+                }
+            });
             deployable.addErrorHealthChecks();
             deployable.addManageInjectables(HasUI.class, new HasUI(Arrays.asList(
                 new HasUI.UI("Reset Errors", "manage", "/manage/resetErrors"),
@@ -181,7 +181,7 @@ public class MiruManageMain {
 
             TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
             TenantAwareHttpClient<String> walHttpClient = tenantRoutingHttpClientInitializer.initialize(tenantRoutingProvider
-                    .getConnections("miru-wal", "main"),
+                .getConnections("miru-wal", "main"),
                 clientHealthProvider,
                 10, 10_000); // TODO expose to conf
 
@@ -200,6 +200,9 @@ public class MiruManageMain {
 
             AmzaClusterRegistryConfig amzaClusterRegistryConfig = deployable.config(AmzaClusterRegistryConfig.class);
             AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable,
+                instanceConfig.getRoutesHost(),
+                instanceConfig.getRoutesPort(),
+                instanceConfig.getConnectionsHealth(),
                 instanceConfig.getInstanceName(),
                 instanceConfig.getInstanceKey(),
                 instanceConfig.getServiceName(),
@@ -210,10 +213,9 @@ public class MiruManageMain {
                 rowsChanged -> {
                 });
 
-            AmzaClientProvider amzaClientProvider = new AmzaClientProvider(amzaService);
+            EmbeddedClientProvider clientProvider = new EmbeddedClientProvider(amzaService);
             AmzaClusterRegistry clusterRegistry = new AmzaClusterRegistry(amzaService,
-                amzaClientProvider,
-                amzaClusterRegistryConfig.getReplicateTakeQuorum(),
+                clientProvider,
                 amzaClusterRegistryConfig.getReplicateTimeoutMillis(),
                 new JacksonJsonObjectTypeMarshaller<>(MiruSchema.class, mapper),
                 registryConfig.getDefaultNumberOfReplicas(),
@@ -221,7 +223,7 @@ public class MiruManageMain {
                 registryConfig.getDefaultTopologyIsIdleAfterMillis(),
                 registryConfig.getDefaultTopologyDestroyAfterMillis(),
                 amzaClusterRegistryConfig.getTakeFromFactor());
-            amzaService.watch(PartitionProvider.RING_INDEX.getPartitionName(), clusterRegistry);
+            amzaService.watch(PartitionCreator.RING_INDEX.getPartitionName(), clusterRegistry);
 
             MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
 

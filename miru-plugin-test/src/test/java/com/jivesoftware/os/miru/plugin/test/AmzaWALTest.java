@@ -5,14 +5,15 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
-import com.jivesoftware.os.amza.client.AmzaClientProvider;
+import com.jivesoftware.os.amza.api.Consistency;
+import com.jivesoftware.os.amza.api.DeltaOverCapacityException;
+import com.jivesoftware.os.amza.api.partition.PartitionName;
+import com.jivesoftware.os.amza.api.partition.PartitionProperties;
+import com.jivesoftware.os.amza.api.partition.PrimaryIndexDescriptor;
+import com.jivesoftware.os.amza.api.partition.WALStorageDescriptor;
 import com.jivesoftware.os.amza.service.AmzaService;
-import com.jivesoftware.os.amza.service.storage.delta.DeltaOverCapacityException;
-import com.jivesoftware.os.amza.shared.AmzaPartitionAPI;
-import com.jivesoftware.os.amza.shared.partition.PartitionName;
-import com.jivesoftware.os.amza.shared.partition.PartitionProperties;
-import com.jivesoftware.os.amza.shared.partition.PrimaryIndexDescriptor;
-import com.jivesoftware.os.amza.shared.wal.WALStorageDescriptor;
+import com.jivesoftware.os.amza.shared.EmbeddedClientProvider;
+import com.jivesoftware.os.amza.shared.Partition;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceConfig;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceInitializer;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
@@ -64,14 +65,14 @@ public class AmzaWALTest {
         HealthFactory.initialize(
             BindInterfaceToConfiguration::bindDefault,
             new HealthCheckRegistry() {
-                @Override
-                public void register(HealthChecker healthChecker) {
-                }
+            @Override
+            public void register(HealthChecker healthChecker) {
+            }
 
-                @Override
-                public void unregister(HealthChecker healthChecker) {
-                }
-            });
+            @Override
+            public void unregister(HealthChecker healthChecker) {
+            }
+        });
 
         MiruServiceConfig config = BindInterfaceToConfiguration.bindDefault(MiruServiceConfig.class);
         config.setDefaultFailAfterNMillis(TimeUnit.HOURS.toMillis(1));
@@ -94,14 +95,16 @@ public class AmzaWALTest {
         acrc.setIndexDirectories(amzaIndexDir.getAbsolutePath());
         acrc.setMaxUpdatesBeforeDeltaStripeCompaction(100_000);
         Deployable deployable = new Deployable(new String[0]);
-        AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable, 1, "instanceKey", "serviceName", "localhost", 10000, null, acrc,
+        AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable, "routesHost", 1, "connectionHealthPath", 1, "instanceKey",
+            "serviceName", "localhost", 10000, null, acrc,
             rowsChanged -> {
             });
-        AmzaClientProvider amzaClientProvider = new AmzaClientProvider(amzaService);
-        WALStorageDescriptor storageDescriptor = new WALStorageDescriptor(new PrimaryIndexDescriptor("berkeleydb", 0, false, null),
+        EmbeddedClientProvider amzaClientProvider = new EmbeddedClientProvider(amzaService);
+        WALStorageDescriptor storageDescriptor = new WALStorageDescriptor(false, new PrimaryIndexDescriptor("berkeleydb", 0, false, null),
             null, 1000, 1000);
 
-        AmzaWALUtil amzaWALUtil = new AmzaWALUtil(amzaService, amzaClientProvider, new PartitionProperties(storageDescriptor, 0, false));
+        AmzaWALUtil amzaWALUtil = new AmzaWALUtil(amzaService, amzaClientProvider,
+            new PartitionProperties(storageDescriptor, Consistency.leader_quorum, true, 0, false));
         MiruActivityWALWriter activityWALWriter = new AmzaActivityWALWriter(amzaWALUtil, 0, 0, mapper);
         MiruActivityWALReader<AmzaCursor, AmzaSipCursor> activityWALReader = new AmzaActivityWALReader(amzaWALUtil, mapper);
 
@@ -142,12 +145,12 @@ public class AmzaWALTest {
         //amzaService.compactAllTombstones();
 
         for (PartitionName partitionName : amzaService.getPartitionNames()) {
-            AmzaPartitionAPI partition = amzaService.getPartition(partitionName);
+            Partition partition = amzaService.getPartition(partitionName);
             System.out.println("Count: " + partitionName + " = " + partition.count());
         }
 
         byte[] partitionNameBytes = "activityWAL-test-0".getBytes(Charsets.UTF_8);
-        AmzaPartitionAPI partition = amzaService.getPartition(new PartitionName(false, partitionNameBytes, partitionNameBytes));
+        Partition partition = amzaService.getPartition(new PartitionName(false, partitionNameBytes, partitionNameBytes));
         System.out.println("Count: " + partition.count());
         //assertEquals(partition.count(), batchSize * numBatches);
 

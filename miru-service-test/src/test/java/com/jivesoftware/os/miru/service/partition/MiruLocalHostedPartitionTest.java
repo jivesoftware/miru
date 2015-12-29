@@ -7,8 +7,8 @@ import com.google.common.collect.Interners;
 import com.google.common.collect.Lists;
 import com.google.common.hash.Hashing;
 import com.google.common.io.Files;
-import com.jivesoftware.os.amza.client.AmzaClientProvider;
 import com.jivesoftware.os.amza.service.AmzaService;
+import com.jivesoftware.os.amza.shared.EmbeddedClientProvider;
 import com.jivesoftware.os.filer.chunk.store.transaction.TxCogs;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
@@ -164,14 +164,14 @@ public class MiruLocalHostedPartitionTest {
         HealthFactory.initialize(
             BindInterfaceToConfiguration::bindDefault,
             new HealthCheckRegistry() {
-                @Override
-                public void register(HealthChecker healthChecker) {
-                }
+            @Override
+            public void register(HealthChecker healthChecker) {
+            }
 
-                @Override
-                public void unregister(HealthChecker healthChecker) {
-                }
-            });
+            @Override
+            public void unregister(HealthChecker healthChecker) {
+            }
+        });
 
         MiruServiceConfig config = mock(MiruServiceConfig.class);
         when(config.getBitsetBufferSize()).thenReturn(32);
@@ -240,9 +240,9 @@ public class MiruLocalHostedPartitionTest {
             termComposer,
             activityInternExtern,
             ImmutableMap.<MiruBackingStorage, MiruChunkAllocator>builder()
-                .put(MiruBackingStorage.memory, hybridContextAllocator)
-                .put(MiruBackingStorage.disk, diskContextAllocator)
-                .build(),
+            .put(MiruBackingStorage.memory, hybridContextAllocator)
+            .put(MiruBackingStorage.disk, diskContextAllocator)
+            .build(),
             new RCVSSipIndexMarshaller(),
             new MiruTempDirectoryResourceLocator(),
             config.getPartitionAuthzCacheSize(),
@@ -278,15 +278,15 @@ public class MiruLocalHostedPartitionTest {
         acrc.setAmzaDiscoveryGroup("225.5.6.26");
         acrc.setAmzaDiscoveryPort(1226);
         Deployable deployable = new Deployable(new String[0]);
-        AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable, 1, "instanceKey", "serviceName", "localhost", 10000, null, acrc,
+        AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable, "routesHosts", 1, "connectionHealthPath",
+            1, "instanceKey", "serviceName", "localhost", 10000, null, acrc,
             rowsChanged -> {
             });
 
-        AmzaClientProvider amzaClientProvider = new AmzaClientProvider(amzaService);
+        EmbeddedClientProvider clientProvider = new EmbeddedClientProvider(amzaService);
 
         clusterRegistry = new AmzaClusterRegistry(amzaService,
-            amzaClientProvider,
-            0,
+            clientProvider,
             10_000L,
             new JacksonJsonObjectTypeMarshaller<>(MiruSchema.class, mapper),
             3,
@@ -370,7 +370,6 @@ public class MiruLocalHostedPartitionTest {
         assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.disk);
         assertTrue(localHostedPartition.rebuild());
 
-
         assertEquals(localHostedPartition.getState(), MiruPartitionState.obsolete);
         assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.disk);
         waitForRef(rebuildIndexRunnable).run();
@@ -383,7 +382,6 @@ public class MiruLocalHostedPartitionTest {
         assertFalse(localHostedPartition.needsToMigrate());
         assertEquals(localHostedPartition.getState(), MiruPartitionState.online);
         assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.disk);
-
 
     }
 
