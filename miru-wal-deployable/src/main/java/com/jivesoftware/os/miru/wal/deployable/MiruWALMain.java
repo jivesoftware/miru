@@ -22,6 +22,7 @@ import com.jivesoftware.os.amza.api.Consistency;
 import com.jivesoftware.os.amza.api.partition.PartitionProperties;
 import com.jivesoftware.os.amza.api.partition.PrimaryIndexDescriptor;
 import com.jivesoftware.os.amza.api.partition.WALStorageDescriptor;
+import com.jivesoftware.os.amza.api.stream.RowType;
 import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.amza.shared.EmbeddedClientProvider;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceConfig;
@@ -224,7 +225,12 @@ public class MiruWALMain {
             EmbeddedClientProvider clientProvider = new EmbeddedClientProvider(amzaService);
             AmzaWALUtil amzaWALUtil = new AmzaWALUtil(amzaService,
                 clientProvider,
-                new PartitionProperties(storageDescriptor, Consistency.leader_quorum, true, amzaServiceConfig.getTakeFromFactor(), false));
+                new PartitionProperties(storageDescriptor,
+                    Consistency.leader_quorum,
+                    true,
+                    amzaServiceConfig.getTakeFromFactor(),
+                    false,
+                    RowType.snappy_primary));
 
             HttpDeliveryClientHealthProvider clientHealthProvider = new HttpDeliveryClientHealthProvider(instanceConfig.getInstanceKey(),
                 HttpRequestHelperUtils.buildRequestHelper(instanceConfig.getRoutesHost(), instanceConfig.getRoutesPort()),
