@@ -16,6 +16,7 @@ import com.jivesoftware.os.amza.api.partition.PartitionName;
 import com.jivesoftware.os.amza.api.partition.PartitionProperties;
 import com.jivesoftware.os.amza.api.partition.PrimaryIndexDescriptor;
 import com.jivesoftware.os.amza.api.partition.WALStorageDescriptor;
+import com.jivesoftware.os.amza.api.stream.RowType;
 import com.jivesoftware.os.amza.api.take.TakeCursors;
 import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.amza.service.storage.PartitionCreator;
@@ -144,7 +145,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
                 amzaService.getRingWriter().ensureMaximalRing(CLUSTER_REGISTRY_RING_NAME);
                 PartitionName partitionName = new PartitionName(false, CLUSTER_REGISTRY_RING_NAME, name.getBytes(Charsets.UTF_8));
                 amzaService.setPropertiesIfAbsent(partitionName,
-                    new PartitionProperties(amzaStorageDescriptor, consistency, requiresConsistency, takeFromFactor, false));
+                    new PartitionProperties(amzaStorageDescriptor, consistency, requiresConsistency, takeFromFactor, false, RowType.primary));
                 amzaService.awaitOnline(partitionName, 10_000L); //TODO config
                 return embeddedClientProvider.getClient(partitionName);
             } catch (Exception e) {
