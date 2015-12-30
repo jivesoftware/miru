@@ -60,7 +60,7 @@ public class AmzaWALTest {
     MiruTenantId tenantId = new MiruTenantId("test".getBytes());
     MiruPartitionId partitionId = MiruPartitionId.of(0);
 
-    @Test(enabled = false)
+    @Test(enabled = false, description = "Need to factor out ring size of WAL")
     public void testStreamWAL() throws Exception {
 
         HealthFactory.initialize(
