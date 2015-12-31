@@ -38,15 +38,21 @@ public class AmzaWALUtil {
 
     private final AmzaService amzaService;
     private final EmbeddedClientProvider clientProvider;
-    private final PartitionProperties defaultProperties;
+    private final PartitionProperties activityProperties;
+    private final PartitionProperties readTrackingProperties;
+    private final PartitionProperties lookupProperties;
     private final Map<PartitionName, EmbeddedClient> clientMap = Maps.newConcurrentMap();
 
     public AmzaWALUtil(AmzaService amzaService,
         EmbeddedClientProvider embeddedClientProvider,
-        PartitionProperties defaultProperties) {
+        PartitionProperties activityProperties,
+        PartitionProperties readTrackingProperties,
+        PartitionProperties lookupProperties) {
         this.amzaService = amzaService;
         this.clientProvider = embeddedClientProvider;
-        this.defaultProperties = defaultProperties;
+        this.activityProperties = activityProperties;
+        this.readTrackingProperties = readTrackingProperties;
+        this.lookupProperties = lookupProperties;
     }
 
     public HostPort[] getActivityRoutingGroup(MiruTenantId tenantId,
@@ -54,7 +60,7 @@ public class AmzaWALUtil {
         Optional<PartitionProperties> regionProperties) throws Exception {
         PartitionName partitionName = getActivityPartitionName(tenantId, partitionId);
         amzaService.getRingWriter().ensureSubRing(partitionName.getRingName(), 3); //TODO config numberOfReplicas
-        amzaService.setPropertiesIfAbsent(partitionName, regionProperties.or(defaultProperties));
+        amzaService.setPropertiesIfAbsent(partitionName, regionProperties.or(activityProperties));
         AmzaService.AmzaPartitionRoute partitionRoute = amzaService.getPartitionRoute(partitionName);
         if (partitionRoute.leader != null) {
             return new HostPort[] { new HostPort(partitionRoute.leader.ringHost.getHost(), partitionRoute.leader.ringHost.getPort()) };
@@ -68,7 +74,7 @@ public class AmzaWALUtil {
     public HostPort[] getReadTrackingRoutingGroup(MiruTenantId tenantId, Optional<PartitionProperties> partitionProperties) throws Exception {
         PartitionName partitionName = getReadTrackingPartitionName(tenantId);
         amzaService.getRingWriter().ensureSubRing(partitionName.getRingName(), 3); //TODO config numberOfReplicas
-        amzaService.setPropertiesIfAbsent(partitionName, partitionProperties.or(defaultProperties));
+        amzaService.setPropertiesIfAbsent(partitionName, partitionProperties.or(readTrackingProperties));
         AmzaService.AmzaPartitionRoute partitionRoute = amzaService.getPartitionRoute(partitionName);
         if (partitionRoute.leader != null) {
             return new HostPort[] { new HostPort(partitionRoute.leader.ringHost.getHost(), partitionRoute.leader.ringHost.getPort()) };
@@ -140,10 +146,6 @@ public class AmzaWALUtil {
         return getClient(getReadTrackingPartitionName(tenantId));
     }
 
-    public EmbeddedClient getLookupClient(MiruTenantId tenantId) throws Exception {
-        return getClient(getLookupPartitionName(tenantId));
-    }
-
     public EmbeddedClient getLookupTenantsClient() throws Exception {
         return getOrCreateMaximalClient(LOOKUP_TENANTS_PARTITION_NAME, Optional.<PartitionProperties>absent());
     }
@@ -156,7 +158,7 @@ public class AmzaWALUtil {
         return clientMap.computeIfAbsent(partitionName, key -> {
             try {
                 amzaService.getRingWriter().ensureMaximalRing(partitionName.getRingName());
-                amzaService.setPropertiesIfAbsent(partitionName, partitionProperties.or(defaultProperties));
+                amzaService.setPropertiesIfAbsent(partitionName, partitionProperties.or(lookupProperties));
                 amzaService.awaitOnline(partitionName, 10_000); //TODO config
                 return clientProvider.getClient(partitionName);
             } catch (Exception e) {
