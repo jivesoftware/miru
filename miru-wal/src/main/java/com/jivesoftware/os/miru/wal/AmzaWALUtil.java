@@ -61,7 +61,7 @@ public class AmzaWALUtil {
         PartitionName partitionName = getActivityPartitionName(tenantId, partitionId);
         amzaService.getRingWriter().ensureSubRing(partitionName.getRingName(), 3); //TODO config numberOfReplicas
         amzaService.setPropertiesIfAbsent(partitionName, regionProperties.or(activityProperties));
-        AmzaService.AmzaPartitionRoute partitionRoute = amzaService.getPartitionRoute(partitionName);
+        AmzaService.AmzaPartitionRoute partitionRoute = amzaService.getPartitionRoute(partitionName, 10_000); //TODO config timeout
         if (partitionRoute.leader != null) {
             return new HostPort[] { new HostPort(partitionRoute.leader.ringHost.getHost(), partitionRoute.leader.ringHost.getPort()) };
         } else {
@@ -75,7 +75,7 @@ public class AmzaWALUtil {
         PartitionName partitionName = getReadTrackingPartitionName(tenantId);
         amzaService.getRingWriter().ensureSubRing(partitionName.getRingName(), 3); //TODO config numberOfReplicas
         amzaService.setPropertiesIfAbsent(partitionName, partitionProperties.or(readTrackingProperties));
-        AmzaService.AmzaPartitionRoute partitionRoute = amzaService.getPartitionRoute(partitionName);
+        AmzaService.AmzaPartitionRoute partitionRoute = amzaService.getPartitionRoute(partitionName, 10_000); //TODO config timeout
         if (partitionRoute.leader != null) {
             return new HostPort[] { new HostPort(partitionRoute.leader.ringHost.getHost(), partitionRoute.leader.ringHost.getPort()) };
         } else {

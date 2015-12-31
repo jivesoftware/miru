@@ -16,6 +16,7 @@ import com.jivesoftware.os.miru.api.wal.RCVSCursor;
 import com.jivesoftware.os.miru.api.wal.RCVSSipCursor;
 import com.jivesoftware.os.miru.api.wal.SipAndLastSeen;
 import com.jivesoftware.os.miru.wal.MiruWALDirector;
+import com.jivesoftware.os.miru.wal.deployable.MiruWALNotInitializedException;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.shared.HostPort;
@@ -142,6 +143,10 @@ public class RCVSWALEndpoints {
             walDirector.sanitizeActivityWAL(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), MiruPartitionId.of(partitionId));
             stats.ingressed("/sanitize/activity/wal/" + tenantId + "/" + partitionId, 1, System.currentTimeMillis() - start);
             return responseHelper.jsonResponse("ok");
+        } catch (MiruWALNotInitializedException x) {
+            log.error("WAL not initialized calling sanitizeActivityWAL({}, {})",
+                new Object[] { tenantId, partitionId }, x);
+            return responseHelper.errorResponse(Response.Status.SERVICE_UNAVAILABLE, "WAL not initialized", x);
         } catch (Exception x) {
             log.error("Failed calling sanitizeActivityWAL({}, {})", new Object[] { tenantId, partitionId }, x);
             return responseHelper.errorResponse("Server error", x);
@@ -158,6 +163,10 @@ public class RCVSWALEndpoints {
             walDirector.sanitizeActivitySipWAL(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), MiruPartitionId.of(partitionId));
             stats.ingressed("/sanitize/sip/wal/" + tenantId + "/" + partitionId, 1, System.currentTimeMillis() - start);
             return responseHelper.jsonResponse("ok");
+        } catch (MiruWALNotInitializedException x) {
+            log.error("WAL not initialized calling sanitizeActivitySipWAL({}, {})",
+                new Object[] { tenantId, partitionId }, x);
+            return responseHelper.errorResponse(Response.Status.SERVICE_UNAVAILABLE, "WAL not initialized", x);
         } catch (Exception x) {
             log.error("Failed calling sanitizeActivitySipWAL({}, {})", new Object[] { tenantId, partitionId }, x);
             return responseHelper.errorResponse("Server error", x);
@@ -191,6 +200,10 @@ public class RCVSWALEndpoints {
             walDirector.writeActivity(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), MiruPartitionId.of(partitionId), partitionedActivities);
             stats.ingressed("/write/activities/" + tenantId, 1, System.currentTimeMillis() - start);
             return responseHelper.jsonResponse("ok");
+        } catch (MiruWALNotInitializedException x) {
+            log.error("WAL not initialized calling writeActivity({},count:{})",
+                new Object[] { tenantId, partitionedActivities != null ? partitionedActivities.size() : null }, x);
+            return responseHelper.errorResponse(Response.Status.SERVICE_UNAVAILABLE, "WAL not initialized", x);
         } catch (Exception x) {
             log.error("Failed calling writeActivity({},count:{})",
                 new Object[] { tenantId, partitionedActivities != null ? partitionedActivities.size() : null }, x);
@@ -211,6 +224,10 @@ public class RCVSWALEndpoints {
                 partitionedActivities);
             stats.ingressed("/write/reads/" + tenantId, 1, System.currentTimeMillis() - start);
             return responseHelper.jsonResponse("ok");
+        } catch (MiruWALNotInitializedException x) {
+            log.error("WAL not initialized calling writeReadTracking({},count:{})",
+                new Object[] { tenantId, partitionedActivities != null ? partitionedActivities.size() : null }, x);
+            return responseHelper.errorResponse(Response.Status.SERVICE_UNAVAILABLE, "WAL not initialized", x);
         } catch (Exception x) {
             log.error("Failed calling writeReadTracking({},{},count:{})",
                 new Object[] { tenantId, streamId, partitionedActivities != null ? partitionedActivities.size() : null }, x);
@@ -245,6 +262,10 @@ public class RCVSWALEndpoints {
                 MiruPartitionId.of(partitionId), writerId);
             stats.ingressed("/cursor/writer/" + tenantId + "/" + writerId, 1, System.currentTimeMillis() - start);
             return responseHelper.jsonResponse(cursor);
+        } catch (MiruWALNotInitializedException x) {
+            log.error("WAL not initialized calling getCursorForWriterId({},{},{})",
+                new Object[] { tenantId, partitionId, writerId }, x);
+            return responseHelper.errorResponse(Response.Status.SERVICE_UNAVAILABLE, "WAL not initialized", x);
         } catch (Exception x) {
             log.error("Failed calling getCursorForWriterId({},{},{})", new Object[] { tenantId, partitionId, writerId }, x);
             return responseHelper.errorResponse("Server error", x);
@@ -262,6 +283,10 @@ public class RCVSWALEndpoints {
                 MiruPartitionId.of(partitionId));
             stats.ingressed("/activity/wal/status/" + tenantId, 1, System.currentTimeMillis() - start);
             return responseHelper.jsonResponse(partitionStatus);
+        } catch (MiruWALNotInitializedException x) {
+            log.error("WAL not initialized calling getActivityWALStatus({},{})",
+                new Object[] { tenantId, partitionId }, x);
+            return responseHelper.errorResponse(Response.Status.SERVICE_UNAVAILABLE, "WAL not initialized", x);
         } catch (Exception x) {
             log.error("Failed calling getActivityWALStatus({},{})", new Object[] { tenantId, partitionId }, x);
             return responseHelper.errorResponse("Server error", x);
@@ -278,6 +303,10 @@ public class RCVSWALEndpoints {
             long timestamp = walDirector.oldestActivityClockTimestamp(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), MiruPartitionId.of(partitionId));
             stats.ingressed("/oldest/activity/" + tenantId + "/" + partitionId, 1, System.currentTimeMillis() - start);
             return responseHelper.jsonResponse(timestamp);
+        } catch (MiruWALNotInitializedException x) {
+            log.error("WAL not initialized calling oldestActivityClockTimestamp({},{})",
+                new Object[] { tenantId, partitionId }, x);
+            return responseHelper.errorResponse(Response.Status.SERVICE_UNAVAILABLE, "WAL not initialized", x);
         } catch (Exception x) {
             log.error("Failed calling oldestActivityClockTimestamp({},{})", new Object[] { tenantId, partitionId }, x);
             return responseHelper.errorResponse("Server error", x);
@@ -298,6 +327,10 @@ public class RCVSWALEndpoints {
                 timestamps);
             stats.ingressed("/versioned/entries/" + tenantId + "/" + partitionId, 1, System.currentTimeMillis() - start);
             return responseHelper.jsonResponse(versionedEntries);
+        } catch (MiruWALNotInitializedException x) {
+            log.error("WAL not initialized calling getVersionedEntries({},{},count:{})",
+                new Object[] { tenantId, partitionId, timestamps != null ? timestamps.length : null }, x);
+            return responseHelper.errorResponse(Response.Status.SERVICE_UNAVAILABLE, "WAL not initialized", x);
         } catch (Exception x) {
             log.error("Failed calling getVersionedEntries({},{},count:{})",
                 new Object[] { tenantId, partitionId, timestamps != null ? timestamps.length : null }, x);
@@ -320,6 +353,10 @@ public class RCVSWALEndpoints {
                 MiruPartitionId.of(partitionId), sipAndLastSeen.sipCursor, sipAndLastSeen.lastSeen, batchSize);
             stats.ingressed("/sip/activity/" + tenantId + "/" + partitionId + "/" + batchSize, 1, System.currentTimeMillis() - start);
             return responseHelper.jsonResponse(sipActivity);
+        } catch (MiruWALNotInitializedException x) {
+            log.error("WAL not initialized calling sipActivity({},{},{},{})",
+                new Object[] { tenantId, partitionId, batchSize, sipAndLastSeen }, x);
+            return responseHelper.errorResponse(Response.Status.SERVICE_UNAVAILABLE, "WAL not initialized", x);
         } catch (Exception x) {
             log.error("Failed calling sipActivity({},{},{},{})", new Object[] { tenantId, partitionId, batchSize, sipAndLastSeen }, x);
             return responseHelper.errorResponse("Server error", x);
@@ -341,6 +378,10 @@ public class RCVSWALEndpoints {
                 MiruPartitionId.of(partitionId), cursor, batchSize);
             stats.ingressed("/activity/" + tenantId + "/" + partitionId + "/" + batchSize, 1, System.currentTimeMillis() - start);
             return responseHelper.jsonResponse(activity);
+        } catch (MiruWALNotInitializedException x) {
+            log.error("WAL not initialized calling getActivity({},{},{},{})",
+                new Object[] { tenantId, partitionId, batchSize, cursor }, x);
+            return responseHelper.errorResponse(Response.Status.SERVICE_UNAVAILABLE, "WAL not initialized", x);
         } catch (Exception x) {
             log.error("Failed calling getActivity({},{},{},{})", new Object[] { tenantId, partitionId, batchSize, cursor }, x);
             return responseHelper.errorResponse("Server error", x);
@@ -362,6 +403,10 @@ public class RCVSWALEndpoints {
                 new MiruStreamId(streamId.getBytes(Charsets.UTF_8)), cursor, oldestEventId, batchSize);
             stats.ingressed("/read/" + tenantId + "/" + streamId + "/" + batchSize, 1, System.currentTimeMillis() - start);
             return responseHelper.jsonResponse(read);
+        } catch (MiruWALNotInitializedException x) {
+            log.error("WAL not initialized calling getRead({},{},{},{},{})",
+                new Object[] { tenantId, streamId, oldestEventId, batchSize, cursor }, x);
+            return responseHelper.errorResponse(Response.Status.SERVICE_UNAVAILABLE, "WAL not initialized", x);
         } catch (Exception x) {
             log.error("Failed calling getRead({},{},{},{},{})", new Object[] { tenantId, streamId, oldestEventId, batchSize, cursor }, x);
             return responseHelper.errorResponse("Server error", x);
