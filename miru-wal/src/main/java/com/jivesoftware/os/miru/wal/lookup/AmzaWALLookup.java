@@ -26,20 +26,17 @@ public class AmzaWALLookup implements MiruWALLookup {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
-    private static final MiruTenantId FULLY_REPAIRED_TENANT = new MiruTenantId(new byte[]{0});
+    private static final MiruTenantId FULLY_REPAIRED_TENANT = new MiruTenantId(new byte[] { 0 });
 
     private final AmzaWALUtil amzaWALUtil;
-    private final int replicateLookupQuorum;
     private final long replicateLookupTimeoutMillis;
 
     private final Map<TenantAndPartition, Boolean> knownLookup = Maps.newConcurrentMap();
     private final AtomicBoolean ready = new AtomicBoolean(false);
 
     public AmzaWALLookup(AmzaWALUtil amzaWALUtil,
-        int replicateLookupQuorum,
         long replicateLookupTimeoutMillis) {
         this.amzaWALUtil = amzaWALUtil;
-        this.replicateLookupQuorum = replicateLookupQuorum;
         this.replicateLookupTimeoutMillis = replicateLookupTimeoutMillis;
     }
 
@@ -49,11 +46,11 @@ public class AmzaWALLookup implements MiruWALLookup {
         knownLookup.computeIfAbsent(new TenantAndPartition(tenantId, partitionId), tenantAndPartition -> {
             try {
                 LOG.inc("add>set");
-                amzaWALUtil.getLookupTenantsClient().commit(Consistency.leader_quorum,
+                amzaWALUtil.getLookupTenantsClient().commit(Consistency.quorum,
                     null,
                     new AmzaPartitionUpdates().set(tenantId.getBytes(), null),
                     replicateLookupTimeoutMillis, TimeUnit.MILLISECONDS);
-                amzaWALUtil.getLookupPartitionsClient().commit(Consistency.leader_quorum,
+                amzaWALUtil.getLookupPartitionsClient().commit(Consistency.quorum,
                     null,
                     new AmzaPartitionUpdates().set(amzaWALUtil.toPartitionsKey(tenantId, partitionId), null),
                     replicateLookupTimeoutMillis, TimeUnit.MILLISECONDS);
@@ -67,7 +64,7 @@ public class AmzaWALLookup implements MiruWALLookup {
     @Override
     public void markRepaired() throws Exception {
         LOG.inc("markRepaired");
-        amzaWALUtil.getLookupTenantsClient().commit(Consistency.leader_quorum,
+        amzaWALUtil.getLookupTenantsClient().commit(Consistency.quorum,
             null,
             new AmzaPartitionUpdates().set(FULLY_REPAIRED_TENANT.getBytes(), FilerIO.longBytes(System.currentTimeMillis())),
             replicateLookupTimeoutMillis, TimeUnit.MILLISECONDS);
@@ -175,12 +172,12 @@ public class AmzaWALLookup implements MiruWALLookup {
                     return true;
                 }
 
-                byte[] value = amzaWALUtil.getLookupTenantsClient().getValue(Consistency.leader_quorum, null, FULLY_REPAIRED_TENANT.getBytes());
+                byte[] value = amzaWALUtil.getLookupTenantsClient().getValue(Consistency.quorum, null, FULLY_REPAIRED_TENANT.getBytes());
                 if (value != null) {
                     ready.set(true);
                 } else {
                     repairCallback.call();
-                    value = amzaWALUtil.getLookupTenantsClient().getValue(Consistency.leader_quorum, null, FULLY_REPAIRED_TENANT.getBytes());
+                    value = amzaWALUtil.getLookupTenantsClient().getValue(Consistency.quorum, null, FULLY_REPAIRED_TENANT.getBytes());
                     if (value != null) {
                         ready.set(true);
                     } else {
