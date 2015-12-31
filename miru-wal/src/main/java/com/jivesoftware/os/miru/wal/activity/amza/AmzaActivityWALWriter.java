@@ -24,18 +24,15 @@ import java.util.concurrent.TimeUnit;
 public class AmzaActivityWALWriter implements MiruActivityWALWriter {
 
     private final AmzaWALUtil amzaWALUtil;
-    private final int replicateRequireNReplicas;
     private final long replicateTimeoutMillis;
     private final MiruActivityWALColumnKeyMarshaller columnKeyMarshaller = new MiruActivityWALColumnKeyMarshaller();
     private final Function<MiruPartitionedActivity, byte[]> activityWALKeyFunction;
     private final Function<MiruPartitionedActivity, byte[]> activitySerializerFunction;
 
     public AmzaActivityWALWriter(AmzaWALUtil amzaWALUtil,
-        int replicateRequireNReplicas,
         long replicateTimeoutMillis,
         ObjectMapper mapper) {
         this.amzaWALUtil = amzaWALUtil;
-        this.replicateRequireNReplicas = replicateRequireNReplicas;
         this.replicateTimeoutMillis = replicateTimeoutMillis;
 
         JacksonJsonObjectTypeMarshaller<MiruPartitionedActivity> partitionedActivityMarshaller =
