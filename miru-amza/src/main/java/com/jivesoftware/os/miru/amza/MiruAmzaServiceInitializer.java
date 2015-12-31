@@ -18,6 +18,7 @@ import com.jivesoftware.os.amza.service.AmzaRingStoreWriter;
 import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.amza.service.AmzaServiceInitializer.AmzaServiceConfig;
 import com.jivesoftware.os.amza.service.EmbeddedAmzaServiceInitializer;
+import com.jivesoftware.os.amza.service.SickThreads;
 import com.jivesoftware.os.amza.service.WALIndexProviderRegistry;
 import com.jivesoftware.os.amza.service.discovery.AmzaDiscovery;
 import com.jivesoftware.os.amza.service.replication.TakeFailureListener;
@@ -42,6 +43,8 @@ import com.jivesoftware.os.jive.utils.ordered.id.TimestampedOrderIdProvider;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.deployable.Deployable;
+import com.jivesoftware.os.routing.bird.health.HealthCheckResponse;
+import com.jivesoftware.os.routing.bird.health.HealthCheckResponseImpl;
 import com.jivesoftware.os.routing.bird.http.client.HttpClient;
 import com.jivesoftware.os.routing.bird.http.client.HttpClientException;
 import com.jivesoftware.os.routing.bird.http.client.HttpDeliveryClientHealthProvider;
@@ -56,6 +59,7 @@ import com.jivesoftware.os.routing.bird.shared.InstanceDescriptor;
 import com.jivesoftware.os.routing.bird.shared.TenantRoutingProvider;
 import com.jivesoftware.os.routing.bird.shared.TenantsServiceConnectionDescriptorProvider;
 import java.io.IOException;
+import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -131,8 +135,11 @@ public class MiruAmzaServiceInitializer {
             }
         };
 
+        SickThreads sickThreads = new SickThreads();
+
         AmzaService amzaService = new EmbeddedAmzaServiceInitializer().initialize(amzaServiceConfig,
             amzaStats,
+            sickThreads,
             ringMember,
             ringHost,
             orderIdProvider,
@@ -195,6 +202,50 @@ public class MiruAmzaServiceInitializer {
             .addClasspathResource("resources/static/amza")
             .setContext("/static/amza");
         deployable.addResource(staticResource);
+
+        deployable.addHealthCheck(() -> {
+            Map<Thread, Throwable> sickThread = sickThreads.getSickThread();
+            if (sickThread.isEmpty()) {
+                return new HealthCheckResponseImpl("sick>threads", 1.0, "Healthy", "No sick threads", "", System.currentTimeMillis());
+            } else {
+                return new HealthCheckResponse() {
+
+                    @Override
+                    public String getName() {
+                        return "sick>thread";
+                    }
+
+                    @Override
+                    public double getHealth() {
+                        return 0;
+                    }
+
+                    @Override
+                    public String getStatus() {
+                        return "There are " + sickThread.size() + " sick threads.";
+                    }
+
+                    @Override
+                    public String getDescription() {
+                        StringBuilder sb = new StringBuilder();
+                        for (Map.Entry<Thread, Throwable> entry : sickThread.entrySet()) {
+                            sb.append("thread:").append(entry.getKey()).append(" cause:").append(entry.getValue());
+                        }
+                        return sb.toString();
+                    }
+
+                    @Override
+                    public String getResolution() {
+                        return "Look at the logs and see if you can resolve the issue.";
+                    }
+
+                    @Override
+                    public long getTimestamp() {
+                        return System.currentTimeMillis();
+                    }
+                };
+            }
+        });
 
         if (clusterName != null && multicastPort > 0) {
             AmzaDiscovery amzaDiscovery = new AmzaDiscovery(amzaService.getRingReader(),

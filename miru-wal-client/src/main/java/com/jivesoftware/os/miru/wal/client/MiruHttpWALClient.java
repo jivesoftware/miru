@@ -32,6 +32,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import org.apache.http.HttpStatus;
 
 public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCursor<S>> implements MiruWALClient<C, S> {
 
@@ -115,15 +116,17 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
         final String jsonActivities = requestMapper.writeValueAsString(partitionedActivities);
         sendWithTenantPartition(RoutingGroupType.activity, tenantId, partitionId, "writeActivity",
             client -> extract(client.postJson(pathPrefix + "/write/activities/" + tenantId.toString() + "/" + partitionId.getId(), jsonActivities, null),
-                String.class));
+                String.class,
+                null));
     }
 
     @Override
     public void writeReadTracking(MiruTenantId tenantId, MiruStreamId streamId, List<MiruPartitionedActivity> partitionedActivities) throws Exception {
         final String jsonActivities = requestMapper.writeValueAsString(partitionedActivities);
-        sendWithTenant(RoutingGroupType.readTracking, tenantId, "writeReadTracking",
+        sendWithTenantStream(RoutingGroupType.readTracking, tenantId, streamId, "writeReadTracking",
             client -> extract(client.postJson(pathPrefix + "/write/reads/" + tenantId.toString() + "/" + streamId.toString(), jsonActivities, null),
-                String.class));
+                String.class,
+                null));
     }
 
     @Override
@@ -138,14 +141,16 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
     public WriterCursor getCursorForWriterId(MiruTenantId tenantId, MiruPartitionId partitionId, int writerId) {
         return sendWithTenantPartition(RoutingGroupType.activity, tenantId, partitionId, "getCursorForWriterId",
             client -> extract(client.get(pathPrefix + "/cursor/writer/" + tenantId.toString() + "/" + partitionId.getId() + "/" + writerId, null),
-                WriterCursor.class));
+                WriterCursor.class,
+                null));
     }
 
     @Override
     public MiruActivityWALStatus getActivityWALStatusForTenant(final MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         return sendWithTenantPartition(RoutingGroupType.activity, tenantId, partitionId, "getActivityWALStatusForTenant",
             client -> extract(client.get(pathPrefix + "/activity/wal/status/" + tenantId.toString() + "/" + partitionId.getId(), null),
-                MiruActivityWALStatus.class));
+                MiruActivityWALStatus.class,
+                null));
     }
 
     @Override
@@ -179,7 +184,8 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
                     client -> extract(
                         client.postJson(pathPrefix + "/sip/activity/" + tenantId.toString() + "/" + partitionId.getId() + "/" + batchSize, jsonCursor, null),
                         StreamBatch.class,
-                        new Class[] { MiruWALEntry.class, sipCursorClass }));
+                        new Class[] { MiruWALEntry.class, sipCursorClass },
+                        null));
                 if (response != null) {
                     return response;
                 }
@@ -209,7 +215,8 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
                     client -> extract(
                         client.postJson(pathPrefix + "/activity/" + tenantId.toString() + "/" + partitionId.getId() + "/" + batchSize, jsonCursor, null),
                         StreamBatch.class,
-                        new Class[] { MiruWALEntry.class, cursorClass }));
+                        new Class[] { MiruWALEntry.class, cursorClass },
+                        null));
                 if (response != null) {
                     return response;
                 }
@@ -234,39 +241,19 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
         long oldestEventId,
         int batchSize) throws Exception {
         final String jsonCursor = requestMapper.writeValueAsString(cursor);
-        return sendWithTenant(RoutingGroupType.readTracking, tenantId, "getRead",
+        return sendWithTenantStream(RoutingGroupType.readTracking, tenantId, streamId, "getRead",
             client -> extract(
                 client.postJson(pathPrefix + "/read/" + tenantId.toString() + "/" + streamId.toString() + "/" + oldestEventId + "/" + batchSize,
                     jsonCursor,
                     null),
                 StreamBatch.class,
-                new Class[] { MiruWALEntry.class, sipCursorClass }));
+                new Class[] { MiruWALEntry.class, sipCursorClass },
+                null));
     }
 
     private <R> R sendRoundRobin(String family, ClientCall<HttpClient, R, HttpClientException> call) {
         try {
             return walClient.call(routingTenantId, roundRobinStrategy, family, call);
-        } catch (Exception x) {
-            throw new RuntimeException("Failed to send.", x);
-        }
-    }
-
-    private <R> R sendWithTenant(RoutingGroupType routingGroupType,
-        MiruTenantId tenantId,
-        String family,
-        ClientCall<HttpClient, SendResult<R>, HttpClientException> call) {
-        try {
-            TenantRoutingGroup<Void> routingGroup = new TenantRoutingGroup<>(routingGroupType, tenantId, null);
-            while (true) {
-                NextClientStrategy strategy = tenantRoutingCache.get(routingGroup,
-                    () -> new ConnectionDescriptorSelectiveStrategy(getTenantRoutingGroup(routingGroupType, tenantId)));
-                SendResult<R> sendResult = walClient.call(routingTenantId, strategy, family, call);
-                if (sendResult.resultFound) {
-                    return sendResult.result;
-                } else {
-                    tenantRoutingCache.invalidate(routingGroup);
-                }
-            }
         } catch (Exception x) {
             throw new RuntimeException("Failed to send.", x);
         }
@@ -283,10 +270,13 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
                 NextClientStrategy strategy = tenantRoutingCache.get(routingGroup,
                     () -> new ConnectionDescriptorSelectiveStrategy(getTenantPartitionRoutingGroup(routingGroupType, tenantId, partitionId)));
                 SendResult<R> sendResult = walClient.call(routingTenantId, strategy, family, call);
-                if (sendResult.resultFound) {
+                if (sendResult.validRoute) {
                     return sendResult.result;
-                } else {
-                    tenantRoutingCache.invalidate(routingGroup);
+                }
+
+                tenantRoutingCache.invalidate(routingGroup);
+                if (sendResult.errorRoute) {
+                    return null;
                 }
             }
         } catch (Exception x) {
@@ -305,10 +295,13 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
                 NextClientStrategy strategy = tenantRoutingCache.get(routingGroup,
                     () -> new ConnectionDescriptorSelectiveStrategy(getTenantStreamRoutingGroup(routingGroupType, tenantId, streamId)));
                 SendResult<R> sendResult = walClient.call(routingTenantId, strategy, family, call);
-                if (sendResult.resultFound) {
+                if (sendResult.validRoute) {
                     return sendResult.result;
-                } else {
-                    tenantRoutingCache.invalidate(routingGroup);
+                }
+
+                tenantRoutingCache.invalidate(routingGroup);
+                if (sendResult.errorRoute) {
+                    return null;
                 }
             }
         } catch (Exception x) {
@@ -319,36 +312,44 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
     private static class SendResult<R> {
 
         public final R result;
-        public final boolean resultFound;
+        public final boolean validRoute;
+        public final boolean errorRoute;
 
-        public SendResult(R result, boolean resultFound) {
+        public SendResult(R result, boolean validRoute, boolean errorRoute) {
             this.result = result;
-            this.resultFound = resultFound;
+            this.validRoute = validRoute;
+            this.errorRoute = errorRoute;
         }
     }
 
-    private <R> ClientResponse<SendResult<R>> extract(HttpResponse response, Class<R> resultClass) {
-        if (response.getStatusCode() == 404) {
-            return new ClientResponse<>(new SendResult<>(null, false), true);
+    private <R> ClientResponse<SendResult<R>> extract(HttpResponse response, Class<R> resultClass, R emptyResult) {
+        if (response.getStatusCode() == HttpStatus.SC_NOT_FOUND) {
+            return new ClientResponse<>(new SendResult<>(null, false, false), true);
+        } else if (response.getStatusCode() == HttpStatus.SC_SERVICE_UNAVAILABLE) {
+            return new ClientResponse<>(new SendResult<>(null, false, true), true);
         }
-        R result = responseMapper.extractResultFromResponse(response, resultClass, null);
-        return new ClientResponse<>(new SendResult<>(result, true), true);
+        R result = responseMapper.extractResultFromResponse(response, resultClass, emptyResult);
+        return new ClientResponse<>(new SendResult<>(result, true, false), true);
     }
 
     private <R> ClientResponse<SendResult<List<R>>> extractToList(HttpResponse response, Class<R[]> resultClass) {
-        if (response.getStatusCode() == 404) {
-            return new ClientResponse<>(new SendResult<>(null, false), true);
+        if (response.getStatusCode() == HttpStatus.SC_NOT_FOUND) {
+            return new ClientResponse<>(new SendResult<>(null, false, false), true);
+        } else if (response.getStatusCode() == HttpStatus.SC_SERVICE_UNAVAILABLE) {
+            return new ClientResponse<>(new SendResult<>(null, false, true), true);
         }
         R[] result = responseMapper.extractResultFromResponse(response, resultClass, null);
-        return new ClientResponse<>(new SendResult<>(Arrays.asList(result), true), true);
+        return new ClientResponse<>(new SendResult<>(result != null ? Arrays.asList(result) : null, true, false), true);
     }
 
-    private <R> ClientResponse<SendResult<R>> extract(HttpResponse response, Class<R> resultClass, Class<?>[] typeClasses) {
-        if (response.getStatusCode() == 404) {
-            return new ClientResponse<>(new SendResult<>(null, false), true);
+    private <R> ClientResponse<SendResult<R>> extract(HttpResponse response, Class<R> resultClass, Class<?>[] typeClasses, R emptyResult) {
+        if (response.getStatusCode() == HttpStatus.SC_NOT_FOUND) {
+            return new ClientResponse<>(new SendResult<>(null, false, false), true);
+        } else if (response.getStatusCode() == HttpStatus.SC_SERVICE_UNAVAILABLE) {
+            return new ClientResponse<>(new SendResult<>(null, false, true), true);
         }
-        R result = responseMapper.extractResultFromResponse(response, resultClass, typeClasses, null);
-        return new ClientResponse<>(new SendResult<>(result, true), true);
+        R result = responseMapper.extractResultFromResponse(response, resultClass, typeClasses, emptyResult);
+        return new ClientResponse<>(new SendResult<>(result, true, false), true);
     }
 
     private static class TenantRoutingGroup<P> {
