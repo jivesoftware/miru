@@ -105,7 +105,9 @@ public class AmzaWALTest {
             null, 1000, 1000);
 
         AmzaWALUtil amzaWALUtil = new AmzaWALUtil(amzaService, amzaClientProvider,
-            new PartitionProperties(storageDescriptor, Consistency.leader_quorum, true, 0, false, RowType.snappy_primary));
+            new PartitionProperties(storageDescriptor, Consistency.leader_quorum, true, 0, false, RowType.snappy_primary),
+            new PartitionProperties(storageDescriptor, Consistency.leader_quorum, true, 0, false, RowType.snappy_primary),
+            new PartitionProperties(storageDescriptor, Consistency.quorum, true, 0, false, RowType.primary));
         MiruActivityWALWriter activityWALWriter = new AmzaActivityWALWriter(amzaWALUtil, 0, mapper);
         MiruActivityWALReader<AmzaCursor, AmzaSipCursor> activityWALReader = new AmzaActivityWALReader(amzaWALUtil, mapper);
 

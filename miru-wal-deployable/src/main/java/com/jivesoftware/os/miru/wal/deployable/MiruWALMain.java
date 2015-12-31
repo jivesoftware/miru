@@ -214,14 +214,29 @@ public class MiruWALMain {
                 null, 1000, 1000);
 
             EmbeddedClientProvider clientProvider = new EmbeddedClientProvider(amzaService);
+            PartitionProperties activityProperties = new PartitionProperties(storageDescriptor,
+                Consistency.leader_quorum,
+                true,
+                amzaServiceConfig.getTakeFromFactor(),
+                false,
+                RowType.snappy_primary);
+            PartitionProperties readTrackingProperties = new PartitionProperties(storageDescriptor,
+                Consistency.leader_quorum,
+                true,
+                amzaServiceConfig.getTakeFromFactor(),
+                false,
+                RowType.snappy_primary);
+            PartitionProperties lookupProperties = new PartitionProperties(storageDescriptor,
+                Consistency.quorum,
+                true,
+                amzaServiceConfig.getTakeFromFactor(),
+                false,
+                RowType.primary);
             AmzaWALUtil amzaWALUtil = new AmzaWALUtil(amzaService,
                 clientProvider,
-                new PartitionProperties(storageDescriptor,
-                    Consistency.leader_quorum,
-                    true,
-                    amzaServiceConfig.getTakeFromFactor(),
-                    false,
-                    RowType.snappy_primary));
+                activityProperties,
+                readTrackingProperties,
+                lookupProperties);
 
             HttpDeliveryClientHealthProvider clientHealthProvider = new HttpDeliveryClientHealthProvider(instanceConfig.getInstanceKey(),
                 HttpRequestHelperUtils.buildRequestHelper(instanceConfig.getRoutesHost(), instanceConfig.getRoutesPort()),
