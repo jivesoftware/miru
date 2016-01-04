@@ -31,14 +31,14 @@ public class MiruHeaderRegion implements MiruRegion<Void> {
         String template,
         MiruSoyRenderer renderer,
         TenantRoutingProvider tenantRoutingProvider) {
-         this.cluster = cluster;
+        this.cluster = cluster;
         this.instance = instance;
         this.template = template;
         this.renderer = renderer;
         this.tenantRoutingProvider = tenantRoutingProvider;
     }
-    
-     @Override
+
+    @Override
     public String render(Void input) {
         try {
             Map<String, Object> data = Maps.newHashMap();
@@ -65,7 +65,7 @@ public class MiruHeaderRegion implements MiruRegion<Void> {
         }
     }
 
-   private int addPeers(List<Map<String, Object>> services, String name, String portName, String path) {
+    private int addPeers(List<Map<String, Object>> services, String name, String portName, String path) {
         if (tenantRoutingProvider != null) {
             TenantsServiceConnectionDescriptorProvider readers = tenantRoutingProvider.getConnections(name, portName);
             ConnectionDescriptors connectionDescriptors = readers.getConnections("");

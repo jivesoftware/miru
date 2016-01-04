@@ -2,8 +2,6 @@ package com.jivesoftware.os.miru.reader.deployable;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
-import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
-import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.ui.MiruPageRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import java.util.List;

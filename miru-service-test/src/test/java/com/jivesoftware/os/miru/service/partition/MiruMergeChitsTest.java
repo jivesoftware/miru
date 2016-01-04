@@ -28,16 +28,16 @@ public class MiruMergeChitsTest {
 
         futures.add(scheduledInfo.scheduleWithFixedDelay(() -> System.out.println("free=" + mergeChits.remaining()), 1_000, 1_000, TimeUnit.MILLISECONDS));
 
-        int[][] callersAndRates = new int[][]{
-            {1024, 1},
-            {512, 2},
-            {256, 4},
-            {128, 8},
-            {64, 16},
-            {32, 32},
-            {16, 64},
-            {8, 128},
-            {4, 256},};
+        int[][] callersAndRates = new int[][] {
+            { 1024, 1 },
+            { 512, 2 },
+            { 256, 4 },
+            { 128, 8 },
+            { 64, 16 },
+            { 32, 32 },
+            { 16, 64 },
+            { 8, 128 },
+            { 4, 256 }, };
 
         for (int i = 0; i < callersAndRates.length; i++) {
             final int callers = callersAndRates[i][0];

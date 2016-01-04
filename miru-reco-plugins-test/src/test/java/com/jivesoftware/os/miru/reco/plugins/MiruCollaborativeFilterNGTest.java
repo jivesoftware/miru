@@ -1,7 +1,6 @@
 package com.jivesoftware.os.miru.reco.plugins;
 
 import com.google.common.base.Charsets;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
@@ -58,12 +57,12 @@ public class MiruCollaborativeFilterNGTest {
     };
 
     MiruSchema miruSchema = new MiruSchema.Builder("test", 1)
-        .setFieldDefinitions(new MiruFieldDefinition[]{
-        new MiruFieldDefinition(0, "user", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
-        new MiruFieldDefinition(1, "doc", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
-        new MiruFieldDefinition(2, "docType", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
-        new MiruFieldDefinition(3, "activityType", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE)
-    })
+        .setFieldDefinitions(new MiruFieldDefinition[] {
+            new MiruFieldDefinition(0, "user", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
+            new MiruFieldDefinition(1, "doc", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
+            new MiruFieldDefinition(2, "docType", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
+            new MiruFieldDefinition(3, "activityType", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE)
+        })
         .build();
 
     MiruTermComposer termComposer = new MiruTermComposer(Charsets.UTF_8, termInterner);

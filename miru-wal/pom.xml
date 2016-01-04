@@ -5,12 +5,12 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-build-management</artifactId>
-        <version>0.779</version>
+        <version>0.780</version>
         <relativePath>../inheritance-poms/global-build-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru</groupId>
     <artifactId>miru-wal</artifactId>
-    <version>0.779</version>
+    <version>0.780</version>
     <properties>
         <module.type>shared_lib</module.type>
     </properties>
@@ -26,7 +26,7 @@
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-api</artifactId>
-            <version>0.779</version>
+            <version>0.780</version>
         </dependency>
         <dependency>
             <groupId>commons-lang</groupId>
@@ -72,16 +72,12 @@
             <artifactId>amza-service</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.jivesoftware.os.amza</groupId>
-            <artifactId>amza-client</artifactId>
-        </dependency>
-        <dependency>
             <groupId>com.jivesoftware.os.filer</groupId>
             <artifactId>io</artifactId>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.amza</groupId>
-            <artifactId>amza-shared</artifactId>
+            <artifactId>amza-api</artifactId>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.jive.utils</groupId>

@@ -5,7 +5,7 @@ import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.amza.api.partition.PartitionProperties;
 import com.jivesoftware.os.amza.api.take.TakeCursors;
-import com.jivesoftware.os.amza.shared.EmbeddedClientProvider.EmbeddedClient;
+import com.jivesoftware.os.amza.service.EmbeddedClientProvider.EmbeddedClient;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;

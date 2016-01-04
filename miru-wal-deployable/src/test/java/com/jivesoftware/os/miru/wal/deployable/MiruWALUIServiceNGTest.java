@@ -13,17 +13,17 @@ import com.jivesoftware.os.amza.berkeleydb.BerkeleyDBWALIndexProvider;
 import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.amza.service.AmzaServiceInitializer.AmzaServiceConfig;
 import com.jivesoftware.os.amza.service.EmbeddedAmzaServiceInitializer;
+import com.jivesoftware.os.amza.service.EmbeddedClientProvider;
 import com.jivesoftware.os.amza.service.SickThreads;
 import com.jivesoftware.os.amza.service.WALIndexProviderRegistry;
 import com.jivesoftware.os.amza.service.replication.TakeFailureListener;
+import com.jivesoftware.os.amza.service.replication.http.HttpAvailableRowsTaker;
+import com.jivesoftware.os.amza.service.replication.http.HttpRowsTaker;
+import com.jivesoftware.os.amza.service.stats.AmzaStats;
 import com.jivesoftware.os.amza.service.storage.PartitionPropertyMarshaller;
 import com.jivesoftware.os.amza.service.storage.binary.RowIOProvider;
-import com.jivesoftware.os.amza.shared.EmbeddedClientProvider;
-import com.jivesoftware.os.amza.shared.stats.AmzaStats;
-import com.jivesoftware.os.amza.shared.take.AvailableRowsTaker;
-import com.jivesoftware.os.amza.shared.take.RowsTakerFactory;
-import com.jivesoftware.os.amza.transport.http.replication.HttpAvailableRowsTaker;
-import com.jivesoftware.os.amza.transport.http.replication.HttpRowsTaker;
+import com.jivesoftware.os.amza.service.take.AvailableRowsTaker;
+import com.jivesoftware.os.amza.service.take.RowsTakerFactory;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
@@ -118,7 +118,7 @@ public class MiruWALUIServiceNGTest {
         RowsTakerFactory rowsTakerFactory = () -> new HttpRowsTaker(amzaStats);
 
         final AmzaServiceConfig amzaServiceConfig = new AmzaServiceConfig();
-        amzaServiceConfig.workingDirectories = new String[]{amzaDataDir.getAbsolutePath()};
+        amzaServiceConfig.workingDirectories = new String[] { amzaDataDir.getAbsolutePath() };
         amzaServiceConfig.numberOfDeltaStripes = amzaServiceConfig.workingDirectories.length;
         amzaServiceConfig.numberOfTakerThreads = 1;
 
@@ -152,7 +152,7 @@ public class MiruWALUIServiceNGTest {
             idPacker,
             partitionPropertyMarshaller,
             (WALIndexProviderRegistry indexProviderRegistry1, RowIOProvider<?> ephemeralRowIOProvider, RowIOProvider<?> persistentRowIOProvider) -> {
-                String[] walIndexDirs = new String[]{amzaIndexDir.getAbsolutePath()};
+                String[] walIndexDirs = new String[] { amzaIndexDir.getAbsolutePath() };
                 indexProviderRegistry1.register("berkeleydb", new BerkeleyDBWALIndexProvider(walIndexDirs, walIndexDirs.length), persistentRowIOProvider);
             },
             availableRowsTaker,

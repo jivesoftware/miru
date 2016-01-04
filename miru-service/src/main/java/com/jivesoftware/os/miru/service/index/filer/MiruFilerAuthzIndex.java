@@ -7,9 +7,9 @@ import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruAuthzIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
+import com.jivesoftware.os.miru.plugin.partition.TrackError;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzCache;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzUtils;
-import com.jivesoftware.os.miru.plugin.partition.TrackError;
 
 /** @author jonathan */
 public class MiruFilerAuthzIndex<BM extends IBM, IBM> implements MiruAuthzIndex<BM, IBM> {

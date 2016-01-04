@@ -90,8 +90,8 @@ public class Distincts {
                             ranges.add(new KeyRange(
                                 termComposer.prefixLowerInclusive(schema, fieldDefinition, stackBuffer, prefix.parts),
                                 termComposer.prefixUpperExclusive(schema, fieldDefinition, stackBuffer, prefix.parts)));
-                        } catch(Exception x) {
-                            
+                        } catch (Exception x) {
+
                             throw x;
                         }
                     }
@@ -106,7 +106,7 @@ public class Distincts {
                     prefixesAsBytes = new byte[query.prefixes.size()][];
                     int i = 0;
                     for (MiruValue prefix : query.prefixes) {
-                        prefixesAsBytes[i++] = termComposer.prefixLowerInclusive(schema, fieldDefinition,  stackBuffer, prefix.parts);
+                        prefixesAsBytes[i++] = termComposer.prefixLowerInclusive(schema, fieldDefinition, stackBuffer, prefix.parts);
                     }
                 } else {
                     prefixesAsBytes = new byte[0][];

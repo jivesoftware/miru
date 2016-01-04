@@ -11,10 +11,9 @@ import com.jivesoftware.os.miru.plugin.MiruInterner;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Random;
-import junit.framework.Assert;
+import org.testng.Assert;
 import org.testng.annotations.Test;
 
-import static com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition.Type.multiTerm;
 import static com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition.Type.singleTerm;
 import static org.testng.Assert.assertEquals;
 

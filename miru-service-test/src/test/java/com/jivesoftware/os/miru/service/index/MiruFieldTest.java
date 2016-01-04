@@ -58,7 +58,8 @@ public class MiruFieldTest {
         int median = ids.get(ids.size() / 2);
 
         for (int id : ids) {
-            Optional<BitmapAndLastId<BM>> optional = fieldIndex.get("test", fieldId, new MiruTermId(FilerIO.intBytes(id))).getIndexAndLastId(median, stackBuffer);
+            Optional<BitmapAndLastId<BM>> optional = fieldIndex.get("test", fieldId, new MiruTermId(FilerIO.intBytes(id))).getIndexAndLastId(median,
+                stackBuffer);
             assertEquals(optional.isPresent(), id > median, "Should be " + optional.isPresent() + ": " + id + " > " + median);
         }
     }

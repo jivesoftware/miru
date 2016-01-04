@@ -5,12 +5,12 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-build-management</artifactId>
-        <version>0.779</version>
+        <version>0.780</version>
         <relativePath>../inheritance-poms/global-build-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru</groupId>
     <artifactId>miru-amza</artifactId>
-    <version>0.779</version>
+    <version>0.780</version>
     <properties>
         <module.type>shared_lib</module.type>
     </properties>
@@ -25,7 +25,7 @@
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.amza</groupId>
-            <artifactId>amza-shared</artifactId>
+            <artifactId>amza-api</artifactId>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.amza</groupId>
@@ -33,7 +33,7 @@
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.amza</groupId>
-            <artifactId>amza-transport</artifactId>
+            <artifactId>amza-client</artifactId>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.amza</groupId>
@@ -58,6 +58,14 @@
         <dependency>
             <groupId>com.jivesoftware.os.routing.bird</groupId>
             <artifactId>routing-bird-server</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.routing.bird</groupId>
+            <artifactId>routing-bird-health</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.routing.bird</groupId>
+            <artifactId>routing-bird-http-client</artifactId>
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
