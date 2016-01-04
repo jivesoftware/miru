@@ -132,7 +132,7 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
         byte[] cursorKey = key(tenantId, writerId, cursor.getPartitionId());
         cursorsClient().commit(Consistency.none,
             null,
-            new AmzaPartitionUpdates().set(cursorKey, FilerIO.intBytes(cursor.last())),
+            new AmzaPartitionUpdates().set(cursorKey, FilerIO.intBytes(cursor.last()), -1),
             0,
             TimeUnit.MILLISECONDS);
     }
@@ -150,12 +150,12 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
         byte[] latestPartitionValue = latestPartitions.getValue(Consistency.none, null, latestPartitionKey);
         if (latestPartitionValue == null || FilerIO.bytesInt(latestPartitionValue) < cursor.getPartitionId().getId()) {
             latestPartitions.commit(Consistency.none, null,
-                new AmzaPartitionUpdates().set(latestPartitionKey, FilerIO.intBytes(cursor.getPartitionId().getId())),
+                new AmzaPartitionUpdates().set(latestPartitionKey, FilerIO.intBytes(cursor.getPartitionId().getId()), -1),
                 replicateLatestPartitionTimeoutMillis, TimeUnit.MILLISECONDS);
         }
         byte[] cursorKey = key(tenantId, writerId, cursor.getPartitionId());
         cursorsClient().commit(Consistency.none, null,
-            new AmzaPartitionUpdates().set(cursorKey, FilerIO.intBytes(cursor.last())),
+            new AmzaPartitionUpdates().set(cursorKey, FilerIO.intBytes(cursor.last()), -1),
             0,
             TimeUnit.MILLISECONDS);
         return cursor;
@@ -188,7 +188,7 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
         byte[] cursorKey = key(tenantId, writerId, partitionId);
         byte[] got = cursors.getValue(Consistency.none, null, cursorKey);
         if (got == null) {
-            cursors.commit(Consistency.none, null, new AmzaPartitionUpdates().set(cursorKey, FilerIO.intBytes(0)), 0, TimeUnit.MILLISECONDS);
+            cursors.commit(Consistency.none, null, new AmzaPartitionUpdates().set(cursorKey, FilerIO.intBytes(0), -1), 0, TimeUnit.MILLISECONDS);
             return 0;
         } else {
             return FilerIO.bytesInt(got);

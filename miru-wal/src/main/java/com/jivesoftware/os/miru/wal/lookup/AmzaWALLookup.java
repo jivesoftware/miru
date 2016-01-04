@@ -48,11 +48,11 @@ public class AmzaWALLookup implements MiruWALLookup {
                 LOG.inc("add>set");
                 amzaWALUtil.getLookupTenantsClient().commit(Consistency.quorum,
                     null,
-                    new AmzaPartitionUpdates().set(tenantId.getBytes(), null),
+                    new AmzaPartitionUpdates().set(tenantId.getBytes(), null, -1),
                     replicateLookupTimeoutMillis, TimeUnit.MILLISECONDS);
                 amzaWALUtil.getLookupPartitionsClient().commit(Consistency.quorum,
                     null,
-                    new AmzaPartitionUpdates().set(amzaWALUtil.toPartitionsKey(tenantId, partitionId), null),
+                    new AmzaPartitionUpdates().set(amzaWALUtil.toPartitionsKey(tenantId, partitionId), null, -1),
                     replicateLookupTimeoutMillis, TimeUnit.MILLISECONDS);
                 return true;
             } catch (Exception e) {
@@ -66,7 +66,7 @@ public class AmzaWALLookup implements MiruWALLookup {
         LOG.inc("markRepaired");
         amzaWALUtil.getLookupTenantsClient().commit(Consistency.quorum,
             null,
-            new AmzaPartitionUpdates().set(FULLY_REPAIRED_TENANT.getBytes(), FilerIO.longBytes(System.currentTimeMillis())),
+            new AmzaPartitionUpdates().set(FULLY_REPAIRED_TENANT.getBytes(), FilerIO.longBytes(System.currentTimeMillis()), -1),
             replicateLookupTimeoutMillis, TimeUnit.MILLISECONDS);
     }
 
