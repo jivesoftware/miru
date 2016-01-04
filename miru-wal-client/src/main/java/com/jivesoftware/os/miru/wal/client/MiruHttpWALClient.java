@@ -268,7 +268,13 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
             TenantRoutingGroup<MiruPartitionId> routingGroup = new TenantRoutingGroup<>(routingGroupType, tenantId, partitionId);
             while (true) {
                 NextClientStrategy strategy = tenantRoutingCache.get(routingGroup,
-                    () -> new ConnectionDescriptorSelectiveStrategy(getTenantPartitionRoutingGroup(routingGroupType, tenantId, partitionId)));
+                    () -> {
+                        HostPort[] hostPorts = getTenantPartitionRoutingGroup(routingGroupType, tenantId, partitionId);
+                        if (hostPorts == null || hostPorts.length > 0) {
+                            throw new MiruRouteUnavailableException("No route available for tenant " + tenantId + " partition " + partitionId);
+                        }
+                        return new ConnectionDescriptorSelectiveStrategy(hostPorts);
+                    });
                 SendResult<R> sendResult = walClient.call(routingTenantId, strategy, family, call);
                 if (sendResult.validRoute) {
                     return sendResult.result;
@@ -284,6 +290,7 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
         }
     }
 
+    //TODO the cardinality here is TOO HIGH! replace with prefixes against tenant-specific routing
     private <R> R sendWithTenantStream(RoutingGroupType routingGroupType,
         MiruTenantId tenantId,
         MiruStreamId streamId,
@@ -293,7 +300,13 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
             TenantRoutingGroup<MiruStreamId> routingGroup = new TenantRoutingGroup<>(routingGroupType, tenantId, streamId);
             while (true) {
                 NextClientStrategy strategy = tenantRoutingCache.get(routingGroup,
-                    () -> new ConnectionDescriptorSelectiveStrategy(getTenantStreamRoutingGroup(routingGroupType, tenantId, streamId)));
+                    () -> {
+                        HostPort[] hostPorts = getTenantStreamRoutingGroup(routingGroupType, tenantId, streamId);
+                        if (hostPorts == null || hostPorts.length > 0) {
+                            throw new MiruRouteUnavailableException("No route available for tenant " + tenantId + " stream " + streamId);
+                        }
+                        return new ConnectionDescriptorSelectiveStrategy(hostPorts);
+                    });
                 SendResult<R> sendResult = walClient.call(routingTenantId, strategy, family, call);
                 if (sendResult.validRoute) {
                     return sendResult.result;

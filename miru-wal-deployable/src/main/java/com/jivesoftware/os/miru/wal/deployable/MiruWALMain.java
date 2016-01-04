@@ -236,7 +236,11 @@ public class MiruWALMain {
                 clientProvider,
                 activityProperties,
                 readTrackingProperties,
-                lookupProperties);
+                lookupProperties,
+                amzaServiceConfig.getActivityRingSize(),
+                amzaServiceConfig.getActivityRoutingTimeoutMillis(),
+                amzaServiceConfig.getReadTrackingRingSize(),
+                amzaServiceConfig.getReadTrackingRoutingTimeoutMillis());
 
             HttpDeliveryClientHealthProvider clientHealthProvider = new HttpDeliveryClientHealthProvider(instanceConfig.getInstanceKey(),
                 HttpRequestHelperUtils.buildRequestHelper(instanceConfig.getRoutesHost(), instanceConfig.getRoutesPort()),
