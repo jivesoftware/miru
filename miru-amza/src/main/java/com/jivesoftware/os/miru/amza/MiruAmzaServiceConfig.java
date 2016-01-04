@@ -73,4 +73,16 @@ public interface MiruAmzaServiceConfig extends Config {
 
     @LongDefault(30_000L)
     long getDiscoveryIntervalMillis();
+
+    @IntDefault(3)
+    int getActivityRingSize();
+
+    @LongDefault(10_000L)
+    long getActivityRoutingTimeoutMillis();
+
+    @IntDefault(3)
+    int getReadTrackingRingSize();
+
+    @LongDefault(10_000L)
+    long getReadTrackingRoutingTimeoutMillis();
 }
