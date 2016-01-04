@@ -2,9 +2,7 @@ package com.jivesoftware.os.miru.stream.plugins;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
-import com.google.common.base.Functions;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -24,7 +22,6 @@ import com.jivesoftware.os.routing.bird.http.client.HttpClientConfiguration;
 import com.jivesoftware.os.routing.bird.http.client.HttpClientFactory;
 import com.jivesoftware.os.routing.bird.http.client.HttpClientFactoryProvider;
 import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelper;
-import java.util.Arrays;
 import java.util.Collections;
 import org.apache.commons.io.Charsets;
 import org.testng.annotations.Test;

@@ -37,6 +37,10 @@
             <groupId>com.jivesoftware.os.filer</groupId>
             <artifactId>io</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.mlogger</groupId>
+            <artifactId>core</artifactId>
+        </dependency>
 
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>

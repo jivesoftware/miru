@@ -3,12 +3,6 @@ package org.roaringbitmap.buffer;
 import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
 import java.nio.LongBuffer;
 import java.util.Arrays;
-import org.roaringbitmap.ArrayContainer;
-import org.roaringbitmap.BitmapContainer;
-import org.roaringbitmap.Container;
-import org.roaringbitmap.RoaringBitmap;
-import org.roaringbitmap.RunContainer;
-import org.roaringbitmap.Util;
 
 /**
  *

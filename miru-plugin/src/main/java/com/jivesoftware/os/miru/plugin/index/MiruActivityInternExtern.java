@@ -73,9 +73,9 @@ public class MiruActivityInternExtern {
                     activity.time,
                     internAuthz(activity.authz),
                     activity.version)
-                .putFieldsValues(internFields(activity.fieldsValues, schema, stackBuffer))
-                .putPropsValues(internProps(activity.propsValues, schema))
-                .build(),
+                    .putFieldsValues(internFields(activity.fieldsValues, schema, stackBuffer))
+                    .putPropsValues(internProps(activity.propsValues, schema))
+                    .build(),
                 activiyAndId.id));
         }
     }
@@ -124,7 +124,7 @@ public class MiruActivityInternExtern {
                         break;
                     } else if (accumFieldValues.isEmpty()) {
                         for (String compositeFieldValue : compositeFieldValues) {
-                            accumFieldValues.add(new String[]{compositeFieldValue});
+                            accumFieldValues.add(new String[] { compositeFieldValue });
                         }
                     } else {
                         List<String[]> tmpFieldValues = Lists.newArrayList();
@@ -145,7 +145,8 @@ public class MiruActivityInternExtern {
             } else {
                 List<String> values = fields.get(fieldDefinition.name);
                 if (values != null) {
-                    for (int i = 0; i < values.size(); i++) {
+                    int i = 0;
+                    while (i < values.size()) {
                         String fieldValue = values.get(i);
                         if (fieldValue.length() > MAX_TERM_LENGTH || fieldValue.length() == 0) {
                             log.warn("Ignored term {} because its length is zero or greater than {}.", fieldValue.length(), MAX_TERM_LENGTH);
@@ -154,12 +155,13 @@ public class MiruActivityInternExtern {
                             snip.addAll(values.subList(0, i));
                             snip.addAll(values.subList(i + 1, values.size()));
                             values = snip;
-                            i--; //TODO barf
+                        } else {
+                            i++;
                         }
                     }
                     fieldValues = Lists.newArrayListWithCapacity(values.size());
                     for (String value : values) {
-                        fieldValues.add(new String[]{value});
+                        fieldValues.add(new String[] { value });
                     }
                 } else {
                     fieldValues = null;

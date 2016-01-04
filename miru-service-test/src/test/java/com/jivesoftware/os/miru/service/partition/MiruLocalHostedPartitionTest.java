@@ -8,7 +8,7 @@ import com.google.common.collect.Lists;
 import com.google.common.hash.Hashing;
 import com.google.common.io.Files;
 import com.jivesoftware.os.amza.service.AmzaService;
-import com.jivesoftware.os.amza.shared.EmbeddedClientProvider;
+import com.jivesoftware.os.amza.service.EmbeddedClientProvider;
 import com.jivesoftware.os.filer.chunk.store.transaction.TxCogs;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
@@ -164,14 +164,14 @@ public class MiruLocalHostedPartitionTest {
         HealthFactory.initialize(
             BindInterfaceToConfiguration::bindDefault,
             new HealthCheckRegistry() {
-            @Override
-            public void register(HealthChecker healthChecker) {
-            }
+                @Override
+                public void register(HealthChecker healthChecker) {
+                }
 
-            @Override
-            public void unregister(HealthChecker healthChecker) {
-            }
-        });
+                @Override
+                public void unregister(HealthChecker healthChecker) {
+                }
+            });
 
         MiruServiceConfig config = mock(MiruServiceConfig.class);
         when(config.getBitsetBufferSize()).thenReturn(32);
@@ -240,9 +240,9 @@ public class MiruLocalHostedPartitionTest {
             termComposer,
             activityInternExtern,
             ImmutableMap.<MiruBackingStorage, MiruChunkAllocator>builder()
-            .put(MiruBackingStorage.memory, hybridContextAllocator)
-            .put(MiruBackingStorage.disk, diskContextAllocator)
-            .build(),
+                .put(MiruBackingStorage.memory, hybridContextAllocator)
+                .put(MiruBackingStorage.disk, diskContextAllocator)
+                .build(),
             new RCVSSipIndexMarshaller(),
             new MiruTempDirectoryResourceLocator(),
             config.getPartitionAuthzCacheSize(),

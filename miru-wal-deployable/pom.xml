@@ -151,17 +151,9 @@
             <artifactId>amza-api</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.jivesoftware.os.amza</groupId>
-            <artifactId>amza-shared</artifactId>
-        </dependency>
-        <dependency>
             <groupId>com.jivesoftware.os.rcvs</groupId>
             <artifactId>row-column-value-store-inmemory</artifactId>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.jivesoftware.os.amza</groupId>
-            <artifactId>amza-transport</artifactId>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.amza</groupId>

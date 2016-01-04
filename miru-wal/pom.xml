@@ -72,16 +72,12 @@
             <artifactId>amza-service</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.jivesoftware.os.amza</groupId>
-            <artifactId>amza-client</artifactId>
-        </dependency>
-        <dependency>
             <groupId>com.jivesoftware.os.filer</groupId>
             <artifactId>io</artifactId>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.amza</groupId>
-            <artifactId>amza-shared</artifactId>
+            <artifactId>amza-api</artifactId>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.jive.utils</groupId>

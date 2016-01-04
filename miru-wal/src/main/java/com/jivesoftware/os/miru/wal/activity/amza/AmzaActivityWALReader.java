@@ -8,7 +8,7 @@ import com.google.common.collect.Sets;
 import com.jivesoftware.os.amza.api.Consistency;
 import com.jivesoftware.os.amza.api.partition.PartitionProperties;
 import com.jivesoftware.os.amza.api.take.TakeCursors;
-import com.jivesoftware.os.amza.shared.EmbeddedClientProvider.EmbeddedClient;
+import com.jivesoftware.os.amza.service.EmbeddedClientProvider.EmbeddedClient;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
@@ -70,8 +70,8 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
             (long rowTxId, byte[] prefix, byte[] key, byte[] value, long valueTimestamp, boolean valueTombstoned, long valueVersion) -> {
                 MiruPartitionedActivity partitionedActivity = partitionedActivityMarshaller.fromBytes(value);
                 if (partitionedActivity != null
-                && partitionedActivity.type.isActivityType()
-                && !streamAlreadySeen(lastSeen, partitionedActivity, streamSuppressed)) {
+                    && partitionedActivity.type.isActivityType()
+                    && !streamAlreadySeen(lastSeen, partitionedActivity, streamSuppressed)) {
                     if (!streamMiruActivityWAL.stream(partitionedActivity.timestamp, partitionedActivity, valueTimestamp)) {
                         return false;
                     }
@@ -278,7 +278,7 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
     @Override
     public long clockMax(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         EmbeddedClient client = amzaWALUtil.getActivityClient(tenantId, partitionId);
-        long[] clockTimestamp = {-1L};
+        long[] clockTimestamp = { -1L };
         if (client != null) {
             byte[] fromKey = columnKeyMarshaller.toBytes(new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.END.getSort(), Long.MIN_VALUE));
             client.scan(null, fromKey, null, null, (byte[] prefix, byte[] key, byte[] value, long timestamp, long version) -> {

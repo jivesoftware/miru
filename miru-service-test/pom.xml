@@ -81,7 +81,7 @@
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.amza</groupId>
-            <artifactId>amza-shared</artifactId>
+            <artifactId>amza-api</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>

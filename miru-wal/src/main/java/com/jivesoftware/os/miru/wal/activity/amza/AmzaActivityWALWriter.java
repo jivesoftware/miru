@@ -3,7 +3,7 @@ package com.jivesoftware.os.miru.wal.activity.amza;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.jivesoftware.os.amza.api.Consistency;
-import com.jivesoftware.os.amza.shared.EmbeddedClientProvider.EmbeddedClient;
+import com.jivesoftware.os.amza.service.EmbeddedClientProvider.EmbeddedClient;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;

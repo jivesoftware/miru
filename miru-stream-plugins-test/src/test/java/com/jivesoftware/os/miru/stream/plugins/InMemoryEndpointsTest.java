@@ -2,7 +2,6 @@ package com.jivesoftware.os.miru.stream.plugins;
 
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.miru.api.MiruActorId;
@@ -73,22 +72,22 @@ public class InMemoryEndpointsTest {
         AtomicInteger index = new AtomicInteger(0);
         List<MiruPartitionedActivity> partitionedActivities = Lists.newArrayList(
             activityFactory.activity(1, partitionId, index.incrementAndGet(),
-                new MiruActivity.Builder(tenantId, time.incrementAndGet(), new String[]{}, 0)
-                .putFieldValue(OBJECT_ID.getFieldName(), "value1")
-                .putFieldValue(AUTHOR_ID.getFieldName(), "value2")
-                .build()
+                new MiruActivity.Builder(tenantId, time.incrementAndGet(), new String[] {}, 0)
+                    .putFieldValue(OBJECT_ID.getFieldName(), "value1")
+                    .putFieldValue(AUTHOR_ID.getFieldName(), "value2")
+                    .build()
             ),
             activityFactory.activity(1, partitionId, index.incrementAndGet(),
-                new MiruActivity.Builder(tenantId, time.incrementAndGet(), new String[]{}, 0)
-                .putFieldValue(OBJECT_ID.getFieldName(), "value1")
-                .putFieldValue(AUTHOR_ID.getFieldName(), "value2")
-                .build()
+                new MiruActivity.Builder(tenantId, time.incrementAndGet(), new String[] {}, 0)
+                    .putFieldValue(OBJECT_ID.getFieldName(), "value1")
+                    .putFieldValue(AUTHOR_ID.getFieldName(), "value2")
+                    .build()
             ),
             activityFactory.activity(1, partitionId, index.incrementAndGet(),
-                new MiruActivity.Builder(tenantId, time.incrementAndGet(), new String[]{}, 0)
-                .putFieldValue(OBJECT_ID.getFieldName(), "value2")
-                .putFieldValue(AUTHOR_ID.getFieldName(), "value3")
-                .build()
+                new MiruActivity.Builder(tenantId, time.incrementAndGet(), new String[] {}, 0)
+                    .putFieldValue(OBJECT_ID.getFieldName(), "value2")
+                    .putFieldValue(AUTHOR_ID.getFieldName(), "value3")
+                    .build()
             )
         );
 

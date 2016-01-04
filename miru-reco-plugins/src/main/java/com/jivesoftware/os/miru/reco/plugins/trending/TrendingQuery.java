@@ -4,11 +4,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
-import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsQuery;
 import java.io.Serializable;
 import java.util.List;
-import java.util.Map;
 
 /**
  *

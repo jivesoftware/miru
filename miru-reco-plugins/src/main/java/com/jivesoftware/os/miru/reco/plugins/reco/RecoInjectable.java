@@ -97,10 +97,11 @@ public class RecoInjectable {
             Miru miru = provider.getMiru(tenantId);
             return miru.askImmediate(tenantId,
                 partitionId,
-                new MiruSolvableFactory<>(requestAndReport.request.name, provider.getStats(), "collaborativeFilteringRecommendations", new RecoQuestion(collaborativeFiltering,
-                    requestAndReport.request,
-                    provider.getRemotePartition(RecoRemotePartition.class),
-                    requestAndReport.report.removeDistincts)),
+                new MiruSolvableFactory<>(requestAndReport.request.name, provider.getStats(), "collaborativeFilteringRecommendations",
+                    new RecoQuestion(collaborativeFiltering,
+                        requestAndReport.request,
+                        provider.getRemotePartition(RecoRemotePartition.class),
+                        requestAndReport.report.removeDistincts)),
                 Optional.fromNullable(requestAndReport.report),
                 RecoAnswer.EMPTY_RESULTS,
                 requestAndReport.request.logLevel);
