@@ -183,7 +183,7 @@ public class MiruWALUIServiceNGTest {
 
         MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(config);
         service = new MiruWALUIServiceInitializer().initialize("cluster", 1, renderer, null,
-            new TenantRoutingProvider("1", cdr -> null), director, null, activityWALReader, new MiruStats());
+            new TenantRoutingProvider("1", cdr -> null), director, director, null, activityWALReader, new MiruStats());
     }
 
     @Test

@@ -363,6 +363,20 @@ public class MiruWALMain {
                     amzaReadTrackingWALReader);
 
                 rcvsWALDirector = new MiruWALDirector<>(forkingWALLookup,
+                    rcvsActivityWALReader,
+                    rcvsActivityWALWriter,
+                    rcvsReadTrackingWALReader,
+                    rcvsReadTrackingWALWriter,
+                    clusterClient);
+
+                amzaWALDirector = new MiruWALDirector<>(amzaWALLookup,
+                    amzaActivityWALReader,
+                    amzaActivityWALWriter,
+                    amzaReadTrackingWALReader,
+                    amzaReadTrackingWALWriter,
+                    clusterClient);
+
+                miruWALDirector = new MiruWALDirector<>(forkingWALLookup,
                     forkingActivityWALReader,
                     forkingActivityWALWriter,
                     forkingReadTrackingWALReader,
@@ -370,7 +384,6 @@ public class MiruWALMain {
                     clusterClient);
 
                 activityWALReader = rcvsActivityWALReader;
-                miruWALDirector = rcvsWALDirector;
                 walEndpointsClass = RCVSWALEndpoints.class;
             } else if (walConfig.getActivityWALType().equals("amza_rcvs")) {
                 RCVSWALInitializer.RCVSWAL rcvsWAL = new RCVSWALInitializer().initialize(instanceConfig.getClusterName(),
@@ -383,6 +396,9 @@ public class MiruWALMain {
                     mapper);
                 ForkingActivityWALWriter forkingActivityWALWriter = new ForkingActivityWALWriter(amzaActivityWALWriter, rcvsActivityWALWriter);
 
+                RCVSActivityWALReader rcvsActivityWALReader = new RCVSActivityWALReader(hostPortProvider,
+                    rcvsWAL.getActivityWAL(),
+                    rcvsWAL.getActivitySipWAL());
                 AmzaActivityWALReader amzaActivityWALReader = new AmzaActivityWALReader(amzaWALUtil, mapper);
                 ForkingActivityWALReader<AmzaCursor, AmzaSipCursor> forkingActivityWALReader = new ForkingActivityWALReader<>(amzaActivityWALReader,
                     amzaActivityWALReader);
@@ -400,13 +416,30 @@ public class MiruWALMain {
                 ForkingReadTrackingWALWriter forkingReadTrackingWALWriter = new ForkingReadTrackingWALWriter(amzaReadTrackingWALWriter,
                     rcvsReadTrackingWALWriter);
 
+                RCVSReadTrackingWALReader rcvsReadTrackingWALReader = new RCVSReadTrackingWALReader(hostPortProvider,
+                    rcvsWAL.getReadTrackingWAL(),
+                    rcvsWAL.getReadTrackingSipWAL());
                 AmzaReadTrackingWALReader amzaReadTrackingWALReader = new AmzaReadTrackingWALReader(amzaWALUtil, mapper);
                 // technically this is pointless, but at least it's consistent
                 ForkingReadTrackingWALReader<AmzaCursor, AmzaSipCursor> forkingReadTrackingWALReader = new ForkingReadTrackingWALReader<>(
                     amzaReadTrackingWALReader,
                     amzaReadTrackingWALReader);
 
-                amzaWALDirector = new MiruWALDirector<>(forkingWALLookup,
+                rcvsWALDirector = new MiruWALDirector<>(forkingWALLookup,
+                    rcvsActivityWALReader,
+                    rcvsActivityWALWriter,
+                    rcvsReadTrackingWALReader,
+                    rcvsReadTrackingWALWriter,
+                    clusterClient);
+
+                amzaWALDirector = new MiruWALDirector<>(amzaWALLookup,
+                    amzaActivityWALReader,
+                    amzaActivityWALWriter,
+                    amzaReadTrackingWALReader,
+                    amzaReadTrackingWALWriter,
+                    clusterClient);
+
+                miruWALDirector = new MiruWALDirector<>(forkingWALLookup,
                     forkingActivityWALReader,
                     forkingActivityWALWriter,
                     forkingReadTrackingWALReader,
@@ -414,7 +447,6 @@ public class MiruWALMain {
                     clusterClient);
 
                 activityWALReader = amzaActivityWALReader;
-                miruWALDirector = amzaWALDirector;
                 walEndpointsClass = AmzaWALEndpoints.class;
             } else {
                 throw new IllegalStateException("Invalid activity WAL type: " + walConfig.getActivityWALType());
@@ -437,6 +469,7 @@ public class MiruWALMain {
                     renderer,
                     amzaWALUtil,
                     tenantRoutingProvider,
+                    miruWALDirector,
                     rcvsWALDirector,
                     amzaWALDirector,
                     activityWALReader,
