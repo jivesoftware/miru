@@ -10,8 +10,8 @@ import com.jivesoftware.os.miru.wal.deployable.region.MiruChromeRegion;
 import com.jivesoftware.os.miru.wal.deployable.region.MiruFrameRegion;
 import com.jivesoftware.os.miru.wal.deployable.region.MiruHeaderRegion;
 import com.jivesoftware.os.miru.wal.deployable.region.MiruManagePlugin;
+import com.jivesoftware.os.miru.wal.deployable.region.input.MiruActivityWALRegionInput;
 import com.jivesoftware.os.miru.wal.deployable.region.input.MiruReadWALRegionInput;
-import com.jivesoftware.os.miru.wal.deployable.region.input.RCVSActivityWALRegionInput;
 import java.util.List;
 
 /**
@@ -22,7 +22,7 @@ public class MiruWALUIService {
     private final MiruSoyRenderer renderer;
     private final MiruHeaderRegion headerRegion;
     private final MiruPageRegion<Void> adminRegion;
-    private final MiruPageRegion<RCVSActivityWALRegionInput> activityWALRegion;
+    private final MiruPageRegion<MiruActivityWALRegionInput> activityWALRegion;
     private final MiruPageRegion<MiruReadWALRegionInput> readWALRegion;
     private final MiruPageRegion<Optional<String>> repairRegion;
     private final MiruPageRegion<Void> cleanupRegion;
@@ -33,7 +33,7 @@ public class MiruWALUIService {
         MiruSoyRenderer renderer,
         MiruHeaderRegion headerRegion,
         MiruPageRegion<Void> adminRegion,
-        MiruPageRegion<RCVSActivityWALRegionInput> activityWALRegion,
+        MiruPageRegion<MiruActivityWALRegionInput> activityWALRegion,
         MiruPageRegion<MiruReadWALRegionInput> readWALRegion,
         MiruPageRegion<Optional<String>> repairRegion,
         MiruPageRegion<Void> cleanupRegion) {
@@ -63,21 +63,19 @@ public class MiruWALUIService {
     }
 
     public String renderActivityWAL() {
-        return chrome(activityWALRegion).render(new RCVSActivityWALRegionInput(
-            Optional.<MiruTenantId>absent(), Optional.<MiruPartitionId>absent(), Optional.<Boolean>absent(),
+        return chrome(activityWALRegion).render(new MiruActivityWALRegionInput(
+            Optional.<MiruTenantId>absent(), Optional.<String>absent(), Optional.<MiruPartitionId>absent(), Optional.<Boolean>absent(),
             Optional.<Long>absent(), Optional.<Integer>absent()));
     }
 
     public String renderActivityWALWithTenant(MiruTenantId tenantId) {
-        return chrome(activityWALRegion).render(new RCVSActivityWALRegionInput(
-            Optional.of(tenantId), Optional.<MiruPartitionId>absent(), Optional.<Boolean>absent(), Optional.<Long>absent(),
+        return chrome(activityWALRegion).render(new MiruActivityWALRegionInput(
+            Optional.of(tenantId), Optional.<String>absent(), Optional.<MiruPartitionId>absent(), Optional.<Boolean>absent(), Optional.<Long>absent(),
             Optional.<Integer>absent()));
     }
 
-    public String renderActivityWALWithFocus(MiruTenantId tenantId, MiruPartitionId partitionId, Optional<Boolean> sip, Optional<Long> afterTimestamp,
-        Optional<Integer> limit) {
-
-        return chrome(activityWALRegion).render(new RCVSActivityWALRegionInput(Optional.of(tenantId), Optional.of(partitionId), sip, afterTimestamp, limit));
+    public String renderActivityWALWithFocus(MiruActivityWALRegionInput input) {
+        return chrome(activityWALRegion).render(input);
     }
 
     public String renderReadWAL() {

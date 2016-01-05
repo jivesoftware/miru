@@ -431,10 +431,11 @@ public class MiruWALMain {
 
             MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
 
-            MiruWALUIService miruWALUIService = new MiruWriterUIServiceInitializer()
+            MiruWALUIService miruWALUIService = new MiruWALUIServiceInitializer()
                 .initialize(instanceConfig.getClusterName(),
                     instanceConfig.getInstanceName(),
                     renderer,
+                    amzaWALUtil,
                     tenantRoutingProvider,
                     rcvsWALDirector,
                     amzaWALDirector,

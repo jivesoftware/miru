@@ -53,14 +53,6 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
         this.partitionedActivityMarshaller = new JacksonJsonObjectTypeMarshaller<>(MiruPartitionedActivity.class, mapper);
     }
 
-    private Map<String, NamedCursor> extractCursors(List<NamedCursor> cursors) {
-        Map<String, NamedCursor> cursorsByName = Maps.newHashMapWithExpectedSize(cursors.size());
-        for (NamedCursor namedCursor : cursors) {
-            cursorsByName.put(namedCursor.name, namedCursor);
-        }
-        return cursorsByName;
-    }
-
     private TakeCursors takeCursors(StreamMiruActivityWAL streamMiruActivityWAL,
         StreamSuppressed streamSuppressed,
         EmbeddedClient client,
@@ -133,9 +125,9 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
             return cursor;
         }
 
-        Map<String, NamedCursor> cursorsByName = cursor != null ? extractCursors(cursor.cursors) : Maps.newHashMap();
+        Map<String, NamedCursor> cursorsByName = cursor != null ? amzaWALUtil.extractCursors(cursor.cursors) : Maps.newHashMap();
         Map<String, NamedCursor> sipCursorsByName = cursor != null && cursor.sipCursor != null
-            ? extractCursors(cursor.sipCursor.cursors) : Maps.newHashMap();
+            ? amzaWALUtil.extractCursors(cursor.sipCursor.cursors) : Maps.newHashMap();
 
         TakeCursors takeCursors = takeCursors(streamMiruActivityWAL, null, client, cursorsByName, null);
 
@@ -159,7 +151,7 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
             return sipCursor;
         }
 
-        Map<String, NamedCursor> sipCursorsByName = sipCursor != null ? extractCursors(sipCursor.cursors) : Maps.newHashMap();
+        Map<String, NamedCursor> sipCursorsByName = sipCursor != null ? amzaWALUtil.extractCursors(sipCursor.cursors) : Maps.newHashMap();
 
         TakeCursors takeCursors = takeCursors(streamMiruActivityWAL, streamSuppressed, client, sipCursorsByName, lastSeen);
         if (takeCursors.tookToEnd) {

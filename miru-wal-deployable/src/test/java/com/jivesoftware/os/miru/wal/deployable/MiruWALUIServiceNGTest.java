@@ -182,19 +182,15 @@ public class MiruWALUIServiceNGTest {
             clusterClient);
 
         MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(config);
-        service = new MiruWriterUIServiceInitializer().initialize("cluster", 1, renderer, new TenantRoutingProvider("1", new ConnectionDescriptorsProvider() {
-            @Override
-            public ConnectionDescriptorsResponse requestConnections(ConnectionDescriptorsRequest cdr) {
-                return null;
-            }
-        }), director, null, activityWALReader, new MiruStats());
+        service = new MiruWALUIServiceInitializer().initialize("cluster", 1, renderer, null,
+            new TenantRoutingProvider("1", cdr -> null), director, null, activityWALReader, new MiruStats());
     }
 
     @Test
     public void testRenderActivityWALWithTenant() throws Exception {
         String rendered = service.renderActivityWALWithTenant(tenantId);
         assertTrue(rendered.contains(tenantId.toString()));
-        assertTrue(rendered.contains("/miru/wal/activity/" + tenantId + "/" + partitionId + "#focus"));
+        assertTrue(rendered.contains("/miru/wal/activity/" + tenantId + "/" + partitionId + "/rcvs#focus"));
     }
 
 }
