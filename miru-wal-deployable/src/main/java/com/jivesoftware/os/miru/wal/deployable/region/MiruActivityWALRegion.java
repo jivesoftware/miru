@@ -77,7 +77,7 @@ public class MiruActivityWALRegion implements MiruPageRegion<MiruActivityWALRegi
                 SortedMap<Integer, Map<String, String>> amzaPartitions = getPartitions(tenantId, amzaWALDirector);
 
                 int minPartitionId = Math.min(firstKey(rcvsPartitions, Integer.MAX_VALUE), firstKey(amzaPartitions, Integer.MAX_VALUE));
-                int maxPartitionId = Math.max(firstKey(rcvsPartitions, Integer.MIN_VALUE), firstKey(amzaPartitions, Integer.MIN_VALUE));
+                int maxPartitionId = Math.max(lastKey(rcvsPartitions, Integer.MIN_VALUE), lastKey(amzaPartitions, Integer.MIN_VALUE));
 
                 List<PartitionBean> partitionBeans = Lists.newArrayList();
                 for (int partitionId = maxPartitionId; partitionId >= minPartitionId; partitionId--) {
@@ -92,7 +92,7 @@ public class MiruActivityWALRegion implements MiruPageRegion<MiruActivityWALRegi
                     data.put("partition", partitionId.getId());
                     data.put("walType", walType);
 
-                    List<WALBean> walActivities = Collections.emptyList();
+                    List<WALBean> walActivities = Lists.newArrayList();
                     final boolean sip = input.getSip().or(false);
                     final int limit = input.getLimit().or(100);
                     long afterTimestamp = input.getAfterTimestamp().or(0l);
@@ -142,6 +142,10 @@ public class MiruActivityWALRegion implements MiruPageRegion<MiruActivityWALRegi
         return !partitions.isEmpty() ? partitions.firstKey() : defaultValue;
     }
 
+    private Integer lastKey(SortedMap<Integer, Map<String, String>> partitions, Integer defaultValue) {
+        return !partitions.isEmpty() ? partitions.lastKey() : defaultValue;
+    }
+
     private <S extends MiruSipCursor<S>, C extends MiruCursor<C, S>> SortedMap<Integer, Map<String, String>> getPartitions(MiruTenantId tenantId,
         MiruWALDirector<C, S> director) throws Exception {
 
@@ -186,7 +190,6 @@ public class MiruActivityWALRegion implements MiruPageRegion<MiruActivityWALRegi
             partitionId,
             cursor,
             limit);
-        walActivities = Lists.newArrayListWithCapacity(gopped.activities.size());
         walActivities.addAll(Lists.transform(gopped.activities,
             input -> new WALBean(input.collisionId, Optional.of(input.activity), input.version)));
         lastTimestamp.set(gopped.cursor != null ? extractLastTimestamp.apply(gopped.cursor) : Long.MAX_VALUE);
@@ -201,12 +204,11 @@ public class MiruActivityWALRegion implements MiruPageRegion<MiruActivityWALRegi
         S cursor,
         Function<S, Long> extractLastTimestamp) throws Exception {
 
-        final MiruWALClient.StreamBatch<MiruWALEntry, S> sipped = director.sipActivity(tenantId,
+        MiruWALClient.StreamBatch<MiruWALEntry, S> sipped = director.sipActivity(tenantId,
             partitionId,
             cursor,
             null,
             limit);
-
         walActivities.addAll(Lists.transform(sipped.activities,
             input -> new WALBean(input.collisionId, Optional.of(input.activity), input.version)));
         lastTimestamp.set(sipped.cursor != null ? extractLastTimestamp.apply(sipped.cursor) : Long.MAX_VALUE);

@@ -43,15 +43,15 @@
                 <p>
                 {if $partitions}
                     <table class="table table-striped">
-                        <th>
-                            <td>Partition ID</td>
-                            <td>RCVS count</td>
-                            <td>RCVS open</td>
-                            <td>RCVS closed</td>
-                            <td>Amza count</td>
-                            <td>Amza open</td>
-                            <td>Amza closed</td>
-                        </th>
+                        <tr>
+                            <th>Partition ID</th>
+                            <th>RCVS count</th>
+                            <th>RCVS open</th>
+                            <th>RCVS closed</th>
+                            <th>Amza count</th>
+                            <th>Amza open</th>
+                            <th>Amza closed</th>
+                        </tr>
                         {foreach $p in $partitions}
                             <tr>
                                 <td>{$p.id}</td>
