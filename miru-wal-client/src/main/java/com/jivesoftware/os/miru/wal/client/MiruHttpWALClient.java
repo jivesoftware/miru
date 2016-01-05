@@ -291,7 +291,7 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
                 NextClientStrategy strategy = tenantRoutingCache.get(routingGroup,
                     () -> {
                         HostPort[] hostPorts = getTenantPartitionRoutingGroup(routingGroupType, tenantId, partitionId);
-                        if (hostPorts == null || hostPorts.length > 0) {
+                        if (hostPorts == null || hostPorts.length == 0) {
                             throw new MiruRouteUnavailableException("No route available for tenant " + tenantId + " partition " + partitionId);
                         }
                         return new ConnectionDescriptorSelectiveStrategy(hostPorts);
@@ -323,7 +323,7 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
                 NextClientStrategy strategy = tenantRoutingCache.get(routingGroup,
                     () -> {
                         HostPort[] hostPorts = getTenantStreamRoutingGroup(routingGroupType, tenantId, streamId);
-                        if (hostPorts == null || hostPorts.length > 0) {
+                        if (hostPorts == null || hostPorts.length == 0) {
                             throw new MiruRouteUnavailableException("No route available for tenant " + tenantId + " stream " + streamId);
                         }
                         return new ConnectionDescriptorSelectiveStrategy(hostPorts);
