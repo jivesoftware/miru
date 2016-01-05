@@ -376,7 +376,7 @@ public class MiruWALMain {
                     amzaReadTrackingWALWriter,
                     clusterClient);
 
-                miruWALDirector = new MiruWALDirector<>(forkingWALLookup,
+                MiruWALDirector<RCVSCursor, RCVSSipCursor> forkingWALDirector = new MiruWALDirector<>(forkingWALLookup,
                     forkingActivityWALReader,
                     forkingActivityWALWriter,
                     forkingReadTrackingWALReader,
@@ -384,6 +384,7 @@ public class MiruWALMain {
                     clusterClient);
 
                 activityWALReader = rcvsActivityWALReader;
+                miruWALDirector = forkingWALDirector;
                 walEndpointsClass = RCVSWALEndpoints.class;
             } else if (walConfig.getActivityWALType().equals("amza_rcvs")) {
                 RCVSWALInitializer.RCVSWAL rcvsWAL = new RCVSWALInitializer().initialize(instanceConfig.getClusterName(),
@@ -439,7 +440,7 @@ public class MiruWALMain {
                     amzaReadTrackingWALWriter,
                     clusterClient);
 
-                miruWALDirector = new MiruWALDirector<>(forkingWALLookup,
+                MiruWALDirector<AmzaCursor, AmzaSipCursor> forkingWALDirector = new MiruWALDirector<>(forkingWALLookup,
                     forkingActivityWALReader,
                     forkingActivityWALWriter,
                     forkingReadTrackingWALReader,
@@ -447,6 +448,7 @@ public class MiruWALMain {
                     clusterClient);
 
                 activityWALReader = amzaActivityWALReader;
+                miruWALDirector = forkingWALDirector;
                 walEndpointsClass = AmzaWALEndpoints.class;
             } else {
                 throw new IllegalStateException("Invalid activity WAL type: " + walConfig.getActivityWALType());
