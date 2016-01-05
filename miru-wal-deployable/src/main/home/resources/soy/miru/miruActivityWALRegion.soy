@@ -5,6 +5,7 @@
  *
  * @param? tenant
  * @param? partition
+ * @param? walType
  * @param? partitions
  * @param? sip
  * @param? limit
@@ -41,16 +42,28 @@
                 <label for="partitionPicker">Select Partition</label>
                 <p>
                 {if $partitions}
-                    {foreach $p in $partitions}
-                        {if not isFirst($p)} {/if}
-                        <a href="/miru/wal/activity/{$tenant}/{$p.id}#focus" class="activity-wal-partition">
-                            <span style="font-size:125%;">{$p.id}</span>
-                            {$p.count}
-                            {if $p.begins != $p.ends}
-                                ({$p.begins}/{$p.ends})
-                            {/if}
-                        </a>
-                    {/foreach}
+                    <table class="table table-striped">
+                        <th>
+                            <td>Partition ID</td>
+                            <td>RCVS count</td>
+                            <td>RCVS open</td>
+                            <td>RCVS closed</td>
+                            <td>Amza count</td>
+                            <td>Amza open</td>
+                            <td>Amza closed</td>
+                        </th>
+                        {foreach $p in $partitions}
+                            <tr>
+                                <td>{$p.id}</td>
+                                <td>{if $p.rcvs}<a href="/miru/wal/activity/{$tenant}/{$p.id}/rcvs#focus">{$p.rcvs.count}</a>{/if}</td>
+                                <td>{$p.rcvs ? $p.rcvs.begins : ''}</td>
+                                <td>{$p.rcvs ? $p.rcvs.ends : ''}</td>
+                                <td>{if $p.amza}<a href="/miru/wal/activity/{$tenant}/{$p.id}/amza#focus">{$p.amza.count}</a>{/if}</td>
+                                <td>{$p.amza ? $p.amza.begins : ''}</td>
+                                <td>{$p.amza ? $p.amza.ends : ''}</td>
+                            </td>
+                        {/foreach}
+                    </table>
                 {else}
                     No partitions found
                 {/if}
@@ -78,7 +91,7 @@
                         <option value="1000"{if $limit == 1000} selected="selected"{/if}>1000</option>
                     </select>
                     <input type="button" value="Go" onclick="
-                        location.href='/miru/wal/activity/{$tenant}/{$partition}'+
+                        location.href='/miru/wal/activity/{$tenant}/{$partition}/{$walType}'+
                             '?sip='+document.getElementById('sip').checked+
                             '&amp;afterTimestamp='+document.getElementById('fromTimestamp').value+
                             '&amp;limit='+document.getElementById('withLimit').value+
@@ -150,7 +163,7 @@
                 {if length($activities) == $limit}
                     <div style="float:right; margin-right:10px;">
                         <a href="#" onclick="
-                            location.href='/miru/wal/activity/{$tenant}/{$partition}'+
+                            location.href='/miru/wal/activity/{$tenant}/{$partition}/{$walType}'+
                                  '?sip='+document.getElementById('sip').checked+
                                  '&amp;afterTimestamp={$nextTimestamp}'+
                                  '&amp;limit='+document.getElementById('withLimit').value+

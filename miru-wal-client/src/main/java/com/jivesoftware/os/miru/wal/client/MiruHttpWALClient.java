@@ -114,19 +114,40 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
     @Override
     public void writeActivity(MiruTenantId tenantId, MiruPartitionId partitionId, List<MiruPartitionedActivity> partitionedActivities) throws Exception {
         final String jsonActivities = requestMapper.writeValueAsString(partitionedActivities);
-        sendWithTenantPartition(RoutingGroupType.activity, tenantId, partitionId, "writeActivity",
-            client -> extract(client.postJson(pathPrefix + "/write/activities/" + tenantId.toString() + "/" + partitionId.getId(), jsonActivities, null),
-                String.class,
-                null));
+        while (true) {
+            try {
+                String result = sendWithTenantPartition(RoutingGroupType.activity, tenantId, partitionId, "writeActivity",
+                    client -> extract(
+                        client.postJson(pathPrefix + "/write/activities/" + tenantId.toString() + "/" + partitionId.getId(), jsonActivities, null),
+                        String.class,
+                        null));
+                if (result != null) {
+                    break;
+                }
+            } catch (Exception x) {
+                LOG.warn("Failed to write activities for {} {}, retrying in 1 sec", tenantId, partitionId);
+                Thread.sleep(1_000);
+            }
+        }
     }
 
     @Override
     public void writeReadTracking(MiruTenantId tenantId, MiruStreamId streamId, List<MiruPartitionedActivity> partitionedActivities) throws Exception {
         final String jsonActivities = requestMapper.writeValueAsString(partitionedActivities);
-        sendWithTenantStream(RoutingGroupType.readTracking, tenantId, streamId, "writeReadTracking",
-            client -> extract(client.postJson(pathPrefix + "/write/reads/" + tenantId.toString() + "/" + streamId.toString(), jsonActivities, null),
-                String.class,
-                null));
+        while (true) {
+            try {
+                String result = sendWithTenantStream(RoutingGroupType.readTracking, tenantId, streamId, "writeReadTracking",
+                    client -> extract(client.postJson(pathPrefix + "/write/reads/" + tenantId.toString() + "/" + streamId.toString(), jsonActivities, null),
+                        String.class,
+                        null));
+                if (result != null) {
+                    break;
+                }
+            } catch (Exception x) {
+                LOG.warn("Failed to write read tracking for {} {}, retrying in 1 sec", tenantId, streamId);
+                Thread.sleep(1_000);
+            }
+        }
     }
 
     @Override

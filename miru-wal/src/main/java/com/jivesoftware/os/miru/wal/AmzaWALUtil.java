@@ -22,6 +22,7 @@ import com.jivesoftware.os.miru.api.wal.AmzaCursor;
 import com.jivesoftware.os.miru.wal.lookup.PartitionsStream;
 import com.jivesoftware.os.routing.bird.shared.HostPort;
 import java.nio.ByteBuffer;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -247,6 +248,14 @@ public class AmzaWALUtil {
         buf.get(tenantBytes);
         int partitionId = buf.getInt();
         return new TenantAndPartition(new MiruTenantId(tenantBytes), MiruPartitionId.of(partitionId));
+    }
+
+    public Map<String, NamedCursor> extractCursors(List<NamedCursor> cursors) {
+        Map<String, NamedCursor> cursorsByName = Maps.newHashMapWithExpectedSize(cursors.size());
+        for (NamedCursor namedCursor : cursors) {
+            cursorsByName.put(namedCursor.name, namedCursor);
+        }
+        return cursorsByName;
     }
 
     public void mergeCursors(Map<String, NamedCursor> cursorsByName, TakeCursors takeCursors) {

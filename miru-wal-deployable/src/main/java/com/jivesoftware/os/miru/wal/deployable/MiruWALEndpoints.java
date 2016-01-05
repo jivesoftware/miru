@@ -5,6 +5,7 @@ import com.google.common.base.Optional;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.wal.MiruWALDirector;
+import com.jivesoftware.os.miru.wal.deployable.region.input.MiruActivityWALRegionInput;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import javax.inject.Singleton;
@@ -63,20 +64,22 @@ public class MiruWALEndpoints {
     }
 
     @GET
-    @Path("/activity/{tenantId}/{partitionId}")
+    @Path("/activity/{tenantId}/{partitionId}/{walType}")
     @Produces(MediaType.TEXT_HTML)
     public Response getActivityWALForTenantPartition(
         @PathParam("tenantId") String tenantId,
         @PathParam("partitionId") int partitionId,
+        @PathParam("walType") String walType,
         @QueryParam("sip") Boolean sip,
         @QueryParam("afterTimestamp") Long afterTimestamp,
         @QueryParam("limit") Integer limit) {
         String rendered = writerUIService.renderActivityWALWithFocus(
-            new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
-            MiruPartitionId.of(partitionId),
-            Optional.fromNullable(sip),
-            Optional.fromNullable(afterTimestamp),
-            Optional.fromNullable(limit));
+            new MiruActivityWALRegionInput(Optional.of(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8))),
+                Optional.of(walType),
+                Optional.of(MiruPartitionId.of(partitionId)),
+                Optional.fromNullable(sip),
+                Optional.fromNullable(afterTimestamp),
+                Optional.fromNullable(limit)));
         return Response.ok(rendered).build();
     }
 
