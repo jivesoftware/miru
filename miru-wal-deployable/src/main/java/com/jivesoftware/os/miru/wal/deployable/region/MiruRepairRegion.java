@@ -34,12 +34,12 @@ public class MiruRepairRegion implements MiruPageRegion<Optional<String>> {
     private final String template;
     private final MiruSoyRenderer renderer;
     private final MiruActivityWALReader activityWALReader;
-    private final MiruWALDirector miruWALDirector;
+    private final MiruWALDirector<?, ?> miruWALDirector;
 
     public MiruRepairRegion(String template,
         MiruSoyRenderer renderer,
         MiruActivityWALReader activityWALReader,
-        MiruWALDirector miruWALDirector) {
+        MiruWALDirector<?, ?> miruWALDirector) {
         this.template = template;
         this.renderer = renderer;
         this.activityWALReader = activityWALReader;

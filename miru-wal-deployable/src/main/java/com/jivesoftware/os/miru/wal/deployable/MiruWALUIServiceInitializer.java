@@ -24,6 +24,7 @@ public class MiruWALUIServiceInitializer {
         MiruSoyRenderer renderer,
         AmzaWALUtil amzaWALUtil,
         TenantRoutingProvider tenantRoutingProvider,
+        MiruWALDirector<?, ?> miruWALDirector,
         MiruWALDirector<RCVSCursor, RCVSSipCursor> rcvsWALDirector,
         MiruWALDirector<AmzaCursor, AmzaSipCursor> amzaWALDirector,
         MiruActivityWALReader activityWALReader,
@@ -35,8 +36,8 @@ public class MiruWALUIServiceInitializer {
             new MiruHeaderRegion(cluster, instance, "soy.miru.chrome.headerRegion", renderer, tenantRoutingProvider),
             new MiruAdminRegion("soy.miru.page.adminRegion", renderer, miruStats),
             new MiruActivityWALRegion("soy.miru.page.activityWalRegion", renderer, amzaWALUtil, rcvsWALDirector, amzaWALDirector),
-            new MiruReadWALRegion("soy.miru.page.readWalRegion", renderer, rcvsWALDirector),
-            new MiruRepairRegion("soy.miru.page.repairRegion", renderer, activityWALReader, rcvsWALDirector),
-            new MiruCleanupRegion("soy.miru.page.cleanupRegion", renderer, rcvsWALDirector));
+            new MiruReadWALRegion("soy.miru.page.readWalRegion", renderer, rcvsWALDirector), //TODO amza
+            new MiruRepairRegion("soy.miru.page.repairRegion", renderer, activityWALReader, miruWALDirector),
+            new MiruCleanupRegion("soy.miru.page.cleanupRegion", renderer, miruWALDirector));
     }
 }

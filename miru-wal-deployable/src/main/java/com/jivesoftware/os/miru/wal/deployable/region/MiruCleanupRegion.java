@@ -28,7 +28,7 @@ public class MiruCleanupRegion implements MiruPageRegion<Void> {
 
     public MiruCleanupRegion(String template,
         MiruSoyRenderer renderer,
-        MiruWALDirector miruWALDirector) {
+        MiruWALDirector<?, ?> miruWALDirector) {
         this.template = template;
         this.renderer = renderer;
         this.miruWALDirector = miruWALDirector;
