@@ -4,9 +4,9 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
-        <artifactId>routing-bird-deployable-management</artifactId>
+        <artifactId>global-build-management</artifactId>
         <version>0.793-SNAPSHOT</version>
-        <relativePath>../inheritance-poms/routing-bird-deployable-management/pom.xml</relativePath>
+        <relativePath>../inheritance-poms/global-build-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru</groupId>
     <artifactId>miru-reader-deployable</artifactId>
@@ -16,6 +16,13 @@
         <assembly.home>${project.basedir}</assembly.home>
     </properties>
     <dependencies>
+        <dependency>
+            <groupId>com.jivesoftware.os.routing.bird</groupId>
+            <artifactId>deployable-scripts</artifactId>
+            <type>tar.gz</type>
+            <classifier>bin</classifier>
+            <scope>runtime</scope>
+        </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.filer</groupId>
             <artifactId>io</artifactId>
