@@ -49,10 +49,10 @@ public class MiruManageServiceTest {
     private MiruPartitionId partitionId;
 
     private MiruSchema miruSchema = new MiruSchema.Builder("test", 1)
-        .setFieldDefinitions(new MiruFieldDefinition[] {
-            new MiruFieldDefinition(0, "user", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
-            new MiruFieldDefinition(1, "doc", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE)
-        })
+        .setFieldDefinitions(new MiruFieldDefinition[]{
+        new MiruFieldDefinition(0, "user", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
+        new MiruFieldDefinition(1, "doc", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE)
+    })
         .setPairedLatest(ImmutableMap.of(
             "user", Arrays.asList("doc"),
             "doc", Arrays.asList("user")))
@@ -79,7 +79,8 @@ public class MiruManageServiceTest {
         acrc.setWorkingDirectories(amzaDataDir.getAbsolutePath());
         acrc.setIndexDirectories(amzaIndexDir.getAbsolutePath());
         Deployable deployable = new Deployable(new String[0]);
-        AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable, "routesHost", 1, "connectionHealthPath", 1, "instanceKey",
+        AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable, "datacenter", "rack", "routesHost", 1, "connectionHealthPath", 1,
+            "instanceKey",
             "serviceName", "localhost", 10000, null, acrc,
             rowsChanged -> {
             });
