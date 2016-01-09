@@ -20,7 +20,7 @@ import com.jivesoftware.os.amza.service.AmzaRingStoreWriter;
 import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.amza.service.AmzaServiceInitializer.AmzaServiceConfig;
 import com.jivesoftware.os.amza.service.EmbeddedAmzaServiceInitializer;
-import com.jivesoftware.os.amza.service.SickThreads;
+import com.jivesoftware.os.amza.service.SickPartitions;
 import com.jivesoftware.os.amza.service.WALIndexProviderRegistry;
 import com.jivesoftware.os.amza.service.discovery.AmzaDiscovery;
 import com.jivesoftware.os.amza.service.replication.TakeFailureListener;
@@ -45,6 +45,7 @@ import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.deployable.Deployable;
 import com.jivesoftware.os.routing.bird.health.HealthCheckResponse;
 import com.jivesoftware.os.routing.bird.health.HealthCheckResponseImpl;
+import com.jivesoftware.os.routing.bird.health.checkers.SickThreads;
 import com.jivesoftware.os.routing.bird.http.client.HttpClient;
 import com.jivesoftware.os.routing.bird.http.client.HttpClientException;
 import com.jivesoftware.os.routing.bird.http.client.HttpDeliveryClientHealthProvider;
@@ -70,6 +71,8 @@ import java.util.concurrent.TimeUnit;
 public class MiruAmzaServiceInitializer {
 
     public AmzaService initialize(Deployable deployable,
+        String datcenter,
+        String rack,
         String routesHost,
         int routesPort,
         String connectionsHealthEndpoint,
@@ -87,7 +90,7 @@ public class MiruAmzaServiceInitializer {
 
         RingMember ringMember = new RingMember(
             Strings.padStart(String.valueOf(instanceId), 5, '0') + "_" + instanceKey);
-        RingHost ringHost = new RingHost(hostName, port);
+        RingHost ringHost = new RingHost(datcenter, rack, hostName, port);
 
         SnowflakeIdPacker idPacker = new SnowflakeIdPacker();
         TimestampedOrderIdProvider orderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceId),
@@ -136,10 +139,12 @@ public class MiruAmzaServiceInitializer {
         };
 
         SickThreads sickThreads = new SickThreads();
+        SickPartitions sickPartitions = new SickPartitions();
 
         AmzaService amzaService = new EmbeddedAmzaServiceInitializer().initialize(amzaServiceConfig,
             amzaStats,
             sickThreads,
+            sickPartitions,
             ringMember,
             ringHost,
             orderIdProvider,
@@ -263,6 +268,8 @@ public class MiruAmzaServiceInitializer {
             System.out.println("|     Amza Service is in routing bird Discovery mode.  No cluster name was specified or discovery port not set");
             System.out.println("-----------------------------------------------------------------------");
             RoutingBirdAmzaDiscovery routingBirdAmzaDiscovery = new RoutingBirdAmzaDiscovery(deployable,
+                datcenter,
+                rack,
                 serviceName,
                 amzaService,
                 config.getDiscoveryIntervalMillis());
@@ -277,12 +284,17 @@ public class MiruAmzaServiceInitializer {
         private final ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
 
         private final Deployable deployable;
+        private final String datacenter;
+        private final String rack;
         private final String serviceName;
         private final AmzaService amzaService;
         private final long discoveryIntervalMillis;
 
-        public RoutingBirdAmzaDiscovery(Deployable deployable, String serviceName, AmzaService amzaService, long discoveryIntervalMillis) {
+        public RoutingBirdAmzaDiscovery(Deployable deployable, String datacenter, String rack, String serviceName, AmzaService amzaService,
+            long discoveryIntervalMillis) {
             this.deployable = deployable;
+            this.datacenter = datacenter;
+            this.rack = rack;
             this.serviceName = serviceName;
             this.amzaService = amzaService;
             this.discoveryIntervalMillis = discoveryIntervalMillis;
@@ -310,7 +322,7 @@ public class MiruAmzaServiceInitializer {
 
                     HostPort hostPort = connectionDescriptor.getHostPort();
                     AmzaRingStoreWriter ringWriter = amzaService.getRingWriter();
-                    ringWriter.register(routingRingMember, new RingHost(hostPort.getHost(), hostPort.getPort()), -1);
+                    ringWriter.register(routingRingMember, new RingHost(datacenter, rack, hostPort.getHost(), hostPort.getPort()), -1);
                     ringWriter.addRingMember(AmzaRingReader.SYSTEM_RING, routingRingMember);
 
                 }

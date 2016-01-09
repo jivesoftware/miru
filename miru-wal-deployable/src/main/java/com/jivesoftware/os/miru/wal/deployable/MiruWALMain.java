@@ -198,6 +198,8 @@ public class MiruWALMain {
 
             WALAmzaServiceConfig amzaServiceConfig = deployable.config(WALAmzaServiceConfig.class);
             AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable,
+                instanceConfig.getDatacenter(),
+                instanceConfig.getRack(),
                 instanceConfig.getRoutesHost(),
                 instanceConfig.getRoutesPort(),
                 instanceConfig.getConnectionsHealth(),

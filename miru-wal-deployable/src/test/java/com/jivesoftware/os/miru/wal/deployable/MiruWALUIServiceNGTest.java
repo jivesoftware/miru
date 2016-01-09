@@ -14,7 +14,7 @@ import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.amza.service.AmzaServiceInitializer.AmzaServiceConfig;
 import com.jivesoftware.os.amza.service.EmbeddedAmzaServiceInitializer;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider;
-import com.jivesoftware.os.amza.service.SickThreads;
+import com.jivesoftware.os.amza.service.SickPartitions;
 import com.jivesoftware.os.amza.service.WALIndexProviderRegistry;
 import com.jivesoftware.os.amza.service.replication.TakeFailureListener;
 import com.jivesoftware.os.amza.service.replication.http.HttpAvailableRowsTaker;
@@ -54,9 +54,7 @@ import com.jivesoftware.os.miru.wal.lookup.RCVSWALLookup;
 import com.jivesoftware.os.miru.wal.readtracking.rcvs.RCVSReadTrackingWALReader;
 import com.jivesoftware.os.miru.wal.readtracking.rcvs.RCVSReadTrackingWALWriter;
 import com.jivesoftware.os.rcvs.inmemory.InMemoryRowColumnValueStoreInitializer;
-import com.jivesoftware.os.routing.bird.shared.ConnectionDescriptorsProvider;
-import com.jivesoftware.os.routing.bird.shared.ConnectionDescriptorsRequest;
-import com.jivesoftware.os.routing.bird.shared.ConnectionDescriptorsResponse;
+import com.jivesoftware.os.routing.bird.health.checkers.SickThreads;
 import com.jivesoftware.os.routing.bird.shared.TenantRoutingProvider;
 import java.io.File;
 import java.io.IOException;
@@ -105,7 +103,7 @@ public class MiruWALUIServiceNGTest {
         File amzaIndexDir = Files.createTempDir();
 
         RingMember ringMember = new RingMember("testInstance");
-        RingHost ringHost = new RingHost("localhost", 10000);
+        RingHost ringHost = new RingHost("datacenter", "rack", "localhost", 10000);
         SnowflakeIdPacker idPacker = new SnowflakeIdPacker();
         TimestampedOrderIdProvider orderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(1),
             idPacker,
@@ -118,7 +116,7 @@ public class MiruWALUIServiceNGTest {
         RowsTakerFactory rowsTakerFactory = () -> new HttpRowsTaker(amzaStats);
 
         final AmzaServiceConfig amzaServiceConfig = new AmzaServiceConfig();
-        amzaServiceConfig.workingDirectories = new String[] { amzaDataDir.getAbsolutePath() };
+        amzaServiceConfig.workingDirectories = new String[]{amzaDataDir.getAbsolutePath()};
         amzaServiceConfig.numberOfDeltaStripes = amzaServiceConfig.workingDirectories.length;
         amzaServiceConfig.numberOfTakerThreads = 1;
 
@@ -146,13 +144,14 @@ public class MiruWALUIServiceNGTest {
         AmzaService amzaService = new EmbeddedAmzaServiceInitializer().initialize(amzaServiceConfig,
             amzaStats,
             new SickThreads(),
+            new SickPartitions(),
             ringMember,
             ringHost,
             orderIdProvider,
             idPacker,
             partitionPropertyMarshaller,
             (WALIndexProviderRegistry indexProviderRegistry1, RowIOProvider<?> ephemeralRowIOProvider, RowIOProvider<?> persistentRowIOProvider) -> {
-                String[] walIndexDirs = new String[] { amzaIndexDir.getAbsolutePath() };
+                String[] walIndexDirs = new String[]{amzaIndexDir.getAbsolutePath()};
                 indexProviderRegistry1.register("berkeleydb", new BerkeleyDBWALIndexProvider(walIndexDirs, walIndexDirs.length), persistentRowIOProvider);
             },
             availableRowsTaker,
