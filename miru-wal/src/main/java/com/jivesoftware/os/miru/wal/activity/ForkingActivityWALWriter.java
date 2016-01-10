@@ -39,15 +39,7 @@ public class ForkingActivityWALWriter implements MiruActivityWALWriter {
         if (secondaryWAL != null) {
             LOG.startTimer("forking>write>secondary");
             try {
-                while (true) {
-                    try {
-                        secondaryWAL.write(tenantId, partitionId, partitionedActivities);
-                        break;
-                    } catch (Exception x) {
-                        LOG.warn("Failed to write:{} activities for tenant:{} to secondary WAL.", new Object[] { partitionedActivities.size(), tenantId }, x);
-                        Thread.sleep(10_000);
-                    }
-                }
+                secondaryWAL.write(tenantId, partitionId, partitionedActivities);
             } finally {
                 LOG.stopTimer("forking>write>secondary");
             }
@@ -67,15 +59,7 @@ public class ForkingActivityWALWriter implements MiruActivityWALWriter {
         if (secondaryWAL != null) {
             LOG.startTimer("forking>delete>secondary");
             try {
-                while (true) {
-                    try {
-                        secondaryWAL.delete(tenantId, partitionId, keys);
-                        break;
-                    } catch (Exception x) {
-                        LOG.warn("Failed to delete:{} activities for tenant:{} from secondary WAL.", new Object[] { keys.size(), tenantId }, x);
-                        Thread.sleep(10_000);
-                    }
-                }
+                secondaryWAL.delete(tenantId, partitionId, keys);
             } finally {
                 LOG.stopTimer("forking>delete>secondary");
             }
@@ -94,15 +78,7 @@ public class ForkingActivityWALWriter implements MiruActivityWALWriter {
         if (secondaryWAL != null) {
             LOG.startTimer("forking>deleteSip>secondary");
             try {
-                while (true) {
-                    try {
-                        secondaryWAL.deleteSip(tenantId, partitionId, keys);
-                        break;
-                    } catch (Exception x) {
-                        LOG.warn("Failed to deleteSip:{} activities for tenant:{} from secondary WAL.", new Object[] { keys.size(), tenantId }, x);
-                        Thread.sleep(10_000);
-                    }
-                }
+                secondaryWAL.deleteSip(tenantId, partitionId, keys);
             } finally {
                 LOG.stopTimer("forking>deleteSip>secondary");
             }
@@ -122,7 +98,6 @@ public class ForkingActivityWALWriter implements MiruActivityWALWriter {
             LOG.startTimer("forking>removePartition>secondary");
             try {
                 secondaryWAL.removePartition(tenantId, partitionId);
-                //TODO spin?
             } finally {
                 LOG.stopTimer("forking>removePartition>secondary");
             }

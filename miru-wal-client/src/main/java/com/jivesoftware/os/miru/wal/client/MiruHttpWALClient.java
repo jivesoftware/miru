@@ -17,6 +17,7 @@ import com.jivesoftware.os.miru.api.wal.MiruWALEntry;
 import com.jivesoftware.os.miru.api.wal.SipAndLastSeen;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import com.jivesoftware.os.routing.bird.health.checkers.SickThreads;
 import com.jivesoftware.os.routing.bird.http.client.ConnectionDescriptorSelectiveStrategy;
 import com.jivesoftware.os.routing.bird.http.client.HttpClient;
 import com.jivesoftware.os.routing.bird.http.client.HttpClientException;
@@ -43,6 +44,7 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
     private final RoundRobinStrategy roundRobinStrategy;
     private final ObjectMapper requestMapper;
     private final HttpResponseMapper responseMapper;
+    private final SickThreads sickThreads;
     private final long sleepOnFailureMillis;
     private final String pathPrefix;
     private final Class<C> cursorClass;
@@ -54,7 +56,7 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
         RoundRobinStrategy roundRobinStrategy,
         ObjectMapper requestMapper,
         HttpResponseMapper responseMapper,
-        long sleepOnFailureMillis,
+        SickThreads sickThreads, long sleepOnFailureMillis,
         String pathPrefix,
         Class<C> cursorClass,
         Class<S> sipCursorClass) {
@@ -63,6 +65,7 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
         this.roundRobinStrategy = roundRobinStrategy;
         this.requestMapper = requestMapper;
         this.responseMapper = responseMapper;
+        this.sickThreads = sickThreads;
         this.sleepOnFailureMillis = sleepOnFailureMillis;
         this.pathPrefix = pathPrefix;
         this.cursorClass = cursorClass;
@@ -113,40 +116,50 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
 
     @Override
     public void writeActivity(MiruTenantId tenantId, MiruPartitionId partitionId, List<MiruPartitionedActivity> partitionedActivities) throws Exception {
-        final String jsonActivities = requestMapper.writeValueAsString(partitionedActivities);
-        while (true) {
-            try {
-                String result = sendWithTenantPartition(RoutingGroupType.activity, tenantId, partitionId, "writeActivity",
-                    client -> extract(
-                        client.postJson(pathPrefix + "/write/activities/" + tenantId.toString() + "/" + partitionId.getId(), jsonActivities, null),
-                        String.class,
-                        null));
-                if (result != null) {
-                    break;
+        try {
+            final String jsonActivities = requestMapper.writeValueAsString(partitionedActivities);
+            while (true) {
+                try {
+                    String result = sendWithTenantPartition(RoutingGroupType.activity, tenantId, partitionId, "writeActivity",
+                        client -> extract(
+                            client.postJson(pathPrefix + "/write/activities/" + tenantId.toString() + "/" + partitionId.getId(), jsonActivities, null),
+                            String.class,
+                            null));
+                    if (result != null) {
+                        return;
+                    }
+                } catch (Exception x) {
+                    sickThreads.sick(x);
+                    LOG.warn("Failed to write activities for {} {}, retrying in 1 sec", tenantId, partitionId);
+                    Thread.sleep(1_000);
                 }
-            } catch (Exception x) {
-                LOG.warn("Failed to write activities for {} {}, retrying in 1 sec", tenantId, partitionId);
-                Thread.sleep(1_000);
             }
+        } finally {
+            sickThreads.recovered();
         }
     }
 
     @Override
     public void writeReadTracking(MiruTenantId tenantId, MiruStreamId streamId, List<MiruPartitionedActivity> partitionedActivities) throws Exception {
-        final String jsonActivities = requestMapper.writeValueAsString(partitionedActivities);
-        while (true) {
-            try {
-                String result = sendWithTenantStream(RoutingGroupType.readTracking, tenantId, streamId, "writeReadTracking",
-                    client -> extract(client.postJson(pathPrefix + "/write/reads/" + tenantId.toString() + "/" + streamId.toString(), jsonActivities, null),
-                        String.class,
-                        null));
-                if (result != null) {
-                    break;
+        try {
+            final String jsonActivities = requestMapper.writeValueAsString(partitionedActivities);
+            while (true) {
+                try {
+                    String result = sendWithTenantStream(RoutingGroupType.readTracking, tenantId, streamId, "writeReadTracking",
+                        client -> extract(client.postJson(pathPrefix + "/write/reads/" + tenantId.toString() + "/" + streamId.toString(), jsonActivities, null),
+                            String.class,
+                            null));
+                    if (result != null) {
+                        return;
+                    }
+                } catch (Exception x) {
+                    sickThreads.sick(x);
+                    LOG.warn("Failed to write read tracking for {} {}, retrying in 1 sec", tenantId, streamId);
+                    Thread.sleep(1_000);
                 }
-            } catch (Exception x) {
-                LOG.warn("Failed to write read tracking for {} {}, retrying in 1 sec", tenantId, streamId);
-                Thread.sleep(1_000);
             }
+        } finally {
+            sickThreads.recovered();
         }
     }
 
@@ -198,28 +211,28 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
         Set<TimeAndVersion> lastSeen,
         int batchSize) throws Exception {
         final String jsonCursor = requestMapper.writeValueAsString(new SipAndLastSeen<>(cursor, lastSeen));
-        while (true) {
-            try {
-                @SuppressWarnings("unchecked")
-                StreamBatch<MiruWALEntry, S> response = sendWithTenantPartition(RoutingGroupType.activity, tenantId, partitionId, "sipActivity",
-                    client -> extract(
-                        client.postJson(pathPrefix + "/sip/activity/" + tenantId.toString() + "/" + partitionId.getId() + "/" + batchSize, jsonCursor, null),
-                        StreamBatch.class,
-                        new Class[] { MiruWALEntry.class, sipCursorClass },
-                        null));
-                if (response != null) {
-                    return response;
-                }
-            } catch (Exception e) {
-                // non-interrupts are retried
-                LOG.warn("Failure while streaming, will retry in {} ms", new Object[] { sleepOnFailureMillis }, e);
+        try {
+            while (true) {
                 try {
+                    @SuppressWarnings("unchecked")
+                    StreamBatch<MiruWALEntry, S> response = sendWithTenantPartition(RoutingGroupType.activity, tenantId, partitionId, "sipActivity",
+                        client -> extract(
+                            client.postJson(pathPrefix + "/sip/activity/" + tenantId.toString() + "/" + partitionId.getId() + "/" + batchSize, jsonCursor,
+                                null),
+                            StreamBatch.class,
+                            new Class[] { MiruWALEntry.class, sipCursorClass },
+                            null));
+                    if (response != null) {
+                        return response;
+                    }
+                } catch (Exception e) {
+                    sickThreads.sick(e);
+                    LOG.warn("Failure while streaming, will retry in {} ms", new Object[] { sleepOnFailureMillis }, e);
                     Thread.sleep(sleepOnFailureMillis);
-                } catch (InterruptedException ie) {
-                    Thread.interrupted();
-                    throw new RuntimeException("Interrupted during retry after failure, expect partial results");
                 }
             }
+        } finally {
+            sickThreads.recovered();
         }
     }
 
@@ -228,29 +241,28 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
         MiruPartitionId partitionId,
         C cursor,
         int batchSize) throws Exception {
-        final String jsonCursor = requestMapper.writeValueAsString(cursor);
-        while (true) {
-            try {
-                @SuppressWarnings("unchecked")
-                StreamBatch<MiruWALEntry, C> response = sendWithTenantPartition(RoutingGroupType.activity, tenantId, partitionId, "getActivity",
-                    client -> extract(
-                        client.postJson(pathPrefix + "/activity/" + tenantId.toString() + "/" + partitionId.getId() + "/" + batchSize, jsonCursor, null),
-                        StreamBatch.class,
-                        new Class[] { MiruWALEntry.class, cursorClass },
-                        null));
-                if (response != null) {
-                    return response;
-                }
-            } catch (Exception e) {
-                // non-interrupts are retried
-                LOG.warn("Failure while streaming, will retry in {} ms", new Object[] { sleepOnFailureMillis }, e);
+        try {
+            final String jsonCursor = requestMapper.writeValueAsString(cursor);
+            while (true) {
                 try {
+                    @SuppressWarnings("unchecked")
+                    StreamBatch<MiruWALEntry, C> response = sendWithTenantPartition(RoutingGroupType.activity, tenantId, partitionId, "getActivity",
+                        client -> extract(
+                            client.postJson(pathPrefix + "/activity/" + tenantId.toString() + "/" + partitionId.getId() + "/" + batchSize, jsonCursor, null),
+                            StreamBatch.class,
+                            new Class[] { MiruWALEntry.class, cursorClass },
+                            null));
+                    if (response != null) {
+                        return response;
+                    }
+                } catch (Exception e) {
+                    sickThreads.sick(e);
+                    LOG.warn("Failure while streaming, will retry in {} ms", new Object[] { sleepOnFailureMillis }, e);
                     Thread.sleep(sleepOnFailureMillis);
-                } catch (InterruptedException ie) {
-                    Thread.interrupted();
-                    throw new RuntimeException("Interrupted during retry after failure, expect partial results");
                 }
             }
+        } finally {
+            sickThreads.recovered();
         }
     }
 
@@ -285,8 +297,8 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
         MiruPartitionId partitionId,
         String family,
         ClientCall<HttpClient, SendResult<R>, HttpClientException> call) {
+        TenantRoutingGroup<MiruPartitionId> routingGroup = new TenantRoutingGroup<>(routingGroupType, tenantId, partitionId);
         try {
-            TenantRoutingGroup<MiruPartitionId> routingGroup = new TenantRoutingGroup<>(routingGroupType, tenantId, partitionId);
             while (true) {
                 NextClientStrategy strategy = tenantRoutingCache.get(routingGroup,
                     () -> {
@@ -305,9 +317,14 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
                 if (sendResult.errorRoute) {
                     return null;
                 }
+
+                sickThreads.sick(new Throwable("Tenant partition route is invalid"));
             }
         } catch (Exception x) {
+            tenantRoutingCache.invalidate(routingGroup);
             throw new RuntimeException("Failed to send.", x);
+        } finally {
+            sickThreads.recovered();
         }
     }
 
@@ -317,8 +334,8 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
         MiruStreamId streamId,
         String family,
         ClientCall<HttpClient, SendResult<R>, HttpClientException> call) {
+        TenantRoutingGroup<MiruStreamId> routingGroup = new TenantRoutingGroup<>(routingGroupType, tenantId, streamId);
         try {
-            TenantRoutingGroup<MiruStreamId> routingGroup = new TenantRoutingGroup<>(routingGroupType, tenantId, streamId);
             while (true) {
                 NextClientStrategy strategy = tenantRoutingCache.get(routingGroup,
                     () -> {
@@ -337,9 +354,13 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
                 if (sendResult.errorRoute) {
                     return null;
                 }
+                sickThreads.sick(new Throwable("Tenant stream route is invalid"));
             }
         } catch (Exception x) {
+            tenantRoutingCache.invalidate(routingGroup);
             throw new RuntimeException("Failed to send.", x);
+        } finally {
+            sickThreads.recovered();
         }
     }
 
