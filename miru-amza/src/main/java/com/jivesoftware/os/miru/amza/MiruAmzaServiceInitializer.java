@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Optional;
 import com.google.common.base.Strings;
 import com.jivesoftware.os.amza.api.partition.PartitionProperties;
+import com.jivesoftware.os.amza.api.partition.VersionedPartitionName;
 import com.jivesoftware.os.amza.api.ring.RingHost;
 import com.jivesoftware.os.amza.api.ring.RingMember;
 import com.jivesoftware.os.amza.api.scan.RowChanges;
@@ -71,14 +72,14 @@ import java.util.concurrent.TimeUnit;
 public class MiruAmzaServiceInitializer {
 
     public AmzaService initialize(Deployable deployable,
-        String datcenter,
-        String rack,
         String routesHost,
         int routesPort,
         String connectionsHealthEndpoint,
         int instanceId,
         String instanceKey,
         String serviceName,
+        String datacenterName,
+        String rackName,
         String hostName,
         int port,
         String clusterName,
@@ -90,7 +91,7 @@ public class MiruAmzaServiceInitializer {
 
         RingMember ringMember = new RingMember(
             Strings.padStart(String.valueOf(instanceId), 5, '0') + "_" + instanceKey);
-        RingHost ringHost = new RingHost(datcenter, rack, hostName, port);
+        RingHost ringHost = new RingHost(datacenterName, rackName, hostName, port);
 
         SnowflakeIdPacker idPacker = new SnowflakeIdPacker();
         TimestampedOrderIdProvider orderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceId),
@@ -252,6 +253,50 @@ public class MiruAmzaServiceInitializer {
             }
         });
 
+        deployable.addHealthCheck(() -> {
+            Map<VersionedPartitionName, Throwable> sickPartition = sickPartitions.getSickPartitions();
+            if (sickPartition.isEmpty()) {
+                return new HealthCheckResponseImpl("sick>partitions", 1.0, "Healthy", "No sick partitions", "", System.currentTimeMillis());
+            } else {
+                return new HealthCheckResponse() {
+
+                    @Override
+                    public String getName() {
+                        return "sick>partition";
+                    }
+
+                    @Override
+                    public double getHealth() {
+                        return 0;
+                    }
+
+                    @Override
+                    public String getStatus() {
+                        return "There are " + sickPartition.size() + " sick partitions.";
+                    }
+
+                    @Override
+                    public String getDescription() {
+                        StringBuilder sb = new StringBuilder();
+                        for (Map.Entry<VersionedPartitionName, Throwable> entry : sickPartition.entrySet()) {
+                            sb.append("partition:").append(entry.getKey()).append(" cause:").append(entry.getValue());
+                        }
+                        return sb.toString();
+                    }
+
+                    @Override
+                    public String getResolution() {
+                        return "Look at the logs and see if you can resolve the issue.";
+                    }
+
+                    @Override
+                    public long getTimestamp() {
+                        return System.currentTimeMillis();
+                    }
+                };
+            }
+        });
+
         if (clusterName != null && multicastPort > 0) {
             AmzaDiscovery amzaDiscovery = new AmzaDiscovery(amzaService.getRingReader(),
                 amzaService.getRingWriter(),
@@ -268,8 +313,6 @@ public class MiruAmzaServiceInitializer {
             System.out.println("|     Amza Service is in routing bird Discovery mode.  No cluster name was specified or discovery port not set");
             System.out.println("-----------------------------------------------------------------------");
             RoutingBirdAmzaDiscovery routingBirdAmzaDiscovery = new RoutingBirdAmzaDiscovery(deployable,
-                datcenter,
-                rack,
                 serviceName,
                 amzaService,
                 config.getDiscoveryIntervalMillis());
@@ -284,17 +327,13 @@ public class MiruAmzaServiceInitializer {
         private final ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
 
         private final Deployable deployable;
-        private final String datacenter;
-        private final String rack;
         private final String serviceName;
         private final AmzaService amzaService;
         private final long discoveryIntervalMillis;
 
-        public RoutingBirdAmzaDiscovery(Deployable deployable, String datacenter, String rack, String serviceName, AmzaService amzaService,
+        public RoutingBirdAmzaDiscovery(Deployable deployable, String serviceName, AmzaService amzaService,
             long discoveryIntervalMillis) {
             this.deployable = deployable;
-            this.datacenter = datacenter;
-            this.rack = rack;
             this.serviceName = serviceName;
             this.amzaService = amzaService;
             this.discoveryIntervalMillis = discoveryIntervalMillis;
@@ -322,7 +361,8 @@ public class MiruAmzaServiceInitializer {
 
                     HostPort hostPort = connectionDescriptor.getHostPort();
                     AmzaRingStoreWriter ringWriter = amzaService.getRingWriter();
-                    ringWriter.register(routingRingMember, new RingHost(datacenter, rack, hostPort.getHost(), hostPort.getPort()), -1);
+                    ringWriter.register(routingRingMember, new RingHost(routingInstanceDescriptor.datacenter, routingInstanceDescriptor.rack,
+                        hostPort.getHost(), hostPort.getPort()), -1);
                     ringWriter.addRingMember(AmzaRingReader.SYSTEM_RING, routingRingMember);
 
                 }

@@ -169,9 +169,8 @@ public class MiruPluginTestBootstrap {
         acrc.setWorkingDirectories(amzaDataDir.getAbsolutePath());
         acrc.setIndexDirectories(amzaIndexDir.getAbsolutePath());
         Deployable deployable = new Deployable(new String[0]);
-        AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable, "datacenter", "rack", "routesHost", 1, "connectionHealthPath", 1,
-            "instanceKey",
-            "serviceName", "localhost", 10000, null, acrc,
+        AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable, "routesHost", 1, "connectionHealthPath", 1, "instanceKey",
+            "serviceName", "datacenter", "rack", "localhost", 10000, null, acrc,
             rowsChanged -> {
             });
 
