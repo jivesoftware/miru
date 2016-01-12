@@ -98,24 +98,23 @@ public class AmzaWALUtil {
         }
     }
 
-    //TODO slit my wrists
     public void allActivityPartitions(PartitionsStream partitionsStream) throws Exception {
         byte[] prefix = "activityWAL-".getBytes(Charsets.UTF_8);
 
         partition:
-        for (VersionedPartitionName versionedPartitionName : amzaService.getPartitionIndex().getAllPartitions()) {
-            byte[] nameBytes = versionedPartitionName.getPartitionName().getName();
+        for (PartitionName partitionName : amzaService.getPartitionIndex().getAllPartitions()) {
+            byte[] nameBytes = partitionName.getName();
             if (nameBytes.length > prefix.length) {
                 for (int i = 0; i < prefix.length; i++) {
                     if (nameBytes[i] != prefix[i]) {
                         continue partition;
                     }
                 }
-                String partitionName = new String(nameBytes, Charsets.UTF_8);
-                int firstHyphen = partitionName.indexOf('-');
-                int lastHyphen = partitionName.lastIndexOf('-');
-                if (!partitionsStream.stream(new MiruTenantId(partitionName.substring(firstHyphen + 1, lastHyphen).getBytes(Charsets.UTF_8)),
-                    MiruPartitionId.of(Integer.parseInt(partitionName.substring(lastHyphen + 1))))) {
+                String name = new String(nameBytes, Charsets.UTF_8);
+                int firstHyphen = name.indexOf('-');
+                int lastHyphen = name.lastIndexOf('-');
+                if (!partitionsStream.stream(new MiruTenantId(name.substring(firstHyphen + 1, lastHyphen).getBytes(Charsets.UTF_8)),
+                    MiruPartitionId.of(Integer.parseInt(name.substring(lastHyphen + 1))))) {
                     break;
                 }
             }

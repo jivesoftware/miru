@@ -18,6 +18,9 @@ package com.jivesoftware.os.miru.wal.deployable;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
+import com.google.common.base.Splitter;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.jivesoftware.os.amza.api.Consistency;
 import com.jivesoftware.os.amza.api.partition.PartitionProperties;
 import com.jivesoftware.os.amza.api.partition.PrimaryIndexDescriptor;
@@ -75,6 +78,8 @@ import com.jivesoftware.os.routing.bird.endpoints.base.HasUI;
 import com.jivesoftware.os.routing.bird.health.api.HealthCheckRegistry;
 import com.jivesoftware.os.routing.bird.health.api.HealthChecker;
 import com.jivesoftware.os.routing.bird.health.api.HealthFactory;
+import com.jivesoftware.os.routing.bird.health.api.ScheduledMinMaxHealthCheckConfig;
+import com.jivesoftware.os.routing.bird.health.checkers.DiskFreeHealthChecker;
 import com.jivesoftware.os.routing.bird.health.checkers.GCLoadHealthChecker;
 import com.jivesoftware.os.routing.bird.health.checkers.ServiceStartupHealthCheck;
 import com.jivesoftware.os.routing.bird.http.client.HttpDeliveryClientHealthProvider;
@@ -97,6 +102,18 @@ public class MiruWALMain {
 
     public static void main(String[] args) throws Exception {
         new MiruWALMain().run(args);
+    }
+
+    public interface DiskFreeCheck extends ScheduledMinMaxHealthCheckConfig {
+
+        @StringDefault("disk>free")
+        @Override
+        public String getName();
+
+        @LongDefault(80)
+        @Override
+        public Long getMax();
+
     }
 
     public interface WALAmzaServiceConfig extends MiruAmzaServiceConfig {
@@ -152,6 +169,15 @@ public class MiruWALMain {
             deployable.addHealthCheck(serviceStartupHealthCheck);
             deployable.buildManageServer().start();
 
+            WALAmzaServiceConfig amzaServiceConfig = deployable.config(WALAmzaServiceConfig.class);
+
+            List<File> amzaPaths = Lists.newArrayList(Iterables.transform(
+                    Iterables.concat(Splitter.on(',').split(amzaServiceConfig.getWorkingDirectories()),
+                        Splitter.on(',').split(amzaServiceConfig.getIndexDirectories())),
+                    input -> new File(input.trim())));
+            HealthFactory.scheduleHealthChecker(DiskFreeCheck.class,
+                config1 -> (HealthChecker) new DiskFreeHealthChecker(config1, amzaPaths.toArray(new File[amzaPaths.size()])));
+
             InstanceConfig instanceConfig = deployable.config(InstanceConfig.class);
 
             ObjectMapper mapper = new ObjectMapper();
@@ -196,7 +222,6 @@ public class MiruWALMain {
 
             MiruStats miruStats = new MiruStats();
 
-            WALAmzaServiceConfig amzaServiceConfig = deployable.config(WALAmzaServiceConfig.class);
             AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable,
                 instanceConfig.getRoutesHost(),
                 instanceConfig.getRoutesPort(),
