@@ -11,6 +11,6 @@ public class AmzaSipTrackerFactory implements MiruSipTrackerFactory<AmzaSipCurso
 
     @Override
     public MiruSipTracker<AmzaSipCursor> create(Set<TimeAndVersion> seenLastSip) {
-        return new AmzaSipTracker(seenLastSip);
+        return new AmzaSipTracker();
     }
 }

@@ -333,6 +333,9 @@ public class MiruPartitioner {
         int found = 0;
         for (MiruPartitionId partitionId : partitionIds) {
             List<MiruVersionedActivityLookupEntry> versionedEntries = walClient.getVersionedEntries(tenantId, partitionId, times);
+            if (versionedEntries == null) {
+                throw new IllegalStateException("Unable to perform versioned entries lookup because WAL is unavailable for " + tenantId + " " + partitionId);
+            }
             for (int i = 0; i < versionedEntries.size(); i++) {
                 MiruVersionedActivityLookupEntry versionedEntry = versionedEntries.get(i);
                 if (versionedEntry != null) {
