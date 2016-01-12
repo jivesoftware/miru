@@ -1,6 +1,6 @@
 package com.jivesoftware.os.miru.service.partition;
 
-import com.google.common.collect.Sets;
+import com.google.common.collect.ImmutableSet;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.TimeAndVersion;
@@ -18,12 +18,10 @@ public class AmzaSipTracker implements MiruSipTracker<AmzaSipCursor> {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
-    private final Set<TimeAndVersion> seenLastSip;
-    private final Set<TimeAndVersion> seenThisSip;
+    private final Set<TimeAndVersion> seenLastSip = ImmutableSet.of();
+    private final Set<TimeAndVersion> seenThisSip = ImmutableSet.of();
 
-    public AmzaSipTracker(Set<TimeAndVersion> seenLastSip) {
-        this.seenLastSip = seenLastSip;
-        this.seenThisSip = Sets.newHashSet();
+    public AmzaSipTracker() {
     }
 
     @Override
@@ -47,12 +45,11 @@ public class AmzaSipTracker implements MiruSipTracker<AmzaSipCursor> {
 
     @Override
     public boolean wasSeenLastSip(TimeAndVersion timeAndVersion) {
-        return seenLastSip.contains(timeAndVersion);
+        return false;
     }
 
     @Override
     public void addSeenThisSip(TimeAndVersion timeAndVersion) {
-        seenThisSip.add(timeAndVersion);
     }
 
     @Override
