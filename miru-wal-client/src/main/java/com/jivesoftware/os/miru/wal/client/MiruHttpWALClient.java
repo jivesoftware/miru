@@ -189,10 +189,11 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
 
     @Override
     public long oldestActivityClockTimestamp(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
-        return sendRoundRobin("oldestActivityClockTimestamp", client -> {
-            HttpResponse response = client.get(pathPrefix + "/oldest/activity/" + tenantId.toString() + "/" + partitionId.getId(), null);
-            return new ClientResponse<>(responseMapper.extractResultFromResponse(response, Long.class, null), true);
-        });
+        Long timestamp = sendWithTenantPartition(RoutingGroupType.activity, tenantId, partitionId, "oldestActivityClockTimestamp",
+            client -> extract(client.get(pathPrefix + "/oldest/activity/" + tenantId.toString() + "/" + partitionId.getId(), null),
+                Long.class,
+                null));
+        return timestamp != null ? timestamp : -1;
     }
 
     @Override
