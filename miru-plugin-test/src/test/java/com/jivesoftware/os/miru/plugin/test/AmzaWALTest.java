@@ -151,7 +151,7 @@ public class AmzaWALTest {
         System.out.println("Merged!");
         //amzaService.compactAllTombstones();
 
-        for (PartitionName partitionName : amzaService.getPartitionNames()) {
+        for (PartitionName partitionName : amzaService.getMemberPartitionNames()) {
             Partition partition = amzaService.getPartition(partitionName);
             System.out.println("Count: " + partitionName + " = " + partition.count());
         }
