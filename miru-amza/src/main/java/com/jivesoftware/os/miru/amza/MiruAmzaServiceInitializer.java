@@ -23,7 +23,6 @@ import com.jivesoftware.os.amza.service.AmzaServiceInitializer.AmzaServiceConfig
 import com.jivesoftware.os.amza.service.EmbeddedAmzaServiceInitializer;
 import com.jivesoftware.os.amza.service.SickPartitions;
 import com.jivesoftware.os.amza.service.WALIndexProviderRegistry;
-import com.jivesoftware.os.amza.service.discovery.AmzaDiscovery;
 import com.jivesoftware.os.amza.service.replication.TakeFailureListener;
 import com.jivesoftware.os.amza.service.replication.http.HttpAvailableRowsTaker;
 import com.jivesoftware.os.amza.service.replication.http.HttpRowsTaker;
@@ -160,10 +159,23 @@ public class MiruAmzaServiceInitializer {
             Optional.<TakeFailureListener>absent(),
             allRowChanges);
 
+        RoutingBirdAmzaDiscovery routingBirdAmzaDiscovery = new RoutingBirdAmzaDiscovery(deployable,
+            serviceName,
+            amzaService,
+            config.getDiscoveryIntervalMillis());
+        // run once to populate system ring
+        routingBirdAmzaDiscovery.run();
+
         amzaService.start();
 
         System.out.println("-----------------------------------------------------------------------");
         System.out.println("|      Amza Service Online");
+        System.out.println("-----------------------------------------------------------------------");
+
+        routingBirdAmzaDiscovery.start();
+
+        System.out.println("-----------------------------------------------------------------------");
+        System.out.println("|     Amza Service is in Routing Bird Discovery mode");
         System.out.println("-----------------------------------------------------------------------");
 
         HttpDeliveryClientHealthProvider clientHealthProvider = new HttpDeliveryClientHealthProvider(instanceKey,
@@ -297,27 +309,6 @@ public class MiruAmzaServiceInitializer {
             }
         });
 
-        if (clusterName != null && multicastPort > 0) {
-            AmzaDiscovery amzaDiscovery = new AmzaDiscovery(amzaService.getRingReader(),
-                amzaService.getRingWriter(),
-                clusterName,
-                multicastGroup,
-                multicastPort);
-            amzaDiscovery.start();
-            System.out.println("-----------------------------------------------------------------------");
-            System.out.println("|      Amza Service Discovery Online");
-            System.out.println("-----------------------------------------------------------------------");
-        } else {
-
-            System.out.println("-----------------------------------------------------------------------");
-            System.out.println("|     Amza Service is in routing bird Discovery mode.  No cluster name was specified or discovery port not set");
-            System.out.println("-----------------------------------------------------------------------");
-            RoutingBirdAmzaDiscovery routingBirdAmzaDiscovery = new RoutingBirdAmzaDiscovery(deployable,
-                serviceName,
-                amzaService,
-                config.getDiscoveryIntervalMillis());
-            routingBirdAmzaDiscovery.start();
-        }
         return amzaService;
     }
 

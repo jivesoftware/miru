@@ -66,14 +66,14 @@ public class AmzaWALTest {
         HealthFactory.initialize(
             BindInterfaceToConfiguration::bindDefault,
             new HealthCheckRegistry() {
-            @Override
-            public void register(HealthChecker healthChecker) {
-            }
+                @Override
+                public void register(HealthChecker healthChecker) {
+                }
 
-            @Override
-            public void unregister(HealthChecker healthChecker) {
-            }
-        });
+                @Override
+                public void unregister(HealthChecker healthChecker) {
+                }
+            });
 
         MiruServiceConfig config = BindInterfaceToConfiguration.bindDefault(MiruServiceConfig.class);
         config.setDefaultFailAfterNMillis(TimeUnit.HOURS.toMillis(1));
