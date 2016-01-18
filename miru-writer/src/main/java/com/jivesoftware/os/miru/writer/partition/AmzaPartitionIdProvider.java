@@ -1,10 +1,10 @@
 package com.jivesoftware.os.miru.writer.partition;
 
 import com.google.common.base.Charsets;
-import com.jivesoftware.os.amza.api.Consistency;
+import com.jivesoftware.os.amza.api.partition.Consistency;
+import com.jivesoftware.os.amza.api.partition.Durability;
 import com.jivesoftware.os.amza.api.partition.PartitionName;
 import com.jivesoftware.os.amza.api.partition.PartitionProperties;
-import com.jivesoftware.os.amza.api.partition.WALStorageDescriptor;
 import com.jivesoftware.os.amza.api.stream.RowType;
 import com.jivesoftware.os.amza.api.wal.WALKey;
 import com.jivesoftware.os.amza.service.AmzaPartitionUpdates;
@@ -41,7 +41,7 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
     private final AmzaService amzaService;
     private final EmbeddedClientProvider clientProvider;
     private final long replicateLatestPartitionTimeoutMillis;
-    private final WALStorageDescriptor amzaStorageDescriptor;
+    private final String indexClass;
     private final int capacity;
     private final MiruWALClient<?, ?> walClient;
     private final AtomicBoolean ringInitialized = new AtomicBoolean(false);
@@ -49,14 +49,14 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
     public AmzaPartitionIdProvider(AmzaService amzaService,
         EmbeddedClientProvider clientProvider,
         long replicateLatestPartitionTimeoutMillis,
-        WALStorageDescriptor amzaStorageDescriptor,
+        String indexClass,
         int capacity,
         MiruWALClient<?, ?> walClient)
         throws Exception {
         this.amzaService = amzaService;
         this.clientProvider = clientProvider;
         this.replicateLatestPartitionTimeoutMillis = replicateLatestPartitionTimeoutMillis;
-        this.amzaStorageDescriptor = amzaStorageDescriptor;
+        this.indexClass = indexClass;
         this.capacity = capacity;
         this.walClient = walClient;
     }
@@ -84,12 +84,15 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
             ringInitialized.set(true);
         }
 
-        amzaService.setPropertiesIfAbsent(partitionName, new PartitionProperties(amzaStorageDescriptor,
+        amzaService.setPropertiesIfAbsent(partitionName, new PartitionProperties(Durability.fsync_async,
+            0, 0, 0, 0, 0, 0, 0, 0, false,
             consistency,
             requireConsistency,
             2,
             false,
-            RowType.primary));
+            RowType.primary,
+            indexClass,
+            null));
         amzaService.awaitOnline(partitionName, 10_000L); //TODO config
         return clientProvider.getClient(partitionName);
     }

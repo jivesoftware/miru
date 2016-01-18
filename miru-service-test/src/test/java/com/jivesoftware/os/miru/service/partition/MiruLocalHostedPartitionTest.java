@@ -271,10 +271,8 @@ public class MiruLocalHostedPartitionTest {
         MiruWALLookup walLookup = new RCVSWALLookup(wal.getWALLookupTable());
 
         File amzaDataDir = Files.createTempDir();
-        File amzaIndexDir = Files.createTempDir();
         MiruAmzaServiceConfig acrc = BindInterfaceToConfiguration.bindDefault(MiruAmzaServiceConfig.class);
         acrc.setWorkingDirectories(amzaDataDir.getAbsolutePath());
-        acrc.setIndexDirectories(amzaIndexDir.getAbsolutePath());
         acrc.setAmzaDiscoveryGroup("225.5.6.26");
         acrc.setAmzaDiscoveryPort(1226);
         Deployable deployable = new Deployable(new String[0]);

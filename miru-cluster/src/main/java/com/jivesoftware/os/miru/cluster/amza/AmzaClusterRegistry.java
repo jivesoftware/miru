@@ -11,11 +11,10 @@ import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
-import com.jivesoftware.os.amza.api.Consistency;
+import com.jivesoftware.os.amza.api.partition.Consistency;
+import com.jivesoftware.os.amza.api.partition.Durability;
 import com.jivesoftware.os.amza.api.partition.PartitionName;
 import com.jivesoftware.os.amza.api.partition.PartitionProperties;
-import com.jivesoftware.os.amza.api.partition.PrimaryIndexDescriptor;
-import com.jivesoftware.os.amza.api.partition.WALStorageDescriptor;
 import com.jivesoftware.os.amza.api.scan.RowChanges;
 import com.jivesoftware.os.amza.api.scan.RowsChanged;
 import com.jivesoftware.os.amza.api.stream.RowType;
@@ -110,7 +109,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
     private final long defaultTopologyIsIdleAfterMillis;
     private final long defaultTopologyDestroyAfterMillis;
     private final int takeFromFactor;
-    private final WALStorageDescriptor amzaStorageDescriptor;
+    private final String indexClass;
 
     private final AtomicBoolean ringInitialized = new AtomicBoolean(false);
     private final ConcurrentMap<String, EmbeddedClient> clientMap = Maps.newConcurrentMap();
@@ -133,10 +132,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
         this.defaultTopologyIsIdleAfterMillis = defaultTopologyIsIdleAfterMillis;
         this.defaultTopologyDestroyAfterMillis = defaultTopologyDestroyAfterMillis;
         this.takeFromFactor = takeFromFactor;
-        this.amzaStorageDescriptor = new WALStorageDescriptor(
-            false,
-            new PrimaryIndexDescriptor("berkeleydb", 0, false, null),
-            null, 1000, 1000); //TODO config
+        this.indexClass = "berkeleydb"; //TODO config
     }
 
     private EmbeddedClient ensureClient(String name, Consistency consistency, boolean requiresConsistency) throws Exception {
@@ -145,7 +141,8 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
                 amzaService.getRingWriter().ensureMaximalRing(CLUSTER_REGISTRY_RING_NAME);
                 PartitionName partitionName = new PartitionName(false, CLUSTER_REGISTRY_RING_NAME, name.getBytes(Charsets.UTF_8));
                 amzaService.setPropertiesIfAbsent(partitionName,
-                    new PartitionProperties(amzaStorageDescriptor, consistency, requiresConsistency, takeFromFactor, false, RowType.primary));
+                    new PartitionProperties(Durability.fsync_async, 0, 0, 0, 0, 0, 0, 0, 0, false, consistency, requiresConsistency, takeFromFactor, false,
+                        RowType.primary, indexClass, null));
                 amzaService.awaitOnline(partitionName, 10_000L); //TODO config
                 return embeddedClientProvider.getClient(partitionName);
             } catch (Exception e) {

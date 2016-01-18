@@ -19,8 +19,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.collect.Maps;
-import com.jivesoftware.os.amza.api.partition.PrimaryIndexDescriptor;
-import com.jivesoftware.os.amza.api.partition.WALStorageDescriptor;
 import com.jivesoftware.os.amza.api.wal.WALKey;
 import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider;
@@ -88,10 +86,6 @@ public class MiruWriterMain {
         @StringDefault("./var/amza/writer/data/")
         @Override
         String getWorkingDirectories();
-
-        @StringDefault("./var/amza/writer/index/")
-        @Override
-        String getIndexDirectories();
 
         @StringDefault("225.5.6.24")
         @Override
@@ -228,14 +222,13 @@ public class MiruWriterMain {
                 throw new IllegalStateException("Invalid activity WAL type: " + walConfig.getActivityWALType());
             }
 
-            WALStorageDescriptor storageDescriptor = new WALStorageDescriptor(false, new PrimaryIndexDescriptor("berkeleydb", 0, false, null),
-                null, 1000, 1000);
+            String indexClass = "berkeleydb";
 
             EmbeddedClientProvider clientProvider = new EmbeddedClientProvider(amzaService);
             AmzaPartitionIdProvider amzaPartitionIdProvider = new AmzaPartitionIdProvider(amzaService,
                 clientProvider,
                 miruAmzaServiceConfig.getReplicateCursorTimeoutMillis(),
-                storageDescriptor,
+                indexClass,
                 clientConfig.getTotalCapacity(),
                 walClient);
 

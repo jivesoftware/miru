@@ -21,10 +21,9 @@ import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.jivesoftware.os.amza.api.Consistency;
+import com.jivesoftware.os.amza.api.partition.Consistency;
+import com.jivesoftware.os.amza.api.partition.Durability;
 import com.jivesoftware.os.amza.api.partition.PartitionProperties;
-import com.jivesoftware.os.amza.api.partition.PrimaryIndexDescriptor;
-import com.jivesoftware.os.amza.api.partition.WALStorageDescriptor;
 import com.jivesoftware.os.amza.api.stream.RowType;
 import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider;
@@ -122,10 +121,6 @@ public class MiruWALMain {
         @Override
         String getWorkingDirectories();
 
-        @StringDefault("./var/amza/wal/index/")
-        @Override
-        String getIndexDirectories();
-
         @StringDefault("225.5.6.23")
         @Override
         String getAmzaDiscoveryGroup();
@@ -145,16 +140,16 @@ public class MiruWALMain {
             HealthFactory.initialize(deployable::config,
                 new HealthCheckRegistry() {
 
-                    @Override
-                    public void register(HealthChecker healthChecker) {
-                        deployable.addHealthCheck(healthChecker);
-                    }
+                @Override
+                public void register(HealthChecker healthChecker) {
+                    deployable.addHealthCheck(healthChecker);
+                }
 
-                    @Override
-                    public void unregister(HealthChecker healthChecker) {
-                        throw new UnsupportedOperationException("Not supported yet.");
-                    }
-                });
+                @Override
+                public void unregister(HealthChecker healthChecker) {
+                    throw new UnsupportedOperationException("Not supported yet.");
+                }
+            });
             deployable.addErrorHealthChecks();
             deployable.addManageInjectables(HasUI.class, new HasUI(Arrays.asList(
                 new HasUI.UI("Reset Errors", "manage", "/manage/resetErrors"),
@@ -172,8 +167,7 @@ public class MiruWALMain {
             WALAmzaServiceConfig amzaServiceConfig = deployable.config(WALAmzaServiceConfig.class);
 
             List<File> amzaPaths = Lists.newArrayList(Iterables.transform(
-                    Iterables.concat(Splitter.on(',').split(amzaServiceConfig.getWorkingDirectories()),
-                        Splitter.on(',').split(amzaServiceConfig.getIndexDirectories())),
+                    Splitter.on(',').split(amzaServiceConfig.getWorkingDirectories()),
                     input -> new File(input.trim())));
             HealthFactory.scheduleHealthChecker(DiskFreeCheck.class,
                 config1 -> (HealthChecker) new DiskFreeHealthChecker(config1, amzaPaths.toArray(new File[amzaPaths.size()])));
@@ -237,28 +231,37 @@ public class MiruWALMain {
                 amzaServiceConfig,
                 changes -> {
                 });
-            WALStorageDescriptor storageDescriptor = new WALStorageDescriptor(false, new PrimaryIndexDescriptor("berkeleydb", 0, false, null),
-                null, 1000, 1000);
 
+            //WALStorageDescriptor storageDescriptor = new WALStorageDescriptor(false, new PrimaryIndexDescriptor("berkeleydb", 0, false, null),
+            //    null, 1000, 1000);
             EmbeddedClientProvider clientProvider = new EmbeddedClientProvider(amzaService);
-            PartitionProperties activityProperties = new PartitionProperties(storageDescriptor,
+            PartitionProperties activityProperties = new PartitionProperties(Durability.fsync_async, 0, 0, 0, 0, 0, 0, 0, 0,
+                false,
                 Consistency.leader_quorum,
                 true,
                 amzaServiceConfig.getTakeFromFactor(),
                 false,
-                RowType.snappy_primary);
-            PartitionProperties readTrackingProperties = new PartitionProperties(storageDescriptor,
+                RowType.snappy_primary,
+                "berkeleydb",
+                null);
+            PartitionProperties readTrackingProperties = new PartitionProperties(Durability.fsync_async, 0, 0, 0, 0, 0, 0, 0, 0,
+                false,
                 Consistency.leader_quorum,
                 true,
                 amzaServiceConfig.getTakeFromFactor(),
                 false,
-                RowType.snappy_primary);
-            PartitionProperties lookupProperties = new PartitionProperties(storageDescriptor,
+                RowType.snappy_primary,
+                "berkeleydb",
+                null);
+            PartitionProperties lookupProperties = new PartitionProperties(Durability.fsync_async, 0, 0, 0, 0, 0, 0, 0, 0,
+                false,
                 Consistency.quorum,
                 true,
                 amzaServiceConfig.getTakeFromFactor(),
                 false,
-                RowType.primary);
+                RowType.primary,
+                "berkeleydb",
+                null);
             AmzaWALUtil amzaWALUtil = new AmzaWALUtil(amzaService,
                 clientProvider,
                 activityProperties,
@@ -289,7 +292,7 @@ public class MiruWALMain {
 
             TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
             TenantAwareHttpClient<String> manageHttpClient = tenantRoutingHttpClientInitializer.initialize(tenantRoutingProvider
-                    .getConnections("miru-manage", "main"),
+                .getConnections("miru-manage", "main"),
                 clientHealthProvider,
                 10, 10_000); // TODO expose to conf
 

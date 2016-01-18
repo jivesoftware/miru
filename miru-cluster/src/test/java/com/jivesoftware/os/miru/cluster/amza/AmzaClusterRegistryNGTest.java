@@ -61,10 +61,8 @@ public class AmzaClusterRegistryNGTest {
     public void setUp() throws Exception {
         ObjectMapper mapper = new ObjectMapper();
         File amzaDataDir = Files.createTempDir();
-        File amzaIndexDir = Files.createTempDir();
         MiruAmzaServiceConfig acrc = BindInterfaceToConfiguration.bindDefault(MiruAmzaServiceConfig.class);
         acrc.setWorkingDirectories(amzaDataDir.getAbsolutePath());
-        acrc.setIndexDirectories(amzaIndexDir.getAbsolutePath());
         acrc.setTakeFromNeighborsIntervalInMillis(10);
         Deployable deployable = new Deployable(new String[0]);
         AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable, "routesHost", 1, "connectionHealthPath",

@@ -15,13 +15,11 @@ import com.jivesoftware.os.amza.service.AmzaServiceInitializer.AmzaServiceConfig
 import com.jivesoftware.os.amza.service.EmbeddedAmzaServiceInitializer;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider;
 import com.jivesoftware.os.amza.service.SickPartitions;
-import com.jivesoftware.os.amza.service.WALIndexProviderRegistry;
 import com.jivesoftware.os.amza.service.replication.TakeFailureListener;
 import com.jivesoftware.os.amza.service.replication.http.HttpAvailableRowsTaker;
 import com.jivesoftware.os.amza.service.replication.http.HttpRowsTaker;
 import com.jivesoftware.os.amza.service.stats.AmzaStats;
 import com.jivesoftware.os.amza.service.storage.PartitionPropertyMarshaller;
-import com.jivesoftware.os.amza.service.storage.binary.RowIOProvider;
 import com.jivesoftware.os.amza.service.take.AvailableRowsTaker;
 import com.jivesoftware.os.amza.service.take.RowsTakerFactory;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
@@ -117,7 +115,6 @@ public class MiruWALUIServiceNGTest {
 
         final AmzaServiceConfig amzaServiceConfig = new AmzaServiceConfig();
         amzaServiceConfig.workingDirectories = new String[]{amzaDataDir.getAbsolutePath()};
-        amzaServiceConfig.numberOfDeltaStripes = amzaServiceConfig.workingDirectories.length;
         amzaServiceConfig.numberOfTakerThreads = 1;
 
         PartitionPropertyMarshaller partitionPropertyMarshaller = new PartitionPropertyMarshaller() {
@@ -150,9 +147,9 @@ public class MiruWALUIServiceNGTest {
             orderIdProvider,
             idPacker,
             partitionPropertyMarshaller,
-            (WALIndexProviderRegistry indexProviderRegistry1, RowIOProvider<?> ephemeralRowIOProvider, RowIOProvider<?> persistentRowIOProvider) -> {
-                String[] walIndexDirs = new String[]{amzaIndexDir.getAbsolutePath()};
-                indexProviderRegistry1.register("berkeleydb", new BerkeleyDBWALIndexProvider(walIndexDirs, walIndexDirs.length), persistentRowIOProvider);
+            ( workingIndexDirectories,  indexProviderRegistry1,  ephemeralRowIOProvider, persistentRowIOProvider,  partitionStripeFunction) -> {
+                indexProviderRegistry1.register(
+                    new BerkeleyDBWALIndexProvider("berkeleydb", partitionStripeFunction, workingIndexDirectories), persistentRowIOProvider);
             },
             availableRowsTaker,
             rowsTakerFactory,

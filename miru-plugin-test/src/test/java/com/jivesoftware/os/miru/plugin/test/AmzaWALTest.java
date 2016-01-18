@@ -5,12 +5,11 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
-import com.jivesoftware.os.amza.api.Consistency;
 import com.jivesoftware.os.amza.api.DeltaOverCapacityException;
+import com.jivesoftware.os.amza.api.partition.Consistency;
+import com.jivesoftware.os.amza.api.partition.Durability;
 import com.jivesoftware.os.amza.api.partition.PartitionName;
 import com.jivesoftware.os.amza.api.partition.PartitionProperties;
-import com.jivesoftware.os.amza.api.partition.PrimaryIndexDescriptor;
-import com.jivesoftware.os.amza.api.partition.WALStorageDescriptor;
 import com.jivesoftware.os.amza.api.stream.RowType;
 import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider;
@@ -90,10 +89,8 @@ public class AmzaWALTest {
         ObjectMapper mapper = new ObjectMapper();
 
         File amzaDataDir = Files.createTempDir();
-        File amzaIndexDir = Files.createTempDir();
         MiruAmzaServiceConfig acrc = BindInterfaceToConfiguration.bindDefault(MiruAmzaServiceConfig.class);
         acrc.setWorkingDirectories(amzaDataDir.getAbsolutePath());
-        acrc.setIndexDirectories(amzaIndexDir.getAbsolutePath());
         acrc.setMaxUpdatesBeforeDeltaStripeCompaction(100_000);
         Deployable deployable = new Deployable(new String[0]);
         AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable, "routesHost", 1, "connectionHealthPath", 1, "instanceKey",
@@ -101,13 +98,16 @@ public class AmzaWALTest {
             rowsChanged -> {
             });
         EmbeddedClientProvider amzaClientProvider = new EmbeddedClientProvider(amzaService);
-        WALStorageDescriptor storageDescriptor = new WALStorageDescriptor(false, new PrimaryIndexDescriptor("berkeleydb", 0, false, null),
-            null, 1000, 1000);
+        //WALStorageDescriptor storageDescriptor = new WALStorageDescriptor(false, new PrimaryIndexDescriptor("berkeleydb", 0, false, null),
+        //    null, 1000, 1000);
 
         AmzaWALUtil amzaWALUtil = new AmzaWALUtil(amzaService, amzaClientProvider,
-            new PartitionProperties(storageDescriptor, Consistency.leader_quorum, true, 0, false, RowType.snappy_primary),
-            new PartitionProperties(storageDescriptor, Consistency.leader_quorum, true, 0, false, RowType.snappy_primary),
-            new PartitionProperties(storageDescriptor, Consistency.quorum, true, 0, false, RowType.primary),
+            new PartitionProperties(Durability.fsync_async, 0, 0, 0, 0, 0, 0, 0, 0, false, Consistency.leader_quorum, true, 0, false,
+                RowType.snappy_primary, "berkeleydb", null),
+            new PartitionProperties(Durability.fsync_async, 0, 0, 0, 0, 0, 0, 0, 0, false, Consistency.leader_quorum, true, 0, false,
+                RowType.snappy_primary, "berkeleydb", null),
+            new PartitionProperties(Durability.fsync_async, 0, 0, 0, 0, 0, 0, 0, 0, false, Consistency.quorum, true, 0, false,
+                RowType.primary, "berkeleydb", null),
             3,
             10_000,
             3,
