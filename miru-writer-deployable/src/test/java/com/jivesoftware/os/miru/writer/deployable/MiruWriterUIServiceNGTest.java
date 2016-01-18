@@ -8,6 +8,7 @@ import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
 import com.jivesoftware.os.amza.api.partition.PartitionProperties;
+import com.jivesoftware.os.amza.api.partition.PartitionStripeFunction;
 import com.jivesoftware.os.amza.api.ring.RingHost;
 import com.jivesoftware.os.amza.api.ring.RingMember;
 import com.jivesoftware.os.amza.berkeleydb.BerkeleyDBWALIndexProvider;
@@ -119,7 +120,6 @@ public class MiruWriterUIServiceNGTest {
 
         AmzaServiceConfig amzaServiceConfig = new AmzaServiceConfig();
         amzaServiceConfig.workingDirectories = new String[]{amzaDataDir.getAbsolutePath()};
-        amzaServiceConfig.numberOfDeltaStripes = amzaServiceConfig.workingDirectories.length;
         amzaServiceConfig.numberOfTakerThreads = 1;
 
         PartitionPropertyMarshaller regionPropertyMarshaller = new PartitionPropertyMarshaller() {
@@ -152,9 +152,10 @@ public class MiruWriterUIServiceNGTest {
             orderIdProvider,
             idPacker,
             regionPropertyMarshaller,
-            (WALIndexProviderRegistry indexProviderRegistry, RowIOProvider<?> ephemeralRowIOProvider, RowIOProvider<?> persistentRowIOProvider) -> {
-                String[] walIndexDirs = new String[]{amzaIndexDir.getAbsolutePath()};
-                indexProviderRegistry.register("berkeleydb", new BerkeleyDBWALIndexProvider(walIndexDirs, walIndexDirs.length), persistentRowIOProvider);
+            (File[] workingIndexDirectories, WALIndexProviderRegistry indexProviderRegistry, RowIOProvider ephemeralRowIOProvider,
+                RowIOProvider persistentRowIOProvider, PartitionStripeFunction partitionStripeFunction) -> {
+                indexProviderRegistry.register(new BerkeleyDBWALIndexProvider("berkeleydb", partitionStripeFunction, workingIndexDirectories),
+                    persistentRowIOProvider);
             },
             availableRowsTaker,
             rowsTakerFactory,

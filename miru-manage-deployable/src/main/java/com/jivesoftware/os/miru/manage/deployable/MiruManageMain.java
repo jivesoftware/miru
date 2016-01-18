@@ -94,10 +94,6 @@ public class MiruManageMain {
         @Override
         String getWorkingDirectories();
 
-        @StringDefault("./var/amza/registry/index/")
-        @Override
-        String getIndexDirectories();
-
         @StringDefault("225.5.6.25")
         @Override
         String getAmzaDiscoveryGroup();

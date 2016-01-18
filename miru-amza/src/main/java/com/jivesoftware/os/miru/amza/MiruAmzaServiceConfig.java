@@ -16,11 +16,6 @@ public interface MiruAmzaServiceConfig extends Config {
 
     void setWorkingDirectories(String dir);
 
-    @StringDefault("./var/amza/default/index/")
-    String getIndexDirectories();
-
-    void setIndexDirectories(String dir);
-
     @StringDefault("225.4.5.7")
     String getAmzaDiscoveryGroup();
 

@@ -22,7 +22,6 @@ import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.amza.service.AmzaServiceInitializer.AmzaServiceConfig;
 import com.jivesoftware.os.amza.service.EmbeddedAmzaServiceInitializer;
 import com.jivesoftware.os.amza.service.SickPartitions;
-import com.jivesoftware.os.amza.service.WALIndexProviderRegistry;
 import com.jivesoftware.os.amza.service.replication.TakeFailureListener;
 import com.jivesoftware.os.amza.service.replication.http.HttpAvailableRowsTaker;
 import com.jivesoftware.os.amza.service.replication.http.HttpRowsTaker;
@@ -31,7 +30,6 @@ import com.jivesoftware.os.amza.service.ring.AmzaRingReader;
 import com.jivesoftware.os.amza.service.ring.AmzaRingWriter;
 import com.jivesoftware.os.amza.service.stats.AmzaStats;
 import com.jivesoftware.os.amza.service.storage.PartitionPropertyMarshaller;
-import com.jivesoftware.os.amza.service.storage.binary.RowIOProvider;
 import com.jivesoftware.os.amza.service.take.AvailableRowsTaker;
 import com.jivesoftware.os.amza.service.take.RowsTakerFactory;
 import com.jivesoftware.os.amza.ui.AmzaUIInitializer;
@@ -109,10 +107,8 @@ public class MiruAmzaServiceInitializer {
         amzaServiceConfig.workingDirectories = config.getWorkingDirectories().split(",");
         amzaServiceConfig.checkIfCompactionIsNeededIntervalInMillis = config.getCheckIfCompactionIsNeededIntervalInMillis();
         amzaServiceConfig.deltaStripeCompactionIntervalInMillis = config.getDeltaStripeCompactionIntervalInMillis();
-        amzaServiceConfig.compactTombstoneIfOlderThanNMillis = config.getCompactTombstoneIfOlderThanNMillis();
         amzaServiceConfig.corruptionParanoiaFactor = config.getCorruptionParanoiaFactor();
         amzaServiceConfig.maxUpdatesBeforeDeltaStripeCompaction = config.getMaxUpdatesBeforeDeltaStripeCompaction();
-        amzaServiceConfig.numberOfDeltaStripes = amzaServiceConfig.workingDirectories.length;
         amzaServiceConfig.numberOfCompactorThreads = config.getNumberOfCompactorThreads();
         amzaServiceConfig.numberOfTakerThreads = config.getNumberOfTakerThreads();
         amzaServiceConfig.hardFsync = config.getHardFsync();
@@ -150,9 +146,13 @@ public class MiruAmzaServiceInitializer {
             orderIdProvider,
             idPacker,
             partitionPropertyMarshaller,
-            (WALIndexProviderRegistry indexProviderRegistry, RowIOProvider<?> ephemeralRowIOProvider, RowIOProvider<?> persistentRowIOProvider) -> {
-                String[] walIndexDirs = config.getIndexDirectories().split(",");
-                indexProviderRegistry.register("berkeleydb", new BerkeleyDBWALIndexProvider(walIndexDirs, walIndexDirs.length), persistentRowIOProvider);
+            (workingIndexDirectories,
+                indexProviderRegistry,
+                ephemeralRowIOProvider,
+                persistentRowIOProvider,
+                partitionStripeFunction) -> {
+                indexProviderRegistry.register(new BerkeleyDBWALIndexProvider("berkeleydb", partitionStripeFunction, workingIndexDirectories),
+                    persistentRowIOProvider);
             },
             availableRowsTaker,
             rowsTakerFactory,
