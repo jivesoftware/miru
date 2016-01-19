@@ -14,6 +14,7 @@ import com.jivesoftware.os.miru.amza.MiruAmzaServiceConfig;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceInitializer;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
+import com.jivesoftware.os.miru.api.MiruHostProvider;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
@@ -56,6 +57,7 @@ public class AmzaClusterRegistryNGTest {
 
     private MiruReplicaSetDirector replicaSetDirector;
     private MiruClusterRegistry registry;
+    private List<MiruHost> hosts;
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -79,26 +81,31 @@ public class AmzaClusterRegistryNGTest {
             TimeUnit.DAYS.toMillis(365),
             0);
 
-        replicaSetDirector = new MiruReplicaSetDirector(new OrderIdProviderImpl(new ConstantWriterIdProvider(1)), registry);
+        replicaSetDirector = new MiruReplicaSetDirector(new OrderIdProviderImpl(new ConstantWriterIdProvider(1)), registry,
+            stream -> {
+                for (MiruHost host : hosts) {
+                    stream.descriptor("datacenter", "rack", host);
+                }
+            });
     }
 
     @Test
     public void testUpdateAndGetTopology() throws Exception {
-        MiruHost[] hosts = addHosts(1);
+        hosts = addHosts(1);
 
         Set<MiruHost> electedHosts = replicaSetDirector.electHostsForTenantPartition(tenantId,
             partitionId,
-            new MiruReplicaSet(ArrayListMultimap.create(), Sets.<MiruHost>newHashSet(), numReplicas));
+            new MiruReplicaSet(ArrayListMultimap.create(), Sets.<MiruHost>newHashSet(), numReplicas, numReplicas));
         assertEquals(electedHosts.size(), 1);
 
-        MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, partitionId, hosts[0]);
+        MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, partitionId, hosts.get(0));
         registry.updateIngress(new MiruIngressUpdate(tenantId, partitionId, new RangeMinMax(), System.currentTimeMillis(), false));
-        registry.updateTopologies(hosts[0], Arrays.asList(
+        registry.updateTopologies(hosts.get(0), Arrays.asList(
             new MiruClusterRegistry.TopologyUpdate(coord,
                 Optional.of(new MiruPartitionCoordInfo(MiruPartitionState.online, MiruBackingStorage.disk)),
                 Optional.<Long>absent())));
 
-        List<MiruTopologyStatus> topologyStatusForTenantHost = registry.getTopologyStatusForTenantHost(tenantId, hosts[0]);
+        List<MiruTopologyStatus> topologyStatusForTenantHost = registry.getTopologyStatusForTenantHost(tenantId, hosts.get(0));
         List<MiruTopologyStatus> onlineStatus = Lists.newArrayList();
         for (MiruTopologyStatus status : topologyStatusForTenantHost) {
             if (status.partition.info.state == MiruPartitionState.online) {
@@ -114,17 +121,17 @@ public class AmzaClusterRegistryNGTest {
 
     @Test
     public void testRefreshAndGetTopology() throws Exception {
-        MiruHost[] hosts = addHosts(1);
+        hosts = addHosts(1);
 
         Set<MiruHost> electedHosts = replicaSetDirector.electHostsForTenantPartition(tenantId,
             partitionId,
-            new MiruReplicaSet(ArrayListMultimap.create(), Sets.<MiruHost>newHashSet(), numReplicas));
+            new MiruReplicaSet(ArrayListMultimap.create(), Sets.<MiruHost>newHashSet(), numReplicas, numReplicas));
         assertEquals(electedHosts.size(), 1);
 
-        MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, partitionId, hosts[0]);
+        MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, partitionId, hosts.get(0));
         registry.updateIngress(new MiruIngressUpdate(tenantId, partitionId, new RangeMinMax(), System.currentTimeMillis(), false));
 
-        List<MiruTopologyStatus> topologyStatusForTenantHost = registry.getTopologyStatusForTenantHost(tenantId, hosts[0]);
+        List<MiruTopologyStatus> topologyStatusForTenantHost = registry.getTopologyStatusForTenantHost(tenantId, hosts.get(0));
         List<MiruTopologyStatus> offlineStatus = Lists.newArrayList();
         for (MiruTopologyStatus status : topologyStatusForTenantHost) {
             if (status.partition.info.state == MiruPartitionState.offline) {
@@ -141,11 +148,11 @@ public class AmzaClusterRegistryNGTest {
 
     @Test
     public void testElectAndMoveReplica() throws Exception {
-        MiruHost[] hosts = addHosts(4);
+        hosts = addHosts(4);
 
         Set<MiruHost> electedHosts = replicaSetDirector.electHostsForTenantPartition(tenantId,
             partitionId,
-            new MiruReplicaSet(ArrayListMultimap.create(), Sets.<MiruHost>newHashSet(), numReplicas));
+            new MiruReplicaSet(ArrayListMultimap.create(), Sets.<MiruHost>newHashSet(), numReplicas, numReplicas));
 
         MiruReplicaSet replicaSet = registry.getReplicaSets(tenantId, Arrays.asList(partitionId)).get(partitionId);
 
@@ -236,11 +243,12 @@ public class AmzaClusterRegistryNGTest {
         assertEquals(registry.getSchema(tenantId1).getFieldDefinition(1).name, "d");
     }
 
-    private MiruHost[] addHosts(int numHosts) throws Exception {
-        MiruHost[] hosts = new MiruHost[numHosts];
+    private List<MiruHost> addHosts(int numHosts) throws Exception {
+        List<MiruHost> hosts = Lists.newArrayListWithCapacity(numHosts);
         for (int i = 0; i < numHosts; i++) {
-            hosts[i] = new MiruHost("localhost", 49_600 + i);
-            registry.heartbeat(hosts[i]);
+            MiruHost host = MiruHostProvider.fromInstance(i, "instanceKey" + i);
+            hosts.add(host);
+            registry.heartbeat(host);
         }
         return hosts;
     }

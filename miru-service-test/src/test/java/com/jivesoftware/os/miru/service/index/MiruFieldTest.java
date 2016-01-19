@@ -70,7 +70,7 @@ public class MiruFieldTest {
         List<Integer> ids = Lists.newArrayList();
         MiruBitmapsRoaringBuffer bitmaps = new MiruBitmapsRoaringBuffer();
         MiruTenantId tenantId = new MiruTenantId(FilerIO.intBytes(1));
-        MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, MiruPartitionId.of(0), new MiruHost("localhost", 10000));
+        MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, MiruPartitionId.of(0), new MiruHost("logicalName"));
         MiruFieldDefinition fieldDefinition = new MiruFieldDefinition(0, "field1", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE);
 
         MiruContext<MutableRoaringBitmap, ImmutableRoaringBitmap, ?> hybridContext = IndexTestUtil.buildInMemoryContext(4, bitmaps, coord);

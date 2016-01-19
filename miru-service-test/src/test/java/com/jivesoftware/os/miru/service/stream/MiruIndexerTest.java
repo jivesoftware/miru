@@ -175,7 +175,7 @@ public class MiruIndexerTest {
     @DataProvider(name = "miruIndexContextDataProvider")
     public Object[][] miruIndexContextDataProvider() throws Exception {
         final MiruTenantId tenantId = new MiruTenantId("indexContextTenant".getBytes());
-        MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, MiruPartitionId.of(0), new MiruHost("localhost", 10000));
+        MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, MiruPartitionId.of(0), new MiruHost("logicalName"));
 
         MiruBitmapsRoaringBuffer bitmaps = new MiruBitmapsRoaringBuffer();
         MiruIndexer<MutableRoaringBitmap, ImmutableRoaringBitmap> miruIndexer = new MiruIndexer<>(new MiruIndexAuthz<>(),

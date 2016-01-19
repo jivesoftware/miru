@@ -173,13 +173,13 @@ public class MiruBitmapsTimeRangeTest {
 
     private MiruTimeIndex buildInMemoryTimeIndex() throws Exception {
         MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
-        MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("localhost", 10000));
+        MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("logicalName"));
         return buildInMemoryContext(numberOfChunkStores, bitmaps, coord).timeIndex;
     }
 
     private MiruTimeIndex buildOnDiskTimeIndex() throws Exception {
         MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
-        MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("localhost", 10000));
+        MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("logicalName"));
         return buildOnDiskContext(numberOfChunkStores, bitmaps, coord).timeIndex;
     }
 }

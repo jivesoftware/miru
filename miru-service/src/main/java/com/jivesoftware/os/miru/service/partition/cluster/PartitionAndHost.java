@@ -18,9 +18,8 @@ public class PartitionAndHost implements Comparable<PartitionAndHost> {
     public int compareTo(PartitionAndHost o) {
         return ComparisonChain
             .start()
-            .compare(partitionId.getId(), o.partitionId.getId())
-            .compare(host.getPort(), o.host.getPort())
-            .compare(host.getLogicalName(), o.host.getLogicalName())
+            .compare(partitionId, o.partitionId)
+            .compare(host, o.host)
             .result();
     }
 

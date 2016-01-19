@@ -10,6 +10,9 @@ import org.merlin.config.defaults.StringDefault;
 
 public interface MiruServiceConfig extends Config {
 
+    @BooleanDefault(true)
+    boolean getNameByHostPort();
+
     @IntDefault(8_192)
     int getBitsetBufferSize();
 

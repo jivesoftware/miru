@@ -81,7 +81,7 @@ public class MiruFieldIndexTest {
     @DataProvider(name = "miruIndexDataProvider")
     public Object[][] miruIndexDataProvider() throws Exception {
         MiruBitmapsRoaringBuffer bitmaps = new MiruBitmapsRoaringBuffer();
-        MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("localhost", 10000));
+        MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("logicalName"));
 
         MiruContext<MutableRoaringBitmap, ImmutableRoaringBitmap, ?> hybridContext = buildInMemoryContext(4, bitmaps, coord);
         MiruFieldIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> miruInMemoryFieldIndex = hybridContext.fieldIndexProvider.getFieldIndex(
@@ -102,7 +102,7 @@ public class MiruFieldIndexTest {
         StackBuffer stackBuffer = new StackBuffer();
         MiruTenantId tenantId = new MiruTenantId("test".getBytes());
         MiruBitmapsRoaringBuffer bitmaps = new MiruBitmapsRoaringBuffer();
-        MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, MiruPartitionId.of(0), new MiruHost("localhost", 10000));
+        MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, MiruPartitionId.of(0), new MiruHost("logicalName"));
 
         MiruContext<MutableRoaringBitmap, ImmutableRoaringBitmap, ?> hybridContext = buildInMemoryContext(4, bitmaps, coord);
         MiruFieldIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> miruHybridFieldIndex = hybridContext.fieldIndexProvider.getFieldIndex(

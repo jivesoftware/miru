@@ -169,7 +169,9 @@ public class MiruWALUIServiceNGTest {
             TimeUnit.HOURS.toMillis(1),
             TimeUnit.DAYS.toMillis(365),
             0);
-        MiruRegistryClusterClient clusterClient = new MiruRegistryClusterClient(clusterRegistry, new MiruReplicaSetDirector(orderIdProvider, clusterRegistry));
+        MiruRegistryClusterClient clusterClient = new MiruRegistryClusterClient(clusterRegistry, new MiruReplicaSetDirector(orderIdProvider, clusterRegistry,
+            stream -> {
+            }));
         MiruWALDirector<RCVSCursor, RCVSSipCursor> director = new MiruWALDirector<>(walLookup,
             activityWALReader,
             activityWALWriter,

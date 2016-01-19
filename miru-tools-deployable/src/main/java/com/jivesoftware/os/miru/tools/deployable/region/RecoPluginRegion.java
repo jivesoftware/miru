@@ -11,12 +11,10 @@ import com.google.common.collect.Maps;
 import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.miru.api.MiruActorId;
-import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.FilterStringUtil;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
-import com.jivesoftware.os.miru.api.topology.ReaderRequestHelpers;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
@@ -30,7 +28,11 @@ import com.jivesoftware.os.miru.ui.MiruPageRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelper;
+import com.jivesoftware.os.routing.bird.http.client.HttpResponse;
+import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
+import com.jivesoftware.os.routing.bird.http.client.RoundRobinStrategy;
+import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
+import com.jivesoftware.os.routing.bird.shared.ClientCall.ClientResponse;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -46,15 +48,21 @@ public class RecoPluginRegion implements MiruPageRegion<Optional<RecoPluginRegio
 
     private final String template;
     private final MiruSoyRenderer renderer;
-    private final ReaderRequestHelpers readerRequestHelpers;
+    private final TenantAwareHttpClient<String> readerClient;
+    private final ObjectMapper requestMapper;
+    private final HttpResponseMapper responseMapper;
     private final FilterStringUtil filterStringUtil = new FilterStringUtil();
 
     public RecoPluginRegion(String template,
         MiruSoyRenderer renderer,
-        ReaderRequestHelpers readerRequestHelpers) {
+        TenantAwareHttpClient<String> readerClient,
+        ObjectMapper requestMapper,
+        HttpResponseMapper responseMapper) {
         this.template = template;
         this.renderer = renderer;
-        this.readerRequestHelpers = readerRequestHelpers;
+        this.readerClient = readerClient;
+        this.requestMapper = requestMapper;
+        this.responseMapper = responseMapper;
     }
 
     public static class RecoPluginRegionInput {
@@ -140,40 +148,40 @@ public class RecoPluginRegion implements MiruPageRegion<Optional<RecoPluginRegio
                 MiruFilter constraintsFilter = filterStringUtil.parse(input.constraintsFilter);
                 MiruFilter scorableFilter = filterStringUtil.parse(input.scorableFilter);
 
-                List<HttpRequestHelper> requestHelpers = readerRequestHelpers.get(Optional.<MiruHost>absent());
                 MiruResponse<RecoAnswer> response = null;
                 if (!input.tenant.trim().isEmpty()) {
                     MiruTenantId tenantId = new MiruTenantId(input.tenant.trim().getBytes(Charsets.UTF_8));
-                    for (HttpRequestHelper requestHelper : requestHelpers) {
-                        try {
+                    String endpoint = RecoConstants.RECO_PREFIX + RecoConstants.CUSTOM_QUERY_ENDPOINT;
+                    String request = requestMapper.writeValueAsString(new MiruRequest<>("toolsReco",
+                        tenantId,
+                        MiruActorId.NOT_PROVIDED,
+                        MiruAuthzExpression.NOT_PROVIDED,
+                        new RecoQuery(
+                            timeRange,
+                            removeDistinctsQuery,
+                            constraintsFilter,
+                            input.baseField,
+                            input.contributorField,
+                            input.recommendField,
+                            scorableFilter,
+                            100),
+                        MiruSolutionLogLevel.valueOf(input.logLevel)));
+                    MiruResponse<RecoAnswer> recoResponse = readerClient.call("",
+                        new RoundRobinStrategy(),
+                        "recoPluginRegion",
+                        httpClient -> {
+                            HttpResponse httpResponse = httpClient.postJson(endpoint, request, null);
                             @SuppressWarnings("unchecked")
-                            MiruResponse<RecoAnswer> recoResponse = requestHelper.executeRequest(
-                                new MiruRequest<>("toolsReco",
-                                    tenantId,
-                                    MiruActorId.NOT_PROVIDED,
-                                    MiruAuthzExpression.NOT_PROVIDED,
-                                    new RecoQuery(
-                                        timeRange,
-                                        removeDistinctsQuery,
-                                        constraintsFilter,
-                                        input.baseField,
-                                        input.contributorField,
-                                        input.recommendField,
-                                        scorableFilter,
-                                        100),
-                                    MiruSolutionLogLevel.valueOf(input.logLevel)),
-                                RecoConstants.RECO_PREFIX + RecoConstants.CUSTOM_QUERY_ENDPOINT, MiruResponse.class,
+                            MiruResponse<RecoAnswer> extractResponse = responseMapper.extractResultFromResponse(httpResponse,
+                                MiruResponse.class,
                                 new Class[] { RecoAnswer.class },
                                 null);
-                            response = recoResponse;
-                            if (response != null && response.answer != null) {
-                                break;
-                            } else {
-                                log.warn("Empty reco response from {}, trying another", requestHelper);
-                            }
-                        } catch (Exception e) {
-                            log.warn("Failed reco request to {}, trying another", new Object[] { requestHelper }, e);
-                        }
+                            return new ClientResponse<>(extractResponse, true);
+                        });
+                    if (recoResponse != null && recoResponse.answer != null) {
+                        response = recoResponse;
+                    } else {
+                        log.warn("Empty reco response from {}", tenantId);
                     }
                 }
 

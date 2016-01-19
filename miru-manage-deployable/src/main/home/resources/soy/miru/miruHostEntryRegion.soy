@@ -9,9 +9,8 @@
 {template .hostEntryRegion}
     <tr>
         <td>
-            <a href="/miru/manage/hosts/{$host.logicalName|escapeUri}/{$host.port}#focus">{$host.logicalName}</a>
+            <a href="/miru/manage/hosts/{$host.logicalName|escapeUri}#focus">{$host.logicalName}</a>
         </td>
-        <td>{$host.port}</td>
         <td>{$heartbeat} ms</td>
     </tr>
 {/template}

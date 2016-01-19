@@ -23,16 +23,16 @@ public class MiruSoyRendererTest {
                 " * @param host\n" +
                 " */\n" +
                 "{template .test}\n" +
-                "{$host.logicalName}:{$host.port}\n" +
+                "{$host.logicalName}\n" +
                 "{/template}\n");
         }
         builder.add(soyFile);
         MiruSoyRenderer renderer = new MiruSoyRenderer(builder.build().compileToTofu(), new SoyDataUtils());
 
-        MiruHost host = new MiruHost("localhost", 10_001);
+        MiruHost host = new MiruHost("localhost");
         Map<String, ?> data = ImmutableMap.of("host", host);
         String rendered = renderer.render("miru.test", data);
-        assertEquals(rendered, host.toStringForm());
+        assertEquals(rendered, host.getLogicalName());
     }
 
     @Test

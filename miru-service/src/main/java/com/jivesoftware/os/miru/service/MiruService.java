@@ -250,17 +250,6 @@ public class MiruService implements Miru {
         return partition.isPresent() && partition.get().isAvailable();
     }
 
-    /**
-     * Manage topology and configuration.
-     */
-    public void removeHost(MiruHost host) throws Exception {
-        partitionDirector.removeHost(host);
-    }
-
-    public void removeTopology(MiruTenantId tenantId, MiruPartitionId partitionId, MiruHost host) throws Exception {
-        partitionDirector.removeTopology(tenantId, partitionId, host);
-    }
-
     public boolean checkInfo(MiruTenantId tenantId, MiruPartitionId partitionId, MiruPartitionCoordInfo info) throws Exception {
         return partitionDirector.checkInfo(tenantId, partitionId, info);
     }

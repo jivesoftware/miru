@@ -75,7 +75,7 @@ public class MiruHostedPartitionComparisonTest {
     public void testSuggestedTimeout() throws Exception {
         List<MiruSolution> solutions = Lists.newArrayList();
         for (int i = 1; i <= 100; i++) {
-            MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, partitionId, new MiruHost("localhost", 49_600 + i));
+            MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, partitionId, new MiruHost("logicalName_" + (10_000 + i)));
             solutions.add(new MiruSolution(coord, i, i, Collections.<MiruPartitionCoord>emptyList(), null));
         }
         partitionComparison.analyzeSolutions(solutions, requestName, queryKey);
@@ -83,7 +83,7 @@ public class MiruHostedPartitionComparisonTest {
     }
 
     private MiruRoutablePartition create(int port) {
-        return new MiruRoutablePartition(new MiruHost("localhost", port), partitionId, true, MiruPartitionState.online, MiruBackingStorage.memory,
+        return new MiruRoutablePartition(new MiruHost("logicalName_" + port), partitionId, true, MiruPartitionState.online, MiruBackingStorage.memory,
             Long.MAX_VALUE);
     }
 

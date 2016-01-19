@@ -19,10 +19,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.collect.Lists;
-import com.jivesoftware.os.miru.api.MiruStats;
-import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
-import com.jivesoftware.os.miru.api.topology.ReaderRequestHelpers;
-import com.jivesoftware.os.miru.cluster.client.MiruClusterClientInitializer;
 import com.jivesoftware.os.miru.logappender.MiruLogAppender;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
 import com.jivesoftware.os.miru.logappender.RoutingBirdLogSenderProvider;
@@ -62,6 +58,7 @@ import com.jivesoftware.os.routing.bird.health.checkers.GCLoadHealthChecker;
 import com.jivesoftware.os.routing.bird.health.checkers.ServiceStartupHealthCheck;
 import com.jivesoftware.os.routing.bird.http.client.HttpDeliveryClientHealthProvider;
 import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelperUtils;
+import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.http.client.TenantRoutingHttpClientInitializer;
 import com.jivesoftware.os.routing.bird.server.util.Resource;
@@ -70,7 +67,6 @@ import com.jivesoftware.os.routing.bird.shared.TenantsServiceConnectionDescripto
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import org.merlin.config.Config;
 
 public class MiruToolsMain {
@@ -150,12 +146,11 @@ public class MiruToolsMain {
                 HttpRequestHelperUtils.buildRequestHelper(instanceConfig.getRoutesHost(), instanceConfig.getRoutesPort()),
                 instanceConfig.getConnectionsHealth(), 5_000, 100);
             TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
-            TenantAwareHttpClient<String> miruManageClient = tenantRoutingHttpClientInitializer.initialize(tenantRoutingProvider
-                    .getConnections("miru-manage", "main"),
+            TenantAwareHttpClient<String> miruReaderClient = tenantRoutingHttpClientInitializer.initialize(
+                tenantRoutingProvider.getConnections("miru-reader", "main"),
                 clientHealthProvider,
                 10, 10_000); // TODO expose to conf
-
-            MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize(new MiruStats(), "", miruManageClient, mapper);
+            HttpResponseMapper responseMapper = new HttpResponseMapper(mapper);
 
             MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
 
@@ -164,38 +159,36 @@ public class MiruToolsMain {
                 renderer,
                 tenantRoutingProvider);
 
-            ReaderRequestHelpers readerRequestHelpers = new ReaderRequestHelpers(clusterClient, mapper, TimeUnit.MINUTES.toMillis(10));
-
             List<MiruToolsPlugin> plugins = Lists.newArrayList(
                 new MiruToolsPlugin("road", "Aggregate Counts",
                     "/miru/tools/aggregate",
                     AggregateCountsPluginEndpoints.class,
-                    new AggregateCountsPluginRegion("soy.miru.page.aggregateCountsPluginRegion", renderer, readerRequestHelpers)),
+                    new AggregateCountsPluginRegion("soy.miru.page.aggregateCountsPluginRegion", renderer, miruReaderClient, mapper, responseMapper)),
                 new MiruToolsPlugin("stats", "Analytics",
                     "/miru/tools/analytics",
                     AnalyticsPluginEndpoints.class,
-                    new AnalyticsPluginRegion("soy.miru.page.analyticsPluginRegion", renderer, readerRequestHelpers)),
+                    new AnalyticsPluginRegion("soy.miru.page.analyticsPluginRegion", renderer, miruReaderClient, mapper, responseMapper)),
                 new MiruToolsPlugin("asterisk", "Distincts",
                     "/miru/tools/distincts",
                     DistinctsPluginEndpoints.class,
-                    new DistinctsPluginRegion("soy.miru.page.distinctsPluginRegion", renderer, readerRequestHelpers)),
+                    new DistinctsPluginRegion("soy.miru.page.distinctsPluginRegion", renderer, miruReaderClient, mapper, responseMapper)),
                 new MiruToolsPlugin("search", "Full Text",
                     "/miru/tools/fulltext",
                     FullTextPluginEndpoints.class,
-                    new FullTextPluginRegion("soy.miru.page.fullTextPluginRegion", renderer, readerRequestHelpers)),
+                    new FullTextPluginRegion("soy.miru.page.fullTextPluginRegion", renderer, miruReaderClient, mapper, responseMapper)),
                 new MiruToolsPlugin("flash", "Realwave",
                     "/miru/tools/realwave",
                     RealwavePluginEndpoints.class,
-                    new RealwavePluginRegion("soy.miru.page.realwavePluginRegion", renderer, readerRequestHelpers),
+                    new RealwavePluginRegion("soy.miru.page.realwavePluginRegion", renderer, miruReaderClient, mapper, responseMapper),
                     new RealwaveFramePluginRegion("soy.miru.page.realwaveFramePluginRegion", renderer)),
                 new MiruToolsPlugin("thumbs-up", "Reco",
                     "/miru/tools/reco",
                     RecoPluginEndpoints.class,
-                    new RecoPluginRegion("soy.miru.page.recoPluginRegion", renderer, readerRequestHelpers)),
+                    new RecoPluginRegion("soy.miru.page.recoPluginRegion", renderer, miruReaderClient, mapper, responseMapper)),
                 new MiruToolsPlugin("list", "Trending",
                     "/miru/tools/trending",
                     TrendingPluginEndpoints.class,
-                    new TrendingPluginRegion("soy.miru.page.trendingPluginRegion", renderer, readerRequestHelpers)));
+                    new TrendingPluginRegion("soy.miru.page.trendingPluginRegion", renderer, miruReaderClient, mapper, responseMapper)));
 
             File staticResourceDir = new File(System.getProperty("user.dir"));
             System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());

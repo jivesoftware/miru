@@ -132,20 +132,19 @@ public class MiruTopologyEndpoints {
     }
 
     @POST
-    @Path("/thumpthump/{host}/{port}")
+    @Path("/thumpthump/{logicalName}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response thumpthump(@PathParam("host") String host,
-        @PathParam("port") int port,
+    public Response thumpthump(@PathParam("logicalName") String logicalName,
         MiruHeartbeatRequest request) {
         try {
             long start = System.currentTimeMillis();
-            MiruHost miruHost = new MiruHost(host, port);
+            MiruHost miruHost = new MiruHost(logicalName);
             Response r = ResponseHelper.INSTANCE.jsonResponse(registry.thumpthump(miruHost, request));
-            stats.ingressed("/thumpthump/" + host + "/" + port, 1, System.currentTimeMillis() - start);
+            stats.ingressed("/thumpthump/" + logicalName, 1, System.currentTimeMillis() - start);
             return r;
         } catch (Exception x) {
-            String msg = "Failed to thumpthump for " + host + ":" + port;
+            String msg = "Failed to thumpthump for " + logicalName;
             LOG.error(msg, x);
             return ResponseHelper.INSTANCE.errorResponse(msg, x);
         }
@@ -220,42 +219,41 @@ public class MiruTopologyEndpoints {
     }
 
     @POST
-    @Path("/remove/{host}/{port}")
+    @Path("/remove/{logicalName}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response remove(@PathParam("host") String host,
-        @PathParam("port") int port, MiruHeartbeatRequest request) {
+    public Response remove(@PathParam("logicalName") String logicalName,
+        MiruHeartbeatRequest request) {
         try {
             long start = System.currentTimeMillis();
-            MiruHost miruHost = new MiruHost(host, port);
+            MiruHost miruHost = new MiruHost(logicalName);
             registry.removeHost(miruHost);
-            stats.ingressed("/remove/" + host + "/" + port, 1, System.currentTimeMillis() - start);
+            stats.ingressed("/remove/" + logicalName, 1, System.currentTimeMillis() - start);
             return ResponseHelper.INSTANCE.jsonResponse("");
         } catch (Exception x) {
-            String msg = "Failed to removeHost for " + host + ":" + port;
+            String msg = "Failed to removeHost for " + logicalName;
             LOG.error(msg, x);
             return ResponseHelper.INSTANCE.errorResponse(msg, x);
         }
     }
 
     @POST
-    @Path("/remove/{host}/{port}/{tenantId}/{partitionId}")
+    @Path("/remove/{logicalName}/{tenantId}/{partitionId}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response removeTopology(@PathParam("host") String host,
-        @PathParam("port") int port,
+    public Response removeTopology(@PathParam("logicalName") String logicalName,
         @PathParam("tenantId") String tenantId,
         @PathParam("partitionId") int partitionId) {
         try {
             long start = System.currentTimeMillis();
             MiruTenantId miruTenantId = new MiruTenantId(tenantId.getBytes(StandardCharsets.UTF_8));
             MiruPartitionId miruPartitionId = MiruPartitionId.of(partitionId);
-            MiruHost miruHost = new MiruHost(host, port);
+            MiruHost miruHost = new MiruHost(logicalName);
             registry.removeTopology(miruHost, miruTenantId, miruPartitionId);
-            stats.ingressed("/remove/" + host + "/" + port + "/" + tenantId + "/" + partitionId, 1, System.currentTimeMillis() - start);
+            stats.ingressed("/remove/" + logicalName + "/" + tenantId + "/" + partitionId, 1, System.currentTimeMillis() - start);
             return ResponseHelper.INSTANCE.jsonResponse("");
         } catch (Exception x) {
-            String msg = "Failed to removeTopology for " + host + ":" + port + " " + tenantId + " " + partitionId;
+            String msg = "Failed to removeTopology for " + logicalName + " " + tenantId + " " + partitionId;
             LOG.error(msg, x);
             return ResponseHelper.INSTANCE.errorResponse(msg, x);
         }

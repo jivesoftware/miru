@@ -28,12 +28,12 @@ import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceConfig;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceInitializer;
+import com.jivesoftware.os.miru.api.MiruHostProvider;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.marshall.JacksonJsonObjectTypeMarshaller;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.api.topology.MiruRegistryConfig;
-import com.jivesoftware.os.miru.api.topology.ReaderRequestHelpers;
 import com.jivesoftware.os.miru.api.wal.AmzaCursor;
 import com.jivesoftware.os.miru.api.wal.AmzaSipCursor;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
@@ -70,14 +70,18 @@ import com.jivesoftware.os.routing.bird.health.checkers.SickThreads;
 import com.jivesoftware.os.routing.bird.health.checkers.SickThreadsHealthCheck;
 import com.jivesoftware.os.routing.bird.http.client.HttpDeliveryClientHealthProvider;
 import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelperUtils;
+import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.http.client.TenantRoutingHttpClientInitializer;
 import com.jivesoftware.os.routing.bird.server.util.Resource;
+import com.jivesoftware.os.routing.bird.shared.ConnectionDescriptor;
+import com.jivesoftware.os.routing.bird.shared.ConnectionDescriptors;
+import com.jivesoftware.os.routing.bird.shared.HostPort;
+import com.jivesoftware.os.routing.bird.shared.InstanceDescriptor;
 import com.jivesoftware.os.routing.bird.shared.TenantRoutingProvider;
 import com.jivesoftware.os.routing.bird.shared.TenantsServiceConnectionDescriptorProvider;
 import java.io.File;
 import java.util.Arrays;
-import java.util.concurrent.TimeUnit;
 import org.merlin.config.defaults.IntDefault;
 import org.merlin.config.defaults.LongDefault;
 import org.merlin.config.defaults.StringDefault;
@@ -179,10 +183,17 @@ public class MiruManageMain {
                 instanceConfig.getConnectionsHealth(), 5_000, 100);
 
             TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
-            TenantAwareHttpClient<String> walHttpClient = tenantRoutingHttpClientInitializer.initialize(tenantRoutingProvider
-                    .getConnections("miru-wal", "main"),
+            TenantAwareHttpClient<String> walHttpClient = tenantRoutingHttpClientInitializer.initialize(
+                tenantRoutingProvider.getConnections("miru-wal", "main"),
                 clientHealthProvider,
                 10, 10_000); // TODO expose to conf
+            TenantsServiceConnectionDescriptorProvider<String> readerConnectionDescriptorProvider = tenantRoutingProvider
+                .getConnections("miru-reader", "main");
+            TenantAwareHttpClient<String> readerClient = tenantRoutingHttpClientInitializer.initialize(
+                readerConnectionDescriptorProvider,
+                clientHealthProvider,
+                10, 10_000); // TODO expose to conf
+            HttpResponseMapper responseMapper = new HttpResponseMapper(mapper);
 
             SickThreads walClientSickThreads = new SickThreads();
             deployable.addHealthCheck(new SickThreadsHealthCheck(deployable.config(WALClientSickThreadsHealthCheckConfig.class), walClientSickThreads));
@@ -247,12 +258,29 @@ public class MiruManageMain {
 
             OrderIdProvider orderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(0), new SnowflakeIdPacker(),
                 new JiveEpochTimestampProvider());
-            MiruClusterClient clusterClient = new MiruRegistryClusterClient(clusterRegistry, new MiruReplicaSetDirector(orderIdProvider, clusterRegistry));
-            //TODO expose to config TimeUnit.MINUTES.toMillis(10)
-            ReaderRequestHelpers readerRequestHelpers = new ReaderRequestHelpers(clusterClient, mapper, TimeUnit.MINUTES.toMillis(10));
+            MiruClusterClient clusterClient = new MiruRegistryClusterClient(clusterRegistry, new MiruReplicaSetDirector(orderIdProvider, clusterRegistry,
+                stream -> {
+                    ConnectionDescriptors connectionDescriptors = readerConnectionDescriptorProvider.getConnections("");
+                    for (ConnectionDescriptor connectionDescriptor : connectionDescriptors.getConnectionDescriptors()) {
+                        InstanceDescriptor instanceDescriptor = connectionDescriptor.getInstanceDescriptor();
+                        HostPort hostPort = connectionDescriptor.getHostPort();
+                        if (!stream.descriptor(instanceDescriptor.datacenter, instanceDescriptor.rack,
+                            MiruHostProvider.fromInstance(instanceDescriptor.instanceName, instanceDescriptor.instanceKey))) {
+                            return;
+                        }
+                        if (!stream.descriptor(instanceDescriptor.datacenter, instanceDescriptor.rack,
+                            MiruHostProvider.fromHostPort(hostPort.getHost(), hostPort.getPort()))) {
+                            return;
+                        }
+                    }
+                }));
 
-            MiruRebalanceDirector rebalanceDirector = new MiruRebalanceInitializer().initialize(clusterRegistry, miruWALClient,
-                new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName())), readerRequestHelpers);
+            MiruRebalanceDirector rebalanceDirector = new MiruRebalanceInitializer().initialize(clusterRegistry,
+                miruWALClient,
+                new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName())),
+                readerClient,
+                responseMapper,
+                readerConnectionDescriptorProvider);
 
             File staticResourceDir = new File(System.getProperty("user.dir"));
             System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());

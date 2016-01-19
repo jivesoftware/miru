@@ -31,7 +31,7 @@ miru.balancer = {
             }
         });
     },
-    rebalance: function (ele, host, port, direction) {
+    rebalance: function (ele, logicalName, direction) {
         var $button = $(ele);
         $button.attr('disabled', 'disabled');
         var value = $button.val();
@@ -39,8 +39,7 @@ miru.balancer = {
             type: "POST",
             url: "/miru/manage/topology/shift",
             data: {
-                "host": host,
-                "port": port,
+                "logicalName": logicalName,
                 "direction": direction
             },
             //contentType: "application/json",
@@ -58,13 +57,13 @@ miru.balancer = {
             }
         });
     },
-    remove: function (ele, host, port) {
+    remove: function (ele, logicalName) {
         var $button = $(ele);
         $button.attr('disabled', 'disabled');
         var value = $button.val();
         $.ajax({
             type: "DELETE",
-            url: "/miru/manage/hosts/" + host + "/" + port,
+            url: "/miru/manage/hosts/" + logicalName,
             //contentType: "application/json",
             success: function () {
                 $button.val('Success');
@@ -83,7 +82,7 @@ miru.balancer = {
 };
 
 miru.tenants = {
-    rebuild: function (ele, host, port, tenantId, partitionId) {
+    rebuild: function (ele, logicalName, tenantId, partitionId) {
         var $button = $(ele);
         $button.attr('disabled', 'disabled');
         var value = $button.val();
@@ -91,8 +90,7 @@ miru.tenants = {
             type: "POST",
             url: "/miru/manage/tenants/rebuild",
             data: {
-                "host": host,
-                "port": port,
+                "logicalName": logicalName,
                 "tenantId": tenantId,
                 "partitionId": partitionId
             },

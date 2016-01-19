@@ -27,6 +27,8 @@ import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.jive.utils.ordered.id.TimestampedOrderIdProvider;
 import com.jivesoftware.os.miru.api.MiruHost;
+import com.jivesoftware.os.miru.api.MiruHostProvider;
+import com.jivesoftware.os.miru.api.MiruHostSelectiveStrategy;
 import com.jivesoftware.os.miru.api.MiruLifecyle;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaProvider;
@@ -92,13 +94,11 @@ import com.jivesoftware.os.routing.bird.endpoints.base.HasUI;
 import com.jivesoftware.os.routing.bird.health.api.HealthCheckRegistry;
 import com.jivesoftware.os.routing.bird.health.api.HealthChecker;
 import com.jivesoftware.os.routing.bird.health.api.HealthFactory;
-import com.jivesoftware.os.routing.bird.health.api.SickHealthCheckConfig;
 import com.jivesoftware.os.routing.bird.health.checkers.DirectBufferHealthChecker;
 import com.jivesoftware.os.routing.bird.health.checkers.GCLoadHealthChecker;
 import com.jivesoftware.os.routing.bird.health.checkers.ServiceStartupHealthCheck;
 import com.jivesoftware.os.routing.bird.health.checkers.SickThreads;
 import com.jivesoftware.os.routing.bird.health.checkers.SickThreadsHealthCheck;
-import com.jivesoftware.os.routing.bird.http.client.ConnectionDescriptorSelectiveStrategy;
 import com.jivesoftware.os.routing.bird.http.client.HttpDeliveryClientHealthProvider;
 import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelperUtils;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
@@ -114,8 +114,6 @@ import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import org.merlin.config.Config;
-import org.merlin.config.defaults.DoubleDefault;
-import org.merlin.config.defaults.StringDefault;
 import org.reflections.Reflections;
 import org.reflections.scanners.SubTypesScanner;
 import org.reflections.scanners.TypesScanner;
@@ -138,16 +136,16 @@ public class MiruReaderMain {
             HealthFactory.initialize(
                 deployable::config,
                 new HealthCheckRegistry() {
-                @Override
-                public void register(HealthChecker healthChecker) {
-                    deployable.addHealthCheck(healthChecker);
-                }
+                    @Override
+                    public void register(HealthChecker healthChecker) {
+                        deployable.addHealthCheck(healthChecker);
+                    }
 
-                @Override
-                public void unregister(HealthChecker healthChecker) {
-                    throw new UnsupportedOperationException("Not supported yet.");
-                }
-            });
+                    @Override
+                    public void unregister(HealthChecker healthChecker) {
+                        throw new UnsupportedOperationException("Not supported yet.");
+                    }
+                });
             deployable.addErrorHealthChecks();
             deployable.buildStatusReporter(null).start();
             deployable.addManageInjectables(HasUI.class, new HasUI(Arrays.asList(new HasUI.UI("manage", "manage", "/manage/ui"),
@@ -192,10 +190,12 @@ public class MiruReaderMain {
                 new RoutingBirdMetricSampleSenderProvider<>(metricConnections, "", miruLogAppenderConfig.getSocketTimeoutInMillis()));
             sampler.start();
 
-            MiruHost miruHost = new MiruHost(instanceConfig.getHost(), instanceConfig.getMainPort());
-
             MiruServiceConfig miruServiceConfig = deployable.config(MiruServiceConfig.class);
             MiruWALConfig walConfig = deployable.config(MiruWALConfig.class);
+
+            MiruHost miruHost = miruServiceConfig.getNameByHostPort()
+                ? MiruHostProvider.fromHostPort(instanceConfig.getHost(), instanceConfig.getMainPort())
+                : MiruHostProvider.fromInstance(instanceConfig.getInstanceName(), instanceConfig.getInstanceKey());
 
             MiruResourceLocator miruResourceLocator = new MiruResourceLocatorInitializer().initialize(miruServiceConfig);
 
@@ -235,17 +235,17 @@ public class MiruReaderMain {
 
             TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
             TenantAwareHttpClient<String> walHttpClient = tenantRoutingHttpClientInitializer.initialize(tenantRoutingProvider
-                .getConnections("miru-wal", "main"),
+                    .getConnections("miru-wal", "main"),
                 clientHealthProvider,
                 10, 10_000); // TODO expose to conf
 
             TenantAwareHttpClient<String> manageHttpClient = tenantRoutingHttpClientInitializer.initialize(tenantRoutingProvider
-                .getConnections("miru-manage", "main"),
+                    .getConnections("miru-manage", "main"),
                 clientHealthProvider,
                 10, 10_000);  // TODO expose to conf
 
             TenantAwareHttpClient<String> readerHttpClient = tenantRoutingHttpClientInitializer.initialize(tenantRoutingProvider
-                .getConnections("miru-reader", "main"),
+                    .getConnections("miru-reader", "main"),
                 clientHealthProvider,
                 10, 10_000);  // TODO expose to conf
 
@@ -269,7 +269,7 @@ public class MiruReaderMain {
                 new NamedThreadFactory(threadGroup, "scheduled_rebuild"));
 
             final ScheduledExecutorService scheduledSipMigrateExecutor = Executors.newScheduledThreadPool(miruServiceConfig
-                .getPartitionScheduledSipMigrateThreads(),
+                    .getPartitionScheduledSipMigrateThreads(),
                 new NamedThreadFactory(threadGroup, "scheduled_sip_migrate"));
 
             SickThreads walClientSickThreads = new SickThreads();
@@ -368,7 +368,7 @@ public class MiruReaderMain {
 
             Map<Class<?>, MiruRemotePartition<?, ?, ?>> pluginRemotesMap = Maps.newConcurrentMap();
 
-            Map<MiruHost, ConnectionDescriptorSelectiveStrategy> readerStrategyCache = Maps.newConcurrentMap();
+            Map<MiruHost, MiruHostSelectiveStrategy> readerStrategyCache = Maps.newConcurrentMap();
 
             MiruProvider<Miru> miruProvider = new MiruProvider<Miru>() {
                 @Override
@@ -412,7 +412,7 @@ public class MiruReaderMain {
                 }
 
                 @Override
-                public Map<MiruHost, ConnectionDescriptorSelectiveStrategy> getReaderStrategyCache() {
+                public Map<MiruHost, MiruHostSelectiveStrategy> getReaderStrategyCache() {
                     return readerStrategyCache;
                 }
 

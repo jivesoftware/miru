@@ -26,14 +26,11 @@ public class MiruClusterPartitionDirector implements MiruPartitionDirector {
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final MiruHost host;
-    private final MiruClusterClient clusterClient;
     private final MiruExpectedTenants expectedTenants;
 
     public MiruClusterPartitionDirector(MiruHost host,
-        MiruClusterClient clusterClient,
         MiruExpectedTenants expectedTenants) {
         this.host = host;
-        this.clusterClient = clusterClient;
         this.expectedTenants = expectedTenants;
     }
 
@@ -80,18 +77,6 @@ public class MiruClusterPartitionDirector implements MiruPartitionDirector {
         if (topology != null) {
             topology.warm();
         }
-    }
-
-    /** Removes host from the registry */
-    @Override
-    public void removeHost(MiruHost host) throws Exception {
-        clusterClient.removeHost(host);
-    }
-
-    /** Remove topology from the registry */
-    @Override
-    public void removeTopology(MiruTenantId tenantId, MiruPartitionId partitionId, MiruHost host) throws Exception {
-        clusterClient.removeTopology(host, tenantId, partitionId);
     }
 
     /** Check if the given tenant partition is in the desired state */

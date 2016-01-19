@@ -168,15 +168,15 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
     }
 
     private EmbeddedClient topologyInfoClient(MiruHost host) throws Exception {
-        return ensureClient("host-" + host.toStringForm() + "-" + INFO_SUFFIX, Consistency.none, false);
+        return ensureClient("host-" + host.getLogicalName() + "-" + INFO_SUFFIX, Consistency.none, false);
     }
 
     private EmbeddedClient topologyUpdatesClient(MiruHost host) throws Exception {
-        return ensureClient("host-" + host.toStringForm() + "-" + UPDATES_SUFFIX, Consistency.none, false);
+        return ensureClient("host-" + host.getLogicalName() + "-" + UPDATES_SUFFIX, Consistency.none, false);
     }
 
     private EmbeddedClient registryClient(MiruHost host) throws Exception {
-        return ensureClient("host-" + host.toStringForm() + "-" + REGISTRY_SUFFIX, Consistency.quorum, true);
+        return ensureClient("host-" + host.getLogicalName() + "-" + REGISTRY_SUFFIX, Consistency.quorum, true);
     }
 
     private byte[] toTenantKey(MiruTenantId tenantId) {
@@ -329,7 +329,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
             }
 
             MiruTopologyColumnValue value = new MiruTopologyColumnValue(coordInfo.state, coordInfo.storage, queryTimestamp);
-            LOG.debug("Updating {} to {} at query={}", new Object[]{coord, coordInfo, queryTimestamp});
+            LOG.debug("Updating {} to {} at query={}", new Object[] { coord, coordInfo, queryTimestamp });
 
             byte[] valueBytes = topologyColumnValueMarshaller.toBytes(value);
             updates.set(toTopologyKey(topologyUpdate.coord.tenantId, topologyUpdate.coord.partitionId), valueBytes, -1);
@@ -401,9 +401,9 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
         EmbeddedClient topologyInfoClient = topologyInfoClient(host);
         EmbeddedClient ingressClient = ingressClient();
 
-        String partitionRegistryName = "host-" + host.toStringForm() + "-" + REGISTRY_SUFFIX;
-        String partitionInfoName = "host-" + host.toStringForm() + "-" + INFO_SUFFIX;
-        String partitionIngressName = "host-" + host.toStringForm() + "-" + INGRESS_PARTITION_NAME; // global region still gets host prefix
+        String partitionRegistryName = "host-" + host.getLogicalName() + "-" + REGISTRY_SUFFIX;
+        String partitionInfoName = "host-" + host.getLogicalName() + "-" + INFO_SUFFIX;
+        String partitionIngressName = "host-" + host.getLogicalName() + "-" + INGRESS_PARTITION_NAME; // global region still gets host prefix
 
         String ringMember = amzaService.getRingReader().getRingMember().getMember();
         String registryCursorName = ringMember + '/' + partitionRegistryName;
@@ -659,8 +659,8 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
                     if (latest == null) {
                         // TODO defaultNumberOfReplicas should come from config?
                         latest = MinMaxPriorityQueue.maximumSize(defaultNumberOfReplicas)
-                        .expectedSize(defaultNumberOfReplicas)
-                        .create();
+                            .expectedSize(defaultNumberOfReplicas)
+                            .create();
                         partitionIdToLatest.put(partitionId, latest);
                     }
                     latest.add(new HostAndTimestamp(hostHeartbeat.host, FilerIO.bytesLong(value)));
@@ -827,7 +827,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
         }
 
         int missing = defaultNumberOfReplicas - replicaHosts.size(); // TODO expose to config?
-        return new MiruReplicaSet(extractPartitionsByState(partitions), replicaHosts, missing);
+        return new MiruReplicaSet(extractPartitionsByState(partitions), replicaHosts, missing, defaultNumberOfReplicas);
     }
 
     @Override
@@ -860,7 +860,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
             List<MiruPartition> partitions = partitionsPartitions.get(partitionId);
             Set<MiruHost> replicaHosts = partitionHosts.get(partitionId);
             int missing = defaultNumberOfReplicas - replicaHosts.size(); // TODO expose to config?
-            replicaSets.put(partitionId, new MiruReplicaSet(extractPartitionsByState(partitions), replicaHosts, missing));
+            replicaSets.put(partitionId, new MiruReplicaSet(extractPartitionsByState(partitions), replicaHosts, missing, defaultNumberOfReplicas));
         }
         return replicaSets;
     }

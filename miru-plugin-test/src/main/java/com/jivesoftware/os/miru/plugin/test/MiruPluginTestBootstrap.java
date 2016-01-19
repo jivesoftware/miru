@@ -15,6 +15,7 @@ import com.jivesoftware.os.miru.amza.MiruAmzaServiceInitializer;
 import com.jivesoftware.os.miru.api.HostPortProvider;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
+import com.jivesoftware.os.miru.api.MiruHostSelectiveStrategy;
 import com.jivesoftware.os.miru.api.MiruLifecyle;
 import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
@@ -75,7 +76,6 @@ import com.jivesoftware.os.routing.bird.deployable.Deployable;
 import com.jivesoftware.os.routing.bird.health.api.HealthCheckRegistry;
 import com.jivesoftware.os.routing.bird.health.api.HealthChecker;
 import com.jivesoftware.os.routing.bird.health.api.HealthFactory;
-import com.jivesoftware.os.routing.bird.http.client.ConnectionDescriptorSelectiveStrategy;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import java.io.File;
 import java.util.ArrayList;
@@ -118,14 +118,14 @@ public class MiruPluginTestBootstrap {
         HealthFactory.initialize(
             BindInterfaceToConfiguration::bindDefault,
             new HealthCheckRegistry() {
-            @Override
-            public void register(HealthChecker healthChecker) {
-            }
+                @Override
+                public void register(HealthChecker healthChecker) {
+                }
 
-            @Override
-            public void unregister(HealthChecker healthChecker) {
-            }
-        });
+                @Override
+                public void unregister(HealthChecker healthChecker) {
+                }
+            });
 
         MiruServiceConfig config = BindInterfaceToConfiguration.bindDefault(MiruServiceConfig.class);
         config.setDefaultFailAfterNMillis(TimeUnit.HOURS.toMillis(1));
@@ -183,7 +183,8 @@ public class MiruPluginTestBootstrap {
             TimeUnit.DAYS.toMillis(365),
             0);
 
-        MiruReplicaSetDirector replicaSetDirector = new MiruReplicaSetDirector(new OrderIdProviderImpl(new ConstantWriterIdProvider(1)), clusterRegistry);
+        MiruReplicaSetDirector replicaSetDirector = new MiruReplicaSetDirector(new OrderIdProviderImpl(new ConstantWriterIdProvider(1)), clusterRegistry,
+            stream -> stream.descriptor("datacenter", "rack", miruHost));
         MiruWALClient<RCVSCursor, RCVSSipCursor> walClient = new MiruWALDirector<>(walLookup, activityWALReader, activityWALWriter, readTrackingWALReader,
             readTrackingWALWriter, new MiruRegistryClusterClient(clusterRegistry, replicaSetDirector));
         MiruInboxReadTracker inboxReadTracker = new RCVSInboxReadTracker(walClient);
@@ -191,7 +192,7 @@ public class MiruPluginTestBootstrap {
         MiruRegistryClusterClient clusterClient = new MiruRegistryClusterClient(clusterRegistry, replicaSetDirector);
 
         clusterRegistry.heartbeat(miruHost);
-        replicaSetDirector.electHostsForTenantPartition(tenantId, partitionId, new MiruReplicaSet(ArrayListMultimap.create(), new HashSet<>(), 3));
+        replicaSetDirector.electHostsForTenantPartition(tenantId, partitionId, new MiruReplicaSet(ArrayListMultimap.create(), new HashSet<>(), 3, 3));
         clusterRegistry.updateIngress(new MiruIngressUpdate(tenantId, partitionId, new RangeMinMax(), System.currentTimeMillis(), false));
 
         MiruLifecyle<MiruJustInTimeBackfillerizer> backfillerizerLifecycle = new MiruBackfillerizerInitializer()
@@ -359,7 +360,7 @@ public class MiruPluginTestBootstrap {
             }
 
             @Override
-            public Map<MiruHost, ConnectionDescriptorSelectiveStrategy> getReaderStrategyCache() {
+            public Map<MiruHost, MiruHostSelectiveStrategy> getReaderStrategyCache() {
                 return null;
             }
 

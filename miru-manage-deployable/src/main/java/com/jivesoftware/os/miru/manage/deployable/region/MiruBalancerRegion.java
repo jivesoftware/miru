@@ -69,7 +69,6 @@ public class MiruBalancerRegion implements MiruPageRegion<Void> {
                 }
                 return ImmutableMap.<String, String>builder()
                     .put("logicalName", heartbeat.host.getLogicalName())
-                    .put("port", String.valueOf(heartbeat.host.getPort()))
                     .put("numOffline", String.valueOf(stateCounts.count(MiruPartitionState.offline)))
                     .put("numBootstrap", String.valueOf(stateCounts.count(MiruPartitionState.bootstrap)))
                     .put("numRebuilding", String.valueOf(stateCounts.count(MiruPartitionState.rebuilding)))

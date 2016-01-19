@@ -11,13 +11,11 @@ import com.google.common.collect.Maps;
 import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.miru.api.MiruActorId;
-import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.FilterStringUtil;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
-import com.jivesoftware.os.miru.api.topology.ReaderRequestHelpers;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
@@ -32,7 +30,11 @@ import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.ISO8601DateFormat;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelper;
+import com.jivesoftware.os.routing.bird.http.client.HttpResponse;
+import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
+import com.jivesoftware.os.routing.bird.http.client.RoundRobinStrategy;
+import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
+import com.jivesoftware.os.routing.bird.shared.ClientCall.ClientResponse;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -47,15 +49,21 @@ public class AggregateCountsPluginRegion implements MiruPageRegion<Optional<Aggr
 
     private final String template;
     private final MiruSoyRenderer renderer;
-    private final ReaderRequestHelpers readerRequestHelpers;
+    private final TenantAwareHttpClient<String> readerClient;
+    private final ObjectMapper requestMapper;
+    private final HttpResponseMapper responseMapper;
     private final FilterStringUtil filterStringUtil = new FilterStringUtil();
 
     public AggregateCountsPluginRegion(String template,
         MiruSoyRenderer renderer,
-        ReaderRequestHelpers readerRequestHelpers) {
+        TenantAwareHttpClient<String> readerClient,
+        ObjectMapper requestMapper,
+        HttpResponseMapper responseMapper) {
         this.template = template;
         this.renderer = renderer;
-        this.readerRequestHelpers = readerRequestHelpers;
+        this.readerClient = readerClient;
+        this.requestMapper = requestMapper;
+        this.responseMapper = responseMapper;
     }
 
     public static class AggregateCountsPluginRegionInput {
@@ -117,7 +125,6 @@ public class AggregateCountsPluginRegion implements MiruPageRegion<Optional<Aggr
                 MiruFilter streamFilter = filterStringUtil.parse(input.streamFilters);
                 MiruFilter constraintsFilter = filterStringUtil.parse(input.constraintsFilters);
 
-                List<HttpRequestHelper> requestHelpers = readerRequestHelpers.get(Optional.<MiruHost>absent());
                 List<MiruResponse<AggregateCountsAnswer>> responses = Lists.newArrayList();
                 if (!input.tenant.trim().isEmpty()) {
                     MiruTenantId tenantId = new MiruTenantId(input.tenant.trim().getBytes(Charsets.UTF_8));
@@ -142,45 +149,46 @@ public class AggregateCountsPluginRegion implements MiruPageRegion<Optional<Aggr
                         if (timeRange == null) {
                             break;
                         }
-                        for (HttpRequestHelper requestHelper : requestHelpers) {
-                            try {
+                        String request = requestMapper.writeValueAsString(new MiruRequest<>("toolsAggregateCounts",
+                            tenantId,
+                            MiruActorId.NOT_PROVIDED,
+                            MiruAuthzExpression.NOT_PROVIDED,
+                            new AggregateCountsQuery(
+                                streamId,
+                                timeRange,
+                                MiruTimeRange.ALL_TIME,
+                                streamFilter,
+                                ImmutableMap.of(input.field, new AggregateCountsQueryConstraint(constraintsFilter,
+                                    input.field,
+                                    0,
+                                    input.count,
+                                    true))),
+                            MiruSolutionLogLevel.valueOf(input.logLevel)));
+
+                        MiruResponse<AggregateCountsAnswer> aggregatesResponse = readerClient.call("",
+                            new RoundRobinStrategy(),
+                            "aggregateCountsPluginRegion",
+                            httpClient -> {
+                                HttpResponse httpResponse = httpClient.postJson(endpoint, request, null);
                                 @SuppressWarnings("unchecked")
-                                MiruResponse<AggregateCountsAnswer> aggregatesResponse = requestHelper.executeRequest(
-                                    new MiruRequest<>("toolsAggregateCounts",
-                                        tenantId,
-                                        MiruActorId.NOT_PROVIDED,
-                                        MiruAuthzExpression.NOT_PROVIDED,
-                                        new AggregateCountsQuery(
-                                            streamId,
-                                            timeRange,
-                                            MiruTimeRange.ALL_TIME,
-                                            streamFilter,
-                                            ImmutableMap.of(input.field, new AggregateCountsQueryConstraint(constraintsFilter,
-                                                input.field,
-                                                0,
-                                                input.count,
-                                                true))),
-                                        MiruSolutionLogLevel.valueOf(input.logLevel)),
-                                    endpoint,
+                                MiruResponse<AggregateCountsAnswer> response = responseMapper.extractResultFromResponse(httpResponse,
                                     MiruResponse.class,
-                                    new Class[] { AggregateCountsAnswer.class },
+                                    new Class<?>[] { AggregateCountsAnswer.class },
                                     null);
-                                if (aggregatesResponse != null && aggregatesResponse.answer != null) {
-                                    List<AggregateCount> results = aggregatesResponse.answer.constraints.get(input.field).results;
-                                    if (results.size() < input.count) {
-                                        timeRange = null;
-                                    } else {
-                                        long lastTimestamp = results.get(results.size() - 1).mostRecentActivity.time;
-                                        timeRange = new MiruTimeRange(0, lastTimestamp - 1);
-                                    }
-                                    responses.add(aggregatesResponse);
-                                    break;
-                                } else {
-                                    log.warn("Empty aggregate counts response from {}, trying another", requestHelper);
-                                }
-                            } catch (Exception e) {
-                                log.warn("Failed aggregate counts request to {}, trying another", new Object[] { requestHelper }, e);
+                                return new ClientResponse<>(response, true);
+                            });
+                        if (aggregatesResponse != null && aggregatesResponse.answer != null) {
+                            List<AggregateCount> results = aggregatesResponse.answer.constraints.get(input.field).results;
+                            if (results.size() < input.count) {
+                                timeRange = null;
+                            } else {
+                                long lastTimestamp = results.get(results.size() - 1).mostRecentActivity.time;
+                                timeRange = new MiruTimeRange(0, lastTimestamp - 1);
                             }
+                            responses.add(aggregatesResponse);
+                            break;
+                        } else {
+                            log.warn("Empty aggregate counts response for {}", tenantId);
                         }
                     }
                 }
@@ -216,7 +224,11 @@ public class AggregateCountsPluginRegion implements MiruPageRegion<Optional<Aggr
                     data.put("summaries", summaries);
                 }
             }
-        } catch (Exception e) {
+        } catch (
+            Exception e
+            )
+
+        {
             log.error("Unable to retrieve data", e);
         }
 

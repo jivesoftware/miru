@@ -11,6 +11,7 @@ package com.jivesoftware.os.miru.cluster;
 import com.google.common.base.Optional;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.miru.api.MiruHost;
@@ -24,10 +25,12 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -40,11 +43,14 @@ public class MiruReplicaSetDirector {
 
     private final OrderIdProvider orderIdProvider;
     private final MiruClusterRegistry clusterRegistry;
+    private final HostDescriptorProvider hostDescriptorProvider;
 
     public MiruReplicaSetDirector(OrderIdProvider orderIdProvider,
-        MiruClusterRegistry clusterRegistry) {
+        MiruClusterRegistry clusterRegistry,
+        HostDescriptorProvider hostDescriptorProvider) {
         this.orderIdProvider = orderIdProvider;
         this.clusterRegistry = clusterRegistry;
+        this.hostDescriptorProvider = hostDescriptorProvider;
     }
 
     public void elect(MiruHost host, MiruTenantId tenantId, MiruPartitionId partitionId, long electionId) throws Exception {
@@ -67,34 +73,71 @@ public class MiruReplicaSetDirector {
     private Set<MiruHost> electToReplicaSetForTenantPartition(MiruTenantId tenantId,
         MiruPartitionId partitionId,
         MiruReplicaSet replicaSet,
-        final long eligibleAfter) throws Exception {
+        long eligibleAfter) throws Exception {
 
         LinkedHashSet<HostHeartbeat> hostHeartbeats = clusterRegistry.getAllHosts();
 
         Set<MiruHost> hostsWithReplica = Sets.newHashSet(replicaSet.getHostsWithReplica());
-        int countOfMissingReplicas = replicaSet.getCountOfMissingReplicas();
-
-        MiruHost[] hostsArray = hostHeartbeats.stream()
-            .filter(input -> input != null && input.heartbeat > eligibleAfter)
-            .map(input -> input.host)
-            .toArray(MiruHost[]::new);
-
-        // We use a hash code derived from the tenant and partition to choose a starting index,
-        // and start electing eligible hosts from there.
-        // TODO since we only consider eligible hosts we should add a cleanup task that makes replica sets contiguous with respect to the ring.
         int hashCode = Objects.hash(tenantId, partitionId);
-        int electedCount = 0;
-        int index = hashCode == Integer.MIN_VALUE ? Integer.MAX_VALUE : Math.abs(hashCode);
-        for (int i = 0; i < hostsArray.length && electedCount < countOfMissingReplicas; i++, index++) {
-            MiruHost hostToElect = hostsArray[index % hostsArray.length];
-            if (!hostsWithReplica.contains(hostToElect)) {
-                // this host is eligible
-                elect(hostToElect, tenantId, partitionId, Long.MAX_VALUE - orderIdProvider.nextId());
-                hostsWithReplica.add(hostToElect);
-                electedCount++;
 
-                LOG.debug("Elected {} to {} on {}", new Object[] { hostToElect, tenantId, partitionId });
+        Map<MiruHost, String> hostToRack = Maps.newHashMap();
+        hostDescriptorProvider.stream((datacenter, rack, host) -> {
+            hostToRack.put(host, rack);
+            return true;
+        });
+
+        ListMultimap<String, MiruHost> perRackCurrent = ArrayListMultimap.create();
+        for (MiruHost host : hostsWithReplica) {
+            String rack = hostToRack.getOrDefault(host, "");
+            perRackCurrent.put(rack, host);
+        }
+
+        Map<String, List<MiruHost>> perRackHosts = new HashMap<>();
+        for (HostHeartbeat hostHeartbeat : hostHeartbeats) {
+            if (hostHeartbeat.heartbeat > eligibleAfter) {
+                String rack = hostToRack.get(hostHeartbeat.host);
+                if (rack != null) {
+                    perRackHosts.computeIfAbsent(rack, (key) -> new ArrayList<>()).add(hostHeartbeat.host);
+                } else {
+                    LOG.warn("Ignored host with missing rack {}", hostHeartbeat.host);
+                }
             }
+        }
+
+        Random random = new Random(new Random(hashCode).nextLong());
+        for (List<MiruHost> rackMembers : perRackHosts.values()) {
+            Collections.shuffle(rackMembers, random);
+        }
+
+        List<String> racks = new ArrayList<>(perRackHosts.keySet());
+        int desiredNumberOfReplicas = replicaSet.getDesiredNumberOfReplicas();
+
+        while (perRackCurrent.size() < desiredNumberOfReplicas) {
+            Collections.sort(racks, (o1, o2) -> Integer.compare(perRackCurrent.get(o1).size(), perRackCurrent.get(o2).size()));
+            boolean advanced = false;
+            for (String cycleRack : racks) {
+                List<MiruHost> rackHosts = perRackHosts.get(cycleRack);
+                if (!rackHosts.isEmpty()) {
+                    perRackCurrent.put(cycleRack, rackHosts.remove(rackHosts.size() - 1));
+                    advanced = true;
+                    break;
+                }
+            }
+            if (!advanced) {
+                break;
+            }
+        }
+
+        if (perRackCurrent.size() < desiredNumberOfReplicas) {
+            LOG.error("Tenant {} partition {} required {} replicas but only {} hosts are available",
+                tenantId, partitionId, desiredNumberOfReplicas, perRackCurrent.size());
+        }
+
+        for (MiruHost hostToElect : perRackCurrent.values()) {
+            if (hostsWithReplica.add(hostToElect)) {
+                elect(hostToElect, tenantId, partitionId, Long.MAX_VALUE - orderIdProvider.nextId());
+            }
+            LOG.debug("Elected {} to {} on {}", hostToElect, tenantId, partitionId);
         }
         return hostsWithReplica;
     }

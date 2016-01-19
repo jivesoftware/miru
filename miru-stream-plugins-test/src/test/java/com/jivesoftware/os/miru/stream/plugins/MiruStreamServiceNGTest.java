@@ -64,7 +64,7 @@ public class MiruStreamServiceNGTest {
 
     MiruTenantId tenant1 = new MiruTenantId("tenant1".getBytes());
     MiruPartitionId partitionId = MiruPartitionId.of(1);
-    MiruHost miruHost = new MiruHost("logicalName", 1_234);
+    MiruHost miruHost = new MiruHost("logicalName");
 
     int verb1 = 1;
     int verb2 = 2;

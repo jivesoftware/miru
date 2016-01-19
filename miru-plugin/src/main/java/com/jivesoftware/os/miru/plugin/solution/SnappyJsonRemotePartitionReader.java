@@ -6,17 +6,16 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.base.Optional;
 import com.jivesoftware.os.miru.api.MiruHost;
+import com.jivesoftware.os.miru.api.MiruHostSelectiveStrategy;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
 import com.jivesoftware.os.mlogger.core.EndPointMetrics;
-import com.jivesoftware.os.routing.bird.http.client.ConnectionDescriptorSelectiveStrategy;
 import com.jivesoftware.os.routing.bird.http.client.HttpClientException;
 import com.jivesoftware.os.routing.bird.http.client.HttpResponse;
 import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
 import com.jivesoftware.os.routing.bird.http.client.NonSuccessStatusCodeException;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.shared.ClientCall;
-import com.jivesoftware.os.routing.bird.shared.HostPort;
 import java.util.Map;
 import org.apache.http.HttpStatus;
 import org.xerial.snappy.Snappy;
@@ -39,10 +38,10 @@ public class SnappyJsonRemotePartitionReader implements MiruRemotePartitionReade
     }
 
     private final TenantAwareHttpClient<String> readerHttpClient;
-    private final Map<MiruHost, ConnectionDescriptorSelectiveStrategy> strategyPerHost;
+    private final Map<MiruHost, MiruHostSelectiveStrategy> strategyPerHost;
 
     public SnappyJsonRemotePartitionReader(TenantAwareHttpClient<String> readerHttpClient,
-        Map<MiruHost, ConnectionDescriptorSelectiveStrategy> strategyPerHost) {
+        Map<MiruHost, MiruHostSelectiveStrategy> strategyPerHost) {
         this.readerHttpClient = readerHttpClient;
         this.strategyPerHost = strategyPerHost;
     }
@@ -59,8 +58,8 @@ public class SnappyJsonRemotePartitionReader implements MiruRemotePartitionReade
 
         endPointMetrics.start();
         try {
-            ConnectionDescriptorSelectiveStrategy strategy = strategyPerHost.computeIfAbsent(host,
-                miruHost -> new ConnectionDescriptorSelectiveStrategy(new HostPort[] { new HostPort(miruHost.getLogicalName(), miruHost.getPort()) }));
+            MiruHostSelectiveStrategy strategy = strategyPerHost.computeIfAbsent(host,
+                miruHost -> new MiruHostSelectiveStrategy(new MiruHost[] { miruHost }));
             MiruRequestAndReport<Q, P> requestAndReport = new MiruRequestAndReport<>(request, report.orNull());
             byte[] postBytes = pack(requestAndReport);
             return unpack(

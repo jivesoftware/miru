@@ -39,16 +39,11 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.marshall.JacksonJsonObjectTypeMarshaller;
 import com.jivesoftware.os.miru.api.marshall.MiruVoidByte;
-import com.jivesoftware.os.miru.api.wal.RCVSCursor;
-import com.jivesoftware.os.miru.api.wal.RCVSSipCursor;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
-import com.jivesoftware.os.miru.cluster.MiruRegistryClusterClient;
-import com.jivesoftware.os.miru.cluster.MiruReplicaSetDirector;
 import com.jivesoftware.os.miru.cluster.amza.AmzaClusterRegistry;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer.MiruSoyRendererConfig;
-import com.jivesoftware.os.miru.wal.MiruWALDirector;
 import com.jivesoftware.os.miru.wal.RCVSWALInitializer;
 import com.jivesoftware.os.miru.wal.activity.rcvs.RCVSActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.rcvs.RCVSActivityWALWriter;
@@ -119,7 +114,7 @@ public class MiruWriterUIServiceNGTest {
         RowsTakerFactory rowsTakerFactory = () -> new HttpRowsTaker(amzaStats);
 
         AmzaServiceConfig amzaServiceConfig = new AmzaServiceConfig();
-        amzaServiceConfig.workingDirectories = new String[]{amzaDataDir.getAbsolutePath()};
+        amzaServiceConfig.workingDirectories = new String[] { amzaDataDir.getAbsolutePath() };
         amzaServiceConfig.numberOfTakerThreads = 1;
 
         PartitionPropertyMarshaller regionPropertyMarshaller = new PartitionPropertyMarshaller() {
@@ -175,9 +170,6 @@ public class MiruWriterUIServiceNGTest {
             TimeUnit.HOURS.toMillis(1),
             TimeUnit.DAYS.toMillis(365),
             0);
-        MiruRegistryClusterClient clusterClient = new MiruRegistryClusterClient(clusterRegistry, new MiruReplicaSetDirector(orderIdProvider, clusterRegistry));
-        MiruWALDirector<RCVSCursor, RCVSSipCursor> director = new MiruWALDirector<>(walLookup,
-            activityWALReader, activityWALWriter, readTrackingWALReader, readTrackingWALWriter, clusterClient);
 
         MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(config);
         service = new MiruWriterUIServiceInitializer().initialize("test", 1, renderer, new MiruStats(), null);

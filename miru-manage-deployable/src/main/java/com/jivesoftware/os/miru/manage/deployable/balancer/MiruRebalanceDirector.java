@@ -16,6 +16,8 @@ import com.google.common.collect.Table;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.miru.api.MiruHost;
+import com.jivesoftware.os.miru.api.MiruHostProvider;
+import com.jivesoftware.os.miru.api.MiruHostSelectiveStrategy;
 import com.jivesoftware.os.miru.api.MiruPartition;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
@@ -24,12 +26,19 @@ import com.jivesoftware.os.miru.api.activity.TenantAndPartition;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.topology.HostHeartbeat;
 import com.jivesoftware.os.miru.api.topology.MiruTopologyStatus;
-import com.jivesoftware.os.miru.api.topology.ReaderRequestHelpers;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelper;
+import com.jivesoftware.os.routing.bird.http.client.HttpResponse;
+import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
+import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
+import com.jivesoftware.os.routing.bird.shared.ClientCall.ClientResponse;
+import com.jivesoftware.os.routing.bird.shared.ConnectionDescriptor;
+import com.jivesoftware.os.routing.bird.shared.ConnectionDescriptors;
+import com.jivesoftware.os.routing.bird.shared.HostPort;
+import com.jivesoftware.os.routing.bird.shared.InstanceDescriptor;
+import com.jivesoftware.os.routing.bird.shared.TenantsServiceConnectionDescriptorProvider;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
@@ -62,30 +71,49 @@ public class MiruRebalanceDirector {
     private final MiruClusterRegistry clusterRegistry;
     private final MiruWALClient<?, ?> miruWALClient;
     private final OrderIdProvider orderIdProvider;
-    private final ReaderRequestHelpers readerRequestHelpers;
+    private final TenantAwareHttpClient<String> readerClient;
+    private final HttpResponseMapper responseMapper;
+    private final TenantsServiceConnectionDescriptorProvider<String> readerConnectionDescriptorsProvider;
 
     public MiruRebalanceDirector(MiruClusterRegistry clusterRegistry,
         MiruWALClient miruWALClient,
         OrderIdProvider orderIdProvider,
-        ReaderRequestHelpers readerRequestHelpers) {
+        TenantAwareHttpClient<String> readerClient,
+        HttpResponseMapper responseMapper,
+        TenantsServiceConnectionDescriptorProvider<String> readerConnectionDescriptorsProvider) {
         this.clusterRegistry = clusterRegistry;
         this.miruWALClient = miruWALClient;
         this.orderIdProvider = orderIdProvider;
-        this.readerRequestHelpers = readerRequestHelpers;
+        this.readerClient = readerClient;
+        this.responseMapper = responseMapper;
+        this.readerConnectionDescriptorsProvider = readerConnectionDescriptorsProvider;
     }
 
-    public void exportTopology(OutputStream os) throws IOException {
+    //TODO support translation from host:port to instanceName_instanceKey
+    public void exportTopology(OutputStream os, boolean forceInstance) throws IOException {
         try {
+            Map<MiruHost, MiruHost> coercionMap = Maps.newHashMap();
+            if (forceInstance) {
+                ConnectionDescriptors connectionDescriptors = readerConnectionDescriptorsProvider.getConnections("");
+                List<ConnectionDescriptor> descriptors = connectionDescriptors.getConnectionDescriptors();
+                for (ConnectionDescriptor descriptor : descriptors) {
+                    InstanceDescriptor instanceDescriptor = descriptor.getInstanceDescriptor();
+                    HostPort hostPort = descriptor.getHostPort();
+                    coercionMap.put(MiruHostProvider.fromHostPort(hostPort.getHost(), hostPort.getPort()),
+                        MiruHostProvider.fromInstance(instanceDescriptor.instanceName, instanceDescriptor.instanceKey));
+                }
+            }
             BufferedOutputStream buf = new BufferedOutputStream(os);
             List<MiruTenantId> tenantIds = miruWALClient.getAllTenantIds();
             AtomicLong exported = new AtomicLong(0);
             clusterRegistry.topologiesForTenants(tenantIds, status -> {
                 if (status != null) {
+                    MiruHost host = Objects.firstNonNull(coercionMap.get(status.partition.coord.host), status.partition.coord.host);
                     buf.write(status.partition.coord.tenantId.getBytes());
                     buf.write(',');
                     buf.write(String.valueOf(status.partition.coord.partitionId.getId()).getBytes(Charsets.US_ASCII));
                     buf.write(',');
-                    buf.write(status.partition.coord.host.toStringForm().getBytes(Charsets.US_ASCII));
+                    buf.write(host.getLogicalName().getBytes(Charsets.US_ASCII));
                     buf.write('\n');
                     exported.incrementAndGet();
                 }
@@ -183,23 +211,6 @@ public class MiruRebalanceDirector {
         }
     }
 
-    public void removeHost(MiruHost miruHost) throws Exception {
-        List<HttpRequestHelper> requestHelpers = readerRequestHelpers.get(Optional.of(miruHost));
-        for (HttpRequestHelper requestHelper : requestHelpers) {
-            try {
-                String result = requestHelper.executeDeleteRequest("/miru/config/hosts/" + miruHost.getLogicalName() + "/" + miruHost.getPort(),
-                    String.class, null);
-                if (result != null) {
-                    break;
-                } else {
-                    LOG.warn("Empty removeHost response from {}, trying another", requestHelper);
-                }
-            } catch (Exception e) {
-                LOG.warn("Failed removeHost request to {}, trying another", new Object[] { requestHelper }, e);
-            }
-        }
-    }
-
     private void electHosts(Table<MiruTenantId, MiruPartitionId, Shift> shiftTable) throws Exception {
         ListMultimap<MiruHost, TenantAndPartition> elections = ArrayListMultimap.create();
         int elected = 0;
@@ -262,9 +273,13 @@ public class MiruRebalanceDirector {
     }
 
     public void rebuildTenantPartition(MiruHost miruHost, MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
-        readerRequestHelpers.get(miruHost).executeRequest("",
-            "/miru/config/rebuild/prioritize/" + tenantId + "/" + partitionId,
-            String.class, null);
+        String result = readerClient.call("", new MiruHostSelectiveStrategy(new MiruHost[] { miruHost }), "prioritizeRebuild", httpClient -> {
+            HttpResponse response = httpClient.postJson("/miru/config/rebuild/prioritize/" + tenantId + "/" + partitionId, "{}", null);
+            return new ClientResponse<>(responseMapper.extractResultFromResponse(response, String.class, null), true);
+        });
+        if (result == null) {
+            throw new RuntimeException("Failed to rebuild tenant " + tenantId + " partition " + partitionId);
+        }
     }
 
     private static class VisualizeContext {

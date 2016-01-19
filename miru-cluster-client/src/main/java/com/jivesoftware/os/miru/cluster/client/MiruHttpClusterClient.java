@@ -116,9 +116,9 @@ public class MiruHttpClusterClient implements MiruClusterClient {
         String jsonHeartbeatRequest = requestMapper.writeValueAsString(heartbeatRequest);
         return sendRoundRobin("thumpthump", client -> {
             long start = System.currentTimeMillis();
-            HttpResponse response = client.postJson("/miru/topology/thumpthump/" + host.getLogicalName() + "/" + host.getPort(), jsonHeartbeatRequest, null);
+            HttpResponse response = client.postJson("/miru/topology/thumpthump/" + host.getLogicalName(), jsonHeartbeatRequest, null);
             MiruHeartbeatResponse heartbeatResponse = responseMapper.extractResultFromResponse(response, MiruHeartbeatResponse.class, null);
-            miruStats.egressed("/miru/topology/thumpthump/" + host.getLogicalName() + "/" + host.getPort(), 1, System.currentTimeMillis() - start);
+            miruStats.egressed("/miru/topology/thumpthump/" + host.getLogicalName(), 1, System.currentTimeMillis() - start);
             return new ClientResponse<>(heartbeatResponse, true);
         });
     }
@@ -171,11 +171,10 @@ public class MiruHttpClusterClient implements MiruClusterClient {
     public void removeHost(final MiruHost host) {
         sendRoundRobin("removeHost", client -> {
             long start = System.currentTimeMillis();
-            HttpResponse response = client.postJson("/miru/topology/remove/" + host.getLogicalName() + "/" + host.getPort(), "null", null);
+            HttpResponse response = client.postJson("/miru/topology/remove/" + host.getLogicalName(), "null", null);
             String r = responseMapper.extractResultFromResponse(response, String.class, null);
-            miruStats.egressed("/miru/topology/remove/"
-                + host.getLogicalName() + "/"
-                + host.getPort(), 1, System.currentTimeMillis() - start);
+            miruStats.egressed("/miru/topology/remove/" + host.getLogicalName(),
+                1, System.currentTimeMillis() - start);
             return new ClientResponse<>(r, true);
         });
     }
@@ -186,13 +185,11 @@ public class MiruHttpClusterClient implements MiruClusterClient {
             long start = System.currentTimeMillis();
             HttpResponse response = client.postJson("/miru/topology/remove/"
                 + host.getLogicalName() + "/"
-                + host.getPort() + "/"
                 + tenantId + "/"
                 + partitionId.getId(), "null", null);
             String r = responseMapper.extractResultFromResponse(response, String.class, null);
             miruStats.egressed("/miru/topology/remove/"
                 + host.getLogicalName() + "/"
-                + host.getPort() + "/"
                 + tenantId + "/"
                 + partitionId.getId(), 1, System.currentTimeMillis() - start);
             return new ClientResponse<>(r, true);

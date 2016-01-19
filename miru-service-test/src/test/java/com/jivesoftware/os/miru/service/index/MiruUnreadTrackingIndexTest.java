@@ -160,7 +160,7 @@ public class MiruUnreadTrackingIndexTest {
         System.arraycopy(data, data.length / 2, data2_2, 0, data.length / 2);
 
         MiruBitmapsRoaringBuffer bitmaps = new MiruBitmapsRoaringBuffer();
-        MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("localhost", 10000));
+        MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("logicalName"));
 
         MiruUnreadTrackingIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> unmergedInMemoryIndex = buildInMemoryContext(4, bitmaps,
             coord).unreadTrackingIndex;

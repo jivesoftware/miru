@@ -117,7 +117,7 @@ public class MiruManageServiceTest {
 
         long electTime = System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1);
         for (int i = 0; i < numberOfReplicas; i++) {
-            MiruHost host = new MiruHost("host" + i, 10_000 + i);
+            MiruHost host = new MiruHost("logicalName_" + i);
             clusterRegistry.heartbeat(host);
             hosts.add(host);
 
@@ -133,12 +133,11 @@ public class MiruManageServiceTest {
         String rendered = miruManageService.renderHostsWithFocus(hosts.get(0));
         for (int i = 0; i < hosts.size(); i++) {
             MiruHost host = hosts.get(i);
-            assertTrue(rendered.contains("/miru/manage/hosts/" + host.getLogicalName() + "/" + host.getPort() + "#focus"));
-            assertTrue(rendered.contains("<td>" + host.getPort() + "</td>"));
+            assertTrue(rendered.contains("/miru/manage/hosts/" + host.getLogicalName() + "#focus"));
             if (i == 0) {
-                assertTrue(rendered.contains(host.toStringForm()));
+                assertTrue(rendered.contains("Expected Tenants for " + host.getLogicalName()));
             } else {
-                assertFalse(rendered.contains(host.toStringForm()));
+                assertFalse(rendered.contains("Expected Tenants for " + host.getLogicalName()));
             }
         }
     }
@@ -148,7 +147,7 @@ public class MiruManageServiceTest {
         String rendered = miruManageService.renderTenantsWithFocus(tenantId);
         assertTrue(rendered.contains(tenantId.toString()));
         for (MiruHost host : hosts) {
-            assertTrue(rendered.contains("/miru/manage/hosts/" + host.getLogicalName() + "/" + host.getPort() + "#focus"));
+            assertTrue(rendered.contains("/miru/manage/hosts/" + host.getLogicalName() + "#focus"));
         }
     }
 

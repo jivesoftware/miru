@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.tools.deployable.region;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
@@ -12,7 +13,6 @@ import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsConstants;
 import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsQuery;
 import com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsQueryScoreSet;
 import com.jivesoftware.os.miru.api.MiruActorId;
-import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.FilterStringUtil;
@@ -20,7 +20,6 @@ import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
-import com.jivesoftware.os.miru.api.topology.ReaderRequestHelpers;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
@@ -30,7 +29,11 @@ import com.jivesoftware.os.miru.ui.MiruPageRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelper;
+import com.jivesoftware.os.routing.bird.http.client.HttpResponse;
+import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
+import com.jivesoftware.os.routing.bird.http.client.RoundRobinStrategy;
+import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
+import com.jivesoftware.os.routing.bird.shared.ClientCall.ClientResponse;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -47,15 +50,21 @@ public class RealwavePluginRegion implements MiruPageRegion<Optional<RealwavePlu
 
     private final String template;
     private final MiruSoyRenderer renderer;
-    private final ReaderRequestHelpers readerRequestHelpers;
+    private final TenantAwareHttpClient<String> readerClient;
+    private final ObjectMapper requestMapper;
+    private final HttpResponseMapper responseMapper;
     private final FilterStringUtil filterStringUtil = new FilterStringUtil();
 
     public RealwavePluginRegion(String template,
         MiruSoyRenderer renderer,
-        ReaderRequestHelpers readerRequestHelpers) {
+        TenantAwareHttpClient<String> readerClient,
+        ObjectMapper requestMapper,
+        HttpResponseMapper responseMapper) {
         this.template = template;
         this.renderer = renderer;
-        this.readerRequestHelpers = readerRequestHelpers;
+        this.readerClient = readerClient;
+        this.requestMapper = requestMapper;
+        this.responseMapper = responseMapper;
     }
 
     public static class RealwavePluginRegionInput {
@@ -165,62 +174,62 @@ public class RealwavePluginRegion implements MiruPageRegion<Optional<RealwavePlu
 
         MiruFilter constraintsFilter = filterStringUtil.parse(input.filters);
 
-        List<HttpRequestHelper> requestHelpers = readerRequestHelpers.get(Optional.<MiruHost>absent());
         MiruResponse<AnalyticsAnswer> response = null;
         if (!input.tenant.trim().isEmpty()) {
             MiruTenantId tenantId = new MiruTenantId(input.tenant.trim().getBytes(Charsets.UTF_8));
-            for (HttpRequestHelper requestHelper : requestHelpers) {
-                try {
-                    ImmutableMap.Builder<String, MiruFilter> analyticsFiltersBuilder = ImmutableMap.builder();
-                    for (String term1 : terms1) {
-                        if (input.field2.isEmpty() || terms2.isEmpty()) {
-                            analyticsFiltersBuilder.put(
-                                term1,
-                                new MiruFilter(MiruFilterOperation.and,
-                                    false,
-                                    Collections.singletonList(
-                                        MiruFieldFilter.ofTerms(MiruFieldType.primary, input.field1, term1)),
-                                    null));
-                        } else {
-                            for (String term2 : terms2) {
-                                analyticsFiltersBuilder.put(
-                                    term1 + ", " + term2,
-                                    new MiruFilter(MiruFilterOperation.and,
-                                        false,
-                                        Arrays.asList(
-                                            MiruFieldFilter.ofTerms(MiruFieldType.primary, input.field1, term1),
-                                            MiruFieldFilter.ofTerms(MiruFieldType.primary, input.field2, term2)),
-                                        null));
-                            }
-                        }
+            ImmutableMap.Builder<String, MiruFilter> analyticsFiltersBuilder = ImmutableMap.builder();
+            for (String term1 : terms1) {
+                if (input.field2.isEmpty() || terms2.isEmpty()) {
+                    analyticsFiltersBuilder.put(
+                        term1,
+                        new MiruFilter(MiruFilterOperation.and,
+                            false,
+                            Collections.singletonList(
+                                MiruFieldFilter.ofTerms(MiruFieldType.primary, input.field1, term1)),
+                            null));
+                } else {
+                    for (String term2 : terms2) {
+                        analyticsFiltersBuilder.put(
+                            term1 + ", " + term2,
+                            new MiruFilter(MiruFilterOperation.and,
+                                false,
+                                Arrays.asList(
+                                    MiruFieldFilter.ofTerms(MiruFieldType.primary, input.field1, term1),
+                                    MiruFieldFilter.ofTerms(MiruFieldType.primary, input.field2, term2)),
+                                null));
                     }
-                    ImmutableMap<String, MiruFilter> analyticsFilters = analyticsFiltersBuilder.build();
+                }
+            }
+            ImmutableMap<String, MiruFilter> analyticsFilters = analyticsFiltersBuilder.build();
 
+            String endpoint = AnalyticsConstants.ANALYTICS_PREFIX + AnalyticsConstants.CUSTOM_QUERY_ENDPOINT;
+            String request = requestMapper.writeValueAsString(new MiruRequest<>("toolsRealwave",
+                tenantId,
+                MiruActorId.NOT_PROVIDED,
+                MiruAuthzExpression.NOT_PROVIDED,
+                new AnalyticsQuery(
+                    Collections.singletonList(new AnalyticsQueryScoreSet("tools",
+                        new MiruTimeRange(packLookbackTime, packCeilingTime),
+                        input.buckets)),
+                    constraintsFilter,
+                    analyticsFilters),
+                MiruSolutionLogLevel.NONE));
+            MiruResponse<AnalyticsAnswer> analyticsResponse = readerClient.call("",
+                new RoundRobinStrategy(),
+                "realwavePluginRegion",
+                httpClient -> {
+                    HttpResponse httpResponse = httpClient.postJson(endpoint, request, null);
                     @SuppressWarnings("unchecked")
-                    MiruResponse<AnalyticsAnswer> analyticsResponse = requestHelper.executeRequest(
-                        new MiruRequest<>("toolsRealwave",
-                            tenantId,
-                            MiruActorId.NOT_PROVIDED,
-                            MiruAuthzExpression.NOT_PROVIDED,
-                            new AnalyticsQuery(
-                                Collections.singletonList(new AnalyticsQueryScoreSet("tools",
-                                    new MiruTimeRange(packLookbackTime, packCeilingTime),
-                                    input.buckets)),
-                                constraintsFilter,
-                                analyticsFilters),
-                            MiruSolutionLogLevel.NONE),
-                        AnalyticsConstants.ANALYTICS_PREFIX + AnalyticsConstants.CUSTOM_QUERY_ENDPOINT, MiruResponse.class,
+                    MiruResponse<AnalyticsAnswer> extractResponse = responseMapper.extractResultFromResponse(httpResponse,
+                        MiruResponse.class,
                         new Class[] { AnalyticsAnswer.class },
                         null);
-                    response = analyticsResponse;
-                    if (response != null && response.answer != null) {
-                        break;
-                    } else {
-                        log.warn("Empty analytics response from {}, trying another", requestHelper);
-                    }
-                } catch (Exception e) {
-                    log.warn("Failed analytics request to {}, trying another", new Object[] { requestHelper }, e);
-                }
+                    return new ClientResponse<>(extractResponse, true);
+                });
+            if (analyticsResponse != null && analyticsResponse.answer != null) {
+                response = analyticsResponse;
+            } else {
+                log.warn("Empty analytics response from {}", tenantId);
             }
         }
 
