@@ -16,7 +16,8 @@ import com.jivesoftware.os.miru.api.wal.MiruWALClient.StreamBatch;
 import com.jivesoftware.os.miru.api.wal.MiruWALEntry;
 import com.jivesoftware.os.miru.api.wal.SipAndLastSeen;
 import com.jivesoftware.os.miru.wal.MiruWALDirector;
-import com.jivesoftware.os.miru.wal.deployable.MiruWALNotInitializedException;
+import com.jivesoftware.os.miru.wal.MiruWALNotInitializedException;
+import com.jivesoftware.os.miru.wal.MiruWALWrongRouteException;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.shared.HostPort;
@@ -32,6 +33,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.Status;
 
 /**
  * @author jonathan.colt
@@ -147,6 +149,10 @@ public class AmzaWALEndpoints {
             log.error("WAL not initialized calling sanitizeActivityWAL({}, {})",
                 new Object[] { tenantId, partitionId }, x);
             return responseHelper.errorResponse(Response.Status.SERVICE_UNAVAILABLE, "WAL not initialized", x);
+        } catch (MiruWALWrongRouteException x) {
+            log.error("Wrong route calling sanitizeActivityWAL({},{})",
+                new Object[] { tenantId, partitionId }, x);
+            return responseHelper.errorResponse(Response.Status.CONFLICT, "Wrong route", x);
         } catch (Exception x) {
             log.error("Failed calling sanitizeActivityWAL({}, {})", new Object[] { tenantId, partitionId }, x);
             return responseHelper.errorResponse("Server error", x);
@@ -167,6 +173,10 @@ public class AmzaWALEndpoints {
             log.error("WAL not initialized calling sanitizeActivitySipWAL({}, {})",
                 new Object[] { tenantId, partitionId }, x);
             return responseHelper.errorResponse(Response.Status.SERVICE_UNAVAILABLE, "WAL not initialized", x);
+        } catch (MiruWALWrongRouteException x) {
+            log.error("Wrong route calling sanitizeActivityWAL({},{})",
+                new Object[] { tenantId, partitionId }, x);
+            return responseHelper.errorResponse(Response.Status.CONFLICT, "Wrong route", x);
         } catch (Exception x) {
             log.error("Failed calling sanitizeActivitySipWAL({}, {})", new Object[] { tenantId, partitionId }, x);
             return responseHelper.errorResponse("Server error", x);
@@ -204,6 +214,10 @@ public class AmzaWALEndpoints {
             log.error("WAL not initialized calling writeActivity({},count:{})",
                 new Object[] { tenantId, partitionedActivities != null ? partitionedActivities.size() : null }, x);
             return responseHelper.errorResponse(Response.Status.SERVICE_UNAVAILABLE, "WAL not initialized", x);
+        } catch (MiruWALWrongRouteException x) {
+            log.error("Wrong route calling writeActivity({},count:{})",
+                new Object[] { tenantId, partitionedActivities != null ? partitionedActivities.size() : null }, x);
+            return responseHelper.errorResponse(Response.Status.CONFLICT, "Wrong route", x);
         } catch (Exception x) {
             log.error("Failed calling writeActivity({},count:{})",
                 new Object[] { tenantId, partitionedActivities != null ? partitionedActivities.size() : null }, x);
@@ -228,6 +242,10 @@ public class AmzaWALEndpoints {
             log.error("WAL not initialized calling writeReadTracking({},count:{})",
                 new Object[] { tenantId, partitionedActivities != null ? partitionedActivities.size() : null }, x);
             return responseHelper.errorResponse(Response.Status.SERVICE_UNAVAILABLE, "WAL not initialized", x);
+        } catch (MiruWALWrongRouteException x) {
+            log.error("Wrong route calling writeReadTracking({},count:{})",
+                new Object[] { tenantId, partitionedActivities != null ? partitionedActivities.size() : null }, x);
+            return responseHelper.errorResponse(Response.Status.CONFLICT, "Wrong route", x);
         } catch (Exception x) {
             log.error("Failed calling writeReadTracking({},{},count:{})",
                 new Object[] { tenantId, streamId, partitionedActivities != null ? partitionedActivities.size() : null }, x);
@@ -266,6 +284,10 @@ public class AmzaWALEndpoints {
             log.error("WAL not initialized calling getCursorForWriterId({},{},{})",
                 new Object[] { tenantId, partitionId, writerId }, x);
             return responseHelper.errorResponse(Response.Status.SERVICE_UNAVAILABLE, "WAL not initialized", x);
+        } catch (MiruWALWrongRouteException x) {
+            log.error("Wrong route calling getCursorForWriterId({},{},{})",
+                new Object[] { tenantId, partitionId, writerId }, x);
+            return responseHelper.errorResponse(Response.Status.CONFLICT, "Wrong route", x);
         } catch (Exception x) {
             log.error("Failed calling getCursorForWriterId({},{},{})", new Object[] { tenantId, partitionId, writerId }, x);
             return responseHelper.errorResponse("Server error", x);
@@ -286,6 +308,10 @@ public class AmzaWALEndpoints {
             log.error("WAL not initialized calling getActivityWALStatus({},{})",
                 new Object[] { tenantId, partitionId }, x);
             return responseHelper.errorResponse(Response.Status.SERVICE_UNAVAILABLE, "WAL not initialized", x);
+        } catch (MiruWALWrongRouteException x) {
+            log.error("Wrong route calling getActivityWALStatus({},{})",
+                new Object[] { tenantId, partitionId }, x);
+            return responseHelper.errorResponse(Response.Status.CONFLICT, "Wrong route", x);
         } catch (Exception x) {
             log.error("Failed calling getActivityWALStatus({},{})", new Object[] { tenantId, partitionId }, x);
             return responseHelper.errorResponse("Server error", x);
@@ -306,6 +332,10 @@ public class AmzaWALEndpoints {
             log.error("WAL not initialized calling oldestActivityClockTimestamp({},{})",
                 new Object[] { tenantId, partitionId }, x);
             return responseHelper.errorResponse(Response.Status.SERVICE_UNAVAILABLE, "WAL not initialized", x);
+        } catch (MiruWALWrongRouteException x) {
+            log.error("Wrong route calling oldestActivityClockTimestamp({},{})",
+                new Object[] { tenantId, partitionId }, x);
+            return responseHelper.errorResponse(Response.Status.CONFLICT, "Wrong route", x);
         } catch (Exception x) {
             log.error("Failed calling oldestActivityClockTimestamp({},{})", new Object[] { tenantId, partitionId }, x);
             return responseHelper.errorResponse("Server error", x);
@@ -330,6 +360,10 @@ public class AmzaWALEndpoints {
             log.error("WAL not initialized calling getVersionedEntries({},{},count:{})",
                 new Object[] { tenantId, partitionId, timestamps != null ? timestamps.length : null }, x);
             return responseHelper.errorResponse(Response.Status.SERVICE_UNAVAILABLE, "WAL not initialized", x);
+        } catch (MiruWALWrongRouteException x) {
+            log.error("Wrong route calling getVersionedEntries({},{},count:{})",
+                new Object[] { tenantId, partitionId, timestamps != null ? timestamps.length : null }, x);
+            return responseHelper.errorResponse(Response.Status.CONFLICT, "Wrong route", x);
         } catch (Exception x) {
             log.error("Failed calling getVersionedEntries({},{},count:{})",
                 new Object[] { tenantId, partitionId, timestamps != null ? timestamps.length : null }, x);
@@ -356,6 +390,10 @@ public class AmzaWALEndpoints {
             log.error("WAL not initialized calling sipActivity({},{},{},{})",
                 new Object[] { tenantId, partitionId, batchSize, sipAndLastSeen }, x);
             return responseHelper.errorResponse(Response.Status.SERVICE_UNAVAILABLE, "WAL not initialized", x);
+        } catch (MiruWALWrongRouteException x) {
+            log.error("Wrong route calling sipActivity({},{},{})",
+                new Object[] { tenantId, partitionId, batchSize, sipAndLastSeen }, x);
+            return responseHelper.errorResponse(Response.Status.CONFLICT, "Wrong route", x);
         } catch (Exception x) {
             log.error("Failed calling sipActivity({},{},{},{})", new Object[] { tenantId, partitionId, batchSize, sipAndLastSeen }, x);
             return responseHelper.errorResponse("Server error", x);
@@ -381,6 +419,10 @@ public class AmzaWALEndpoints {
             log.error("WAL not initialized calling getActivity({},{},{},{})",
                 new Object[] { tenantId, partitionId, batchSize, cursor }, x);
             return responseHelper.errorResponse(Response.Status.SERVICE_UNAVAILABLE, "WAL not initialized", x);
+        } catch (MiruWALWrongRouteException x) {
+            log.error("Wrong route calling getActivity({},{},{},{})",
+                new Object[] { tenantId, partitionId, batchSize, cursor }, x);
+            return responseHelper.errorResponse(Response.Status.CONFLICT, "Wrong route", x);
         } catch (Exception x) {
             log.error("Failed calling getActivity({},{},{},{})", new Object[] { tenantId, partitionId, batchSize, cursor }, x);
             return responseHelper.errorResponse("Server error", x);
@@ -406,6 +448,10 @@ public class AmzaWALEndpoints {
             log.error("WAL not initialized calling getRead({},{},{},{},{})",
                 new Object[] { tenantId, streamId, oldestEventId, batchSize, cursor }, x);
             return responseHelper.errorResponse(Response.Status.SERVICE_UNAVAILABLE, "WAL not initialized", x);
+        } catch (MiruWALWrongRouteException x) {
+            log.error("Wrong route calling getRead({},{},{},{},{})",
+                new Object[] { tenantId, streamId, oldestEventId, batchSize, cursor }, x);
+            return responseHelper.errorResponse(Status.CONFLICT, "Wrong route", x);
         } catch (Exception x) {
             log.error("Failed calling getRead({},{},{},{},{})", new Object[] { tenantId, streamId, oldestEventId, batchSize, cursor }, x);
             return responseHelper.errorResponse("Server error", x);

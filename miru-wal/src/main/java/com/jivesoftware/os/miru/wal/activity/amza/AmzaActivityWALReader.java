@@ -5,6 +5,7 @@ import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.jivesoftware.os.amza.api.FailedToAchieveQuorumException;
 import com.jivesoftware.os.amza.api.partition.Consistency;
 import com.jivesoftware.os.amza.api.partition.PartitionProperties;
 import com.jivesoftware.os.amza.api.take.TakeCursors;
@@ -25,6 +26,8 @@ import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus.WriterCount;
 import com.jivesoftware.os.miru.api.wal.MiruVersionedActivityLookupEntry;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.WriterCursor;
 import com.jivesoftware.os.miru.wal.AmzaWALUtil;
+import com.jivesoftware.os.miru.wal.MiruWALNotInitializedException;
+import com.jivesoftware.os.miru.wal.MiruWALWrongRouteException;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALColumnKey;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALColumnKeyMarshaller;
@@ -140,6 +143,8 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
         } catch (PropertiesNotPresentException e) {
             LOG.warn("Empty stream for nonexistent partition {} {}", tenantId, partitionId);
             return cursor;
+        } catch (FailedToAchieveQuorumException e) {
+            throw new MiruWALWrongRouteException(e);
         }
     }
 
@@ -172,6 +177,8 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
         } catch (PropertiesNotPresentException e) {
             LOG.warn("Empty streamSip for nonexistent partition {} {}", tenantId, partitionId);
             return sipCursor;
+        } catch (FailedToAchieveQuorumException e) {
+            throw new MiruWALWrongRouteException(e);
         }
     }
 
@@ -190,6 +197,8 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
                 }
             } catch (PropertiesNotPresentException e) {
                 // ignored
+            } catch (FailedToAchieveQuorumException e) {
+                throw new MiruWALWrongRouteException(e);
             }
         }
         return new WriterCursor(0, 0);
@@ -220,6 +229,8 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
                     });
             } catch (PropertiesNotPresentException e) {
                 // ignored
+            } catch (FailedToAchieveQuorumException e) {
+                throw new MiruWALWrongRouteException(e);
             }
         }
         return new MiruActivityWALStatus(partitionId, Lists.newArrayList(counts.values()), begins, ends);
@@ -246,6 +257,8 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
                     });
             } catch (PropertiesNotPresentException e) {
                 // ignored
+            } catch (FailedToAchieveQuorumException e) {
+                throw new MiruWALWrongRouteException(e);
             }
         }
         return oldestClockTimestamp.longValue();
@@ -282,6 +295,8 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
                 });
             } catch (PropertiesNotPresentException e) {
                 // ignored
+            } catch (FailedToAchieveQuorumException e) {
+                throw new MiruWALWrongRouteException(e);
             }
         }
         return Arrays.asList(entries);
@@ -310,6 +325,8 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
                 });
             } catch (PropertiesNotPresentException e) {
                 // ignored
+            } catch (FailedToAchieveQuorumException e) {
+                throw new MiruWALWrongRouteException(e);
             }
         }
         return clockTimestamp[0];
