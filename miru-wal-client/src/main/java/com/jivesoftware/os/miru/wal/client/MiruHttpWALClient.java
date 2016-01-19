@@ -128,11 +128,13 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
                     if (result != null) {
                         return;
                     }
+                    sickThreads.sick(new Throwable("Empty response"));
+                    LOG.warn("Empty response during write activities for {} {}, retrying in 1 sec", tenantId, partitionId);
                 } catch (Exception x) {
                     sickThreads.sick(x);
-                    LOG.warn("Failed to write activities for {} {}, retrying in 1 sec", tenantId, partitionId);
-                    Thread.sleep(1_000);
+                    LOG.warn("Failed to write activities for {} {}, retrying in 1 sec", new Object[] { tenantId, partitionId }, x);
                 }
+                Thread.sleep(1_000);
             }
         } finally {
             sickThreads.recovered();
@@ -152,11 +154,13 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
                     if (result != null) {
                         return;
                     }
+                    sickThreads.sick(new Throwable("Empty response"));
+                    LOG.warn("Empty response during write read tracking for {} {}, retrying in 1 sec", tenantId, streamId);
                 } catch (Exception x) {
                     sickThreads.sick(x);
-                    LOG.warn("Failed to write read tracking for {} {}, retrying in 1 sec", tenantId, streamId);
-                    Thread.sleep(1_000);
+                    LOG.warn("Failed to write read tracking for {} {}, retrying in 1 sec", new Object[] { tenantId, streamId }, x);
                 }
+                Thread.sleep(1_000);
             }
         } finally {
             sickThreads.recovered();
@@ -172,7 +176,7 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
     }
 
     @Override
-    public WriterCursor getCursorForWriterId(MiruTenantId tenantId, MiruPartitionId partitionId, int writerId) {
+    public WriterCursor getCursorForWriterId(MiruTenantId tenantId, MiruPartitionId partitionId, int writerId) throws Exception {
         return sendWithTenantPartition(RoutingGroupType.activity, tenantId, partitionId, "getCursorForWriterId",
             client -> extract(client.get(pathPrefix + "/cursor/writer/" + tenantId.toString() + "/" + partitionId.getId() + "/" + writerId, null),
                 WriterCursor.class,
@@ -226,11 +230,13 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
                     if (response != null) {
                         return response;
                     }
+                    sickThreads.sick(new Throwable("Empty response"));
+                    LOG.warn("Empty response while streaming, will retry in {} ms", sleepOnFailureMillis);
                 } catch (Exception e) {
                     sickThreads.sick(e);
                     LOG.warn("Failure while streaming, will retry in {} ms", new Object[] { sleepOnFailureMillis }, e);
-                    Thread.sleep(sleepOnFailureMillis);
                 }
+                Thread.sleep(sleepOnFailureMillis);
             }
         } finally {
             sickThreads.recovered();
@@ -256,11 +262,13 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
                     if (response != null) {
                         return response;
                     }
+                    sickThreads.sick(new Throwable("Empty response"));
+                    LOG.warn("Empty response while streaming, will retry in {} ms", sleepOnFailureMillis);
                 } catch (Exception e) {
                     sickThreads.sick(e);
                     LOG.warn("Failure while streaming, will retry in {} ms", new Object[] { sleepOnFailureMillis }, e);
-                    Thread.sleep(sleepOnFailureMillis);
                 }
+                Thread.sleep(sleepOnFailureMillis);
             }
         } finally {
             sickThreads.recovered();
@@ -297,7 +305,7 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
         MiruTenantId tenantId,
         MiruPartitionId partitionId,
         String family,
-        ClientCall<HttpClient, SendResult<R>, HttpClientException> call) {
+        ClientCall<HttpClient, SendResult<R>, HttpClientException> call) throws Exception {
         TenantRoutingGroup<MiruPartitionId> routingGroup = new TenantRoutingGroup<>(routingGroupType, tenantId, partitionId);
         try {
             while (true) {
@@ -323,7 +331,7 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
             }
         } catch (Exception x) {
             tenantRoutingCache.invalidate(routingGroup);
-            throw new RuntimeException("Failed to send.", x);
+            throw x;
         } finally {
             sickThreads.recovered();
         }
@@ -334,7 +342,7 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
         MiruTenantId tenantId,
         MiruStreamId streamId,
         String family,
-        ClientCall<HttpClient, SendResult<R>, HttpClientException> call) {
+        ClientCall<HttpClient, SendResult<R>, HttpClientException> call) throws Exception {
         TenantRoutingGroup<MiruStreamId> routingGroup = new TenantRoutingGroup<>(routingGroupType, tenantId, streamId);
         try {
             while (true) {
@@ -359,7 +367,7 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
             }
         } catch (Exception x) {
             tenantRoutingCache.invalidate(routingGroup);
-            throw new RuntimeException("Failed to send.", x);
+            throw x;
         } finally {
             sickThreads.recovered();
         }
@@ -379,19 +387,19 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
     }
 
     private <R> ClientResponse<SendResult<R>> extract(HttpResponse response, Class<R> resultClass, R emptyResult) {
-        if (response.getStatusCode() == HttpStatus.SC_NOT_FOUND) {
-            return new ClientResponse<>(new SendResult<>(null, false, false), true);
-        } else if (response.getStatusCode() == HttpStatus.SC_SERVICE_UNAVAILABLE) {
-            return new ClientResponse<>(new SendResult<>(null, false, true), true);
+        if (response.getStatusCode() == HttpStatus.SC_NOT_FOUND || response.getStatusCode() == HttpStatus.SC_CONFLICT) {
+            return new ClientResponse<>(new SendResult<>(emptyResult, false, false), true);
+        } else if (!responseMapper.isSuccessStatusCode(response.getStatusCode())) {
+            return new ClientResponse<>(new SendResult<>(emptyResult, false, true), true);
         }
         R result = responseMapper.extractResultFromResponse(response, resultClass, emptyResult);
         return new ClientResponse<>(new SendResult<>(result, true, false), true);
     }
 
     private <R> ClientResponse<SendResult<List<R>>> extractToList(HttpResponse response, Class<R[]> resultClass) {
-        if (response.getStatusCode() == HttpStatus.SC_NOT_FOUND) {
+        if (response.getStatusCode() == HttpStatus.SC_NOT_FOUND || response.getStatusCode() == HttpStatus.SC_CONFLICT) {
             return new ClientResponse<>(new SendResult<>(null, false, false), true);
-        } else if (response.getStatusCode() == HttpStatus.SC_SERVICE_UNAVAILABLE) {
+        } else if (!responseMapper.isSuccessStatusCode(response.getStatusCode())) {
             return new ClientResponse<>(new SendResult<>(null, false, true), true);
         }
         R[] result = responseMapper.extractResultFromResponse(response, resultClass, null);
@@ -399,9 +407,9 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
     }
 
     private <R> ClientResponse<SendResult<R>> extract(HttpResponse response, Class<R> resultClass, Class<?>[] typeClasses, R emptyResult) {
-        if (response.getStatusCode() == HttpStatus.SC_NOT_FOUND) {
+        if (response.getStatusCode() == HttpStatus.SC_NOT_FOUND || response.getStatusCode() == HttpStatus.SC_CONFLICT) {
             return new ClientResponse<>(new SendResult<>(null, false, false), true);
-        } else if (response.getStatusCode() == HttpStatus.SC_SERVICE_UNAVAILABLE) {
+        } else if (!responseMapper.isSuccessStatusCode(response.getStatusCode())) {
             return new ClientResponse<>(new SendResult<>(null, false, true), true);
         }
         R result = responseMapper.extractResultFromResponse(response, resultClass, typeClasses, emptyResult);
