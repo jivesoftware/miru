@@ -28,6 +28,7 @@ import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceConfig;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceInitializer;
+import com.jivesoftware.os.miru.api.MiruHostProvider;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.marshall.JacksonJsonObjectTypeMarshaller;
@@ -73,6 +74,10 @@ import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.http.client.TenantRoutingHttpClientInitializer;
 import com.jivesoftware.os.routing.bird.server.util.Resource;
+import com.jivesoftware.os.routing.bird.shared.ConnectionDescriptor;
+import com.jivesoftware.os.routing.bird.shared.ConnectionDescriptors;
+import com.jivesoftware.os.routing.bird.shared.HostPort;
+import com.jivesoftware.os.routing.bird.shared.InstanceDescriptor;
 import com.jivesoftware.os.routing.bird.shared.TenantRoutingProvider;
 import com.jivesoftware.os.routing.bird.shared.TenantsServiceConnectionDescriptorProvider;
 import java.io.File;
@@ -253,7 +258,22 @@ public class MiruManageMain {
 
             OrderIdProvider orderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(0), new SnowflakeIdPacker(),
                 new JiveEpochTimestampProvider());
-            MiruClusterClient clusterClient = new MiruRegistryClusterClient(clusterRegistry, new MiruReplicaSetDirector(orderIdProvider, clusterRegistry));
+            MiruClusterClient clusterClient = new MiruRegistryClusterClient(clusterRegistry, new MiruReplicaSetDirector(orderIdProvider, clusterRegistry,
+                stream -> {
+                    ConnectionDescriptors connectionDescriptors = readerConnectionDescriptorProvider.getConnections("");
+                    for (ConnectionDescriptor connectionDescriptor : connectionDescriptors.getConnectionDescriptors()) {
+                        InstanceDescriptor instanceDescriptor = connectionDescriptor.getInstanceDescriptor();
+                        HostPort hostPort = connectionDescriptor.getHostPort();
+                        if (!stream.descriptor(instanceDescriptor.datacenter, instanceDescriptor.rack,
+                            MiruHostProvider.fromInstance(instanceDescriptor.instanceName, instanceDescriptor.instanceKey))) {
+                            return;
+                        }
+                        if (!stream.descriptor(instanceDescriptor.datacenter, instanceDescriptor.rack,
+                            MiruHostProvider.fromHostPort(hostPort.getHost(), hostPort.getPort()))) {
+                            return;
+                        }
+                    }
+                }));
 
             MiruRebalanceDirector rebalanceDirector = new MiruRebalanceInitializer().initialize(clusterRegistry,
                 miruWALClient,

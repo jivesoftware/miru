@@ -294,7 +294,8 @@ public class MiruLocalHostedPartitionTest {
             0);
 
         OrderIdProvider orderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(0), new SnowflakeIdPacker(), new JiveEpochTimestampProvider());
-        MiruReplicaSetDirector replicaSetDirector = new MiruReplicaSetDirector(orderIdProvider, clusterRegistry);
+        MiruReplicaSetDirector replicaSetDirector = new MiruReplicaSetDirector(orderIdProvider, clusterRegistry,
+            stream -> stream.descriptor("datacenter", "rack", host));
         MiruClusterClient clusterClient = new MiruRegistryClusterClient(clusterRegistry, replicaSetDirector);
         replicaSetDirector.elect(host, tenantId, partitionId, System.currentTimeMillis());
 

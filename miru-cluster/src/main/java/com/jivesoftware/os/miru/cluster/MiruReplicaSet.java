@@ -17,11 +17,16 @@ public class MiruReplicaSet {
     private final ListMultimap<MiruPartitionState, MiruPartition> partitionsByState;
     private final Set<MiruHost> hostsWithReplica;
     private final int countOfMissingReplicas;
+    private final int desiredNumberOfReplicas;
 
-    public MiruReplicaSet(ListMultimap<MiruPartitionState, MiruPartition> partitionsByState, Set<MiruHost> hostsWithReplica, int countOfMissingReplicas) {
+    public MiruReplicaSet(ListMultimap<MiruPartitionState, MiruPartition> partitionsByState,
+        Set<MiruHost> hostsWithReplica,
+        int countOfMissingReplicas,
+        int desiredNumberOfReplicas) {
         this.partitionsByState = partitionsByState;
         this.hostsWithReplica = hostsWithReplica;
         this.countOfMissingReplicas = countOfMissingReplicas;
+        this.desiredNumberOfReplicas = desiredNumberOfReplicas;
     }
 
     public Collection<MiruPartition> get(MiruPartitionState state) {
@@ -47,5 +52,9 @@ public class MiruReplicaSet {
 
     public int getCountOfMissingReplicas() {
         return countOfMissingReplicas;
+    }
+
+    public int getDesiredNumberOfReplicas() {
+        return desiredNumberOfReplicas;
     }
 }

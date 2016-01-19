@@ -827,7 +827,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
         }
 
         int missing = defaultNumberOfReplicas - replicaHosts.size(); // TODO expose to config?
-        return new MiruReplicaSet(extractPartitionsByState(partitions), replicaHosts, missing);
+        return new MiruReplicaSet(extractPartitionsByState(partitions), replicaHosts, missing, defaultNumberOfReplicas);
     }
 
     @Override
@@ -860,7 +860,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
             List<MiruPartition> partitions = partitionsPartitions.get(partitionId);
             Set<MiruHost> replicaHosts = partitionHosts.get(partitionId);
             int missing = defaultNumberOfReplicas - replicaHosts.size(); // TODO expose to config?
-            replicaSets.put(partitionId, new MiruReplicaSet(extractPartitionsByState(partitions), replicaHosts, missing));
+            replicaSets.put(partitionId, new MiruReplicaSet(extractPartitionsByState(partitions), replicaHosts, missing, defaultNumberOfReplicas));
         }
         return replicaSets;
     }
