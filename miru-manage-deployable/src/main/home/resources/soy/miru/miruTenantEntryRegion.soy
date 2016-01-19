@@ -45,7 +45,6 @@
                         <th>Last Ingress</th>
                         <th>Last Query</th>
                         <th>Logical name</th>
-                        <th>Port</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -127,20 +126,19 @@
             <td>{$partition.lastIngress}</td>
             <td>{$partition.lastQuery}</td>
             <td>
-                <a href="/miru/manage/hosts/{$partition.host.logicalName|escapeUri}/{$partition.host.port}#focus">
+                <a href="/miru/manage/hosts/{$partition.host.logicalName|escapeUri}#focus">
                     {$partition.host.logicalName}
                 </a>
             </td>
-            <td>{$partition.host.port}</td>
             <td>
                 {if $type == 'offline'}
-                    <input type="button" value="Warm" onclick="miru.tenants.rebuild(this, '{$partition.host.logicalName}', {$partition.host.port}, '{$tenantId}', {$partitionId})" />
+                    <input type="button" value="Warm" onclick="miru.tenants.rebuild(this, '{$partition.host.logicalName}', '{$tenantId}', {$partitionId})" />
                 {/if}
                 {if $type == 'bootstrap' or $type == 'obsolete'}
-                    <input type="button" value="Prioritize" onclick="miru.tenants.rebuild(this, '{$partition.host.logicalName}', {$partition.host.port}, '{$tenantId}', {$partitionId})" />
+                    <input type="button" value="Prioritize" onclick="miru.tenants.rebuild(this, '{$partition.host.logicalName}', '{$tenantId}', {$partitionId})" />
                 {/if}
                 {if $type == 'online'}
-                    <input type="button" value="Rebuild" onclick="miru.tenants.rebuild(this, '{$partition.host.logicalName}', {$partition.host.port}, '{$tenantId}', {$partitionId})" />
+                    <input type="button" value="Rebuild" onclick="miru.tenants.rebuild(this, '{$partition.host.logicalName}', '{$tenantId}', {$partitionId})" />
                 {/if}
                 <input type="button" value="Destroy" onclick="miru.tenants.destroy(this, '{$tenantId}', {$partitionId})" />
             </td>

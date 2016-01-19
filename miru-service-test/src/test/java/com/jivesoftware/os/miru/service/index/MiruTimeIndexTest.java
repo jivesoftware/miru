@@ -23,7 +23,7 @@ public class MiruTimeIndexTest {
 
     private final MiruBitmapsRoaringBuffer bitmaps = new MiruBitmapsRoaringBuffer();
     private final MiruTenantId tenantId = new MiruTenantId(new byte[] { 1 });
-    private final MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, MiruPartitionId.of(0), new MiruHost("localhost", 10000));
+    private final MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, MiruPartitionId.of(0), new MiruHost("logicalName"));
     private final int numberOfChunkStores = 4;
 
     @Test(dataProvider = "miruTimeIndexDataProviderWithData")

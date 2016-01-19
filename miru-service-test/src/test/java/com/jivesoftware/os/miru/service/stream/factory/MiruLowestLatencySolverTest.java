@@ -48,7 +48,7 @@ public class MiruLowestLatencySolverTest {
             final int id = i;
             MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()),
                 MiruPartitionId.of(1),
-                new MiruHost("localhost", 49_600 + i));
+                new MiruHost("logicalName_" + (10_000 + i)));
             solvables.add(new MiruSolvable<>(
                 coord,
                 () -> {
@@ -65,6 +65,6 @@ public class MiruLowestLatencySolverTest {
         assertNotNull(solved.answer, "The answer was null, this probably means that the solver timed out when it shouldn't have.");
         assertEquals((int) solved.answer, 0);
         assertNotNull(solved.solution, "The solution was null");
-        assertEquals(solved.solution.usedPartition.host.getPort(), 49_600);
+        assertEquals(solved.solution.usedPartition.host.getLogicalName(), "logicalName_" + 10_000);
     }
 }

@@ -10,14 +10,12 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.miru.api.MiruActorId;
-import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.api.query.filter.MiruValue;
-import com.jivesoftware.os.miru.api.topology.ReaderRequestHelpers;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
@@ -35,7 +33,11 @@ import com.jivesoftware.os.miru.ui.MiruPageRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelper;
+import com.jivesoftware.os.routing.bird.http.client.HttpResponse;
+import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
+import com.jivesoftware.os.routing.bird.http.client.RoundRobinStrategy;
+import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
+import com.jivesoftware.os.routing.bird.shared.ClientCall.ClientResponse;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -53,14 +55,20 @@ public class StumptownTrendsPluginRegion implements MiruPageRegion<Optional<Stum
 
     private final String template;
     private final MiruSoyRenderer renderer;
-    private final ReaderRequestHelpers miruReaders;
+    private final TenantAwareHttpClient<String> readerClient;
+    private final ObjectMapper requestMapper;
+    private final HttpResponseMapper responseMapper;
 
     public StumptownTrendsPluginRegion(String template,
         MiruSoyRenderer renderer,
-        ReaderRequestHelpers miruReaders) {
+        TenantAwareHttpClient<String> readerClient,
+        ObjectMapper requestMapper,
+        HttpResponseMapper responseMapper) {
         this.template = template;
         this.renderer = renderer;
-        this.miruReaders = miruReaders;
+        this.readerClient = readerClient;
+        this.requestMapper = requestMapper;
+        this.responseMapper = responseMapper;
     }
 
     public static class TrendingPluginRegionInput {
@@ -141,37 +149,38 @@ public class StumptownTrendsPluginRegion implements MiruPageRegion<Optional<Stum
                 Strategy strategy = Strategy.valueOf(input.strategy);
                 MiruResponse<TrendingAnswer> response = null;
                 MiruTenantId tenantId = StumptownSchemaConstants.TENANT_ID;
-                for (HttpRequestHelper requestHelper : miruReaders.get(Optional.<MiruHost>absent())) {
-                    try {
+                String endpoint = TrendingConstants.TRENDING_PREFIX + TrendingConstants.CUSTOM_QUERY_ENDPOINT;
+                String request = requestMapper.writeValueAsString(new MiruRequest<>("stumptownTrends",
+                    tenantId,
+                    MiruActorId.NOT_PROVIDED,
+                    MiruAuthzExpression.NOT_PROVIDED,
+                    new TrendingQuery(
+                        Collections.singletonList(new TrendingQueryScoreSet(
+                            "stumptown",
+                            Collections.singleton(strategy),
+                            miruTimeRange,
+                            30,
+                            100)),
+                        constraintsFilter,
+                        input.aggregateAroundField,
+                        Collections.emptyList()),
+                    MiruSolutionLogLevel.INFO));
+                MiruResponse<TrendingAnswer> trendingResponse = readerClient.call("",
+                    new RoundRobinStrategy(),
+                    "stumptownTrends",
+                    httpClient -> {
+                        HttpResponse httpResponse = httpClient.postJson(endpoint, request, null);
                         @SuppressWarnings("unchecked")
-                        MiruResponse<TrendingAnswer> trendingResponse = requestHelper.executeRequest(
-                            new MiruRequest<>("stumptownTrends",
-                                tenantId,
-                                MiruActorId.NOT_PROVIDED,
-                                MiruAuthzExpression.NOT_PROVIDED,
-                                new TrendingQuery(
-                                    Collections.singletonList(new TrendingQueryScoreSet(
-                                        "stumptown",
-                                        Collections.singleton(strategy),
-                                        miruTimeRange,
-                                        30,
-                                        100)),
-                                    constraintsFilter,
-                                    input.aggregateAroundField,
-                                    Collections.emptyList()),
-                                MiruSolutionLogLevel.INFO),
-                            TrendingConstants.TRENDING_PREFIX + TrendingConstants.CUSTOM_QUERY_ENDPOINT, MiruResponse.class,
+                        MiruResponse<TrendingAnswer> extractResponse = responseMapper.extractResultFromResponse(httpResponse,
+                            MiruResponse.class,
                             new Class[] { TrendingAnswer.class },
                             null);
-                        response = trendingResponse;
-                        if (response != null && response.answer != null) {
-                            break;
-                        } else {
-                            log.warn("Empty trending response from {}, trying another", requestHelper);
-                        }
-                    } catch (Exception e) {
-                        log.warn("Failed trending request to {}, trying another", new Object[] { requestHelper }, e);
-                    }
+                        return new ClientResponse<>(extractResponse, true);
+                    });
+                if (trendingResponse != null && trendingResponse.answer != null) {
+                    response = trendingResponse;
+                } else {
+                    log.warn("Empty trending response from {}", tenantId);
                 }
 
                 if (response != null && response.answer != null) {

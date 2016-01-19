@@ -64,7 +64,7 @@ public class InMemoryEndpointsTest {
     public void testSimpleAddActivities() throws Exception {
 
         MiruBackingStorage desiredStorage = MiruBackingStorage.disk;
-        MiruHost miruHost = new MiruHost("logicalName", 1_234);
+        MiruHost miruHost = new MiruHost("logicalName");
         MiruSchema schema = new MiruSchema.Builder("test", 1)
             .setFieldDefinitions(DefaultMiruSchemaDefinition.FIELDS)
             .build();

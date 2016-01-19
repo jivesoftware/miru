@@ -71,12 +71,11 @@ public class MiruManageEndpoints {
     }
 
     @GET
-    @Path("/hosts/{logicalName}/{port}")
+    @Path("/hosts/{logicalName}")
     @Produces(MediaType.TEXT_HTML)
     public Response getHostsWithFocus(
-        @PathParam("logicalName") String logicalName,
-        @PathParam("port") int port) {
-        String rendered = miruManageService.renderHostsWithFocus(new MiruHost(logicalName, port));
+        @PathParam("logicalName") String logicalName) {
+        String rendered = miruManageService.renderHostsWithFocus(new MiruHost(logicalName));
         return Response.ok(rendered).build();
     }
 
@@ -89,11 +88,10 @@ public class MiruManageEndpoints {
     }
 
     @GET
-    @Path("/balancer/export")
+    @Path("/balancer/export/{forceInstance}")
     @Produces(MediaType.TEXT_PLAIN)
-    public Response importTopology() {
-        StreamingOutput streamingOutput = rebalanceDirector::exportTopology;
-        return Response.ok(streamingOutput).build();
+    public Response importTopology(@PathParam("forceInstance") boolean forceInstance) {
+        return Response.ok((StreamingOutput) output -> rebalanceDirector.exportTopology(output, forceInstance)).build();
     }
 
     @POST
@@ -156,8 +154,7 @@ public class MiruManageEndpoints {
     @Path("/topology/shift")
     @Produces(MediaType.TEXT_HTML)
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
-    public Response shiftTopologies(@FormParam("host") String host,
-        @FormParam("port") int port,
+    public Response shiftTopologies(@FormParam("logicalName") String logicalName,
         @FormParam("direction") int direction,
         @FormParam("unhealthyPct") @DefaultValue("0.24") float unhealthyPct,
         @FormParam("probability") @DefaultValue("0.10") float probability) {
@@ -173,12 +170,12 @@ public class MiruManageEndpoints {
                 caterpillar = true;
                 shiftPredicate = new RandomShiftPredicate(probability);
             }
-            rebalanceDirector.shiftTopologies(Optional.of(new MiruHost(host, port)),
+            rebalanceDirector.shiftTopologies(Optional.of(new MiruHost(logicalName)),
                 shiftPredicate,
                 new CaterpillarSelectHostsStrategy(caterpillar, direction, false));
             return Response.ok("success").build();
         } catch (Throwable t) {
-            LOG.error("POST /topology/shift {} {} {} {} {}", new Object[] { host, port, direction, unhealthyPct, probability }, t);
+            LOG.error("POST /topology/shift {} {} {} {} {}", new Object[] { logicalName, direction, unhealthyPct, probability }, t);
             return Response.serverError().entity(t.getMessage()).build();
         }
     }
@@ -222,15 +219,15 @@ public class MiruManageEndpoints {
     }
 
     @DELETE
-    @Path("/hosts/{logicalName}/{port}")
+    @Path("/hosts/{logicalName}")
     @Produces(MediaType.TEXT_HTML)
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
-    public Response removeHost(@PathParam("logicalName") String logicalName, @PathParam("port") int port) {
+    public Response removeHost(@PathParam("logicalName") String logicalName) {
         try {
-            rebalanceDirector.removeHost(new MiruHost(logicalName, port));
+            clusterRegistry.removeHost(new MiruHost(logicalName));
             return Response.ok("success").build();
         } catch (Throwable t) {
-            LOG.error("DELETE /hosts/{}/{}", new Object[] { logicalName, port }, t);
+            LOG.error("DELETE /hosts/{}", new Object[] { logicalName }, t);
             return Response.serverError().entity(t.getMessage()).build();
         }
     }
@@ -239,17 +236,16 @@ public class MiruManageEndpoints {
     @Path("/tenants/rebuild")
     @Produces(MediaType.TEXT_HTML)
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
-    public Response rebuildTenantPartition(@FormParam("host") String host,
-        @FormParam("port") int port,
+    public Response rebuildTenantPartition(@FormParam("logicalName") String logicalName,
         @FormParam("tenantId") String tenantId,
         @FormParam("partitionId") int partitionId) {
         try {
-            rebalanceDirector.rebuildTenantPartition(new MiruHost(host, port),
+            rebalanceDirector.rebuildTenantPartition(new MiruHost(logicalName),
                 new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
                 MiruPartitionId.of(partitionId));
             return Response.ok("success").build();
         } catch (Throwable t) {
-            LOG.error("POST /tenants/rebuild {} {} {} {}", new Object[] { host, port, tenantId, partitionId }, t);
+            LOG.error("POST /tenants/rebuild {} {} {} {}", new Object[] { logicalName, tenantId, partitionId }, t);
             return Response.serverError().entity(t.getMessage()).build();
         }
     }

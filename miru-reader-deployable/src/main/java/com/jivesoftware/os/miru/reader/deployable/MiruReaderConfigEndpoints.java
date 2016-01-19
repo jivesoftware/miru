@@ -45,49 +45,6 @@ public class MiruReaderConfigEndpoints {
         this.timestampedOrderIdProvider = timestampedOrderIdProvider;
     }
 
-    @DELETE
-    @Path("/hosts/{logicalName}/{port}")
-    @Produces(MediaType.TEXT_HTML)
-    public Response removeHost(
-        @PathParam("logicalName") String logicalName,
-        @PathParam("port") int port) {
-
-        MiruHost host = new MiruHost(logicalName, port);
-        try {
-            long start = System.currentTimeMillis();
-            miruService.removeHost(host);
-            stats.ingressed("DELETE:/hosts/" + logicalName + "/" + port, 1, System.currentTimeMillis() - start);
-            return Response.ok(host.toStringForm()).build();
-        } catch (Throwable t) {
-            log.error("Failed to remove host {}", new Object[]{host}, t);
-            return Response.serverError().entity(t.getMessage()).build();
-        }
-    }
-
-    @DELETE
-    @Path("/topology/{tenantId}/{partitionId}/{logicalName}/{port}")
-    @Produces(MediaType.TEXT_HTML)
-    public Response removeTopology(
-        @PathParam("tenantId") String tenantId,
-        @PathParam("partitionId") Integer partitionId,
-        @PathParam("logicalName") String logicalName,
-        @PathParam("port") int port) {
-
-        MiruHost host = new MiruHost(logicalName, port);
-        try {
-            long start = System.currentTimeMillis();
-            miruService.removeTopology(
-                new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
-                MiruPartitionId.of(partitionId),
-                host);
-            stats.ingressed("DELETE:/topology/" + tenantId + "/" + partitionId + "/" + logicalName + "/" + port, 1, System.currentTimeMillis() - start);
-            return Response.ok(host.toStringForm()).build();
-        } catch (Throwable t) {
-            log.error("Failed to remove topology for tenant {} partition {} host {}", new Object[]{tenantId, partitionId, host}, t);
-            return Response.serverError().entity(t.getMessage()).build();
-        }
-    }
-
     @POST
     @Path("/check/{tenantId}/{partitionId}/{state}/{storage}")
     public Response check(

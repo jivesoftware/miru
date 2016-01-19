@@ -64,7 +64,7 @@ public class MiruTenantTopologyTest {
 
         MiruServiceConfig config = mock(MiruServiceConfig.class);
         tenantId = new MiruTenantId("test".getBytes(Charsets.UTF_8));
-        localhost = new MiruHost("localhost", 49_600);
+        localhost = new MiruHost("logicalName");
         localPartitionFactory = mock(MiruLocalPartitionFactory.class);
         remotePartitionFactory = mock(MiruRemoteQueryablePartitionFactory.class);
         bitmaps = new MiruBitmapsRoaringBuffer();

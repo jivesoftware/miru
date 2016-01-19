@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.plugin.query;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jivesoftware.os.miru.api.MiruHost;
+import com.jivesoftware.os.miru.api.MiruHostProvider;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
@@ -13,6 +14,7 @@ import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.shared.ClientCall;
 import com.jivesoftware.os.routing.bird.shared.ConnectionDescriptor;
 import com.jivesoftware.os.routing.bird.shared.HostPort;
+import com.jivesoftware.os.routing.bird.shared.InstanceDescriptor;
 import com.jivesoftware.os.routing.bird.shared.NextClientStrategy;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -80,7 +82,10 @@ public class MiruTenantQueryRouting {
             int preferredIndex = -1;
             for (int i = 0; i < connectionDescriptors.length; i++) {
                 HostPort hostPort = connectionDescriptors[i].getHostPort();
-                if (hostPort.getHost().equals(host.getLogicalName()) && hostPort.getPort() == host.getPort()) {
+                InstanceDescriptor instanceDescriptor = connectionDescriptors[i].getInstanceDescriptor();
+                if (MiruHostProvider.checkEquals(host,
+                    instanceDescriptor.instanceName, instanceDescriptor.instanceKey,
+                    hostPort.getHost(), hostPort.getPort())) {
                     indexes[0] = i;
                     pos = 1;
                     preferredIndex = i;

@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.stumptown.deployable.region;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableMap;
@@ -7,14 +8,12 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.miru.api.MiruActorId;
-import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
-import com.jivesoftware.os.miru.api.topology.ReaderRequestHelpers;
 import com.jivesoftware.os.miru.logappender.MiruLogEvent;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
@@ -30,7 +29,11 @@ import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.ISO8601DateFormat;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelper;
+import com.jivesoftware.os.routing.bird.http.client.HttpResponse;
+import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
+import com.jivesoftware.os.routing.bird.http.client.RoundRobinStrategy;
+import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
+import com.jivesoftware.os.routing.bird.shared.ClientCall.ClientResponse;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
@@ -54,21 +57,27 @@ public class StumptownQueryPluginRegion implements MiruPageRegion<Optional<Stump
     private final String logEventTemplate;
     private final String noEventsTemplate;
     private final MiruSoyRenderer renderer;
-    private final ReaderRequestHelpers miruReaders;
+    private final TenantAwareHttpClient<String> readerClient;
+    private final ObjectMapper requestMapper;
+    private final HttpResponseMapper responseMapper;
     private final MiruStumptownPayloads payloads;
 
     public StumptownQueryPluginRegion(String template,
         String logEventTemplate,
         String noEventsTemplate,
         MiruSoyRenderer renderer,
-        ReaderRequestHelpers miruReaders,
+        TenantAwareHttpClient<String> readerClient,
+        ObjectMapper requestMapper,
+        HttpResponseMapper responseMapper,
         MiruStumptownPayloads payloads) {
 
         this.template = template;
         this.logEventTemplate = logEventTemplate;
         this.noEventsTemplate = noEventsTemplate;
         this.renderer = renderer;
-        this.miruReaders = miruReaders;
+        this.readerClient = readerClient;
+        this.requestMapper = requestMapper;
+        this.responseMapper = responseMapper;
         this.payloads = payloads;
     }
 
@@ -202,65 +211,66 @@ public class StumptownQueryPluginRegion implements MiruPageRegion<Optional<Stump
 
         MiruTenantId tenantId = StumptownSchemaConstants.TENANT_ID;
         MiruResponse<StumptownAnswer> response = null;
-        for (HttpRequestHelper requestHelper : miruReaders.get(Optional.<MiruHost>absent())) {
-            try {
-                List<MiruFieldFilter> fieldFilters = Lists.newArrayList();
-                List<MiruFieldFilter> notFieldFilters = Lists.newArrayList();
-                QueryUtils.addFieldFilter(fieldFilters, notFieldFilters, "cluster", input.cluster);
-                QueryUtils.addFieldFilter(fieldFilters, notFieldFilters, "host", input.host);
-                QueryUtils.addFieldFilter(fieldFilters, notFieldFilters, "service", input.service);
-                QueryUtils.addFieldFilter(fieldFilters, notFieldFilters, "instance", input.instance);
-                QueryUtils.addFieldFilter(fieldFilters, notFieldFilters, "version", input.version);
-                QueryUtils.addFieldFilter(fieldFilters, notFieldFilters, "thread", input.thread);
-                QueryUtils.addFieldFilter(fieldFilters, notFieldFilters, "methodName", input.method);
-                QueryUtils.addFieldFilter(fieldFilters, notFieldFilters, "lineNumber", input.line);
-                QueryUtils.addFieldFilter(fieldFilters, notFieldFilters, "logger", input.logger);
-                QueryUtils.addFieldFilter(fieldFilters, notFieldFilters, "message", input.message.toLowerCase());
-                QueryUtils.addFieldFilter(fieldFilters, notFieldFilters, "level", input.logLevel);
-                QueryUtils.addFieldFilter(fieldFilters, notFieldFilters, "exceptionClass", input.exceptionClass);
-                QueryUtils.addFieldFilter(fieldFilters, notFieldFilters, "thrownStackTrace", input.thrown.toLowerCase());
+        List<MiruFieldFilter> fieldFilters = Lists.newArrayList();
+        List<MiruFieldFilter> notFieldFilters = Lists.newArrayList();
+        QueryUtils.addFieldFilter(fieldFilters, notFieldFilters, "cluster", input.cluster);
+        QueryUtils.addFieldFilter(fieldFilters, notFieldFilters, "host", input.host);
+        QueryUtils.addFieldFilter(fieldFilters, notFieldFilters, "service", input.service);
+        QueryUtils.addFieldFilter(fieldFilters, notFieldFilters, "instance", input.instance);
+        QueryUtils.addFieldFilter(fieldFilters, notFieldFilters, "version", input.version);
+        QueryUtils.addFieldFilter(fieldFilters, notFieldFilters, "thread", input.thread);
+        QueryUtils.addFieldFilter(fieldFilters, notFieldFilters, "methodName", input.method);
+        QueryUtils.addFieldFilter(fieldFilters, notFieldFilters, "lineNumber", input.line);
+        QueryUtils.addFieldFilter(fieldFilters, notFieldFilters, "logger", input.logger);
+        QueryUtils.addFieldFilter(fieldFilters, notFieldFilters, "message", input.message.toLowerCase());
+        QueryUtils.addFieldFilter(fieldFilters, notFieldFilters, "level", input.logLevel);
+        QueryUtils.addFieldFilter(fieldFilters, notFieldFilters, "exceptionClass", input.exceptionClass);
+        QueryUtils.addFieldFilter(fieldFilters, notFieldFilters, "thrownStackTrace", input.thrown.toLowerCase());
 
-                List<MiruFilter> notFilters = null;
-                if (!notFieldFilters.isEmpty()) {
-                    notFilters = Arrays.asList(
-                        new MiruFilter(MiruFilterOperation.pButNotQ,
-                            true,
-                            notFieldFilters,
-                            null));
-                }
+        List<MiruFilter> notFilters = null;
+        if (!notFieldFilters.isEmpty()) {
+            notFilters = Arrays.asList(
+                new MiruFilter(MiruFilterOperation.pButNotQ,
+                    true,
+                    notFieldFilters,
+                    null));
+        }
 
-                ImmutableMap<String, MiruFilter> stumptownFilters = ImmutableMap.of(
-                    "stumptown",
-                    new MiruFilter(MiruFilterOperation.and,
-                        false,
-                        fieldFilters,
-                        notFilters));
+        ImmutableMap<String, MiruFilter> stumptownFilters = ImmutableMap.of(
+            "stumptown",
+            new MiruFilter(MiruFilterOperation.and,
+                false,
+                fieldFilters,
+                notFilters));
 
+        String endpoint = StumptownConstants.STUMPTOWN_PREFIX + StumptownConstants.CUSTOM_QUERY_ENDPOINT;
+        String request = requestMapper.writeValueAsString(new MiruRequest<>("stumptownQuery",
+            tenantId,
+            MiruActorId.NOT_PROVIDED,
+            MiruAuthzExpression.NOT_PROVIDED,
+            new StumptownQuery(
+                miruTimeRange,
+                input.buckets,
+                input.messageCount,
+                MiruFilter.NO_FILTER,
+                stumptownFilters),
+            MiruSolutionLogLevel.NONE));
+        MiruResponse<StumptownAnswer> stumptownResponse = readerClient.call("",
+            new RoundRobinStrategy(),
+            "stumptownQuery",
+            httpClient -> {
+                HttpResponse httpResponse = httpClient.postJson(endpoint, request, null);
                 @SuppressWarnings("unchecked")
-                MiruResponse<StumptownAnswer> analyticsResponse = requestHelper.executeRequest(
-                    new MiruRequest<>("stumptownQuery",
-                        tenantId,
-                        MiruActorId.NOT_PROVIDED,
-                        MiruAuthzExpression.NOT_PROVIDED,
-                        new StumptownQuery(
-                            miruTimeRange,
-                            input.buckets,
-                            input.messageCount,
-                            MiruFilter.NO_FILTER,
-                            stumptownFilters),
-                        MiruSolutionLogLevel.NONE),
-                    StumptownConstants.STUMPTOWN_PREFIX + StumptownConstants.CUSTOM_QUERY_ENDPOINT, MiruResponse.class,
+                MiruResponse<StumptownAnswer> extractResponse = responseMapper.extractResultFromResponse(httpResponse,
+                    MiruResponse.class,
                     new Class[] { StumptownAnswer.class },
                     null);
-                response = analyticsResponse;
-                if (response != null && response.answer != null) {
-                    break;
-                } else {
-                    log.warn("Empty stumptown response from {}, trying another", requestHelper);
-                }
-            } catch (Exception e) {
-                log.warn("Failed stumptown request to {}, trying another", new Object[] { requestHelper }, e);
-            }
+                return new ClientResponse<>(extractResponse, true);
+            });
+        if (stumptownResponse != null && stumptownResponse.answer != null) {
+            response = stumptownResponse;
+        } else {
+            log.warn("Empty stumptown response from {}", tenantId);
         }
 
         if (response != null && response.answer != null) {

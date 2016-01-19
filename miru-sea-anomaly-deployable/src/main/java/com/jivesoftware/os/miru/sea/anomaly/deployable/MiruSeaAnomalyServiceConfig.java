@@ -10,14 +10,4 @@ import org.merlin.config.defaults.StringDefault;
  */
 public interface MiruSeaAnomalyServiceConfig extends Config {
 
-    @StringDefault(MiruWriterEndpointConstants.INGRESS_PREFIX + MiruWriterEndpointConstants.ADD)
-    public String getMiruIngressEndpoint();
-
-    @StringDefault("unspecifiedHost:0")
-    public String getMiruWriterHosts();
-
-    //@StringDefault("unspecifiedHost:0")
-    @StringDefault("soa-prime-data8.phx1.jivehosted.com:10004")
-    public String getMiruReaderHosts();
-
 }

@@ -99,7 +99,7 @@ public class MiruInboxIndexTest {
     public Object[][] miruInboxIndexDataProvider() throws Exception {
         MiruStreamId miruStreamId = new MiruStreamId(new byte[] { 2 });
         MiruTenantId tenantId = new MiruTenantId(new byte[] { 1 });
-        MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, MiruPartitionId.of(0), new MiruHost("localhost", 10000));
+        MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, MiruPartitionId.of(0), new MiruHost("logicalName"));
         MiruBitmapsRoaringBuffer bitmaps = new MiruBitmapsRoaringBuffer();
 
         //TODO unnecessary casts, but the wildcards cause some IDE confusion
@@ -123,7 +123,7 @@ public class MiruInboxIndexTest {
         // Create in-memory inbox index
         MiruBitmapsRoaringBuffer bitmaps = new MiruBitmapsRoaringBuffer();
         MiruTenantId tenantId = new MiruTenantId(new byte[] { 1 });
-        MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, MiruPartitionId.of(0), new MiruHost("localhost", 10000));
+        MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, MiruPartitionId.of(0), new MiruHost("logicalName"));
 
         int[] data = new int[] { 1, 2, 3, 4 };
         int[] data1_2 = new int[] { 1, 2 };

@@ -55,7 +55,7 @@ public class MiruAuthzIndexTest {
     public Object[][] miruAuthzIndexDataProvider() throws Exception {
         MiruBitmapsRoaringBuffer bitmaps = new MiruBitmapsRoaringBuffer();
         MiruTenantId tenantId = new MiruTenantId(new byte[] { 1 });
-        MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, MiruPartitionId.of(1), new MiruHost("localhost", 10000));
+        MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, MiruPartitionId.of(1), new MiruHost("logicalName"));
         MiruAuthzUtils<MutableRoaringBitmap, ImmutableRoaringBitmap> miruAuthzUtils = new MiruAuthzUtils<>(bitmaps);
 
         MiruAuthzIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> unmergedLargeMiruHybridAuthzIndex = buildInMemoryContext(4, bitmaps, coord).authzIndex;

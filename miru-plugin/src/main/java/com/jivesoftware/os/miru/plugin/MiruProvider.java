@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.plugin;
 
 import com.jivesoftware.os.miru.api.MiruHost;
+import com.jivesoftware.os.miru.api.MiruHostSelectiveStrategy;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.backfill.MiruJustInTimeBackfillerizer;
@@ -34,7 +35,7 @@ public interface MiruProvider<T extends Miru> {
 
     TenantAwareHttpClient<String> getReaderHttpClient();
 
-    Map<MiruHost, ConnectionDescriptorSelectiveStrategy> getReaderStrategyCache();
+    Map<MiruHost, MiruHostSelectiveStrategy> getReaderStrategyCache();
 
     <C extends Config> C getConfig(Class<C> configClass);
 }

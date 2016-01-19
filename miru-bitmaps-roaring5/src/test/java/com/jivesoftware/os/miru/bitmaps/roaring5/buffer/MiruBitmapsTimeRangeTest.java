@@ -124,13 +124,13 @@ public class MiruBitmapsTimeRangeTest {
             miruOnDiskTimeIndexPartiallyMerged.nextId(stackBuffer, timestamps[i]);
         }
 
-        return new Object[][]{
-            {new MiruBitmapsRoaringBuffer(), miruInMemoryTimeIndex},
-            {new MiruBitmapsRoaringBuffer(), miruOnDiskTimeIndex},
-            {new MiruBitmapsRoaringBuffer(), miruInMemoryTimeIndexMerged},
-            {new MiruBitmapsRoaringBuffer(), miruOnDiskTimeIndexMerged},
-            {new MiruBitmapsRoaringBuffer(), miruInMemoryTimeIndexPartiallyMerged},
-            {new MiruBitmapsRoaringBuffer(), miruOnDiskTimeIndexPartiallyMerged}
+        return new Object[][] {
+            { new MiruBitmapsRoaringBuffer(), miruInMemoryTimeIndex },
+            { new MiruBitmapsRoaringBuffer(), miruOnDiskTimeIndex },
+            { new MiruBitmapsRoaringBuffer(), miruInMemoryTimeIndexMerged },
+            { new MiruBitmapsRoaringBuffer(), miruOnDiskTimeIndexMerged },
+            { new MiruBitmapsRoaringBuffer(), miruInMemoryTimeIndexPartiallyMerged },
+            { new MiruBitmapsRoaringBuffer(), miruOnDiskTimeIndexPartiallyMerged }
         };
     }
 
@@ -149,9 +149,9 @@ public class MiruBitmapsTimeRangeTest {
         MiruTimeIndex miruOnDiskTimeIndex = buildOnDiskTimeIndex();
         miruOnDiskTimeIndex.nextId(stackBuffer, timestamps);
 
-        return new Object[][]{
-            {new MiruBitmapsRoaringBuffer(), miruInMemoryTimeIndex},
-            {new MiruBitmapsRoaringBuffer(), miruOnDiskTimeIndex}
+        return new Object[][] {
+            { new MiruBitmapsRoaringBuffer(), miruInMemoryTimeIndex },
+            { new MiruBitmapsRoaringBuffer(), miruOnDiskTimeIndex }
         };
     }
 
@@ -159,27 +159,27 @@ public class MiruBitmapsTimeRangeTest {
     public Object[][] singleEntryTimeIndexDataProvider() throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
 
-        final long[] timestamps = new long[]{System.currentTimeMillis()};
+        final long[] timestamps = new long[] { System.currentTimeMillis() };
         MiruTimeIndex miruInMemoryTimeIndex = buildInMemoryTimeIndex();
         MiruTimeIndex miruOnDiskTimeIndex = buildOnDiskTimeIndex();
         miruOnDiskTimeIndex.nextId(stackBuffer, timestamps);
         miruInMemoryTimeIndex.nextId(stackBuffer, timestamps);
 
-        return new Object[][]{
-            {new MiruBitmapsRoaringBuffer(), miruInMemoryTimeIndex},
-            {new MiruBitmapsRoaringBuffer(), miruOnDiskTimeIndex}
+        return new Object[][] {
+            { new MiruBitmapsRoaringBuffer(), miruInMemoryTimeIndex },
+            { new MiruBitmapsRoaringBuffer(), miruOnDiskTimeIndex }
         };
     }
 
     private MiruTimeIndex buildInMemoryTimeIndex() throws Exception {
         MiruBitmapsRoaringBuffer bitmaps = new MiruBitmapsRoaringBuffer();
-        MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("localhost", 10000));
+        MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("logicalName"));
         return buildInMemoryContext(numberOfChunkStores, bitmaps, coord).timeIndex;
     }
 
     private MiruTimeIndex buildOnDiskTimeIndex() throws Exception {
         MiruBitmapsRoaringBuffer bitmaps = new MiruBitmapsRoaringBuffer();
-        MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("localhost", 10000));
+        MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("logicalName"));
         return buildOnDiskContext(numberOfChunkStores, bitmaps, coord).timeIndex;
     }
 }

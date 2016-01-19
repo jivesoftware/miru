@@ -10,14 +10,12 @@ import com.google.common.collect.Maps;
 import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.miru.api.MiruActorId;
-import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
-import com.jivesoftware.os.miru.api.topology.ReaderRequestHelpers;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
@@ -31,7 +29,11 @@ import com.jivesoftware.os.miru.ui.MiruPageRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelper;
+import com.jivesoftware.os.routing.bird.http.client.HttpResponse;
+import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
+import com.jivesoftware.os.routing.bird.http.client.RoundRobinStrategy;
+import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
+import com.jivesoftware.os.routing.bird.shared.ClientCall.ClientResponse;
 import java.awt.Color;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -54,15 +56,20 @@ public class SeaAnomalyQueryPluginRegion implements MiruPageRegion<Optional<SeaA
 
     private final String template;
     private final MiruSoyRenderer renderer;
-    private final ReaderRequestHelpers miruReaders;
+    private final TenantAwareHttpClient<String> readerClient;
+    private final ObjectMapper requestMapper;
+    private final HttpResponseMapper responseMapper;
 
     public SeaAnomalyQueryPluginRegion(String template,
         MiruSoyRenderer renderer,
-        ReaderRequestHelpers miruReaders) {
-
+        TenantAwareHttpClient<String> readerClient,
+        ObjectMapper requestMapper,
+        HttpResponseMapper responseMapper) {
         this.template = template;
         this.renderer = renderer;
-        this.miruReaders = miruReaders;
+        this.readerClient = readerClient;
+        this.requestMapper = requestMapper;
+        this.responseMapper = responseMapper;
     }
 
     public static class SeaAnomalyPluginRegionInput {
@@ -170,65 +177,65 @@ public class SeaAnomalyQueryPluginRegion implements MiruPageRegion<Optional<SeaA
 
                 MiruTenantId tenantId = SeaAnomalySchemaConstants.TENANT_ID;
                 MiruResponse<SeaAnomalyAnswer> response = null;
-                for (HttpRequestHelper requestHelper : miruReaders.get(Optional.<MiruHost>absent())) {
-                    try {
-                        List<MiruFieldFilter> fieldFilters = Lists.newArrayList();
-                        List<MiruFieldFilter> notFieldFilters = Lists.newArrayList();
-                        addFieldFilter(fieldFilters, notFieldFilters, "cluster", input.cluster);
-                        addFieldFilter(fieldFilters, notFieldFilters, "host", input.host);
-                        addFieldFilter(fieldFilters, notFieldFilters, "service", input.service);
-                        addFieldFilter(fieldFilters, notFieldFilters, "instance", input.instance);
-                        addFieldFilter(fieldFilters, notFieldFilters, "version", input.version);
-                        addFieldFilter(fieldFilters, notFieldFilters, "tenant", input.tenant);
-                        addFieldFilter(fieldFilters, notFieldFilters, "sampler", input.sampler);
-                        addFieldFilter(fieldFilters, notFieldFilters, "metric", input.metric);
-                        addFieldFilter(fieldFilters, notFieldFilters, "tags", input.tags);
-                        addFieldFilter(fieldFilters, notFieldFilters, "type", input.type);
+                List<MiruFieldFilter> fieldFilters = Lists.newArrayList();
+                List<MiruFieldFilter> notFieldFilters = Lists.newArrayList();
+                addFieldFilter(fieldFilters, notFieldFilters, "cluster", input.cluster);
+                addFieldFilter(fieldFilters, notFieldFilters, "host", input.host);
+                addFieldFilter(fieldFilters, notFieldFilters, "service", input.service);
+                addFieldFilter(fieldFilters, notFieldFilters, "instance", input.instance);
+                addFieldFilter(fieldFilters, notFieldFilters, "version", input.version);
+                addFieldFilter(fieldFilters, notFieldFilters, "tenant", input.tenant);
+                addFieldFilter(fieldFilters, notFieldFilters, "sampler", input.sampler);
+                addFieldFilter(fieldFilters, notFieldFilters, "metric", input.metric);
+                addFieldFilter(fieldFilters, notFieldFilters, "tags", input.tags);
+                addFieldFilter(fieldFilters, notFieldFilters, "type", input.type);
 
-                        List<MiruFilter> notFilters = null;
-                        if (!notFieldFilters.isEmpty()) {
-                            notFilters = Arrays.asList(
-                                new MiruFilter(MiruFilterOperation.pButNotQ,
-                                    true,
-                                    notFieldFilters,
-                                    null));
-                        }
+                List<MiruFilter> notFilters = null;
+                if (!notFieldFilters.isEmpty()) {
+                    notFilters = Arrays.asList(
+                        new MiruFilter(MiruFilterOperation.pButNotQ,
+                            true,
+                            notFieldFilters,
+                            null));
+                }
 
-                        ImmutableMap<String, MiruFilter> seaAnomalyFilters = ImmutableMap.of(
-                            "metric",
-                            new MiruFilter(MiruFilterOperation.and,
-                                false,
-                                fieldFilters,
-                                notFilters));
+                ImmutableMap<String, MiruFilter> seaAnomalyFilters = ImmutableMap.of(
+                    "metric",
+                    new MiruFilter(MiruFilterOperation.and,
+                        false,
+                        fieldFilters,
+                        notFilters));
 
+                String endpoint = SeaAnomalyConstants.SEA_ANOMALY_PREFIX + SeaAnomalyConstants.CUSTOM_QUERY_ENDPOINT;
+                String request = requestMapper.writeValueAsString(new MiruRequest<>("anomalyQuery",
+                    tenantId,
+                    MiruActorId.NOT_PROVIDED,
+                    MiruAuthzExpression.NOT_PROVIDED,
+                    new SeaAnomalyQuery(
+                        new MiruTimeRange(fromTime, toTime),
+                        input.buckets,
+                        "bits",
+                        MiruFilter.NO_FILTER,
+                        seaAnomalyFilters,
+                        input.expansionField,
+                        Arrays.asList(input.expansionValue.split("\\s*,\\s*"))),
+                    MiruSolutionLogLevel.INFO));
+                MiruResponse<SeaAnomalyAnswer> miruResponse = readerClient.call("",
+                    new RoundRobinStrategy(),
+                    "seaAnomalyQuery",
+                    httpClient -> {
+                        HttpResponse httpResponse = httpClient.postJson(endpoint, request, null);
                         @SuppressWarnings("unchecked")
-                        MiruResponse<SeaAnomalyAnswer> miruResponse = requestHelper.executeRequest(
-                            new MiruRequest<>("anomalyQuery",
-                                tenantId,
-                                MiruActorId.NOT_PROVIDED,
-                                MiruAuthzExpression.NOT_PROVIDED,
-                                new SeaAnomalyQuery(
-                                    new MiruTimeRange(fromTime, toTime),
-                                    input.buckets,
-                                    "bits",
-                                    MiruFilter.NO_FILTER,
-                                    seaAnomalyFilters,
-                                    input.expansionField,
-                                    Arrays.asList(input.expansionValue.split("\\s*,\\s*"))),
-                                MiruSolutionLogLevel.INFO),
-                            SeaAnomalyConstants.SEA_ANOMALY_PREFIX + SeaAnomalyConstants.CUSTOM_QUERY_ENDPOINT,
+                        MiruResponse<SeaAnomalyAnswer> extractResponse = responseMapper.extractResultFromResponse(httpResponse,
                             MiruResponse.class,
-                            new Class[]{SeaAnomalyAnswer.class},
+                            new Class[] { SeaAnomalyAnswer.class },
                             null);
-                        response = miruResponse;
-                        if (response != null && response.answer != null) {
-                            break;
-                        } else {
-                            log.warn("Empty seaAnomaly response from {}, trying another", requestHelper);
-                        }
-                    } catch (Exception e) {
-                        log.warn("Failed seaAnomaly request to {}, trying another", new Object[]{requestHelper}, e);
-                    }
+                        return new ClientResponse<>(extractResponse, true);
+                    });
+                if (miruResponse != null && miruResponse.answer != null) {
+                    response = miruResponse;
+                } else {
+                    log.warn("Empty seaAnomaly response from {}", tenantId);
                 }
 
                 if (response != null && response.answer != null) {

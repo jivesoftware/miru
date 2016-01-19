@@ -157,7 +157,7 @@ public class MiruLocalHostedPartitionTest {
     public void setUp() throws Exception {
         tenantId = new MiruTenantId("test".getBytes(Charsets.UTF_8));
         partitionId = MiruPartitionId.of(0);
-        host = new MiruHost("localhost", 49_600);
+        host = new MiruHost("logicalName");
         coord = new MiruPartitionCoord(tenantId, partitionId, host);
         defaultStorage = MiruBackingStorage.memory;
 

@@ -15,7 +15,7 @@ public class MiruTopologyColumnKeyMarshallerTest {
     @Test
     public void testFromBytes() throws Exception {
         MiruTopologyColumnKeyMarshaller marshaller = new MiruTopologyColumnKeyMarshaller();
-        MiruTopologyColumnKey expected = new MiruTopologyColumnKey(MiruPartitionId.of(123), new MiruHost("a", 456));
+        MiruTopologyColumnKey expected = new MiruTopologyColumnKey(MiruPartitionId.of(123), new MiruHost("logicalName"));
         MiruTopologyColumnKey actual = marshaller.fromBytes(marshaller.toBytes(expected));
         assertEquals(actual.partitionId, expected.partitionId);
         assertEquals(actual.host, expected.host);
@@ -24,7 +24,7 @@ public class MiruTopologyColumnKeyMarshallerTest {
     @Test
     public void testFromLexBytes() throws Exception {
         MiruTopologyColumnKeyMarshaller marshaller = new MiruTopologyColumnKeyMarshaller();
-        MiruTopologyColumnKey expected = new MiruTopologyColumnKey(MiruPartitionId.of(123), new MiruHost("a", 456));
+        MiruTopologyColumnKey expected = new MiruTopologyColumnKey(MiruPartitionId.of(123), new MiruHost("logicalName"));
         MiruTopologyColumnKey actual = marshaller.fromLexBytes(marshaller.toLexBytes(expected));
         assertEquals(actual.partitionId, expected.partitionId);
         assertEquals(actual.host, expected.host);

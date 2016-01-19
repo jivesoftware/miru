@@ -15,6 +15,7 @@ import com.jivesoftware.os.miru.amza.MiruAmzaServiceInitializer;
 import com.jivesoftware.os.miru.api.HostPortProvider;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
+import com.jivesoftware.os.miru.api.MiruHostSelectiveStrategy;
 import com.jivesoftware.os.miru.api.MiruLifecyle;
 import com.jivesoftware.os.miru.api.MiruPartitionCoordInfo;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
@@ -359,7 +360,7 @@ public class MiruPluginTestBootstrap {
             }
 
             @Override
-            public Map<MiruHost, ConnectionDescriptorSelectiveStrategy> getReaderStrategyCache() {
+            public Map<MiruHost, MiruHostSelectiveStrategy> getReaderStrategyCache() {
                 return null;
             }
 

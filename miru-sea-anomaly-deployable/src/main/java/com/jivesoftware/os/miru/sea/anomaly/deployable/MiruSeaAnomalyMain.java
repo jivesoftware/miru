@@ -24,7 +24,6 @@ import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
-import com.jivesoftware.os.miru.api.topology.ReaderRequestHelpers;
 import com.jivesoftware.os.miru.cluster.client.MiruClusterClientInitializer;
 import com.jivesoftware.os.miru.logappender.MiruLogAppender;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
@@ -54,6 +53,7 @@ import com.jivesoftware.os.routing.bird.health.checkers.GCLoadHealthChecker;
 import com.jivesoftware.os.routing.bird.health.checkers.ServiceStartupHealthCheck;
 import com.jivesoftware.os.routing.bird.http.client.HttpDeliveryClientHealthProvider;
 import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelperUtils;
+import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.http.client.TenantRoutingHttpClientInitializer;
 import com.jivesoftware.os.routing.bird.server.util.Resource;
@@ -61,7 +61,6 @@ import com.jivesoftware.os.routing.bird.shared.TenantsServiceConnectionDescripto
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import org.merlin.config.Config;
 
 public class MiruSeaAnomalyMain {
@@ -127,16 +126,24 @@ public class MiruSeaAnomalyMain {
 
             TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
             TenantAwareHttpClient<String> miruManageClient = tenantRoutingHttpClientInitializer.initialize(deployable
-                .getTenantRoutingProvider()
-                .getConnections("miru-manage", "main"),
+                    .getTenantRoutingProvider()
+                    .getConnections("miru-manage", "main"),
                 clientHealthProvider,
                 10, 10_000); // TODO expose to conf
 
             TenantAwareHttpClient<String> miruWriteClient = tenantRoutingHttpClientInitializer.initialize(deployable
-                .getTenantRoutingProvider()
-                .getConnections("miru-writer", "main"),
+                    .getTenantRoutingProvider()
+                    .getConnections("miru-writer", "main"),
                 clientHealthProvider,
                 10, 10_000);  // TODO expose to conf
+
+            TenantAwareHttpClient<String> readerClient = tenantRoutingHttpClientInitializer.initialize(deployable
+                    .getTenantRoutingProvider()
+                    .getConnections("miru-reader", "main"),
+                clientHealthProvider,
+                10, 10_000);  // TODO expose to conf
+
+            HttpResponseMapper responseMapper = new HttpResponseMapper(mapper);
 
             // TODO add fall back to config
             //MiruClusterClientConfig clusterClientConfig = deployable.config(MiruClusterClientConfig.class);
@@ -154,17 +161,17 @@ public class MiruSeaAnomalyMain {
                 AnomalyMetric.class,
                 true,
                 null) {
-                    @Override
-                    void deliverSerialized(List<AnomalyMetric> serialized) {
-                        try {
-                            inTakeService.ingressEvents(serialized);
-                            LOG.inc("ingress>delivered");
-                        } catch (Exception x) {
-                            LOG.error("Encountered the following while draining seaAnomalyQueue.", x);
-                            throw new RuntimeException(x);
-                        }
+                @Override
+                void deliverSerialized(List<AnomalyMetric> serialized) {
+                    try {
+                        inTakeService.ingressEvents(serialized);
+                        LOG.inc("ingress>delivered");
+                    } catch (Exception x) {
+                        LOG.error("Encountered the following while draining seaAnomalyQueue.", x);
+                        throw new RuntimeException(x);
                     }
-                };
+                }
+            };
 
             IngressGuaranteedDeliveryQueueProvider ingressGuaranteedDeliveryQueueProvider = new IngressGuaranteedDeliveryQueueProvider(
                 intakeConfig.getPathToQueues(), intakeConfig.getNumberOfQueues(), intakeConfig.getNumberOfThreadsPerQueue(), deliveryCallback);
@@ -187,18 +194,16 @@ public class MiruSeaAnomalyMain {
 
             serviceStartupHealthCheck.info("installing ui plugins...", null);
 
-            //TODO expose to config TimeUnit.MINUTES.toMillis(10)
-            ReaderRequestHelpers readerRequestHelpers = new ReaderRequestHelpers(clusterClient, mapper, TimeUnit.MINUTES.toMillis(10));
             List<MiruManagePlugin> plugins = Lists.newArrayList(
                 new MiruManagePlugin("eye-open", "Status", "/seaAnomaly/status",
                     SeaAnomalyStatusPluginEndpoints.class,
                     new SeaAnomalyStatusPluginRegion("soy.sea.anomaly.page.seaAnomalyStatusPluginRegion", renderer, sampleTrawl)),
                 new MiruManagePlugin("stats", "Trends", "/seaAnomaly/trends",
                     SeaAnomalyTrendsPluginEndpoints.class,
-                    new SeaAnomalyTrendsPluginRegion("soy.sea.anomaly.page.seaAnomalyTrendsPluginRegion", renderer, readerRequestHelpers)),
+                    new SeaAnomalyTrendsPluginRegion("soy.sea.anomaly.page.seaAnomalyTrendsPluginRegion", renderer, readerClient, mapper, responseMapper)),
                 new MiruManagePlugin("search", "Query", "/seaAnomaly/query",
                     SeaAnomalyQueryPluginEndpoints.class,
-                    new SeaAnomalyQueryPluginRegion("soy.sea.anomaly.page.seaAnomalyQueryPluginRegion", renderer, readerRequestHelpers)));
+                    new SeaAnomalyQueryPluginRegion("soy.sea.anomaly.page.seaAnomalyQueryPluginRegion", renderer, readerClient, mapper, responseMapper)));
 
             File staticResourceDir = new File(System.getProperty("user.dir"));
             System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());

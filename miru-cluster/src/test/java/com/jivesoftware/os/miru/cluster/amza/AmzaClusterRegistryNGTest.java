@@ -239,7 +239,7 @@ public class AmzaClusterRegistryNGTest {
     private MiruHost[] addHosts(int numHosts) throws Exception {
         MiruHost[] hosts = new MiruHost[numHosts];
         for (int i = 0; i < numHosts; i++) {
-            hosts[i] = new MiruHost("localhost", 49_600 + i);
+            hosts[i] = new MiruHost("logicalName_" + (10_000 + i));
             registry.heartbeat(hosts[i]);
         }
         return hosts;

@@ -29,6 +29,6 @@ public class MiruHostMarshaller implements TypeMarshaller<MiruHost> {
     @Override
     public byte[] toLexBytes(MiruHost miruHost) throws Exception {
         Preconditions.checkNotNull(miruHost);
-        return miruHost.toStringForm().getBytes(Charsets.UTF_8);
+        return miruHost.getLogicalName().getBytes(Charsets.UTF_8);
     }
 }

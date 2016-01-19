@@ -9,12 +9,10 @@ import com.google.common.collect.Maps;
 import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.miru.api.MiruActorId;
-import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.FilterStringUtil;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
-import com.jivesoftware.os.miru.api.topology.ReaderRequestHelpers;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
@@ -26,7 +24,11 @@ import com.jivesoftware.os.miru.ui.MiruPageRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelper;
+import com.jivesoftware.os.routing.bird.http.client.HttpResponse;
+import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
+import com.jivesoftware.os.routing.bird.http.client.RoundRobinStrategy;
+import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
+import com.jivesoftware.os.routing.bird.shared.ClientCall.ClientResponse;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -43,15 +45,21 @@ public class FullTextPluginRegion implements MiruPageRegion<Optional<FullTextPlu
 
     private final String template;
     private final MiruSoyRenderer renderer;
-    private final ReaderRequestHelpers readerRequestHelpers;
+    private final TenantAwareHttpClient<String> readerClient;
+    private final ObjectMapper requestMapper;
+    private final HttpResponseMapper responseMapper;
     private final FilterStringUtil filterStringUtil = new FilterStringUtil();
 
     public FullTextPluginRegion(String template,
         MiruSoyRenderer renderer,
-        ReaderRequestHelpers readerRequestHelpers) {
+        TenantAwareHttpClient<String> readerClient,
+        ObjectMapper requestMapper,
+        HttpResponseMapper responseMapper) {
         this.template = template;
         this.renderer = renderer;
-        this.readerRequestHelpers = readerRequestHelpers;
+        this.readerClient = readerClient;
+        this.requestMapper = requestMapper;
+        this.responseMapper = responseMapper;
     }
 
     public static class FullTextPluginRegionInput {
@@ -114,39 +122,38 @@ public class FullTextPluginRegion implements MiruPageRegion<Optional<FullTextPlu
 
                 MiruFilter constraintsFilter = filterStringUtil.parse(input.filters);
 
-                List<HttpRequestHelper> requestHelpers = readerRequestHelpers.get(Optional.<MiruHost>absent());
                 MiruResponse<FullTextAnswer> response = null;
                 if (!input.tenant.trim().isEmpty()) {
                     MiruTenantId tenantId = new MiruTenantId(input.tenant.trim().getBytes(Charsets.UTF_8));
-                    for (HttpRequestHelper requestHelper : requestHelpers) {
-                        try {
+                    String endpoint = FullTextConstants.FULLTEXT_PREFIX + FullTextConstants.CUSTOM_QUERY_ENDPOINT;
+                    String request = requestMapper.writeValueAsString(new MiruRequest<>("toolsFullText",
+                        tenantId,
+                        MiruActorId.NOT_PROVIDED,
+                        MiruAuthzExpression.NOT_PROVIDED,
+                        new FullTextQuery(
+                            new MiruTimeRange(fromTime, toTime),
+                            input.defaultField,
+                            input.queryString,
+                            constraintsFilter,
+                            input.strategy,
+                            input.maxCount),
+                        MiruSolutionLogLevel.valueOf(input.logLevel)));
+                    MiruResponse<FullTextAnswer> fullTextResponse = readerClient.call("",
+                        new RoundRobinStrategy(),
+                        "fullTextPluginRegion",
+                        httpClient -> {
+                            HttpResponse httpResponse = httpClient.postJson(endpoint, request, null);
                             @SuppressWarnings("unchecked")
-                            MiruResponse<FullTextAnswer> fullTextResponse = requestHelper.executeRequest(
-                                new MiruRequest<>("toolsFullText",
-                                    tenantId,
-                                    MiruActorId.NOT_PROVIDED,
-                                    MiruAuthzExpression.NOT_PROVIDED,
-                                    new FullTextQuery(
-                                        new MiruTimeRange(fromTime, toTime),
-                                        input.defaultField,
-                                        input.queryString,
-                                        constraintsFilter,
-                                        input.strategy,
-                                        input.maxCount),
-                                    MiruSolutionLogLevel.valueOf(input.logLevel)),
-                                FullTextConstants.FULLTEXT_PREFIX + FullTextConstants.CUSTOM_QUERY_ENDPOINT,
+                            MiruResponse<FullTextAnswer> extractResponse = responseMapper.extractResultFromResponse(httpResponse,
                                 MiruResponse.class,
                                 new Class[] { FullTextAnswer.class },
                                 null);
-                            response = fullTextResponse;
-                            if (response != null && response.answer != null) {
-                                break;
-                            } else {
-                                log.warn("Empty full text response from {}, trying another", requestHelper);
-                            }
-                        } catch (Exception e) {
-                            log.warn("Failed full text request to {}, trying another", new Object[] { requestHelper }, e);
-                        }
+                            return new ClientResponse<>(extractResponse, true);
+                        });
+                    if (fullTextResponse != null && fullTextResponse.answer != null) {
+                        response = fullTextResponse;
+                    } else {
+                        log.warn("Empty full text response from {}", tenantId);
                     }
                 }
 

@@ -237,7 +237,7 @@ public class MiruServiceInitializer {
             partitionComparison,
             clusterClient);
 
-        final MiruClusterPartitionDirector partitionDirector = new MiruClusterPartitionDirector(miruHost, clusterClient, expectedTenants);
+        final MiruClusterPartitionDirector partitionDirector = new MiruClusterPartitionDirector(miruHost, expectedTenants);
 
         MiruSolver solver = new MiruLowestLatencySolver(solverExecutor,
             config.getDefaultInitialSolvers(),

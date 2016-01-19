@@ -24,10 +24,6 @@ public interface MiruPartitionDirector {
 
     void warm(MiruTenantId tenantId) throws Exception;
 
-    void removeHost(MiruHost host) throws Exception;
-
-    void removeTopology(MiruTenantId tenantId, MiruPartitionId partitionId, MiruHost host) throws Exception;
-
     boolean checkInfo(MiruTenantId tenantId, MiruPartitionId partitionId, MiruPartitionCoordInfo info) throws Exception;
 
     MiruPartitionCoordInfo getInfo(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
