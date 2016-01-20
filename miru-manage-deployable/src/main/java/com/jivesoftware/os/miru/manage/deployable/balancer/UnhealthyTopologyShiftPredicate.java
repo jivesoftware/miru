@@ -43,7 +43,7 @@ public class UnhealthyTopologyShiftPredicate implements ShiftPredicate {
             }
         }
 
-        float currentPct = unhealthyCount / numberOfReplicas;
+        float currentPct = (float) unhealthyCount / (float) numberOfReplicas;
         return (currentPct > unhealthyPct);
     }
 }
