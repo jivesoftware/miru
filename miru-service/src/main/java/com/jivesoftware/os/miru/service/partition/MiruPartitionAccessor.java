@@ -46,6 +46,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
@@ -66,7 +67,6 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
     public final MiruBitmaps<BM, IBM> bitmaps;
     public final MiruPartitionCoord coord;
     public final MiruPartitionState state;
-    public final boolean hasPersistentStorage;
     public final Optional<MiruContext<BM, IBM, S>> persistentContext;
     public final Optional<MiruContext<BM, IBM, S>> transientContext;
 
@@ -74,6 +74,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
 
     public final AtomicLong endOfStream;
     public final AtomicBoolean hasOpenWriters;
+    public final AtomicReference<Boolean> hasPersistentStorage;
 
     public final Semaphore readSemaphore;
     public final Semaphore writeSemaphore;
@@ -90,7 +91,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         MiruBitmaps<BM, IBM> bitmaps,
         MiruPartitionCoord coord,
         MiruPartitionState state,
-        boolean hasPersistentStorage,
+        AtomicReference<Boolean> hasPersistentStorage,
         Optional<MiruContext<BM, IBM, S>> persistentContext,
         Optional<MiruContext<BM, IBM, S>> transientContext,
         AtomicReference<C> rebuildCursor,
@@ -129,7 +130,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         MiruBitmaps<BM, IBM> bitmaps,
         MiruPartitionCoord coord,
         MiruPartitionState state,
-        boolean hasPersistentStorage,
+        AtomicReference<Boolean> hasPersistentStorage,
         Optional<MiruContext<BM, IBM, S>> persistentContext,
         Optional<MiruContext<BM, IBM, S>> transientContext,
         MiruIndexRepairs indexRepairs,
@@ -186,8 +187,17 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         }
     }
 
-    MiruBackingStorage getBackingStorage() {
-        return hasPersistentStorage ? MiruBackingStorage.disk : MiruBackingStorage.memory;
+    interface CheckPersistent {
+
+        boolean check();
+    }
+
+    boolean hasPersistentStorage(CheckPersistent checkPersistent) {
+        return hasPersistentStorage.updateAndGet(existing -> existing != null ? existing : checkPersistent.check());
+    }
+
+    MiruBackingStorage getBackingStorage(CheckPersistent checkPersistent) {
+        return hasPersistentStorage(checkPersistent) ? MiruBackingStorage.disk : MiruBackingStorage.memory;
     }
 
     boolean isCorrupt() {
@@ -203,8 +213,8 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         obsolete.set(true);
     }
 
-    boolean canHotDeploy() {
-        return (state == MiruPartitionState.offline || state == MiruPartitionState.bootstrap) && hasPersistentStorage;
+    boolean canHotDeploy(CheckPersistent checkPersistent) {
+        return (state == MiruPartitionState.offline || state == MiruPartitionState.bootstrap) && hasPersistentStorage(checkPersistent);
     }
 
     boolean canHandleQueries() {
@@ -712,7 +722,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
                     bitmaps,
                     coord,
                     newState.or(state),
-                    newHasPersistentStorage.or(hasPersistentStorage),
+                    newHasPersistentStorage.isPresent() ? new AtomicReference<>(newHasPersistentStorage.get()) : hasPersistentStorage,
                     newPersistentContext,
                     newTransientContext,
                     indexRepairs,

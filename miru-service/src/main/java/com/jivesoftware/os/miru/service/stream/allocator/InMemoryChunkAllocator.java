@@ -61,7 +61,7 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
         return true;
     }
 
-    public <BM> void close(ChunkStore[] chunkStores) {
+    public void close(ChunkStore[] chunkStores) {
         if (partitionDeleteChunkStoreOnClose) {
             for (ChunkStore chunkStore : chunkStores) {
                 try {

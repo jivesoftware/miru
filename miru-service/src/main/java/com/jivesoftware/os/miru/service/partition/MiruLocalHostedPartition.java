@@ -29,6 +29,7 @@ import com.jivesoftware.os.miru.plugin.partition.MiruQueryablePartition;
 import com.jivesoftware.os.miru.plugin.partition.TrackError;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
 import com.jivesoftware.os.miru.service.NamedThreadFactory;
+import com.jivesoftware.os.miru.service.partition.MiruPartitionAccessor.CheckPersistent;
 import com.jivesoftware.os.miru.service.stream.MiruContext;
 import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
 import com.jivesoftware.os.miru.service.stream.MiruIndexer;
@@ -97,6 +98,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
     private final AtomicBoolean firstRebuild = new AtomicBoolean(true);
     private final AtomicBoolean sipEndOfWAL = new AtomicBoolean(false);
     private final AtomicBoolean firstSip = new AtomicBoolean(true);
+    private final CheckPersistent checkPersistent;
 
     private interface BootstrapCount extends MinMaxHealthCheckConfig {
 
@@ -174,6 +176,13 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
         this.transientMergeChits = transientMergeChits;
         this.timings = timings;
         this.futures = Lists.newCopyOnWriteArrayList(); // rebuild, sip-migrate
+        this.checkPersistent = () -> {
+            try {
+                return contextFactory.findBackingStorage(coord) == MiruBackingStorage.disk;
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to find backing storage for " + coord, e);
+            }
+        };
 
         MiruPartitionState initialState = MiruPartitionState.offline;
         MiruBackingStorage initialStorage = contextFactory.findBackingStorage(coord);
@@ -181,7 +190,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
             bitmaps,
             coord,
             initialState,
-            initialStorage == MiruBackingStorage.disk,
+            new AtomicReference<>(),
             Optional.<MiruContext<BM, IBM, S>>absent(),
             Optional.<MiruContext<BM, IBM, S>>absent(),
             indexRepairs,
@@ -207,12 +216,11 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
         Optional<MiruContext<BM, IBM, S>> optionalPersistentContext = Optional.absent();
         Optional<MiruContext<BM, IBM, S>> optionalTransientContext = Optional.absent();
 
-
         synchronized (factoryLock) {
 
             boolean refundPersistentChits = false;
             boolean obsolete = false;
-            if (state.isOnline() && accessor.hasPersistentStorage) {
+            if (state.isOnline() && accessor.hasPersistentStorage(checkPersistent)) {
                 if (accessor.persistentContext.isPresent()) {
                     optionalPersistentContext = accessor.persistentContext;
                 } else {
@@ -280,13 +288,13 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
             if (accessorRef.get() != existing) {
                 return null;
             }
-            MiruBackingStorage updateStorage = update.getBackingStorage();
+            MiruBackingStorage updateStorage = update.getBackingStorage(checkPersistent);
             MiruPartitionCoordInfo info = new MiruPartitionCoordInfo(update.state, updateStorage);
             heartbeatHandler.heartbeat(coord, Optional.of(info), Optional.<Long>absent());
 
             accessorRef.set(update);
 
-            MiruBackingStorage existingStorage = existing.getBackingStorage();
+            MiruBackingStorage existingStorage = existing.getBackingStorage(checkPersistent);
 
             log.decAtomic("state>" + existing.state.name());
             log.decAtomic("storage>" + existingStorage.name());
@@ -323,7 +331,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                 throw new MiruPartitionUnavailableException("Partition is outdated");
             }
         }
-        if (accessor.canHotDeploy()) {
+        if (accessor.canHotDeploy(checkPersistent)) {
             log.info("Hot deploying for query: {}", coord);
             accessor = open(accessor, MiruPartitionState.online, null, stackBuffer);
         }
@@ -424,7 +432,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
 
     @Override
     public MiruBackingStorage getStorage() {
-        return accessorRef.get().getBackingStorage();
+        return accessorRef.get().getBackingStorage(checkPersistent);
     }
 
     @Override
@@ -570,6 +578,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
     protected class BootstrapRunnable implements Runnable {
 
         private final AtomicLong banUnregisteredSchema = new AtomicLong();
+        private final AtomicBoolean destroyed = new AtomicBoolean();
 
         @Override
         public void run() {
@@ -601,38 +610,47 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                     close();
                     accessor = accessorRef.get();
                 }
-                if (accessor.state == MiruPartitionState.offline && accessor.hasPersistentStorage) {
-                    synchronized (factoryLock) {
-                        log.info("Cleaning disk for partition because it is marked for destruction: {}", coord);
+                //TODO this guarantees we will always check persistent storage on restart for every destroyed partition ever - need to make this super lazy
+                boolean acquired = !destroyed.get() && heartbeatHandler.acquireDestructionHandle();
+                if (acquired) {
+                    try {
+                        if (accessor.state == MiruPartitionState.offline && accessor.hasPersistentStorage(checkPersistent)) {
+                            synchronized (factoryLock) {
+                                log.info("Cleaning disk for partition because it is marked for destruction: {}", coord);
 
-                        MiruPartitionAccessor<BM, IBM, C, S> existing = accessorRef.get();
+                                MiruPartitionAccessor<BM, IBM, C, S> existing = accessorRef.get();
 
-                        MiruPartitionAccessor<BM, IBM, C, S> cleaned = MiruPartitionAccessor.initialize(miruStats,
-                            bitmaps,
-                            coord,
-                            MiruPartitionState.offline,
-                            false,
-                            Optional.<MiruContext<BM, IBM, S>>absent(),
-                            Optional.<MiruContext<BM, IBM, S>>absent(),
-                            indexRepairs,
-                            indexer,
-                            false);
-                        cleaned = updatePartition(existing, cleaned);
-                        if (cleaned != null) {
-                            existing.close(contextFactory, rebuildDirector);
-                            existing.refundChits(persistentMergeChits);
-                            existing.refundChits(transientMergeChits);
-                            clearFutures();
-                            contextFactory.cleanDisk(coord);
-                        } else {
-                            log.warn("Failed to clean disk because accessor changed for partition: {}", coord);
+                                MiruPartitionAccessor<BM, IBM, C, S> cleaned = MiruPartitionAccessor.initialize(miruStats,
+                                    bitmaps,
+                                    coord,
+                                    MiruPartitionState.offline,
+                                    new AtomicReference<>(false),
+                                    Optional.<MiruContext<BM, IBM, S>>absent(),
+                                    Optional.<MiruContext<BM, IBM, S>>absent(),
+                                    indexRepairs,
+                                    indexer,
+                                    false);
+                                cleaned = updatePartition(existing, cleaned);
+                                if (cleaned != null) {
+                                    existing.close(contextFactory, rebuildDirector);
+                                    existing.refundChits(persistentMergeChits);
+                                    existing.refundChits(transientMergeChits);
+                                    clearFutures();
+                                    contextFactory.cleanDisk(coord);
+                                    destroyed.set(true);
+                                } else {
+                                    log.warn("Failed to clean disk because accessor changed for partition: {}", coord);
+                                }
+                            }
                         }
+                    } finally {
+                        heartbeatHandler.releaseDestructionHandle();
                     }
                 }
             } else if (partitionActive.activeUntilTimestamp > System.currentTimeMillis()) {
                 if (accessor.state == MiruPartitionState.offline) {
-                    if (accessor.hasPersistentStorage) {
-                        if (!removed.get() && accessor.canHotDeploy()) {
+                    if (accessor.hasPersistentStorage(checkPersistent)) {
+                        if (!removed.get() && accessor.canHotDeploy(checkPersistent)) {
                             log.info("Hot deploying for checkActive: {}", coord);
                             open(accessor, MiruPartitionState.online, null, stackBuffer);
                         }
