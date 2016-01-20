@@ -95,13 +95,14 @@ public class MiruManageEndpoints {
     }
 
     @POST
-    @Path("/balancer/import")
+    @Path("/balancer/import/{forceInstance}")
     @Consumes(MediaType.MULTIPART_FORM_DATA)
     @Produces(MediaType.TEXT_HTML)
-    public Response importTopology(@FormDataParam("file") InputStream fileInputStream,
+    public Response importTopology(@PathParam("forceInstance") boolean forceInstance,
+        @FormDataParam("file") InputStream fileInputStream,
         @FormDataParam("file") FormDataContentDisposition contentDispositionHeader) {
         try {
-            rebalanceDirector.importTopology(fileInputStream);
+            rebalanceDirector.importTopology(fileInputStream, forceInstance);
             return Response.ok("success").build();
         } catch (Throwable t) {
             return Response.serverError().entity(t.getMessage()).build();
@@ -192,28 +193,6 @@ public class MiruManageEndpoints {
             return Response.ok("success").build();
         } catch (Throwable t) {
             LOG.error("POST /topology/repair", t);
-            return Response.serverError().entity(t.getMessage()).build();
-        }
-    }
-
-    @GET
-    @Path("/topology/visual")
-    @Produces("image/png")
-    public Response visualizeTopologies(@QueryParam("width") final int width,
-        @QueryParam("split") final int split,
-        @QueryParam("index") final int index,
-        @QueryParam("token") final String token) {
-        try {
-            return Response.ok().entity((StreamingOutput) output -> {
-                try {
-                    rebalanceDirector.visualizeTopologies(width, split, index, token, output);
-                    output.flush();
-                } catch (Exception e) {
-                    throw new IOException("Problem generating visual", e);
-                }
-            }).build();
-        } catch (Throwable t) {
-            LOG.error("GET /topology/visual {}", new Object[] { width }, t);
             return Response.serverError().entity(t.getMessage()).build();
         }
     }

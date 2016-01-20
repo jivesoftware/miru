@@ -4,30 +4,51 @@
  * Balancer page
  *
  * @param? hosts
- * @param? hostWidth
- * @param? imageWidth
- * @param? numHosts
- * @param? token
  */
 {template .balancerRegion}
     <div class="panel panel-default">
         <div class="panel-heading">Balancer</div>
         <div class="panel-body">
             {if $hosts}
-                <input type="button" value="Repair" onclick="miru.balancer.repair(this)" />
-                <input type="button" value="Export" onclick="window.location.assign('/miru/manage/balancer/export')" />
-                <br/>
-                <form method="post" action="/miru/manage/balancer/import" enctype="multipart/form-data">
-                    <input type="file" name="file" size="50" />
-                    <input type="submit" value="Import" />
-                </form>
+                <table class="table table-condensed">
+                    <tr>
+                        <td><input type="button" value="Repair" onclick="miru.balancer.repair(this)" /></td>
+                        <td>Ensures optimal rack distribution for each partition replica set. <strong>WARNING: This is not yet rack aware!</strong></td>
+                    </tr>
+                    <tr>
+                        <td><input type="button" value="Export" onclick="window.location.assign('/miru/manage/balancer/export/false')" /></td>
+                        <td>Download topology using configured host identifier.</td>
+                    </tr>
+                    <tr>
+                        <td><input type="button" value="Export Instance" onclick="window.location.assign('/miru/manage/balancer/export/true')" /></td>
+                        <td>Download topology using instance derived host identifier.</td>
+                    </tr>
+                    <form method="post" action="/miru/manage/balancer/import/false" enctype="multipart/form-data">
+                    <tr>
+                        <td><input type="submit" value="Import" /></td>
+                        <td>
+                            Imports the topology from the selected file using the exported host identifiers.
+                            <input type="file" name="file" size="50" />
+                        </td>
+                    </tr>
+                    </form>
+                    <form method="post" action="/miru/manage/balancer/import/true" enctype="multipart/form-data">
+                    <tr>
+                        <td><input type="submit" value="Import Instance" /></td>
+                        <td>
+                            Imports the topology from the selected file using instance derived host identifiers.
+                            <input type="file" name="file" size="50" />
+                        </td>
+                    </tr>
+                    </form>
+                </table>
                 <br/><br/>
                 <table border="0" cellspacing="2" cellpadding="0" class="balancer">
                     <tbody>
                         <tr>
                             <td class="balancer-label balancer-host">Host</td>
                             {foreach $host in $hosts}
-                                <td style="width:{$hostWidth}px">{$host.logicalName}</td>
+                                <td>{$host.logicalName}</td>
                             {/foreach}
                         </tr>
                         <tr>
@@ -75,14 +96,6 @@
                                     <input type="button" value="Remove" onclick="miru.balancer.remove(this, '{$host.logicalName}')" /><br/>
                                 </td>
                             {/foreach}
-                        </tr>
-                        <tr>
-                            <td class="balancer-label balancer-topology">Topology</td>
-                            <td colspan="{$numHosts}">
-                                {for $i in range(0, 100)}
-                                    <img class="balancer-visual" src="/miru/manage/topology/visual?width={$imageWidth}&amp;split=100&amp;index={$i}&amp;token={$token}" />
-                                {/for}
-                            </td>
                         </tr>
                     </tbody>
                 </table>
