@@ -5,7 +5,7 @@ import com.google.common.base.Optional;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
+import com.jivesoftware.os.miru.cluster.MiruRegistryClusterClient;
 import com.jivesoftware.os.miru.manage.deployable.balancer.CaterpillarSelectHostsStrategy;
 import com.jivesoftware.os.miru.manage.deployable.balancer.MiruRebalanceDirector;
 import com.jivesoftware.os.miru.manage.deployable.balancer.ShiftPredicate;
@@ -13,7 +13,6 @@ import com.jivesoftware.os.miru.manage.deployable.balancer.UnhealthyTopologyShif
 import com.jivesoftware.os.miru.manage.deployable.region.MiruSchemaRegion;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import java.io.IOException;
 import java.io.InputStream;
 import javax.inject.Singleton;
 import javax.ws.rs.Consumes;
@@ -25,7 +24,6 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -44,14 +42,14 @@ public class MiruManageEndpoints {
 
     private final MiruManageService miruManageService;
     private final MiruRebalanceDirector rebalanceDirector;
-    private final MiruClusterRegistry clusterRegistry;
+    private final MiruRegistryClusterClient registryClusterClient;
 
     public MiruManageEndpoints(@Context MiruManageService miruManageService,
         @Context MiruRebalanceDirector rebalanceDirector,
-        @Context MiruClusterRegistry clusterRegistry) {
+        @Context MiruRegistryClusterClient registryClusterClient) {
         this.miruManageService = miruManageService;
         this.rebalanceDirector = rebalanceDirector;
-        this.clusterRegistry = clusterRegistry;
+        this.registryClusterClient = registryClusterClient;
     }
 
     @GET
@@ -203,7 +201,7 @@ public class MiruManageEndpoints {
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     public Response removeHost(@PathParam("logicalName") String logicalName) {
         try {
-            clusterRegistry.removeHost(new MiruHost(logicalName));
+            registryClusterClient.removeHost(new MiruHost(logicalName));
             return Response.ok("success").build();
         } catch (Throwable t) {
             LOG.error("DELETE /hosts/{}", new Object[] { logicalName }, t);
