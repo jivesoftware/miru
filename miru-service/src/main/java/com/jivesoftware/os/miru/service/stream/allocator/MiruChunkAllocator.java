@@ -13,5 +13,5 @@ public interface MiruChunkAllocator {
 
     ChunkStore[] allocateChunkStores(MiruPartitionCoord coord, StackBuffer stackBuffer) throws Exception;
 
-    <BM> void close(ChunkStore[] chunkStores);
+    void close(ChunkStore[] chunkStores);
 }

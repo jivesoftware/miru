@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  *
@@ -38,6 +39,7 @@ public class MiruPartitionHeartbeatHandler {
     private final Object cursorLock = new Object();
     private final Map<String, NamedCursor> partitionActiveUpdatesSinceCursors = Maps.newHashMap();
     private final Map<String, NamedCursor> topologyUpdatesSinceCursors = Maps.newHashMap();
+    private final AtomicBoolean destructionPermit = new AtomicBoolean();
 
     public MiruPartitionHeartbeatHandler(MiruClusterClient clusterClient) {
         this.clusterClient = clusterClient;
@@ -153,4 +155,11 @@ public class MiruPartitionHeartbeatHandler {
         }
     }
 
+    public boolean acquireDestructionHandle() {
+        return destructionPermit.compareAndSet(false, true);
+    }
+
+    public void releaseDestructionHandle() {
+        destructionPermit.set(false);
+    }
 }
