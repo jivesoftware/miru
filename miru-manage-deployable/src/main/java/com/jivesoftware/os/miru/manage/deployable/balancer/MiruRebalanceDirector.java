@@ -89,20 +89,24 @@ public class MiruRebalanceDirector {
         this.readerConnectionDescriptorsProvider = readerConnectionDescriptorsProvider;
     }
 
-    //TODO support translation from host:port to instanceName_instanceKey
+    private Map<MiruHost, MiruHost> buildCoercionMap(boolean forceInstance) {
+        Map<MiruHost, MiruHost> coercionMap = Maps.newHashMap();
+        if (forceInstance) {
+            ConnectionDescriptors connectionDescriptors = readerConnectionDescriptorsProvider.getConnections("");
+            List<ConnectionDescriptor> descriptors = connectionDescriptors.getConnectionDescriptors();
+            for (ConnectionDescriptor descriptor : descriptors) {
+                InstanceDescriptor instanceDescriptor = descriptor.getInstanceDescriptor();
+                HostPort hostPort = descriptor.getHostPort();
+                coercionMap.put(MiruHostProvider.fromHostPort(hostPort.getHost(), hostPort.getPort()),
+                    MiruHostProvider.fromInstance(instanceDescriptor.instanceName, instanceDescriptor.instanceKey));
+            }
+        }
+        return coercionMap;
+    }
+
     public void exportTopology(OutputStream os, boolean forceInstance) throws IOException {
         try {
-            Map<MiruHost, MiruHost> coercionMap = Maps.newHashMap();
-            if (forceInstance) {
-                ConnectionDescriptors connectionDescriptors = readerConnectionDescriptorsProvider.getConnections("");
-                List<ConnectionDescriptor> descriptors = connectionDescriptors.getConnectionDescriptors();
-                for (ConnectionDescriptor descriptor : descriptors) {
-                    InstanceDescriptor instanceDescriptor = descriptor.getInstanceDescriptor();
-                    HostPort hostPort = descriptor.getHostPort();
-                    coercionMap.put(MiruHostProvider.fromHostPort(hostPort.getHost(), hostPort.getPort()),
-                        MiruHostProvider.fromInstance(instanceDescriptor.instanceName, instanceDescriptor.instanceKey));
-                }
-            }
+            Map<MiruHost, MiruHost> coercionMap = buildCoercionMap(forceInstance);
             BufferedOutputStream buf = new BufferedOutputStream(os);
             List<MiruTenantId> tenantIds = miruWALClient.getAllTenantIds();
             AtomicLong exported = new AtomicLong(0);
@@ -126,7 +130,8 @@ public class MiruRebalanceDirector {
         }
     }
 
-    public void importTopology(InputStream in) throws Exception {
+    public void importTopology(InputStream in, boolean forceInstance) throws Exception {
+        Map<MiruHost, MiruHost> coercionMap = buildCoercionMap(forceInstance);
         Splitter splitter = Splitter.on(',');
         BufferedReader reader = new BufferedReader(new InputStreamReader(in));
         ListMultimap<MiruHost, TenantAndPartition> elections = ArrayListMultimap.create();
@@ -137,6 +142,7 @@ public class MiruRebalanceDirector {
             MiruPartitionId partitionId = split.hasNext() ? MiruPartitionId.of(Integer.parseInt(split.next())) : null;
             MiruHost host = split.hasNext() ? new MiruHost(split.next()) : null;
             if (tenantId != null && partitionId != null && host != null) {
+                host = Objects.firstNonNull(coercionMap.get(host), host);
                 elections.put(host, new TenantAndPartition(tenantId, partitionId));
             }
         }
@@ -256,11 +262,7 @@ public class MiruRebalanceDirector {
         return replicaTable;
     }
 
-    private static final int VISUAL_PARTITION_HEIGHT = 4;
-    private static final int VISUAL_PADDING = 2;
-    private static final int VISUAL_PADDING_HALVED = VISUAL_PADDING / 2;
-    private static final Color[] COLORS;
-
+    /*private static final Color[] COLORS;
     static {
         COLORS = new Color[MiruPartitionState.values().length];
         Arrays.fill(COLORS, Color.WHITE);
@@ -270,7 +272,7 @@ public class MiruRebalanceDirector {
         COLORS[MiruPartitionState.online.ordinal()] = Color.GREEN;
         COLORS[MiruPartitionState.obsolete.ordinal()] = Color.CYAN;
         COLORS[MiruPartitionState.upgrading.ordinal()] = Color.PINK;
-    }
+    }*/
 
     public void rebuildTenantPartition(MiruHost miruHost, MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         String result = readerClient.call("", new MiruHostSelectiveStrategy(new MiruHost[] { miruHost }), "prioritizeRebuild", httpClient -> {
@@ -282,214 +284,4 @@ public class MiruRebalanceDirector {
         }
     }
 
-    private static class VisualizeContext {
-
-        private final List<MiruHost> allHosts;
-        private final Set<MiruHost> unhealthyHosts;
-        private final List<List<MiruTenantId>> splitTenantIds;
-
-        private VisualizeContext(List<MiruHost> allHosts, Set<MiruHost> unhealthyHosts, List<List<MiruTenantId>> splitTenantIds) {
-            this.allHosts = allHosts;
-            this.unhealthyHosts = unhealthyHosts;
-            this.splitTenantIds = splitTenantIds;
-        }
-    }
-
-    private final Cache<String, VisualizeContext> contextCache = CacheBuilder.newBuilder()
-        .maximumSize(10)
-        .expireAfterAccess(10, TimeUnit.MINUTES)
-        .weakValues()
-        .build();
-    private final StripingLocksProvider<String> tokenLocks = new StripingLocksProvider<>(64);
-
-    public void visualizeTopologies(int width, final int split, int index, String token, OutputStream out) throws Exception {
-        VisualizeContext context;
-        synchronized (tokenLocks.lock(token, 0)) {
-            context = contextCache.get(token, () -> {
-                LinkedHashSet<HostHeartbeat> heartbeats = clusterRegistry.getAllHosts();
-                List<MiruHost> allHosts = Lists.newArrayList();
-                Set<MiruHost> unhealthyHosts = Sets.newHashSet();
-                for (HostHeartbeat heartbeat : heartbeats) {
-                    allHosts.add(heartbeat.host);
-                    if (heartbeat.heartbeat < System.currentTimeMillis() - TimeUnit.MINUTES.toMillis(1)) { //TODO configure
-                        unhealthyHosts.add(heartbeat.host);
-                    }
-                }
-
-                List<MiruTenantId> allTenantIds = miruWALClient.getAllTenantIds();
-                List<List<MiruTenantId>> splitTenantIds = Lists.partition(allTenantIds, Math.max(1, (allTenantIds.size() + split - 1) / split));
-
-                return new VisualizeContext(allHosts, unhealthyHosts, splitTenantIds);
-            });
-        }
-
-        final Table<MiruTenantId, MiruPartitionId, List<MiruTopologyStatus>> topologies = HashBasedTable.create();
-        List<MiruTenantId> tenantIds = (index < context.splitTenantIds.size() - 1) ? context.splitTenantIds.get(index) : Collections.<MiruTenantId>emptyList();
-        clusterRegistry.topologiesForTenants(tenantIds, status -> {
-            if (status != null) {
-                MiruPartitionCoord coord = status.partition.coord;
-                List<MiruTopologyStatus> statuses = topologies.get(coord.tenantId, coord.partitionId);
-                if (statuses == null) {
-                    statuses = Lists.newArrayList();
-                    topologies.put(coord.tenantId, coord.partitionId, statuses);
-                }
-                statuses.add(status);
-            }
-            return status;
-        });
-
-        int numHosts = context.allHosts.size();
-        int numPartitions = topologies.size();
-        if (numHosts == 0) {
-            throw new IllegalStateException("Not enough data");
-        }
-
-        int visualHostWidth = (width - VISUAL_PADDING) / context.allHosts.size() - VISUAL_PADDING;
-        int w = VISUAL_PADDING + (visualHostWidth + VISUAL_PADDING) * numHosts;
-        int h = VISUAL_PADDING + (VISUAL_PARTITION_HEIGHT + VISUAL_PADDING) * numPartitions;
-        BufferedImage bi = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
-        Graphics2D ig2 = bi.createGraphics();
-
-        int y = VISUAL_PADDING;
-        for (List<MiruTopologyStatus> statuses : topologies.values()) {
-            int unhealthyPartitions = 0;
-            int offlinePartitions = 0;
-            int onlinePartitions = 0;
-            for (MiruTopologyStatus status : statuses) {
-                if (context.unhealthyHosts.contains(status.partition.coord.host)) {
-                    unhealthyPartitions++;
-                }
-                if (status.partition.info.state == MiruPartitionState.offline) {
-                    offlinePartitions++;
-                }
-                if (status.partition.info.state.isOnline()) {
-                    onlinePartitions++;
-                }
-            }
-            Color unhealthyColor = null;
-            if (unhealthyPartitions > 0) {
-                int numReplicas = statuses.size();
-                float unhealthyPct = unhealthyPartitions / numReplicas;
-                if (unhealthyPct < 0.33f) {
-                    unhealthyColor = Color.YELLOW;
-                } else if (unhealthyPct < 0.67f) {
-                    unhealthyColor = Color.ORANGE;
-                } else {
-                    unhealthyColor = Color.RED;
-                }
-            }
-
-            if (offlinePartitions < statuses.size() && onlinePartitions == 0) {
-                // partition appears to be awake, but nothing is online, so paint the background
-                ig2.setColor(new Color(64, 0, 0));
-                ig2.fillRect(VISUAL_PADDING_HALVED,
-                    y - VISUAL_PADDING_HALVED,
-                    (visualHostWidth + VISUAL_PADDING) * numHosts,
-                    VISUAL_PARTITION_HEIGHT + VISUAL_PADDING);
-            }
-
-            for (MiruTopologyStatus status : statuses) {
-                int x = VISUAL_PADDING + context.allHosts.indexOf(status.partition.coord.host) * (visualHostWidth + VISUAL_PADDING);
-                if (context.unhealthyHosts.contains(status.partition.coord.host)) {
-                    ig2.setColor(unhealthyColor);
-                } else {
-                    ig2.setColor(COLORS[status.partition.info.state.ordinal()]);
-                }
-                ig2.fillRect(x, y, visualHostWidth, VISUAL_PARTITION_HEIGHT);
-            }
-
-            y += VISUAL_PARTITION_HEIGHT + VISUAL_PADDING;
-        }
-
-        ImageIO.write(bi, "PNG", out);
-    }
-
-    public List<Map<String, String>> visualize() throws Exception {
-
-        List<MiruHost> allHosts = Lists.newArrayList();
-        Set<MiruHost> unhealthyHosts = Sets.newHashSet();
-        LinkedHashSet<HostHeartbeat> heartbeats = clusterRegistry.getAllHosts();
-        Map<MiruHost, Integer> hostToIndex = Maps.newHashMapWithExpectedSize(heartbeats.size());
-        int i = 0;
-        for (HostHeartbeat heartbeat : heartbeats) {
-            allHosts.add(heartbeat.host);
-            hostToIndex.put(heartbeat.host, i);
-            i++;
-            if (heartbeat.heartbeat < System.currentTimeMillis() - TimeUnit.MINUTES.toMillis(1)) { //TODO configure
-                unhealthyHosts.add(heartbeat.host);
-            }
-        }
-
-        Table<MiruTenantId, MiruPartitionId, List<MiruTopologyStatus>> topologies = HashBasedTable.create();
-        List<MiruTenantId> tenantIds = miruWALClient.getAllTenantIds();
-        clusterRegistry.topologiesForTenants(tenantIds, status -> {
-            if (status != null) {
-                MiruPartitionCoord coord = status.partition.coord;
-                List<MiruTopologyStatus> statuses = topologies.get(coord.tenantId, coord.partitionId);
-                if (statuses == null) {
-                    statuses = Lists.newArrayList();
-                    topologies.put(coord.tenantId, coord.partitionId, statuses);
-                }
-                statuses.add(status);
-            }
-            return status;
-        });
-
-        int numHosts = allHosts.size();
-        if (numHosts == 0) {
-            throw new IllegalStateException("Not enough data");
-        }
-
-        List<Map<String, String>> rows = new ArrayList<>();
-        for (List<MiruTopologyStatus> statuses : topologies.values()) {
-
-            Color[] statusColors = new Color[numHosts];
-            int unhealthyPartitions = 0;
-            int offlinePartitions = 0;
-            int onlinePartitions = 0;
-            for (MiruTopologyStatus status : statuses) {
-                if (unhealthyHosts.contains(status.partition.coord.host)) {
-                    unhealthyPartitions++;
-                }
-                if (status.partition.info.state == MiruPartitionState.offline) {
-                    offlinePartitions++;
-                }
-                if (status.partition.info.state.isOnline()) {
-                    onlinePartitions++;
-                }
-            }
-            Color unhealthyColor = null;
-            if (unhealthyPartitions > 0) {
-                int numReplicas = statuses.size();
-                float unhealthyPct = unhealthyPartitions / numReplicas;
-                if (unhealthyPct < 0.33f) {
-                    unhealthyColor = Color.YELLOW;
-                } else if (unhealthyPct < 0.67f) {
-                    unhealthyColor = Color.ORANGE;
-                } else {
-                    unhealthyColor = Color.RED;
-                }
-            }
-
-            if (offlinePartitions < statuses.size() && onlinePartitions == 0) {
-                Color c = new Color(64, 0, 0);
-            }
-
-            for (MiruTopologyStatus status : statuses) {
-                if (unhealthyHosts.contains(status.partition.coord.host)) {
-                    Color c = unhealthyColor;
-                } else {
-                    Color c = COLORS[status.partition.info.state.ordinal()];
-                }
-            }
-
-//            List<String> row = new ArrayList<>();
-//            row.add(null);
-//            for (int c = 0; c < statusColors.length; c++) {
-//                row.add(null);
-//            }
-//            row.add(null);
-        }
-        return rows;
-    }
 }

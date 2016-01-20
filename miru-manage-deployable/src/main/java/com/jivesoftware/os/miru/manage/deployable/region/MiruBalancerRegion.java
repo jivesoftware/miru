@@ -21,7 +21,6 @@ import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import org.apache.commons.lang.RandomStringUtils;
 
 /**
  *
@@ -77,13 +76,6 @@ public class MiruBalancerRegion implements MiruPageRegion<Void> {
                     .put("numUpgrading", String.valueOf(stateCounts.count(MiruPartitionState.upgrading)))
                     .build();
             }));
-            data.put("numHosts", String.valueOf(hostHeartbeats.size()));
-            data.put("token", RandomStringUtils.randomAlphanumeric(8));
-
-            int totalWidth = 920;
-            int hostWidth = totalWidth / hostHeartbeats.size() - 2;
-            data.put("imageWidth", String.valueOf(totalWidth));
-            data.put("hostWidth", hostWidth);
         } catch (Exception e) {
             log.error("Unable to retrieve data", e);
         }
