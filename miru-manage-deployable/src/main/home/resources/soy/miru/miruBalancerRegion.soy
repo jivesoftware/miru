@@ -91,9 +91,9 @@
                             <td class="balancer-label balancer-action">Action</td>
                             {foreach $host in $hosts}
                                 <td>
-                                    <input type="button" value="Rebalance" onclick="miru.balancer.rebalance(this, '{$host.logicalName}', 1)" /><br/>
-                                    <input type="button" value="Evacuate" onclick="miru.balancer.rebalance(this, '{$host.logicalName}', 0)" /><br/>
-                                    <input type="button" value="Remove" onclick="miru.balancer.remove(this, '{$host.logicalName}')" /><br/>
+                                    <input type="button" value="Rebalance" onclick="if (confirm('Are you sure you want to rebalance this host?')) miru.balancer.rebalance(this, '{$host.logicalName}', 1)" /><br/>
+                                    <input type="button" value="Evacuate" onclick="if (confirm('Are you sure you want to evacuate this host?')) miru.balancer.rebalance(this, '{$host.logicalName}', 0)" /><br/>
+                                    <input type="button" value="Remove" onclick="if (confirm('Are you sure you want to remove this host?')) miru.balancer.remove(this, '{$host.logicalName}')" /><br/>
                                 </td>
                             {/foreach}
                         </tr>
