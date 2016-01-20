@@ -193,9 +193,7 @@ public class MiruReaderMain {
             MiruServiceConfig miruServiceConfig = deployable.config(MiruServiceConfig.class);
             MiruWALConfig walConfig = deployable.config(MiruWALConfig.class);
 
-            MiruHost miruHost = miruServiceConfig.getNameByHostPort()
-                ? MiruHostProvider.fromHostPort(instanceConfig.getHost(), instanceConfig.getMainPort())
-                : MiruHostProvider.fromInstance(instanceConfig.getInstanceName(), instanceConfig.getInstanceKey());
+            MiruHost miruHost = MiruHostProvider.fromInstance(instanceConfig.getInstanceName(), instanceConfig.getInstanceKey());
 
             MiruResourceLocator miruResourceLocator = new MiruResourceLocatorInitializer().initialize(miruServiceConfig);
 
