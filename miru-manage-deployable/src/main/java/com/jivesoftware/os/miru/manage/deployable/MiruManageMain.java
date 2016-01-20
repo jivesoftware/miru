@@ -40,6 +40,7 @@ import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.api.wal.MiruWALConfig;
 import com.jivesoftware.os.miru.api.wal.RCVSCursor;
 import com.jivesoftware.os.miru.api.wal.RCVSSipCursor;
+import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruRegistryClusterClient;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSetDirector;
 import com.jivesoftware.os.miru.cluster.amza.AmzaClusterRegistry;
@@ -292,10 +293,10 @@ public class MiruManageMain {
             deployable.addEndpoints(MiruManageEndpoints.class);
             deployable.addInjectables(MiruManageService.class, miruManageService);
             deployable.addInjectables(MiruRebalanceDirector.class, rebalanceDirector);
+            deployable.addInjectables(MiruRegistryClusterClient.class, clusterClient);
             deployable.addInjectables(MiruWALClient.class, miruWALClient);
             deployable.addEndpoints(MiruTopologyEndpoints.class);
             deployable.addInjectables(MiruStats.class, stats);
-            deployable.addInjectables(MiruRegistryClusterClient.class, clusterClient);
 
             deployable.addResource(sourceTree);
             deployable.buildServer().start();
