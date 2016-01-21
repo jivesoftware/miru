@@ -291,7 +291,7 @@ public class MiruLocalHostedPartitionTest {
             TimeUnit.HOURS.toMillis(1),
             TimeUnit.HOURS.toMillis(1),
             TimeUnit.DAYS.toMillis(365),
-            0);
+            1);
 
         OrderIdProvider orderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(0), new SnowflakeIdPacker(), new JiveEpochTimestampProvider());
         MiruReplicaSetDirector replicaSetDirector = new MiruReplicaSetDirector(orderIdProvider, clusterRegistry,

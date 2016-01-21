@@ -157,7 +157,7 @@ public class MiruWALUIServiceNGTest {
             rowsChanged -> {
             });
 
-        amzaService.start();
+        amzaService.start(ringMember, ringHost);
 
         EmbeddedClientProvider clientProvider = new EmbeddedClientProvider(amzaService);
         MiruClusterRegistry clusterRegistry = new AmzaClusterRegistry(amzaService,
@@ -168,7 +168,7 @@ public class MiruWALUIServiceNGTest {
             TimeUnit.HOURS.toMillis(1),
             TimeUnit.HOURS.toMillis(1),
             TimeUnit.DAYS.toMillis(365),
-            0);
+            1);
         MiruRegistryClusterClient clusterClient = new MiruRegistryClusterClient(clusterRegistry, new MiruReplicaSetDirector(orderIdProvider, clusterRegistry,
             stream -> {
             }));

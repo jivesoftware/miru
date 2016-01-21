@@ -166,7 +166,7 @@ public class MiruAmzaServiceInitializer {
         // run once to populate system ring
         routingBirdAmzaDiscovery.run();
 
-        amzaService.start();
+        amzaService.start(ringMember, ringHost);
 
         System.out.println("-----------------------------------------------------------------------");
         System.out.println("|      Amza Service Online");
