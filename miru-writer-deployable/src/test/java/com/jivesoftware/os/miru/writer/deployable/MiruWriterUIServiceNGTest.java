@@ -158,18 +158,7 @@ public class MiruWriterUIServiceNGTest {
             rowsChanged -> {
             });
 
-        amzaService.start();
-
-        EmbeddedClientProvider amzaClientProvider = new EmbeddedClientProvider(amzaService);
-        MiruClusterRegistry clusterRegistry = new AmzaClusterRegistry(amzaService,
-            amzaClientProvider,
-            10_000L,
-            new JacksonJsonObjectTypeMarshaller<>(MiruSchema.class, mapper),
-            3,
-            TimeUnit.HOURS.toMillis(1),
-            TimeUnit.HOURS.toMillis(1),
-            TimeUnit.DAYS.toMillis(365),
-            0);
+        amzaService.start(ringMember, ringHost);
 
         MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(config);
         service = new MiruWriterUIServiceInitializer().initialize("test", 1, renderer, new MiruStats(), null);
