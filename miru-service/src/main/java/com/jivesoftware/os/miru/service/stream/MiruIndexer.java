@@ -100,7 +100,7 @@ public class MiruIndexer<BM extends IBM, IBM> {
         // 6. Update activity index
         otherFutures.add(indexExecutor.submit(() -> {
             StackBuffer stackBuffer = new StackBuffer();
-            context.activityIndex.set(internalActivityAndIds, stackBuffer);
+            context.activityIndex.set(context.schema, internalActivityAndIds, stackBuffer);
             return null;
         }));
 
@@ -135,7 +135,7 @@ public class MiruIndexer<BM extends IBM, IBM> {
 
         StackBuffer stackBuffer = new StackBuffer();
         context.activityInternExtern.intern(activityAndIds, 0, activityAndIds.size(), internalActivityAndIds, context.schema, stackBuffer);
-        context.activityIndex.setAndReady(internalActivityAndIds, stackBuffer);
+        context.activityIndex.setAndReady(context.schema, internalActivityAndIds, stackBuffer);
     }
 
     /*public void repair(final MiruContext<BM> context,
@@ -197,7 +197,7 @@ public class MiruIndexer<BM extends IBM, IBM> {
             context.removalIndex.set(stackBuffer, id);
 
             // finally, update the activity index
-            context.activityIndex.setAndReady(internalActivity, stackBuffer);
+            context.activityIndex.setAndReady(context.schema, internalActivity, stackBuffer);
         }
     }
 

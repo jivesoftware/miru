@@ -8,6 +8,7 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.schema.DefaultMiruSchemaDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema.Builder;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.bitmaps.roaring5.MiruBitmapsRoaring;
@@ -47,9 +48,10 @@ public class MiruActivityIndexTest {
     @Test(dataProvider = "miruActivityIndexDataProvider")
     public void testSetActivity(MiruActivityIndex miruActivityIndex, boolean throwsUnsupportedExceptionOnSet) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
+        MiruSchema schema = new Builder("test", 1).build();
         MiruInternalActivity miruActivity = buildMiruActivity(new MiruTenantId(RandomStringUtils.randomAlphabetic(10).getBytes()), 1, new String[0], 5);
         try {
-            miruActivityIndex.setAndReady(Arrays.asList(new MiruActivityAndId<>(miruActivity, 0)), stackBuffer);
+            miruActivityIndex.setAndReady(schema, Arrays.asList(new MiruActivityAndId<>(miruActivity, 0)), stackBuffer);
             if (throwsUnsupportedExceptionOnSet) {
                 fail("This implementation of the MiruActivityIndex should have thrown an UnsupportedOperationException");
             }
@@ -63,9 +65,10 @@ public class MiruActivityIndexTest {
     @Test(dataProvider = "miruActivityIndexDataProvider")
     public void testSetActivityOutOfBounds(MiruActivityIndex miruActivityIndex, boolean throwsUnsupportedExceptionOnSet) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
+        MiruSchema schema = new Builder("test", 1).build();
         MiruInternalActivity miruActivity = buildMiruActivity(new MiruTenantId(RandomStringUtils.randomAlphabetic(10).getBytes()), 1, new String[0], 5);
         try {
-            miruActivityIndex.setAndReady(Arrays.asList(new MiruActivityAndId<>(miruActivity, -1)), stackBuffer);
+            miruActivityIndex.setAndReady(schema, Arrays.asList(new MiruActivityAndId<>(miruActivity, -1)), stackBuffer);
             if (throwsUnsupportedExceptionOnSet) {
                 fail("This implementation of the MiruActivityIndex should have thrown an UnsupportedOperationException");
             }
@@ -108,6 +111,7 @@ public class MiruActivityIndexTest {
     @DataProvider(name = "miruActivityIndexDataProviderWithData")
     public Object[][] miruActivityIndexDataProviderWithData() throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
+        MiruSchema schema = new Builder("test", 1).build();
         MiruTenantId tenantId = new MiruTenantId(RandomStringUtils.randomAlphabetic(10).getBytes());
         MiruInternalActivity miruActivity1 = buildMiruActivity(tenantId, 1, new String[0], 3);
         MiruInternalActivity miruActivity2 = buildMiruActivity(tenantId, 2, new String[0], 4);
@@ -116,13 +120,13 @@ public class MiruActivityIndexTest {
 
         // Add activities to in-memory index
         MiruActivityIndex hybridActivityIndex = buildInMemoryActivityIndex();
-        hybridActivityIndex.setAndReady(Arrays.asList(
+        hybridActivityIndex.setAndReady(schema, Arrays.asList(
             new MiruActivityAndId<>(miruActivity1, 0),
             new MiruActivityAndId<>(miruActivity2, 1),
             new MiruActivityAndId<>(miruActivity3, 2)), stackBuffer);
 
         MiruActivityIndex onDiskActivityIndex = buildOnDiskActivityIndex();
-        onDiskActivityIndex.setAndReady(Arrays.asList(
+        onDiskActivityIndex.setAndReady(schema, Arrays.asList(
             new MiruActivityAndId<>(miruActivity1, 0),
             new MiruActivityAndId<>(miruActivity2, 1),
             new MiruActivityAndId<>(miruActivity3, 2)), stackBuffer);

@@ -3,6 +3,8 @@ package com.jivesoftware.os.miru.service.index;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema.Builder;
 import com.jivesoftware.os.miru.bitmaps.roaring5.buffer.MiruBitmapsRoaringBuffer;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
@@ -233,6 +235,7 @@ public class MiruInvertedIndexTest {
     @Test
     public void testSetIfEmpty() throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
+        MiruSchema schema = new Builder("test", 1).build();
         MiruBitmapsRoaringBuffer bitmaps = new MiruBitmapsRoaringBuffer();
 
         MiruDeltaInvertedIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> index = buildDeltaInvertedIndex(bitmaps);
@@ -251,7 +254,7 @@ public class MiruInvertedIndexTest {
         assertFalse(got.contains(2));
 
         // merge the index
-        index.merge(stackBuffer);
+        index.merge(schema, stackBuffer);
 
         // check index 1 is still set after merge
         got = index.getIndex(stackBuffer).get();
@@ -284,7 +287,7 @@ public class MiruInvertedIndexTest {
         assertEquals(got.getCardinality(), 0);
 
         // merge the index
-        index.merge(stackBuffer);
+        index.merge(schema, stackBuffer);
 
         // setIfEmpty index 6 noops
         index.setIfEmpty(stackBuffer, 6);
@@ -295,18 +298,19 @@ public class MiruInvertedIndexTest {
     @DataProvider(name = "miruInvertedIndexDataProviderWithData")
     public Object[][] miruInvertedIndexDataProviderWithData() throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
+        MiruSchema schema = new Builder("test", 1).build();
         MiruBitmapsRoaringBuffer bitmaps = new MiruBitmapsRoaringBuffer();
 
         MiruDeltaInvertedIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> mergedIndex = buildDeltaInvertedIndex(bitmaps);
         mergedIndex.append(stackBuffer, 1, 2, 3, 4);
-        mergedIndex.merge(stackBuffer);
+        mergedIndex.merge(schema, stackBuffer);
 
         MiruDeltaInvertedIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> unmergedIndex = buildDeltaInvertedIndex(bitmaps);
         unmergedIndex.append(stackBuffer, 1, 2, 3, 4);
 
         MiruDeltaInvertedIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> partiallyMergedIndex = buildDeltaInvertedIndex(bitmaps);
         partiallyMergedIndex.append(stackBuffer, 1, 2);
-        partiallyMergedIndex.merge(stackBuffer);
+        partiallyMergedIndex.merge(schema, stackBuffer);
         partiallyMergedIndex.append(stackBuffer, 3, 4);
 
         return new Object[][] {

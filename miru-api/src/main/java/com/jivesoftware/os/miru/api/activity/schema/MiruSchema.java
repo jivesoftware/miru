@@ -7,6 +7,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition.Type;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -217,14 +219,40 @@ public class MiruSchema {
         return a.version == b.version && a.name.equals(b.name);
     }
 
-    public static class CompositeFieldDefinitions {
-
-        public final MiruFieldDefinition[] fieldDefinitions;
-
-        public CompositeFieldDefinitions(MiruFieldDefinition[] fieldDefinitions) {
-            this.fieldDefinitions = fieldDefinitions;
+    public static boolean deepEquals(MiruSchema a, MiruSchema b) {
+        if (a.version == b.version && a.name.equals(b.name)) {
+            // Probably incorrect - comparing Object[] arrays with Arrays.equals
+            if (!Arrays.equals(a.fieldDefinitions, b.fieldDefinitions)) {
+                return false;
+            }
+            // Probably incorrect - comparing Object[] arrays with Arrays.equals
+            if (!Arrays.equals(a.propertyDefinitions, b.propertyDefinitions)) {
+                return false;
+            }
+            if (a.pairedLatest != null ? !a.pairedLatest.equals(b.pairedLatest) : b.pairedLatest != null) {
+                return false;
+            }
+            if (a.bloom != null ? !a.bloom.equals(b.bloom) : b.bloom != null) {
+                return false;
+            }
+            if (a.composite != null ? !a.composite.equals(b.composite) : b.composite != null) {
+                return false;
+            }
+            return !(a.compositePrefixWhitelist != null ? !a.compositePrefixWhitelist.equals(b.compositePrefixWhitelist) : b.compositePrefixWhitelist != null);
         }
+        return false;
+    }
 
+    public static boolean checkAdditive(MiruSchema a, MiruSchema b) {
+        if (b.fieldDefinitions.length < a.fieldDefinitions.length) {
+            return false;
+        }
+        for (int i = 0; i < a.fieldDefinitions.length; i++) {
+            if (!a.fieldDefinitions[i].equals(b.fieldDefinitions[i]) && (!a.name.equals(b.name) || b.fieldDefinitions[i].type != Type.nonIndexedNonStored)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     public static class Builder {

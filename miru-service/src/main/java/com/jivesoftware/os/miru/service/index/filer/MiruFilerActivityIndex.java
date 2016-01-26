@@ -4,6 +4,7 @@ import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.api.HintAndTransaction;
 import com.jivesoftware.os.filer.io.api.KeyedFilerStore;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityAndId;
@@ -140,21 +141,25 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
     }
 
     @Override
-    public void setAndReady(Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds, StackBuffer stackBuffer) throws Exception {
+    public void setAndReady(MiruSchema schema, Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds, StackBuffer stackBuffer) throws Exception {
         if (!activityAndIds.isEmpty()) {
-            int lastIndex = setInternal("setAndReady", activityAndIds, stackBuffer);
+            int lastIndex = setInternal(schema, "setAndReady", activityAndIds, stackBuffer);
             ready(lastIndex, stackBuffer);
         }
     }
 
     @Override
-    public void set(Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds, StackBuffer stackBuffer) throws IOException, InterruptedException {
+    public void set(MiruSchema schema,
+        Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds,
+        StackBuffer stackBuffer) throws IOException, InterruptedException {
         if (!activityAndIds.isEmpty()) {
-            setInternal("set", activityAndIds, stackBuffer);
+            setInternal(schema, "set", activityAndIds, stackBuffer);
         }
     }
 
-    private int setInternal(String name, Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds,
+    private int setInternal(MiruSchema schema,
+        String name,
+        Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds,
         StackBuffer stackBuffer) throws IOException, InterruptedException {
 
         int lastIndex = -1;
@@ -170,7 +175,7 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
         MutableLong bytesWrite = new MutableLong();
         keyedStore.multiWriteNewReplace(keyBytes,
             (oldMonkey, oldFiler, stackBuffer1, oldLock, index) -> {
-                final byte[] bytes = internalActivityMarshaller.toBytes(activityAndIdsArray[index].activity, stackBuffer1);
+                final byte[] bytes = internalActivityMarshaller.toBytes(schema, activityAndIdsArray[index].activity, stackBuffer1);
                 long filerSize = (long) 4 + bytes.length;
                 bytesWrite.add(filerSize);
                 LOG.inc("set>total");

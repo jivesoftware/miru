@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.service.index.delta;
 
 import com.jivesoftware.os.filer.io.api.StackBuffer;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.service.index.Mergeable;
@@ -214,7 +215,7 @@ public class MiruDeltaTimeIndex implements MiruTimeIndex, Mergeable {
     }
 
     @Override
-    public void merge(StackBuffer stackBuffer) throws Exception {
+    public void merge(MiruSchema schema, StackBuffer stackBuffer) throws Exception {
         backingIndex.nextId(stackBuffer, actualInsertionOrderTimestamps.toArray());
         clear();
     }

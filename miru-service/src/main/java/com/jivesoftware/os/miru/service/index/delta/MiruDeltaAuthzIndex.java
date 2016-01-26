@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.service.index.delta;
 
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruAuthzIndex;
@@ -85,9 +86,9 @@ public class MiruDeltaAuthzIndex<BM extends IBM, IBM> implements MiruAuthzIndex<
     }
 
     @Override
-    public void merge(StackBuffer stackBuffer) throws Exception {
+    public void merge(MiruSchema schema, StackBuffer stackBuffer) throws Exception {
         for (Map.Entry<String, MiruDeltaInvertedIndex<BM, IBM>> entry : authzDeltas.entrySet()) {
-            entry.getValue().merge(stackBuffer);
+            entry.getValue().merge(schema, stackBuffer);
             cache.increment(entry.getKey());
         }
         authzDeltas.clear();

@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.service.index.delta;
 
 import com.google.common.base.Optional;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.plugin.index.IndexTx;
@@ -371,7 +372,7 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     }
 
     @Override
-    public void merge(StackBuffer stackBuffer) throws Exception {
+    public void merge(MiruSchema schema, StackBuffer stackBuffer) throws Exception {
         if (delta.andNot == null && delta.or == null) {
             return;
         }

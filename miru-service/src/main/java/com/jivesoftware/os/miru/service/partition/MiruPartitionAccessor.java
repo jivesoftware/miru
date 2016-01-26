@@ -13,6 +13,7 @@ import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.TimeAndVersion;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.wal.MiruCursor;
 import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
@@ -46,7 +47,6 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
@@ -271,16 +271,18 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
     private static class MergeRunnable implements Runnable {
 
         private final Mergeable mergeable;
+        private final MiruSchema schema;
 
-        public MergeRunnable(Mergeable mergeable) {
+        public MergeRunnable(Mergeable mergeable, MiruSchema schema) {
             this.mergeable = mergeable;
+            this.schema = schema;
         }
 
         @Override
         public void run() {
             try {
                 StackBuffer stackBuffer = new StackBuffer();
-                mergeable.merge(stackBuffer);
+                mergeable.merge(schema, stackBuffer);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
@@ -297,19 +299,19 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
                 long start = System.currentTimeMillis();
 
                 List<Future<?>> futures = Lists.newArrayList();
-                futures.add(mergeExecutor.submit(new MergeRunnable((MiruDeltaTimeIndex) got.timeIndex)));
+                futures.add(mergeExecutor.submit(new MergeRunnable((MiruDeltaTimeIndex) got.timeIndex, got.schema)));
                 for (MiruFieldType fieldType : MiruFieldType.values()) {
                     MiruDeltaFieldIndex<BM, IBM> deltaFieldIndex = (MiruDeltaFieldIndex<BM, IBM>) got.fieldIndexProvider.getFieldIndex(fieldType);
                     for (Mergeable mergeable : deltaFieldIndex.getMergeables()) {
-                        futures.add(mergeExecutor.submit(new MergeRunnable(mergeable)));
+                        futures.add(mergeExecutor.submit(new MergeRunnable(mergeable, got.schema)));
                     }
                 }
-                futures.add(mergeExecutor.submit(new MergeRunnable((MiruDeltaAuthzIndex<BM, IBM>) got.authzIndex)));
-                futures.add(mergeExecutor.submit(new MergeRunnable((MiruDeltaRemovalIndex<BM, IBM>) got.removalIndex)));
-                futures.add(mergeExecutor.submit(new MergeRunnable((MiruDeltaInboxIndex<BM, IBM>) got.inboxIndex)));
-                futures.add(mergeExecutor.submit(new MergeRunnable((MiruDeltaUnreadTrackingIndex<BM, IBM>) got.unreadTrackingIndex)));
-                futures.add(mergeExecutor.submit(new MergeRunnable((MiruDeltaActivityIndex) got.activityIndex)));
-                futures.add(mergeExecutor.submit(new MergeRunnable((MiruDeltaSipIndex) got.sipIndex)));
+                futures.add(mergeExecutor.submit(new MergeRunnable((MiruDeltaAuthzIndex<BM, IBM>) got.authzIndex, got.schema)));
+                futures.add(mergeExecutor.submit(new MergeRunnable((MiruDeltaRemovalIndex<BM, IBM>) got.removalIndex, got.schema)));
+                futures.add(mergeExecutor.submit(new MergeRunnable((MiruDeltaInboxIndex<BM, IBM>) got.inboxIndex, got.schema)));
+                futures.add(mergeExecutor.submit(new MergeRunnable((MiruDeltaUnreadTrackingIndex<BM, IBM>) got.unreadTrackingIndex, got.schema)));
+                futures.add(mergeExecutor.submit(new MergeRunnable((MiruDeltaActivityIndex) got.activityIndex, got.schema)));
+                futures.add(mergeExecutor.submit(new MergeRunnable((MiruDeltaSipIndex) got.sipIndex, got.schema)));
 
                 try {
                     for (Future<?> future : futures) {

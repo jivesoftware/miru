@@ -27,14 +27,50 @@ public class MiruFieldDefinition {
         this.prefix = prefix;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
+        MiruFieldDefinition that = (MiruFieldDefinition) o;
+
+        if (fieldId != that.fieldId) {
+            return false;
+        }
+        if (name != null ? !name.equals(that.name) : that.name != null) {
+            return false;
+        }
+        if (type != that.type) {
+            return false;
+        }
+        return !(prefix != null ? !prefix.equals(that.prefix) : that.prefix != null);
+
+    }
+
+    @Override
+    public int hashCode() {
+        throw new UnsupportedOperationException("NOPE");
+    }
+
     public enum Type {
-        singleTerm(Feature.indexed),
-        singleTermIndexLatest(Feature.indexed, Feature.indexedLatest),
-        singleTermIndexFirst(Feature.indexedFirst),
-        multiTerm(Feature.indexed, Feature.multiValued),
-        multiTermCardinality(Feature.indexed, Feature.multiValued, Feature.cardinality),
-        multiTermIndexFirst(Feature.indexedFirst, Feature.multiValued),
-        nonIndexed();
+        singleTerm(Feature.indexed, Feature.stored),
+        singleTermNonStored(Feature.indexed),
+        singleTermIndexLatest(Feature.indexed, Feature.indexedLatest, Feature.stored),
+        singleTermIndexLatestNonStored(Feature.indexed, Feature.indexedLatest),
+        singleTermIndexFirst(Feature.indexedFirst, Feature.stored),
+        singleTermIndexFirstNonStored(Feature.indexedFirst),
+        multiTerm(Feature.indexed, Feature.multiValued, Feature.stored),
+        multiTermNonStored(Feature.indexed, Feature.multiValued),
+        multiTermCardinality(Feature.indexed, Feature.multiValued, Feature.cardinality, Feature.stored),
+        multiTermCardinalityNonStored(Feature.indexed, Feature.multiValued, Feature.cardinality),
+        multiTermIndexFirst(Feature.indexedFirst, Feature.multiValued, Feature.stored),
+        multiTermIndexFirstNonStored(Feature.indexedFirst, Feature.multiValued),
+        nonIndexed(Feature.stored),
+        nonIndexedNonStored();
 
         private final Set<Feature> features;
 
@@ -52,7 +88,8 @@ public class MiruFieldDefinition {
         indexedFirst,
         indexedLatest,
         multiValued,
-        cardinality;
+        cardinality,
+        stored;
     }
 
     /**

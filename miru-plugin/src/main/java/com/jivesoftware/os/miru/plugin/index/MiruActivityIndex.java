@@ -6,6 +6,7 @@
 package com.jivesoftware.os.miru.plugin.index;
 
 import com.jivesoftware.os.filer.io.api.StackBuffer;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import java.io.IOException;
@@ -56,7 +57,7 @@ public interface MiruActivityIndex {
      *
      * @param activityAndIds the activities to be stored and their indexes
      */
-    void setAndReady(Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds, StackBuffer stackBuffer) throws Exception;
+    void setAndReady(MiruSchema schema, Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds, StackBuffer stackBuffer) throws Exception;
 
     /**
      * Store the given activity at the provided index value, but does not make ready the new ids.
@@ -65,7 +66,9 @@ public interface MiruActivityIndex {
      *
      * @param activityAndIds the activities to be stored and their indexes
      */
-    void set(Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds, StackBuffer stackBuffer) throws IOException, InterruptedException;
+    void set(MiruSchema schema,
+        Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds,
+        StackBuffer stackBuffer) throws IOException, InterruptedException;
 
     /**
      * Readies the index up to the provided index value.
