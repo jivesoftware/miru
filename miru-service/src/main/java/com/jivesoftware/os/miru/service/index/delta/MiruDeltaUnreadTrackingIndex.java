@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.service.index.delta;
 
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
@@ -69,9 +70,9 @@ public class MiruDeltaUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUn
     }
 
     @Override
-    public void merge(StackBuffer stackBuffer) throws Exception {
+    public void merge(MiruSchema schema, StackBuffer stackBuffer) throws Exception {
         for (MiruDeltaInvertedIndex<BM, IBM> delta : unreadDeltas.values()) {
-            delta.merge(stackBuffer);
+            delta.merge(schema, stackBuffer);
         }
         unreadDeltas.clear();
     }

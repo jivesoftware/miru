@@ -17,6 +17,12 @@ package com.jivesoftware.os.miru.service.index;
 
 import com.jivesoftware.os.filer.io.ByteArrayFiler;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
+import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
+import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition.Prefix;
+import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition.Type;
+import com.jivesoftware.os.miru.api.activity.schema.MiruPropertyDefinition;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema.Builder;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -38,16 +44,30 @@ public class MiruInternalActivityMarshallerNGTest {
         }
     };
 
+    MiruSchema schema = new Builder("test", 1)
+        .setFieldDefinitions(new MiruFieldDefinition[] {
+            new MiruFieldDefinition(0, "field0", Type.singleTerm, Prefix.NONE),
+            new MiruFieldDefinition(1, "field1", Type.singleTerm, Prefix.NONE),
+            new MiruFieldDefinition(2, "field2", Type.singleTerm, Prefix.NONE),
+            new MiruFieldDefinition(3, "field3", Type.singleTerm, Prefix.NONE)
+        })
+        .setPropertyDefinitions(new MiruPropertyDefinition[] {
+            new MiruPropertyDefinition(0, "prop0"),
+            new MiruPropertyDefinition(1, "prop1"),
+            new MiruPropertyDefinition(2, "prop2"),
+            new MiruPropertyDefinition(3, "prop3")
+        })
+        .build();
+
     /**
      * Test of fieldValueFromFiler method, of class MiruInternalActivityMarshaller.
      */
     @Test
     public void testFieldValueFromFiler() throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
-        System.out.println("fieldValueFromFiler");
         MiruInternalActivityMarshaller instance = new MiruInternalActivityMarshaller(termInterner);
         MiruInternalActivity expResult = activity();
-        ByteArrayFiler filer = new ByteArrayFiler(instance.toBytes(expResult, stackBuffer));
+        ByteArrayFiler filer = new ByteArrayFiler(instance.toBytes(schema, expResult, stackBuffer));
         filer.seek(0);
 
         int fieldId = 3;
@@ -68,16 +88,18 @@ public class MiruInternalActivityMarshallerNGTest {
     @Test
     public void testToBytesThenFromFiler() throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
-        System.out.println("fromFiler");
         MiruInternalActivityMarshaller instance = new MiruInternalActivityMarshaller(termInterner);
         MiruInternalActivity expResult = activity();
-        ByteArrayFiler filer = new ByteArrayFiler(instance.toBytes(expResult, stackBuffer));
+        ByteArrayFiler filer = new ByteArrayFiler(instance.toBytes(schema, expResult, stackBuffer));
         MiruInternalActivity result = instance.fromFiler(new MiruTenantId("abc".getBytes()), filer, stackBuffer);
         Assert.assertEquals(result, expResult);
     }
 
     private MiruInternalActivity activity() {
-        return new MiruInternalActivity(new MiruTenantId("abc".getBytes()), 1, new String[] { "foo" }, 2,
+        return new MiruInternalActivity(
+            new MiruTenantId("abc".getBytes()),
+            1,
+            new String[] { "foo" }, 2,
             new MiruTermId[][] {
                 null, null, { new MiruTermId("a".getBytes()) }, { new MiruTermId("b".getBytes()), new MiruTermId("c".getBytes()) }
             },

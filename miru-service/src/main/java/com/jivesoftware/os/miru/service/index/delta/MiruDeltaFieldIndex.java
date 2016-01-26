@@ -368,7 +368,7 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
         List<Mergeable> mergeables = Lists.newArrayListWithCapacity(fieldIndexDeltas.length);
         for (int fieldId = 0; fieldId < fieldIndexDeltas.length; fieldId++) {
             int _fieldId = fieldId;
-            mergeables.add(stackBuffer -> {
+            mergeables.add((schema, stackBuffer) -> {
                 ConcurrentMap<MiruTermId, MiruDeltaInvertedIndex.Delta<IBM>> deltaMap = fieldIndexDeltas[_fieldId];
                 ConcurrentHashMap<MiruTermId, TIntLongMap> cardinality = cardinalities[_fieldId];
 

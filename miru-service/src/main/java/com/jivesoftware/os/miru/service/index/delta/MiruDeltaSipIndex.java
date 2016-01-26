@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.service.index.delta;
 
 import com.google.common.base.Optional;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.plugin.index.MiruSipIndex;
 import com.jivesoftware.os.miru.service.index.Mergeable;
@@ -54,7 +55,7 @@ public class MiruDeltaSipIndex<S extends MiruSipCursor<S>> implements MiruSipInd
     }
 
     @Override
-    public void merge(StackBuffer stackBuffer) throws Exception {
+    public void merge(MiruSchema schema, StackBuffer stackBuffer) throws Exception {
         S sip = sipReference.get();
         if (sip != null) {
             backingIndex.setSip(sip, stackBuffer);

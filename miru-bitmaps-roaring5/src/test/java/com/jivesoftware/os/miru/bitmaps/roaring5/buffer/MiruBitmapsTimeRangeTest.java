@@ -4,6 +4,8 @@ import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema.Builder;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
@@ -90,6 +92,7 @@ public class MiruBitmapsTimeRangeTest {
     @DataProvider(name = "evenTimeIndexDataProvider")
     public Object[][] evenTimeIndexDataProvider() throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
+        MiruSchema schema = new Builder("test", 1).build();
 
         final int size = (64 * 3) + 1;
         final long[] timestamps = new long[size];
@@ -106,8 +109,8 @@ public class MiruBitmapsTimeRangeTest {
         MiruTimeIndex miruOnDiskTimeIndexMerged = buildOnDiskTimeIndex();
         miruInMemoryTimeIndexMerged.nextId(stackBuffer, timestamps);
         miruOnDiskTimeIndexMerged.nextId(stackBuffer, timestamps);
-        ((MiruDeltaTimeIndex) miruInMemoryTimeIndexMerged).merge(stackBuffer);
-        ((MiruDeltaTimeIndex) miruOnDiskTimeIndexMerged).merge(stackBuffer);
+        ((MiruDeltaTimeIndex) miruInMemoryTimeIndexMerged).merge(schema, stackBuffer);
+        ((MiruDeltaTimeIndex) miruOnDiskTimeIndexMerged).merge(schema, stackBuffer);
 
         MiruTimeIndex miruInMemoryTimeIndexPartiallyMerged = buildInMemoryTimeIndex();
         MiruTimeIndex miruOnDiskTimeIndexPartiallyMerged = buildOnDiskTimeIndex();
@@ -117,8 +120,8 @@ public class MiruBitmapsTimeRangeTest {
             miruOnDiskTimeIndexPartiallyMerged.nextId(stackBuffer, timestamps[i]);
 
         }
-        ((MiruDeltaTimeIndex) miruInMemoryTimeIndexPartiallyMerged).merge(stackBuffer);
-        ((MiruDeltaTimeIndex) miruOnDiskTimeIndexPartiallyMerged).merge(stackBuffer);
+        ((MiruDeltaTimeIndex) miruInMemoryTimeIndexPartiallyMerged).merge(schema, stackBuffer);
+        ((MiruDeltaTimeIndex) miruOnDiskTimeIndexPartiallyMerged).merge(schema, stackBuffer);
         for (; i < timestamps.length; i++) {
             miruInMemoryTimeIndexPartiallyMerged.nextId(stackBuffer, timestamps[i]);
             miruOnDiskTimeIndexPartiallyMerged.nextId(stackBuffer, timestamps[i]);

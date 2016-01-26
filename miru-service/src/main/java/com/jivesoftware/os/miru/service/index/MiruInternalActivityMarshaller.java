@@ -19,6 +19,10 @@ import com.jivesoftware.os.filer.io.ByteArrayFiler;
 import com.jivesoftware.os.filer.io.Filer;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
+import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
+import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition.Feature;
+import com.jivesoftware.os.miru.api.activity.schema.MiruPropertyDefinition;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -108,7 +112,7 @@ public class MiruInternalActivityMarshaller {
         return terms;
     }
 
-    public byte[] toBytes(MiruInternalActivity activity, StackBuffer stackBuffer) throws IOException {
+    public byte[] toBytes(MiruSchema schema, MiruInternalActivity activity, StackBuffer stackBuffer) throws IOException {
 
         int fieldsLength = activity.fieldsValues.length;
         int propsLength = activity.propsValues.length;
@@ -118,8 +122,10 @@ public class MiruInternalActivityMarshaller {
         // fieldsLength + propsLength + fieldsIndex * 4 + propsIndex * 4
         int offset = (4 + 4) + (fieldsLength * 4) + (propsLength * 4);
         for (int i = 0; i < fieldsLength; i++) {
+            MiruFieldDefinition fieldDefinition = schema.getFieldDefinition(i);
+            MiruTermId[] values = fieldDefinition.type.hasFeature(Feature.stored) ? activity.fieldsValues[i] : null;
             offsetIndex[i] = offset;
-            valueBytes[i] = fieldValuesToBytes(activity.fieldsValues[i], stackBuffer);
+            valueBytes[i] = fieldValuesToBytes(values, stackBuffer);
             offset += valueBytes[i].length;
         }
 

@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.service.index.delta;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityAndId;
@@ -87,7 +88,7 @@ public class MiruDeltaActivityIndex implements MiruActivityIndex, Mergeable {
     }
 
     @Override
-    public void setAndReady(Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds, StackBuffer stackBuffer) throws Exception {
+    public void setAndReady(MiruSchema schema, Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds, StackBuffer stackBuffer) throws Exception {
         if (!activityAndIds.isEmpty()) {
             int lastIndex = setInternal(activityAndIds);
             ready(lastIndex, stackBuffer);
@@ -95,7 +96,7 @@ public class MiruDeltaActivityIndex implements MiruActivityIndex, Mergeable {
     }
 
     @Override
-    public void set(Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds, StackBuffer stackBuffer) {
+    public void set(MiruSchema schema, Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds, StackBuffer stackBuffer) {
         if (!activityAndIds.isEmpty()) {
             setInternal(activityAndIds);
         }
@@ -129,8 +130,8 @@ public class MiruDeltaActivityIndex implements MiruActivityIndex, Mergeable {
     }
 
     @Override
-    public void merge(StackBuffer stackBuffer) throws Exception {
-        backingIndex.setAndReady(activities.values(), stackBuffer);
+    public void merge(MiruSchema schema, StackBuffer stackBuffer) throws Exception {
+        backingIndex.setAndReady(schema, activities.values(), stackBuffer);
         activities.clear();
     }
 }

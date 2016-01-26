@@ -225,11 +225,23 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                     optionalPersistentContext = accessor.persistentContext;
                 } else {
                     MiruSchema schema = contextFactory.loadPersistentSchema(coord);
+                    MiruSchema latestSchema = contextFactory.lookupLatestSchema(coord.tenantId);
                     if (schema == null) {
                         log.warn("Missing schema for persistent storage on {}, marking as obsolete", coord);
                         contextFactory.markObsolete(coord);
                         obsolete = true;
-                        schema = contextFactory.lookupLatestSchema(coord.tenantId);
+                        schema = latestSchema;
+                    } else if (MiruSchema.checkEquals(schema, latestSchema)) {
+                        // same name and version, check if the schema itself has changed
+                        if (MiruSchema.deepEquals(schema, latestSchema)) {
+                            schema = latestSchema;
+                        } else if (MiruSchema.checkAdditive(schema, latestSchema)) {
+                            contextFactory.saveSchema(coord, latestSchema);
+                            schema = latestSchema;
+                        } else {
+                            log.warn("Non-additive schema change for persistent storage on {}", coord);
+                            trackError.error("Non-additive schema change for persistent storage, fix schema and restart, or force rebuild to resolve");
+                        }
                     }
                     MiruContext<BM, IBM, S> context = contextFactory.allocate(bitmaps, schema, coord, MiruBackingStorage.disk, rebuildToken, stackBuffer);
                     optionalPersistentContext = Optional.of(context);

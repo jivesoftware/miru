@@ -8,6 +8,8 @@ import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema.Builder;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.bitmaps.roaring5.buffer.MiruBitmapsRoaringBuffer;
@@ -97,6 +99,7 @@ public class MiruAuthzIndexTest {
         boolean mergeEnd)
         throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
+        MiruSchema schema = new Builder("test", 1).build();
         Map<String, List<Integer>> bitsIn = Maps.newHashMap();
 
         for (int i = 1; i <= size; i++) {
@@ -114,7 +117,7 @@ public class MiruAuthzIndexTest {
         }
 
         if (mergeMiddle) {
-            ((MiruDeltaAuthzIndex<BM, IBM>) authzIndex).merge(stackBuffer);
+            ((MiruDeltaAuthzIndex<BM, IBM>) authzIndex).merge(schema, stackBuffer);
         }
 
         for (int i = 1; i <= size; i++) {
@@ -131,7 +134,7 @@ public class MiruAuthzIndexTest {
         }
 
         if (mergeEnd) {
-            ((MiruDeltaAuthzIndex<BM, IBM>) authzIndex).merge(stackBuffer);
+            ((MiruDeltaAuthzIndex<BM, IBM>) authzIndex).merge(schema, stackBuffer);
         }
 
         return bitsIn;
