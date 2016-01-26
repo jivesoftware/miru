@@ -120,6 +120,31 @@ public class MiruFieldDefinition {
             this.separator = separator;
         }
 
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+
+            Prefix prefix = (Prefix) o;
+
+            if (length != prefix.length) {
+                return false;
+            }
+            if (separator != prefix.separator) {
+                return false;
+            }
+            return type == prefix.type;
+        }
+
+        @Override
+        public int hashCode() {
+            throw new UnsupportedOperationException("NOPE");
+        }
+
         public enum Type {
             none(false),
             wildcard(false),
