@@ -20,7 +20,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition.Prefix;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition.Type;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema.Builder;
-import com.jivesoftware.os.miru.api.field.MiruFieldName;
 import java.io.File;
 import java.io.IOException;
 import org.testng.Assert;
@@ -49,21 +48,21 @@ public class MiruSchemaNGTest {
     }
 
     @Test
-    public void testAdditive() throws Exception {
-        MiruSchema a = new Builder("test", 1)
+    public void testRemovedField() throws Exception {
+        MiruSchema a = serdes(new Builder("test", 1)
             .setFieldDefinitions(new MiruFieldDefinition[] {
                 new MiruFieldDefinition(0, "a", Type.singleTerm, Prefix.NONE),
                 new MiruFieldDefinition(1, "b", Type.singleTerm, Prefix.NONE),
                 new MiruFieldDefinition(2, "c", Type.singleTerm, Prefix.NONE)
             })
-            .build();
-        MiruSchema b = new Builder("test", 1)
+            .build());
+        MiruSchema b = serdes(new Builder("test", 1)
             .setFieldDefinitions(new MiruFieldDefinition[] {
                 new MiruFieldDefinition(0, "a", Type.singleTerm, Prefix.NONE),
                 new MiruFieldDefinition(1, "b", Type.nonIndexedNonStored, Prefix.NONE),
                 new MiruFieldDefinition(2, "c", Type.singleTerm, Prefix.NONE)
             })
-            .build();
+            .build());
         assertTrue(MiruSchema.checkEquals(a, b));
         assertFalse(MiruSchema.deepEquals(a, b));
         assertTrue(MiruSchema.checkAdditive(a, b));
@@ -71,20 +70,20 @@ public class MiruSchemaNGTest {
 
     @Test
     public void testWrongName() throws Exception {
-        MiruSchema a = new Builder("test", 1)
+        MiruSchema a = serdes(new Builder("test", 1)
             .setFieldDefinitions(new MiruFieldDefinition[] {
                 new MiruFieldDefinition(0, "a", Type.singleTerm, Prefix.NONE),
                 new MiruFieldDefinition(1, "b", Type.singleTerm, Prefix.NONE),
                 new MiruFieldDefinition(2, "c", Type.singleTerm, Prefix.NONE)
             })
-            .build();
-        MiruSchema b = new Builder("test", 1)
+            .build());
+        MiruSchema b = serdes(new Builder("test", 1)
             .setFieldDefinitions(new MiruFieldDefinition[] {
                 new MiruFieldDefinition(0, "a", Type.singleTerm, Prefix.NONE),
                 new MiruFieldDefinition(1, "bb", Type.singleTerm, Prefix.NONE),
                 new MiruFieldDefinition(2, "c", Type.singleTerm, Prefix.NONE)
             })
-            .build();
+            .build());
         assertTrue(MiruSchema.checkEquals(a, b));
         assertFalse(MiruSchema.deepEquals(a, b));
         assertFalse(MiruSchema.checkAdditive(a, b));
@@ -92,20 +91,20 @@ public class MiruSchemaNGTest {
 
     @Test
     public void testWrongPrefix() throws Exception {
-        MiruSchema a = new Builder("test", 1)
+        MiruSchema a = serdes(new Builder("test", 1)
             .setFieldDefinitions(new MiruFieldDefinition[] {
                 new MiruFieldDefinition(0, "a", Type.singleTerm, Prefix.NONE),
                 new MiruFieldDefinition(1, "b", Type.singleTerm, Prefix.WILDCARD),
                 new MiruFieldDefinition(2, "c", Type.singleTerm, Prefix.NONE)
             })
-            .build();
-        MiruSchema b = new Builder("test", 1)
+            .build());
+        MiruSchema b = serdes(new Builder("test", 1)
             .setFieldDefinitions(new MiruFieldDefinition[] {
                 new MiruFieldDefinition(0, "a", Type.singleTerm, Prefix.NONE),
                 new MiruFieldDefinition(1, "bb", Type.singleTerm, Prefix.NONE),
                 new MiruFieldDefinition(2, "c", Type.singleTerm, Prefix.NONE)
             })
-            .build();
+            .build());
         assertTrue(MiruSchema.checkEquals(a, b));
         assertFalse(MiruSchema.deepEquals(a, b));
         assertFalse(MiruSchema.checkAdditive(a, b));
@@ -113,43 +112,71 @@ public class MiruSchemaNGTest {
 
     @Test
     public void testNonAdditive() throws Exception {
-        MiruSchema a = new Builder("test", 1)
+        MiruSchema a = serdes(new Builder("test", 1)
             .setFieldDefinitions(new MiruFieldDefinition[] {
                 new MiruFieldDefinition(0, "a", Type.singleTerm, Prefix.NONE),
                 new MiruFieldDefinition(1, "b", Type.singleTerm, Prefix.NONE),
                 new MiruFieldDefinition(2, "c", Type.singleTerm, Prefix.NONE)
             })
-            .build();
-        MiruSchema b = new Builder("test", 1)
+            .build());
+        MiruSchema b = serdes(new Builder("test", 1)
             .setFieldDefinitions(new MiruFieldDefinition[] {
                 new MiruFieldDefinition(0, "a", Type.singleTerm, Prefix.NONE),
                 new MiruFieldDefinition(1, "b", Type.nonIndexed, Prefix.NONE),
                 new MiruFieldDefinition(2, "c", Type.singleTerm, Prefix.NONE)
             })
-            .build();
+            .build());
         assertTrue(MiruSchema.checkEquals(a, b));
         assertFalse(MiruSchema.deepEquals(a, b));
         assertFalse(MiruSchema.checkAdditive(a, b));
     }
 
     @Test
-    public void testRemovedField() throws Exception {
-        MiruSchema a = new Builder("test", 1)
+    public void testMissingField() throws Exception {
+        MiruSchema a = serdes(new Builder("test", 1)
             .setFieldDefinitions(new MiruFieldDefinition[] {
                 new MiruFieldDefinition(0, "a", Type.singleTerm, Prefix.NONE),
                 new MiruFieldDefinition(1, "b", Type.singleTerm, Prefix.NONE),
                 new MiruFieldDefinition(2, "c", Type.singleTerm, Prefix.NONE)
             })
-            .build();
-        MiruSchema b = new Builder("test", 1)
+            .build());
+        MiruSchema b = serdes(new Builder("test", 1)
             .setFieldDefinitions(new MiruFieldDefinition[] {
                 new MiruFieldDefinition(0, "a", Type.singleTerm, Prefix.NONE),
                 new MiruFieldDefinition(1, "b", Type.singleTerm, Prefix.NONE)
             })
-            .build();
+            .build());
         assertTrue(MiruSchema.checkEquals(a, b));
         assertFalse(MiruSchema.deepEquals(a, b));
         assertFalse(MiruSchema.checkAdditive(a, b));
+    }
+
+    @Test
+    public void testAddField() throws Exception {
+        MiruSchema a = serdes(new Builder("test", 1)
+            .setFieldDefinitions(new MiruFieldDefinition[] {
+                new MiruFieldDefinition(0, "a", Type.singleTerm, Prefix.NONE),
+                new MiruFieldDefinition(1, "b", Type.singleTerm, Prefix.NONE),
+                new MiruFieldDefinition(2, "c", Type.singleTerm, Prefix.NONE)
+            })
+            .build());
+        MiruSchema b = serdes(new Builder("test", 1)
+            .setFieldDefinitions(new MiruFieldDefinition[] {
+                new MiruFieldDefinition(0, "a", Type.singleTerm, Prefix.NONE),
+                new MiruFieldDefinition(1, "b", Type.singleTerm, Prefix.NONE),
+                new MiruFieldDefinition(2, "c", Type.singleTerm, Prefix.NONE),
+                new MiruFieldDefinition(3, "d", Type.singleTerm, Prefix.NONE)
+            })
+            .build());
+        assertTrue(MiruSchema.checkEquals(a, b));
+        assertFalse(MiruSchema.deepEquals(a, b));
+        assertTrue(MiruSchema.checkAdditive(a, b));
+    }
+
+    private ObjectMapper objectMapper = new ObjectMapper();
+
+    private MiruSchema serdes(MiruSchema schema) throws Exception {
+        return objectMapper.readValue(objectMapper.writeValueAsString(schema), MiruSchema.class);
     }
 
 }
