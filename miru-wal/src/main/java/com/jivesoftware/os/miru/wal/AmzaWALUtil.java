@@ -101,7 +101,7 @@ public class AmzaWALUtil {
         byte[] prefix = "activityWAL-".getBytes(Charsets.UTF_8);
 
         partition:
-        for (PartitionName partitionName : amzaService.getPartitionIndex().getAllPartitions()) {
+        for (PartitionName partitionName : amzaService.getAllPartitionNames()) {
             byte[] nameBytes = partitionName.getName();
             if (nameBytes.length > prefix.length) {
                 for (int i = 0; i < prefix.length; i++) {
