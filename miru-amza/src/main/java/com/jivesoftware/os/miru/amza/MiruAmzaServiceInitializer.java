@@ -112,6 +112,7 @@ public class MiruAmzaServiceInitializer {
         amzaServiceConfig.numberOfCompactorThreads = config.getNumberOfCompactorThreads();
         amzaServiceConfig.numberOfTakerThreads = config.getNumberOfTakerThreads();
         amzaServiceConfig.hardFsync = config.getHardFsync();
+        amzaServiceConfig.takeSlowThresholdInMillis = config.getTakeSlowThresholdInMillis();
 
         PartitionPropertyMarshaller partitionPropertyMarshaller = new PartitionPropertyMarshaller() {
 
