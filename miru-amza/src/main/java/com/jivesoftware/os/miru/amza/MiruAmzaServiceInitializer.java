@@ -91,9 +91,9 @@ public class MiruAmzaServiceInitializer {
         RingHost ringHost = new RingHost(datacenterName, rackName, hostName, port);
 
         SnowflakeIdPacker idPacker = new SnowflakeIdPacker();
+        JiveEpochTimestampProvider timestampProvider = new JiveEpochTimestampProvider();
         TimestampedOrderIdProvider orderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceId),
-            idPacker,
-            new JiveEpochTimestampProvider());
+            idPacker, timestampProvider);
 
         ObjectMapper mapper = new ObjectMapper();
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
@@ -197,7 +197,8 @@ public class MiruAmzaServiceInitializer {
             Executors.newCachedThreadPool(),
             10_000); //TODO expose to conf
 
-        new AmzaUIInitializer().initialize(clusterName, ringHost, amzaService, clientProvider, amzaStats, new AmzaUIInitializer.InjectionCallback() {
+        new AmzaUIInitializer().initialize(clusterName, ringHost, amzaService, clientProvider, amzaStats, timestampProvider, idPacker,
+            new AmzaUIInitializer.InjectionCallback() {
 
             @Override
             public void addEndpoint(Class clazz) {
