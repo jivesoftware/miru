@@ -68,10 +68,10 @@ public class AmzaActivityWALWriter implements MiruActivityWALWriter {
         RangeMinMax partitionMinMax = new RangeMinMax();
 
         amzaWALUtil.getActivityClient(tenantId, partitionId).commit(Consistency.leader_quorum, null,
-            (highwaters, txKeyValueStream) -> {
+            (txKeyValueStream) -> {
                 for (MiruPartitionedActivity activity : partitionedActivities) {
                     long timestamp = activity.activity.isPresent() ? activity.activity.get().version : System.currentTimeMillis();
-                    if (!txKeyValueStream.row(-1, activityWALKeyFunction.apply(activity), activitySerializerFunction.apply(activity), timestamp, false, -1)) {
+                    if (!txKeyValueStream.commit(activityWALKeyFunction.apply(activity), activitySerializerFunction.apply(activity), timestamp, false)) {
                         return false;
                     }
                 }
@@ -95,9 +95,9 @@ public class AmzaActivityWALWriter implements MiruActivityWALWriter {
         if (client != null) {
             client.commit(Consistency.leader_quorum,
                 null,
-                (highwaters, txKeyValueStream) -> {
+                (txKeyValueStream) -> {
                     for (MiruActivityWALColumnKey columnKey : keys) {
-                        if (!txKeyValueStream.row(-1, columnKeyMarshaller.toLexBytes(columnKey), null, -1, true, -1)) {
+                        if (!txKeyValueStream.commit(columnKeyMarshaller.toLexBytes(columnKey), null, -1, true)) {
                             return false;
                         }
                     }

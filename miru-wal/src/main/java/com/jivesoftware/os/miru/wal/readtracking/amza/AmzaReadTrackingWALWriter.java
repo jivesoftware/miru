@@ -44,11 +44,11 @@ public class AmzaReadTrackingWALWriter implements MiruReadTrackingWALWriter {
     @Override
     public void write(MiruTenantId tenantId, MiruStreamId streamId, List<MiruPartitionedActivity> partitionedActivities) throws Exception {
         amzaWALUtil.getReadTrackingClient(tenantId).commit(Consistency.leader_quorum, streamId.getBytes(),
-            (highwaters, txKeyValueStream) -> {
+            (txKeyValueStream) -> {
                 for (MiruPartitionedActivity activity : partitionedActivities) {
                     byte[] key = readTrackingWALKeyFunction.apply(activity);
                     byte[] value = activitySerializerFunction.apply(activity);
-                    if (!txKeyValueStream.row(-1, key, value, System.currentTimeMillis(), false, -1)) {
+                    if (!txKeyValueStream.commit(key, value, System.currentTimeMillis(), false)) {
                         return false;
                     }
                 }
