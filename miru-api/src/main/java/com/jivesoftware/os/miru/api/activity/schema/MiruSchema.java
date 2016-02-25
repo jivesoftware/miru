@@ -248,7 +248,7 @@ public class MiruSchema {
         }
         for (int i = 0; i < a.fieldDefinitions.length; i++) {
             if (!a.fieldDefinitions[i].equals(b.fieldDefinitions[i]) &&
-                (!a.name.equals(b.name) || b.fieldDefinitions[i].type.isAdditiveTo(a.fieldDefinitions[i].type))) {
+                (!a.name.equals(b.name) || !b.fieldDefinitions[i].type.isAdditiveTo(a.fieldDefinitions[i].type))) {
                 return false;
             }
         }
