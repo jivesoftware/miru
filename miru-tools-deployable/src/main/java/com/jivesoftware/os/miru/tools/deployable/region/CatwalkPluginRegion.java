@@ -157,7 +157,6 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
                     for (int i = 0; i < featureFields.length; i++) {
                         featureFields[i] = input.featureFields.toArray(new String[0]);
                     }*/
-
                     MiruFilter constraintsFilter = filterStringUtil.parse(input.filters);
                     String endpoint = CatwalkConstants.CATWALK_PREFIX + CatwalkConstants.CUSTOM_QUERY_ENDPOINT;
                     String request = requestMapper.writeValueAsString(new MiruRequest<>("toolsCatwalk",
@@ -178,7 +177,7 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
                             @SuppressWarnings("unchecked")
                             MiruResponse<CatwalkAnswer> extractResponse = responseMapper.extractResultFromResponse(httpResponse,
                                 MiruResponse.class,
-                                new Class<?>[] { CatwalkAnswer.class },
+                                new Class<?>[]{CatwalkAnswer.class},
                                 null);
                             return new ClientResponse<>(extractResponse, true);
                         });
@@ -199,18 +198,25 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
                             for (FeatureScore r : result) {
                                 scored.add(new ScoredFeature(r));
                             }
+                            String key = Joiner.on(',').join(featureFields[i]);
                             Collections.sort(scored);
+                            LOG.info(key + " " + scored.size());
+
                             List<Map<String, Object>> features = new ArrayList<>();
                             for (ScoredFeature scoredFeature : scored) {
+                                LOG.info(key + " begin building feature " + scoredFeature);
                                 Map<String, Object> feature = new HashMap<>();
                                 List<String> values = Lists.transform(Arrays.asList(scoredFeature.featureScore.values), MiruValue::last);
                                 feature.put("values", values);
                                 feature.put("numerator", String.valueOf(scoredFeature.featureScore.numerator));
                                 feature.put("denominator", String.valueOf(scoredFeature.featureScore.denominator));
                                 feature.put("score", String.valueOf(scoredFeature.score));
+                                LOG.info(key + " done building feature " + scoredFeature);
                                 features.add(feature);
+                                LOG.info(key + " added " + feature);
                             }
-                            featureClasses.put(Joiner.on(',').join(featureFields[i]), features);
+                            LOG.info(key + " " + scored.size() + " vs " + features.size());
+                            featureClasses.put(key, features);
                         }
 
                         HashMap<String, Object> model = new HashMap<>();
@@ -225,7 +231,6 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
                     data.put("summary", Joiner.on("\n").join(response.log) + "\n\n" + mapper.writeValueAsString(response.solutions));
                 }
 
-
             }
         } catch (Exception e) {
             LOG.error("Unable to retrieve data", e);
@@ -235,6 +240,7 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
     }
 
     public static class ScoredFeature implements Comparable<ScoredFeature> {
+
         private final FeatureScore featureScore;
         private final float score;
 
