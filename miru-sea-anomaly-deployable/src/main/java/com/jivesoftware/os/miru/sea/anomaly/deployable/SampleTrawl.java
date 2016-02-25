@@ -49,7 +49,7 @@ public class SampleTrawl {
 
         String metricName = Joiner.on(">").join(metric.path);
         for (int i = 0; i < 64; i++) {
-            if (((metric.value >> i) & 1) != 0) {
+            if (((metric.value >>> i) & 1) != 0) {
                 bits.add(String.valueOf(i));
             }
         }
