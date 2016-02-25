@@ -119,42 +119,49 @@
                 <a href="#summary">Jump to query summary</a>
             </div>
             <div class="panel-body">
-                <table class="table table-condensed">
-                    <thead>
-                        <tr>
-                            <th>Values</th>
-                            <th>Numerator</th>
-                            <th>Denominator</th>
-                            <th>Score</th>
-                        </tr>
-                    </thead>
-                    </tbody>
-                        {foreach $featureClass in $model.featureClasses}
-                            <tr colspan="4">
-                                <h3>{$featureClass.name}</h3>
-                            </tr>
-                            {foreach $feature in $featureClass.features}
-                                <tr>
-                                    <td>
-                                        {foreach $v in $feature.values}
-                                            {if not isFirst($v)}, {/if}
-                                            {$v}
-                                        {/foreach}
-                                    </td>
-                                    <td>
-                                        {$feature.numerator}
-                                    </td>
-                                    <td>
-                                        {$feature.denominator}
-                                    </td>
-                                    <td>
-                                        {$feature.score}
-                                    </td>
-                                </tr>
-                            {/foreach}
-                        {/foreach}
-                    </tbody>
-                </table>
+                <ul>
+                    {foreach $featureClass in $model.featureClasses}
+                        <li><h3>{$featureClass.name}</h3></li>
+                        <li>
+                            <ul style="list-style-type:none;">
+                                <li>
+                                    <table class="table table-condensed">
+                                        <thead>
+                                            <tr>
+                                                {foreach $namePart in $featureClass.nameParts}
+                                                    <th>{$namePart}</th>
+                                                {/foreach}
+                                                <th>Numerator</th>
+                                                <th>Denominator</th>
+                                                <th>Score</th>
+                                            </tr>
+                                        </thead>
+                                        </tbody>
+                                            {foreach $feature in $featureClass.features}
+                                                <tr>
+                                                    {foreach $v in $feature.values}
+                                                        <td>
+                                                            {$v}
+                                                        </td>
+                                                    {/foreach}
+                                                    <td>
+                                                        {$feature.numerator}
+                                                    </td>
+                                                    <td>
+                                                        {$feature.denominator}
+                                                    </td>
+                                                    <td>
+                                                        {$feature.score}
+                                                    </td>
+                                                </tr>
+                                            {/foreach}
+                                        </tbody>
+                                    </table>
+                                </li>
+                            </ul>
+                        </li>
+                    {/foreach}
+                </ul>
             </div>
         </div>
     {/if}
