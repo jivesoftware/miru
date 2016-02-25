@@ -4,19 +4,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.FilterStringUtil;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
-import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
-import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
@@ -198,10 +194,13 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
                     if (results != null) {
                         Map<String, Object> featureClasses = new HashMap<>();
                         for (int i = 0; i < results.length; i++) {
-                            List<Map<String, Object>> features = new ArrayList<>();
                             List<FeatureScore> result = results[i];
-                            List<ScoredFeature> scored = Lists.newArrayList(Lists.transform(result, ScoredFeature::new));
+                            List<ScoredFeature> scored = Lists.newArrayList();
+                            for (FeatureScore r : result) {
+                                scored.add(new ScoredFeature(r));
+                            }
                             Collections.sort(scored);
+                            List<Map<String, Object>> features = new ArrayList<>();
                             for (ScoredFeature scoredFeature : scored) {
                                 Map<String, Object> feature = new HashMap<>();
                                 List<String> values = Lists.transform(Arrays.asList(scoredFeature.featureScore.values), MiruValue::last);
@@ -216,7 +215,6 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
 
                         HashMap<String, Object> model = new HashMap<>();
                         model.put("featureClasses", featureClasses);
-
                         data.put("model", model);
                     }
 
