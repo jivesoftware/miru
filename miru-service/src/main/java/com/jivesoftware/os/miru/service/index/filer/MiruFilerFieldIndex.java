@@ -130,7 +130,7 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
                 bytes.add(filer.length());
                 BitmapAndLastId<BM> bitmapAndLastId = MiruFilerInvertedIndex.deser(bitmaps, trackError, filer, -1, _stackBuffer);
                 if (bitmapAndLastId != null) {
-                    return bitmapAndLastId.bitmap;
+                    return bitmapAndLastId;
                 }
             }
             return null;
