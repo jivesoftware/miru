@@ -58,8 +58,8 @@ public class MiruFieldDefinition {
 
     public enum Type {
         singleTerm(Feature.indexed, Feature.stored),
+        singleTermIndexValueBits(Feature.indexed, Feature.stored, Feature.indexedValueBits),
         singleTermNonStored(Feature.indexed),
-        singleTermIndexValueBits(Feature.indexed, Feature.indexedValueBits, Feature.stored),
         singleTermIndexLatest(Feature.indexed, Feature.indexedLatest, Feature.stored),
         singleTermIndexLatestNonStored(Feature.indexed, Feature.indexedLatest),
         singleTermIndexFirst(Feature.indexedFirst, Feature.stored),
@@ -81,6 +81,18 @@ public class MiruFieldDefinition {
 
         public boolean hasFeature(Feature feature) {
             return features.contains(feature);
+        }
+
+        public boolean isAdditiveTo(Type oldType) {
+            if (this == Type.nonIndexedNonStored) {
+                return true;
+            }
+
+            if (this == singleTermIndexValueBits) {
+                return (oldType == singleTerm);
+            }
+
+            return false;
         }
     }
 
