@@ -191,32 +191,32 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
                 if (response != null && response.answer != null) {
                     List<FeatureScore>[] results = response.answer.results;
                     if (results != null) {
-                        Map<String, Object> featureClasses = new HashMap<>();
+                        List<Map<String, Object>> featureClasses = new ArrayList<>();
                         for (int i = 0; i < results.length; i++) {
                             List<FeatureScore> result = results[i];
                             List<ScoredFeature> scored = Lists.newArrayList();
                             for (FeatureScore r : result) {
                                 scored.add(new ScoredFeature(r));
                             }
-                            String key = Joiner.on(',').join(featureFields[i]);
                             Collections.sort(scored);
-                            LOG.info(key + " " + scored.size());
 
                             List<Map<String, Object>> features = new ArrayList<>();
                             for (ScoredFeature scoredFeature : scored) {
-                                LOG.info(key + " begin building feature " + scoredFeature);
                                 Map<String, Object> feature = new HashMap<>();
                                 List<String> values = Lists.transform(Arrays.asList(scoredFeature.featureScore.values), MiruValue::last);
                                 feature.put("values", values);
                                 feature.put("numerator", String.valueOf(scoredFeature.featureScore.numerator));
                                 feature.put("denominator", String.valueOf(scoredFeature.featureScore.denominator));
                                 feature.put("score", String.valueOf(scoredFeature.score));
-                                LOG.info(key + " done building feature " + scoredFeature);
                                 features.add(feature);
-                                LOG.info(key + " added " + feature);
                             }
-                            LOG.info(key + " " + scored.size() + " vs " + features.size());
-                            featureClasses.put(key, features);
+
+                            String name = Joiner.on(',').join(featureFields[i]);
+                            Map<String, Object> featureClass = new HashMap<>();
+                            featureClass.put("name", name);
+                            featureClass.put("features", features);
+                            
+                            featureClasses.add(featureClass);
                         }
 
                         HashMap<String, Object> model = new HashMap<>();

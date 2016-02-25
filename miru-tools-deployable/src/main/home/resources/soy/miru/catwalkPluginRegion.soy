@@ -129,11 +129,11 @@
                         </tr>
                     </thead>
                     </tbody>
-                        {foreach $featureClass in keys($model.featureClasses)}
+                        {foreach $featureClass in $model.featureClasses}
                             <tr colspan="4">
-                                <h3>{$featureClass}</h3>
+                                <h3>{$featureClass.name}</h3>
                             </tr>
-                            {foreach $feature in $model.featureClasses[$featureClass]}
+                            {foreach $feature in $featureClass.features}
                                 <tr>
                                     <td>
                                         {foreach $v in $feature.values}
