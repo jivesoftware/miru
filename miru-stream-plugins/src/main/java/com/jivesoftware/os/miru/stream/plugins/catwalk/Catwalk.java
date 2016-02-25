@@ -185,6 +185,7 @@ public class Catwalk {
 
         for (int i = 0; i < featureValueSets.length; i++) {
             Multiset<Feature> valueSet = featureValueSets[i];
+            featureScoreResults[i] = Lists.newArrayListWithCapacity(valueSet.size());
             for (Entry<Feature> entry : valueSet.entrySet()) {
                 int[] fieldIds = featureFieldIds[i];
                 MiruTermId[] termIds = entry.getElement().termIds;
