@@ -126,7 +126,7 @@
                         <th>Denominator</th>
                         <th>Score</th>
                     </tr>
-                    {foreach $featureClass in $model.featureClasses.keys()}
+                    {foreach $featureClass in keys($model.featureClasses)}
                         <tr colspan="4">
                             <h3>{$featureClass}</h3>
                         </tr>
