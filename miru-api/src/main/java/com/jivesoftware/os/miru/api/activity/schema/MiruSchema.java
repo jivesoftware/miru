@@ -7,7 +7,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition.Type;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -248,7 +247,8 @@ public class MiruSchema {
             return false;
         }
         for (int i = 0; i < a.fieldDefinitions.length; i++) {
-            if (!a.fieldDefinitions[i].equals(b.fieldDefinitions[i]) && (!a.name.equals(b.name) || b.fieldDefinitions[i].type != Type.nonIndexedNonStored)) {
+            if (!a.fieldDefinitions[i].equals(b.fieldDefinitions[i]) &&
+                (!a.name.equals(b.name) || b.fieldDefinitions[i].type.isAdditiveTo(a.fieldDefinitions[i].type))) {
                 return false;
             }
         }
