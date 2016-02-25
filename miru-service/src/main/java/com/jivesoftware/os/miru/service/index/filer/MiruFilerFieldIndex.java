@@ -74,9 +74,9 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
     }
 
     @Override
-    public void remove(int fieldId, MiruTermId termId, int id, StackBuffer stackBuffer) throws Exception {
-        getIndex("remove", fieldId, termId).remove(id, stackBuffer);
-        mergeCardinalities(fieldId, termId, new int[] { id }, cardinalities[fieldId] != null ? new long[1] : null, stackBuffer);
+    public void remove(int fieldId, MiruTermId termId, int[] ids, StackBuffer stackBuffer) throws Exception {
+        getIndex("remove", fieldId, termId).remove(stackBuffer, ids);
+        mergeCardinalities(fieldId, termId, ids, cardinalities[fieldId] != null ? new long[ids.length] : null, stackBuffer);
     }
 
     @Override

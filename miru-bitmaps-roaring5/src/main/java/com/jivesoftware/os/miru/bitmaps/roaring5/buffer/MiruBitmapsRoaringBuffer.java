@@ -110,6 +110,11 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
     }
 
     @Override
+    public boolean removeIfPresent(MutableRoaringBitmap bitmap, int index) {
+        return bitmap.checkedRemove(index);
+    }
+
+    @Override
     public boolean isSet(ImmutableRoaringBitmap bitmap, int i) {
         return bitmap.contains(i);
     }

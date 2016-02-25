@@ -45,7 +45,6 @@ public class MiruValue implements Serializable {
 
         MiruValue miruValue = (MiruValue) o;
 
-        // Probably incorrect - comparing Object[] arrays with Arrays.equals
         return Arrays.equals(parts, miruValue.parts);
 
     }

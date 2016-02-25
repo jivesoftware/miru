@@ -9,12 +9,9 @@
  * @param? fromTimeUnit
  * @param? toTimeAgo
  * @param? toTimeUnit
- * @param? buckets
- * @param? field1
- * @param? terms1
- * @param? field2
- * @param? terms2
+ * @param? featureFields
  * @param? filters
+ * @param? desiredNumberOfResults
  * @param? model
  * @param? summary
  * @param? elapse
@@ -84,43 +81,11 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>Buckets</td>
+                        <td>Feature Fields</td>
                         <td>
                             <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
-                                class="j-buckets-autocomplete j-autocomplete-input j-ui-elem" placeholder="Buckets" value="{$buckets?:''}"
-                                name="buckets" id="bucketsPicker" data-original-title="" title="">
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Field1</td>
-                        <td>
-                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
-                                class="j-field-autocomplete j-autocomplete-input j-ui-elem" placeholder="Field1" value="{$field1?:''}"
-                                name="field1" id="field1Picker" data-original-title="" title="">
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Field1 Terms</td>
-                        <td>
-                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
-                                class="j-terms-autocomplete j-autocomplete-input j-ui-elem" placeholder="Field1 Terms" value="{$terms1?:''}"
-                                name="terms1" id="terms1Picker" data-original-title="" title="">
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Field2</td>
-                        <td>
-                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
-                                class="j-field-autocomplete j-autocomplete-input j-ui-elem" placeholder="Field2" value="{$field2?:''}"
-                                name="field2" id="field2Picker" data-original-title="" title="">
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Field2 Terms</td>
-                        <td>
-                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
-                                class="j-terms-autocomplete j-autocomplete-input j-ui-elem" placeholder="Field2 Terms" value="{$terms2?:''}"
-                                name="terms2" id="terms2Picker" data-original-title="" title="">
+                                class="j-featureFields-autocomplete j-autocomplete-input j-ui-elem" placeholder="Feature Fields" value="{$featureFields?:''}"
+                                name="featureFields" id="featureFieldsPicker" data-original-title="" title="">
                         </td>
                     </tr>
                     <tr>
@@ -131,6 +96,14 @@
                                 name="filters" id="filtersPicker" data-original-title="" title="">
                             &nbsp;
                             <em>(e.g. user:3 3765, parentType:102|2|38)</em>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Desired Number of Results</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-desiredNumberOfResults-autocomplete j-autocomplete-input j-ui-elem" placeholder="Desired Number of Results" value="{$desiredNumberOfResults?:''}"
+                                name="desiredNumberOfResults" id="desiredNumberOfResultsPicker" data-original-title="" title="">
                         </td>
                     </tr>
                 </table>
@@ -151,21 +124,28 @@
                         <th>Values</th>
                         <th>Numerator</th>
                         <th>Denominator</th>
+                        <th>Score</th>
                     </tr>
                     {foreach $featureClass in $model.featureClasses.keys()}
-                        <tr colspan="3">
+                        <tr colspan="4">
                             <h3>{$featureClass}</h3>
                         </tr>
-                        {foreach $feature in $model.featureClasses[$key]}
+                        {foreach $feature in $model.featureClasses[$featureClass]}
                             <tr>
                                 <td>
-                                    {$feature.values}
+                                    {foreach $v in $feature.values}
+                                        {if not isFirst($v)}, {/if}
+                                        {$v}
+                                    {/foreach}
                                 </td>
                                 <td>
                                     {$feature.numerator}
                                 </td>
                                 <td>
                                     {$feature.denominator}
+                                </td>
+                                <td>
+                                    {$feature.score}
                                 </td>
                             </tr>
                         {/foreach}

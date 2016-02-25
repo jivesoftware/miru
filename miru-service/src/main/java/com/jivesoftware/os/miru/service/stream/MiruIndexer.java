@@ -7,6 +7,8 @@ import com.jivesoftware.os.miru.plugin.index.MiruActivityAndId;
 import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import gnu.trove.list.TIntList;
+import gnu.trove.list.array.TIntArrayList;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -23,18 +25,21 @@ public class MiruIndexer<BM extends IBM, IBM> {
     private final static MetricLogger log = MetricLoggerFactory.getLogger();
 
     private final MiruIndexAuthz<BM, IBM> indexAuthz;
-    private final MiruIndexFieldValues<BM, IBM> indexFieldValues;
+    private final MiruIndexPrimaryFields<BM, IBM> indexPrimaryFields;
+    private final MiruIndexValueBits<BM, IBM> indexValueBits;
     private final MiruIndexBloom<BM, IBM> indexBloom;
     private final MiruIndexLatest<BM, IBM> indexLatest;
     private final MiruIndexPairedLatest<BM, IBM> indexPairedLatest;
 
     public MiruIndexer(MiruIndexAuthz<BM, IBM> indexAuthz,
-        MiruIndexFieldValues<BM, IBM> indexFieldValues,
+        MiruIndexPrimaryFields<BM, IBM> indexPrimaryFields,
+        MiruIndexValueBits<BM, IBM> indexValueBits,
         MiruIndexBloom<BM, IBM> indexBloom,
         MiruIndexLatest<BM, IBM> indexLatest,
         MiruIndexPairedLatest<BM, IBM> indexPairedLatest) {
         this.indexAuthz = indexAuthz;
-        this.indexFieldValues = indexFieldValues;
+        this.indexPrimaryFields = indexPrimaryFields;
+        this.indexValueBits = indexValueBits;
         this.indexBloom = indexBloom;
         this.indexLatest = indexLatest;
         this.indexPairedLatest = indexPairedLatest;
@@ -76,7 +81,8 @@ public class MiruIndexer<BM extends IBM, IBM> {
         activityAndIds.clear();
 
         // 1. Compose work
-        List<Future<List<FieldValuesWork>>> fieldValuesComposed = indexFieldValues.compose(context, internalActivityAndIds, indexExecutor);
+        List<Future<List<PrimaryIndexWork>>> primaryFieldsComposed = indexPrimaryFields.compose(context, internalActivityAndIds, indexExecutor);
+        List<Future<List<ValueIndexWork>>> valueBitsComposed = indexValueBits.compose(context, internalActivityAndIds, indexExecutor);
         //List<Future<List<BloomWork>>> bloomComposed = indexBloom.compose(context, internalActivityAndIds, indexExecutor);
         //List<Future<List<PairedLatestWork>>> pairedLatestComposed = indexPairedLatest.compose(context, internalActivityAndIds, indexExecutor);
 
@@ -85,10 +91,12 @@ public class MiruIndexer<BM extends IBM, IBM> {
         //Future<List<PairedLatestWork>> pairedLatestPrepared = indexPairedLatest.prepare(context, pairedLatestComposed, indexExecutor);
 
         // 3. Index field values work
-        List<Future<?>> fieldFutures = indexFieldValues.index(context, coord.tenantId, fieldValuesComposed, repair, indexExecutor);
+        List<Future<?>> primaryFieldFutures = indexPrimaryFields.index(context, coord.tenantId, primaryFieldsComposed, repair, indexExecutor);
+        List<Future<?>> valueBitsFutures = indexValueBits.index(context, coord.tenantId, valueBitsComposed, repair, indexExecutor);
 
         // 4. Wait for completion
-        awaitFutures(fieldFutures, "indexFieldValues");
+        awaitFutures(primaryFieldFutures, "indexPrimaryFields");
+        awaitFutures(valueBitsFutures, "indexValueBits");
 
         // 5. Index remaining work
         final List<Future<?>> otherFutures = new ArrayList<>();
@@ -111,9 +119,11 @@ public class MiruIndexer<BM extends IBM, IBM> {
                 log.inc("count>remove", activityAndIds.size());
                 log.inc("count>remove", activityAndIds.size(), coord.tenantId.toString());
                 StackBuffer stackBuffer = new StackBuffer();
+                TIntList ids = new TIntArrayList();
                 for (MiruActivityAndId<MiruActivity> activityAndId : activityAndIds) {
-                    context.removalIndex.remove(activityAndId.id, stackBuffer);
+                    ids.add(activityAndId.id);
                 }
+                context.removalIndex.remove(stackBuffer, ids.toArray());
                 return null;
             }));
         }
@@ -152,7 +162,7 @@ public class MiruIndexer<BM extends IBM, IBM> {
         }
         context.activityInternExtern.intern(activityAndIds, 0, activityAndIds.size(), internalActivityAndIds, context.schema);
 
-        awaitFutures(indexFieldValues.repair(context, internalActivityAndIds, existingActivities, indexExecutor), "repairFieldValues");
+        awaitFutures(indexPrimaryFields.repair(context, internalActivityAndIds, existingActivities, indexExecutor), "repairFieldValues");
 
         List<Future<?>> otherFutures = Lists.newArrayList();
         otherFutures.addAll(indexAuthz.repair(context, internalActivityAndIds, existingActivities, indexExecutor));

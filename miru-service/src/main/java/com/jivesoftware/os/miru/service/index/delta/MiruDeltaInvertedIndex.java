@@ -185,18 +185,18 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     }
 
     @Override
-    public void remove(int id, StackBuffer stackBuffer) throws Exception {
+    public void remove(StackBuffer stackBuffer, int... ids) throws Exception {
         synchronized (delta) {
             clearIfEmpty();
 
             if (delta.or != null) {
-                delta.or = bitmaps.remove(delta.or, id);
+                delta.or = bitmaps.remove(delta.or, ids);
             }
 
             if (delta.andNot != null) {
-                delta.andNot = bitmaps.set(delta.andNot, id);
+                delta.andNot = bitmaps.set(delta.andNot, ids);
             } else {
-                delta.andNot = bitmaps.createWithBits(id);
+                delta.andNot = bitmaps.createWithBits(ids);
             }
         }
     }

@@ -72,7 +72,7 @@ public class MiruIndexAuthz<BM extends IBM, IBM> {
 
                 for (String authz : existingAuthz) {
                     if (!repairedAuthz.contains(authz)) {
-                        context.authzIndex.remove(authz, id, stackBuffer);
+                        context.authzIndex.remove(authz, stackBuffer, id);
                     }
                 }
 

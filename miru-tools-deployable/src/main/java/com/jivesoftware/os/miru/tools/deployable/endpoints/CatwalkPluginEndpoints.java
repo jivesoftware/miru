@@ -2,8 +2,8 @@ package com.jivesoftware.os.miru.tools.deployable.endpoints;
 
 import com.google.common.base.Optional;
 import com.jivesoftware.os.miru.tools.deployable.MiruToolsService;
-import com.jivesoftware.os.miru.tools.deployable.region.AnalyticsPluginRegion;
-import com.jivesoftware.os.miru.tools.deployable.region.AnalyticsPluginRegion.AnalyticsPluginRegionInput;
+import com.jivesoftware.os.miru.tools.deployable.region.CatwalkPluginRegion;
+import com.jivesoftware.os.miru.tools.deployable.region.CatwalkPluginRegion.CatwalkPluginRegionInput;
 import javax.inject.Singleton;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
@@ -22,11 +22,11 @@ import javax.ws.rs.core.Response;
 public class CatwalkPluginEndpoints {
 
     private final MiruToolsService toolsService;
-    private final AnalyticsPluginRegion analyticsPluginRegion;
+    private final CatwalkPluginRegion catwalkPluginRegion;
 
-    public CatwalkPluginEndpoints(@Context MiruToolsService toolsService, @Context AnalyticsPluginRegion analyticsPluginRegion) {
+    public CatwalkPluginEndpoints(@Context MiruToolsService toolsService, @Context CatwalkPluginRegion catwalkPluginRegion) {
         this.toolsService = toolsService;
-        this.analyticsPluginRegion = analyticsPluginRegion;
+        this.catwalkPluginRegion = catwalkPluginRegion;
     }
 
 
@@ -38,26 +38,21 @@ public class CatwalkPluginEndpoints {
         @QueryParam("fromTimeUnit") @DefaultValue("HOURS") String fromTimeUnit,
         @QueryParam("toTimeAgo") @DefaultValue("0") long toTimeAgo,
         @QueryParam("toTimeUnit") @DefaultValue("HOURS") String toTimeUnit,
-        @QueryParam("buckets") @DefaultValue("30") int buckets,
-        @QueryParam("field1") @DefaultValue("activityType") String field1,
-        @QueryParam("terms1") @DefaultValue("0, 1, 11, 65") String terms1,
-        @QueryParam("field2") @DefaultValue("") String field2,
-        @QueryParam("terms2") @DefaultValue("") String terms2,
-        @QueryParam("filters") @DefaultValue("") String filters,
+        @QueryParam("featureFields") @DefaultValue("user activityType, activityType context") String featureFields,
+        @QueryParam("filters") @DefaultValue("activityType:0, user:3 2000") String filters,
+        @QueryParam("desiredNumberOfResults") @DefaultValue("1000") int desiredNumberOfResults,
         @QueryParam("logLevel") @DefaultValue("NONE") String logLevel) {
-        String rendered = toolsService.renderPlugin(analyticsPluginRegion,
-            Optional.of(new AnalyticsPluginRegionInput(
+
+        String rendered = toolsService.renderPlugin(catwalkPluginRegion,
+            Optional.of(new CatwalkPluginRegionInput(
                 tenantId,
                 fromTimeAgo,
                 fromTimeUnit,
                 toTimeAgo,
                 toTimeUnit,
-                buckets,
-                field1.trim(),
-                terms1.trim(),
-                field2.trim(),
-                terms2.trim(),
+                featureFields,
                 filters.trim(),
+                desiredNumberOfResults,
                 logLevel)));
         return Response.ok(rendered).build();
     }
