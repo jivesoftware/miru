@@ -16,7 +16,7 @@ public interface MiruAuthzIndex<BM extends IBM, IBM> {
 
     void set(String authz, StackBuffer stackBuffer, int... ids) throws Exception;
 
-    void remove(String authz, int id, StackBuffer stackBuffer) throws Exception;
+    void remove(String authz, StackBuffer stackBuffer, int... ids) throws Exception;
 
     void close();
 

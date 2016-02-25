@@ -16,11 +16,14 @@
 package com.jivesoftware.os.miru.bitmaps.roaring5;
 
 import com.google.common.base.Optional;
-import com.jivesoftware.os.filer.io.AutoGrowingByteBufferBackedFiler;
+import com.google.common.collect.HashMultiset;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Multiset;
+import com.google.common.collect.Multiset.Entry;
+import com.google.common.collect.Sets;
 import com.jivesoftware.os.filer.io.ByteBufferDataInput;
-import com.jivesoftware.os.filer.io.FileBackedMemMappedByteBufferFactory;
 import com.jivesoftware.os.filer.io.FilerDataInput;
-import com.jivesoftware.os.filer.io.FilerDataOutput;
+import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.filer.io.chunk.ChunkFiler;
 import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
@@ -35,15 +38,16 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.DataInput;
 import java.io.DataOutput;
-import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
-import org.apache.commons.io.FileUtils;
+import java.util.Set;
 import org.roaringbitmap.FastAggregation;
 import org.roaringbitmap.IntIterator;
 import org.roaringbitmap.RoaringBitmap;
@@ -113,6 +117,11 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
             container.remove(index);
         }
         return container;
+    }
+
+    @Override
+    public boolean removeIfPresent(RoaringBitmap bitmap, int index) {
+        return bitmap.checkedRemove(index);
     }
 
     @Override
@@ -570,76 +579,447 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
         return deser;
     }
 
-    public static void main0(String[] args) throws Exception {
-        Random r = new Random(1234);
-        StackBuffer buf = new StackBuffer();
-        for (int i = 0; i < 100; i++) {
+    public static class Value {
 
-            long start;
-            long count;
+        final byte[] bytes;
 
-            RoaringBitmap b1 = new RoaringBitmap();
-            for (int j = 0; j < 1_000_000; j++) {
-                if (r.nextBoolean()) {
-                    b1.add(j);
-                }
-            }
-
-            File tempDir = Files.createTempDirectory("roaring5").toFile();
-            AutoGrowingByteBufferBackedFiler autoFiler = new AutoGrowingByteBufferBackedFiler(
-                new FileBackedMemMappedByteBufferFactory("roaring5", 0, new File[] { tempDir }), 1024 * 1024, 1024 * 1024);
-
-            autoFiler.seek(0);
-            b1.serialize(new FilerDataOutput(autoFiler, new StackBuffer()));
-
-            ChunkFiler filer = new ChunkFiler(null, autoFiler, 0, 0, b1.serializedSizeInBytes());
-
-            System.out.println("---- filer ----");
-            count = 0;
-            start = System.currentTimeMillis();
-            for (int j = 0; j < 10_000; j++) {
-                filer.seek(0);
-                RoaringBitmap tmp = new RoaringBitmap();
-                if (filer.canLeakUnsafeByteBuffer()) {
-                    tmp.deserialize(new ByteBufferDataInput(filer.leakUnsafeByteBuffer()));
-                } else {
-                    tmp.deserialize(new FilerDataInput(filer, buf));
-                }
-                count += tmp.getCardinality();
-            }
-            System.out.println("time=" + (System.currentTimeMillis() - start) + ", count=" + count);
-
-            /*System.out.println("---- array ----");
-            count = 0;
-            start = System.currentTimeMillis();
-            for (int j = 0; j < 10_000; j++) {
-                filer.seek(0);
-                byte[] bytes = new byte[(int) filer.length()];
-                filer.read(bytes);
-                RoaringBitmap tmp = new RoaringBitmap();
-                tmp.deserialize(ByteStreams.newDataInput(bytes));
-                //count += tmp.getCardinality();
-            }
-            System.out.println("time=" + (System.currentTimeMillis() - start) + ", count=" + count);
-
-            System.out.println("---- shared ----");
-            count = 0;
-            start = System.currentTimeMillis();
-            {
-                byte[] shared = new byte[(int) filer.length()];
-                for (int j = 0; j < 10_000; j++) {
-                    filer.seek(0);
-                    filer.read(shared);
-                    RoaringBitmap tmp = new RoaringBitmap();
-                    tmp.deserialize(ByteStreams.newDataInput(shared));
-                    //count += tmp.getCardinality();
-                }
-            }
-            System.out.println("time=" + (System.currentTimeMillis() - start) + ", count=" + count);*/
-            System.out.println();
-
-            filer.close();
-            FileUtils.deleteDirectory(tempDir);
+        public Value(byte[] bytes) {
+            this.bytes = bytes;
         }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+
+            Value value = (Value) o;
+
+            return Arrays.equals(bytes, value.bytes);
+
+        }
+
+        @Override
+        public int hashCode() {
+            return bytes != null ? Arrays.hashCode(bytes) : 0;
+        }
+    }
+
+    public static void main(String[] args) throws Exception {
+        int[] pieces = { 4 }; //{ 4, 8, 4, 8 };
+        int[] cardinalities = { 3_000 }; //{ 1, 100, 3, 10 };
+        int numInserts = 10_000;
+
+        int numBytes = 0;
+        for (int piece : pieces) {
+            numBytes += piece;
+        }
+        int numBits = numBytes * 8;
+
+        Random rand = new Random(1234);
+
+        for (int run = 0; run < 1_000_000; run++) {
+
+            RoaringBitmap[] vertical = new RoaringBitmap[numBits];
+            for (int i = 0; i < vertical.length; i++) {
+                vertical[i] = new RoaringBitmap();
+            }
+
+            System.out.println("-------------------------------");
+            System.out.println("Writing...");
+
+            Set<Value> expected = Sets.newHashSet();
+            for (int i = 0; i < numInserts; i++) {
+                byte[] value = new byte[numBytes];
+                int offset = 0;
+                for (int j = 0; j < pieces.length; j++) {
+                    int piece = pieces[j];
+                    int cardinality = cardinalities[j];
+                    if (piece == 4) {
+                        int p = 1 + rand.nextInt(cardinality);
+                        byte[] pb = FilerIO.intBytes(p);
+                        System.arraycopy(pb, 0, value, offset, 4);
+                    } else if (piece == 8) {
+                        long p = 1 + rand.nextInt(cardinality);
+                        byte[] pb = FilerIO.longBytes(p);
+                        System.arraycopy(pb, 0, value, offset, 8);
+                    }
+                    offset += piece;
+                }
+
+                //rand.nextBytes(value);
+                //value[rand.nextInt(numBytes)] |= 1;
+
+                //long value = 1L + (mask & rand.nextInt(100_000));
+                //int value = 1 + rand.nextInt(1_000);
+                expected.add(new Value(value));
+
+                for (int j = 0; j < numBytes; j++) {
+                    int v = value[j] & 0xFF;
+                    int bit = j * 8;
+                    while (v != 0 && bit < vertical.length) {
+                        if ((v & 1) != 0) {
+                            vertical[bit].add(i);
+                        }
+                        bit++;
+                        v >>>= 1;
+                    }
+                }
+            }
+
+            System.out.println("Cloning...");
+
+            //RoaringBitmap[] cloned = new RoaringBitmap[vertical.length];
+            List<BitmapWithCardinality> bits = Lists.newArrayListWithCapacity(vertical.length);
+            for (int i = 0; i < vertical.length; i++) {
+                RoaringBitmap clone = vertical[i].clone();
+                //cloned[i] = clone;
+                bits.add(new BitmapWithCardinality(i, clone));
+                //System.out.println("cardinality: " + clone.getCardinality());
+            }
+
+            System.out.println("Streaming...");
+
+            /*int traversed = 0;
+            int from = 0;
+            while (bits[from].isEmpty() && from < bits.length) {
+                from++;
+            }
+
+            int to = bits.length;
+            while (bits[to - 1].isEmpty() && to > 0) {
+                to--;
+            }*/
+
+            int[] valueBits = new int[numBits];
+            int[] bitBytes = new int[numBits];
+            for (int i = 0; i < numBits; i++) {
+                valueBits[i] = 1 << (i & 0x07);
+                bitBytes[i] = i >> 3;
+            }
+
+            Multiset<Value> found = HashMultiset.create(expected.size());
+            int[] streamed = { 0 };
+            int maxQuickSize = 0;
+
+            long start = System.currentTimeMillis();
+            /*RoaringBitmap input = new RoaringBitmap();
+            input.add(0, numInserts);
+            int _numBytes = numBytes;
+            solve(cloned, input, (output, cardinality) -> {
+                byte[] value = new byte[_numBytes];
+                for (int i = 0; i < output.length; i++) {
+                    if (output[i]) {
+                        value[bitBytes[i]] |= valueBits[i];
+                    }
+                }
+                found.add(new Value(value));
+                streamed[0]++;
+                return true;
+            });*/
+            Collections.sort(bits);
+            //Set<Value> quick = Sets.newHashSet();
+            while (!bits.isEmpty()) {
+                BitmapWithCardinality next = bits.remove(0);
+                //boolean last = bits.isEmpty();
+                IntIterator iter = next.bitmap.getIntIterator();
+                while (iter.hasNext()) {
+                    int id = iter.next();
+                    byte[] value = new byte[numBytes];
+                    value[bitBytes[next.index]] |= valueBits[next.index];
+                    for (BitmapWithCardinality bwc : bits) {
+                        if (bwc.bitmap.checkedRemove(id)) {
+                            bwc.cardinality--;
+                            value[bitBytes[bwc.index]] |= valueBits[bwc.index];
+                        }
+                    }
+                    Value v = new Value(value);
+                    //if (last || quick.add(v)) {
+                        found.add(v);
+                        streamed[0]++;
+                    //}
+                }
+                //maxQuickSize = Math.max(maxQuickSize, quick.size());
+                //quick.clear();
+                Collections.sort(bits);
+            }
+            /*for (int i = 0; i <= bits.size(); i++) {
+                int _i = i;
+                iterConsume(null, bits, i, bits.size(), numBytes, value -> {
+                    //System.out.println("Got from:" + _i + " value:" + value);
+                    found.add(new Value(value));
+                    streamed[0]++;
+                });
+            }*/
+            //found = expected;
+            long elapsed = System.currentTimeMillis() - start;
+
+            System.out.println("-------------------------------");
+            //System.out.println("traversed: " + traversed);
+            System.out.println("streamed: " + streamed[0]);
+            System.out.println("maxQuickSize: " + maxQuickSize);
+            System.out.println("expected: " + expected.size());
+            System.out.println("found: " + found.size());
+            boolean isExpected = expected.equals(found.elementSet());
+            System.out.println("equal: " + isExpected);
+            for (Entry<Value> entry : found.entrySet()) {
+                System.out.println("count: " + entry.getCount());
+            }
+
+            if (!isExpected) {
+                System.out.println("-foundContainsExpected: " + found.elementSet().containsAll(expected));
+                System.out.println("-expectedContainsFound: " + expected.containsAll(found.elementSet()));
+            }
+            System.out.println("elapsed: " + elapsed);
+            if (!isExpected) {
+                throw new AssertionError("Broken");
+            }
+        }
+    }
+
+    private static class BitmapWithCardinality implements Comparable<BitmapWithCardinality> {
+
+        private final int index;
+        private final RoaringBitmap bitmap;
+        private int cardinality;
+
+        public BitmapWithCardinality(int index, RoaringBitmap bitmap) {
+            this.index = index;
+            this.bitmap = bitmap;
+            this.cardinality = bitmap.getCardinality();
+        }
+
+        @Override
+        public int compareTo(BitmapWithCardinality o) {
+            return Integer.compare(cardinality, o.cardinality);
+        }
+    }
+
+    static private void solve(RoaringBitmap[] bits, RoaringBitmap candidate, Solution solution) {
+        int bitIndex = bits.length - 1;
+        while (bitIndex > -1) {
+            RoaringBitmap ones = RoaringBitmap.and(candidate, bits[bitIndex]);
+            if (!ones.isEmpty()) {
+                break;
+            }
+            bitIndex--;
+        }
+        if (bitIndex > -1) {
+            solve(bits, 0, bitIndex, candidate, new boolean[bits.length], solution);
+        }
+    }
+
+    static void solve(RoaringBitmap[] bits, int depth, int bitIndex, RoaringBitmap candidate, boolean[] output, Solution solution) {
+
+        RoaringBitmap zero = RoaringBitmap.andNot(candidate, bits[bitIndex]);
+        RoaringBitmap ones = RoaringBitmap.and(candidate, bits[bitIndex]);
+        if (bitIndex > 0) {
+            output[bitIndex] = true;
+            solve(bits, depth + 1, bitIndex - 1, ones, output, solution);
+        } else if (!ones.isEmpty()) {
+            output[bitIndex] = true;
+            solution.stream(output, ones.getCardinality());
+        }
+        if (bitIndex > 0) {
+            output[bitIndex] = false;
+            solve(bits, depth + 1, bitIndex - 1, zero, output, solution);
+        } else if (!zero.isEmpty()) {
+            output[bitIndex] = false;
+            solution.stream(output, zero.getCardinality());
+        }
+    }
+
+    interface Solution {
+
+        boolean stream(boolean[] output, int cardinality);
+    }
+
+
+    interface ValueStream {
+        void stream(byte[] value) throws Exception;
+    }
+
+    /*public static int consume(RoaringBitmap use, RoaringBitmap[] bits, int from, LongStream stream) throws Exception {
+        int traversals = 1;
+        RoaringBitmap one = use != null ? RoaringBitmap.and(use, bits[from]) : bits[from];
+        RoaringBitmap zero = use != null ? RoaringBitmap.andNot(use, bits[from]) : null;
+        if (from == bits.length - 1) {
+            if (!one.isEmpty()) {
+                //System.out.println("Stream One from:" + from + " value:" + (1L << from));
+                stream.stream(1L << from);
+            }
+            if (zero != null && !zero.isEmpty()) {
+                //System.out.println("Stream Zero from:" + from + " value:" + (0));
+                stream.stream(0L);
+            }
+        } else {
+            if (!one.isEmpty()) {
+                long base = 1L << from;
+                int _i = from + 1;
+                traversals += consume(one, bits, _i, value -> {
+                    long glue = base | value;
+                    //System.out.println("Pass One from:" + from + " at:" + _i + " base:" + base + " value:" + value + " glue:" + glue);
+                    stream.stream(glue);
+                });
+            }
+            if (zero != null && !zero.isEmpty()) {
+                int _i = from + 1;
+                traversals += consume(zero, bits, _i, value -> {
+                    //System.out.println("Pass Zero from:" + from + " at:" + _i + " value:" + value);
+                    stream.stream(value);
+                });
+            }
+        }
+        if (use != null) {
+            bits[from].andNot(use);
+        }
+        return traversals;
+    }*/
+
+    public static class Frame {
+        final RoaringBitmap use;
+        final int from;
+        //final int to;
+        final byte[] base;
+        //final LongStream stream;
+        RoaringBitmap consumed = null;
+
+        public Frame(RoaringBitmap use, int from, /*int to,*/ byte[] base /* LongStream stream*/) {
+            this.use = use;
+            this.from = from;
+            //this.to = to;
+            this.base = base;
+            //this.stream = stream;
+        }
+    }
+
+    final static int threshold = 0;
+
+    public static int iterConsume(RoaringBitmap _use,
+        List<BitmapWithCardinality> bits,
+        int _from,
+        int _to,
+        int numBytes,
+        ValueStream _stream) throws Exception {
+        int traversed = 1;
+        Deque<Frame> stack = new LinkedList<>();
+        stack.add(new Frame(null, _from, /*_to,*/ new byte[numBytes] /*_stream */));
+        while (!stack.isEmpty()) {
+            Frame frame = stack.getLast();
+            RoaringBitmap use = frame.use;
+            int from = frame.from;
+            //int to = frame.to;
+            byte[] base = frame.base;
+            //LongStream stream = frame.stream;
+            if (frame.consumed != null) {
+                if (use != null) {
+                    RoaringBitmap fromBitmap = bits.get(from).bitmap;
+                    fromBitmap.andNot(frame.consumed);
+                }
+                stack.removeLast();
+            } else if (from == _to) {
+                if (use != null) {
+                    _stream.stream(base);
+                }
+                stack.removeLast();
+            } else {
+                RoaringBitmap fromBitmap = bits.get(from).bitmap;
+                RoaringBitmap ones = use != null ? RoaringBitmap.and(use, fromBitmap) : fromBitmap;
+                RoaringBitmap zeroes = use;
+                if (zeroes != null) {
+                    zeroes.andNot(fromBitmap);
+                }
+                frame.consumed = ones;
+                if (from == bits.size() - 1) {
+                    if (!ones.isEmpty()) {
+                        byte[] value = new byte[numBytes];
+                        System.arraycopy(base, 0, value, 0, numBytes);
+                        value[from >> 3] |= (1L << (from & 0x07));
+                        _stream.stream(value);
+                    }
+                    if (zeroes != null && !zeroes.isEmpty()) {
+                        _stream.stream(base);
+                    }
+                } else {
+                    int numOnes = ones.getCardinality();
+                    if (numOnes > 0 && numOnes <= threshold) {
+                        IntIterator iter = ones.getIntIterator();
+                        while (iter.hasNext()) {
+                            int id = iter.next();
+                            byte[] value = new byte[numBytes];
+                            System.arraycopy(base, 0, value, 0, numBytes);
+                            value[from >> 3] |= (1L << (from & 0x07));
+                            for (int i = from + 1; i < bits.size(); i++) {
+                                if (bits.get(i).bitmap.checkedRemove(id)) {
+                                    value[i >> 3] |= (1L << (i & 0x07));
+                                }
+                            }
+                            _stream.stream(value);
+                        }
+                    } else if (numOnes > threshold) {
+                        byte[] nextBase = new byte[numBytes];
+                        System.arraycopy(base, 0, nextBase, 0, numBytes);
+                        nextBase[from >> 3] |= (1L << (from & 0x07));
+                        int _i = from + 1;
+                        traversed++;
+                        stack.push(new Frame(ones, _i, nextBase));
+                    }
+
+                    int numZeroes = zeroes != null ? zeroes.getCardinality() : 0;
+                    if (numZeroes > 0 && numZeroes <= threshold) {
+                        IntIterator iter = zeroes.getIntIterator();
+                        while (iter.hasNext()) {
+                            int id = iter.next();
+                            byte[] value = new byte[numBytes];
+                            System.arraycopy(base, 0, value, 0, numBytes);
+                            for (int i = from + 1; i < bits.size(); i++) {
+                                if (bits.get(i).bitmap.checkedRemove(id)) {
+                                    value[i >> 3] |= (1L << (i & 0x07));
+                                }
+                            }
+                            _stream.stream(value);
+                        }
+                    } else if (numZeroes > threshold) {
+                        int _i = from + 1;
+                        traversed++;
+                        stack.push(new Frame(zeroes, _i, base));
+                    }
+                }
+            }
+        }
+        return traversed;
+    }
+
+    public static void main0(String[] args) throws Exception {
+        RoaringBitmap horizontal = new RoaringBitmap();
+        RoaringBitmap[] vertical = new RoaringBitmap[64];
+        for (int i = 0; i < vertical.length; i++) {
+            vertical[i] = new RoaringBitmap();
+        }
+
+        Random rand = new Random(1234);
+        for (int i = 0; i < 3_000_000; i++) {
+            long value = rand.nextInt(1_000_000);
+            int bit = 0;
+            while (value != 0) {
+                if ((value & 1) != 0) {
+                    horizontal.add(i * 64 + bit);
+                    vertical[bit].add(i);
+                }
+                bit++;
+                value >>>= 1;
+            }
+        }
+
+        System.out.println("horizontal sizeInBytes: " + horizontal.serializedSizeInBytes());
+
+        long verticalSizeInBytes = 0;
+        for (int i = 0; i < vertical.length; i++) {
+            verticalSizeInBytes += vertical[i].serializedSizeInBytes();
+        }
+        System.out.println("vertical sizeInBytes: " + verticalSizeInBytes);
     }
 }

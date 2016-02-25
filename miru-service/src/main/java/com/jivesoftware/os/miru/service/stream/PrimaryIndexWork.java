@@ -7,19 +7,19 @@ import gnu.trove.list.TLongList;
 /**
  *
  */
-class FieldValuesWork implements Comparable<FieldValuesWork> {
+class PrimaryIndexWork implements Comparable<PrimaryIndexWork> {
     final MiruTermId fieldValue;
     final TIntList ids;
     final TLongList counts;
 
-    FieldValuesWork(MiruTermId fieldValue, TIntList ids, TLongList counts) {
+    PrimaryIndexWork(MiruTermId fieldValue, TIntList ids, TLongList counts) {
         this.fieldValue = fieldValue;
         this.ids = ids;
         this.counts = counts;
     }
 
     @Override
-    public int compareTo(FieldValuesWork o) {
+    public int compareTo(PrimaryIndexWork o) {
         // flipped so that natural ordering is "largest first"
         return Integer.compare(o.ids.size(), ids.size());
     }

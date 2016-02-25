@@ -15,7 +15,7 @@ public interface MiruInvertedIndex<BM extends IBM, IBM> extends MiruInvertedInde
 
     void replaceIndex(IBM index, int setLastId, StackBuffer stackBuffer) throws Exception;
 
-    void remove(int id, StackBuffer stackBuffer) throws Exception;
+    void remove(StackBuffer stackBuffer, int... ids) throws Exception;
 
     /**
      * Sets multiple bits anywhere in the bitmap.

@@ -8,7 +8,8 @@ public enum MiruFieldType {
     primary(0),
     latest(1),
     pairedLatest(2),
-    bloom(3);
+    bloom(3),
+    valueBits(4);
 
     private int index;
 

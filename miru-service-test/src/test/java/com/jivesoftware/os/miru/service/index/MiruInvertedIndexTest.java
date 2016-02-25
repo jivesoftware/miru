@@ -58,7 +58,7 @@ public class MiruInvertedIndexTest {
         long timestamp = System.currentTimeMillis();
         long subTimestamp = System.currentTimeMillis();
         for (int i = 0; i < sets; i++) {
-            miruInvertedIndex.remove(ids[i], stackBuffer);
+            miruInvertedIndex.remove(stackBuffer, ids[i]);
 
             id += 1 + (r.nextDouble() * 120);
             miruInvertedIndex.append(stackBuffer, id);
@@ -104,7 +104,7 @@ public class MiruInvertedIndexTest {
         }
 
         for (int i = 0; i < ids.size() / 2; i++) {
-            miruInvertedIndex.remove(ids.get(i), stackBuffer);
+            miruInvertedIndex.remove(stackBuffer, ids.get(i));
         }
         ids = ids.subList(ids.size() / 2, ids.size());
 
@@ -276,8 +276,8 @@ public class MiruInvertedIndexTest {
         assertTrue(got.contains(4));
 
         // remove index 1, 4
-        index.remove(1, stackBuffer);
-        index.remove(4, stackBuffer);
+        index.remove(stackBuffer, 1);
+        index.remove(stackBuffer, 4);
         got = index.getIndex(stackBuffer).get();
         assertEquals(got.getCardinality(), 0);
 

@@ -57,8 +57,8 @@ public class MiruFilerAuthzIndex<BM extends IBM, IBM> implements MiruAuthzIndex<
     }
 
     @Override
-    public void remove(String authz, int id, StackBuffer stackBuffer) throws Exception {
-        getAuthz(authz).remove(id, stackBuffer);
+    public void remove(String authz, StackBuffer stackBuffer, int... ids) throws Exception {
+        getAuthz(authz).remove(stackBuffer, ids);
         cache.increment(authz);
     }
 

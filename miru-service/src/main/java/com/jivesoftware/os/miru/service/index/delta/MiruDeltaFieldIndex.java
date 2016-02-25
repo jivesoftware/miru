@@ -92,10 +92,10 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
     }
 
     @Override
-    public void remove(int fieldId, MiruTermId termId, int id, StackBuffer stackBuffer) throws Exception {
+    public void remove(int fieldId, MiruTermId termId, int[] ids, StackBuffer stackBuffer) throws Exception {
         MiruInvertedIndex<BM, IBM> got = get("remove", fieldId, termId);
-        got.remove(id, stackBuffer);
-        putCardinalities(fieldId, termId, new int[] { id }, cardinalities[fieldId] != null ? new long[1] : null, false, stackBuffer);
+        got.remove(stackBuffer, ids);
+        putCardinalities(fieldId, termId, ids, cardinalities[fieldId] != null ? new long[ids.length] : null, false, stackBuffer);
     }
 
     @Override

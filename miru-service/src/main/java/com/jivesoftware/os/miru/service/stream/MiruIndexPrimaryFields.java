@@ -6,6 +6,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multiset;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
+import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition.Feature;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
@@ -29,17 +30,17 @@ import java.util.concurrent.Future;
 /**
  *
  */
-public class MiruIndexFieldValues<BM extends IBM, IBM> {
+public class MiruIndexPrimaryFields<BM extends IBM, IBM> {
 
     private final static MetricLogger log = MetricLoggerFactory.getLogger();
 
-    public List<Future<List<FieldValuesWork>>> compose(MiruContext<BM, IBM, ?> context,
+    public List<Future<List<PrimaryIndexWork>>> compose(MiruContext<BM, IBM, ?> context,
         final List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds,
         ExecutorService indexExecutor)
         throws Exception {
 
         MiruFieldDefinition[] fieldDefinitions = context.schema.getFieldDefinitions();
-        List<Future<List<FieldValuesWork>>> workFutures = new ArrayList<>(fieldDefinitions.length);
+        List<Future<List<PrimaryIndexWork>>> workFutures = new ArrayList<>(fieldDefinitions.length);
         for (final MiruFieldDefinition fieldDefinition : fieldDefinitions) {
             if (!fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.indexed)
                 && !fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.indexedFirst)) {
@@ -82,10 +83,10 @@ public class MiruIndexFieldValues<BM extends IBM, IBM> {
                         }
                     }
                 }
-                List<FieldValuesWork> workList = Lists.newArrayListWithCapacity(fieldWork.size());
+                List<PrimaryIndexWork> workList = Lists.newArrayListWithCapacity(fieldWork.size());
                 for (Map.Entry<MiruTermId, TermWork> entry : fieldWork.entrySet()) {
                     TermWork work = entry.getValue();
-                    workList.add(new FieldValuesWork(entry.getKey(), work.ids, work.counts));
+                    workList.add(new PrimaryIndexWork(entry.getKey(), work.ids, work.counts));
                 }
                 return workList;
             }));
@@ -95,47 +96,47 @@ public class MiruIndexFieldValues<BM extends IBM, IBM> {
 
     public List<Future<?>> index(final MiruContext<BM, IBM, ?> context,
         MiruTenantId tenantId,
-        List<Future<List<FieldValuesWork>>> fieldWorkFutures,
+        List<Future<List<PrimaryIndexWork>>> fieldWorkFutures,
         final boolean repair,
         ExecutorService indexExecutor)
         throws Exception {
 
-        List<FieldValuesWork>[] work = awaitFieldWorkFutures(fieldWorkFutures);
+        List<PrimaryIndexWork>[] work = awaitFieldWorkFutures(fieldWorkFutures);
 
         final MiruFieldIndex<BM, IBM> fieldIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
         List<Integer> fieldIds = context.schema.getFieldIds();
         List<Future<?>> futures = new ArrayList<>(fieldIds.size());
         for (int fieldId = 0; fieldId < work.length; fieldId++) {
-            List<FieldValuesWork> fieldWork = work[fieldId];
+            List<PrimaryIndexWork> fieldWork = work[fieldId];
             MiruFieldDefinition fieldDefinition = context.schema.getFieldDefinition(fieldId);
             final int finalFieldId = fieldId;
-            for (final FieldValuesWork fieldValuesWork : fieldWork) {
+            for (final PrimaryIndexWork primaryIndexWork : fieldWork) {
                 futures.add(indexExecutor.submit(() -> {
                     StackBuffer stackBuffer = new StackBuffer();
                     if (fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.indexed)) {
                         if (repair) {
-                            log.inc("count>set", fieldValuesWork.ids.size());
-                            log.inc("count>set", fieldValuesWork.ids.size(), tenantId.toString());
+                            log.inc("count>set", primaryIndexWork.ids.size());
+                            log.inc("count>set", primaryIndexWork.ids.size(), tenantId.toString());
                             fieldIndex.set(finalFieldId,
-                                fieldValuesWork.fieldValue,
-                                fieldValuesWork.ids.toArray(),
-                                fieldValuesWork.counts != null ? fieldValuesWork.counts.toArray() : null,
+                                primaryIndexWork.fieldValue,
+                                primaryIndexWork.ids.toArray(),
+                                primaryIndexWork.counts != null ? primaryIndexWork.counts.toArray() : null,
                                 stackBuffer);
                         } else {
-                            log.inc("count>append", fieldValuesWork.ids.size());
-                            log.inc("count>append", fieldValuesWork.ids.size(), tenantId.toString());
+                            log.inc("count>append", primaryIndexWork.ids.size());
+                            log.inc("count>append", primaryIndexWork.ids.size(), tenantId.toString());
                             fieldIndex.append(finalFieldId,
-                                fieldValuesWork.fieldValue,
-                                fieldValuesWork.ids.toArray(),
-                                fieldValuesWork.counts != null ? fieldValuesWork.counts.toArray() : null,
+                                primaryIndexWork.fieldValue,
+                                primaryIndexWork.ids.toArray(),
+                                primaryIndexWork.counts != null ? primaryIndexWork.counts.toArray() : null,
                                 stackBuffer);
                         }
                     } else if (fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.indexedFirst)) {
                         log.inc("count>setIfEmpty", 1);
                         fieldIndex.setIfEmpty(finalFieldId,
-                            fieldValuesWork.fieldValue,
-                            fieldValuesWork.ids.get(0),
-                            fieldValuesWork.counts != null ? fieldValuesWork.counts.get(0) : -1,
+                            primaryIndexWork.fieldValue,
+                            primaryIndexWork.ids.get(0),
+                            primaryIndexWork.counts != null ? primaryIndexWork.counts.get(0) : -1,
                             stackBuffer);
                     }
                     return null;
@@ -145,11 +146,11 @@ public class MiruIndexFieldValues<BM extends IBM, IBM> {
         return futures;
     }
 
-    private List<FieldValuesWork>[] awaitFieldWorkFutures(List<Future<List<FieldValuesWork>>> fieldWorkFutures)
+    private List<PrimaryIndexWork>[] awaitFieldWorkFutures(List<Future<List<PrimaryIndexWork>>> fieldWorkFutures)
         throws InterruptedException, ExecutionException {
 
         @SuppressWarnings("unchecked")
-        List<FieldValuesWork>[] fieldsWork = new List[fieldWorkFutures.size()];
+        List<PrimaryIndexWork>[] fieldsWork = new List[fieldWorkFutures.size()];
         for (int i = 0; i < fieldWorkFutures.size(); i++) {
             fieldsWork[i] = fieldWorkFutures.get(i).get();
             Collections.sort(fieldsWork[i]);

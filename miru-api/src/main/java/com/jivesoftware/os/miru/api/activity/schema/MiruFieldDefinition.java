@@ -59,6 +59,7 @@ public class MiruFieldDefinition {
     public enum Type {
         singleTerm(Feature.indexed, Feature.stored),
         singleTermNonStored(Feature.indexed),
+        singleTermIndexValueBits(Feature.indexed, Feature.indexedValueBits, Feature.stored),
         singleTermIndexLatest(Feature.indexed, Feature.indexedLatest, Feature.stored),
         singleTermIndexLatestNonStored(Feature.indexed, Feature.indexedLatest),
         singleTermIndexFirst(Feature.indexedFirst, Feature.stored),
@@ -87,6 +88,7 @@ public class MiruFieldDefinition {
         indexed,
         indexedFirst,
         indexedLatest,
+        indexedValueBits,
         multiValued,
         cardinality,
         stored;

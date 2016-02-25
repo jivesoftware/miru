@@ -62,8 +62,8 @@ public class MiruDeltaAuthzIndex<BM extends IBM, IBM> implements MiruAuthzIndex<
     }
 
     @Override
-    public void remove(String authz, int id, StackBuffer stackBuffer) throws Exception {
-        getOrCreate(authz).remove(id, stackBuffer);
+    public void remove(String authz, StackBuffer stackBuffer, int... ids) throws Exception {
+        getOrCreate(authz).remove(stackBuffer, ids);
         cache.increment(authz);
     }
 

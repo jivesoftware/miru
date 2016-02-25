@@ -49,6 +49,8 @@ public interface MiruBitmaps<BM extends IBM, IBM> {
 
     BM remove(IBM bitmap, int... indexes);
 
+    boolean removeIfPresent(BM bitmap, int index);
+
     boolean isSet(IBM bitmap, int index);
 
     BM extend(IBM bitmap, List<Integer> indexes, int extendToIndex);

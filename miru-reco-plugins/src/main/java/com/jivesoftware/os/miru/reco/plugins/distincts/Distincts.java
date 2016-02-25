@@ -86,14 +86,9 @@ public class Distincts {
                 if (query.prefixes != null && !query.prefixes.isEmpty()) {
                     ranges = Lists.newArrayListWithCapacity(query.prefixes.size());
                     for (MiruValue prefix : query.prefixes) {
-                        try {
-                            ranges.add(new KeyRange(
-                                termComposer.prefixLowerInclusive(schema, fieldDefinition, stackBuffer, prefix.parts),
-                                termComposer.prefixUpperExclusive(schema, fieldDefinition, stackBuffer, prefix.parts)));
-                        } catch (Exception x) {
-
-                            throw x;
-                        }
+                        ranges.add(new KeyRange(
+                            termComposer.prefixLowerInclusive(schema, fieldDefinition, stackBuffer, prefix.parts),
+                            termComposer.prefixUpperExclusive(schema, fieldDefinition, stackBuffer, prefix.parts)));
                     }
                 }
 

@@ -7,6 +7,7 @@ import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
+import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.bitmaps.roaring5.MiruBitmapsRoaring;
 import com.jivesoftware.os.miru.plugin.MiruInterner;
@@ -65,12 +66,9 @@ public class LuceneBackedQueryParserTest {
     public void setUp() throws Exception {
         fieldIndex = new TestFieldIndex(2);
         @SuppressWarnings("unchecked")
-        MiruFieldIndex<RoaringBitmap, RoaringBitmap>[] indexes = (MiruFieldIndex<RoaringBitmap, RoaringBitmap>[]) new MiruFieldIndex[] {
-            fieldIndex,
-            null,
-            null,
-            null
-        };
+        MiruFieldIndex<RoaringBitmap, RoaringBitmap>[] indexes =
+            (MiruFieldIndex<RoaringBitmap, RoaringBitmap>[]) new MiruFieldIndex[MiruFieldType.values().length];
+        indexes[0] = fieldIndex;
         fieldIndexProvider = new MiruFieldIndexProvider<>(indexes);
     }
 
@@ -227,7 +225,7 @@ public class LuceneBackedQueryParserTest {
         }
 
         @Override
-        public void remove(int fieldId, MiruTermId termId, int id, StackBuffer stackBuffer) throws Exception {
+        public void remove(int fieldId, MiruTermId termId, int[] ids, StackBuffer stackBuffer) throws Exception {
             throw new UnsupportedOperationException("Nope");
         }
 
@@ -286,7 +284,7 @@ public class LuceneBackedQueryParserTest {
             }
 
             @Override
-            public void remove(int id, StackBuffer stackBuffer) throws Exception {
+            public void remove(StackBuffer stackBuffer, int... ids) throws Exception {
             }
 
             @Override

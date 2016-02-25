@@ -1,7 +1,6 @@
-package com.jivesoftware.os.miru.stream.plugins.fulltext;
+package com.jivesoftware.os.miru.stream.plugins.catwalk;
 
 import com.google.common.base.Optional;
-import com.google.common.collect.Maps;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
@@ -11,7 +10,6 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
-import com.jivesoftware.os.miru.plugin.solution.FieldAndTermId;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
@@ -25,33 +23,31 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import org.apache.commons.lang.mutable.MutableInt;
 
 /**
  * @author jonathan
  */
-public class FullTextCustomQuestion implements Question<FullTextQuery, FullTextAnswer, FullTextReport> {
+public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, CatwalkReport> {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
-    private final FullText fullText;
-    private final MiruRequest<FullTextQuery> request;
-    private final MiruRemotePartition<FullTextQuery, FullTextAnswer, FullTextReport> remotePartition;
+    private final Catwalk catwalk;
+    private final MiruRequest<CatwalkQuery> request;
+    private final MiruRemotePartition<CatwalkQuery, CatwalkAnswer, CatwalkReport> remotePartition;
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
 
-    public FullTextCustomQuestion(FullText fullText,
-        MiruRequest<FullTextQuery> request,
-        MiruRemotePartition<FullTextQuery, FullTextAnswer, FullTextReport> remotePartition) {
-        this.fullText = fullText;
+    public CatwalkQuestion(Catwalk catwalk,
+        MiruRequest<CatwalkQuery> request,
+        MiruRemotePartition<CatwalkQuery, CatwalkAnswer, CatwalkReport> remotePartition) {
+        this.catwalk = catwalk;
         this.request = request;
         this.remotePartition = remotePartition;
     }
 
     @Override
-    public <BM extends IBM, IBM> MiruPartitionResponse<FullTextAnswer> askLocal(MiruRequestHandle<BM, IBM, ?> handle,
-        Optional<FullTextReport> report)
+    public <BM extends IBM, IBM> MiruPartitionResponse<CatwalkAnswer> askLocal(MiruRequestHandle<BM, IBM, ?> handle,
+        Optional<CatwalkReport> report)
         throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
@@ -62,22 +58,15 @@ public class FullTextCustomQuestion implements Question<FullTextQuery, FullTextA
         if (!context.getTimeIndex().intersects(timeRange)) {
             solutionLog.log(MiruSolutionLogLevel.WARN, "No time index intersection. Partition {}: {} doesn't intersect with {}",
                 handle.getCoord().partitionId, context.getTimeIndex(), timeRange);
-            return new MiruPartitionResponse<>(fullText.getActivityScores("fullText", bitmaps, context, request, report, bitmaps.create(), null),
+            return new MiruPartitionResponse<>(catwalk.model("catwalk", bitmaps, context, request, report, bitmaps.create(), solutionLog),
                 solutionLog.asList());
         }
 
-        MiruFilter filter = fullText.parseQuery(request.query.defaultField, request.query.query);
-        Map<FieldAndTermId, MutableInt> termCollector = request.query.strategy == FullTextQuery.Strategy.TF_IDF ? Maps.newHashMap() : null;
-
-        BM filtered = aggregateUtil.filter("fullTextCustom", bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(),
-            filter, solutionLog, termCollector, context.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
-
         List<IBM> ands = new ArrayList<>();
-        ands.add(filtered);
         ands.add(bitmaps.buildIndexMask(context.getActivityIndex().lastId(stackBuffer), context.getRemovalIndex().getIndex(stackBuffer)));
 
         if (!MiruFilter.NO_FILTER.equals(request.query.constraintsFilter)) {
-            BM constrained = aggregateUtil.filter("fullTextCustom", bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(),
+            BM constrained = aggregateUtil.filter("catwalk", bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(),
                 request.query.constraintsFilter,
                 solutionLog, null, context.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
             ands.add(constrained);
@@ -94,33 +83,19 @@ public class FullTextCustomQuestion implements Question<FullTextQuery, FullTextA
         bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
         BM answer = bitmaps.and(ands);
 
-        return new MiruPartitionResponse<>(fullText.getActivityScores("fullText", bitmaps, context, request, report, answer, termCollector),
+        return new MiruPartitionResponse<>(catwalk.model("catwalk", bitmaps, context, request, report, answer, solutionLog),
             solutionLog.asList());
     }
 
     @Override
-    public MiruPartitionResponse<FullTextAnswer> askRemote(MiruHost host,
+    public MiruPartitionResponse<CatwalkAnswer> askRemote(MiruHost host,
         MiruPartitionId partitionId,
-        Optional<FullTextReport> report) throws MiruQueryServiceException {
+        Optional<CatwalkReport> report) throws MiruQueryServiceException {
         return remotePartition.askRemote(host, partitionId, request, report);
     }
 
     @Override
-    public Optional<FullTextReport> createReport(Optional<FullTextAnswer> answer) {
-        Optional<FullTextReport> report = Optional.absent();
-        if (answer.isPresent()) {
-            float lowestScore = Float.MAX_VALUE;
-            float highestScore = -Float.MAX_VALUE;
-            for (FullTextAnswer.ActivityScore result : answer.get().results) {
-                lowestScore = Math.min(lowestScore, result.score);
-                highestScore = Math.max(highestScore, result.score);
-            }
-
-            report = Optional.of(new FullTextReport(
-                answer.get().results.size(),
-                lowestScore,
-                highestScore));
-        }
-        return report;
+    public Optional<CatwalkReport> createReport(Optional<CatwalkAnswer> answer) {
+        return Optional.absent();
     }
 }

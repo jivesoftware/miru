@@ -266,10 +266,10 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     }
 
     @Override
-    public void remove(int id, StackBuffer stackBuffer) throws Exception {
+    public void remove(StackBuffer stackBuffer, int... ids) throws Exception {
         synchronized (mutationLock) {
             BM index = getOrCreateIndex(stackBuffer);
-            BM r = bitmaps.remove(index, id);
+            BM r = bitmaps.remove(index, ids);
             setIndex(r, lastId, stackBuffer);
         }
     }

@@ -12,9 +12,10 @@ import com.jivesoftware.os.miru.service.MiruServiceConfig;
 import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
 import com.jivesoftware.os.miru.service.stream.MiruIndexAuthz;
 import com.jivesoftware.os.miru.service.stream.MiruIndexBloom;
-import com.jivesoftware.os.miru.service.stream.MiruIndexFieldValues;
 import com.jivesoftware.os.miru.service.stream.MiruIndexLatest;
 import com.jivesoftware.os.miru.service.stream.MiruIndexPairedLatest;
+import com.jivesoftware.os.miru.service.stream.MiruIndexPrimaryFields;
+import com.jivesoftware.os.miru.service.stream.MiruIndexValueBits;
 import com.jivesoftware.os.miru.service.stream.MiruIndexer;
 import com.jivesoftware.os.miru.service.stream.MiruRebuildDirector;
 import java.util.concurrent.ExecutorService;
@@ -111,7 +112,8 @@ public class MiruLocalPartitionFactory<C extends MiruCursor<C, S>, S extends Mir
             indexRepairs,
             new MiruIndexer<>(
                 new MiruIndexAuthz<>(),
-                new MiruIndexFieldValues<>(),
+                new MiruIndexPrimaryFields<>(),
+                new MiruIndexValueBits<>(),
                 new MiruIndexBloom<>(new BloomIndex<>(bitmaps, Hashing.murmur3_128(), 100_000, 0.01f)),
                 new MiruIndexLatest<>(),
                 new MiruIndexPairedLatest<>()),

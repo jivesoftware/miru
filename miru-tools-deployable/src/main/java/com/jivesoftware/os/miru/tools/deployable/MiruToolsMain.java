@@ -170,6 +170,10 @@ public class MiruToolsMain {
                     "/miru/tools/analytics",
                     AnalyticsPluginEndpoints.class,
                     new AnalyticsPluginRegion("soy.miru.page.analyticsPluginRegion", renderer, miruReaderClient, mapper, responseMapper)),
+                new MiruToolsPlugin("education", "Catwalk",
+                    "/miru/tools/catwalk",
+                    CatwalkPluginEndpoints.class,
+                    new CatwalkPluginRegion("soy.miru.page.catwalkPluginRegion", renderer, miruReaderClient, mapper, responseMapper)),
                 new MiruToolsPlugin("asterisk", "Distincts",
                     "/miru/tools/distincts",
                     DistinctsPluginEndpoints.class,
@@ -190,11 +194,7 @@ public class MiruToolsMain {
                 new MiruToolsPlugin("list", "Trending",
                     "/miru/tools/trending",
                     TrendingPluginEndpoints.class,
-                    new TrendingPluginRegion("soy.miru.page.trendingPluginRegion", renderer, miruReaderClient, mapper, responseMapper)),
-                new MiruToolsPlugin("education", "Catwalk",
-                    "/miru/tools/catwalk",
-                    CatwalkPluginEndpoints.class,
-                    new CatwalkPluginRegion("soy.miru.page.catwalkPluginRegion", renderer, miruReaderClient, mapper, responseMapper)));
+                    new TrendingPluginRegion("soy.miru.page.trendingPluginRegion", renderer, miruReaderClient, mapper, responseMapper)));
 
             File staticResourceDir = new File(System.getProperty("user.dir"));
             System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());
