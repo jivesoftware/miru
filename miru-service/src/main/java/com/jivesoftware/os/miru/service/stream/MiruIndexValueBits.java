@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.service.stream;
 
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.Futures;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition.Feature;
@@ -39,6 +40,7 @@ public class MiruIndexValueBits<BM extends IBM, IBM> {
         List<Future<List<ValueIndexWork>>> workFutures = new ArrayList<>(fieldDefinitions.length);
         for (final MiruFieldDefinition fieldDefinition : fieldDefinitions) {
             if (!fieldDefinition.type.hasFeature(Feature.indexedValueBits)) {
+                workFutures.add(Futures.immediateFuture(Collections.emptyList()));
                 continue;
             }
             if (activityIds == null) {
@@ -82,7 +84,7 @@ public class MiruIndexValueBits<BM extends IBM, IBM> {
                 List<ValueIndexWork> workList = Lists.newArrayListWithCapacity(bitIds.length);
                 for (int aye = 0; aye < bitIds.length; aye++) {
                     if (bitIds[aye] != null) {
-                        workList.add(new ValueIndexWork(fieldDefinition, allIds, bitIds[aye], aye));
+                        workList.add(new ValueIndexWork(allIds, bitIds[aye], aye));
                     }
                 }
                 return workList;

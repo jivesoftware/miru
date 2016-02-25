@@ -4,9 +4,9 @@ import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multiset;
+import com.google.common.util.concurrent.Futures;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
-import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition.Feature;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
@@ -44,6 +44,7 @@ public class MiruIndexPrimaryFields<BM extends IBM, IBM> {
         for (final MiruFieldDefinition fieldDefinition : fieldDefinitions) {
             if (!fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.indexed)
                 && !fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.indexedFirst)) {
+                workFutures.add(Futures.immediateFuture(Collections.emptyList()));
                 continue;
             }
             boolean hasCardinality = fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.cardinality);
