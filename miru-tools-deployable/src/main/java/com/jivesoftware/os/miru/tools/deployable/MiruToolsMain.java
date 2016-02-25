@@ -28,12 +28,14 @@ import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer.Miru
 import com.jivesoftware.os.miru.metric.sampler.RoutingBirdMetricSampleSenderProvider;
 import com.jivesoftware.os.miru.tools.deployable.endpoints.AggregateCountsPluginEndpoints;
 import com.jivesoftware.os.miru.tools.deployable.endpoints.AnalyticsPluginEndpoints;
+import com.jivesoftware.os.miru.tools.deployable.endpoints.CatwalkPluginEndpoints;
 import com.jivesoftware.os.miru.tools.deployable.endpoints.DistinctsPluginEndpoints;
 import com.jivesoftware.os.miru.tools.deployable.endpoints.FullTextPluginEndpoints;
 import com.jivesoftware.os.miru.tools.deployable.endpoints.MiruToolsEndpoints;
 import com.jivesoftware.os.miru.tools.deployable.endpoints.RealwavePluginEndpoints;
 import com.jivesoftware.os.miru.tools.deployable.region.AggregateCountsPluginRegion;
 import com.jivesoftware.os.miru.tools.deployable.region.AnalyticsPluginRegion;
+import com.jivesoftware.os.miru.tools.deployable.region.CatwalkPluginRegion;
 import com.jivesoftware.os.miru.tools.deployable.region.DistinctsPluginRegion;
 import com.jivesoftware.os.miru.tools.deployable.region.FullTextPluginRegion;
 import com.jivesoftware.os.miru.tools.deployable.region.MiruToolsPlugin;
@@ -188,7 +190,11 @@ public class MiruToolsMain {
                 new MiruToolsPlugin("list", "Trending",
                     "/miru/tools/trending",
                     TrendingPluginEndpoints.class,
-                    new TrendingPluginRegion("soy.miru.page.trendingPluginRegion", renderer, miruReaderClient, mapper, responseMapper)));
+                    new TrendingPluginRegion("soy.miru.page.trendingPluginRegion", renderer, miruReaderClient, mapper, responseMapper)),
+                new MiruToolsPlugin("education", "Catwalk",
+                    "/miru/tools/catwalk",
+                    CatwalkPluginEndpoints.class,
+                    new CatwalkPluginRegion("soy.miru.page.catwalkPluginRegion", renderer, miruReaderClient, mapper, responseMapper)));
 
             File staticResourceDir = new File(System.getProperty("user.dir"));
             System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());
