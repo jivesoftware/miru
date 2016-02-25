@@ -119,37 +119,41 @@
                 <a href="#summary">Jump to query summary</a>
             </div>
             <div class="panel-body">
-                <table>
-                    <tr>
-                        <th>Values</th>
-                        <th>Numerator</th>
-                        <th>Denominator</th>
-                        <th>Score</th>
-                    </tr>
-                    {foreach $featureClass in keys($model.featureClasses)}
-                        <tr colspan="4">
-                            <h3>{$featureClass}</h3>
+                <table class="table table-condensed">
+                    <thead>
+                        <tr>
+                            <th>Values</th>
+                            <th>Numerator</th>
+                            <th>Denominator</th>
+                            <th>Score</th>
                         </tr>
-                        {foreach $feature in $model.featureClasses[$featureClass]}
-                            <tr>
-                                <td>
-                                    {foreach $v in $feature.values}
-                                        {if not isFirst($v)}, {/if}
-                                        {$v}
-                                    {/foreach}
-                                </td>
-                                <td>
-                                    {$feature.numerator}
-                                </td>
-                                <td>
-                                    {$feature.denominator}
-                                </td>
-                                <td>
-                                    {$feature.score}
-                                </td>
+                    </thead>
+                    </tbody>
+                        {foreach $featureClass in keys($model.featureClasses)}
+                            <tr colspan="4">
+                                <h3>{$featureClass}</h3>
                             </tr>
+                            {foreach $feature in $model.featureClasses[$featureClass]}
+                                <tr>
+                                    <td>
+                                        {foreach $v in $feature.values}
+                                            {if not isFirst($v)}, {/if}
+                                            {$v}
+                                        {/foreach}
+                                    </td>
+                                    <td>
+                                        {$feature.numerator}
+                                    </td>
+                                    <td>
+                                        {$feature.denominator}
+                                    </td>
+                                    <td>
+                                        {$feature.score}
+                                    </td>
+                                </tr>
+                            {/foreach}
                         {/foreach}
-                    {/foreach}
+                    </tbody>
                 </table>
             </div>
         </div>
