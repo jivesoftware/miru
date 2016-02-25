@@ -189,7 +189,7 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
                     if (catwalkResponse != null && catwalkResponse.answer != null) {
                         response = catwalkResponse;
                     } else {
-                        LOG.warn("Empty analytics response from {}", tenantId);
+                        LOG.warn("Empty catwalk response from {}", tenantId);
                     }
                 }
 
