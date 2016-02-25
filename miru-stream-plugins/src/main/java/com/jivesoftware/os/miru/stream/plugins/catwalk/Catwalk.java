@@ -10,8 +10,6 @@ import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
-import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
-import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
@@ -21,7 +19,6 @@ import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.index.MiruTxIndex;
 import com.jivesoftware.os.miru.plugin.index.ValueIndex;
-import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
@@ -199,7 +196,7 @@ public class Catwalk {
 
                 List<MiruTxIndex<IBM>> ands = Lists.newArrayList();
                 for (int j = 0; j < fieldIds.length; j++) {
-                    ands.add(primaryIndex.get(name, fieldIds[j], termIds[i]));
+                    ands.add(primaryIndex.get(name, fieldIds[j], termIds[j]));
                 }
                 BM bitmap = bitmaps.andTx(ands, stackBuffer);
                 featureScoreResults[i].add(new FeatureScore(featureValues, entry.getCount(), bitmaps.cardinality(bitmap)));
