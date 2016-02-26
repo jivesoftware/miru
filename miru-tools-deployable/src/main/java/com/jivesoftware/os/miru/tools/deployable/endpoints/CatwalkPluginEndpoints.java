@@ -4,6 +4,8 @@ import com.google.common.base.Optional;
 import com.jivesoftware.os.miru.tools.deployable.MiruToolsService;
 import com.jivesoftware.os.miru.tools.deployable.region.CatwalkPluginRegion;
 import com.jivesoftware.os.miru.tools.deployable.region.CatwalkPluginRegion.CatwalkPluginRegionInput;
+import com.jivesoftware.os.mlogger.core.MetricLogger;
+import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import javax.inject.Singleton;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
@@ -21,6 +23,8 @@ import javax.ws.rs.core.Response;
 @Path("/miru/tools/catwalk")
 public class CatwalkPluginEndpoints {
 
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
+
     private final MiruToolsService toolsService;
     private final CatwalkPluginRegion catwalkPluginRegion;
 
@@ -29,11 +33,10 @@ public class CatwalkPluginEndpoints {
         this.catwalkPluginRegion = catwalkPluginRegion;
     }
 
-
     @GET
     @Path("/")
     @Produces(MediaType.TEXT_HTML)
-    public Response getAnalytics(@QueryParam("tenantId") @DefaultValue("") String tenantId,
+    public Response getCatwalkModel(@QueryParam("tenantId") @DefaultValue("") String tenantId,
         @QueryParam("fromTimeAgo") @DefaultValue("720") long fromTimeAgo,
         @QueryParam("fromTimeUnit") @DefaultValue("HOURS") String fromTimeUnit,
         @QueryParam("toTimeAgo") @DefaultValue("0") long toTimeAgo,
@@ -43,17 +46,22 @@ public class CatwalkPluginEndpoints {
         @QueryParam("desiredNumberOfResults") @DefaultValue("1000") int desiredNumberOfResults,
         @QueryParam("logLevel") @DefaultValue("NONE") String logLevel) {
 
-        String rendered = toolsService.renderPlugin(catwalkPluginRegion,
-            Optional.of(new CatwalkPluginRegionInput(
-                tenantId,
-                fromTimeAgo,
-                fromTimeUnit,
-                toTimeAgo,
-                toTimeUnit,
-                featureFields,
-                filters.trim(),
-                desiredNumberOfResults,
-                logLevel)));
-        return Response.ok(rendered).build();
+        try {
+            String rendered = toolsService.renderPlugin(catwalkPluginRegion,
+                Optional.of(new CatwalkPluginRegionInput(
+                    tenantId,
+                    fromTimeAgo,
+                    fromTimeUnit,
+                    toTimeAgo,
+                    toTimeUnit,
+                    featureFields,
+                    filters.trim(),
+                    desiredNumberOfResults,
+                    logLevel)));
+            return Response.ok(rendered).build();
+        } catch (Exception x) {
+            LOG.error("Failed to generating catwalkModel.", x);
+            return Response.serverError().build();
+        }
     }
 }
