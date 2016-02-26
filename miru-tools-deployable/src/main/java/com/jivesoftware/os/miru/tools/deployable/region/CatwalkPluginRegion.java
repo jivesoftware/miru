@@ -214,7 +214,7 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
                             String name = Joiner.on(',').join(featureFields[i]);
                             Map<String, Object> featureClass = new HashMap<>();
                             featureClass.put("name", name);
-                            featureClass.put("nameParts", featureFields[i]);
+                            featureClass.put("nameParts", Arrays.asList(featureFields[i]));
                             featureClass.put("features", features);
 
                             featureClasses.add(featureClass);
