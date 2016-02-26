@@ -41,7 +41,16 @@ public class CatwalkPluginEndpoints {
         @QueryParam("fromTimeUnit") @DefaultValue("HOURS") String fromTimeUnit,
         @QueryParam("toTimeAgo") @DefaultValue("0") long toTimeAgo,
         @QueryParam("toTimeUnit") @DefaultValue("HOURS") String toTimeUnit,
-        @QueryParam("featureFields") @DefaultValue("user activityType, activityType context") String featureFields,
+        @QueryParam("featureFields") @DefaultValue("activityType context,"
+            + "activityType objectType,"
+            + "activityType parentType,"
+            + "activityType user,"
+            + "context objectType,"
+            + "context parentType,"
+            + "context user,"
+            + "objectType parentType,"
+            + "objectType user,"
+            + "parentType user") String featureFields,
         @QueryParam("filters") @DefaultValue("activityType:0, user:3 2000") String filters,
         @QueryParam("desiredNumberOfResults") @DefaultValue("1000") int desiredNumberOfResults,
         @QueryParam("logLevel") @DefaultValue("NONE") String logLevel) {
