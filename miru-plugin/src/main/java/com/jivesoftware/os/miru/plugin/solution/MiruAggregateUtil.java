@@ -108,7 +108,7 @@ public class MiruAggregateUtil {
             }
 
             if (maxBit != -1) {
-                valueBuffers[fieldId] = new byte[(maxBit + 1) / 8];
+                valueBuffers[fieldId] = new byte[(maxBit / 8) + 1];
                 for (int i = 0; i < termIds.size(); i++) {
                     MiruTermId termId = termIds.get(i);
                     int bit = ValueIndex.bytesShort(termId.getBytes());
