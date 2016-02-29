@@ -250,6 +250,11 @@
                 <version>${jive-utils-version}</version>
             </dependency>
             <dependency>
+                <groupId>com.jivesoftware.os.jive.utils</groupId>
+                <artifactId>collections</artifactId>
+                <version>${jive-utils-version}</version>
+            </dependency>
+            <dependency>
                 <groupId>com.google.guava</groupId>
                 <artifactId>guava</artifactId>
                 <version>14.0</version>
