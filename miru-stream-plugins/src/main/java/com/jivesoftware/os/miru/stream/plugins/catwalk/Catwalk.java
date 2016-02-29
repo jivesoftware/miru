@@ -61,7 +61,7 @@ public class Catwalk {
         for (int i = 0; i < featureFields.length; i++) {
             String[] featureField = featureFields[i];
             for (int j = 0; j < featureFields[i].length; j++) {
-                featureFieldIds[i][j] = requestContext.getSchema().getFieldId(featureField[j]);
+                featureFieldIds[i][j] = requestContext.getSchema().getFieldId(featureField[i]);
             }
         }
         aggregateUtil.gatherFeatures(name, bitmaps, requestContext, answer, featureFieldIds, false, (featureId, termIds) -> {
