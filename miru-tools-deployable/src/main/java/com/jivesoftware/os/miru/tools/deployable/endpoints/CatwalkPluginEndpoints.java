@@ -41,6 +41,8 @@ public class CatwalkPluginEndpoints {
         @QueryParam("fromTimeUnit") @DefaultValue("HOURS") String fromTimeUnit,
         @QueryParam("toTimeAgo") @DefaultValue("0") long toTimeAgo,
         @QueryParam("toTimeUnit") @DefaultValue("HOURS") String toTimeUnit,
+        @QueryParam("gatherField") @DefaultValue("parent") String gatherField,
+        @QueryParam("gatherFilters") @DefaultValue("activityType:0, user:3 2000") String gatherFilters,
         @QueryParam("featureFields") @DefaultValue("activityType context,"
             + "activityType objectType,"
             + "activityType parentType,"
@@ -51,7 +53,7 @@ public class CatwalkPluginEndpoints {
             + "objectType parentType,"
             + "objectType user,"
             + "parentType user") String featureFields,
-        @QueryParam("filters") @DefaultValue("activityType:0, user:3 2000") String filters,
+        @QueryParam("featureFilters") @DefaultValue("") String featureFilters,
         @QueryParam("desiredNumberOfResults") @DefaultValue("1000") int desiredNumberOfResults,
         @QueryParam("logLevel") @DefaultValue("NONE") String logLevel) {
 
@@ -63,8 +65,10 @@ public class CatwalkPluginEndpoints {
                     fromTimeUnit,
                     toTimeAgo,
                     toTimeUnit,
+                    gatherField,
+                    gatherFilters.trim(),
                     featureFields,
-                    filters.trim(),
+                    featureFilters.trim(),
                     desiredNumberOfResults,
                     logLevel)));
             return Response.ok(rendered).build();

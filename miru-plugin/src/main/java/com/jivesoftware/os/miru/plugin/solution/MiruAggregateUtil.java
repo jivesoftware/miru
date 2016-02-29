@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.plugin.solution;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.filer.io.api.KeyRange;
@@ -19,6 +20,7 @@ import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
+import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.plugin.index.FieldMultiTermTxIndex;
 import com.jivesoftware.os.miru.plugin.index.IndexTx;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
@@ -27,6 +29,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruFieldIndexProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.index.MiruTxIndex;
 import com.jivesoftware.os.miru.plugin.index.TermIdStream;
+import com.jivesoftware.os.miru.plugin.index.ValueIndex;
 import com.jivesoftware.os.miru.plugin.partition.TrackError;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -46,6 +49,225 @@ import org.apache.commons.lang.mutable.MutableLong;
 public class MiruAggregateUtil {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
+
+    public <BM extends IBM, IBM, S extends MiruSipCursor<S>> void gatherFeatures(String name,
+        MiruBitmaps<BM, IBM> bitmaps,
+        MiruRequestContext<BM, IBM, S> requestContext,
+        BM constrain,
+        int[][] featureFieldIds,
+        boolean dedupe,
+        FeatureStream stream,
+        MiruSolutionLog solutionLog,
+        StackBuffer stackBuffer) throws Exception {
+
+        MiruFieldIndex<BM, IBM> valueBitsIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.valueBits);
+
+        Set<String> fields = Sets.newHashSet();
+        Set<Integer> uniqueFieldIds = Sets.newHashSet();
+        for (int i = 0; i < featureFieldIds.length; i++) {
+            for (int j = 0; j < featureFieldIds[i].length; j++) {
+                uniqueFieldIds.add(featureFieldIds[i][j]);
+            }
+        }
+
+        long start = System.currentTimeMillis();
+        byte[][] valueBuffers = new byte[requestContext.getSchema().fieldCount()][];
+        List<FieldBits<BM, IBM>> fieldBits = Lists.newArrayList();
+        for (String field : fields) {
+            int fieldId = requestContext.getSchema().getFieldId(field);
+            List<MiruTermId> termIds = Lists.newArrayList();
+            valueBitsIndex.streamTermIdsForField(name, fieldId, null,
+                termId -> {
+                    termIds.add(termId);
+                    return true;
+                },
+                stackBuffer);
+
+            @SuppressWarnings("unchecked")
+            BitmapAndLastId<BM>[] results = new BitmapAndLastId[termIds.size()];
+            valueBitsIndex.multiGet(name, fieldId, termIds.toArray(new MiruTermId[0]), results, stackBuffer);
+
+            BM[] featureBits = bitmaps.createArrayOf(results.length);
+            for (int i = 0; i < results.length; i++) {
+                BitmapAndLastId<BM> result = results[i];
+                if (constrain != null) {
+                    if (bitmaps.supportsInPlace()) {
+                        bitmaps.inPlaceAnd(result.bitmap, constrain);
+                        featureBits[i] = result.bitmap;
+                    } else {
+                        featureBits[i] = bitmaps.and(Arrays.asList(result.bitmap, constrain));
+                    }
+                } else {
+                    featureBits[i] = result.bitmap;
+                }
+            }
+
+            int[] bits = new int[termIds.size()];
+            int maxBit = -1;
+            for (int i = 0; i < termIds.size(); i++) {
+                bits[i] = ValueIndex.bytesShort(termIds.get(i).getBytes());
+                maxBit = Math.max(maxBit, bits[i]);
+            }
+
+            if (maxBit != -1) {
+                valueBuffers[fieldId] = new byte[(maxBit + 1) / 8];
+                for (int i = 0; i < termIds.size(); i++) {
+                    MiruTermId termId = termIds.get(i);
+                    int bit = ValueIndex.bytesShort(termId.getBytes());
+                    fieldBits.add(new FieldBits<>(fieldId, bit, featureBits[i], bitmaps.cardinality(featureBits[i])));
+                }
+            }
+        }
+
+        solutionLog.log(MiruSolutionLogLevel.INFO, "Setup field bits took {} ms", System.currentTimeMillis() - start);
+        start = System.currentTimeMillis();
+
+        @SuppressWarnings("unchecked")
+        Set<Feature>[] quickDedupe = dedupe ? new Set[featureFieldIds.length] : null;
+        if (dedupe) {
+            for (int i = 0; i < quickDedupe.length; i++) {
+                quickDedupe[i] = Sets.newHashSet();
+            }
+        }
+        byte[][] values = new byte[valueBuffers.length][];
+        Collections.sort(fieldBits);
+        done:
+        while (!fieldBits.isEmpty()) {
+            if (quickDedupe != null) {
+                for (Set<Feature> qd : quickDedupe) {
+                    qd.clear();
+                }
+            }
+
+            FieldBits<BM, IBM> next = fieldBits.remove(0);
+
+            MiruIntIterator iter = bitmaps.intIterator(next.bitmap);
+            while (iter.hasNext()) {
+                for (byte[] valueBuffer : valueBuffers) {
+                    if (valueBuffer != null) {
+                        Arrays.fill(valueBuffer, (byte) 0);
+                    }
+                }
+
+                int id = iter.next();
+                valueBuffers[next.fieldId][next.bit >>> 3] |= 1 << (next.bit & 0x07);
+                for (FieldBits<BM, IBM> fb : fieldBits) {
+                    if (bitmaps.removeIfPresent(fb.bitmap, id)) {
+                        fb.cardinality--;
+                        valueBuffers[fb.fieldId][fb.bit >>> 3] |= 1 << (fb.bit & 0x07);
+                    }
+                }
+
+                Arrays.fill(values, null);
+                for (int i = 0; i < valueBuffers.length; i++) {
+                    byte[] valueBuffer = valueBuffers[i];
+                    if (valueBuffer != null) {
+                        byte[] value = ValueIndex.unpackValue(valueBuffer);
+                        if (value != null) {
+                            values[i] = value;
+                        }
+                    }
+                }
+
+                next:
+                for (int featureId = 0; featureId < featureFieldIds.length; featureId++) {
+                    int[] fieldIds = featureFieldIds[featureId];
+                    // make sure we have all the parts for this feature
+                    for (int i = 0; i < fieldIds.length; i++) {
+                        if (values[fieldIds[i]] == null) {
+                            continue next;
+                        }
+                    }
+
+                    MiruTermId[] featureTermIds = new MiruTermId[fieldIds.length];
+                    for (int i = 0; i < fieldIds.length; i++) {
+                        int fieldId = fieldIds[i];
+                        MiruTermId termId = new MiruTermId(values[fieldId]);
+                        featureTermIds[i] = termId;
+                    }
+
+                    if (dedupe && !quickDedupe[featureId].add(new Feature(featureTermIds))) {
+                        continue;
+                    }
+
+                    if (!stream.stream(featureId, featureTermIds)) {
+                        break done;
+                    }
+                }
+            }
+            Collections.sort(fieldBits);
+        }
+
+        solutionLog.log(MiruSolutionLogLevel.INFO, "Gather value bits took {} ms", System.currentTimeMillis() - start);
+        start = System.currentTimeMillis();
+    }
+
+    public interface FeatureStream {
+        boolean stream(int featureId, MiruTermId[] termIds) throws Exception;
+    }
+
+    public static class Feature {
+
+        public final MiruTermId[] termIds;
+
+        private int hash = 0;
+
+        public Feature(MiruTermId[] termIds) {
+            this.termIds = termIds;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+
+            Feature feature = (Feature) o;
+
+            return Arrays.equals(termIds, feature.termIds);
+
+        }
+
+        @Override
+        public int hashCode() {
+            if (hash == 0) {
+                hash = termIds != null ? Arrays.hashCode(termIds) : 0;
+            }
+            return hash;
+        }
+    }
+
+    private static class FieldBits<BM extends IBM, IBM> implements Comparable<FieldBits<BM, IBM>> {
+
+        private final int fieldId;
+        private final int bit;
+        private final BM bitmap;
+
+        private long cardinality;
+
+        public FieldBits(int fieldId, int bit, BM bitmap, long cardinality) {
+            this.fieldId = fieldId;
+            this.bit = bit;
+            this.bitmap = bitmap;
+            this.cardinality = cardinality;
+        }
+
+        @Override
+        public int compareTo(FieldBits<BM, IBM> o) {
+            int c = Long.compare(cardinality, o.cardinality);
+            if (c != 0) {
+                return c;
+            }
+            c = Integer.compare(fieldId, o.fieldId);
+            if (c != 0) {
+                return c;
+            }
+            return Integer.compare(bit, o.bit);
+        }
+    }
 
     public <BM extends IBM, IBM, S extends MiruSipCursor<S>> void stream(String name,
         MiruBitmaps<BM, IBM> bitmaps,
@@ -172,6 +394,46 @@ public class MiruAggregateUtil {
     }
 
     public <BM extends IBM, IBM, S extends MiruSipCursor<S>> void gather(String name,
+        MiruBitmaps<BM, IBM> bitmaps,
+        MiruRequestContext<BM, IBM, S> requestContext,
+        BM answer,
+        int pivotFieldId,
+        int batchSize,
+        MiruSolutionLog solutionLog,
+        TermIdStream termIdStream,
+        StackBuffer stackBuffer) throws Exception {
+
+        MiruFieldDefinition fieldDefinition = requestContext.getSchema().getFieldDefinition(pivotFieldId);
+        if (fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.indexedValueBits)) {
+            gatherValueBits(name, bitmaps, requestContext, answer, pivotFieldId, solutionLog, termIdStream, stackBuffer);
+        } else {
+            gatherActivityLookup(name, bitmaps, requestContext, answer, pivotFieldId, batchSize, solutionLog, termIdStream, stackBuffer);
+        }
+    }
+
+    // ooh that tickles
+    private <BM extends IBM, IBM, S extends MiruSipCursor<S>> void gatherValueBits(String name,
+        MiruBitmaps<BM, IBM> bitmaps,
+        MiruRequestContext<BM, IBM, S> requestContext,
+        BM answer,
+        int pivotFieldId,
+        MiruSolutionLog solutionLog,
+        TermIdStream termIdStream,
+        StackBuffer stackBuffer) throws Exception {
+
+        int[][] featureFieldIds = new int[][] { new int[] { pivotFieldId } };
+        gatherFeatures(name,
+            bitmaps,
+            requestContext,
+            answer,
+            featureFieldIds,
+            true,
+            (featureId, termIds) -> termIdStream.stream(termIds[0]),
+            solutionLog,
+            stackBuffer);
+    }
+
+    private <BM extends IBM, IBM, S extends MiruSipCursor<S>> void gatherActivityLookup(String name,
         MiruBitmaps<BM, IBM> bitmaps,
         MiruRequestContext<BM, IBM, S> requestContext,
         BM answer,

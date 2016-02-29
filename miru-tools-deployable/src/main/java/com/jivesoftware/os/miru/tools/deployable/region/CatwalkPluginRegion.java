@@ -74,8 +74,10 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
         final String fromTimeUnit;
         final long toTimeAgo;
         final String toTimeUnit;
+        final String gatherField;
+        final String gatherFilters;
         final String featureFields;
-        final String filters;
+        final String featureFilters;
         final int desiredNumberOfResults;
         final String logLevel;
 
@@ -84,17 +86,21 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
             String fromTimeUnit,
             long toTimeAgo,
             String toTimeUnit,
+            String gatherField,
+            String gatherFilters,
             String featureFields,
-            String filters,
+            String featureFilters,
             int desiredNumberOfResults,
             String logLevel) {
             this.tenant = tenant;
             this.fromTimeAgo = fromTimeAgo;
             this.fromTimeUnit = fromTimeUnit;
-            this.toTimeUnit = toTimeUnit;
             this.toTimeAgo = toTimeAgo;
+            this.toTimeUnit = toTimeUnit;
+            this.gatherField = gatherField;
+            this.gatherFilters = gatherFilters;
             this.featureFields = featureFields;
-            this.filters = filters;
+            this.featureFilters = featureFilters;
             this.desiredNumberOfResults = desiredNumberOfResults;
             this.logLevel = logLevel;
         }
@@ -133,8 +139,10 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
                 data.put("toTimeAgo", String.valueOf(toTimeAgo));
                 data.put("toTimeUnit", String.valueOf(toTimeUnit));
                 data.put("toTimeUnit", String.valueOf(toTimeUnit));
+                data.put("gatherField", input.gatherField);
+                data.put("gatherFilters", input.gatherFilters);
                 data.put("featureFields", input.featureFields);
-                data.put("filters", input.filters);
+                data.put("featureFilters", input.featureFilters);
                 data.put("desiredNumberOfResults", input.desiredNumberOfResults);
 
                 SnowflakeIdPacker snowflakeIdPacker = new SnowflakeIdPacker();
@@ -157,7 +165,8 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
                     for (int i = 0; i < featureFields.length; i++) {
                         featureFields[i] = input.featureFields.toArray(new String[0]);
                     }*/
-                    MiruFilter constraintsFilter = filterStringUtil.parse(input.filters);
+                    MiruFilter gatherFilter = filterStringUtil.parse(input.gatherFilters);
+                    MiruFilter featureFilter = filterStringUtil.parse(input.featureFilters);
                     String endpoint = CatwalkConstants.CATWALK_PREFIX + CatwalkConstants.CUSTOM_QUERY_ENDPOINT;
                     String request = requestMapper.writeValueAsString(new MiruRequest<>("toolsCatwalk",
                         tenantId,
@@ -165,8 +174,10 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
                         MiruAuthzExpression.NOT_PROVIDED,
                         new CatwalkQuery(
                             new MiruTimeRange(fromTime, toTime),
-                            constraintsFilter,
+                            input.gatherField,
+                            gatherFilter,
                             featureFields,
+                            featureFilter,
                             input.desiredNumberOfResults),
                         MiruSolutionLogLevel.valueOf(input.logLevel)));
                     MiruResponse<CatwalkAnswer> catwalkResponse = readerClient.call("",
@@ -177,7 +188,7 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
                             @SuppressWarnings("unchecked")
                             MiruResponse<CatwalkAnswer> extractResponse = responseMapper.extractResultFromResponse(httpResponse,
                                 MiruResponse.class,
-                                new Class<?>[]{CatwalkAnswer.class},
+                                new Class<?>[] { CatwalkAnswer.class },
                                 null);
                             return new ClientResponse<>(extractResponse, true);
                         });

@@ -9,8 +9,10 @@
  * @param? fromTimeUnit
  * @param? toTimeAgo
  * @param? toTimeUnit
+ * @param? gatherField
+ * @param? gatherFilters
  * @param? featureFields
- * @param? filters
+ * @param? featureFilters
  * @param? desiredNumberOfResults
  * @param? model
  * @param? summary
@@ -81,6 +83,24 @@
                         </td>
                     </tr>
                     <tr>
+                        <td>Gather Field</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-gatherField-autocomplete j-autocomplete-input j-ui-elem" placeholder="Gather Field" value="{$gatherField?:''}"
+                                name="gatherField" id="gatherFieldPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Gather Filters</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-gatherFilters-autocomplete j-autocomplete-input j-ui-elem" placeholder="Gather Filters" value="{$gatherFilters?:''}"
+                                name="gatherFilters" id="gatherFiltersPicker" data-original-title="" title="">
+                            &nbsp;
+                            <em>(e.g. user:3 3765, parentType:102|2|38)</em>
+                        </td>
+                    </tr>
+                    <tr>
                         <td>Feature Fields</td>
                         <td>
                             <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
@@ -89,11 +109,11 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>Filters</td>
+                        <td>Feature Filters</td>
                         <td>
                             <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
-                                class="j-filters-autocomplete j-autocomplete-input j-ui-elem" placeholder="Filters" value="{$filters?:''}"
-                                name="filters" id="filtersPicker" data-original-title="" title="">
+                                class="j-featureFilters-autocomplete j-autocomplete-input j-ui-elem" placeholder="Feature Filters" value="{$featureFilters?:''}"
+                                name="featureFilters" id="featureFiltersPicker" data-original-title="" title="">
                             &nbsp;
                             <em>(e.g. user:3 3765, parentType:102|2|38)</em>
                         </td>
