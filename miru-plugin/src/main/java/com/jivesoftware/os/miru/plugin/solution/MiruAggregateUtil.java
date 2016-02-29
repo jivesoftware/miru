@@ -62,7 +62,6 @@ public class MiruAggregateUtil {
 
         MiruFieldIndex<BM, IBM> valueBitsIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.valueBits);
 
-        Set<String> fields = Sets.newHashSet();
         Set<Integer> uniqueFieldIds = Sets.newHashSet();
         for (int i = 0; i < featureFieldIds.length; i++) {
             for (int j = 0; j < featureFieldIds[i].length; j++) {
@@ -73,8 +72,7 @@ public class MiruAggregateUtil {
         long start = System.currentTimeMillis();
         byte[][] valueBuffers = new byte[requestContext.getSchema().fieldCount()][];
         List<FieldBits<BM, IBM>> fieldBits = Lists.newArrayList();
-        for (String field : fields) {
-            int fieldId = requestContext.getSchema().getFieldId(field);
+        for (int fieldId : uniqueFieldIds) {
             List<MiruTermId> termIds = Lists.newArrayList();
             valueBitsIndex.streamTermIdsForField(name, fieldId, null,
                 termId -> {
