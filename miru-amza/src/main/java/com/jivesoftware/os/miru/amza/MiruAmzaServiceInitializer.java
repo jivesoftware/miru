@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Optional;
 import com.google.common.base.Strings;
+import com.jivesoftware.os.amza.api.BAInterner;
 import com.jivesoftware.os.amza.api.partition.PartitionProperties;
 import com.jivesoftware.os.amza.api.partition.VersionedPartitionName;
 import com.jivesoftware.os.amza.api.ring.RingHost;
@@ -83,9 +84,6 @@ public class MiruAmzaServiceInitializer {
         MiruAmzaServiceConfig config,
         RowChanges allRowChanges) throws Exception {
 
-        String multicastGroup = System.getProperty("amza.discovery.group", config.getAmzaDiscoveryGroup());
-        int multicastPort = Integer.parseInt(System.getProperty("amza.discovery.port", String.valueOf(config.getAmzaDiscoveryPort())));
-
         RingMember ringMember = new RingMember(
             Strings.padStart(String.valueOf(instanceId), 5, '0') + "_" + instanceKey);
         RingHost ringHost = new RingHost(datacenterName, rackName, hostName, port);
@@ -100,8 +98,9 @@ public class MiruAmzaServiceInitializer {
         mapper.configure(SerializationFeature.INDENT_OUTPUT, false);
 
         AmzaStats amzaStats = new AmzaStats();
-        RowsTakerFactory rowsTakerFactory = () -> new HttpRowsTaker(amzaStats);
-        AvailableRowsTaker availableRowsTaker = new HttpAvailableRowsTaker(amzaStats);
+        BAInterner baInterner = new BAInterner();
+        RowsTakerFactory rowsTakerFactory = () -> new HttpRowsTaker(amzaStats, baInterner);
+        AvailableRowsTaker availableRowsTaker = new HttpAvailableRowsTaker(baInterner);
 
         AmzaServiceConfig amzaServiceConfig = new AmzaServiceConfig();
         amzaServiceConfig.workingDirectories = config.getWorkingDirectories().split(",");
@@ -139,6 +138,7 @@ public class MiruAmzaServiceInitializer {
         SickPartitions sickPartitions = new SickPartitions();
 
         AmzaService amzaService = new EmbeddedAmzaServiceInitializer().initialize(amzaServiceConfig,
+            baInterner,
             amzaStats,
             sickThreads,
             sickPartitions,
@@ -191,8 +191,8 @@ public class MiruAmzaServiceInitializer {
             10_000); // TODO expose to conf
 
         AmzaClientProvider<HttpClient, HttpClientException> clientProvider = new AmzaClientProvider<>(
-            new HttpPartitionClientFactory(),
-            new HttpPartitionHostsProvider(httpClient, mapper),
+            new HttpPartitionClientFactory(baInterner),
+            new HttpPartitionHostsProvider(baInterner, httpClient, mapper),
             new RingHostHttpClientProvider(httpClient),
             Executors.newCachedThreadPool(),
             10_000); //TODO expose to conf

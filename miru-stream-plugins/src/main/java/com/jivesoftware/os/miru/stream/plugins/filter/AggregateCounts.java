@@ -220,7 +220,6 @@ public class AggregateCounts {
                 MiruTermId[] fieldValues = activity != null ? activity.fieldsValues[fieldId] : null;
                 log.trace("fieldValues={}", (Object) fieldValues);
                 if (fieldValues == null || fieldValues.length == 0) {
-                    // could make this a reusable buffer, but this is effectively an error case and would require 3 buffers
                     if (bitmaps.supportsInPlace()) {
                         BM removeUnknownField = bitmaps.createWithBits(lastSetBit);
                         answerCollector = bitmaps.inPlaceAndNotWithCardinalityAndLastSetBit(answer, removeUnknownField);

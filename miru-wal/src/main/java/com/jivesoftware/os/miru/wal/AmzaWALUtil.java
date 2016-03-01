@@ -12,6 +12,7 @@ import com.jivesoftware.os.amza.api.take.TakeCursors;
 import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider.EmbeddedClient;
+import com.jivesoftware.os.amza.service.Partition.ScanRange;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.TenantAndPartition;
@@ -21,6 +22,7 @@ import com.jivesoftware.os.miru.api.wal.AmzaCursor;
 import com.jivesoftware.os.miru.wal.lookup.PartitionsStream;
 import com.jivesoftware.os.routing.bird.shared.HostPort;
 import java.nio.ByteBuffer;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -213,8 +215,8 @@ public class AmzaWALUtil {
         long id = (localNamedCursor != null) ? localNamedCursor.id : 0;
 
         long[] nextId = new long[1];
-        client.scan(prefix, FilerIO.longBytes(id), prefix, FilerIO.longBytes(Long.MAX_VALUE),
-            (byte[] prefix1, byte[] key, byte[] value, long timestamp, long version) -> {
+        client.scan(Collections.singletonList(new ScanRange(prefix, FilerIO.longBytes(id), prefix, FilerIO.longBytes(Long.MAX_VALUE))),
+            (prefix1, key, value, timestamp, version) -> {
                 nextId[0] = FilerIO.bytesLong(key);
                 return scan.stream(prefix1, key, value, timestamp, version);
             });

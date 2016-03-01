@@ -24,6 +24,7 @@ import com.jivesoftware.os.amza.service.AmzaPartitionUpdates;
 import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider.EmbeddedClient;
+import com.jivesoftware.os.amza.service.Partition.ScanRange;
 import com.jivesoftware.os.amza.service.storage.PartitionCreator;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.jive.utils.base.interfaces.CallbackStream;
@@ -230,12 +231,13 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
     @Override
     public LinkedHashSet<HostHeartbeat> getAllHosts() throws Exception {
         final LinkedHashSet<HostHeartbeat> heartbeats = new LinkedHashSet<>();
-        hostsClient().scan(null, null, null, null, (byte[] prefix, byte[] key, byte[] value, long timestamp, long version) -> {
-            MiruHost host = hostMarshaller.fromBytes(key);
-            long valueAsTimestamp = FilerIO.bytesLong(value);
-            heartbeats.add(new HostHeartbeat(host, valueAsTimestamp));
-            return true;
-        });
+        hostsClient().scan(Collections.singletonList(new ScanRange(null, null, null, null)),
+            (prefix, key, value, timestamp, version) -> {
+                MiruHost host = hostMarshaller.fromBytes(key);
+                long valueAsTimestamp = FilerIO.bytesLong(value);
+                heartbeats.add(new HostHeartbeat(host, valueAsTimestamp));
+                return true;
+            });
         return heartbeats;
     }
 
@@ -576,8 +578,8 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
     private Set<MiruTenantId> getTenantsForHostAsSet(MiruHost host) throws Exception {
         final Set<MiruTenantId> tenants = new HashSet<>();
         EmbeddedClient registryClient = registryClient(host);
-        registryClient.scan(null, null, null, null,
-            (byte[] prefix, byte[] key, byte[] value, long timestamp, long version) -> {
+        registryClient.scan(Collections.singletonList(new ScanRange(null, null, null, null)),
+            (prefix, key, value, timestamp, version) -> {
                 RawTenantAndPartition topologyKey = fromTopologyKey(key);
                 tenants.add(new MiruTenantId(topologyKey.tenantBytes));
                 return true;
@@ -588,7 +590,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
     @Override
     public void removeTenantPartionReplicaSet(final MiruTenantId tenantId, final MiruPartitionId partitionId) throws Exception {
         List<MiruHost> hosts = Lists.newArrayList();
-        hostsClient().scan(null, null, null, null,
+        hostsClient().scan(Collections.singletonList(new ScanRange(null, null, null, null)),
             (byte[] prefix, byte[] key, byte[] value, long timestamp, long version) -> {
                 MiruHost host = hostMarshaller.fromBytes(key);
                 hosts.add(host);
@@ -651,8 +653,8 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
         final NavigableMap<MiruPartitionId, MinMaxPriorityQueue<HostAndTimestamp>> partitionIdToLatest = new TreeMap<>();
         for (HostHeartbeat hostHeartbeat : getAllHosts()) {
             EmbeddedClient registryClient = registryClient(hostHeartbeat.host);
-            registryClient.scan(null, from, null, to,
-                (byte[] prefix, byte[] key, byte[] value, long timestamp, long version) -> {
+            registryClient.scan(Collections.singletonList(new ScanRange(null, from, null, to)),
+                (prefix, key, value, timestamp, version) -> {
                     RawTenantAndPartition tenantPartitionKey = fromTopologyKey(key);
                     MiruPartitionId partitionId = MiruPartitionId.of(tenantPartitionKey.partitionId);
                     MinMaxPriorityQueue<HostAndTimestamp> latest = partitionIdToLatest.get(partitionId);
@@ -971,10 +973,11 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
     @Override
     public int upgradeSchema(MiruSchema schema, boolean upgradeOnMissing, boolean upgradeOnError) throws Exception {
         Set<MiruTenantId> toTenantIds = Sets.newHashSet();
-        schemasClient().scan(null, null, null, null, (byte[] prefix, byte[] key, byte[] value, long timestamp, long version) -> {
-            toTenantIds.add(fromTenantKey(key));
-            return true;
-        });
+        schemasClient().scan(Collections.singletonList(new ScanRange(null, null, null, null)),
+            (prefix, key, value, timestamp, version) -> {
+                toTenantIds.add(fromTenantKey(key));
+                return true;
+            });
 
         byte[] schemaBytes = schemaMarshaller.toBytes(schema);
         AmzaPartitionUpdates updates = new AmzaPartitionUpdates();
@@ -1059,8 +1062,8 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
         byte[] toKey = WALKey.prefixUpperExclusive(fromKey);
         EmbeddedClient ingressClient = ingressClient();
         if (ingressClient != null) {
-            ingressClient.scan(null, fromKey, null, toKey,
-                (byte[] prefix, byte[] key, byte[] value, long timestamp, long version) -> {
+            ingressClient.scan(Collections.singletonList(new ScanRange(null, fromKey, null, toKey)),
+                (prefix, key, value, timestamp, version) -> {
                     if (value != null) {
                         MiruPartitionId streamPartitionId = ingressKeyToPartitionId(key);
                         if (partitionId == null || partitionId.equals(streamPartitionId)) {
