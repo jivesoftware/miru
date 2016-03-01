@@ -16,7 +16,8 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolvableFactory;
 public interface Miru {
 
     <Q, A, P> MiruResponse<A> askAndMerge(
-        MiruTenantId tenantId, MiruSolvableFactory<Q, A, P> solvableFactory,
+        MiruTenantId tenantId,
+        MiruSolvableFactory<Q, A, P> solvableFactory,
         MiruAnswerEvaluator<A> evaluator,
         MiruAnswerMerger<A> merger,
         A defaultValue,
@@ -25,7 +26,8 @@ public interface Miru {
     <Q, A, P> MiruPartitionResponse<A> askImmediate(
         MiruTenantId tenantId,
         MiruPartitionId partitionId,
-        MiruSolvableFactory<Q, A, P> factory, Optional<P> report,
+        MiruSolvableFactory<Q, A, P> factory,
+        Optional<P> report,
         A defaultValue,
         MiruSolutionLogLevel logLevel) throws Exception;
 

@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Optional;
 import com.google.common.io.Files;
+import com.jivesoftware.os.amza.api.BAInterner;
 import com.jivesoftware.os.amza.api.partition.PartitionProperties;
 import com.jivesoftware.os.amza.api.ring.RingHost;
 import com.jivesoftware.os.amza.api.ring.RingMember;
@@ -110,11 +111,12 @@ public class MiruWALUIServiceNGTest {
         mapper.configure(SerializationFeature.INDENT_OUTPUT, false);
 
         AmzaStats amzaStats = new AmzaStats();
-        AvailableRowsTaker availableRowsTaker = new HttpAvailableRowsTaker(amzaStats);
-        RowsTakerFactory rowsTakerFactory = () -> new HttpRowsTaker(amzaStats);
+        BAInterner baInterner = new BAInterner();
+        AvailableRowsTaker availableRowsTaker = new HttpAvailableRowsTaker(baInterner);
+        RowsTakerFactory rowsTakerFactory = () -> new HttpRowsTaker(amzaStats, baInterner);
 
         final AmzaServiceConfig amzaServiceConfig = new AmzaServiceConfig();
-        amzaServiceConfig.workingDirectories = new String[]{amzaDataDir.getAbsolutePath()};
+        amzaServiceConfig.workingDirectories = new String[] { amzaDataDir.getAbsolutePath() };
         amzaServiceConfig.numberOfTakerThreads = 1;
 
         PartitionPropertyMarshaller partitionPropertyMarshaller = new PartitionPropertyMarshaller() {
@@ -139,6 +141,7 @@ public class MiruWALUIServiceNGTest {
         };
 
         AmzaService amzaService = new EmbeddedAmzaServiceInitializer().initialize(amzaServiceConfig,
+            baInterner,
             amzaStats,
             new SickThreads(),
             new SickPartitions(),
@@ -147,7 +150,7 @@ public class MiruWALUIServiceNGTest {
             orderIdProvider,
             idPacker,
             partitionPropertyMarshaller,
-            ( workingIndexDirectories,  indexProviderRegistry1,  ephemeralRowIOProvider, persistentRowIOProvider,  partitionStripeFunction) -> {
+            (workingIndexDirectories, indexProviderRegistry1, ephemeralRowIOProvider, persistentRowIOProvider, partitionStripeFunction) -> {
                 indexProviderRegistry1.register(
                     new BerkeleyDBWALIndexProvider("berkeleydb", partitionStripeFunction, workingIndexDirectories), persistentRowIOProvider);
             },

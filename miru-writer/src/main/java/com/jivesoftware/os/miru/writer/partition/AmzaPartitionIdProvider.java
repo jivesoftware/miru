@@ -11,6 +11,7 @@ import com.jivesoftware.os.amza.service.AmzaPartitionUpdates;
 import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider.EmbeddedClient;
+import com.jivesoftware.os.amza.service.Partition.ScanRange;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -19,6 +20,7 @@ import com.jivesoftware.os.miru.api.wal.MiruWALClient.WriterCursor;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.nio.ByteBuffer;
+import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -210,8 +212,8 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
         final AtomicInteger largestPartitionId = new AtomicInteger(0);
         byte[] from = tenantId.getBytes();
         byte[] to = WALKey.prefixUpperExclusive(from);
-        latestPartitionsClient().scan(null, from, null, to,
-            (byte[] prefix, byte[] key, byte[] value, long timestamp, long version) -> {
+        latestPartitionsClient().scan(Collections.singletonList(new ScanRange(null, from, null, to)),
+            (prefix, key, value, timestamp, version) -> {
                 int partitionId = FilerIO.bytesInt(value);
                 if (largestPartitionId.get() < partitionId) {
                     largestPartitionId.set(partitionId);

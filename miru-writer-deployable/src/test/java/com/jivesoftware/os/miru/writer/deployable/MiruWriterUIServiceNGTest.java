@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
+import com.jivesoftware.os.amza.api.BAInterner;
 import com.jivesoftware.os.amza.api.partition.PartitionProperties;
 import com.jivesoftware.os.amza.api.partition.PartitionStripeFunction;
 import com.jivesoftware.os.amza.api.ring.RingHost;
@@ -15,7 +16,6 @@ import com.jivesoftware.os.amza.berkeleydb.BerkeleyDBWALIndexProvider;
 import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.amza.service.AmzaServiceInitializer.AmzaServiceConfig;
 import com.jivesoftware.os.amza.service.EmbeddedAmzaServiceInitializer;
-import com.jivesoftware.os.amza.service.EmbeddedClientProvider;
 import com.jivesoftware.os.amza.service.SickPartitions;
 import com.jivesoftware.os.amza.service.WALIndexProviderRegistry;
 import com.jivesoftware.os.amza.service.replication.TakeFailureListener;
@@ -35,12 +35,8 @@ import com.jivesoftware.os.miru.api.HostPortProvider;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
-import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.api.marshall.JacksonJsonObjectTypeMarshaller;
 import com.jivesoftware.os.miru.api.marshall.MiruVoidByte;
-import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
-import com.jivesoftware.os.miru.cluster.amza.AmzaClusterRegistry;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer.MiruSoyRendererConfig;
@@ -56,7 +52,6 @@ import com.jivesoftware.os.routing.bird.health.checkers.SickThreads;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import org.merlin.config.BindInterfaceToConfiguration;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
@@ -110,8 +105,9 @@ public class MiruWriterUIServiceNGTest {
         mapper.configure(SerializationFeature.INDENT_OUTPUT, false);
 
         AmzaStats amzaStats = new AmzaStats();
-        AvailableRowsTaker availableRowsTaker = new HttpAvailableRowsTaker(amzaStats);
-        RowsTakerFactory rowsTakerFactory = () -> new HttpRowsTaker(amzaStats);
+        BAInterner baInterner = new BAInterner();
+        AvailableRowsTaker availableRowsTaker = new HttpAvailableRowsTaker(baInterner);
+        RowsTakerFactory rowsTakerFactory = () -> new HttpRowsTaker(amzaStats, baInterner);
 
         AmzaServiceConfig amzaServiceConfig = new AmzaServiceConfig();
         amzaServiceConfig.workingDirectories = new String[] { amzaDataDir.getAbsolutePath() };
@@ -139,6 +135,7 @@ public class MiruWriterUIServiceNGTest {
         };
 
         AmzaService amzaService = new EmbeddedAmzaServiceInitializer().initialize(amzaServiceConfig,
+            baInterner,
             amzaStats,
             new SickThreads(),
             new SickPartitions(),

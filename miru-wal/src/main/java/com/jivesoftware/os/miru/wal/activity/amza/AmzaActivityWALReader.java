@@ -10,6 +10,7 @@ import com.jivesoftware.os.amza.api.partition.Consistency;
 import com.jivesoftware.os.amza.api.partition.PartitionProperties;
 import com.jivesoftware.os.amza.api.take.TakeCursors;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider.EmbeddedClient;
+import com.jivesoftware.os.amza.service.Partition.ScanRange;
 import com.jivesoftware.os.amza.service.PropertiesNotPresentException;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
@@ -26,7 +27,6 @@ import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus.WriterCount;
 import com.jivesoftware.os.miru.api.wal.MiruVersionedActivityLookupEntry;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.WriterCursor;
 import com.jivesoftware.os.miru.wal.AmzaWALUtil;
-import com.jivesoftware.os.miru.wal.MiruWALNotInitializedException;
 import com.jivesoftware.os.miru.wal.MiruWALWrongRouteException;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALColumnKey;
@@ -36,6 +36,7 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.shared.HostPort;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -97,8 +98,8 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
         byte[] toKey = columnKeyMarshaller.toLexBytes(new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.BEGIN.getSort(), Long.MAX_VALUE));
         Set<Integer> begins = Sets.newHashSet();
         Set<Integer> ends = Sets.newHashSet();
-        client.scan(null, fromKey, null, toKey,
-            (byte[] prefix, byte[] key, byte[] value, long timestamp, long version) -> {
+        client.scan(Collections.singletonList(new ScanRange(null, fromKey, null, toKey)),
+            (prefix, key, value, timestamp, version) -> {
                 MiruPartitionedActivity partitionedActivity = partitionedActivityMarshaller.fromBytes(value);
                 if (partitionedActivity != null) {
                     if (partitionedActivity.type == MiruPartitionedActivity.Type.BEGIN) {
@@ -214,8 +215,8 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
             try {
                 byte[] fromKey = columnKeyMarshaller.toLexBytes(new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.END.getSort(), 0));
                 byte[] toKey = columnKeyMarshaller.toLexBytes(new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.BEGIN.getSort(), Long.MAX_VALUE));
-                client.scan(null, fromKey, null, toKey,
-                    (byte[] prefix, byte[] key, byte[] value, long timestamp, long version) -> {
+                client.scan(Collections.singletonList(new ScanRange(null, fromKey, null, toKey)),
+                    (prefix, key, value, timestamp, version) -> {
                         if (value != null) {
                             MiruPartitionedActivity partitionedActivity = partitionedActivityMarshaller.fromBytes(value);
                             if (partitionedActivity.type == MiruPartitionedActivity.Type.BEGIN) {
@@ -244,8 +245,8 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
             try {
                 byte[] fromKey = columnKeyMarshaller.toBytes(new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.ACTIVITY.getSort(), 0L));
                 byte[] toKey = columnKeyMarshaller.toBytes(new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.END.getSort(), 0L));
-                client.scan(null, fromKey, null, toKey,
-                    (byte[] prefix, byte[] key, byte[] value, long timestamp, long version) -> {
+                client.scan(Collections.singletonList(new ScanRange(null, fromKey, null, toKey)),
+                    (prefix, key, value, timestamp, version) -> {
                         if (value != null) {
                             MiruPartitionedActivity partitionedActivity = partitionedActivityMarshaller.fromBytes(value);
                             if (partitionedActivity != null && partitionedActivity.type.isActivityType()) {
@@ -314,15 +315,16 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
         if (client != null) {
             try {
                 byte[] fromKey = columnKeyMarshaller.toBytes(new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.END.getSort(), Long.MIN_VALUE));
-                client.scan(null, fromKey, null, null, (byte[] prefix, byte[] key, byte[] value, long timestamp, long version) -> {
-                    if (value != null) {
-                        MiruPartitionedActivity partitionedActivity = partitionedActivityMarshaller.fromBytes(value);
-                        if (partitionedActivity != null) {
-                            clockTimestamp[0] = Math.max(clockTimestamp[0], partitionedActivity.clockTimestamp);
+                client.scan(Collections.singletonList(new ScanRange(null, fromKey, null, null)),
+                    (prefix, key, value, timestamp, version) -> {
+                        if (value != null) {
+                            MiruPartitionedActivity partitionedActivity = partitionedActivityMarshaller.fromBytes(value);
+                            if (partitionedActivity != null) {
+                                clockTimestamp[0] = Math.max(clockTimestamp[0], partitionedActivity.clockTimestamp);
+                            }
                         }
-                    }
-                    return true;
-                });
+                        return true;
+                    });
             } catch (PropertiesNotPresentException e) {
                 // ignored
             } catch (FailedToAchieveQuorumException e) {

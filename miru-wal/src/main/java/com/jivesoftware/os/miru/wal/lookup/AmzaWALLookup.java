@@ -6,6 +6,7 @@ import com.jivesoftware.os.amza.api.partition.Consistency;
 import com.jivesoftware.os.amza.api.wal.WALKey;
 import com.jivesoftware.os.amza.service.AmzaPartitionUpdates;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider.EmbeddedClient;
+import com.jivesoftware.os.amza.service.Partition.ScanRange;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.TenantAndPartition;
@@ -13,6 +14,7 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.wal.AmzaWALUtil;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -80,8 +82,8 @@ public class AmzaWALLookup implements MiruWALLookup {
         EmbeddedClient client = amzaWALUtil.getLookupTenantsClient();
         final List<MiruTenantId> tenantIds = Lists.newArrayList();
         if (client != null) {
-            client.scan(null, null, null, null,
-                (byte[] prefix, byte[] key, byte[] value, long timestamp, long version) -> {
+            client.scan(Collections.singletonList(new ScanRange(null, null, null, null)),
+                (prefix, key, value, timestamp, version) -> {
                     if (key != null) {
                         MiruTenantId tenantId = new MiruTenantId(key);
                         if (!FULLY_REPAIRED_TENANT.equals(tenantId)) {
@@ -103,8 +105,8 @@ public class AmzaWALLookup implements MiruWALLookup {
         LOG.inc("allPartitions");
         EmbeddedClient client = amzaWALUtil.getLookupPartitionsClient();
         if (client != null) {
-            client.scan(null, null, null, null,
-                (byte[] prefix, byte[] key, byte[] value, long timestamp, long version) -> {
+            client.scan(Collections.singletonList(new ScanRange(null, null, null, null)),
+                (prefix, key, value, timestamp, version) -> {
                     if (key != null) {
                         TenantAndPartition tenantAndPartition = amzaWALUtil.fromPartitionsKey(key);
                         if (!partitionsStream.stream(tenantAndPartition.tenantId, tenantAndPartition.partitionId)) {
@@ -127,8 +129,8 @@ public class AmzaWALLookup implements MiruWALLookup {
         if (client != null) {
             byte[] fromKey = amzaWALUtil.toPartitionsKey(tenantId, null);
             byte[] toKey = WALKey.prefixUpperExclusive(fromKey);
-            client.scan(null, fromKey, null, toKey,
-                (byte[] prefix, byte[] key, byte[] value, long timestamp, long version) -> {
+            client.scan(Collections.singletonList(new ScanRange(null, fromKey, null, toKey)),
+                (prefix, key, value, timestamp, version) -> {
                     if (key != null) {
                         TenantAndPartition tenantAndPartition = amzaWALUtil.fromPartitionsKey(key);
                         if (!partitionsStream.stream(tenantAndPartition.tenantId, tenantAndPartition.partitionId)) {
@@ -152,8 +154,8 @@ public class AmzaWALLookup implements MiruWALLookup {
             byte[] fromKey = amzaWALUtil.toPartitionsKey(tenantId, null);
             byte[] toKey = WALKey.prefixUpperExclusive(fromKey);
             MiruPartitionId[] partitionId = new MiruPartitionId[1];
-            client.scan(null, fromKey, null, toKey,
-                (byte[] prefix, byte[] key, byte[] value, long timestamp, long version) -> {
+            client.scan(Collections.singletonList(new ScanRange(null, fromKey, null, toKey)),
+                (prefix, key, value, timestamp, version) -> {
                     if (key != null) {
                         TenantAndPartition tenantAndPartition = amzaWALUtil.fromPartitionsKey(key);
                         partitionId[0] = tenantAndPartition.partitionId;
