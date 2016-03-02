@@ -275,8 +275,6 @@ public class MiruLocalHostedPartitionTest {
         File amzaDataDir = Files.createTempDir();
         MiruAmzaServiceConfig acrc = BindInterfaceToConfiguration.bindDefault(MiruAmzaServiceConfig.class);
         acrc.setWorkingDirectories(amzaDataDir.getAbsolutePath());
-        acrc.setAmzaDiscoveryGroup("225.5.6.26");
-        acrc.setAmzaDiscoveryPort(1226);
         Deployable deployable = new Deployable(new String[0]);
         AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable, "routesHosts", 1, "connectionHealthPath",
             1, "instanceKey", "serviceName", "datacenter", "rack", "localhost", 10000, null, acrc,

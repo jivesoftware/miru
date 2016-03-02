@@ -217,6 +217,7 @@ public class MiruAmzaServiceInitializer {
         deployable.addInjectables(AmzaRingWriter.class, amzaService.getRingWriter());
         deployable.addInjectables(AmzaRingReader.class, amzaService.getRingReader());
         deployable.addInjectables(AmzaInstance.class, amzaService);
+        deployable.addInjectables(BAInterner.class, baInterner);
 
         Resource staticResource = new Resource(null)
             .addClasspathResource("resources/static/amza")

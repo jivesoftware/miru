@@ -99,17 +99,6 @@ public class MiruManageMain {
         @Override
         String getWorkingDirectories();
 
-        @StringDefault("225.5.6.25")
-        @Override
-        String getAmzaDiscoveryGroup();
-
-        @IntDefault(1225)
-        @Override
-        int getAmzaDiscoveryPort();
-
-        @IntDefault(1)
-        int getReplicateTakeQuorum();
-
         @LongDefault(60_000L)
         long getReplicateTimeoutMillis();
     }
