@@ -16,32 +16,11 @@ public interface MiruAmzaServiceConfig extends Config {
 
     void setWorkingDirectories(String dir);
 
-    @StringDefault("225.4.5.7")
-    String getAmzaDiscoveryGroup();
-
-    void setAmzaDiscoveryGroup(String amzaDiscoveryGroup);
-
-    @IntDefault(-1)
-    int getAmzaDiscoveryPort();
-
-    void setAmzaDiscoveryPort(int amzaDiscoveryPort);
-
     @LongDefault(60_000)
     long getCheckIfCompactionIsNeededIntervalInMillis();
 
     @IntDefault(60_000)
     int getDeltaStripeCompactionIntervalInMillis();
-
-    @IntDefault(1000)
-    int getTakeFromNeighborsIntervalInMillis();
-
-    void setTakeFromNeighborsIntervalInMillis(int takeFromNeighborsIntervalInMillis);
-
-    @LongDefault(1 * 24 * 60 * 60 * 1000L)
-    long getCompactTombstoneIfOlderThanNMillis();
-
-    @LongDefault(60_000L)
-    long getMinimumRangeCheckIntervalInMillis();
 
     @IntDefault(100)
     int getCorruptionParanoiaFactor();
@@ -56,9 +35,6 @@ public interface MiruAmzaServiceConfig extends Config {
 
     @IntDefault(24)
     int getNumberOfTakerThreads();
-
-    @IntDefault(24)
-    int getNumberOfAckerThreads();
 
     @IntDefault(1)
     int getTakeFromFactor();

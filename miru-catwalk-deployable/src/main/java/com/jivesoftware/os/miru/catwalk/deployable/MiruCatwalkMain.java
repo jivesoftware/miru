@@ -13,14 +13,13 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-package com.jivesoftware.os.miru.manage.deployable;
+package com.jivesoftware.os.miru.catwalk.deployable;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider;
-import com.jivesoftware.os.amza.service.storage.PartitionCreator;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
@@ -28,28 +27,14 @@ import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceConfig;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceInitializer;
-import com.jivesoftware.os.miru.api.MiruHostProvider;
 import com.jivesoftware.os.miru.api.MiruStats;
-import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
-import com.jivesoftware.os.miru.api.marshall.JacksonJsonObjectTypeMarshaller;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaProvider;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
-import com.jivesoftware.os.miru.api.topology.MiruRegistryConfig;
-import com.jivesoftware.os.miru.api.wal.AmzaCursor;
-import com.jivesoftware.os.miru.api.wal.AmzaSipCursor;
-import com.jivesoftware.os.miru.api.wal.MiruWALClient;
-import com.jivesoftware.os.miru.api.wal.MiruWALConfig;
-import com.jivesoftware.os.miru.api.wal.RCVSCursor;
-import com.jivesoftware.os.miru.api.wal.RCVSSipCursor;
-import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
-import com.jivesoftware.os.miru.cluster.MiruRegistryClusterClient;
-import com.jivesoftware.os.miru.cluster.MiruReplicaSetDirector;
-import com.jivesoftware.os.miru.cluster.amza.AmzaClusterRegistry;
+import com.jivesoftware.os.miru.cluster.client.ClusterSchemaProvider;
+import com.jivesoftware.os.miru.cluster.client.MiruClusterClientInitializer;
 import com.jivesoftware.os.miru.logappender.MiruLogAppender;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
 import com.jivesoftware.os.miru.logappender.RoutingBirdLogSenderProvider;
-import com.jivesoftware.os.miru.manage.deployable.balancer.MiruRebalanceDirector;
-import com.jivesoftware.os.miru.manage.deployable.balancer.MiruRebalanceInitializer;
-import com.jivesoftware.os.miru.manage.deployable.topology.MiruTopologyEndpoints;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSampler;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer.MiruMetricSamplerConfig;
@@ -57,7 +42,6 @@ import com.jivesoftware.os.miru.metric.sampler.RoutingBirdMetricSampleSenderProv
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer.MiruSoyRendererConfig;
-import com.jivesoftware.os.miru.wal.client.MiruWALClientInitializer;
 import com.jivesoftware.os.miru.wal.client.MiruWALClientInitializer.WALClientSickThreadsHealthCheckConfig;
 import com.jivesoftware.os.routing.bird.deployable.Deployable;
 import com.jivesoftware.os.routing.bird.deployable.InstanceConfig;
@@ -71,36 +55,27 @@ import com.jivesoftware.os.routing.bird.health.checkers.SickThreads;
 import com.jivesoftware.os.routing.bird.health.checkers.SickThreadsHealthCheck;
 import com.jivesoftware.os.routing.bird.http.client.HttpDeliveryClientHealthProvider;
 import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelperUtils;
-import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.http.client.TenantRoutingHttpClientInitializer;
 import com.jivesoftware.os.routing.bird.server.util.Resource;
-import com.jivesoftware.os.routing.bird.shared.ConnectionDescriptor;
-import com.jivesoftware.os.routing.bird.shared.ConnectionDescriptors;
-import com.jivesoftware.os.routing.bird.shared.HostPort;
-import com.jivesoftware.os.routing.bird.shared.InstanceDescriptor;
 import com.jivesoftware.os.routing.bird.shared.TenantRoutingProvider;
 import com.jivesoftware.os.routing.bird.shared.TenantsServiceConnectionDescriptorProvider;
 import java.io.File;
 import java.util.Arrays;
-import org.merlin.config.defaults.IntDefault;
-import org.merlin.config.defaults.LongDefault;
 import org.merlin.config.defaults.StringDefault;
 
-public class MiruManageMain {
+public class MiruCatwalkMain {
 
     public static void main(String[] args) throws Exception {
-        new MiruManageMain().run(args);
+        new MiruCatwalkMain().run(args);
     }
 
-    public interface AmzaClusterRegistryConfig extends MiruAmzaServiceConfig {
+    public interface AmzaCatwalkConfig extends MiruAmzaServiceConfig {
 
-        @StringDefault("./var/amza/registry/data/")
+        @StringDefault("./var/amza/catwalk/data/")
         @Override
         String getWorkingDirectories();
 
-        @LongDefault(60_000L)
-        long getReplicateTimeoutMillis();
     }
 
     public void run(String[] args) throws Exception {
@@ -164,8 +139,6 @@ public class MiruManageMain {
                 new RoutingBirdMetricSampleSenderProvider<>(metricConnections, "", miruLogAppenderConfig.getSocketTimeoutInMillis()));
             sampler.start();
 
-            MiruRegistryConfig registryConfig = deployable.config(MiruRegistryConfig.class);
-            MiruWALConfig walConfig = deployable.config(MiruWALConfig.class);
             MiruSoyRendererConfig rendererConfig = deployable.config(MiruSoyRendererConfig.class);
 
             HttpDeliveryClientHealthProvider clientHealthProvider = new HttpDeliveryClientHealthProvider(instanceConfig.getInstanceKey(),
@@ -173,8 +146,8 @@ public class MiruManageMain {
                 instanceConfig.getConnectionsHealth(), 5_000, 100);
 
             TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
-            TenantAwareHttpClient<String> walHttpClient = tenantRoutingHttpClientInitializer.initialize(
-                tenantRoutingProvider.getConnections("miru-wal", "main"),
+            TenantAwareHttpClient<String> manageHttpClient = tenantRoutingHttpClientInitializer.initialize(
+                tenantRoutingProvider.getConnections("miru-manage", "main"),
                 clientHealthProvider,
                 10, 10_000); // TODO expose to conf
             TenantsServiceConnectionDescriptorProvider<String> readerConnectionDescriptorProvider = tenantRoutingProvider
@@ -183,27 +156,11 @@ public class MiruManageMain {
                 readerConnectionDescriptorProvider,
                 clientHealthProvider,
                 10, 10_000); // TODO expose to conf
-            HttpResponseMapper responseMapper = new HttpResponseMapper(mapper);
 
             SickThreads walClientSickThreads = new SickThreads();
             deployable.addHealthCheck(new SickThreadsHealthCheck(deployable.config(WALClientSickThreadsHealthCheckConfig.class), walClientSickThreads));
 
-            MiruWALClient<?, ?> miruWALClient;
-            if (walConfig.getActivityWALType().equals("rcvs") || walConfig.getActivityWALType().equals("rcvs_amza")) {
-                MiruWALClient<RCVSCursor, RCVSSipCursor> rcvsWALClient = new MiruWALClientInitializer().initialize("", walHttpClient, mapper,
-                    walClientSickThreads, 10_000,
-                    "/miru/wal/rcvs", RCVSCursor.class, RCVSSipCursor.class);
-                miruWALClient = rcvsWALClient;
-            } else if (walConfig.getActivityWALType().equals("amza") || walConfig.getActivityWALType().equals("amza_rcvs")) {
-                MiruWALClient<AmzaCursor, AmzaSipCursor> amzaWALClient = new MiruWALClientInitializer().initialize("", walHttpClient, mapper,
-                    walClientSickThreads, 10_000,
-                    "/miru/wal/amza", AmzaCursor.class, AmzaSipCursor.class);
-                miruWALClient = amzaWALClient;
-            } else {
-                throw new IllegalStateException("Invalid activity WAL type: " + walConfig.getActivityWALType());
-            }
-
-            AmzaClusterRegistryConfig amzaClusterRegistryConfig = deployable.config(AmzaClusterRegistryConfig.class);
+            AmzaCatwalkConfig amzaCatwalkConfig = deployable.config(AmzaCatwalkConfig.class);
             AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable,
                 instanceConfig.getRoutesHost(),
                 instanceConfig.getRoutesPort(),
@@ -216,12 +173,12 @@ public class MiruManageMain {
                 instanceConfig.getHost(),
                 instanceConfig.getMainPort(),
                 null, //"amza-topology-" + instanceConfig.getClusterName(), // Manual service discovery if null
-                amzaClusterRegistryConfig,
+                amzaCatwalkConfig,
                 rowsChanged -> {
                 });
 
             EmbeddedClientProvider clientProvider = new EmbeddedClientProvider(amzaService);
-            AmzaClusterRegistry clusterRegistry = new AmzaClusterRegistry(amzaService,
+            /*AmzaClusterRegistry clusterRegistry = new AmzaClusterRegistry(amzaService,
                 clientProvider,
                 amzaClusterRegistryConfig.getReplicateTimeoutMillis(),
                 new JacksonJsonObjectTypeMarshaller<>(MiruSchema.class, mapper),
@@ -230,47 +187,22 @@ public class MiruManageMain {
                 registryConfig.getDefaultTopologyIsIdleAfterMillis(),
                 registryConfig.getDefaultTopologyDestroyAfterMillis(),
                 amzaClusterRegistryConfig.getTakeFromFactor());
-            amzaService.watch(PartitionCreator.RING_INDEX.getPartitionName(), clusterRegistry);
+            amzaService.watch(PartitionCreator.RING_INDEX.getPartitionName(), clusterRegistry);*/
 
             MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
 
             MiruStats stats = new MiruStats();
 
-            MiruManageService miruManageService = new MiruManageInitializer().initialize(
+            MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize(stats, "", manageHttpClient, mapper);
+            MiruSchemaProvider miruSchemaProvider = new ClusterSchemaProvider(clusterClient, 10000); // TODO config
+
+            MiruCatwalkService miruCatwalkService = new MiruCatwalkInitializer().initialize(
                 instanceConfig.getClusterName(),
                 instanceConfig.getInstanceName(),
                 renderer,
-                clusterRegistry,
-                miruWALClient,
                 stats,
                 tenantRoutingProvider,
                 mapper);
-
-            OrderIdProvider orderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(0), new SnowflakeIdPacker(),
-                new JiveEpochTimestampProvider());
-            MiruClusterClient clusterClient = new MiruRegistryClusterClient(clusterRegistry, new MiruReplicaSetDirector(orderIdProvider, clusterRegistry,
-                stream -> {
-                    ConnectionDescriptors connectionDescriptors = readerConnectionDescriptorProvider.getConnections("");
-                    for (ConnectionDescriptor connectionDescriptor : connectionDescriptors.getConnectionDescriptors()) {
-                        InstanceDescriptor instanceDescriptor = connectionDescriptor.getInstanceDescriptor();
-                        HostPort hostPort = connectionDescriptor.getHostPort();
-                        if (!stream.descriptor(instanceDescriptor.datacenter, instanceDescriptor.rack,
-                            MiruHostProvider.fromInstance(instanceDescriptor.instanceName, instanceDescriptor.instanceKey))) {
-                            return;
-                        }
-                        if (!stream.descriptor(instanceDescriptor.datacenter, instanceDescriptor.rack,
-                            MiruHostProvider.fromHostPort(hostPort.getHost(), hostPort.getPort()))) {
-                            return;
-                        }
-                    }
-                }));
-
-            MiruRebalanceDirector rebalanceDirector = new MiruRebalanceInitializer().initialize(clusterRegistry,
-                miruWALClient,
-                new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName())),
-                readerClient,
-                responseMapper,
-                readerConnectionDescriptorProvider);
 
             File staticResourceDir = new File(System.getProperty("user.dir"));
             System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());
@@ -279,12 +211,8 @@ public class MiruManageMain {
                 .addResourcePath(rendererConfig.getPathToStaticResources())
                 .setContext("/static");
 
-            deployable.addEndpoints(MiruManageEndpoints.class);
-            deployable.addInjectables(MiruManageService.class, miruManageService);
-            deployable.addInjectables(MiruRebalanceDirector.class, rebalanceDirector);
-            deployable.addInjectables(MiruRegistryClusterClient.class, clusterClient);
-            deployable.addInjectables(MiruWALClient.class, miruWALClient);
-            deployable.addEndpoints(MiruTopologyEndpoints.class);
+            deployable.addEndpoints(MiruCatwalkEndpoints.class);
+            deployable.addInjectables(MiruCatwalkService.class, miruCatwalkService);
             deployable.addInjectables(MiruStats.class, stats);
 
             deployable.addResource(sourceTree);

@@ -121,14 +121,6 @@ public class MiruWALMain {
         @Override
         String getWorkingDirectories();
 
-        @StringDefault("225.5.6.23")
-        @Override
-        String getAmzaDiscoveryGroup();
-
-        @IntDefault(1223)
-        @Override
-        int getAmzaDiscoveryPort();
-
         @LongDefault(60_000L)
         long getReplicateTimeoutMillis();
     }
