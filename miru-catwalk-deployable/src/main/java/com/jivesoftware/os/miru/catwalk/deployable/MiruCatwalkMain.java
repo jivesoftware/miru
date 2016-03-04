@@ -101,8 +101,8 @@ public class MiruCatwalkMain {
                 new HasUI.UI("Tail", "manage", "/manage/tail"),
                 new HasUI.UI("Thread Dump", "manage", "/manage/threadDump"),
                 new HasUI.UI("Health", "manage", "/manage/ui"),
-                new HasUI.UI("Miru-Manage", "main", "/miru/manage"),
-                new HasUI.UI("Miru-Manage-Amza", "main", "/amza"))));
+                new HasUI.UI("Miru-Catwalk", "main", "/miru/catwalk"),
+                new HasUI.UI("Miru-Catwalk-Amza", "main", "/amza"))));
             deployable.buildStatusReporter(null).start();
             deployable.addHealthCheck(new GCLoadHealthChecker(deployable.config(GCLoadHealthChecker.GCLoadHealthCheckerConfig.class)));
             deployable.addHealthCheck(serviceStartupHealthCheck);
