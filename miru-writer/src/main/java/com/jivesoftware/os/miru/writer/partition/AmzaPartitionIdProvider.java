@@ -94,7 +94,9 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
             false,
             RowType.primary,
             indexClass,
-            null));
+            null,
+            -1,
+            -1));
         amzaService.awaitOnline(partitionName, 10_000L); //TODO config
         return clientProvider.getClient(partitionName);
     }
