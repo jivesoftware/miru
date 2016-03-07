@@ -235,7 +235,9 @@ public class MiruWALMain {
                 false,
                 RowType.snappy_primary,
                 "berkeleydb",
-                null);
+                null,
+                -1,
+                -1);
             PartitionProperties readTrackingProperties = new PartitionProperties(Durability.fsync_async, 0, 0, 0, 0, 0, 0, 0, 0,
                 false,
                 Consistency.leader_quorum,
@@ -244,7 +246,9 @@ public class MiruWALMain {
                 false,
                 RowType.snappy_primary,
                 "berkeleydb",
-                null);
+                null,
+                -1,
+                -1);
             PartitionProperties lookupProperties = new PartitionProperties(Durability.fsync_async, 0, 0, 0, 0, 0, 0, 0, 0,
                 false,
                 Consistency.quorum,
@@ -253,7 +257,9 @@ public class MiruWALMain {
                 false,
                 RowType.primary,
                 "berkeleydb",
-                null);
+                null,
+                -1,
+                -1);
             AmzaWALUtil amzaWALUtil = new AmzaWALUtil(amzaService,
                 clientProvider,
                 activityProperties,
