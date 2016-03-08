@@ -102,11 +102,11 @@ public class AmzaWALTest {
         //    null, 1000, 1000);
 
         AmzaWALUtil amzaWALUtil = new AmzaWALUtil(amzaService, amzaClientProvider,
-            new PartitionProperties(Durability.fsync_async, 0, 0, 0, 0, 0, 0, 0, 0, false, Consistency.leader_quorum, true, 0, false,
+            new PartitionProperties(Durability.fsync_async, 0, 0, 0, 0, 0, 0, 0, 0, false, Consistency.leader_quorum, true, false, false,
                 RowType.snappy_primary, "berkeleydb", null, -1, -1),
-            new PartitionProperties(Durability.fsync_async, 0, 0, 0, 0, 0, 0, 0, 0, false, Consistency.leader_quorum, true, 0, false,
+            new PartitionProperties(Durability.fsync_async, 0, 0, 0, 0, 0, 0, 0, 0, false, Consistency.leader_quorum, true, false, false,
                 RowType.snappy_primary, "berkeleydb", null, -1, -1),
-            new PartitionProperties(Durability.fsync_async, 0, 0, 0, 0, 0, 0, 0, 0, false, Consistency.quorum, true, 0, false,
+            new PartitionProperties(Durability.fsync_async, 0, 0, 0, 0, 0, 0, 0, 0, false, Consistency.quorum, true, false, false,
                 RowType.primary, "berkeleydb", null, -1, -1),
             3,
             10_000,

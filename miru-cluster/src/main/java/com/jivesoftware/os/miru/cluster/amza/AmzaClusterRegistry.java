@@ -132,7 +132,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
         this.defaultTopologyIsStaleAfterMillis = defaultTopologyIsStaleAfterMillis;
         this.defaultTopologyIsIdleAfterMillis = defaultTopologyIsIdleAfterMillis;
         this.defaultTopologyDestroyAfterMillis = defaultTopologyDestroyAfterMillis;
-        this.takeFromFactor = takeFromFactor;
+        this.takeFromFactor = takeFromFactor; //TODO use for ring config?
         this.indexClass = "berkeleydb"; //TODO config
     }
 
@@ -142,7 +142,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
                 amzaService.getRingWriter().ensureMaximalRing(CLUSTER_REGISTRY_RING_NAME);
                 PartitionName partitionName = new PartitionName(false, CLUSTER_REGISTRY_RING_NAME, name.getBytes(Charsets.UTF_8));
                 amzaService.setPropertiesIfAbsent(partitionName,
-                    new PartitionProperties(Durability.fsync_async, 0, 0, 0, 0, 0, 0, 0, 0, false, consistency, requiresConsistency, takeFromFactor, false,
+                    new PartitionProperties(Durability.fsync_async, 0, 0, 0, 0, 0, 0, 0, 0, false, consistency, requiresConsistency, true, false,
                         RowType.primary, indexClass, null, -1, -1));
                 amzaService.awaitOnline(partitionName, 10_000L); //TODO config
                 return embeddedClientProvider.getClient(partitionName);
