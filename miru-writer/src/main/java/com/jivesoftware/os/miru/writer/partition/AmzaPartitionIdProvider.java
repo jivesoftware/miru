@@ -90,7 +90,7 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
             0, 0, 0, 0, 0, 0, 0, 0, false,
             consistency,
             requireConsistency,
-            2,
+            true,
             false,
             RowType.primary,
             indexClass,
