@@ -19,7 +19,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkAnswer;
-import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkAnswer.FeatureScore;
+import com.jivesoftware.os.miru.stream.plugins.catwalk.FeatureScore;
 import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkConstants;
 import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkQuery;
 import com.jivesoftware.os.miru.ui.MiruPageRegion;

@@ -18,13 +18,13 @@ package com.jivesoftware.os.miru.catwalk.deployable;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
+import com.jivesoftware.os.amza.api.BAInterner;
+import com.jivesoftware.os.amza.client.http.AmzaClientProvider;
+import com.jivesoftware.os.amza.client.http.HttpPartitionClientFactory;
+import com.jivesoftware.os.amza.client.http.HttpPartitionHostsProvider;
+import com.jivesoftware.os.amza.client.http.RingHostHttpClientProvider;
 import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider;
-import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
-import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
-import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
-import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
-import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceConfig;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceInitializer;
 import com.jivesoftware.os.miru.api.MiruStats;
@@ -53,6 +53,8 @@ import com.jivesoftware.os.routing.bird.health.checkers.GCLoadHealthChecker;
 import com.jivesoftware.os.routing.bird.health.checkers.ServiceStartupHealthCheck;
 import com.jivesoftware.os.routing.bird.health.checkers.SickThreads;
 import com.jivesoftware.os.routing.bird.health.checkers.SickThreadsHealthCheck;
+import com.jivesoftware.os.routing.bird.http.client.HttpClient;
+import com.jivesoftware.os.routing.bird.http.client.HttpClientException;
 import com.jivesoftware.os.routing.bird.http.client.HttpDeliveryClientHealthProvider;
 import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelperUtils;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
@@ -62,6 +64,9 @@ import com.jivesoftware.os.routing.bird.shared.TenantRoutingProvider;
 import com.jivesoftware.os.routing.bird.shared.TenantsServiceConnectionDescriptorProvider;
 import java.io.File;
 import java.util.Arrays;
+import java.util.concurrent.Executors;
+import org.merlin.config.defaults.IntDefault;
+import org.merlin.config.defaults.LongDefault;
 import org.merlin.config.defaults.StringDefault;
 
 public class MiruCatwalkMain {
@@ -76,6 +81,11 @@ public class MiruCatwalkMain {
         @Override
         String getWorkingDirectories();
 
+        @IntDefault(64)
+        int getAmzaCallerThreadPoolSize();
+
+        @LongDefault(10_000)
+        long getAmzaAwaitLeaderElectionForNMillis();
     }
 
     public void run(String[] args) throws Exception {
@@ -146,14 +156,18 @@ public class MiruCatwalkMain {
                 instanceConfig.getConnectionsHealth(), 5_000, 100);
 
             TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
+
+            TenantAwareHttpClient<String> amzaClient = tenantRoutingHttpClientInitializer.initialize(
+                tenantRoutingProvider.getConnections("amza", "main"), // TODO expose to conf
+                clientHealthProvider,
+                10, 10_000); // TODO expose to conf
+
             TenantAwareHttpClient<String> manageHttpClient = tenantRoutingHttpClientInitializer.initialize(
                 tenantRoutingProvider.getConnections("miru-manage", "main"),
                 clientHealthProvider,
                 10, 10_000); // TODO expose to conf
-            TenantsServiceConnectionDescriptorProvider<String> readerConnectionDescriptorProvider = tenantRoutingProvider
-                .getConnections("miru-reader", "main");
             TenantAwareHttpClient<String> readerClient = tenantRoutingHttpClientInitializer.initialize(
-                readerConnectionDescriptorProvider,
+                tenantRoutingProvider.getConnections("miru-reader", "main"),
                 clientHealthProvider,
                 10, 10_000); // TODO expose to conf
 
@@ -177,6 +191,14 @@ public class MiruCatwalkMain {
                 rowsChanged -> {
                 });
 
+            BAInterner baInterner = new BAInterner();
+            AmzaClientProvider<HttpClient, HttpClientException> amzaClientProvider = new AmzaClientProvider<>(
+                new HttpPartitionClientFactory(baInterner),
+                new HttpPartitionHostsProvider(baInterner, amzaClient, mapper),
+                new RingHostHttpClientProvider(amzaClient),
+                Executors.newFixedThreadPool(amzaCatwalkConfig.getAmzaCallerThreadPoolSize()), //TODO expose to conf
+                amzaCatwalkConfig.getAmzaAwaitLeaderElectionForNMillis()); //TODO expose to conf
+
             EmbeddedClientProvider clientProvider = new EmbeddedClientProvider(amzaService);
             /*AmzaClusterRegistry clusterRegistry = new AmzaClusterRegistry(amzaService,
                 clientProvider,
@@ -196,13 +218,15 @@ public class MiruCatwalkMain {
             MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize(stats, "", manageHttpClient, mapper);
             MiruSchemaProvider miruSchemaProvider = new ClusterSchemaProvider(clusterClient, 10000); // TODO config
 
-            MiruCatwalkService miruCatwalkService = new MiruCatwalkInitializer().initialize(
+            MiruCatwalkUIService miruCatwalkUIService = new MiruCatwalkUIInitializer().initialize(
                 instanceConfig.getClusterName(),
                 instanceConfig.getInstanceName(),
                 renderer,
                 stats,
                 tenantRoutingProvider,
                 mapper);
+
+            CatwalkModelService modelService = new CatwalkModelInitializer().initialize(amzaClientProvider, stats, mapper);
 
             File staticResourceDir = new File(System.getProperty("user.dir"));
             System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());
@@ -211,8 +235,8 @@ public class MiruCatwalkMain {
                 .addResourcePath(rendererConfig.getPathToStaticResources())
                 .setContext("/static");
 
-            deployable.addEndpoints(MiruCatwalkEndpoints.class);
-            deployable.addInjectables(MiruCatwalkService.class, miruCatwalkService);
+            deployable.addEndpoints(MiruCatwalkUIEndpoints.class);
+            deployable.addInjectables(MiruCatwalkUIService.class, miruCatwalkUIService);
             deployable.addInjectables(MiruStats.class, stats);
 
             deployable.addResource(sourceTree);

@@ -12,7 +12,7 @@ import java.util.List;
 /**
  *
  */
-public class MiruCatwalkService {
+public class MiruCatwalkUIService {
 
     private final MiruSoyRenderer renderer;
     private final MiruHeaderRegion headerRegion;
@@ -21,7 +21,7 @@ public class MiruCatwalkService {
 
     private final List<MiruCatwalkPlugin> plugins = Lists.newCopyOnWriteArrayList();
 
-    public MiruCatwalkService(
+    public MiruCatwalkUIService(
         MiruSoyRenderer renderer,
         MiruHeaderRegion headerRegion,
         MiruPageRegion<Void> adminRegion,
