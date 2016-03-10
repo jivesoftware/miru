@@ -9,6 +9,7 @@ import com.jivesoftware.os.miru.plugin.partition.MiruRoutablePartition;
 import com.jivesoftware.os.miru.service.partition.cluster.PartitionAndHost;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentSkipListMap;
 
 public class MiruTenantRoutingTopology {
@@ -39,6 +40,18 @@ public class MiruTenantRoutingTopology {
         }
 
         return allOrderedPartitions;
+    }
+
+    public PartitionGroup partitionInOrder(MiruTenantId tenantId, MiruPartitionId partitionId, String requestName, String queryKey) {
+        List<MiruRoutablePartition> partitions = Lists.newArrayList();
+        for (MiruRoutablePartition routablePartition : topology.values()) {
+            if (routablePartition.partitionId.equals(partitionId)) {
+                partitions.add(routablePartition);
+            }
+        }
+
+        List<MiruRoutablePartition> orderedPartitions = partitionComparison.orderPartitions(tenantId, partitionId, requestName, queryKey, partitions);
+        return new PartitionGroup(tenantId, partitionId, orderedPartitions);
     }
 
     public static class PartitionGroup {

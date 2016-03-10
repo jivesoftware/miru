@@ -54,6 +54,26 @@ public class CatwalkEndpoints {
     }
 
     @POST
+    @Path(CatwalkConstants.PARTITION_QUERY_ENDPOINT + "/{partitionId}")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response catwalkCustomPartition(@PathParam("partitionId") int id,
+        MiruRequest<CatwalkQuery> request) {
+        try {
+            MiruPartitionId partitionId = MiruPartitionId.of(id);
+            MiruResponse<CatwalkAnswer> result = injectable.strut(partitionId, request);
+
+            //log.info("catwalkPartition: " + answer.collectedDistincts);
+            return responseHelper.jsonResponse(result);
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
+            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Unavailable " + e.getMessage()).build();
+        } catch (Exception e) {
+            log.error("Failed to partition catwalk for partition: {}", new Object[] { id }, e);
+            return Response.serverError().build();
+        }
+    }
+
+    @POST
     @Path(CatwalkConstants.CUSTOM_QUERY_ENDPOINT + "/{partitionId}")
     @Consumes(MediaType.APPLICATION_OCTET_STREAM)
     @Produces(MediaType.APPLICATION_OCTET_STREAM)
@@ -66,16 +86,15 @@ public class CatwalkEndpoints {
             return Response.serverError().build();
         }
 
-        MiruPartitionId partitionId = MiruPartitionId.of(id);
         try {
-
+            MiruPartitionId partitionId = MiruPartitionId.of(id);
             MiruPartitionResponse<CatwalkAnswer> result = injectable.strut(partitionId, requestAndReport);
             byte[] responseBytes = result != null ? conf.asByteArray(result) : new byte[0];
             return Response.ok(responseBytes, MediaType.APPLICATION_OCTET_STREAM).build();
         } catch (MiruPartitionUnavailableException | InterruptedException e) {
             return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Unavailable " + e.getMessage()).build();
         } catch (Exception e) {
-            log.error("Failed to custom catwalk for partition: " + partitionId.getId(), e);
+            log.error("Failed to custom catwalk for partition: {}", new Object[] { id }, e);
             return Response.serverError().build();
         }
     }

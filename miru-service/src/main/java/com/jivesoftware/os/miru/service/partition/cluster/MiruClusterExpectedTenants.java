@@ -89,7 +89,31 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
         String requestName,
         String queryKey) throws Exception {
 
-        MiruTenantRoutingTopology topology = routingTopologies.get(tenantId, () -> {
+        MiruTenantRoutingTopology topology = getTenantRoutingTopology(tenantId);
+        if (topology == null) {
+            return Collections.emptyList();
+        }
+        MiruTenantTopology<?, ?> localTopology = localTopologies.get(tenantId);
+        return getOrderedPartitions(tenantId, requestName, queryKey, topology, (MiruTenantTopology) localTopology);
+    }
+
+    @Override
+    public OrderedPartitions<?, ?> queryablePartitionInOrder(MiruTenantId tenantId,
+        MiruPartitionId partitionId,
+        String requestName,
+        String queryKey) throws Exception {
+
+        MiruTenantRoutingTopology topology = getTenantRoutingTopology(tenantId);
+        if (topology == null) {
+            return null;
+        }
+        PartitionGroup partitionGroup = topology.partitionInOrder(tenantId, partitionId, requestName, queryKey);
+        final MiruTenantTopology<?, ?> localTopology = localTopologies.get(tenantId);
+        return getOrderedPartition(tenantId, (MiruTenantTopology) localTopology, partitionGroup);
+    }
+
+    private MiruTenantRoutingTopology getTenantRoutingTopology(MiruTenantId tenantId) throws Exception {
+        return routingTopologies.get(tenantId, () -> {
 
             MiruTopologyResponse topologyResponse = clusterClient.routingTopology(tenantId);
             ConcurrentSkipListMap<PartitionAndHost, MiruRoutablePartition> partitionHostTopology = new ConcurrentSkipListMap<>();
@@ -102,11 +126,6 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
             }
             return new MiruTenantRoutingTopology(partitionComparison, partitionHostTopology);
         });
-        if (topology == null) {
-            return Collections.emptyList();
-        }
-        final MiruTenantTopology<?, ?> localTopology = localTopologies.get(tenantId);
-        return getOrderedPartitions(tenantId, requestName, queryKey, topology, (MiruTenantTopology) localTopology);
     }
 
     private <BM extends IBM, IBM> List<OrderedPartitions<BM, IBM>> getOrderedPartitions(MiruTenantId tenantId,
@@ -117,24 +136,30 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
 
         List<PartitionGroup> allPartitionsInOrder = topology.allPartitionsInOrder(tenantId, requestName, queryKey);
         return Lists.transform(allPartitionsInOrder, input -> {
-            List<MiruQueryablePartition<BM, IBM>> partitions = Lists.transform(input.partitions,
-                routablePartition -> {
-                    MiruPartitionCoord key = new MiruPartitionCoord(tenantId, routablePartition.partitionId, routablePartition.host);
-                    if (routablePartition.local) {
-                        if (localTopology == null) {
-                            return null;
-                        } else {
-                            Optional<MiruLocalHostedPartition<BM, IBM, ?, ?>> partition = localTopology.getPartition(routablePartition.partitionId);
-                            return partition.orNull();
-                        }
-                    } else {
-                        return remotePartitionFactory.create(key);
-                    }
-                });
-            // uncomment to prevent local queries
-            //return new OrderedPartitions<>(input.tenantId, input.partitionId, Iterables.filter(partitions, input1 -> input1 != null && !input1.isLocal()));
-            return new OrderedPartitions<>(input.tenantId, input.partitionId, Iterables.filter(partitions, Predicates.notNull()));
+            return getOrderedPartition(tenantId, localTopology, input);
         });
+    }
+
+    private <BM extends IBM, IBM> OrderedPartitions<BM, IBM> getOrderedPartition(MiruTenantId tenantId,
+        MiruTenantTopology<BM, IBM> localTopology,
+        PartitionGroup partitionGroup) {
+        List<MiruQueryablePartition<BM, IBM>> partitions = Lists.transform(partitionGroup.partitions,
+            routablePartition -> {
+                MiruPartitionCoord key = new MiruPartitionCoord(tenantId, routablePartition.partitionId, routablePartition.host);
+                if (routablePartition.local) {
+                    if (localTopology == null) {
+                        return null;
+                    } else {
+                        Optional<MiruLocalHostedPartition<BM, IBM, ?, ?>> partition = localTopology.getPartition(routablePartition.partitionId);
+                        return partition.orNull();
+                    }
+                } else {
+                    return remotePartitionFactory.create(key);
+                }
+            });
+        // uncomment to prevent local queries
+        //return new OrderedPartitions<>(input.tenantId, input.partitionId, Iterables.filter(partitions, input1 -> input1 != null && !input1.isLocal()));
+        return new OrderedPartitions<>(partitionGroup.tenantId, partitionGroup.partitionId, Iterables.filter(partitions, Predicates.notNull()));
     }
 
     @Override
