@@ -229,6 +229,9 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         if (!endOfStream.compareAndSet(0, System.currentTimeMillis() + threshold)) {
             if (endOfStream.get() < System.currentTimeMillis()) {
                 hasOpenWriters.set(false);
+                if (persistentContext.isPresent()) {
+                    persistentContext.get().markClosed();
+                }
             }
         }
     }

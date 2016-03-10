@@ -50,29 +50,6 @@ public class CatwalkInjectable {
         }
     }
 
-    public MiruResponse<CatwalkAnswer> strut(MiruPartitionId partitionId,
-        MiruRequest<CatwalkQuery> request) throws MiruQueryServiceException, InterruptedException {
-        try {
-            MiruTenantId tenantId = request.tenantId;
-            Miru miru = provider.getMiru(tenantId);
-            return miru.askAndMergePartition(tenantId,
-                partitionId,
-                new MiruSolvableFactory<>(request.name, provider.getStats(),
-                    "catwalk",
-                    new CatwalkQuestion(catwalk,
-                        request,
-                        provider.getRemotePartition(CatwalkRemotePartition.class))),
-                new CatwalkAnswerMerger(request.query.desiredNumberOfResults),
-                CatwalkAnswer.EMPTY_RESULTS,
-                request.logLevel);
-        } catch (MiruPartitionUnavailableException | InterruptedException e) {
-            throw e;
-        } catch (Exception e) {
-            //TODO throw http error codes
-            throw new MiruQueryServiceException("Failed to catwalk", e);
-        }
-    }
-
     public MiruPartitionResponse<CatwalkAnswer> strut(MiruPartitionId partitionId,
         MiruRequestAndReport<CatwalkQuery, CatwalkReport> requestAndReport)
         throws MiruQueryServiceException, InterruptedException {
@@ -93,7 +70,30 @@ public class CatwalkInjectable {
             throw e;
         } catch (Exception e) {
             //TODO throw http error codes
-            throw new MiruQueryServiceException("Failed to catwalk for partition: " + partitionId.getId(), e);
+            throw new MiruQueryServiceException("Failed remote catwalk for partition: " + partitionId.getId(), e);
+        }
+    }
+
+    public MiruResponse<CatwalkAnswer> strut(MiruPartitionId partitionId,
+        MiruRequest<CatwalkQuery> request) throws MiruQueryServiceException, InterruptedException {
+        try {
+            MiruTenantId tenantId = request.tenantId;
+            Miru miru = provider.getMiru(tenantId);
+            return miru.askAndMergePartition(tenantId,
+                partitionId,
+                new MiruSolvableFactory<>(request.name, provider.getStats(),
+                    "catwalk",
+                    new CatwalkQuestion(catwalk,
+                        request,
+                        provider.getRemotePartition(CatwalkRemotePartition.class))),
+                new CatwalkAnswerMerger(request.query.desiredNumberOfResults),
+                CatwalkAnswer.EMPTY_RESULTS,
+                request.logLevel);
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
+            throw e;
+        } catch (Exception e) {
+            //TODO throw http error codes
+            throw new MiruQueryServiceException("Failed single catwalk for partition: " + partitionId.getId(), e);
         }
     }
 

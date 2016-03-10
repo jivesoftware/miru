@@ -20,6 +20,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil.Feature;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
+import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.List;
@@ -100,8 +101,13 @@ public class Catwalk {
         solutionLog.log(MiruSolutionLogLevel.INFO, "Gather cardinalities took {} ms", System.currentTimeMillis() - start);
 
         boolean resultsExhausted = request.query.timeRange.smallestTimestamp > requestContext.getTimeIndex().getLargestTimestamp();
+        boolean resultsClosed = requestContext.isClosed();
 
-        CatwalkAnswer result = new CatwalkAnswer(featureScoreResults, resultsExhausted);
+        MiruTimeRange timeRange = new MiruTimeRange(
+            requestContext.getTimeIndex().getSmallestTimestamp(),
+            requestContext.getTimeIndex().getLargestTimestamp());
+
+        CatwalkAnswer result = new CatwalkAnswer(featureScoreResults, timeRange, resultsExhausted, resultsClosed);
         log.debug("result={}", result);
         return result;
     }

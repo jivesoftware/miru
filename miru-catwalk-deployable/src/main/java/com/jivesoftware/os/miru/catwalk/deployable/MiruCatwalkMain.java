@@ -41,6 +41,7 @@ import com.jivesoftware.os.miru.metric.sampler.MiruMetricSampler;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer.MiruMetricSamplerConfig;
 import com.jivesoftware.os.miru.metric.sampler.RoutingBirdMetricSampleSenderProvider;
+import com.jivesoftware.os.miru.plugin.query.MiruTenantQueryRouting;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer.MiruSoyRendererConfig;
@@ -59,6 +60,7 @@ import com.jivesoftware.os.routing.bird.http.client.HttpClient;
 import com.jivesoftware.os.routing.bird.http.client.HttpClientException;
 import com.jivesoftware.os.routing.bird.http.client.HttpDeliveryClientHealthProvider;
 import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelperUtils;
+import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.http.client.TenantRoutingHttpClientInitializer;
 import com.jivesoftware.os.routing.bird.server.util.Resource;
@@ -94,8 +96,14 @@ public class MiruCatwalkMain {
         @IntDefault(64)
         int getNumberOfUpateModelQueues();
 
+        @IntDefault(1_000)
+        int getCheckQueuesBatchSize();
+
         @LongDefault(10_000)
-        public long getCheckQueuesForWorkEvenNMillis();
+        long getCheckQueuesForWorkEvenNMillis();
+
+        @LongDefault(1_000L * 60 * 60)
+        long getModelUpdateIntervalInMillis();
     }
 
     public void run(String[] args) throws Exception {
@@ -133,6 +141,8 @@ public class MiruCatwalkMain {
             ObjectMapper mapper = new ObjectMapper();
             mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
             mapper.registerModule(new GuavaModule());
+
+            HttpResponseMapper responseMapper = new HttpResponseMapper(mapper);
 
             TenantRoutingProvider tenantRoutingProvider = deployable.getTenantRoutingProvider();
             MiruLogAppenderInitializer.MiruLogAppenderConfig miruLogAppenderConfig = deployable.config(MiruLogAppenderInitializer.MiruLogAppenderConfig.class);
@@ -242,16 +252,28 @@ public class MiruCatwalkMain {
             ExecutorService modelUpdaters = Executors.newFixedThreadPool(numProcs, new ThreadFactoryBuilder().setNameFormat("modelUpdaters-%d").build());
             ExecutorService readRepairers = Executors.newFixedThreadPool(numProcs, new ThreadFactoryBuilder().setNameFormat("readRepairers-%d").build());
 
-            CatwalkModelService catwalkModelService = new CatwalkModelService(readRepairers, amzaClientProvider, stats);
-            CatwalkModelQueue catwalkModelQueue = new CatwalkModelQueue(catwalkModelService,
+            MiruTenantQueryRouting tenantQueryRouting = new MiruTenantQueryRouting();
+
+            CatwalkModelQueue catwalkModelQueue = new CatwalkModelQueue(amzaService,
+                embeddedClientProvider,
+                mapper,
+                amzaCatwalkConfig.getNumberOfUpateModelQueues());
+            CatwalkModelService catwalkModelService = new CatwalkModelService(catwalkModelQueue,
+                readRepairers,
+                amzaClientProvider,
+                stats);
+            CatwalkModelUpdater catwalkModelUpdater = new CatwalkModelUpdater(catwalkModelService,
+                catwalkModelQueue,
                 queueConsumers,
+                tenantQueryRouting,
                 readerClient,
+                mapper,
+                responseMapper,
                 modelUpdaters,
                 amzaService,
                 embeddedClientProvider,
                 stats,
-                amzaCatwalkConfig.getNumberOfUpateModelQueues(),
-                amzaCatwalkConfig.getCheckQueuesForWorkEvenNMillis());
+                amzaCatwalkConfig.getModelUpdateIntervalInMillis());
 
             File staticResourceDir = new File(System.getProperty("user.dir"));
             System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());
@@ -262,7 +284,7 @@ public class MiruCatwalkMain {
 
             deployable.addEndpoints(CatwalkModelEndpoints.class);
             deployable.addInjectables(CatwalkModelService.class, catwalkModelService);
-            deployable.addInjectables(CatwalkModelQueue.class, catwalkModelQueue);
+            deployable.addInjectables(CatwalkModelUpdater.class, catwalkModelUpdater);
 
             deployable.addEndpoints(MiruCatwalkUIEndpoints.class);
             deployable.addInjectables(MiruCatwalkUIService.class, miruCatwalkUIService);
@@ -271,6 +293,9 @@ public class MiruCatwalkMain {
             deployable.addResource(sourceTree);
             deployable.buildServer().start();
             clientHealthProvider.start();
+            catwalkModelUpdater.start(amzaCatwalkConfig.getNumberOfUpateModelQueues(),
+                amzaCatwalkConfig.getCheckQueuesBatchSize(),
+                amzaCatwalkConfig.getCheckQueuesForWorkEvenNMillis());
             serviceStartupHealthCheck.success();
         } catch (Throwable t) {
             serviceStartupHealthCheck.info("Encountered the following failure during startup.", t);

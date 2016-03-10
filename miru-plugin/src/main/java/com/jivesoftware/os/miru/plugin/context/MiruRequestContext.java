@@ -44,4 +44,6 @@ public interface MiruRequestContext<BM extends IBM, IBM, S extends MiruSipCursor
     int getDeltaMinId();
 
     int getLastDeltaMinId();
+
+    boolean isClosed();
 }

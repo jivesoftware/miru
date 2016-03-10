@@ -1,9 +1,10 @@
 package com.jivesoftware.os.miru.catwalk.deployable.endpoints;
 
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.catwalk.deployable.CatwalkModelQueue;
+import com.jivesoftware.os.miru.catwalk.deployable.CatwalkModelUpdater;
 import com.jivesoftware.os.miru.catwalk.deployable.CatwalkModelService;
 import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkModel;
+import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkQuery;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.nio.charset.StandardCharsets;
@@ -28,12 +29,12 @@ public class CatwalkModelEndpoints {
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final CatwalkModelService catwalkModelService;
-    private final CatwalkModelQueue catwalkModelQueue;
+    private final CatwalkModelUpdater catwalkModelUpdater;
 
     public CatwalkModelEndpoints(@Context CatwalkModelService catwalkModelService,
-        @Context CatwalkModelQueue catwalkModelQueue) {
+        @Context CatwalkModelUpdater catwalkModelUpdater) {
         this.catwalkModelService = catwalkModelService;
-        this.catwalkModelQueue = catwalkModelQueue;
+        this.catwalkModelUpdater = catwalkModelUpdater;
     }
 
     @GET
@@ -41,13 +42,14 @@ public class CatwalkModelEndpoints {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public Response getModel(@PathParam("tenantId") String tenantId,
-        @PathParam("userId") String userId,
-        String[][] featureFieldIds) {
+        @PathParam("catwalkId") String catwalkId,
+        @PathParam("modelId") String modelId,
+        CatwalkQuery catwalkQuery) {
         try {
-            CatwalkModel model = catwalkModelService.getModel(new MiruTenantId(tenantId.getBytes(StandardCharsets.UTF_8)), userId, featureFieldIds);
+            CatwalkModel model = catwalkModelService.getModel(new MiruTenantId(tenantId.getBytes(StandardCharsets.UTF_8)), catwalkId, modelId, catwalkQuery);
             return Response.ok(model).build();
         } catch (Exception e) {
-            LOG.error("Failed to get model for {} {}", new Object[]{tenantId, userId}, e);
+            LOG.error("Failed to get model for {} {} {}", new Object[] { tenantId, catwalkId, modelId }, e);
             return Response.serverError().entity("Failed to get model").build();
         }
     }
@@ -56,17 +58,19 @@ public class CatwalkModelEndpoints {
     @Path("/{tenantId}/{userId}/{partitionId}")
     @Produces(MediaType.TEXT_HTML)
     public Response updateModel(@PathParam("tenantId") String tenantId,
-        @PathParam("userId") String userId,
+        @PathParam("catwalkId") String catwalkId,
+        @PathParam("modelId") String modelId,
         @PathParam("partitionId") int partitionId,
-        String[][] featureFieldIds) {
+        CatwalkQuery catwalkQuery) {
         try {
-            catwalkModelQueue.updateModel(new MiruTenantId(tenantId.getBytes(StandardCharsets.UTF_8)),
-                userId,
-                featureFieldIds,
-                partitionId);
+            catwalkModelUpdater.updateModel(new MiruTenantId(tenantId.getBytes(StandardCharsets.UTF_8)),
+                catwalkId,
+                modelId,
+                partitionId,
+                catwalkQuery);
             return Response.ok("success").build();
         } catch (Exception e) {
-            LOG.error("Failed to update model for {} {} {}", new Object[]{tenantId, userId, partitionId}, e);
+            LOG.error("Failed to update model for {} {} {} {}", new Object[] { tenantId, catwalkId, modelId, partitionId }, e);
             return Response.serverError().entity("Failed to update model").build();
         }
     }

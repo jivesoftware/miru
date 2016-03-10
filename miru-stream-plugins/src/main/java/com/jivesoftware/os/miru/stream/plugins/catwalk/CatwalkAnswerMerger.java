@@ -7,6 +7,7 @@ import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.miru.plugin.solution.MiruAnswerMerger;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
+import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -80,7 +81,10 @@ public class CatwalkAnswerMerger implements MiruAnswerMerger<CatwalkAnswer> {
             mergedFeatures[i] = merged;
         }
 
-        return new CatwalkAnswer(mergedFeatures, currentAnswer.resultsExhausted);
+        MiruTimeRange mergedTimeRange = new MiruTimeRange(Math.min(currentAnswer.timeRange.smallestTimestamp, lastAnswer.timeRange.smallestTimestamp),
+            Math.max(currentAnswer.timeRange.largestTimestamp, lastAnswer.timeRange.largestTimestamp));
+        boolean mergedResultsClosed = currentAnswer.resultsClosed && lastAnswer.resultsClosed;
+        return new CatwalkAnswer(mergedFeatures, mergedTimeRange, currentAnswer.resultsExhausted, mergedResultsClosed);
     }
 
     @Override

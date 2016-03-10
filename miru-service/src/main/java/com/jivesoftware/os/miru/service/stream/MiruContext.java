@@ -48,6 +48,7 @@ public class MiruContext<BM extends IBM, IBM, S extends MiruSipCursor<S>> implem
     public final AtomicInteger deltaMinId = new AtomicInteger(-1);
     public final AtomicInteger lastDeltaMinId = new AtomicInteger(-1);
     public final MiruRebuildDirector.Token rebuildToken;
+    public final AtomicBoolean closed = new AtomicBoolean(false);
 
     public MiruContext(MiruSchema schema,
         MiruTermComposer termComposer,
@@ -158,5 +159,14 @@ public class MiruContext<BM extends IBM, IBM, S extends MiruSipCursor<S>> implem
 
     public void markCorrupt() {
         corrupt.set(true);
+    }
+
+    @Override
+    public boolean isClosed() {
+        return closed.get();
+    }
+
+    public void markClosed() {
+        closed.set(true);
     }
 }

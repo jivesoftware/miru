@@ -1,7 +1,9 @@
 package com.jivesoftware.os.miru.catwalk.deployable;
 
 import com.google.common.collect.Iterators;
+import com.google.common.collect.Lists;
 import com.google.common.collect.PeekingIterator;
+import com.google.common.collect.Sets;
 import com.jivesoftware.os.amza.api.PartitionClient;
 import com.jivesoftware.os.amza.api.PartitionClientProvider;
 import com.jivesoftware.os.amza.api.filer.UIO;
@@ -14,7 +16,9 @@ import com.jivesoftware.os.amza.service.filer.HeapFiler;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.MiruValue;
+import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkModel;
+import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkQuery;
 import com.jivesoftware.os.miru.stream.plugins.catwalk.FeatureScore;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -28,6 +32,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.TreeSet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -42,6 +47,7 @@ public class CatwalkModelService {
         TimeUnit.DAYS.toMillis(30), TimeUnit.DAYS.toMillis(10), TimeUnit.DAYS.toMillis(30), TimeUnit.DAYS.toMillis(10), 0, 0, 0, 0,
         false, Consistency.leader_quorum, true, true, false, RowType.snappy_primary, "berkeleydb", null, -1, -1);
 
+    private final CatwalkModelQueue modelQueue;
     private final ExecutorService readRepairers;
     private final PartitionClientProvider clientProvider;
     private final MiruStats stats;
@@ -50,36 +56,33 @@ public class CatwalkModelService {
     private final long abandonLeaderSolutionAfterNMillis = 5_000; //TODO expose to conf?
     private final long abandonSolutionAfterNMillis = 30_000; //TODO expose to conf?
 
-    public CatwalkModelService(ExecutorService readRepairers, PartitionClientProvider clientProvider, MiruStats stats) {
+    public CatwalkModelService(CatwalkModelQueue modelQueue,
+        ExecutorService readRepairers,
+        PartitionClientProvider clientProvider,
+        MiruStats stats) {
+        this.modelQueue = modelQueue;
         this.readRepairers = readRepairers;
         this.clientProvider = clientProvider;
         this.stats = stats;
     }
 
-    // 1 - 9
-    // 1 - 2
-    // 3 - 7
-    // 3 - 5
-    // 6 - 7
-    // 8 - 8
-    // 9 - 9
-    // 10 - 10
-    // 11 - 11
-    public CatwalkModel getModel(MiruTenantId tenantId, String userId, String[][] featureFieldIds) throws Exception {
+    public CatwalkModel getModel(MiruTenantId tenantId, String catwalkId, String modelId, CatwalkQuery catwalkQuery) throws Exception {
         long start = System.currentTimeMillis();
 
         PartitionClient client = modelClient(tenantId);
 
-        List<FeatureRange> deletableRanges = new ArrayList<>();
+        List<FeatureRange> deletableRanges = Lists.newArrayList();
+        TreeSet<Integer> partitionIds = Sets.newTreeSet();
+
         Map<FieldIdsKey, MergedScores> fieldIdsToFeatureScores = new HashMap<>();
-        FeatureRange[] currentRange = {null};
-        long[] schema = {-1};
+        FeatureRange[] currentRange = { null };
+        String[][] featureFields = catwalkQuery.featureFields;
         client.scan(Consistency.leader_quorum,
             prefixedKeyRangeStream -> {
-                for (int i = 0; i < featureFieldIds.length; i++) {
-                    String[] fieldIds = featureFieldIds[i];
-                    byte[] fromKey = userPartitionKey(userId, fieldIds, 0, 0);
-                    byte[] toKey = userPartitionKey(userId, fieldIds, 0, Integer.MAX_VALUE);
+                for (int i = 0; i < featureFields.length; i++) {
+                    String[] fields = featureFields[i];
+                    byte[] fromKey = modelPartitionKey(catwalkId, modelId, fields, 0, 0);
+                    byte[] toKey = modelPartitionKey(catwalkId, modelId, fields, 0, Integer.MAX_VALUE);
                     if (!prefixedKeyRangeStream.stream(null, fromKey, null, toKey)) {
                         return false;
                     }
@@ -91,6 +94,10 @@ public class CatwalkModelService {
                 FeatureRange range = getFeatureRange(key);
                 if (currentRange[0] == null || !currentRange[0].intersects(range)) {
                     currentRange[0] = range;
+
+                    for (int partitionId = range.fromPartitionId; partitionId <= range.toPartitionId; partitionId++) {
+                        partitionIds.add(partitionId);
+                    }
 
                     ModelFeatureScores scores = valueFromBytes(value);
                     FieldIdsKey fieldIdsKey = new FieldIdsKey(range.fieldIds);
@@ -122,17 +129,25 @@ public class CatwalkModelService {
                             }
                         }
 
-                        currentMerged.closedPartition &= scores.partitionIsClosed;
-                        if (currentMerged.closedPartition) {
+                        currentMerged.contiguousClosedPartitions &= scores.partitionIsClosed;
+                        currentMerged.contiguousClosedPartitions &= (currentMerged.latestRange.toPartitionId + 1 == range.fromPartitionId);
+                        if (currentMerged.contiguousClosedPartitions) {
                             if (currentMerged.ranges == null) {
                                 currentMerged.ranges = new ArrayList<>();
                             }
                             currentMerged.ranges.add(currentMerged.latestRange);
                             currentMerged.scores = currentMerged.latestScores;
+                            if (currentMerged.timeRange == null) {
+                                currentMerged.timeRange = currentMerged.latestScores.timeRange;
+                            } else {
+                                currentMerged.timeRange = new MiruTimeRange(
+                                    Math.min(scores.timeRange.smallestTimestamp, currentMerged.timeRange.smallestTimestamp),
+                                    Math.max(scores.timeRange.largestTimestamp, currentMerged.timeRange.largestTimestamp));
+                            }
                         }
 
                         currentMerged.latestRange = range;
-                        currentMerged.latestScores = new ModelFeatureScores(scores.partitionIsClosed, merged);
+                        currentMerged.latestScores = new ModelFeatureScores(scores.partitionIsClosed, merged, scores.timeRange);
                         return currentMerged;
                     });
 
@@ -147,27 +162,36 @@ public class CatwalkModelService {
             Optional.<List<String>>empty());
 
         @SuppressWarnings("unchecked")
-        List<FeatureScore>[] featureScores = new List[featureFieldIds.length];
-        for (int i = 0; i < featureFieldIds.length; i++) {
-            MergedScores mergedScores = fieldIdsToFeatureScores.get(new FieldIdsKey(featureFieldIds[i]));
+        List<FeatureScore>[] featureScores = new List[featureFields.length];
+        for (int i = 0; i < featureFields.length; i++) {
+            MergedScores mergedScores = fieldIdsToFeatureScores.get(new FieldIdsKey(featureFields[i]));
             featureScores[i] = mergedScores.latestScores.featureScores;
         }
 
         for (Map.Entry<FieldIdsKey, MergedScores> entry : fieldIdsToFeatureScores.entrySet()) {
             List<FeatureRange> ranges = entry.getValue().ranges;
             if (ranges != null && ranges.size() > 1) {
-                readRepairers.submit(new ReadRepair(tenantId, userId, entry.getKey(), entry.getValue()));
+                readRepairers.submit(new ReadRepair(tenantId, catwalkId, modelId, entry.getKey(), entry.getValue()));
             }
         }
 
         if (!deletableRanges.isEmpty()) {
             readRepairers.submit(() -> {
                 try {
-                    removeModel(tenantId, userId, deletableRanges);
+                    removeModel(tenantId, catwalkId, modelId, deletableRanges);
                 } catch (Exception x) {
                     LOG.error("Failure while trying to delete.");
                 }
             });
+        }
+
+        Integer[] repairPartitionIds = partitionIds.toArray(new Integer[0]);
+        for (int i = 1; i < repairPartitionIds.length; i++) {
+            int lastPartitionId = repairPartitionIds[i - 1];
+            int currentPartitionId = repairPartitionIds[i];
+            for (int partitionId = lastPartitionId + 1; partitionId < currentPartitionId; partitionId++) {
+                modelQueue.enqueue(tenantId, catwalkId, modelId, partitionId, catwalkQuery);
+            }
         }
 
         CatwalkModel model = new CatwalkModel(featureScores);
@@ -176,34 +200,44 @@ public class CatwalkModelService {
     }
 
     public void saveModel(MiruTenantId tenantId,
-        String userId,
-        String[] fieldIds,
+        String catwalkId,
+        String modelId,
         int fromPartitionId,
         int toPartitionId,
-        boolean partitionIsClosed,
-        List<FeatureScore> scores) throws Exception {
+        String[][] featureFields,
+        ModelFeatureScores[] models) throws Exception {
 
-        Collections.sort(scores, FEATURE_SCORE_COMPARATOR);
+        for (ModelFeatureScores model : models) {
+            Collections.sort(model.featureScores, FEATURE_SCORE_COMPARATOR);
+        }
 
         PartitionClient client = modelClient(tenantId);
-        byte[] key = userPartitionKey(userId, fieldIds, fromPartitionId, toPartitionId);
-        byte[] value = valueToBytes(partitionIsClosed, scores);
         client.commit(Consistency.leader_quorum, null,
-            commitKeyValueStream -> commitKeyValueStream.commit(key, value, -1, false),
+            commitKeyValueStream -> {
+                for (int i = 0; i < featureFields.length; i++) {
+                    byte[] key = modelPartitionKey(catwalkId, modelId, featureFields[i], fromPartitionId, toPartitionId);
+                    byte[] value = valueToBytes(models[i].partitionIsClosed, models[i].featureScores, models[i].timeRange);
+                    if (!commitKeyValueStream.commit(key, value, -1, false)) {
+                        return false;
+                    }
+                }
+                return true;
+            },
             additionalSolverAfterNMillis,
             abandonSolutionAfterNMillis,
             Optional.<List<String>>empty());
     }
 
     public void removeModel(MiruTenantId tenantId,
-        String userId,
+        String catwalkId,
+        String modelId,
         List<FeatureRange> ranges) throws Exception {
 
         PartitionClient client = modelClient(tenantId);
         client.commit(Consistency.leader_quorum, null,
             commitKeyValueStream -> {
                 for (FeatureRange range : ranges) {
-                    byte[] key = userPartitionKey(userId, range.fieldIds, range.fromPartitionId, range.toPartitionId);
+                    byte[] key = modelPartitionKey(catwalkId, modelId, range.fieldIds, range.fromPartitionId, range.toPartitionId);
                     if (!commitKeyValueStream.commit(key, null, -1, true)) {
                         return false;
                     }
@@ -221,8 +255,8 @@ public class CatwalkModelService {
         return new FeatureScore(a.values, a.numerator + b.numerator, a.denominator + b.denominator);
     }
 
-    private byte[] valueToBytes(boolean partitionIsClosed, List<FeatureScore> scores) throws IOException {
-        HeapFiler filer = new HeapFiler(1 + 1 + scores.size() * (8 + 8 + 4 + 4 + 10)); //TODO rough guesstimation
+    private byte[] valueToBytes(boolean partitionIsClosed, List<FeatureScore> scores, MiruTimeRange timeRange) throws IOException {
+        HeapFiler filer = new HeapFiler(1 + 1 + scores.size() * (8 + 8 + 4 + 4 + 10) + 8 + 8); //TODO rough guesstimation
 
         UIO.writeByte(filer, (byte) 0, "version");
         UIO.writeByte(filer, partitionIsClosed ? (byte) 1 : (byte) 0, "partitionIsClosed");
@@ -240,6 +274,9 @@ public class CatwalkModelService {
             UIO.writeLong(filer, score.numerator, "numerator");
             UIO.writeLong(filer, score.denominator, "denominator");
         }
+
+        UIO.writeLong(filer, timeRange.smallestTimestamp, "smallestTimestamp");
+        UIO.writeLong(filer, timeRange.largestTimestamp, "largestTimestamp");
 
         return filer.getBytes();
     }
@@ -266,7 +303,11 @@ public class CatwalkModelService {
             long denominator = UIO.readLong(filer, "denominator", lengthBuffer);
             scores.add(new FeatureScore(values, numerator, denominator));
         }
-        return new ModelFeatureScores(partitionIsClosed, scores);
+
+        MiruTimeRange timeRange = new MiruTimeRange(
+            UIO.readLong(filer, "smallestTimestamp", lengthBuffer),
+            UIO.readLong(filer, "largestTimestamp", lengthBuffer));
+        return new ModelFeatureScores(partitionIsClosed, scores, timeRange);
     }
 
     private PartitionClient modelClient(MiruTenantId tenantId) throws Exception {
@@ -274,31 +315,38 @@ public class CatwalkModelService {
         return clientProvider.getPartition(new PartitionName(false, nameBytes, nameBytes), 3, MODEL_PROPERTIES);
     }
 
-    private byte[] userPartitionKey(String userId, String[] fieldIds, int fromPartitionId, int toPartitionId) {
-        byte[] userBytes = userId.getBytes(StandardCharsets.UTF_8);
+    private byte[] modelPartitionKey(String catwalkId, String modelId, String[] fields, int fromPartitionId, int toPartitionId) {
+        byte[] catwalkBytes = catwalkId.getBytes(StandardCharsets.UTF_8);
+        byte[] modelBytes = modelId.getBytes(StandardCharsets.UTF_8);
 
-        int fieldIdsSizeInByte = 0;
-        byte[][] rawFields = new byte[fieldIds.length][];
+        int fieldsSizeInByte = 0;
+        byte[][] rawFields = new byte[fields.length][];
         for (int i = 0; i < rawFields.length; i++) {
-            fieldIdsSizeInByte += 4;
-            rawFields[i] = fieldIds[i].getBytes(StandardCharsets.UTF_8);
-            fieldIdsSizeInByte += rawFields[i].length;
+            fieldsSizeInByte += 4;
+            rawFields[i] = fields[i].getBytes(StandardCharsets.UTF_8);
+            fieldsSizeInByte += rawFields[i].length;
         }
 
-        int keyLength = 2 + userBytes.length + 1 + (fieldIdsSizeInByte) + 4 + 4;
+        int keyLength = 2 + catwalkBytes.length + 2 + modelBytes.length + 1 + (fieldsSizeInByte) + 4 + 4;
         byte[] keyBytes = new byte[keyLength];
         int offset = 0;
 
-        UIO.shortBytes((short) userBytes.length, keyBytes, 0);
+        UIO.shortBytes((short) catwalkBytes.length, keyBytes, 0);
         offset += 2;
 
-        UIO.writeBytes(userBytes, keyBytes, offset);
-        offset += userBytes.length;
+        UIO.writeBytes(catwalkBytes, keyBytes, offset);
+        offset += catwalkBytes.length;
 
-        keyBytes[offset] = (byte) fieldIds.length;
+        UIO.shortBytes((short) modelBytes.length, keyBytes, 0);
+        offset += 2;
+
+        UIO.writeBytes(modelBytes, keyBytes, offset);
+        offset += modelBytes.length;
+
+        keyBytes[offset] = (byte) fields.length;
         offset++;
 
-        for (int i = 0; i < fieldIds.length; i++) {
+        for (int i = 0; i < fields.length; i++) {
             UIO.intBytes(rawFields[i].length, keyBytes, offset);
             offset += 4;
             offset += UIO.writeBytes(rawFields[i], keyBytes, offset);
@@ -317,9 +365,9 @@ public class CatwalkModelService {
     private FeatureRange getFeatureRange(byte[] key) {
 
         int offset = 0;
-        int userLength = UIO.bytesShort(key, offset);
+        int modelLength = UIO.bytesShort(key, offset);
         offset += 2;
-        offset += userLength;
+        offset += modelLength;
 
         int fieldIdsLength = key[offset];
         offset++;
@@ -374,13 +422,15 @@ public class CatwalkModelService {
     private class ReadRepair implements Runnable {
 
         private final MiruTenantId tenantId;
-        private final String userId;
+        private final String catwalkId;
+        private final String modelId;
         private final FieldIdsKey fieldIdsKey;
         private final MergedScores mergedScores;
 
-        public ReadRepair(MiruTenantId tenantId, String userId, FieldIdsKey fieldIdsKey, MergedScores mergedScores) {
+        public ReadRepair(MiruTenantId tenantId, String catwalkId, String modelId, FieldIdsKey fieldIdsKey, MergedScores mergedScores) {
             this.tenantId = tenantId;
-            this.userId = userId;
+            this.catwalkId = catwalkId;
+            this.modelId = modelId;
             this.fieldIdsKey = fieldIdsKey;
             this.mergedScores = mergedScores;
         }
@@ -397,8 +447,16 @@ public class CatwalkModelService {
                     }
                 }
 
-                saveModel(tenantId, userId, fieldIdsKey.fieldIds, merged.fromPartitionId, merged.toPartitionId, true, mergedScores.scores.featureScores);
-                removeModel(tenantId, userId, mergedScores.ranges);
+                if (merged != null) {
+                    saveModel(tenantId,
+                        catwalkId,
+                        modelId,
+                        merged.fromPartitionId,
+                        merged.toPartitionId,
+                        new String[][] { fieldIdsKey.fieldIds },
+                        new ModelFeatureScores[] { new ModelFeatureScores(true, mergedScores.scores.featureScores, mergedScores.timeRange) });
+                    removeModel(tenantId, catwalkId, modelId, mergedScores.ranges);
+                }
             } catch (Exception x) {
                 LOG.error("Failure while trying to apply read repairs.");
             }
@@ -471,13 +529,14 @@ public class CatwalkModelService {
 
     private static class MergedScores {
 
-        boolean closedPartition = true;
+        boolean contiguousClosedPartitions = true;
 
         FeatureRange latestRange;
         ModelFeatureScores latestScores;
 
         List<FeatureRange> ranges;
         ModelFeatureScores scores;
+        MiruTimeRange timeRange;
 
         public MergedScores(FeatureRange latestRange, ModelFeatureScores latestScores) {
             this.latestRange = latestRange;
