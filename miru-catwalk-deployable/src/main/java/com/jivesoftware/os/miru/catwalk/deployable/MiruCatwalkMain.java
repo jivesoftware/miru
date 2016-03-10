@@ -18,6 +18,7 @@ package com.jivesoftware.os.miru.catwalk.deployable;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.jivesoftware.os.amza.api.BAInterner;
 import com.jivesoftware.os.amza.client.http.AmzaClientProvider;
 import com.jivesoftware.os.amza.client.http.HttpPartitionClientFactory;
@@ -30,6 +31,7 @@ import com.jivesoftware.os.miru.amza.MiruAmzaServiceInitializer;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaProvider;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
+import com.jivesoftware.os.miru.catwalk.deployable.endpoints.CatwalkModelEndpoints;
 import com.jivesoftware.os.miru.cluster.client.ClusterSchemaProvider;
 import com.jivesoftware.os.miru.cluster.client.MiruClusterClientInitializer;
 import com.jivesoftware.os.miru.logappender.MiruLogAppender;
@@ -64,7 +66,9 @@ import com.jivesoftware.os.routing.bird.shared.TenantRoutingProvider;
 import com.jivesoftware.os.routing.bird.shared.TenantsServiceConnectionDescriptorProvider;
 import java.io.File;
 import java.util.Arrays;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import org.merlin.config.defaults.IntDefault;
 import org.merlin.config.defaults.LongDefault;
 import org.merlin.config.defaults.StringDefault;
@@ -86,6 +90,12 @@ public class MiruCatwalkMain {
 
         @LongDefault(10_000)
         long getAmzaAwaitLeaderElectionForNMillis();
+
+        @IntDefault(64)
+        int getNumberOfUpateModelQueues();
+
+        @LongDefault(10_000)
+        public long getCheckQueuesForWorkEvenNMillis();
     }
 
     public void run(String[] args) throws Exception {
@@ -95,16 +105,16 @@ public class MiruCatwalkMain {
             HealthFactory.initialize(deployable::config,
                 new HealthCheckRegistry() {
 
-                    @Override
-                    public void register(HealthChecker healthChecker) {
-                        deployable.addHealthCheck(healthChecker);
-                    }
+                @Override
+                public void register(HealthChecker healthChecker) {
+                    deployable.addHealthCheck(healthChecker);
+                }
 
-                    @Override
-                    public void unregister(HealthChecker healthChecker) {
-                        throw new UnsupportedOperationException("Not supported yet.");
-                    }
-                });
+                @Override
+                public void unregister(HealthChecker healthChecker) {
+                    throw new UnsupportedOperationException("Not supported yet.");
+                }
+            });
             deployable.addErrorHealthChecks();
             deployable.addManageInjectables(HasUI.class, new HasUI(Arrays.asList(
                 new HasUI.UI("Reset Errors", "manage", "/manage/resetErrors"),
@@ -199,7 +209,7 @@ public class MiruCatwalkMain {
                 Executors.newFixedThreadPool(amzaCatwalkConfig.getAmzaCallerThreadPoolSize()), //TODO expose to conf
                 amzaCatwalkConfig.getAmzaAwaitLeaderElectionForNMillis()); //TODO expose to conf
 
-            EmbeddedClientProvider clientProvider = new EmbeddedClientProvider(amzaService);
+            EmbeddedClientProvider embeddedClientProvider = new EmbeddedClientProvider(amzaService);
             /*AmzaClusterRegistry clusterRegistry = new AmzaClusterRegistry(amzaService,
                 clientProvider,
                 amzaClusterRegistryConfig.getReplicateTimeoutMillis(),
@@ -226,7 +236,22 @@ public class MiruCatwalkMain {
                 tenantRoutingProvider,
                 mapper);
 
-            CatwalkModelService modelService = new CatwalkModelInitializer().initialize(amzaClientProvider, stats, mapper);
+            int numProcs = Runtime.getRuntime().availableProcessors();
+            ScheduledExecutorService queueConsumers = Executors.newScheduledThreadPool(numProcs, new ThreadFactoryBuilder().setNameFormat("queueConsumers-%d")
+                .build());
+            ExecutorService modelUpdaters = Executors.newFixedThreadPool(numProcs, new ThreadFactoryBuilder().setNameFormat("modelUpdaters-%d").build());
+            ExecutorService readRepairers = Executors.newFixedThreadPool(numProcs, new ThreadFactoryBuilder().setNameFormat("readRepairers-%d").build());
+
+            CatwalkModelService catwalkModelService = new CatwalkModelService(readRepairers, amzaClientProvider, stats);
+            CatwalkModelQueue catwalkModelQueue = new CatwalkModelQueue(catwalkModelService,
+                queueConsumers,
+                readerClient,
+                modelUpdaters,
+                amzaService,
+                embeddedClientProvider,
+                stats,
+                amzaCatwalkConfig.getNumberOfUpateModelQueues(),
+                amzaCatwalkConfig.getCheckQueuesForWorkEvenNMillis());
 
             File staticResourceDir = new File(System.getProperty("user.dir"));
             System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());
@@ -234,6 +259,10 @@ public class MiruCatwalkMain {
                 //.addResourcePath("../../../../../src/main/resources") // fluff?
                 .addResourcePath(rendererConfig.getPathToStaticResources())
                 .setContext("/static");
+
+            deployable.addEndpoints(CatwalkModelEndpoints.class);
+            deployable.addInjectables(CatwalkModelService.class, catwalkModelService);
+            deployable.addInjectables(CatwalkModelQueue.class, catwalkModelQueue);
 
             deployable.addEndpoints(MiruCatwalkUIEndpoints.class);
             deployable.addInjectables(MiruCatwalkUIService.class, miruCatwalkUIService);

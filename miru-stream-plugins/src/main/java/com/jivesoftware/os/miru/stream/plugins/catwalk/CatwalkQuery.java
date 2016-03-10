@@ -5,7 +5,6 @@ import com.google.common.base.Preconditions;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import java.util.Arrays;
-import java.util.List;
 
 /**
  *

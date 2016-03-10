@@ -88,6 +88,11 @@
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
+            <artifactId>miru-plugin</artifactId>
+            <version>0.871-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-api</artifactId>
             <version>0.871-SNAPSHOT</version>
         </dependency>

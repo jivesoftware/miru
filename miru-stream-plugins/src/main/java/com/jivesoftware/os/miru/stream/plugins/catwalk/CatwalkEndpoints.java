@@ -18,13 +18,15 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-
+import org.nustaq.serialization.FSTConfiguration;
 
 @Path(CatwalkConstants.CATWALK_PREFIX)
 @Singleton
 public class CatwalkEndpoints {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
+
+    private static final FSTConfiguration conf = FSTConfiguration.createDefaultConfiguration();
 
     private final CatwalkInjectable injectable;
     private final ResponseHelper responseHelper = ResponseHelper.INSTANCE;
@@ -53,14 +55,23 @@ public class CatwalkEndpoints {
 
     @POST
     @Path(CatwalkConstants.CUSTOM_QUERY_ENDPOINT + "/{partitionId}")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response catwalkCustom(@PathParam("partitionId") int id, MiruRequestAndReport<CatwalkQuery, CatwalkReport> requestAndReport) {
+    @Consumes(MediaType.APPLICATION_OCTET_STREAM)
+    @Produces(MediaType.APPLICATION_OCTET_STREAM)
+    public Response catwalkCustom(@PathParam("partitionId") int id, byte[] rawBytes) {
+        MiruRequestAndReport<CatwalkQuery, CatwalkReport> requestAndReport;
+        try {
+            requestAndReport = (MiruRequestAndReport<CatwalkQuery, CatwalkReport>) conf.asObject(rawBytes);
+        } catch (Exception e) {
+            log.error("Failed to deserialize request", e);
+            return Response.serverError().build();
+        }
+
         MiruPartitionId partitionId = MiruPartitionId.of(id);
         try {
-            MiruPartitionResponse<CatwalkAnswer> result = injectable.strut(partitionId, requestAndReport);
 
-            return responseHelper.jsonResponse(result != null ? result : new MiruPartitionResponse<>(CatwalkAnswer.EMPTY_RESULTS, null));
+            MiruPartitionResponse<CatwalkAnswer> result = injectable.strut(partitionId, requestAndReport);
+            byte[] responseBytes = result != null ? conf.asByteArray(result) : new byte[0];
+            return Response.ok(responseBytes, MediaType.APPLICATION_OCTET_STREAM).build();
         } catch (MiruPartitionUnavailableException | InterruptedException e) {
             return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Unavailable " + e.getMessage()).build();
         } catch (Exception e) {
