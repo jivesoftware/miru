@@ -5,12 +5,12 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-build-management</artifactId>
-        <version>0.872</version>
+        <version>0.873-SNAPSHOT</version>
         <relativePath>../inheritance-poms/global-build-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru</groupId>
     <artifactId>miru-service</artifactId>
-    <version>0.872</version>
+    <version>0.873-SNAPSHOT</version>
     <properties>
         <module.type>service_lib</module.type>
     </properties>
@@ -36,12 +36,12 @@
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-api</artifactId>
-            <version>0.872</version>
+            <version>0.873-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-plugin</artifactId>
-            <version>0.872</version>
+            <version>0.873-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.filer</groupId>
