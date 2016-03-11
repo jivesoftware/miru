@@ -81,8 +81,8 @@ public class CatwalkModelService {
             prefixedKeyRangeStream -> {
                 for (int i = 0; i < featureFields.length; i++) {
                     String[] fields = featureFields[i];
-                    byte[] fromKey = modelPartitionKey(catwalkId, modelId, fields, 0, 0);
-                    byte[] toKey = modelPartitionKey(catwalkId, modelId, fields, 0, Integer.MAX_VALUE);
+                    byte[] fromKey = modelPartitionKey(catwalkId, modelId, fields, 0, Integer.MAX_VALUE);
+                    byte[] toKey = modelPartitionKey(catwalkId, modelId, fields, Integer.MAX_VALUE, 0);
                     if (!prefixedKeyRangeStream.stream(null, fromKey, null, toKey)) {
                         return false;
                     }
