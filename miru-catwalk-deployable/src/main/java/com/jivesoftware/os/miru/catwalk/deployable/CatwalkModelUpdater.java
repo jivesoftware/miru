@@ -161,7 +161,7 @@ public class CatwalkModelUpdater {
                     modelQueue.remove(queueId, processedRequests);
 
                     EmbeddedClient processedClient = processedClient(queueId);
-                    processedClient.commit(Consistency.leader_quorum,
+                    processedClient.commit(Consistency.quorum,
                         null,
                         commitKeyValueStream -> {
                             for (UpdateModelRequest request : processedRequests) {
@@ -176,7 +176,7 @@ public class CatwalkModelUpdater {
                         TimeUnit.MILLISECONDS);
                 }
             } catch (Exception x) {
-                LOG.error("Unexpected issue while checking queue:{}", new Object[] { queueId }, x);
+                LOG.error("Unexpected issue while checking queue:{}", new Object[]{queueId}, x);
             }
         }
     }
@@ -216,7 +216,7 @@ public class CatwalkModelUpdater {
         byte[] modelKey = modelQueue.updateModelKey(tenantId, catwalkId, modelId, partitionId);
 
         EmbeddedClient processedClient = processedClient(tenantId, catwalkId, modelId);
-        TimestampedValue timestampedValue = processedClient.getTimestampedValue(Consistency.leader_quorum, null, modelKey);
+        TimestampedValue timestampedValue = processedClient.getTimestampedValue(Consistency.quorum, null, modelKey);
         long lastProcessed = (timestampedValue != null) ? (System.currentTimeMillis() - timestampedValue.getTimestampId()) : -1;
         if ((System.currentTimeMillis() - lastProcessed) < modelUpdateIntervalInMillis) {
             return;
@@ -238,6 +238,7 @@ public class CatwalkModelUpdater {
         PartitionName partitionName = catsPartition();
         amzaService.getRingWriter().ensureMaximalRing(partitionName.getRingName());
         amzaService.setPropertiesIfAbsent(partitionName, CATS_WALKED);
+        amzaService.awaitOnline(partitionName, 30_000);
         return embeddedClientProvider.getClient(partitionName);
     }
 
@@ -255,6 +256,7 @@ public class CatwalkModelUpdater {
         PartitionName partitionName = processedPartition(queueId);
         amzaService.getRingWriter().ensureMaximalRing(partitionName.getRingName());
         amzaService.setPropertiesIfAbsent(partitionName, PROCESSED_MODEL);
+        amzaService.awaitOnline(partitionName, 30_000);
         return embeddedClientProvider.getClient(partitionName);
     }
 
