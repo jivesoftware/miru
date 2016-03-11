@@ -33,6 +33,7 @@ import com.jivesoftware.os.miru.tools.deployable.endpoints.DistinctsPluginEndpoi
 import com.jivesoftware.os.miru.tools.deployable.endpoints.FullTextPluginEndpoints;
 import com.jivesoftware.os.miru.tools.deployable.endpoints.MiruToolsEndpoints;
 import com.jivesoftware.os.miru.tools.deployable.endpoints.RealwavePluginEndpoints;
+import com.jivesoftware.os.miru.tools.deployable.endpoints.StrutPluginEndpoints;
 import com.jivesoftware.os.miru.tools.deployable.region.AggregateCountsPluginRegion;
 import com.jivesoftware.os.miru.tools.deployable.region.AnalyticsPluginRegion;
 import com.jivesoftware.os.miru.tools.deployable.region.CatwalkPluginRegion;
@@ -43,6 +44,7 @@ import com.jivesoftware.os.miru.tools.deployable.region.RealwaveFramePluginRegio
 import com.jivesoftware.os.miru.tools.deployable.region.RealwavePluginRegion;
 import com.jivesoftware.os.miru.tools.deployable.region.RecoPluginEndpoints;
 import com.jivesoftware.os.miru.tools.deployable.region.RecoPluginRegion;
+import com.jivesoftware.os.miru.tools.deployable.region.StrutPluginRegion;
 import com.jivesoftware.os.miru.tools.deployable.region.TrendingPluginEndpoints;
 import com.jivesoftware.os.miru.tools.deployable.region.TrendingPluginRegion;
 import com.jivesoftware.os.miru.ui.MiruRegion;
@@ -174,6 +176,10 @@ public class MiruToolsMain {
                     "/miru/tools/catwalk",
                     CatwalkPluginEndpoints.class,
                     new CatwalkPluginRegion("soy.miru.page.catwalkPluginRegion", renderer, miruReaderClient, mapper, responseMapper)),
+                new MiruToolsPlugin("fire", "Strut your Stuff",
+                    "/miru/tools/strut",
+                    StrutPluginEndpoints.class,
+                    new StrutPluginRegion("soy.miru.page.strutPluginRegion", renderer, miruReaderClient, mapper, responseMapper)),
                 new MiruToolsPlugin("asterisk", "Distincts",
                     "/miru/tools/distincts",
                     DistinctsPluginEndpoints.class,

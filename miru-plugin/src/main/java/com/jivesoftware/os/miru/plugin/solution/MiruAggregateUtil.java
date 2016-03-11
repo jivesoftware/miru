@@ -64,8 +64,10 @@ public class MiruAggregateUtil {
 
         Set<Integer> uniqueFieldIds = Sets.newHashSet();
         for (int i = 0; i < featureFieldIds.length; i++) {
-            for (int j = 0; j < featureFieldIds[i].length; j++) {
-                uniqueFieldIds.add(featureFieldIds[i][j]);
+            if (featureFieldIds[i] != null) {
+                for (int j = 0; j < featureFieldIds[i].length; j++) {
+                    uniqueFieldIds.add(featureFieldIds[i][j]);
+                }
             }
         }
 
@@ -169,6 +171,9 @@ public class MiruAggregateUtil {
 
                 next:
                 for (int featureId = 0; featureId < featureFieldIds.length; featureId++) {
+                    if (featureFieldIds[featureId] == null) {
+                        continue;
+                    }
                     int[] fieldIds = featureFieldIds[featureId];
                     // make sure we have all the parts for this feature
                     for (int i = 0; i < fieldIds.length; i++) {
@@ -201,6 +206,7 @@ public class MiruAggregateUtil {
     }
 
     public interface FeatureStream {
+
         boolean stream(int featureId, MiruTermId[] termIds) throws Exception;
     }
 
@@ -419,7 +425,7 @@ public class MiruAggregateUtil {
         TermIdStream termIdStream,
         StackBuffer stackBuffer) throws Exception {
 
-        int[][] featureFieldIds = new int[][] { new int[] { pivotFieldId } };
+        int[][] featureFieldIds = new int[][]{new int[]{pivotFieldId}};
         gatherFeatures(name,
             bitmaps,
             requestContext,
@@ -652,6 +658,7 @@ public class MiruAggregateUtil {
     }
 
     private static class SimpleInvertedIndex<IBM> implements MiruTxIndex<IBM> {
+
         private final IBM bitmap;
 
         public SimpleInvertedIndex(IBM bitmap) {

@@ -61,6 +61,15 @@ public class MiruClusterPartitionDirector implements MiruPartitionDirector {
         return expectedTenants.allQueryablePartitionsInOrder(tenantId, requestName, queryKey);
     }
 
+    /** All reads read from here */
+    @Override
+    public OrderedPartitions<?, ?> queryablePartitionInOrder(MiruTenantId tenantId,
+        MiruPartitionId partitionId,
+        String requestName,
+        String queryKey) throws Exception {
+        return expectedTenants.queryablePartitionInOrder(tenantId, partitionId, requestName, queryKey);
+    }
+
     @Override
     public Optional<? extends MiruQueryablePartition<?, ?>> getQueryablePartition(MiruPartitionCoord miruPartitionCoord) throws Exception {
         MiruTenantTopology<?, ?> topology = expectedTenants.getLocalTopology(miruPartitionCoord.tenantId);

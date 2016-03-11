@@ -23,6 +23,15 @@ public interface Miru {
         A defaultValue,
         MiruSolutionLogLevel logLevel) throws Exception;
 
+    <Q, A, P> MiruResponse<A> askAndMergePartition(
+        MiruTenantId tenantId,
+        MiruPartitionId partitionId,
+        MiruSolvableFactory<Q, A, P> solvableFactory,
+        MiruAnswerMerger<A> merger,
+        A defaultValue,
+        MiruSolutionLogLevel logLevel)
+        throws Exception;
+
     <Q, A, P> MiruPartitionResponse<A> askImmediate(
         MiruTenantId tenantId,
         MiruPartitionId partitionId,

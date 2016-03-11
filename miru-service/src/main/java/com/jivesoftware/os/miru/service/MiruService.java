@@ -183,6 +183,68 @@ public class MiruService implements Miru {
     }
 
     @Override
+    public <Q, A, P> MiruResponse<A> askAndMergePartition(
+        MiruTenantId tenantId,
+        MiruPartitionId partitionId,
+        MiruSolvableFactory<Q, A, P> solvableFactory,
+        MiruAnswerMerger<A> merger,
+        A defaultValue,
+        MiruSolutionLogLevel logLevel)
+        throws Exception {
+
+        try {
+            schemaProvider.getSchema(tenantId);
+        } catch (MiruSchemaUnvailableException e) {
+            return new MiruResponse<>(null, null, 0, true, Collections.<Integer>emptyList(),
+                Collections.singletonList("Schema has not been registered for this tenantId"));
+        }
+
+        log.startTimer("askAndMergePartition");
+
+        A answer = null;
+        MiruSolutionLog solutionLog = new MiruSolutionLog(logLevel);
+        List<MiruSolution> solutions = Lists.newArrayList();
+        List<Integer> incompletePartitionIds = Lists.newArrayList();
+        long totalElapsed;
+
+        try {
+            Optional<Long> suggestedTimeoutInMillis = partitionComparison.suggestTimeout(tenantId, partitionId,
+                solvableFactory.getRequestName(), solvableFactory.getQueryKey());
+
+            OrderedPartitions<?, ?> orderedPartitions = partitionDirector.queryablePartitionInOrder(tenantId,
+                partitionId,
+                solvableFactory.getRequestName(),
+                solvableFactory.getQueryKey());
+
+            long start = System.currentTimeMillis();
+            MiruSolved<A> solved = null;
+            if (orderedPartitions != null) {
+                solved = new SerialExpectedSolution<>(orderedPartitions,
+                    solvableFactory,
+                    suggestedTimeoutInMillis,
+                    solutionLog)
+                    .get(Optional.<A>absent());
+            }
+
+            Optional<A> lastAnswer = Optional.absent();
+            if (solved == null) {
+                solutionLog.log(MiruSolutionLogLevel.WARN, "No solution for partition:{}", partitionId);
+                incompletePartitionIds.add(partitionId.getId());
+            } else {
+                solutionLog.log(MiruSolutionLogLevel.INFO, "Solved partition:{}. elapse:{} millis",
+                    partitionId, (System.currentTimeMillis() - start));
+                solutions.add(solved.solution);
+                lastAnswer = Optional.of(merger.merge(Optional.<A>absent(), solved.answer, solutionLog));
+            }
+            answer = merger.done(lastAnswer, defaultValue, solutionLog);
+        } finally {
+            totalElapsed = log.stopTimer("askAndMergePartition");
+        }
+
+        return new MiruResponse<>(answer, solutions, totalElapsed, false, incompletePartitionIds, solutionLog.asList());
+    }
+
+    @Override
     public <Q, A, P> MiruPartitionResponse<A> askImmediate(
         MiruTenantId tenantId,
         MiruPartitionId partitionId,

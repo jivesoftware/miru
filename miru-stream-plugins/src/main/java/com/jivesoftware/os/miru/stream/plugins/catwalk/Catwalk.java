@@ -9,7 +9,6 @@ import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
-import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
@@ -20,7 +19,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil.Feature;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
-import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkAnswer.FeatureScore;
+import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.List;
@@ -81,28 +80,26 @@ public class Catwalk {
             for (Entry<Feature> entry : valueSet.entrySet()) {
                 int[] fieldIds = featureFieldIds[i];
                 MiruTermId[] termIds = entry.getElement().termIds;
-                MiruValue[] featureValues = new MiruValue[fieldIds.length];
-                for (int j = 0; j < fieldIds.length; j++) {
-                    featureValues[j] = new MiruValue(termComposer.decompose(schema,
-                        schema.getFieldDefinition(fieldIds[j]),
-                        stackBuffer,
-                        termIds[j]));
-                }
-
+                
                 List<MiruTxIndex<IBM>> ands = Lists.newArrayList();
                 for (int j = 0; j < fieldIds.length; j++) {
                     ands.add(primaryIndex.get(name, fieldIds[j], termIds[j]));
                 }
                 BM bitmap = bitmaps.andTx(ands, stackBuffer);
-                featureScoreResults[i].add(new FeatureScore(featureValues, entry.getCount(), bitmaps.cardinality(bitmap)));
+                featureScoreResults[i].add(new FeatureScore(termIds, entry.getCount(), bitmaps.cardinality(bitmap)));
             }
         }
 
         solutionLog.log(MiruSolutionLogLevel.INFO, "Gather cardinalities took {} ms", System.currentTimeMillis() - start);
 
         boolean resultsExhausted = request.query.timeRange.smallestTimestamp > requestContext.getTimeIndex().getLargestTimestamp();
+        boolean resultsClosed = requestContext.isClosed();
 
-        CatwalkAnswer result = new CatwalkAnswer(featureScoreResults, resultsExhausted);
+        MiruTimeRange timeRange = new MiruTimeRange(
+            requestContext.getTimeIndex().getSmallestTimestamp(),
+            requestContext.getTimeIndex().getLargestTimestamp());
+
+        CatwalkAnswer result = new CatwalkAnswer(featureScoreResults, timeRange, resultsExhausted, resultsClosed);
         log.debug("result={}", result);
         return result;
     }

@@ -8,9 +8,9 @@ import com.jivesoftware.os.miru.catwalk.deployable.region.MiruSomethingRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.routing.bird.shared.TenantRoutingProvider;
 
-public class MiruCatwalkInitializer {
+public class MiruCatwalkUIInitializer {
 
-    public MiruCatwalkService initialize(String cluster,
+    public MiruCatwalkUIService initialize(String cluster,
         int instance,
         MiruSoyRenderer renderer,
         MiruStats stats,
@@ -18,7 +18,7 @@ public class MiruCatwalkInitializer {
         ObjectMapper mapper)
         throws Exception {
 
-        return new MiruCatwalkService(
+        return new MiruCatwalkUIService(
             renderer,
             new MiruHeaderRegion(cluster, instance, "soy.miru.chrome.headerRegion", renderer, tenantRoutingProvider),
             new MiruAdminRegion("soy.miru.page.adminRegion", renderer, stats),

@@ -1,0 +1,212 @@
+{namespace soy.miru.page}
+
+/**
+ *
+ * @param? logLevel
+ * @param? tenant
+ * @param? fromTimeAgo
+ * @param? fromTimeUnit
+ * @param? toTimeAgo
+ * @param? toTimeUnit
+ * @param? catwalkId
+ * @param? modelId
+ * @param? gatherField
+ * @param? gatherFilters
+ * @param? featureFields
+ * @param? featureFilters
+ * @param? constraintField
+ * @param? constraintFilters
+ * @param? desiredNumberOfResults
+ * @param? results
+ * @param? summary
+ * @param? elapse
+ */
+{template .strutPluginRegion}
+    <div class="panel panel-default">
+        <div class="panel-heading">Strut your Stuff</div>
+        <div class="panel-body">
+            <form id="requestPickerForm" class="j-form" data-active-class="btn-default" data-input-el="#requestPicker" data-form-el="#requestPickerForm"
+                data-jive-ui="jive/ui/typeahead/request_typeahead" method="get" name="requestPickerForm">
+                <table>
+                    <tr>
+                        <td>Log Level</td>
+                        <td>
+                            <select style="width:280px; padding-left:10px;"
+                                class="j-tenant-autocomplete j-autocomplete-input j-ui-elem" placeholder="Log Level"
+                                name="logLevel" id="logLevelPicker" data-original-title="" title="">
+                                <option value="TRACE" {if $logLevel == 'TRACE'}selected="selected"{/if}>TRACE</option>
+                                <option value="DEBUG" {if $logLevel == 'DEBUG'}selected="selected"{/if}>DEBUG</option>
+                                <option value="INFO" {if $logLevel == 'INFO'}selected="selected"{/if}>INFO</option>
+                                <option value="WARN" {if $logLevel == 'WARN'}selected="selected"{/if}>WARN</option>
+                                <option value="ERROR" {if $logLevel == 'ERROR'}selected="selected"{/if}>ERROR</option>
+                                <option value="NONE" {if $logLevel == 'NONE'}selected="selected"{/if}>NONE</option>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Tenant</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-tenant-autocomplete j-autocomplete-input j-ui-elem" placeholder="Tenant" value="{$tenant?:''}"
+                                name="tenantId" id="tenantPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>From Time Ago</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-time-autocomplete j-autocomplete-input j-ui-elem" placeholder="From Time Ago" value="{$fromTimeAgo?:''}"
+                                name="fromTimeAgo" id="fromTimePicker" data-original-title="" title="">
+                            <select style="padding-left:10px;"
+                                class="j-tenant-autocomplete j-autocomplete-input j-ui-elem" placeholder="From Time Unit"
+                                name="fromTimeUnit" id="fromTimeUnitPicker" data-original-title="" title="">
+                                <option value="MILLISECONDS" {if $fromTimeUnit == 'MILLISECONDS'}selected="selected"{/if}>Millis</option>
+                                <option value="SECONDS" {if $fromTimeUnit == 'SECONDS'}selected="selected"{/if}>Seconds</option>
+                                <option value="MINUTES" {if $fromTimeUnit == 'MINUTES'}selected="selected"{/if}>Minutes</option>
+                                <option value="HOURS" {if $fromTimeUnit == 'HOURS'}selected="selected"{/if}>Hours</option>
+                                <option value="DAYS" {if $fromTimeUnit == 'DAYS'}selected="selected"{/if}>Days</option>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>To Time Ago</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-time-autocomplete j-autocomplete-input j-ui-elem" placeholder="To Time Ago" value="{$toTimeAgo?:''}"
+                                name="toTimeAgo" id="toTimePicker" data-original-title="" title="">
+                            <select style="padding-left:10px;"
+                                class="j-tenant-autocomplete j-autocomplete-input j-ui-elem" placeholder="to Time Unit"
+                                name="toTimeUnit" id="toTimeUnitPicker" data-original-title="" title="">
+                                <option value="MILLISECONDS" {if $toTimeUnit == 'MILLISECONDS'}selected="selected"{/if}>Millis</option>
+                                <option value="SECONDS" {if $toTimeUnit == 'SECONDS'}selected="selected"{/if}>Seconds</option>
+                                <option value="MINUTES" {if $toTimeUnit == 'MINUTES'}selected="selected"{/if}>Minutes</option>
+                                <option value="HOURS" {if $toTimeUnit == 'HOURS'}selected="selected"{/if}>Hours</option>
+                                <option value="DAYS" {if $toTimeUnit == 'DAYS'}selected="selected"{/if}>Days</option>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Catwalk Id</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                placeholder="Catwalk Id" value="{$catwalkId?:''}"
+                                name="catwalkId" id="catwalkIdPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Model Id</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                placeholder="Model Id" value="{$modelId?:''}"
+                                name="modelId" id="modelIdPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Gather Field</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-gatherField-autocomplete j-autocomplete-input j-ui-elem" placeholder="Gather Field" value="{$gatherField?:''}"
+                                name="gatherField" id="gatherFieldPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Gather Filters</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-gatherFilters-autocomplete j-autocomplete-input j-ui-elem" placeholder="Gather Filters" value="{$gatherFilters?:''}"
+                                name="gatherFilters" id="gatherFiltersPicker" data-original-title="" title="">
+                            &nbsp;
+                            <em>(e.g. user:3 3765, parentType:102|2|38)</em>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Feature Fields</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-featureFields-autocomplete j-autocomplete-input j-ui-elem" placeholder="Feature Fields" value="{$featureFields?:''}"
+                                name="featureFields" id="featureFieldsPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Feature Filters</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-featureFilters-autocomplete j-autocomplete-input j-ui-elem" placeholder="Feature Filters" value="{$featureFilters?:''}"
+                                name="featureFilters" id="featureFiltersPicker" data-original-title="" title="">
+                            &nbsp;
+                            <em>(e.g. user:3 3765, parentType:102|2|38)</em>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>Constraint Field</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                placeholder="Constraint Field" value="{$constraintField?:''}"
+                                name="constraintField" id="constraintFieldPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Constraint Filters</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                placeholder="Constraint Filters" value="{$constraintFilters?:''}"
+                                name="constraintFilters" id="constraintFiltersPicker" data-original-title="" title="">
+                            &nbsp;
+                            <em>(e.g. user:3 3765, parentType:102|2|38)</em>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Desired Number of Results</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-desiredNumberOfResults-autocomplete j-autocomplete-input j-ui-elem" placeholder="Desired Number of Results" value="{$desiredNumberOfResults?:''}"
+                                name="desiredNumberOfResults" id="desiredNumberOfResultsPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                </table>
+                <input type="submit" value="Run"/>
+            </form>
+        </div>
+    </div>
+    {if $results}
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                Results
+                &nbsp;|&nbsp;
+                <a href="#summary">Jump to query summary&nbsp;&nbsp;&nbsp;{$elapse}</a>
+            </div>
+            <div class="panel-body">
+                <table class="table table-condensed">
+                    <thead>
+                        <tr>
+                            <th>Id</th>
+                            <th>Score</th>
+                        </tr>
+                    </thead>
+                    </tbody>
+                        {foreach $r in $results}
+                            <tr>
+                                <td>
+                                    {$r.value}
+                                </td>
+                                <td>
+                                    {$r.score}
+                                </td>
+                            </tr>
+                        {/foreach}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {/if}
+    {if $summary}
+        <a name="summary"></a>
+        <div class="panel panel-default">
+            <div class="panel-heading">Query Summary {$elapse}</div>
+            <div class="panel-body">
+                <pre>{$summary}</pre>
+            </div>
+        </div>
+    {/if}
+{/template}

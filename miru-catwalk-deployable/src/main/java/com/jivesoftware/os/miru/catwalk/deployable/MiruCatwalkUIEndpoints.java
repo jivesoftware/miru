@@ -15,21 +15,21 @@ import javax.ws.rs.core.Response;
  */
 @Singleton
 @Path("/miru/catwalk")
-public class MiruCatwalkEndpoints {
+public class MiruCatwalkUIEndpoints {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
-    private final MiruCatwalkService miruCatwalkService;
+    private final MiruCatwalkUIService miruCatwalkUIService;
 
-    public MiruCatwalkEndpoints(@Context MiruCatwalkService miruCatwalkService) {
-        this.miruCatwalkService = miruCatwalkService;
+    public MiruCatwalkUIEndpoints(@Context MiruCatwalkUIService miruCatwalkUIService) {
+        this.miruCatwalkUIService = miruCatwalkUIService;
     }
 
     @GET
     @Path("/")
     @Produces(MediaType.TEXT_HTML)
     public Response get() {
-        String rendered = miruCatwalkService.render();
+        String rendered = miruCatwalkUIService.render();
         return Response.ok(rendered).build();
     }
 
@@ -37,7 +37,7 @@ public class MiruCatwalkEndpoints {
     @Path("/something")
     @Produces(MediaType.TEXT_HTML)
     public Response getHosts() {
-        String rendered = miruCatwalkService.renderSomething();
+        String rendered = miruCatwalkUIService.renderSomething();
         return Response.ok(rendered).build();
     }
 

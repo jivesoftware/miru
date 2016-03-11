@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.service.partition;
 import com.google.common.base.Optional;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.CoordinateStream;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.partition.OrderedPartitions;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
@@ -26,6 +27,8 @@ public interface MiruExpectedTenants {
     void thumpthump() throws Exception;
 
     Iterable<? extends OrderedPartitions<?, ?>> allQueryablePartitionsInOrder(MiruTenantId tenantId, String requestName, String queryKey) throws Exception;
+
+    OrderedPartitions<?,?> queryablePartitionInOrder(MiruTenantId tenantId, MiruPartitionId partitionId, String requestName, String queryKey) throws Exception;
 
     boolean expectedTopologies(Optional<MiruTenantId> tenantId, CoordinateStream stream) throws Exception;
 

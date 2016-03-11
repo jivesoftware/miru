@@ -13,15 +13,14 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.FilterStringUtil;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
-import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkAnswer;
-import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkAnswer.FeatureScore;
 import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkConstants;
 import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkQuery;
+import com.jivesoftware.os.miru.stream.plugins.catwalk.FeatureScore;
 import com.jivesoftware.os.miru.ui.MiruPageRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
@@ -188,7 +187,7 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
                             @SuppressWarnings("unchecked")
                             MiruResponse<CatwalkAnswer> extractResponse = responseMapper.extractResultFromResponse(httpResponse,
                                 MiruResponse.class,
-                                new Class<?>[] { CatwalkAnswer.class },
+                                new Class<?>[]{CatwalkAnswer.class},
                                 null);
                             return new ClientResponse<>(extractResponse, true);
                         });
@@ -214,7 +213,8 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
                             List<Map<String, Object>> features = new ArrayList<>();
                             for (ScoredFeature scoredFeature : scored) {
                                 Map<String, Object> feature = new HashMap<>();
-                                List<String> values = Lists.transform(Arrays.asList(scoredFeature.featureScore.values), MiruValue::last);
+                                List<String> values = Lists.transform(Arrays.asList(scoredFeature.featureScore.termIds),
+                                    (input1) -> new String(input1.getBytes(), StandardCharsets.UTF_8));
                                 feature.put("values", values);
                                 feature.put("numerator", String.valueOf(scoredFeature.featureScore.numerator));
                                 feature.put("denominator", String.valueOf(scoredFeature.featureScore.denominator));
@@ -267,22 +267,16 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
             if (c != 0) {
                 return c;
             }
-            c = Integer.compare(featureScore.values.length, o.featureScore.values.length);
+            c = Integer.compare(featureScore.termIds.length, o.featureScore.termIds.length);
             if (c != 0) {
                 return c;
             }
-            for (int i = 0; i < featureScore.values.length; i++) {
-                c = Integer.compare(featureScore.values[i].parts.length, o.featureScore.values[i].parts.length);
+            for (int j = 0; j < featureScore.termIds.length; j++) {
+                c = featureScore.termIds[j].compareTo(o.featureScore.termIds[j]);
                 if (c != 0) {
                     return c;
                 }
-                for (int j = 0; j < featureScore.values[i].parts.length; j++) {
-                    c = featureScore.values[i].parts[j].compareTo(o.featureScore.values[i].parts[j]);
-                    if (c != 0) {
-                        return c;
-                    }
-                }
-            }
+            }           
             return 0;
         }
     }
