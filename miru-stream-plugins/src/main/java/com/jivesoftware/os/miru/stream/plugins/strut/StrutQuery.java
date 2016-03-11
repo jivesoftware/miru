@@ -5,11 +5,12 @@ import com.google.common.base.Preconditions;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkQuery;
+import java.io.Serializable;
 
 /**
  *
  */
-public class StrutQuery {
+public class StrutQuery implements Serializable {
 
     public final String catwalkId;
     public final String modelId;

@@ -3,12 +3,13 @@ package com.jivesoftware.os.miru.stream.plugins.catwalk;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
+import java.io.Serializable;
 import java.util.Arrays;
 
 /**
  *
  */
-public class FeatureScore {
+public class FeatureScore implements Serializable {
 
     public final MiruTermId[] termIds;
     public final long numerator;
@@ -26,11 +27,11 @@ public class FeatureScore {
 
     @Override
     public String toString() {
-        return "FeatureScore{" +
-            "termIds=" + Arrays.toString(termIds) +
-            ", numerator=" + numerator +
-            ", denominator=" + denominator +
-            '}';
+        return "FeatureScore{"
+            + "termIds=" + Arrays.toString(termIds)
+            + ", numerator=" + numerator
+            + ", denominator=" + denominator
+            + '}';
     }
 
     @Override
