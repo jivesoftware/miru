@@ -217,7 +217,7 @@ public class CatwalkModelUpdater {
 
         EmbeddedClient processedClient = processedClient(tenantId, catwalkId, modelId);
         TimestampedValue timestampedValue = processedClient.getTimestampedValue(Consistency.quorum, null, modelKey);
-        long lastProcessed = (timestampedValue != null) ? (System.currentTimeMillis() - timestampedValue.getTimestampId()) : -1;
+        long lastProcessed = (timestampedValue != null) ? timestampedValue.getTimestampId() : -1;
         if ((System.currentTimeMillis() - lastProcessed) < modelUpdateIntervalInMillis) {
             return;
         }
