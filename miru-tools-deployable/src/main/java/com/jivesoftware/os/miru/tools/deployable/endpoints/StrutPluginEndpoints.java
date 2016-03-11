@@ -42,7 +42,7 @@ public class StrutPluginEndpoints {
         @QueryParam("toTimeAgo") @DefaultValue("0") long toTimeAgo,
         @QueryParam("toTimeUnit") @DefaultValue("HOURS") String toTimeUnit,
         @QueryParam("catwalkId") @DefaultValue("test") String catwalkId,
-        @QueryParam("modelId") @DefaultValue("3 2000") String modelId,
+        @QueryParam("modelId") @DefaultValue("2000") String modelId,
         @QueryParam("gatherField") @DefaultValue("parent") String gatherField,
         @QueryParam("gatherFilters") @DefaultValue("activityType:0, user:3 2000") String gatherFilters,
         @QueryParam("featureFields") @DefaultValue("activityType context,"
