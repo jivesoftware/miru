@@ -1,7 +1,6 @@
 {namespace soy.miru.page}
 
 /**
- * Analytics plugin page
  *
  * @param? logLevel
  * @param? tenant
@@ -9,18 +8,22 @@
  * @param? fromTimeUnit
  * @param? toTimeAgo
  * @param? toTimeUnit
+ * @param? catwalkId
+ * @param? modelId
  * @param? gatherField
  * @param? gatherFilters
  * @param? featureFields
  * @param? featureFilters
+ * @param? constraintField
+ * @param? constraintFilters
  * @param? desiredNumberOfResults
- * @param? model
+ * @param? results
  * @param? summary
  * @param? elapse
  */
-{template .catwalkPluginRegion}
+{template .strutPluginRegion}
     <div class="panel panel-default">
-        <div class="panel-heading">Catwalk</div>
+        <div class="panel-heading">Strut your Stuff</div>
         <div class="panel-body">
             <form id="requestPickerForm" class="j-form" data-active-class="btn-default" data-input-el="#requestPicker" data-form-el="#requestPickerForm"
                 data-jive-ui="jive/ui/typeahead/request_typeahead" method="get" name="requestPickerForm">
@@ -83,6 +86,22 @@
                         </td>
                     </tr>
                     <tr>
+                        <td>Catwalk Id</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                placeholder="Catwalk Id" value="{$catwalkId?:''}"
+                                name="catwalkId" id="catwalkIdPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Model Id</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                placeholder="Model Id" value="{$modelId?:''}"
+                                name="modelId" id="modelIdPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
                         <td>Gather Field</td>
                         <td>
                             <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
@@ -118,6 +137,25 @@
                             <em>(e.g. user:3 3765, parentType:102|2|38)</em>
                         </td>
                     </tr>
+
+                    <tr>
+                        <td>Constraint Field</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                placeholder="Constraint Field" value="{$constraintField?:''}"
+                                name="constraintField" id="constraintFieldPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Constraint Filters</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                placeholder="Constraint Filters" value="{$constraintFilters?:''}"
+                                name="constraintFilters" id="constraintFiltersPicker" data-original-title="" title="">
+                            &nbsp;
+                            <em>(e.g. user:3 3765, parentType:102|2|38)</em>
+                        </td>
+                    </tr>
                     <tr>
                         <td>Desired Number of Results</td>
                         <td>
@@ -131,56 +169,34 @@
             </form>
         </div>
     </div>
-    {if $model}
+    {if $results}
         <div class="panel panel-default">
             <div class="panel-heading">
-                Model
+                Results
                 &nbsp;|&nbsp;
-                <a href="#summary">Jump to query summary</a>
+                <a href="#summary">Jump to query summary&nbsp;&nbsp;&nbsp;{$elapse}</a>
             </div>
             <div class="panel-body">
-                <ul>
-                    {foreach $featureClass in $model.featureClasses}
-                        <li><h3>{$featureClass.name}</h3>
-                            <ul style="list-style-type:none;">
-                                <li>
-                                    <table class="table table-condensed">
-                                        <thead>
-                                            <tr>
-                                                {foreach $namePart in $featureClass.nameParts}
-                                                    <th>{$namePart}</th>
-                                                {/foreach}
-                                                <th>Numerator</th>
-                                                <th>Denominator</th>
-                                                <th>Score</th>
-                                            </tr>
-                                        </thead>
-                                        </tbody>
-                                            {foreach $feature in $featureClass.features}
-                                                <tr>
-                                                    {foreach $v in $feature.values}
-                                                        <td>
-                                                            {$v}
-                                                        </td>
-                                                    {/foreach}
-                                                    <td>
-                                                        {$feature.numerator}
-                                                    </td>
-                                                    <td>
-                                                        {$feature.denominator}
-                                                    </td>
-                                                    <td>
-                                                        {$feature.score}
-                                                    </td>
-                                                </tr>
-                                            {/foreach}
-                                        </tbody>
-                                    </table>
-                                </li>
-                            </ul>
-                        </li>
-                    {/foreach}
-                </ul>
+                <table class="table table-condensed">
+                    <thead>
+                        <tr>
+                            <th>Id</th>
+                            <th>Score</th>
+                        </tr>
+                    </thead>
+                    </tbody>
+                        {foreach $r in $results}
+                            <tr>
+                                <td>
+                                    {$r.value}
+                                </td>
+                                <td>
+                                    {$r.score}
+                                </td>
+                            </tr>
+                        {/foreach}
+                    </tbody>
+                </table>
             </div>
         </div>
     {/if}

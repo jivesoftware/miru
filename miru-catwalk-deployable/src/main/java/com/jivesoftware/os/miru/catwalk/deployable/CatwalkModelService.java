@@ -15,7 +15,7 @@ import com.jivesoftware.os.amza.api.stream.RowType;
 import com.jivesoftware.os.amza.service.filer.HeapFiler;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.api.query.filter.MiruValue;
+import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkModel;
 import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkQuery;
@@ -75,7 +75,7 @@ public class CatwalkModelService {
         TreeSet<Integer> partitionIds = Sets.newTreeSet();
 
         Map<FieldIdsKey, MergedScores> fieldIdsToFeatureScores = new HashMap<>();
-        FeatureRange[] currentRange = { null };
+        FeatureRange[] currentRange = {null};
         String[][] featureFields = catwalkQuery.featureFields;
         client.scan(Consistency.leader_quorum,
             prefixedKeyRangeStream -> {
@@ -252,7 +252,7 @@ public class CatwalkModelService {
     }
 
     private FeatureScore merge(FeatureScore a, FeatureScore b) {
-        return new FeatureScore(a.values, a.numerator + b.numerator, a.denominator + b.denominator);
+        return new FeatureScore(a.termIds, a.numerator + b.numerator, a.denominator + b.denominator);
     }
 
     private byte[] valueToBytes(boolean partitionIsClosed, List<FeatureScore> scores, MiruTimeRange timeRange) throws IOException {
@@ -264,12 +264,9 @@ public class CatwalkModelService {
         byte[] lengthBuffer = new byte[4];
         UIO.writeInt(filer, scores.size(), "scoresLength", lengthBuffer);
         for (FeatureScore score : scores) {
-            UIO.writeInt(filer, score.values.length, "valuesLength", lengthBuffer);
-            for (MiruValue value : score.values) {
-                UIO.writeInt(filer, value.parts.length, "partsLength", lengthBuffer);
-                for (String part : value.parts) {
-                    UIO.writeByteArray(filer, part.getBytes(StandardCharsets.UTF_8), "part", lengthBuffer);
-                }
+            UIO.writeInt(filer, score.termIds.length, "termsLength", lengthBuffer);
+            for (MiruTermId termId : score.termIds) {
+                UIO.writeByteArray(filer, termId.getBytes(), "term", lengthBuffer);
             }
             UIO.writeLong(filer, score.numerator, "numerator");
             UIO.writeLong(filer, score.denominator, "denominator");
@@ -291,17 +288,13 @@ public class CatwalkModelService {
         byte[] lengthBuffer = new byte[8];
         List<FeatureScore> scores = new ArrayList<>(UIO.readInt(filer, "scoresLength", value));
         for (int i = 0; i < scores.size(); i++) {
-            MiruValue[] values = new MiruValue[UIO.readInt(filer, "valuesLength", value)];
-            for (int j = 0; j < values.length; j++) {
-                String[] parts = new String[UIO.readInt(filer, "partsLength", value)];
-                for (int k = 0; k < parts.length; k++) {
-                    parts[k] = new String(UIO.readByteArray(filer, "part", lengthBuffer), StandardCharsets.UTF_8);
-                }
-                values[j] = new MiruValue(parts);
+            MiruTermId[] terms = new MiruTermId[UIO.readInt(filer, "termsLength", value)];
+            for (int j = 0; j < terms.length; j++) {
+                terms[j] = new MiruTermId(UIO.readByteArray(filer, "term", lengthBuffer));
             }
             long numerator = UIO.readLong(filer, "numerator", lengthBuffer);
             long denominator = UIO.readLong(filer, "denominator", lengthBuffer);
-            scores.add(new FeatureScore(values, numerator, denominator));
+            scores.add(new FeatureScore(terms, numerator, denominator));
         }
 
         MiruTimeRange timeRange = new MiruTimeRange(
@@ -453,8 +446,8 @@ public class CatwalkModelService {
                         modelId,
                         merged.fromPartitionId,
                         merged.toPartitionId,
-                        new String[][] { fieldIdsKey.fieldIds },
-                        new ModelFeatureScores[] { new ModelFeatureScores(true, mergedScores.scores.featureScores, mergedScores.timeRange) });
+                        new String[][]{fieldIdsKey.fieldIds},
+                        new ModelFeatureScores[]{new ModelFeatureScores(true, mergedScores.scores.featureScores, mergedScores.timeRange)});
                     removeModel(tenantId, catwalkId, modelId, mergedScores.ranges);
                 }
             } catch (Exception x) {
@@ -464,27 +457,20 @@ public class CatwalkModelService {
 
     }
 
-
     private static final FeatureScoreComparator FEATURE_SCORE_COMPARATOR = new FeatureScoreComparator();
 
     private static class FeatureScoreComparator implements Comparator<FeatureScore> {
 
         @Override
         public int compare(FeatureScore o1, FeatureScore o2) {
-            int c = Integer.compare(o1.values.length, o2.values.length);
+            int c = Integer.compare(o1.termIds.length, o2.termIds.length);
             if (c != 0) {
                 return c;
             }
-            for (int i = 0; i < o1.values.length; i++) {
-                c = Integer.compare(o1.values[i].parts.length, o2.values[i].parts.length);
+            for (int j = 0; j < o1.termIds.length; j++) {
+                c = o1.termIds[j].compareTo(o2.termIds[j]);
                 if (c != 0) {
                     return c;
-                }
-                for (int j = 0; j < o1.values[i].parts.length; j++) {
-                    c = o1.values[i].parts[j].compareTo(o2.values[i].parts[j]);
-                    if (c != 0) {
-                        return c;
-                    }
                 }
             }
             return c;

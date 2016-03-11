@@ -247,6 +247,11 @@ public class MiruReaderMain {
                 clientHealthProvider,
                 10, 10_000);  // TODO expose to conf
 
+            TenantAwareHttpClient<String> catwalkHttpClient = tenantRoutingHttpClientInitializer.initialize(tenantRoutingProvider
+                    .getConnections("miru-catwalk", "main"),
+                clientHealthProvider,
+                10, 10_000);  // TODO expose to conf
+
             // TODO add fall back to config
             final MiruStats miruStats = new MiruStats();
             MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize(miruStats, "", manageHttpClient, mapper);
@@ -407,6 +412,11 @@ public class MiruReaderMain {
                 @Override
                 public TenantAwareHttpClient<String> getReaderHttpClient() {
                     return readerHttpClient;
+                }
+
+                @Override
+                public TenantAwareHttpClient<String> getCatwalkHttpClient() {
+                    return catwalkHttpClient;
                 }
 
                 @Override

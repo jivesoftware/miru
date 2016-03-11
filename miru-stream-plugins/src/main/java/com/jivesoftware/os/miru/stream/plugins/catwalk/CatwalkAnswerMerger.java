@@ -4,7 +4,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.jivesoftware.os.miru.api.query.filter.MiruValue;
+import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.solution.MiruAnswerMerger;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
@@ -63,14 +63,14 @@ public class CatwalkAnswerMerger implements MiruAnswerMerger<CatwalkAnswer> {
 
             Map<Key, FeatureScore> smallerMap = Maps.newHashMap();
             for (FeatureScore featureScore : smaller) {
-                smallerMap.put(new Key(featureScore.values), featureScore);
+                smallerMap.put(new Key(featureScore.termIds), featureScore);
             }
 
             List<FeatureScore> merged = Lists.newArrayListWithCapacity(bigger.size() + smaller.size());
             for (FeatureScore featureScore : bigger) {
-                FeatureScore otherScore = smallerMap.remove(new Key(featureScore.values));
+                FeatureScore otherScore = smallerMap.remove(new Key(featureScore.termIds));
                 if (otherScore != null) {
-                    merged.add(new FeatureScore(featureScore.values,
+                    merged.add(new FeatureScore(featureScore.termIds,
                         featureScore.numerator + otherScore.numerator,
                         featureScore.denominator + otherScore.denominator));
                 } else {
@@ -93,10 +93,10 @@ public class CatwalkAnswerMerger implements MiruAnswerMerger<CatwalkAnswer> {
     }
 
     private static class Key {
-        private final MiruValue[] values;
+        private final MiruTermId[] miruTermIds;
 
-        public Key(MiruValue[] values) {
-            this.values = values;
+        public Key(MiruTermId[] miruTermIds) {
+            this.miruTermIds = miruTermIds;
         }
 
         @Override
@@ -110,7 +110,7 @@ public class CatwalkAnswerMerger implements MiruAnswerMerger<CatwalkAnswer> {
 
             Key key = (Key) o;
 
-            if (!Arrays.equals(values, key.values)) {
+            if (!Arrays.equals(miruTermIds, key.miruTermIds)) {
                 return false;
             }
 
@@ -119,7 +119,7 @@ public class CatwalkAnswerMerger implements MiruAnswerMerger<CatwalkAnswer> {
 
         @Override
         public int hashCode() {
-            return values != null ? Arrays.hashCode(values) : 0;
+            return miruTermIds != null ? Arrays.hashCode(miruTermIds) : 0;
         }
     }
 }
