@@ -60,7 +60,6 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
         MiruRequestContext<BM, IBM, ?> context = handle.getRequestContext();
         MiruBitmaps<BM, IBM> bitmaps = handle.getBitmaps();
-        MiruFieldIndex<BM, IBM> primaryFieldIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
 
         MiruTimeRange timeRange = request.query.timeRange;
         if (!context.getTimeIndex().intersects(timeRange)) {
@@ -128,12 +127,13 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 Optional<BM> index = invertedIndex.getIndex(stackBuffer);
                 if (index.isPresent()) {
                     BM scorable = index.get();
-                    if (bitmaps.supportsInPlace()) {
-                        bitmaps.inPlaceAnd(scorable, constrainFeature);
-                    } else {
-                        scorable = bitmaps.and(Arrays.asList(scorable, constrainFeature));
+                    if (constrainFeature != null) {
+                        if (bitmaps.supportsInPlace()) {
+                            bitmaps.inPlaceAnd(scorable, constrainFeature);
+                        } else {
+                            scorable = bitmaps.and(Arrays.asList(scorable, constrainFeature));
+                        }
                     }
-
                     if (!streamBitmaps.stream(termId, scorable)) {
                         return false;
                     }
