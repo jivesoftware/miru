@@ -78,9 +78,11 @@ public class StrutModelCache {
 
         }
         for (int i = 0; i < catwalkQuery.featureFields.length; i++) {
-            List<FeatureScore> featureScores = model.featureScores[i];
-            for (FeatureScore featureScore : featureScores) {
-                modelFeatureScore[i].put(new StrutModelKey(featureScore.termIds), featureScore.numerator / (float) featureScore.denominator);
+            if (model != null && model.featureScores != null && model.featureScores[i] != null) {
+                List<FeatureScore> featureScores = model.featureScores[i];
+                for (FeatureScore featureScore : featureScores) {
+                    modelFeatureScore[i].put(new StrutModelKey(featureScore.termIds), featureScore.numerator / (float) featureScore.denominator);
+                }
             }
         }
         return new StrutModel(modelFeatureScore);

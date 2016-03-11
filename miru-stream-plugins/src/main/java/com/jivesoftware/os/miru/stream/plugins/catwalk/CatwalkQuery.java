@@ -4,12 +4,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
+import java.io.Serializable;
 import java.util.Arrays;
 
 /**
  *
  */
-public class CatwalkQuery {
+public class CatwalkQuery implements Serializable {
 
     public final MiruTimeRange timeRange;
     public final String gatherField; // "parent"
@@ -40,13 +41,13 @@ public class CatwalkQuery {
 
     @Override
     public String toString() {
-        return "CatwalkQuery{" +
-            "timeRange=" + timeRange +
-            ", gatherField='" + gatherField + '\'' +
-            ", gatherFilter=" + gatherFilter +
-            ", featureFields=" + Arrays.toString(featureFields) +
-            ", featureFilter=" + featureFilter +
-            ", desiredNumberOfResults=" + desiredNumberOfResults +
-            '}';
+        return "CatwalkQuery{"
+            + "timeRange=" + timeRange
+            + ", gatherField='" + gatherField + '\''
+            + ", gatherFilter=" + gatherFilter
+            + ", featureFields=" + Arrays.toString(featureFields)
+            + ", featureFilter=" + featureFilter
+            + ", desiredNumberOfResults=" + desiredNumberOfResults
+            + '}';
     }
 }

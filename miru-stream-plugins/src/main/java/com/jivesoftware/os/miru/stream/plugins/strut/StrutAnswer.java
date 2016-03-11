@@ -2,10 +2,11 @@ package com.jivesoftware.os.miru.stream.plugins.strut;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.io.Serializable;
 import java.util.List;
 
 /** @author jonathan */
-public class StrutAnswer {
+public class StrutAnswer implements Serializable {
 
     public static final StrutAnswer EMPTY_RESULTS = new StrutAnswer(null, true);
 

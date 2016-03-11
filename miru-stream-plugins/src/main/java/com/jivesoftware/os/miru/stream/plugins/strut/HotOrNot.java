@@ -3,12 +3,13 @@ package com.jivesoftware.os.miru.stream.plugins.strut;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.jivesoftware.os.miru.api.query.filter.MiruValue;
+import java.io.Serializable;
 
 /**
  *
  * @author jonathan.colt
  */
-public class HotOrNot implements Comparable<HotOrNot> {
+public class HotOrNot implements Comparable<HotOrNot>, Serializable {
 
     public final MiruValue value;
     public final float score;
