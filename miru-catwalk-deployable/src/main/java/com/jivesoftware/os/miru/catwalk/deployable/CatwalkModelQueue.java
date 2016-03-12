@@ -69,14 +69,14 @@ public class CatwalkModelQueue {
         List<UpdateModelRequest> batch = new ArrayList<>(batchSize);
         queueClient.scan(Collections.singletonList(ScanRange.ROW_SCAN),
             (prefix, key, value, timestamp, version) -> {
-                UpdateModelRequest request = updateModelRequestFromBytes(key, value, timestamp);
+                UpdateModelRequest request = updateModelRequestFromBytes(requestMapper, key, value, timestamp);
                 batch.add(request);
                 return (batch.size() < batchSize);
             });
         return batch;
     }
 
-    public byte[] updateModelKey(MiruTenantId tenantId, String catwalkId, String modelId, int partitionId) {
+    static byte[] updateModelKey(MiruTenantId tenantId, String catwalkId, String modelId, int partitionId) {
         byte[] tenantBytes = tenantId.getBytes();
         byte[] catwalkBytes = catwalkId.getBytes(StandardCharsets.UTF_8);
         byte[] modelBytes = modelId.getBytes(StandardCharsets.UTF_8);
@@ -109,7 +109,7 @@ public class CatwalkModelQueue {
         return keyBytes;
     }
 
-    public UpdateModelRequest updateModelRequestFromBytes(byte[] keyBytes, byte[] valueBytes, long timestamp) throws IOException {
+    static UpdateModelRequest updateModelRequestFromBytes(ObjectMapper mapper, byte[] keyBytes, byte[] valueBytes, long timestamp) throws IOException {
         byte[] buffer = new byte[8];
         HeapFiler filer = HeapFiler.fromBytes(keyBytes, keyBytes.length);
         byte[] rawTenant = UIO.readByteArray(filer, "tenant", buffer);
@@ -117,7 +117,7 @@ public class CatwalkModelQueue {
         byte[] rawModelId = UIO.readByteArray(filer, "modelId", buffer);
         int partitionId = UIO.readInt(filer, "partitionId", buffer);
 
-        CatwalkQuery catwalkQuery = requestMapper.readValue(valueBytes, CatwalkQuery.class);
+        CatwalkQuery catwalkQuery = mapper.readValue(valueBytes, CatwalkQuery.class);
 
         return new UpdateModelRequest(new MiruTenantId(rawTenant),
             new String(rawCatwalkId, StandardCharsets.UTF_8),

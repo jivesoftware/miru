@@ -255,7 +255,7 @@ public class CatwalkModelService {
         return new FeatureScore(a.termIds, a.numerator + b.numerator, a.denominator + b.denominator);
     }
 
-    private byte[] valueToBytes(boolean partitionIsClosed, List<FeatureScore> scores, MiruTimeRange timeRange) throws IOException {
+    static byte[] valueToBytes(boolean partitionIsClosed, List<FeatureScore> scores, MiruTimeRange timeRange) throws IOException {
         HeapFiler filer = new HeapFiler(1 + 1 + scores.size() * (8 + 8 + 4 + 4 + 10) + 8 + 8); //TODO rough guesstimation
 
         UIO.writeByte(filer, (byte) 0, "version");
@@ -278,7 +278,7 @@ public class CatwalkModelService {
         return filer.getBytes();
     }
 
-    private ModelFeatureScores valueFromBytes(byte[] value) throws IOException {
+    static ModelFeatureScores valueFromBytes(byte[] value) throws IOException {
         HeapFiler filer = HeapFiler.fromBytes(value, value.length);
         byte version = UIO.readByte(filer, "version");
         if (version != 0) {
@@ -286,8 +286,9 @@ public class CatwalkModelService {
         }
         boolean partitionIsClosed = UIO.readByte(filer, "partitionIsClosed") == 1;
         byte[] lengthBuffer = new byte[8];
-        List<FeatureScore> scores = new ArrayList<>(UIO.readInt(filer, "scoresLength", value));
-        for (int i = 0; i < scores.size(); i++) {
+        int scoresLength = UIO.readInt(filer, "scoresLength", value);
+        List<FeatureScore> scores = new ArrayList<>(scoresLength);
+        for (int i = 0; i < scoresLength; i++) {
             MiruTermId[] terms = new MiruTermId[UIO.readInt(filer, "termsLength", value)];
             for (int j = 0; j < terms.length; j++) {
                 terms[j] = new MiruTermId(UIO.readByteArray(filer, "term", lengthBuffer));
@@ -308,7 +309,7 @@ public class CatwalkModelService {
         return clientProvider.getPartition(new PartitionName(false, nameBytes, nameBytes), 3, MODEL_PROPERTIES);
     }
 
-    private byte[] modelPartitionKey(String catwalkId, String modelId, String[] fields, int fromPartitionId, int toPartitionId) {
+    static byte[] modelPartitionKey(String catwalkId, String modelId, String[] fields, int fromPartitionId, int toPartitionId) {
         byte[] catwalkBytes = catwalkId.getBytes(StandardCharsets.UTF_8);
         byte[] modelBytes = modelId.getBytes(StandardCharsets.UTF_8);
 
@@ -324,13 +325,13 @@ public class CatwalkModelService {
         byte[] keyBytes = new byte[keyLength];
         int offset = 0;
 
-        UIO.shortBytes((short) catwalkBytes.length, keyBytes, 0);
+        UIO.shortBytes((short) catwalkBytes.length, keyBytes, offset);
         offset += 2;
 
         UIO.writeBytes(catwalkBytes, keyBytes, offset);
         offset += catwalkBytes.length;
 
-        UIO.shortBytes((short) modelBytes.length, keyBytes, 0);
+        UIO.shortBytes((short) modelBytes.length, keyBytes, offset);
         offset += 2;
 
         UIO.writeBytes(modelBytes, keyBytes, offset);
@@ -355,9 +356,14 @@ public class CatwalkModelService {
         return keyBytes;
     }
 
-    private FeatureRange getFeatureRange(byte[] key) {
+    static FeatureRange getFeatureRange(byte[] key) {
 
         int offset = 0;
+
+        int catwalkLength = UIO.bytesShort(key, offset);
+        offset += 2;
+        offset += catwalkLength;
+
         int modelLength = UIO.bytesShort(key, offset);
         offset += 2;
         offset += modelLength;
@@ -384,7 +390,7 @@ public class CatwalkModelService {
         return new FeatureRange(fieldIds, fromPartitionId, toPartitionId);
     }
 
-    private static class FeatureRange {
+    static class FeatureRange {
 
         public final String[] fieldIds;
         public final int fromPartitionId;

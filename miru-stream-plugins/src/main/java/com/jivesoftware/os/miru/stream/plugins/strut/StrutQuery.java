@@ -6,6 +6,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkQuery;
 import java.io.Serializable;
+import java.util.Arrays;
 
 /**
  *
@@ -59,7 +60,7 @@ public class StrutQuery implements Serializable {
             + ", timeRange=" + timeRange
             + ", constraintField=" + constraintField
             + ", constraintFilter=" + constraintFilter
-            + ", featureFields=" + featureFields
+            + ", featureFields=" + Arrays.deepToString(featureFields)
             + ", featureFilter=" + featureFilter
             + ", desiredNumberOfResults=" + desiredNumberOfResults
             + '}';
