@@ -124,8 +124,10 @@ public class CatwalkModelUpdater {
 
         @Override
         public void run() {
+            long start = System.currentTimeMillis();
             try {
                 while (modelQueue.isLeader(queueId)) {
+                    start = System.currentTimeMillis();
                     List<UpdateModelRequest> batch = modelQueue.getBatch(queueId, batchSize);
                     if (batch.isEmpty()) {
                         break;
@@ -174,9 +176,12 @@ public class CatwalkModelUpdater {
                         },
                         10_000, // TODO config
                         TimeUnit.MILLISECONDS);
+
+                    stats.egressed("processed>success>" + queueId, batch.size(), System.currentTimeMillis() - start);
                 }
             } catch (Exception x) {
                 LOG.error("Unexpected issue while checking queue:{}", new Object[]{queueId}, x);
+                stats.egressed("processed>failure>" + queueId, 1, System.currentTimeMillis() - start);
             }
         }
     }

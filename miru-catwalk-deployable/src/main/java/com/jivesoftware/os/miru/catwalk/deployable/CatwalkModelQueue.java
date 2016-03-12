@@ -11,6 +11,7 @@ import com.jivesoftware.os.amza.api.stream.RowType;
 import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider.EmbeddedClient;
+import com.jivesoftware.os.amza.service.Partition.ScanRange;
 import com.jivesoftware.os.amza.service.filer.HeapFiler;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkQuery;
@@ -19,6 +20,7 @@ import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -65,7 +67,7 @@ public class CatwalkModelQueue {
     public List<UpdateModelRequest> getBatch(int queueId, int batchSize) throws Exception {
         EmbeddedClient queueClient = queueClient(queueId);
         List<UpdateModelRequest> batch = new ArrayList<>(batchSize);
-        queueClient.scan(null,
+        queueClient.scan(Collections.singletonList(ScanRange.ROW_SCAN),
             (prefix, key, value, timestamp, version) -> {
                 UpdateModelRequest request = updateModelRequestFromBytes(key, value, timestamp);
                 batch.add(request);
