@@ -85,19 +85,19 @@ public class CatwalkModelQueue {
         byte[] keyBytes = new byte[keyLength];
         int offset = 0;
 
-        UIO.intBytes(tenantBytes.length, keyBytes, 0);
+        UIO.intBytes(tenantBytes.length, keyBytes, offset);
         offset += 4;
 
         UIO.writeBytes(tenantBytes, keyBytes, offset);
         offset += tenantBytes.length;
 
-        UIO.intBytes(catwalkBytes.length, keyBytes, 0);
+        UIO.intBytes(catwalkBytes.length, keyBytes, offset);
         offset += 4;
 
         UIO.writeBytes(catwalkBytes, keyBytes, offset);
         offset += catwalkBytes.length;
 
-        UIO.intBytes(modelBytes.length, keyBytes, 0);
+        UIO.intBytes(modelBytes.length, keyBytes, offset);
         offset += 4;
 
         UIO.writeBytes(modelBytes, keyBytes, offset);
