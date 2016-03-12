@@ -45,7 +45,7 @@ public class CatwalkQuery implements Serializable {
             + "timeRange=" + timeRange
             + ", gatherField='" + gatherField + '\''
             + ", gatherFilter=" + gatherFilter
-            + ", featureFields=" + Arrays.toString(featureFields)
+            + ", featureFields=" + Arrays.deepToString(featureFields)
             + ", featureFilter=" + featureFilter
             + ", desiredNumberOfResults=" + desiredNumberOfResults
             + '}';
