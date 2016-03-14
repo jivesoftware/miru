@@ -119,8 +119,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
 
         MiruFieldIndex<BM, IBM> primaryIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
 
-        StrutAnswer answer = strut.yourStuff("strut", handle.getCoord(), bitmaps, context, request, report, (streamBitmaps) -> {
-
+        /*StrutAnswer answer = strut.yourStuff("strut", handle.getCoord(), bitmaps, context, request, report, (streamBitmaps) -> {
             List<MiruTermId> termIds = Lists.newArrayList();
             aggregateUtil.gather("strut", bitmaps, context, eligible, pivotFieldId, 100, solutionLog, (termId) -> {
                 termIds.add(termId);
@@ -140,30 +139,37 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 termIds.size(), System.currentTimeMillis() - start);
 
             return streamBitmaps.stream(null, combined);
+        }, solutionLog);*/
 
-            /*aggregateUtil.gather("strut", bitmaps, context, eligible, pivotFieldId, 100, solutionLog, (termId) -> {
+        StrutAnswer answer = strut.yourStuff("strut",
+            handle.getCoord(),
+            bitmaps,
+            context,
+            request,
+            report,
+            (streamBitmaps) -> {
+                long start = System.currentTimeMillis();
+                List<MiruTermId> termIds = Lists.newArrayList();
+                aggregateUtil.gather("strut", bitmaps, context, eligible, pivotFieldId, 100, solutionLog, (termId) -> {
+                    termIds.add(termId);
+                    return true;
+                }, stackBuffer);
 
+                solutionLog.log(MiruSolutionLogLevel.INFO, "Strut term accumulation for {} bitmaps took {} ms",
+                    termIds.size(), System.currentTimeMillis() - start);
+                start = System.currentTimeMillis();
 
-                MiruInvertedIndex<BM, IBM> invertedIndex = primaryIndex
-                    .get("strut-term", pivotFieldId, termId);
+                bitmaps.multiTx(
+                    (tx, stackBuffer1) -> primaryIndex.multiTxIndex("strut", pivotFieldId, termIds.toArray(new MiruTermId[0]), -1, stackBuffer1, tx),
+                    (index, bitmap) -> streamBitmaps.stream(termIds.get(index), bitmap),
+                    stackBuffer);
 
-                Optional<BM> index = invertedIndex.getIndex(stackBuffer);
-                if (index.isPresent()) {
-                    BM scorable = index.get();
-                    if (constrainFeature != null) {
-                        if (bitmaps.supportsInPlace()) {
-                            bitmaps.inPlaceAnd(scorable, constrainFeature);
-                        } else {
-                            scorable = bitmaps.and(Arrays.asList(scorable, constrainFeature));
-                        }
-                    }
-                    if (!streamBitmaps.stream(termId, scorable)) {
-                        return false;
-                    }
-                }
+                solutionLog.log(MiruSolutionLogLevel.INFO, "Strut scores took {} ms",
+                    termIds.size(), System.currentTimeMillis() - start);
                 return true;
-            }, stackBuffer);*/
-        }, solutionLog);
+            },
+            solutionLog);
+
         return new MiruPartitionResponse<>(answer, solutionLog.asList());
     }
 

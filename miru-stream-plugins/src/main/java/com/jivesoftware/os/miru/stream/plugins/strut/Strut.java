@@ -1,9 +1,7 @@
 package com.jivesoftware.os.miru.stream.plugins.strut;
 
 import com.google.common.base.Optional;
-import com.google.common.collect.HashMultiset;
 import com.google.common.collect.MinMaxPriorityQueue;
-import com.google.common.collect.Multiset;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
@@ -14,9 +12,10 @@ import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
-import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil.Feature;
+import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil.ConsumeBitmaps;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.stream.plugins.strut.StrutModelCache.StrutModel;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -36,16 +35,6 @@ public class Strut {
 
     public Strut(StrutModelCache cache) {
         this.cache = cache;
-    }
-
-    public interface StreamBitmaps<BM> {
-
-        boolean stream(MiruTermId termId, BM answer) throws Exception;
-    }
-
-    public interface ConsumeBitmaps<BM> {
-
-        boolean consume(StreamBitmaps<BM> streamBitmaps) throws Exception;
     }
 
     public <BM extends IBM, IBM> StrutAnswer yourStuff(String name,
@@ -79,11 +68,6 @@ public class Strut {
             }
         }
 
-        @SuppressWarnings("unchecked")
-        Multiset<Feature>[] featureValueSets = new Multiset[featureFields.length];
-        for (int i = 0; i < featureFields.length; i++) {
-            featureValueSets[i] = HashMultiset.create();
-        }
         int[][] featureFieldIds = new int[featureFields.length][];
         for (int i = 0; i < featureFields.length; i++) {
             String[] featureField = featureFields[i];
@@ -102,46 +86,42 @@ public class Strut {
             .maximumSize(request.query.desiredNumberOfResults)
             .create();
 
+        long start = System.currentTimeMillis();
+        int[] featureCount = { 0 };
         float[] score = { 0 };
-        consumeAnswers.consume((termId, answer) -> {
-            for (Multiset<Feature> featureValueSet : featureValueSets) {
-                featureValueSet.clear();
-            }
-            score[0] = 0f;
-            log.debug("Strut for answer={} request={}", answer, request);
-
-            MiruTermId[] currentPivot = { null };
-            aggregateUtil.gatherFeatures(name,
-                bitmaps,
-                requestContext,
-                answer,
-                pivotFieldId,
-                featureFieldIds,
-                true,
-                (pivotTermId, featureId, termIds) -> {
-                    if (currentPivot[0] == null || !currentPivot[0].equals(pivotTermId)) {
-                        if (currentPivot[0] != null) {
-                            if (score[0] > 0) {
-                                scored.add(new Scored(pivotTermId, score[0]));
-                            }
-                            score[0] = 0f;
+        MiruTermId[] currentPivot = { null };
+        aggregateUtil.gatherFeatures(name,
+            bitmaps,
+            requestContext,
+            consumeAnswers,
+            featureFieldIds,
+            true,
+            (answerTermId, featureId, termIds) -> {
+                featureCount[0]++;
+                if (currentPivot[0] == null || !currentPivot[0].equals(answerTermId)) {
+                    if (currentPivot[0] != null) {
+                        if (score[0] > 0) {
+                            scored.add(new Scored(answerTermId, score[0]));
                         }
-                        currentPivot[0] = pivotTermId;
+                        score[0] = 0f;
                     }
-                    float s = model.score(featureId, termIds, 0f);
-                    if (!Float.isNaN(s)) {
-                        score[0] = Math.max(score[0], s);
-                    }
-                    return true;
-                },
-                solutionLog,
-                stackBuffer);
+                    currentPivot[0] = answerTermId;
+                }
+                float s = model.score(featureId, termIds, 0f);
+                if (!Float.isNaN(s)) {
+                    score[0] = Math.max(score[0], s);
+                }
+                return true;
+            },
+            solutionLog,
+            stackBuffer);
 
-            if (score[0] > 0) {
-                scored.add(new Scored(currentPivot[0], score[0]));
-            }
-            return true;
-        });
+        if (score[0] > 0) {
+            scored.add(new Scored(currentPivot[0], score[0]));
+        }
+
+        solutionLog.log(MiruSolutionLogLevel.INFO, "Strut scored {} features for {} terms in {} ms",
+            featureCount[0], scored.size(), System.currentTimeMillis() - start);
 
         for (Scored s : scored) {
             hotOrNots.add(new HotOrNot(new MiruValue(termComposer.decompose(schema, pivotFieldDefinition, stackBuffer, s.term)), s.score));
