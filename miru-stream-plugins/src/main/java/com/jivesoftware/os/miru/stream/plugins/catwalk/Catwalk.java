@@ -64,10 +64,18 @@ public class Catwalk {
                 featureFieldIds[i][j] = requestContext.getSchema().getFieldId(featureField[j]);
             }
         }
-        aggregateUtil.gatherFeatures(name, bitmaps, requestContext, answer, -1, featureFieldIds, false, (pivotTermId, featureId, termIds) -> {
-            featureValueSets[featureId].add(new Feature(termIds));
-            return true;
-        }, solutionLog, stackBuffer);
+        aggregateUtil.gatherFeatures(name,
+            bitmaps,
+            requestContext,
+            streamBitmaps -> streamBitmaps.stream(null, answer),
+            featureFieldIds,
+            false,
+            (answerTermId, featureId, termIds) -> {
+                featureValueSets[featureId].add(new Feature(termIds));
+                return true;
+            },
+            solutionLog,
+            stackBuffer);
 
         long start = System.currentTimeMillis();
 
@@ -80,7 +88,7 @@ public class Catwalk {
             for (Entry<Feature> entry : valueSet.entrySet()) {
                 int[] fieldIds = featureFieldIds[i];
                 MiruTermId[] termIds = entry.getElement().termIds;
-                
+
                 List<MiruTxIndex<IBM>> ands = Lists.newArrayList();
                 for (int j = 0; j < fieldIds.length; j++) {
                     ands.add(primaryIndex.get(name, fieldIds[j], termIds[j]));
