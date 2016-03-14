@@ -76,6 +76,9 @@ public class MiruAggregateUtil {
         MiruFieldIndex<BM, IBM> valueBitsIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.valueBits);
 
         Set<Integer> uniqueFieldIds = Sets.newHashSet();
+        if (pivotFieldId != -1) {
+            uniqueFieldIds.add(pivotFieldId);
+        }
         for (int i = 0; i < featureFieldIds.length; i++) {
             if (featureFieldIds[i] != null) {
                 for (int j = 0; j < featureFieldIds[i].length; j++) {
@@ -85,6 +88,7 @@ public class MiruAggregateUtil {
         }
 
         long start = System.currentTimeMillis();
+        int bitmapCount = 0;
         byte[][] valueBuffers = new byte[requestContext.getSchema().fieldCount()][];
         List<FieldBits<BM, IBM>> fieldBits = Lists.newArrayList();
         for (int fieldId : uniqueFieldIds) {
@@ -95,6 +99,7 @@ public class MiruAggregateUtil {
                     return true;
                 },
                 stackBuffer);
+            bitmapCount += termIds.size();
 
             @SuppressWarnings("unchecked")
             BitmapAndLastId<BM>[] results = new BitmapAndLastId[termIds.size()];
@@ -132,7 +137,8 @@ public class MiruAggregateUtil {
             }
         }
 
-        solutionLog.log(MiruSolutionLogLevel.INFO, "Setup field bits took {} ms", System.currentTimeMillis() - start);
+        solutionLog.log(MiruSolutionLogLevel.INFO, "Setup field bits for fields:{} bitmaps:{} took {} ms",
+            uniqueFieldIds.size(), bitmapCount, System.currentTimeMillis() - start);
         start = System.currentTimeMillis();
 
         @SuppressWarnings("unchecked")

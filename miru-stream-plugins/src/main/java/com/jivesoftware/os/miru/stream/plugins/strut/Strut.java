@@ -122,7 +122,7 @@ public class Strut {
                     if (currentPivot[0] == null || !currentPivot[0].equals(pivotTermId)) {
                         if (currentPivot[0] != null) {
                             if (score[0] > 0) {
-                                scored.add(new Scored(termId, score[0]));
+                                scored.add(new Scored(pivotTermId, score[0]));
                             }
                             score[0] = 0f;
                         }
