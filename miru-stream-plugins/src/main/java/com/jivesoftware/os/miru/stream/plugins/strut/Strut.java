@@ -102,7 +102,7 @@ public class Strut {
             .maximumSize(request.query.desiredNumberOfResults)
             .create();
 
-        float[] score = {0};
+        float[] score = { 0 };
         consumeAnswers.consume((termId, answer) -> {
             for (Multiset<Feature> featureValueSet : featureValueSets) {
                 featureValueSet.clear();
@@ -110,18 +110,35 @@ public class Strut {
             score[0] = 0f;
             log.debug("Strut for answer={} request={}", answer, request);
 
-            aggregateUtil.gatherFeatures(name, bitmaps, requestContext, answer, featureFieldIds, true, (int featureId, MiruTermId[] termIds) -> {
-
-                float s = model.score(featureId, termIds, 0f);
-                if (!Float.isNaN(s)) {
-                    score[0] = Math.max(score[0], s);
-                }
-
-                return true;
-            }, solutionLog, stackBuffer);
+            MiruTermId[] currentPivot = { null };
+            aggregateUtil.gatherFeatures(name,
+                bitmaps,
+                requestContext,
+                answer,
+                pivotFieldId,
+                featureFieldIds,
+                true,
+                (pivotTermId, featureId, termIds) -> {
+                    if (currentPivot[0] == null || !currentPivot[0].equals(pivotTermId)) {
+                        if (currentPivot[0] != null) {
+                            if (score[0] > 0) {
+                                scored.add(new Scored(termId, score[0]));
+                            }
+                            score[0] = 0f;
+                        }
+                        currentPivot[0] = pivotTermId;
+                    }
+                    float s = model.score(featureId, termIds, 0f);
+                    if (!Float.isNaN(s)) {
+                        score[0] = Math.max(score[0], s);
+                    }
+                    return true;
+                },
+                solutionLog,
+                stackBuffer);
 
             if (score[0] > 0) {
-                scored.add(new Scored(termId, score[0]));
+                scored.add(new Scored(currentPivot[0], score[0]));
             }
             return true;
         });

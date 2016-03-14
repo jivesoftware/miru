@@ -1,11 +1,13 @@
 package com.jivesoftware.os.miru.stream.plugins.strut;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.Lists;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
+import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
@@ -117,11 +119,31 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             constrainFeature = null;
         }
 
-        StrutAnswer answer = strut.yourStuff("strut", handle.getCoord(), bitmaps, context, request, report, (streamBitmaps) -> {
-            aggregateUtil.gather("strut", bitmaps, context, eligible, pivotFieldId, 100, solutionLog, (termId) -> {
+        MiruFieldIndex<BM, IBM> primaryIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
 
-                MiruInvertedIndex<BM, IBM> invertedIndex = context.getFieldIndexProvider()
-                    .getFieldIndex(MiruFieldType.primary)
+        StrutAnswer answer = strut.yourStuff("strut", handle.getCoord(), bitmaps, context, request, report, (streamBitmaps) -> {
+
+            List<MiruTermId> termIds = Lists.newArrayList();
+            aggregateUtil.gather("strut", bitmaps, context, eligible, pivotFieldId, 100, solutionLog, (termId) -> {
+                termIds.add(termId);
+                return true;
+            }, stackBuffer);
+
+            BM combined = bitmaps.create();
+            bitmaps.multiTx(
+                (tx, stackBuffer1) -> primaryIndex.multiTxIndex("strut", pivotFieldId, termIds.toArray(new MiruTermId[0]), -1, stackBuffer1, tx),
+                (index1, bitmap) -> bitmaps.inPlaceOr(combined, bitmap),
+                stackBuffer);
+            if (constrainFeature != null) {
+                bitmaps.inPlaceAnd(combined, constrainFeature);
+            }
+
+            return streamBitmaps.stream(null, combined);
+
+            /*aggregateUtil.gather("strut", bitmaps, context, eligible, pivotFieldId, 100, solutionLog, (termId) -> {
+
+
+                MiruInvertedIndex<BM, IBM> invertedIndex = primaryIndex
                     .get("strut-term", pivotFieldId, termId);
 
                 Optional<BM> index = invertedIndex.getIndex(stackBuffer);
@@ -139,8 +161,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                     }
                 }
                 return true;
-            }, stackBuffer);
-            return true;
+            }, stackBuffer);*/
         }, solutionLog);
         return new MiruPartitionResponse<>(answer, solutionLog.asList());
     }
