@@ -7,11 +7,14 @@ import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkModel;
 import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkQuery;
 import com.jivesoftware.os.miru.stream.plugins.catwalk.FeatureScore;
+import com.jivesoftware.os.mlogger.core.MetricLogger;
+import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.http.client.HttpResponse;
 import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
 import com.jivesoftware.os.routing.bird.http.client.RoundRobinStrategy;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.shared.ClientCall;
+import com.jivesoftware.os.routing.bird.shared.ClientCall.ClientResponse;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -22,6 +25,8 @@ import java.util.Map;
  * @author jonathan.colt
  */
 public class StrutModelCache {
+
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final RoundRobinStrategy robinStrategy = new RoundRobinStrategy();
 
@@ -50,15 +55,36 @@ public class StrutModelCache {
 
         StrutModel model = modelCache.getIfPresent(key);
         if (model == null) {
-            return modelCache.get(key, () -> {
+            model = modelCache.get(key, () -> {
                 String json = requestMapper.writeValueAsString(catwalkQuery);
                 HttpResponse response = catwalkClient.call("",
                     robinStrategy,
                     "strutModelCache",
-                    (c) -> new ClientCall.ClientResponse<>(c.postJson("/miru/catwalk/model/get/" + key + "/" + partitionId, json, null), true));
+                    (c) -> new ClientResponse<>(c.postJson("/miru/catwalk/model/get/" + key + "/" + partitionId, json, null), true));
 
-                return convert(catwalkQuery, responseMapper.extractResultFromResponse(response, CatwalkModel.class, null));
+                CatwalkModel catwalkModel = responseMapper.extractResultFromResponse(response, CatwalkModel.class, null);
+                if (catwalkModel == null) {
+                    throw new IllegalStateException("Model not available");
+                }
+                return convert(catwalkQuery, catwalkModel);
             });
+
+            if (model.model == null) {
+                LOG.info("Discarded null model for tenantId:{} partitionId:{} catwalkId:{} modelId:{}", tenantId, partitionId, catwalkId, modelId);
+                modelCache.invalidate(key);
+            } else {
+                boolean empty = true;
+                for (Map<StrutModelKey, Float> featureModel : model.model) {
+                    if (!featureModel.isEmpty()) {
+                        empty = false;
+                        break;
+                    }
+                }
+                if (empty) {
+                    LOG.info("Discarded empty model for tenantId:{} partitionId:{} catwalkId:{} modelId:{}", tenantId, partitionId, catwalkId, modelId);
+                    modelCache.invalidate(key);
+                }
+            }
         } else {
             String json = requestMapper.writeValueAsString(catwalkQuery);
             catwalkClient.call("",

@@ -12,6 +12,8 @@ import com.jivesoftware.os.filer.chunk.store.transaction.TxCog;
 import com.jivesoftware.os.filer.chunk.store.transaction.TxCogs;
 import com.jivesoftware.os.filer.chunk.store.transaction.TxMapGrower;
 import com.jivesoftware.os.filer.chunk.store.transaction.TxNamedMapOfFiler;
+import com.jivesoftware.os.filer.io.FilerIO;
+import com.jivesoftware.os.filer.io.KeyValueMarshaller;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.io.api.KeyedFilerStore;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
@@ -24,6 +26,7 @@ import com.jivesoftware.os.filer.keyed.store.TxKeyedFilerStore;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
+import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition.Feature;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaProvider;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaUnvailableException;
@@ -79,6 +82,7 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang.builder.HashCodeBuilder;
@@ -190,10 +194,14 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         MiruTimeIndex timeIndex = new MiruDeltaTimeIndex(new MiruFilerTimeIndex(
             Optional.<MiruFilerTimeIndex.TimeOrderAnomalyStream>absent(),
             new KeyedFilerProvider<>(genericFilerStore, MiruContextConstants.GENERIC_FILER_TIME_INDEX_KEY),
-            new TxKeyValueStore<>(skyhookCog, cogs.getSkyHookKeySemaphores(), seed, chunkStores,
+            new TxKeyValueStore<>(skyhookCog,
+                cogs.getSkyHookKeySemaphores(),
+                seed,
+                chunkStores,
                 new LongIntKeyValueMarshaller(),
                 keyBytes("timeIndex-timestamps"),
-                8, false, 4, false), stackBuffer));
+                8, false, 4, false),
+            stackBuffer));
 
         TxKeyedFilerStore<Long, Void> activityFilerStore = new TxKeyedFilerStore<>(cogs, seed, chunkStores, keyBytes("activityIndex"), false,
             TxNamedMapOfFiler.CHUNK_FILER_CREATOR,
@@ -201,11 +209,26 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             TxNamedMapOfFiler.OVERWRITE_GROWER_PROVIDER,
             TxNamedMapOfFiler.REWRITE_GROWER_PROVIDER);
 
+        @SuppressWarnings("unchecked")
+        TxKeyValueStore<Integer, MiruTermId[]>[] termLookups = new TxKeyValueStore[schema.fieldCount()];
+        for (MiruFieldDefinition fieldDefinition : schema.getFieldDefinitions()) {
+            if (fieldDefinition.type.hasFeature(Feature.indexedValueBits)) {
+                termLookups[fieldDefinition.fieldId] = new TxKeyValueStore<>(skyhookCog,
+                    cogs.getSkyHookKeySemaphores(),
+                    seed,
+                    chunkStores,
+                    new IntTermIdsKeyValueMarshaller(),
+                    keyBytes("timeIndex-timestamps"),
+                    4, false, 65_536, true);
+            }
+        }
+
         MiruActivityIndex activityIndex = new MiruDeltaActivityIndex(
             new MiruFilerActivityIndex(
                 activityFilerStore,
                 new MiruInternalActivityMarshaller(termInterner),
-                new KeyedFilerProvider<>(activityFilerStore, keyBytes("activityIndex-size"))));
+                new KeyedFilerProvider<>(activityFilerStore, keyBytes("activityIndex-size")),
+                termLookups));
 
         TrackError trackError = partitionErrorTracker.track(coord);
 
@@ -431,5 +454,49 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
 
     private byte[] keyBytes(String key) {
         return key.getBytes(Charsets.UTF_8);
+    }
+
+    private static class IntTermIdsKeyValueMarshaller implements KeyValueMarshaller<Integer, MiruTermId[]> {
+
+        @Override
+        public byte[] keyBytes(Integer integer) {
+            return FilerIO.intBytes(integer);
+        }
+
+        @Override
+        public Integer bytesKey(byte[] bytes, int i) {
+            return FilerIO.bytesInt(bytes);
+        }
+
+        @Override
+        public byte[] valueBytes(MiruTermId[] termIds) {
+            int length = 2; // short term count
+            for (MiruTermId termId : termIds) {
+                length += 2 + termId.length();
+            }
+
+            byte[] bytes = new byte[length];
+            ByteBuffer buf = ByteBuffer.wrap(bytes);
+            buf.putShort((short) termIds.length);
+
+            for (MiruTermId termId : termIds) {
+                buf.putShort((short) termId.length());
+                buf.put(termId.getBytes());
+            }
+            return bytes;
+        }
+
+        @Override
+        public MiruTermId[] bytesValue(Integer integer, byte[] bytes, int offset) {
+            ByteBuffer buf = ByteBuffer.wrap(bytes);
+            MiruTermId[] termIds = new MiruTermId[buf.getShort()];
+            for (int i = 0; i < termIds.length; i++) {
+                int termIdLength = buf.getShort();
+                byte[] termId = new byte[termIdLength];
+                buf.get(termId);
+                termIds[i] = new MiruTermId(termId);
+            }
+            return termIds;
+        }
     }
 }
