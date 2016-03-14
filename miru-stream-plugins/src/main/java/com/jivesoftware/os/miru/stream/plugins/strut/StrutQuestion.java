@@ -15,7 +15,6 @@ import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
-import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
@@ -29,7 +28,6 @@ import com.jivesoftware.os.miru.plugin.solution.Question;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -129,6 +127,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 return true;
             }, stackBuffer);
 
+            long start = System.currentTimeMillis();
             BM combined = bitmaps.create();
             bitmaps.multiTx(
                 (tx, stackBuffer1) -> primaryIndex.multiTxIndex("strut", pivotFieldId, termIds.toArray(new MiruTermId[0]), -1, stackBuffer1, tx),
@@ -137,6 +136,8 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             if (constrainFeature != null) {
                 bitmaps.inPlaceAnd(combined, constrainFeature);
             }
+            solutionLog.log(MiruSolutionLogLevel.INFO, "Strut term accumulation for {} bitmaps took {} ms",
+                termIds.size(), System.currentTimeMillis() - start);
 
             return streamBitmaps.stream(null, combined);
 
