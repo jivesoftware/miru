@@ -36,6 +36,7 @@ import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -54,12 +55,24 @@ public class MiruAggregateUtil {
         MiruBitmaps<BM, IBM> bitmaps,
         MiruRequestContext<BM, IBM, S> requestContext,
         BM constrain,
+        int pivotFieldId,
         int[][] featureFieldIds,
         boolean dedupe,
         FeatureStream stream,
         MiruSolutionLog solutionLog,
         StackBuffer stackBuffer) throws Exception {
 
+        Comparator<FieldBits<BM, IBM>> comparator = (o1, o2) -> {
+            if (pivotFieldId == -1) {
+                return o1.compareTo(o2);
+            } else if (o1.fieldId == pivotFieldId && o2.fieldId != pivotFieldId) {
+                return -1;
+            } else if (o2.fieldId == pivotFieldId && o1.fieldId != pivotFieldId) {
+                return 1;
+            } else {
+                return o1.compareTo(o2);
+            }
+        };
         MiruFieldIndex<BM, IBM> valueBitsIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.valueBits);
 
         Set<Integer> uniqueFieldIds = Sets.newHashSet();
@@ -129,8 +142,9 @@ public class MiruAggregateUtil {
                 quickDedupe[i] = Sets.newHashSet();
             }
         }
+
         byte[][] values = new byte[valueBuffers.length][];
-        Collections.sort(fieldBits);
+        Collections.sort(fieldBits, comparator);
         done:
         while (!fieldBits.isEmpty()) {
             if (quickDedupe != null) {
@@ -169,6 +183,8 @@ public class MiruAggregateUtil {
                     }
                 }
 
+                MiruTermId pivotTermId = (pivotFieldId == -1 || values[pivotFieldId] == null) ? null : new MiruTermId(values[pivotFieldId]);
+
                 next:
                 for (int featureId = 0; featureId < featureFieldIds.length; featureId++) {
                     if (featureFieldIds[featureId] == null) {
@@ -193,12 +209,12 @@ public class MiruAggregateUtil {
                         continue;
                     }
 
-                    if (!stream.stream(featureId, featureTermIds)) {
+                    if (!stream.stream(pivotTermId, featureId, featureTermIds)) {
                         break done;
                     }
                 }
             }
-            Collections.sort(fieldBits);
+            Collections.sort(fieldBits, comparator);
         }
 
         solutionLog.log(MiruSolutionLogLevel.INFO, "Gather value bits took {} ms", System.currentTimeMillis() - start);
@@ -207,7 +223,7 @@ public class MiruAggregateUtil {
 
     public interface FeatureStream {
 
-        boolean stream(int featureId, MiruTermId[] termIds) throws Exception;
+        boolean stream(MiruTermId pivotTermId, int featureId, MiruTermId[] termIds) throws Exception;
     }
 
     public static class Feature {
@@ -430,9 +446,10 @@ public class MiruAggregateUtil {
             bitmaps,
             requestContext,
             answer,
+            -1,
             featureFieldIds,
             true,
-            (featureId, termIds) -> termIdStream.stream(termIds[0]),
+            (pivotTermId, featureId, termIds) -> termIdStream.stream(termIds[0]),
             solutionLog,
             stackBuffer);
     }

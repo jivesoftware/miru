@@ -64,7 +64,7 @@ public class Catwalk {
                 featureFieldIds[i][j] = requestContext.getSchema().getFieldId(featureField[j]);
             }
         }
-        aggregateUtil.gatherFeatures(name, bitmaps, requestContext, answer, featureFieldIds, false, (featureId, termIds) -> {
+        aggregateUtil.gatherFeatures(name, bitmaps, requestContext, answer, -1, featureFieldIds, false, (pivotTermId, featureId, termIds) -> {
             featureValueSets[featureId].add(new Feature(termIds));
             return true;
         }, solutionLog, stackBuffer);
