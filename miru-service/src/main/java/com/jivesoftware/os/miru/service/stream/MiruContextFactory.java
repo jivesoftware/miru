@@ -218,7 +218,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                     seed,
                     chunkStores,
                     new IntTermIdsKeyValueMarshaller(),
-                    keyBytes("timeIndex-timestamps"),
+                    keyBytes("termLookup-" + fieldDefinition.fieldId),
                     4, false, 65_536, true);
             }
         }
