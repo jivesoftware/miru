@@ -217,22 +217,25 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
             new Void[activityAndIdsArray.length],
             stackBuffer);
 
-        for (MiruActivityAndId<MiruInternalActivity> activityAndId : activityAndIds) {
-            MiruInternalActivity internalActivity = activityAndId.activity;
-            MiruTermId[][] fieldsValues = internalActivity.fieldsValues;
-            for (int i = 0; i < fieldsValues.length; i++) {
-                int index = i;
-                if (termLookup[i] != null && fieldsValues[index] != null) {
-                    termLookup[i].execute(activityAndId.id,
-                        true,
-                        keyValueContext -> {
-                            keyValueContext.set(fieldsValues[index]);
-                            return null;
-                        },
-                        stackBuffer);
+        for (int i = 0; i < termLookup.length; i++) {
+            int fieldId = i;
+            LOG.inc("count>set>lookupFields");
+            if (termLookup[fieldId] != null) {
+                Integer[] keys = new Integer[activityAndIds.size()];
+                for (int j = 0; j < activityAndIdsArray.length; j++) {
+                    if (activityAndIdsArray[j].activity.fieldsValues[fieldId] != null) {
+                        keys[j] = activityAndIdsArray[j].id;
+                    }
                 }
+                termLookup[fieldId].multiExecute(keys,
+                    (keyValueContext, index) -> {
+                        LOG.inc("count>set>lookupFieldTerms");
+                        keyValueContext.set(activityAndIdsArray[index].activity.fieldsValues[fieldId]);
+                    },
+                    stackBuffer);
             }
         }
+
 
         LOG.inc("count>set>total");
         LOG.inc("count>set>" + name);
