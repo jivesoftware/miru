@@ -155,13 +155,18 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                     return true;
                 }, stackBuffer);
 
-                solutionLog.log(MiruSolutionLogLevel.INFO, "Strut term accumulation for {} bitmaps took {} ms",
+                solutionLog.log(MiruSolutionLogLevel.INFO, "Strut accumulated {} terms took {} ms",
                     termIds.size(), System.currentTimeMillis() - start);
                 start = System.currentTimeMillis();
 
                 bitmaps.multiTx(
                     (tx, stackBuffer1) -> primaryIndex.multiTxIndex("strut", pivotFieldId, termIds.toArray(new MiruTermId[0]), -1, stackBuffer1, tx),
-                    (index, bitmap) -> streamBitmaps.stream(termIds.get(index), bitmap),
+                    (index, bitmap) -> {
+                        if (constrainFeature != null) {
+                            bitmaps.inPlaceAnd(bitmap, constrainFeature);
+                        }
+                        streamBitmaps.stream(termIds.get(index), bitmap);
+                    },
                     stackBuffer);
 
                 solutionLog.log(MiruSolutionLogLevel.INFO, "Strut scores took {} ms",

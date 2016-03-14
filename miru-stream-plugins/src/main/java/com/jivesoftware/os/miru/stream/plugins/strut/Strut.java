@@ -89,6 +89,7 @@ public class Strut {
         long start = System.currentTimeMillis();
         int[] featureCount = { 0 };
         float[] score = { 0 };
+        int[] termCount = { 0 };
         MiruTermId[] currentPivot = { null };
         aggregateUtil.gatherFeatures(name,
             bitmaps,
@@ -100,16 +101,17 @@ public class Strut {
                 featureCount[0]++;
                 if (currentPivot[0] == null || !currentPivot[0].equals(answerTermId)) {
                     if (currentPivot[0] != null) {
-                        if (score[0] > 0) {
-                            scored.add(new Scored(answerTermId, score[0]));
+                        if (termCount[0] > 0) {
+                            scored.add(new Scored(answerTermId, score[0] / termCount[0]));
                         }
                         score[0] = 0f;
+                        termCount[0] = 0;
                     }
                     currentPivot[0] = answerTermId;
                 }
                 float s = model.score(featureId, termIds, 0f);
                 if (!Float.isNaN(s)) {
-                    score[0] = Math.max(score[0], s);
+                    score[0] += s;
                 }
                 return true;
             },

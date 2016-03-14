@@ -2,8 +2,10 @@ package com.jivesoftware.os.miru.service.index.filer;
 
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.api.HintAndTransaction;
+import com.jivesoftware.os.filer.io.api.KeyValueContext;
 import com.jivesoftware.os.filer.io.api.KeyedFilerStore;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
+import com.jivesoftware.os.filer.keyed.store.TxKeyValueStore;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -17,7 +19,6 @@ import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.lang.mutable.MutableLong;
@@ -35,14 +36,18 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
     private final AtomicInteger indexSize = new AtomicInteger(-1);
     private final MiruInternalActivityMarshaller internalActivityMarshaller;
     private final MiruFilerProvider<Long, Void> indexSizeFiler;
+    private final TxKeyValueStore<Integer, MiruTermId[]>[] termLookup;
+    // fastTermLookup[fieldId].get(activityTime) -> MiruTermId[]
 
     public MiruFilerActivityIndex(KeyedFilerStore<Long, Void> keyedStore,
         MiruInternalActivityMarshaller internalActivityMarshaller,
-        MiruFilerProvider<Long, Void> indexSizeFiler)
+        MiruFilerProvider<Long, Void> indexSizeFiler,
+        TxKeyValueStore<Integer, MiruTermId[]>[] termLookup)
         throws Exception {
         this.keyedStore = keyedStore;
         this.internalActivityMarshaller = internalActivityMarshaller;
         this.indexSizeFiler = indexSizeFiler;
+        this.termLookup = termLookup;
     }
 
     @Override
@@ -70,7 +75,13 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
 
     @Override
     public MiruTermId[] get(String name, int index, final int fieldId, StackBuffer stackBuffer) throws IOException, InterruptedException {
-        int capacity = capacity(stackBuffer);
+        if (termLookup[fieldId] == null) {
+            return null;
+        }
+
+        return termLookup[fieldId].execute(index, false, KeyValueContext::get, stackBuffer);
+
+        /*int capacity = capacity(stackBuffer);
         checkArgument(index >= 0 && index < capacity, "Index parameter is out of bounds. The value %s must be >=0 and <%s", index, capacity);
         MiruTermId[] termIds = keyedStore.read(FilerIO.intBytes(index), null, (monkey, filer, _stackBuffer, lock) -> {
             if (filer != null) {
@@ -90,12 +101,27 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
         LOG.inc("count>getTerms>" + name);
         LOG.inc("bytes>getTerms>total", bytes);
         LOG.inc("bytes>getTerms>" + name, bytes);
-        return termIds;
+        return termIds;*/
     }
 
     @Override
     public List<MiruTermId[]> getAll(String name, int[] indexes, final int fieldId, StackBuffer stackBuffer) throws IOException, InterruptedException {
-        if (indexes.length == 0) {
+        if (termLookup[fieldId] == null) {
+            return null;
+        }
+
+        Integer[] keys = new Integer[indexes.length];
+        for (int i = 0; i < keys.length; i++) {
+            keys[i] = indexes[i];
+        }
+
+        List<MiruTermId[]> termIds = Arrays.asList(new MiruTermId[keys.length][]);
+        termLookup[fieldId].multiExecute(keys,
+            (keyValueContext, index) -> termIds.set(index, keyValueContext.get()),
+            stackBuffer);
+        return termIds;
+
+        /*if (indexes.length == 0) {
             return Collections.emptyList();
         }
         byte[][] bytesForIndexes = new byte[indexes.length][];
@@ -131,7 +157,7 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
         LOG.inc("count>getAllTerms>" + name);
         LOG.inc("bytes>getAllTerms>total", bytes);
         LOG.inc("bytes>getAllTerms>" + name, bytes);
-        return Arrays.asList(results);
+        return Arrays.asList(results);*/
 
     }
 
@@ -190,6 +216,24 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
             },
             new Void[activityAndIdsArray.length],
             stackBuffer);
+
+        for (MiruActivityAndId<MiruInternalActivity> activityAndId : activityAndIds) {
+            MiruInternalActivity internalActivity = activityAndId.activity;
+            MiruTermId[][] fieldsValues = internalActivity.fieldsValues;
+            for (int i = 0; i < fieldsValues.length; i++) {
+                int index = i;
+                if (termLookup[i] != null) {
+                    termLookup[i].execute(activityAndId.id,
+                        true,
+                        keyValueContext -> {
+                            keyValueContext.set(fieldsValues[index]);
+                            return null;
+                        },
+                        stackBuffer);
+                }
+            }
+        }
+
         LOG.inc("count>set>total");
         LOG.inc("count>set>" + name);
         LOG.inc("bytes>set>total", bytesWrite.longValue());

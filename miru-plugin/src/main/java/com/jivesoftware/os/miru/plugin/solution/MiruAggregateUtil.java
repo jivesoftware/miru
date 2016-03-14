@@ -36,7 +36,6 @@ import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -432,12 +431,14 @@ public class MiruAggregateUtil {
         TermIdStream termIdStream,
         StackBuffer stackBuffer) throws Exception {
 
-        MiruFieldDefinition fieldDefinition = requestContext.getSchema().getFieldDefinition(pivotFieldId);
+        gatherActivityLookup(name, bitmaps, requestContext, answer, pivotFieldId, batchSize, solutionLog, termIdStream, stackBuffer);
+
+        /*MiruFieldDefinition fieldDefinition = requestContext.getSchema().getFieldDefinition(pivotFieldId);
         if (fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.indexedValueBits)) {
             gatherValueBits(name, bitmaps, requestContext, answer, pivotFieldId, solutionLog, termIdStream, stackBuffer);
         } else {
             gatherActivityLookup(name, bitmaps, requestContext, answer, pivotFieldId, batchSize, solutionLog, termIdStream, stackBuffer);
-        }
+        }*/
     }
 
     // ooh that tickles
@@ -450,7 +451,7 @@ public class MiruAggregateUtil {
         TermIdStream termIdStream,
         StackBuffer stackBuffer) throws Exception {
 
-        int[][] featureFieldIds = new int[][]{new int[]{pivotFieldId}};
+        int[][] featureFieldIds = new int[][] { new int[] { pivotFieldId } };
         gatherFeatures(name,
             bitmaps,
             requestContext,
