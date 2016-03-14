@@ -222,7 +222,7 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
             MiruTermId[][] fieldsValues = internalActivity.fieldsValues;
             for (int i = 0; i < fieldsValues.length; i++) {
                 int index = i;
-                if (termLookup[i] != null) {
+                if (termLookup[i] != null && fieldsValues[index] != null) {
                     termLookup[i].execute(activityAndId.id,
                         true,
                         keyValueContext -> {
