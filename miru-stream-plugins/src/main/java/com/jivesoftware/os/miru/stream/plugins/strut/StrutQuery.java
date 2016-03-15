@@ -27,6 +27,7 @@ public class StrutQuery implements Serializable {
     public final String[][] featureFields;
     public final MiruFilter featureFilter; // "I viewed"
     public final int desiredNumberOfResults;
+    public final boolean includeFeatures;
 
     public StrutQuery(
         @JsonProperty("catwalkId") String catwalkId,
@@ -37,7 +38,8 @@ public class StrutQuery implements Serializable {
         @JsonProperty("constraintFilter") MiruFilter constraintFilter,
         @JsonProperty("featureFields") String[][] featureFields,
         @JsonProperty("featureFilter") MiruFilter featureFilter,
-        @JsonProperty("desiredNumberOfResults") int desiredNumberOfResults) {
+        @JsonProperty("desiredNumberOfResults") int desiredNumberOfResults,
+        @JsonProperty("includeFeatures") boolean includeFeatures) {
 
         this.catwalkId = Preconditions.checkNotNull(catwalkId);
         this.modelId = Preconditions.checkNotNull(modelId);
@@ -49,6 +51,7 @@ public class StrutQuery implements Serializable {
         this.featureFilter = Preconditions.checkNotNull(featureFilter);
         Preconditions.checkArgument(desiredNumberOfResults > 0, "Number of results must be at least 1");
         this.desiredNumberOfResults = desiredNumberOfResults;
+        this.includeFeatures = includeFeatures;
     }
 
     @Override
@@ -63,6 +66,7 @@ public class StrutQuery implements Serializable {
             + ", featureFields=" + Arrays.deepToString(featureFields)
             + ", featureFilter=" + featureFilter
             + ", desiredNumberOfResults=" + desiredNumberOfResults
+            + ", includeFeatures=" + includeFeatures
             + '}';
     }
 

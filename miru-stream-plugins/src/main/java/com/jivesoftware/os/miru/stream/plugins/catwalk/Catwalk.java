@@ -5,14 +5,13 @@ import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multiset;
 import com.google.common.collect.Multiset.Entry;
+import com.google.common.collect.Sets;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
-import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
-import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.index.MiruTxIndex;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil.Feature;
@@ -23,6 +22,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.List;
+import java.util.Set;
 
 /**
  *
@@ -46,9 +46,7 @@ public class Catwalk {
         log.debug("Catwalk for answer={} request={}", answer, request);
         //System.out.println("Number of matches: " + bitmaps.cardinality(answer));
 
-        MiruSchema schema = requestContext.getSchema();
         MiruFieldIndex<BM, IBM> primaryIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
-        MiruTermComposer termComposer = requestContext.getTermComposer();
 
         String[][] featureFields = request.query.featureFields;
         @SuppressWarnings("unchecked")
@@ -64,10 +62,29 @@ public class Catwalk {
                 featureFieldIds[i][j] = requestContext.getSchema().getFieldId(featureField[j]);
             }
         }
+
+        Set<Integer> uniqueFieldIdSet = Sets.newHashSet();
+        for (int i = 0; i < featureFieldIds.length; i++) {
+            if (featureFieldIds[i] != null) {
+                for (int j = 0; j < featureFieldIds[i].length; j++) {
+                    uniqueFieldIdSet.add(featureFieldIds[i][j]);
+                }
+            }
+        }
+
+        int[] uniqueFieldIds = new int[uniqueFieldIdSet.size()];
+        int ufi = 0;
+        for (Integer fieldId : uniqueFieldIdSet) {
+            uniqueFieldIds[ufi] = fieldId;
+            ufi++;
+        }
+
         aggregateUtil.gatherFeatures(name,
             bitmaps,
             requestContext,
             streamBitmaps -> streamBitmaps.stream(null, answer),
+            null,
+            uniqueFieldIds,
             featureFieldIds,
             false,
             (answerTermId, featureId, termIds) -> {

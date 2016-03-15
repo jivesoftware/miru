@@ -2,8 +2,11 @@ package com.jivesoftware.os.miru.stream.plugins.strut;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import java.io.Serializable;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  *
@@ -13,18 +16,25 @@ public class HotOrNot implements Comparable<HotOrNot>, Serializable {
 
     public final MiruValue value;
     public final float score;
+    public final List<MiruTermId[]>[] features;
 
     @JsonCreator
     public HotOrNot(
         @JsonProperty("value") MiruValue value,
-        @JsonProperty("score") float score) {
+        @JsonProperty("score") float score,
+        @JsonProperty("features") List<MiruTermId[]>[] features) {
         this.value = value;
         this.score = score;
+        this.features = features;
     }
 
     @Override
     public String toString() {
-        return "HotOrNot{" + "value=" + value + ", score=" + score + '}';
+        return "HotOrNot{" +
+            "value=" + value +
+            ", score=" + score +
+            ", features=" + Arrays.toString(features) +
+            '}';
     }
 
     @Override

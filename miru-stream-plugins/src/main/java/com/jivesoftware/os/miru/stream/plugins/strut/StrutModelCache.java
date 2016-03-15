@@ -2,6 +2,8 @@ package com.jivesoftware.os.miru.stream.plugins.strut;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.cache.Cache;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkModel;
@@ -19,6 +21,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  *
@@ -97,21 +100,33 @@ public class StrutModelCache {
     }
 
     private StrutModel convert(CatwalkQuery catwalkQuery, CatwalkModel model) {
+
+        Map<String, Set<MiruTermId>> fieldTerms = Maps.newHashMap();
+
         @SuppressWarnings("unchecked")
         Map<StrutModelKey, Float>[] modelFeatureScore = new Map[catwalkQuery.featureFields.length];
         for (int i = 0; i < modelFeatureScore.length; i++) {
             modelFeatureScore[i] = new HashMap<>();
-
         }
         for (int i = 0; i < catwalkQuery.featureFields.length; i++) {
+            String[] fields = catwalkQuery.featureFields[i];
+            @SuppressWarnings("unchecked")
+            Set<MiruTermId>[] terms = new Set[fields.length];
+            for (int j = 0; j < fields.length; j++) {
+                terms[j] = fieldTerms.computeIfAbsent(fields[j], key -> Sets.newHashSet());
+            }
             if (model != null && model.featureScores != null && model.featureScores[i] != null) {
                 List<FeatureScore> featureScores = model.featureScores[i];
                 for (FeatureScore featureScore : featureScores) {
+                    MiruTermId[] termIds = featureScore.termIds;
+                    for (int j = 0; j < termIds.length; j++) {
+                        terms[j].add(termIds[j]);
+                    }
                     modelFeatureScore[i].put(new StrutModelKey(featureScore.termIds), featureScore.numerator / (float) featureScore.denominator);
                 }
             }
         }
-        return new StrutModel(modelFeatureScore);
+        return new StrutModel(fieldTerms, modelFeatureScore);
     }
 
     public static class StrutModelKey {
@@ -151,10 +166,17 @@ public class StrutModelCache {
 
     public static class StrutModel {
 
+        private final Map<String, Set<MiruTermId>> fieldTerms;
         private final Map<StrutModelKey, Float>[] model;
 
-        public StrutModel(Map<StrutModelKey, Float>[] model) {
+        public StrutModel(Map<String, Set<MiruTermId>> fieldTerms,
+            Map<StrutModelKey, Float>[] model) {
+            this.fieldTerms = fieldTerms;
             this.model = model;
+        }
+
+        public Map<String, Set<MiruTermId>> getFieldTerms() {
+            return fieldTerms;
         }
 
         public float score(int featureId, MiruTermId[] values, float missing) {
