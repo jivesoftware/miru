@@ -7,6 +7,7 @@ import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.miru.plugin.solution.MiruAnswerMerger;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
+import com.jivesoftware.os.miru.stream.plugins.strut.HotOrNot.Hotness;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -64,7 +65,7 @@ public class StrutAnswerMerger implements MiruAnswerMerger<StrutAnswer> {
         for (HotOrNot hotOrNot : bigger) {
             HotOrNot otherScore = smallerMap.remove(hotOrNot.value);
             if (otherScore != null) {
-                List<MiruTermId[]>[] features = null;
+                List<Hotness>[] features = null;
                 if (hotOrNot.features != null && otherScore.features != null) {
                     features = new List[hotOrNot.features.length];
                     for (int i = 0; i < features.length; i++) {

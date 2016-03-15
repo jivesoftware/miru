@@ -4,17 +4,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.query.filter.FilterStringUtil;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
+import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
@@ -22,6 +21,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkQuery;
 import com.jivesoftware.os.miru.stream.plugins.catwalk.FeatureScore;
 import com.jivesoftware.os.miru.stream.plugins.strut.HotOrNot;
+import com.jivesoftware.os.miru.stream.plugins.strut.HotOrNot.Hotness;
 import com.jivesoftware.os.miru.stream.plugins.strut.StrutAnswer;
 import com.jivesoftware.os.miru.stream.plugins.strut.StrutConstants;
 import com.jivesoftware.os.miru.stream.plugins.strut.StrutQuery;
@@ -228,17 +228,22 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                         StringBuilder buf = new StringBuilder();
                         for (HotOrNot hotOrNot : hotOrNots) {
                             List<String> features = Lists.newArrayList();
-                            List<MiruTermId[]>[] featureTerms = hotOrNot.features;
+                            List<Hotness>[] featureTerms = hotOrNot.features;
                             for (int i = 0; i < featureTerms.length; i++) {
                                 String[] fields = featureFields[i];
-                                List<MiruTermId[]> feature = featureTerms[i];
-                                for (MiruTermId[] termIds : feature) {
-                                    if (termIds.length != fields.length) {
-                                        features.add("unknown");
+                                List<Hotness> feature = featureTerms[i];
+                                for (Hotness hotness : feature) {
+                                    if (hotness.values.length != fields.length) {
+                                        features.add("[unknown=" + hotness.score + "]");
                                     } else {
-                                        for (int j = 0; j < termIds.length; j++) {
-                                            buf.append(fields[j]).append(':').append(termIds[j].toString()).append(' ');
+                                        buf.append('[');
+                                        for (int j = 0; j < hotness.values.length; j++) {
+                                            if (j > 0) {
+                                                buf.append(',');
+                                            }
+                                            buf.append(fields[j]).append(':').append(valueToString(hotness.values[j]));
                                         }
+                                        buf.append('=').append(hotness.score).append("] ");
                                         features.add(buf.toString());
                                         buf.setLength(0);
                                     }
@@ -246,7 +251,7 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                             }
 
                             Map<String, Object> r = new HashMap<>();
-                            r.put("value", hotOrNot.value.toString());
+                            r.put("value", valueToString(hotOrNot.value));
                             r.put("score", String.valueOf(hotOrNot.score));
                             r.put("features", features);
                             results.add(r);
@@ -268,6 +273,10 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
         }
 
         return renderer.render(template, data);
+    }
+
+    private String valueToString(MiruValue value) {
+        return Joiner.on(',').join(value.parts);
     }
 
     public static class ScoredFeature implements Comparable<ScoredFeature> {

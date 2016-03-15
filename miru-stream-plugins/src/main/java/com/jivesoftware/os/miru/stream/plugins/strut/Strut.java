@@ -17,6 +17,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil.ConsumeBitmaps
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
+import com.jivesoftware.os.miru.stream.plugins.strut.HotOrNot.Hotness;
 import com.jivesoftware.os.miru.stream.plugins.strut.StrutModelCache.StrutModel;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -88,7 +89,7 @@ public class Strut {
             .create();
 
         @SuppressWarnings("unchecked")
-        List<MiruTermId[]>[] features = request.query.includeFeatures ? new List[featureFields.length] : null;
+        List<Hotness>[] features = request.query.includeFeatures ? new List[featureFields.length] : null;
 
         long start = System.currentTimeMillis();
         int[] featureCount = { 0 };
@@ -106,7 +107,7 @@ public class Strut {
                 if (currentPivot[0] == null || !currentPivot[0].equals(answerTermId)) {
                     if (currentPivot[0] != null) {
                         if (termCount[0] > 0) {
-                            List<MiruTermId[]>[] scoredFeatures = null;
+                            List<Hotness>[] scoredFeatures = null;
                             if (request.query.includeFeatures) {
                                 scoredFeatures = new List[features.length];
                                 System.arraycopy(features, 0, scoredFeatures, 0, features.length);
@@ -131,7 +132,12 @@ public class Strut {
                         if (features[featureId] == null) {
                             features[featureId] = Lists.newArrayList();
                         }
-                        features[featureId].add(termIds);
+                        MiruValue[] values = new MiruValue[termIds.length];
+                        for (int i = 0; i < termIds.length; i++) {
+                            values[i] = new MiruValue(termComposer.decompose(schema,
+                                schema.getFieldDefinition(featureFieldIds[featureId][i]), stackBuffer, termIds[i]));
+                        }
+                        features[featureId].add(new Hotness(values, s));
                     }
                 }
                 return true;
@@ -159,9 +165,9 @@ public class Strut {
 
         MiruTermId term;
         float score;
-        List<MiruTermId[]>[] features;
+        List<Hotness>[] features;
 
-        public Scored(MiruTermId term, float score, List<MiruTermId[]>[] features) {
+        public Scored(MiruTermId term, float score, List<Hotness>[] features) {
             this.term = term;
             this.score = score;
             this.features = features;
