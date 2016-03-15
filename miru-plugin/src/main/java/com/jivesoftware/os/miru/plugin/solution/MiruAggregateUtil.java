@@ -84,6 +84,14 @@ public class MiruAggregateUtil {
 
         MiruTermId[][][] fieldTerms = new MiruTermId[schema.fieldCount()][][];
 
+        @SuppressWarnings("unchecked")
+        Set<Feature>[] features = new Set[featureFieldIds.length];
+        if (dedupe) {
+            for (int i = 0; i < features.length; i++) {
+                features[i] = Sets.newHashSet();
+            }
+        }
+
         int[] featureCount = { 0 };
         int[] termCount = { 0 };
         int batchSize = 1_000;
@@ -92,7 +100,9 @@ public class MiruAggregateUtil {
         long start = System.currentTimeMillis();
         consumeAnswers.consume((answerTermId, answerBitmap) -> {
             termCount[0]++;
-            Set<Feature> features = dedupe ? Sets.newHashSet() : null;
+            for (Set<Feature> featureSet : features) {
+                featureSet.clear();
+            }
             MiruIntIterator iter = bitmaps.intIterator(answerBitmap);
             while (iter.hasNext()) {
                 ids[count[0]] = iter.next();
@@ -128,10 +138,10 @@ public class MiruAggregateUtil {
         int count,
         MiruTermId answerTermId,
         int[] featureCount,
-        Set<Feature> features) throws Exception {
+        Set<Feature>[] features) throws Exception {
 
         for (int fieldId : uniqueFieldIds) {
-            fieldTerms[fieldId] = activityIndex.getAll(name, ids, fieldId, stackBuffer);
+            fieldTerms[fieldId] = activityIndex.getAll(name, ids, 0, count, fieldId, stackBuffer);
         }
         for (int index = 0; index < count; index++) {
             NEXT_FEATURE:
@@ -146,7 +156,7 @@ public class MiruAggregateUtil {
                     }
                     termIds[j] = fieldTermIds[0];
                 }
-                if (features == null || features.add(new Feature(termIds))) {
+                if (features[i] == null || features[i].add(new Feature(termIds))) {
                     featureCount[0]++;
                     if (!stream.stream(answerTermId, i, termIds)) {
                         return false;
