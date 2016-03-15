@@ -82,7 +82,6 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.File;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang.builder.HashCodeBuilder;
@@ -209,17 +208,32 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             TxNamedMapOfFiler.OVERWRITE_GROWER_PROVIDER,
             TxNamedMapOfFiler.REWRITE_GROWER_PROVIDER);
 
+        IntUnsignedShortKeyValueMarshaller intUnsignedShortKeyValueMarshaller = new IntUnsignedShortKeyValueMarshaller();
+        IntTermIdsKeyValueMarshaller intTermIdsKeyValueMarshaller = new IntTermIdsKeyValueMarshaller();
+
         @SuppressWarnings("unchecked")
-        TxKeyValueStore<Integer, MiruTermId[]>[] termLookups = new TxKeyValueStore[schema.fieldCount()];
+        TxKeyValueStore<Integer, Integer>[] termLookup = new TxKeyValueStore[schema.fieldCount()];
+        @SuppressWarnings("unchecked")
+        TxKeyValueStore<Integer, MiruTermId[]>[][] termStorage = new TxKeyValueStore[schema.fieldCount()][];
         for (MiruFieldDefinition fieldDefinition : schema.getFieldDefinitions()) {
             if (fieldDefinition.type.hasFeature(Feature.indexedValueBits)) {
-                termLookups[fieldDefinition.fieldId] = new TxKeyValueStore<>(skyhookCog,
+                termLookup[fieldDefinition.fieldId] = new TxKeyValueStore<>(skyhookCog,
                     cogs.getSkyHookKeySemaphores(),
                     seed,
                     chunkStores,
-                    new IntTermIdsKeyValueMarshaller(),
+                    intUnsignedShortKeyValueMarshaller,
                     keyBytes("termLookup-" + fieldDefinition.fieldId),
                     4, false, 65_536, true);
+
+                for (int i = 0; i < 16; i++) {
+                    termStorage[i][fieldDefinition.fieldId] = new TxKeyValueStore<>(skyhookCog,
+                        cogs.getSkyHookKeySemaphores(),
+                        seed,
+                        chunkStores,
+                        intTermIdsKeyValueMarshaller,
+                        keyBytes("termStorage-" + i + "-" + fieldDefinition.fieldId),
+                        4, false, 65_536, true);
+                }
             }
         }
 
@@ -227,8 +241,10 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             new MiruFilerActivityIndex(
                 activityFilerStore,
                 new MiruInternalActivityMarshaller(termInterner),
+                intTermIdsKeyValueMarshaller,
                 new KeyedFilerProvider<>(activityFilerStore, keyBytes("activityIndex-size")),
-                termLookups));
+                termLookup,
+                termStorage));
 
         TrackError trackError = partitionErrorTracker.track(coord);
 
@@ -456,7 +472,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         return key.getBytes(Charsets.UTF_8);
     }
 
-    private static class IntTermIdsKeyValueMarshaller implements KeyValueMarshaller<Integer, MiruTermId[]> {
+    private static class IntUnsignedShortKeyValueMarshaller implements KeyValueMarshaller<Integer, Integer> {
 
         @Override
         public byte[] keyBytes(Integer integer) {
@@ -464,39 +480,25 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         }
 
         @Override
-        public Integer bytesKey(byte[] bytes, int i) {
+        public Integer bytesKey(byte[] bytes, int offset) {
             return FilerIO.bytesInt(bytes);
         }
 
         @Override
-        public byte[] valueBytes(MiruTermId[] termIds) {
-            int length = 2; // short term count
-            for (MiruTermId termId : termIds) {
-                length += 2 + termId.length();
-            }
-
-            byte[] bytes = new byte[length];
-            ByteBuffer buf = ByteBuffer.wrap(bytes);
-            buf.putShort((short) termIds.length);
-
-            for (MiruTermId termId : termIds) {
-                buf.putShort((short) termId.length());
-                buf.put(termId.getBytes());
-            }
-            return bytes;
+        public byte[] valueBytes(Integer value) {
+            byte[] bytes = new byte[2];
+            bytes[0] = (byte) (value >>> 8);
+            bytes[1] = (byte) value.intValue();
+            return null;
         }
 
         @Override
-        public MiruTermId[] bytesValue(Integer integer, byte[] bytes, int offset) {
-            ByteBuffer buf = ByteBuffer.wrap(bytes);
-            MiruTermId[] termIds = new MiruTermId[buf.getShort()];
-            for (int i = 0; i < termIds.length; i++) {
-                int termIdLength = buf.getShort();
-                byte[] termId = new byte[termIdLength];
-                buf.get(termId);
-                termIds[i] = new MiruTermId(termId);
-            }
-            return termIds;
+        public Integer bytesValue(Integer key, byte[] bytes, int offset) {
+            int v = 0;
+            v |= (bytes[offset + 0] & 0xFF);
+            v <<= 8;
+            v |= (bytes[offset + 1] & 0xFF);
+            return v;
         }
     }
 }

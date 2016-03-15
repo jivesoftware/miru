@@ -14,6 +14,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
 import com.jivesoftware.os.miru.service.index.MiruFilerProvider;
 import com.jivesoftware.os.miru.service.index.MiruInternalActivityMarshaller;
+import com.jivesoftware.os.miru.service.stream.IntTermIdsKeyValueMarshaller;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.IOException;
@@ -35,19 +36,25 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
     private final KeyedFilerStore<Long, Void> keyedStore;
     private final AtomicInteger indexSize = new AtomicInteger(-1);
     private final MiruInternalActivityMarshaller internalActivityMarshaller;
+    private final IntTermIdsKeyValueMarshaller intTermIdsKeyValueMarshaller;
     private final MiruFilerProvider<Long, Void> indexSizeFiler;
-    private final TxKeyValueStore<Integer, MiruTermId[]>[] termLookup;
+    private final TxKeyValueStore<Integer, Integer>[] termLookup;
+    private final TxKeyValueStore<Integer, MiruTermId[]>[][] termStorage;
     // fastTermLookup[fieldId].get(activityTime) -> MiruTermId[]
 
     public MiruFilerActivityIndex(KeyedFilerStore<Long, Void> keyedStore,
         MiruInternalActivityMarshaller internalActivityMarshaller,
+        IntTermIdsKeyValueMarshaller intTermIdsKeyValueMarshaller,
         MiruFilerProvider<Long, Void> indexSizeFiler,
-        TxKeyValueStore<Integer, MiruTermId[]>[] termLookup)
+        TxKeyValueStore<Integer, Integer>[] termLookup,
+        TxKeyValueStore<Integer, MiruTermId[]>[][] termStorage)
         throws Exception {
         this.keyedStore = keyedStore;
         this.internalActivityMarshaller = internalActivityMarshaller;
+        this.intTermIdsKeyValueMarshaller = intTermIdsKeyValueMarshaller;
         this.indexSizeFiler = indexSizeFiler;
         this.termLookup = termLookup;
+        this.termStorage = termStorage;
     }
 
     @Override
@@ -79,7 +86,8 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
             return null;
         }
 
-        return termLookup[fieldId].execute(index, false, KeyValueContext::get, stackBuffer);
+        Integer valuePower = termLookup[fieldId].execute(index, false, KeyValueContext::get, stackBuffer);
+        return valuePower == null ? null : termStorage[(valuePower & 0xFF)][fieldId].execute(index, false, KeyValueContext::get, stackBuffer);
 
         /*int capacity = capacity(stackBuffer);
         checkArgument(index >= 0 && index < capacity, "Index parameter is out of bounds. The value %s must be >=0 and <%s", index, capacity);
@@ -115,10 +123,34 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
             keys[i] = indexes[i];
         }
 
-        List<MiruTermId[]> termIds = Arrays.asList(new MiruTermId[keys.length][]);
+        boolean[][] valuePowers = new boolean[16][];
         termLookup[fieldId].multiExecute(keys,
-            (keyValueContext, index) -> termIds.set(index, keyValueContext.get()),
+            (keyValueContext, index) -> {
+                Integer valueLength = keyValueContext.get();
+                if (valueLength != null) {
+                    int valuePower = valueLength & 0xFF;
+                    if (valuePowers[valuePower] == null) {
+                        valuePowers[valuePower] = new boolean[keys.length];
+                    }
+                    valuePowers[valuePower][index] = true;
+                }
+            },
             stackBuffer);
+
+        List<MiruTermId[]> termIds = Arrays.asList(new MiruTermId[keys.length][]);
+        for (int valuePower = 0; valuePower < valuePowers.length; valuePower++) {
+            if (valuePowers[valuePower] != null) {
+                Integer[] valueKeys = new Integer[keys.length];
+                for (int j = 0; j < valueKeys.length; j++) {
+                    if (valuePowers[valuePower][j]) {
+                        valueKeys[j] = keys[j];
+                    }
+                }
+                termStorage[valuePower][fieldId].multiExecute(valueKeys,
+                    (keyValueContext, index) -> termIds.set(index, keyValueContext.get()),
+                    stackBuffer);
+            }
+        }
         return termIds;
 
         /*if (indexes.length == 0) {
@@ -220,19 +252,45 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
         for (int i = 0; i < termLookup.length; i++) {
             int fieldId = i;
             LOG.inc("count>set>lookupFields");
-            if (termLookup[fieldId] != null) {
+            if (termLookup[fieldId] != null && termStorage[fieldId] != null) {
                 Integer[] keys = new Integer[activityAndIds.size()];
                 for (int j = 0; j < activityAndIdsArray.length; j++) {
                     if (activityAndIdsArray[j].activity.fieldsValues[fieldId] != null) {
                         keys[j] = activityAndIdsArray[j].id;
                     }
                 }
+
+                @SuppressWarnings("unchecked")
+                boolean[][] valuePowers = new boolean[16][];
                 termLookup[fieldId].multiExecute(keys,
                     (keyValueContext, index) -> {
                         LOG.inc("count>set>lookupFieldTerms");
-                        keyValueContext.set(activityAndIdsArray[index].activity.fieldsValues[fieldId]);
+                        int valueSize = intTermIdsKeyValueMarshaller.valueSizeInBytes(activityAndIdsArray[index].activity.fieldsValues[fieldId]);
+                        keyValueContext.set((valueSize & 0xFF));
+                        int valuePower = FilerIO.chunkPower(valueSize, 1);
+                        if (valuePowers[valuePower] == null) {
+                            valuePowers[valuePower] = new boolean[activityAndIdsArray.length];
+                        }
+                        valuePowers[valuePower][index] = true;
                     },
                     stackBuffer);
+
+                for (int valuePower = 0; valuePower < valuePowers.length; valuePower++) {
+                    if (valuePowers[valuePower] != null) {
+                        Integer[] valueKeys = new Integer[keys.length];
+                        for (int j = 0; j < valueKeys.length; j++) {
+                            if (valuePowers[valuePower][j]) {
+                                valueKeys[j] = keys[j];
+                            }
+                        }
+                        termStorage[valuePower][fieldId].multiExecute(valueKeys,
+                            (keyValueContext, index) -> {
+                                LOG.inc("count>set>lookupFieldTerms");
+                                keyValueContext.set(activityAndIdsArray[index].activity.fieldsValues[fieldId]);
+                            },
+                            stackBuffer);
+                    }
+                }
             }
         }
 
