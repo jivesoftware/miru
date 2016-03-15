@@ -9,20 +9,19 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- *
  * @author jonathan.colt
  */
 public class HotOrNot implements Comparable<HotOrNot>, Serializable {
 
     public final MiruValue value;
     public final float score;
-    public final List<MiruTermId[]>[] features;
+    public final List<Hotness>[] features;
 
     @JsonCreator
     public HotOrNot(
         @JsonProperty("value") MiruValue value,
         @JsonProperty("score") float score,
-        @JsonProperty("features") List<MiruTermId[]>[] features) {
+        @JsonProperty("features") List<Hotness>[] features) {
         this.value = value;
         this.score = score;
         this.features = features;
@@ -64,5 +63,27 @@ public class HotOrNot implements Comparable<HotOrNot>, Serializable {
             }
         }
         return c;
+    }
+
+    public static class Hotness implements Serializable {
+        public final MiruValue[] values;
+        public final float score;
+
+        @JsonCreator
+        public Hotness(@JsonProperty("values") MiruValue[] values,
+            @JsonProperty("score") float score) {
+            this.values = values;
+            this.score = score;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            throw new UnsupportedOperationException("NOPE");
+        }
+
+        @Override
+        public int hashCode() {
+            throw new UnsupportedOperationException("NOPE");
+        }
     }
 }
