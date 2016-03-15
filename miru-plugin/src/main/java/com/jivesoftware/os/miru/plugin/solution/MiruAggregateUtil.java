@@ -122,6 +122,7 @@ public class MiruAggregateUtil {
                     ids, count[0], answerTermId, featureCount, features)) {
                     return false;
                 }
+                count[0] = 0;
             }
             return true;
         });
