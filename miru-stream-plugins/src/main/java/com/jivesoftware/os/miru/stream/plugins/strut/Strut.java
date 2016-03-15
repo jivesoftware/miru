@@ -3,7 +3,6 @@ package com.jivesoftware.os.miru.stream.plugins.strut;
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MinMaxPriorityQueue;
-import com.google.common.collect.Sets;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
@@ -24,8 +23,6 @@ import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map.Entry;
-import java.util.Set;
 
 /**
  *
@@ -83,30 +80,6 @@ public class Strut {
             }
         }
 
-        @SuppressWarnings("unchecked")
-        Set<MiruTermId>[] acceptFieldTerms = new Set[schema.fieldCount()];
-        for (Entry<String, Set<MiruTermId>> entry : model.getFieldTerms().entrySet()) {
-            int fieldId = schema.getFieldId(entry.getKey());
-            acceptFieldTerms[fieldId] = entry.getValue();
-        }
-
-        // sort by descending size
-        Set<Integer> uniqueFieldIdSet = Sets.newTreeSet((o1, o2) -> Integer.compare(acceptFieldTerms[o2].size(), acceptFieldTerms[o1].size()));
-        for (int i = 0; i < featureFieldIds.length; i++) {
-            if (featureFieldIds[i] != null) {
-                for (int j = 0; j < featureFieldIds[i].length; j++) {
-                    uniqueFieldIdSet.add(featureFieldIds[i][j]);
-                }
-            }
-        }
-
-        int[] uniqueFieldIds = new int[uniqueFieldIdSet.size()];
-        int ufi = 0;
-        for (Integer fieldId : uniqueFieldIdSet) {
-            uniqueFieldIds[ufi] = fieldId;
-            ufi++;
-        }
-
         List<HotOrNot> hotOrNots = new ArrayList<>(request.query.desiredNumberOfResults);
 
         MinMaxPriorityQueue<Scored> scored = MinMaxPriorityQueue
@@ -126,8 +99,6 @@ public class Strut {
             bitmaps,
             requestContext,
             consumeAnswers,
-            acceptFieldTerms,
-            uniqueFieldIds,
             featureFieldIds,
             true,
             (answerTermId, featureId, termIds) -> {
@@ -135,7 +106,12 @@ public class Strut {
                 if (currentPivot[0] == null || !currentPivot[0].equals(answerTermId)) {
                     if (currentPivot[0] != null) {
                         if (termCount[0] > 0) {
-                            scored.add(new Scored(answerTermId, score[0], features));
+                            List<MiruTermId[]>[] scoredFeatures = null;
+                            if (request.query.includeFeatures) {
+                                scoredFeatures = new List[features.length];
+                                System.arraycopy(features, 0, scoredFeatures, 0, features.length);
+                            }
+                            scored.add(new Scored(answerTermId, score[0], scoredFeatures));
                         }
                         score[0] = 0f;
                         termCount[0] = 0;

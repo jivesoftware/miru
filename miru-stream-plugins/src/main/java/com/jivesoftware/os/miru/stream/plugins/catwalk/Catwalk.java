@@ -63,28 +63,10 @@ public class Catwalk {
             }
         }
 
-        Set<Integer> uniqueFieldIdSet = Sets.newHashSet();
-        for (int i = 0; i < featureFieldIds.length; i++) {
-            if (featureFieldIds[i] != null) {
-                for (int j = 0; j < featureFieldIds[i].length; j++) {
-                    uniqueFieldIdSet.add(featureFieldIds[i][j]);
-                }
-            }
-        }
-
-        int[] uniqueFieldIds = new int[uniqueFieldIdSet.size()];
-        int ufi = 0;
-        for (Integer fieldId : uniqueFieldIdSet) {
-            uniqueFieldIds[ufi] = fieldId;
-            ufi++;
-        }
-
         aggregateUtil.gatherFeatures(name,
             bitmaps,
             requestContext,
             streamBitmaps -> streamBitmaps.stream(null, answer),
-            null,
-            uniqueFieldIds,
             featureFieldIds,
             false,
             (answerTermId, featureId, termIds) -> {
