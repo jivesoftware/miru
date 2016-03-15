@@ -41,7 +41,23 @@ public interface MiruActivityIndex {
      * @param fieldId the field
      * @return the terms
      */
-    List<MiruTermId[]> getAll(String name, int[] indexes, int fieldId, StackBuffer stackBuffer) throws IOException, InterruptedException;
+    MiruTermId[][] getAll(String name, int[] indexes, int fieldId, StackBuffer stackBuffer) throws IOException, InterruptedException;
+
+    /**
+     * Get the terms from the given field for each activity index.
+     *
+     * @param indexes the activity indexes
+     * @param offset the offset into indexes
+     * @param length the length of indexes
+     * @param fieldId the field
+     * @return the terms
+     */
+    MiruTermId[][] getAll(String name,
+        int[] indexes,
+        int offset,
+        int length,
+        int fieldId,
+        StackBuffer stackBuffer) throws IOException, InterruptedException;
 
     /**
      * Returns the index of the last activity.
