@@ -489,7 +489,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             byte[] bytes = new byte[2];
             bytes[0] = (byte) (value >>> 8);
             bytes[1] = (byte) value.intValue();
-            return null;
+            return bytes;
         }
 
         @Override
