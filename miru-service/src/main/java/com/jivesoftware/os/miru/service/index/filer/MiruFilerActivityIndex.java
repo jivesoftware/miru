@@ -122,31 +122,48 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
     }
 
     @Override
-    public List<MiruTermId[]> getAll(String name, int[] indexes, final int fieldId, StackBuffer stackBuffer) throws IOException, InterruptedException {
+    public MiruTermId[][] getAll(String name, int[] indexes, final int fieldId, StackBuffer stackBuffer) throws IOException, InterruptedException {
+        return getAll(name, indexes, 0, indexes.length, fieldId, stackBuffer);
+    }
+
+    @Override
+    public MiruTermId[][] getAll(String name,
+        int[] indexes,
+        int offset,
+        int length,
+        final int fieldId,
+        StackBuffer stackBuffer) throws IOException, InterruptedException {
+
         if (termLookup[fieldId] == null) {
             return null;
         }
 
-        Integer[] keys = new Integer[indexes.length];
-        for (int i = 0; i < keys.length; i++) {
-            keys[i] = indexes[i];
+        Integer[] keys = new Integer[length];
+        for (int i = 0; i < length; i++) {
+            if (indexes[offset + i] >= 0) {
+                keys[i] = indexes[offset + i];
+            }
         }
 
         boolean[][] valuePowers = new boolean[16][];
         termLookup[fieldId].read(-1L,
             (monkey, filer, stackBuffer1, lock) -> {
                 synchronized (lock) {
-                    long length = filer.length();
-                    for (int index : indexes) {
-                        int offset = index * 2;
-                        if (length >= offset + 2) {
-                            filer.seek(offset);
+                    long filerLength = filer.length();
+                    for (int i = 0; i < length; i++) {
+                        int index = indexes[offset + i];
+                        if (index == -1) {
+                            continue;
+                        }
+                        int filerOffset = index * 2;
+                        if (filerLength >= filerOffset + 2) {
+                            filer.seek(filerOffset);
                             int valuePower = readUnsignedShort(filer);
                             if (valuePower > 0) {
                                 if (valuePowers[valuePower] == null) {
-                                    valuePowers[valuePower] = new boolean[keys.length];
+                                    valuePowers[valuePower] = new boolean[length];
                                 }
-                                valuePowers[valuePower][index] = true;
+                                valuePowers[valuePower][i] = true;
                             }
                         }
                     }
@@ -155,17 +172,17 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
             },
             stackBuffer);
 
-        List<MiruTermId[]> termIds = Arrays.asList(new MiruTermId[keys.length][]);
+        MiruTermId[][] termIds = new MiruTermId[length][];
         for (int valuePower = 0; valuePower < valuePowers.length; valuePower++) {
             if (valuePowers[valuePower] != null) {
-                Integer[] valueKeys = new Integer[keys.length];
-                for (int j = 0; j < valueKeys.length; j++) {
+                Integer[] valueKeys = new Integer[length];
+                for (int j = 0; j < length; j++) {
                     if (valuePowers[valuePower][j]) {
                         valueKeys[j] = keys[j];
                     }
                 }
                 termStorage[valuePower][fieldId].multiExecute(valueKeys,
-                    (keyValueContext, index) -> termIds.set(index, keyValueContext.get()),
+                    (keyValueContext, index) -> termIds[index] = keyValueContext.get(),
                     stackBuffer);
             }
         }

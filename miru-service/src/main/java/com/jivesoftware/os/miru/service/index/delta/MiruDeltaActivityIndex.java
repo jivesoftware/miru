@@ -57,22 +57,38 @@ public class MiruDeltaActivityIndex implements MiruActivityIndex, Mergeable {
     }
 
     @Override
-    public List<MiruTermId[]> getAll(String name, int[] indexes, int fieldId, StackBuffer stackBuffer) throws IOException, InterruptedException {
-        List<MiruTermId[]> allTermIds = Lists.newArrayList();
+    public MiruTermId[][] getAll(String name, int[] indexes, int fieldId, StackBuffer stackBuffer) throws IOException, InterruptedException {
+        return getAll(name, indexes, 0, indexes.length, fieldId, stackBuffer);
+    }
+
+    @Override
+    public MiruTermId[][] getAll(String name,
+        int[] indexes,
+        int offset,
+        int length,
+        int fieldId,
+        StackBuffer stackBuffer) throws IOException, InterruptedException {
+
+        MiruTermId[][] allTermIds = new MiruTermId[length][];
         boolean missed = false;
-        for (int i = 0; i < indexes.length; i++) {
-            if (indexes[i] > -1) {
-                MiruActivityAndId<MiruInternalActivity> activityAndId = activities.get(indexes[i]);
+        for (int i = 0; i < length; i++) {
+            if (indexes[offset + i] > -1) {
+                MiruActivityAndId<MiruInternalActivity> activityAndId = activities.get(indexes[offset + i]);
                 if (activityAndId != null) {
-                    indexes[i] = -1;
-                    allTermIds.add(activityAndId.activity.fieldsValues[fieldId]);
+                    indexes[offset + i] = -1;
+                    allTermIds[i] = activityAndId.activity.fieldsValues[fieldId];
                 } else {
                     missed = true;
                 }
             }
         }
         if (missed) {
-            allTermIds.addAll(backingIndex.getAll(name, indexes, fieldId, stackBuffer));
+            MiruTermId[][] backingTermIds = backingIndex.getAll(name, indexes, offset, length, fieldId, stackBuffer);
+            for (int i = 0; i < length; i++) {
+                if (backingTermIds[i] != null) {
+                    allTermIds[i] = backingTermIds[i];
+                }
+            }
         }
         return allTermIds;
     }

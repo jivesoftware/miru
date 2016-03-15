@@ -70,6 +70,103 @@ public class MiruAggregateUtil {
         MiruSolutionLog solutionLog,
         StackBuffer stackBuffer) throws Exception {
 
+        Set<Integer> uniqueFieldIds = Sets.newHashSet();
+        for (int i = 0; i < featureFieldIds.length; i++) {
+            if (featureFieldIds[i] != null) {
+                for (int j = 0; j < featureFieldIds[i].length; j++) {
+                    uniqueFieldIds.add(featureFieldIds[i][j]);
+                }
+            }
+        }
+
+        MiruSchema schema = requestContext.getSchema();
+        MiruActivityIndex activityIndex = requestContext.getActivityIndex();
+
+        MiruTermId[][][] fieldTerms = new MiruTermId[schema.fieldCount()][][];
+
+        int[] featureCount = { 0 };
+        int[] termCount = { 0 };
+        int batchSize = 1_000;
+        int[] ids = new int[batchSize];
+        int[] count = { 0 };
+        long start = System.currentTimeMillis();
+        consumeAnswers.consume((answerTermId, answerBitmap) -> {
+            termCount[0]++;
+            Set<Feature> features = dedupe ? Sets.newHashSet() : null;
+            MiruIntIterator iter = bitmaps.intIterator(answerBitmap);
+            while (iter.hasNext()) {
+                ids[count[0]] = iter.next();
+                count[0]++;
+                if (count[0] == batchSize) {
+                    if (!gatherAndStreamFeatures(name, featureFieldIds, stream, stackBuffer, uniqueFieldIds, activityIndex, fieldTerms,
+                        ids, ids.length, answerTermId, featureCount, features)) {
+                        return false;
+                    }
+                    count[0] = 0;
+                }
+            }
+            if (count[0] > 0) {
+                if (!gatherAndStreamFeatures(name, featureFieldIds, stream, stackBuffer, uniqueFieldIds, activityIndex, fieldTerms,
+                    ids, count[0], answerTermId, featureCount, features)) {
+                    return false;
+                }
+            }
+            return true;
+        });
+        solutionLog.log(MiruSolutionLogLevel.INFO, "Gathered {} features for {} terms in {} ms",
+            featureCount[0], termCount[0], System.currentTimeMillis() - start);
+    }
+
+    private boolean gatherAndStreamFeatures(String name,
+        int[][] featureFieldIds,
+        FeatureStream stream,
+        StackBuffer stackBuffer,
+        Set<Integer> uniqueFieldIds,
+        MiruActivityIndex activityIndex,
+        MiruTermId[][][] fieldTerms,
+        int[] ids,
+        int count,
+        MiruTermId answerTermId,
+        int[] featureCount,
+        Set<Feature> features) throws Exception {
+
+        for (int fieldId : uniqueFieldIds) {
+            fieldTerms[fieldId] = activityIndex.getAll(name, ids, fieldId, stackBuffer);
+        }
+        for (int index = 0; index < count; index++) {
+            NEXT_FEATURE:
+            for (int i = 0; i < featureFieldIds.length; i++) {
+                int[] fieldIds = featureFieldIds[i];
+                //TODO handle multiTerm fields
+                MiruTermId[] termIds = new MiruTermId[fieldIds.length];
+                for (int j = 0; j < fieldIds.length; j++) {
+                    MiruTermId[] fieldTermIds = fieldTerms[fieldIds[j]][index];
+                    if (fieldTermIds == null || fieldTermIds.length == 0) {
+                        continue NEXT_FEATURE;
+                    }
+                    termIds[j] = fieldTermIds[0];
+                }
+                if (features == null || features.add(new Feature(termIds))) {
+                    featureCount[0]++;
+                    if (!stream.stream(answerTermId, i, termIds)) {
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
+    }
+
+    private <BM extends IBM, IBM, S extends MiruSipCursor<S>> void indexValueBitsGatherFeatures(String name,
+        MiruBitmaps<BM, IBM> bitmaps,
+        MiruRequestContext<BM, IBM, S> requestContext,
+        ConsumeBitmaps<BM> consumeAnswers,
+        int[][] featureFieldIds,
+        boolean dedupe,
+        FeatureStream stream,
+        MiruSolutionLog solutionLog,
+        StackBuffer stackBuffer) throws Exception {
+
         MiruFieldIndex<BM, IBM> valueBitsIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.valueBits);
 
         Set<Integer> uniqueFieldIds = Sets.newHashSet();
@@ -368,17 +465,17 @@ public class MiruAggregateUtil {
                 /*answer[0] = bitmaps.removeRange(answer[0], actualIds[0], actualIds[actualIds.length - 1] + 1);*/
             }
 
-            List<MiruTermId[]> all = activityIndex.getAll(name, actualIds, pivotFieldId, stackBuffer);
-            List<MiruTermId[]> streamAll;
+            MiruTermId[][] all = activityIndex.getAll(name, actualIds, pivotFieldId, stackBuffer);
+            MiruTermId[][] streamAll;
             if (streamFieldId != pivotFieldId) {
                 streamAll = activityIndex.getAll(name, actualIds, streamFieldId, stackBuffer);
             } else {
                 streamAll = all;
             }
             distincts.clear();
-            for (int i = 0; i < all.size(); i++) {
-                MiruTermId[] termIds = all.get(i);
-                MiruTermId[] streamTermIds = streamAll.get(i);
+            for (int i = 0; i < all.length; i++) {
+                MiruTermId[] termIds = all[i];
+                MiruTermId[] streamTermIds = streamAll[i];
                 if (termIds != null && termIds.length > 0) {
                     for (int j = 0; j < termIds.length; j++) {
                         distincts.put(termIds[j], streamTermIds);
@@ -517,7 +614,7 @@ public class MiruAggregateUtil {
             }
 
             long start = System.nanoTime();
-            List<MiruTermId[]> all = activityIndex.getAll(name, actualIds, pivotFieldId, stackBuffer);
+            MiruTermId[][] all = activityIndex.getAll(name, actualIds, pivotFieldId, stackBuffer);
             getAllCost += (System.nanoTime() - start);
             distincts.clear();
             for (MiruTermId[] termIds : all) {
