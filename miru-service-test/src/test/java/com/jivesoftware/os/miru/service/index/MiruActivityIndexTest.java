@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.service.index;
 
 import com.google.common.base.Charsets;
+import com.google.common.collect.Lists;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
@@ -20,6 +21,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.service.stream.MiruContext;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.List;
 import org.apache.commons.lang.RandomStringUtils;
 import org.roaringbitmap.RoaringBitmap;
 import org.testng.annotations.DataProvider;
@@ -28,6 +30,7 @@ import org.testng.annotations.Test;
 import static com.jivesoftware.os.miru.service.IndexTestUtil.buildInMemoryContext;
 import static com.jivesoftware.os.miru.service.IndexTestUtil.buildOnDiskContext;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 
@@ -44,6 +47,24 @@ public class MiruActivityIndexTest {
         .setFieldDefinitions(DefaultMiruSchemaDefinition.FIELDS)
         .build();
     MiruTermComposer termComposer = new MiruTermComposer(Charsets.UTF_8, termInterner);
+
+    @Test
+    public void testTermLookup() throws Exception {
+        StackBuffer stackBuffer = new StackBuffer();
+        MiruTenantId tenantId = new MiruTenantId(RandomStringUtils.randomAlphabetic(10).getBytes());
+        MiruActivityIndex activityIndex = buildOnDiskActivityIndex();
+        List<MiruActivityAndId<MiruInternalActivity>> activityAndIds = Lists.newArrayList();
+        for (int i = 0; i < 1_000_000; i++) {
+            activityAndIds.add(new MiruActivityAndId<>(buildMiruActivity(tenantId, i, new String[0], 1), i));
+        }
+        activityIndex.setAndReady(schema, activityAndIds, stackBuffer);
+
+        for (int i = 0; i < 1_000_000; i++) {
+            MiruTermId[] termIds = activityIndex.get("test", i, 0, stackBuffer);
+            assertNotNull(termIds);
+            assertEquals(termIds.length, 1);
+        }
+    }
 
     @Test(dataProvider = "miruActivityIndexDataProvider")
     public void testSetActivity(MiruActivityIndex miruActivityIndex, boolean throwsUnsupportedExceptionOnSet) throws Exception {
