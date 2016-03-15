@@ -223,7 +223,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                     chunkStores,
                     intUnsignedShortKeyValueMarshaller,
                     keyBytes("termLookup-" + fieldDefinition.fieldId),
-                    4, false, 65_536, true);
+                    4, false, 2, false);
 
                 for (int i = 0; i < 16; i++) {
                     termStorage[i][fieldDefinition.fieldId] = new TxKeyValueStore<>(skyhookCog,
@@ -232,7 +232,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                         chunkStores,
                         intTermIdsKeyValueMarshaller,
                         keyBytes("termStorage-" + i + "-" + fieldDefinition.fieldId),
-                        4, false, 65_536, true);
+                        4, false, (int) FilerIO.chunkLength(i), true);
                 }
             }
         }
