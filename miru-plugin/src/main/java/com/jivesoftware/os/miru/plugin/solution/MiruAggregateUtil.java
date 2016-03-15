@@ -101,7 +101,9 @@ public class MiruAggregateUtil {
         consumeAnswers.consume((answerTermId, answerBitmap) -> {
             termCount[0]++;
             for (Set<Feature> featureSet : features) {
-                featureSet.clear();
+                if (featureSet != null) {
+                    featureSet.clear();
+                }
             }
             MiruIntIterator iter = bitmaps.intIterator(answerBitmap);
             while (iter.hasNext()) {
