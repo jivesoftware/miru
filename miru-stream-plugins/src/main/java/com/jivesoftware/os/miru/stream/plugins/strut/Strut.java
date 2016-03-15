@@ -102,7 +102,7 @@ public class Strut {
                 if (currentPivot[0] == null || !currentPivot[0].equals(answerTermId)) {
                     if (currentPivot[0] != null) {
                         if (termCount[0] > 0) {
-                            scored.add(new Scored(answerTermId, score[0] / termCount[0]));
+                            scored.add(new Scored(answerTermId, score[0]));
                         }
                         score[0] = 0f;
                         termCount[0] = 0;
@@ -111,7 +111,8 @@ public class Strut {
                 }
                 float s = model.score(featureId, termIds, 0f);
                 if (!Float.isNaN(s)) {
-                    score[0] += s;
+                    score[0] = Math.max(score[0], s);
+                    termCount[0]++;
                 }
                 return true;
             },

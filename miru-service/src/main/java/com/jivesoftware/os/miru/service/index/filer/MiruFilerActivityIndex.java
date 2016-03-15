@@ -5,6 +5,7 @@ import com.jivesoftware.os.filer.io.api.HintAndTransaction;
 import com.jivesoftware.os.filer.io.api.KeyValueContext;
 import com.jivesoftware.os.filer.io.api.KeyedFilerStore;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
+import com.jivesoftware.os.filer.io.chunk.ChunkFiler;
 import com.jivesoftware.os.filer.keyed.store.TxKeyValueStore;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -38,15 +39,14 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
     private final MiruInternalActivityMarshaller internalActivityMarshaller;
     private final IntTermIdsKeyValueMarshaller intTermIdsKeyValueMarshaller;
     private final MiruFilerProvider<Long, Void> indexSizeFiler;
-    private final TxKeyValueStore<Integer, Integer>[] termLookup;
+    private final MiruFilerProvider<Long, Void>[] termLookup;
     private final TxKeyValueStore<Integer, MiruTermId[]>[][] termStorage;
-    // fastTermLookup[fieldId].get(activityTime) -> MiruTermId[]
 
     public MiruFilerActivityIndex(KeyedFilerStore<Long, Void> keyedStore,
         MiruInternalActivityMarshaller internalActivityMarshaller,
         IntTermIdsKeyValueMarshaller intTermIdsKeyValueMarshaller,
         MiruFilerProvider<Long, Void> indexSizeFiler,
-        TxKeyValueStore<Integer, Integer>[] termLookup,
+        MiruFilerProvider<Long, Void>[] termLookup,
         TxKeyValueStore<Integer, MiruTermId[]>[][] termStorage)
         throws Exception {
         this.keyedStore = keyedStore;
@@ -82,34 +82,43 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
 
     @Override
     public MiruTermId[] get(String name, int index, final int fieldId, StackBuffer stackBuffer) throws IOException, InterruptedException {
-        if (termLookup[fieldId] == null) {
+        if (termLookup[fieldId] == null || index > lastId(stackBuffer)) {
             return null;
         }
 
-        Integer valuePower = termLookup[fieldId].execute(index, false, KeyValueContext::get, stackBuffer);
-        return valuePower == null ? null : termStorage[(valuePower & 0xFF)][fieldId].execute(index, false, KeyValueContext::get, stackBuffer);
-
-        /*int capacity = capacity(stackBuffer);
-        checkArgument(index >= 0 && index < capacity, "Index parameter is out of bounds. The value %s must be >=0 and <%s", index, capacity);
-        MiruTermId[] termIds = keyedStore.read(FilerIO.intBytes(index), null, (monkey, filer, _stackBuffer, lock) -> {
-            if (filer != null) {
+        int[] valuePower = { -1 };
+        termLookup[fieldId].read(-1L,
+            (monkey, filer, stackBuffer1, lock) -> {
                 synchronized (lock) {
-                    filer.seek(0);
-                    return internalActivityMarshaller.fieldValueFromFiler(filer, fieldId, _stackBuffer);
+                    int offset = index * 2;
+                    if (filer.length() >= offset + 2) {
+                        filer.seek(offset);
+                        valuePower[0] = readUnsignedShort(filer);
+                    }
                 }
-            } else {
                 return null;
-            }
-        }, stackBuffer);
-        long bytes = 0;
-        for (MiruTermId termId : termIds) {
-            bytes += termId.length();
-        }
+            },
+            stackBuffer);
+
+        MiruTermId[] termIds = valuePower[0] == -1 ? null :
+            termStorage[(valuePower[0] & 0xFF)][fieldId].execute(index, false, KeyValueContext::get, stackBuffer);
+
         LOG.inc("count>getTerms>total");
         LOG.inc("count>getTerms>" + name);
-        LOG.inc("bytes>getTerms>total", bytes);
-        LOG.inc("bytes>getTerms>" + name, bytes);
-        return termIds;*/
+        return termIds;
+    }
+
+    private int readUnsignedShort(ChunkFiler filer) throws IOException {
+        int length = 0;
+        length |= (filer.read() & 0xFF);
+        length <<= 8;
+        length |= (filer.read() & 0xFF);
+        return length;
+    }
+
+    private void writeUnsignedShort(ChunkFiler filer, int value) throws IOException {
+        filer.write((value >>> 8) & 0xFF);
+        filer.write(value & 0xFF);
     }
 
     @Override
@@ -124,16 +133,25 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
         }
 
         boolean[][] valuePowers = new boolean[16][];
-        termLookup[fieldId].multiExecute(keys,
-            (keyValueContext, index) -> {
-                Integer valueLength = keyValueContext.get();
-                if (valueLength != null) {
-                    int valuePower = valueLength & 0xFF;
-                    if (valuePowers[valuePower] == null) {
-                        valuePowers[valuePower] = new boolean[keys.length];
+        termLookup[fieldId].read(-1L,
+            (monkey, filer, stackBuffer1, lock) -> {
+                synchronized (lock) {
+                    long length = filer.length();
+                    for (int index : indexes) {
+                        int offset = index * 2;
+                        if (length >= offset + 2) {
+                            filer.seek(offset);
+                            int valuePower = readUnsignedShort(filer);
+                            if (valuePower > 0) {
+                                if (valuePowers[valuePower] == null) {
+                                    valuePowers[valuePower] = new boolean[keys.length];
+                                }
+                                valuePowers[valuePower][index] = true;
+                            }
+                        }
                     }
-                    valuePowers[valuePower][index] = true;
                 }
+                return null;
             },
             stackBuffer);
 
@@ -151,46 +169,9 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
                     stackBuffer);
             }
         }
-        return termIds;
-
-        /*if (indexes.length == 0) {
-            return Collections.emptyList();
-        }
-        byte[][] bytesForIndexes = new byte[indexes.length][];
-        for (int i = 0; i < indexes.length; i++) {
-            if (indexes[i] >= 0) {
-                bytesForIndexes[i] = FilerIO.intBytes(indexes[i]);
-            }
-        }
-
-        MiruTermId[][] results = new MiruTermId[indexes.length][];
-        keyedStore.readEach(bytesForIndexes, null, (monkey, filer, _stackBuffer, lock, index) -> {
-            if (filer != null) {
-                synchronized (lock) {
-                    filer.seek(0);
-                    return internalActivityMarshaller.fieldValueFromFiler(filer, fieldId, _stackBuffer);
-                }
-            } else {
-                return null;
-            }
-        }, results, stackBuffer);
-
-        long bytes = 0;
-        for (MiruTermId[] termIds : results) {
-            if (termIds != null) {
-                for (MiruTermId termId : termIds) {
-                    if (termId != null) {
-                        bytes += termId.length();
-                    }
-                }
-            }
-        }
         LOG.inc("count>getAllTerms>total");
         LOG.inc("count>getAllTerms>" + name);
-        LOG.inc("bytes>getAllTerms>total", bytes);
-        LOG.inc("bytes>getAllTerms>" + name, bytes);
-        return Arrays.asList(results);*/
-
+        return termIds;
     }
 
     @Override
@@ -230,6 +211,7 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
             lastIndex = Math.max(index, lastIndex);
             keyBytes[i] = FilerIO.intBytes(activityAndIdsArray[i].id);
         }
+
         MutableLong bytesWrite = new MutableLong();
         keyedStore.multiWriteNewReplace(keyBytes,
             (oldMonkey, oldFiler, stackBuffer1, oldLock, index) -> {
@@ -249,38 +231,43 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
             new Void[activityAndIdsArray.length],
             stackBuffer);
 
+        int capacity = lastIndex + 1;
         for (int i = 0; i < termLookup.length; i++) {
             int fieldId = i;
             LOG.inc("count>set>lookupFields");
             if (termLookup[fieldId] != null && termStorage[fieldId] != null) {
-                Integer[] keys = new Integer[activityAndIds.size()];
-                for (int j = 0; j < activityAndIdsArray.length; j++) {
-                    if (activityAndIdsArray[j].activity.fieldsValues[fieldId] != null) {
-                        keys[j] = activityAndIdsArray[j].id;
-                    }
-                }
-
                 @SuppressWarnings("unchecked")
                 boolean[][] valuePowers = new boolean[16][];
-                termLookup[fieldId].multiExecute(keys,
-                    (keyValueContext, index) -> {
-                        LOG.inc("count>set>lookupFieldTerms");
-                        int valueSize = intTermIdsKeyValueMarshaller.valueSizeInBytes(activityAndIdsArray[index].activity.fieldsValues[fieldId]);
-                        keyValueContext.set((valueSize & 0xFF));
-                        int valuePower = FilerIO.chunkPower(valueSize, 1);
-                        if (valuePowers[valuePower] == null) {
-                            valuePowers[valuePower] = new boolean[activityAndIdsArray.length];
+                termLookup[fieldId].readWriteAutoGrow(capacity * 2L,
+                    (monkey, filer, stackBuffer1, lock) -> {
+                        synchronized (lock) {
+                            LOG.inc("count>set>lookupFieldTerms");
+                            for (int j = 0; j < activityAndIdsArray.length; j++) {
+                                MiruTermId[] termIds = activityAndIdsArray[j].activity.fieldsValues[fieldId];
+                                if (termIds != null && termIds.length > 0) {
+                                    int index = activityAndIdsArray[j].id;
+                                    int valueSize = intTermIdsKeyValueMarshaller.valueSizeInBytes(termIds);
+                                    int valuePower = FilerIO.chunkPower(valueSize, 1);
+                                    if (valuePowers[valuePower] == null) {
+                                        valuePowers[valuePower] = new boolean[activityAndIdsArray.length];
+                                    }
+                                    valuePowers[valuePower][j] = true;
+
+                                    filer.seek(index * 2);
+                                    writeUnsignedShort(filer, valuePower);
+                                }
+                            }
                         }
-                        valuePowers[valuePower][index] = true;
+                        return null;
                     },
                     stackBuffer);
 
                 for (int valuePower = 0; valuePower < valuePowers.length; valuePower++) {
                     if (valuePowers[valuePower] != null) {
-                        Integer[] valueKeys = new Integer[keys.length];
+                        Integer[] valueKeys = new Integer[activityAndIdsArray.length];
                         for (int j = 0; j < valueKeys.length; j++) {
                             if (valuePowers[valuePower][j]) {
-                                valueKeys[j] = keys[j];
+                                valueKeys[j] = activityAndIdsArray[j].id;
                             }
                         }
                         termStorage[valuePower][fieldId].multiExecute(valueKeys,
@@ -293,7 +280,6 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
                 }
             }
         }
-
 
         LOG.inc("count>set>total");
         LOG.inc("count>set>" + name);

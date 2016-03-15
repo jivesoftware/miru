@@ -52,6 +52,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruUnreadTrackingIndex;
 import com.jivesoftware.os.miru.plugin.partition.TrackError;
 import com.jivesoftware.os.miru.service.index.KeyedFilerProvider;
+import com.jivesoftware.os.miru.service.index.MiruFilerProvider;
 import com.jivesoftware.os.miru.service.index.MiruInternalActivityMarshaller;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzCache;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzUtils;
@@ -212,18 +213,12 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         IntTermIdsKeyValueMarshaller intTermIdsKeyValueMarshaller = new IntTermIdsKeyValueMarshaller();
 
         @SuppressWarnings("unchecked")
-        TxKeyValueStore<Integer, Integer>[] termLookup = new TxKeyValueStore[schema.fieldCount()];
+        MiruFilerProvider<Long, Void>[] termLookup = new MiruFilerProvider[schema.fieldCount()];
         @SuppressWarnings("unchecked")
         TxKeyValueStore<Integer, MiruTermId[]>[][] termStorage = new TxKeyValueStore[16][schema.fieldCount()];
         for (MiruFieldDefinition fieldDefinition : schema.getFieldDefinitions()) {
             if (fieldDefinition.type.hasFeature(Feature.indexedValueBits)) {
-                termLookup[fieldDefinition.fieldId] = new TxKeyValueStore<>(skyhookCog,
-                    cogs.getSkyHookKeySemaphores(),
-                    seed,
-                    chunkStores,
-                    intUnsignedShortKeyValueMarshaller,
-                    keyBytes("termLookup-" + fieldDefinition.fieldId),
-                    4, false, 2, false);
+                termLookup[fieldDefinition.fieldId] = new KeyedFilerProvider<>(genericFilerStore, keyBytes("termLookup-" + fieldDefinition.fieldId));
 
                 for (int i = 0; i < 16; i++) {
                     termStorage[i][fieldDefinition.fieldId] = new TxKeyValueStore<>(skyhookCog,
