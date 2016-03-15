@@ -50,20 +50,41 @@ public class MiruActivityIndexTest {
 
     @Test
     public void testTermLookup() throws Exception {
+        int numberOfFields = 3;
+        int numberOfActivities = 1_000;
+
         StackBuffer stackBuffer = new StackBuffer();
         MiruTenantId tenantId = new MiruTenantId(RandomStringUtils.randomAlphabetic(10).getBytes());
         MiruActivityIndex activityIndex = buildOnDiskActivityIndex();
         List<MiruActivityAndId<MiruInternalActivity>> activityAndIds = Lists.newArrayList();
-        for (int i = 0; i < 1_000_000; i++) {
-            activityAndIds.add(new MiruActivityAndId<>(buildMiruActivity(tenantId, i, new String[0], 1), i));
+        for (int i = 0; i < numberOfActivities; i++) {
+            activityAndIds.add(new MiruActivityAndId<>(buildLookupActivity(tenantId, i, new String[0], numberOfFields), i));
         }
         activityIndex.setAndReady(schema, activityAndIds, stackBuffer);
 
-        for (int i = 0; i < 1_000_000; i++) {
-            MiruTermId[] termIds = activityIndex.get("test", i, 0, stackBuffer);
-            assertNotNull(termIds);
-            assertEquals(termIds.length, 1);
+        for (int i = 0; i < numberOfActivities; i++) {
+            MiruActivityAndId<MiruInternalActivity> activityAndId = activityAndIds.get(i);
+            for (int j = 0; j < numberOfFields; j++) {
+                MiruFieldDefinition fieldDefinition = schema.getFieldDefinition(j);
+                MiruTermId[] termIds = activityIndex.get("test", i, j, stackBuffer);
+                assertNotNull(termIds);
+                assertEquals(termIds.length, 1);
+                assertEquals(termIds[0], termComposer.compose(schema, fieldDefinition, stackBuffer, activityAndId.activity.time + "-" + j));
+            }
         }
+    }
+
+    private MiruInternalActivity buildLookupActivity(MiruTenantId tenantId, long time, String[] authz, int numberOfFields) throws Exception {
+        assertTrue(numberOfFields <= schema.fieldCount());
+        MiruInternalActivity.Builder builder = new MiruInternalActivity.Builder(schema, tenantId, time, authz, 0);
+        StackBuffer stackBuffer = new StackBuffer();
+        MiruTermId[][] terms = new MiruTermId[numberOfFields][];
+        for (int i = 0; i < numberOfFields; i++) {
+            MiruFieldDefinition fieldDefinition = schema.getFieldDefinition(i);
+            terms[i] = new MiruTermId[] { termComposer.compose(schema, fieldDefinition, stackBuffer, time + "-" + i) };
+        }
+        builder.putFieldsValues(terms);
+        return builder.build();
     }
 
     @Test(dataProvider = "miruActivityIndexDataProvider")

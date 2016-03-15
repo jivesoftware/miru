@@ -155,7 +155,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                     return true;
                 }, stackBuffer);
 
-                solutionLog.log(MiruSolutionLogLevel.INFO, "Strut accumulated {} terms took {} ms",
+                solutionLog.log(MiruSolutionLogLevel.INFO, "Strut accumulated {} terms in {} ms",
                     termIds.size(), System.currentTimeMillis() - start);
                 start = System.currentTimeMillis();
 
