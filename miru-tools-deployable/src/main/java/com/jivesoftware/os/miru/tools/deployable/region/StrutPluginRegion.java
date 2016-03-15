@@ -4,11 +4,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.query.filter.FilterStringUtil;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
@@ -81,11 +84,12 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
         final String constraintField;
         final String constraintFilters;
         final int desiredNumberOfResults;
+        final int desiredModelSize;
         final String logLevel;
 
         public StrutPluginRegionInput(String tenant, long fromTimeAgo, String fromTimeUnit, long toTimeAgo, String toTimeUnit, String catwalkId, String modelId,
             String gatherField, String gatherFilters, String featureFields, String featureFilters, String constraintField,
-            String constraintFilters, int desiredNumberOfResults, String logLevel) {
+            String constraintFilters, int desiredNumberOfResults, int desiredModelSize, String logLevel) {
             this.tenant = tenant;
             this.fromTimeAgo = fromTimeAgo;
             this.fromTimeUnit = fromTimeUnit;
@@ -100,6 +104,7 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
             this.constraintField = constraintField;
             this.constraintFilters = constraintFilters;
             this.desiredNumberOfResults = desiredNumberOfResults;
+            this.desiredModelSize = desiredModelSize;
             this.logLevel = logLevel;
         }
     }
@@ -178,7 +183,7 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                         gatherFilter,
                         featureFields,
                         featureFilter,
-                        input.desiredNumberOfResults);
+                        input.desiredModelSize);
 
                     String request = requestMapper.writeValueAsString(new MiruRequest<>("toolsStrut",
                         tenantId,
@@ -193,39 +198,60 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                             constraintFilter,
                             featureFields, // todo seperate from catwalkQuery
                             featureFilter, // todo seperate from catwalkQuery
-                            input.desiredNumberOfResults),
+                            input.desiredNumberOfResults,
+                            true),
                         MiruSolutionLogLevel.valueOf(input.logLevel)));
-                    MiruResponse<StrutAnswer> catwalkResponse = readerClient.call("",
+                    MiruResponse<StrutAnswer> strutResponse = readerClient.call("",
                         new RoundRobinStrategy(),
-                        "catwalkPluginRegion",
+                        "strutPluginRegion",
                         httpClient -> {
                             HttpResponse httpResponse = httpClient.postJson(endpoint, request, null);
                             @SuppressWarnings("unchecked")
                             MiruResponse<StrutAnswer> extractResponse = responseMapper.extractResultFromResponse(httpResponse,
                                 MiruResponse.class,
-                                new Class<?>[]{StrutAnswer.class},
+                                new Class<?>[] { StrutAnswer.class },
                                 null);
                             return new ClientResponse<>(extractResponse, true);
                         });
-                    if (catwalkResponse != null && catwalkResponse.answer != null) {
-                        response = catwalkResponse;
+                    if (strutResponse != null && strutResponse.answer != null) {
+                        response = strutResponse;
                     } else {
-                        LOG.warn("Empty catwalk response from {}", tenantId);
+                        LOG.warn("Empty strut response from {}", tenantId);
                     }
                 }
 
                 if (response != null && response.answer != null) {
                     List<HotOrNot> hotOrNots = response.answer.results;
                     if (hotOrNots != null) {
-                         Collections.sort(hotOrNots);
+                        Collections.sort(hotOrNots);
                         List<Map<String, Object>> results = new ArrayList<>();
-                         for (HotOrNot hotOrNot : hotOrNots) {
-                             Map<String, Object> r = new HashMap<>();
-                             r.put("value", hotOrNot.value.toString());
-                             r.put("score", String.valueOf(hotOrNot.score));
-                             results.add(r);
+                        StringBuilder buf = new StringBuilder();
+                        for (HotOrNot hotOrNot : hotOrNots) {
+                            List<String> features = Lists.newArrayList();
+                            List<MiruTermId[]>[] featureTerms = hotOrNot.features;
+                            for (int i = 0; i < featureTerms.length; i++) {
+                                String[] fields = featureFields[i];
+                                List<MiruTermId[]> feature = featureTerms[i];
+                                for (MiruTermId[] termIds : feature) {
+                                    if (termIds.length != fields.length) {
+                                        features.add("unknown");
+                                    } else {
+                                        for (int j = 0; j < termIds.length; j++) {
+                                            buf.append(fields[j]).append(':').append(termIds[j].toString()).append(' ');
+                                        }
+                                        features.add(buf.toString());
+                                        buf.setLength(0);
+                                    }
+                                }
+                            }
+
+                            Map<String, Object> r = new HashMap<>();
+                            r.put("value", hotOrNot.value.toString());
+                            r.put("score", String.valueOf(hotOrNot.score));
+                            r.put("features", features);
+                            results.add(r);
                         }
-                        
+
                         data.put("results", results);
                     }
 

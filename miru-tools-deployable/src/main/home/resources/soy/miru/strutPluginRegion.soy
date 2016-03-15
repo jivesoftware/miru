@@ -17,6 +17,7 @@
  * @param? constraintField
  * @param? constraintFilters
  * @param? desiredNumberOfResults
+ * @param? desiredModelSize
  * @param? results
  * @param? summary
  * @param? elapse
@@ -164,6 +165,14 @@
                                 name="desiredNumberOfResults" id="desiredNumberOfResultsPicker" data-original-title="" title="">
                         </td>
                     </tr>
+                    <tr>
+                        <td>Desired Model Size</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-desiredModelSize-autocomplete j-autocomplete-input j-ui-elem" placeholder="Desired Model Size" value="{$desiredModelSize?:''}"
+                                name="desiredModelSize" id="desiredModelSizePicker" data-original-title="" title="">
+                        </td>
+                    </tr>
                 </table>
                 <input type="submit" value="Run"/>
             </form>
@@ -182,6 +191,7 @@
                         <tr>
                             <th>Id</th>
                             <th>Score</th>
+                            <th>Features</th>
                         </tr>
                     </thead>
                     </tbody>
@@ -192,6 +202,11 @@
                                 </td>
                                 <td>
                                     {$r.score}
+                                </td>
+                                <td>
+                                    {foreach $f in $r.features}
+                                        <p>{$f}</p>
+                                    {/foreach}
                                 </td>
                             </tr>
                         {/foreach}

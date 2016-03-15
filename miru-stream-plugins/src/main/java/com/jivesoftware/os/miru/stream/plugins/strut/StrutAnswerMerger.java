@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.stream.plugins.strut;
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.miru.plugin.solution.MiruAnswerMerger;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
@@ -63,7 +64,16 @@ public class StrutAnswerMerger implements MiruAnswerMerger<StrutAnswer> {
         for (HotOrNot hotOrNot : bigger) {
             HotOrNot otherScore = smallerMap.remove(hotOrNot.value);
             if (otherScore != null) {
-                merged.add(new HotOrNot(hotOrNot.value, Math.max(hotOrNot.score, otherScore.score)));
+                List<MiruTermId[]>[] features = null;
+                if (hotOrNot.features != null && otherScore.features != null) {
+                    features = new List[hotOrNot.features.length];
+                    for (int i = 0; i < features.length; i++) {
+                        features[i] = Lists.newArrayListWithCapacity(hotOrNot.features[i].size() + otherScore.features[i].size());
+                        features[i].addAll(hotOrNot.features[i]);
+                        features[i].addAll(otherScore.features[i]);
+                    }
+                }
+                merged.add(new HotOrNot(hotOrNot.value, Math.max(hotOrNot.score, otherScore.score), features));
             } else {
                 merged.add(hotOrNot);
             }

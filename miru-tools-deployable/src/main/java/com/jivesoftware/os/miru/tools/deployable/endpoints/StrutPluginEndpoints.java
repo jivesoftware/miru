@@ -59,6 +59,7 @@ public class StrutPluginEndpoints {
         @QueryParam("constraintField") @DefaultValue("parent") String constraintField,
         @QueryParam("constraintFilters") @DefaultValue("activityType:1|2|65|72") String constraintFilters,
         @QueryParam("desiredNumberOfResults") @DefaultValue("1000") int desiredNumberOfResults,
+        @QueryParam("desiredModelSize") @DefaultValue("10000") int desiredModelSize,
         @QueryParam("logLevel") @DefaultValue("NONE") String logLevel) {
 
         try {
@@ -78,6 +79,7 @@ public class StrutPluginEndpoints {
                     constraintField,
                     constraintFilters.trim(),
                     desiredNumberOfResults,
+                    desiredModelSize,
                     logLevel)));
             return Response.ok(rendered).build();
         } catch (Exception x) {

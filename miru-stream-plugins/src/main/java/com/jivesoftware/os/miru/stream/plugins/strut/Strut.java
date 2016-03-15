@@ -1,7 +1,9 @@
 package com.jivesoftware.os.miru.stream.plugins.strut;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.Lists;
 import com.google.common.collect.MinMaxPriorityQueue;
+import com.google.common.collect.Sets;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
@@ -22,6 +24,8 @@ import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map.Entry;
+import java.util.Set;
 
 /**
  *
@@ -79,12 +83,39 @@ public class Strut {
             }
         }
 
+        @SuppressWarnings("unchecked")
+        Set<MiruTermId>[] acceptFieldTerms = new Set[schema.fieldCount()];
+        for (Entry<String, Set<MiruTermId>> entry : model.getFieldTerms().entrySet()) {
+            int fieldId = schema.getFieldId(entry.getKey());
+            acceptFieldTerms[fieldId] = entry.getValue();
+        }
+
+        // sort by descending size
+        Set<Integer> uniqueFieldIdSet = Sets.newTreeSet((o1, o2) -> Integer.compare(acceptFieldTerms[o2].size(), acceptFieldTerms[o1].size()));
+        for (int i = 0; i < featureFieldIds.length; i++) {
+            if (featureFieldIds[i] != null) {
+                for (int j = 0; j < featureFieldIds[i].length; j++) {
+                    uniqueFieldIdSet.add(featureFieldIds[i][j]);
+                }
+            }
+        }
+
+        int[] uniqueFieldIds = new int[uniqueFieldIdSet.size()];
+        int ufi = 0;
+        for (Integer fieldId : uniqueFieldIdSet) {
+            uniqueFieldIds[ufi] = fieldId;
+            ufi++;
+        }
+
         List<HotOrNot> hotOrNots = new ArrayList<>(request.query.desiredNumberOfResults);
 
         MinMaxPriorityQueue<Scored> scored = MinMaxPriorityQueue
             .expectedSize(request.query.desiredNumberOfResults)
             .maximumSize(request.query.desiredNumberOfResults)
             .create();
+
+        @SuppressWarnings("unchecked")
+        List<MiruTermId[]>[] features = request.query.includeFeatures ? new List[featureFields.length] : null;
 
         long start = System.currentTimeMillis();
         int[] featureCount = { 0 };
@@ -95,6 +126,8 @@ public class Strut {
             bitmaps,
             requestContext,
             consumeAnswers,
+            acceptFieldTerms,
+            uniqueFieldIds,
             featureFieldIds,
             true,
             (answerTermId, featureId, termIds) -> {
@@ -102,10 +135,14 @@ public class Strut {
                 if (currentPivot[0] == null || !currentPivot[0].equals(answerTermId)) {
                     if (currentPivot[0] != null) {
                         if (termCount[0] > 0) {
-                            scored.add(new Scored(answerTermId, score[0]));
+                            scored.add(new Scored(answerTermId, score[0], features));
                         }
                         score[0] = 0f;
                         termCount[0] = 0;
+
+                        if (request.query.includeFeatures) {
+                            Arrays.fill(features, null);
+                        }
                     }
                     currentPivot[0] = answerTermId;
                 }
@@ -113,21 +150,28 @@ public class Strut {
                 if (!Float.isNaN(s)) {
                     score[0] = Math.max(score[0], s);
                     termCount[0]++;
+
+                    if (request.query.includeFeatures) {
+                        if (features[featureId] == null) {
+                            features[featureId] = Lists.newArrayList();
+                        }
+                        features[featureId].add(termIds);
+                    }
                 }
                 return true;
             },
             solutionLog,
             stackBuffer);
 
-        if (score[0] > 0) {
-            scored.add(new Scored(currentPivot[0], score[0]));
+        if (termCount[0] > 0) {
+            scored.add(new Scored(currentPivot[0], score[0], features));
         }
 
         solutionLog.log(MiruSolutionLogLevel.INFO, "Strut scored {} features for {} terms in {} ms",
             featureCount[0], scored.size(), System.currentTimeMillis() - start);
 
         for (Scored s : scored) {
-            hotOrNots.add(new HotOrNot(new MiruValue(termComposer.decompose(schema, pivotFieldDefinition, stackBuffer, s.term)), s.score));
+            hotOrNots.add(new HotOrNot(new MiruValue(termComposer.decompose(schema, pivotFieldDefinition, stackBuffer, s.term)), s.score, s.features));
         }
 
         boolean resultsExhausted = request.query.timeRange.smallestTimestamp > requestContext.getTimeIndex().getLargestTimestamp();
@@ -139,10 +183,12 @@ public class Strut {
 
         MiruTermId term;
         float score;
+        List<MiruTermId[]>[] features;
 
-        public Scored(MiruTermId term, float score) {
+        public Scored(MiruTermId term, float score, List<MiruTermId[]>[] features) {
             this.term = term;
             this.score = score;
+            this.features = features;
         }
 
         @Override
