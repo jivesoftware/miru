@@ -214,7 +214,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         @SuppressWarnings("unchecked")
         TxKeyValueStore<Integer, Integer>[] termLookup = new TxKeyValueStore[schema.fieldCount()];
         @SuppressWarnings("unchecked")
-        TxKeyValueStore<Integer, MiruTermId[]>[][] termStorage = new TxKeyValueStore[schema.fieldCount()][];
+        TxKeyValueStore<Integer, MiruTermId[]>[][] termStorage = new TxKeyValueStore[16][schema.fieldCount()];
         for (MiruFieldDefinition fieldDefinition : schema.getFieldDefinitions()) {
             if (fieldDefinition.type.hasFeature(Feature.indexedValueBits)) {
                 termLookup[fieldDefinition.fieldId] = new TxKeyValueStore<>(skyhookCog,
