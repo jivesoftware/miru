@@ -75,7 +75,7 @@ public class CatwalkModelService {
         TreeSet<Integer> partitionIds = Sets.newTreeSet();
 
         Map<FieldIdsKey, MergedScores> fieldIdsToFeatureScores = new HashMap<>();
-        FeatureRange[] currentRange = {null};
+        FeatureRange[] currentRange = { null };
         String[][] featureFields = catwalkQuery.featureFields;
         client.scan(Consistency.leader_quorum,
             prefixedKeyRangeStream -> {
@@ -190,6 +190,8 @@ public class CatwalkModelService {
             int lastPartitionId = repairPartitionIds[i - 1];
             int currentPartitionId = repairPartitionIds[i];
             for (int partitionId = lastPartitionId + 1; partitionId < currentPartitionId; partitionId++) {
+                LOG.info("Requesting repair for missing partitionId:{} for tenantId:{} catwalkId:{} modelId:{}",
+                    partitionId, tenantId, catwalkId, modelId);
                 modelQueue.enqueue(tenantId, catwalkId, modelId, partitionId, catwalkQuery);
             }
         }
@@ -206,6 +208,9 @@ public class CatwalkModelService {
         int toPartitionId,
         String[][] featureFields,
         ModelFeatureScores[] models) throws Exception {
+
+        LOG.info("Saving model for tenantId:{} catwalkId:{} modelId:{} from:{} to:{}",
+            tenantId, catwalkId, modelId, fromPartitionId, toPartitionId);
 
         for (ModelFeatureScores model : models) {
             Collections.sort(model.featureScores, FEATURE_SCORE_COMPARATOR);
@@ -237,6 +242,8 @@ public class CatwalkModelService {
         client.commit(Consistency.leader_quorum, null,
             commitKeyValueStream -> {
                 for (FeatureRange range : ranges) {
+                    LOG.info("Removing model for tenantId:{} catwalkId:{} modelId:{} from:{} to:{}",
+                        tenantId, catwalkId, modelId, range.fromPartitionId, range.toPartitionId);
                     byte[] key = modelPartitionKey(catwalkId, modelId, range.fieldIds, range.fromPartitionId, range.toPartitionId);
                     if (!commitKeyValueStream.commit(key, null, -1, true)) {
                         return false;
@@ -447,13 +454,15 @@ public class CatwalkModelService {
                 }
 
                 if (merged != null) {
+                    LOG.info("Merging model for tenantId:{} catwalkId:{} modelId:{} from:{} to:{}",
+                        tenantId, catwalkId, modelId, merged.fromPartitionId, merged.toPartitionId);
                     saveModel(tenantId,
                         catwalkId,
                         modelId,
                         merged.fromPartitionId,
                         merged.toPartitionId,
-                        new String[][]{fieldIdsKey.fieldIds},
-                        new ModelFeatureScores[]{new ModelFeatureScores(true, mergedScores.scores.featureScores, mergedScores.timeRange)});
+                        new String[][] { fieldIdsKey.fieldIds },
+                        new ModelFeatureScores[] { new ModelFeatureScores(true, mergedScores.scores.featureScores, mergedScores.timeRange) });
                     removeModel(tenantId, catwalkId, modelId, mergedScores.ranges);
                 }
             } catch (Exception x) {
