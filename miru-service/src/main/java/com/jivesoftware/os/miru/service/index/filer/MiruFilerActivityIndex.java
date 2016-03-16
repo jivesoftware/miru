@@ -1,14 +1,13 @@
 package com.jivesoftware.os.miru.service.index.filer;
 
 import com.jivesoftware.os.filer.io.FilerIO;
-import com.jivesoftware.os.filer.io.api.HintAndTransaction;
 import com.jivesoftware.os.filer.io.api.KeyValueContext;
-import com.jivesoftware.os.filer.io.api.KeyedFilerStore;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.filer.io.chunk.ChunkFiler;
 import com.jivesoftware.os.filer.keyed.store.TxKeyValueStore;
+import com.jivesoftware.os.miru.api.activity.TimeAndVersion;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
-import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityAndId;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
@@ -32,23 +31,20 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
-    private final KeyedFilerStore<Long, Void> keyedStore;
+    private final MiruFilerProvider<Long, Void> timeAndVersionFiler;
     private final AtomicInteger indexSize = new AtomicInteger(-1);
-    private final MiruInternalActivityMarshaller internalActivityMarshaller;
     private final IntTermIdsKeyValueMarshaller intTermIdsKeyValueMarshaller;
     private final MiruFilerProvider<Long, Void> indexSizeFiler;
     private final MiruFilerProvider<Long, Void>[] termLookup;
     private final TxKeyValueStore<Integer, MiruTermId[]>[][] termStorage;
 
-    public MiruFilerActivityIndex(KeyedFilerStore<Long, Void> keyedStore,
-        MiruInternalActivityMarshaller internalActivityMarshaller,
+    public MiruFilerActivityIndex(MiruFilerProvider<Long, Void> timeAndVersionFiler,
         IntTermIdsKeyValueMarshaller intTermIdsKeyValueMarshaller,
         MiruFilerProvider<Long, Void> indexSizeFiler,
         MiruFilerProvider<Long, Void>[] termLookup,
         TxKeyValueStore<Integer, MiruTermId[]>[][] termStorage)
         throws Exception {
-        this.keyedStore = keyedStore;
-        this.internalActivityMarshaller = internalActivityMarshaller;
+        this.timeAndVersionFiler = timeAndVersionFiler;
         this.intTermIdsKeyValueMarshaller = intTermIdsKeyValueMarshaller;
         this.indexSizeFiler = indexSizeFiler;
         this.termLookup = termLookup;
@@ -56,26 +52,30 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
     }
 
     @Override
-    public MiruInternalActivity get(String name, final MiruTenantId tenantId, int index, StackBuffer stackBuffer) throws IOException, InterruptedException {
+    public TimeAndVersion get(String name, int index, StackBuffer stackBuffer) throws IOException, InterruptedException {
         int capacity = capacity(stackBuffer);
         checkArgument(index >= 0 && index < capacity, "Index parameter is out of bounds. The value %s must be >=0 and <%s", index, capacity);
-        MutableLong bytes = new MutableLong();
-        MiruInternalActivity activity = keyedStore.read(FilerIO.intBytes(index), null, (monkey, filer, _stackBuffer, lock) -> {
-            if (filer != null) {
-                bytes.add(filer.length());
-                synchronized (lock) {
-                    filer.seek(0);
-                    return internalActivityMarshaller.fromFiler(tenantId, filer, _stackBuffer);
+
+        long[] values = { -1L, -1L };
+        timeAndVersionFiler.read(null,
+            (monkey, filer, stackBuffer1, lock) -> {
+                if (filer != null) {
+                    synchronized (lock) {
+                        int offset = index * 16;
+                        if (filer.length() >= offset + 16) {
+                            filer.seek(offset);
+                            values[0] = FilerIO.readLong(filer, "time", stackBuffer1);
+                            values[1] = FilerIO.readLong(filer, "version", stackBuffer1);
+                        }
+                    }
                 }
-            } else {
                 return null;
-            }
-        }, stackBuffer);
+            },
+            stackBuffer);
+
         LOG.inc("count>getActivity>total");
         LOG.inc("count>getActivity>" + name);
-        LOG.inc("bytes>getActivity>total", bytes.longValue());
-        LOG.inc("bytes>getActivity>" + name, bytes.longValue());
-        return activity;
+        return (values[0] != -1L || values[1] != -1L) ? new TimeAndVersion(values[0], values[1]) : null;
     }
 
     @Override
@@ -194,6 +194,16 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
     }
 
     @Override
+    public MiruIBA[] getProp(String name, int index, int propId, StackBuffer stackBuffer) {
+        throw new UnsupportedOperationException("not yet");
+    }
+
+    @Override
+    public String[] getAuthz(String name, int index, StackBuffer stackBuffer) {
+        return null;
+    }
+
+    @Override
     public int lastId(StackBuffer stackBuffer) {
         return capacity(stackBuffer) - 1;
     }
@@ -231,26 +241,25 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
             keyBytes[i] = FilerIO.intBytes(activityAndIdsArray[i].id);
         }
 
+        int capacity = lastIndex + 1;
+
         MutableLong bytesWrite = new MutableLong();
-        keyedStore.multiWriteNewReplace(keyBytes,
-            (oldMonkey, oldFiler, stackBuffer1, oldLock, index) -> {
-                final byte[] bytes = internalActivityMarshaller.toBytes(schema, activityAndIdsArray[index].activity, stackBuffer1);
-                long filerSize = (long) 4 + bytes.length;
-                bytesWrite.add(filerSize);
-                LOG.inc("set>total");
-                LOG.inc("set>bytes", bytes.length);
-                return new HintAndTransaction<>(filerSize, (newMonkey, newFiler, stackBuffer2, newLock) -> {
-                    synchronized (newLock) {
-                        newFiler.seek(0);
-                        FilerIO.write(newFiler, bytes);
+        timeAndVersionFiler.readWriteAutoGrow(capacity * 16L,
+            (monkey, filer, stackBuffer1, lock) -> {
+                synchronized (lock) {
+                    LOG.inc("set>total");
+                    LOG.inc("set>bytes", 16);
+                    for (int j = 0; j < activityAndIdsArray.length; j++) {
+                        int index = activityAndIdsArray[j].id;
+                        filer.seek(index * 16);
+                        FilerIO.writeLong(filer, activityAndIdsArray[j].activity.time, "time", stackBuffer1);
+                        FilerIO.writeLong(filer, activityAndIdsArray[j].activity.version, "version", stackBuffer1);
                     }
-                    return null;
-                });
+                }
+                return null;
             },
-            new Void[activityAndIdsArray.length],
             stackBuffer);
 
-        int capacity = lastIndex + 1;
         for (int i = 0; i < termLookup.length; i++) {
             int fieldId = i;
             LOG.inc("count>set>lookupFields");

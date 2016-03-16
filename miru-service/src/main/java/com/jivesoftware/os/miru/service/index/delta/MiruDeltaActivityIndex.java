@@ -1,10 +1,10 @@
 package com.jivesoftware.os.miru.service.index.delta;
 
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
+import com.jivesoftware.os.miru.api.activity.TimeAndVersion;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
-import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityAndId;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
@@ -14,7 +14,6 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.IOException;
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -36,13 +35,12 @@ public class MiruDeltaActivityIndex implements MiruActivityIndex, Mergeable {
     }
 
     @Override
-    public MiruInternalActivity get(String name, MiruTenantId tenantId, int index, StackBuffer stackBuffer) throws IOException, InterruptedException {
-        //TODO consider writing through to the backing index for old indexes to avoid the double lookup
+    public TimeAndVersion get(String name, int index, StackBuffer stackBuffer) throws IOException, InterruptedException {
         MiruActivityAndId<MiruInternalActivity> activityAndId = activities.get(index);
         if (activityAndId != null) {
-            return activityAndId.activity;
+            return new TimeAndVersion(activityAndId.activity.time, activityAndId.activity.version);
         } else {
-            return backingIndex.get(name, tenantId, index, stackBuffer);
+            return backingIndex.get(name, index, stackBuffer);
         }
     }
 
@@ -59,6 +57,16 @@ public class MiruDeltaActivityIndex implements MiruActivityIndex, Mergeable {
     @Override
     public MiruTermId[][] getAll(String name, int[] indexes, int fieldId, StackBuffer stackBuffer) throws IOException, InterruptedException {
         return getAll(name, indexes, 0, indexes.length, fieldId, stackBuffer);
+    }
+
+    @Override
+    public MiruIBA[] getProp(String name, int index, int propId, StackBuffer stackBuffer) {
+        throw new UnsupportedOperationException("not yet");
+    }
+
+    @Override
+    public String[] getAuthz(String name, int index, StackBuffer stackBuffer) {
+        return null;
     }
 
     @Override

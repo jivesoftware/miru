@@ -7,7 +7,7 @@ import com.jivesoftware.os.miru.api.property.MiruPropertyName;
 public class DefaultMiruSchemaDefinition {
 
     public static final MiruFieldDefinition[] FIELDS = new MiruFieldDefinition[] {
-        new MiruFieldDefinition(0, MiruFieldName.OBJECT_ID.getFieldName(), Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
+        new MiruFieldDefinition(0, MiruFieldName.OBJECT_ID.getFieldName(), Type.singleTermIndexValueBits, MiruFieldDefinition.Prefix.NONE),
         new MiruFieldDefinition(1, MiruFieldName.VIEW_CLASS_NAME.getFieldName(), Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
         new MiruFieldDefinition(2, MiruFieldName.VERB_SUBJECT_CLASS_NAME.getFieldName(), Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
 
@@ -16,9 +16,9 @@ public class DefaultMiruSchemaDefinition {
 
         new MiruFieldDefinition(5, MiruFieldName.PARTICIPANT_IDS.getFieldName(), Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
 
-        new MiruFieldDefinition(6, MiruFieldName.ACTIVITY_PARENT.getFieldName(), Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
-        new MiruFieldDefinition(7, MiruFieldName.CONTAINER_ID.getFieldName(), Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
-        new MiruFieldDefinition(8, MiruFieldName.AUTHOR_ID.getFieldName(), Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
+        new MiruFieldDefinition(6, MiruFieldName.ACTIVITY_PARENT.getFieldName(), Type.singleTermIndexValueBits, MiruFieldDefinition.Prefix.NONE),
+        new MiruFieldDefinition(7, MiruFieldName.CONTAINER_ID.getFieldName(), Type.singleTermIndexValueBits, MiruFieldDefinition.Prefix.NONE),
+        new MiruFieldDefinition(8, MiruFieldName.AUTHOR_ID.getFieldName(), Type.singleTermIndexValueBits, MiruFieldDefinition.Prefix.NONE),
 
         new MiruFieldDefinition(9, MiruFieldName.MENTIONED_CONTAINER_IDS.getFieldName(), Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
         new MiruFieldDefinition(10, MiruFieldName.MENTIONED_USER_IDS.getFieldName(), Type.singleTerm, MiruFieldDefinition.Prefix.NONE),

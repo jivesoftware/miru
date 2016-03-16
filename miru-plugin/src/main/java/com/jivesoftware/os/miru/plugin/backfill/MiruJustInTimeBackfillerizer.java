@@ -5,6 +5,7 @@ import com.google.common.collect.Lists;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.api.activity.TimeAndVersion;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -12,7 +13,6 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
-import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndexAppender;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
@@ -89,17 +89,18 @@ public class MiruJustInTimeBackfillerizer {
                     while (intIterator.hasNext()) {
                         int i = intIterator.next();
                         if (i > lastActivityIndex && i <= lastId) {
-                            MiruInternalActivity miruActivity = requestContext.getActivityIndex().get("justInTimeBackfillerizer", tenantId, i, stackBuffer);
-                            if (miruActivity == null) {
+                            TimeAndVersion timeAndVersion = requestContext.getActivityIndex().get("justInTimeBackfillerizer", i, stackBuffer);
+                            if (timeAndVersion == null) {
                                 log.warn("Missing activity at index {}, timeIndex={}, activityIndex={}",
                                     i, requestContext.getTimeIndex().lastId(), requestContext.getActivityIndex().lastId(stackBuffer));
                                 continue;
                             }
-                            oldestBackfilledEventId = Math.min(oldestBackfilledEventId, miruActivity.time);
+                            oldestBackfilledEventId = Math.min(oldestBackfilledEventId, timeAndVersion.timestamp);
 
                             inboxIds.add(i);
 
-                            MiruIBA[] readStreamIds = propId >= 0 ? miruActivity.propsValues[propId] : null;
+                            MiruIBA[] readStreamIds = propId < 0 ? null :
+                                requestContext.getActivityIndex().getProp("justInTimeBackfillerizer", i, propId, stackBuffer);
                             if (readStreamIds == null || !Arrays.asList(readStreamIds).contains(streamIdAsIBA)) {
                                 unreadIds.add(i);
                             }

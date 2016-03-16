@@ -51,12 +51,15 @@ public class AggregateCountsAnswerMerger implements MiruAnswerMerger<AggregateCo
                     if (had == null) {
                         mergedResults.add(aggregateCount);
                     } else {
-                        mergedResults.add(new AggregateCount(aggregateCount.mostRecentActivity, aggregateCount.distinctValue, aggregateCount.count + had.count,
-                            aggregateCount.timestamp, aggregateCount.unread || had.unread));
+                        mergedResults.add(new AggregateCount(aggregateCount.distinctValue,
+                            aggregateCount.gatherLatestValues,
+                            aggregateCount.count + had.count,
+                            aggregateCount.timestamp,
+                            aggregateCount.unread || had.unread));
                     }
                 }
                 for (AggregateCount aggregateCount : currentConstraint.results) {
-                    if (carryOverCounts.containsKey(aggregateCount.distinctValue) && aggregateCount.mostRecentActivity != null) {
+                    if (carryOverCounts.containsKey(aggregateCount.distinctValue) && aggregateCount.timestamp != -1) {
                         mergedResults.add(aggregateCount);
                     }
                 }
