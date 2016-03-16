@@ -15,15 +15,18 @@ public class HotOrNot implements Comparable<HotOrNot>, Serializable {
 
     public final MiruValue value;
     public final float score;
+    public final int count;
     public final List<Hotness>[] features;
 
     @JsonCreator
     public HotOrNot(
         @JsonProperty("value") MiruValue value,
         @JsonProperty("score") float score,
+        @JsonProperty("count") int count,
         @JsonProperty("features") List<Hotness>[] features) {
         this.value = value;
         this.score = score;
+        this.count = count;
         this.features = features;
     }
 
@@ -32,6 +35,7 @@ public class HotOrNot implements Comparable<HotOrNot>, Serializable {
         return "HotOrNot{" +
             "value=" + value +
             ", score=" + score +
+            ", count=" + count +
             ", features=" + Arrays.toString(features) +
             '}';
     }

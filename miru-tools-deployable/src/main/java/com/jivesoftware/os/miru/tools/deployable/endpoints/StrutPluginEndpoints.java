@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.tools.deployable.endpoints;
 
 import com.google.common.base.Optional;
+import com.jivesoftware.os.miru.stream.plugins.strut.StrutQuery.Strategy;
 import com.jivesoftware.os.miru.tools.deployable.MiruToolsService;
 import com.jivesoftware.os.miru.tools.deployable.region.StrutPluginRegion;
 import com.jivesoftware.os.miru.tools.deployable.region.StrutPluginRegion.StrutPluginRegionInput;
@@ -58,6 +59,7 @@ public class StrutPluginEndpoints {
         @QueryParam("featureFilters") @DefaultValue("") String featureFilters,
         @QueryParam("constraintField") @DefaultValue("parent") String constraintField,
         @QueryParam("constraintFilters") @DefaultValue("activityType:1|2|65|72") String constraintFilters,
+        @QueryParam("strategy") @DefaultValue("ARITHMETIC_MEAN") String strategy,
         @QueryParam("desiredNumberOfResults") @DefaultValue("1000") int desiredNumberOfResults,
         @QueryParam("desiredModelSize") @DefaultValue("10000") int desiredModelSize,
         @QueryParam("logLevel") @DefaultValue("NONE") String logLevel) {
@@ -78,6 +80,7 @@ public class StrutPluginEndpoints {
                     featureFilters.trim(),
                     constraintField,
                     constraintFilters.trim(),
+                    Strategy.valueOf(strategy),
                     desiredNumberOfResults,
                     desiredModelSize,
                     logLevel)));

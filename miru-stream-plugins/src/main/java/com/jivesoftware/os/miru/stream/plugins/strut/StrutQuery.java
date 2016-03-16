@@ -13,6 +13,11 @@ import java.util.Arrays;
  */
 public class StrutQuery implements Serializable {
 
+    public enum Strategy {
+        MAX,
+        MEAN
+    }
+
     public final String catwalkId;
     public final String modelId;
     public final CatwalkQuery catwalkQuery;
@@ -20,6 +25,7 @@ public class StrutQuery implements Serializable {
     public final MiruTimeRange timeRange;
     public final String constraintField; // "parent"
     public final MiruFilter constraintFilter; // "I viewed"
+    public final Strategy strategy;
     /**
      * {{ user }, { user, context }, { user, activityType }, { user, context, activityType }}
      * ["bob": 7 / 100], ["bob, water cooler": 2 / 6], ["bob, water cooler, created": 1 / 3]
@@ -36,6 +42,7 @@ public class StrutQuery implements Serializable {
         @JsonProperty("timeRange") MiruTimeRange timeRange,
         @JsonProperty("constraintField") String constraintField,
         @JsonProperty("constraintFilter") MiruFilter constraintFilter,
+        @JsonProperty("strategy") Strategy strategy,
         @JsonProperty("featureFields") String[][] featureFields,
         @JsonProperty("featureFilter") MiruFilter featureFilter,
         @JsonProperty("desiredNumberOfResults") int desiredNumberOfResults,
@@ -47,6 +54,7 @@ public class StrutQuery implements Serializable {
         this.timeRange = Preconditions.checkNotNull(timeRange);
         this.constraintField = Preconditions.checkNotNull(constraintField);
         this.constraintFilter = Preconditions.checkNotNull(constraintFilter);
+        this.strategy = Preconditions.checkNotNull(strategy);
         this.featureFields = Preconditions.checkNotNull(featureFields);
         this.featureFilter = Preconditions.checkNotNull(featureFilter);
         Preconditions.checkArgument(desiredNumberOfResults > 0, "Number of results must be at least 1");
@@ -56,18 +64,19 @@ public class StrutQuery implements Serializable {
 
     @Override
     public String toString() {
-        return "StrutQuery{"
-            + "catwalkId=" + catwalkId
-            + ", modelId=" + modelId
-            + ", catwalkQuery=" + catwalkQuery
-            + ", timeRange=" + timeRange
-            + ", constraintField=" + constraintField
-            + ", constraintFilter=" + constraintFilter
-            + ", featureFields=" + Arrays.deepToString(featureFields)
-            + ", featureFilter=" + featureFilter
-            + ", desiredNumberOfResults=" + desiredNumberOfResults
-            + ", includeFeatures=" + includeFeatures
-            + '}';
+        return "StrutQuery{" +
+            "catwalkId='" + catwalkId + '\'' +
+            ", modelId='" + modelId + '\'' +
+            ", catwalkQuery=" + catwalkQuery +
+            ", timeRange=" + timeRange +
+            ", constraintField='" + constraintField + '\'' +
+            ", constraintFilter=" + constraintFilter +
+            ", strategy=" + strategy +
+            ", featureFields=" + Arrays.toString(featureFields) +
+            ", featureFilter=" + featureFilter +
+            ", desiredNumberOfResults=" + desiredNumberOfResults +
+            ", includeFeatures=" + includeFeatures +
+            '}';
     }
 
 }
