@@ -286,6 +286,13 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                     futures.add(scheduledSipExecutor.scheduleWithFixedDelay(new SipMigrateIndexRunnable(),
                         0, timings.partitionSipMigrateIntervalInMillis, TimeUnit.MILLISECONDS));
                 }
+                if (state == MiruPartitionState.online) {
+                    if (contextFactory.checkClosed(coord)) {
+                        log.warn("Found closed context for {}", coord);
+                        sipEndOfWAL.set(true);
+                        opened.markWritersClosed();
+                    }
+                }
                 return opened;
             } else {
                 return accessor;
@@ -985,8 +992,16 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                                 }
                             }
 
-                            if (sip(accessor, stackBuffer)) {
+                            SipResult sipResult = sip(accessor, stackBuffer);
+                            if (sipResult.sippedEndOfWAL) {
                                 sipEndOfWAL.set(true);
+                            }
+                            if (sipResult.sippedEndOfStream) {
+                                synchronized (factoryLock) {
+                                    if (accessor == accessorRef.get() && !accessor.hasOpenWriters()) {
+                                        contextFactory.markClosed(coord);
+                                    }
+                                }
                             }
                         } else {
                             accessor.refundChits(persistentMergeChits);
@@ -1000,7 +1015,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
             }
         }
 
-        private boolean sip(final MiruPartitionAccessor<BM, IBM, C, S> accessor, StackBuffer stackBuffer) throws Exception {
+        private SipResult sip(final MiruPartitionAccessor<BM, IBM, C, S> accessor, StackBuffer stackBuffer) throws Exception {
 
             final MiruSipTracker<S> sipTracker = sipTrackerFactory.create(accessor.seenLastSip.get());
 
@@ -1014,6 +1029,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                 partitionSipBatchSize);
 
             boolean sippedEndOfWAL = false;
+            boolean sippedEndOfStream = false;
 
             while (accessorRef.get() == accessor && sippedActivity != null) {
                 if (Thread.interrupted()) {
@@ -1046,7 +1062,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                     log.info("Sipped to end of stream for {}", coord);
                     long threshold = first ? 0 : timings.partitionSipNotifyEndOfStreamMillis;
                     sippedEndOfWAL = true;
-                    accessor.notifyEndOfStream(threshold);
+                    sippedEndOfStream = accessor.notifyEndOfStream(threshold);
                     break;
                 } else if (sipCursor == null) {
                     log.warn("No cursor for {}", coord);
@@ -1069,7 +1085,17 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                 accessor.merge(persistentMergeExecutor, accessor.persistentContext, persistentMergeChits, trackError);
             }
 
-            return sippedEndOfWAL;
+            return new SipResult(sippedEndOfWAL, sippedEndOfStream);
+        }
+
+        private class SipResult {
+            private final boolean sippedEndOfWAL;
+            private final boolean sippedEndOfStream;
+
+            public SipResult(boolean sippedEndOfWAL, boolean sippedEndOfStream) {
+                this.sippedEndOfWAL = sippedEndOfWAL;
+                this.sippedEndOfStream = sippedEndOfStream;
+            }
         }
 
         private S deliver(final List<MiruPartitionedActivity> partitionedActivities, final MiruPartitionAccessor<BM, IBM, C, S> accessor,
