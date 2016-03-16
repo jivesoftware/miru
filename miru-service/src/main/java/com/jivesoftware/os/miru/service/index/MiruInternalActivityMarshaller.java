@@ -74,7 +74,7 @@ public class MiruInternalActivityMarshaller {
         long version = FilerIO.readLong(filer, "version", stackBuffer);
         String[] authz = FilerIO.readStringArray(filer, "authz", stackBuffer);
 
-        return new MiruInternalActivity(tenant, time, authz, version, values, props);
+        return new MiruInternalActivity(tenant, time, version, authz, values, props);
     }
 
     private MiruTermId[] valuesFromFiler(Filer filer, StackBuffer stackBuffer) throws IOException {

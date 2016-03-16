@@ -76,7 +76,7 @@ public class MiruActivityIndexTest {
 
     private MiruInternalActivity buildLookupActivity(MiruTenantId tenantId, long time, String[] authz, int numberOfFields) throws Exception {
         assertTrue(numberOfFields <= schema.fieldCount());
-        MiruInternalActivity.Builder builder = new MiruInternalActivity.Builder(schema, tenantId, time, authz, 0);
+        MiruInternalActivity.Builder builder = new MiruInternalActivity.Builder(schema, tenantId, time, 0, authz);
         StackBuffer stackBuffer = new StackBuffer();
         MiruTermId[][] terms = new MiruTermId[numberOfFields][];
         for (int i = 0; i < numberOfFields; i++) {
@@ -128,16 +128,19 @@ public class MiruActivityIndexTest {
     public void testGetActivity(MiruActivityIndex miruActivityIndex, MiruInternalActivity[] expectedActivities) throws IOException, InterruptedException {
         StackBuffer stackBuffer = new StackBuffer();
         assertTrue(expectedActivities.length == 3);
-        assertEquals(miruActivityIndex.get("test", expectedActivities[0].tenantId, 0, stackBuffer), expectedActivities[0]);
-        assertEquals(miruActivityIndex.get("test", expectedActivities[1].tenantId, 1, stackBuffer), expectedActivities[1]);
-        assertEquals(miruActivityIndex.get("test", expectedActivities[2].tenantId, 2, stackBuffer), expectedActivities[2]);
+        assertEquals(miruActivityIndex.get("test", 0, stackBuffer).timestamp, expectedActivities[0].time);
+        assertEquals(miruActivityIndex.get("test", 0, stackBuffer).version, expectedActivities[0].version);
+        assertEquals(miruActivityIndex.get("test", 1, stackBuffer).timestamp, expectedActivities[1].time);
+        assertEquals(miruActivityIndex.get("test", 1, stackBuffer).version, expectedActivities[1].version);
+        assertEquals(miruActivityIndex.get("test", 2, stackBuffer).timestamp, expectedActivities[2].time);
+        assertEquals(miruActivityIndex.get("test", 2, stackBuffer).version, expectedActivities[2].version);
     }
 
     @Test(dataProvider = "miruActivityIndexDataProviderWithData", expectedExceptions = IllegalArgumentException.class)
     public void testGetActivityOverCapacity(MiruActivityIndex miruActivityIndex, MiruInternalActivity[] expectedActivities) throws IOException,
         InterruptedException {
         StackBuffer stackBuffer = new StackBuffer();
-        miruActivityIndex.get("test", null, expectedActivities.length, stackBuffer); // This should throw an exception
+        miruActivityIndex.get("test", expectedActivities.length, stackBuffer); // This should throw an exception
     }
 
     @DataProvider(name = "miruActivityIndexDataProvider")
@@ -195,7 +198,7 @@ public class MiruActivityIndexTest {
 
     private MiruInternalActivity buildMiruActivity(MiruTenantId tenantId, long time, String[] authz, int numberOfRandomFields) throws Exception {
         assertTrue(numberOfRandomFields <= schema.fieldCount());
-        MiruInternalActivity.Builder builder = new MiruInternalActivity.Builder(schema, tenantId, time, authz, 0);
+        MiruInternalActivity.Builder builder = new MiruInternalActivity.Builder(schema, tenantId, time, 0, authz);
         StackBuffer stackBuffer = new StackBuffer();
         MiruTermId[][] terms = new MiruTermId[numberOfRandomFields][];
         for (int i = 0; i < numberOfRandomFields; i++) {

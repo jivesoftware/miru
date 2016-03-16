@@ -234,8 +234,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
 
         MiruActivityIndex activityIndex = new MiruDeltaActivityIndex(
             new MiruFilerActivityIndex(
-                activityFilerStore,
-                new MiruInternalActivityMarshaller(termInterner),
+                new KeyedFilerProvider<>(activityFilerStore, keyBytes("activityIndex-tav")),
                 intTermIdsKeyValueMarshaller,
                 new KeyedFilerProvider<>(activityFilerStore, keyBytes("activityIndex-size")),
                 termLookup,

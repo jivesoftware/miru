@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.service.stream;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
+import com.jivesoftware.os.miru.api.activity.TimeAndVersion;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityAndId;
 import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
@@ -189,7 +190,7 @@ public class MiruIndexer<BM extends IBM, IBM> {
 
     public void remove(MiruContext<BM, IBM, ?> context, MiruActivity activity, int id) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
-        MiruInternalActivity existing = context.activityIndex.get("remove", activity.tenantId, id, stackBuffer);
+        TimeAndVersion existing = context.activityIndex.get("remove", id, stackBuffer);
         if (existing == null) {
             log.debug("Can't remove nonexistent activity at {}\n- offered: {}", id, activity);
         } else if (activity.version <= existing.version) {

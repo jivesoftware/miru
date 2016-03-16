@@ -3,13 +3,17 @@ package com.jivesoftware.os.miru.stumptown.plugins;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
+import com.jivesoftware.os.miru.api.activity.TimeAndVersion;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
+import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
+import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
 import com.jivesoftware.os.miru.stumptown.plugins.StumptownAnswer.Waveform;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -51,7 +55,11 @@ public class Stumptown {
         for (long i = 0; i < cardinality && iter.hasNext(); i++) {
             int index = iter.next();
             if (i > (cardinality - 1 - desiredNumberOfResults)) {
-                results.add(internExtern.extern(requestContext.getActivityIndex().get(name, tenantId, index, stackBuffer), schema, stackBuffer));
+                //TODO formalize gathering of fields/terms
+                TimeAndVersion timeAndVersion = requestContext.getActivityIndex().get(name, index, stackBuffer);
+                MiruInternalActivity activity = new MiruInternalActivity(tenantId, timeAndVersion.timestamp, timeAndVersion.version, new String[0],
+                    new MiruTermId[0][], new MiruIBA[0][]);
+                results.add(internExtern.extern(activity, schema, stackBuffer));
             }
         }
         Collections.reverse(results); // chronologically descending (for proper alignment when merging/appending older partitions)

@@ -92,14 +92,20 @@ public class MiruInternalActivityMarshallerNGTest {
         MiruInternalActivity expResult = activity();
         ByteArrayFiler filer = new ByteArrayFiler(instance.toBytes(schema, expResult, stackBuffer));
         MiruInternalActivity result = instance.fromFiler(new MiruTenantId("abc".getBytes()), filer, stackBuffer);
-        Assert.assertEquals(result, expResult);
+        Assert.assertEquals(result.tenantId, expResult.tenantId);
+        Assert.assertEquals(result.authz, expResult.authz);
+        Assert.assertEquals(result.time, expResult.time);
+        Assert.assertEquals(result.version, expResult.version);
+        Assert.assertEquals(result.fieldsValues, expResult.fieldsValues);
+        Assert.assertEquals(result.propsValues, expResult.propsValues);
     }
 
     private MiruInternalActivity activity() {
         return new MiruInternalActivity(
             new MiruTenantId("abc".getBytes()),
             1,
-            new String[] { "foo" }, 2,
+            2,
+            new String[] { "foo" },
             new MiruTermId[][] {
                 null, null, { new MiruTermId("a".getBytes()) }, { new MiruTermId("b".getBytes()), new MiruTermId("c".getBytes()) }
             },

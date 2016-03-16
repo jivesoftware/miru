@@ -1,11 +1,14 @@
 package com.jivesoftware.os.miru.stream.plugins.filter;
 
 import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
+import com.jivesoftware.os.miru.api.activity.TimeAndVersion;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
+import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition.Feature;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -17,9 +20,7 @@ import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
-import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
-import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
@@ -102,6 +103,23 @@ public class AggregateCounts {
 
         StackBuffer stackBuffer = new StackBuffer();
 
+        MiruSchema schema = requestContext.getSchema();
+        int fieldId = schema.getFieldId(constraint.aggregateCountAroundField);
+        MiruFieldDefinition fieldDefinition = schema.getFieldDefinition(fieldId);
+        Preconditions.checkArgument(fieldDefinition.type.hasFeature(Feature.indexedValueBits), "You can only aggregate fields with indexedValueBits");
+
+        int[] gatherFieldIds;
+        if (constraint.gatherTermsForFields != null && constraint.gatherTermsForFields.length > 0) {
+            gatherFieldIds = new int[constraint.gatherTermsForFields.length];
+            for (int i = 0; i < gatherFieldIds.length; i++) {
+                gatherFieldIds[i] = schema.getFieldId(constraint.gatherTermsForFields[i]);
+                Preconditions.checkArgument(schema.getFieldDefinition(gatherFieldIds[i]).type.hasFeature(Feature.indexedValueBits),
+                    "You can only gather fields with indexedValueBits");
+            }
+        } else {
+            gatherFieldIds = new int[0];
+        }
+
         if (bitmaps.supportsInPlace()) {
             // don't mutate the original
             answer = bitmaps.copy(answer);
@@ -109,16 +127,15 @@ public class AggregateCounts {
 
         int collectedDistincts = 0;
         int skippedDistincts = 0;
-        Set<MiruValue> aggregateTerms;
+        Set<MiruValue> aggregated;
         if (lastReport.isPresent()) {
             collectedDistincts = lastReport.get().collectedDistincts;
             skippedDistincts = lastReport.get().skippedDistincts;
-            aggregateTerms = Sets.newHashSet(lastReport.get().aggregateTerms);
+            aggregated = Sets.newHashSet(lastReport.get().aggregateTerms);
         } else {
-            aggregateTerms = Sets.newHashSet();
+            aggregated = Sets.newHashSet();
         }
 
-        MiruSchema schema = requestContext.getSchema();
         if (!MiruFilter.NO_FILTER.equals(constraint.constraintsFilter)) {
             BM filtered = aggregateUtil.filter(name, bitmaps, schema, requestContext.getTermComposer(), requestContext.getFieldIndexProvider(),
                 constraint.constraintsFilter, solutionLog, null, requestContext.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
@@ -143,11 +160,9 @@ public class AggregateCounts {
         }
 
         MiruTermComposer termComposer = requestContext.getTermComposer();
-        MiruActivityInternExtern activityInternExtern = miruProvider.getActivityInternExtern(coord.tenantId);
+        //MiruActivityInternExtern activityInternExtern = miruProvider.getActivityInternExtern(coord.tenantId);
 
         MiruFieldIndex<BM, IBM> fieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
-        int fieldId = schema.getFieldId(constraint.aggregateCountAroundField);
-        MiruFieldDefinition fieldDefinition = schema.getFieldDefinition(fieldId);
         log.debug("fieldId={}", fieldId);
 
         List<AggregateCount> aggregateCounts = new ArrayList<>();
@@ -162,7 +177,7 @@ public class AggregateCounts {
 
             long beforeCount = counter.isPresent() ? bitmaps.cardinality(counter.get()) : bitmaps.cardinality(answer);
             CardinalityAndLastSetBit<BM> answerCollector = null;
-            for (MiruValue aggregateTerm : aggregateTerms) { // Consider
+            for (MiruValue aggregateTerm : aggregated) {
                 MiruTermId aggregateTermId = termComposer.compose(schema, fieldDefinition, stackBuffer, aggregateTerm.parts);
                 Optional<BM> optionalTermIndex = fieldIndex.get(name, fieldId, aggregateTermId).getIndex(stackBuffer);
                 if (!optionalTermIndex.isPresent()) {
@@ -201,7 +216,7 @@ public class AggregateCounts {
                     }
                 }
 
-                aggregateCounts.add(new AggregateCount(null, aggregateTerm, beforeCount - afterCount, -1L, unread));
+                aggregateCounts.add(new AggregateCount(aggregateTerm, null, beforeCount - afterCount, -1L, unread));
                 beforeCount = afterCount;
             }
 
@@ -212,13 +227,10 @@ public class AggregateCounts {
                     break;
                 }
 
-                MiruInternalActivity activity = requestContext.getActivityIndex().get(name, coord.tenantId, lastSetBit, stackBuffer);
-                if (activity == null) {
-                    log.warn("Missing activity for tenant: {} with id: {} size: {}",
-                        coord.tenantId, lastSetBit, requestContext.getActivityIndex().lastId(stackBuffer));
+                MiruTermId[] fieldValues = requestContext.getActivityIndex().get(name, lastSetBit, fieldId, stackBuffer);
+                if (log.isTraceEnabled()) {
+                    log.trace("fieldValues={}", Arrays.toString(fieldValues));
                 }
-                MiruTermId[] fieldValues = activity != null ? activity.fieldsValues[fieldId] : null;
-                log.trace("fieldValues={}", (Object) fieldValues);
                 if (fieldValues == null || fieldValues.length == 0) {
                     if (bitmaps.supportsInPlace()) {
                         BM removeUnknownField = bitmaps.createWithBits(lastSetBit);
@@ -232,8 +244,8 @@ public class AggregateCounts {
 
                 } else {
                     MiruTermId aggregateTermId = fieldValues[0]; // Kinda lame but for now we don't see a need for multi field aggregation.
-                    MiruValue aggregateTerm = new MiruValue(termComposer.decompose(schema, fieldDefinition, stackBuffer, aggregateTermId));
-                    aggregateTerms.add(aggregateTerm);
+                    MiruValue aggregateValue = new MiruValue(termComposer.decompose(schema, fieldDefinition, stackBuffer, aggregateTermId));
+                    aggregated.add(aggregateValue);
 
                     Optional<BM> optionalTermIndex = fieldIndex.get(name, fieldId, aggregateTermId).getIndex(stackBuffer);
                     checkState(optionalTermIndex.isPresent(), "Unable to load inverted index for aggregateTermId: " + aggregateTermId);
@@ -272,11 +284,27 @@ public class AggregateCounts {
                             }
                         }
 
+                        //TODO much more efficient to accumulate lastSetBits and gather these once at the end
+                        MiruValue[][] gatherValues = new MiruValue[gatherFieldIds.length][];
+                        for (int i = 0; i < gatherFieldIds.length; i++) {
+                            MiruTermId[] termIds = requestContext.getActivityIndex().get(name, lastSetBit, gatherFieldIds[i], stackBuffer);
+                            MiruValue[] gather = new MiruValue[termIds.length];
+                            for (int j = 0; j < gather.length; j++) {
+                                gather[j] = new MiruValue(termComposer.decompose(schema,
+                                    schema.getFieldDefinition(gatherFieldIds[i]),
+                                    stackBuffer,
+                                    termIds[j]));
+                            }
+                            gatherValues[i] = gather;
+                        }
+                        //TODO much more efficient to accumulate lastSetBits and gather these once at the end
+                        TimeAndVersion activity = requestContext.getActivityIndex().get(name, lastSetBit, stackBuffer);
+
                         AggregateCount aggregateCount = new AggregateCount(
-                            constraint.includeMostRecentActivity ? activityInternExtern.extern(activity, schema, stackBuffer) : null,
-                            aggregateTerm,
+                            aggregateValue,
+                            gatherValues,
                             beforeCount - afterCount,
-                            activity.time,
+                            activity.timestamp,
                             unread);
                         aggregateCounts.add(aggregateCount);
 
@@ -290,7 +318,7 @@ public class AggregateCounts {
                 }
             }
         }
-        return new AggregateCountsAnswerConstraint(aggregateCounts, aggregateTerms, skippedDistincts, collectedDistincts);
+        return new AggregateCountsAnswerConstraint(aggregateCounts, aggregated, skippedDistincts, collectedDistincts);
     }
 
 }

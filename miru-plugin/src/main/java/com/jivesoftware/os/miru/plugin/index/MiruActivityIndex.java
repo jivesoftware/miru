@@ -6,7 +6,9 @@
 package com.jivesoftware.os.miru.plugin.index;
 
 import com.jivesoftware.os.filer.io.api.StackBuffer;
+import com.jivesoftware.os.miru.api.activity.TimeAndVersion;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
+import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import java.io.IOException;
@@ -17,13 +19,12 @@ import java.util.List;
 public interface MiruActivityIndex {
 
     /**
-     * Returns the activity that was recorded at the given index
+     * Returns the time and version that was recorded at the given index
      *
-     * @param tenantId the tenant
      * @param index the index of the activity
      * @return the activity at the given index
      */
-    MiruInternalActivity get(String name, MiruTenantId tenantId, int index, StackBuffer stackBuffer) throws IOException, InterruptedException;
+    TimeAndVersion get(String name, int index, StackBuffer stackBuffer) throws IOException, InterruptedException;
 
     /**
      * Get the terms from the given field for the activity at the requested index.
@@ -42,6 +43,23 @@ public interface MiruActivityIndex {
      * @return the terms
      */
     MiruTermId[][] getAll(String name, int[] indexes, int fieldId, StackBuffer stackBuffer) throws IOException, InterruptedException;
+
+    /**
+     * Get the values from the given property for the activity at the requested index.
+     *
+     * @param index the activity index
+     * @param propId the property
+     * @return the terms
+     */
+    MiruIBA[] getProp(String name, int index, int propId, StackBuffer stackBuffer);
+
+    /**
+     * Get the authz for the activity at the requested index.
+     *
+     * @param index the activity index
+     * @return the terms
+     */
+    String[] getAuthz(String name, int index, StackBuffer stackBuffer);
 
     /**
      * Get the terms from the given field for each activity index.

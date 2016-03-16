@@ -7,7 +7,10 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
+import com.jivesoftware.os.miru.api.activity.TimeAndVersion;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
+import com.jivesoftware.os.miru.api.base.MiruIBA;
+import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
@@ -175,13 +178,19 @@ public class FullText {
             int _i = i;
             if (scores[i] > minScore) {
                 RawBitScore bitScore = new RawBitScore(new Promise<>(() -> {
-                    MiruInternalActivity internalActivity = requestContext.getActivityIndex().get(name, request.tenantId, ids[_i], stackBuffer);
+                    //TODO formalize gathering of fields/terms
+                    TimeAndVersion timeAndVersion = requestContext.getActivityIndex().get(name, ids[_i], stackBuffer);
+                    MiruInternalActivity internalActivity = new MiruInternalActivity(request.tenantId, timeAndVersion.timestamp, timeAndVersion.version,
+                        new String[0], new MiruTermId[0][], new MiruIBA[0][]);
                     return internExtern.extern(internalActivity, schema, stackBuffer);
                 }), ids[i], scores[i]);
                 scored.add(bitScore);
             } else if (acceptableBelowMin.intValue() > 0) {
                 RawBitScore bitScore = new RawBitScore(new Promise<>(() -> {
-                    MiruInternalActivity internalActivity = requestContext.getActivityIndex().get(name, request.tenantId, ids[_i], stackBuffer);
+                    //TODO formalize gathering of fields/terms
+                    TimeAndVersion timeAndVersion = requestContext.getActivityIndex().get(name, ids[_i], stackBuffer);
+                    MiruInternalActivity internalActivity = new MiruInternalActivity(request.tenantId, timeAndVersion.timestamp, timeAndVersion.version,
+                        new String[0], new MiruTermId[0][], new MiruIBA[0][]);
                     return internExtern.extern(internalActivity, schema, stackBuffer);
                 }), ids[i], scores[i]);
                 scored.add(bitScore);
@@ -208,7 +217,10 @@ public class FullText {
         MiruIntIterator iter = bitmaps.descendingIntIterator(answer);
         while (iter.hasNext()) {
             int lastSetBit = iter.next();
-            MiruInternalActivity internalActivity = requestContext.getActivityIndex().get(name, request.tenantId, lastSetBit, stackBuffer);
+            //TODO formalize gathering of fields/terms
+            TimeAndVersion timeAndVersion = requestContext.getActivityIndex().get(name, lastSetBit, stackBuffer);
+            MiruInternalActivity internalActivity = new MiruInternalActivity(request.tenantId, timeAndVersion.timestamp, timeAndVersion.version,
+                new String[0], new MiruTermId[0][], new MiruIBA[0][]);
             float score = 0f; //TODO ?
             ActivityScore activityScore = new ActivityScore(internExtern.extern(internalActivity, schema, stackBuffer), score);
             activityScores.add(activityScore);

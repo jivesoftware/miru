@@ -71,8 +71,8 @@ public class MiruActivityInternExtern {
                 new MiruInternalActivity.Builder(schema,
                     tenantInterner.intern(activity.tenantId.getBytes()),
                     activity.time,
-                    internAuthz(activity.authz),
-                    activity.version)
+                    activity.version,
+                    internAuthz(activity.authz))
                     .putFieldsValues(internFields(activity.fieldsValues, schema, stackBuffer))
                     .putPropsValues(internProps(activity.propsValues, schema))
                     .build(),
