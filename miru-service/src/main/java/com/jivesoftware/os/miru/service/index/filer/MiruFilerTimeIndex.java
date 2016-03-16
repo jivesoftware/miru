@@ -207,15 +207,16 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
     @Override
     public long getTimestamp(final int id, StackBuffer stackBuffer) throws IOException, InterruptedException {
         if (id >= timestampsLength) {
-            return 0l;
+            return 0L;
         }
         long ts = filerProvider.read(null, (monkey, filer, _stackBuffer, lock) -> {
-            long timestamp;
-            synchronized (lock) {
-                filer.seek(HEADER_SIZE_IN_BYTES + searchIndexSizeInBytes + id * timestampSize);
-                timestamp = FilerIO.readLong(filer, "ts", _stackBuffer);
+            long timestamp = 0L;
+            if (filer != null) {
+                synchronized (lock) {
+                    filer.seek(HEADER_SIZE_IN_BYTES + searchIndexSizeInBytes + id * timestampSize);
+                    timestamp = FilerIO.readLong(filer, "ts", _stackBuffer);
+                }
             }
-
             return timestamp;
         }, stackBuffer);
         log.inc("get>total");

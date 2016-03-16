@@ -87,13 +87,15 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
         }
 
         int[] valuePower = { -1 };
-        termLookup[fieldId].read(-1L,
+        termLookup[fieldId].read(null,
             (monkey, filer, stackBuffer1, lock) -> {
-                synchronized (lock) {
-                    int offset = index * 2;
-                    if (filer.length() >= offset + 2) {
-                        filer.seek(offset);
-                        valuePower[0] = readUnsignedShort(filer);
+                if (filer != null) {
+                    synchronized (lock) {
+                        int offset = index * 2;
+                        if (filer.length() >= offset + 2) {
+                            filer.seek(offset);
+                            valuePower[0] = readUnsignedShort(filer);
+                        }
                     }
                 }
                 return null;
@@ -146,24 +148,26 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
         }
 
         boolean[][] valuePowers = new boolean[16][];
-        termLookup[fieldId].read(-1L,
+        termLookup[fieldId].read(null,
             (monkey, filer, stackBuffer1, lock) -> {
                 synchronized (lock) {
-                    long filerLength = filer.length();
-                    for (int i = 0; i < length; i++) {
-                        int index = indexes[offset + i];
-                        if (index == -1) {
-                            continue;
-                        }
-                        int filerOffset = index * 2;
-                        if (filerLength >= filerOffset + 2) {
-                            filer.seek(filerOffset);
-                            int valuePower = readUnsignedShort(filer);
-                            if (valuePower > 0) {
-                                if (valuePowers[valuePower] == null) {
-                                    valuePowers[valuePower] = new boolean[length];
+                    if (filer != null) {
+                        long filerLength = filer.length();
+                        for (int i = 0; i < length; i++) {
+                            int index = indexes[offset + i];
+                            if (index == -1) {
+                                continue;
+                            }
+                            int filerOffset = index * 2;
+                            if (filerLength >= filerOffset + 2) {
+                                filer.seek(filerOffset);
+                                int valuePower = readUnsignedShort(filer);
+                                if (valuePower > 0) {
+                                    if (valuePowers[valuePower] == null) {
+                                        valuePowers[valuePower] = new boolean[length];
+                                    }
+                                    valuePowers[valuePower][i] = true;
                                 }
-                                valuePowers[valuePower][i] = true;
                             }
                         }
                     }
