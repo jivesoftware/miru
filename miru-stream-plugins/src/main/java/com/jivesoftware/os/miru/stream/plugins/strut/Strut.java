@@ -31,7 +31,8 @@ import java.util.List;
  */
 public class Strut {
 
-    private static final MetricLogger log = MetricLoggerFactory.getLogger();
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
+
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
 
     private final StrutModelCache cache;
@@ -129,6 +130,10 @@ public class Strut {
                 }
                 float s = model.score(featureId, termIds, 0f);
                 if (!Float.isNaN(s)) {
+                    if (s > 1.0) {
+                        LOG.warn("Encountered score {} > 1.0 for answerTermId:{} featureId:{} termIds:{}",
+                            s, answerTermId, featureId, Arrays.toString(termIds));
+                    }
                     //TODO tiered scoring based on thresholds
                     score[0] = score(score[0], s, request.query.strategy);
                     termCount[0]++;
