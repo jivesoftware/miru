@@ -94,7 +94,7 @@ public class StrutAnswerMerger implements MiruAnswerMerger<StrutAnswer> {
         if (strategy == Strategy.MAX) {
             return Math.max(left.score, right.score);
         } else if (strategy == Strategy.MEAN) {
-            return (left.score * right.count + right.score * left.count) / (left.count + right.count);
+            return (left.score * left.count + right.score * right.count) / (left.count + right.count);
         }
         throw new UnsupportedOperationException("Strategy not supported: " + strategy);
     }

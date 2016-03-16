@@ -129,6 +129,7 @@ public class Strut {
                 }
                 float s = model.score(featureId, termIds, 0f);
                 if (!Float.isNaN(s)) {
+                    //TODO tiered scoring based on thresholds
                     score[0] = score(score[0], s, request.query.strategy);
                     termCount[0]++;
 
