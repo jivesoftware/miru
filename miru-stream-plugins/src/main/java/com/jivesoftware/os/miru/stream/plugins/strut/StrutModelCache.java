@@ -63,7 +63,9 @@ public class StrutModelCache {
 
                 CatwalkModel catwalkModel = responseMapper.extractResultFromResponse(response, CatwalkModel.class, null);
                 if (catwalkModel == null) {
-                    throw new IllegalStateException("Model not available");
+                    throw new IllegalStateException("Model not available," +
+                        " status code: " + response.getStatusCode() +
+                        " reason: " + response.getStatusReasonPhrase());
                 }
                 return convert(catwalkQuery, catwalkModel);
             });
