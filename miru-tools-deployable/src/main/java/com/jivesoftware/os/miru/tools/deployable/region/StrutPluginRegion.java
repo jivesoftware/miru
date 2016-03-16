@@ -25,6 +25,7 @@ import com.jivesoftware.os.miru.stream.plugins.strut.HotOrNot.Hotness;
 import com.jivesoftware.os.miru.stream.plugins.strut.StrutAnswer;
 import com.jivesoftware.os.miru.stream.plugins.strut.StrutConstants;
 import com.jivesoftware.os.miru.stream.plugins.strut.StrutQuery;
+import com.jivesoftware.os.miru.stream.plugins.strut.StrutQuery.Strategy;
 import com.jivesoftware.os.miru.ui.MiruPageRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
@@ -83,13 +84,14 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
         final String featureFilters;
         final String constraintField;
         final String constraintFilters;
+        final Strategy strategy;
         final int desiredNumberOfResults;
         final int desiredModelSize;
         final String logLevel;
 
         public StrutPluginRegionInput(String tenant, long fromTimeAgo, String fromTimeUnit, long toTimeAgo, String toTimeUnit, String catwalkId, String modelId,
             String gatherField, String gatherFilters, String featureFields, String featureFilters, String constraintField,
-            String constraintFilters, int desiredNumberOfResults, int desiredModelSize, String logLevel) {
+            String constraintFilters, Strategy strategy, int desiredNumberOfResults, int desiredModelSize, String logLevel) {
             this.tenant = tenant;
             this.fromTimeAgo = fromTimeAgo;
             this.fromTimeUnit = fromTimeUnit;
@@ -103,6 +105,7 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
             this.featureFilters = featureFilters;
             this.constraintField = constraintField;
             this.constraintFilters = constraintFilters;
+            this.strategy = strategy;
             this.desiredNumberOfResults = desiredNumberOfResults;
             this.desiredModelSize = desiredModelSize;
             this.logLevel = logLevel;
@@ -150,7 +153,9 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                 data.put("featureFilters", input.featureFilters);
                 data.put("constraintField", input.constraintField);
                 data.put("constraintFilters", input.constraintFilters);
+                data.put("strategy", input.strategy.name());
                 data.put("desiredNumberOfResults", input.desiredNumberOfResults);
+                data.put("desiredModelSize", input.desiredModelSize);
 
                 SnowflakeIdPacker snowflakeIdPacker = new SnowflakeIdPacker();
                 long jiveCurrentTime = new JiveEpochTimestampProvider().getTimestamp();
@@ -196,6 +201,7 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                             new MiruTimeRange(fromTime, toTime),
                             input.constraintField,
                             constraintFilter,
+                            input.strategy,
                             featureFields, // todo seperate from catwalkQuery
                             featureFilter, // todo seperate from catwalkQuery
                             input.desiredNumberOfResults,

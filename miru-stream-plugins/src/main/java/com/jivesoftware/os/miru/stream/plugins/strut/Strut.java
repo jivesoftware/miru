@@ -19,6 +19,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.stream.plugins.strut.HotOrNot.Hotness;
 import com.jivesoftware.os.miru.stream.plugins.strut.StrutModelCache.StrutModel;
+import com.jivesoftware.os.miru.stream.plugins.strut.StrutQuery.Strategy;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
@@ -112,7 +113,10 @@ public class Strut {
                                 scoredFeatures = new List[features.length];
                                 System.arraycopy(features, 0, scoredFeatures, 0, features.length);
                             }
-                            scored.add(new Scored(answerTermId, score[0], scoredFeatures));
+                            scored.add(new Scored(currentPivot[0],
+                                finalizeScore(score[0], termCount[0], request.query.strategy),
+                                termCount[0],
+                                scoredFeatures));
                         }
                         score[0] = 0f;
                         termCount[0] = 0;
@@ -125,7 +129,7 @@ public class Strut {
                 }
                 float s = model.score(featureId, termIds, 0f);
                 if (!Float.isNaN(s)) {
-                    score[0] = Math.max(score[0], s);
+                    score[0] = score(score[0], s, request.query.strategy);
                     termCount[0]++;
 
                     if (request.query.includeFeatures) {
@@ -146,14 +150,15 @@ public class Strut {
             stackBuffer);
 
         if (termCount[0] > 0) {
-            scored.add(new Scored(currentPivot[0], score[0], features));
+            scored.add(new Scored(currentPivot[0], finalizeScore(score[0], termCount[0], request.query.strategy), termCount[0], features));
         }
 
         solutionLog.log(MiruSolutionLogLevel.INFO, "Strut scored {} features for {} terms in {} ms",
             featureCount[0], scored.size(), System.currentTimeMillis() - start);
 
         for (Scored s : scored) {
-            hotOrNots.add(new HotOrNot(new MiruValue(termComposer.decompose(schema, pivotFieldDefinition, stackBuffer, s.term)), s.score, s.features));
+            hotOrNots.add(new HotOrNot(new MiruValue(termComposer.decompose(schema, pivotFieldDefinition, stackBuffer, s.term)),
+                s.score, s.termCount, s.features));
         }
 
         boolean resultsExhausted = request.query.timeRange.smallestTimestamp > requestContext.getTimeIndex().getLargestTimestamp();
@@ -161,15 +166,35 @@ public class Strut {
         return new StrutAnswer(hotOrNots, resultsExhausted);
     }
 
+    private float score(float currentScore, float nextScore, Strategy strategy) {
+        if (strategy == Strategy.MAX) {
+            return Math.max(currentScore, nextScore);
+        } else if (strategy == Strategy.MEAN) {
+            return currentScore + nextScore;
+        }
+        throw new UnsupportedOperationException("Strategy not supported: " + strategy);
+    }
+
+    private float finalizeScore(float score, int termCount, Strategy strategy) {
+        if (strategy == Strategy.MAX) {
+            return score;
+        } else if (strategy == Strategy.MEAN) {
+            return score / termCount;
+        }
+        throw new UnsupportedOperationException("Strategy not supported: " + strategy);
+    }
+
     static class Scored implements Comparable<Scored> {
 
         MiruTermId term;
         float score;
+        int termCount;
         List<Hotness>[] features;
 
-        public Scored(MiruTermId term, float score, List<Hotness>[] features) {
+        public Scored(MiruTermId term, float score, int termCount, List<Hotness>[] features) {
             this.term = term;
             this.score = score;
+            this.termCount = termCount;
             this.features = features;
         }
 

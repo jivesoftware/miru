@@ -3,11 +3,11 @@ package com.jivesoftware.os.miru.stream.plugins.strut;
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.miru.plugin.solution.MiruAnswerMerger;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.stream.plugins.strut.HotOrNot.Hotness;
+import com.jivesoftware.os.miru.stream.plugins.strut.StrutQuery.Strategy;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -17,9 +17,11 @@ import java.util.Map;
  */
 public class StrutAnswerMerger implements MiruAnswerMerger<StrutAnswer> {
 
+    private final Strategy strategy;
     private final int desiredNumberOfResults;
 
-    public StrutAnswerMerger(int desiredNumberOfResults) {
+    public StrutAnswerMerger(Strategy strategy, int desiredNumberOfResults) {
+        this.strategy = strategy;
         this.desiredNumberOfResults = desiredNumberOfResults;
     }
 
@@ -74,7 +76,7 @@ public class StrutAnswerMerger implements MiruAnswerMerger<StrutAnswer> {
                         features[i].addAll(otherScore.features[i]);
                     }
                 }
-                merged.add(new HotOrNot(hotOrNot.value, Math.max(hotOrNot.score, otherScore.score), features));
+                merged.add(new HotOrNot(hotOrNot.value, mergeScores(hotOrNot, otherScore), hotOrNot.count + otherScore.count, features));
             } else {
                 merged.add(hotOrNot);
             }
@@ -86,6 +88,15 @@ public class StrutAnswerMerger implements MiruAnswerMerger<StrutAnswer> {
         } else {
             return new StrutAnswer(merged, currentAnswer.resultsExhausted);
         }
+    }
+
+    private float mergeScores(HotOrNot left, HotOrNot right) {
+        if (strategy == Strategy.MAX) {
+            return Math.max(left.score, right.score);
+        } else if (strategy == Strategy.MEAN) {
+            return (left.score * right.count + right.score * left.count) / (left.count + right.count);
+        }
+        throw new UnsupportedOperationException("Strategy not supported: " + strategy);
     }
 
     @Override

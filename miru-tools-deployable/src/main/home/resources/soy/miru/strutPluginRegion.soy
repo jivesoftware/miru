@@ -16,6 +16,7 @@
  * @param? featureFilters
  * @param? constraintField
  * @param? constraintFilters
+ * @param? strategy
  * @param? desiredNumberOfResults
  * @param? desiredModelSize
  * @param? results
@@ -155,6 +156,17 @@
                                 name="constraintFilters" id="constraintFiltersPicker" data-original-title="" title="">
                             &nbsp;
                             <em>(e.g. user:3 3765, parentType:102|2|38)</em>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Strategy</td>
+                        <td>
+                            <select style="width:120px; padding-left:10px;"
+                                class="j-strategy-autocomplete j-autocomplete-input j-ui-elem" placeholder="Strategy"
+                                name="strategy" id="strategyPicker" data-original-title="" title="">
+                                <option value="MAX" {if $strategy == 'MAX'}selected="selected"{/if}>MAX</option>
+                                <option value="MEAN" {if $strategy == 'MEAN'}selected="selected"{/if}>MEAN</option>
+                            </select>0
                         </td>
                     </tr>
                     <tr>
