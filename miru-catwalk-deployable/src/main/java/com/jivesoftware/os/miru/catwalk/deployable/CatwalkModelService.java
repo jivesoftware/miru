@@ -146,6 +146,7 @@ public class CatwalkModelService {
                             }
                         }
 
+                        currentMerged.numberOfMerges++;
                         currentMerged.latestRange = range;
                         currentMerged.latestScores = new ModelFeatureScores(scores.partitionIsClosed, merged, scores.timeRange);
                         return currentMerged;
@@ -166,6 +167,8 @@ public class CatwalkModelService {
         for (int i = 0; i < featureFields.length; i++) {
             MergedScores mergedScores = fieldIdsToFeatureScores.get(new FieldIdsKey(featureFields[i]));
             featureScores[i] = mergedScores.latestScores.featureScores;
+            LOG.info("Gathered {} scores for tenantId:{} catwalkId:{} modelId:{} feature:{} from {} models",
+                featureScores[i].size(), tenantId, catwalkId, modelId, i, 1 + mergedScores.numberOfMerges);
         }
 
         for (Map.Entry<FieldIdsKey, MergedScores> entry : fieldIdsToFeatureScores.entrySet()) {
@@ -259,7 +262,12 @@ public class CatwalkModelService {
     }
 
     private FeatureScore merge(FeatureScore a, FeatureScore b) {
-        return new FeatureScore(a.termIds, a.numerator + b.numerator, a.denominator + b.denominator);
+        long numerator = a.numerator + b.numerator;
+        long denominator = a.denominator + b.denominator;
+        if (numerator > denominator) {
+            LOG.warn("Merged numerator:{} denominator:{} for scores: {} {}", numerator, denominator, a, b);
+        }
+        return new FeatureScore(a.termIds, numerator, denominator);
     }
 
     static byte[] valueToBytes(boolean partitionIsClosed, List<FeatureScore> scores, MiruTimeRange timeRange) throws IOException {
@@ -531,6 +539,7 @@ public class CatwalkModelService {
     private static class MergedScores {
 
         boolean contiguousClosedPartitions = true;
+        int numberOfMerges = 0;
 
         FeatureRange latestRange;
         ModelFeatureScores latestScores;
