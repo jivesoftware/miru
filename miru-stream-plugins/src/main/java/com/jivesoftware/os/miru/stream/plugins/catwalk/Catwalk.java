@@ -21,6 +21,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 
@@ -93,7 +94,13 @@ public class Catwalk {
                     ands.add(primaryIndex.get(name, fieldIds[j], termIds[j]));
                 }
                 BM bitmap = bitmaps.andTx(ands, stackBuffer);
-                featureScoreResults[i].add(new FeatureScore(termIds, entry.getCount(), bitmaps.cardinality(bitmap)));
+                int numerator = entry.getCount();
+                long denominator = bitmaps.cardinality(bitmap);
+                if (numerator > denominator) {
+                    log.warn("Catwalk computed numerator:{} denominator:{} for tenantId:{} fieldIds:{} terms:{}",
+                        numerator, denominator, request.tenantId, i, Arrays.asList(fieldIds), Arrays.asList(termIds));
+                }
+                featureScoreResults[i].add(new FeatureScore(termIds, numerator, denominator));
             }
         }
 
