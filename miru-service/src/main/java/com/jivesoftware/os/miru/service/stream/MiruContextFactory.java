@@ -439,6 +439,16 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         return diskResourceLocator.getFilerFile(identifier, "obsolete").exists();
     }
 
+    public void markClosed(MiruPartitionCoord coord) throws Exception {
+        MiruResourcePartitionIdentifier identifier = new MiruPartitionCoordIdentifier(coord);
+        diskResourceLocator.getFilerFile(identifier, "closed").createNewFile();
+    }
+
+    public boolean checkClosed(MiruPartitionCoord coord) throws Exception {
+        MiruResourcePartitionIdentifier identifier = new MiruPartitionCoordIdentifier(coord);
+        return diskResourceLocator.getFilerFile(identifier, "closed").exists();
+    }
+
     public void cleanDisk(MiruPartitionCoord coord) throws IOException {
         diskResourceLocator.clean(new MiruPartitionCoordIdentifier(coord));
     }

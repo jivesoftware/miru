@@ -19,9 +19,7 @@ import com.jivesoftware.os.miru.service.stream.IntTermIdsKeyValueMarshaller;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.lang.mutable.MutableLong;
 
@@ -150,8 +148,8 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
         boolean[][] valuePowers = new boolean[16][];
         termLookup[fieldId].read(null,
             (monkey, filer, stackBuffer1, lock) -> {
-                synchronized (lock) {
-                    if (filer != null) {
+                if (filer != null) {
+                    synchronized (lock) {
                         long filerLength = filer.length();
                         for (int i = 0; i < length; i++) {
                             int index = indexes[offset + i];
