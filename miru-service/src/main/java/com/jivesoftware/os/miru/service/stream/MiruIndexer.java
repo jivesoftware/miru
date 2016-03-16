@@ -82,7 +82,7 @@ public class MiruIndexer<BM extends IBM, IBM> {
 
         // 1. Compose work
         List<Future<List<PrimaryIndexWork>>> primaryFieldsComposed = indexPrimaryFields.compose(context, internalActivityAndIds, indexExecutor);
-        List<Future<List<ValueIndexWork>>> valueBitsComposed = indexValueBits.compose(context, internalActivityAndIds, indexExecutor);
+        //List<Future<List<ValueIndexWork>>> valueBitsComposed = indexValueBits.compose(context, internalActivityAndIds, indexExecutor);
         //List<Future<List<BloomWork>>> bloomComposed = indexBloom.compose(context, internalActivityAndIds, indexExecutor);
         //List<Future<List<PairedLatestWork>>> pairedLatestComposed = indexPairedLatest.compose(context, internalActivityAndIds, indexExecutor);
 
@@ -92,11 +92,11 @@ public class MiruIndexer<BM extends IBM, IBM> {
 
         // 3. Index field values work
         List<Future<?>> primaryFieldFutures = indexPrimaryFields.index(context, coord.tenantId, primaryFieldsComposed, repair, indexExecutor);
-        List<Future<?>> valueBitsFutures = indexValueBits.index(context, coord.tenantId, valueBitsComposed, repair, indexExecutor);
+        //List<Future<?>> valueBitsFutures = indexValueBits.index(context, coord.tenantId, valueBitsComposed, repair, indexExecutor);
 
         // 4. Wait for completion
         awaitFutures(primaryFieldFutures, "indexPrimaryFields");
-        awaitFutures(valueBitsFutures, "indexValueBits");
+        //awaitFutures(valueBitsFutures, "indexValueBits");
 
         // 5. Index remaining work
         final List<Future<?>> otherFutures = new ArrayList<>();
