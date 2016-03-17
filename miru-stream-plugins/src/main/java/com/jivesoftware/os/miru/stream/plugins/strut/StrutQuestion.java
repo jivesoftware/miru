@@ -28,6 +28,7 @@ import com.jivesoftware.os.miru.plugin.solution.Question;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -150,6 +151,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             (streamBitmaps) -> {
                 long start = System.currentTimeMillis();
                 List<MiruTermId> termIds = Lists.newArrayList();
+                //TODO config batch size
                 aggregateUtil.gather("strut", bitmaps, context, eligible, pivotFieldId, 100, solutionLog, (termId) -> {
                     termIds.add(termId);
                     return true;
@@ -159,15 +161,27 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                     termIds.size(), System.currentTimeMillis() - start);
                 start = System.currentTimeMillis();
 
-                bitmaps.multiTx(
-                    (tx, stackBuffer1) -> primaryIndex.multiTxIndex("strut", pivotFieldId, termIds.toArray(new MiruTermId[0]), -1, stackBuffer1, tx),
-                    (index, bitmap) -> {
-                        if (constrainFeature != null) {
-                            bitmaps.inPlaceAnd(bitmap, constrainFeature);
+                //TODO config batch size
+                BM[] answers = bitmaps.createArrayOf(100);
+                done:
+                for (List<MiruTermId> batch : Lists.partition(termIds, answers.length)) {
+                    Arrays.fill(answers, null);
+                    bitmaps.multiTx(
+                        (tx, stackBuffer1) -> primaryIndex.multiTxIndex("strut", pivotFieldId, batch.toArray(new MiruTermId[0]), -1, stackBuffer1, tx),
+                        (index, bitmap) -> {
+                            if (constrainFeature != null) {
+                                bitmaps.inPlaceAnd(bitmap, constrainFeature);
+                            }
+                            answers[index] = bitmap;
+                        },
+                        stackBuffer);
+
+                    for (int i = 0; i < batch.size(); i++) {
+                        if (answers[i] != null && !streamBitmaps.stream(termIds.get(i), answers[i])) {
+                            break done;
                         }
-                        streamBitmaps.stream(termIds.get(index), bitmap);
-                    },
-                    stackBuffer);
+                    }
+                }
 
                 solutionLog.log(MiruSolutionLogLevel.INFO, "Strut scores took {} ms",
                     termIds.size(), System.currentTimeMillis() - start);

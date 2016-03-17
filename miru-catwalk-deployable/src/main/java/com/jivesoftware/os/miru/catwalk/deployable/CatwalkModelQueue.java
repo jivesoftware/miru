@@ -152,7 +152,7 @@ public class CatwalkModelQueue {
         byte[] modelValue = requestMapper.writeValueAsBytes(catwalkQuery);
 
         EmbeddedClient queueClient = queueClient(tenantId, catwalkId, modelId);
-        queueClient.commit(Consistency.leader_quorum,
+        queueClient.commit(Consistency.quorum,
             null,
             commitKeyValueStream -> commitKeyValueStream.commit(modelKey, modelValue, -1, false),
             10_000,
@@ -161,7 +161,7 @@ public class CatwalkModelQueue {
 
     public void remove(int queueId, List<UpdateModelRequest> processedRequests) throws Exception {
         EmbeddedClient queueClient = queueClient(queueId);
-        queueClient.commit(Consistency.leader_quorum,
+        queueClient.commit(Consistency.quorum,
             null,
             (commitKeyValueStream) -> {
                 for (UpdateModelRequest request : processedRequests) {
