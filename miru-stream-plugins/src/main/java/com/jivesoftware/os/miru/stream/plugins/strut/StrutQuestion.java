@@ -98,6 +98,8 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             ands.add(bitmaps.buildTimeRangeMask(context.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp, stackBuffer));
         }
 
+        ands.add(bitmaps.buildIndexMask(context.getActivityIndex().lastId(stackBuffer), context.getRemovalIndex().getIndex(stackBuffer)));
+
         bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
         BM eligible = bitmaps.and(ands);
 

@@ -216,6 +216,29 @@ public class Strut {
         throw new UnsupportedOperationException("Strategy not supported: " + strategy);
     }
 
+    public static void main(String[] args) {
+        float totalActivities = 3_000_000f;
+        float viewedActivities = 10_000f;
+
+        float[] viewedFeatures = { 7f, 3f, 8f };
+        float[] nonViewedFeatures = { 3f, 12f, 12f };
+
+        float pViewed = (7f / 10_000f) * (3f / 10_000f) * (8f / 10_000f) * (10_000f / 3_000_000f);
+        float pNonViewed = (3f / 2_990_000f) * (12f / 2_990_000f) * (12f / 2_990_000f) * (2_990_000f / 3_000_000f);
+
+        System.out.println(pViewed);
+        System.out.println(pNonViewed);
+        System.out.println(pViewed / pNonViewed);
+
+
+
+        /*System.out.println("" + ((7f / 10_000) * (3f / 10_000) * (8f / 10_000) * (10_000f / 3_000_000))
+            / ((10f / 3_000_000) * (15f / 3_000_000) * (20f / 3_000_000)));
+
+        System.out.println("" + ((3f / 2_990_000) * (12f / 2_990_000) * (12f / 2_990_000) * (2_990_000f / 3_000_000))
+            / ((10f / 3_000_000) * (15f / 3_000_000) * (20f / 3_000_000)));*/
+    }
+
     static class Scored implements Comparable<Scored> {
 
         MiruTermId term;

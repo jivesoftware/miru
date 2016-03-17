@@ -40,6 +40,8 @@ public class CatwalkModelServiceTest {
             new FeatureScore(terms("term7", "term8", "term9"), 3, 5));
         MiruTimeRange timeRange = new MiruTimeRange(123L, Long.MAX_VALUE - 456L);
         byte[] valueBytes = CatwalkModelService.valueToBytes(partitionIsClosed,
+            6,
+            12,
             featureScores,
             timeRange);
 

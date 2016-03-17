@@ -84,7 +84,12 @@ public class CatwalkAnswerMerger implements MiruAnswerMerger<CatwalkAnswer> {
         MiruTimeRange mergedTimeRange = new MiruTimeRange(Math.min(currentAnswer.timeRange.smallestTimestamp, lastAnswer.timeRange.smallestTimestamp),
             Math.max(currentAnswer.timeRange.largestTimestamp, lastAnswer.timeRange.largestTimestamp));
         boolean mergedResultsClosed = currentAnswer.resultsClosed && lastAnswer.resultsClosed;
-        return new CatwalkAnswer(mergedFeatures, mergedTimeRange, currentAnswer.resultsExhausted, mergedResultsClosed);
+        return new CatwalkAnswer(mergedFeatures,
+            lastAnswer.modelCount + currentAnswer.modelCount,
+            lastAnswer.totalCount + currentAnswer.totalCount,
+            mergedTimeRange,
+            currentAnswer.resultsExhausted,
+            mergedResultsClosed);
     }
 
     @Override
