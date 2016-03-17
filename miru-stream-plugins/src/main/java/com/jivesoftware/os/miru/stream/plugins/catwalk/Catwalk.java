@@ -98,7 +98,7 @@ public class Catwalk {
                 long denominator = bitmaps.cardinality(bitmap);
                 if (numerator > denominator) {
                     log.warn("Catwalk computed numerator:{} denominator:{} for tenantId:{} fieldIds:{} terms:{}",
-                        numerator, denominator, request.tenantId, i, Arrays.asList(fieldIds), Arrays.asList(termIds));
+                        numerator, denominator, request.tenantId, i, Arrays.toString(fieldIds), Arrays.toString(termIds));
                 }
                 featureScoreResults[i].add(new FeatureScore(termIds, numerator, denominator));
             }
