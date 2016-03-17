@@ -177,7 +177,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                         stackBuffer);
 
                     for (int i = 0; i < batch.size(); i++) {
-                        if (answers[i] != null && !streamBitmaps.stream(termIds.get(i), answers[i])) {
+                        if (answers[i] != null && !streamBitmaps.stream(batch.get(i), answers[i])) {
                             break done;
                         }
                     }
