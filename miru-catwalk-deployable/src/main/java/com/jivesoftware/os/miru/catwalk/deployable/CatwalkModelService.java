@@ -166,9 +166,15 @@ public class CatwalkModelService {
         List<FeatureScore>[] featureScores = new List[featureFields.length];
         for (int i = 0; i < featureFields.length; i++) {
             MergedScores mergedScores = fieldIdsToFeatureScores.get(new FieldIdsKey(featureFields[i]));
-            featureScores[i] = mergedScores.latestScores.featureScores;
-            LOG.info("Gathered {} scores for tenantId:{} catwalkId:{} modelId:{} feature:{} from {} models",
-                featureScores[i].size(), tenantId, catwalkId, modelId, i, 1 + mergedScores.numberOfMerges);
+            if (mergedScores != null) {
+                featureScores[i] = mergedScores.latestScores.featureScores;
+                LOG.info("Gathered {} scores for tenantId:{} catwalkId:{} modelId:{} feature:{} from {} models",
+                    featureScores[i].size(), tenantId, catwalkId, modelId, i, 1 + mergedScores.numberOfMerges);
+            } else {
+                featureScores[i] = Collections.emptyList();
+                LOG.info("Gathered no scores for tenantId:{} catwalkId:{} modelId:{} feature:{}",
+                    featureScores[i].size(), tenantId, catwalkId, modelId, i);
+            }
         }
 
         for (Map.Entry<FieldIdsKey, MergedScores> entry : fieldIdsToFeatureScores.entrySet()) {
