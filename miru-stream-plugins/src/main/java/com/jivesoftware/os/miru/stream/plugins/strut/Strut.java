@@ -131,10 +131,10 @@ public class Strut {
                             }
                             score[i] = 0f;
                             termCount[i] = 0;
-                        }
 
-                        if (request.query.includeFeatures) {
-                            Arrays.fill(features, null);
+                            if (request.query.includeFeatures) {
+                                Arrays.fill(features[i], null);
+                            }
                         }
                     }
                     currentPivot[0] = answerTermId;
