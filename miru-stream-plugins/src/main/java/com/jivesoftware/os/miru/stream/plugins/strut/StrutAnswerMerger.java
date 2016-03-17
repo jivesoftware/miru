@@ -71,9 +71,15 @@ public class StrutAnswerMerger implements MiruAnswerMerger<StrutAnswer> {
                 if (hotOrNot.features != null && otherScore.features != null) {
                     features = new List[hotOrNot.features.length];
                     for (int i = 0; i < features.length; i++) {
-                        features[i] = Lists.newArrayListWithCapacity(hotOrNot.features[i].size() + otherScore.features[i].size());
-                        features[i].addAll(hotOrNot.features[i]);
-                        features[i].addAll(otherScore.features[i]);
+                        int sizeA = hotOrNot.features[i] != null ? hotOrNot.features[i].size() : 0;
+                        int sizeB = otherScore.features[i] != null ? otherScore.features[i].size() : 0;
+                        features[i] = Lists.newArrayListWithCapacity(sizeA + sizeB);
+                        if (hotOrNot.features[i] != null) {
+                            features[i].addAll(hotOrNot.features[i]);
+                        }
+                        if (otherScore.features[i] != null) {
+                            features[i].addAll(otherScore.features[i]);
+                        }
                     }
                 }
                 merged.add(new HotOrNot(hotOrNot.value, mergeScores(hotOrNot, otherScore), hotOrNot.count + otherScore.count, features));

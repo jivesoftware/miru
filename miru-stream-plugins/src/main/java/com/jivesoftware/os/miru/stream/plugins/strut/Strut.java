@@ -85,14 +85,17 @@ public class Strut {
 
         List<HotOrNot> hotOrNots = new ArrayList<>(request.query.desiredNumberOfResults);
 
-        @SuppressWarnings("unchecked")
-        List<Hotness>[] features = request.query.includeFeatures ? new List[featureFields.length] : null;
-
         float[] thresholds = { 0.5f, 0.2f, 0.08f, 0f };
 
         @SuppressWarnings("unchecked")
+        List<Hotness>[][] features = request.query.includeFeatures ? new List[thresholds.length][] : null;
+        @SuppressWarnings("unchecked")
         MinMaxPriorityQueue<Scored>[] scored = new MinMaxPriorityQueue[thresholds.length];
+
         for (int i = 0; i < thresholds.length; i++) {
+            if (features != null) {
+                features[i] = new List[featureFields.length];
+            }
             scored[i] = MinMaxPriorityQueue
                 .expectedSize(request.query.desiredNumberOfResults)
                 .maximumSize(request.query.desiredNumberOfResults)
@@ -148,18 +151,18 @@ public class Strut {
                             score[i] = score(score[i], s, request.query.strategy);
                             termCount[i]++;
                         }
-                    }
 
-                    if (request.query.includeFeatures) {
-                        if (features[featureId] == null) {
-                            features[featureId] = Lists.newArrayList();
+                        if (request.query.includeFeatures) {
+                            if (features[i][featureId] == null) {
+                                features[i][featureId] = Lists.newArrayList();
+                            }
+                            MiruValue[] values = new MiruValue[termIds.length];
+                            for (int j = 0; j < termIds.length; j++) {
+                                values[j] = new MiruValue(termComposer.decompose(schema,
+                                    schema.getFieldDefinition(featureFieldIds[featureId][j]), stackBuffer, termIds[j]));
+                            }
+                            features[i][featureId].add(new Hotness(values, s));
                         }
-                        MiruValue[] values = new MiruValue[termIds.length];
-                        for (int i = 0; i < termIds.length; i++) {
-                            values[i] = new MiruValue(termComposer.decompose(schema,
-                                schema.getFieldDefinition(featureFieldIds[featureId][i]), stackBuffer, termIds[i]));
-                        }
-                        features[featureId].add(new Hotness(values, s));
                     }
                 }
                 return true;
@@ -169,7 +172,10 @@ public class Strut {
 
         for (int i = 0; i < thresholds.length; i++) {
             if (termCount[i] > 0) {
-                scored[i].add(new Scored(currentPivot[0], finalizeScore(score[i], termCount[i], request.query.strategy), termCount[i], features));
+                scored[i].add(new Scored(currentPivot[0],
+                    finalizeScore(score[i], termCount[i], request.query.strategy),
+                    termCount[i],
+                    request.query.includeFeatures ? features[i] : null));
             }
         }
 
