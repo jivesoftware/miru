@@ -128,9 +128,9 @@ public class Strut {
                     }
                     currentPivot[0] = answerTermId;
                 }
-                float s = model.score(featureId, termIds, 0f);
-                if (!Float.isNaN(s)) {
-                    if (s > 1.0) {
+                float s = model.score(featureId, termIds, Float.NaN);
+                if (!Float.isNaN(s) && s > 0.0f) {
+                    if (s > 1.0f) {
                         LOG.warn("Encountered score {} > 1.0 for answerTermId:{} featureId:{} termIds:{}",
                             s, answerTermId, featureId, Arrays.toString(termIds));
                     }
