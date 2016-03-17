@@ -85,18 +85,24 @@ public class Strut {
 
         List<HotOrNot> hotOrNots = new ArrayList<>(request.query.desiredNumberOfResults);
 
-        MinMaxPriorityQueue<Scored> scored = MinMaxPriorityQueue
-            .expectedSize(request.query.desiredNumberOfResults)
-            .maximumSize(request.query.desiredNumberOfResults)
-            .create();
-
         @SuppressWarnings("unchecked")
         List<Hotness>[] features = request.query.includeFeatures ? new List[featureFields.length] : null;
 
+        float[] thresholds = { 0.5f, 0.2f, 0.08f, 0f };
+
+        @SuppressWarnings("unchecked")
+        MinMaxPriorityQueue<Scored>[] scored = new MinMaxPriorityQueue[thresholds.length];
+        for (int i = 0; i < thresholds.length; i++) {
+            scored[i] = MinMaxPriorityQueue
+                .expectedSize(request.query.desiredNumberOfResults)
+                .maximumSize(request.query.desiredNumberOfResults)
+                .create();
+        }
+
         long start = System.currentTimeMillis();
         int[] featureCount = { 0 };
-        float[] score = { 0 };
-        int[] termCount = { 0 };
+        float[][] score = new float[thresholds.length][];
+        int[][] termCount = new int[thresholds.length][];
         MiruTermId[] currentPivot = { null };
         aggregateUtil.gatherFeatures(name,
             bitmaps,
@@ -108,19 +114,21 @@ public class Strut {
                 featureCount[0]++;
                 if (currentPivot[0] == null || !currentPivot[0].equals(answerTermId)) {
                     if (currentPivot[0] != null) {
-                        if (termCount[0] > 0) {
-                            List<Hotness>[] scoredFeatures = null;
-                            if (request.query.includeFeatures) {
-                                scoredFeatures = new List[features.length];
-                                System.arraycopy(features, 0, scoredFeatures, 0, features.length);
+                        for (int i = 0; i < thresholds.length; i++) {
+                            if (termCount[i][0] > 0) {
+                                List<Hotness>[] scoredFeatures = null;
+                                if (request.query.includeFeatures) {
+                                    scoredFeatures = new List[features.length];
+                                    System.arraycopy(features, 0, scoredFeatures, 0, features.length);
+                                }
+                                scored[i].add(new Scored(currentPivot[0],
+                                    finalizeScore(score[i][0], termCount[i][0], request.query.strategy),
+                                    termCount[i][0],
+                                    scoredFeatures));
                             }
-                            scored.add(new Scored(currentPivot[0],
-                                finalizeScore(score[0], termCount[0], request.query.strategy),
-                                termCount[0],
-                                scoredFeatures));
+                            score[i][0] = 0f;
+                            termCount[i][0] = 0;
                         }
-                        score[0] = 0f;
-                        termCount[0] = 0;
 
                         if (request.query.includeFeatures) {
                             Arrays.fill(features, null);
@@ -135,8 +143,12 @@ public class Strut {
                             s, answerTermId, featureId, Arrays.toString(termIds));
                     }
                     //TODO tiered scoring based on thresholds
-                    score[0] = score(score[0], s, request.query.strategy);
-                    termCount[0]++;
+                    for (int i = 0; i < thresholds.length; i++) {
+                        if (s > thresholds[i]) {
+                            score[i][0] = score(score[i][0], s, request.query.strategy);
+                            termCount[i][0]++;
+                        }
+                    }
 
                     if (request.query.includeFeatures) {
                         if (features[featureId] == null) {
@@ -155,16 +167,24 @@ public class Strut {
             solutionLog,
             stackBuffer);
 
-        if (termCount[0] > 0) {
-            scored.add(new Scored(currentPivot[0], finalizeScore(score[0], termCount[0], request.query.strategy), termCount[0], features));
+        for (int i = 0; i < thresholds.length; i++) {
+            if (termCount[i][0] > 0) {
+                scored[i].add(new Scored(currentPivot[0], finalizeScore(score[i][0], termCount[i][0], request.query.strategy), termCount[i][0], features));
+            }
         }
 
-        solutionLog.log(MiruSolutionLogLevel.INFO, "Strut scored {} features for {} terms in {} ms",
-            featureCount[0], scored.size(), System.currentTimeMillis() - start);
+        solutionLog.log(MiruSolutionLogLevel.INFO, "Strut scored {} features in {} ms",
+            featureCount[0], System.currentTimeMillis() - start);
 
-        for (Scored s : scored) {
-            hotOrNots.add(new HotOrNot(new MiruValue(termComposer.decompose(schema, pivotFieldDefinition, stackBuffer, s.term)),
-                s.score, s.termCount, s.features));
+        for (int i = 0; i < scored.length; i++) {
+            if (i == scored.length - 1 || scored[i].size() == request.query.desiredNumberOfResults) {
+                for (Scored s : scored[i]) {
+                    hotOrNots.add(new HotOrNot(new MiruValue(termComposer.decompose(schema, pivotFieldDefinition, stackBuffer, s.term)),
+                        s.score, s.termCount, s.features));
+                }
+                solutionLog.log(MiruSolutionLogLevel.INFO, "Strut found {} terms at threshold {}", hotOrNots.size(), thresholds[i]);
+                break;
+            }
         }
 
         boolean resultsExhausted = request.query.timeRange.smallestTimestamp > requestContext.getTimeIndex().getLargestTimestamp();
