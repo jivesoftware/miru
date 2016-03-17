@@ -122,7 +122,7 @@ public class Strut {
                                 List<Hotness>[] scoredFeatures = null;
                                 if (request.query.includeFeatures) {
                                     scoredFeatures = new List[features.length];
-                                    System.arraycopy(features[i], 0, scoredFeatures, 0, features.length);
+                                    System.arraycopy(features[i], 0, scoredFeatures, 0, features[i].length);
                                 }
                                 scored[i].add(new Scored(currentPivot[0],
                                     finalizeScore(score[i], termCount[i], request.query.strategy),
