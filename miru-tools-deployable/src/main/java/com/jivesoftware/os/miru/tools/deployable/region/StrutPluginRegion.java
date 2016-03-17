@@ -238,20 +238,22 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                             for (int i = 0; i < featureTerms.length; i++) {
                                 String[] fields = featureFields[i];
                                 List<Hotness> feature = featureTerms[i];
-                                for (Hotness hotness : feature) {
-                                    if (hotness.values.length != fields.length) {
-                                        features.add("[unknown=" + hotness.score + "]");
-                                    } else {
-                                        buf.append('[');
-                                        for (int j = 0; j < hotness.values.length; j++) {
-                                            if (j > 0) {
-                                                buf.append(',');
+                                if (feature != null) {
+                                    for (Hotness hotness : feature) {
+                                        if (hotness.values.length != fields.length) {
+                                            features.add("[unknown=" + hotness.score + "]");
+                                        } else {
+                                            buf.append('[');
+                                            for (int j = 0; j < hotness.values.length; j++) {
+                                                if (j > 0) {
+                                                    buf.append(',');
+                                                }
+                                                buf.append(fields[j]).append(':').append(valueToString(hotness.values[j]));
                                             }
-                                            buf.append(fields[j]).append(':').append(valueToString(hotness.values[j]));
+                                            buf.append('=').append(hotness.score).append("] ");
+                                            features.add(buf.toString());
+                                            buf.setLength(0);
                                         }
-                                        buf.append('=').append(hotness.score).append("] ");
-                                        features.add(buf.toString());
-                                        buf.setLength(0);
                                     }
                                 }
                             }
