@@ -5,7 +5,6 @@ import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multiset;
 import com.google.common.collect.Multiset.Entry;
-import com.google.common.collect.Sets;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -24,7 +23,6 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Set;
 
 /**
  *
@@ -115,7 +113,9 @@ public class Catwalk {
             requestContext.getTimeIndex().getSmallestTimestamp(),
             requestContext.getTimeIndex().getLargestTimestamp());
 
-        CatwalkAnswer result = new CatwalkAnswer(featureScoreResults, timeRange, resultsExhausted, resultsClosed);
+        long modelCount = bitmaps.cardinality(answer);
+        long totalCount = requestContext.getTimeIndex().lastId();
+        CatwalkAnswer result = new CatwalkAnswer(featureScoreResults, modelCount, totalCount, timeRange, resultsExhausted, resultsClosed);
         log.debug("result={}", result);
         return result;
     }

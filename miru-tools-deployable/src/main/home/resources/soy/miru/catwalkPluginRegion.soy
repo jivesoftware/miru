@@ -140,8 +140,10 @@
             </div>
             <div class="panel-body">
                 <ul>
+                    <li><h3>Model count: {$model.modelCount}</h3></li>
+                    <li><h3>Total count: {$model.totalCount}</h3></li>
                     {foreach $featureClass in $model.featureClasses}
-                        <li><h3>{$featureClass.name}</h3>
+                        <li><h3>Feature: {$featureClass.name}</h3>
                             <ul style="list-style-type:none;">
                                 <li>
                                     <table class="table table-condensed">

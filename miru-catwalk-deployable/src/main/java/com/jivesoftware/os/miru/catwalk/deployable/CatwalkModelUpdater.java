@@ -167,7 +167,7 @@ public class CatwalkModelUpdater {
                         null,
                         commitKeyValueStream -> {
                             for (UpdateModelRequest request : processedRequests) {
-                                byte[] key = modelQueue.updateModelKey(request.tenantId, request.catwalkId, request.modelId, request.partitionId);
+                                byte[] key = CatwalkModelQueue.updateModelKey(request.tenantId, request.catwalkId, request.modelId, request.partitionId);
                                 if (!commitKeyValueStream.commit(key, new byte[0], request.timestamp, false)) {
                                     return false;
                                 }
@@ -205,6 +205,8 @@ public class CatwalkModelUpdater {
             ModelFeatureScores[] featureScores = new ModelFeatureScores[updateModelRequest.catwalkQuery.featureFields.length];
             for (int i = 0; i < featureScores.length; i++) {
                 featureScores[i] = new ModelFeatureScores(catwalkResponse.answer.resultsClosed,
+                    catwalkResponse.answer.modelCount,
+                    catwalkResponse.answer.totalCount,
                     catwalkResponse.answer.results[i],
                     catwalkResponse.answer.timeRange);
             }
@@ -218,7 +220,7 @@ public class CatwalkModelUpdater {
     public void updateModel(MiruTenantId tenantId, String catwalkId, String modelId, int partitionId, CatwalkQuery catwalkQuery) throws Exception {
         long start = System.currentTimeMillis();
 
-        byte[] modelKey = modelQueue.updateModelKey(tenantId, catwalkId, modelId, partitionId);
+        byte[] modelKey = CatwalkModelQueue.updateModelKey(tenantId, catwalkId, modelId, partitionId);
 
         EmbeddedClient processedClient = processedClient(tenantId, catwalkId, modelId);
         TimestampedValue timestampedValue = processedClient.getTimestampedValue(Consistency.quorum, null, modelKey);

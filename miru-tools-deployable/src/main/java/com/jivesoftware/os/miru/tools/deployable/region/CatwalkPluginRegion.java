@@ -187,7 +187,7 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
                             @SuppressWarnings("unchecked")
                             MiruResponse<CatwalkAnswer> extractResponse = responseMapper.extractResultFromResponse(httpResponse,
                                 MiruResponse.class,
-                                new Class<?>[]{CatwalkAnswer.class},
+                                new Class<?>[] { CatwalkAnswer.class },
                                 null);
                             return new ClientResponse<>(extractResponse, true);
                         });
@@ -232,6 +232,8 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
                         }
 
                         HashMap<String, Object> model = new HashMap<>();
+                        model.put("modelCount", String.valueOf(response.answer.modelCount));
+                        model.put("totalCount", String.valueOf(response.answer.totalCount));
                         model.put("featureClasses", featureClasses);
                         data.put("model", model);
                     }
@@ -276,7 +278,7 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
                 if (c != 0) {
                     return c;
                 }
-            }           
+            }
             return 0;
         }
     }
