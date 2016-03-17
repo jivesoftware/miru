@@ -101,8 +101,8 @@ public class Strut {
 
         long start = System.currentTimeMillis();
         int[] featureCount = { 0 };
-        float[][] score = new float[thresholds.length][];
-        int[][] termCount = new int[thresholds.length][];
+        float[] score = new float[thresholds.length];
+        int[] termCount = new int[thresholds.length];
         MiruTermId[] currentPivot = { null };
         aggregateUtil.gatherFeatures(name,
             bitmaps,
@@ -115,19 +115,19 @@ public class Strut {
                 if (currentPivot[0] == null || !currentPivot[0].equals(answerTermId)) {
                     if (currentPivot[0] != null) {
                         for (int i = 0; i < thresholds.length; i++) {
-                            if (termCount[i][0] > 0) {
+                            if (termCount[i] > 0) {
                                 List<Hotness>[] scoredFeatures = null;
                                 if (request.query.includeFeatures) {
                                     scoredFeatures = new List[features.length];
                                     System.arraycopy(features, 0, scoredFeatures, 0, features.length);
                                 }
                                 scored[i].add(new Scored(currentPivot[0],
-                                    finalizeScore(score[i][0], termCount[i][0], request.query.strategy),
-                                    termCount[i][0],
+                                    finalizeScore(score[i], termCount[i], request.query.strategy),
+                                    termCount[i],
                                     scoredFeatures));
                             }
-                            score[i][0] = 0f;
-                            termCount[i][0] = 0;
+                            score[i] = 0f;
+                            termCount[i] = 0;
                         }
 
                         if (request.query.includeFeatures) {
@@ -145,8 +145,8 @@ public class Strut {
                     //TODO tiered scoring based on thresholds
                     for (int i = 0; i < thresholds.length; i++) {
                         if (s > thresholds[i]) {
-                            score[i][0] = score(score[i][0], s, request.query.strategy);
-                            termCount[i][0]++;
+                            score[i] = score(score[i], s, request.query.strategy);
+                            termCount[i]++;
                         }
                     }
 
@@ -168,8 +168,8 @@ public class Strut {
             stackBuffer);
 
         for (int i = 0; i < thresholds.length; i++) {
-            if (termCount[i][0] > 0) {
-                scored[i].add(new Scored(currentPivot[0], finalizeScore(score[i][0], termCount[i][0], request.query.strategy), termCount[i][0], features));
+            if (termCount[i] > 0) {
+                scored[i].add(new Scored(currentPivot[0], finalizeScore(score[i], termCount[i], request.query.strategy), termCount[i], features));
             }
         }
 
