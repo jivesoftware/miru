@@ -150,18 +150,18 @@ public class Strut {
                         if (s > thresholds[i]) {
                             score[i] = score(score[i], s, request.query.strategy);
                             termCount[i]++;
-                        }
 
-                        if (request.query.includeFeatures) {
-                            if (features[i][featureId] == null) {
-                                features[i][featureId] = Lists.newArrayList();
+                            if (request.query.includeFeatures) {
+                                if (features[i][featureId] == null) {
+                                    features[i][featureId] = Lists.newArrayList();
+                                }
+                                MiruValue[] values = new MiruValue[termIds.length];
+                                for (int j = 0; j < termIds.length; j++) {
+                                    values[j] = new MiruValue(termComposer.decompose(schema,
+                                        schema.getFieldDefinition(featureFieldIds[featureId][j]), stackBuffer, termIds[j]));
+                                }
+                                features[i][featureId].add(new Hotness(values, s));
                             }
-                            MiruValue[] values = new MiruValue[termIds.length];
-                            for (int j = 0; j < termIds.length; j++) {
-                                values[j] = new MiruValue(termComposer.decompose(schema,
-                                    schema.getFieldDefinition(featureFieldIds[featureId][j]), stackBuffer, termIds[j]));
-                            }
-                            features[i][featureId].add(new Hotness(values, s));
                         }
                     }
                 }
