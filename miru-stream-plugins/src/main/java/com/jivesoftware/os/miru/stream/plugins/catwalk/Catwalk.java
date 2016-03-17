@@ -7,6 +7,7 @@ import com.google.common.collect.Multiset;
 import com.google.common.collect.Multiset.Entry;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
+import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
@@ -38,6 +39,7 @@ public class Catwalk {
         MiruBitmaps<BM, IBM> bitmaps,
         MiruRequestContext<BM, IBM, ?> requestContext,
         MiruRequest<CatwalkQuery> request,
+        MiruPartitionCoord coord,
         Optional<CatwalkReport> report,
         BM answer,
         MiruSolutionLog solutionLog) throws Exception {
@@ -97,8 +99,8 @@ public class Catwalk {
                 int numerator = entry.getCount();
                 long denominator = bitmaps.cardinality(bitmap);
                 if (numerator > denominator) {
-                    log.warn("Catwalk computed numerator:{} denominator:{} for tenantId:{} featureId:{} fieldIds:{} terms:{}",
-                        numerator, denominator, request.tenantId, i, Arrays.toString(fieldIds), Arrays.toString(termIds));
+                    log.warn("Catwalk computed numerator:{} denominator:{} for tenantId:{} partitionId:{} featureId:{} fieldIds:{} terms:{}",
+                        numerator, denominator, coord.tenantId, coord.partitionId, i, Arrays.toString(fieldIds), Arrays.toString(termIds));
                 }
                 featureScoreResults[i].add(new FeatureScore(termIds, numerator, denominator));
             }

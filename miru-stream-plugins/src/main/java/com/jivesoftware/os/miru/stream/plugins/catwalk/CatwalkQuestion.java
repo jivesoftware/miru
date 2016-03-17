@@ -65,7 +65,7 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
         if (!context.getTimeIndex().intersects(timeRange)) {
             solutionLog.log(MiruSolutionLogLevel.WARN, "No time index intersection. Partition {}: {} doesn't intersect with {}",
                 handle.getCoord().partitionId, context.getTimeIndex(), timeRange);
-            return new MiruPartitionResponse<>(catwalk.model("catwalk", bitmaps, context, request, report, bitmaps.create(), solutionLog),
+            return new MiruPartitionResponse<>(catwalk.model("catwalk", bitmaps, context, request, handle.getCoord(), report, bitmaps.create(), solutionLog),
                 solutionLog.asList());
         }
 
@@ -144,7 +144,7 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
             }
         }
 
-        return new MiruPartitionResponse<>(catwalk.model("catwalk", bitmaps, context, request, report, answer, solutionLog),
+        return new MiruPartitionResponse<>(catwalk.model("catwalk", bitmaps, context, request, handle.getCoord(), report, answer, solutionLog),
             solutionLog.asList());
     }
 
