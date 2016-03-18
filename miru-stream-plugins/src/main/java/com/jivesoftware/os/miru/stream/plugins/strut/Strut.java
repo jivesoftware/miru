@@ -149,7 +149,7 @@ public class Strut {
                                     termCount[i],
                                     scoredFeatures));
                             }
-                            Arrays.fill(score, 0f);
+                            score[i] = 0f;
                             termCount[i] = 0;
 
                             if (request.query.includeFeatures) {
