@@ -221,8 +221,9 @@ public class Strut {
                 scores[1] = 1f;
             }
             scores[1] *= ((float) (1 + misses) / (1 + nonModelCount));
+        } else {
+            throw new UnsupportedOperationException("Strategy not supported: " + strategy);
         }
-        throw new UnsupportedOperationException("Strategy not supported: " + strategy);
     }
 
     private float finalizeScore(float[] score, int termCount, long modelCount, long totalCount, Strategy strategy) {
@@ -235,8 +236,9 @@ public class Strut {
             score[0] *= ((float) (1 + modelCount) / (1 + totalCount));
             score[1] *= ((float) (1 + nonModelCount) / (1 + totalCount));
             return score[0] / score[1];
+        } else {
+            throw new UnsupportedOperationException("Strategy not supported: " + strategy);
         }
-        throw new UnsupportedOperationException("Strategy not supported: " + strategy);
     }
 
     /*public static void main(String[] args) {
