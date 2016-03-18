@@ -109,6 +109,27 @@ public class CatwalkModelService {
                         PeekingIterator<FeatureScore> a = Iterators.peekingIterator(currentMerged.latestScores.featureScores.iterator());
                         PeekingIterator<FeatureScore> b = Iterators.peekingIterator(scores.featureScores.iterator());
 
+                        // dur: 9  5  7  6  5  7  9  4
+                        // pid: 0, 1, 2, 3, 4, 5, 6, 7
+
+                        // 0*0.9, 1...
+                        // 01*0.9, 2...
+                        // 02*0.9, 3...
+
+                        // 06 -> A-view-B -> 21 / 70 = (3 / 10) / partition
+                        //  7 -> A-view-B -> 0 / 10
+                        // 06, 7... -> 21/80
+
+                        // 06, 7, 8
+                        // 07, 8
+                        // 07*0.9, 8
+
+
+                        // 07, A-view-B ->   99 / 100
+                        // 8 9 10 11 12 13 157, A-view-B -> ???????
+                        // 158, A-view-B -> 99 / 100
+                        // 0..158, A-view-B -> 198 / 200
+
                         List<FeatureScore> merged = new ArrayList<>(currentMerged.latestScores.featureScores.size() + scores.featureScores.size());
                         while (a.hasNext() || b.hasNext()) {
 
@@ -117,12 +138,12 @@ public class CatwalkModelService {
                                 if (c == 0) {
                                     merged.add(merge(a.next(), b.next()));
                                 } else if (c < 0) {
-                                    merged.add(a.next());
+                                    merged.add(decay(a.next(), currentMerged.latestRange.toPartitionId - currentMerged.firstRange.fromPartitionId + 1));
                                 } else {
                                     merged.add(b.next());
                                 }
                             } else if (a.hasNext()) {
-                                merged.add(a.next());
+                                merged.add(decay(a.next(), currentMerged.latestRange.toPartitionId - currentMerged.firstRange.fromPartitionId + 1));
 
                             } else if (b.hasNext()) {
                                 merged.add(b.next());
@@ -288,6 +309,20 @@ public class CatwalkModelService {
             LOG.warn("Merged numerator:{} denominator:{} for scores: {} {}", numerator, denominator, a, b);
         }
         return new FeatureScore(a.termIds, numerator, denominator);
+    }
+
+    //  0 ->  25 / 73
+    //  1 ->  25 / 22
+    // 01 ->  50 / 95
+    //  2 ->   0 / ?  = 0 / (95/2p) = 0 / 47
+    // 02 ->  50 / 142
+    //  3 ->  25 / 65
+    // 03 ->  75 / 207
+    //  4 ->  25 / 26
+    // 04 -> 100 / 233
+
+    private FeatureScore decay(FeatureScore score, int numPartitions) {
+        return new FeatureScore(score.termIds, score.numerator, score.denominator + (score.denominator / numPartitions));
     }
 
     static byte[] valueToBytes(boolean partitionIsClosed,
@@ -577,6 +612,7 @@ public class CatwalkModelService {
         boolean contiguousClosedPartitions = true;
         int numberOfMerges = 0;
 
+        final FeatureRange firstRange;
         FeatureRange latestRange;
         ModelFeatureScores latestScores;
 
@@ -585,6 +621,7 @@ public class CatwalkModelService {
         MiruTimeRange timeRange;
 
         public MergedScores(FeatureRange latestRange, ModelFeatureScores latestScores) {
+            this.firstRange = latestRange;
             this.latestRange = latestRange;
             this.latestScores = latestScores;
         }

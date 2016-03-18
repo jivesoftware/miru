@@ -222,15 +222,22 @@ public class Strut {
 
         float[] viewedFeatures = { 7f, 3f, 8f };
         float[] nonViewedFeatures = { 3f, 12f, 12f };
+        // 7/10, 3/15, 8/20
 
-        float pViewed = (7f / 10_000f) * (3f / 10_000f) * (8f / 10_000f) * (10_000f / 3_000_000f);
-        float pNonViewed = (3f / 2_990_000f) * (12f / 2_990_000f) * (12f / 2_990_000f) * (2_990_000f / 3_000_000f);
+        float pViewed1 = (7f / 10_000f) * (3f / 10_000f) * (8f / 10_000f) * (10_000f / 3_000_000f);
+        float pNonViewed1 = (3f / 2_990_000f) * (12f / 2_990_000f) * (12f / 2_990_000f) * (2_990_000f / 3_000_000f);
+        float p1 = (10f / 3_000_000f) * (15f / 3_000_000f) * (20f / 3_000_000f);
 
-        System.out.println(pViewed);
-        System.out.println(pNonViewed);
-        System.out.println(pViewed / pNonViewed);
+        float pViewed2 = (5f / 15_000f) * (6f / 15_000f) * (10f / 15_000f) * (15_000f / 3_000_000f);
+        float pNonViewed2 = (8f / 2_985_000f) * (2f / 2_985_000f) * (2f / 2_985_000f) * (2_985_000f / 3_000_000f);
 
-
+        /*System.out.println(pViewed1);
+        System.out.println(pNonViewed1);*/
+        System.out.println(pViewed1 / p1);
+        System.out.println(pNonViewed1 / p1);
+        System.out.println("---");
+        System.out.println(pViewed2 / pNonViewed2);
+        System.out.println((pViewed1 * pViewed2) / (pNonViewed1 * pNonViewed2));
 
         /*System.out.println("" + ((7f / 10_000) * (3f / 10_000) * (8f / 10_000) * (10_000f / 3_000_000))
             / ((10f / 3_000_000) * (15f / 3_000_000) * (20f / 3_000_000)));
