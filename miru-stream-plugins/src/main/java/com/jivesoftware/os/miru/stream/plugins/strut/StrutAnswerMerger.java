@@ -103,8 +103,9 @@ public class StrutAnswerMerger implements MiruAnswerMerger<StrutAnswer> {
             return (left.score * left.count + right.score * right.count) / (left.count + right.count);
         } else if (strategy == Strategy.NAIVE_BAYES) {
             return left.score * right.score;
+        } else {
+            throw new UnsupportedOperationException("Strategy not supported: " + strategy);
         }
-        throw new UnsupportedOperationException("Strategy not supported: " + strategy);
     }
 
     @Override
