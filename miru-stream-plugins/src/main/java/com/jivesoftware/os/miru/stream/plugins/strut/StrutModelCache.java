@@ -75,7 +75,7 @@ public class StrutModelCache {
                 modelCache.invalidate(key);
             } else {
                 boolean empty = true;
-                for (Map<StrutModelKey, Float> featureModel : model.model) {
+                for (Map<StrutModelKey, ModelScore> featureModel : model.model) {
                     if (!featureModel.isEmpty()) {
                         empty = false;
                         break;
@@ -100,7 +100,7 @@ public class StrutModelCache {
     private StrutModel convert(CatwalkQuery catwalkQuery, CatwalkModel model) {
 
         @SuppressWarnings("unchecked")
-        Map<StrutModelKey, Float>[] modelFeatureScore = new Map[catwalkQuery.featureFields.length];
+        Map<StrutModelKey, ModelScore>[] modelFeatureScore = new Map[catwalkQuery.featureFields.length];
         for (int i = 0; i < modelFeatureScore.length; i++) {
             modelFeatureScore[i] = new HashMap<>();
         }
@@ -108,11 +108,11 @@ public class StrutModelCache {
             if (model != null && model.featureScores != null && model.featureScores[i] != null) {
                 List<FeatureScore> featureScores = model.featureScores[i];
                 for (FeatureScore featureScore : featureScores) {
-                    modelFeatureScore[i].put(new StrutModelKey(featureScore.termIds), featureScore.numerator / (float) featureScore.denominator);
+                    modelFeatureScore[i].put(new StrutModelKey(featureScore.termIds), new ModelScore(featureScore.numerator, featureScore.denominator));
                 }
             }
         }
-        return new StrutModel(modelFeatureScore);
+        return new StrutModel(modelFeatureScore, model.modelCount, model.totalCount);
     }
 
     public static class StrutModelKey {
@@ -150,16 +150,38 @@ public class StrutModelCache {
 
     }
 
+    public static class ModelScore {
+        public final long numerator;
+        public final long denominator;
+
+        public ModelScore(long numerator, long denominator) {
+            this.numerator = numerator;
+            this.denominator = denominator;
+        }
+    }
+
     public static class StrutModel {
 
-        private final Map<StrutModelKey, Float>[] model;
+        private final Map<StrutModelKey, ModelScore>[] model;
+        private final long modelCount;
+        private final long totalCount;
 
-        public StrutModel(Map<StrutModelKey, Float>[] model) {
+        public StrutModel(Map<StrutModelKey, ModelScore>[] model, long modelCount, long totalCount) {
             this.model = model;
+            this.modelCount = modelCount;
+            this.totalCount = totalCount;
         }
 
-        public float score(int featureId, MiruTermId[] values, float missing) {
-            return model[featureId].getOrDefault(new StrutModelKey(values), missing);
+        public ModelScore score(int featureId, MiruTermId[] values) {
+            return model[featureId].get(new StrutModelKey(values));
+        }
+
+        public long getModelCount() {
+            return modelCount;
+        }
+
+        public long getTotalCount() {
+            return totalCount;
         }
     }
 }
