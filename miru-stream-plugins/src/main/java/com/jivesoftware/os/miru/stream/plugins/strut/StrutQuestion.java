@@ -203,6 +203,6 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
 
     @Override
     public Optional<StrutReport> createReport(Optional<StrutAnswer> answer) {
-        return Optional.absent();
+        return answer.transform(input -> new StrutReport(input.threshold));
     }
 }

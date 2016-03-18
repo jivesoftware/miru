@@ -18,6 +18,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.stream.plugins.strut.HotOrNot.Hotness;
+import com.jivesoftware.os.miru.stream.plugins.strut.StrutModelCache.ModelScore;
 import com.jivesoftware.os.miru.stream.plugins.strut.StrutModelCache.StrutModel;
 import com.jivesoftware.os.miru.stream.plugins.strut.StrutQuery.Strategy;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
@@ -85,7 +86,7 @@ public class Strut {
 
         List<HotOrNot> hotOrNots = new ArrayList<>(request.query.desiredNumberOfResults);
 
-        float[] thresholds = { 0.5f, 0.2f, 0.08f, 0f };
+        float[] thresholds = report.isPresent() ? new float[] { report.get().threshold } : new float[] { 0.5f, 0.2f, 0.08f, 0f };
 
         @SuppressWarnings("unchecked")
         List<Hotness>[][] features = request.query.includeFeatures ? new List[thresholds.length][] : null;
@@ -104,7 +105,7 @@ public class Strut {
 
         long start = System.currentTimeMillis();
         int[] featureCount = { 0 };
-        float[] score = new float[thresholds.length];
+        float[][] score = new float[thresholds.length][2];
         int[] termCount = new int[thresholds.length];
         MiruTermId[] currentPivot = { null };
         aggregateUtil.gatherFeatures(name,
@@ -125,11 +126,11 @@ public class Strut {
                                     System.arraycopy(features[i], 0, scoredFeatures, 0, features[i].length);
                                 }
                                 scored[i].add(new Scored(currentPivot[0],
-                                    finalizeScore(score[i], termCount[i], request.query.strategy),
+                                    finalizeScore(score[i], termCount[i], model.getModelCount(), model.getTotalCount(), request.query.strategy),
                                     termCount[i],
                                     scoredFeatures));
                             }
-                            score[i] = 0f;
+                            Arrays.fill(score[i], 0f);
                             termCount[i] = 0;
 
                             if (request.query.includeFeatures) {
@@ -139,8 +140,9 @@ public class Strut {
                     }
                     currentPivot[0] = answerTermId;
                 }
-                float s = model.score(featureId, termIds, Float.NaN);
-                if (!Float.isNaN(s) && s > 0.0f) {
+                ModelScore modelScore = model.score(featureId, termIds);
+                if (modelScore != null) { // if (!Float.isNaN(s) && s > 0.0f) {
+                    float s = (float) modelScore.numerator / (float) modelScore.denominator;
                     if (s > 1.0f) {
                         LOG.warn("Encountered score {} > 1.0 for answerTermId:{} featureId:{} termIds:{}",
                             s, answerTermId, featureId, Arrays.toString(termIds));
@@ -148,7 +150,7 @@ public class Strut {
                     //TODO tiered scoring based on thresholds
                     for (int i = 0; i < thresholds.length; i++) {
                         if (s > thresholds[i]) {
-                            score[i] = score(score[i], s, request.query.strategy);
+                            score(score[i], modelScore, s, model.getModelCount(), model.getTotalCount(), request.query.strategy);
                             termCount[i]++;
 
                             if (request.query.includeFeatures) {
@@ -173,7 +175,7 @@ public class Strut {
         for (int i = 0; i < thresholds.length; i++) {
             if (termCount[i] > 0) {
                 scored[i].add(new Scored(currentPivot[0],
-                    finalizeScore(score[i], termCount[i], request.query.strategy),
+                    finalizeScore(score[i], termCount[i], model.getModelCount(), model.getTotalCount(), request.query.strategy),
                     termCount[i],
                     request.query.includeFeatures ? features[i] : null));
             }
@@ -182,6 +184,7 @@ public class Strut {
         solutionLog.log(MiruSolutionLogLevel.INFO, "Strut scored {} features in {} ms",
             featureCount[0], System.currentTimeMillis() - start);
 
+        float scoredThreshold = 0f;
         for (int i = 0; i < scored.length; i++) {
             if (i == scored.length - 1 || scored[i].size() == request.query.desiredNumberOfResults) {
                 for (Scored s : scored[i]) {
@@ -189,34 +192,54 @@ public class Strut {
                         s.score, s.termCount, s.features));
                 }
                 solutionLog.log(MiruSolutionLogLevel.INFO, "Strut found {} terms at threshold {}", hotOrNots.size(), thresholds[i]);
+                scoredThreshold = thresholds[i];
                 break;
             }
         }
 
         boolean resultsExhausted = request.query.timeRange.smallestTimestamp > requestContext.getTimeIndex().getLargestTimestamp();
 
-        return new StrutAnswer(hotOrNots, resultsExhausted);
+        return new StrutAnswer(hotOrNots, scoredThreshold, resultsExhausted);
     }
 
-    private float score(float currentScore, float nextScore, Strategy strategy) {
+    private void score(float[] scores, ModelScore nextScore, float s, long modelCount, long totalCount, Strategy strategy) {
         if (strategy == Strategy.MAX) {
-            return Math.max(currentScore, nextScore);
+            scores[0] = Math.max(scores[0], s);
         } else if (strategy == Strategy.MEAN) {
-            return currentScore + nextScore;
+            scores[0] += s;
+        } else if (strategy == Strategy.NAIVE_BAYES) {
+            long hits = nextScore.numerator;
+            long misses = nextScore.denominator - nextScore.numerator;
+            long nonModelCount = totalCount - modelCount;
+
+            if (scores[0] == 0f) {
+                scores[0] = 1f;
+            }
+            scores[0] *= ((float) (1 + hits) / (1 + modelCount));
+
+            if (scores[1] == 0f) {
+                scores[1] = 1f;
+            }
+            scores[1] *= ((float) (1 + misses) / (1 + nonModelCount));
         }
         throw new UnsupportedOperationException("Strategy not supported: " + strategy);
     }
 
-    private float finalizeScore(float score, int termCount, Strategy strategy) {
+    private float finalizeScore(float[] score, int termCount, long modelCount, long totalCount, Strategy strategy) {
         if (strategy == Strategy.MAX) {
-            return score;
+            return score[0];
         } else if (strategy == Strategy.MEAN) {
-            return score / termCount;
+            return score[0] / termCount;
+        } else if (strategy == Strategy.NAIVE_BAYES) {
+            long nonModelCount = totalCount - modelCount;
+            score[0] *= ((float) (1 + modelCount) / (1 + totalCount));
+            score[1] *= ((float) (1 + nonModelCount) / (1 + totalCount));
+            return score[0] / score[1];
         }
         throw new UnsupportedOperationException("Strategy not supported: " + strategy);
     }
 
-    public static void main(String[] args) {
+    /*public static void main(String[] args) {
         float totalActivities = 3_000_000f;
         float viewedActivities = 10_000f;
 
@@ -231,20 +254,17 @@ public class Strut {
         float pViewed2 = (5f / 15_000f) * (6f / 15_000f) * (10f / 15_000f) * (15_000f / 3_000_000f);
         float pNonViewed2 = (8f / 2_985_000f) * (2f / 2_985_000f) * (2f / 2_985_000f) * (2_985_000f / 3_000_000f);
 
-        /*System.out.println(pViewed1);
-        System.out.println(pNonViewed1);*/
-        System.out.println(pViewed1 / p1);
-        System.out.println(pNonViewed1 / p1);
+        //System.out.println(pViewed1);
+        //System.out.println(pNonViewed1);
+        System.out.println("pV1: " + pViewed1);
+        System.out.println("pNV1: " + pNonViewed1);
+        System.out.println("p1: " + p1);
+        System.out.println("pV1/p1: " + (pViewed1 / p1));
+        System.out.println("pNV1/p1: " + (pNonViewed1 / p1));
         System.out.println("---");
         System.out.println(pViewed2 / pNonViewed2);
         System.out.println((pViewed1 * pViewed2) / (pNonViewed1 * pNonViewed2));
-
-        /*System.out.println("" + ((7f / 10_000) * (3f / 10_000) * (8f / 10_000) * (10_000f / 3_000_000))
-            / ((10f / 3_000_000) * (15f / 3_000_000) * (20f / 3_000_000)));
-
-        System.out.println("" + ((3f / 2_990_000) * (12f / 2_990_000) * (12f / 2_990_000) * (2_990_000f / 3_000_000))
-            / ((10f / 3_000_000) * (15f / 3_000_000) * (20f / 3_000_000)));*/
-    }
+    }*/
 
     static class Scored implements Comparable<Scored> {
 

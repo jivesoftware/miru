@@ -90,9 +90,9 @@ public class StrutAnswerMerger implements MiruAnswerMerger<StrutAnswer> {
         merged.addAll(smallerMap.values());
         Collections.sort(merged);
         if (merged.size() > desiredNumberOfResults) {
-            return new StrutAnswer(Lists.newArrayList(merged.subList(0, desiredNumberOfResults)), currentAnswer.resultsExhausted);
+            return new StrutAnswer(Lists.newArrayList(merged.subList(0, desiredNumberOfResults)), currentAnswer.threshold, currentAnswer.resultsExhausted);
         } else {
-            return new StrutAnswer(merged, currentAnswer.resultsExhausted);
+            return new StrutAnswer(merged, currentAnswer.threshold, currentAnswer.resultsExhausted);
         }
     }
 
@@ -101,6 +101,8 @@ public class StrutAnswerMerger implements MiruAnswerMerger<StrutAnswer> {
             return Math.max(left.score, right.score);
         } else if (strategy == Strategy.MEAN) {
             return (left.score * left.count + right.score * right.count) / (left.count + right.count);
+        } else if (strategy == Strategy.NAIVE_BAYES) {
+            return left.score * right.score;
         }
         throw new UnsupportedOperationException("Strategy not supported: " + strategy);
     }
