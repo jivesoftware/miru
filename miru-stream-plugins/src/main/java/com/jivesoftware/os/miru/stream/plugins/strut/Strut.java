@@ -105,7 +105,7 @@ public class Strut {
 
         long start = System.currentTimeMillis();
         int[] featureCount = { 0 };
-        float[][] score = new float[thresholds.length][2];
+        double[][] score = new double[thresholds.length][2];
         int[] termCount = new int[thresholds.length];
         MiruTermId[] currentPivot = { null };
         aggregateUtil.gatherFeatures(name,
@@ -202,7 +202,7 @@ public class Strut {
         return new StrutAnswer(hotOrNots, scoredThreshold, resultsExhausted);
     }
 
-    private void score(float[] scores, ModelScore nextScore, float s, long modelCount, long totalCount, Strategy strategy) {
+    private void score(double[] scores, ModelScore nextScore, float s, long modelCount, long totalCount, Strategy strategy) {
         if (strategy == Strategy.MAX) {
             scores[0] = Math.max(scores[0], s);
         } else if (strategy == Strategy.MEAN) {
@@ -226,16 +226,17 @@ public class Strut {
         }
     }
 
-    private float finalizeScore(float[] score, int termCount, long modelCount, long totalCount, Strategy strategy) {
+    private float finalizeScore(double[] score, int termCount, long modelCount, long totalCount, Strategy strategy) {
         if (strategy == Strategy.MAX) {
-            return score[0];
+            return (float) score[0];
         } else if (strategy == Strategy.MEAN) {
-            return score[0] / termCount;
+            return (float) score[0] / termCount;
         } else if (strategy == Strategy.NAIVE_BAYES) {
             long nonModelCount = totalCount - modelCount;
-            score[0] *= ((float) (1 + modelCount) / (1 + totalCount));
-            score[1] *= ((float) (1 + nonModelCount) / (1 + totalCount));
-            return score[0] / score[1];
+            score[0] *= Math.log((double) (1 + modelCount) / (1 + totalCount));
+            score[1] *= Math.log((double) (1 + nonModelCount) / (1 + totalCount));
+            float result = (float) (score[0] / score[1]);
+            return Float.isFinite(result) ? result : Float.isInfinite(result) ? Float.MAX_VALUE : 0f;
         } else {
             throw new UnsupportedOperationException("Strategy not supported: " + strategy);
         }
