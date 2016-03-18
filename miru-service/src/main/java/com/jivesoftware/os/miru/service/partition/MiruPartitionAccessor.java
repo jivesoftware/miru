@@ -215,6 +215,9 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
 
     void markWritersClosed() {
         hasOpenWriters.set(false);
+        if (persistentContext.isPresent()) {
+            persistentContext.get().markClosed();
+        }
     }
 
     boolean canHotDeploy(CheckPersistent checkPersistent) {
@@ -232,10 +235,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
     boolean notifyEndOfStream(long threshold) {
         if (!endOfStream.compareAndSet(0, System.currentTimeMillis() + threshold)) {
             if (endOfStream.get() < System.currentTimeMillis()) {
-                hasOpenWriters.set(false);
-                if (persistentContext.isPresent()) {
-                    persistentContext.get().markClosed();
-                }
+                markWritersClosed();
                 return true;
             }
         }

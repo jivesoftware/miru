@@ -15,7 +15,8 @@ public class StrutQuery implements Serializable {
 
     public enum Strategy {
         MAX,
-        MEAN
+        MEAN,
+        NAIVE_BAYES
     }
 
     public final String catwalkId;
