@@ -25,10 +25,12 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.solution.Question;
+import com.jivesoftware.os.miru.stream.plugins.strut.Strut.HotOrNotResult;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -66,7 +68,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         if (!context.getTimeIndex().intersects(timeRange)) {
             solutionLog.log(MiruSolutionLogLevel.WARN, "No time index intersection. Partition {}: {} doesn't intersect with {}",
                 handle.getCoord().partitionId, context.getTimeIndex(), timeRange);
-            StrutAnswer answer = strut.yourStuff("strut", handle.getCoord(), bitmaps, context, request, report, streamBitmaps -> true, solutionLog);
+            StrutAnswer answer = strut.composeAnswer(context, request, Collections.emptyList(), report.isPresent() ? report.get().threshold : 0f);
             return new MiruPartitionResponse<>(answer, solutionLog.asList());
         }
 
@@ -144,7 +146,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             return streamBitmaps.stream(null, combined);
         }, solutionLog);*/
 
-        StrutAnswer answer = strut.yourStuff("strut",
+        HotOrNotResult hotOrNotResult = strut.yourStuff("strut",
             handle.getCoord(),
             bitmaps,
             context,
@@ -191,7 +193,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             },
             solutionLog);
 
-        return new MiruPartitionResponse<>(answer, solutionLog.asList());
+        return new MiruPartitionResponse<>(strut.composeAnswer(context, request, hotOrNotResult.hotOrNots, hotOrNotResult.threshold), solutionLog.asList());
     }
 
     @Override
