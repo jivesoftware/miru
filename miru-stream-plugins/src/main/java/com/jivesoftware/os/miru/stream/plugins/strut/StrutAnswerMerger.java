@@ -101,8 +101,6 @@ public class StrutAnswerMerger implements MiruAnswerMerger<StrutAnswer> {
             return Math.max(left.score, right.score);
         } else if (strategy == Strategy.MEAN) {
             return (left.score * left.count + right.score * right.count) / (left.count + right.count);
-        } else if (strategy == Strategy.NAIVE_BAYES) {
-            return left.score * right.score;
         } else {
             throw new UnsupportedOperationException("Strategy not supported: " + strategy);
         }

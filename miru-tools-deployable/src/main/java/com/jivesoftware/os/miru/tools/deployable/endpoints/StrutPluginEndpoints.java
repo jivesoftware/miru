@@ -59,7 +59,7 @@ public class StrutPluginEndpoints {
         @QueryParam("featureFilters") @DefaultValue("") String featureFilters,
         @QueryParam("constraintField") @DefaultValue("parent") String constraintField,
         @QueryParam("constraintFilters") @DefaultValue("activityType:1|2|65|72") String constraintFilters,
-        @QueryParam("strategy") @DefaultValue("MEAN") String strategy,
+        @QueryParam("strategy") @DefaultValue("MAX") String strategy,
         @QueryParam("desiredNumberOfResults") @DefaultValue("1000") int desiredNumberOfResults,
         @QueryParam("desiredModelSize") @DefaultValue("10000") int desiredModelSize,
         @QueryParam("logLevel") @DefaultValue("NONE") String logLevel) {

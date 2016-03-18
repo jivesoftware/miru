@@ -239,6 +239,7 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                                 String[] fields = featureFields[i];
                                 List<Hotness> feature = featureTerms[i];
                                 if (feature != null) {
+                                    Collections.sort(feature, (o1, o2) -> Float.compare(o2.score, o1.score)); // sort descending
                                     for (Hotness hotness : feature) {
                                         if (hotness.values.length != fields.length) {
                                             features.add("[unknown=" + hotness.score + "]");

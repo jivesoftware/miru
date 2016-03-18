@@ -23,6 +23,7 @@ import com.jivesoftware.os.miru.stream.plugins.strut.StrutModelCache.StrutModel;
 import com.jivesoftware.os.miru.stream.plugins.strut.StrutQuery.Strategy;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -42,7 +43,25 @@ public class Strut {
         this.cache = cache;
     }
 
-    public <BM extends IBM, IBM> StrutAnswer yourStuff(String name,
+    public static class HotOrNotResult {
+        public final List<HotOrNot> hotOrNots;
+        public final float threshold;
+
+        public HotOrNotResult(List<HotOrNot> hotOrNots, float threshold) {
+            this.hotOrNots = hotOrNots;
+            this.threshold = threshold;
+        }
+    }
+
+    public <BM extends IBM, IBM> StrutAnswer composeAnswer(MiruRequestContext<BM, IBM, ?> requestContext,
+        MiruRequest<StrutQuery> request,
+        List<HotOrNot> hotOrNots,
+        float threshold) throws IOException, InterruptedException {
+        boolean resultsExhausted = request.query.timeRange.smallestTimestamp > requestContext.getTimeIndex().getLargestTimestamp();
+        return new StrutAnswer(hotOrNots, threshold, resultsExhausted);
+    }
+
+    public <BM extends IBM, IBM> HotOrNotResult yourStuff(String name,
         MiruPartitionCoord coord,
         MiruBitmaps<BM, IBM> bitmaps,
         MiruRequestContext<BM, IBM, ?> requestContext,
@@ -105,7 +124,7 @@ public class Strut {
 
         long start = System.currentTimeMillis();
         int[] featureCount = { 0 };
-        double[][] score = new double[thresholds.length][2];
+        float[] score = new float[thresholds.length];
         int[] termCount = new int[thresholds.length];
         MiruTermId[] currentPivot = { null };
         aggregateUtil.gatherFeatures(name,
@@ -126,11 +145,11 @@ public class Strut {
                                     System.arraycopy(features[i], 0, scoredFeatures, 0, features[i].length);
                                 }
                                 scored[i].add(new Scored(currentPivot[0],
-                                    finalizeScore(score[i], termCount[i], model.getModelCount(), model.getTotalCount(), request.query.strategy),
+                                    finalizeScore(score[i], termCount[i], request.query.strategy),
                                     termCount[i],
                                     scoredFeatures));
                             }
-                            Arrays.fill(score[i], 0f);
+                            Arrays.fill(score, 0f);
                             termCount[i] = 0;
 
                             if (request.query.includeFeatures) {
@@ -142,27 +161,28 @@ public class Strut {
                 }
                 ModelScore modelScore = model.score(featureId, termIds);
                 if (modelScore != null) { // if (!Float.isNaN(s) && s > 0.0f) {
-                    float s = (float) modelScore.numerator / (float) modelScore.denominator;
+                    float s = (float) modelScore.numerator / modelScore.denominator;
                     if (s > 1.0f) {
                         LOG.warn("Encountered score {} > 1.0 for answerTermId:{} featureId:{} termIds:{}",
                             s, answerTermId, featureId, Arrays.toString(termIds));
-                    }
-                    //TODO tiered scoring based on thresholds
-                    for (int i = 0; i < thresholds.length; i++) {
-                        if (s > thresholds[i]) {
-                            score(score[i], modelScore, s, model.getModelCount(), model.getTotalCount(), request.query.strategy);
-                            termCount[i]++;
+                    } else if (!Float.isNaN(s) && s > 0f) {
+                        //TODO tiered scoring based on thresholds
+                        for (int i = 0; i < thresholds.length; i++) {
+                            if (s > thresholds[i]) {
+                                score[i] = score(score[i], s, request.query.strategy);
+                                termCount[i]++;
 
-                            if (request.query.includeFeatures) {
-                                if (features[i][featureId] == null) {
-                                    features[i][featureId] = Lists.newArrayList();
+                                if (request.query.includeFeatures) {
+                                    if (features[i][featureId] == null) {
+                                        features[i][featureId] = Lists.newArrayList();
+                                    }
+                                    MiruValue[] values = new MiruValue[termIds.length];
+                                    for (int j = 0; j < termIds.length; j++) {
+                                        values[j] = new MiruValue(termComposer.decompose(schema,
+                                            schema.getFieldDefinition(featureFieldIds[featureId][j]), stackBuffer, termIds[j]));
+                                    }
+                                    features[i][featureId].add(new Hotness(values, s));
                                 }
-                                MiruValue[] values = new MiruValue[termIds.length];
-                                for (int j = 0; j < termIds.length; j++) {
-                                    values[j] = new MiruValue(termComposer.decompose(schema,
-                                        schema.getFieldDefinition(featureFieldIds[featureId][j]), stackBuffer, termIds[j]));
-                                }
-                                features[i][featureId].add(new Hotness(values, s));
                             }
                         }
                     }
@@ -175,7 +195,7 @@ public class Strut {
         for (int i = 0; i < thresholds.length; i++) {
             if (termCount[i] > 0) {
                 scored[i].add(new Scored(currentPivot[0],
-                    finalizeScore(score[i], termCount[i], model.getModelCount(), model.getTotalCount(), request.query.strategy),
+                    finalizeScore(score[i], termCount[i], request.query.strategy),
                     termCount[i],
                     request.query.includeFeatures ? features[i] : null));
             }
@@ -197,46 +217,24 @@ public class Strut {
             }
         }
 
-        boolean resultsExhausted = request.query.timeRange.smallestTimestamp > requestContext.getTimeIndex().getLargestTimestamp();
-
-        return new StrutAnswer(hotOrNots, scoredThreshold, resultsExhausted);
+        return new HotOrNotResult(hotOrNots, scoredThreshold);
     }
 
-    private void score(double[] scores, ModelScore nextScore, float s, long modelCount, long totalCount, Strategy strategy) {
+    private float score(float score, float s, Strategy strategy) {
         if (strategy == Strategy.MAX) {
-            scores[0] = Math.max(scores[0], s);
+            return Math.max(score, s);
         } else if (strategy == Strategy.MEAN) {
-            scores[0] += s;
-        } else if (strategy == Strategy.NAIVE_BAYES) {
-            long hits = nextScore.numerator;
-            long misses = nextScore.denominator - nextScore.numerator;
-            long nonModelCount = totalCount - modelCount;
-
-            if (scores[0] == 0f) {
-                scores[0] = 1f;
-            }
-            scores[0] *= ((float) (1 + hits) / (1 + modelCount));
-
-            if (scores[1] == 0f) {
-                scores[1] = 1f;
-            }
-            scores[1] *= ((float) (1 + misses) / (1 + nonModelCount));
+            return score + s;
         } else {
             throw new UnsupportedOperationException("Strategy not supported: " + strategy);
         }
     }
 
-    private float finalizeScore(double[] score, int termCount, long modelCount, long totalCount, Strategy strategy) {
+    private float finalizeScore(float score, int termCount, Strategy strategy) {
         if (strategy == Strategy.MAX) {
-            return (float) score[0];
+            return score;
         } else if (strategy == Strategy.MEAN) {
-            return (float) score[0] / termCount;
-        } else if (strategy == Strategy.NAIVE_BAYES) {
-            long nonModelCount = totalCount - modelCount;
-            score[0] *= Math.log((double) (1 + modelCount) / (1 + totalCount));
-            score[1] *= Math.log((double) (1 + nonModelCount) / (1 + totalCount));
-            float result = (float) (score[0] / score[1]);
-            return Float.isFinite(result) ? result : Float.isInfinite(result) ? Float.MAX_VALUE : 0f;
+            return score / termCount;
         } else {
             throw new UnsupportedOperationException("Strategy not supported: " + strategy);
         }
