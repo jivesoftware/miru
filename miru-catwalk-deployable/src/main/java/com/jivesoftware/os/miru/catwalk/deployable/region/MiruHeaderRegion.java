@@ -50,7 +50,8 @@ public class MiruHeaderRegion implements MiruRegion<Void> {
                 addPeers(services, "miru-reader", "main", "/");
                 addPeers(services, "miru-writer", "main", "/miru/writer");
                 addPeers(services, "miru-wal", "main", "/miru/wal");
-                data.put("total", String.valueOf(addPeers(services, "miru-manage", "main", "/miru/manage")));
+                addPeers(services, "miru-manage", "main", "/miru/manage");
+                data.put("total", String.valueOf(addPeers(services, "miru-catwalk", "main", "/miru/catwalk")));
                 addPeers(services, "miru-tools", "main", "/");
                 data.put("services", services);
 
