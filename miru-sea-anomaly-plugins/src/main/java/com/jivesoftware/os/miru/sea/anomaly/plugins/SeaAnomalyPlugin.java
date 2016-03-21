@@ -22,7 +22,7 @@ public class SeaAnomalyPlugin implements MiruPlugin<SeaAnomalyEndpoints, SeaAnom
     @Override
     public Collection<MiruEndpointInjectable<SeaAnomalyInjectable>> getInjectables(MiruProvider<? extends Miru> miruProvider) {
 
-        SeaAnomaly anomaly = new SeaAnomaly(miruProvider);
+        SeaAnomaly anomaly = new SeaAnomaly();
         return Collections.singletonList(new MiruEndpointInjectable<>(
             SeaAnomalyInjectable.class,
             new SeaAnomalyInjectable(miruProvider, anomaly)

@@ -1,7 +1,6 @@
 package com.jivesoftware.os.miru.sea.anomaly.plugins;
 
 import com.google.common.math.LongMath;
-import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.sea.anomaly.plugins.SeaAnomalyAnswer.Waveform;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
@@ -14,36 +13,30 @@ import java.util.List;
  */
 public class SeaAnomaly {
 
-    private static final MetricLogger log = MetricLoggerFactory.getLogger();
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
-    private final MiruProvider miruProvider;
-
-    public SeaAnomaly(MiruProvider miruProvider) {
-        this.miruProvider = miruProvider;
-    }
-
-    public <BM extends IBM, IBM> Waveform metricingSum(MiruBitmaps<BM, IBM> bitmaps,
+    public static <BM extends IBM, IBM> Waveform metricingSum(MiruBitmaps<BM, IBM> bitmaps,
         BM rawAnswer,
         List<BM> answers,
         int[] indexes,
         int numBits)
         throws Exception {
 
-        log.debug("Get metricing for answers={}", answers);
+        LOG.debug("Get metricing for answers={}", answers);
 
         long[] waveform = sum(indexes, numBits, answers, bitmaps);
 
         return new Waveform(waveform);
     }
 
-    public <BM extends IBM, IBM> Waveform metricingAvg(MiruBitmaps<BM, IBM> bitmaps,
+    public static <BM extends IBM, IBM> Waveform metricingAvg(MiruBitmaps<BM, IBM> bitmaps,
         BM rawAnswer,
         List<BM> answers,
         int[] indexes,
         int numBits)
         throws Exception {
 
-        log.debug("Get metricing for answers={}", answers);
+        LOG.debug("Get metricing for answers={}", answers);
 
         long[] rawCardinalities = new long[indexes.length - 1];
         bitmaps.boundedCardinalities(rawAnswer, new int[][] { indexes }, new long[][] { rawCardinalities });
@@ -58,36 +51,8 @@ public class SeaAnomaly {
         return new Waveform(waveform);
     }
 
-    /*
-     1,2,3,4,1 avg = avg 4.3, max 4, min 1
-
-     00010 - b2 (card 1)
-     01100 - b1 (card 2)
-     10101 - b0 (card 3)
-     -----
-     12341   avg (1+2+3+4+1)/5 max 4, min 1 (cardinality 5)
-     */
-    public <BM extends IBM, IBM> Waveform metricingMin(MiruBitmaps<BM, IBM> bitmaps,
-        BM rawAnswer,
-        List<BM> answers,
-        int[] indexes,
-        int numBits)
-        throws Exception {
-
-        return null; // TODO
-    }
-
-    public <BM extends IBM, IBM> Waveform metricingMax(MiruBitmaps<BM, IBM> bitmaps,
-        BM rawAnswer,
-        List<BM> answers,
-        int[] indexes,
-        int numBits)
-        throws Exception {
-
-        return null; // TODO
-    }
-
-    private <BM extends IBM, IBM> long[] sum(int[] indexes, int numBits, List<BM> answers, MiruBitmaps<BM, IBM> bitmaps) {
+   
+    static <BM extends IBM, IBM> long[] sum(int[] indexes, int numBits, List<BM> answers, MiruBitmaps<BM, IBM> bitmaps) {
         long[] waveform = null;
         long[] rawCardinalities = new long[indexes.length - 1];
 
@@ -107,7 +72,7 @@ public class SeaAnomaly {
                             waveform[j] = LongMath.checkedAdd(waveform[j], add);
                         } catch (Exception x) {
                             waveform[j] = Long.MAX_VALUE;
-                            log.inc("overflows");
+                            LOG.inc("overflows");
                         }
                     }
                 }
