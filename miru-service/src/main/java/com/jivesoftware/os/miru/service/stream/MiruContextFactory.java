@@ -5,6 +5,7 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.google.common.collect.Maps;
 import com.jivesoftware.os.filer.chunk.store.transaction.MapBackedKeyedFPIndex;
 import com.jivesoftware.os.filer.chunk.store.transaction.MapCreator;
 import com.jivesoftware.os.filer.chunk.store.transaction.MapOpener;
@@ -38,6 +39,7 @@ import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.plugin.MiruInterner;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.plugin.context.MiruPluginCacheProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.index.MiruAuthzIndex;
@@ -53,7 +55,6 @@ import com.jivesoftware.os.miru.plugin.index.MiruUnreadTrackingIndex;
 import com.jivesoftware.os.miru.plugin.partition.TrackError;
 import com.jivesoftware.os.miru.service.index.KeyedFilerProvider;
 import com.jivesoftware.os.miru.service.index.MiruFilerProvider;
-import com.jivesoftware.os.miru.service.index.MiruInternalActivityMarshaller;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzCache;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzUtils;
 import com.jivesoftware.os.miru.service.index.auth.VersionedAuthzExpression;
@@ -320,7 +321,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                     TxNamedMapOfFiler.CHUNK_FILER_OPENER,
                     TxNamedMapOfFiler.OVERWRITE_GROWER_PROVIDER,
                     TxNamedMapOfFiler.REWRITE_GROWER_PROVIDER),
-                new byte[] { 0 },
+                new byte[]{0},
                 new Object()),
             new MiruDeltaInvertedIndex.Delta<>());
 
@@ -352,6 +353,18 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
 
         StripingLocksProvider<MiruStreamId> streamLocks = new StripingLocksProvider<>(64);
 
+        Map<String, TxKeyedFilerStore<Integer, MapContext>> pluginPersistentCache = Maps.newConcurrentMap();
+
+        MiruPluginCacheProvider cacheProvider = (name) -> pluginPersistentCache.computeIfAbsent(name, (key) -> new TxKeyedFilerStore<>(cogs,
+            seed,
+            chunkStores,
+            keyBytes("cache-" + key),
+            false,
+            new MapCreator(100, 4, false, 8, false),
+            MapOpener.INSTANCE,
+            TxMapGrower.MAP_OVERWRITE_GROWER,
+            TxMapGrower.MAP_REWRITE_GROWER));
+
         MiruContext<BM, IBM, S> context = new MiruContext<>(schema,
             termComposer,
             timeIndex,
@@ -362,6 +375,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             removalIndex,
             unreadTrackingIndex,
             inboxIndex,
+            cacheProvider,
             activityInternExtern,
             streamLocks,
             chunkStores,

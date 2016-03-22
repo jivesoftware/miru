@@ -144,6 +144,30 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
     }
 
     @Override
+    public void multiGetLastIds(String name, int fieldId, MiruTermId[] termIds, int[] results, StackBuffer stackBuffer) throws Exception {
+        byte[][] termIdBytes = new byte[termIds.length][];
+        for (int i = 0; i < termIds.length; i++) {
+            if (termIds[i] != null) {
+                termIdBytes[i] = termIds[i].getBytes();
+            }
+        }
+        MutableLong bytes = new MutableLong();
+        indexes[fieldId].readEach(termIdBytes, null, (monkey, filer, _stackBuffer, lock, index) -> {
+            if (filer != null) {
+                bytes.add(4);
+                results[index] = MiruFilerInvertedIndex.deserLastId(filer);
+            }
+            return null;
+        }, new Void[results.length], stackBuffer);
+        LOG.inc("count>multiGetLastIds>total");
+        LOG.inc("count>multiGetLastIds>" + name + ">total");
+        LOG.inc("count>multiGetLastIds>" + name + ">" + fieldId);
+        LOG.inc("bytes>multiGetLastIds>total", bytes.longValue());
+        LOG.inc("bytes>multiGetLastIds>" + name + ">total", bytes.longValue());
+        LOG.inc("bytes>multiGetLastIds>" + name + ">" + fieldId, bytes.longValue());
+    }
+
+    @Override
     public void multiTxIndex(String name,
         int fieldId,
         MiruTermId[] termIds,

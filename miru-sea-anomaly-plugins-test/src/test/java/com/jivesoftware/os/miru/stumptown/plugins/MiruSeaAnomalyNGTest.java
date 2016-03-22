@@ -73,7 +73,7 @@ public class MiruSeaAnomalyNGTest {
 
         this.service = miruProvider.getMiru(tenant1);
 
-        this.injectable = new SeaAnomalyInjectable(miruProvider, new SeaAnomaly(miruProvider));
+        this.injectable = new SeaAnomalyInjectable(miruProvider, new SeaAnomaly());
     }
 
     @Test(enabled = true)

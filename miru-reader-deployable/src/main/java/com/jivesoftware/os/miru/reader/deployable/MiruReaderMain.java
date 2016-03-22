@@ -427,7 +427,7 @@ public class MiruReaderMain {
                 @Override
                 public <C extends Config> C getConfig(Class<C> configClass) {
                     return deployable.config(configClass);
-                }
+                }                
             };
 
             for (String pluginPackage : miruServiceConfig.getPluginPackages().split(",")) {

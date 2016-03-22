@@ -11,7 +11,6 @@ import com.jivesoftware.os.miru.plugin.plugin.MiruEndpointInjectable;
 import com.jivesoftware.os.miru.plugin.plugin.MiruPlugin;
 import com.jivesoftware.os.miru.plugin.solution.FstRemotePartitionReader;
 import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
-import com.jivesoftware.os.miru.stream.plugins.strut.StrutModelCache.StrutModel;
 import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import java.util.Arrays;

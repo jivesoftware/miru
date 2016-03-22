@@ -46,6 +46,7 @@ public class SampleTrawl {
         levelCount.incrementAndGet();
 
         List<String> bits = new ArrayList<>();
+        bits.add("z");
 
         String metricName = Joiner.on(">").join(metric.path);
         for (int i = 0; i < 64; i++) {
