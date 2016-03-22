@@ -61,7 +61,7 @@
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-bitmaps-roaring5</artifactId>
-            <version>0.879-SNAPSHOT</version>
+            <version>0.930-SNAPSHOT</version>
             <scope>test</scope>
             <type>jar</type>
         </dependency>
