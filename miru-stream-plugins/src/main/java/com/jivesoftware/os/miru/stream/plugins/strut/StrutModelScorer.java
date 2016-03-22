@@ -47,10 +47,17 @@ public class StrutModelScorer {
                         }
                     }
                 }
+            } else {
+                for (int i = 0; i < termIds.length; i++) {
+                    if (termIds[i] != null) {
+                        if (!scoredStream.score(i, Float.NaN, -1)) {
+                            return null;
+                        }
+                    }
+                }
             }
             return null;
-        },
-            stackBuffer);
+        }, stackBuffer);
     }
 
     void commit(MiruTenantId tenantId,
