@@ -353,17 +353,27 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
 
         StripingLocksProvider<MiruStreamId> streamLocks = new StripingLocksProvider<>(64);
 
-        Map<String, TxKeyedFilerStore<Integer, MapContext>> pluginPersistentCache = Maps.newConcurrentMap();
+        Map<String, TxKeyedFilerStore<Integer, MapContext>[]> pluginPersistentCache = Maps.newConcurrentMap();
 
-        MiruPluginCacheProvider cacheProvider = (name) -> pluginPersistentCache.computeIfAbsent(name, (key) -> new TxKeyedFilerStore<>(cogs,
-            seed,
-            chunkStores,
-            keyBytes("cache-" + key),
-            false,
-            new MapCreator(100, 4, false, 8, false),
-            MapOpener.INSTANCE,
-            TxMapGrower.MAP_OVERWRITE_GROWER,
-            TxMapGrower.MAP_REWRITE_GROWER));
+        MiruPluginCacheProvider cacheProvider = (name) -> pluginPersistentCache.computeIfAbsent(name, (key) -> {
+
+            @SuppressWarnings("unchecked")
+            TxKeyedFilerStore<Integer, MapContext>[] powerIndex = new TxKeyedFilerStore[16];
+            for (int i = 0; i < powerIndex.length; i++) {
+                powerIndex[i] = new TxKeyedFilerStore<>(cogs,
+                    seed,
+                    chunkStores,
+                    keyBytes("cache-" + key),
+                    false,
+                    new MapCreator(100, (int) FilerIO.chunkLength(i), true, 8, false),
+                    MapOpener.INSTANCE,
+                    TxMapGrower.MAP_OVERWRITE_GROWER,
+                    TxMapGrower.MAP_REWRITE_GROWER);
+
+            }
+
+            return powerIndex;
+        });
 
         MiruContext<BM, IBM, S> context = new MiruContext<>(schema,
             termComposer,
