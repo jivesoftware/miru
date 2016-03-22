@@ -180,9 +180,11 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                     return true;
                 }, stackBuffer);
 
-                solutionLog.log(MiruSolutionLogLevel.INFO, "Strut accumulated {} terms in {} ms",
-                    termIds.size(), System.currentTimeMillis() - start);
+                solutionLog.log(MiruSolutionLogLevel.INFO, "Strut accumulated {} terms in {} ms", termIds.size(), System.currentTimeMillis() - start);
                 start = System.currentTimeMillis();
+
+                long totalTimeFetchingLastId = 0;
+                long totalTimeFetchingScores = 0;
 
                 int batchSize = 100; //TODO config batch size
                 BM[] answers = bitmaps.createArrayOf(batchSize);
@@ -197,8 +199,11 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                     System.arraycopy(miruTermIds, 0, nullableMiruTermIds, 0, batchSize);
                     Arrays.fill(lastIds, -1);
 
+                    long fetchLastIdsStart = System.currentTimeMillis();
                     primaryIndex.multiGetLastIds("strut", pivotFieldId, nullableMiruTermIds, lastIds, stackBuffer);
+                    totalTimeFetchingLastId += (System.currentTimeMillis() - fetchLastIdsStart);
 
+                    long fetchScoresStart = System.currentTimeMillis();
                     boolean[] missed = {false};
                     modelScorer.score(
                         request.query.modelId,
@@ -217,6 +222,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                             return true;
                         },
                         stackBuffer);
+                    totalTimeFetchingScores += (System.currentTimeMillis() - fetchScoresStart);
 
                     if (missed[0]) {
                         Arrays.fill(answers, null);
@@ -238,22 +244,26 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                     }
                 }
 
-                solutionLog.log(MiruSolutionLogLevel.INFO, "Strut scores took {} ms",
-                    termIds.size(), System.currentTimeMillis() - start);
+                solutionLog.log(MiruSolutionLogLevel.INFO, "Struted our stuff for {} which took lastIds {} ms cached {} ms total {} ms",
+                    termIds.size(),
+                    totalTimeFetchingLastId,
+                    totalTimeFetchingScores,
+                    System.currentTimeMillis() - start);
                 return true;
             },
             thresholds,
             (thresholdIndex, hotness) -> {
                 scored[thresholdIndex].add(hotness);
-                // TODO persit in local cache
                 updates.add(hotness);
                 return true;
             },
             solutionLog);
 
         if (!updates.isEmpty()) {
-            // Async??
+            long start = System.currentTimeMillis();
             modelScorer.commit(request.query.modelId, cacheStores, updates, stackBuffer);
+            solutionLog.log(MiruSolutionLogLevel.INFO, "Strut score updates {} features in {} ms",
+                updates.size(), System.currentTimeMillis() - start);
         }
 
         MiruFieldDefinition pivotFieldDefinition = schema.getFieldDefinition(pivotFieldId);
