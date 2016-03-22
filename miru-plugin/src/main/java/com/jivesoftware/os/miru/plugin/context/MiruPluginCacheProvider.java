@@ -9,5 +9,5 @@ import com.jivesoftware.os.filer.io.map.MapContext;
  */
 public interface MiruPluginCacheProvider {
 
-    KeyedFilerStore<Integer, MapContext> get(String name);
+    KeyedFilerStore<Integer, MapContext>[] get(String name);
 }

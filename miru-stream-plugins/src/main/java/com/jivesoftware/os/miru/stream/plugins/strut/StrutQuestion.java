@@ -161,7 +161,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 .create();
         }
 
-        KeyedFilerStore<Integer, MapContext> cacheStore = handle.getRequestContext().getCacheProvider().get("strut");
+        KeyedFilerStore<Integer, MapContext>[] cacheStores = handle.getRequestContext().getCacheProvider().get("strut-" + request.query.catwalkId);
 
         StrutModelScorer modelScorer = new StrutModelScorer(); // Ahh
         List<Scored> updates = Lists.newArrayList();
@@ -184,7 +184,6 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                     termIds.size(), System.currentTimeMillis() - start);
                 start = System.currentTimeMillis();
 
-                
                 int batchSize = 100; //TODO config batch size
                 BM[] answers = bitmaps.createArrayOf(batchSize);
                 int[] lastIds = new int[batchSize];
@@ -201,11 +200,10 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                     primaryIndex.multiGetLastIds("strut", pivotFieldId, nullableMiruTermIds, lastIds, stackBuffer);
 
                     boolean[] missed = {false};
-                    modelScorer.score(request.tenantId,
-                        request.query.catwalkId,
+                    modelScorer.score(
                         request.query.modelId,
                         miruTermIds,
-                        cacheStore,
+                        cacheStores,
                         (int termIndex, float score, int lastId) -> {
                             if (!Float.isNaN(score) && lastId >= lastIds[termIndex]) {
                                 miruTermIds[termIndex] = null;
@@ -255,7 +253,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
 
         if (!updates.isEmpty()) {
             // Async??
-            modelScorer.commit(request.tenantId, request.query.catwalkId, request.query.modelId, cacheStore, updates, stackBuffer);
+            modelScorer.commit(request.query.modelId, cacheStores, updates, stackBuffer);
         }
 
         MiruFieldDefinition pivotFieldDefinition = schema.getFieldDefinition(pivotFieldId);
