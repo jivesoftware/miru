@@ -132,6 +132,8 @@ public class Strut {
                                     scoredFeatures))) {
                                     stopped = true;
                                 }
+                            } else if (!hotStuff.steamStream(i, new Scored(currentPivot[0], currentLastId[0], 0f, 0, null))) {
+                                stopped = true;
                             }
                             score[i] = 0f;
                             termCount[i] = 0;
