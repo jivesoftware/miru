@@ -5,12 +5,12 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-build-management</artifactId>
-        <version>0.935</version>
+        <version>0.936</version>
         <relativePath>../inheritance-poms/global-build-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru</groupId>
     <artifactId>miru-stream-plugins</artifactId>
-    <version>0.935</version>
+    <version>0.936</version>
     <properties>
         <module.type>shared_lib</module.type>
     </properties>
@@ -42,12 +42,12 @@
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-api</artifactId>
-            <version>0.935</version>
+            <version>0.936</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-plugin</artifactId>
-            <version>0.935</version>
+            <version>0.936</version>
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
@@ -61,13 +61,6 @@
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.jivesoftware.os.miru</groupId>
-            <artifactId>miru-service</artifactId>
-            <version>0.865</version>
-            <scope>test</scope>
-            <type>jar</type>
         </dependency>
     </dependencies>
 </project>
