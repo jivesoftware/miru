@@ -68,7 +68,7 @@ public class Strut {
         StackBuffer stackBuffer = new StackBuffer();
 
         MiruSchema schema = requestContext.getSchema();
-        
+
         MiruTermComposer termComposer = requestContext.getTermComposer();
         String[][] modelFeatureFields = request.query.catwalkQuery.featureFields;
         String[][] desiredFeatureFields = request.query.featureFields;
@@ -107,13 +107,14 @@ public class Strut {
         float[] score = new float[thresholds.length];
         int[] termCount = new int[thresholds.length];
         MiruTermId[] currentPivot = {null};
+        int[] currentLastId = {-1};
         aggregateUtil.gatherFeatures(name,
             bitmaps,
             requestContext,
             consumeAnswers,
             featureFieldIds,
             true,
-            (answerTermId, featureId, termIds) -> {
+            (answerTermId, answerLastId, featureId, termIds) -> {
                 featureCount[0]++;
                 if (currentPivot[0] == null || !currentPivot[0].equals(answerTermId)) {
                     if (currentPivot[0] != null) {
@@ -125,7 +126,7 @@ public class Strut {
                                     scoredFeatures = new List[features[i].length];
                                     System.arraycopy(features[i], 0, scoredFeatures, 0, features[i].length);
                                 }
-                                if (!hotStuff.steamStream(i, new Scored(currentPivot[0],
+                                if (!hotStuff.steamStream(i, new Scored(currentPivot[0], currentLastId[0],
                                     finalizeScore(score[i], termCount[i], request.query.strategy),
                                     termCount[i],
                                     scoredFeatures))) {
@@ -144,6 +145,7 @@ public class Strut {
                         }
                     }
                     currentPivot[0] = answerTermId;
+                    currentLastId[0] = answerLastId;
                 }
                 ModelScore modelScore = model.score(featureId, termIds);
                 if (modelScore != null) { // if (!Float.isNaN(s) && s > 0.0f) {
@@ -180,7 +182,7 @@ public class Strut {
 
         for (int i = 0; i < thresholds.length; i++) {
             if (termCount[i] > 0) {
-                if (!hotStuff.steamStream(i, new Scored(currentPivot[0],
+                if (!hotStuff.steamStream(i, new Scored(currentPivot[0], currentLastId[0],
                     finalizeScore(score[i], termCount[i], request.query.strategy),
                     termCount[i],
                     request.query.includeFeatures ? features[i] : null))) {
@@ -214,6 +216,33 @@ public class Strut {
         }
     }
 
+    static class Scored implements Comparable<Scored> {
+
+        MiruTermId term;
+        int lastId;
+        float score;
+        int termCount;
+        List<Hotness>[] features;
+
+        public Scored(MiruTermId term, int lastId, float score, int termCount, List<Hotness>[] features) {
+            this.term = term;
+            this.lastId = lastId;
+            this.score = score;
+            this.termCount = termCount;
+            this.features = features;
+        }
+
+        @Override
+        public int compareTo(Scored o) {
+            int c = Float.compare(o.score, score); // reversed
+            if (c != 0) {
+                return c;
+            }
+            return term.compareTo(o.term);
+        }
+
+    }
+
     /*public static void main(String[] args) {
         float totalActivities = 3_000_000f;
         float viewedActivities = 10_000f;
@@ -240,28 +269,4 @@ public class Strut {
         System.out.println(pViewed2 / pNonViewed2);
         System.out.println((pViewed1 * pViewed2) / (pNonViewed1 * pNonViewed2));
     }*/
-    static class Scored implements Comparable<Scored> {
-
-        MiruTermId term;
-        float score;
-        int termCount;
-        List<Hotness>[] features;
-
-        public Scored(MiruTermId term, float score, int termCount, List<Hotness>[] features) {
-            this.term = term;
-            this.score = score;
-            this.termCount = termCount;
-            this.features = features;
-        }
-
-        @Override
-        public int compareTo(Scored o) {
-            int c = Float.compare(o.score, score); // reversed
-            if (c != 0) {
-                return c;
-            }
-            return term.compareTo(o.term);
-        }
-
-    }
 }

@@ -217,8 +217,7 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
     }
 
     @Override
-    public void multiGetLastIds(String name, int fieldId, MiruTermId[] termIds, long[] lastIds, StackBuffer stackBuffer) throws Exception {
-        Arrays.fill(lastIds, -1);
+    public void multiGetLastIds(String name, int fieldId, MiruTermId[] termIds, int[] lastIds, StackBuffer stackBuffer) throws Exception {
         for (int i = 0; i < termIds.length; i++) {
             if (termIds[i] != null) {
                 MiruDeltaInvertedIndex.Delta<IBM> delta = fieldIndexDeltas[fieldId].get(termIds[i]);

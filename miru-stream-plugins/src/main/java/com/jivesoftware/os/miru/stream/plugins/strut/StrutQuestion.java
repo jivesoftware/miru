@@ -37,7 +37,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 /**
  * @author jonathan
@@ -78,10 +77,10 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             return new MiruPartitionResponse<>(answer, solutionLog.asList());
         }
 
-        int lastId = context.getActivityIndex().lastId(stackBuffer);
+        int activityIndexLastId = context.getActivityIndex().lastId(stackBuffer);
 
         List<IBM> ands = new ArrayList<>();
-        ands.add(bitmaps.buildIndexMask(lastId, context.getRemovalIndex().getIndex(stackBuffer)));
+        ands.add(bitmaps.buildIndexMask(activityIndexLastId, context.getRemovalIndex().getIndex(stackBuffer)));
         MiruSchema schema = context.getSchema();
         MiruTermComposer termComposer = context.getTermComposer();
 
@@ -92,7 +91,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 request.query.constraintFilter,
                 solutionLog,
                 null,
-                lastId,
+                activityIndexLastId,
                 -1,
                 stackBuffer);
             ands.add(constrained);
@@ -106,7 +105,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             ands.add(bitmaps.buildTimeRangeMask(context.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp, stackBuffer));
         }
 
-        ands.add(bitmaps.buildIndexMask(context.getActivityIndex().lastId(stackBuffer), context.getRemovalIndex().getIndex(stackBuffer)));
+        ands.add(bitmaps.buildIndexMask(activityIndexLastId, context.getRemovalIndex().getIndex(stackBuffer)));
 
         bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
         BM eligible = bitmaps.and(ands);
@@ -121,7 +120,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 request.query.featureFilter,
                 solutionLog,
                 null,
-                lastId,
+                activityIndexLastId,
                 -1,
                 stackBuffer);
         } else {
@@ -161,12 +160,8 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 .maximumSize(request.query.desiredNumberOfResults)
                 .create();
         }
-        long expireScoresAfterNMillis = TimeUnit.MINUTES.toMillis(10); // TODO
-        long expireScoresAfterTimeStamp = System.currentTimeMillis() - expireScoresAfterNMillis;
 
         KeyedFilerStore<Integer, MapContext> cacheStore = handle.getRequestContext().getCacheProvider().get("strut");
-
-
 
         StrutModelScorer modelScorer = new StrutModelScorer(); // Ahh
         List<Scored> updates = Lists.newArrayList();
@@ -189,28 +184,34 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                     termIds.size(), System.currentTimeMillis() - start);
                 start = System.currentTimeMillis();
 
-                //TODO config batch size
-                BM[] answers = bitmaps.createArrayOf(100);
+                
+                int batchSize = 100; //TODO config batch size
+                BM[] answers = bitmaps.createArrayOf(batchSize);
+                int[] lastIds = new int[batchSize];
+                MiruTermId[] miruTermIds = new MiruTermId[batchSize];
                 done:
                 for (List<MiruTermId> batch : Lists.partition(termIds, answers.length)) {
 
-                    MiruTermId[] miruTermIds = batch.toArray(new MiruTermId[0]);
+                    Arrays.fill(miruTermIds, null);
+                    batch.toArray(miruTermIds);
+                    Arrays.fill(lastIds, -1);
+                    primaryIndex.multiGetLastIds("strut", pivotFieldId, miruTermIds, lastIds, stackBuffer);
+
                     boolean[] missed = {false};
                     modelScorer.score(request.tenantId,
                         request.query.catwalkId,
                         request.query.modelId,
                         miruTermIds,
                         cacheStore,
-                        (int termIndex, float score, long timestamp) -> {
-                            if (!Float.isNaN(score) && timestamp > expireScoresAfterTimeStamp) {
+                        (int termIndex, float score, int lastId) -> {
+                            if (!Float.isNaN(score) && lastId >= lastIds[termIndex]) {
                                 miruTermIds[termIndex] = null;
+                                Scored s = new Scored(miruTermIds[termIndex], lastIds[termIndex], score, -1, null);
                                 for (int j = 0; j < thresholds.length; j++) {
-                                    if (score > thresholds[j]) {
-                                        scored[j].add(new Scored(miruTermIds[termIndex], score, -1, null));
-                                    } else {
-                                        missed[0] = true;
-                                    }
+                                    scored[j].add(s);
                                 }
+                            } else {
+                                missed[0] = true;
                             }
                             return true;
                         },
@@ -229,7 +230,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                             stackBuffer);
 
                         for (int i = 0; i < batch.size(); i++) {
-                            if (answers[i] != null && !streamBitmaps.stream(batch.get(i), answers[i])) {
+                            if (answers[i] != null && !streamBitmaps.stream(batch.get(i), lastIds[i], answers[i])) {
                                 break done;
                             }
                         }

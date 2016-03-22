@@ -19,7 +19,7 @@ public class StrutModelScorer {
 
     public static interface ScoredStream {
 
-        boolean score(int termIndex, float score, long timestamp);
+        boolean score(int termIndex, float score, int lastId);
     }
 
     void score(MiruTenantId tenantId,
@@ -35,13 +35,15 @@ public class StrutModelScorer {
             if (filer != null) {
                 synchronized (lock) {
                     for (int i = 0; i < termIds.length; i++) {
-                        byte[] payload = MapStore.INSTANCE.getPayload(filer, monkey, termIds[i].getBytes(), _stackBuffer);
-                        if (payload != null) {
-                            if (!scoredStream.score(i, FilerIO.bytesFloat(payload, 0), FilerIO.bytesLong(payload, 4))) {
+                        if (termIds[i] != null) {
+                            byte[] payload = MapStore.INSTANCE.getPayload(filer, monkey, termIds[i].getBytes(), _stackBuffer);
+                            if (payload != null) {
+                                if (!scoredStream.score(i, FilerIO.bytesFloat(payload, 0), FilerIO.bytesInt(payload, 4))) {
+                                    return null;
+                                }
+                            } else if (!scoredStream.score(i, Float.NaN, -1)) {
                                 return null;
                             }
-                        } else if (!scoredStream.score(i, Float.NaN, -1)) {
-                            return null;
                         }
                     }
                 }
@@ -64,7 +66,7 @@ public class StrutModelScorer {
 
                 synchronized (lock) {
                     byte[] timestampBytes = FilerIO.longBytes(System.currentTimeMillis());
-                    byte[] payload = new byte[12];
+                    byte[] payload = new byte[8];
                     System.arraycopy(timestampBytes, 0, payload, 4, 8);
                     for (Strut.Scored update : updates) {
                         byte[] scoreBytes = FilerIO.floatBytes(update.score);

@@ -202,7 +202,7 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
         return null;
     }
 
-    public static long deserLastId(ChunkFiler filer) throws IOException {
+    public static int deserLastId(ChunkFiler filer) throws IOException {
         if (filer.length() > LAST_ID_LENGTH) {
             return filer.readInt();
         }

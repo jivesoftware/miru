@@ -16,7 +16,7 @@ public interface MiruFieldIndex<BM extends IBM, IBM> {
 
     void multiGet(String name, int fieldId, MiruTermId[] termIds, BitmapAndLastId<BM>[] results, StackBuffer stackBuffer) throws Exception;
 
-    void multiGetLastIds(String name, int fieldId, MiruTermId[] termIds, long[] lastIds, StackBuffer stackBuffer) throws Exception;
+    void multiGetLastIds(String name, int fieldId, MiruTermId[] termIds, int[] lastIds, StackBuffer stackBuffer) throws Exception;
 
     void multiTxIndex(String name,
         int fieldId,

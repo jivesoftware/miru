@@ -144,7 +144,7 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
     }
 
     @Override
-    public void multiGetLastIds(String name, int fieldId, MiruTermId[] termIds, long[] results, StackBuffer stackBuffer) throws Exception {
+    public void multiGetLastIds(String name, int fieldId, MiruTermId[] termIds, int[] results, StackBuffer stackBuffer) throws Exception {
         byte[][] termIdBytes = new byte[termIds.length][];
         for (int i = 0; i < termIds.length; i++) {
             if (termIds[i] != null) {
