@@ -183,19 +183,20 @@ public class Strut {
             solutionLog,
             stackBuffer);
 
-        for (int i = 0; i < thresholds.length; i++) {
-            if (termCount[i] > 0) {
-                if (!hotStuff.steamStream(i, new Scored(currentPivot[0], currentLastId[0],
-                    finalizeScore(score[i], termCount[i], request.query.strategy),
-                    termCount[i],
-                    request.query.includeFeatures ? features[i] : null))) {
+        if (currentPivot[0] != null) {
+            for (int i = 0; i < thresholds.length; i++) {
+                if (termCount[i] > 0) {
+                    if (!hotStuff.steamStream(i, new Scored(currentPivot[0], currentLastId[0],
+                        finalizeScore(score[i], termCount[i], request.query.strategy),
+                        termCount[i],
+                        request.query.includeFeatures ? features[i] : null))) {
+                        break;
+                    }
+                } else if (!hotStuff.steamStream(i, new Scored(currentPivot[0], currentLastId[0], 0f, 0, null))) {
                     break;
                 }
-            } else if (!hotStuff.steamStream(i, new Scored(currentPivot[0], currentLastId[0], 0f, 0, null))) {
-                break;
             }
         }
-
         solutionLog.log(MiruSolutionLogLevel.INFO, "Strut scored {} features in {} ms",
             featureCount[0], System.currentTimeMillis() - start);
 
