@@ -149,6 +149,7 @@ public class Strut {
                     currentPivot[0] = answerTermId;
                     currentLastId[0] = answerLastId;
                 }
+
                 ModelScore modelScore = model.score(featureId, termIds);
                 if (modelScore != null) { // if (!Float.isNaN(s) && s > 0.0f) {
                     float s = (float) modelScore.numerator / modelScore.denominator;
@@ -190,6 +191,8 @@ public class Strut {
                     request.query.includeFeatures ? features[i] : null))) {
                     break;
                 }
+            } else if (!hotStuff.steamStream(i, new Scored(currentPivot[0], currentLastId[0], 0f, 0, null))) {
+                break;
             }
         }
 
