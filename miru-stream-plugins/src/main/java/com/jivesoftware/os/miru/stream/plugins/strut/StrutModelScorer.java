@@ -72,12 +72,14 @@ public class StrutModelScorer {
             (MapContext m, ChunkFiler cf, StackBuffer sb1, Object lock) -> {
 
                 synchronized (lock) {
-                    byte[] timestampBytes = FilerIO.longBytes(System.currentTimeMillis());
-                    byte[] payload = new byte[8];
-                    System.arraycopy(timestampBytes, 0, payload, 4, 8);
                     for (Strut.Scored update : updates) {
                         byte[] scoreBytes = FilerIO.floatBytes(update.score);
+                        byte[] lastId = FilerIO.intBytes(update.lastId);
+
+                        byte[] payload = new byte[8];
                         System.arraycopy(scoreBytes, 0, payload, 0, 4);
+                        System.arraycopy(lastId, 0, payload, 4, 4);
+
                         MapStore.INSTANCE.add(cf, m, (byte) 1, update.term.getBytes(), payload, stackBuffer);
                     }
                     return null;
