@@ -215,7 +215,7 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                             @SuppressWarnings("unchecked")
                             MiruResponse<StrutAnswer> extractResponse = responseMapper.extractResultFromResponse(httpResponse,
                                 MiruResponse.class,
-                                new Class<?>[] { StrutAnswer.class },
+                                new Class<?>[]{StrutAnswer.class},
                                 null);
                             return new ClientResponse<>(extractResponse, true);
                         });
@@ -235,25 +235,27 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                         for (HotOrNot hotOrNot : hotOrNots) {
                             List<String> features = Lists.newArrayList();
                             List<Hotness>[] featureTerms = hotOrNot.features;
-                            for (int i = 0; i < featureTerms.length; i++) {
-                                String[] fields = featureFields[i];
-                                List<Hotness> feature = featureTerms[i];
-                                if (feature != null) {
-                                    Collections.sort(feature, (o1, o2) -> Float.compare(o2.score, o1.score)); // sort descending
-                                    for (Hotness hotness : feature) {
-                                        if (hotness.values.length != fields.length) {
-                                            features.add("[unknown=" + hotness.score + "]");
-                                        } else {
-                                            buf.append('[');
-                                            for (int j = 0; j < hotness.values.length; j++) {
-                                                if (j > 0) {
-                                                    buf.append(',');
+                            if (featureTerms != null) {
+                                for (int i = 0; i < featureTerms.length; i++) {
+                                    String[] fields = featureFields[i];
+                                    List<Hotness> feature = featureTerms[i];
+                                    if (feature != null) {
+                                        Collections.sort(feature, (o1, o2) -> Float.compare(o2.score, o1.score)); // sort descending
+                                        for (Hotness hotness : feature) {
+                                            if (hotness.values.length != fields.length) {
+                                                features.add("[unknown=" + hotness.score + "]");
+                                            } else {
+                                                buf.append('[');
+                                                for (int j = 0; j < hotness.values.length; j++) {
+                                                    if (j > 0) {
+                                                        buf.append(',');
+                                                    }
+                                                    buf.append(fields[j]).append(':').append(valueToString(hotness.values[j]));
                                                 }
-                                                buf.append(fields[j]).append(':').append(valueToString(hotness.values[j]));
+                                                buf.append('=').append(hotness.score).append("] ");
+                                                features.add(buf.toString());
+                                                buf.setLength(0);
                                             }
-                                            buf.append('=').append(hotness.score).append("] ");
-                                            features.add(buf.toString());
-                                            buf.setLength(0);
                                         }
                                     }
                                 }
