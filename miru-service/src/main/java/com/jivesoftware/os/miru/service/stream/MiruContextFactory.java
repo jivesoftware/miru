@@ -359,13 +359,13 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
 
             @SuppressWarnings("unchecked")
             TxKeyedFilerStore<Integer, MapContext>[] powerIndex = new TxKeyedFilerStore[16];
-            for (int i = 0; i < powerIndex.length; i++) {
-                powerIndex[i] = new TxKeyedFilerStore<>(cogs,
+            for (int power = 0; power < powerIndex.length; power++) {
+                powerIndex[power] = new TxKeyedFilerStore<>(cogs,
                     seed,
                     chunkStores,
-                    keyBytes("cache-" + key),
+                    keyBytes("cache-" + power + "-" + key),
                     false,
-                    new MapCreator(100, (int) FilerIO.chunkLength(i), true, 8, false),
+                    new MapCreator(100, (int) FilerIO.chunkLength(power), true, 8, false),
                     MapOpener.INSTANCE,
                     TxMapGrower.MAP_OVERWRITE_GROWER,
                     TxMapGrower.MAP_REWRITE_GROWER);

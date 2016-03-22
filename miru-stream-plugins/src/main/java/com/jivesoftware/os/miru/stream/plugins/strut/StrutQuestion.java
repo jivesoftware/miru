@@ -206,8 +206,8 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                         cacheStores,
                         (int termIndex, float score, int lastId) -> {
                             if (!Float.isNaN(score) && lastId >= lastIds[termIndex]) {
-                                miruTermIds[termIndex] = null;
                                 Scored s = new Scored(miruTermIds[termIndex], lastIds[termIndex], score, -1, null);
+                                miruTermIds[termIndex] = null;
                                 for (int j = 0; j < thresholds.length; j++) {
                                     scored[j].add(s);
                                 }

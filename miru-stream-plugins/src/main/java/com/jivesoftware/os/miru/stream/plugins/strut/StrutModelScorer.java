@@ -43,10 +43,15 @@ public class StrutModelScorer {
         }
 
         for (int power = 0; power < powerTermIdKeys.length; power++) {
+            long expectedKeySize = FilerIO.chunkLength(power);
+
             byte[][] termIdKeys = powerTermIdKeys[power];
             if (termIdKeys != null) {
                 cacheStores[power].read(modelIdBytes, null, (monkey, filer, _stackBuffer, lock) -> {
                     if (filer != null) {
+                        if (monkey.keySize != expectedKeySize) {
+                            throw new IllegalStateException("provided " + monkey.keySize + " expected " + expectedKeySize);
+                        }
                         synchronized (lock) {
                             for (int i = 0; i < termIdKeys.length; i++) {
                                 if (termIdKeys[i] != null) {
@@ -86,24 +91,26 @@ public class StrutModelScorer {
         byte[][][] powerTermIdKeys = new byte[cacheStores.length][][];
         for (int i = 0; i < updates.size(); i++) {
             Strut.Scored scored = updates.get(i);
-            if (scored != null) {
-                byte[] termIdBytes = scored.term.getBytes();
-                int power = FilerIO.chunkPower(termIdBytes.length, 0);
-                if (powerTermIdKeys[power] == null) {
-                    powerTermIdKeys[power] = new byte[updates.size()][];
-                }
-                powerTermIdKeys[power][i] = termIdBytes;
+            byte[] termIdBytes = scored.term.getBytes();
+            int power = FilerIO.chunkPower(termIdBytes.length, 0);
+            if (powerTermIdKeys[power] == null) {
+                powerTermIdKeys[power] = new byte[updates.size()][];
             }
+            powerTermIdKeys[power][i] = termIdBytes;
         }
 
         for (int power = 0; power < powerTermIdKeys.length; power++) {
+            long expectedKeySize = FilerIO.chunkLength(power);
             byte[][] termIdKeys = powerTermIdKeys[power];
             if (termIdKeys != null) {
 
                 cacheStores[power].readWriteAutoGrow(modelIdBytes,
                     updates.size(), // lazy
-                    (MapContext m, ChunkFiler cf, StackBuffer stackBuffer1, Object lock) -> {
+                    (MapContext monkey, ChunkFiler chunkFiler, StackBuffer stackBuffer1, Object lock) -> {
 
+                        if (monkey.keySize != expectedKeySize) {
+                            throw new IllegalStateException("provided " + monkey.keySize + " expected " + expectedKeySize);
+                        }
                         synchronized (lock) {
 
                             for (int i = 0; i < termIdKeys.length; i++) {
@@ -117,7 +124,7 @@ public class StrutModelScorer {
                                     System.arraycopy(scoreBytes, 0, payload, 0, 4);
                                     System.arraycopy(lastId, 0, payload, 4, 4);
 
-                                    MapStore.INSTANCE.add(cf, m, (byte) 1, termIdKeys[i], payload, stackBuffer1);
+                                    MapStore.INSTANCE.add(chunkFiler, monkey, (byte) 1, termIdKeys[i], payload, stackBuffer1);
                                 }
                             }
                             return null;
