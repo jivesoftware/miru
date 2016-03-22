@@ -188,14 +188,17 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 int batchSize = 100; //TODO config batch size
                 BM[] answers = bitmaps.createArrayOf(batchSize);
                 int[] lastIds = new int[batchSize];
+                MiruTermId[] nullableMiruTermIds = new MiruTermId[batchSize];
                 MiruTermId[] miruTermIds = new MiruTermId[batchSize];
                 done:
                 for (List<MiruTermId> batch : Lists.partition(termIds, answers.length)) {
 
                     Arrays.fill(miruTermIds, null);
                     batch.toArray(miruTermIds);
+                    System.arraycopy(miruTermIds, 0, nullableMiruTermIds, 0, batchSize);
                     Arrays.fill(lastIds, -1);
-                    primaryIndex.multiGetLastIds("strut", pivotFieldId, miruTermIds, lastIds, stackBuffer);
+
+                    primaryIndex.multiGetLastIds("strut", pivotFieldId, nullableMiruTermIds, lastIds, stackBuffer);
 
                     boolean[] missed = {false};
                     modelScorer.score(request.tenantId,
