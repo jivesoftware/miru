@@ -124,7 +124,7 @@ public class MiruAggregateUtil {
                 }
                 count[0] = 0;
             }
-            return true;
+            return stream.stream(answerTermId, answerLastId, -1, null);
         });
         solutionLog.log(MiruSolutionLogLevel.INFO, "Gathered {} features for {} terms in {} ms",
             featureCount[0], termCount[0], System.currentTimeMillis() - start);
@@ -569,7 +569,7 @@ public class MiruAggregateUtil {
             streamBitmaps -> streamBitmaps.stream(null, -1, answer),
             featureFieldIds,
             true,
-            (answerTermId, answerLastId, featureId, termIds) -> termIdStream.stream(termIds[0]),
+            (answerTermId, answerLastId, featureId, termIds) -> featureId == -1 || termIdStream.stream(termIds[0]),
             solutionLog,
             stackBuffer);
     }

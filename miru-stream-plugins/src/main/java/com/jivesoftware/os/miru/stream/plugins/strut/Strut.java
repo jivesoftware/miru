@@ -103,11 +103,9 @@ public class Strut {
         }
 
         long start = System.currentTimeMillis();
-        int[] featureCount = {0};
+        int[] featureCount = { 0 };
         float[] score = new float[thresholds.length];
         int[] termCount = new int[thresholds.length];
-        MiruTermId[] currentPivot = {null};
-        int[] currentLastId = {-1};
         aggregateUtil.gatherFeatures(name,
             bitmaps,
             requestContext,
@@ -115,64 +113,58 @@ public class Strut {
             featureFieldIds,
             true,
             (answerTermId, answerLastId, featureId, termIds) -> {
-                featureCount[0]++;
-                if (currentPivot[0] == null || !currentPivot[0].equals(answerTermId)) {
-                    if (currentPivot[0] != null) {
-                        for (int i = 0; i < thresholds.length; i++) {
-                            boolean stopped = false;
-                            if (termCount[i] > 0) {
-                                List<Hotness>[] scoredFeatures = null;
-                                if (request.query.includeFeatures) {
-                                    scoredFeatures = new List[features[i].length];
-                                    System.arraycopy(features[i], 0, scoredFeatures, 0, features[i].length);
-                                }
-                                if (!hotStuff.steamStream(i, new Scored(currentPivot[0], currentLastId[0],
-                                    finalizeScore(score[i], termCount[i], request.query.strategy),
-                                    termCount[i],
-                                    scoredFeatures))) {
-                                    stopped = true;
-                                }
-                            } else if (!hotStuff.steamStream(i, new Scored(currentPivot[0], currentLastId[0], 0f, 0, null))) {
+                if (featureId == -1) {
+                    for (int i = 0; i < thresholds.length; i++) {
+                        boolean stopped = false;
+                        if (termCount[i] > 0) {
+                            List<Hotness>[] scoredFeatures = null;
+                            if (request.query.includeFeatures) {
+                                scoredFeatures = new List[features[i].length];
+                                System.arraycopy(features[i], 0, scoredFeatures, 0, features[i].length);
+                            }
+                            float s = finalizeScore(score[i], termCount[i], request.query.strategy);
+                            if (!hotStuff.steamStream(i, new Scored(answerTermId, answerLastId, s, termCount[i], scoredFeatures))) {
                                 stopped = true;
                             }
-                            score[i] = 0f;
-                            termCount[i] = 0;
+                        } else if (!hotStuff.steamStream(i, new Scored(answerTermId, answerLastId, 0f, 0, null))) {
+                            stopped = true;
+                        }
+                        score[i] = 0f;
+                        termCount[i] = 0;
 
-                            if (request.query.includeFeatures) {
-                                Arrays.fill(features[i], null);
-                            }
-                            if (stopped) {
-                                return false;
-                            }
+                        if (request.query.includeFeatures) {
+                            Arrays.fill(features[i], null);
+                        }
+                        if (stopped) {
+                            return false;
                         }
                     }
-                    currentPivot[0] = answerTermId;
-                    currentLastId[0] = answerLastId;
-                }
+                } else {
+                    featureCount[0]++;
+                    ModelScore modelScore = model.score(featureId, termIds);
+                    if (modelScore != null) { // if (!Float.isNaN(s) && s > 0.0f) {
+                        float s = (float) modelScore.numerator / modelScore.denominator;
+                        if (s > 1.0f) {
+                            LOG.warn("Encountered score {} > 1.0 for answerTermId:{} featureId:{} termIds:{}",
+                                s, answerTermId, featureId, Arrays.toString(termIds));
+                        } else if (!Float.isNaN(s) && s > 0f) {
+                            //TODO tiered scoring based on thresholds
+                            for (int i = 0; i < thresholds.length; i++) {
+                                if (s > thresholds[i]) {
+                                    score[i] = score(score[i], s, request.query.strategy);
+                                    termCount[i]++;
 
-                ModelScore modelScore = model.score(featureId, termIds);
-                if (modelScore != null) { // if (!Float.isNaN(s) && s > 0.0f) {
-                    float s = (float) modelScore.numerator / modelScore.denominator;
-                    if (s > 1.0f) {
-                        LOG.warn("Encountered score {} > 1.0 for answerTermId:{} featureId:{} termIds:{}",
-                            s, answerTermId, featureId, Arrays.toString(termIds));
-                    } else if (!Float.isNaN(s) && s > 0f) {
-                        //TODO tiered scoring based on thresholds
-                        for (int i = 0; i < thresholds.length; i++) {
-                            if (s > thresholds[i]) {
-                                score[i] = score(score[i], s, request.query.strategy);
-                                termCount[i]++;
-
-                                if (request.query.includeFeatures) {
-                                    if (features[i][featureId] == null) {
-                                        features[i][featureId] = Lists.newArrayList();
+                                    if (request.query.includeFeatures) {
+                                        if (features[i][featureId] == null) {
+                                            features[i][featureId] = Lists.newArrayList();
+                                        }
+                                        MiruValue[] values = new MiruValue[termIds.length];
+                                        for (int j = 0; j < termIds.length; j++) {
+                                            values[j] = new MiruValue(termComposer.decompose(schema,
+                                                schema.getFieldDefinition(featureFieldIds[featureId][j]), stackBuffer, termIds[j]));
+                                        }
+                                        features[i][featureId].add(new Hotness(values, s));
                                     }
-                                    MiruValue[] values = new MiruValue[termIds.length];
-                                    for (int j = 0; j < termIds.length; j++) {
-                                        values[j] = new MiruValue(termComposer.decompose(schema,
-                                            schema.getFieldDefinition(featureFieldIds[featureId][j]), stackBuffer, termIds[j]));
-                                    }
-                                    features[i][featureId].add(new Hotness(values, s));
                                 }
                             }
                         }
@@ -183,20 +175,6 @@ public class Strut {
             solutionLog,
             stackBuffer);
 
-        if (currentPivot[0] != null) {
-            for (int i = 0; i < thresholds.length; i++) {
-                if (termCount[i] > 0) {
-                    if (!hotStuff.steamStream(i, new Scored(currentPivot[0], currentLastId[0],
-                        finalizeScore(score[i], termCount[i], request.query.strategy),
-                        termCount[i],
-                        request.query.includeFeatures ? features[i] : null))) {
-                        break;
-                    }
-                } else if (!hotStuff.steamStream(i, new Scored(currentPivot[0], currentLastId[0], 0f, 0, null))) {
-                    break;
-                }
-            }
-        }
         solutionLog.log(MiruSolutionLogLevel.INFO, "Strut scored {} features in {} ms",
             featureCount[0], System.currentTimeMillis() - start);
 
