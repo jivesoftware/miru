@@ -191,6 +191,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 int[] lastIds = new int[batchSize];
                 MiruTermId[] nullableMiruTermIds = new MiruTermId[batchSize];
                 MiruTermId[] miruTermIds = new MiruTermId[batchSize];
+                int totalMisses = 0;
                 done:
                 for (List<MiruTermId> batch : Lists.partition(termIds, answers.length)) {
 
@@ -204,7 +205,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                     totalTimeFetchingLastId += (System.currentTimeMillis() - fetchLastIdsStart);
 
                     long fetchScoresStart = System.currentTimeMillis();
-                    boolean[] missed = {false};
+                    int[] missed = {0};
                     modelScorer.score(
                         request.query.modelId,
                         miruTermIds,
@@ -217,14 +218,15 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                                     scored[j].add(s);
                                 }
                             } else {
-                                missed[0] = true;
+                                missed[0]++;
                             }
                             return true;
                         },
                         stackBuffer);
                     totalTimeFetchingScores += (System.currentTimeMillis() - fetchScoresStart);
 
-                    if (missed[0]) {
+                    if (missed[0] > 0) {
+                        totalMisses += missed[0];
                         Arrays.fill(answers, null);
                         bitmaps.multiTx(
                             (tx, stackBuffer1) -> primaryIndex.multiTxIndex("strut", pivotFieldId, miruTermIds, -1, stackBuffer1, tx),
@@ -244,17 +246,20 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                     }
                 }
 
-                solutionLog.log(MiruSolutionLogLevel.INFO, "Struted our stuff for {} which took lastIds {} ms cached {} ms total {} ms",
+                solutionLog.log(MiruSolutionLogLevel.INFO, "Struted our stuff for {} which took lastIds {} ms cached {} ms total {} ms total missed {}",
                     termIds.size(),
                     totalTimeFetchingLastId,
                     totalTimeFetchingScores,
-                    System.currentTimeMillis() - start);
+                    System.currentTimeMillis() - start,
+                    totalMisses);
                 return true;
             },
             thresholds,
             (thresholdIndex, hotness) -> {
                 scored[thresholdIndex].add(hotness);
-                updates.add(hotness);
+                if (thresholds.length == thresholdIndex + 1) {
+                    updates.add(hotness);
+                }
                 return true;
             },
             solutionLog);
