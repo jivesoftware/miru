@@ -191,6 +191,11 @@ public class LuceneBackedQueryParserTest {
         }
 
         @Override
+        public void multiGetLastIds(String name, int fieldId, MiruTermId[] termIds, long[] lastIds, StackBuffer stackBuffer) throws Exception {
+            throw new UnsupportedOperationException("Nope");
+        }
+
+        @Override
         public void multiTxIndex(String name,
             int fieldId,
             MiruTermId[] termIds,

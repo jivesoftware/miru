@@ -202,6 +202,13 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
         return null;
     }
 
+    public static long deserLastId(ChunkFiler filer) throws IOException {
+        if (filer.length() > LAST_ID_LENGTH) {
+            return filer.readInt();
+        }
+        return -1;
+    }
+
     private BM getOrCreateIndex(StackBuffer stackBuffer) throws Exception {
         Optional<BM> index = getIndex(stackBuffer);
         return index.isPresent() ? index.get() : bitmaps.create();
