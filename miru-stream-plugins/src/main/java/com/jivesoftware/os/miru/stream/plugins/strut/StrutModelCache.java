@@ -63,9 +63,9 @@ public class StrutModelCache {
 
                 CatwalkModel catwalkModel = responseMapper.extractResultFromResponse(response, CatwalkModel.class, null);
                 if (catwalkModel == null) {
-                    throw new IllegalStateException("Model not available," +
-                        " status code: " + response.getStatusCode() +
-                        " reason: " + response.getStatusReasonPhrase());
+                    throw new IllegalStateException("Model not available,"
+                        + " status code: " + response.getStatusCode()
+                        + " reason: " + response.getStatusReasonPhrase());
                 }
                 return convert(catwalkQuery, catwalkModel);
             });
@@ -115,11 +115,11 @@ public class StrutModelCache {
         return new StrutModel(modelFeatureScore, model.modelCount, model.totalCount);
     }
 
-    public static class StrutModelKey {
+    static class StrutModelKey {
 
         private final MiruTermId[] termIds;
 
-        public StrutModelKey(MiruTermId[] termIds) {
+        StrutModelKey(MiruTermId[] termIds) {
             this.termIds = termIds;
         }
 
@@ -151,6 +151,7 @@ public class StrutModelCache {
     }
 
     public static class ModelScore {
+
         public final long numerator;
         public final long denominator;
 
@@ -160,28 +161,4 @@ public class StrutModelCache {
         }
     }
 
-    public static class StrutModel {
-
-        private final Map<StrutModelKey, ModelScore>[] model;
-        private final long modelCount;
-        private final long totalCount;
-
-        public StrutModel(Map<StrutModelKey, ModelScore>[] model, long modelCount, long totalCount) {
-            this.model = model;
-            this.modelCount = modelCount;
-            this.totalCount = totalCount;
-        }
-
-        public ModelScore score(int featureId, MiruTermId[] values) {
-            return model[featureId].get(new StrutModelKey(values));
-        }
-
-        public long getModelCount() {
-            return modelCount;
-        }
-
-        public long getTotalCount() {
-            return totalCount;
-        }
-    }
 }

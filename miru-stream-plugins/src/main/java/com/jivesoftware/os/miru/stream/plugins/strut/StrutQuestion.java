@@ -2,15 +2,20 @@ package com.jivesoftware.os.miru.stream.plugins.strut;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
+import com.google.common.collect.MinMaxPriorityQueue;
+import com.jivesoftware.os.filer.io.api.KeyedFilerStore;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
+import com.jivesoftware.os.filer.io.map.MapContext;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
+import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
@@ -25,13 +30,14 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.solution.Question;
-import com.jivesoftware.os.miru.stream.plugins.strut.Strut.HotOrNotResult;
+import com.jivesoftware.os.miru.stream.plugins.strut.Strut.Scored;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author jonathan
@@ -145,8 +151,26 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
 
             return streamBitmaps.stream(null, combined);
         }, solutionLog);*/
+        float[] thresholds = report.isPresent() ? new float[]{report.get().threshold} : new float[]{0.5f, 0.2f, 0.08f, 0f};
+        @SuppressWarnings("unchecked")
+        MinMaxPriorityQueue<Scored>[] scored = new MinMaxPriorityQueue[thresholds.length];
 
-        HotOrNotResult hotOrNotResult = strut.yourStuff("strut",
+        for (int i = 0; i < thresholds.length; i++) {
+            scored[i] = MinMaxPriorityQueue
+                .expectedSize(request.query.desiredNumberOfResults)
+                .maximumSize(request.query.desiredNumberOfResults)
+                .create();
+        }
+        long expireScoresAfterNMillis = TimeUnit.MINUTES.toMillis(10); // TODO
+        long expireScoresAfterTimeStamp = System.currentTimeMillis() - expireScoresAfterNMillis;
+
+        KeyedFilerStore<Integer, MapContext> cacheStore = handle.getRequestContext().getCacheProvider().get("strut");
+
+
+
+        StrutModelScorer modelScorer = new StrutModelScorer(); // Ahh
+        List<Scored> updates = Lists.newArrayList();
+        strut.yourStuff("strut",
             handle.getCoord(),
             bitmaps,
             context,
@@ -169,20 +193,45 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 BM[] answers = bitmaps.createArrayOf(100);
                 done:
                 for (List<MiruTermId> batch : Lists.partition(termIds, answers.length)) {
-                    Arrays.fill(answers, null);
-                    bitmaps.multiTx(
-                        (tx, stackBuffer1) -> primaryIndex.multiTxIndex("strut", pivotFieldId, batch.toArray(new MiruTermId[0]), -1, stackBuffer1, tx),
-                        (index, bitmap) -> {
-                            if (constrainFeature != null) {
-                                bitmaps.inPlaceAnd(bitmap, constrainFeature);
+
+                    MiruTermId[] miruTermIds = batch.toArray(new MiruTermId[0]);
+                    boolean[] missed = {false};
+                    modelScorer.score(request.tenantId,
+                        request.query.catwalkId,
+                        request.query.modelId,
+                        miruTermIds,
+                        cacheStore,
+                        (int termIndex, float score, long timestamp) -> {
+                            if (!Float.isNaN(score) && timestamp > expireScoresAfterTimeStamp) {
+                                miruTermIds[termIndex] = null;
+                                for (int j = 0; j < thresholds.length; j++) {
+                                    if (score > thresholds[j]) {
+                                        scored[j].add(new Scored(miruTermIds[termIndex], score, -1, null));
+                                    } else {
+                                        missed[0] = true;
+                                    }
+                                }
                             }
-                            answers[index] = bitmap;
+                            return true;
                         },
                         stackBuffer);
 
-                    for (int i = 0; i < batch.size(); i++) {
-                        if (answers[i] != null && !streamBitmaps.stream(batch.get(i), answers[i])) {
-                            break done;
+                    if (missed[0]) {
+                        Arrays.fill(answers, null);
+                        bitmaps.multiTx(
+                            (tx, stackBuffer1) -> primaryIndex.multiTxIndex("strut", pivotFieldId, miruTermIds, -1, stackBuffer1, tx),
+                            (index, bitmap) -> {
+                                if (constrainFeature != null) {
+                                    bitmaps.inPlaceAnd(bitmap, constrainFeature);
+                                }
+                                answers[index] = bitmap;
+                            },
+                            stackBuffer);
+
+                        for (int i = 0; i < batch.size(); i++) {
+                            if (answers[i] != null && !streamBitmaps.stream(batch.get(i), answers[i])) {
+                                break done;
+                            }
                         }
                     }
                 }
@@ -191,9 +240,36 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                     termIds.size(), System.currentTimeMillis() - start);
                 return true;
             },
+            thresholds,
+            (thresholdIndex, hotness) -> {
+                scored[thresholdIndex].add(hotness);
+                // TODO persit in local cache
+                updates.add(hotness);
+                return true;
+            },
             solutionLog);
 
-        return new MiruPartitionResponse<>(strut.composeAnswer(context, request, hotOrNotResult.hotOrNots, hotOrNotResult.threshold), solutionLog.asList());
+        if (!updates.isEmpty()) {
+            // Async??
+            modelScorer.commit(request.tenantId, request.query.catwalkId, request.query.modelId, cacheStore, updates, stackBuffer);
+        }
+
+        MiruFieldDefinition pivotFieldDefinition = schema.getFieldDefinition(pivotFieldId);
+        List<HotOrNot> hotOrNots = new ArrayList<>(request.query.desiredNumberOfResults);
+        float scoredThreshold = 0f;
+        for (int i = 0; i < scored.length; i++) {
+            if (i == scored.length - 1 || scored[i].size() == request.query.desiredNumberOfResults) {
+                for (Scored s : scored[i]) {
+                    hotOrNots.add(new HotOrNot(new MiruValue(termComposer.decompose(schema, pivotFieldDefinition, stackBuffer, s.term)),
+                        s.score, s.termCount, s.features));
+                }
+                solutionLog.log(MiruSolutionLogLevel.INFO, "Strut found {} terms at threshold {}", hotOrNots.size(), thresholds[i]);
+                scoredThreshold = thresholds[i];
+                break;
+            }
+        }
+
+        return new MiruPartitionResponse<>(strut.composeAnswer(context, request, hotOrNots, scoredThreshold), solutionLog.asList());
     }
 
     @Override

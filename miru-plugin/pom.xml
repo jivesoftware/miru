@@ -97,5 +97,9 @@
             <artifactId>testng</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.filer</groupId>
+            <artifactId>keyed-store</artifactId>
+        </dependency>
     </dependencies>
 </project>

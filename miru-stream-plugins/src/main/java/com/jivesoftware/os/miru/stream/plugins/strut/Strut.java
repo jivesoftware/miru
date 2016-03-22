@@ -2,10 +2,8 @@ package com.jivesoftware.os.miru.stream.plugins.strut;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
-import com.google.common.collect.MinMaxPriorityQueue;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
-import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.query.filter.MiruValue;
@@ -19,12 +17,10 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.stream.plugins.strut.HotOrNot.Hotness;
 import com.jivesoftware.os.miru.stream.plugins.strut.StrutModelCache.ModelScore;
-import com.jivesoftware.os.miru.stream.plugins.strut.StrutModelCache.StrutModel;
 import com.jivesoftware.os.miru.stream.plugins.strut.StrutQuery.Strategy;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -43,16 +39,6 @@ public class Strut {
         this.cache = cache;
     }
 
-    public static class HotOrNotResult {
-        public final List<HotOrNot> hotOrNots;
-        public final float threshold;
-
-        public HotOrNotResult(List<HotOrNot> hotOrNots, float threshold) {
-            this.hotOrNots = hotOrNots;
-            this.threshold = threshold;
-        }
-    }
-
     public <BM extends IBM, IBM> StrutAnswer composeAnswer(MiruRequestContext<BM, IBM, ?> requestContext,
         MiruRequest<StrutQuery> request,
         List<HotOrNot> hotOrNots,
@@ -61,13 +47,20 @@ public class Strut {
         return new StrutAnswer(hotOrNots, threshold, resultsExhausted);
     }
 
-    public <BM extends IBM, IBM> HotOrNotResult yourStuff(String name,
+    public static interface HotStuff {
+
+        boolean steamStream(int thresholdIndex, Scored scored);
+    }
+
+    public <BM extends IBM, IBM> void yourStuff(String name,
         MiruPartitionCoord coord,
         MiruBitmaps<BM, IBM> bitmaps,
         MiruRequestContext<BM, IBM, ?> requestContext,
         MiruRequest<StrutQuery> request,
         Optional<StrutReport> report,
         ConsumeBitmaps<BM> consumeAnswers,
+        float[] thresholds,
+        HotStuff hotStuff,
         MiruSolutionLog solutionLog) throws Exception {
 
         StrutModel model = cache.get(request.tenantId, request.query.catwalkId, request.query.modelId, coord.partitionId.getId(), request.query.catwalkQuery);
@@ -75,9 +68,7 @@ public class Strut {
         StackBuffer stackBuffer = new StackBuffer();
 
         MiruSchema schema = requestContext.getSchema();
-        int pivotFieldId = schema.getFieldId(request.query.constraintField);
-        MiruFieldDefinition pivotFieldDefinition = schema.getFieldDefinition(pivotFieldId);
-
+        
         MiruTermComposer termComposer = requestContext.getTermComposer();
         String[][] modelFeatureFields = request.query.catwalkQuery.featureFields;
         String[][] desiredFeatureFields = request.query.featureFields;
@@ -103,30 +94,19 @@ public class Strut {
             }
         }
 
-        List<HotOrNot> hotOrNots = new ArrayList<>(request.query.desiredNumberOfResults);
-
-        float[] thresholds = report.isPresent() ? new float[] { report.get().threshold } : new float[] { 0.5f, 0.2f, 0.08f, 0f };
-
         @SuppressWarnings("unchecked")
         List<Hotness>[][] features = request.query.includeFeatures ? new List[thresholds.length][] : null;
-        @SuppressWarnings("unchecked")
-        MinMaxPriorityQueue<Scored>[] scored = new MinMaxPriorityQueue[thresholds.length];
-
         for (int i = 0; i < thresholds.length; i++) {
             if (features != null) {
                 features[i] = new List[featureFields.length];
             }
-            scored[i] = MinMaxPriorityQueue
-                .expectedSize(request.query.desiredNumberOfResults)
-                .maximumSize(request.query.desiredNumberOfResults)
-                .create();
         }
 
         long start = System.currentTimeMillis();
-        int[] featureCount = { 0 };
+        int[] featureCount = {0};
         float[] score = new float[thresholds.length];
         int[] termCount = new int[thresholds.length];
-        MiruTermId[] currentPivot = { null };
+        MiruTermId[] currentPivot = {null};
         aggregateUtil.gatherFeatures(name,
             bitmaps,
             requestContext,
@@ -138,22 +118,28 @@ public class Strut {
                 if (currentPivot[0] == null || !currentPivot[0].equals(answerTermId)) {
                     if (currentPivot[0] != null) {
                         for (int i = 0; i < thresholds.length; i++) {
+                            boolean stopped = false;
                             if (termCount[i] > 0) {
                                 List<Hotness>[] scoredFeatures = null;
                                 if (request.query.includeFeatures) {
                                     scoredFeatures = new List[features[i].length];
                                     System.arraycopy(features[i], 0, scoredFeatures, 0, features[i].length);
                                 }
-                                scored[i].add(new Scored(currentPivot[0],
+                                if (!hotStuff.steamStream(i, new Scored(currentPivot[0],
                                     finalizeScore(score[i], termCount[i], request.query.strategy),
                                     termCount[i],
-                                    scoredFeatures));
+                                    scoredFeatures))) {
+                                    stopped = true;
+                                }
                             }
                             score[i] = 0f;
                             termCount[i] = 0;
 
                             if (request.query.includeFeatures) {
                                 Arrays.fill(features[i], null);
+                            }
+                            if (stopped) {
+                                return false;
                             }
                         }
                     }
@@ -194,30 +180,18 @@ public class Strut {
 
         for (int i = 0; i < thresholds.length; i++) {
             if (termCount[i] > 0) {
-                scored[i].add(new Scored(currentPivot[0],
+                if (!hotStuff.steamStream(i, new Scored(currentPivot[0],
                     finalizeScore(score[i], termCount[i], request.query.strategy),
                     termCount[i],
-                    request.query.includeFeatures ? features[i] : null));
+                    request.query.includeFeatures ? features[i] : null))) {
+                    break;
+                }
             }
         }
 
         solutionLog.log(MiruSolutionLogLevel.INFO, "Strut scored {} features in {} ms",
             featureCount[0], System.currentTimeMillis() - start);
 
-        float scoredThreshold = 0f;
-        for (int i = 0; i < scored.length; i++) {
-            if (i == scored.length - 1 || scored[i].size() == request.query.desiredNumberOfResults) {
-                for (Scored s : scored[i]) {
-                    hotOrNots.add(new HotOrNot(new MiruValue(termComposer.decompose(schema, pivotFieldDefinition, stackBuffer, s.term)),
-                        s.score, s.termCount, s.features));
-                }
-                solutionLog.log(MiruSolutionLogLevel.INFO, "Strut found {} terms at threshold {}", hotOrNots.size(), thresholds[i]);
-                scoredThreshold = thresholds[i];
-                break;
-            }
-        }
-
-        return new HotOrNotResult(hotOrNots, scoredThreshold);
     }
 
     private float score(float score, float s, Strategy strategy) {
@@ -266,7 +240,6 @@ public class Strut {
         System.out.println(pViewed2 / pNonViewed2);
         System.out.println((pViewed1 * pViewed2) / (pNonViewed1 * pNonViewed2));
     }*/
-
     static class Scored implements Comparable<Scored> {
 
         MiruTermId term;

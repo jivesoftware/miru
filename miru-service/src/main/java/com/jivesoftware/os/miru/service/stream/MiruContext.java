@@ -7,6 +7,7 @@ import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
+import com.jivesoftware.os.miru.plugin.context.MiruPluginCacheProvider;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
@@ -39,6 +40,7 @@ public class MiruContext<BM extends IBM, IBM, S extends MiruSipCursor<S>> implem
     public final MiruRemovalIndex<BM, IBM> removalIndex;
     public final MiruUnreadTrackingIndex<BM, IBM> unreadTrackingIndex;
     public final MiruInboxIndex<BM, IBM> inboxIndex;
+    public final MiruPluginCacheProvider cacheProvider;
     public final MiruActivityInternExtern activityInternExtern;
     public final StripingLocksProvider<MiruStreamId> streamLocks;
     public final ChunkStore[] chunkStores;
@@ -60,6 +62,7 @@ public class MiruContext<BM extends IBM, IBM, S extends MiruSipCursor<S>> implem
         MiruRemovalIndex<BM, IBM> removalIndex,
         MiruUnreadTrackingIndex<BM, IBM> unreadTrackingIndex,
         MiruInboxIndex<BM, IBM> inboxIndex,
+        MiruPluginCacheProvider cacheProvider,
         MiruActivityInternExtern activityInternExtern,
         StripingLocksProvider<MiruStreamId> streamLocks,
         ChunkStore[] chunkStores,
@@ -75,6 +78,7 @@ public class MiruContext<BM extends IBM, IBM, S extends MiruSipCursor<S>> implem
         this.removalIndex = removalIndex;
         this.unreadTrackingIndex = unreadTrackingIndex;
         this.inboxIndex = inboxIndex;
+        this.cacheProvider = cacheProvider;
         this.activityInternExtern = activityInternExtern;
         this.streamLocks = streamLocks;
         this.chunkStores = chunkStores;
@@ -130,6 +134,11 @@ public class MiruContext<BM extends IBM, IBM, S extends MiruSipCursor<S>> implem
     @Override
     public MiruInboxIndex<BM, IBM> getInboxIndex() {
         return inboxIndex;
+    }
+
+    @Override
+    public MiruPluginCacheProvider getCacheProvider() {
+        return cacheProvider;
     }
 
     @Override
