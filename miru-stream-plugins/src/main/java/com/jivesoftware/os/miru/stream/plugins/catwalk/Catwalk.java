@@ -71,7 +71,9 @@ public class Catwalk {
             featureFieldIds,
             false,
             (answerTermId, answerLastId, featureId, termIds) -> {
-                featureValueSets[featureId].add(new Feature(termIds));
+                if (featureId >= 0) {
+                    featureValueSets[featureId].add(new Feature(termIds));
+                }
                 return true;
             },
             solutionLog,
