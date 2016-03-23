@@ -58,17 +58,18 @@ public class MiruFieldDefinition {
 
     public enum Type {
         singleTerm(Feature.indexed, Feature.stored),
-        singleTermIndexValueBits(Feature.indexed, Feature.stored, Feature.indexedValueBits),
+        @Deprecated
+        singleTermIndexValueBits(Feature.indexedValueBits),
         singleTermNonStored(Feature.indexed),
-        singleTermIndexLatest(Feature.indexed, Feature.indexedLatest, Feature.stored),
+        singleTermIndexLatest(Feature.indexed, Feature.indexedLatest),
         singleTermIndexLatestNonStored(Feature.indexed, Feature.indexedLatest),
-        singleTermIndexFirst(Feature.indexedFirst, Feature.stored),
+        singleTermIndexFirst(Feature.indexedFirst),
         singleTermIndexFirstNonStored(Feature.indexedFirst),
         multiTerm(Feature.indexed, Feature.multiValued, Feature.stored),
         multiTermNonStored(Feature.indexed, Feature.multiValued),
         multiTermCardinality(Feature.indexed, Feature.multiValued, Feature.cardinality, Feature.stored),
         multiTermCardinalityNonStored(Feature.indexed, Feature.multiValued, Feature.cardinality),
-        multiTermIndexFirst(Feature.indexedFirst, Feature.multiValued, Feature.stored),
+        multiTermIndexFirst(Feature.indexedFirst, Feature.multiValued),
         multiTermIndexFirstNonStored(Feature.indexedFirst, Feature.multiValued),
         nonIndexed(Feature.stored),
         nonIndexedNonStored();
@@ -92,6 +93,14 @@ public class MiruFieldDefinition {
                 return (oldType == singleTerm);
             }
 
+            if (this == singleTerm) {
+                return (oldType == singleTermIndexValueBits);
+            }
+
+            if (this == singleTermNonStored) {
+                return (oldType == singleTerm || oldType == singleTermIndexValueBits);
+            }
+
             return false;
         }
     }
@@ -100,6 +109,7 @@ public class MiruFieldDefinition {
         indexed,
         indexedFirst,
         indexedLatest,
+        @Deprecated
         indexedValueBits,
         multiValued,
         cardinality,
