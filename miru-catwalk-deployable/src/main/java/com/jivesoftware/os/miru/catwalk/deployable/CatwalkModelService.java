@@ -196,18 +196,22 @@ public class CatwalkModelService {
 
         long modelCount = 0;
         long totalCount = 0;
+        int[] numberOfModels = new int[featureFields.length];
 
         @SuppressWarnings("unchecked")
         List<FeatureScore>[] featureScores = new List[featureFields.length];
         for (int i = 0; i < featureFields.length; i++) {
             MergedScores mergedScores = fieldIdsToFeatureScores.get(new FieldIdsKey(featureFields[i]));
             if (mergedScores != null) {
+                int featureModels = 1 + mergedScores.numberOfMerges;
+
                 modelCount = Math.max(modelCount, mergedScores.mergedScores.modelCount);
                 totalCount = Math.max(totalCount, mergedScores.mergedScores.totalCount);
+                numberOfModels[i] = featureModels;
 
                 featureScores[i] = mergedScores.mergedScores.featureScores;
                 LOG.info("Gathered {} scores for tenantId:{} catwalkId:{} modelId:{} feature:{} from {} models",
-                    featureScores[i].size(), tenantId, catwalkId, modelId, i, 1 + mergedScores.numberOfMerges);
+                    featureScores[i].size(), tenantId, catwalkId, modelId, i, featureModels);
             } else {
                 featureScores[i] = Collections.emptyList();
                 LOG.info("Gathered no scores for tenantId:{} catwalkId:{} modelId:{} feature:{}",
@@ -243,7 +247,7 @@ public class CatwalkModelService {
             }
         }
 
-        CatwalkModel model = new CatwalkModel(modelCount, totalCount, featureScores);
+        CatwalkModel model = new CatwalkModel(modelCount, totalCount, numberOfModels, featureScores);
         stats.egressed("/miru/catwalk/model/" + tenantId.toString(), 1, System.currentTimeMillis() - start);
         return model;
     }

@@ -150,7 +150,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
 
             return streamBitmaps.stream(null, combined);
         }, solutionLog);*/
-        float[] thresholds = report.isPresent() ? new float[]{report.get().threshold} : new float[]{0.5f, 0.2f, 0.08f, 0f};
+        float[] thresholds = report.isPresent() ? new float[] { report.get().threshold } : new float[] { 0.5f, 0.2f, 0.08f, 0f };
         @SuppressWarnings("unchecked")
         MinMaxPriorityQueue<Scored>[] scored = new MinMaxPriorityQueue[thresholds.length];
 
@@ -205,7 +205,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                     totalTimeFetchingLastId += (System.currentTimeMillis() - fetchLastIdsStart);
 
                     long fetchScoresStart = System.currentTimeMillis();
-                    int[] missed = {0};
+                    int[] missed = { 0 };
                     modelScorer.score(
                         request.query.modelId,
                         miruTermIds,
@@ -255,9 +255,9 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 return true;
             },
             thresholds,
-            (thresholdIndex, hotness) -> {
+            (thresholdIndex, hotness, cacheable) -> {
                 scored[thresholdIndex].add(hotness);
-                if (thresholds.length == thresholdIndex + 1) {
+                if (cacheable && thresholds.length == thresholdIndex + 1) {
                     updates.add(hotness);
                 }
                 return true;

@@ -19,31 +19,27 @@ import com.jivesoftware.os.miru.api.base.MiruTermId;
 import java.util.Map;
 
 /**
- *
  * @author jonathan.colt
  */
 public class StrutModel {
 
     final Map<StrutModelCache.StrutModelKey, StrutModelCache.ModelScore>[] model;
-    private final long modelCount;
-    private final long totalCount;
+    public final long modelCount;
+    public final long totalCount;
+    public final int[] numberOfModels;
 
-    public StrutModel(Map<StrutModelCache.StrutModelKey, StrutModelCache.ModelScore>[] model, long modelCount, long totalCount) {
+    public StrutModel(Map<StrutModelCache.StrutModelKey, StrutModelCache.ModelScore>[] model,
+        long modelCount,
+        long totalCount,
+        int[] numberOfModels) {
         this.model = model;
         this.modelCount = modelCount;
         this.totalCount = totalCount;
+        this.numberOfModels = numberOfModels;
     }
 
     public StrutModelCache.ModelScore score(int featureId, MiruTermId[] values) {
         return model[featureId].get(new StrutModelCache.StrutModelKey(values));
-    }
-
-    public long getModelCount() {
-        return modelCount;
-    }
-
-    public long getTotalCount() {
-        return totalCount;
     }
 
 }
