@@ -49,7 +49,7 @@ public class Strut {
 
     public static interface HotStuff {
 
-        boolean steamStream(int thresholdIndex, Scored scored);
+        boolean steamStream(int thresholdIndex, Scored scored, boolean cacheable);
     }
 
     public <BM extends IBM, IBM> void yourStuff(String name,
@@ -62,8 +62,6 @@ public class Strut {
         float[] thresholds,
         HotStuff hotStuff,
         MiruSolutionLog solutionLog) throws Exception {
-
-        StrutModel model = cache.get(request.tenantId, request.query.catwalkId, request.query.modelId, coord.partitionId.getId(), request.query.catwalkQuery);
 
         StackBuffer stackBuffer = new StackBuffer();
 
@@ -102,6 +100,15 @@ public class Strut {
             }
         }
 
+        StrutModel model = cache.get(request.tenantId, request.query.catwalkId, request.query.modelId, coord.partitionId.getId(), request.query.catwalkQuery);
+        boolean[] cacheable = { true };
+        for (int i = 0; i < featureFields.length; i++) {
+            if (model.numberOfModels[i] == 0) {
+                cacheable[0] = false;
+                break;
+            }
+        }
+
         long start = System.currentTimeMillis();
         int[] featureCount = { 0 };
         float[] score = new float[thresholds.length];
@@ -123,10 +130,10 @@ public class Strut {
                                 System.arraycopy(features[i], 0, scoredFeatures, 0, features[i].length);
                             }
                             float s = finalizeScore(score[i], termCount[i], request.query.strategy);
-                            if (!hotStuff.steamStream(i, new Scored(answerTermId, answerLastId, s, termCount[i], scoredFeatures))) {
+                            if (!hotStuff.steamStream(i, new Scored(answerTermId, answerLastId, s, termCount[i], scoredFeatures), cacheable[0])) {
                                 stopped = true;
                             }
-                        } else if (!hotStuff.steamStream(i, new Scored(answerTermId, answerLastId, 0f, 0, null))) {
+                        } else if (!hotStuff.steamStream(i, new Scored(answerTermId, answerLastId, 0f, 0, null), cacheable[0])) {
                             stopped = true;
                         }
                         score[i] = 0f;

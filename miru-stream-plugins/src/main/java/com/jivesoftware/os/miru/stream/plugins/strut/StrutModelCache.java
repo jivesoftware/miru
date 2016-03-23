@@ -112,7 +112,10 @@ public class StrutModelCache {
                 }
             }
         }
-        return new StrutModel(modelFeatureScore, model.modelCount, model.totalCount);
+        return new StrutModel(modelFeatureScore,
+            model != null ? model.modelCount : 0,
+            model != null ? model.totalCount : 0,
+            model != null ? model.numberOfModels : new int[catwalkQuery.featureFields.length]);
     }
 
     static class StrutModelKey {
