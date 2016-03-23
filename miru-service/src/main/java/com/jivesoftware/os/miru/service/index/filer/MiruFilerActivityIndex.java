@@ -262,7 +262,7 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
                 termLookup[fieldId].readWriteAutoGrow((long) capacity,
                     (monkey, filer, stackBuffer1, lock) -> {
                         synchronized (lock) {
-                            LOG.inc("count>set>lookupFieldTerms");
+                            LOG.inc("count>set>termLookup");
                             for (int j = 0; j < activityAndIdsArray.length; j++) {
                                 MiruTermId[] termIds = activityAndIdsArray[j].activity.fieldsValues[fieldId];
                                 if (termIds != null && termIds.length > 0) {
@@ -293,7 +293,7 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
                         }
                         termStorage[valuePower][fieldId].multiExecute(valueKeys,
                             (keyValueContext, index) -> {
-                                LOG.inc("count>set>lookupFieldTerms");
+                                LOG.inc("count>set>termStorage");
                                 keyValueContext.set(activityAndIdsArray[index].activity.fieldsValues[fieldId]);
                             },
                             stackBuffer);
