@@ -263,7 +263,7 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
         for (int i = 0; i < termLookup.length; i++) {
             int fieldId = i;
             LOG.inc("count>set>lookupFields");
-            if (termLookup[fieldId] != null && termStorage[fieldId] != null) {
+            if (termLookup[fieldId] != null) {
                 @SuppressWarnings("unchecked")
                 boolean[][] valuePowers = new boolean[16][];
                 termLookup[fieldId].readWriteAutoGrow(capacity * 2L,
@@ -291,7 +291,7 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
                     stackBuffer);
 
                 for (int valuePower = 0; valuePower < valuePowers.length; valuePower++) {
-                    if (valuePowers[valuePower] != null) {
+                    if (valuePowers[valuePower] != null && termStorage[valuePower][fieldId] != null) {
                         Integer[] valueKeys = new Integer[activityAndIdsArray.length];
                         for (int j = 0; j < valueKeys.length; j++) {
                             if (valuePowers[valuePower][j]) {
