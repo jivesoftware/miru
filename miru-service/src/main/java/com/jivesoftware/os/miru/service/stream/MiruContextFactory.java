@@ -219,7 +219,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         TxKeyValueStore<Integer, MiruTermId[]>[][] termStorage = new TxKeyValueStore[16][schema.fieldCount()];
         for (MiruFieldDefinition fieldDefinition : schema.getFieldDefinitions()) {
             if (fieldDefinition.type.hasFeature(Feature.stored)) {
-                termLookup[fieldDefinition.fieldId] = new KeyedFilerProvider<>(genericFilerStore, keyBytes("termLookup-" + fieldDefinition.fieldId));
+                termLookup[fieldDefinition.fieldId] = new KeyedFilerProvider<>(genericFilerStore, keyBytes("termLookup2-" + fieldDefinition.fieldId));
 
                 for (int i = 0; i < 16; i++) {
                     termStorage[i][fieldDefinition.fieldId] = new TxKeyValueStore<>(skyhookCog,

@@ -30,6 +30,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.index.MiruSipIndexMarshaller;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.service.locator.MiruResourceLocator;
+import com.jivesoftware.os.miru.service.partition.LargestFirstMergeChits;
 import com.jivesoftware.os.miru.service.partition.MiruClusterPartitionDirector;
 import com.jivesoftware.os.miru.service.partition.MiruExpectedTenants;
 import com.jivesoftware.os.miru.service.partition.MiruHostedPartitionComparison;
@@ -41,6 +42,7 @@ import com.jivesoftware.os.miru.service.partition.MiruPartitionHeartbeatHandler;
 import com.jivesoftware.os.miru.service.partition.MiruRemoteQueryablePartitionFactory;
 import com.jivesoftware.os.miru.service.partition.MiruSipTrackerFactory;
 import com.jivesoftware.os.miru.service.partition.MiruTenantTopologyFactory;
+import com.jivesoftware.os.miru.service.partition.OrderedMergeChits;
 import com.jivesoftware.os.miru.service.partition.PartitionErrorTracker;
 import com.jivesoftware.os.miru.service.partition.cluster.MiruClusterExpectedTenants;
 import com.jivesoftware.os.miru.service.solver.MiruLowestLatencySolver;
@@ -198,9 +200,10 @@ public class MiruServiceInitializer {
             }
         };
 
-        MiruMergeChits persistentMergeChits = new MiruMergeChits("persistent", new AtomicLong(config.getPersistentMergeChitCount()),
-            config.getPersistentMergeChitCount(), config.getMergeMaxOverage());
-        MiruMergeChits transientMergeChits = new MiruMergeChits("transient", new AtomicLong(config.getTransientMergeChitCount()),
+        MiruMergeChits persistentMergeChits = new LargestFirstMergeChits("persistent", new AtomicLong(config.getPersistentMergeChitCount()));
+        /*MiruMergeChits persistentMergeChits = new OrderedMergeChits("persistent", new AtomicLong(config.getPersistentMergeChitCount()),
+            config.getPersistentMergeChitCount(), config.getMergeMaxOverage());*/
+        MiruMergeChits transientMergeChits = new OrderedMergeChits("transient", new AtomicLong(config.getTransientMergeChitCount()),
             config.getTransientMergeChitCount(), config.getMergeMaxOverage());
         MiruLocalPartitionFactory<C, S> localPartitionFactory = new MiruLocalPartitionFactory<>(miruStats,
             config,
