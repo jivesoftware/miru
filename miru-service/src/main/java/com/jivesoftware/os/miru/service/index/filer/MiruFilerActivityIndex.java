@@ -89,10 +89,9 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
             (monkey, filer, stackBuffer1, lock) -> {
                 if (filer != null) {
                     synchronized (lock) {
-                        int offset = index * 2;
-                        if (filer.length() >= offset + 2) {
-                            filer.seek(offset);
-                            valuePower[0] = readUnsignedShort(filer);
+                        if (filer.length() >= index + 1) {
+                            filer.seek(index);
+                            valuePower[0] = readUnsignedByte(filer);
                         }
                     }
                 }
@@ -108,16 +107,11 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
         return termIds;
     }
 
-    private int readUnsignedShort(ChunkFiler filer) throws IOException {
-        int length = 0;
-        length |= (filer.read() & 0xFF);
-        length <<= 8;
-        length |= (filer.read() & 0xFF);
-        return length;
+    private int readUnsignedByte(ChunkFiler filer) throws IOException {
+        return (filer.read() & 0xFF);
     }
 
-    private void writeUnsignedShort(ChunkFiler filer, int value) throws IOException {
-        filer.write((value >>> 8) & 0xFF);
+    private void writeUnsignedByte(ChunkFiler filer, int value) throws IOException {
         filer.write(value & 0xFF);
     }
 
@@ -156,10 +150,9 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
                             if (index == -1) {
                                 continue;
                             }
-                            int filerOffset = index * 2;
-                            if (filerLength >= filerOffset + 2) {
-                                filer.seek(filerOffset);
-                                int valuePower = readUnsignedShort(filer);
+                            if (filerLength >= index + 1) {
+                                filer.seek(index);
+                                int valuePower = readUnsignedByte(filer);
                                 if (valuePower > 0) {
                                     if (valuePowers[valuePower] == null) {
                                         valuePowers[valuePower] = new boolean[length];
@@ -266,7 +259,7 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
             if (termLookup[fieldId] != null) {
                 @SuppressWarnings("unchecked")
                 boolean[][] valuePowers = new boolean[16][];
-                termLookup[fieldId].readWriteAutoGrow(capacity * 2L,
+                termLookup[fieldId].readWriteAutoGrow((long) capacity,
                     (monkey, filer, stackBuffer1, lock) -> {
                         synchronized (lock) {
                             LOG.inc("count>set>lookupFieldTerms");
@@ -281,8 +274,8 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
                                     }
                                     valuePowers[valuePower][j] = true;
 
-                                    filer.seek(index * 2);
-                                    writeUnsignedShort(filer, valuePower);
+                                    filer.seek(index);
+                                    writeUnsignedByte(filer, valuePower);
                                 }
                             }
                         }

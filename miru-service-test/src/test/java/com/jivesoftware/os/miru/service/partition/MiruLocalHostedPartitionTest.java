@@ -540,8 +540,8 @@ public class MiruLocalHostedPartitionTest {
     private MiruLocalHostedPartition<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSCursor, RCVSSipCursor> getRoaringLocalHostedPartition()
         throws Exception {
         AtomicLong numberOfChitsRemaining = new AtomicLong(100_000);
-        MiruMergeChits persistentMergeChits = new MiruMergeChits("persistent", numberOfChitsRemaining, 100_000, 10_000);
-        MiruMergeChits transientMergeChits = new MiruMergeChits("transient", numberOfChitsRemaining, 100_000, 10_000);
+        MiruMergeChits persistentMergeChits = new OrderedMergeChits("persistent", numberOfChitsRemaining, 100_000, 10_000);
+        MiruMergeChits transientMergeChits = new OrderedMergeChits("transient", numberOfChitsRemaining, 100_000, 10_000);
 
         return new MiruLocalHostedPartition<>(new MiruStats(), bitmaps, trackError, coord, -1, contextFactory, sipTrackerFactory,
             walClient, partitionEventHandler, rebuildDirector, scheduledBootstrapService, scheduledRebuildService,
