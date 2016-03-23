@@ -106,15 +106,15 @@ public class AggregateCounts {
         MiruSchema schema = requestContext.getSchema();
         int fieldId = schema.getFieldId(constraint.aggregateCountAroundField);
         MiruFieldDefinition fieldDefinition = schema.getFieldDefinition(fieldId);
-        Preconditions.checkArgument(fieldDefinition.type.hasFeature(Feature.indexedValueBits), "You can only aggregate fields with indexedValueBits");
+        Preconditions.checkArgument(fieldDefinition.type.hasFeature(Feature.stored), "You can only aggregate stored fields");
 
         int[] gatherFieldIds;
         if (constraint.gatherTermsForFields != null && constraint.gatherTermsForFields.length > 0) {
             gatherFieldIds = new int[constraint.gatherTermsForFields.length];
             for (int i = 0; i < gatherFieldIds.length; i++) {
                 gatherFieldIds[i] = schema.getFieldId(constraint.gatherTermsForFields[i]);
-                Preconditions.checkArgument(schema.getFieldDefinition(gatherFieldIds[i]).type.hasFeature(Feature.indexedValueBits),
-                    "You can only gather fields with indexedValueBits");
+                Preconditions.checkArgument(schema.getFieldDefinition(gatherFieldIds[i]).type.hasFeature(Feature.stored),
+                    "You can only gather stored fields");
             }
         } else {
             gatherFieldIds = new int[0];
