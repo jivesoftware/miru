@@ -247,6 +247,7 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
                         filer.seek(index * 16);
                         FilerIO.writeLong(filer, activityAndIdsArray[j].activity.time, "time", stackBuffer1);
                         FilerIO.writeLong(filer, activityAndIdsArray[j].activity.version, "version", stackBuffer1);
+                        bytesWrite.add(16);
                     }
                 }
                 return null;
@@ -276,6 +277,7 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
 
                                     filer.seek(index);
                                     writeUnsignedByte(filer, valuePower);
+                                    bytesWrite.add(1 + 4 + valueSize); // power byte plus key/value payload below
                                 }
                             }
                         }
@@ -294,6 +296,7 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
                         termStorage[valuePower][fieldId].multiExecute(valueKeys,
                             (keyValueContext, index) -> {
                                 LOG.inc("count>set>termStorage");
+                                // bytes written metric handled above
                                 keyValueContext.set(activityAndIdsArray[index].activity.fieldsValues[fieldId]);
                             },
                             stackBuffer);

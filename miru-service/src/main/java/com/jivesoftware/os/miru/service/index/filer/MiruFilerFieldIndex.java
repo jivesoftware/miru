@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.service.index.filer;
 
+import com.google.common.collect.Lists;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.io.api.HintAndTransaction;
@@ -266,6 +267,7 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
 
         MutableLong bytesRead = new MutableLong();
         MutableLong bytesWrite = new MutableLong();
+        int[] indexPowers = new int[32];
         indexes[fieldId].multiWriteNewReplace(termIdBytes, (monkey, filer, stackBuffer1, lock, index) -> {
             BitmapAndLastId<BM> backing = null;
             if (filer != null) {
@@ -282,6 +284,7 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
             try {
                 MiruFilerInvertedIndex.SizeAndBytes sizeAndBytes = MiruFilerInvertedIndex.getSizeAndBytes(bitmaps, merged.bitmap, merged.lastId);
                 bytesWrite.add(sizeAndBytes.filerSizeInBytes);
+                indexPowers[FilerIO.chunkPower(sizeAndBytes.filerSizeInBytes, 0)]++;
                 return new HintAndTransaction<>(sizeAndBytes.filerSizeInBytes, new MiruFilerInvertedIndex.SetTransaction(sizeAndBytes.bytes));
             } catch (Exception e) {
                 throw new IOException("Failed to serialize bitmap", e);
@@ -293,6 +296,11 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
         LOG.inc("bytes>multiMergeRead>" + fieldId, bytesRead.longValue());
         LOG.inc("bytes>multiMergeWrite>total", bytesWrite.longValue());
         LOG.inc("bytes>multiMergeWrite>" + fieldId, bytesWrite.longValue());
+        for (int i = 0; i < indexPowers.length; i++) {
+            if (indexPowers[i] > 0) {
+                LOG.inc("count>multiMerge>power>" + i, indexPowers[i]);
+            }
+        }
     }
 
     @Override
