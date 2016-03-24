@@ -17,6 +17,7 @@
         <jive-utils-version>0.98</jive-utils-version>
         <rcvs-version>0.18</rcvs-version>
         <filer-version>0.95</filer-version>
+        <lab-version>0.32</lab-version>
         <amza-version>0.309</amza-version>
         <routing-bird-version>0.42</routing-bird-version>
         <jackson-version>2.5.3</jackson-version>
@@ -29,6 +30,12 @@
     </properties>
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>com.jivesoftware.os.leaps-n-bounds</groupId>
+                <artifactId>leaps-n-bounds</artifactId>
+                <version>${lab-version}</version>
+                <type>jar</type>
+            </dependency>
             <dependency>
                 <groupId>de.ruedigermoeller</groupId>
                 <artifactId>fst</artifactId>

@@ -22,6 +22,7 @@ import com.google.common.collect.Multiset;
 import com.google.common.collect.Multiset.Entry;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.filer.io.ByteBufferDataInput;
+import com.jivesoftware.os.filer.io.Filer;
 import com.jivesoftware.os.filer.io.FilerDataInput;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
@@ -566,10 +567,10 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
         return !intersection.isEmpty();
     }
 
-    private RoaringBitmap bitmapFromFiler(ChunkFiler filer, int offset, StackBuffer stackBuffer1) throws IOException {
+    private RoaringBitmap bitmapFromFiler(Filer filer, int offset, StackBuffer stackBuffer1) throws IOException {
         RoaringBitmap deser = new RoaringBitmap();
-        if (filer.canLeakUnsafeByteBuffer()) {
-            ByteBuffer buf = filer.leakUnsafeByteBuffer();
+        if (filer instanceof ChunkFiler && ((ChunkFiler) filer).canLeakUnsafeByteBuffer()) {
+            ByteBuffer buf = ((ChunkFiler) filer).leakUnsafeByteBuffer();
             buf.position(offset);
             deser.deserialize(new ByteBufferDataInput(buf));
         } else {
@@ -609,8 +610,8 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
     }
 
     public static void main(String[] args) throws Exception {
-        int[] pieces = { 4 }; //{ 4, 8, 4, 8 };
-        int[] cardinalities = { 3_000 }; //{ 1, 100, 3, 10 };
+        int[] pieces = {4}; //{ 4, 8, 4, 8 };
+        int[] cardinalities = {3_000}; //{ 1, 100, 3, 10 };
         int numInserts = 10_000;
 
         int numBytes = 0;
@@ -652,7 +653,6 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
 
                 //rand.nextBytes(value);
                 //value[rand.nextInt(numBytes)] |= 1;
-
                 //long value = 1L + (mask & rand.nextInt(100_000));
                 //int value = 1 + rand.nextInt(1_000);
                 expected.add(new Value(value));
@@ -693,7 +693,6 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
             while (bits[to - 1].isEmpty() && to > 0) {
                 to--;
             }*/
-
             int[] valueBits = new int[numBits];
             int[] bitBytes = new int[numBits];
             for (int i = 0; i < numBits; i++) {
@@ -702,7 +701,7 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
             }
 
             Multiset<Value> found = HashMultiset.create(expected.size());
-            int[] streamed = { 0 };
+            int[] streamed = {0};
             int maxQuickSize = 0;
 
             long start = System.currentTimeMillis();
@@ -738,8 +737,8 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
                     }
                     Value v = new Value(value);
                     //if (last || quick.add(v)) {
-                        found.add(v);
-                        streamed[0]++;
+                    found.add(v);
+                    streamed[0]++;
                     //}
                 }
                 //maxQuickSize = Math.max(maxQuickSize, quick.size());
@@ -837,8 +836,8 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
         boolean stream(boolean[] output, int cardinality);
     }
 
-
     interface ValueStream {
+
         void stream(byte[] value) throws Exception;
     }
 
@@ -878,8 +877,8 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
         }
         return traversals;
     }*/
-
     public static class Frame {
+
         final RoaringBitmap use;
         final int from;
         //final int to;

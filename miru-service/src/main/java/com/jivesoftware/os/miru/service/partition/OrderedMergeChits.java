@@ -1,7 +1,6 @@
 package com.jivesoftware.os.miru.service.partition;
 
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
@@ -10,8 +9,6 @@ import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.mlogger.core.ValueType;
 import java.util.Collections;
 import java.util.Map;
-import java.util.NavigableSet;
-import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**

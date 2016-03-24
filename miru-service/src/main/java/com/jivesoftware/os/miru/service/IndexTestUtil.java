@@ -17,6 +17,9 @@ import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.filer.io.chunk.ChunkStore;
 import com.jivesoftware.os.filer.keyed.store.TxKeyValueStore;
 import com.jivesoftware.os.filer.keyed.store.TxKeyedFilerStore;
+import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
+import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
+import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.schema.DefaultMiruSchemaDefinition;
@@ -107,7 +110,9 @@ public class IndexTestUtil {
             100,
             1_000);
 
-        return new MiruContextFactory<>(cogs,
+        OrderIdProvider idProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(1));
+        return new MiruContextFactory<>(idProvider,
+            cogs,
             cogs,
             schemaProvider,
             termComposer,

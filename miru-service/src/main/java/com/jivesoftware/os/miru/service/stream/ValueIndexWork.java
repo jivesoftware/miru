@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.service.stream;
 
-import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import gnu.trove.list.TIntList;
 
 /**

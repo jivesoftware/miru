@@ -9,7 +9,6 @@ import com.jivesoftware.os.miru.plugin.partition.MiruRoutablePartition;
 import com.jivesoftware.os.miru.service.partition.cluster.PartitionAndHost;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentSkipListMap;
 
 public class MiruTenantRoutingTopology {

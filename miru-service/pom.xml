@@ -92,5 +92,13 @@
             <groupId>com.jivesoftware.os.routing.bird</groupId>
             <artifactId>routing-bird-shared</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.leaps-n-bounds</groupId>
+            <artifactId>leaps-n-bounds</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.jive.utils</groupId>
+            <artifactId>ordered-id</artifactId>
+        </dependency>
     </dependencies>
 </project>

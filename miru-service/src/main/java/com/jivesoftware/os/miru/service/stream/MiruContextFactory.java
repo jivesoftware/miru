@@ -24,6 +24,9 @@ import com.jivesoftware.os.filer.io.map.MapContext;
 import com.jivesoftware.os.filer.io.primative.LongIntKeyValueMarshaller;
 import com.jivesoftware.os.filer.keyed.store.TxKeyValueStore;
 import com.jivesoftware.os.filer.keyed.store.TxKeyedFilerStore;
+import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
+import com.jivesoftware.os.lab.LABEnvironment;
+import com.jivesoftware.os.lab.api.ValueIndex;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
@@ -75,6 +78,7 @@ import com.jivesoftware.os.miru.service.index.filer.MiruFilerRemovalIndex;
 import com.jivesoftware.os.miru.service.index.filer.MiruFilerSipIndex;
 import com.jivesoftware.os.miru.service.index.filer.MiruFilerTimeIndex;
 import com.jivesoftware.os.miru.service.index.filer.MiruFilerUnreadTrackingIndex;
+import com.jivesoftware.os.miru.service.index.lab.LabFieldIndex;
 import com.jivesoftware.os.miru.service.locator.MiruPartitionCoordIdentifier;
 import com.jivesoftware.os.miru.service.locator.MiruResourceLocator;
 import com.jivesoftware.os.miru.service.locator.MiruResourcePartitionIdentifier;
@@ -86,6 +90,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.builder.HashCodeBuilder;
 
 /**
@@ -95,6 +100,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
+    private final OrderIdProvider idProvider;
     private final TxCogs persistentCogs;
     private final TxCogs transientCogs;
     private final MiruSchemaProvider schemaProvider;
@@ -111,7 +117,8 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
     private final MiruInterner<MiruTermId> termInterner;
     private final ObjectMapper objectMapper;
 
-    public MiruContextFactory(TxCogs persistentCogs,
+    public MiruContextFactory(OrderIdProvider idProvider,
+        TxCogs persistentCogs,
         TxCogs transientCogs,
         MiruSchemaProvider schemaProvider,
         MiruTermComposer termComposer,
@@ -127,6 +134,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         MiruInterner<MiruTermId> termInterner,
         ObjectMapper objectMapper) {
 
+        this.idProvider = idProvider;
         this.persistentCogs = persistentCogs;
         this.transientCogs = transientCogs;
         this.schemaProvider = schemaProvider;
@@ -172,13 +180,16 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         StackBuffer stackBuffer) throws Exception {
 
         ChunkStore[] chunkStores = getAllocator(storage).allocateChunkStores(coord, stackBuffer);
-        return allocate(bitmaps, coord, schema, chunkStores, storage, rebuildToken, stackBuffer);
+        File[] labDirs = getAllocator(storage).getLabDirs(coord);
+        LABEnvironment[] labEnvironments = getAllocator(storage).allocateLABEnvironments(labDirs);
+        return allocate(bitmaps, coord, schema, chunkStores, labEnvironments, storage, rebuildToken, stackBuffer);
     }
 
     private <BM extends IBM, IBM> MiruContext<BM, IBM, S> allocate(MiruBitmaps<BM, IBM> bitmaps,
         MiruPartitionCoord coord,
         MiruSchema schema,
         ChunkStore[] chunkStores,
+        LABEnvironment[] labEnvironments,
         MiruBackingStorage storage,
         MiruRebuildDirector.Token rebuildToken,
         StackBuffer stackBuffer) throws Exception {
@@ -245,41 +256,80 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         @SuppressWarnings("unchecked")
         MiruFieldIndex<BM, IBM>[] fieldIndexes = new MiruFieldIndex[MiruFieldType.values().length];
         for (MiruFieldType fieldType : MiruFieldType.values()) {
-            @SuppressWarnings("unchecked")
-            KeyedFilerStore<Long, Void>[] indexes = new KeyedFilerStore[schema.fieldCount()];
-            @SuppressWarnings("unchecked")
-            KeyedFilerStore<Integer, MapContext>[] cardinalities = new KeyedFilerStore[schema.fieldCount()];
-            for (MiruFieldDefinition fieldDefinition : schema.getFieldDefinitions()) {
-                int fieldId = fieldDefinition.fieldId;
-                if (fieldType == MiruFieldType.latest && !fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.indexedLatest)
-                    || fieldType == MiruFieldType.pairedLatest && schema.getPairedLatestFieldDefinitions(fieldId).isEmpty()
-                    || fieldType == MiruFieldType.bloom && schema.getBloomFieldDefinitions(fieldId).isEmpty()) {
-                    indexes[fieldId] = null;
-                } else {
-                    boolean lexOrderKeys = (fieldDefinition.prefix.type != MiruFieldDefinition.Prefix.Type.none);
-                    indexes[fieldId] = new TxKeyedFilerStore<>(cogs, seed, chunkStores, keyBytes("field-" + fieldType.name() + "-" + fieldId), lexOrderKeys,
-                        TxNamedMapOfFiler.CHUNK_FILER_CREATOR,
-                        TxNamedMapOfFiler.CHUNK_FILER_OPENER,
-                        TxNamedMapOfFiler.OVERWRITE_GROWER_PROVIDER,
-                        TxNamedMapOfFiler.REWRITE_GROWER_PROVIDER);
+
+            boolean insane = true;
+            if (insane) {
+                @SuppressWarnings("unchecked")
+                ValueIndex[] indexes = new ValueIndex[schema.fieldCount()];
+                @SuppressWarnings("unchecked")
+                KeyedFilerStore<Integer, MapContext>[] cardinalities = new KeyedFilerStore[schema.fieldCount()];
+                for (MiruFieldDefinition fieldDefinition : schema.getFieldDefinitions()) {
+                    int fieldId = fieldDefinition.fieldId;
+                    if (fieldType == MiruFieldType.latest && !fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.indexedLatest)
+                        || fieldType == MiruFieldType.pairedLatest && schema.getPairedLatestFieldDefinitions(fieldId).isEmpty()
+                        || fieldType == MiruFieldType.bloom && schema.getBloomFieldDefinitions(fieldId).isEmpty()) {
+                        indexes[fieldId] = null;
+                    } else {
+                        boolean lexOrderKeys = (fieldDefinition.prefix.type != MiruFieldDefinition.Prefix.Type.none);
+                        indexes[fieldId] = labEnvironments[Math.abs((coord.hashCode() + fieldId) % labEnvironments.length)]
+                            .open("field-" + fieldType.name() + "-" + fieldId, 4096, 1000, 10 * 1024 * 1024, -1L, -1L);
+                    }
+                    if (fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.cardinality)) {
+                        cardinalities[fieldId] = new TxKeyedFilerStore<>(cogs,
+                            seed,
+                            chunkStores,
+                            keyBytes("field-c-" + fieldType.name() + "-" + fieldId),
+                            false,
+                            new MapCreator(100, 4, false, 8, false),
+                            MapOpener.INSTANCE,
+                            TxMapGrower.MAP_OVERWRITE_GROWER,
+                            TxMapGrower.MAP_REWRITE_GROWER);
+                    }
                 }
-                if (fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.cardinality)) {
-                    cardinalities[fieldId] = new TxKeyedFilerStore<>(cogs,
-                        seed,
-                        chunkStores,
-                        keyBytes("field-c-" + fieldType.name() + "-" + fieldId),
-                        false,
-                        new MapCreator(100, 4, false, 8, false),
-                        MapOpener.INSTANCE,
-                        TxMapGrower.MAP_OVERWRITE_GROWER,
-                        TxMapGrower.MAP_REWRITE_GROWER);
+
+                fieldIndexes[fieldType.getIndex()] = new MiruDeltaFieldIndex<>(
+                    bitmaps,
+                    trackError,
+                    new LabFieldIndex<>(idProvider, bitmaps, trackError, indexes, cardinalities, fieldIndexStripingLocksProvider, termInterner),
+                    schema.getFieldDefinitions());
+            } else {
+                @SuppressWarnings("unchecked")
+                KeyedFilerStore<Long, Void>[] indexes = new KeyedFilerStore[schema.fieldCount()];
+                @SuppressWarnings("unchecked")
+                KeyedFilerStore<Integer, MapContext>[] cardinalities = new KeyedFilerStore[schema.fieldCount()];
+                for (MiruFieldDefinition fieldDefinition : schema.getFieldDefinitions()) {
+                    int fieldId = fieldDefinition.fieldId;
+                    if (fieldType == MiruFieldType.latest && !fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.indexedLatest)
+                        || fieldType == MiruFieldType.pairedLatest && schema.getPairedLatestFieldDefinitions(fieldId).isEmpty()
+                        || fieldType == MiruFieldType.bloom && schema.getBloomFieldDefinitions(fieldId).isEmpty()) {
+                        indexes[fieldId] = null;
+                    } else {
+                        boolean lexOrderKeys = (fieldDefinition.prefix.type != MiruFieldDefinition.Prefix.Type.none);
+                        indexes[fieldId] = new TxKeyedFilerStore<>(cogs, seed, chunkStores, keyBytes("field-" + fieldType.name() + "-" + fieldId), lexOrderKeys,
+                            TxNamedMapOfFiler.CHUNK_FILER_CREATOR,
+                            TxNamedMapOfFiler.CHUNK_FILER_OPENER,
+                            TxNamedMapOfFiler.OVERWRITE_GROWER_PROVIDER,
+                            TxNamedMapOfFiler.REWRITE_GROWER_PROVIDER);
+                    }
+                    if (fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.cardinality)) {
+                        cardinalities[fieldId] = new TxKeyedFilerStore<>(cogs,
+                            seed,
+                            chunkStores,
+                            keyBytes("field-c-" + fieldType.name() + "-" + fieldId),
+                            false,
+                            new MapCreator(100, 4, false, 8, false),
+                            MapOpener.INSTANCE,
+                            TxMapGrower.MAP_OVERWRITE_GROWER,
+                            TxMapGrower.MAP_REWRITE_GROWER);
+                    }
                 }
+
+                fieldIndexes[fieldType.getIndex()] = new MiruDeltaFieldIndex<>(
+                    bitmaps,
+                    trackError,
+                    new MiruFilerFieldIndex<>(bitmaps, trackError, indexes, cardinalities, fieldIndexStripingLocksProvider, termInterner),
+                    schema.getFieldDefinitions());
             }
-            fieldIndexes[fieldType.getIndex()] = new MiruDeltaFieldIndex<>(
-                bitmaps,
-                trackError,
-                new MiruFilerFieldIndex<>(bitmaps, trackError, indexes, cardinalities, fieldIndexStripingLocksProvider, termInterner),
-                schema.getFieldDefinitions());
         }
         MiruFieldIndexProvider<BM, IBM> fieldIndexProvider = new MiruFieldIndexProvider<>(fieldIndexes);
 
@@ -388,6 +438,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             activityInternExtern,
             streamLocks,
             chunkStores,
+            labEnvironments,
             storage,
             rebuildToken);
 
@@ -411,7 +462,22 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         for (int i = 0; i < fromChunks.length; i++) {
             fromChunks[i].copyTo(toChunks[i], stackBuffer);
         }
-        return allocate(bitmaps, coord, schema, toChunks, toStorage, null, stackBuffer);
+
+        File[] fromLabDirs = getAllocator(from.storage).getLabDirs(coord);
+        File[] toLabDirs = getAllocator(toStorage).getLabDirs(coord);
+
+        if (fromLabDirs.length != toLabDirs.length) {
+            throw new IllegalArgumentException("The number of from env:" + fromLabDirs.length
+                + " must equal the number of to env:" + toLabDirs.length);
+        }
+        for (int i = 0; i < fromLabDirs.length; i++) {
+            FileUtils.deleteDirectory(toLabDirs[i]);
+            if (fromLabDirs[i].exists()) {
+                FileUtils.moveDirectory(fromLabDirs[i], toLabDirs[i]);
+            }
+        }
+        LABEnvironment[] environments = getAllocator(toStorage).allocateLABEnvironments(toLabDirs);
+        return allocate(bitmaps, coord, schema, toChunks, environments, toStorage, null, stackBuffer);
     }
 
     public void saveSchema(MiruPartitionCoord coord, MiruSchema schema) throws IOException {
