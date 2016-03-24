@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.service.partition;
 
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
@@ -92,7 +93,12 @@ public class LargestFirstMergeChits implements MiruMergeChits {
             }
         }
 
-        return eligible.contains(chitty.coord);
+        boolean canMerge = eligible.contains(chitty.coord);
+        if (canMerge) {
+            log.inc("chit>" + name + ">merged>total");
+            log.inc("chit>" + name + ">merged>power>" + FilerIO.chunkPower(chitty.taken, 0));
+        }
+        return canMerge;
     }
 
     @Override
