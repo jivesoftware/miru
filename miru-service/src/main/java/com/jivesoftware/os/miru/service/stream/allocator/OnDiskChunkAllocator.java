@@ -1,10 +1,11 @@
 package com.jivesoftware.os.miru.service.stream.allocator;
 
-import com.google.common.base.Preconditions;
 import com.jivesoftware.os.filer.chunk.store.ChunkStoreInitializer;
 import com.jivesoftware.os.filer.io.ByteBufferFactory;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.filer.io.chunk.ChunkStore;
+import com.jivesoftware.os.lab.LABEnvironment;
+import com.jivesoftware.os.lab.LABValueMerger;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.service.locator.MiruPartitionCoordIdentifier;
 import com.jivesoftware.os.miru.service.locator.MiruResourceLocator;
@@ -12,6 +13,7 @@ import com.jivesoftware.os.miru.service.locator.MiruResourcePartitionIdentifier;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.File;
+import java.util.concurrent.ExecutorService;
 import org.apache.commons.lang.builder.HashCodeBuilder;
 
 /**
@@ -27,6 +29,8 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
     private final int partitionInitialChunkCacheSize;
     private final int partitionMaxChunkCacheSize;
     private final ChunkStoreInitializer chunkStoreInitializer = new ChunkStoreInitializer();
+    private final ExecutorService buildLABCompactorThreadPool = LABEnvironment.buildLABCompactorThreadPool(12);
+    private final ExecutorService buildLABDestroyThreadPool = LABEnvironment.buildLABDestroyThreadPool(12);
 
     public OnDiskChunkAllocator(
         MiruResourceLocator resourceLocator,
@@ -44,8 +48,7 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
     public static void main(String[] args) {
 
         int count = 3;
-
-        for (int hashCode : new int[] { -13, -7, -2, -1, 0, 1, 2, 7, 13 }) {
+        for (int hashCode : new int[]{-13, -7, -2, -1, 0, 1, 2, 7, 13}) {
             for (int shift = 0; shift < count; shift++) {
                 System.out.println("--- " + hashCode + ", " + shift);
                 for (int i = 0; i < count; i++) {
@@ -122,6 +125,24 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
                 stackBuffer);
         }
         return chunkStores;
+    }
+
+    @Override
+    public File[] getLabDirs(MiruPartitionCoord coord) throws Exception {
+        MiruResourcePartitionIdentifier identifier = new MiruPartitionCoordIdentifier(coord);
+        return resourceLocator.getChunkDirectories(identifier, "labs");
+    }
+
+    @Override
+    public LABEnvironment[] allocateLABEnvironments(File[] labDirs) throws Exception {
+
+        LABEnvironment[] environments = new LABEnvironment[labDirs.length];
+        for (int i = 0; i < labDirs.length; i++) {
+            environments[i] = new LABEnvironment(buildLABCompactorThreadPool, buildLABDestroyThreadPool, labDirs[i],
+                new LABValueMerger(),
+                true, 4, 16, 1024);
+        }
+        return environments;
     }
 
     @Override

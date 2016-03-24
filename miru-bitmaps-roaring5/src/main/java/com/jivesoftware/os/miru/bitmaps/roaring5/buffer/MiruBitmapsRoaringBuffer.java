@@ -18,6 +18,7 @@ package com.jivesoftware.os.miru.bitmaps.roaring5.buffer;
 import com.google.common.base.Optional;
 import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
+import com.jivesoftware.os.filer.io.Filer;
 import com.jivesoftware.os.filer.io.FilerDataInput;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.filer.io.chunk.ChunkFiler;
@@ -553,9 +554,9 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
         return !intersection.isEmpty();
     }
 
-    private MutableRoaringBitmap bitmapFromFiler(ChunkFiler filer, int offset, StackBuffer stackBuffer1) throws IOException {
-        if (filer.canLeakUnsafeByteBuffer()) {
-            ByteBuffer buf = filer.leakUnsafeByteBuffer();
+    private MutableRoaringBitmap bitmapFromFiler(Filer filer, int offset, StackBuffer stackBuffer1) throws IOException {
+        if (filer instanceof ChunkFiler && ((ChunkFiler)filer).canLeakUnsafeByteBuffer()) {
+            ByteBuffer buf = ((ChunkFiler)filer).leakUnsafeByteBuffer();
             buf.position(offset);
             return new ImmutableRoaringBitmap(buf).toMutableRoaringBitmap();
         } else {

@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.service.stream;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.filer.io.chunk.ChunkStore;
+import com.jivesoftware.os.lab.LABEnvironment;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
@@ -44,6 +45,7 @@ public class MiruContext<BM extends IBM, IBM, S extends MiruSipCursor<S>> implem
     public final MiruActivityInternExtern activityInternExtern;
     public final StripingLocksProvider<MiruStreamId> streamLocks;
     public final ChunkStore[] chunkStores;
+    public final LABEnvironment[] labEnvironments;
     public final MiruBackingStorage storage;
     public final Object writeLock = new Object();
     public final AtomicBoolean corrupt = new AtomicBoolean(false);
@@ -66,6 +68,7 @@ public class MiruContext<BM extends IBM, IBM, S extends MiruSipCursor<S>> implem
         MiruActivityInternExtern activityInternExtern,
         StripingLocksProvider<MiruStreamId> streamLocks,
         ChunkStore[] chunkStores,
+        LABEnvironment[] labEnvironments,
         MiruBackingStorage storage,
         MiruRebuildDirector.Token rebuildToken) {
         this.schema = schema;
@@ -82,6 +85,7 @@ public class MiruContext<BM extends IBM, IBM, S extends MiruSipCursor<S>> implem
         this.activityInternExtern = activityInternExtern;
         this.streamLocks = streamLocks;
         this.chunkStores = chunkStores;
+        this.labEnvironments = labEnvironments;
         this.storage = storage;
         this.rebuildToken = rebuildToken;
     }

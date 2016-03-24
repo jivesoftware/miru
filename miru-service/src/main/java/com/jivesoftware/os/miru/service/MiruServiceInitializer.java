@@ -12,6 +12,9 @@ import com.jivesoftware.os.filer.io.DirectByteBufferFactory;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
 import com.jivesoftware.os.filer.io.IBA;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
+import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
+import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
+import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruLifecyle;
@@ -159,15 +162,18 @@ public class MiruServiceInitializer {
         objectMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
         objectMapper.registerModule(new GuavaModule());
 
-        MiruContextFactory<S> contextFactory = new MiruContextFactory<>(persistentCogs,
+        OrderIdProvider idProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(1));
+
+        MiruContextFactory<S> contextFactory = new MiruContextFactory<>(idProvider,
+            persistentCogs,
             transientCogs,
             schemaProvider,
             termComposer,
             internExtern,
             ImmutableMap.<MiruBackingStorage, MiruChunkAllocator>builder()
-                .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
-                .put(MiruBackingStorage.disk, onDiskChunkAllocator)
-                .build(),
+            .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
+            .put(MiruBackingStorage.disk, onDiskChunkAllocator)
+            .build(),
             sipIndexMarshaller,
             resourceLocator,
             config.getPartitionAuthzCacheSize(),

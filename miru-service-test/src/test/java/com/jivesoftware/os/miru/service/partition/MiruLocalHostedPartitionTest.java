@@ -61,9 +61,9 @@ import com.jivesoftware.os.miru.service.locator.MiruTempDirectoryResourceLocator
 import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
 import com.jivesoftware.os.miru.service.stream.MiruIndexAuthz;
 import com.jivesoftware.os.miru.service.stream.MiruIndexBloom;
-import com.jivesoftware.os.miru.service.stream.MiruIndexPrimaryFields;
 import com.jivesoftware.os.miru.service.stream.MiruIndexLatest;
 import com.jivesoftware.os.miru.service.stream.MiruIndexPairedLatest;
+import com.jivesoftware.os.miru.service.stream.MiruIndexPrimaryFields;
 import com.jivesoftware.os.miru.service.stream.MiruIndexValueBits;
 import com.jivesoftware.os.miru.service.stream.MiruIndexer;
 import com.jivesoftware.os.miru.service.stream.MiruRebuildDirector;
@@ -236,7 +236,9 @@ public class MiruLocalHostedPartitionTest {
         TxCogs cogs = new TxCogs(256, 64, null, null, null);
         ObjectMapper mapper = new ObjectMapper();
 
-        contextFactory = new MiruContextFactory<>(cogs,
+        OrderIdProvider idProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(0));
+        contextFactory = new MiruContextFactory<>(idProvider,
+            cogs,
             cogs,
             schemaProvider,
             termComposer,

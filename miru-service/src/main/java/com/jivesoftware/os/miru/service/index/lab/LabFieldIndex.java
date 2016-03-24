@@ -1,13 +1,17 @@
-package com.jivesoftware.os.miru.service.index.filer;
+package com.jivesoftware.os.miru.service.index.lab;
 
+import com.jivesoftware.os.filer.io.ByteArrayFiler;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
-import com.jivesoftware.os.filer.io.api.HintAndTransaction;
 import com.jivesoftware.os.filer.io.api.KeyRange;
 import com.jivesoftware.os.filer.io.api.KeyedFilerStore;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.filer.io.map.MapContext;
 import com.jivesoftware.os.filer.io.map.MapStore;
+import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
+import com.jivesoftware.os.lab.api.ValueIndex;
+import com.jivesoftware.os.lab.api.ValueStream;
+import com.jivesoftware.os.lab.io.api.UIO;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.MiruInterner;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
@@ -18,34 +22,41 @@ import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MultiIndexTx;
 import com.jivesoftware.os.miru.plugin.index.TermIdStream;
 import com.jivesoftware.os.miru.plugin.partition.TrackError;
+import com.jivesoftware.os.miru.service.index.lab.LabInvertedIndex.SizeAndBytes;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.Future;
 import org.apache.commons.lang.mutable.MutableLong;
 
 /**
- * @author jonathan
+ *
+ * @author jonathan.colt
  */
-public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IBM> {
+public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IBM> {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
+    private final OrderIdProvider idProvider;
     private final MiruBitmaps<BM, IBM> bitmaps;
     private final TrackError trackError;
-    private final KeyedFilerStore<Long, Void>[] indexes;
+    private final ValueIndex[] indexes;
     private final KeyedFilerStore<Integer, MapContext>[] cardinalities;
     // We could lock on both field + termId for improved hash/striping, but we favor just termId to reduce object creation
     private final StripingLocksProvider<MiruTermId> stripingLocksProvider;
     private final MiruInterner<MiruTermId> termInterner;
 
-    public MiruFilerFieldIndex(MiruBitmaps<BM, IBM> bitmaps,
+    public LabFieldIndex(OrderIdProvider idProvider,
+        MiruBitmaps<BM, IBM> bitmaps,
         TrackError trackError,
-        KeyedFilerStore<Long, Void>[] indexes,
+        ValueIndex[] indexes,
         KeyedFilerStore<Integer, MapContext>[] cardinalities,
         StripingLocksProvider<MiruTermId> stripingLocksProvider,
         MiruInterner<MiruTermId> termInterner) throws Exception {
+
+        this.idProvider = idProvider;
         this.bitmaps = bitmaps;
         this.trackError = trackError;
         this.indexes = indexes;
@@ -69,7 +80,7 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
     @Override
     public void setIfEmpty(int fieldId, MiruTermId termId, int id, long count, StackBuffer stackBuffer) throws Exception {
         if (getIndex("setIfEmpty", fieldId, termId).setIfEmpty(stackBuffer, id)) {
-            mergeCardinalities(fieldId, termId, new int[] { id }, new long[] { count }, stackBuffer);
+            mergeCardinalities(fieldId, termId, new int[]{id}, new long[]{count}, stackBuffer);
         }
     }
 
@@ -86,14 +97,15 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
         final TermIdStream termIdStream,
         StackBuffer stackBuffer) throws Exception {
         MutableLong bytes = new MutableLong();
-        indexes[fieldId].streamKeys(ranges, rawKey -> {
+        indexes[fieldId].rowScan((byte[] key, long timestamp, boolean tombstoned, long version, byte[] payload) -> {
             try {
-                bytes.add(rawKey.length);
-                return termIdStream.stream(termInterner.intern(rawKey));
+                bytes.add(key.length);
+                return termIdStream.stream(termInterner.intern(key));
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
-        }, stackBuffer);
+        });
+
         LOG.inc("count>streamTermIdsForField>total");
         LOG.inc("count>streamTermIdsForField>" + name + ">total");
         LOG.inc("count>streamTermIdsForField>" + name + ">" + fieldId);
@@ -113,28 +125,28 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
     }
 
     private MiruInvertedIndex<BM, IBM> getIndex(String name, int fieldId, MiruTermId termId) throws Exception {
-        return new MiruFilerInvertedIndex<>(bitmaps, trackError, name, fieldId, termId.getBytes(), indexes[fieldId], stripingLocksProvider.lock(termId, 0));
+        return new LabInvertedIndex<>(idProvider, bitmaps, trackError, name, fieldId, termId.getBytes(), indexes[fieldId], stripingLocksProvider.lock(termId, 0));
     }
 
     @Override
     public void multiGet(String name, int fieldId, MiruTermId[] termIds, BitmapAndLastId<BM>[] results, StackBuffer stackBuffer) throws Exception {
-        byte[][] termIdBytes = new byte[termIds.length][];
+        MutableLong bytes = new MutableLong();
+
         for (int i = 0; i < termIds.length; i++) {
             if (termIds[i] != null) {
-                termIdBytes[i] = termIds[i].getBytes();
+                int ri = i;
+                indexes[fieldId].get(termIds[i].getBytes(), (byte[] key, long timestamp, boolean tombstoned, long version, byte[] payload) -> {
+                    if (payload != null) {
+                        BitmapAndLastId<BM> bitmapAndLastId = LabInvertedIndex.deser(bitmaps, trackError, payload, -1, stackBuffer);
+                        if (bitmapAndLastId != null) {
+                            results[ri] = bitmapAndLastId;
+                        }
+                    }
+                    return true;
+                });
             }
         }
-        MutableLong bytes = new MutableLong();
-        indexes[fieldId].readEach(termIdBytes, null, (monkey, filer, _stackBuffer, lock, index) -> {
-            if (filer != null) {
-                bytes.add(filer.length());
-                BitmapAndLastId<BM> bitmapAndLastId = MiruFilerInvertedIndex.deser(bitmaps, trackError, filer, -1, _stackBuffer);
-                if (bitmapAndLastId != null) {
-                    return bitmapAndLastId;
-                }
-            }
-            return null;
-        }, results, stackBuffer);
+
         LOG.inc("count>multiGet>total");
         LOG.inc("count>multiGet>" + name + ">total");
         LOG.inc("count>multiGet>" + name + ">" + fieldId);
@@ -152,13 +164,19 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
             }
         }
         MutableLong bytes = new MutableLong();
-        indexes[fieldId].readEach(termIdBytes, null, (monkey, filer, _stackBuffer, lock, index) -> {
-            if (filer != null) {
-                bytes.add(4);
-                results[index] = MiruFilerInvertedIndex.deserLastId(filer);
+        for (int i = 0; i < termIds.length; i++) {
+            if (termIds[i] != null) {
+                int ri = i;
+                indexes[fieldId].get(termIds[i].getBytes(), (byte[] key, long timestamp, boolean tombstoned, long version, byte[] payload) -> {
+                    if (payload != null) {
+                        bytes.add(payload.length);
+                        results[ri] = UIO.bytesInt(payload);
+                    }
+                    return true;
+                });
             }
-            return null;
-        }, new Void[results.length], stackBuffer);
+        }
+
         LOG.inc("count>multiGetLastIds>total");
         LOG.inc("count>multiGetLastIds>" + name + ">total");
         LOG.inc("count>multiGetLastIds>" + name + ">" + fieldId);
@@ -175,31 +193,30 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
         StackBuffer stackBuffer,
         MultiIndexTx<IBM> indexTx) throws Exception {
 
-        byte[][] termIdBytes = new byte[termIds.length][];
+        MutableLong bytes = new MutableLong();
         for (int i = 0; i < termIds.length; i++) {
             if (termIds[i] != null) {
-                termIdBytes[i] = termIds[i].getBytes();
+                int ri = i;
+                indexes[fieldId].get(termIds[i].getBytes(), (byte[] key, long timestamp, boolean tombstoned, long version, byte[] payload) -> {
+                    if (payload != null) {
+                        try {
+                            bytes.add(payload.length);
+                            int lastId = -1;
+                            if (considerIfLastIdGreaterThanN >= 0) {
+                                lastId = UIO.bytesInt(payload);
+                            }
+                            if (lastId < 0 || lastId > considerIfLastIdGreaterThanN) {
+                                indexTx.tx(ri, null, new ByteArrayFiler(payload), LabInvertedIndex.LAST_ID_LENGTH, stackBuffer);
+                            }
+                        } catch (Exception e) {
+                            throw new IOException(e);
+                        }
+                    }
+                    return true;
+                });
             }
         }
-        MutableLong bytes = new MutableLong();
-        indexes[fieldId].readEach(termIdBytes, null, (monkey, filer, _stackBuffer, lock, index) -> {
-            if (filer != null) {
-                try {
-                    bytes.add(filer.length());
-                    int lastId = -1;
-                    if (considerIfLastIdGreaterThanN >= 0) {
-                        lastId = filer.readInt();
-                        filer.seek(0);
-                    }
-                    if (lastId < 0 || lastId > considerIfLastIdGreaterThanN) {
-                        indexTx.tx(index, null, filer, MiruFilerInvertedIndex.LAST_ID_LENGTH, _stackBuffer);
-                    }
-                } catch (Exception e) {
-                    throw new IOException(e);
-                }
-            }
-            return null;
-        }, new Void[termIds.length], stackBuffer);
+
         LOG.inc("count>multiTxIndex>total");
         LOG.inc("count>multiTxIndex>" + name + ">total");
         LOG.inc("count>multiTxIndex>" + name + ">" + fieldId);
@@ -267,28 +284,49 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
         MutableLong bytesRead = new MutableLong();
         MutableLong bytesWrite = new MutableLong();
         int[] indexPowers = new int[32];
-        indexes[fieldId].multiWriteNewReplace(termIdBytes, (monkey, filer, stackBuffer1, lock, index) -> {
-            BitmapAndLastId<BM> backing = null;
-            if (filer != null) {
-                bytesRead.add(filer.length());
-                synchronized (lock) {
-                    filer.seek(0);
-                    backing = MiruFilerInvertedIndex.deser(bitmaps, trackError, filer, -1, stackBuffer1);
+
+        SizeAndBytes[] sabs = new SizeAndBytes[termIds.length];
+        for (int i = 0; i < termIds.length; i++) {
+            if (termIds[i] != null) {
+                int ri = i;
+                indexes[fieldId].get(termIds[i].getBytes(), (byte[] key, long timestamp, boolean tombstoned, long version, byte[] payload) -> {
+                    BitmapAndLastId<BM> backing = null;
+                    if (payload != null) {
+                        bytesRead.add(payload.length);
+                        backing = LabInvertedIndex.deser(bitmaps, trackError, payload, -1, stackBuffer);
+                    }
+                    BitmapAndLastId<BM> merged = merger.merge(ri, backing);
+                    if (merged != null) {
+                        try {
+                            SizeAndBytes sizeAndBytes = LabInvertedIndex.getSizeAndBytes(bitmaps, merged.bitmap, merged.lastId);
+                            indexPowers[FilerIO.chunkPower(sizeAndBytes.filerSizeInBytes, 0)]++;
+                            sabs[ri] = sizeAndBytes;
+                        } catch (Exception e) {
+                            throw new IOException("Failed to serialize bitmap", e);
+                        }
+                    }
+                    return true;
+                });
+            }
+        }
+
+        long timestamp = System.currentTimeMillis();
+        long version = idProvider.nextId();
+        indexes[fieldId].append((ValueStream stream) -> {
+            for (int i = 0; i < termIds.length; i++) {
+                if (sabs[i] != null) {
+                    bytesWrite.add(sabs[i].bytes.length);
+                    stream.stream(termIds[i].getBytes(), timestamp, false, version, sabs[i].bytes);
                 }
             }
-            BitmapAndLastId<BM> merged = merger.merge(index, backing);
-            if (merged == null) {
-                return null;
-            }
-            try {
-                MiruFilerInvertedIndex.SizeAndBytes sizeAndBytes = MiruFilerInvertedIndex.getSizeAndBytes(bitmaps, merged.bitmap, merged.lastId);
-                bytesWrite.add(sizeAndBytes.filerSizeInBytes);
-                indexPowers[FilerIO.chunkPower(sizeAndBytes.filerSizeInBytes, 0)]++;
-                return new HintAndTransaction<>(sizeAndBytes.filerSizeInBytes, new MiruFilerInvertedIndex.SetTransaction(sizeAndBytes.bytes));
-            } catch (Exception e) {
-                throw new IOException("Failed to serialize bitmap", e);
-            }
-        }, new Void[termIdBytes.length], stackBuffer);
+            return true;
+        });
+
+        List<Future<Object>> commit = indexes[fieldId].commit(false);
+        for (Future<Object> future : commit) {
+            future.get();
+        }
+
         LOG.inc("count>multiMerge>total");
         LOG.inc("count>multiMerge>" + fieldId);
         LOG.inc("bytes>multiMergeRead>total", bytesRead.longValue());

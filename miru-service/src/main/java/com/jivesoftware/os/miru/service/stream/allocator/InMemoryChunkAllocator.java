@@ -1,13 +1,20 @@
 package com.jivesoftware.os.miru.service.stream.allocator;
 
+import com.google.common.collect.Maps;
+import com.google.common.io.Files;
 import com.jivesoftware.os.filer.chunk.store.ChunkStoreInitializer;
 import com.jivesoftware.os.filer.io.ByteBufferFactory;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.filer.io.chunk.ChunkStore;
+import com.jivesoftware.os.lab.LABEnvironment;
+import com.jivesoftware.os.lab.LABValueMerger;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import java.io.File;
 import java.io.IOException;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
 
 /**
  *
@@ -23,6 +30,9 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
     private final boolean partitionDeleteChunkStoreOnClose;
     private final int partitionInitialChunkCacheSize;
     private final int partitionMaxChunkCacheSize;
+
+    private final ExecutorService buildLABCompactorThreadPool = LABEnvironment.buildLABCompactorThreadPool(12);
+    private final ExecutorService buildLABDestroyThreadPool = LABEnvironment.buildLABDestroyThreadPool(12);
 
     public InMemoryChunkAllocator(ByteBufferFactory rebuildByteBufferFactory,
         ByteBufferFactory cacheByteBufferFactory,
@@ -56,11 +66,39 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
         return chunkStores;
     }
 
+    private final Map<MiruPartitionCoord, File> hack = Maps.newConcurrentMap();
+
+    @Override
+    public File[] getLabDirs(MiruPartitionCoord coord) throws Exception {
+
+        return new File[]{hack.computeIfAbsent(coord, (MiruPartitionCoord t) -> {
+            File dir = Files.createTempDir(); // Sorry
+            dir.deleteOnExit();
+            return dir;
+        })};
+    }
+
+    @Override
+    public LABEnvironment[] allocateLABEnvironments(File[] labDirs) throws Exception {
+
+        LABEnvironment[] environments = new LABEnvironment[labDirs.length];
+        for (int i = 0; i < labDirs.length; i++) {
+            environments[i] = new LABEnvironment(buildLABCompactorThreadPool,
+                buildLABDestroyThreadPool,
+                labDirs[i],
+                new LABValueMerger(),
+                true, 4, 16, 1024);
+
+        }
+        return environments;
+    }
+
     @Override
     public boolean checkExists(MiruPartitionCoord coord) throws Exception {
         return true;
     }
 
+    @Override
     public void close(ChunkStore[] chunkStores) {
         if (partitionDeleteChunkStoreOnClose) {
             for (ChunkStore chunkStore : chunkStores) {
@@ -72,4 +110,5 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
             }
         }
     }
+
 }
