@@ -71,6 +71,8 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
     @Override
     public File[] getLabDirs(MiruPartitionCoord coord) throws Exception {
 
+        System.out.println("numberOfChunkStores" + numberOfChunkStores);
+
         return hack.computeIfAbsent(coord, (MiruPartitionCoord t) -> {
 
             File[] dirs = new File[numberOfChunkStores];
@@ -84,8 +86,9 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
     }
 
     @Override
-    public LABEnvironment[] allocateLABEnvironments(File[] labDirs) throws Exception {
+    public LABEnvironment[] allocateLABEnvironments(MiruPartitionCoord coord) throws Exception {
 
+        File[] labDirs = getLabDirs(coord);
         LABEnvironment[] environments = new LABEnvironment[labDirs.length];
         for (int i = 0; i < labDirs.length; i++) {
             environments[i] = new LABEnvironment(buildLABCompactorThreadPool,
