@@ -260,20 +260,15 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             boolean insane = true;
             if (insane) {
                 @SuppressWarnings("unchecked")
-                ValueIndex[] indexes = new ValueIndex[schema.fieldCount()];
+                ValueIndex[] indexes = new ValueIndex[labEnvironments.length];
+                for (int i = 0; i < indexes.length; i++) {
+                    indexes[i] = labEnvironments[i].open("field-" + fieldType.name() + "-" + i, 4096, 1000, 10 * 1024 * 1024, -1L, -1L);
+                }
+
                 @SuppressWarnings("unchecked")
                 KeyedFilerStore<Integer, MapContext>[] cardinalities = new KeyedFilerStore[schema.fieldCount()];
                 for (MiruFieldDefinition fieldDefinition : schema.getFieldDefinitions()) {
                     int fieldId = fieldDefinition.fieldId;
-                    if (fieldType == MiruFieldType.latest && !fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.indexedLatest)
-                        || fieldType == MiruFieldType.pairedLatest && schema.getPairedLatestFieldDefinitions(fieldId).isEmpty()
-                        || fieldType == MiruFieldType.bloom && schema.getBloomFieldDefinitions(fieldId).isEmpty()) {
-                        indexes[fieldId] = null;
-                    } else {
-                        boolean lexOrderKeys = (fieldDefinition.prefix.type != MiruFieldDefinition.Prefix.Type.none);
-                        indexes[fieldId] = labEnvironments[Math.abs((coord.hashCode() + fieldId) % labEnvironments.length)]
-                            .open("field-" + fieldType.name() + "-" + fieldId, 4096, 1000, 10 * 1024 * 1024, -1L, -1L);
-                    }
                     if (fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.cardinality)) {
                         cardinalities[fieldId] = new TxKeyedFilerStore<>(cogs,
                             seed,
