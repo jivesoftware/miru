@@ -66,21 +66,29 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
         return chunkStores;
     }
 
-    private final Map<MiruPartitionCoord, File> hack = Maps.newConcurrentMap();
+    private final Map<MiruPartitionCoord, File[]> hack = Maps.newConcurrentMap();
 
     @Override
     public File[] getLabDirs(MiruPartitionCoord coord) throws Exception {
 
-        return new File[]{hack.computeIfAbsent(coord, (MiruPartitionCoord t) -> {
-            File dir = Files.createTempDir(); // Sorry
-            dir.deleteOnExit();
-            return dir;
-        })};
+        System.out.println("numberOfChunkStores" + numberOfChunkStores);
+
+        return hack.computeIfAbsent(coord, (MiruPartitionCoord t) -> {
+
+            File[] dirs = new File[numberOfChunkStores];
+            for (int i = 0; i < numberOfChunkStores; i++) {
+                File dir = Files.createTempDir(); // Sorry
+                dir.deleteOnExit();
+                dirs[i] = dir;
+            }
+            return dirs;
+        });
     }
 
     @Override
-    public LABEnvironment[] allocateLABEnvironments(File[] labDirs) throws Exception {
+    public LABEnvironment[] allocateLABEnvironments(MiruPartitionCoord coord) throws Exception {
 
+        File[] labDirs = getLabDirs(coord);
         LABEnvironment[] environments = new LABEnvironment[labDirs.length];
         for (int i = 0; i < labDirs.length; i++) {
             environments[i] = new LABEnvironment(buildLABCompactorThreadPool,

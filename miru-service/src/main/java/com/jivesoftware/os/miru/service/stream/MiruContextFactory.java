@@ -181,7 +181,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
 
         ChunkStore[] chunkStores = getAllocator(storage).allocateChunkStores(coord, stackBuffer);
         File[] labDirs = getAllocator(storage).getLabDirs(coord);
-        LABEnvironment[] labEnvironments = getAllocator(storage).allocateLABEnvironments(labDirs);
+        LABEnvironment[] labEnvironments = getAllocator(storage).allocateLABEnvironments(coord);
         return allocate(bitmaps, coord, schema, chunkStores, labEnvironments, storage, rebuildToken, stackBuffer);
     }
 
@@ -476,7 +476,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                 FileUtils.moveDirectory(fromLabDirs[i], toLabDirs[i]);
             }
         }
-        LABEnvironment[] environments = getAllocator(toStorage).allocateLABEnvironments(toLabDirs);
+        LABEnvironment[] environments = getAllocator(toStorage).allocateLABEnvironments(coord);
         return allocate(bitmaps, coord, schema, toChunks, environments, toStorage, null, stackBuffer);
     }
 

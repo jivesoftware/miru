@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.service.stream.allocator;
 
+import com.google.common.collect.Lists;
 import com.jivesoftware.os.filer.chunk.store.ChunkStoreInitializer;
 import com.jivesoftware.os.filer.io.ByteBufferFactory;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
@@ -13,6 +14,7 @@ import com.jivesoftware.os.miru.service.locator.MiruResourcePartitionIdentifier;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.File;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import org.apache.commons.lang.builder.HashCodeBuilder;
 
@@ -130,14 +132,21 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
     @Override
     public File[] getLabDirs(MiruPartitionCoord coord) throws Exception {
         MiruResourcePartitionIdentifier identifier = new MiruPartitionCoordIdentifier(coord);
-        return resourceLocator.getChunkDirectories(identifier, "labs");
+        File[] baseDirs = resourceLocator.getChunkDirectories(identifier, "labs");
+        int hashCode = hash(coord);
+        List<File> dirs = Lists.newArrayList();
+        for (int i = 0; i < numberOfChunkStores; i++) {
+            int directoryOffset = offset(hashCode, i, 0, baseDirs.length);
+            dirs.add(new File(baseDirs[directoryOffset], "lab-" + i));
+        }
+        return dirs.toArray(new File[0]);
     }
 
     @Override
-    public LABEnvironment[] allocateLABEnvironments(File[] labDirs) throws Exception {
-
+    public LABEnvironment[] allocateLABEnvironments(MiruPartitionCoord coord) throws Exception {
+        File[] labDirs = getLabDirs(coord);
         LABEnvironment[] environments = new LABEnvironment[labDirs.length];
-        for (int i = 0; i < labDirs.length; i++) {
+        for (int i = 0; i < numberOfChunkStores; i++) {
             environments[i] = new LABEnvironment(buildLABCompactorThreadPool, buildLABDestroyThreadPool, labDirs[i],
                 new LABValueMerger(),
                 true, 4, 16, 1024);
