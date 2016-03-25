@@ -217,8 +217,10 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
         });
 
         List<Future<Object>> futures = lab.commit(false);
-        for (Future<Object> future : futures) {
-            future.get();
+        if (futures != null) {
+            for (Future<Object> future : futures) {
+                future.get();
+            }
         }
 
         LOG.inc("count>set>total");
