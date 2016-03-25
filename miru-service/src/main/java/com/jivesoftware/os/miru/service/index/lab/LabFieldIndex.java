@@ -326,9 +326,11 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
             return true;
         });
 
-        List<Future<Object>> commit = getFieldIndex(fieldId).commit(false);
-        for (Future<Object> future : commit) {
-            future.get();
+        List<Future<Object>> futures = getFieldIndex(fieldId).commit(false);
+        if (futures != null) {
+            for (Future<Object> future : futures) {
+                future.get();
+            }
         }
 
         LOG.inc("count>multiMerge>total");
