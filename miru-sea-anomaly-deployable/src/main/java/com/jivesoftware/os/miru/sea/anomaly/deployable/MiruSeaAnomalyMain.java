@@ -97,7 +97,7 @@ public class MiruSeaAnomalyMain {
             deployable.buildStatusReporter(null).start();
             deployable.addManageInjectables(HasUI.class, new HasUI(Arrays.asList(new HasUI.UI("manage", "manage", "/manage/ui"),
                 new HasUI.UI("Reset Errors", "manage", "/manage/resetErrors"),
-                new HasUI.UI("Tail", "manage", "/manage/tail"),
+                new HasUI.UI("Tail", "manage", "/manage/tail?lastNLines=1000"),
                 new HasUI.UI("Thread Dump", "manage", "/manage/threadDump"),
                 new HasUI.UI("Health", "manage", "/manage/ui"),
                 new HasUI.UI("Anomaly", "main", "/"))));
