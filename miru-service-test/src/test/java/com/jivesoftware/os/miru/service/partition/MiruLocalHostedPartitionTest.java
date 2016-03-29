@@ -217,7 +217,9 @@ public class MiruLocalHostedPartitionTest {
             Interners.<String>newWeakInterner(),
             termComposer);
 
+        MiruTempDirectoryResourceLocator resourceLocator = new MiruTempDirectoryResourceLocator();
         MiruChunkAllocator hybridContextAllocator = new InMemoryChunkAllocator(
+            resourceLocator,
             new HeapByteBufferFactory(),
             new HeapByteBufferFactory(),
             4_096,
@@ -227,7 +229,7 @@ public class MiruLocalHostedPartitionTest {
             1_000);
 
         MiruChunkAllocator diskContextAllocator = new OnDiskChunkAllocator(
-            new MiruTempDirectoryResourceLocator(),
+            resourceLocator,
             new HeapByteBufferFactory(),
             config.getPartitionNumberOfChunkStores(),
             100,
@@ -248,7 +250,7 @@ public class MiruLocalHostedPartitionTest {
                 .put(MiruBackingStorage.disk, diskContextAllocator)
                 .build(),
             new RCVSSipIndexMarshaller(),
-            new MiruTempDirectoryResourceLocator(),
+            resourceLocator,
             config.getPartitionAuthzCacheSize(),
             new StripingLocksProvider<>(8),
             new StripingLocksProvider<>(8),

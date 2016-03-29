@@ -180,7 +180,6 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         StackBuffer stackBuffer) throws Exception {
 
         ChunkStore[] chunkStores = getAllocator(storage).allocateChunkStores(coord, stackBuffer);
-        File[] labDirs = getAllocator(storage).getLabDirs(coord);
         LABEnvironment[] labEnvironments = getAllocator(storage).allocateLABEnvironments(coord);
         return allocate(bitmaps, coord, schema, chunkStores, labEnvironments, storage, rebuildToken, stackBuffer);
     }
