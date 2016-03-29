@@ -133,7 +133,7 @@ public class MiruServiceInitializer {
         StripingLocksProvider<MiruStreamId> streamStripingLocksProvider = new StripingLocksProvider<>(config.getStreamNumberOfLocks());
         StripingLocksProvider<String> authzStripingLocksProvider = new StripingLocksProvider<>(config.getAuthzNumberOfLocks());
 
-        MiruChunkAllocator inMemoryChunkAllocator = new InMemoryChunkAllocator(
+        MiruChunkAllocator inMemoryChunkAllocator = new InMemoryChunkAllocator(resourceLocator,
             byteBufferFactory,
             byteBufferFactory,
             resourceLocator.getInMemoryChunkSize(),

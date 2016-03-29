@@ -195,7 +195,8 @@ public class MiruReaderMain {
 
             MiruHost miruHost = MiruHostProvider.fromInstance(instanceConfig.getInstanceName(), instanceConfig.getInstanceKey());
 
-            MiruResourceLocator miruResourceLocator = new MiruResourceLocatorInitializer().initialize(miruServiceConfig);
+            MiruResourceLocator transientResourceLocator = new MiruResourceLocatorInitializer().initialize(miruServiceConfig);
+            MiruResourceLocator diskResourceLocator = new MiruResourceLocatorInitializer().initialize(miruServiceConfig);
 
             MiruInterner<MiruTermId> termInterner = new MiruInterner<MiruTermId>(miruServiceConfig.getEnableTermInterning()) {
                 @Override
@@ -297,7 +298,7 @@ public class MiruReaderMain {
                     rcvsWALClient,
                     new RCVSSipTrackerFactory(),
                     new RCVSSipIndexMarshaller(),
-                    miruResourceLocator,
+                    diskResourceLocator,
                     termComposer,
                     internExtern,
                     new SingleBitmapsProvider(bitmaps),
@@ -320,7 +321,7 @@ public class MiruReaderMain {
                     amzaWALClient,
                     new AmzaSipTrackerFactory(),
                     new AmzaSipIndexMarshaller(),
-                    miruResourceLocator,
+                    diskResourceLocator,
                     termComposer,
                     internExtern,
                     new SingleBitmapsProvider(bitmaps),

@@ -1,7 +1,6 @@
 package com.jivesoftware.os.miru.service.stream.allocator;
 
-import com.google.common.collect.Maps;
-import com.google.common.io.Files;
+import com.google.common.collect.Lists;
 import com.jivesoftware.os.filer.chunk.store.ChunkStoreInitializer;
 import com.jivesoftware.os.filer.io.ByteBufferFactory;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
@@ -9,12 +8,17 @@ import com.jivesoftware.os.filer.io.chunk.ChunkStore;
 import com.jivesoftware.os.lab.LABEnvironment;
 import com.jivesoftware.os.lab.LABValueMerger;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
+import com.jivesoftware.os.miru.service.locator.MiruResourceLocator;
+import com.jivesoftware.os.miru.service.locator.MiruResourcePartitionIdentifier;
+import com.jivesoftware.os.miru.service.locator.TransientPartitionCoordIdentifier;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.File;
 import java.io.IOException;
-import java.util.Map;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.builder.HashCodeBuilder;
 
 /**
  *
@@ -23,6 +27,7 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
+    private final MiruResourceLocator resourceLocator;
     private final ByteBufferFactory rebuildByteBufferFactory;
     private final ByteBufferFactory cacheByteBufferFactory;
     private final long initialChunkSize;
@@ -34,13 +39,15 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
     private final ExecutorService buildLABCompactorThreadPool = LABEnvironment.buildLABCompactorThreadPool(12);
     private final ExecutorService buildLABDestroyThreadPool = LABEnvironment.buildLABDestroyThreadPool(12);
 
-    public InMemoryChunkAllocator(ByteBufferFactory rebuildByteBufferFactory,
+    public InMemoryChunkAllocator(MiruResourceLocator resourceLocator,
+        ByteBufferFactory rebuildByteBufferFactory,
         ByteBufferFactory cacheByteBufferFactory,
         long initialChunkSize,
         int numberOfChunkStores,
         boolean partitionDeleteChunkStoreOnClose,
         int partitionInitialChunkCacheSize,
         int partitionMaxChunkCacheSize) {
+        this.resourceLocator = resourceLocator;
         this.rebuildByteBufferFactory = rebuildByteBufferFactory;
         this.cacheByteBufferFactory = cacheByteBufferFactory;
         this.initialChunkSize = initialChunkSize;
@@ -66,29 +73,40 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
         return chunkStores;
     }
 
-    private final Map<MiruPartitionCoord, File[]> hack = Maps.newConcurrentMap();
-
     @Override
     public File[] getLabDirs(MiruPartitionCoord coord) throws Exception {
+        MiruResourcePartitionIdentifier identifier = new TransientPartitionCoordIdentifier(coord);
+        File[] baseDirs = resourceLocator.getChunkDirectories(identifier, "labs-transient");
+        int hashCode = hash(coord);
+        List<File> dirs = Lists.newArrayList();
+        for (int i = 0; i < numberOfChunkStores; i++) {
+            int directoryOffset = offset(hashCode, i, 0, baseDirs.length);
+            dirs.add(new File(baseDirs[directoryOffset], "lab-" + i));
+        }
+        return dirs.toArray(new File[0]);
+    }
 
-        System.out.println("numberOfChunkStores" + numberOfChunkStores);
+    private static int offset(int hashCode, int index, int shift, int length) {
+        long shifted = (hashCode & 0xFFFF) + index + shift;
+        long offset = shifted % length;
+        if (offset > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException("Computed offset is not a valid integer");
+        }
+        return (int) offset;
+    }
 
-        return hack.computeIfAbsent(coord, (MiruPartitionCoord t) -> {
-
-            File[] dirs = new File[numberOfChunkStores];
-            for (int i = 0; i < numberOfChunkStores; i++) {
-                File dir = Files.createTempDir(); // Sorry
-                dir.deleteOnExit();
-                dirs[i] = dir;
-            }
-            return dirs;
-        });
+    private static int hash(MiruPartitionCoord coord) {
+        return new HashCodeBuilder().append(coord.tenantId).append(coord.partitionId).toHashCode();
     }
 
     @Override
     public LABEnvironment[] allocateLABEnvironments(MiruPartitionCoord coord) throws Exception {
 
         File[] labDirs = getLabDirs(coord);
+        for (int i = 0; i < labDirs.length; i++) {
+            FileUtils.deleteDirectory(labDirs[i]);
+        }
+
         LABEnvironment[] environments = new LABEnvironment[labDirs.length];
         for (int i = 0; i < labDirs.length; i++) {
             environments[i] = new LABEnvironment(buildLABCompactorThreadPool,

@@ -94,7 +94,9 @@ public class IndexTestUtil {
             Interners.<String>newWeakInterner(),
             termComposer);
 
+        final MiruResourceLocator diskResourceLocator = new MiruTempDirectoryResourceLocator();
         MiruChunkAllocator inMemoryChunkAllocator = new InMemoryChunkAllocator(
+            diskResourceLocator,
             new HeapByteBufferFactory(),
             new HeapByteBufferFactory(),
             4_096,
@@ -103,7 +105,6 @@ public class IndexTestUtil {
             100,
             1_000);
 
-        final MiruResourceLocator diskResourceLocator = new MiruTempDirectoryResourceLocator();
         MiruChunkAllocator onDiskChunkAllocator = new OnDiskChunkAllocator(diskResourceLocator,
             new HeapByteBufferFactory(),
             numberOfChunkStores,
