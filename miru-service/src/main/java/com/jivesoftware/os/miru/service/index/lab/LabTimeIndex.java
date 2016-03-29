@@ -1,15 +1,18 @@
-package com.jivesoftware.os.miru.service.index.filer;
+package com.jivesoftware.os.miru.service.index.lab;
 
 import com.google.common.base.Optional;
+import com.jivesoftware.os.filer.io.ByteArrayFiler;
 import com.jivesoftware.os.filer.io.Filer;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.api.KeyValueContext;
-import com.jivesoftware.os.filer.io.api.KeyValueStore;
 import com.jivesoftware.os.filer.io.api.KeyValueTransaction;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
+import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
+import com.jivesoftware.os.lab.api.ValueIndex;
+import com.jivesoftware.os.lab.api.ValueStream;
+import com.jivesoftware.os.lab.io.api.UIO;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
-import com.jivesoftware.os.miru.service.index.MiruFilerProvider;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import gnu.trove.iterator.TLongIterator;
@@ -23,9 +26,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * @author jonathan
  */
-public class MiruFilerTimeIndex implements MiruTimeIndex {
+public class LabTimeIndex implements MiruTimeIndex {
 
-    private static final MetricLogger log = MetricLoggerFactory.getLogger();
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private static final int HEADER_SIZE_IN_BYTES = 4 + 8 + 8 + 4 + 2 + 2;
     private static final short LEVELS = 3; // TODO - Config or allow it to be passed in?
@@ -39,77 +42,75 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
     private long smallestTimestamp;
     private long largestTimestamp;
     private int timestampsLength;
-    private int searchIndexLevels;
-    private int searchIndexSegments;
-    private int searchIndexSizeInBytes;
 
-    private final MiruFilerProvider<Long, Void> filerProvider;
+    private final OrderIdProvider idProvider;
+    private final ValueIndex metaIndex;
+    private final byte[] metaKey;
+    private final ValueIndex monotonicTimestampIndex;
     private final Optional<TimeOrderAnomalyStream> timeOrderAnomalyStream;
-    private final KeyValueStore<Long, Integer> timestampToIndex;
+    private final ValueIndex rawTimestampToIndex;
 
-    public MiruFilerTimeIndex(Optional<TimeOrderAnomalyStream> timeOrderAnomalyStream,
-        MiruFilerProvider<Long, Void> filerProvider,
-        KeyValueStore<Long, Integer> timestampToIndex,
+    public LabTimeIndex(OrderIdProvider idProvider,
+        Optional<TimeOrderAnomalyStream> timeOrderAnomalyStream,
+        ValueIndex metaIndex,
+        byte[] metaKey,
+        ValueIndex monotonicTimestampIndex,
+        ValueIndex rawTimestampToIndex,
         StackBuffer stackBuffer)
-        throws IOException, InterruptedException {
+        throws Exception, InterruptedException {
 
-        this.filerProvider = filerProvider;
+        this.idProvider = idProvider;
+        this.metaIndex = metaIndex;
+        this.metaKey = metaKey;
+        this.monotonicTimestampIndex = monotonicTimestampIndex;
         this.timeOrderAnomalyStream = timeOrderAnomalyStream;
-        this.timestampToIndex = timestampToIndex;
+        this.rawTimestampToIndex = rawTimestampToIndex;
 
         init(stackBuffer);
     }
 
-    private void init(StackBuffer stackBuffer) throws IOException, InterruptedException {
+    private void init(StackBuffer stackBuffer) throws Exception, InterruptedException {
         final AtomicBoolean initialized = new AtomicBoolean(false);
 
         //TODO consider using a custom CreateFiler in the KeyValueStore to handle the uninitialized case
-        filerProvider.read(null, (monkey, filer, _stackBuffer, lock) -> {
-            if (filer != null) {
-                synchronized (lock) {
-                    filer.seek(0);
-                    MiruFilerTimeIndex.this.id.set(FilerIO.readInt(filer, "lastId", _stackBuffer));
-                    MiruFilerTimeIndex.this.smallestTimestamp = FilerIO.readLong(filer, "smallestTimestamp", _stackBuffer);
-                    MiruFilerTimeIndex.this.largestTimestamp = FilerIO.readLong(filer, "largestTimestamp", _stackBuffer);
-                    MiruFilerTimeIndex.this.timestampsLength = FilerIO.readInt(filer, "timestampsLength", _stackBuffer);
-                    MiruFilerTimeIndex.this.searchIndexLevels = FilerIO.readShort(filer, "searchIndexLevels", _stackBuffer);
-                    MiruFilerTimeIndex.this.searchIndexSegments = FilerIO.readShort(filer, "searchIndexSegments", _stackBuffer);
-                    MiruFilerTimeIndex.this.searchIndexSizeInBytes = segmentWidth(searchIndexLevels, searchIndexSegments);
-                    initialized.set(true);
-                }
+        metaIndex.get(metaKey, (byte[] key, long timestamp, boolean tombstoned, long version, byte[] payload) -> {
+            if (payload != null && !tombstoned) {
+                Filer filer = new ByteArrayFiler(payload);
+                LabTimeIndex.this.id.set(FilerIO.readInt(filer, "lastId", stackBuffer));
+                LabTimeIndex.this.smallestTimestamp = FilerIO.readLong(filer, "smallestTimestamp", stackBuffer);
+                LabTimeIndex.this.largestTimestamp = FilerIO.readLong(filer, "largestTimestamp", stackBuffer);
+                LabTimeIndex.this.timestampsLength = FilerIO.readInt(filer, "timestampsLength", stackBuffer);
+                initialized.set(true);
 
             }
-            return null;
-        }, stackBuffer);
-        log.inc("init-read>total");
-        log.inc("init-read>bytes", HEADER_SIZE_IN_BYTES);
+            return true;
+        });
+
+        LOG.inc("init-read>total");
+        LOG.inc("init-read>bytes", HEADER_SIZE_IN_BYTES);
 
         if (!initialized.get()) {
             this.id.set(-1);
             this.smallestTimestamp = Long.MAX_VALUE;
             this.largestTimestamp = Long.MIN_VALUE;
             this.timestampsLength = 0;
-            this.searchIndexLevels = LEVELS;
-            this.searchIndexSegments = SEGMENTS;
-            this.searchIndexSizeInBytes = segmentWidth(LEVELS, SEGMENTS);
 
-            filerProvider.writeNewReplace((long) HEADER_SIZE_IN_BYTES, (monkey, filer, _stackBuffer, lock) -> {
+            setMeta(this.id.get(), this.smallestTimestamp, this.largestTimestamp, this.timestampsLength, stackBuffer);
 
-                filer.seek(0);
-                FilerIO.writeInt(filer, MiruFilerTimeIndex.this.id.get(), "lastId", _stackBuffer);
-                FilerIO.writeLong(filer, MiruFilerTimeIndex.this.smallestTimestamp, "smallestTimestamp", _stackBuffer);
-                FilerIO.writeLong(filer, MiruFilerTimeIndex.this.largestTimestamp, "largestTimestamp", _stackBuffer);
-                FilerIO.writeInt(filer, MiruFilerTimeIndex.this.timestampsLength, "timestampsLength", _stackBuffer);
-                FilerIO.writeShort(filer, MiruFilerTimeIndex.this.searchIndexLevels, "searchIndexLevels", _stackBuffer);
-                FilerIO.writeShort(filer, MiruFilerTimeIndex.this.searchIndexSegments, "searchIndexSegments", _stackBuffer);
-
-                return null;
-            }, stackBuffer);
-
-            log.inc("init-write>total");
-            log.inc("init-write>bytes", HEADER_SIZE_IN_BYTES);
+            LOG.inc("init-write>total");
+            LOG.inc("init-write>bytes", HEADER_SIZE_IN_BYTES);
 
         }
+    }
+
+    private void setMeta(int lastId, long smallestTimestamp, long largestTimestamp, int timestampsLength, StackBuffer stackBuffer) throws Exception {
+        ByteArrayFiler metaFiler = new ByteArrayFiler();
+        FilerIO.writeInt(metaFiler, lastId, "lastId", stackBuffer);
+        FilerIO.writeLong(metaFiler, smallestTimestamp, "smallestTimestamp", stackBuffer);
+        FilerIO.writeLong(metaFiler, largestTimestamp, "largestTimestamp", stackBuffer);
+        FilerIO.writeInt(metaFiler, timestampsLength, "timestampsLength", stackBuffer);
+
+        metaIndex.append((ValueStream stream) -> stream.stream(metaKey, System.currentTimeMillis(), false, idProvider.nextId(), metaFiler.getBytes()));
     }
 
     /**
@@ -204,15 +205,8 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
         return largestTimestamp;
     }
 
-    private long readTimestamp(Object lock, Filer filer, int id, StackBuffer stackBuffer) throws IOException {
-        synchronized (lock) {
-            filer.seek(HEADER_SIZE_IN_BYTES + searchIndexSizeInBytes + id * timestampSize);
-            return FilerIO.readLong(filer, "ts", stackBuffer);
-        }
-    }
-
     @Override
-    public int[] nextId(StackBuffer stackBuffer, long... timestamps) throws IOException, InterruptedException {
+    public int[] nextId(StackBuffer stackBuffer, long... timestamps) throws Exception, InterruptedException {
         final int[] nextIds = new int[timestamps.length];
 
         final TLongList monotonicTimestamps = new TLongArrayList(timestamps.length);
@@ -251,42 +245,32 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
             final int _firstId = firstId;
             final int _lastId = lastId;
 
-            //TODO we should be concerned about potential corruption with failures during readWriteAutoGrow
-            filerProvider.readWriteAutoGrow(HEADER_SIZE_IN_BYTES + searchIndexSizeInBytes + longs, (monkey, filer, _stackBuffer, lock) -> {
-                synchronized (lock) {
-                    filer.seek(0);
-                    FilerIO.writeInt(filer, _lastId, "int", _stackBuffer);
-                    FilerIO.writeLong(filer, smallestTimestamp, "smallestTimestamp", _stackBuffer);
-                    FilerIO.writeLong(filer, largestTimestamp, "largestTimestamp", _stackBuffer);
-                    timestampsLength = _lastId + 1;
-                    FilerIO.writeInt(filer, timestampsLength, "timestampsLength", _stackBuffer);
+            timestampsLength = _lastId + 1;
+            setMeta(_lastId, smallestTimestamp, largestTimestamp, timestampsLength, stackBuffer);
 
-                    filer.seek(HEADER_SIZE_IN_BYTES + searchIndexSizeInBytes + (_firstId * timestampSize));
-                    TLongIterator iter = monotonicTimestamps.iterator();
-                    while (iter.hasNext()) {
-                        FilerIO.writeLong(filer, iter.next(), "long", _stackBuffer);
+            long currentTime = System.currentTimeMillis();
+            long version = idProvider.nextId();
+            monotonicTimestampIndex.append((ValueStream stream) -> {
+                int id1 = firstId;
+                TLongIterator iter = monotonicTimestamps.iterator();
+                while (iter.hasNext()) {
+                    stream.stream(UIO.longBytes(iter.next()), currentTime, false, version, UIO.intBytes(id1));
+                    id1++;
+                }
+                return true;
+            });
+
+            rawTimestampToIndex.append((ValueStream stream) -> {
+                for (int i = 0; i < nextIds.length; i++) {
+                    if (timestamps[i] != -1) {
+                        stream.stream(UIO.longBytes(timestamps[i]), currentTime, false, version, UIO.intBytes(nextIds[i]));
+                        LOG.inc("nextId>sets");
                     }
-
-                    segmentForSearch(filer, searchIndexSizeInBytes, searchIndexLevels, searchIndexSegments, HEADER_SIZE_IN_BYTES, 0, _lastId + 1,
-                        _stackBuffer);
                 }
-                return null;
-            }, stackBuffer);
-            log.inc("nextId>total");
-            log.inc("nextId>bytes", HEADER_SIZE_IN_BYTES + searchIndexSizeInBytes + longs);
+                return true;
+            });
 
-            Long[] keys = new Long[nextIds.length];
-            for (int i = 0; i < nextIds.length; i++) {
-                if (timestamps[i] != -1) {
-                    keys[i] = timestamps[i];
-                    log.inc("nextId>sets");
-                }
-            }
-            timestampToIndex.multiExecute(keys, (keyValueContext, index) -> {
-                keyValueContext.set(nextIds[index]);
-            }, stackBuffer);
         }
-
         return nextIds;
 
     }
@@ -295,80 +279,55 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
      Returns true index of activityTimestamp or where it would have been.
      */
     @Override
-    public int getClosestId(final long timestamp, StackBuffer stackBuffer) throws IOException, InterruptedException {
-        try {
-            int i = filerProvider.read(null, (monkey, filer, _stackBuffer, lock) -> {
-                if (filer != null) {
-                    return readClosestId(lock, filer, timestamp, _stackBuffer);
-                }
-                return -1;
-            }, stackBuffer);
-            if (i < 0) {
-                i = -(i + 1);
-            }
-            return i;
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private int readClosestId(Object lock, Filer filer, long timestamp, StackBuffer stackBuffer) throws IOException {
-        long fp = HEADER_SIZE_IN_BYTES;
-        if (id.get() < 0) {
-            return -1;
-        } else if (timestamp > largestTimestamp) {
-            return -(id.get() + 2);
-        } else if (timestamp < smallestTimestamp) {
-            return -1;
-        }
-        synchronized (lock) {
-            filer.seek(fp);
-            for (int remainingLevels = searchIndexLevels - 1; remainingLevels >= 0; remainingLevels--) {
-                int segmentIndex = 0;
-                for (; segmentIndex < searchIndexSegments; segmentIndex++) {
-                    long segmentTimestamp = FilerIO.readLong(filer, "ts", stackBuffer);
-                    if (segmentTimestamp > timestamp) {
-                        break;
+    public int getClosestId(final long timestamp, StackBuffer stackBuffer) throws Exception, InterruptedException {
+        int[] id = {-1};
+        monotonicTimestampIndex.rangeScan(UIO.longBytes(timestamp),
+            null,
+            (byte[] key, long ptimestamp, boolean tombstoned, long version, byte[] payload) -> {
+                if (payload != null) {
+                    if (UIO.bytesLong(key) == timestamp) {
+                        id[0] = UIO.bytesInt(payload);
+                    } else {
+                        id[0] = -(UIO.bytesInt(payload) + 1);
                     }
                 }
-                segmentIndex--; // last index whose timestamp was less than the requested timestamp
-                if (segmentIndex < 0) {
-                    segmentIndex = 0; // underflow, just keep tracking towards the smallest segment
-                }
-                fp += searchIndexSegments * searchIndexKeySize;
-                if (remainingLevels == 0) {
-                    fp += segmentIndex * searchIndexValueSize;
-                } else {
-                    fp += segmentIndex * segmentWidth(remainingLevels, searchIndexSegments);
-                }
-                filer.seek(fp);
-            }
-
-            int id = FilerIO.readInt(filer, "id", stackBuffer);
-            long lastId = lastId();
-            long readTimestamp = readTimestamp(lock, filer, id, stackBuffer);
-            while (id <= lastId && readTimestamp < timestamp) {
-                id++;
-                readTimestamp = readTimestamp(lock, filer, id, stackBuffer);
-            }
-            if (timestamp != readTimestamp) {
-                return -(id + 1);
-            }
-            return id;
-        }
+                return false;
+            });
+        return id[0];
     }
 
     private final KeyValueTransaction<Integer, Integer> exactIdTransaction = KeyValueContext::get;
 
     @Override
     public int getExactId(long timestamp, StackBuffer stackBuffer) throws Exception {
-        Integer id = timestampToIndex.execute(timestamp, false, exactIdTransaction, stackBuffer);
-        return id != null ? id : -1;
+        int[] id = {-1};
+        rawTimestampToIndex.get(UIO.longBytes(timestamp), (byte[] key, long ptimestamp, boolean tombstoned, long version, byte[] payload) -> {
+            if (payload != null) {
+                id[0] = UIO.bytesInt(payload);
+            }
+            return false;
+        });
+        return id[0];
     }
 
     @Override
     public boolean[] contains(List<Long> timestamp, StackBuffer stackBuffer) throws Exception {
-        return timestampToIndex.contains(timestamp, stackBuffer);
+
+        boolean[] contained = new boolean[timestamp.size()];
+        for (int i = 0; i < contained.length; i++) {
+            Long ts = timestamp.get(i);
+            if (ts != null && ts != -1) {
+                int ci = i;
+                rawTimestampToIndex.get(UIO.longBytes(ts),
+                    (byte[] key, long ptimestamp, boolean tombstoned, long version, byte[] payload) -> {
+                        if (payload != null) {
+                            contained[ci] = true;
+                        }
+                        return false;
+                    });
+            }
+        }
+        return contained;
     }
 
     @Override
@@ -378,12 +337,35 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
     }
 
     @Override
-    public int smallestExclusiveTimestampIndex(final long timestamp, StackBuffer stackBuffer) throws IOException, InterruptedException {
+    public int smallestExclusiveTimestampIndex(final long timestamp, StackBuffer stackBuffer) throws Exception, InterruptedException {
         try {
             if (id.get() < 0) {
                 return 0;
             }
-            return filerProvider.read(null, (monkey, filer, _stackBuffer, lock) -> {
+            int[] id = {-1};
+            monotonicTimestampIndex.rangeScan(UIO.longBytes(timestamp),
+                null,
+                (byte[] key, long ptimestamp, boolean tombstoned, long version, byte[] payload) -> {
+                    if (payload != null) {
+                        if (UIO.bytesLong(key) <= timestamp) {
+                            id[0] = UIO.bytesInt(payload) + 1;
+                            return true;
+                        } else {
+                            id[0] = UIO.bytesInt(payload);
+                        }
+                    }
+                    return false;
+                });
+            if (id[0] == -1) {
+                return 0;
+            }
+            int lastId = lastId();
+            if (id[0] > lastId) {
+                return lastId + 1;
+            }
+            return id[0];
+
+            return monotonicTimestampIndex.read(null, (monkey, filer, _stackBuffer, lock) -> {
                 if (filer != null) {
                     int index = readClosestId(lock, filer, timestamp, _stackBuffer);
                     if (index == -1) {
@@ -414,7 +396,7 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
             if (id.get() < 0) {
                 return -1;
             }
-            return filerProvider.read(null, (monkey, filer, _stackBuffer, lock) -> {
+            return monotonicTimestampIndex.read(null, (monkey, filer, _stackBuffer, lock) -> {
                 if (filer != null) {
                     int index = readClosestId(lock, filer, timestamp, _stackBuffer);
                     if (index < 0) {

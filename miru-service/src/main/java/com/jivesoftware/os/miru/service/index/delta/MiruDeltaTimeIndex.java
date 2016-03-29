@@ -121,16 +121,6 @@ public class MiruDeltaTimeIndex implements MiruTimeIndex, Mergeable {
         }
     }
 
-    @Override
-    public long getTimestamp(int id, StackBuffer stackBuffer) throws IOException, InterruptedException {
-        if (timestamps.isEmpty()) {
-            return backingIndex.getTimestamp(id, stackBuffer);
-        } else if (id < baseId.get()) {
-            return backingIndex.getTimestamp(id, stackBuffer);
-        } else {
-            return timestamps.get(id - baseId.get());
-        }
-    }
 
     @Override
     public int smallestExclusiveTimestampIndex(long timestamp, StackBuffer stackBuffer) throws IOException, InterruptedException {

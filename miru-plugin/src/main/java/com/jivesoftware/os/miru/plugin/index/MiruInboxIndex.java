@@ -47,5 +47,5 @@ public interface MiruInboxIndex<BM extends IBM, IBM> {
     void append(MiruStreamId streamId, StackBuffer stackBuffer, int... ids) throws Exception;
 
     /** Frees resources used by this index. */
-    void close();
+    void close() throws Exception;
 }
