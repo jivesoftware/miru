@@ -3,9 +3,7 @@ package com.jivesoftware.os.miru.stream.plugins.strut;
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MinMaxPriorityQueue;
-import com.jivesoftware.os.filer.io.api.KeyedFilerStore;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
-import com.jivesoftware.os.filer.io.map.MapContext;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
@@ -18,6 +16,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
+import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
@@ -150,7 +149,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
 
             return streamBitmaps.stream(null, combined);
         }, solutionLog);*/
-        float[] thresholds = report.isPresent() ? new float[] { report.get().threshold } : new float[] { 0.5f, 0.2f, 0.08f, 0f };
+        float[] thresholds = report.isPresent() ? new float[]{report.get().threshold} : new float[]{0.5f, 0.2f, 0.08f, 0f};
         @SuppressWarnings("unchecked")
         MinMaxPriorityQueue<Scored>[] scored = new MinMaxPriorityQueue[thresholds.length];
 
@@ -161,7 +160,9 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 .create();
         }
 
-        KeyedFilerStore<Integer, MapContext>[] cacheStores = handle.getRequestContext().getCacheProvider().get("strut-" + request.query.catwalkId);
+        MiruPluginCacheProvider.CacheKeyValues cacheStores = handle.getRequestContext()
+            .getCacheProvider()
+            .get("strut-" + request.query.catwalkId, 8, false);
 
         StrutModelScorer modelScorer = new StrutModelScorer(); // Ahh
         List<Scored> updates = Lists.newArrayList();
@@ -205,7 +206,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                     totalTimeFetchingLastId += (System.currentTimeMillis() - fetchLastIdsStart);
 
                     long fetchScoresStart = System.currentTimeMillis();
-                    int[] missed = { 0 };
+                    int[] missed = {0};
                     modelScorer.score(
                         request.query.modelId,
                         miruTermIds,

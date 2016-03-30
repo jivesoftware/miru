@@ -602,8 +602,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
         public void run() {
             try {
                 try {
-                    StackBuffer stackBuffer = new StackBuffer();
-                    checkActive(stackBuffer);
+                    checkActive();
                 } catch (MiruSchemaUnvailableException sue) {
                     log.warn("Tenant is active but schema not available for {}", coord.tenantId);
                     log.debug("Tenant is active but schema not available", sue);
@@ -615,7 +614,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
             }
         }
 
-        private void checkActive(StackBuffer stackBuffer) throws Exception {
+        private void checkActive() throws Exception {
             if (removed.get() || banUnregisteredSchema.get() >= System.currentTimeMillis()) {
                 return;
             }
@@ -670,11 +669,11 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                     if (accessor.hasPersistentStorage(checkPersistent)) {
                         if (!removed.get() && accessor.canHotDeploy(checkPersistent)) {
                             log.info("Hot deploying for checkActive: {}", coord);
-                            open(accessor, MiruPartitionState.online, null, stackBuffer);
+                            open(accessor, MiruPartitionState.online, null);
                         }
                     } else {
                         try {
-                            open(accessor, MiruPartitionState.bootstrap, null, stackBuffer);
+                            open(accessor, MiruPartitionState.bootstrap, null);
                         } catch (MiruPartitionUnavailableException e) {
                             log.warn("CheckActive: Partition is active for tenant {} but no schema is registered, banning for {} ms",
                                 coord.tenantId, timings.partitionBanUnregisteredSchemaMillis);
@@ -719,7 +718,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                         try {
                             if (state.isRebuildable()) {
                                 MiruPartitionState desiredState = state.transitionToRebuildingState();
-                                accessor = open(accessor, desiredState, token.get(), stackBuffer);
+                                accessor = open(accessor, desiredState, token.get());
                                 if (accessor.state != desiredState) {
                                     log.warn("Failed to transition to {} for {}", desiredState, coord);
                                     accessor = null;

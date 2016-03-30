@@ -46,8 +46,7 @@ public class LabTimeIndex implements MiruTimeIndex {
         ValueIndex metaIndex,
         byte[] metaKey,
         ValueIndex monotonicTimestampIndex,
-        ValueIndex rawTimestampToIndex,
-        StackBuffer stackBuffer)
+        ValueIndex rawTimestampToIndex)
         throws Exception {
 
         this.idProvider = idProvider;
@@ -57,12 +56,12 @@ public class LabTimeIndex implements MiruTimeIndex {
         this.timeOrderAnomalyStream = timeOrderAnomalyStream;
         this.rawTimestampToIndex = rawTimestampToIndex;
 
-        init(stackBuffer);
+        init();
     }
 
-    private void init(StackBuffer stackBuffer) throws Exception {
+    private void init() throws Exception {
         final AtomicBoolean initialized = new AtomicBoolean(false);
-
+        StackBuffer stackBuffer = new StackBuffer();
         metaIndex.get(metaKey, (byte[] key, long timestamp, boolean tombstoned, long version, byte[] payload) -> {
             if (payload != null && !tombstoned) {
                 Filer filer = new ByteArrayFiler(payload);
@@ -185,7 +184,7 @@ public class LabTimeIndex implements MiruTimeIndex {
      */
     @Override
     public int getClosestId(final long timestamp, StackBuffer stackBuffer) throws Exception, InterruptedException {
-        int[] id = { -1 };
+        int[] id = {-1};
         monotonicTimestampIndex.rangeScan(UIO.longBytes(timestamp),
             null,
             (byte[] key, long ptimestamp, boolean tombstoned, long version, byte[] payload) -> {
@@ -205,7 +204,7 @@ public class LabTimeIndex implements MiruTimeIndex {
 
     @Override
     public int getExactId(long timestamp, StackBuffer stackBuffer) throws Exception {
-        int[] id = { -1 };
+        int[] id = {-1};
         rawTimestampToIndex.get(UIO.longBytes(timestamp), (byte[] key, long ptimestamp, boolean tombstoned, long version, byte[] payload) -> {
             if (payload != null) {
                 id[0] = UIO.bytesInt(payload);
@@ -246,7 +245,7 @@ public class LabTimeIndex implements MiruTimeIndex {
         if (id.get() < 0) {
             return 0;
         }
-        int[] id = { -1 };
+        int[] id = {-1};
         monotonicTimestampIndex.rangeScan(UIO.longBytes(timestamp),
             null,
             (byte[] key, long payloadTimestamp, boolean tombstoned, long version, byte[] payload) -> {
@@ -275,7 +274,7 @@ public class LabTimeIndex implements MiruTimeIndex {
         if (id.get() < 0) {
             return -1;
         }
-        int[] id = { -1 };
+        int[] id = {-1};
         monotonicTimestampIndex.rangeScan(UIO.longBytes(timestamp),
             null,
             (byte[] key, long payloadTimestamp, boolean tombstoned, long version, byte[] payload) -> {

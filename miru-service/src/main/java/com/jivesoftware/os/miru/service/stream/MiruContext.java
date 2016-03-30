@@ -8,7 +8,7 @@ import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
-import com.jivesoftware.os.miru.plugin.context.MiruPluginCacheProvider;
+import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;

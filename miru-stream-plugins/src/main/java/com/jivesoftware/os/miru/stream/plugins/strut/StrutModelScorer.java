@@ -3,7 +3,7 @@ package com.jivesoftware.os.miru.stream.plugins.strut;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
-import com.jivesoftware.os.miru.plugin.context.MiruPluginCacheProvider.CacheKeyValues;
+import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.CacheKeyValues;
 import com.jivesoftware.os.miru.stream.plugins.strut.Strut.Scored;
 import java.util.List;
 

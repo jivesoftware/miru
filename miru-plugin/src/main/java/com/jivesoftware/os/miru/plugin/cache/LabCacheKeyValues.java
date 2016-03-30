@@ -1,11 +1,11 @@
-package com.jivesoftware.os.miru.service.index.lab;
+package com.jivesoftware.os.miru.plugin.cache;
 
 import com.google.common.primitives.Bytes;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.lab.api.ValueIndex;
-import com.jivesoftware.os.miru.plugin.context.MiruPluginCacheProvider.CacheKeyValues;
-import com.jivesoftware.os.miru.plugin.context.MiruPluginCacheProvider.GetKeyValueStream;
+import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.CacheKeyValues;
+import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.GetKeyValueStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 

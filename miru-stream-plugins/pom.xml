@@ -62,5 +62,15 @@
             <artifactId>testng</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.leaps-n-bounds</groupId>
+            <artifactId>leaps-n-bounds</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.jive.utils</groupId>
+            <artifactId>ordered-id</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 </project>

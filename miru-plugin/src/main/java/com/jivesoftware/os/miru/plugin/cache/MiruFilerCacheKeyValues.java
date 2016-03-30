@@ -1,13 +1,13 @@
-package com.jivesoftware.os.miru.service.index.filer;
+package com.jivesoftware.os.miru.plugin.cache;
 
 import com.jivesoftware.os.filer.io.FilerIO;
+import com.jivesoftware.os.filer.io.api.KeyedFilerStore;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.filer.io.chunk.ChunkFiler;
 import com.jivesoftware.os.filer.io.map.MapContext;
 import com.jivesoftware.os.filer.io.map.MapStore;
-import com.jivesoftware.os.filer.keyed.store.TxKeyedFilerStore;
-import com.jivesoftware.os.miru.plugin.context.MiruPluginCacheProvider.CacheKeyValues;
-import com.jivesoftware.os.miru.plugin.context.MiruPluginCacheProvider.GetKeyValueStream;
+import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.CacheKeyValues;
+import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.GetKeyValueStream;
 import java.nio.charset.StandardCharsets;
 
 /**
@@ -15,9 +15,9 @@ import java.nio.charset.StandardCharsets;
  */
 public class MiruFilerCacheKeyValues implements CacheKeyValues {
 
-    private final TxKeyedFilerStore<Integer, MapContext>[] powerIndex;
+    private final KeyedFilerStore<Integer, MapContext>[] powerIndex;
 
-    public MiruFilerCacheKeyValues(TxKeyedFilerStore<Integer, MapContext>[] powerIndex) {
+    public MiruFilerCacheKeyValues(KeyedFilerStore<Integer, MapContext>[] powerIndex) {
         this.powerIndex = powerIndex;
     }
 

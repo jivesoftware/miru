@@ -140,7 +140,8 @@ public class MiruServiceInitializer {
             config.getPartitionNumberOfChunkStores(),
             config.getPartitionDeleteChunkStoreOnClose(),
             config.getPartitionInitialChunkCacheSize(),
-            config.getPartitionMaxChunkCacheSize());
+            config.getPartitionMaxChunkCacheSize(),
+            config.getUseLabIndexes());
 
         MiruChunkAllocator onDiskChunkAllocator = new OnDiskChunkAllocator(resourceLocator,
             byteBufferFactory,
@@ -171,9 +172,9 @@ public class MiruServiceInitializer {
             termComposer,
             internExtern,
             ImmutableMap.<MiruBackingStorage, MiruChunkAllocator>builder()
-                .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
-                .put(MiruBackingStorage.disk, onDiskChunkAllocator)
-                .build(),
+            .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
+            .put(MiruBackingStorage.disk, onDiskChunkAllocator)
+            .build(),
             sipIndexMarshaller,
             resourceLocator,
             config.getPartitionAuthzCacheSize(),

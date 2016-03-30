@@ -32,6 +32,8 @@ import static org.testng.Assert.assertTrue;
 
 public class MiruAuthzIndexTest {
 
+    boolean useLabIndexes = true;
+
     @Test(dataProvider = "miruAuthzIndexDataProviderWithData")
     public void storeAndGetAuthz(MiruAuthzIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> miruAuthzIndex,
         MiruAuthzUtils miruAuthzUtils,
@@ -56,39 +58,39 @@ public class MiruAuthzIndexTest {
     @DataProvider(name = "miruAuthzIndexDataProviderWithData")
     public Object[][] miruAuthzIndexDataProvider() throws Exception {
         MiruBitmapsRoaringBuffer bitmaps = new MiruBitmapsRoaringBuffer();
-        MiruTenantId tenantId = new MiruTenantId(new byte[] { 1 });
+        MiruTenantId tenantId = new MiruTenantId(new byte[]{1});
         MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, MiruPartitionId.of(1), new MiruHost("logicalName"));
         MiruAuthzUtils<MutableRoaringBitmap, ImmutableRoaringBitmap> miruAuthzUtils = new MiruAuthzUtils<>(bitmaps);
 
-        MiruAuthzIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> unmergedLargeMiruHybridAuthzIndex = buildInMemoryContext(4, bitmaps, coord).authzIndex;
+        MiruAuthzIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> unmergedLargeMiruHybridAuthzIndex = buildInMemoryContext(4, useLabIndexes, bitmaps, coord).authzIndex;
         Map<String, List<Integer>> unmergedLargeHybridBitsIn = populateAuthzIndex(unmergedLargeMiruHybridAuthzIndex, miruAuthzUtils, 2, false, false);
 
-        MiruAuthzIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> unmergedLargeMiruOnDiskAuthzIndex = buildOnDiskContext(4, bitmaps, coord).authzIndex;
+        MiruAuthzIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> unmergedLargeMiruOnDiskAuthzIndex = buildOnDiskContext(4, useLabIndexes, bitmaps, coord).authzIndex;
         Map<String, List<Integer>> unmergedLargeOnDiskBitsIn = populateAuthzIndex(unmergedLargeMiruOnDiskAuthzIndex, miruAuthzUtils, 2, false, false);
 
-        MiruAuthzIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> mergedLargeMiruHybridAuthzIndex = buildInMemoryContext(4, bitmaps, coord).authzIndex;
+        MiruAuthzIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> mergedLargeMiruHybridAuthzIndex = buildInMemoryContext(4, useLabIndexes, bitmaps, coord).authzIndex;
         Map<String, List<Integer>> mergedLargeHybridBitsIn = populateAuthzIndex(mergedLargeMiruHybridAuthzIndex, miruAuthzUtils, 2, false, true);
 
-        MiruAuthzIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> mergedLargeMiruOnDiskAuthzIndex = buildOnDiskContext(4, bitmaps, coord).authzIndex;
+        MiruAuthzIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> mergedLargeMiruOnDiskAuthzIndex = buildOnDiskContext(4, useLabIndexes, bitmaps, coord).authzIndex;
         Map<String, List<Integer>> mergedLargeOnDiskBitsIn = populateAuthzIndex(mergedLargeMiruOnDiskAuthzIndex, miruAuthzUtils, 2, false, true);
 
-        MiruAuthzIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> partiallyMergedLargeMiruHybridAuthzIndex = buildInMemoryContext(4, bitmaps,
+        MiruAuthzIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> partiallyMergedLargeMiruHybridAuthzIndex = buildInMemoryContext(4, useLabIndexes, bitmaps,
             coord).authzIndex;
         Map<String, List<Integer>> partiallyMergedLargeHybridBitsIn = populateAuthzIndex(partiallyMergedLargeMiruHybridAuthzIndex, miruAuthzUtils, 2,
             true, false);
 
-        MiruAuthzIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> partiallyMergedLargeMiruOnDiskAuthzIndex = buildOnDiskContext(4, bitmaps,
+        MiruAuthzIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> partiallyMergedLargeMiruOnDiskAuthzIndex = buildOnDiskContext(4, useLabIndexes, bitmaps,
             coord).authzIndex;
         Map<String, List<Integer>> partiallyMergedLargeOnDiskBitsIn = populateAuthzIndex(partiallyMergedLargeMiruOnDiskAuthzIndex, miruAuthzUtils, 2,
             true, false);
 
-        return new Object[][] {
-            { unmergedLargeMiruHybridAuthzIndex, miruAuthzUtils, unmergedLargeHybridBitsIn },
-            { unmergedLargeMiruOnDiskAuthzIndex, miruAuthzUtils, unmergedLargeOnDiskBitsIn },
-            { mergedLargeMiruHybridAuthzIndex, miruAuthzUtils, mergedLargeHybridBitsIn },
-            { mergedLargeMiruOnDiskAuthzIndex, miruAuthzUtils, mergedLargeOnDiskBitsIn },
-            { partiallyMergedLargeMiruHybridAuthzIndex, miruAuthzUtils, partiallyMergedLargeHybridBitsIn },
-            { partiallyMergedLargeMiruOnDiskAuthzIndex, miruAuthzUtils, partiallyMergedLargeOnDiskBitsIn }
+        return new Object[][]{
+            {unmergedLargeMiruHybridAuthzIndex, miruAuthzUtils, unmergedLargeHybridBitsIn},
+            {unmergedLargeMiruOnDiskAuthzIndex, miruAuthzUtils, unmergedLargeOnDiskBitsIn},
+            {mergedLargeMiruHybridAuthzIndex, miruAuthzUtils, mergedLargeHybridBitsIn},
+            {mergedLargeMiruOnDiskAuthzIndex, miruAuthzUtils, mergedLargeOnDiskBitsIn},
+            {partiallyMergedLargeMiruHybridAuthzIndex, miruAuthzUtils, partiallyMergedLargeHybridBitsIn},
+            {partiallyMergedLargeMiruOnDiskAuthzIndex, miruAuthzUtils, partiallyMergedLargeOnDiskBitsIn}
         };
     }
 

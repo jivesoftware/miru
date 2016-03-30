@@ -31,6 +31,8 @@ import static org.testng.Assert.assertTrue;
  */
 public class MiruFieldTest {
 
+    boolean useLabIndexes = true;
+
     @Test(dataProvider = "miruFieldDataProvider",
         enabled = true, description = "This test is disk dependent, disable if it flaps or becomes slow")
     public <BM extends IBM, IBM> void getInvertedIndex(MiruBitmaps<BM, IBM> bitmaps,
@@ -73,7 +75,7 @@ public class MiruFieldTest {
         MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, MiruPartitionId.of(0), new MiruHost("logicalName"));
         MiruFieldDefinition fieldDefinition = new MiruFieldDefinition(0, "field1", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE);
 
-        MiruContext<MutableRoaringBitmap, ImmutableRoaringBitmap, ?> hybridContext = IndexTestUtil.buildInMemoryContext(4, bitmaps, coord);
+        MiruContext<MutableRoaringBitmap, ImmutableRoaringBitmap, ?> hybridContext = IndexTestUtil.buildInMemoryContext(4, useLabIndexes, bitmaps, coord);
         MiruFieldIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> hybridFieldIndex = hybridContext.fieldIndexProvider.getFieldIndex(MiruFieldType.primary);
 
         for (int id = 0; id < 10; id++) {
@@ -81,7 +83,7 @@ public class MiruFieldTest {
             hybridFieldIndex.append(fieldDefinition.fieldId, new MiruTermId(FilerIO.intBytes(id)), new int[] { id }, null, stackBuffer);
         }
 
-        MiruContext<MutableRoaringBitmap, ImmutableRoaringBitmap, ?> onDiskContext = IndexTestUtil.buildOnDiskContext(4, bitmaps, coord);
+        MiruContext<MutableRoaringBitmap, ImmutableRoaringBitmap, ?> onDiskContext = IndexTestUtil.buildOnDiskContext(4, useLabIndexes, bitmaps, coord);
         MiruFieldIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> onDiskFieldIndex = onDiskContext.fieldIndexProvider.getFieldIndex(MiruFieldType.primary);
 
         for (int id = 0; id < 10; id++) {

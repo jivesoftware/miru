@@ -33,6 +33,8 @@ import static org.testng.Assert.assertTrue;
 
 public class MiruIndexerTest {
 
+    boolean useLabIndexes = true;
+
     @Test(dataProvider = "miruIndexContextDataProvider")
     public void testIndexData(MiruPartitionCoord coord,
         MiruContext<MutableRoaringBitmap, ImmutableRoaringBitmap, ?> context,
@@ -56,7 +58,7 @@ public class MiruIndexerTest {
             context,
             coord,
             Lists.newArrayList(Arrays.asList(new MiruActivityAndId<>(
-                buildMiruActivity(tenantId, 4, new String[] { "pqrst" }, ImmutableMap.of(
+                buildMiruActivity(tenantId, 4, new String[]{"pqrst"}, ImmutableMap.of(
                     DefaultMiruSchemaDefinition.FIELDS[0].name, "0",
                     DefaultMiruSchemaDefinition.FIELDS[1].name, "1")),
                 3))),
@@ -70,7 +72,7 @@ public class MiruIndexerTest {
             context,
             coord,
             Lists.newArrayList(Arrays.asList(new MiruActivityAndId<>(
-                buildMiruActivity(tenantId, 5, new String[] { "uvwxy" }, ImmutableMap.of(
+                buildMiruActivity(tenantId, 5, new String[]{"uvwxy"}, ImmutableMap.of(
                     DefaultMiruSchemaDefinition.FIELDS[0].name, "0",
                     DefaultMiruSchemaDefinition.FIELDS[2].name, "2")),
                 4))),
@@ -105,9 +107,9 @@ public class MiruIndexerTest {
                     activity.time,
                     authz,
                     ImmutableMap.<String, String>builder()
-                        .put(DefaultMiruSchemaDefinition.FIELDS[0].name, "0")
-                        .put(DefaultMiruSchemaDefinition.FIELDS[1].name, "1")
-                        .build()),
+                    .put(DefaultMiruSchemaDefinition.FIELDS[0].name, "0")
+                    .put(DefaultMiruSchemaDefinition.FIELDS[1].name, "1")
+                    .build()),
                 id));
         }
 
@@ -115,7 +117,7 @@ public class MiruIndexerTest {
         activityAndIds.add(new MiruActivityAndId<>(
             buildMiruActivity(tenantId,
                 nextId + 1,
-                new String[] { "pqrst" },
+                new String[]{"pqrst"},
                 ImmutableMap.of(
                     DefaultMiruSchemaDefinition.FIELDS[0].name, "0",
                     DefaultMiruSchemaDefinition.FIELDS[1].name, "1")),
@@ -184,21 +186,21 @@ public class MiruIndexerTest {
             new MiruIndexLatest<>(),
             new MiruIndexPairedLatest<>());
 
-        MiruContext<MutableRoaringBitmap, ImmutableRoaringBitmap, ?> inMemoryContext = IndexTestUtil.buildInMemoryContext(4, bitmaps, coord);
+        MiruContext<MutableRoaringBitmap, ImmutableRoaringBitmap, ?> inMemoryContext = IndexTestUtil.buildInMemoryContext(4, useLabIndexes, bitmaps, coord);
 
         // Build in-memory index stream object
-        MiruActivity miruActivity1 = buildMiruActivity(tenantId, 1, new String[] { "abcde" },
+        MiruActivity miruActivity1 = buildMiruActivity(tenantId, 1, new String[]{"abcde"},
             ImmutableMap.of(DefaultMiruSchemaDefinition.FIELDS[0].name, "0"));
-        MiruActivity miruActivity2 = buildMiruActivity(tenantId, 2, new String[] { "abcde" },
+        MiruActivity miruActivity2 = buildMiruActivity(tenantId, 2, new String[]{"abcde"},
             ImmutableMap.of(DefaultMiruSchemaDefinition.FIELDS[0].name, "0"));
-        MiruActivity miruActivity3 = buildMiruActivity(tenantId, 3, new String[] { "abcde" },
+        MiruActivity miruActivity3 = buildMiruActivity(tenantId, 3, new String[]{"abcde"},
             ImmutableMap.of(DefaultMiruSchemaDefinition.FIELDS[0].name, "0"));
         List<MiruActivityAndId<MiruActivity>> immutableActivityList = Arrays.asList(
             new MiruActivityAndId<>(miruActivity1, 0),
             new MiruActivityAndId<>(miruActivity2, 1),
             new MiruActivityAndId<>(miruActivity3, 2));
 
-        MiruContext<MutableRoaringBitmap, ImmutableRoaringBitmap, ?> onDiskContext = IndexTestUtil.buildOnDiskContext(4, bitmaps, coord);
+        MiruContext<MutableRoaringBitmap, ImmutableRoaringBitmap, ?> onDiskContext = IndexTestUtil.buildOnDiskContext(4, useLabIndexes, bitmaps, coord);
 
         // Index initial activities
         miruIndexer.index(inMemoryContext,
@@ -213,9 +215,9 @@ public class MiruIndexerTest {
             false,
             MoreExecutors.sameThreadExecutor());
 
-        return new Object[][] {
-            { coord, inMemoryContext, miruIndexer, immutableActivityList },
-            { coord, onDiskContext, miruIndexer, immutableActivityList }
+        return new Object[][]{
+            {coord, inMemoryContext, miruIndexer, immutableActivityList},
+            {coord, onDiskContext, miruIndexer, immutableActivityList}
         };
     }
 

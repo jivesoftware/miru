@@ -59,7 +59,7 @@ public class MiruDeltaInboxIndex<BM extends IBM, IBM> implements MiruInboxIndex<
     }
 
     @Override
-    public void close() {
+    public void close() throws Exception {
         backingIndex.close();
     }
 

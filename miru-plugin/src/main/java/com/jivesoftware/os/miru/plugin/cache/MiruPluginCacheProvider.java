@@ -1,4 +1,4 @@
-package com.jivesoftware.os.miru.plugin.context;
+package com.jivesoftware.os.miru.plugin.cache;
 
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import java.io.IOException;

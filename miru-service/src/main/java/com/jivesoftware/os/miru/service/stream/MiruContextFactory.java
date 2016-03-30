@@ -13,7 +13,6 @@ import com.jivesoftware.os.filer.chunk.store.transaction.TxCog;
 import com.jivesoftware.os.filer.chunk.store.transaction.TxCogs;
 import com.jivesoftware.os.filer.chunk.store.transaction.TxMapGrower;
 import com.jivesoftware.os.filer.chunk.store.transaction.TxNamedMapOfFiler;
-import com.jivesoftware.os.filer.io.ByteArrayFiler;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.KeyValueMarshaller;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
@@ -27,11 +26,7 @@ import com.jivesoftware.os.filer.keyed.store.TxKeyValueStore;
 import com.jivesoftware.os.filer.keyed.store.TxKeyedFilerStore;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.lab.LABEnvironment;
-import com.jivesoftware.os.lab.api.RawEntryMarshaller;
 import com.jivesoftware.os.lab.api.ValueIndex;
-import com.jivesoftware.os.lab.api.ValueStream;
-import com.jivesoftware.os.lab.io.api.IAppendOnly;
-import com.jivesoftware.os.lab.io.api.IReadable;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
@@ -47,8 +42,10 @@ import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.plugin.MiruInterner;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
-import com.jivesoftware.os.miru.plugin.context.MiruPluginCacheProvider;
-import com.jivesoftware.os.miru.plugin.context.MiruPluginCacheProvider.CacheKeyValues;
+import com.jivesoftware.os.miru.plugin.cache.LabCacheKeyValues;
+import com.jivesoftware.os.miru.plugin.cache.MiruFilerCacheKeyValues;
+import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider;
+import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.CacheKeyValues;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.index.MiruAuthzIndex;
@@ -78,16 +75,16 @@ import com.jivesoftware.os.miru.service.index.delta.MiruDeltaTimeIndex;
 import com.jivesoftware.os.miru.service.index.delta.MiruDeltaUnreadTrackingIndex;
 import com.jivesoftware.os.miru.service.index.filer.MiruFilerActivityIndex;
 import com.jivesoftware.os.miru.service.index.filer.MiruFilerAuthzIndex;
-import com.jivesoftware.os.miru.service.index.filer.MiruFilerCacheKeyValues;
 import com.jivesoftware.os.miru.service.index.filer.MiruFilerFieldIndex;
 import com.jivesoftware.os.miru.service.index.filer.MiruFilerInboxIndex;
 import com.jivesoftware.os.miru.service.index.filer.MiruFilerRemovalIndex;
 import com.jivesoftware.os.miru.service.index.filer.MiruFilerSipIndex;
 import com.jivesoftware.os.miru.service.index.filer.MiruFilerTimeIndex;
 import com.jivesoftware.os.miru.service.index.filer.MiruFilerUnreadTrackingIndex;
+import com.jivesoftware.os.miru.plugin.context.FixedWidthRawhide;
+import com.jivesoftware.os.miru.plugin.context.KeyValueRawhide;
 import com.jivesoftware.os.miru.service.index.lab.LabActivityIndex;
 import com.jivesoftware.os.miru.service.index.lab.LabAuthzIndex;
-import com.jivesoftware.os.miru.service.index.lab.LabCacheKeyValues;
 import com.jivesoftware.os.miru.service.index.lab.LabFieldIndex;
 import com.jivesoftware.os.miru.service.index.lab.LabInboxIndex;
 import com.jivesoftware.os.miru.service.index.lab.LabRemovalIndex;
@@ -350,7 +347,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                     TxNamedMapOfFiler.CHUNK_FILER_OPENER,
                     TxNamedMapOfFiler.OVERWRITE_GROWER_PROVIDER,
                     TxNamedMapOfFiler.REWRITE_GROWER_PROVIDER),
-                new byte[] { 0 },
+                new byte[]{0},
                 new Object()),
             new MiruDeltaInvertedIndex.Delta<>());
 
@@ -421,7 +418,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             storage,
             rebuildToken);
 
-        context.markStartOfDelta(stackBuffer);
+        context.markStartOfDelta(new StackBuffer());
 
         return context;
     }
@@ -435,82 +432,22 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
 
         int seed = new HashCodeBuilder().append(coord).append(storage).toHashCode();
 
-        RawEntryMarshaller metaMarshaller = new RawEntryMarshaller() {
-            @Override
-            public byte[] merge(byte[] current, byte[] adding) {
-                return adding;
-            }
-
-            @Override
-            public boolean streamRawEntry(ValueStream stream, byte[] rawEntry, int offset) throws Exception {
-                ByteArrayFiler filer = new ByteArrayFiler(rawEntry);
-                StackBuffer stackBuffer = new StackBuffer();
-                byte[] key = FilerIO.readByteArray(filer, "key", stackBuffer);
-                byte[] payload = FilerIO.readByteArray(filer, "payload", stackBuffer);
-                return stream.stream(key, 0, false, 0, payload);
-            }
-
-            @Override
-            public byte[] toRawEntry(byte[] key, long timestamp, boolean tombstoned, long version, byte[] payload) throws Exception {
-                ByteArrayFiler filer = new ByteArrayFiler(new byte[4 + key.length + 4 + payload.length]);
-                StackBuffer stackBuffer = new StackBuffer();
-                FilerIO.writeByteArray(filer, key, "key", stackBuffer);
-                byte[] key = FilerIO.readByteArray(filer, "key", stackBuffer);
-                byte[] payload = FilerIO.readByteArray(filer, "payload", stackBuffer);
-                return new byte[0];
-            }
-
-            @Override
-            public int entryLength(IReadable readable, byte[] lengthBuffer) throws Exception {
-                return 0;
-            }
-
-            @Override
-            public void writeRawEntry(byte[] rawEntry, int offset, int length, IAppendOnly appendOnly, byte[] lengthBuffer) throws Exception {
-
-            }
-
-            @Override
-            public byte[] key(byte[] rawEntry, int offset, int length) throws Exception {
-                return new byte[0];
-            }
-
-            @Override
-            public long timestamp(byte[] rawEntry, int offset, int length) {
-                return 0;
-            }
-
-            @Override
-            public long version(byte[] rawEntry, int offset, int length) {
-                return 0;
-            }
-
-            @Override
-            public boolean mightContain(long l, long l1, long l2, long l3) {
-                return false;
-            }
-
-            @Override
-            public boolean isNewerThan(long l, long l1, long l2, long l3) {
-                return false;
-            }
-        };
-        ValueIndex metaIndex = labEnvironments[Math.abs(seed % labEnvironments.length)].open("meta", 4096, 1000, 10 * 1024 * 1024, -1L, -1L, metaMarshaller);
+        ValueIndex metaIndex = labEnvironments[Math.abs(seed % labEnvironments.length)].open("meta", 4096, 1000, 10 * 1024 * 1024, -1L, -1L,
+            new KeyValueRawhide());
 
         MiruTimeIndex timeIndex = new MiruDeltaTimeIndex(new LabTimeIndex(
             idProvider,
             Optional.<MiruFilerTimeIndex.TimeOrderAnomalyStream>absent(),
             metaIndex,
             keyBytes("timeIndex"),
-            labEnvironments[Math.abs((seed + 1) % labEnvironments.length)].open("monoTime", 4096, 1000, 10 * 1024 * 1024, -1L, -1L),
-            labEnvironments[Math.abs((seed + 1) % labEnvironments.length)].open("rawTime", 4096, 1000, 10 * 1024 * 1024, -1L, -1L),
-            stackBuffer));
+            labEnvironments[Math.abs((seed + 1) % labEnvironments.length)].open("monoTime", 4096, 1000, 10 * 1024 * 1024, -1L, -1L, new FixedWidthRawhide(8, 4)),
+            labEnvironments[Math.abs((seed + 1) % labEnvironments.length)].open("rawTime", 4096, 1000, 10 * 1024 * 1024, -1L, -1L, new FixedWidthRawhide(8, 4))));
 
         IntTermIdsKeyValueMarshaller intTermIdsKeyValueMarshaller = new IntTermIdsKeyValueMarshaller();
 
         ValueIndex[] termStorage = new ValueIndex[labEnvironments.length];
         for (int i = 0; i < termStorage.length; i++) {
-            termStorage[i] = labEnvironments[i].open("termStorage", 4096, 1000, 10 * 1024 * 1024, -1L, -1L);
+            termStorage[i] = labEnvironments[i].open("termStorage", 4096, 1000, 10 * 1024 * 1024, -1L, -1L, new KeyValueRawhide());
         }
         boolean[] hasTermStorage = new boolean[schema.fieldCount()];
         for (MiruFieldDefinition fieldDefinition : schema.getFieldDefinitions()) {
@@ -520,7 +457,8 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         MiruActivityIndex activityIndex = new MiruDeltaActivityIndex(
             new LabActivityIndex(
                 idProvider,
-                labEnvironments[Math.abs((seed + 2) % labEnvironments.length)].open("timeAndVersion", 4096, 1000, 10 * 1024 * 1024, -1L, -1L),
+                labEnvironments[Math.abs((seed + 2) % labEnvironments.length)].open("timeAndVersion", 4096, 1000, 10 * 1024 * 1024, -1L, -1L,
+                new FixedWidthRawhide(4, 16)),
                 intTermIdsKeyValueMarshaller,
                 metaIndex,
                 keyBytes("lastId"),
@@ -537,8 +475,8 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             ValueIndex[] indexes = new ValueIndex[labEnvironments.length];
             ValueIndex[] cardinalities = new ValueIndex[labEnvironments.length];
             for (int i = 0; i < indexes.length; i++) {
-                indexes[i] = labEnvironments[i].open("field-" + fieldType.name(), 4096, 1000, 10 * 1024 * 1024, -1L, -1L);
-                cardinalities[i] = labEnvironments[i].open("cardinality-" + fieldType.name(), 4096, 1000, 10 * 1024 * 1024, -1L, -1L);
+                indexes[i] = labEnvironments[i].open("field-" + fieldType.name(), 4096, 1000, 10 * 1024 * 1024, -1L, -1L, new KeyValueRawhide());
+                cardinalities[i] = labEnvironments[i].open("cardinality-" + fieldType.name(), 4096, 1000, 10 * 1024 * 1024, -1L, -1L, new KeyValueRawhide());
             }
 
             boolean[] hasCardinalities = new boolean[schema.fieldCount()];
@@ -570,7 +508,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
 
         ValueIndex[] authzIndexes = new ValueIndex[labEnvironments.length];
         for (int i = 0; i < authzIndexes.length; i++) {
-            authzIndexes[i] = labEnvironments[i].open("authz", 4096, 1000, 10 * 1024 * 1024, -1L, -1L);
+            authzIndexes[i] = labEnvironments[i].open("authz", 4096, 1000, 10 * 1024 * 1024, -1L, -1L, new KeyValueRawhide());
         }
         MiruAuthzIndex<BM, IBM> authzIndex = new MiruDeltaAuthzIndex<>(bitmaps,
             trackError,
@@ -597,7 +535,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
 
         ValueIndex[] unreadIndexes = new ValueIndex[labEnvironments.length];
         for (int i = 0; i < unreadIndexes.length; i++) {
-            unreadIndexes[i] = labEnvironments[i].open("unread", 4096, 1000, 10 * 1024 * 1024, -1L, -1L);
+            unreadIndexes[i] = labEnvironments[i].open("unread", 4096, 1000, 10 * 1024 * 1024, -1L, -1L, new KeyValueRawhide());
         }
         MiruUnreadTrackingIndex<BM, IBM> unreadTrackingIndex = new MiruDeltaUnreadTrackingIndex<>(
             bitmaps,
@@ -611,7 +549,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
 
         ValueIndex[] inboxIndexes = new ValueIndex[labEnvironments.length];
         for (int i = 0; i < inboxIndexes.length; i++) {
-            inboxIndexes[i] = labEnvironments[i].open("inbox", 4096, 1000, 10 * 1024 * 1024, -1L, -1L);
+            inboxIndexes[i] = labEnvironments[i].open("inbox", 4096, 1000, 10 * 1024 * 1024, -1L, -1L, new KeyValueRawhide());
         }
         MiruInboxIndex<BM, IBM> inboxIndex = new MiruDeltaInboxIndex<>(
             bitmaps,
@@ -631,7 +569,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             try {
                 ValueIndex[] cacheIndexes = new ValueIndex[labEnvironments.length];
                 for (int i = 0; i < cacheIndexes.length; i++) {
-                    cacheIndexes[i] = labEnvironments[i].open("pluginCache-" + key, 4096, 1000, 10 * 1024 * 1024, -1L, -1L);
+                    cacheIndexes[i] = labEnvironments[i].open("pluginCache-" + key, 4096, 1000, 10 * 1024 * 1024, -1L, -1L, new KeyValueRawhide());
                 }
                 return new LabCacheKeyValues(idProvider, cacheIndexes);
             } catch (Exception x) {
@@ -657,7 +595,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             storage,
             rebuildToken);
 
-        context.markStartOfDelta(stackBuffer);
+        context.markStartOfDelta(new StackBuffer());
 
         return context;
     }
@@ -697,7 +635,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             }
         }
         LABEnvironment[] environments = getAllocator(toStorage).allocateLABEnvironments(coord);
-        return allocateLabIndex(bitmaps, coord, schema, environments, toStorage, null, stackBuffer);
+        return allocateLabIndex(bitmaps, coord, schema, environments, toStorage, null);
     }
 
     public <BM extends IBM, IBM> MiruContext<BM, IBM, S> copyChunkStore(MiruBitmaps<BM, IBM> bitmaps,
@@ -708,7 +646,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         StackBuffer stackBuffer) throws Exception {
 
         ChunkStore[] fromChunks = from.chunkStores;
-        ChunkStore[] toChunks = getAllocator(toStorage).allocateChunkStores(coord, stackBuffer);
+        ChunkStore[] toChunks = getAllocator(toStorage).allocateChunkStores(coord);
         if (fromChunks.length != toChunks.length) {
             throw new IllegalArgumentException("The number of from chunks:" + fromChunks.length + " must equal the number of to chunks:" + toChunks.length);
         }
@@ -716,7 +654,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             fromChunks[i].copyTo(toChunks[i], stackBuffer);
         }
 
-        return allocateChunkStore(bitmaps, coord, schema, toChunks, toStorage, null, stackBuffer);
+        return allocateChunkStore(bitmaps, coord, schema, toChunks, toStorage, null);
     }
 
     public void saveSchema(MiruPartitionCoord coord, MiruSchema schema) throws IOException {

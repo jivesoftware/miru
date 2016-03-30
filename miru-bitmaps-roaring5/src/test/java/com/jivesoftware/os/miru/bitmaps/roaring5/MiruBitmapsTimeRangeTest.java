@@ -10,13 +10,11 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
+import com.jivesoftware.os.miru.service.IndexTestUtil;
 import com.jivesoftware.os.miru.service.index.delta.MiruDeltaTimeIndex;
-import java.io.IOException;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
-import static com.jivesoftware.os.miru.service.IndexTestUtil.buildInMemoryContext;
-import static com.jivesoftware.os.miru.service.IndexTestUtil.buildOnDiskContext;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.fail;
 
@@ -62,7 +60,7 @@ public class MiruBitmapsTimeRangeTest {
 
     @Test(dataProvider = "singleEntryTimeIndexDataProvider")
     public <BM extends IBM, IBM> void testSingleBitTimeRange(MiruBitmaps<BM, IBM> bitmaps, MiruTimeIndex miruTimeIndex) throws
-        IOException, InterruptedException {
+        Exception, InterruptedException {
         StackBuffer stackBuffer = new StackBuffer();
         IBM bitmap = bitmaps.buildTimeRangeMask(miruTimeIndex, 0, Long.MAX_VALUE, stackBuffer);
 
@@ -177,12 +175,12 @@ public class MiruBitmapsTimeRangeTest {
     private MiruTimeIndex buildInMemoryTimeIndex() throws Exception {
         MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
         MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("logicalName"));
-        return buildInMemoryContext(numberOfChunkStores, bitmaps, coord).timeIndex;
+        return IndexTestUtil.buildInMemoryContext(numberOfChunkStores, true, bitmaps, coord).timeIndex;
     }
 
     private MiruTimeIndex buildOnDiskTimeIndex() throws Exception {
         MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
         MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("logicalName"));
-        return buildOnDiskContext(numberOfChunkStores, bitmaps, coord).timeIndex;
+        return IndexTestUtil.buildOnDiskContext(numberOfChunkStores, true, bitmaps, coord).timeIndex;
     }
 }

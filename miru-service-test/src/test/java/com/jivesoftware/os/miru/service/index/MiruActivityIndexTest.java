@@ -19,7 +19,6 @@ import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.service.stream.MiruContext;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import org.apache.commons.lang.RandomStringUtils;
@@ -35,6 +34,8 @@ import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 
 public class MiruActivityIndexTest {
+
+    boolean useLabIndexes = true;
 
     MiruInterner<MiruTermId> termInterner = new MiruInterner<MiruTermId>(true) {
         @Override
@@ -81,7 +82,7 @@ public class MiruActivityIndexTest {
         MiruTermId[][] terms = new MiruTermId[numberOfFields][];
         for (int i = 0; i < numberOfFields; i++) {
             MiruFieldDefinition fieldDefinition = schema.getFieldDefinition(i);
-            terms[i] = new MiruTermId[] { termComposer.compose(schema, fieldDefinition, stackBuffer, time + "-" + i) };
+            terms[i] = new MiruTermId[]{termComposer.compose(schema, fieldDefinition, stackBuffer, time + "-" + i)};
         }
         builder.putFieldsValues(terms);
         return builder.build();
@@ -125,7 +126,7 @@ public class MiruActivityIndexTest {
     }
 
     @Test(dataProvider = "miruActivityIndexDataProviderWithData")
-    public void testGetActivity(MiruActivityIndex miruActivityIndex, MiruInternalActivity[] expectedActivities) throws IOException, InterruptedException {
+    public void testGetActivity(MiruActivityIndex miruActivityIndex, MiruInternalActivity[] expectedActivities) throws Exception, InterruptedException {
         StackBuffer stackBuffer = new StackBuffer();
         assertTrue(expectedActivities.length == 3);
         assertEquals(miruActivityIndex.get("test", 0, stackBuffer).timestamp, expectedActivities[0].time);
@@ -137,7 +138,7 @@ public class MiruActivityIndexTest {
     }
 
     @Test(dataProvider = "miruActivityIndexDataProviderWithData", expectedExceptions = IllegalArgumentException.class)
-    public void testGetActivityOverCapacity(MiruActivityIndex miruActivityIndex, MiruInternalActivity[] expectedActivities) throws IOException,
+    public void testGetActivityOverCapacity(MiruActivityIndex miruActivityIndex, MiruInternalActivity[] expectedActivities) throws Exception,
         InterruptedException {
         StackBuffer stackBuffer = new StackBuffer();
         miruActivityIndex.get("test", expectedActivities.length, stackBuffer); // This should throw an exception
@@ -148,9 +149,9 @@ public class MiruActivityIndexTest {
         MiruActivityIndex hybridActivityIndex = buildInMemoryActivityIndex();
         MiruActivityIndex onDiskActivityIndex = buildOnDiskActivityIndex();
 
-        return new Object[][] {
-            { hybridActivityIndex, false },
-            { onDiskActivityIndex, false } };
+        return new Object[][]{
+            {hybridActivityIndex, false},
+            {onDiskActivityIndex, false}};
     }
 
     @DataProvider(name = "miruActivityIndexDataProviderWithData")
@@ -160,8 +161,8 @@ public class MiruActivityIndexTest {
         MiruTenantId tenantId = new MiruTenantId(RandomStringUtils.randomAlphabetic(10).getBytes());
         MiruInternalActivity miruActivity1 = buildMiruActivity(tenantId, 1, new String[0], 3);
         MiruInternalActivity miruActivity2 = buildMiruActivity(tenantId, 2, new String[0], 4);
-        MiruInternalActivity miruActivity3 = buildMiruActivity(tenantId, 3, new String[] { "abcde" }, 1);
-        final MiruInternalActivity[] miruActivities = new MiruInternalActivity[] { miruActivity1, miruActivity2, miruActivity3 };
+        MiruInternalActivity miruActivity3 = buildMiruActivity(tenantId, 3, new String[]{"abcde"}, 1);
+        final MiruInternalActivity[] miruActivities = new MiruInternalActivity[]{miruActivity1, miruActivity2, miruActivity3};
 
         // Add activities to in-memory index
         MiruActivityIndex hybridActivityIndex = buildInMemoryActivityIndex();
@@ -176,23 +177,23 @@ public class MiruActivityIndexTest {
             new MiruActivityAndId<>(miruActivity2, 1),
             new MiruActivityAndId<>(miruActivity3, 2)), stackBuffer);
 
-        return new Object[][] {
-            { hybridActivityIndex, miruActivities },
-            { onDiskActivityIndex, miruActivities }
+        return new Object[][]{
+            {hybridActivityIndex, miruActivities},
+            {onDiskActivityIndex, miruActivities}
         };
     }
 
     private MiruActivityIndex buildInMemoryActivityIndex() throws Exception {
         MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
         MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("logicalName"));
-        MiruContext<RoaringBitmap, RoaringBitmap, ?> hybridContext = buildInMemoryContext(4, bitmaps, coord);
+        MiruContext<RoaringBitmap, RoaringBitmap, ?> hybridContext = buildInMemoryContext(4, useLabIndexes, bitmaps, coord);
         return hybridContext.activityIndex;
     }
 
     private MiruActivityIndex buildOnDiskActivityIndex() throws Exception {
         MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
         MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("logicalName"));
-        MiruContext<RoaringBitmap, RoaringBitmap, ?> hybridContext = buildOnDiskContext(4, bitmaps, coord);
+        MiruContext<RoaringBitmap, RoaringBitmap, ?> hybridContext = buildOnDiskContext(4, useLabIndexes, bitmaps, coord);
         return hybridContext.activityIndex;
     }
 
@@ -203,7 +204,7 @@ public class MiruActivityIndexTest {
         MiruTermId[][] terms = new MiruTermId[numberOfRandomFields][];
         for (int i = 0; i < numberOfRandomFields; i++) {
             MiruFieldDefinition fieldDefinition = schema.getFieldDefinition(i);
-            terms[i] = new MiruTermId[] { termComposer.compose(schema, fieldDefinition, stackBuffer, RandomStringUtils.randomAlphanumeric(5)) };
+            terms[i] = new MiruTermId[]{termComposer.compose(schema, fieldDefinition, stackBuffer, RandomStringUtils.randomAlphanumeric(5))};
         }
         builder.putFieldsValues(terms);
         return builder.build();

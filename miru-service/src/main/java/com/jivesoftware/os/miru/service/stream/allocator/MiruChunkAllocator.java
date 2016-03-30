@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.service.stream.allocator;
 
-import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.filer.io.chunk.ChunkStore;
 import com.jivesoftware.os.lab.LABEnvironment;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;

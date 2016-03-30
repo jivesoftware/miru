@@ -20,7 +20,6 @@ import com.jivesoftware.os.miru.stream.plugins.strut.StrutModelCache.ModelScore;
 import com.jivesoftware.os.miru.stream.plugins.strut.StrutQuery.Strategy;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
@@ -42,7 +41,7 @@ public class Strut {
     public <BM extends IBM, IBM> StrutAnswer composeAnswer(MiruRequestContext<BM, IBM, ?> requestContext,
         MiruRequest<StrutQuery> request,
         List<HotOrNot> hotOrNots,
-        float threshold) throws IOException, InterruptedException {
+        float threshold) throws Exception, InterruptedException {
         boolean resultsExhausted = request.query.timeRange.smallestTimestamp > requestContext.getTimeIndex().getLargestTimestamp();
         return new StrutAnswer(hotOrNots, threshold, resultsExhausted);
     }

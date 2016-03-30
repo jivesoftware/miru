@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.plugin.context;
 
+import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;

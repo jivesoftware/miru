@@ -238,12 +238,11 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
 
     @Override
     public boolean rebuildTimeRange(MiruTimeRange miruTimeRange) throws Exception {
-        StackBuffer stackBuffer = new StackBuffer();
         for (Map.Entry<MiruTenantId, MiruTenantTopology<?, ?>> entry : localTopologies.entrySet()) {
             MiruTenantTopology<?, ?> topology = entry.getValue();
             for (MiruLocalHostedPartition<?, ?, ?, ?> hostedPartition : entry.getValue().allPartitions()) {
                 MiruPartitionCoord coord = hostedPartition.getCoord();
-                try (MiruRequestHandle<?, ?, ?> handle = hostedPartition.acquireQueryHandle(stackBuffer)) {
+                try (MiruRequestHandle<?, ?, ?> handle = hostedPartition.acquireQueryHandle()) {
                     MiruTimeIndex timeIndex = handle.getRequestContext().getTimeIndex();
                     if (timeIndex.intersects(miruTimeRange)) {
                         LOG.info("Rebuild requested for {}", coord);

@@ -1,7 +1,6 @@
 package com.jivesoftware.os.miru.plugin.solution;
 
 import com.google.common.base.Optional;
-import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
 import com.jivesoftware.os.miru.plugin.partition.MiruQueryablePartition;
@@ -34,8 +33,7 @@ public class MiruSolvableFactory<Q, A, R> {
 
     public <BM extends IBM, IBM> MiruSolvable<A> create(final MiruQueryablePartition<BM, IBM> replica, final Optional<R> report) {
         Callable<MiruPartitionResponse<A>> callable = () -> {
-            StackBuffer stackBuffer = new StackBuffer();
-            try (MiruRequestHandle<BM, IBM, ?> handle = replica.acquireQueryHandle(stackBuffer)) {
+            try (MiruRequestHandle<BM, IBM, ?> handle = replica.acquireQueryHandle()) {
                 if (handle.isLocal()) {
                     long start = System.currentTimeMillis();
                     MiruPartitionResponse<A> response = question.askLocal(handle, report);

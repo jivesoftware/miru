@@ -60,10 +60,11 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
     }
 
     @Override
-    public ChunkStore[] allocateChunkStores(MiruPartitionCoord coord, StackBuffer stackBuffer) throws Exception {
+    public ChunkStore[] allocateChunkStores(MiruPartitionCoord coord) throws Exception {
 
         ChunkStore[] chunkStores = new ChunkStore[numberOfChunkStores];
         ChunkStoreInitializer chunkStoreInitializer = new ChunkStoreInitializer();
+        StackBuffer stackBuffer = new StackBuffer();
         for (int i = 0; i < numberOfChunkStores; i++) {
             chunkStores[i] = chunkStoreInitializer.create(rebuildByteBufferFactory,
                 initialChunkSize,
