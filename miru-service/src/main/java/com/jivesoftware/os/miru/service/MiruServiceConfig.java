@@ -177,4 +177,7 @@ public interface MiruServiceConfig extends Config {
 
     @BooleanDefault(true)
     boolean getEnableTermInterning();
+
+    @BooleanDefault(true)
+    boolean getUseLabIndexes();
 }

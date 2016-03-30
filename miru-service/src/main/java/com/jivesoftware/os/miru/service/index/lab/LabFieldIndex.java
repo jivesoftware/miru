@@ -5,10 +5,7 @@ import com.jivesoftware.os.filer.io.ByteArrayFiler;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.io.api.KeyRange;
-import com.jivesoftware.os.filer.io.api.KeyedFilerStore;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
-import com.jivesoftware.os.filer.io.map.MapContext;
-import com.jivesoftware.os.filer.io.map.MapStore;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.lab.api.ValueIndex;
 import com.jivesoftware.os.lab.api.ValueStream;
@@ -33,7 +30,6 @@ import java.util.concurrent.Future;
 import org.apache.commons.lang.mutable.MutableLong;
 
 /**
- *
  * @author jonathan.colt
  */
 public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IBM> {
@@ -44,7 +40,8 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
     private final MiruBitmaps<BM, IBM> bitmaps;
     private final TrackError trackError;
     private final ValueIndex[] indexes;
-    private final KeyedFilerStore<Integer, MapContext>[] cardinalities;
+    private final ValueIndex[] cardinalities;
+    private final boolean[] hasCardinalities;
     // We could lock on both field + termId for improved hash/striping, but we favor just termId to reduce object creation
     private final StripingLocksProvider<MiruTermId> stripingLocksProvider;
     private final MiruInterner<MiruTermId> termInterner;
@@ -53,7 +50,8 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
         MiruBitmaps<BM, IBM> bitmaps,
         TrackError trackError,
         ValueIndex[] indexes,
-        KeyedFilerStore<Integer, MapContext>[] cardinalities,
+        ValueIndex[] cardinalities,
+        boolean[] hasCardinalities,
         StripingLocksProvider<MiruTermId> stripingLocksProvider,
         MiruInterner<MiruTermId> termInterner) throws Exception {
 
@@ -62,8 +60,17 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
         this.trackError = trackError;
         this.indexes = indexes;
         this.cardinalities = cardinalities;
+        this.hasCardinalities = hasCardinalities;
         this.stripingLocksProvider = stripingLocksProvider;
         this.termInterner = termInterner;
+    }
+
+    private ValueIndex getFieldIndex(int fieldId) {
+        return indexes[fieldId % indexes.length];
+    }
+
+    private ValueIndex getCardinalityIndex(int fieldId) {
+        return cardinalities[fieldId % indexes.length];
     }
 
     @Override
@@ -81,7 +88,7 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
     @Override
     public void setIfEmpty(int fieldId, MiruTermId termId, int id, long count, StackBuffer stackBuffer) throws Exception {
         if (getIndex("setIfEmpty", fieldId, termId).setIfEmpty(stackBuffer, id)) {
-            mergeCardinalities(fieldId, termId, new int[]{id}, new long[]{count}, stackBuffer);
+            mergeCardinalities(fieldId, termId, new int[] { id }, new long[] { count }, stackBuffer);
         }
     }
 
@@ -113,10 +120,6 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
         LOG.inc("bytes>streamTermIdsForField>total", bytes.longValue());
         LOG.inc("bytes>streamTermIdsForField>" + name + ">total", bytes.longValue());
         LOG.inc("bytes>streamTermIdsForField>" + name + ">" + fieldId, bytes.longValue());
-    }
-
-    private ValueIndex getFieldIndex(int fieldId) {
-        return indexes[fieldId % indexes.length];
     }
 
     @Override
@@ -233,19 +236,17 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
 
     @Override
     public long getCardinality(int fieldId, MiruTermId termId, int id, StackBuffer stackBuffer) throws Exception {
-        if (cardinalities[fieldId] != null) {
-            Long count = cardinalities[fieldId].read(termId.getBytes(), null, (monkey, filer, _stackBuffer, lock) -> {
-                if (filer != null) {
-                    synchronized (lock) {
-                        byte[] payload = MapStore.INSTANCE.getPayload(filer, monkey, FilerIO.intBytes(id), _stackBuffer);
-                        if (payload != null) {
-                            return FilerIO.bytesLong(payload);
-                        }
+        if (hasCardinalities[fieldId]) {
+            byte[] fieldIdBytes = UIO.intBytes(fieldId);
+            long[] count = { 0 };
+            getCardinalityIndex(fieldId).get(Bytes.concat(fieldIdBytes, UIO.intBytes(id), termId.getBytes()),
+                (byte[] key, long timestamp, boolean tombstoned, long version, byte[] payload) -> {
+                    if (payload != null && !tombstoned) {
+                        count[0] = UIO.bytesLong(payload);
                     }
-                }
-                return null;
-            }, stackBuffer);
-            return count != null ? count : 0;
+                    return false;
+                });
+            return count[0];
         }
         return -1;
     }
@@ -253,22 +254,21 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
     @Override
     public long[] getCardinalities(int fieldId, MiruTermId termId, int[] ids, StackBuffer stackBuffer) throws Exception {
         long[] counts = new long[ids.length];
-        if (cardinalities[fieldId] != null) {
-            cardinalities[fieldId].read(termId.getBytes(), null, (monkey, filer, _stackBuffer, lock) -> {
-                if (filer != null) {
-                    synchronized (lock) {
-                        for (int i = 0; i < ids.length; i++) {
-                            if (ids[i] >= 0) {
-                                byte[] payload = MapStore.INSTANCE.getPayload(filer, monkey, FilerIO.intBytes(ids[i]), _stackBuffer);
-                                if (payload != null) {
-                                    counts[i] = FilerIO.bytesLong(payload);
-                                }
+        if (hasCardinalities[fieldId]) {
+            byte[] fieldIdBytes = UIO.intBytes(fieldId);
+            ValueIndex cardinalityIndex = getCardinalityIndex(fieldId);
+            for (int i = 0; i < ids.length; i++) {
+                if (ids[i] >= 0) {
+                    int index = i;
+                    cardinalityIndex.get(Bytes.concat(fieldIdBytes, UIO.intBytes(ids[i]), termId.getBytes()),
+                        (byte[] key, long timestamp, boolean tombstoned, long version, byte[] payload) -> {
+                            if (payload != null && !tombstoned) {
+                                counts[index] = UIO.bytesLong(payload);
                             }
-                        }
-                    }
+                            return false;
+                        });
                 }
-                return null;
-            }, stackBuffer);
+            }
         } else {
             Arrays.fill(counts, -1);
         }
@@ -348,26 +348,50 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
 
     @Override
     public void mergeCardinalities(int fieldId, MiruTermId termId, int[] ids, long[] counts, StackBuffer stackBuffer) throws Exception {
-        if (cardinalities[fieldId] != null && counts != null) {
-            cardinalities[fieldId].readWriteAutoGrow(termId.getBytes(), ids.length, (monkey, filer, _stackBuffer, lock) -> {
-                synchronized (lock) {
-                    long delta = 0;
-                    for (int i = 0; i < ids.length; i++) {
-                        byte[] key = FilerIO.intBytes(ids[i]);
-                        long keyHash = MapStore.INSTANCE.hash(key, 0, key.length);
-                        byte[] payload = MapStore.INSTANCE.getPayload(filer, monkey, keyHash, key, stackBuffer);
-                        long existing = payload != null ? FilerIO.bytesLong(payload) : 0;
-                        MapStore.INSTANCE.add(filer, monkey, (byte) 1, keyHash, key, FilerIO.longBytes(counts[i]), _stackBuffer);
-                        delta += counts[i] - existing;
+        if (hasCardinalities[fieldId] && counts != null) {
+            byte[] fieldBytes = UIO.intBytes(fieldId);
+            ValueIndex cardinalityIndex = getCardinalityIndex(fieldId);
+
+            long[] merged = new long[counts.length];
+            long delta = 0;
+            System.arraycopy(counts, 0, merged, 0, counts.length);
+            for (int i = 0; i < ids.length; i++) {
+                int index = i;
+                cardinalityIndex.get(Bytes.concat(fieldBytes, UIO.intBytes(ids[i]), termId.getBytes()),
+                    (byte[] key, long timestamp, boolean tombstoned, long version, byte[] payload) -> {
+                        if (payload != null && !tombstoned) {
+                            merged[index] += UIO.bytesLong(payload);
+                        }
+                        return false;
+                    });
+                delta += merged[i] - counts[i];
+            }
+
+            long[] globalCount = { 0 };
+            cardinalityIndex.get(Bytes.concat(fieldBytes, UIO.intBytes(-1), termId.getBytes()),
+                (byte[] key, long timestamp, boolean tombstoned, long version, byte[] payload) -> {
+                    if (payload != null && !tombstoned) {
+                        globalCount[0] = UIO.bytesLong(payload);
+                    }
+                    return false;
+                });
+            globalCount[0] += delta;
+
+            long timestamp = System.currentTimeMillis();
+            long version = idProvider.nextId();
+            cardinalityIndex.append(valueStream -> {
+                for (int i = 0; i < ids.length; i++) {
+                    byte[] key = Bytes.concat(fieldBytes, UIO.intBytes(ids[i]), termId.getBytes());
+                    if (!valueStream.stream(key, timestamp, false, version, UIO.longBytes(merged[i]))) {
+                        return false;
                     }
 
-                    byte[] globalKey = FilerIO.intBytes(-1);
-                    byte[] globalPayload = MapStore.INSTANCE.getPayload(filer, monkey, globalKey, _stackBuffer);
-                    long globalExisting = globalPayload != null ? FilerIO.bytesLong(globalPayload) : 0;
-                    MapStore.INSTANCE.add(filer, monkey, (byte) 1, globalKey, FilerIO.longBytes(globalExisting + delta), _stackBuffer);
                 }
-                return null;
-            }, stackBuffer);
+
+                byte[] globalKey = Bytes.concat(fieldBytes, UIO.intBytes(-1), termId.getBytes());
+                valueStream.stream(globalKey, timestamp, false, version, UIO.longBytes(globalCount[0]));
+                return true;
+            });
         }
     }
 

@@ -66,7 +66,7 @@ public class IndexTestUtil {
         .setFieldDefinitions(DefaultMiruSchemaDefinition.FIELDS)
         .build();
 
-    private static MiruContextFactory<RCVSSipCursor> factory(int numberOfChunkStores) {
+    private static MiruContextFactory<RCVSSipCursor> factory(int numberOfChunkStores, boolean useLabIndexes) {
 
         StripingLocksProvider<MiruTermId> fieldIndexStripingLocksProvider = new StripingLocksProvider<>(1024);
         StripingLocksProvider<MiruStreamId> streamStripingLocksProvider = new StripingLocksProvider<>(1024);
@@ -103,7 +103,8 @@ public class IndexTestUtil {
             numberOfChunkStores,
             true,
             100,
-            1_000);
+            1_000,
+            useLabIndexes);
 
         MiruChunkAllocator onDiskChunkAllocator = new OnDiskChunkAllocator(diskResourceLocator,
             new HeapByteBufferFactory(),
@@ -130,22 +131,23 @@ public class IndexTestUtil {
             authzStripingLocksProvider,
             new PartitionErrorTracker(BindInterfaceToConfiguration.bindDefault(PartitionErrorTracker.PartitionErrorTrackerConfig.class)),
             termInterner,
-            new ObjectMapper());
+            new ObjectMapper(),
+            useLabIndexes);
     }
 
     public static <BM extends IBM, IBM> MiruContext<BM, IBM, RCVSSipCursor> buildInMemoryContext(int numberOfChunkStores,
+        boolean useLabIndexes,
         MiruBitmaps<BM, IBM> bitmaps,
         MiruPartitionCoord coord) throws Exception {
-        StackBuffer stackBuffer = new StackBuffer();
-        return factory(numberOfChunkStores).allocate(bitmaps, schema, coord, MiruBackingStorage.memory, null, stackBuffer);
+        return factory(numberOfChunkStores, useLabIndexes).allocate(bitmaps, schema, coord, MiruBackingStorage.memory, null);
 
     }
 
     public static <BM extends IBM, IBM> MiruContext<BM, IBM, RCVSSipCursor> buildOnDiskContext(int numberOfChunkStores,
+        boolean useLabIndexes,
         MiruBitmaps<BM, IBM> bitmaps,
         MiruPartitionCoord coord) throws Exception {
-        StackBuffer stackBuffer = new StackBuffer();
-        return factory(numberOfChunkStores).allocate(bitmaps, schema, coord, MiruBackingStorage.disk, null, stackBuffer);
+        return factory(numberOfChunkStores, useLabIndexes).allocate(bitmaps, schema, coord, MiruBackingStorage.disk, null);
 
     }
 

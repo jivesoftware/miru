@@ -13,6 +13,7 @@ import com.jivesoftware.os.filer.chunk.store.transaction.TxCog;
 import com.jivesoftware.os.filer.chunk.store.transaction.TxCogs;
 import com.jivesoftware.os.filer.chunk.store.transaction.TxMapGrower;
 import com.jivesoftware.os.filer.chunk.store.transaction.TxNamedMapOfFiler;
+import com.jivesoftware.os.filer.io.ByteArrayFiler;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.KeyValueMarshaller;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
@@ -26,7 +27,11 @@ import com.jivesoftware.os.filer.keyed.store.TxKeyValueStore;
 import com.jivesoftware.os.filer.keyed.store.TxKeyedFilerStore;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.lab.LABEnvironment;
+import com.jivesoftware.os.lab.api.RawEntryMarshaller;
 import com.jivesoftware.os.lab.api.ValueIndex;
+import com.jivesoftware.os.lab.api.ValueStream;
+import com.jivesoftware.os.lab.io.api.IAppendOnly;
+import com.jivesoftware.os.lab.io.api.IReadable;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
@@ -43,6 +48,7 @@ import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.plugin.MiruInterner;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.context.MiruPluginCacheProvider;
+import com.jivesoftware.os.miru.plugin.context.MiruPluginCacheProvider.CacheKeyValues;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.index.MiruAuthzIndex;
@@ -72,13 +78,22 @@ import com.jivesoftware.os.miru.service.index.delta.MiruDeltaTimeIndex;
 import com.jivesoftware.os.miru.service.index.delta.MiruDeltaUnreadTrackingIndex;
 import com.jivesoftware.os.miru.service.index.filer.MiruFilerActivityIndex;
 import com.jivesoftware.os.miru.service.index.filer.MiruFilerAuthzIndex;
+import com.jivesoftware.os.miru.service.index.filer.MiruFilerCacheKeyValues;
 import com.jivesoftware.os.miru.service.index.filer.MiruFilerFieldIndex;
 import com.jivesoftware.os.miru.service.index.filer.MiruFilerInboxIndex;
 import com.jivesoftware.os.miru.service.index.filer.MiruFilerRemovalIndex;
 import com.jivesoftware.os.miru.service.index.filer.MiruFilerSipIndex;
 import com.jivesoftware.os.miru.service.index.filer.MiruFilerTimeIndex;
 import com.jivesoftware.os.miru.service.index.filer.MiruFilerUnreadTrackingIndex;
+import com.jivesoftware.os.miru.service.index.lab.LabActivityIndex;
+import com.jivesoftware.os.miru.service.index.lab.LabAuthzIndex;
+import com.jivesoftware.os.miru.service.index.lab.LabCacheKeyValues;
 import com.jivesoftware.os.miru.service.index.lab.LabFieldIndex;
+import com.jivesoftware.os.miru.service.index.lab.LabInboxIndex;
+import com.jivesoftware.os.miru.service.index.lab.LabRemovalIndex;
+import com.jivesoftware.os.miru.service.index.lab.LabSipIndex;
+import com.jivesoftware.os.miru.service.index.lab.LabTimeIndex;
+import com.jivesoftware.os.miru.service.index.lab.LabUnreadTrackingIndex;
 import com.jivesoftware.os.miru.service.locator.MiruPartitionCoordIdentifier;
 import com.jivesoftware.os.miru.service.locator.MiruResourceLocator;
 import com.jivesoftware.os.miru.service.locator.MiruResourcePartitionIdentifier;
@@ -116,6 +131,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
     private final PartitionErrorTracker partitionErrorTracker;
     private final MiruInterner<MiruTermId> termInterner;
     private final ObjectMapper objectMapper;
+    private final boolean useLabIndexes;
 
     public MiruContextFactory(OrderIdProvider idProvider,
         TxCogs persistentCogs,
@@ -132,7 +148,8 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         StripingLocksProvider<String> authzStripingLocksProvider,
         PartitionErrorTracker partitionErrorTracker,
         MiruInterner<MiruTermId> termInterner,
-        ObjectMapper objectMapper) {
+        ObjectMapper objectMapper,
+        boolean useLabIndexes) {
 
         this.idProvider = idProvider;
         this.persistentCogs = persistentCogs;
@@ -150,6 +167,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         this.partitionErrorTracker = partitionErrorTracker;
         this.termInterner = termInterner;
         this.objectMapper = objectMapper;
+        this.useLabIndexes = useLabIndexes;
     }
 
     public MiruBackingStorage findBackingStorage(MiruPartitionCoord coord) throws Exception {
@@ -176,22 +194,24 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         MiruSchema schema,
         MiruPartitionCoord coord,
         MiruBackingStorage storage,
-        MiruRebuildDirector.Token rebuildToken,
-        StackBuffer stackBuffer) throws Exception {
+        MiruRebuildDirector.Token rebuildToken) throws Exception {
 
-        ChunkStore[] chunkStores = getAllocator(storage).allocateChunkStores(coord, stackBuffer);
-        LABEnvironment[] labEnvironments = getAllocator(storage).allocateLABEnvironments(coord);
-        return allocate(bitmaps, coord, schema, chunkStores, labEnvironments, storage, rebuildToken, stackBuffer);
+        MiruChunkAllocator allocator = getAllocator(storage);
+        if (useLabIndexes && !allocator.hasChunkStores(coord)) {
+            LABEnvironment[] labEnvironments = allocator.allocateLABEnvironments(coord);
+            return allocateLabIndex(bitmaps, coord, schema, labEnvironments, storage, rebuildToken);
+        } else {
+            ChunkStore[] chunkStores = allocator.allocateChunkStores(coord);
+            return allocateChunkStore(bitmaps, coord, schema, chunkStores, storage, rebuildToken);
+        }
     }
 
-    private <BM extends IBM, IBM> MiruContext<BM, IBM, S> allocate(MiruBitmaps<BM, IBM> bitmaps,
+    private <BM extends IBM, IBM> MiruContext<BM, IBM, S> allocateChunkStore(MiruBitmaps<BM, IBM> bitmaps,
         MiruPartitionCoord coord,
         MiruSchema schema,
         ChunkStore[] chunkStores,
-        LABEnvironment[] labEnvironments,
         MiruBackingStorage storage,
-        MiruRebuildDirector.Token rebuildToken,
-        StackBuffer stackBuffer) throws Exception {
+        MiruRebuildDirector.Token rebuildToken) throws Exception {
 
         TxCogs cogs = storage == MiruBackingStorage.disk ? persistentCogs : transientCogs;
         int seed = new HashCodeBuilder().append(coord).append(storage).toHashCode();
@@ -211,8 +231,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                 chunkStores,
                 new LongIntKeyValueMarshaller(),
                 keyBytes("timeIndex-timestamps"),
-                8, false, 4, false),
-            stackBuffer));
+                8, false, 4, false)));
 
         TxKeyedFilerStore<Long, Void> activityFilerStore = new TxKeyedFilerStore<>(cogs, seed, chunkStores, keyBytes("activityIndex"), false,
             TxNamedMapOfFiler.CHUNK_FILER_CREATOR,
@@ -255,75 +274,42 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         @SuppressWarnings("unchecked")
         MiruFieldIndex<BM, IBM>[] fieldIndexes = new MiruFieldIndex[MiruFieldType.values().length];
         for (MiruFieldType fieldType : MiruFieldType.values()) {
-
-            boolean insane = true;
-            if (insane) {
-                @SuppressWarnings("unchecked")
-                ValueIndex[] indexes = new ValueIndex[labEnvironments.length];
-                for (int i = 0; i < indexes.length; i++) {
-                    indexes[i] = labEnvironments[i].open("field-" + fieldType.name() + "-" + i, 4096, 1000, 10 * 1024 * 1024, -1L, -1L);
+            @SuppressWarnings("unchecked")
+            KeyedFilerStore<Long, Void>[] indexes = new KeyedFilerStore[schema.fieldCount()];
+            @SuppressWarnings("unchecked")
+            KeyedFilerStore<Integer, MapContext>[] cardinalities = new KeyedFilerStore[schema.fieldCount()];
+            for (MiruFieldDefinition fieldDefinition : schema.getFieldDefinitions()) {
+                int fieldId = fieldDefinition.fieldId;
+                if (fieldType == MiruFieldType.latest && !fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.indexedLatest)
+                    || fieldType == MiruFieldType.pairedLatest && schema.getPairedLatestFieldDefinitions(fieldId).isEmpty()
+                    || fieldType == MiruFieldType.bloom && schema.getBloomFieldDefinitions(fieldId).isEmpty()) {
+                    indexes[fieldId] = null;
+                } else {
+                    boolean lexOrderKeys = (fieldDefinition.prefix.type != MiruFieldDefinition.Prefix.Type.none);
+                    indexes[fieldId] = new TxKeyedFilerStore<>(cogs, seed, chunkStores, keyBytes("field-" + fieldType.name() + "-" + fieldId), lexOrderKeys,
+                        TxNamedMapOfFiler.CHUNK_FILER_CREATOR,
+                        TxNamedMapOfFiler.CHUNK_FILER_OPENER,
+                        TxNamedMapOfFiler.OVERWRITE_GROWER_PROVIDER,
+                        TxNamedMapOfFiler.REWRITE_GROWER_PROVIDER);
                 }
-
-                @SuppressWarnings("unchecked")
-                KeyedFilerStore<Integer, MapContext>[] cardinalities = new KeyedFilerStore[schema.fieldCount()];
-                for (MiruFieldDefinition fieldDefinition : schema.getFieldDefinitions()) {
-                    int fieldId = fieldDefinition.fieldId;
-                    if (fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.cardinality)) {
-                        cardinalities[fieldId] = new TxKeyedFilerStore<>(cogs,
-                            seed,
-                            chunkStores,
-                            keyBytes("field-c-" + fieldType.name() + "-" + fieldId),
-                            false,
-                            new MapCreator(100, 4, false, 8, false),
-                            MapOpener.INSTANCE,
-                            TxMapGrower.MAP_OVERWRITE_GROWER,
-                            TxMapGrower.MAP_REWRITE_GROWER);
-                    }
+                if (fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.cardinality)) {
+                    cardinalities[fieldId] = new TxKeyedFilerStore<>(cogs,
+                        seed,
+                        chunkStores,
+                        keyBytes("field-c-" + fieldType.name() + "-" + fieldId),
+                        false,
+                        new MapCreator(100, 4, false, 8, false),
+                        MapOpener.INSTANCE,
+                        TxMapGrower.MAP_OVERWRITE_GROWER,
+                        TxMapGrower.MAP_REWRITE_GROWER);
                 }
-
-                fieldIndexes[fieldType.getIndex()] = new MiruDeltaFieldIndex<>(
-                    bitmaps,
-                    trackError,
-                    new LabFieldIndex<>(idProvider, bitmaps, trackError, indexes, cardinalities, fieldIndexStripingLocksProvider, termInterner),
-                    schema.getFieldDefinitions());
-            } else {
-                @SuppressWarnings("unchecked")
-                KeyedFilerStore<Long, Void>[] indexes = new KeyedFilerStore[schema.fieldCount()];
-                @SuppressWarnings("unchecked")
-                KeyedFilerStore<Integer, MapContext>[] cardinalities = new KeyedFilerStore[schema.fieldCount()];
-                for (MiruFieldDefinition fieldDefinition : schema.getFieldDefinitions()) {
-                    int fieldId = fieldDefinition.fieldId;
-                    if (fieldType == MiruFieldType.latest && !fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.indexedLatest)
-                        || fieldType == MiruFieldType.pairedLatest && schema.getPairedLatestFieldDefinitions(fieldId).isEmpty()
-                        || fieldType == MiruFieldType.bloom && schema.getBloomFieldDefinitions(fieldId).isEmpty()) {
-                        indexes[fieldId] = null;
-                    } else {
-                        boolean lexOrderKeys = (fieldDefinition.prefix.type != MiruFieldDefinition.Prefix.Type.none);
-                        indexes[fieldId] = new TxKeyedFilerStore<>(cogs, seed, chunkStores, keyBytes("field-" + fieldType.name() + "-" + fieldId), lexOrderKeys,
-                            TxNamedMapOfFiler.CHUNK_FILER_CREATOR,
-                            TxNamedMapOfFiler.CHUNK_FILER_OPENER,
-                            TxNamedMapOfFiler.OVERWRITE_GROWER_PROVIDER,
-                            TxNamedMapOfFiler.REWRITE_GROWER_PROVIDER);
-                    }
-                    if (fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.cardinality)) {
-                        cardinalities[fieldId] = new TxKeyedFilerStore<>(cogs,
-                            seed,
-                            chunkStores,
-                            keyBytes("field-c-" + fieldType.name() + "-" + fieldId),
-                            false,
-                            new MapCreator(100, 4, false, 8, false),
-                            MapOpener.INSTANCE,
-                            TxMapGrower.MAP_OVERWRITE_GROWER,
-                            TxMapGrower.MAP_REWRITE_GROWER);
-                    }
-                }
-
-                fieldIndexes[fieldType.getIndex()] = new MiruDeltaFieldIndex<>(
-                    bitmaps,
-                    trackError,
-                    new MiruFilerFieldIndex<>(bitmaps, trackError, indexes, cardinalities, fieldIndexStripingLocksProvider, termInterner),
-                    schema.getFieldDefinitions());
             }
+
+            fieldIndexes[fieldType.getIndex()] = new MiruDeltaFieldIndex<>(
+                bitmaps,
+                trackError,
+                new MiruFilerFieldIndex<>(bitmaps, trackError, indexes, cardinalities, fieldIndexStripingLocksProvider, termInterner),
+                schema.getFieldDefinitions());
         }
         MiruFieldIndexProvider<BM, IBM> fieldIndexProvider = new MiruFieldIndexProvider<>(fieldIndexes);
 
@@ -364,7 +350,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                     TxNamedMapOfFiler.CHUNK_FILER_OPENER,
                     TxNamedMapOfFiler.OVERWRITE_GROWER_PROVIDER,
                     TxNamedMapOfFiler.REWRITE_GROWER_PROVIDER),
-                new byte[]{0},
+                new byte[] { 0 },
                 new Object()),
             new MiruDeltaInvertedIndex.Delta<>());
 
@@ -396,9 +382,9 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
 
         StripingLocksProvider<MiruStreamId> streamLocks = new StripingLocksProvider<>(64);
 
-        Map<String, TxKeyedFilerStore<Integer, MapContext>[]> pluginPersistentCache = Maps.newConcurrentMap();
+        Map<String, CacheKeyValues> pluginPersistentCache = Maps.newConcurrentMap();
 
-        MiruPluginCacheProvider cacheProvider = (name) -> pluginPersistentCache.computeIfAbsent(name, (key) -> {
+        MiruPluginCacheProvider cacheProvider = (name, payloadSize, variablePayloadSize) -> pluginPersistentCache.computeIfAbsent(name, (key) -> {
 
             @SuppressWarnings("unchecked")
             TxKeyedFilerStore<Integer, MapContext>[] powerIndex = new TxKeyedFilerStore[16];
@@ -408,14 +394,13 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                     chunkStores,
                     keyBytes("cache-" + power + "-" + key),
                     false,
-                    new MapCreator(100, (int) FilerIO.chunkLength(power), true, 8, false),
+                    new MapCreator(100, (int) FilerIO.chunkLength(power), true, payloadSize, variablePayloadSize),
                     MapOpener.INSTANCE,
                     TxMapGrower.MAP_OVERWRITE_GROWER,
                     TxMapGrower.MAP_REWRITE_GROWER);
-
             }
 
-            return powerIndex;
+            return new MiruFilerCacheKeyValues(powerIndex);
         });
 
         MiruContext<BM, IBM, S> context = new MiruContext<>(schema,
@@ -432,6 +417,242 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             activityInternExtern,
             streamLocks,
             chunkStores,
+            null,
+            storage,
+            rebuildToken);
+
+        context.markStartOfDelta(stackBuffer);
+
+        return context;
+    }
+
+    private <BM extends IBM, IBM> MiruContext<BM, IBM, S> allocateLabIndex(MiruBitmaps<BM, IBM> bitmaps,
+        MiruPartitionCoord coord,
+        MiruSchema schema,
+        LABEnvironment[] labEnvironments,
+        MiruBackingStorage storage,
+        MiruRebuildDirector.Token rebuildToken) throws Exception {
+
+        int seed = new HashCodeBuilder().append(coord).append(storage).toHashCode();
+
+        RawEntryMarshaller metaMarshaller = new RawEntryMarshaller() {
+            @Override
+            public byte[] merge(byte[] current, byte[] adding) {
+                return adding;
+            }
+
+            @Override
+            public boolean streamRawEntry(ValueStream stream, byte[] rawEntry, int offset) throws Exception {
+                ByteArrayFiler filer = new ByteArrayFiler(rawEntry);
+                StackBuffer stackBuffer = new StackBuffer();
+                byte[] key = FilerIO.readByteArray(filer, "key", stackBuffer);
+                byte[] payload = FilerIO.readByteArray(filer, "payload", stackBuffer);
+                return stream.stream(key, 0, false, 0, payload);
+            }
+
+            @Override
+            public byte[] toRawEntry(byte[] key, long timestamp, boolean tombstoned, long version, byte[] payload) throws Exception {
+                ByteArrayFiler filer = new ByteArrayFiler(new byte[4 + key.length + 4 + payload.length]);
+                StackBuffer stackBuffer = new StackBuffer();
+                FilerIO.writeByteArray(filer, key, "key", stackBuffer);
+                byte[] key = FilerIO.readByteArray(filer, "key", stackBuffer);
+                byte[] payload = FilerIO.readByteArray(filer, "payload", stackBuffer);
+                return new byte[0];
+            }
+
+            @Override
+            public int entryLength(IReadable readable, byte[] lengthBuffer) throws Exception {
+                return 0;
+            }
+
+            @Override
+            public void writeRawEntry(byte[] rawEntry, int offset, int length, IAppendOnly appendOnly, byte[] lengthBuffer) throws Exception {
+
+            }
+
+            @Override
+            public byte[] key(byte[] rawEntry, int offset, int length) throws Exception {
+                return new byte[0];
+            }
+
+            @Override
+            public long timestamp(byte[] rawEntry, int offset, int length) {
+                return 0;
+            }
+
+            @Override
+            public long version(byte[] rawEntry, int offset, int length) {
+                return 0;
+            }
+
+            @Override
+            public boolean mightContain(long l, long l1, long l2, long l3) {
+                return false;
+            }
+
+            @Override
+            public boolean isNewerThan(long l, long l1, long l2, long l3) {
+                return false;
+            }
+        };
+        ValueIndex metaIndex = labEnvironments[Math.abs(seed % labEnvironments.length)].open("meta", 4096, 1000, 10 * 1024 * 1024, -1L, -1L, metaMarshaller);
+
+        MiruTimeIndex timeIndex = new MiruDeltaTimeIndex(new LabTimeIndex(
+            idProvider,
+            Optional.<MiruFilerTimeIndex.TimeOrderAnomalyStream>absent(),
+            metaIndex,
+            keyBytes("timeIndex"),
+            labEnvironments[Math.abs((seed + 1) % labEnvironments.length)].open("monoTime", 4096, 1000, 10 * 1024 * 1024, -1L, -1L),
+            labEnvironments[Math.abs((seed + 1) % labEnvironments.length)].open("rawTime", 4096, 1000, 10 * 1024 * 1024, -1L, -1L),
+            stackBuffer));
+
+        IntTermIdsKeyValueMarshaller intTermIdsKeyValueMarshaller = new IntTermIdsKeyValueMarshaller();
+
+        ValueIndex[] termStorage = new ValueIndex[labEnvironments.length];
+        for (int i = 0; i < termStorage.length; i++) {
+            termStorage[i] = labEnvironments[i].open("termStorage", 4096, 1000, 10 * 1024 * 1024, -1L, -1L);
+        }
+        boolean[] hasTermStorage = new boolean[schema.fieldCount()];
+        for (MiruFieldDefinition fieldDefinition : schema.getFieldDefinitions()) {
+            hasTermStorage[fieldDefinition.fieldId] = fieldDefinition.type.hasFeature(Feature.stored);
+        }
+
+        MiruActivityIndex activityIndex = new MiruDeltaActivityIndex(
+            new LabActivityIndex(
+                idProvider,
+                labEnvironments[Math.abs((seed + 2) % labEnvironments.length)].open("timeAndVersion", 4096, 1000, 10 * 1024 * 1024, -1L, -1L),
+                intTermIdsKeyValueMarshaller,
+                metaIndex,
+                keyBytes("lastId"),
+                termStorage,
+                hasTermStorage));
+
+        TrackError trackError = partitionErrorTracker.track(coord);
+
+        @SuppressWarnings("unchecked")
+        MiruFieldIndex<BM, IBM>[] fieldIndexes = new MiruFieldIndex[MiruFieldType.values().length];
+        for (MiruFieldType fieldType : MiruFieldType.values()) {
+
+            @SuppressWarnings("unchecked")
+            ValueIndex[] indexes = new ValueIndex[labEnvironments.length];
+            ValueIndex[] cardinalities = new ValueIndex[labEnvironments.length];
+            for (int i = 0; i < indexes.length; i++) {
+                indexes[i] = labEnvironments[i].open("field-" + fieldType.name(), 4096, 1000, 10 * 1024 * 1024, -1L, -1L);
+                cardinalities[i] = labEnvironments[i].open("cardinality-" + fieldType.name(), 4096, 1000, 10 * 1024 * 1024, -1L, -1L);
+            }
+
+            boolean[] hasCardinalities = new boolean[schema.fieldCount()];
+            for (MiruFieldDefinition fieldDefinition : schema.getFieldDefinitions()) {
+                hasCardinalities[fieldDefinition.fieldId] = fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.cardinality);
+            }
+
+            fieldIndexes[fieldType.getIndex()] = new MiruDeltaFieldIndex<>(
+                bitmaps,
+                trackError,
+                new LabFieldIndex<>(idProvider, bitmaps, trackError, indexes, cardinalities, hasCardinalities, fieldIndexStripingLocksProvider, termInterner),
+                schema.getFieldDefinitions());
+        }
+        MiruFieldIndexProvider<BM, IBM> fieldIndexProvider = new MiruFieldIndexProvider<>(fieldIndexes);
+
+        MiruSipIndex<S> sipIndex = new MiruDeltaSipIndex<>(new LabSipIndex<>(
+            idProvider,
+            metaIndex,
+            keyBytes("sip"),
+            sipMarshaller));
+
+        MiruAuthzUtils<BM, IBM> authzUtils = new MiruAuthzUtils<>(bitmaps);
+
+        Cache<VersionedAuthzExpression, BM> authzCache = CacheBuilder.newBuilder()
+            .maximumSize(partitionAuthzCacheSize)
+            .expireAfterAccess(1, TimeUnit.MINUTES) //TODO should be adjusted with respect to tuning GC (prevent promotion from eden space)
+            .build();
+        MiruAuthzCache<BM, IBM> miruAuthzCache = new MiruAuthzCache<>(bitmaps, authzCache, activityInternExtern, authzUtils);
+
+        ValueIndex[] authzIndexes = new ValueIndex[labEnvironments.length];
+        for (int i = 0; i < authzIndexes.length; i++) {
+            authzIndexes[i] = labEnvironments[i].open("authz", 4096, 1000, 10 * 1024 * 1024, -1L, -1L);
+        }
+        MiruAuthzIndex<BM, IBM> authzIndex = new MiruDeltaAuthzIndex<>(bitmaps,
+            trackError,
+            miruAuthzCache,
+            new LabAuthzIndex<>(
+                idProvider,
+                bitmaps,
+                trackError,
+                authzIndexes,
+                miruAuthzCache,
+                authzStripingLocksProvider));
+
+        MiruRemovalIndex<BM, IBM> removalIndex = new MiruDeltaRemovalIndex<>(
+            bitmaps,
+            trackError,
+            new LabRemovalIndex<>(
+                idProvider,
+                bitmaps,
+                trackError,
+                metaIndex,
+                keyBytes("removal"),
+                new Object()),
+            new MiruDeltaInvertedIndex.Delta<>());
+
+        ValueIndex[] unreadIndexes = new ValueIndex[labEnvironments.length];
+        for (int i = 0; i < unreadIndexes.length; i++) {
+            unreadIndexes[i] = labEnvironments[i].open("unread", 4096, 1000, 10 * 1024 * 1024, -1L, -1L);
+        }
+        MiruUnreadTrackingIndex<BM, IBM> unreadTrackingIndex = new MiruDeltaUnreadTrackingIndex<>(
+            bitmaps,
+            trackError,
+            new LabUnreadTrackingIndex<>(
+                idProvider,
+                bitmaps,
+                trackError,
+                unreadIndexes,
+                streamStripingLocksProvider));
+
+        ValueIndex[] inboxIndexes = new ValueIndex[labEnvironments.length];
+        for (int i = 0; i < inboxIndexes.length; i++) {
+            inboxIndexes[i] = labEnvironments[i].open("inbox", 4096, 1000, 10 * 1024 * 1024, -1L, -1L);
+        }
+        MiruInboxIndex<BM, IBM> inboxIndex = new MiruDeltaInboxIndex<>(
+            bitmaps,
+            trackError,
+            new LabInboxIndex<>(
+                idProvider,
+                bitmaps,
+                trackError,
+                inboxIndexes,
+                streamStripingLocksProvider));
+
+        StripingLocksProvider<MiruStreamId> streamLocks = new StripingLocksProvider<>(64);
+
+        Map<String, CacheKeyValues> pluginPersistentCache = Maps.newConcurrentMap();
+
+        MiruPluginCacheProvider cacheProvider = (name, payloadSize, variablePayloadSize) -> pluginPersistentCache.computeIfAbsent(name, (key) -> {
+            try {
+                ValueIndex[] cacheIndexes = new ValueIndex[labEnvironments.length];
+                for (int i = 0; i < cacheIndexes.length; i++) {
+                    cacheIndexes[i] = labEnvironments[i].open("pluginCache-" + key, 4096, 1000, 10 * 1024 * 1024, -1L, -1L);
+                }
+                return new LabCacheKeyValues(idProvider, cacheIndexes);
+            } catch (Exception x) {
+                throw new RuntimeException("Failed to initialize plugin cache", x);
+            }
+        });
+
+        MiruContext<BM, IBM, S> context = new MiruContext<>(schema,
+            termComposer,
+            timeIndex,
+            activityIndex,
+            fieldIndexProvider,
+            sipIndex,
+            authzIndex,
+            removalIndex,
+            unreadTrackingIndex,
+            inboxIndex,
+            cacheProvider,
+            activityInternExtern,
+            streamLocks,
+            null,
             labEnvironments,
             storage,
             rebuildToken);
@@ -448,14 +669,19 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         MiruBackingStorage toStorage,
         StackBuffer stackBuffer) throws Exception {
 
-        ChunkStore[] fromChunks = from.chunkStores;
-        ChunkStore[] toChunks = getAllocator(toStorage).allocateChunkStores(coord, stackBuffer);
-        if (fromChunks.length != toChunks.length) {
-            throw new IllegalArgumentException("The number of from chunks:" + fromChunks.length + " must equal the number of to chunks:" + toChunks.length);
+        if (from.chunkStores != null) {
+            return copyChunkStore(bitmaps, schema, coord, from, toStorage, stackBuffer);
+        } else {
+            return copyLabIndex(bitmaps, schema, coord, from, toStorage, stackBuffer);
         }
-        for (int i = 0; i < fromChunks.length; i++) {
-            fromChunks[i].copyTo(toChunks[i], stackBuffer);
-        }
+    }
+
+    public <BM extends IBM, IBM> MiruContext<BM, IBM, S> copyLabIndex(MiruBitmaps<BM, IBM> bitmaps,
+        MiruSchema schema,
+        MiruPartitionCoord coord,
+        MiruContext<BM, IBM, S> from,
+        MiruBackingStorage toStorage,
+        StackBuffer stackBuffer) throws Exception {
 
         File[] fromLabDirs = getAllocator(from.storage).getLabDirs(coord);
         File[] toLabDirs = getAllocator(toStorage).getLabDirs(coord);
@@ -471,7 +697,26 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             }
         }
         LABEnvironment[] environments = getAllocator(toStorage).allocateLABEnvironments(coord);
-        return allocate(bitmaps, coord, schema, toChunks, environments, toStorage, null, stackBuffer);
+        return allocateLabIndex(bitmaps, coord, schema, environments, toStorage, null, stackBuffer);
+    }
+
+    public <BM extends IBM, IBM> MiruContext<BM, IBM, S> copyChunkStore(MiruBitmaps<BM, IBM> bitmaps,
+        MiruSchema schema,
+        MiruPartitionCoord coord,
+        MiruContext<BM, IBM, S> from,
+        MiruBackingStorage toStorage,
+        StackBuffer stackBuffer) throws Exception {
+
+        ChunkStore[] fromChunks = from.chunkStores;
+        ChunkStore[] toChunks = getAllocator(toStorage).allocateChunkStores(coord, stackBuffer);
+        if (fromChunks.length != toChunks.length) {
+            throw new IllegalArgumentException("The number of from chunks:" + fromChunks.length + " must equal the number of to chunks:" + toChunks.length);
+        }
+        for (int i = 0; i < fromChunks.length; i++) {
+            fromChunks[i].copyTo(toChunks[i], stackBuffer);
+        }
+
+        return allocateChunkStore(bitmaps, coord, schema, toChunks, toStorage, null, stackBuffer);
     }
 
     public void saveSchema(MiruPartitionCoord coord, MiruSchema schema) throws IOException {
@@ -535,7 +780,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         diskResourceLocator.clean(new MiruPartitionCoordIdentifier(coord));
     }
 
-    public <BM extends IBM, IBM> void close(MiruContext<BM, IBM, S> context, MiruRebuildDirector rebuildDirector) {
+    public <BM extends IBM, IBM> void close(MiruContext<BM, IBM, S> context, MiruRebuildDirector rebuildDirector) throws Exception {
         if (context.rebuildToken != null) {
             rebuildDirector.release(context.rebuildToken);
         }

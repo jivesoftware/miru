@@ -161,7 +161,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
             seenLastSip.get(), endOfStream, hasOpenWriters, readSemaphore, writeSemaphore, closed, indexRepairs, indexer, timestampOfLastMerge, obsolete);
     }
 
-    void close(MiruContextFactory<S> contextFactory, MiruRebuildDirector rebuildDirector) throws InterruptedException {
+    void close(MiruContextFactory<S> contextFactory, MiruRebuildDirector rebuildDirector) throws Exception {
         writeSemaphore.acquire(PERMITS);
         try {
             readSemaphore.acquire(PERMITS);
@@ -181,7 +181,9 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         closed.set(true);
     }
 
-    private void closeImmediate(MiruContextFactory<S> contextFactory, Optional<MiruContext<BM, IBM, S>> context, MiruRebuildDirector rebuildDirector) {
+    private void closeImmediate(MiruContextFactory<S> contextFactory,
+        Optional<MiruContext<BM, IBM, S>> context,
+        MiruRebuildDirector rebuildDirector) throws Exception {
         if (context != null && context.isPresent()) {
             contextFactory.close(context.get(), rebuildDirector);
         }
@@ -266,11 +268,11 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         rebuildCursor.set(cursor);
     }
 
-    Optional<S> getSipCursor(StackBuffer stackBuffer) throws IOException, InterruptedException {
+    Optional<S> getSipCursor(StackBuffer stackBuffer) throws Exception {
         return persistentContext.isPresent() ? persistentContext.get().sipIndex.getSip(stackBuffer) : null;
     }
 
-    boolean setSip(Optional<MiruContext<BM, IBM, S>> context, S sip, StackBuffer stackBuffer) throws IOException, InterruptedException {
+    boolean setSip(Optional<MiruContext<BM, IBM, S>> context, S sip, StackBuffer stackBuffer) throws Exception {
         if (sip == null) {
             throw new IllegalArgumentException("Sip cannot be null");
         }
@@ -707,13 +709,13 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
             }
 
             @Override
-            public void closePersistentContext(MiruContextFactory<S> contextFactory, MiruRebuildDirector rebuildDirector) {
+            public void closePersistentContext(MiruContextFactory<S> contextFactory, MiruRebuildDirector rebuildDirector) throws Exception {
                 MiruPartitionAccessor.this.markClosed();
                 MiruPartitionAccessor.this.closeImmediate(contextFactory, persistentContext, rebuildDirector);
             }
 
             @Override
-            public void closeTransientContext(MiruContextFactory<S> contextFactory, MiruRebuildDirector rebuildDirector) {
+            public void closeTransientContext(MiruContextFactory<S> contextFactory, MiruRebuildDirector rebuildDirector) throws Exception {
                 MiruPartitionAccessor.this.closeImmediate(contextFactory, transientContext, rebuildDirector);
             }
 

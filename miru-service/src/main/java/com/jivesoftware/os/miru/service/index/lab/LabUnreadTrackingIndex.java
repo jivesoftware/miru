@@ -18,21 +18,25 @@ public class LabUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUnreadTr
     private final OrderIdProvider idProvider;
     private final MiruBitmaps<BM, IBM> bitmaps;
     private final TrackError trackError;
-    private final ValueIndex store;
+    private final ValueIndex[] stores;
     private final StripingLocksProvider<MiruStreamId> stripingLocksProvider;
 
     public LabUnreadTrackingIndex(OrderIdProvider idProvider,
         MiruBitmaps<BM, IBM> bitmaps,
         TrackError trackError,
-        ValueIndex store,
+        ValueIndex[] stores,
         StripingLocksProvider<MiruStreamId> stripingLocksProvider)
         throws Exception {
 
         this.idProvider = idProvider;
         this.bitmaps = bitmaps;
         this.trackError = trackError;
-        this.store = store;
+        this.stores = stores;
         this.stripingLocksProvider = stripingLocksProvider;
+    }
+
+    private ValueIndex getStore(MiruStreamId streamId) {
+        return stores[Math.abs(streamId.hashCode() % stores.length)];
     }
 
     @Override
@@ -42,7 +46,14 @@ public class LabUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUnreadTr
 
     @Override
     public MiruInvertedIndex<BM, IBM> getUnread(MiruStreamId streamId) throws Exception {
-        return new LabInvertedIndex<>(idProvider, bitmaps, trackError, "unread", -1, streamId.getBytes(), store, stripingLocksProvider.lock(streamId, 0));
+        return new LabInvertedIndex<>(idProvider,
+            bitmaps,
+            trackError,
+            "unread",
+            -1,
+            streamId.getBytes(),
+            getStore(streamId),
+            stripingLocksProvider.lock(streamId, 0));
     }
 
     @Override
@@ -64,6 +75,8 @@ public class LabUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUnreadTr
 
     @Override
     public void close() throws Exception {
-        store.close();
+        for (ValueIndex store : stores) {
+            store.close();
+        }
     }
 }

@@ -16,7 +16,7 @@ public interface MiruTimeIndex {
 
     boolean[] contains(List<Long> timestamps, StackBuffer stackBuffer) throws Exception;
 
-    boolean intersects(MiruTimeRange timeRange);
+    boolean intersects(MiruTimeRange timeRange) throws Exception;
 
     /**
      * Returns the actual index of the given timestamp if it appears in the index, or else where it would have been.
@@ -24,13 +24,13 @@ public interface MiruTimeIndex {
      * @param timestamp the activity timestamp
      * @return the actual index or nearest insertion point
      */
-    int getClosestId(long timestamp, StackBuffer stackBuffer) throws Exception, InterruptedException;
+    int getClosestId(long timestamp, StackBuffer stackBuffer) throws Exception;
 
     int getExactId(long timestamp, StackBuffer stackBuffer) throws Exception;
 
-    long getLargestTimestamp() throws Exception, InterruptedException;
+    long getLargestTimestamp() throws Exception;
 
-    long getSmallestTimestamp() throws Exception, InterruptedException;
+    long getSmallestTimestamp() throws Exception;
 
     /**
      * Returns the smallest id satisfying the condition that its timestamp
@@ -39,7 +39,7 @@ public interface MiruTimeIndex {
      * @param timestamp the timestamp serving as the exclusive lower bound
      * @return the smallest id exclusive of the requested timestamp
      */
-    int smallestExclusiveTimestampIndex(long timestamp, StackBuffer stackBuffer) throws Exception, InterruptedException;
+    int smallestExclusiveTimestampIndex(long timestamp, StackBuffer stackBuffer) throws Exception;
 
     /**
      * Returns the largest id satisfying the condition that its timestamp
@@ -48,7 +48,7 @@ public interface MiruTimeIndex {
      * @param timestamp the timestamp serving as the inclusive upper bound
      * @return the largest id inclusive of the requested timestamp
      */
-    int largestInclusiveTimestampIndex(long timestamp, StackBuffer stackBuffer) throws Exception, InterruptedException;
+    int largestInclusiveTimestampIndex(long timestamp, StackBuffer stackBuffer) throws Exception;
 
     int lastId();
 
@@ -56,4 +56,11 @@ public interface MiruTimeIndex {
 
     void close();
 
+    interface TimeOrderAnomalyStream {
+
+        void underflowOfSmallestTimestamp(long delta);
+
+        void underflowOfLargestTimestamp(long delta);
+
+    }
 }

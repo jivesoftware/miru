@@ -18,14 +18,14 @@ public class LabAuthzIndex<BM extends IBM, IBM> implements MiruAuthzIndex<BM, IB
     private final OrderIdProvider idProvider;
     private final MiruBitmaps<BM, IBM> bitmaps;
     private final TrackError trackError;
-    private final ValueIndex keyedStore;
+    private final ValueIndex[] keyedStores;
     private final MiruAuthzCache<BM, IBM> cache;
     private final StripingLocksProvider<String> stripingLocksProvider;
 
     public LabAuthzIndex(OrderIdProvider idProvider,
         MiruBitmaps<BM, IBM> bitmaps,
         TrackError trackError,
-        ValueIndex keyedStore,
+        ValueIndex[] keyedStores,
         MiruAuthzCache<BM, IBM> cache,
         StripingLocksProvider<String> stripingLocksProvider)
         throws Exception {
@@ -33,15 +33,26 @@ public class LabAuthzIndex<BM extends IBM, IBM> implements MiruAuthzIndex<BM, IB
         this.idProvider = idProvider;
         this.bitmaps = bitmaps;
         this.trackError = trackError;
-        this.keyedStore = keyedStore;
+        this.keyedStores = keyedStores;
         this.cache = cache;
         this.stripingLocksProvider = stripingLocksProvider;
 
     }
 
+    private ValueIndex getStore(String authz) {
+        return keyedStores[Math.abs(authz.hashCode() % keyedStores.length)];
+    }
+
     @Override
     public MiruInvertedIndex<BM, IBM> getAuthz(String authz) throws Exception {
-        return new LabInvertedIndex<>(idProvider, bitmaps, trackError, "authz", -3, MiruAuthzUtils.key(authz), keyedStore, stripingLocksProvider.lock(authz, 0));
+        return new LabInvertedIndex<>(idProvider,
+            bitmaps,
+            trackError,
+            "authz",
+            -3,
+            MiruAuthzUtils.key(authz),
+            getStore(authz),
+            stripingLocksProvider.lock(authz, 0));
     }
 
     @Override
@@ -68,15 +79,10 @@ public class LabAuthzIndex<BM extends IBM, IBM> implements MiruAuthzIndex<BM, IB
 
     @Override
     public void close() throws Exception {
-        keyedStore.close();
+        for (ValueIndex keyedStore : keyedStores) {
+            keyedStore.close();
+        }
         cache.clear();
-    }
-
-    private static final String IDEA_TYPE_CODE = "idea";
-    public static final int IDEA_TYPE_ID = IDEA_TYPE_CODE.hashCode();
-
-    public static void main(String[] args) {
-        System.out.println("" + IDEA_TYPE_ID);
     }
 
 }

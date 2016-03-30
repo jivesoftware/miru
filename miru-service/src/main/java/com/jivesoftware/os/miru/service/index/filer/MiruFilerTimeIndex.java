@@ -49,20 +49,20 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
 
     public MiruFilerTimeIndex(Optional<TimeOrderAnomalyStream> timeOrderAnomalyStream,
         MiruFilerProvider<Long, Void> filerProvider,
-        KeyValueStore<Long, Integer> timestampToIndex,
-        StackBuffer stackBuffer)
+        KeyValueStore<Long, Integer> timestampToIndex)
         throws IOException, InterruptedException {
 
         this.filerProvider = filerProvider;
         this.timeOrderAnomalyStream = timeOrderAnomalyStream;
         this.timestampToIndex = timestampToIndex;
 
-        init(stackBuffer);
+        init();
     }
 
-    private void init(StackBuffer stackBuffer) throws IOException, InterruptedException {
+    private void init() throws IOException, InterruptedException {
         final AtomicBoolean initialized = new AtomicBoolean(false);
 
+        StackBuffer stackBuffer = new StackBuffer();
         //TODO consider using a custom CreateFiler in the KeyValueStore to handle the uninitialized case
         filerProvider.read(null, (monkey, filer, _stackBuffer, lock) -> {
             if (filer != null) {
@@ -445,11 +445,4 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
     public void close() {
     }
 
-    public static interface TimeOrderAnomalyStream {
-
-        void underflowOfSmallestTimestamp(long delta);
-
-        void underflowOfLargestTimestamp(long delta);
-
-    }
 }

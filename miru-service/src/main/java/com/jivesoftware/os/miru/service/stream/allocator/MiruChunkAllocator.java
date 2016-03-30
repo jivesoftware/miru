@@ -13,7 +13,11 @@ public interface MiruChunkAllocator {
 
     boolean checkExists(MiruPartitionCoord coord) throws Exception;
 
-    ChunkStore[] allocateChunkStores(MiruPartitionCoord coord, StackBuffer stackBuffer) throws Exception;
+    boolean hasChunkStores(MiruPartitionCoord coord) throws Exception;
+
+    boolean hasLabIndex(MiruPartitionCoord coord) throws Exception;
+
+    ChunkStore[] allocateChunkStores(MiruPartitionCoord coord) throws Exception;
 
     void close(ChunkStore[] chunkStores);
 

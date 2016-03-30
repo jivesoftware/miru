@@ -8,7 +8,8 @@ import com.jivesoftware.os.miru.plugin.partition.TrackError;
 
 public class LabRemovalIndex<BM extends IBM, IBM> extends LabInvertedIndex<BM, IBM> implements MiruRemovalIndex<BM, IBM> {
 
-    public LabRemovalIndex(OrderIdProvider idProvider, MiruBitmaps<BM, IBM> bitmaps,
+    public LabRemovalIndex(OrderIdProvider idProvider,
+        MiruBitmaps<BM, IBM> bitmaps,
         TrackError trackError,
         ValueIndex valueIndex,
         byte[] keyBytes,

@@ -6,7 +6,6 @@ import com.jivesoftware.os.filer.io.ByteBufferFactory;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.filer.io.chunk.ChunkStore;
 import com.jivesoftware.os.lab.LABEnvironment;
-import com.jivesoftware.os.lab.LABValueMerger;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.service.locator.MiruPartitionCoordIdentifier;
 import com.jivesoftware.os.miru.service.locator.MiruResourceLocator;
@@ -50,7 +49,7 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
     public static void main(String[] args) {
 
         int count = 3;
-        for (int hashCode : new int[]{-13, -7, -2, -1, 0, 1, 2, 7, 13}) {
+        for (int hashCode : new int[] { -13, -7, -2, -1, 0, 1, 2, 7, 13 }) {
             for (int shift = 0; shift < count; shift++) {
                 System.out.println("--- " + hashCode + ", " + shift);
                 for (int i = 0; i < count; i++) {
@@ -75,6 +74,11 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
 
     @Override
     public boolean checkExists(MiruPartitionCoord coord) throws Exception {
+        return hasChunkStores(coord) || hasLabIndex(coord);
+    }
+
+    @Override
+    public boolean hasChunkStores(MiruPartitionCoord coord) throws Exception {
         MiruPartitionCoordIdentifier identifier = new MiruPartitionCoordIdentifier(coord);
         File[] chunkDirs = resourceLocator.getChunkDirectories(identifier, "chunks");
         int hashCode = hash(coord);
@@ -94,12 +98,30 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
             }
         }
 
-        log.info("Partition is on disk for {}", coord);
+        log.info("Partition has chunks on disk for {}", coord);
         return true;
     }
 
     @Override
-    public ChunkStore[] allocateChunkStores(MiruPartitionCoord coord, StackBuffer stackBuffer) throws Exception {
+    public boolean hasLabIndex(MiruPartitionCoord coord) throws Exception {
+        MiruPartitionCoordIdentifier identifier = new MiruPartitionCoordIdentifier(coord);
+        File[] baseDirs = resourceLocator.getChunkDirectories(identifier, "labs");
+        int hashCode = hash(coord);
+        for (int i = 0; i < numberOfChunkStores; i++) {
+            int directoryOffset = offset(hashCode, i, 0, baseDirs.length);
+            File dir = new File(baseDirs[directoryOffset], "lab-" + i);
+            if (!dir.exists()) {
+                log.warn("Partition missing lab {} for {}", i, coord);
+                return false;
+            }
+        }
+
+        log.info("Partition has labs on disk for {}", coord);
+        return true;
+    }
+
+    @Override
+    public ChunkStore[] allocateChunkStores(MiruPartitionCoord coord) throws Exception {
 
         MiruResourcePartitionIdentifier identifier = new MiruPartitionCoordIdentifier(coord);
 
@@ -107,6 +129,7 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
         ChunkStore[] chunkStores = new ChunkStore[numberOfChunkStores];
         int hashCode = hash(coord);
         // since the hashCode function can change, we need to be overly defensive and check all possible directories for each chunk
+        StackBuffer stackBuffer = new StackBuffer();
         for (int i = 0; i < numberOfChunkStores; i++) {
             int directoryOffset = offset(hashCode, i, 0, chunkDirs.length);
             for (int shift = 0; shift < chunkDirs.length; shift++) {
@@ -148,7 +171,6 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
         LABEnvironment[] environments = new LABEnvironment[labDirs.length];
         for (int i = 0; i < numberOfChunkStores; i++) {
             environments[i] = new LABEnvironment(buildLABCompactorThreadPool, buildLABDestroyThreadPool, labDirs[i],
-                new LABValueMerger(),
                 true, 4, 16, 1024);
         }
         return environments;

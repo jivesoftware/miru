@@ -17,21 +17,25 @@ public class LabInboxIndex<BM extends IBM, IBM> implements MiruInboxIndex<BM, IB
     private final OrderIdProvider idProvider;
     private final MiruBitmaps<BM, IBM> bitmaps;
     private final TrackError trackError;
-    private final ValueIndex store;
+    private final ValueIndex[] stores;
     private final StripingLocksProvider<MiruStreamId> stripingLocksProvider;
 
     public LabInboxIndex(OrderIdProvider idProvider,
         MiruBitmaps<BM, IBM> bitmaps,
         TrackError trackError,
-        ValueIndex store,
+        ValueIndex[] stores,
         StripingLocksProvider<MiruStreamId> stripingLocksProvider)
         throws Exception {
 
         this.idProvider = idProvider;
         this.bitmaps = bitmaps;
         this.trackError = trackError;
-        this.store = store;
+        this.stores = stores;
         this.stripingLocksProvider = stripingLocksProvider;
+    }
+
+    private ValueIndex getStore(MiruStreamId streamId) {
+        return stores[Math.abs(streamId.hashCode() % stores.length)];
     }
 
     @Override
@@ -47,7 +51,7 @@ public class LabInboxIndex<BM extends IBM, IBM> implements MiruInboxIndex<BM, IB
             "inbox",
             -2,
             streamId.getBytes(),
-            store,
+            getStore(streamId),
             stripingLocksProvider.lock(streamId, 0));
     }
 
@@ -63,6 +67,8 @@ public class LabInboxIndex<BM extends IBM, IBM> implements MiruInboxIndex<BM, IB
 
     @Override
     public void close() throws Exception {
-        store.close();
+        for (ValueIndex store : stores) {
+            store.close();
+        }
     }
 }

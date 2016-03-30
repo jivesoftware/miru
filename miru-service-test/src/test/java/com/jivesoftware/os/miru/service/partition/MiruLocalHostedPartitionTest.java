@@ -257,7 +257,8 @@ public class MiruLocalHostedPartitionTest {
             new StripingLocksProvider<>(8),
             new PartitionErrorTracker(BindInterfaceToConfiguration.bindDefault(PartitionErrorTracker.PartitionErrorTrackerConfig.class)),
             termInterner,
-            mapper);
+            mapper,
+            true);
         sipTrackerFactory = new RCVSSipTrackerFactory();
 
         InMemoryRowColumnValueStoreInitializer inMemoryRowColumnValueStoreInitializer = new InMemoryRowColumnValueStoreInitializer();

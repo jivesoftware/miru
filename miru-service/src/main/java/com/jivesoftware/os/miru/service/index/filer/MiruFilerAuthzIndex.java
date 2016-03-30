@@ -68,11 +68,4 @@ public class MiruFilerAuthzIndex<BM extends IBM, IBM> implements MiruAuthzIndex<
         cache.clear();
     }
 
-    private static final String IDEA_TYPE_CODE = "idea";
-    public static final int IDEA_TYPE_ID = IDEA_TYPE_CODE.hashCode();
-
-    public static void main(String[] args) {
-        System.out.println("" + IDEA_TYPE_ID);
-    }
-
 }
