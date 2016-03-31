@@ -96,7 +96,7 @@ public class StrutModelScorerNGTest {
         @SuppressWarnings("unchecked")
         ValueIndex[] stores = new ValueIndex[16];
         for (int i = 0; i < stores.length; i++) {
-            stores[i] = env.open("cache-" + i + "-" + catwalkId, 4096, 100, 0, 0, 0, new KeyValueRawhide());
+            stores[i] = env.open("cache-" + i + "-" + catwalkId, 4096, Integer.MAX_VALUE, 0, 0, 0, new KeyValueRawhide());
         }
 
         CacheKeyValues cacheKeyValues = new LabCacheKeyValues(new OrderIdProviderImpl(new ConstantWriterIdProvider(1)), stores, false);
