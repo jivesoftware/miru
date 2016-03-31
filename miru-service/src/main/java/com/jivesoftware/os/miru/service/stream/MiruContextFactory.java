@@ -100,6 +100,8 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -655,7 +657,8 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         for (int i = 0; i < fromLabDirs.length; i++) {
             FileUtils.deleteDirectory(toLabDirs[i]);
             if (fromLabDirs[i].exists()) {
-                FileUtils.moveDirectory(fromLabDirs[i], toLabDirs[i]);
+                FileUtils.forceMkdir(toLabDirs[i].getParentFile());
+                Files.move(fromLabDirs[i].toPath(), toLabDirs[i].toPath(), StandardCopyOption.ATOMIC_MOVE);
             }
         }
         LABEnvironment[] environments = getAllocator(toStorage).allocateLABEnvironments(coord);
