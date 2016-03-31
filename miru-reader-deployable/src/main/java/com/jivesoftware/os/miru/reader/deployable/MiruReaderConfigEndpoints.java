@@ -68,9 +68,10 @@ public class MiruReaderConfigEndpoints {
     @Produces(MediaType.TEXT_HTML)
     public Response rebuild(@FormParam("days") int days) {
         try {
-            long smallestTimestamp = timestampedOrderIdProvider.getApproximateId(System.currentTimeMillis() - TimeUnit.DAYS.toDays(days));
+            long smallestTimestamp = timestampedOrderIdProvider.getApproximateId(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(days));
             MiruTimeRange miruTimeRange = new MiruTimeRange(smallestTimestamp, Long.MAX_VALUE);
-            return Response.ok(miruService.rebuildTimeRange(miruTimeRange)).build();
+            boolean result = miruService.rebuildTimeRange(miruTimeRange);
+            return Response.ok(result ? "success" : "failure").build();
         } catch (Throwable t) {
             log.error("Failed to rebuild for last {} days", new Object[] { days }, t);
             return Response.serverError().build();
