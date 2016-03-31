@@ -761,8 +761,10 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
     }
 
     public <BM extends IBM, IBM> void releaseCaches(MiruContext<BM, IBM, S> context) throws IOException {
-        for (ChunkStore chunkStore : context.chunkStores) {
-            chunkStore.rollCache();
+        if (context.chunkStores != null) {
+            for (ChunkStore chunkStore : context.chunkStores) {
+                chunkStore.rollCache();
+            }
         }
     }
 
