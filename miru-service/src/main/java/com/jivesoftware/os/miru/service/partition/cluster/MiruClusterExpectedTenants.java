@@ -249,7 +249,7 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
                         topology.rebuild(coord.partitionId);
                     }
                 } catch (Exception x) {
-                    LOG.warn("Attempt to rebuild offline non disk partition was ignored for {}.", coord, x);
+                    LOG.warn("Attempt to rebuild offline non disk partition was ignored for {}.", new Object[] { coord }, x);
                 }
             }
         }
