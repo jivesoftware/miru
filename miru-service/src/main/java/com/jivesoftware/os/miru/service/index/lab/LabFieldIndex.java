@@ -343,7 +343,7 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
                 }
             }
             return true;
-        });
+        }, false);
 
         LOG.inc("count>multiMerge>total");
         LOG.inc("count>multiMerge>" + fieldId);
@@ -402,7 +402,7 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
                 byte[] globalKey = cardinalityIndexKey(fieldBytes, -1, termId.getBytes());
                 valueStream.stream(globalKey, timestamp, false, version, UIO.longBytes(globalCount[0]));
                 return true;
-            });
+            }, true);
         }
     }
 

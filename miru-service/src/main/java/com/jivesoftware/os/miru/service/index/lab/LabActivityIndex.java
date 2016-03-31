@@ -191,7 +191,7 @@ public class LabActivityIndex implements MiruActivityIndex {
                 bytesWrite.add(16);
             }
             return true;
-        });
+        }, true);
 
         for (int i = 0; i < schema.fieldCount(); i++) {
             int fieldId = i;
@@ -208,7 +208,7 @@ public class LabActivityIndex implements MiruActivityIndex {
                     }
                 }
                 return true;
-            });
+            }, true);
         }
         LOG.inc("count>set>total");
         LOG.inc("count>set>" + name);
@@ -225,7 +225,7 @@ public class LabActivityIndex implements MiruActivityIndex {
             if (size > indexSize.get()) {
                 long timestamp = System.currentTimeMillis();
                 long version = idProvider.nextId();
-                metaIndex.append(stream -> stream.stream(metaKey, timestamp, false, version, UIO.intBytes(size)));
+                metaIndex.append(stream -> stream.stream(metaKey, timestamp, false, version, UIO.intBytes(size)), true);
                 LOG.inc("ready>total");
                 LOG.inc("ready>bytes", 4);
                 LOG.debug("Capacity extended to {}", size);

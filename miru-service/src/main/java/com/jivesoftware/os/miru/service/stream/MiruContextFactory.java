@@ -439,15 +439,15 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         List<ValueIndex> commitables = Lists.newArrayList();
         int seed = new HashCodeBuilder().append(coord).append(storage).toHashCode();
 
-        ValueIndex metaIndex = labEnvironments[Math.abs(seed % labEnvironments.length)].open("meta", 4096, 1000, 10 * 1024 * 1024, -1L, -1L,
+        ValueIndex metaIndex = labEnvironments[Math.abs(seed % labEnvironments.length)].open("meta", 4096, Integer.MAX_VALUE, 10 * 1024 * 1024, -1L, -1L,
             new KeyValueRawhide());
         commitables.add(metaIndex);
 
-        ValueIndex monoTimeIndex = labEnvironments[Math.abs((seed + 1) % labEnvironments.length)].open("monoTime", 4096, 1000, 10 * 1024 * 1024, -1L, -1L,
-            new FixedWidthRawhide(12, 0));
+        ValueIndex monoTimeIndex = labEnvironments[Math.abs((seed + 1) % labEnvironments.length)].open("monoTime", 4096, Integer.MAX_VALUE, 10 * 1024 * 1024,
+            -1L, -1L, new FixedWidthRawhide(12, 0));
         commitables.add(monoTimeIndex);
-        ValueIndex rawTimeIndex = labEnvironments[Math.abs((seed + 1) % labEnvironments.length)].open("rawTime", 4096, 1000, 10 * 1024 * 1024, -1L, -1L,
-            new FixedWidthRawhide(8, 4));
+        ValueIndex rawTimeIndex = labEnvironments[Math.abs((seed + 1) % labEnvironments.length)].open("rawTime", 4096, Integer.MAX_VALUE, 10 * 1024 * 1024,
+            -1L, -1L, new FixedWidthRawhide(8, 4));
         commitables.add(rawTimeIndex);
         MiruTimeIndex timeIndex = new MiruDeltaTimeIndex(new LabTimeIndex(
             idProvider,
@@ -469,8 +469,8 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             hasTermStorage[fieldDefinition.fieldId] = fieldDefinition.type.hasFeature(Feature.stored);
         }
 
-        ValueIndex timeAndVersionIndex = labEnvironments[Math.abs((seed + 2) % labEnvironments.length)].open("timeAndVersion", 4096, 1000, 10 * 1024 * 1024,
-            -1L, -1L, new FixedWidthRawhide(4, 16));
+        ValueIndex timeAndVersionIndex = labEnvironments[Math.abs((seed + 2) % labEnvironments.length)].open("timeAndVersion", 4096, Integer.MAX_VALUE,
+            10 * 1024 * 1024, -1L, -1L, new FixedWidthRawhide(4, 16));
         commitables.add(timeAndVersionIndex);
         MiruActivityIndex activityIndex = new MiruDeltaActivityIndex(
             new LabActivityIndex(
@@ -488,9 +488,9 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         ValueIndex[] termIndexes = new ValueIndex[labEnvironments.length];
         ValueIndex[] cardinalityIndex = new ValueIndex[labEnvironments.length];
         for (int i = 0; i < termIndexes.length; i++) {
-            termIndexes[i] = labEnvironments[i].open("field", 4096, 1000, 10 * 1024 * 1024, -1L, -1L, new KeyValueRawhide());
+            termIndexes[i] = labEnvironments[i].open("field", 4096, Integer.MAX_VALUE, 10 * 1024 * 1024, -1L, -1L, new KeyValueRawhide());
             commitables.add(termIndexes[i]);
-            cardinalityIndex[i] = labEnvironments[i].open("cardinality", 4096, 1000, 10 * 1024 * 1024, -1L, -1L, new KeyValueRawhide());
+            cardinalityIndex[i] = labEnvironments[i].open("cardinality", 4096, Integer.MAX_VALUE, 10 * 1024 * 1024, -1L, -1L, new KeyValueRawhide());
             commitables.add(cardinalityIndex[i]);
         }
 
@@ -588,7 +588,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                 ValueIndex[] cacheIndexes = new ValueIndex[labEnvironments.length];
                 for (int i = 0; i < cacheIndexes.length; i++) {
                     // currently not commitable, as the commit is done immediately at write time
-                    cacheIndexes[i] = labEnvironments[i].open("pluginCache-" + key, 4096, 1000, 10 * 1024 * 1024, -1L, -1L, new KeyValueRawhide());
+                    cacheIndexes[i] = labEnvironments[i].open("pluginCache-" + key, 4096, Integer.MAX_VALUE, 10 * 1024 * 1024, -1L, -1L, new KeyValueRawhide());
                 }
                 return new LabCacheKeyValues(idProvider, cacheIndexes, fsyncOnCommit);
             } catch (Exception x) {

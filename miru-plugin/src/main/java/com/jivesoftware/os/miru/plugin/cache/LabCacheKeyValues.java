@@ -90,7 +90,7 @@ public class LabCacheKeyValues implements CacheKeyValues {
                         }
                     }
                     return true;
-                });
+                }, fsyncOnCommit);
 
                 //TODO consider making this a lazy commit
                 indexes[stripe].commit(fsyncOnCommit);

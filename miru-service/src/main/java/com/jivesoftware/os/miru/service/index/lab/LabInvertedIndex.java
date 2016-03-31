@@ -207,7 +207,7 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
         lab.append((ValueStream stream) -> {
             stream.stream(indexKeyBytes, System.currentTimeMillis(), false, idProvider.nextId(), sizeAndBytes.bytes);
             return true;
-        });
+        }, true);
 
         LOG.inc("count>set>total");
         LOG.inc("count>set>" + name + ">total");

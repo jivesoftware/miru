@@ -73,7 +73,7 @@ public class LabSipIndex<S extends MiruSipCursor<S>> implements MiruSipIndex<S> 
                     valueIndex.append((ValueStream stream) -> {
                         stream.stream(key, System.currentTimeMillis(), false, idProvider.nextId(), filer.getBytes());
                         return true;
-                    });
+                    }, true);
 
                 } catch (Exception e) {
                     throw new IOException("Failed to serialize sip");
