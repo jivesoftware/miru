@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.service.index.lab;
 
+import com.google.common.primitives.Bytes;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
@@ -18,6 +19,7 @@ public class LabAuthzIndex<BM extends IBM, IBM> implements MiruAuthzIndex<BM, IB
     private final OrderIdProvider idProvider;
     private final MiruBitmaps<BM, IBM> bitmaps;
     private final TrackError trackError;
+    private final byte[] prefix;
     private final ValueIndex[] keyedStores;
     private final MiruAuthzCache<BM, IBM> cache;
     private final StripingLocksProvider<String> stripingLocksProvider;
@@ -25,6 +27,7 @@ public class LabAuthzIndex<BM extends IBM, IBM> implements MiruAuthzIndex<BM, IB
     public LabAuthzIndex(OrderIdProvider idProvider,
         MiruBitmaps<BM, IBM> bitmaps,
         TrackError trackError,
+        byte[] prefix,
         ValueIndex[] keyedStores,
         MiruAuthzCache<BM, IBM> cache,
         StripingLocksProvider<String> stripingLocksProvider)
@@ -33,6 +36,7 @@ public class LabAuthzIndex<BM extends IBM, IBM> implements MiruAuthzIndex<BM, IB
         this.idProvider = idProvider;
         this.bitmaps = bitmaps;
         this.trackError = trackError;
+        this.prefix = prefix;
         this.keyedStores = keyedStores;
         this.cache = cache;
         this.stripingLocksProvider = stripingLocksProvider;
@@ -50,7 +54,7 @@ public class LabAuthzIndex<BM extends IBM, IBM> implements MiruAuthzIndex<BM, IB
             trackError,
             "authz",
             -3,
-            MiruAuthzUtils.key(authz),
+            Bytes.concat(prefix, MiruAuthzUtils.key(authz)),
             getStore(authz),
             stripingLocksProvider.lock(authz, 0));
     }

@@ -124,13 +124,9 @@ public class MiruBitmapsTimeRangeTest {
         labOnDiskTimeIndexMerged.timeIndex.nextId(stackBuffer, timestamps);
 
         ((MiruDeltaTimeIndex) chunkInMemoryTimeIndexMerged.timeIndex).merge(schema, stackBuffer);
-        chunkInMemoryTimeIndexMerged.commitable.commit();
         ((MiruDeltaTimeIndex) chunkOnDiskTimeIndexMerged.timeIndex).merge(schema, stackBuffer);
-        chunkOnDiskTimeIndexMerged.commitable.commit();
         ((MiruDeltaTimeIndex) labInMemoryTimeIndexMerged.timeIndex).merge(schema, stackBuffer);
-        labInMemoryTimeIndexMerged.commitable.commit();
         ((MiruDeltaTimeIndex) labOnDiskTimeIndexMerged.timeIndex).merge(schema, stackBuffer);
-        labOnDiskTimeIndexMerged.commitable.commit();
 
         MiruContext<RoaringBitmap, RoaringBitmap, RCVSSipCursor> chunkInMemoryTimeIndexPartiallyMerged = buildInMemoryTimeIndex(false);
         MiruContext<RoaringBitmap, RoaringBitmap, RCVSSipCursor> chunkOnDiskTimeIndexPartiallyMerged = buildOnDiskTimeIndex(false);

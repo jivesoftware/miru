@@ -18,6 +18,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.service.stream.MiruContext;
 import java.util.Arrays;
 import java.util.List;
+import org.apache.commons.lang3.ArrayUtils;
 import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
 import org.roaringbitmap.buffer.MutableRoaringBitmap;
 import org.testng.annotations.DataProvider;
@@ -50,7 +51,7 @@ public class MiruFieldIndexTest {
         MiruFieldIndex<BM, IBM> miruFieldIndex,
         MiruBackingStorage miruBackingStorage) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
-        miruFieldIndex.append(0, new MiruTermId(FilerIO.intBytes(2)), new int[]{3}, null, stackBuffer);
+        miruFieldIndex.append(0, new MiruTermId(FilerIO.intBytes(2)), new int[] { 3 }, null, stackBuffer);
         MiruInvertedIndex<BM, IBM> invertedIndex = miruFieldIndex.get("test", 0, new MiruTermId(FilerIO.intBytes(2)));
         assertNotNull(invertedIndex);
         assertTrue(invertedIndex.getIndex(stackBuffer).isPresent());
@@ -83,17 +84,22 @@ public class MiruFieldIndexTest {
         MiruBitmapsRoaringBuffer bitmaps = new MiruBitmapsRoaringBuffer();
         MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("logicalName"));
 
-        MiruContext<MutableRoaringBitmap, ImmutableRoaringBitmap, ?> hybridContext = buildInMemoryContext(4, false, bitmaps, coord);
+        return ArrayUtils.addAll(buildIndexDataProvider(bitmaps, coord, false),
+            buildIndexDataProvider(bitmaps, coord, true));
+    }
+
+    private Object[][] buildIndexDataProvider(MiruBitmapsRoaringBuffer bitmaps, MiruPartitionCoord coord, boolean useLabIndexes) throws Exception {
+        MiruContext<MutableRoaringBitmap, ImmutableRoaringBitmap, ?> hybridContext = buildInMemoryContext(4, useLabIndexes, bitmaps, coord);
         MiruFieldIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> miruInMemoryFieldIndex = hybridContext.fieldIndexProvider.getFieldIndex(
             MiruFieldType.primary);
 
-        MiruContext<MutableRoaringBitmap, ImmutableRoaringBitmap, ?> onDiskContext = buildOnDiskContext(4, false, bitmaps, coord);
+        MiruContext<MutableRoaringBitmap, ImmutableRoaringBitmap, ?> onDiskContext = buildOnDiskContext(4, useLabIndexes, bitmaps, coord);
         MiruFieldIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> miruOnDiskFieldIndex = onDiskContext.fieldIndexProvider.getFieldIndex(
             MiruFieldType.primary);
 
-        return new Object[][]{
-            {bitmaps, miruInMemoryFieldIndex, MiruBackingStorage.memory},
-            {bitmaps, miruOnDiskFieldIndex, MiruBackingStorage.disk}
+        return new Object[][] {
+            { bitmaps, miruInMemoryFieldIndex, MiruBackingStorage.memory },
+            { bitmaps, miruOnDiskFieldIndex, MiruBackingStorage.disk }
         };
     }
 
@@ -104,19 +110,28 @@ public class MiruFieldIndexTest {
         MiruBitmapsRoaringBuffer bitmaps = new MiruBitmapsRoaringBuffer();
         MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, MiruPartitionId.of(0), new MiruHost("logicalName"));
 
-        MiruContext<MutableRoaringBitmap, ImmutableRoaringBitmap, ?> hybridContext = buildInMemoryContext(4, false, bitmaps, coord);
+        return ArrayUtils.addAll(buildIndexDataProviderWithData(stackBuffer, bitmaps, coord, false),
+            buildIndexDataProviderWithData(stackBuffer, bitmaps, coord, true));
+    }
+
+    private Object[][] buildIndexDataProviderWithData(StackBuffer stackBuffer,
+        MiruBitmapsRoaringBuffer bitmaps,
+        MiruPartitionCoord coord,
+        boolean useLabIndexes) throws Exception {
+
+        MiruContext<MutableRoaringBitmap, ImmutableRoaringBitmap, ?> hybridContext = buildInMemoryContext(4, useLabIndexes, bitmaps, coord);
         MiruFieldIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> miruHybridFieldIndex = hybridContext.fieldIndexProvider.getFieldIndex(
             MiruFieldType.primary);
-        miruHybridFieldIndex.append(0, new MiruTermId("term1".getBytes()), new int[]{1, 2, 3}, null, stackBuffer);
+        miruHybridFieldIndex.append(0, new MiruTermId("term1".getBytes()), new int[] { 1, 2, 3 }, null, stackBuffer);
 
-        MiruContext<MutableRoaringBitmap, ImmutableRoaringBitmap, ?> onDiskContext = buildOnDiskContext(4, false, bitmaps, coord);
+        MiruContext<MutableRoaringBitmap, ImmutableRoaringBitmap, ?> onDiskContext = buildOnDiskContext(4, useLabIndexes, bitmaps, coord);
         MiruFieldIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> miruOnDiskFieldIndex = onDiskContext.fieldIndexProvider.getFieldIndex(
             MiruFieldType.primary);
-        miruOnDiskFieldIndex.append(0, new MiruTermId("term1".getBytes()), new int[]{1, 2, 3}, null, stackBuffer);
+        miruOnDiskFieldIndex.append(0, new MiruTermId("term1".getBytes()), new int[] { 1, 2, 3 }, null, stackBuffer);
 
-        return new Object[][]{
-            {bitmaps, miruHybridFieldIndex, Arrays.asList(1, 2, 3), MiruBackingStorage.memory},
-            {bitmaps, miruOnDiskFieldIndex, Arrays.asList(1, 2, 3), MiruBackingStorage.disk}
+        return new Object[][] {
+            { bitmaps, miruHybridFieldIndex, Arrays.asList(1, 2, 3), MiruBackingStorage.memory },
+            { bitmaps, miruOnDiskFieldIndex, Arrays.asList(1, 2, 3), MiruBackingStorage.disk }
         };
     }
 }

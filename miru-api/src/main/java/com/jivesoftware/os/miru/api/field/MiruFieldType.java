@@ -5,6 +5,9 @@ package com.jivesoftware.os.miru.api.field;
  */
 public enum MiruFieldType {
 
+    // -3 reserved for authz
+    // -2 reserved for inbox
+    // -1 reserved for unread
     primary(0),
     latest(1),
     pairedLatest(2),

@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.service.index.lab;
 
+import com.google.common.primitives.Bytes;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
@@ -18,12 +19,14 @@ public class LabUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUnreadTr
     private final OrderIdProvider idProvider;
     private final MiruBitmaps<BM, IBM> bitmaps;
     private final TrackError trackError;
+    private final byte[] prefix;
     private final ValueIndex[] stores;
     private final StripingLocksProvider<MiruStreamId> stripingLocksProvider;
 
     public LabUnreadTrackingIndex(OrderIdProvider idProvider,
         MiruBitmaps<BM, IBM> bitmaps,
         TrackError trackError,
+        byte[] prefix,
         ValueIndex[] stores,
         StripingLocksProvider<MiruStreamId> stripingLocksProvider)
         throws Exception {
@@ -31,6 +34,7 @@ public class LabUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUnreadTr
         this.idProvider = idProvider;
         this.bitmaps = bitmaps;
         this.trackError = trackError;
+        this.prefix = prefix;
         this.stores = stores;
         this.stripingLocksProvider = stripingLocksProvider;
     }
@@ -51,7 +55,7 @@ public class LabUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUnreadTr
             trackError,
             "unread",
             -1,
-            streamId.getBytes(),
+            Bytes.concat(prefix, streamId.getBytes()),
             getStore(streamId),
             stripingLocksProvider.lock(streamId, 0));
     }

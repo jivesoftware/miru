@@ -15,7 +15,6 @@ import com.jivesoftware.os.filer.chunk.store.transaction.TxCogs;
 import com.jivesoftware.os.filer.chunk.store.transaction.TxMapGrower;
 import com.jivesoftware.os.filer.chunk.store.transaction.TxNamedMapOfFiler;
 import com.jivesoftware.os.filer.io.FilerIO;
-import com.jivesoftware.os.filer.io.KeyValueMarshaller;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.io.api.KeyedFilerStore;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
@@ -27,7 +26,6 @@ import com.jivesoftware.os.filer.keyed.store.TxKeyValueStore;
 import com.jivesoftware.os.filer.keyed.store.TxKeyedFilerStore;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.lab.LABEnvironment;
-import com.jivesoftware.os.lab.LABUtils;
 import com.jivesoftware.os.lab.api.ValueIndex;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
@@ -484,28 +482,36 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         TrackError trackError = partitionErrorTracker.track(coord);
 
         @SuppressWarnings("unchecked")
+        ValueIndex[] termIndexes = new ValueIndex[labEnvironments.length];
+        ValueIndex[] cardinalityIndex = new ValueIndex[labEnvironments.length];
+        for (int i = 0; i < termIndexes.length; i++) {
+            termIndexes[i] = labEnvironments[i].open("field", 4096, 1000, 10 * 1024 * 1024, -1L, -1L, new KeyValueRawhide());
+            commitables.add(termIndexes[i]);
+            cardinalityIndex[i] = labEnvironments[i].open("cardinality", 4096, 1000, 10 * 1024 * 1024, -1L, -1L, new KeyValueRawhide());
+            commitables.add(cardinalityIndex[i]);
+        }
+
+        @SuppressWarnings("unchecked")
         MiruFieldIndex<BM, IBM>[] fieldIndexes = new MiruFieldIndex[MiruFieldType.values().length];
         for (MiruFieldType fieldType : MiruFieldType.values()) {
-
-            @SuppressWarnings("unchecked")
-            ValueIndex[] indexes = new ValueIndex[labEnvironments.length];
-            ValueIndex[] cardinalities = new ValueIndex[labEnvironments.length];
-            for (int i = 0; i < indexes.length; i++) {
-                indexes[i] = labEnvironments[i].open("field-" + fieldType.name(), 4096, 1000, 10 * 1024 * 1024, -1L, -1L, new KeyValueRawhide());
-                commitables.add(indexes[i]);
-                cardinalities[i] = labEnvironments[i].open("cardinality-" + fieldType.name(), 4096, 1000, 10 * 1024 * 1024, -1L, -1L, new KeyValueRawhide());
-                commitables.add(cardinalities[i]);
-            }
-
             boolean[] hasCardinalities = new boolean[schema.fieldCount()];
             for (MiruFieldDefinition fieldDefinition : schema.getFieldDefinitions()) {
                 hasCardinalities[fieldDefinition.fieldId] = fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.cardinality);
             }
 
+            byte[] prefix = { (byte) fieldType.getIndex() };
             fieldIndexes[fieldType.getIndex()] = new MiruDeltaFieldIndex<>(
                 bitmaps,
                 trackError,
-                new LabFieldIndex<>(idProvider, bitmaps, trackError, indexes, cardinalities, hasCardinalities, fieldIndexStripingLocksProvider, termInterner),
+                new LabFieldIndex<>(idProvider,
+                    bitmaps,
+                    trackError,
+                    prefix,
+                    termIndexes,
+                    cardinalityIndex,
+                    hasCardinalities,
+                    fieldIndexStripingLocksProvider,
+                    termInterner),
                 schema.getFieldDefinitions());
         }
         MiruFieldIndexProvider<BM, IBM> fieldIndexProvider = new MiruFieldIndexProvider<>(fieldIndexes);
@@ -515,30 +521,6 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             metaIndex,
             keyBytes("sip"),
             sipMarshaller));
-
-        MiruAuthzUtils<BM, IBM> authzUtils = new MiruAuthzUtils<>(bitmaps);
-
-        Cache<VersionedAuthzExpression, BM> authzCache = CacheBuilder.newBuilder()
-            .maximumSize(partitionAuthzCacheSize)
-            .expireAfterAccess(1, TimeUnit.MINUTES) //TODO should be adjusted with respect to tuning GC (prevent promotion from eden space)
-            .build();
-        MiruAuthzCache<BM, IBM> miruAuthzCache = new MiruAuthzCache<>(bitmaps, authzCache, activityInternExtern, authzUtils);
-
-        ValueIndex[] authzIndexes = new ValueIndex[labEnvironments.length];
-        for (int i = 0; i < authzIndexes.length; i++) {
-            authzIndexes[i] = labEnvironments[i].open("authz", 4096, 1000, 10 * 1024 * 1024, -1L, -1L, new KeyValueRawhide());
-            commitables.add(authzIndexes[i]);
-        }
-        MiruAuthzIndex<BM, IBM> authzIndex = new MiruDeltaAuthzIndex<>(bitmaps,
-            trackError,
-            miruAuthzCache,
-            new LabAuthzIndex<>(
-                idProvider,
-                bitmaps,
-                trackError,
-                authzIndexes,
-                miruAuthzCache,
-                authzStripingLocksProvider));
 
         MiruRemovalIndex<BM, IBM> removalIndex = new MiruDeltaRemovalIndex<>(
             bitmaps,
@@ -552,11 +534,6 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                 new Object()),
             new MiruDeltaInvertedIndex.Delta<>());
 
-        ValueIndex[] unreadIndexes = new ValueIndex[labEnvironments.length];
-        for (int i = 0; i < unreadIndexes.length; i++) {
-            unreadIndexes[i] = labEnvironments[i].open("unread", 4096, 1000, 10 * 1024 * 1024, -1L, -1L, new KeyValueRawhide());
-            commitables.add(unreadIndexes[i]);
-        }
         MiruUnreadTrackingIndex<BM, IBM> unreadTrackingIndex = new MiruDeltaUnreadTrackingIndex<>(
             bitmaps,
             trackError,
@@ -564,14 +541,10 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                 idProvider,
                 bitmaps,
                 trackError,
-                unreadIndexes,
+                new byte[] { (byte) -1 },
+                termIndexes,
                 streamStripingLocksProvider));
 
-        ValueIndex[] inboxIndexes = new ValueIndex[labEnvironments.length];
-        for (int i = 0; i < inboxIndexes.length; i++) {
-            inboxIndexes[i] = labEnvironments[i].open("inbox", 4096, 1000, 10 * 1024 * 1024, -1L, -1L, new KeyValueRawhide());
-            commitables.add(inboxIndexes[i]);
-        }
         MiruInboxIndex<BM, IBM> inboxIndex = new MiruDeltaInboxIndex<>(
             bitmaps,
             trackError,
@@ -579,8 +552,29 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                 idProvider,
                 bitmaps,
                 trackError,
-                inboxIndexes,
+                new byte[] { (byte) -2 },
+                termIndexes,
                 streamStripingLocksProvider));
+
+        MiruAuthzUtils<BM, IBM> authzUtils = new MiruAuthzUtils<>(bitmaps);
+
+        Cache<VersionedAuthzExpression, BM> authzCache = CacheBuilder.newBuilder()
+            .maximumSize(partitionAuthzCacheSize)
+            .expireAfterAccess(1, TimeUnit.MINUTES) //TODO should be adjusted with respect to tuning GC (prevent promotion from eden space)
+            .build();
+        MiruAuthzCache<BM, IBM> miruAuthzCache = new MiruAuthzCache<>(bitmaps, authzCache, activityInternExtern, authzUtils);
+
+        MiruAuthzIndex<BM, IBM> authzIndex = new MiruDeltaAuthzIndex<>(bitmaps,
+            trackError,
+            miruAuthzCache,
+            new LabAuthzIndex<>(
+                idProvider,
+                bitmaps,
+                trackError,
+                new byte[] { (byte) -3 },
+                termIndexes,
+                miruAuthzCache,
+                authzStripingLocksProvider));
 
         StripingLocksProvider<MiruStreamId> streamLocks = new StripingLocksProvider<>(64);
 
@@ -774,35 +768,5 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
 
     private byte[] keyBytes(String key) {
         return key.getBytes(Charsets.UTF_8);
-    }
-
-    private static class IntUnsignedShortKeyValueMarshaller implements KeyValueMarshaller<Integer, Integer> {
-
-        @Override
-        public byte[] keyBytes(Integer integer) {
-            return FilerIO.intBytes(integer);
-        }
-
-        @Override
-        public Integer bytesKey(byte[] bytes, int offset) {
-            return FilerIO.bytesInt(bytes);
-        }
-
-        @Override
-        public byte[] valueBytes(Integer value) {
-            byte[] bytes = new byte[2];
-            bytes[0] = (byte) (value >>> 8);
-            bytes[1] = (byte) value.intValue();
-            return bytes;
-        }
-
-        @Override
-        public Integer bytesValue(Integer key, byte[] bytes, int offset) {
-            int v = 0;
-            v |= (bytes[offset + 0] & 0xFF);
-            v <<= 8;
-            v |= (bytes[offset + 1] & 0xFF);
-            return v;
-        }
     }
 }
