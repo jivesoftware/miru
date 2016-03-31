@@ -130,6 +130,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
     private final MiruInterner<MiruTermId> termInterner;
     private final ObjectMapper objectMapper;
     private final boolean useLabIndexes;
+    private final boolean fsyncOnCommit;
 
     public MiruContextFactory(OrderIdProvider idProvider,
         TxCogs persistentCogs,
@@ -147,7 +148,8 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         PartitionErrorTracker partitionErrorTracker,
         MiruInterner<MiruTermId> termInterner,
         ObjectMapper objectMapper,
-        boolean useLabIndexes) {
+        boolean useLabIndexes,
+        boolean fsyncOnCommit) {
 
         this.idProvider = idProvider;
         this.persistentCogs = persistentCogs;
@@ -166,6 +168,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         this.termInterner = termInterner;
         this.objectMapper = objectMapper;
         this.useLabIndexes = useLabIndexes;
+        this.fsyncOnCommit = fsyncOnCommit;
     }
 
     public MiruBackingStorage findBackingStorage(MiruPartitionCoord coord) throws Exception {
@@ -587,7 +590,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                     // currently not commitable, as the commit is done immediately at write time
                     cacheIndexes[i] = labEnvironments[i].open("pluginCache-" + key, 4096, 1000, 10 * 1024 * 1024, -1L, -1L, new KeyValueRawhide());
                 }
-                return new LabCacheKeyValues(idProvider, cacheIndexes);
+                return new LabCacheKeyValues(idProvider, cacheIndexes, fsyncOnCommit);
             } catch (Exception x) {
                 throw new RuntimeException("Failed to initialize plugin cache", x);
             }
@@ -612,7 +615,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             rebuildToken,
             () -> {
                 for (ValueIndex valueIndex : commitables) {
-                    valueIndex.commit(true);
+                    valueIndex.commit(fsyncOnCommit);
                 }
             });
 

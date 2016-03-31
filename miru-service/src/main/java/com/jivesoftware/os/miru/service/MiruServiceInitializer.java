@@ -184,7 +184,8 @@ public class MiruServiceInitializer {
             partitionErrorTracker,
             termInterner,
             objectMapper,
-            config.getUseLabIndexes());
+            config.getUseLabIndexes(),
+            config.getFsyncOnCommit());
 
         MiruPartitionHeartbeatHandler heartbeatHandler = new MiruPartitionHeartbeatHandler(clusterClient);
         MiruRebuildDirector rebuildDirector = new MiruRebuildDirector(config.getMaxRebuildActivityCount());

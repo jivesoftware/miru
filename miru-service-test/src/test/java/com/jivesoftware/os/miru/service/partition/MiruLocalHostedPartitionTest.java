@@ -260,7 +260,8 @@ public class MiruLocalHostedPartitionTest {
             new PartitionErrorTracker(BindInterfaceToConfiguration.bindDefault(PartitionErrorTracker.PartitionErrorTrackerConfig.class)),
             termInterner,
             mapper,
-            true);
+            true,
+            false);
         sipTrackerFactory = new RCVSSipTrackerFactory();
 
         InMemoryRowColumnValueStoreInitializer inMemoryRowColumnValueStoreInitializer = new InMemoryRowColumnValueStoreInitializer();

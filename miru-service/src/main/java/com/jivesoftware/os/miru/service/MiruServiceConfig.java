@@ -180,4 +180,7 @@ public interface MiruServiceConfig extends Config {
 
     @BooleanDefault(false)
     boolean getUseLabIndexes();
+
+    @BooleanDefault(false)
+    boolean getFsyncOnCommit();
 }

@@ -132,7 +132,8 @@ public class IndexTestUtil {
             new PartitionErrorTracker(BindInterfaceToConfiguration.bindDefault(PartitionErrorTracker.PartitionErrorTrackerConfig.class)),
             termInterner,
             new ObjectMapper(),
-            useLabIndexes);
+            useLabIndexes,
+            false);
     }
 
     public static <BM extends IBM, IBM> MiruContext<BM, IBM, RCVSSipCursor> buildInMemoryContext(int numberOfChunkStores,
