@@ -114,12 +114,13 @@ public class LabActivityIndex implements MiruActivityIndex {
         ValueIndex termIndex = getTermIndex(fieldId);
         byte[] fieldBytes = UIO.intBytes(fieldId);
         for (int i = 0; i < length; i++) {
+            int eye = i;
             int index = indexes[offset + i];
             if (index >= 0) {
                 termIndex.get(Bytes.concat(fieldBytes, UIO.intBytes(index)),
                     (key, timestamp, tombstoned, version, payload) -> {
                         if (payload != null && !tombstoned) {
-                            termIds[index] = intTermIdsKeyValueMarshaller.bytesValue(null, payload, 0);
+                            termIds[eye] = intTermIdsKeyValueMarshaller.bytesValue(null, payload, 0);
                         }
                         return false;
                     });
