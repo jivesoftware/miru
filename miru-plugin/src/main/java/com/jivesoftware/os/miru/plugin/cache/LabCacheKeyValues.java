@@ -17,10 +17,12 @@ public class LabCacheKeyValues implements CacheKeyValues {
 
     private final OrderIdProvider idProvider;
     private final ValueIndex[] indexes;
+    private final boolean fsyncOnCommit;
 
-    public LabCacheKeyValues(OrderIdProvider idProvider, ValueIndex[] indexes) {
+    public LabCacheKeyValues(OrderIdProvider idProvider, ValueIndex[] indexes, boolean fsyncOnCommit) {
         this.idProvider = idProvider;
         this.indexes = indexes;
+        this.fsyncOnCommit = fsyncOnCommit;
     }
 
     @Override
@@ -88,10 +90,10 @@ public class LabCacheKeyValues implements CacheKeyValues {
                         }
                     }
                     return true;
-                });
+                }, fsyncOnCommit);
 
                 //TODO consider making this a lazy commit
-                indexes[stripe].commit(true);
+                indexes[stripe].commit(fsyncOnCommit);
             }
         }
     }

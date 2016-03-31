@@ -97,7 +97,7 @@ public class LabTimeIndex implements MiruTimeIndex {
         FilerIO.writeLong(metaFiler, largestTimestamp, "largestTimestamp", stackBuffer);
         FilerIO.writeInt(metaFiler, timestampsLength, "timestampsLength", stackBuffer);
 
-        metaIndex.append((ValueStream stream) -> stream.stream(metaKey, System.currentTimeMillis(), false, idProvider.nextId(), metaFiler.getBytes()));
+        metaIndex.append((ValueStream stream) -> stream.stream(metaKey, System.currentTimeMillis(), false, idProvider.nextId(), metaFiler.getBytes()), true);
     }
 
     @Override
@@ -164,7 +164,7 @@ public class LabTimeIndex implements MiruTimeIndex {
                     id1++;
                 }
                 return true;
-            });
+            }, true);
 
             rawTimestampToIndex.append((ValueStream stream) -> {
                 for (int i = 0; i < nextIds.length; i++) {
@@ -174,7 +174,7 @@ public class LabTimeIndex implements MiruTimeIndex {
                     }
                 }
                 return true;
-            });
+            }, true);
         }
         return nextIds;
 

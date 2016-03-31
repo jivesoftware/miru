@@ -99,7 +99,7 @@ public class StrutModelScorerNGTest {
             stores[i] = env.open("cache-" + i + "-" + catwalkId, 4096, 100, 0, 0, 0, new KeyValueRawhide());
         }
 
-        CacheKeyValues cacheKeyValues = new LabCacheKeyValues(new OrderIdProviderImpl(new ConstantWriterIdProvider(1)), stores);
+        CacheKeyValues cacheKeyValues = new LabCacheKeyValues(new OrderIdProviderImpl(new ConstantWriterIdProvider(1)), stores, false);
 
         assertScores(modelId, cacheKeyValues, new StackBuffer());
 
