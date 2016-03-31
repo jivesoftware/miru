@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.plugin.cache;
 import com.google.common.primitives.Bytes;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
+import com.jivesoftware.os.lab.LABUtils;
 import com.jivesoftware.os.lab.api.ValueIndex;
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.CacheKeyValues;
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.GetKeyValueStream;
@@ -88,6 +89,9 @@ public class LabCacheKeyValues implements CacheKeyValues {
                     }
                     return true;
                 });
+
+                //TODO consider making this a lazy commit
+                indexes[stripe].commit(true);
             }
         }
     }

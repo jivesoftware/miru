@@ -20,6 +20,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruSipIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruUnreadTrackingIndex;
+import com.jivesoftware.os.miru.service.index.Commitable;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -53,6 +54,7 @@ public class MiruContext<BM extends IBM, IBM, S extends MiruSipCursor<S>> implem
     public final AtomicInteger lastDeltaMinId = new AtomicInteger(-1);
     public final MiruRebuildDirector.Token rebuildToken;
     public final AtomicBoolean closed = new AtomicBoolean(false);
+    public final Commitable commitable;
 
     public MiruContext(MiruSchema schema,
         MiruTermComposer termComposer,
@@ -70,7 +72,8 @@ public class MiruContext<BM extends IBM, IBM, S extends MiruSipCursor<S>> implem
         ChunkStore[] chunkStores,
         LABEnvironment[] labEnvironments,
         MiruBackingStorage storage,
-        MiruRebuildDirector.Token rebuildToken) {
+        MiruRebuildDirector.Token rebuildToken,
+        Commitable commitable) {
         this.schema = schema;
         this.termComposer = termComposer;
         this.timeIndex = timeIndex;
@@ -88,6 +91,7 @@ public class MiruContext<BM extends IBM, IBM, S extends MiruSipCursor<S>> implem
         this.labEnvironments = labEnvironments;
         this.storage = storage;
         this.rebuildToken = rebuildToken;
+        this.commitable = commitable;
     }
 
     @Override

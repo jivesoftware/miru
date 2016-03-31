@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.plugin.context;
 import com.jivesoftware.os.lab.LABUtils;
 import com.jivesoftware.os.lab.api.Rawhide;
 import com.jivesoftware.os.lab.api.ValueStream;
+import com.jivesoftware.os.lab.guts.IndexUtil;
 import com.jivesoftware.os.lab.io.api.IAppendOnly;
 import com.jivesoftware.os.lab.io.api.IReadable;
 import com.jivesoftware.os.lab.io.api.UIO;
@@ -55,6 +56,29 @@ public class KeyValueRawhide implements Rawhide {
     }
 
     @Override
+    public int keyLength(byte[] rawEntry, int offset) {
+        return UIO.bytesInt(rawEntry, offset);
+    }
+
+    @Override
+    public int keyOffset(byte[] rawEntry, int offset) {
+        return offset + 4;
+    }
+
+    @Override
+    public int compareKey(byte[] rawEntry, int offset, byte[] compareKey, int compareOffset, int compareLength) {
+        int keylength = UIO.bytesInt(rawEntry, offset);
+        return IndexUtil.compare(rawEntry, offset + 4, keylength, compareKey, compareOffset, compareLength);
+    }
+
+    @Override
+    public int compareKeyFromEntry(IReadable readable, byte[] compareKey, int compareOffset, int compareLength, byte[] intBuffer) throws Exception {
+        readable.seek(readable.getFilePointer() + 4); // skip the entry length
+        int keyLength = UIO.readInt(readable, "keyLength", intBuffer);
+        return IndexUtil.compare(readable, keyLength, compareKey, compareOffset, compareLength);
+    }
+
+    @Override
     public long timestamp(byte[] rawEntry, int offset, int length) {
         return 0;
     }
@@ -71,6 +95,6 @@ public class KeyValueRawhide implements Rawhide {
 
     @Override
     public boolean mightContain(long timestamp, long timestampVersion, long newerThanTimestamp, long newerThanTimestampVersion) {
-        return false;
+        return (timestamp != -1 && timestampVersion != -1);
     }
 }

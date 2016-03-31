@@ -20,6 +20,8 @@ public interface MiruChunkAllocator {
 
     void close(ChunkStore[] chunkStores);
 
+    void close(LABEnvironment[] labEnvironments);
+
     File[] getLabDirs(MiruPartitionCoord coord) throws Exception;
 
     LABEnvironment[] allocateLABEnvironments(MiruPartitionCoord coord) throws Exception;

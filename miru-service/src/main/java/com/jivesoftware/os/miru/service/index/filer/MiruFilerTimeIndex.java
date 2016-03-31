@@ -296,20 +296,24 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
      */
     @Override
     public int getClosestId(final long timestamp, StackBuffer stackBuffer) throws IOException, InterruptedException {
-        try {
-            int i = filerProvider.read(null, (monkey, filer, _stackBuffer, lock) -> {
-                if (filer != null) {
-                    return readClosestId(lock, filer, timestamp, _stackBuffer);
-                }
-                return -1;
-            }, stackBuffer);
-            if (i < 0) {
-                i = -(i + 1);
-            }
-            return i;
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        if (timestamp <= smallestTimestamp) {
+            return 0;
+        } else if (timestamp == largestTimestamp) {
+            return lastId();
+        } else if (timestamp > largestTimestamp) {
+            return lastId() + 1;
         }
+
+        int i = filerProvider.read(null, (monkey, filer, _stackBuffer, lock) -> {
+            if (filer != null) {
+                return readClosestId(lock, filer, timestamp, _stackBuffer);
+            }
+            return -1;
+        }, stackBuffer);
+        if (i < 0) {
+            i = -(i + 1);
+        }
+        return i;
     }
 
     private int readClosestId(Object lock, Filer filer, long timestamp, StackBuffer stackBuffer) throws IOException {

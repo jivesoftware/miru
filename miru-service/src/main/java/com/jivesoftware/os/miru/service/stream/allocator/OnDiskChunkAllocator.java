@@ -180,4 +180,7 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
     public void close(ChunkStore[] chunkStores) {
     }
 
+    @Override
+    public void close(LABEnvironment[] labEnvironments) {
+    }
 }

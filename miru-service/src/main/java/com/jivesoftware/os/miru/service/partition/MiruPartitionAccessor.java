@@ -328,6 +328,8 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
                     for (Future<?> future : futures) {
                         future.get();
                     }
+
+                    got.commitable.commit();
                 } catch (Exception e) {
                     if (!(e instanceof InterruptedException)) {
                         trackError.error("Failed to merge: " + e.getMessage());

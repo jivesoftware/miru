@@ -7,6 +7,7 @@ import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.io.api.KeyRange;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
+import com.jivesoftware.os.lab.LABUtils;
 import com.jivesoftware.os.lab.api.ValueIndex;
 import com.jivesoftware.os.lab.api.ValueStream;
 import com.jivesoftware.os.lab.io.api.UIO;
@@ -26,7 +27,6 @@ import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.Future;
 import org.apache.commons.lang.mutable.MutableLong;
 
 /**
@@ -149,7 +149,7 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
                 getFieldIndex(fieldId).get(Bytes.concat(fieldIdBytes, termIds[i].getBytes()),
                     (byte[] key, long timestamp, boolean tombstoned, long version, byte[] payload) -> {
                         if (payload != null) {
-                            BitmapAndLastId<BM> bitmapAndLastId = LabInvertedIndex.deser(bitmaps, trackError, payload, -1, stackBuffer);
+                            BitmapAndLastId<BM> bitmapAndLastId = LabInvertedIndex.deser(bitmaps, trackError, payload, -1);
                             if (bitmapAndLastId != null) {
                                 results[ri] = bitmapAndLastId;
                             }
@@ -289,15 +289,16 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
         int[] indexPowers = new int[32];
 
         SizeAndBytes[] sabs = new SizeAndBytes[termIds.length];
+        ValueIndex fieldIndex = getFieldIndex(fieldId);
         for (int i = 0; i < termIds.length; i++) {
             if (termIds[i] != null) {
                 int ri = i;
-                getFieldIndex(fieldId).get(Bytes.concat(fieldIdBytes, termIds[i].getBytes()),
+                fieldIndex.get(Bytes.concat(fieldIdBytes, termIds[i].getBytes()),
                     (byte[] key, long timestamp, boolean tombstoned, long version, byte[] payload) -> {
                         BitmapAndLastId<BM> backing = null;
                         if (payload != null) {
                             bytesRead.add(payload.length);
-                            backing = LabInvertedIndex.deser(bitmaps, trackError, payload, -1, stackBuffer);
+                            backing = LabInvertedIndex.deser(bitmaps, trackError, payload, -1);
                         }
                         BitmapAndLastId<BM> merged = merger.merge(ri, backing);
                         if (merged != null) {
@@ -316,7 +317,7 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
 
         long timestamp = System.currentTimeMillis();
         long version = idProvider.nextId();
-        getFieldIndex(fieldId).append((ValueStream stream) -> {
+        fieldIndex.append((ValueStream stream) -> {
             for (int i = 0; i < termIds.length; i++) {
                 if (sabs[i] != null) {
                     bytesWrite.add(sabs[i].bytes.length);
@@ -325,13 +326,6 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
             }
             return true;
         });
-
-        List<Future<Object>> futures = getFieldIndex(fieldId).commit(false);
-        if (futures != null) {
-            for (Future<Object> future : futures) {
-                future.get();
-            }
-        }
 
         LOG.inc("count>multiMerge>total");
         LOG.inc("count>multiMerge>" + fieldId);

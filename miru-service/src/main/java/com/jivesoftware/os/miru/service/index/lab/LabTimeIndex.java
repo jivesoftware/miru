@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.service.index.lab;
 
 import com.google.common.base.Optional;
+import com.google.common.primitives.Bytes;
 import com.jivesoftware.os.filer.io.ByteArrayFiler;
 import com.jivesoftware.os.filer.io.Filer;
 import com.jivesoftware.os.filer.io.FilerIO;
@@ -159,7 +160,7 @@ public class LabTimeIndex implements MiruTimeIndex {
                 int id1 = firstId;
                 TLongIterator iter = monotonicTimestamps.iterator();
                 while (iter.hasNext()) {
-                    stream.stream(UIO.longBytes(iter.next()), currentTime, false, version, UIO.intBytes(id1));
+                    stream.stream(Bytes.concat(UIO.longBytes(iter.next()), UIO.intBytes(id1)), currentTime, false, version, null);
                     id1++;
                 }
                 return true;
@@ -184,16 +185,20 @@ public class LabTimeIndex implements MiruTimeIndex {
      */
     @Override
     public int getClosestId(final long timestamp, StackBuffer stackBuffer) throws Exception, InterruptedException {
-        int[] id = {-1};
+        if (timestamp <= smallestTimestamp) {
+            return 0;
+        } else if (timestamp == largestTimestamp) {
+            return lastId();
+        } else if (timestamp > largestTimestamp) {
+            return lastId() + 1;
+        }
+
+        int[] id = { 0 };
         monotonicTimestampIndex.rangeScan(UIO.longBytes(timestamp),
             null,
             (byte[] key, long ptimestamp, boolean tombstoned, long version, byte[] payload) -> {
-                if (payload != null) {
-                    if (UIO.bytesLong(key) == timestamp) {
-                        id[0] = UIO.bytesInt(payload);
-                    } else {
-                        id[0] = -(UIO.bytesInt(payload) + 1);
-                    }
+                if (key != null) {
+                    id[0] = UIO.bytesInt(key, 8);
                 }
                 return false;
             });
@@ -204,7 +209,7 @@ public class LabTimeIndex implements MiruTimeIndex {
 
     @Override
     public int getExactId(long timestamp, StackBuffer stackBuffer) throws Exception {
-        int[] id = {-1};
+        int[] id = { -1 };
         rawTimestampToIndex.get(UIO.longBytes(timestamp), (byte[] key, long ptimestamp, boolean tombstoned, long version, byte[] payload) -> {
             if (payload != null) {
                 id[0] = UIO.bytesInt(payload);
@@ -242,27 +247,29 @@ public class LabTimeIndex implements MiruTimeIndex {
 
     @Override
     public int smallestExclusiveTimestampIndex(final long timestamp, StackBuffer stackBuffer) throws Exception {
-        if (id.get() < 0) {
+        int lastId = lastId();
+        if (lastId < 0) {
             return 0;
+        } else if (timestamp < smallestTimestamp) {
+            return 0;
+        } else if (timestamp >= largestTimestamp) {
+            return lastId + 1;
         }
-        int[] id = {-1};
+
+        int[] id = { 0 };
         monotonicTimestampIndex.rangeScan(UIO.longBytes(timestamp),
             null,
             (byte[] key, long payloadTimestamp, boolean tombstoned, long version, byte[] payload) -> {
-                if (payload != null) {
-                    if (UIO.bytesLong(key) <= timestamp) {
-                        id[0] = UIO.bytesInt(payload) + 1;
+                if (key != null) {
+                    if (UIO.bytesLong(key, 0) <= timestamp) {
+                        id[0] = UIO.bytesInt(key, 8) + 1;
                         return true;
                     } else {
-                        id[0] = UIO.bytesInt(payload);
+                        id[0] = UIO.bytesInt(key, 8);
                     }
                 }
                 return false;
             });
-        if (id[0] == -1) {
-            return 0;
-        }
-        int lastId = lastId();
         if (id[0] > lastId) {
             return lastId + 1;
         }
@@ -271,24 +278,29 @@ public class LabTimeIndex implements MiruTimeIndex {
 
     @Override
     public int largestInclusiveTimestampIndex(final long timestamp, StackBuffer stackBuffer) throws Exception {
-        if (id.get() < 0) {
+        int lastId = lastId();
+        if (lastId < 0) {
             return -1;
+        } else if (timestamp < smallestTimestamp) {
+            return -1;
+        } else if (timestamp > largestTimestamp) {
+            return lastId;
         }
-        int[] id = {-1};
+
+        int[] id = { -1 };
         monotonicTimestampIndex.rangeScan(UIO.longBytes(timestamp),
             null,
             (byte[] key, long payloadTimestamp, boolean tombstoned, long version, byte[] payload) -> {
-                if (payload != null) {
-                    if (UIO.bytesLong(key) <= timestamp) {
-                        id[0] = UIO.bytesInt(payload);
+                if (key != null) {
+                    if (UIO.bytesLong(key, 0) <= timestamp) {
+                        id[0] = UIO.bytesInt(key, 8);
                         return true;
                     } else {
-                        id[0] = UIO.bytesInt(payload) - 1;
+                        id[0] = UIO.bytesInt(key, 8) - 1;
                     }
                 }
                 return false;
             });
-        int lastId = lastId();
         if (id[0] > lastId) {
             return lastId;
         }

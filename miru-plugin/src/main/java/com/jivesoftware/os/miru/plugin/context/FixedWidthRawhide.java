@@ -2,12 +2,12 @@ package com.jivesoftware.os.miru.plugin.context;
 
 import com.jivesoftware.os.lab.api.Rawhide;
 import com.jivesoftware.os.lab.api.ValueStream;
+import com.jivesoftware.os.lab.guts.IndexUtil;
 import com.jivesoftware.os.lab.io.api.IAppendOnly;
 import com.jivesoftware.os.lab.io.api.IReadable;
 import com.jivesoftware.os.lab.io.api.UIO;
 
 /**
- *
  * @author jonathan.colt
  */
 public class FixedWidthRawhide implements Rawhide {
@@ -39,7 +39,7 @@ public class FixedWidthRawhide implements Rawhide {
 
     @Override
     public byte[] toRawEntry(byte[] key, long timestamp, boolean tombstoned, long version, byte[] payload) throws Exception {
-        return UIO.add(key, payload);
+        return payload != null ? UIO.add(key, payload) : key;
     }
 
     @Override
@@ -60,6 +60,26 @@ public class FixedWidthRawhide implements Rawhide {
     }
 
     @Override
+    public int keyLength(byte[] rawEntry, int offset) {
+        return keyLength;
+    }
+
+    @Override
+    public int keyOffset(byte[] rawEntry, int offset) {
+        return offset;
+    }
+
+    @Override
+    public int compareKey(byte[] rawEntry, int offset, byte[] compareKey, int compareOffset, int compareLength) {
+        return IndexUtil.compare(rawEntry, offset, keyLength, compareKey, compareOffset, compareLength);
+    }
+
+    @Override
+    public int compareKeyFromEntry(IReadable readable, byte[] compareKey, int compareOffset, int compareLength, byte[] intBuffer) throws Exception {
+        return IndexUtil.compare(readable, keyLength, compareKey, compareOffset, compareLength);
+    }
+
+    @Override
     public long timestamp(byte[] rawEntry, int offset, int length) {
         return 0;
     }
@@ -76,6 +96,6 @@ public class FixedWidthRawhide implements Rawhide {
 
     @Override
     public boolean mightContain(long timestamp, long timestampVersion, long newerThanTimestamp, long newerThanTimestampVersion) {
-        return false;
+        return (timestamp != -1 && timestampVersion != -1);
     }
 }

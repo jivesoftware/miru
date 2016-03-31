@@ -149,4 +149,12 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
         }
     }
 
+    @Override
+    public void close(LABEnvironment[] labEnvironments) {
+        if (partitionDeleteChunkStoreOnClose) {
+            for (LABEnvironment labEnvironment : labEnvironments) {
+                //TODO
+            }
+        }
+    }
 }
