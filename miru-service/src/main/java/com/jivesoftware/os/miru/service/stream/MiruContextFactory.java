@@ -463,7 +463,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
 
         ValueIndex[] termStorage = new ValueIndex[labEnvironments.length];
         for (int i = 0; i < termStorage.length; i++) {
-            termStorage[i] = labEnvironments[i].open("termStorage", 4096, 1000, 10 * 1024 * 1024, -1L, -1L, new KeyValueRawhide());
+            termStorage[i] = labEnvironments[i].open("termStorage", 4096, Integer.MAX_VALUE, 10 * 1024 * 1024, -1L, -1L, new KeyValueRawhide());
             commitables.add(termStorage[i]);
         }
         boolean[] hasTermStorage = new boolean[schema.fieldCount()];
