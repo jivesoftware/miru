@@ -19,7 +19,7 @@ public interface MiruQueryablePartition<BM extends IBM, IBM> {
 
     boolean isLocal();
 
-    MiruRequestHandle<BM, IBM, ?> acquireQueryHandle(StackBuffer stackBuffer) throws Exception;
+    MiruRequestHandle<BM, IBM, ?> acquireQueryHandle() throws Exception;
 
     MiruRequestHandle<BM, IBM, ?> inspectRequestHandle() throws Exception;
 

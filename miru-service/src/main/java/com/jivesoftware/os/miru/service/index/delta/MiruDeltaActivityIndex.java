@@ -12,7 +12,6 @@ import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
 import com.jivesoftware.os.miru.service.index.Mergeable;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import java.io.IOException;
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -35,7 +34,7 @@ public class MiruDeltaActivityIndex implements MiruActivityIndex, Mergeable {
     }
 
     @Override
-    public TimeAndVersion get(String name, int index, StackBuffer stackBuffer) throws IOException, InterruptedException {
+    public TimeAndVersion get(String name, int index, StackBuffer stackBuffer) throws Exception, InterruptedException {
         MiruActivityAndId<MiruInternalActivity> activityAndId = activities.get(index);
         if (activityAndId != null) {
             return new TimeAndVersion(activityAndId.activity.time, activityAndId.activity.version);
@@ -45,7 +44,7 @@ public class MiruDeltaActivityIndex implements MiruActivityIndex, Mergeable {
     }
 
     @Override
-    public MiruTermId[] get(String name, int index, int fieldId, StackBuffer stackBuffer) throws IOException, InterruptedException {
+    public MiruTermId[] get(String name, int index, int fieldId, StackBuffer stackBuffer) throws Exception, InterruptedException {
         MiruActivityAndId<MiruInternalActivity> activityAndId = activities.get(index);
         if (activityAndId != null) {
             return activityAndId.activity.fieldsValues[fieldId];
@@ -55,7 +54,7 @@ public class MiruDeltaActivityIndex implements MiruActivityIndex, Mergeable {
     }
 
     @Override
-    public MiruTermId[][] getAll(String name, int[] indexes, int fieldId, StackBuffer stackBuffer) throws IOException, InterruptedException {
+    public MiruTermId[][] getAll(String name, int[] indexes, int fieldId, StackBuffer stackBuffer) throws Exception, InterruptedException {
         return getAll(name, indexes, 0, indexes.length, fieldId, stackBuffer);
     }
 
@@ -75,7 +74,7 @@ public class MiruDeltaActivityIndex implements MiruActivityIndex, Mergeable {
         int offset,
         int length,
         int fieldId,
-        StackBuffer stackBuffer) throws IOException, InterruptedException {
+        StackBuffer stackBuffer) throws Exception, InterruptedException {
 
         MiruTermId[][] allTermIds = new MiruTermId[length][];
         boolean missed = false;

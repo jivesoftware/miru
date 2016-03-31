@@ -19,5 +19,5 @@ public interface MiruUnreadTrackingIndex<BM extends IBM, IBM> {
 
     void applyUnread(MiruStreamId streamId, IBM unreadMask, StackBuffer stackBuffer) throws Exception;
 
-    void close();
+    void close() throws Exception;
 }

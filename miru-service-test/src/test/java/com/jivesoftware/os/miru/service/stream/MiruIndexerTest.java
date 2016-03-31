@@ -22,6 +22,7 @@ import com.jivesoftware.os.miru.service.IndexTestUtil;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.lang3.ArrayUtils;
 import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
 import org.roaringbitmap.buffer.MutableRoaringBitmap;
 import org.testng.annotations.DataProvider;
@@ -184,7 +185,17 @@ public class MiruIndexerTest {
             new MiruIndexLatest<>(),
             new MiruIndexPairedLatest<>());
 
-        MiruContext<MutableRoaringBitmap, ImmutableRoaringBitmap, ?> inMemoryContext = IndexTestUtil.buildInMemoryContext(4, bitmaps, coord);
+        return ArrayUtils.addAll(buildIndexContextDataProvider(tenantId, coord, bitmaps, miruIndexer, false),
+            buildIndexContextDataProvider(tenantId, coord, bitmaps, miruIndexer, true));
+    }
+
+    private Object[][] buildIndexContextDataProvider(MiruTenantId tenantId,
+        MiruPartitionCoord coord,
+        MiruBitmapsRoaringBuffer bitmaps,
+        MiruIndexer<MutableRoaringBitmap, ImmutableRoaringBitmap> miruIndexer,
+        boolean useLabIndexes) throws Exception {
+
+        MiruContext<MutableRoaringBitmap, ImmutableRoaringBitmap, ?> inMemoryContext = IndexTestUtil.buildInMemoryContext(4, useLabIndexes, bitmaps, coord);
 
         // Build in-memory index stream object
         MiruActivity miruActivity1 = buildMiruActivity(tenantId, 1, new String[] { "abcde" },
@@ -198,7 +209,7 @@ public class MiruIndexerTest {
             new MiruActivityAndId<>(miruActivity2, 1),
             new MiruActivityAndId<>(miruActivity3, 2));
 
-        MiruContext<MutableRoaringBitmap, ImmutableRoaringBitmap, ?> onDiskContext = IndexTestUtil.buildOnDiskContext(4, bitmaps, coord);
+        MiruContext<MutableRoaringBitmap, ImmutableRoaringBitmap, ?> onDiskContext = IndexTestUtil.buildOnDiskContext(4, useLabIndexes, bitmaps, coord);
 
         // Index initial activities
         miruIndexer.index(inMemoryContext,

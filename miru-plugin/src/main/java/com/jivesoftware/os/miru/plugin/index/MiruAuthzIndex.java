@@ -18,6 +18,6 @@ public interface MiruAuthzIndex<BM extends IBM, IBM> {
 
     void remove(String authz, StackBuffer stackBuffer, int... ids) throws Exception;
 
-    void close();
+    void close() throws Exception;
 
 }

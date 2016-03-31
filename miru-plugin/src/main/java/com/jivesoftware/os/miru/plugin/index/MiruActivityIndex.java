@@ -22,7 +22,7 @@ public interface MiruActivityIndex {
      * @param index the index of the activity
      * @return the activity at the given index
      */
-    TimeAndVersion get(String name, int index, StackBuffer stackBuffer) throws IOException, InterruptedException;
+    TimeAndVersion get(String name, int index, StackBuffer stackBuffer) throws Exception;
 
     /**
      * Get the terms from the given field for the activity at the requested index.
@@ -31,7 +31,7 @@ public interface MiruActivityIndex {
      * @param fieldId the field
      * @return the terms
      */
-    MiruTermId[] get(String name, int index, int fieldId, StackBuffer stackBuffer) throws IOException, InterruptedException;
+    MiruTermId[] get(String name, int index, int fieldId, StackBuffer stackBuffer) throws Exception;
 
     /**
      * Get the terms from the given field for each activity index.
@@ -40,7 +40,7 @@ public interface MiruActivityIndex {
      * @param fieldId the field
      * @return the terms
      */
-    MiruTermId[][] getAll(String name, int[] indexes, int fieldId, StackBuffer stackBuffer) throws IOException, InterruptedException;
+    MiruTermId[][] getAll(String name, int[] indexes, int fieldId, StackBuffer stackBuffer) throws Exception;
 
     /**
      * Get the values from the given property for the activity at the requested index.
@@ -73,7 +73,7 @@ public interface MiruActivityIndex {
         int offset,
         int length,
         int fieldId,
-        StackBuffer stackBuffer) throws IOException, InterruptedException;
+        StackBuffer stackBuffer) throws Exception;
 
     /**
      * Returns the index of the last activity.
@@ -100,7 +100,7 @@ public interface MiruActivityIndex {
      */
     void set(MiruSchema schema,
         Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds,
-        StackBuffer stackBuffer) throws IOException, InterruptedException;
+        StackBuffer stackBuffer) throws Exception;
 
     /**
      * Readies the index up to the provided index value.

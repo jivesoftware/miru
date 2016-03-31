@@ -12,7 +12,6 @@ import com.jivesoftware.os.amza.service.EmbeddedClientProvider;
 import com.jivesoftware.os.filer.chunk.store.transaction.TxCogs;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
-import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
@@ -124,6 +123,8 @@ public class MiruLocalHostedPartitionTest {
         }
     };
 
+    private boolean useLabIndexes = true;
+
     private MiruContextFactory<RCVSSipCursor> contextFactory;
     private MiruSipTrackerFactory<RCVSSipCursor> sipTrackerFactory;
     private MiruSchema schema;
@@ -165,14 +166,14 @@ public class MiruLocalHostedPartitionTest {
         HealthFactory.initialize(
             BindInterfaceToConfiguration::bindDefault,
             new HealthCheckRegistry() {
-                @Override
-                public void register(HealthChecker healthChecker) {
-                }
+            @Override
+            public void register(HealthChecker healthChecker) {
+            }
 
-                @Override
-                public void unregister(HealthChecker healthChecker) {
-                }
-            });
+            @Override
+            public void unregister(HealthChecker healthChecker) {
+            }
+        });
 
         MiruServiceConfig config = mock(MiruServiceConfig.class);
         when(config.getBitsetBufferSize()).thenReturn(32);
@@ -226,7 +227,8 @@ public class MiruLocalHostedPartitionTest {
             config.getPartitionNumberOfChunkStores(),
             config.getPartitionDeleteChunkStoreOnClose(),
             100,
-            1_000);
+            1_000,
+            useLabIndexes);
 
         MiruChunkAllocator diskContextAllocator = new OnDiskChunkAllocator(
             resourceLocator,
@@ -246,9 +248,9 @@ public class MiruLocalHostedPartitionTest {
             termComposer,
             activityInternExtern,
             ImmutableMap.<MiruBackingStorage, MiruChunkAllocator>builder()
-                .put(MiruBackingStorage.memory, hybridContextAllocator)
-                .put(MiruBackingStorage.disk, diskContextAllocator)
-                .build(),
+            .put(MiruBackingStorage.memory, hybridContextAllocator)
+            .put(MiruBackingStorage.disk, diskContextAllocator)
+            .build(),
             new RCVSSipIndexMarshaller(),
             resourceLocator,
             config.getPartitionAuthzCacheSize(),
@@ -257,7 +259,8 @@ public class MiruLocalHostedPartitionTest {
             new StripingLocksProvider<>(8),
             new PartitionErrorTracker(BindInterfaceToConfiguration.bindDefault(PartitionErrorTracker.PartitionErrorTrackerConfig.class)),
             termInterner,
-            mapper);
+            mapper,
+            true);
         sipTrackerFactory = new RCVSSipTrackerFactory();
 
         InMemoryRowColumnValueStoreInitializer inMemoryRowColumnValueStoreInitializer = new InMemoryRowColumnValueStoreInitializer();
@@ -407,7 +410,6 @@ public class MiruLocalHostedPartitionTest {
 
     @Test
     public void testQueryHandleOfflineMemMappedHotDeploy() throws Exception {
-        StackBuffer stackBuffer = new StackBuffer();
         MiruLocalHostedPartition<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSCursor, RCVSSipCursor> localHostedPartition =
             getRoaringLocalHostedPartition();
         walClient.writeActivity(tenantId, partitionId, Lists.newArrayList(
@@ -428,7 +430,7 @@ public class MiruLocalHostedPartitionTest {
         assertEquals(localHostedPartition.getState(), MiruPartitionState.offline);
         assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.disk);
 
-        try (MiruRequestHandle queryHandle = localHostedPartition.acquireQueryHandle(stackBuffer)) {
+        try (MiruRequestHandle queryHandle = localHostedPartition.acquireQueryHandle()) {
             assertEquals(queryHandle.getCoord(), coord);
             assertNotNull(queryHandle.getRequestContext()); // would throw exception if offline
         }
@@ -436,7 +438,6 @@ public class MiruLocalHostedPartitionTest {
 
     @Test(expectedExceptions = MiruPartitionUnavailableException.class)
     public void testQueryHandleOfflineMemoryException() throws Exception {
-        StackBuffer stackBuffer = new StackBuffer();
         MiruLocalHostedPartition<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSCursor, RCVSSipCursor> localHostedPartition =
             getRoaringLocalHostedPartition();
 
@@ -450,7 +451,7 @@ public class MiruLocalHostedPartitionTest {
         assertEquals(localHostedPartition.getState(), MiruPartitionState.offline);
         assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.memory);
 
-        try (MiruRequestHandle queryHandle = localHostedPartition.acquireQueryHandle(stackBuffer)) {
+        try (MiruRequestHandle queryHandle = localHostedPartition.acquireQueryHandle()) {
             queryHandle.getRequestContext(); // throws exception
         }
     }

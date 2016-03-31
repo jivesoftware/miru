@@ -140,7 +140,8 @@ public class MiruServiceInitializer {
             config.getPartitionNumberOfChunkStores(),
             config.getPartitionDeleteChunkStoreOnClose(),
             config.getPartitionInitialChunkCacheSize(),
-            config.getPartitionMaxChunkCacheSize());
+            config.getPartitionMaxChunkCacheSize(),
+            config.getUseLabIndexes());
 
         MiruChunkAllocator onDiskChunkAllocator = new OnDiskChunkAllocator(resourceLocator,
             byteBufferFactory,
@@ -182,7 +183,8 @@ public class MiruServiceInitializer {
             authzStripingLocksProvider,
             partitionErrorTracker,
             termInterner,
-            objectMapper);
+            objectMapper,
+            config.getUseLabIndexes());
 
         MiruPartitionHeartbeatHandler heartbeatHandler = new MiruPartitionHeartbeatHandler(clusterClient);
         MiruRebuildDirector rebuildDirector = new MiruRebuildDirector(config.getMaxRebuildActivityCount());

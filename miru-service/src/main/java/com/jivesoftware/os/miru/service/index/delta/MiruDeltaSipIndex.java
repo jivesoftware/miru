@@ -6,7 +6,6 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.plugin.index.MiruSipIndex;
 import com.jivesoftware.os.miru.service.index.Mergeable;
-import java.io.IOException;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -22,7 +21,7 @@ public class MiruDeltaSipIndex<S extends MiruSipCursor<S>> implements MiruSipInd
     }
 
     @Override
-    public Optional<S> getSip(StackBuffer stackBuffer) throws IOException, InterruptedException {
+    public Optional<S> getSip(StackBuffer stackBuffer) throws Exception, InterruptedException {
         S sip = sipReference.get();
         if (sip == null) {
             return backingIndex.getSip(stackBuffer);
@@ -31,7 +30,7 @@ public class MiruDeltaSipIndex<S extends MiruSipCursor<S>> implements MiruSipInd
     }
 
     @Override
-    public boolean setSip(final S sip, StackBuffer stackBuffer) throws IOException, InterruptedException {
+    public boolean setSip(final S sip, StackBuffer stackBuffer) throws Exception, InterruptedException {
         S existing = sipReference.get();
         if (existing == null) {
             existing = backingIndex.getSip(stackBuffer).orNull();

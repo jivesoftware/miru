@@ -65,7 +65,7 @@ public class MiruDeltaUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUn
     }
 
     @Override
-    public void close() {
+    public void close() throws Exception {
         backingIndex.close();
     }
 

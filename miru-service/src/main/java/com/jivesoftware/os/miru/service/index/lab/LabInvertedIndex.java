@@ -9,6 +9,7 @@ import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.filer.io.chunk.ChunkFiler;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
+import com.jivesoftware.os.lab.LABUtils;
 import com.jivesoftware.os.lab.api.ValueIndex;
 import com.jivesoftware.os.lab.api.ValueStream;
 import com.jivesoftware.os.lab.io.api.UIO;
@@ -96,7 +97,7 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
         BitmapAndLastId<BM>[] bitmapAndLastId = new BitmapAndLastId[1];
         lab.get(indexKeyBytes, (byte[] key, long timestamp, boolean tombstoned, long version, byte[] payload) -> {
             if (payload != null) {
-                bitmapAndLastId[0] = deser(bitmaps, trackError, payload, considerIfLastIdGreaterThanN, stackBuffer);
+                bitmapAndLastId[0] = deser(bitmaps, trackError, payload, considerIfLastIdGreaterThanN);
                 bytes.add(payload.length);
             }
             return true;
@@ -160,8 +161,7 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
     public static <BM extends IBM, IBM> BitmapAndLastId<BM> deser(MiruBitmaps<BM, IBM> bitmaps,
         TrackError trackError,
         byte[] bytes,
-        int considerIfLastIdGreaterThanN,
-        StackBuffer stackBuffer) throws IOException {
+        int considerIfLastIdGreaterThanN) throws IOException {
 
         if (bytes.length > LAST_ID_LENGTH + 4) {
             int lastId = UIO.bytesInt(bytes, 0);
@@ -181,13 +181,6 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
             }
         }
         return null;
-    }
-
-    public static int deserLastId(ChunkFiler filer) throws IOException {
-        if (filer.length() > LAST_ID_LENGTH) {
-            return filer.readInt();
-        }
-        return -1;
     }
 
     private BM getOrCreateIndex(StackBuffer stackBuffer) throws Exception {
@@ -215,13 +208,6 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
             stream.stream(indexKeyBytes, System.currentTimeMillis(), false, idProvider.nextId(), sizeAndBytes.bytes);
             return true;
         });
-
-        List<Future<Object>> futures = lab.commit(false);
-        if (futures != null) {
-            for (Future<Object> future : futures) {
-                future.get();
-            }
-        }
 
         LOG.inc("count>set>total");
         LOG.inc("count>set>" + name + ">total");

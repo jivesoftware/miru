@@ -49,20 +49,20 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
 
     public MiruFilerTimeIndex(Optional<TimeOrderAnomalyStream> timeOrderAnomalyStream,
         MiruFilerProvider<Long, Void> filerProvider,
-        KeyValueStore<Long, Integer> timestampToIndex,
-        StackBuffer stackBuffer)
+        KeyValueStore<Long, Integer> timestampToIndex)
         throws IOException, InterruptedException {
 
         this.filerProvider = filerProvider;
         this.timeOrderAnomalyStream = timeOrderAnomalyStream;
         this.timestampToIndex = timestampToIndex;
 
-        init(stackBuffer);
+        init();
     }
 
-    private void init(StackBuffer stackBuffer) throws IOException, InterruptedException {
+    private void init() throws IOException, InterruptedException {
         final AtomicBoolean initialized = new AtomicBoolean(false);
 
+        StackBuffer stackBuffer = new StackBuffer();
         //TODO consider using a custom CreateFiler in the KeyValueStore to handle the uninitialized case
         filerProvider.read(null, (monkey, filer, _stackBuffer, lock) -> {
             if (filer != null) {
@@ -204,26 +204,6 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
         return largestTimestamp;
     }
 
-    @Override
-    public long getTimestamp(final int id, StackBuffer stackBuffer) throws IOException, InterruptedException {
-        if (id >= timestampsLength) {
-            return 0L;
-        }
-        long ts = filerProvider.read(null, (monkey, filer, _stackBuffer, lock) -> {
-            long timestamp = 0L;
-            if (filer != null) {
-                synchronized (lock) {
-                    filer.seek(HEADER_SIZE_IN_BYTES + searchIndexSizeInBytes + id * timestampSize);
-                    timestamp = FilerIO.readLong(filer, "ts", _stackBuffer);
-                }
-            }
-            return timestamp;
-        }, stackBuffer);
-        log.inc("get>total");
-        log.inc("get>bytes", 8);
-        return ts;
-    }
-
     private long readTimestamp(Object lock, Filer filer, int id, StackBuffer stackBuffer) throws IOException {
         synchronized (lock) {
             filer.seek(HEADER_SIZE_IN_BYTES + searchIndexSizeInBytes + id * timestampSize);
@@ -316,20 +296,24 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
      */
     @Override
     public int getClosestId(final long timestamp, StackBuffer stackBuffer) throws IOException, InterruptedException {
-        try {
-            int i = filerProvider.read(null, (monkey, filer, _stackBuffer, lock) -> {
-                if (filer != null) {
-                    return readClosestId(lock, filer, timestamp, _stackBuffer);
-                }
-                return -1;
-            }, stackBuffer);
-            if (i < 0) {
-                i = -(i + 1);
-            }
-            return i;
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        if (timestamp <= smallestTimestamp) {
+            return 0;
+        } else if (timestamp == largestTimestamp) {
+            return lastId();
+        } else if (timestamp > largestTimestamp) {
+            return lastId() + 1;
         }
+
+        int i = filerProvider.read(null, (monkey, filer, _stackBuffer, lock) -> {
+            if (filer != null) {
+                return readClosestId(lock, filer, timestamp, _stackBuffer);
+            }
+            return -1;
+        }, stackBuffer);
+        if (i < 0) {
+            i = -(i + 1);
+        }
+        return i;
     }
 
     private int readClosestId(Object lock, Filer filer, long timestamp, StackBuffer stackBuffer) throws IOException {
@@ -465,11 +449,4 @@ public class MiruFilerTimeIndex implements MiruTimeIndex {
     public void close() {
     }
 
-    public static interface TimeOrderAnomalyStream {
-
-        void underflowOfSmallestTimestamp(long delta);
-
-        void underflowOfLargestTimestamp(long delta);
-
-    }
 }

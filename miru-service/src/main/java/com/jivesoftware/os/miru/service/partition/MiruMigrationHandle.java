@@ -20,9 +20,9 @@ public interface MiruMigrationHandle<BM extends IBM, IBM, C extends MiruCursor<C
 
     Optional<MiruContext<BM, IBM, S>> getContext();
 
-    void closePersistentContext(MiruContextFactory<S> contextFactory, MiruRebuildDirector rebuildDirector);
+    void closePersistentContext(MiruContextFactory<S> contextFactory, MiruRebuildDirector rebuildDirector) throws Exception;
 
-    void closeTransientContext(MiruContextFactory<S> contextFactory, MiruRebuildDirector rebuildDirector);
+    void closeTransientContext(MiruContextFactory<S> contextFactory, MiruRebuildDirector rebuildDirector) throws Exception;
 
     void merge(ExecutorService mergeExecutor, Optional<MiruContext<BM, IBM, S>> context, MiruMergeChits chits, TrackError trackError) throws Exception;
 

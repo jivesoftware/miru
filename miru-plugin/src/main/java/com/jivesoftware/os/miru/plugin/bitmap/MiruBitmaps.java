@@ -24,7 +24,6 @@ import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTxIndex;
 import java.io.DataInput;
 import java.io.DataOutput;
-import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 
@@ -130,7 +129,7 @@ public interface MiruBitmaps<BM extends IBM, IBM> {
     IBM buildIndexMask(int largestIndex, Optional<? extends IBM> andNotMask);
 
     IBM buildTimeRangeMask(MiruTimeIndex timeIndex, long smallestTimestamp, long largestTimestamp, StackBuffer stackBuffer) throws
-        IOException, InterruptedException;
+        Exception, InterruptedException;
 
     MiruIntIterator intIterator(IBM bitmap);
 

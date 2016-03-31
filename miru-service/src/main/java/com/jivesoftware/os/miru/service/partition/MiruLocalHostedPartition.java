@@ -210,8 +210,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
 
     private MiruPartitionAccessor<BM, IBM, C, S> open(MiruPartitionAccessor<BM, IBM, C, S> accessor,
         MiruPartitionState state,
-        MiruRebuildDirector.Token rebuildToken,
-        StackBuffer stackBuffer) throws Exception {
+        MiruRebuildDirector.Token rebuildToken) throws Exception {
 
         Optional<MiruContext<BM, IBM, S>> optionalPersistentContext = Optional.absent();
         Optional<MiruContext<BM, IBM, S>> optionalTransientContext = Optional.absent();
@@ -243,7 +242,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                             trackError.error("Non-additive schema change for persistent storage, fix schema and restart, or force rebuild to resolve");
                         }
                     }
-                    MiruContext<BM, IBM, S> context = contextFactory.allocate(bitmaps, schema, coord, MiruBackingStorage.disk, rebuildToken, stackBuffer);
+                    MiruContext<BM, IBM, S> context = contextFactory.allocate(bitmaps, schema, coord, MiruBackingStorage.disk, rebuildToken);
                     optionalPersistentContext = Optional.of(context);
                     refundPersistentChits = true;
                 }
@@ -255,7 +254,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                     optionalTransientContext = accessor.transientContext;
                 } else {
                     MiruSchema schema = contextFactory.lookupLatestSchema(coord.tenantId);
-                    MiruContext<BM, IBM, S> context = contextFactory.allocate(bitmaps, schema, coord, MiruBackingStorage.memory, rebuildToken, stackBuffer);
+                    MiruContext<BM, IBM, S> context = contextFactory.allocate(bitmaps, schema, coord, MiruBackingStorage.memory, rebuildToken);
                     optionalTransientContext = Optional.of(context);
                     refundTransientChits = true;
                 }
@@ -333,7 +332,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
     }
 
     @Override
-    public MiruRequestHandle<BM, IBM, S> acquireQueryHandle(StackBuffer stackBuffer) throws Exception {
+    public MiruRequestHandle<BM, IBM, S> acquireQueryHandle() throws Exception {
         heartbeatHandler.heartbeat(coord, Optional.<MiruPartitionCoordInfo>absent(), Optional.of(System.currentTimeMillis()));
 
         if (removed.get()) {
@@ -352,7 +351,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
         }
         if (accessor.canHotDeploy(checkPersistent)) {
             log.info("Hot deploying for query: {}", coord);
-            accessor = open(accessor, MiruPartitionState.online, null, stackBuffer);
+            accessor = open(accessor, MiruPartitionState.online, null);
         }
         return accessor.getRequestHandle(trackError);
     }
@@ -603,8 +602,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
         public void run() {
             try {
                 try {
-                    StackBuffer stackBuffer = new StackBuffer();
-                    checkActive(stackBuffer);
+                    checkActive();
                 } catch (MiruSchemaUnvailableException sue) {
                     log.warn("Tenant is active but schema not available for {}", coord.tenantId);
                     log.debug("Tenant is active but schema not available", sue);
@@ -616,7 +614,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
             }
         }
 
-        private void checkActive(StackBuffer stackBuffer) throws Exception {
+        private void checkActive() throws Exception {
             if (removed.get() || banUnregisteredSchema.get() >= System.currentTimeMillis()) {
                 return;
             }
@@ -671,11 +669,11 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                     if (accessor.hasPersistentStorage(checkPersistent)) {
                         if (!removed.get() && accessor.canHotDeploy(checkPersistent)) {
                             log.info("Hot deploying for checkActive: {}", coord);
-                            open(accessor, MiruPartitionState.online, null, stackBuffer);
+                            open(accessor, MiruPartitionState.online, null);
                         }
                     } else {
                         try {
-                            open(accessor, MiruPartitionState.bootstrap, null, stackBuffer);
+                            open(accessor, MiruPartitionState.bootstrap, null);
                         } catch (MiruPartitionUnavailableException e) {
                             log.warn("CheckActive: Partition is active for tenant {} but no schema is registered, banning for {} ms",
                                 coord.tenantId, timings.partitionBanUnregisteredSchemaMillis);
@@ -720,7 +718,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                         try {
                             if (state.isRebuildable()) {
                                 MiruPartitionState desiredState = state.transitionToRebuildingState();
-                                accessor = open(accessor, desiredState, token.get(), stackBuffer);
+                                accessor = open(accessor, desiredState, token.get());
                                 if (accessor.state != desiredState) {
                                     log.warn("Failed to transition to {} for {}", desiredState, coord);
                                     accessor = null;

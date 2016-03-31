@@ -80,7 +80,7 @@ public class MiruDeltaAuthzIndex<BM extends IBM, IBM> implements MiruAuthzIndex<
     }
 
     @Override
-    public void close() {
+    public void close() throws Exception {
         cache.clear();
         backingIndex.close();
     }

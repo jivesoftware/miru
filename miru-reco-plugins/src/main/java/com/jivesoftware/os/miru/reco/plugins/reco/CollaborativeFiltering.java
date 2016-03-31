@@ -27,7 +27,6 @@ import com.jivesoftware.os.miru.plugin.solution.MiruTermCount;
 import com.jivesoftware.os.miru.reco.plugins.reco.RecoAnswer.Recommendation;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -203,7 +202,7 @@ public class CollaborativeFiltering {
         MiruRequest<RecoQuery> request,
         MiruFieldDefinition fieldDefinition,
         MinMaxPriorityQueue<MiruTermCount> heap,
-        StackBuffer stackBuffer) throws IOException, InterruptedException {
+        StackBuffer stackBuffer) throws Exception, InterruptedException {
 
         MiruSchema schema = requestContext.getSchema();
         MiruTermComposer termComposer = requestContext.getTermComposer();

@@ -19,7 +19,6 @@ import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.service.stream.MiruContext;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import org.apache.commons.lang.RandomStringUtils;
@@ -55,21 +54,22 @@ public class MiruActivityIndexTest {
 
         StackBuffer stackBuffer = new StackBuffer();
         MiruTenantId tenantId = new MiruTenantId(RandomStringUtils.randomAlphabetic(10).getBytes());
-        MiruActivityIndex activityIndex = buildOnDiskActivityIndex();
-        List<MiruActivityAndId<MiruInternalActivity>> activityAndIds = Lists.newArrayList();
-        for (int i = 0; i < numberOfActivities; i++) {
-            activityAndIds.add(new MiruActivityAndId<>(buildLookupActivity(tenantId, i, new String[0], numberOfFields), i));
-        }
-        activityIndex.setAndReady(schema, activityAndIds, stackBuffer);
+        for (MiruActivityIndex activityIndex : Arrays.asList(buildOnDiskActivityIndex(false), buildOnDiskActivityIndex(true))) {
+            List<MiruActivityAndId<MiruInternalActivity>> activityAndIds = Lists.newArrayList();
+            for (int i = 0; i < numberOfActivities; i++) {
+                activityAndIds.add(new MiruActivityAndId<>(buildLookupActivity(tenantId, i, new String[0], numberOfFields), i));
+            }
+            activityIndex.setAndReady(schema, activityAndIds, stackBuffer);
 
-        for (int i = 0; i < numberOfActivities; i++) {
-            MiruActivityAndId<MiruInternalActivity> activityAndId = activityAndIds.get(i);
-            for (int j = 0; j < numberOfFields; j++) {
-                MiruFieldDefinition fieldDefinition = schema.getFieldDefinition(j);
-                MiruTermId[] termIds = activityIndex.get("test", i, j, stackBuffer);
-                assertNotNull(termIds);
-                assertEquals(termIds.length, 1);
-                assertEquals(termIds[0], termComposer.compose(schema, fieldDefinition, stackBuffer, activityAndId.activity.time + "-" + j));
+            for (int i = 0; i < numberOfActivities; i++) {
+                MiruActivityAndId<MiruInternalActivity> activityAndId = activityAndIds.get(i);
+                for (int j = 0; j < numberOfFields; j++) {
+                    MiruFieldDefinition fieldDefinition = schema.getFieldDefinition(j);
+                    MiruTermId[] termIds = activityIndex.get("test", i, j, stackBuffer);
+                    assertNotNull(termIds);
+                    assertEquals(termIds.length, 1);
+                    assertEquals(termIds[0], termComposer.compose(schema, fieldDefinition, stackBuffer, activityAndId.activity.time + "-" + j));
+                }
             }
         }
     }
@@ -125,7 +125,7 @@ public class MiruActivityIndexTest {
     }
 
     @Test(dataProvider = "miruActivityIndexDataProviderWithData")
-    public void testGetActivity(MiruActivityIndex miruActivityIndex, MiruInternalActivity[] expectedActivities) throws IOException, InterruptedException {
+    public void testGetActivity(MiruActivityIndex miruActivityIndex, MiruInternalActivity[] expectedActivities) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
         assertTrue(expectedActivities.length == 3);
         assertEquals(miruActivityIndex.get("test", 0, stackBuffer).timestamp, expectedActivities[0].time);
@@ -137,7 +137,7 @@ public class MiruActivityIndexTest {
     }
 
     @Test(dataProvider = "miruActivityIndexDataProviderWithData", expectedExceptions = IllegalArgumentException.class)
-    public void testGetActivityOverCapacity(MiruActivityIndex miruActivityIndex, MiruInternalActivity[] expectedActivities) throws IOException,
+    public void testGetActivityOverCapacity(MiruActivityIndex miruActivityIndex, MiruInternalActivity[] expectedActivities) throws Exception,
         InterruptedException {
         StackBuffer stackBuffer = new StackBuffer();
         miruActivityIndex.get("test", expectedActivities.length, stackBuffer); // This should throw an exception
@@ -145,12 +145,17 @@ public class MiruActivityIndexTest {
 
     @DataProvider(name = "miruActivityIndexDataProvider")
     public Object[][] miruActivityIndexDataProvider() throws Exception {
-        MiruActivityIndex hybridActivityIndex = buildInMemoryActivityIndex();
-        MiruActivityIndex onDiskActivityIndex = buildOnDiskActivityIndex();
+        MiruActivityIndex chunkInMemoryActivityIndex = buildInMemoryActivityIndex(false);
+        MiruActivityIndex chunkOnDiskActivityIndex = buildOnDiskActivityIndex(false);
+        MiruActivityIndex labInMemoryActivityIndex = buildInMemoryActivityIndex(true);
+        MiruActivityIndex labOnDiskActivityIndex = buildOnDiskActivityIndex(true);
 
         return new Object[][] {
-            { hybridActivityIndex, false },
-            { onDiskActivityIndex, false } };
+            { chunkInMemoryActivityIndex, false },
+            { chunkOnDiskActivityIndex, false },
+            { labInMemoryActivityIndex, false },
+            { labOnDiskActivityIndex, false },
+        };
     }
 
     @DataProvider(name = "miruActivityIndexDataProviderWithData")
@@ -163,36 +168,41 @@ public class MiruActivityIndexTest {
         MiruInternalActivity miruActivity3 = buildMiruActivity(tenantId, 3, new String[] { "abcde" }, 1);
         final MiruInternalActivity[] miruActivities = new MiruInternalActivity[] { miruActivity1, miruActivity2, miruActivity3 };
 
-        // Add activities to in-memory index
-        MiruActivityIndex hybridActivityIndex = buildInMemoryActivityIndex();
-        hybridActivityIndex.setAndReady(schema, Arrays.asList(
+        List<MiruActivityAndId<MiruInternalActivity>> activityAndIds = Arrays.asList(
             new MiruActivityAndId<>(miruActivity1, 0),
             new MiruActivityAndId<>(miruActivity2, 1),
-            new MiruActivityAndId<>(miruActivity3, 2)), stackBuffer);
+            new MiruActivityAndId<>(miruActivity3, 2));
 
-        MiruActivityIndex onDiskActivityIndex = buildOnDiskActivityIndex();
-        onDiskActivityIndex.setAndReady(schema, Arrays.asList(
-            new MiruActivityAndId<>(miruActivity1, 0),
-            new MiruActivityAndId<>(miruActivity2, 1),
-            new MiruActivityAndId<>(miruActivity3, 2)), stackBuffer);
+        // Add activities to in-memory index
+        MiruActivityIndex chunkInMemoryActivityIndex = buildInMemoryActivityIndex(false);
+        MiruActivityIndex labInMemoryActivityIndex = buildInMemoryActivityIndex(true);
+        chunkInMemoryActivityIndex.setAndReady(schema, activityAndIds, stackBuffer);
+        labInMemoryActivityIndex.setAndReady(schema, activityAndIds, stackBuffer);
+
+        MiruActivityIndex chunkOnDiskActivityIndex = buildOnDiskActivityIndex(false);
+        MiruActivityIndex labOnDiskActivityIndex = buildOnDiskActivityIndex(true);
+        chunkOnDiskActivityIndex.setAndReady(schema, activityAndIds, stackBuffer);
+        labOnDiskActivityIndex.setAndReady(schema, activityAndIds, stackBuffer);
 
         return new Object[][] {
-            { hybridActivityIndex, miruActivities },
-            { onDiskActivityIndex, miruActivities }
+            { chunkInMemoryActivityIndex, miruActivities },
+            { chunkOnDiskActivityIndex, miruActivities },
+            { labInMemoryActivityIndex, miruActivities },
+            { labOnDiskActivityIndex, miruActivities },
         };
     }
 
-    private MiruActivityIndex buildInMemoryActivityIndex() throws Exception {
+    private MiruActivityIndex buildInMemoryActivityIndex(boolean useLabIndexes) throws Exception {
         MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
         MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("logicalName"));
-        MiruContext<RoaringBitmap, RoaringBitmap, ?> hybridContext = buildInMemoryContext(4, bitmaps, coord);
+        MiruContext<RoaringBitmap, RoaringBitmap, ?> hybridContext = buildInMemoryContext(4, useLabIndexes, bitmaps, coord);
         return hybridContext.activityIndex;
     }
 
-    private MiruActivityIndex buildOnDiskActivityIndex() throws Exception {
+    private MiruActivityIndex buildOnDiskActivityIndex(boolean useLabIndexes) throws Exception {
         MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
         MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("logicalName"));
-        MiruContext<RoaringBitmap, RoaringBitmap, ?> hybridContext = buildOnDiskContext(4, bitmaps, coord);
+        MiruContext<RoaringBitmap, RoaringBitmap, ?> hybridContext = buildOnDiskContext(4, useLabIndexes, bitmaps, coord);
         return hybridContext.activityIndex;
     }
 
