@@ -22,6 +22,8 @@ import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruUnreadTrackingIndex;
 import com.jivesoftware.os.miru.service.index.Closeable;
 import com.jivesoftware.os.miru.service.index.Commitable;
+import com.jivesoftware.os.miru.service.index.Removable;
+import com.jivesoftware.os.miru.service.stream.MiruRebuildDirector.Token;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -57,6 +59,7 @@ public class MiruContext<BM extends IBM, IBM, S extends MiruSipCursor<S>> implem
     public final AtomicBoolean closed = new AtomicBoolean(false);
     public final Commitable commitable;
     public final Closeable closeable;
+    public final Removable removable;
 
     public MiruContext(MiruSchema schema,
         MiruTermComposer termComposer,
@@ -74,9 +77,9 @@ public class MiruContext<BM extends IBM, IBM, S extends MiruSipCursor<S>> implem
         ChunkStore[] chunkStores,
         LABEnvironment[] labEnvironments,
         MiruBackingStorage storage,
-        MiruRebuildDirector.Token rebuildToken,
+        Token rebuildToken,
         Commitable commitable,
-        Closeable closeable) {
+        Closeable closeable, Removable removable) {
         this.schema = schema;
         this.termComposer = termComposer;
         this.timeIndex = timeIndex;
@@ -96,6 +99,7 @@ public class MiruContext<BM extends IBM, IBM, S extends MiruSipCursor<S>> implem
         this.rebuildToken = rebuildToken;
         this.commitable = commitable;
         this.closeable = closeable;
+        this.removable = removable;
     }
 
     @Override
@@ -172,6 +176,16 @@ public class MiruContext<BM extends IBM, IBM, S extends MiruSipCursor<S>> implem
         int lastId = activityIndex.lastId(stackBuffer);
         lastDeltaMinId.set(deltaMinId.getAndSet(lastId));
         return lastId;
+    }
+
+    @Override
+    public boolean hasChunkStores() {
+        return chunkStores != null;
+    }
+
+    @Override
+    public boolean hasLabIndex() {
+        return labEnvironments != null;
     }
 
     public boolean isCorrupt() {

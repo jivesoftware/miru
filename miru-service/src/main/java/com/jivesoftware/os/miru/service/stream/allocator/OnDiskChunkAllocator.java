@@ -13,6 +13,7 @@ import com.jivesoftware.os.miru.service.locator.MiruResourcePartitionIdentifier;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.File;
+import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import org.apache.commons.lang.builder.HashCodeBuilder;
@@ -22,7 +23,7 @@ import org.apache.commons.lang.builder.HashCodeBuilder;
  */
 public class OnDiskChunkAllocator implements MiruChunkAllocator {
 
-    private static final MetricLogger log = MetricLoggerFactory.getLogger();
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final MiruResourceLocator resourceLocator;
     private final ByteBufferFactory cacheByteBufferFactory;
@@ -49,7 +50,7 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
     public static void main(String[] args) {
 
         int count = 3;
-        for (int hashCode : new int[]{-13, -7, -2, -1, 0, 1, 2, 7, 13}) {
+        for (int hashCode : new int[] { -13, -7, -2, -1, 0, 1, 2, 7, 13 }) {
             for (int shift = 0; shift < count; shift++) {
                 System.out.println("--- " + hashCode + ", " + shift);
                 for (int i = 0; i < count; i++) {
@@ -93,12 +94,12 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
                 }
             }
             if (!found) {
-                log.warn("Partition missing chunk {} for {}", i, coord);
+                LOG.warn("Partition missing chunk {} for {}", i, coord);
                 return false;
             }
         }
 
-        log.info("Partition has chunks on disk for {}", coord);
+        LOG.info("Partition has chunks on disk for {}", coord);
         return true;
     }
 
@@ -111,12 +112,12 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
             int directoryOffset = offset(hashCode, i, 0, baseDirs.length);
             File dir = new File(baseDirs[directoryOffset], "lab-" + i);
             if (!dir.exists()) {
-                log.warn("Partition missing lab {} for {}", i, coord);
+                LOG.warn("Partition missing lab {} for {}", i, coord);
                 return false;
             }
         }
 
-        log.info("Partition has labs on disk for {}", coord);
+        LOG.info("Partition has labs on disk for {}", coord);
         return true;
     }
 
@@ -181,6 +182,28 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
     }
 
     @Override
+    public void remove(ChunkStore[] chunkStores) {
+        for (ChunkStore chunkStore : chunkStores) {
+            try {
+                chunkStore.delete();
+            } catch (IOException e) {
+                LOG.warn("Failed to delete chunk store", e);
+            }
+        }
+    }
+
+    @Override
     public void close(LABEnvironment[] labEnvironments) {
+    }
+
+    @Override
+    public void remove(LABEnvironment[] labEnvironments) {
+        for (LABEnvironment labEnvironment : labEnvironments) {
+            try {
+                labEnvironment.delete();
+            } catch (IOException e) {
+                LOG.warn("Failed to delete lab", e);
+            }
+        }
     }
 }

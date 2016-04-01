@@ -1,10 +1,10 @@
 package com.jivesoftware.os.miru.plugin.context;
 
-import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
+import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruAuthzIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndexProvider;
@@ -49,4 +49,8 @@ public interface MiruRequestContext<BM extends IBM, IBM, S extends MiruSipCursor
     int getLastDeltaMinId();
 
     boolean isClosed();
+
+    boolean hasChunkStores();
+
+    boolean hasLabIndex();
 }

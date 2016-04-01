@@ -12,6 +12,7 @@ import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.shared.ResponseHelper;
 import java.util.concurrent.TimeUnit;
 import javax.inject.Singleton;
+import javax.ws.rs.Consumes;
 import javax.ws.rs.FormParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -66,11 +67,14 @@ public class MiruReaderConfigEndpoints {
     @POST
     @Path("/rebuild")
     @Produces(MediaType.TEXT_HTML)
-    public Response rebuild(@FormParam("days") int days) {
+    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+    public Response rebuild(@FormParam("days") int days,
+        @FormParam("chunkStores") boolean chunkStores,
+        @FormParam("labIndexes") boolean labIndexes) {
         try {
             long smallestTimestamp = timestampedOrderIdProvider.getApproximateId(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(days));
             MiruTimeRange miruTimeRange = new MiruTimeRange(smallestTimestamp, Long.MAX_VALUE);
-            boolean result = miruService.rebuildTimeRange(miruTimeRange);
+            boolean result = miruService.rebuildTimeRange(miruTimeRange, chunkStores, labIndexes);
             return Response.ok(result ? "success" : "failure").build();
         } catch (Throwable t) {
             log.error("Failed to rebuild for last {} days", new Object[] { days }, t);

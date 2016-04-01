@@ -237,14 +237,16 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
     }
 
     @Override
-    public boolean rebuildTimeRange(MiruTimeRange miruTimeRange) throws Exception {
+    public boolean rebuildTimeRange(MiruTimeRange miruTimeRange, boolean chunkStores, boolean labIndex) throws Exception {
         for (Map.Entry<MiruTenantId, MiruTenantTopology<?, ?>> entry : localTopologies.entrySet()) {
             MiruTenantTopology<?, ?> topology = entry.getValue();
             for (MiruLocalHostedPartition<?, ?, ?, ?> hostedPartition : entry.getValue().allPartitions()) {
                 MiruPartitionCoord coord = hostedPartition.getCoord();
                 try (MiruRequestHandle<?, ?, ?> handle = hostedPartition.acquireQueryHandle()) {
                     MiruTimeIndex timeIndex = handle.getRequestContext().getTimeIndex();
-                    if (timeIndex.intersects(miruTimeRange)) {
+                    boolean hasChunkStores = handle.getRequestContext().hasChunkStores();
+                    boolean hasLabIndex = handle.getRequestContext().hasLabIndex();
+                    if (timeIndex.intersects(miruTimeRange) && (chunkStores && hasChunkStores || labIndex && hasLabIndex)) {
                         LOG.info("Rebuild requested for {}", coord);
                         topology.rebuild(coord.partitionId);
                     }

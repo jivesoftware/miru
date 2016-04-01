@@ -25,7 +25,6 @@ import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.MiruStats;
-import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivityFactory;
 import com.jivesoftware.os.miru.api.activity.schema.DefaultMiruSchemaDefinition;
@@ -57,6 +56,7 @@ import com.jivesoftware.os.miru.plugin.partition.TrackError;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
 import com.jivesoftware.os.miru.service.locator.MiruTempDirectoryResourceLocator;
+import com.jivesoftware.os.miru.service.partition.PartitionErrorTracker.PartitionErrorTrackerConfig;
 import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
 import com.jivesoftware.os.miru.service.stream.MiruIndexAuthz;
 import com.jivesoftware.os.miru.service.stream.MiruIndexBloom;
@@ -87,8 +87,6 @@ import com.jivesoftware.os.routing.bird.health.api.HealthCheckRegistry;
 import com.jivesoftware.os.routing.bird.health.api.HealthChecker;
 import com.jivesoftware.os.routing.bird.health.api.HealthFactory;
 import java.io.File;
-import java.util.Collections;
-import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -100,7 +98,7 @@ import org.merlin.config.BindInterfaceToConfiguration;
 import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
 import org.roaringbitmap.buffer.MutableRoaringBitmap;
 import org.testng.Assert;
-import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import static org.mockito.Matchers.any;
@@ -122,8 +120,6 @@ public class MiruLocalHostedPartitionTest {
             return new MiruTermId(bytes);
         }
     };
-
-    private boolean useLabIndexes = true;
 
     private MiruContextFactory<RCVSSipCursor> contextFactory;
     private MiruSipTrackerFactory<RCVSSipCursor> sipTrackerFactory;
@@ -155,8 +151,7 @@ public class MiruLocalHostedPartitionTest {
     private MiruLocalHostedPartition.Timings timings;
     private long topologyIsStaleAfterMillis = TimeUnit.HOURS.toMillis(1);
 
-    @BeforeMethod
-    public void setUp() throws Exception {
+    public void init(boolean useLabIndexes) throws Exception {
         tenantId = new MiruTenantId("test".getBytes(Charsets.UTF_8));
         partitionId = MiruPartitionId.of(0);
         host = new MiruHost("logicalName");
@@ -166,14 +161,14 @@ public class MiruLocalHostedPartitionTest {
         HealthFactory.initialize(
             BindInterfaceToConfiguration::bindDefault,
             new HealthCheckRegistry() {
-            @Override
-            public void register(HealthChecker healthChecker) {
-            }
+                @Override
+                public void register(HealthChecker healthChecker) {
+                }
 
-            @Override
-            public void unregister(HealthChecker healthChecker) {
-            }
-        });
+                @Override
+                public void unregister(HealthChecker healthChecker) {
+                }
+            });
 
         MiruServiceConfig config = mock(MiruServiceConfig.class);
         when(config.getBitsetBufferSize()).thenReturn(32);
@@ -187,7 +182,9 @@ public class MiruLocalHostedPartitionTest {
         when(schemaProvider.getSchema(any(MiruTenantId.class))).thenReturn(schema);
 
         bitmaps = new MiruBitmapsRoaringBuffer();
-        trackError = new PartitionErrorTracker(BindInterfaceToConfiguration.bindDefault(PartitionErrorTracker.PartitionErrorTrackerConfig.class)).track(coord);
+
+        PartitionErrorTracker partitionErrorTracker = new PartitionErrorTracker(BindInterfaceToConfiguration.bindDefault(PartitionErrorTrackerConfig.class));
+        trackError = partitionErrorTracker.track(coord);
 
         indexer = new MiruIndexer<>(new MiruIndexAuthz<>(),
             new MiruIndexPrimaryFields<>(),
@@ -248,16 +245,16 @@ public class MiruLocalHostedPartitionTest {
             termComposer,
             activityInternExtern,
             ImmutableMap.<MiruBackingStorage, MiruChunkAllocator>builder()
-            .put(MiruBackingStorage.memory, hybridContextAllocator)
-            .put(MiruBackingStorage.disk, diskContextAllocator)
-            .build(),
+                .put(MiruBackingStorage.memory, hybridContextAllocator)
+                .put(MiruBackingStorage.disk, diskContextAllocator)
+                .build(),
             new RCVSSipIndexMarshaller(),
             resourceLocator,
             config.getPartitionAuthzCacheSize(),
             new StripingLocksProvider<>(8),
             new StripingLocksProvider<>(8),
             new StripingLocksProvider<>(8),
-            new PartitionErrorTracker(BindInterfaceToConfiguration.bindDefault(PartitionErrorTracker.PartitionErrorTrackerConfig.class)),
+            partitionErrorTracker,
             termInterner,
             mapper,
             true,
@@ -332,8 +329,18 @@ public class MiruLocalHostedPartitionTest {
 
     }
 
-    @Test
-    public void testBootstrapToOnline() throws Exception {
+    @DataProvider(name = "useLabIndexes")
+    public Object[][] useLabIndexesDataProvider() {
+        return new Object[][] {
+            { false },
+            { true }
+        };
+    }
+
+    @Test(dataProvider = "useLabIndexes")
+    public void testBootstrapToOnline(boolean useLabIndexes) throws Exception {
+        init(useLabIndexes);
+
         MiruLocalHostedPartition<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSCursor, RCVSSipCursor> localHostedPartition =
             getRoaringLocalHostedPartition();
 
@@ -354,8 +361,10 @@ public class MiruLocalHostedPartitionTest {
 
     }
 
-    @Test
-    public void testBootstrapToOnlineToUpgradeToOnline() throws Exception {
+    @Test(dataProvider = "useLabIndexes")
+    public void testBootstrapToOnlineToUpgradeToOnline(boolean useLabIndexes) throws Exception {
+        init(useLabIndexes);
+
         MiruLocalHostedPartition<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSCursor, RCVSSipCursor> localHostedPartition =
             getRoaringLocalHostedPartition();
 
@@ -392,8 +401,10 @@ public class MiruLocalHostedPartitionTest {
 
     }
 
-    @Test
-    public void testInactiveToOffline() throws Exception {
+    @Test(dataProvider = "useLabIndexes")
+    public void testInactiveToOffline(boolean useLabIndexes) throws Exception {
+        init(useLabIndexes);
+
         MiruLocalHostedPartition<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSCursor, RCVSSipCursor> localHostedPartition =
             getRoaringLocalHostedPartition();
 
@@ -409,8 +420,10 @@ public class MiruLocalHostedPartitionTest {
         assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.disk);
     }
 
-    @Test
-    public void testQueryHandleOfflineMemMappedHotDeploy() throws Exception {
+    @Test(dataProvider = "useLabIndexes")
+    public void testQueryHandleOfflineMemMappedHotDeploy(boolean useLabIndexes) throws Exception {
+        init(useLabIndexes);
+
         MiruLocalHostedPartition<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSCursor, RCVSSipCursor> localHostedPartition =
             getRoaringLocalHostedPartition();
         walClient.writeActivity(tenantId, partitionId, Lists.newArrayList(
@@ -437,8 +450,10 @@ public class MiruLocalHostedPartitionTest {
         }
     }
 
-    @Test(expectedExceptions = MiruPartitionUnavailableException.class)
-    public void testQueryHandleOfflineMemoryException() throws Exception {
+    @Test(expectedExceptions = MiruPartitionUnavailableException.class, dataProvider = "useLabIndexes")
+    public void testQueryHandleOfflineMemoryException(boolean useLabIndexes) throws Exception {
+        init(useLabIndexes);
+
         MiruLocalHostedPartition<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSCursor, RCVSSipCursor> localHostedPartition =
             getRoaringLocalHostedPartition();
 
@@ -457,8 +472,10 @@ public class MiruLocalHostedPartitionTest {
         }
     }
 
-    @Test
-    public void testInactiveFinishesRebuilding() throws Exception {
+    @Test(dataProvider = "useLabIndexes")
+    public void testInactiveFinishesRebuilding(boolean useLabIndexes) throws Exception {
+        init(useLabIndexes);
+
         MiruLocalHostedPartition<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSCursor, RCVSSipCursor> localHostedPartition =
             getRoaringLocalHostedPartition();
 
@@ -481,8 +498,10 @@ public class MiruLocalHostedPartitionTest {
         assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.disk);
     }
 
-    @Test
-    public void testRemove() throws Exception {
+    @Test(dataProvider = "useLabIndexes")
+    public void testRemove(boolean useLabIndexes) throws Exception {
+        init(useLabIndexes);
+
         MiruLocalHostedPartition<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSCursor, RCVSSipCursor> localHostedPartition =
             getRoaringLocalHostedPartition();
 
@@ -497,8 +516,10 @@ public class MiruLocalHostedPartitionTest {
         assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.disk);
     }
 
-    @Test
-    public void testSchemaNotRegistered_checkActive() throws Exception {
+    @Test(dataProvider = "useLabIndexes")
+    public void testSchemaNotRegistered_checkActive(boolean useLabIndexes) throws Exception {
+        init(useLabIndexes);
+
         when(schemaProvider.getSchema(any(MiruTenantId.class))).thenThrow(new MiruSchemaUnvailableException("test"));
         MiruLocalHostedPartition<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSCursor, RCVSSipCursor> localHostedPartition =
             getRoaringLocalHostedPartition();
@@ -509,14 +530,16 @@ public class MiruLocalHostedPartitionTest {
         setActive(true);
         waitForRef(bootstrapRunnable).run(); // enters bootstrap
         waitForRef(rebuildIndexRunnable).run(); // stays bootstrap
-        waitForRef(sipMigrateIndexRunnable).run(); // stays bootstrap
+        waitForRef(sipMigrateIndexRunnable).run(); // stays bootstrapt
 
         assertEquals(localHostedPartition.getState(), MiruPartitionState.bootstrap);
         assertEquals(localHostedPartition.getStorage(), defaultStorage);
     }
 
-    @Test
-    public void testSchemaRegisteredLate() throws Exception {
+    @Test(dataProvider = "useLabIndexes")
+    public void testSchemaRegisteredLate(boolean useLabIndexes) throws Exception {
+        init(useLabIndexes);
+
         when(schemaProvider.getSchema(any(MiruTenantId.class))).thenThrow(new MiruSchemaUnvailableException("test"));
         MiruLocalHostedPartition<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSCursor, RCVSSipCursor> localHostedPartition =
             getRoaringLocalHostedPartition();
@@ -568,22 +591,6 @@ public class MiruLocalHostedPartitionTest {
     private void setDestroyed() throws Exception {
         clusterRegistry.destroyPartition(tenantId, partitionId);
         partitionEventHandler.thumpthump(host);
-    }
-
-    private void indexNormalActivity(MiruLocalHostedPartition localHostedPartition) throws Exception {
-        localHostedPartition.index(Lists.newArrayList(
-            factory.activity(1, partitionId, 0, new MiruActivity(
-                tenantId, System.currentTimeMillis(), new String[0], 0,
-                Collections.<String, List<String>>emptyMap(),
-                Collections.<String, List<String>>emptyMap()))
-        ).iterator());
-    }
-
-    private void indexBoundaryActivity(MiruLocalHostedPartition localHostedPartition) throws Exception {
-        localHostedPartition.index(Lists.newArrayList(
-            factory.begin(1, partitionId, tenantId, 0),
-            factory.end(1, partitionId, tenantId, 0)
-        ).iterator());
     }
 
     private <T extends Runnable> void captureRunnable(ScheduledExecutorService scheduledExecutor, final AtomicReference<T> ref, Class<T> runnableClass) {
