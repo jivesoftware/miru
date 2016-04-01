@@ -30,8 +30,8 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
     private final int partitionInitialChunkCacheSize;
     private final int partitionMaxChunkCacheSize;
     private final ChunkStoreInitializer chunkStoreInitializer = new ChunkStoreInitializer();
-    private final ExecutorService buildLABCompactorThreadPool = LABEnvironment.buildLABCompactorThreadPool(12);
-    private final ExecutorService buildLABDestroyThreadPool = LABEnvironment.buildLABDestroyThreadPool(12);
+    private final ExecutorService buildLABCompactorThreadPool = LABEnvironment.buildLABCompactorThreadPool(12); // TODO config
+    private final ExecutorService buildLABDestroyThreadPool = LABEnvironment.buildLABDestroyThreadPool(12); // TODO config
 
     public OnDiskChunkAllocator(
         MiruResourceLocator resourceLocator,
@@ -49,7 +49,7 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
     public static void main(String[] args) {
 
         int count = 3;
-        for (int hashCode : new int[] { -13, -7, -2, -1, 0, 1, 2, 7, 13 }) {
+        for (int hashCode : new int[]{-13, -7, -2, -1, 0, 1, 2, 7, 13}) {
             for (int shift = 0; shift < count; shift++) {
                 System.out.println("--- " + hashCode + ", " + shift);
                 for (int i = 0; i < count; i++) {
