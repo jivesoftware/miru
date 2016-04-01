@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.service.index;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
@@ -15,9 +16,11 @@ import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
+import com.jivesoftware.os.miru.service.index.delta.MiruDeltaFieldIndex;
 import com.jivesoftware.os.miru.service.stream.MiruContext;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import org.apache.commons.lang3.ArrayUtils;
 import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
 import org.roaringbitmap.buffer.MutableRoaringBitmap;
@@ -79,6 +82,25 @@ public class MiruFieldIndexTest {
         assertEquals(actual, expected);
     }
 
+    @Test(dataProvider = "miruIndexDataProviderWithData")
+    public <BM extends IBM, IBM> void testStreamTermIds(MiruBitmaps<BM, IBM> bitmaps,
+        MiruFieldIndex<BM, IBM> miruFieldIndex,
+        List<Integer> expected,
+        MiruBackingStorage miruBackingStorage)
+        throws Exception {
+        StackBuffer stackBuffer = new StackBuffer();
+        byte[] key = "term1".getBytes();
+
+        Set<MiruTermId> found = Sets.newHashSet();
+        miruFieldIndex.streamTermIdsForField("test", 0, null, termId -> {
+            found.add(termId);
+            return true;
+        }, stackBuffer);
+
+        assertEquals(found.size(), 1);
+        assertTrue(found.contains(new MiruTermId(key)));
+    }
+
     @DataProvider(name = "miruIndexDataProvider")
     public Object[][] miruIndexDataProvider() throws Exception {
         MiruBitmapsRoaringBuffer bitmaps = new MiruBitmapsRoaringBuffer();
@@ -124,10 +146,18 @@ public class MiruFieldIndexTest {
             MiruFieldType.primary);
         miruHybridFieldIndex.append(0, new MiruTermId("term1".getBytes()), new int[] { 1, 2, 3 }, null, stackBuffer);
 
+        for (Mergeable mergeable : ((MiruDeltaFieldIndex<MutableRoaringBitmap, ImmutableRoaringBitmap>) miruHybridFieldIndex).getMergeables()) {
+            mergeable.merge(null, stackBuffer);
+        }
+
         MiruContext<MutableRoaringBitmap, ImmutableRoaringBitmap, ?> onDiskContext = buildOnDiskContext(4, useLabIndexes, bitmaps, coord);
         MiruFieldIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> miruOnDiskFieldIndex = onDiskContext.fieldIndexProvider.getFieldIndex(
             MiruFieldType.primary);
         miruOnDiskFieldIndex.append(0, new MiruTermId("term1".getBytes()), new int[] { 1, 2, 3 }, null, stackBuffer);
+
+        for (Mergeable mergeable : ((MiruDeltaFieldIndex<MutableRoaringBitmap, ImmutableRoaringBitmap>) miruOnDiskFieldIndex).getMergeables()) {
+            mergeable.merge(null, stackBuffer);
+        }
 
         return new Object[][] {
             { bitmaps, miruHybridFieldIndex, Arrays.asList(1, 2, 3), MiruBackingStorage.memory },

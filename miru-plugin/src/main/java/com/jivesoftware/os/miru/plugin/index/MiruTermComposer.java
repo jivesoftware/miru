@@ -262,7 +262,7 @@ public class MiruTermComposer {
         }
     }
 
-    private void makeUpperExclusive(byte[] raw) {
+    public static void makeUpperExclusive(byte[] raw) {
         for (int i = raw.length - 1; i >= 0; i--) {
             if (raw[i] == Byte.MAX_VALUE) {
                 raw[i] = Byte.MIN_VALUE;
