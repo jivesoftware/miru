@@ -69,15 +69,16 @@ public class MiruReaderConfigEndpoints {
     @Produces(MediaType.TEXT_HTML)
     @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
     public Response rebuild(@FormParam("days") int days,
+        @FormParam("hotDeploy") boolean hotDeploy,
         @FormParam("chunkStores") boolean chunkStores,
         @FormParam("labIndexes") boolean labIndexes) {
         try {
             long smallestTimestamp = timestampedOrderIdProvider.getApproximateId(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(days));
             MiruTimeRange miruTimeRange = new MiruTimeRange(smallestTimestamp, Long.MAX_VALUE);
-            boolean result = miruService.rebuildTimeRange(miruTimeRange, chunkStores, labIndexes);
+            boolean result = miruService.rebuildTimeRange(miruTimeRange, hotDeploy, chunkStores, labIndexes);
             return Response.ok(result ? "success" : "failure").build();
         } catch (Throwable t) {
-            log.error("Failed to rebuild for last {} days", new Object[] { days }, t);
+            log.error("Failed to rebuild({}, {}, {}, {})", new Object[] { days, hotDeploy, chunkStores, labIndexes }, t);
             return Response.serverError().build();
         }
     }

@@ -12,7 +12,12 @@
         <div class="panel-heading">Rebuild</div>
         <div class="panel-body">
             <label for="days">Rebuild all partitions written in the past N days</label>
+            <br/>
             <input type="number" min="1" max="65536" autocomplete="off" placeholder="Number of days" value="" name="days" id="days" title="" style="width:200px;">
+            {sp}
+            <input type="checkbox" autocomplete="off" value="true" name="hotDeploy" id="hotDeploy">
+            {sp}
+            <label for="hotDeploy">Hot deploy when offline</label>
             {sp}
             <input type="checkbox" autocomplete="off" value="true" name="chunkStores" id="chunkStores">
             {sp}
@@ -22,7 +27,7 @@
             {sp}
             <label for="labIndexes">Rebuild lab indexes</label>
             {sp}
-            <input type="submit" value="Rebuild" onclick="miru.partitions.rebuild(this)">
+            <input type="button" value="Rebuild" onclick="miru.partitions.rebuild(this)">
         </div>
     </div>
 

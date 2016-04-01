@@ -332,7 +332,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
     }
 
     @Override
-    public MiruRequestHandle<BM, IBM, S> acquireQueryHandle() throws Exception {
+    public MiruRequestHandle<BM, IBM, S> acquireQueryHandle(boolean hotDeploy) throws Exception {
         heartbeatHandler.heartbeat(coord, Optional.<MiruPartitionCoordInfo>absent(), Optional.of(System.currentTimeMillis()));
 
         if (removed.get()) {
@@ -349,7 +349,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                 throw new MiruPartitionUnavailableException("Partition is outdated");
             }
         }
-        if (accessor.canHotDeploy(checkPersistent)) {
+        if (hotDeploy && accessor.canHotDeploy(checkPersistent)) {
             log.info("Hot deploying for query: {}", coord);
             accessor = open(accessor, MiruPartitionState.online, null);
         }
@@ -1134,6 +1134,11 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                 log.inc("sip>partition>" + coord.partitionId, count, coord.tenantId.toString());
             }
             if (initialCount > 0) {
+                if (initialCount > count * 2 && accessor.persistentContext.isPresent()) {
+                    MiruContext<BM, IBM, S> context = accessor.persistentContext.get();
+                    log.warn("Partition skipped over half a batch for {} while sipping, hasChunkStores={} hasLabIndex={} lastId={} cursor={} nextCursor={}",
+                        coord, context.hasChunkStores(), context.hasLabIndex(), context.timeIndex.lastId(), sipCursor, nextSipCursor);
+                }
                 log.inc("sip>count>skip", (initialCount - count));
             }
             return suggestion;

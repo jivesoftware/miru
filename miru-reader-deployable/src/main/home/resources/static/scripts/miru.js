@@ -10,6 +10,7 @@ miru.resetButton = function ($button, value) {
 miru.partitions = {
     rebuild: function (ele) {
         var days = $('#days').val();
+        var hotDeploy = $('#hotDeploy').is(':checked');
         var chunkStores = $('#chunkStores').is(':checked');
         var labIndexes = $('#labIndexes').is(':checked');
 
@@ -21,6 +22,7 @@ miru.partitions = {
             url: "/miru/config/rebuild",
             data: {
                 "days": days,
+                "hotDeploy": hotDeploy,
                 "chunkStores": chunkStores,
                 "labIndexes": labIndexes
             },
