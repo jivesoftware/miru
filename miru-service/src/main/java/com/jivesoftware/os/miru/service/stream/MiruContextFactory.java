@@ -353,7 +353,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                     TxNamedMapOfFiler.CHUNK_FILER_OPENER,
                     TxNamedMapOfFiler.OVERWRITE_GROWER_PROVIDER,
                     TxNamedMapOfFiler.REWRITE_GROWER_PROVIDER),
-                new byte[] { 0 },
+                new byte[]{0},
                 new Object()),
             new MiruDeltaInvertedIndex.Delta<>());
 
@@ -424,6 +424,9 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             storage,
             rebuildToken,
             () -> {
+            },
+            () -> {
+                getAllocator(storage).close(chunkStores);
             });
 
         context.markStartOfDelta(new StackBuffer());
@@ -504,7 +507,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                 hasCardinalities[fieldDefinition.fieldId] = fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.cardinality);
             }
 
-            byte[] prefix = { (byte) fieldType.getIndex() };
+            byte[] prefix = {(byte) fieldType.getIndex()};
             fieldIndexes[fieldType.getIndex()] = new MiruDeltaFieldIndex<>(
                 bitmaps,
                 trackError,
@@ -546,7 +549,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                 idProvider,
                 bitmaps,
                 trackError,
-                new byte[] { (byte) -1 },
+                new byte[]{(byte) -1},
                 termIndexes,
                 streamStripingLocksProvider));
 
@@ -557,7 +560,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                 idProvider,
                 bitmaps,
                 trackError,
-                new byte[] { (byte) -2 },
+                new byte[]{(byte) -2},
                 termIndexes,
                 streamStripingLocksProvider));
 
@@ -576,7 +579,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                 idProvider,
                 bitmaps,
                 trackError,
-                new byte[] { (byte) -3 },
+                new byte[]{(byte) -3},
                 termIndexes,
                 miruAuthzCache,
                 authzStripingLocksProvider));
@@ -619,6 +622,12 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                 for (ValueIndex valueIndex : commitables) {
                     valueIndex.commit(fsyncOnCommit);
                 }
+            },
+            () -> {
+                for (ValueIndex valueIndex : commitables) {
+                    valueIndex.close();
+                }
+                getAllocator(storage).close(labEnvironments);
             });
 
         context.markStartOfDelta(new StackBuffer());
@@ -755,14 +764,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         context.timeIndex.close();
         context.unreadTrackingIndex.close();
         context.inboxIndex.close();
-
-        if (context.chunkStores != null) {
-            getAllocator(context.storage).close(context.chunkStores);
-        }
-
-        if (context.labEnvironments != null) {
-            getAllocator(context.storage).close(context.labEnvironments);
-        }
+        context.closeable.close();
 
     }
 
