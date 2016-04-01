@@ -20,15 +20,15 @@ public class KeyValueRawhide implements Rawhide {
     }
 
     @Override
-    public boolean streamRawEntry(ValueStream stream, byte[] rawEntry, int offset) throws Exception {
+    public boolean streamRawEntry(ValueStream stream, int index, byte[] rawEntry, int offset) throws Exception {
         if (rawEntry == null) {
-            return stream.stream(null, -1, false, -1, null);
+            return stream.stream(index, null, -1, false, -1, null);
         }
         int o = offset;
         byte[] key = LABUtils.readByteArray(rawEntry, o);
         o += 4 + (key != null ? key.length : 0);
         byte[] payload = LABUtils.readByteArray(rawEntry, o);
-        return stream.stream(key, 0, false, 0, payload);
+        return stream.stream(index, key, 0, false, 0, payload);
     }
 
     @Override

@@ -41,7 +41,7 @@ public class LabSipIndex<S extends MiruSipCursor<S>> implements MiruSipIndex<S> 
     public Optional<S> getSip(StackBuffer stackBuffer) throws Exception {
         S sip = sipReference.get();
         if (sip == null && !absent.get()) {
-            valueIndex.get(key, (byte[] key1, long timestamp, boolean tombstoned, long version, byte[] payload) -> {
+            valueIndex.get(key, (int index, byte[] key1, long timestamp, boolean tombstoned, long version, byte[] payload) -> {
                 if (payload != null && !tombstoned) {
                     try {
                         sipReference.set(marshaller.fromFiler(new ByteArrayFiler(payload), stackBuffer));
@@ -63,7 +63,7 @@ public class LabSipIndex<S extends MiruSipCursor<S>> implements MiruSipIndex<S> 
     }
 
     @Override
-    public boolean setSip(final S sip, StackBuffer stackBuffer) throws Exception, InterruptedException {
+    public boolean setSip(final S sip, StackBuffer stackBuffer) throws Exception {
         ByteArrayFiler filer = new ByteArrayFiler();
         S existingSip = getSip(stackBuffer).orNull();
         while (existingSip == null || sip.compareTo(existingSip) > 0) {
@@ -71,7 +71,7 @@ public class LabSipIndex<S extends MiruSipCursor<S>> implements MiruSipIndex<S> 
                 try {
                     marshaller.toFiler(filer, sip, stackBuffer);
                     valueIndex.append((ValueStream stream) -> {
-                        stream.stream(key, System.currentTimeMillis(), false, idProvider.nextId(), filer.getBytes());
+                        stream.stream(-1, key, System.currentTimeMillis(), false, idProvider.nextId(), filer.getBytes());
                         return true;
                     }, true);
 

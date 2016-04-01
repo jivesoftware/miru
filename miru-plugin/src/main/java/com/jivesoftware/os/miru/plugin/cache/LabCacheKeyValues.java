@@ -41,18 +41,23 @@ public class LabCacheKeyValues implements CacheKeyValues {
         }
 
         for (int stripe = 0; stripe < stripeKeyBytes.length; stripe++) {
-            byte[][] keysBytes = stripeKeyBytes[stripe];
-            if (keysBytes != null) {
-                for (int i = 0; i < keysBytes.length; i++) {
-                    byte[] keyBytes = keysBytes[i];
-                    if (keyBytes != null) {
-                        int index = i;
-                        indexes[stripe].get(keyBytes, (key, timestamp, tombstoned, version, payload) -> {
-                            stream.stream(index, keys[index], tombstoned ? null : payload);
-                            return false;
-                        });
-                    }
-                }
+            byte[][] keyBytes = stripeKeyBytes[stripe];
+            if (keyBytes != null) {
+                indexes[stripe].get(
+                    keyStream -> {
+                        for (int i = 0; i < keyBytes.length; i++) {
+                            byte[] key = keyBytes[i];
+                            if (key != null) {
+                                if (!keyStream.key(i, key, 0, key.length)) {
+                                    return false;
+                                }
+                            }
+                        }
+                        return true;
+                    },
+                    (index, key, timestamp, tombstoned, version, payload) -> {
+                        return stream.stream(index, keys[index], tombstoned ? null : payload);
+                    });
             }
         }
         return true;
@@ -83,7 +88,7 @@ public class LabCacheKeyValues implements CacheKeyValues {
                     for (int i = 0; i < keysBytes.length; i++) {
                         byte[] keyBytes = keysBytes[i];
                         if (keyBytes != null) {
-                            stream.stream(keyBytes, timestamp, false, version, values[i]);
+                            stream.stream(-1, keyBytes, timestamp, false, version, values[i]);
                         }
                     }
                     return true;

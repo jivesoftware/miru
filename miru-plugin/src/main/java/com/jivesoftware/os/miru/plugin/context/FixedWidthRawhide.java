@@ -26,15 +26,15 @@ public class FixedWidthRawhide implements Rawhide {
     }
 
     @Override
-    public boolean streamRawEntry(ValueStream stream, byte[] rawEntry, int offset) throws Exception {
+    public boolean streamRawEntry(ValueStream stream, int index, byte[] rawEntry, int offset) throws Exception {
         if (rawEntry == null) {
-            return stream.stream(null, -1, false, -1, null);
+            return stream.stream(index, null, -1, false, -1, null);
         }
         byte[] key = new byte[keyLength];
         UIO.readBytes(rawEntry, 0, key);
         byte[] payload = new byte[payloadLength];
         UIO.readBytes(rawEntry, keyLength, payload);
-        return stream.stream(key, 0, false, 0, payload);
+        return stream.stream(index, key, 0, false, 0, payload);
     }
 
     @Override
