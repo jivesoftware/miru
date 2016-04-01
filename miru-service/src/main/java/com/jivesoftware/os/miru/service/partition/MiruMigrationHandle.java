@@ -20,7 +20,7 @@ public interface MiruMigrationHandle<BM extends IBM, IBM, C extends MiruCursor<C
 
     Optional<MiruContext<BM, IBM, S>> getContext();
 
-    void closeAll(MiruContextFactory<S> contextFactory) throws Exception;
+    void closePersistent(MiruContextFactory<S> contextFactory) throws Exception;
 
     void closeTransient(MiruContextFactory<S> contextFactory) throws Exception;
 

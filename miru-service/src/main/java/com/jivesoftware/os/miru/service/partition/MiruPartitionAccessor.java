@@ -725,10 +725,9 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
             }
 
             @Override
-            public void closeAll(MiruContextFactory<S> contextFactory) throws Exception {
+            public void closePersistent(MiruContextFactory<S> contextFactory) throws Exception {
                 MiruPartitionAccessor.this.markClosed();
                 MiruPartitionAccessor.this.closeImmediate(contextFactory, persistentContext);
-                MiruPartitionAccessor.this.closeImmediate(contextFactory, transientContext);
             }
 
             @Override
