@@ -120,8 +120,8 @@ public class MiruClusterPartitionDirector implements MiruPartitionDirector {
     }
 
     @Override
-    public boolean rebuildTimeRange(MiruTimeRange miruTimeRange, boolean chunkStores, boolean labIndex) throws Exception {
-        return expectedTenants.rebuildTimeRange(miruTimeRange, chunkStores, labIndex);
+    public boolean rebuildTimeRange(MiruTimeRange miruTimeRange, boolean hotDeploy, boolean chunkStores, boolean labIndex) throws Exception {
+        return expectedTenants.rebuildTimeRange(miruTimeRange, hotDeploy, chunkStores, labIndex);
     }
 
     @Override

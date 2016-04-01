@@ -32,7 +32,7 @@ public interface MiruPartitionDirector {
 
     boolean prioritizeRebuild(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
 
-    boolean rebuildTimeRange(MiruTimeRange miruTimeRange, boolean chunkStores, boolean labIndex) throws Exception;
+    boolean rebuildTimeRange(MiruTimeRange miruTimeRange, boolean hotDeploy, boolean chunkStores, boolean labIndex) throws Exception;
 
     boolean expectedTopologies(Optional<MiruTenantId> tenantId, CoordinateStream stream) throws Exception;
 

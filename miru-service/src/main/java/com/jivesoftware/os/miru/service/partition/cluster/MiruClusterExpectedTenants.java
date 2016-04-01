@@ -23,6 +23,8 @@ import com.jivesoftware.os.miru.api.topology.MiruPartitionActiveUpdate;
 import com.jivesoftware.os.miru.api.topology.MiruTenantTopologyUpdate;
 import com.jivesoftware.os.miru.api.topology.MiruTopologyPartition;
 import com.jivesoftware.os.miru.api.topology.MiruTopologyResponse;
+import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
+import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.partition.MiruQueryablePartition;
 import com.jivesoftware.os.miru.plugin.partition.MiruRoutablePartition;
@@ -237,17 +239,19 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
     }
 
     @Override
-    public boolean rebuildTimeRange(MiruTimeRange miruTimeRange, boolean chunkStores, boolean labIndex) throws Exception {
+    public boolean rebuildTimeRange(MiruTimeRange miruTimeRange, boolean hotDeploy, boolean chunkStores, boolean labIndex) throws Exception {
         for (Map.Entry<MiruTenantId, MiruTenantTopology<?, ?>> entry : localTopologies.entrySet()) {
             MiruTenantTopology<?, ?> topology = entry.getValue();
             for (MiruLocalHostedPartition<?, ?, ?, ?> hostedPartition : entry.getValue().allPartitions()) {
                 MiruPartitionCoord coord = hostedPartition.getCoord();
-                try (MiruRequestHandle<?, ?, ?> handle = hostedPartition.acquireQueryHandle()) {
-                    MiruTimeIndex timeIndex = handle.getRequestContext().getTimeIndex();
-                    boolean hasChunkStores = handle.getRequestContext().hasChunkStores();
-                    boolean hasLabIndex = handle.getRequestContext().hasLabIndex();
+                try (MiruRequestHandle<?, ?, ?> handle = hostedPartition.acquireQueryHandle(hotDeploy)) {
+                    MiruRequestContext<?, ?, ? extends MiruSipCursor<?>> requestContext = handle.getRequestContext();
+                    MiruTimeIndex timeIndex = requestContext.getTimeIndex();
+                    boolean hasChunkStores = requestContext.hasChunkStores();
+                    boolean hasLabIndex = requestContext.hasLabIndex();
                     if (timeIndex.intersects(miruTimeRange) && (chunkStores && hasChunkStores || labIndex && hasLabIndex)) {
-                        LOG.info("Rebuild requested for {}", coord);
+                        LOG.info("Rebuild requested for {} with intersecting time range, hasChunkStores={} hasLabIndex={}",
+                            coord, hasChunkStores, hasLabIndex);
                         topology.rebuild(coord.partitionId);
                     }
                 } catch (Exception x) {

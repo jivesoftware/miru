@@ -324,8 +324,8 @@ public class MiruService implements Miru {
         return partitionDirector.prioritizeRebuild(tenantId, partitionId);
     }
 
-    public boolean rebuildTimeRange(MiruTimeRange miruTimeRange, boolean chunkStores, boolean labIndex) throws Exception {
-        return partitionDirector.rebuildTimeRange(miruTimeRange, chunkStores, labIndex);
+    public boolean rebuildTimeRange(MiruTimeRange miruTimeRange, boolean hotDeploy, boolean chunkStores, boolean labIndex) throws Exception {
+        return partitionDirector.rebuildTimeRange(miruTimeRange, hotDeploy, chunkStores, labIndex);
     }
 
     private Optional<? extends MiruQueryablePartition<?, ?>> getLocalTenantPartition(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
