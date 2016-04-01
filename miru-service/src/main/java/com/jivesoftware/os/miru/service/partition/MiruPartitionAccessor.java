@@ -161,7 +161,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
             seenLastSip.get(), endOfStream, hasOpenWriters, readSemaphore, writeSemaphore, closed, indexRepairs, indexer, timestampOfLastMerge, obsolete);
     }
 
-    void close(MiruContextFactory<S> contextFactory, MiruRebuildDirector rebuildDirector) throws Exception {
+    void close(MiruContextFactory<S> contextFactory) throws Exception {
         writeSemaphore.acquire(PERMITS);
         try {
             readSemaphore.acquire(PERMITS);
@@ -173,8 +173,8 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         } finally {
             writeSemaphore.release(PERMITS);
         }
-        closeImmediate(contextFactory, persistentContext, rebuildDirector);
-        closeImmediate(contextFactory, transientContext, rebuildDirector);
+        closeImmediate(contextFactory, persistentContext);
+        closeImmediate(contextFactory, transientContext);
     }
 
     private void markClosed() {
@@ -182,10 +182,24 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
     }
 
     private void closeImmediate(MiruContextFactory<S> contextFactory,
-        Optional<MiruContext<BM, IBM, S>> context,
-        MiruRebuildDirector rebuildDirector) throws Exception {
+        Optional<MiruContext<BM, IBM, S>> context) throws Exception {
         if (context != null && context.isPresent()) {
-            contextFactory.close(context.get(), rebuildDirector);
+            contextFactory.close(context.get());
+        }
+    }
+
+    void releaseRebuildTokens(MiruRebuildDirector rebuildDirector) {
+        if (persistentContext.isPresent()) {
+            releaseRebuildToken(persistentContext.get(), rebuildDirector);
+        }
+        if (transientContext.isPresent()) {
+            releaseRebuildToken(transientContext.get(), rebuildDirector);
+        }
+    }
+
+    private void releaseRebuildToken(MiruContext<BM, IBM, S> context, MiruRebuildDirector rebuildDirector) {
+        if (context.rebuildToken != null) {
+            rebuildDirector.release(context.rebuildToken);
         }
     }
 
@@ -711,19 +725,32 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
             }
 
             @Override
-            public void closePersistentContext(MiruContextFactory<S> contextFactory, MiruRebuildDirector rebuildDirector) throws Exception {
+            public void closeAll(MiruContextFactory<S> contextFactory) throws Exception {
                 MiruPartitionAccessor.this.markClosed();
-                MiruPartitionAccessor.this.closeImmediate(contextFactory, persistentContext, rebuildDirector);
+                MiruPartitionAccessor.this.closeImmediate(contextFactory, persistentContext);
+                MiruPartitionAccessor.this.closeImmediate(contextFactory, transientContext);
             }
 
             @Override
-            public void closeTransientContext(MiruContextFactory<S> contextFactory, MiruRebuildDirector rebuildDirector) throws Exception {
-                MiruPartitionAccessor.this.closeImmediate(contextFactory, transientContext, rebuildDirector);
+            public void closeTransient(MiruContextFactory<S> contextFactory) throws Exception {
+                MiruPartitionAccessor.this.closeImmediate(contextFactory, transientContext);
             }
 
             @Override
-            public void merge(ExecutorService mergeExecutor, Optional<MiruContext<BM, IBM, S>> context, MiruMergeChits chits, TrackError trackError) throws
-                Exception {
+            public void refundChits(MiruMergeChits mergeChits) {
+                MiruPartitionAccessor.this.refundChits(mergeChits);
+            }
+
+            @Override
+            public void releaseRebuildTokens(MiruRebuildDirector rebuildDirector) throws Exception {
+                MiruPartitionAccessor.this.releaseRebuildTokens(rebuildDirector);
+            }
+
+            @Override
+            public void merge(ExecutorService mergeExecutor,
+                Optional<MiruContext<BM, IBM, S>> context,
+                MiruMergeChits chits,
+                TrackError trackError) throws Exception {
                 MiruPartitionAccessor.this.merge(mergeExecutor, context, chits, trackError);
             }
 

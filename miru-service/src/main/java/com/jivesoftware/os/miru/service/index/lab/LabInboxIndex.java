@@ -71,8 +71,5 @@ public class LabInboxIndex<BM extends IBM, IBM> implements MiruInboxIndex<BM, IB
 
     @Override
     public void close() throws Exception {
-        for (ValueIndex store : stores) {
-            store.close();
-        }
     }
 }

@@ -138,6 +138,10 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
 
     @Override
     public void close(ChunkStore[] chunkStores) {
+    }
+
+    @Override
+    public void remove(ChunkStore[] chunkStores) {
         if (partitionDeleteChunkStoreOnClose) {
             for (ChunkStore chunkStore : chunkStores) {
                 try {
@@ -151,9 +155,17 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
 
     @Override
     public void close(LABEnvironment[] labEnvironments) {
+    }
+
+    @Override
+    public void remove(LABEnvironment[] labEnvironments) {
         if (partitionDeleteChunkStoreOnClose) {
             for (LABEnvironment labEnvironment : labEnvironments) {
-                //TODO
+                try {
+                    labEnvironment.delete();
+                } catch (IOException e) {
+                    LOG.warn("Failed to delete lab", e);
+                }
             }
         }
     }

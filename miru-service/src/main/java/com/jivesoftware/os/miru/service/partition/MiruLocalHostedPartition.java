@@ -394,7 +394,8 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                     false);
                 closed = updatePartition(existing, closed);
                 if (closed != null) {
-                    existing.close(contextFactory, rebuildDirector);
+                    existing.close(contextFactory);
+                    existing.releaseRebuildTokens(rebuildDirector);
                     existing.refundChits(persistentMergeChits);
                     existing.refundChits(transientMergeChits);
                     clearFutures();
@@ -521,7 +522,10 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                 // make sure the accessor didn't change while getting the handle, and that it's ready to migrate
                 if (accessorRef.get() == accessor) {
                     if (accessor.transientContext.isPresent()) {
-                        handle.closeTransientContext(contextFactory, rebuildDirector);
+                        handle.closeTransient(contextFactory);
+                        handle.releaseRebuildTokens(rebuildDirector);
+                        handle.refundChits(transientMergeChits);
+                        contextFactory.remove(accessor.transientContext.get());
                     }
                 }
 
@@ -554,7 +558,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                 // make sure the accessor didn't change while getting the handle, and that it's ready to migrate
                 if (accessorRef.get() == accessor && accessor.transientContext.isPresent()) {
 
-                    handle.closePersistentContext(contextFactory, rebuildDirector);
+                    handle.closeAll(contextFactory);
                     contextFactory.cleanDisk(coord);
 
                     MiruContext<BM, IBM, S> toContext;
@@ -579,11 +583,13 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                         migrated = updatePartition(accessor, migrated);
                         if (migrated != null) {
                             log.info("Partition at {} has transitioned to persistent storage", coord);
-                            contextFactory.close(fromContext, rebuildDirector);
+                            contextFactory.remove(fromContext);
+                            handle.releaseRebuildTokens(rebuildDirector);
+
                             updated = migrated;
                         } else {
                             log.warn("Partition at {} failed to migrate to {}, attempting to rewind", coord, MiruBackingStorage.disk);
-                            contextFactory.close(toContext, rebuildDirector);
+                            contextFactory.remove(toContext);
                             contextFactory.cleanDisk(coord);
                         }
                     }
@@ -649,7 +655,8 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                                     false);
                                 cleaned = updatePartition(existing, cleaned);
                                 if (cleaned != null) {
-                                    existing.close(contextFactory, rebuildDirector);
+                                    existing.close(contextFactory);
+                                    existing.releaseRebuildTokens(rebuildDirector);
                                     existing.refundChits(persistentMergeChits);
                                     existing.refundChits(transientMergeChits);
                                     clearFutures();

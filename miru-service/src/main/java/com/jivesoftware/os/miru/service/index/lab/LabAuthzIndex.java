@@ -83,9 +83,6 @@ public class LabAuthzIndex<BM extends IBM, IBM> implements MiruAuthzIndex<BM, IB
 
     @Override
     public void close() throws Exception {
-        for (ValueIndex keyedStore : keyedStores) {
-            keyedStore.close();
-        }
         cache.clear();
     }
 

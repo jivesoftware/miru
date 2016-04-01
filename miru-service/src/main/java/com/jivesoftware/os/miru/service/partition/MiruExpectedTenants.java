@@ -22,7 +22,7 @@ public interface MiruExpectedTenants {
 
     boolean prioritizeRebuild(MiruPartitionCoord coord) throws Exception;
 
-    boolean rebuildTimeRange(MiruTimeRange miruTimeRange) throws Exception;
+    boolean rebuildTimeRange(MiruTimeRange miruTimeRange, boolean chunkStores, boolean labIndex) throws Exception;
 
     void thumpthump() throws Exception;
 

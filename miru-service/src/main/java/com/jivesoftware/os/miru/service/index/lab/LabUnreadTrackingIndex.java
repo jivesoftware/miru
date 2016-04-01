@@ -79,8 +79,5 @@ public class LabUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUnreadTr
 
     @Override
     public void close() throws Exception {
-        for (ValueIndex store : stores) {
-            store.close();
-        }
     }
 }
