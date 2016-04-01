@@ -95,7 +95,7 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
 
         @SuppressWarnings("unchecked")
         BitmapAndLastId<BM>[] bitmapAndLastId = new BitmapAndLastId[1];
-        lab.get(indexKeyBytes, (byte[] key, long timestamp, boolean tombstoned, long version, byte[] payload) -> {
+        lab.get(indexKeyBytes, (int index, byte[] key, long timestamp, boolean tombstoned, long version, byte[] payload) -> {
             if (payload != null) {
                 bitmapAndLastId[0] = deser(bitmaps, trackError, payload, considerIfLastIdGreaterThanN);
                 bytes.add(payload.length);
@@ -121,7 +121,7 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
         MutableLong bytes = new MutableLong();
         @SuppressWarnings("unchecked")
         R[] result = (R[]) new Object[1];
-        lab.get(indexKeyBytes, (byte[] key, long timestamp, boolean tombstoned, long version, byte[] payload) -> {
+        lab.get(indexKeyBytes, (int index, byte[] key, long timestamp, boolean tombstoned, long version, byte[] payload) -> {
             try {
                 if (payload != null) {
                     bytes.add(payload.length);
@@ -205,7 +205,7 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
         SizeAndBytes sizeAndBytes = getSizeAndBytes(bitmaps, index, setLastId);
 
         lab.append((ValueStream stream) -> {
-            stream.stream(indexKeyBytes, System.currentTimeMillis(), false, idProvider.nextId(), sizeAndBytes.bytes);
+            stream.stream(-1, indexKeyBytes, System.currentTimeMillis(), false, idProvider.nextId(), sizeAndBytes.bytes);
             return true;
         }, true);
 
@@ -298,7 +298,7 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
             MutableLong bytes = new MutableLong();
             synchronized (mutationLock) {
                 int[] id = {-1};
-                lab.get(indexKeyBytes, (byte[] key, long timestamp, boolean tombstoned, long version, byte[] payload) -> {
+                lab.get(indexKeyBytes, (int index, byte[] key, long timestamp, boolean tombstoned, long version, byte[] payload) -> {
                     if (payload != null) {
                         bytes.add(payload.length);
                         id[0] = UIO.bytesInt(payload);

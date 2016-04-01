@@ -63,7 +63,7 @@ public class LabTimeIndex implements MiruTimeIndex {
     private void init() throws Exception {
         final AtomicBoolean initialized = new AtomicBoolean(false);
         StackBuffer stackBuffer = new StackBuffer();
-        metaIndex.get(metaKey, (byte[] key, long timestamp, boolean tombstoned, long version, byte[] payload) -> {
+        metaIndex.get(metaKey, (index, key, timestamp, tombstoned, version, payload) -> {
             if (payload != null && !tombstoned) {
                 Filer filer = new ByteArrayFiler(payload);
                 LabTimeIndex.this.id.set(FilerIO.readInt(filer, "lastId", stackBuffer));
@@ -97,7 +97,9 @@ public class LabTimeIndex implements MiruTimeIndex {
         FilerIO.writeLong(metaFiler, largestTimestamp, "largestTimestamp", stackBuffer);
         FilerIO.writeInt(metaFiler, timestampsLength, "timestampsLength", stackBuffer);
 
-        metaIndex.append((ValueStream stream) -> stream.stream(metaKey, System.currentTimeMillis(), false, idProvider.nextId(), metaFiler.getBytes()), true);
+        long timestamp = System.currentTimeMillis();
+        long version = idProvider.nextId();
+        metaIndex.append(stream -> stream.stream(-1, metaKey, timestamp, false, version, metaFiler.getBytes()), true);
     }
 
     @Override
@@ -160,7 +162,7 @@ public class LabTimeIndex implements MiruTimeIndex {
                 int id1 = firstId;
                 TLongIterator iter = monotonicTimestamps.iterator();
                 while (iter.hasNext()) {
-                    stream.stream(Bytes.concat(UIO.longBytes(iter.next()), UIO.intBytes(id1)), currentTime, false, version, null);
+                    stream.stream(-1, Bytes.concat(UIO.longBytes(iter.next()), UIO.intBytes(id1)), currentTime, false, version, null);
                     id1++;
                 }
                 return true;
@@ -169,7 +171,7 @@ public class LabTimeIndex implements MiruTimeIndex {
             rawTimestampToIndex.append((ValueStream stream) -> {
                 for (int i = 0; i < nextIds.length; i++) {
                     if (timestamps[i] != -1) {
-                        stream.stream(UIO.longBytes(timestamps[i]), currentTime, false, version, UIO.intBytes(nextIds[i]));
+                        stream.stream(-1, UIO.longBytes(timestamps[i]), currentTime, false, version, UIO.intBytes(nextIds[i]));
                         LOG.inc("nextId>sets");
                     }
                 }
@@ -194,14 +196,12 @@ public class LabTimeIndex implements MiruTimeIndex {
         }
 
         int[] id = { 0 };
-        monotonicTimestampIndex.rangeScan(UIO.longBytes(timestamp),
-            null,
-            (byte[] key, long ptimestamp, boolean tombstoned, long version, byte[] payload) -> {
-                if (key != null) {
-                    id[0] = UIO.bytesInt(key, 8);
-                }
-                return false;
-            });
+        monotonicTimestampIndex.rangeScan(UIO.longBytes(timestamp), null, (index, key, payloadTimestamp, tombstoned, version, payload) -> {
+            if (key != null) {
+                id[0] = UIO.bytesInt(key, 8);
+            }
+            return false;
+        });
         return id[0];
     }
 
@@ -210,7 +210,7 @@ public class LabTimeIndex implements MiruTimeIndex {
     @Override
     public int getExactId(long timestamp, StackBuffer stackBuffer) throws Exception {
         int[] id = { -1 };
-        rawTimestampToIndex.get(UIO.longBytes(timestamp), (byte[] key, long ptimestamp, boolean tombstoned, long version, byte[] payload) -> {
+        rawTimestampToIndex.get(UIO.longBytes(timestamp), (index, key, payloadTimestamp, tombstoned, version, payload) -> {
             if (payload != null) {
                 id[0] = UIO.bytesInt(payload);
             }
@@ -223,19 +223,25 @@ public class LabTimeIndex implements MiruTimeIndex {
     public boolean[] contains(List<Long> timestamp, StackBuffer stackBuffer) throws Exception {
 
         boolean[] contained = new boolean[timestamp.size()];
-        for (int i = 0; i < contained.length; i++) {
-            Long ts = timestamp.get(i);
-            if (ts != null && ts != -1) {
-                int ci = i;
-                rawTimestampToIndex.get(UIO.longBytes(ts),
-                    (byte[] key, long ptimestamp, boolean tombstoned, long version, byte[] payload) -> {
-                        if (payload != null) {
-                            contained[ci] = true;
+        rawTimestampToIndex.get(
+            keyStream -> {
+                for (int i = 0; i < contained.length; i++) {
+                    Long ts = timestamp.get(i);
+                    if (ts != null && ts != -1) {
+                        byte[] key = UIO.longBytes(ts);
+                        if (!keyStream.key(i, key, 0, key.length)) {
+                            return false;
                         }
-                        return false;
-                    });
-            }
-        }
+                    }
+                }
+                return true;
+            },
+            (index, key, timestamp1, tombstoned, version, payload) -> {
+                if (payload != null) {
+                    contained[index] = true;
+                }
+                return true;
+            });
         return contained;
     }
 
@@ -257,19 +263,17 @@ public class LabTimeIndex implements MiruTimeIndex {
         }
 
         int[] id = { 0 };
-        monotonicTimestampIndex.rangeScan(UIO.longBytes(timestamp),
-            null,
-            (byte[] key, long payloadTimestamp, boolean tombstoned, long version, byte[] payload) -> {
-                if (key != null) {
-                    if (UIO.bytesLong(key, 0) <= timestamp) {
-                        id[0] = UIO.bytesInt(key, 8) + 1;
-                        return true;
-                    } else {
-                        id[0] = UIO.bytesInt(key, 8);
-                    }
+        monotonicTimestampIndex.rangeScan(UIO.longBytes(timestamp), null, (index, key, payloadTimestamp, tombstoned, version, payload) -> {
+            if (key != null) {
+                if (UIO.bytesLong(key, 0) <= timestamp) {
+                    id[0] = UIO.bytesInt(key, 8) + 1;
+                    return true;
+                } else {
+                    id[0] = UIO.bytesInt(key, 8);
                 }
-                return false;
-            });
+            }
+            return false;
+        });
         if (id[0] > lastId) {
             return lastId + 1;
         }
@@ -288,19 +292,17 @@ public class LabTimeIndex implements MiruTimeIndex {
         }
 
         int[] id = { -1 };
-        monotonicTimestampIndex.rangeScan(UIO.longBytes(timestamp),
-            null,
-            (byte[] key, long payloadTimestamp, boolean tombstoned, long version, byte[] payload) -> {
-                if (key != null) {
-                    if (UIO.bytesLong(key, 0) <= timestamp) {
-                        id[0] = UIO.bytesInt(key, 8);
-                        return true;
-                    } else {
-                        id[0] = UIO.bytesInt(key, 8) - 1;
-                    }
+        monotonicTimestampIndex.rangeScan(UIO.longBytes(timestamp), null, (index, key, payloadTimestamp, tombstoned, version, payload) -> {
+            if (key != null) {
+                if (UIO.bytesLong(key, 0) <= timestamp) {
+                    id[0] = UIO.bytesInt(key, 8);
+                    return true;
+                } else {
+                    id[0] = UIO.bytesInt(key, 8) - 1;
                 }
-                return false;
-            });
+            }
+            return false;
+        });
         if (id[0] > lastId) {
             return lastId;
         }
