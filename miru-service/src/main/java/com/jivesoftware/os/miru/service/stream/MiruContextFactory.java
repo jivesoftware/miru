@@ -491,11 +491,14 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         TrackError trackError = partitionErrorTracker.track(coord);
 
         @SuppressWarnings("unchecked")
-        ValueIndex[] termIndexes = new ValueIndex[labEnvironments.length];
+        ValueIndex[] bitmapIndex = new ValueIndex[labEnvironments.length];
+        ValueIndex[] termIndex = new ValueIndex[labEnvironments.length];
         ValueIndex[] cardinalityIndex = new ValueIndex[labEnvironments.length];
-        for (int i = 0; i < termIndexes.length; i++) {
-            termIndexes[i] = labEnvironments[i].open("field", 4096, Integer.MAX_VALUE, 10 * 1024 * 1024, -1L, -1L, new KeyValueRawhide());
-            commitables.add(termIndexes[i]);
+        for (int i = 0; i < bitmapIndex.length; i++) {
+            bitmapIndex[i] = labEnvironments[i].open("field", 4096, Integer.MAX_VALUE, 10 * 1024 * 1024, -1L, -1L, new KeyValueRawhide());
+            commitables.add(bitmapIndex[i]);
+            termIndex[i] = labEnvironments[i].open("term", 4096, Integer.MAX_VALUE, 10 * 1024 * 1024, -1L, -1L, new KeyValueRawhide());
+            commitables.add(termIndex[i]);
             cardinalityIndex[i] = labEnvironments[i].open("cardinality", 4096, Integer.MAX_VALUE, 10 * 1024 * 1024, -1L, -1L, new KeyValueRawhide());
             commitables.add(cardinalityIndex[i]);
         }
@@ -516,7 +519,8 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                     bitmaps,
                     trackError,
                     prefix,
-                    termIndexes,
+                    bitmapIndex,
+                    termIndex,
                     cardinalityIndex,
                     hasCardinalities,
                     fieldIndexStripingLocksProvider,
@@ -551,7 +555,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                 bitmaps,
                 trackError,
                 new byte[] { (byte) -1 },
-                termIndexes,
+                bitmapIndex,
                 streamStripingLocksProvider));
 
         MiruInboxIndex<BM, IBM> inboxIndex = new MiruDeltaInboxIndex<>(
@@ -562,7 +566,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                 bitmaps,
                 trackError,
                 new byte[] { (byte) -2 },
-                termIndexes,
+                bitmapIndex,
                 streamStripingLocksProvider));
 
         MiruAuthzUtils<BM, IBM> authzUtils = new MiruAuthzUtils<>(bitmaps);
@@ -581,7 +585,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                 bitmaps,
                 trackError,
                 new byte[] { (byte) -3 },
-                termIndexes,
+                bitmapIndex,
                 miruAuthzCache,
                 authzStripingLocksProvider));
 
