@@ -442,7 +442,9 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         MiruRebuildDirector.Token rebuildToken) throws Exception {
 
         List<ValueIndex> commitables = Lists.newArrayList();
-        int seed = new HashCodeBuilder().append(coord).append(storage).toHashCode();
+
+        // do NOT hash storage, as disk/memory require the same stripe order
+        int seed = new HashCodeBuilder().append(coord).toHashCode();
 
         ValueIndex metaIndex = labEnvironments[Math.abs(seed % labEnvironments.length)].open("meta", 4096, Integer.MAX_VALUE, 10 * 1024 * 1024, -1L, -1L,
             new KeyValueRawhide());
