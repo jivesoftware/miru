@@ -11,20 +11,18 @@
     <div class="panel panel-default">
         <div class="panel-heading">Rebuild</div>
         <div class="panel-body">
-            <label for="tenantPicker">Rebuild all partitions written in the past N days</label>
-            <form id="tenantPickerForm" method="post" name="tenantPickerForm" action="/miru/config/rebuild">
-                <input type="number" min="1" max="65536" autocomplete="off" placeholder="Number of days" value="" name="days" id="days" title="" style="width:200px;">
-                {sp}
-                <input type="checkbox" autocomplete="off" value="true" name="chunkStores" id="chunkStores">
-                {sp}
-                <label for="chunkStores">Rebuild chunk stores</label>
-                {sp}
-                <input type="checkbox" autocomplete="off" value="true" name="labIndexes" id="labIndexes">
-                {sp}
-                <label for="labIndexes">Rebuild lab indexes</label>
-                {sp}
-                <input type="submit" value="Rebuild">
-            </form>
+            <label for="days">Rebuild all partitions written in the past N days</label>
+            <input type="number" min="1" max="65536" autocomplete="off" placeholder="Number of days" value="" name="days" id="days" title="" style="width:200px;">
+            {sp}
+            <input type="checkbox" autocomplete="off" value="true" name="chunkStores" id="chunkStores">
+            {sp}
+            <label for="chunkStores">Rebuild chunk stores</label>
+            {sp}
+            <input type="checkbox" autocomplete="off" value="true" name="labIndexes" id="labIndexes">
+            {sp}
+            <label for="labIndexes">Rebuild lab indexes</label>
+            {sp}
+            <input type="submit" value="Rebuild" onclick="miru.partitions.rebuild(this)">
         </div>
     </div>
 

@@ -512,7 +512,8 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
 
     @Override
     public boolean rebuild() throws Exception {
-        return rebuild(accessorRef.get());
+        MiruPartitionAccessor<BM, IBM, C, S> accessor = accessorRef.get();
+        return !accessor.transientContext.isPresent() && rebuild(accessor);
     }
 
     private boolean rebuild(MiruPartitionAccessor<BM, IBM, C, S> accessor) throws Exception {
@@ -558,13 +559,14 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                 // make sure the accessor didn't change while getting the handle, and that it's ready to migrate
                 if (accessorRef.get() == accessor && accessor.transientContext.isPresent()) {
 
-                    handle.closeAll(contextFactory);
+                    handle.closePersistent(contextFactory);
                     contextFactory.cleanDisk(coord);
 
                     MiruContext<BM, IBM, S> toContext;
                     MiruContext<BM, IBM, S> fromContext = accessor.transientContext.get();
                     synchronized (fromContext.writeLock) {
                         handle.merge(transientMergeExecutor, accessor.transientContext, transientMergeChits, trackError);
+                        handle.closeTransient(contextFactory);
                         toContext = contextFactory.copy(bitmaps, fromContext.schema, coord, fromContext, MiruBackingStorage.disk, stackBuffer);
                         contextFactory.saveSchema(coord, fromContext.schema);
                     }
