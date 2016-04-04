@@ -332,7 +332,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
     }
 
     @Override
-    public MiruRequestHandle<BM, IBM, S> acquireQueryHandle(boolean hotDeploy) throws Exception {
+    public MiruRequestHandle<BM, IBM, S> acquireQueryHandle() throws Exception {
         heartbeatHandler.heartbeat(coord, Optional.<MiruPartitionCoordInfo>absent(), Optional.of(System.currentTimeMillis()));
 
         if (removed.get()) {
@@ -349,7 +349,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                 throw new MiruPartitionUnavailableException("Partition is outdated");
             }
         }
-        if (hotDeploy && accessor.canHotDeploy(checkPersistent)) {
+        if (accessor.canHotDeploy(checkPersistent)) {
             log.info("Hot deploying for query: {}", coord);
             accessor = open(accessor, MiruPartitionState.online, null);
         }
@@ -357,12 +357,21 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
     }
 
     @Override
-    public MiruRequestHandle<BM, IBM, S> inspectRequestHandle() throws Exception {
+    public MiruRequestHandle<BM, IBM, S> inspectRequestHandle(boolean hotDeploy) throws Exception {
         if (removed.get()) {
             throw new MiruPartitionUnavailableException("Partition has been removed");
         }
 
         MiruPartitionAccessor<BM, IBM, C, S> accessor = accessorRef.get();
+        if (hotDeploy) {
+            heartbeatHandler.heartbeat(coord, Optional.<MiruPartitionCoordInfo>absent(), Optional.of(System.currentTimeMillis()));
+
+            if (accessor.canHotDeploy(checkPersistent)) {
+                log.info("Hot deploying for query: {}", coord);
+                accessor = open(accessor, MiruPartitionState.online, null);
+            }
+        }
+
         return accessor.getRequestHandle(trackError);
     }
 

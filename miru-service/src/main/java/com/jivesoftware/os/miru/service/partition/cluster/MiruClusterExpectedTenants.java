@@ -244,7 +244,7 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
             MiruTenantTopology<?, ?> topology = entry.getValue();
             for (MiruLocalHostedPartition<?, ?, ?, ?> hostedPartition : entry.getValue().allPartitions()) {
                 MiruPartitionCoord coord = hostedPartition.getCoord();
-                try (MiruRequestHandle<?, ?, ?> handle = hostedPartition.acquireQueryHandle(hotDeploy)) {
+                try (MiruRequestHandle<?, ?, ?> handle = hostedPartition.inspectRequestHandle(hotDeploy)) {
                     MiruRequestContext<?, ?, ? extends MiruSipCursor<?>> requestContext = handle.getRequestContext();
                     MiruTimeIndex timeIndex = requestContext.getTimeIndex();
                     boolean hasChunkStores = requestContext.hasChunkStores();

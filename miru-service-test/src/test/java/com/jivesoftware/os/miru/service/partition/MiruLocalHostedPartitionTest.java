@@ -444,7 +444,7 @@ public class MiruLocalHostedPartitionTest {
         assertEquals(localHostedPartition.getState(), MiruPartitionState.offline);
         assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.disk);
 
-        try (MiruRequestHandle queryHandle = localHostedPartition.acquireQueryHandle(true)) {
+        try (MiruRequestHandle queryHandle = localHostedPartition.acquireQueryHandle()) {
             assertEquals(queryHandle.getCoord(), coord);
             assertNotNull(queryHandle.getRequestContext()); // would throw exception if offline
         }
@@ -467,7 +467,7 @@ public class MiruLocalHostedPartitionTest {
         assertEquals(localHostedPartition.getState(), MiruPartitionState.offline);
         assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.memory);
 
-        try (MiruRequestHandle queryHandle = localHostedPartition.acquireQueryHandle(true)) {
+        try (MiruRequestHandle queryHandle = localHostedPartition.acquireQueryHandle()) {
             queryHandle.getRequestContext(); // throws exception
         }
     }
