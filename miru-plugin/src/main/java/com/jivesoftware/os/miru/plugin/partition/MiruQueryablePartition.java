@@ -19,9 +19,9 @@ public interface MiruQueryablePartition<BM extends IBM, IBM> {
 
     boolean isLocal();
 
-    MiruRequestHandle<BM, IBM, ?> acquireQueryHandle(boolean hotDeploy) throws Exception;
+    MiruRequestHandle<BM, IBM, ?> acquireQueryHandle() throws Exception;
 
-    MiruRequestHandle<BM, IBM, ?> inspectRequestHandle() throws Exception;
+    MiruRequestHandle<BM, IBM, ?> inspectRequestHandle(boolean hotDeploy) throws Exception;
 
     boolean isAvailable();
 }

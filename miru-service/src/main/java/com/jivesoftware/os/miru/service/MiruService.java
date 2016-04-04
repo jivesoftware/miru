@@ -290,7 +290,7 @@ public class MiruService implements Miru {
     }
 
     private <BM extends IBM, IBM> String inspect(MiruQueryablePartition<BM, IBM> partition, String fieldName, String termValue) throws Exception {
-        try (MiruRequestHandle<BM, IBM, ?> handle = partition.inspectRequestHandle()) {
+        try (MiruRequestHandle<BM, IBM, ?> handle = partition.inspectRequestHandle(false)) {
             MiruRequestContext<BM, IBM, ?> requestContext = handle.getRequestContext();
             int fieldId = requestContext.getSchema().getFieldId(fieldName);
             MiruFieldDefinition fieldDefinition = requestContext.getSchema().getFieldDefinition(fieldId);
@@ -341,7 +341,7 @@ public class MiruService implements Miru {
         Optional<? extends MiruQueryablePartition<?, ?>> partition = getLocalTenantPartition(tenantId, partitionId);
         if (partition.isPresent()) {
             MiruQueryablePartition<?, ?> hostedPartition = partition.get();
-            try (MiruRequestHandle<?, ?, ? extends MiruSipCursor<?>> handle = hostedPartition.inspectRequestHandle()) {
+            try (MiruRequestHandle<?, ?, ? extends MiruSipCursor<?>> handle = hostedPartition.inspectRequestHandle(false)) {
                 callback.call(handle.getRequestContext());
             }
         }

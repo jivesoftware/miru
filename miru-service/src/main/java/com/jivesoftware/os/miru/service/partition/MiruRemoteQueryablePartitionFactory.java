@@ -38,7 +38,7 @@ public class MiruRemoteQueryablePartitionFactory {
             }
 
             @Override
-            public MiruRequestHandle<BM, IBM, ?> inspectRequestHandle() throws Exception {
+            public MiruRequestHandle<BM, IBM, ?> inspectRequestHandle(boolean hotDeploy) throws Exception {
                 throw new UnsupportedOperationException("Remote partitions cannot be inspected");
             }
 
@@ -48,7 +48,7 @@ public class MiruRemoteQueryablePartitionFactory {
             }
 
             @Override
-            public MiruRequestHandle<BM, IBM, S> acquireQueryHandle(boolean hotDeploy) throws Exception {
+            public MiruRequestHandle<BM, IBM, S> acquireQueryHandle() throws Exception {
                 return new MiruRequestHandle<BM, IBM, S>() {
 
                     @Override
