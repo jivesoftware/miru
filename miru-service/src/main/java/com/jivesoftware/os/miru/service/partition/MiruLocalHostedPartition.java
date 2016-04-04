@@ -1145,7 +1145,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
             if (initialCount > 0) {
                 if (initialCount > count * 2 && accessor.persistentContext.isPresent()) {
                     MiruContext<BM, IBM, S> context = accessor.persistentContext.get();
-                    log.warn("Partition skipped over half a batch for {} while sipping, hasChunkStores={} hasLabIndex={} lastId={} cursor={} nextCursor={}",
+                    log.debug("Partition skipped over half a batch for {} while sipping, hasChunkStores={} hasLabIndex={} lastId={} cursor={} nextCursor={}",
                         coord, context.hasChunkStores(), context.hasLabIndex(), context.timeIndex.lastId(), sipCursor, nextSipCursor);
                 }
                 log.inc("sip>count>skip", (initialCount - count));
