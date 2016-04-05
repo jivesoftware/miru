@@ -25,14 +25,7 @@ import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableExcepti
 import com.jivesoftware.os.miru.plugin.partition.TrackError;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
 import com.jivesoftware.os.miru.service.index.Mergeable;
-import com.jivesoftware.os.miru.service.index.delta.MiruDeltaActivityIndex;
-import com.jivesoftware.os.miru.service.index.delta.MiruDeltaAuthzIndex;
 import com.jivesoftware.os.miru.service.index.delta.MiruDeltaFieldIndex;
-import com.jivesoftware.os.miru.service.index.delta.MiruDeltaInboxIndex;
-import com.jivesoftware.os.miru.service.index.delta.MiruDeltaRemovalIndex;
-import com.jivesoftware.os.miru.service.index.delta.MiruDeltaSipIndex;
-import com.jivesoftware.os.miru.service.index.delta.MiruDeltaTimeIndex;
-import com.jivesoftware.os.miru.service.index.delta.MiruDeltaUnreadTrackingIndex;
 import com.jivesoftware.os.miru.service.stream.MiruContext;
 import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
 import com.jivesoftware.os.miru.service.stream.MiruIndexer;
@@ -324,19 +317,19 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
                 long start = System.currentTimeMillis();
 
                 List<Future<?>> futures = Lists.newArrayList();
-                futures.add(mergeExecutor.submit(new MergeRunnable((MiruDeltaTimeIndex) got.timeIndex, got.schema)));
+                futures.add(mergeExecutor.submit(new MergeRunnable((Mergeable) got.timeIndex, got.schema)));
                 for (MiruFieldType fieldType : MiruFieldType.values()) {
                     MiruDeltaFieldIndex<BM, IBM> deltaFieldIndex = (MiruDeltaFieldIndex<BM, IBM>) got.fieldIndexProvider.getFieldIndex(fieldType);
                     for (Mergeable mergeable : deltaFieldIndex.getMergeables()) {
                         futures.add(mergeExecutor.submit(new MergeRunnable(mergeable, got.schema)));
                     }
                 }
-                futures.add(mergeExecutor.submit(new MergeRunnable((MiruDeltaAuthzIndex<BM, IBM>) got.authzIndex, got.schema)));
-                futures.add(mergeExecutor.submit(new MergeRunnable((MiruDeltaRemovalIndex<BM, IBM>) got.removalIndex, got.schema)));
-                futures.add(mergeExecutor.submit(new MergeRunnable((MiruDeltaInboxIndex<BM, IBM>) got.inboxIndex, got.schema)));
-                futures.add(mergeExecutor.submit(new MergeRunnable((MiruDeltaUnreadTrackingIndex<BM, IBM>) got.unreadTrackingIndex, got.schema)));
-                futures.add(mergeExecutor.submit(new MergeRunnable((MiruDeltaActivityIndex) got.activityIndex, got.schema)));
-                futures.add(mergeExecutor.submit(new MergeRunnable((MiruDeltaSipIndex) got.sipIndex, got.schema)));
+                futures.add(mergeExecutor.submit(new MergeRunnable((Mergeable) got.authzIndex, got.schema)));
+                futures.add(mergeExecutor.submit(new MergeRunnable((Mergeable) got.removalIndex, got.schema)));
+                futures.add(mergeExecutor.submit(new MergeRunnable((Mergeable) got.inboxIndex, got.schema)));
+                futures.add(mergeExecutor.submit(new MergeRunnable((Mergeable) got.unreadTrackingIndex, got.schema)));
+                futures.add(mergeExecutor.submit(new MergeRunnable((Mergeable) got.activityIndex, got.schema)));
+                futures.add(mergeExecutor.submit(new MergeRunnable((Mergeable) got.sipIndex, got.schema)));
 
                 try {
                     for (Future<?> future : futures) {
