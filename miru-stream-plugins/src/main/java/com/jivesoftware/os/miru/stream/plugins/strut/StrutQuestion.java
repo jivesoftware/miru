@@ -199,7 +199,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 for (List<LastIdAndTermId> batch : Lists.partition(lastIdAndTermIds, answers.length)) {
 
                     Arrays.fill(miruTermIds, null);
-                    for (int i = 0; i < batchSize; i++) {
+                    for (int i = 0; i < batch.size(); i++) {
                         miruTermIds[i] = batch.get(i).termId;
                     }
 
