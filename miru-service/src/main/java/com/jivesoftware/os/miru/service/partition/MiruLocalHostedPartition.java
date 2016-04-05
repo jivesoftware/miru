@@ -62,7 +62,7 @@ import org.merlin.config.defaults.StringDefault;
 public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<C, S>, S extends MiruSipCursor<S>>
     implements MiruHostedPartition, MiruQueryablePartition<BM, IBM> {
 
-    private static final MetricLogger log = MetricLoggerFactory.getLogger();
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final MiruStats miruStats;
     private final MiruBitmaps<BM, IBM> bitmaps;
@@ -200,8 +200,8 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
         MiruPartitionCoordInfo coordInfo = new MiruPartitionCoordInfo(initialState, initialStorage);
         heartbeatHandler.heartbeat(coord, Optional.of(coordInfo), Optional.<Long>absent());
         this.accessorRef.set(accessor);
-        log.incAtomic("state>" + initialState.name());
-        log.incAtomic("storage>" + initialStorage.name());
+        LOG.incAtomic("state>" + initialState.name());
+        LOG.incAtomic("storage>" + initialStorage.name());
 
         scheduledBootstrapExecutor.scheduleWithFixedDelay(
             new BootstrapRunnable(), 0, timings.partitionBootstrapIntervalInMillis, TimeUnit.MILLISECONDS);
@@ -226,7 +226,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                     MiruSchema schema = contextFactory.loadPersistentSchema(coord);
                     MiruSchema latestSchema = contextFactory.lookupLatestSchema(coord.tenantId);
                     if (schema == null) {
-                        log.warn("Missing schema for persistent storage on {}, marking as obsolete", coord);
+                        LOG.warn("Missing schema for persistent storage on {}, marking as obsolete", coord);
                         contextFactory.markObsolete(coord);
                         obsolete = true;
                         schema = latestSchema;
@@ -238,7 +238,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                             contextFactory.saveSchema(coord, latestSchema);
                             schema = latestSchema;
                         } else {
-                            log.warn("Non-additive schema change for persistent storage on {}", coord);
+                            LOG.warn("Non-additive schema change for persistent storage on {}", coord);
                             trackError.error("Non-additive schema change for persistent storage, fix schema and restart, or force rebuild to resolve");
                         }
                     }
@@ -287,7 +287,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                 }
                 if (state == MiruPartitionState.online) {
                     if (contextFactory.checkClosed(coord)) {
-                        log.warn("Found closed context for {}", coord);
+                        LOG.warn("Found closed context for {}", coord);
                         sipEndOfWAL.set(true);
                         opened.markWritersClosed();
                     }
@@ -314,10 +314,10 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
 
             MiruBackingStorage existingStorage = existing.getBackingStorage(checkPersistent);
 
-            log.decAtomic("state>" + existing.state.name());
-            log.decAtomic("storage>" + existingStorage.name());
-            log.incAtomic("state>" + update.state.name());
-            log.incAtomic("storage>" + updateStorage.name());
+            LOG.decAtomic("state>" + existing.state.name());
+            LOG.decAtomic("storage>" + existingStorage.name());
+            LOG.incAtomic("state>" + update.state.name());
+            LOG.incAtomic("storage>" + updateStorage.name());
             if (existing.state != MiruPartitionState.bootstrap && update.state == MiruPartitionState.bootstrap) {
                 bootstrapCounter.inc("Total number of partitions that need to be brought online.",
                     "Be patient. Rebalance. Increase number of concurrent rebuilds.");
@@ -326,7 +326,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                     "Be patient. Rebalance. Increase number of concurrent rebuilds.");
             }
 
-            log.info("Partition is now {}/{} for {}", update.state, updateStorage, coord);
+            LOG.info("Partition is now {}/{} for {}", update.state, updateStorage, coord);
             return update;
         }
     }
@@ -350,7 +350,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
             }
         }
         if (accessor.canHotDeploy(checkPersistent)) {
-            log.info("Hot deploying for query: {}", coord);
+            LOG.info("Hot deploying for query: {}", coord);
             accessor = open(accessor, MiruPartitionState.online, null);
         }
         return accessor.getRequestHandle(trackError);
@@ -367,7 +367,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
             heartbeatHandler.heartbeat(coord, Optional.<MiruPartitionCoordInfo>absent(), Optional.of(System.currentTimeMillis()));
 
             if (accessor.canHotDeploy(checkPersistent)) {
-                log.info("Hot deploying for query: {}", coord);
+                LOG.info("Hot deploying for query: {}", coord);
                 accessor = open(accessor, MiruPartitionState.online, null);
             }
         }
@@ -382,15 +382,17 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
 
     @Override
     public void remove() throws Exception {
-        log.info("Removing partition by request: {}", coord);
+        LOG.info("Removing partition by request: {}", coord);
         removed.set(true);
         close();
     }
 
     private boolean close() throws Exception {
         try {
+
+            MiruPartitionAccessor<BM, IBM, C, S> existing = accessorRef.get();
+            existing.merge(persistentMergeExecutor, existing.persistentContext, persistentMergeChits, trackError);
             synchronized (factoryLock) {
-                MiruPartitionAccessor<BM, IBM, C, S> existing = accessorRef.get();
                 MiruPartitionAccessor<BM, IBM, C, S> closed = MiruPartitionAccessor.initialize(miruStats,
                     bitmaps,
                     coord,
@@ -496,7 +498,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                 trackError,
                 stackBuffer);
             if (count > 0) {
-                log.inc("indexIngress>written", count);
+                LOG.inc("indexIngress>written", count);
             }
         } else {
             int count = 0;
@@ -507,16 +509,16 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                     count++;
                 }
             }
-            log.inc("indexIngress>dropped", count);
+            LOG.inc("indexIngress>dropped", count);
         }
     }
 
     @Override
     public void warm() throws Exception {
         heartbeatHandler.heartbeat(coord, Optional.<MiruPartitionCoordInfo>absent(), Optional.of(System.currentTimeMillis()));
-        log.inc("warm", 1);
-        log.inc("warm", 1, coord.tenantId.toString());
-        log.inc("warm>partition>" + coord.partitionId, 1, coord.tenantId.toString());
+        LOG.inc("warm", 1);
+        LOG.inc("warm", 1, coord.tenantId.toString());
+        LOG.inc("warm>partition>" + coord.partitionId, 1, coord.tenantId.toString());
     }
 
     @Override
@@ -593,13 +595,13 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                     if (migrated != null) {
                         migrated = updatePartition(accessor, migrated);
                         if (migrated != null) {
-                            log.info("Partition at {} has transitioned to persistent storage", coord);
+                            LOG.info("Partition at {} has transitioned to persistent storage", coord);
                             contextFactory.remove(fromContext);
                             handle.releaseRebuildTokens(rebuildDirector);
 
                             updated = migrated;
                         } else {
-                            log.warn("Partition at {} failed to migrate to {}, attempting to rewind", coord, MiruBackingStorage.disk);
+                            LOG.warn("Partition at {} failed to migrate to {}, attempting to rewind", coord, MiruBackingStorage.disk);
                             contextFactory.remove(toContext);
                             contextFactory.cleanDisk(coord);
                         }
@@ -621,13 +623,13 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                 try {
                     checkActive();
                 } catch (MiruSchemaUnvailableException sue) {
-                    log.warn("Tenant is active but schema not available for {}", coord.tenantId);
-                    log.debug("Tenant is active but schema not available", sue);
+                    LOG.warn("Tenant is active but schema not available for {}", coord.tenantId);
+                    LOG.debug("Tenant is active but schema not available", sue);
                 } catch (Throwable t) {
-                    log.error("CheckActive encountered a problem for {}", new Object[] { coord }, t);
+                    LOG.error("CheckActive encountered a problem for {}", new Object[]{coord}, t);
                 }
             } catch (Throwable t) {
-                log.error("Bootstrap encountered a problem for {}", new Object[] { coord }, t);
+                LOG.error("Bootstrap encountered a problem for {}", new Object[]{coord}, t);
             }
         }
 
@@ -640,7 +642,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
             MiruPartitionActive partitionActive = heartbeatHandler.getPartitionActive(coord);
             if (partitionActive.destroyAfterTimestamp > 0 && System.currentTimeMillis() > partitionActive.destroyAfterTimestamp) {
                 if (accessor.state != MiruPartitionState.offline) {
-                    log.info("Taking partition offline because it is marked for destruction: {}", coord);
+                    LOG.info("Taking partition offline because it is marked for destruction: {}", coord);
                     close();
                     accessor = accessorRef.get();
                 }
@@ -650,7 +652,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                     try {
                         if (accessor.state == MiruPartitionState.offline && accessor.hasPersistentStorage(checkPersistent)) {
                             synchronized (factoryLock) {
-                                log.info("Cleaning disk for partition because it is marked for destruction: {}", coord);
+                                LOG.info("Cleaning disk for partition because it is marked for destruction: {}", coord);
 
                                 MiruPartitionAccessor<BM, IBM, C, S> existing = accessorRef.get();
 
@@ -674,7 +676,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                                     contextFactory.cleanDisk(coord);
                                     destroyed.set(true);
                                 } else {
-                                    log.warn("Failed to clean disk because accessor changed for partition: {}", coord);
+                                    LOG.warn("Failed to clean disk because accessor changed for partition: {}", coord);
                                 }
                             }
                         }
@@ -686,14 +688,14 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                 if (accessor.state == MiruPartitionState.offline) {
                     if (accessor.hasPersistentStorage(checkPersistent)) {
                         if (!removed.get() && accessor.canHotDeploy(checkPersistent)) {
-                            log.info("Hot deploying for checkActive: {}", coord);
+                            LOG.info("Hot deploying for checkActive: {}", coord);
                             open(accessor, MiruPartitionState.online, null);
                         }
                     } else {
                         try {
                             open(accessor, MiruPartitionState.bootstrap, null);
                         } catch (MiruPartitionUnavailableException e) {
-                            log.warn("CheckActive: Partition is active for tenant {} but no schema is registered, banning for {} ms",
+                            LOG.warn("CheckActive: Partition is active for tenant {} but no schema is registered, banning for {} ms",
                                 coord.tenantId, timings.partitionBanUnregisteredSchemaMillis);
                             banUnregisteredSchema.set(System.currentTimeMillis() + timings.partitionBanUnregisteredSchemaMillis);
                         }
@@ -703,7 +705,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                 }
             } else if (accessor.state != MiruPartitionState.offline) {
                 if (accessor.transientContext.isPresent()) {
-                    log.info("Partition {} is idle but still has a transient context, closure will be deferred", coord);
+                    LOG.info("Partition {} is idle but still has a transient context, closure will be deferred", coord);
                 } else {
                     close();
                 }
@@ -738,19 +740,19 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                                 MiruPartitionState desiredState = state.transitionToRebuildingState();
                                 accessor = open(accessor, desiredState, token.get());
                                 if (accessor.state != desiredState) {
-                                    log.warn("Failed to transition to {} for {}", desiredState, coord);
+                                    LOG.warn("Failed to transition to {} for {}", desiredState, coord);
                                     accessor = null;
                                 }
                             }
                             if (accessor != null) {
                                 try {
                                     if (!accessor.transientContext.isPresent()) {
-                                        log.error("Attempted rebuild without a transientContext for {}", coord);
+                                        LOG.error("Attempted rebuild without a transientContext for {}", coord);
                                     } else if (accessor.transientContext.get().isCorrupt()) {
                                         if (close()) {
-                                            log.warn("Stopped rebuild due to corruption for {}", coord);
+                                            LOG.warn("Stopped rebuild due to corruption for {}", coord);
                                         } else {
-                                            log.error("Failed to stop rebuild after corruption for {}", coord);
+                                            LOG.error("Failed to stop rebuild after corruption for {}", coord);
                                         }
                                     } else if (rebuild(accessor, stackBuffer)) {
                                         MiruPartitionAccessor<BM, IBM, C, S> online = accessor.copyToState(MiruPartitionState.online);
@@ -760,14 +762,14 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                                             trackError.reset();
                                         }
                                     } else {
-                                        log.error("Rebuild did not finish for {} isAccessor={}", coord, (accessor == accessorRef.get()));
+                                        LOG.error("Rebuild did not finish for {} isAccessor={}", coord, (accessor == accessorRef.get()));
                                     }
                                 } catch (Throwable t) {
-                                    log.error("Rebuild encountered a problem for {}", new Object[] { coord }, t);
+                                    LOG.error("Rebuild encountered a problem for {}", new Object[]{coord}, t);
                                 }
                             }
                         } catch (MiruPartitionUnavailableException e) {
-                            log.warn("Rebuild: Partition is active for tenant {} but no schema is registered, banning for {} ms",
+                            LOG.warn("Rebuild: Partition is active for tenant {} but no schema is registered, banning for {} ms",
                                 coord.tenantId, timings.partitionBanUnregisteredSchemaMillis);
                             banUnregisteredSchema.set(System.currentTimeMillis() + timings.partitionBanUnregisteredSchemaMillis);
                         } finally {
@@ -776,13 +778,13 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                             }
                         }
                     } else {
-                        log.debug("Skipped rebuild because count={} available={}", count, rebuildDirector.available());
+                        LOG.debug("Skipped rebuild because count={} available={}", count, rebuildDirector.available());
                     }
                 }
             } catch (MiruSchemaUnvailableException e) {
-                log.warn("Skipped rebuild because schema is unavailable for {}", coord);
+                LOG.warn("Skipped rebuild because schema is unavailable for {}", coord);
             } catch (Throwable t) {
-                log.error("RebuildIndex encountered a problem for {}", new Object[] { coord }, t);
+                LOG.error("RebuildIndex encountered a problem for {}", new Object[]{coord}, t);
             }
         }
 
@@ -810,7 +812,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
             final AtomicBoolean rebuilding = new AtomicBoolean(true);
             final AtomicBoolean endOfWAL = new AtomicBoolean(false);
 
-            log.debug("Starting rebuild at {} for {}", cursor.get(), coord);
+            LOG.debug("Starting rebuild at {} for {}", cursor.get(), coord);
 
             rebuildWALExecutors.submit(() -> {
                 try {
@@ -831,10 +833,10 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                     }
 
                     // signals end of rebuild
-                    log.debug("Signaling end of rebuild for {}", coord);
+                    LOG.debug("Signaling end of rebuild for {}", coord);
                     endOfWAL.set(true);
                 } catch (Exception x) {
-                    log.error("Failure while rebuilding {}", new Object[] { coord }, x);
+                    LOG.error("Failure while rebuilding {}", new Object[]{coord}, x);
                 } finally {
                     rebuilding.set(false);
                 }
@@ -862,15 +864,15 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                         nextCursor = streamBatch.cursor;
                     } else {
                         // end of rebuild
-                        log.debug("Ending rebuild for {}", coord);
+                        LOG.debug("Ending rebuild for {}", coord);
                         break;
                     }
 
                     int count = partitionedActivities.size();
                     totalIndexed += count;
 
-                    log.debug("Indexing batch of size {} (total {}) for {}", count, totalIndexed, coord);
-                    log.startTimer("rebuild>batchSize-" + partitionRebuildBatchSize);
+                    LOG.debug("Indexing batch of size {} (total {}) for {}", count, totalIndexed, coord);
+                    LOG.startTimer("rebuild>batchSize-" + partitionRebuildBatchSize);
                     boolean repair = firstRebuild.compareAndSet(true, false);
                     accessor.indexInternal(accessor.transientContext,
                         partitionedActivities.iterator(),
@@ -887,15 +889,15 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                         accessor.setSip(accessor.transientContext, nextCursor.getSipCursor(), stackBuffer);
                     }
 
-                    log.stopTimer("rebuild>batchSize-" + partitionRebuildBatchSize);
-                    log.inc("rebuild>count>calls", 1);
-                    log.inc("rebuild>count>total", count);
-                    log.inc("rebuild>count>power>" + FilerIO.chunkPower(count, 0), 1);
-                    log.inc("rebuild", count, coord.tenantId.toString());
-                    log.inc("rebuild>partition>" + coord.partitionId, count, coord.tenantId.toString());
+                    LOG.stopTimer("rebuild>batchSize-" + partitionRebuildBatchSize);
+                    LOG.inc("rebuild>count>calls", 1);
+                    LOG.inc("rebuild>count>total", count);
+                    LOG.inc("rebuild>count>power>" + FilerIO.chunkPower(count, 0), 1);
+                    LOG.inc("rebuild", count, coord.tenantId.toString());
+                    LOG.inc("rebuild>partition>" + coord.partitionId, count, coord.tenantId.toString());
                 }
             } catch (Exception e) {
-                log.error("Failure during rebuild index for {}", new Object[] { coord }, e);
+                LOG.error("Failure during rebuild index for {}", new Object[]{coord}, e);
                 failure = e;
             }
 
@@ -907,7 +909,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                 try {
                     shutdown = rebuildIndexExecutor.awaitTermination(1, TimeUnit.SECONDS);
                 } catch (InterruptedException e) {
-                    log.warn("Ignored interrupt while awaiting shutdown of rebuild index executor for {}", coord);
+                    LOG.warn("Ignored interrupt while awaiting shutdown of rebuild index executor for {}", coord);
                     interrupted = true;
                 }
             }
@@ -948,7 +950,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
 
             if (checkedObsolete.compareAndSet(false, true)) {
                 if (contextFactory.checkObsolete(coord)) {
-                    log.warn("Found obsolete context for {}", coord);
+                    LOG.warn("Found obsolete context for {}", coord);
                     accessor.markObsolete();
                     return;
                 }
@@ -958,7 +960,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                 MiruSchema latestSchema = contextFactory.lookupLatestSchema(coord.tenantId);
                 MiruContext<BM, IBM, S> context = accessor.persistentContext.get();
                 if (!MiruSchema.checkEquals(latestSchema, context.schema)) {
-                    log.warn("Found obsolete schema for {}: {} {} vs {} {}",
+                    LOG.warn("Found obsolete schema for {}: {} {} vs {} {}",
                         coord, latestSchema.getName(), latestSchema.getVersion(), context.schema.getName(), context.schema.getVersion());
                     accessor.markObsolete();
                 }
@@ -976,13 +978,13 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
 
                     boolean forceRebuild = false;
                     if (!accessor.persistentContext.isPresent() && !accessor.transientContext.isPresent()) {
-                        log.info("Forcing rebuild because context is missing for {}", coord);
+                        LOG.info("Forcing rebuild because context is missing for {}", coord);
                         forceRebuild = true;
                     } else if (accessor.isCorrupt()) {
-                        log.info("Forcing rebuild because context is corrupt for {}", coord);
+                        LOG.info("Forcing rebuild because context is corrupt for {}", coord);
                         forceRebuild = true;
                     } else if (!accessor.transientContext.isPresent() && accessor.isObsolete() && accessor.state != MiruPartitionState.obsolete) {
-                        log.info("Forcing rebuild because context is obsolete for {}", coord);
+                        LOG.info("Forcing rebuild because context is obsolete for {}", coord);
                         forceRebuild = true;
                     }
 
@@ -996,7 +998,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                             accessor = transitionStorage(accessor, stackBuffer);
                         }
                     } catch (Throwable t) {
-                        log.error("Migrate encountered a problem for {}", new Object[] { coord }, t);
+                        LOG.error("Migrate encountered a problem for {}", new Object[]{coord}, t);
                     }
                     try {
                         if (accessor.isOpenForWrites() && accessor.hasOpenWriters()) {
@@ -1023,11 +1025,11 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                             accessor.refundChits(persistentMergeChits);
                         }
                     } catch (Throwable t) {
-                        log.error("Sip encountered a problem for {}", new Object[] { coord }, t);
+                        LOG.error("Sip encountered a problem for {}", new Object[]{coord}, t);
                     }
                 }
             } catch (Throwable t) {
-                log.error("SipMigrateIndex encountered a problem for {}", new Object[] { coord }, t);
+                LOG.error("SipMigrateIndex encountered a problem for {}", new Object[]{coord}, t);
             }
         }
 
@@ -1075,21 +1077,21 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                 partitionedActivities.clear();
 
                 if (sippedActivity.cursor != null && sippedActivity.cursor.endOfStream()) {
-                    log.info("Sipped to end of stream for {}", coord);
+                    LOG.info("Sipped to end of stream for {}", coord);
                     long threshold = first ? 0 : timings.partitionSipNotifyEndOfStreamMillis;
                     sippedEndOfWAL = true;
                     sippedEndOfStream = accessor.notifyEndOfStream(threshold);
                     break;
                 } else if (sipCursor == null) {
-                    log.warn("No cursor for {}", coord);
+                    LOG.warn("No cursor for {}", coord);
                     sippedEndOfWAL = true;
                     break;
                 } else if (sipCursor.equals(lastCursor)) {
-                    log.debug("Sipped same cursor for {}", coord);
+                    LOG.debug("Sipped same cursor for {}", coord);
                     sippedEndOfWAL = true;
                     break;
                 } else if (sippedActivity.endOfWAL) {
-                    log.debug("Sipped to end of WAL for {}", coord);
+                    LOG.debug("Sipped to end of WAL for {}", coord);
                     sippedEndOfWAL = true;
                     break;
                 }
@@ -1098,6 +1100,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
             }
 
             if (!accessor.hasOpenWriters()) {
+                LOG.info("Sipped forced merging has no open writers. sippedEndOfWAL:{} sippedEndOfStream:{}", sippedEndOfWAL, sippedEndOfStream);
                 accessor.merge(persistentMergeExecutor, accessor.persistentContext, persistentMergeChits, trackError);
             }
 
@@ -1105,6 +1108,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
         }
 
         private class SipResult {
+
             private final boolean sippedEndOfWAL;
             private final boolean sippedEndOfStream;
 
@@ -1135,20 +1139,20 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                 sipTracker.metrics(coord, suggestion);
             }
 
-            log.inc("sip>count>calls", 1);
+            LOG.inc("sip>count>calls", 1);
             if (count > 0) {
-                log.inc("sip>count>total", count);
-                log.inc("sip>count>power>" + FilerIO.chunkPower(count, 0), 1);
-                log.inc("sip>count", count, coord.tenantId.toString());
-                log.inc("sip>partition>" + coord.partitionId, count, coord.tenantId.toString());
+                LOG.inc("sip>count>total", count);
+                LOG.inc("sip>count>power>" + FilerIO.chunkPower(count, 0), 1);
+                LOG.inc("sip>count", count, coord.tenantId.toString());
+                LOG.inc("sip>partition>" + coord.partitionId, count, coord.tenantId.toString());
             }
             if (initialCount > 0) {
                 if (initialCount > count * 2 && accessor.persistentContext.isPresent()) {
                     MiruContext<BM, IBM, S> context = accessor.persistentContext.get();
-                    log.debug("Partition skipped over half a batch for {} while sipping, hasChunkStores={} hasLabIndex={} lastId={} cursor={} nextCursor={}",
+                    LOG.debug("Partition skipped over half a batch for {} while sipping, hasChunkStores={} hasLabIndex={} lastId={} cursor={} nextCursor={}",
                         coord, context.hasChunkStores(), context.hasLabIndex(), context.timeIndex.lastId(), sipCursor, nextSipCursor);
                 }
-                log.inc("sip>count>skip", (initialCount - count));
+                LOG.inc("sip>count>skip", (initialCount - count));
             }
             return suggestion;
         }
