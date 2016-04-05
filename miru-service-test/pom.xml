@@ -5,12 +5,12 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-build-management</artifactId>
-        <version>0.977-SNAPSHOT</version>
+        <version>0.977</version>
         <relativePath>../inheritance-poms/global-build-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru</groupId>
     <artifactId>miru-service-test</artifactId>
-    <version>0.977-SNAPSHOT</version>
+    <version>0.977</version>
     <properties>
         <module.type>service_lib</module.type>
     </properties>
@@ -56,22 +56,22 @@
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-api</artifactId>
-            <version>0.977-SNAPSHOT</version>
+            <version>0.977</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-plugin</artifactId>
-            <version>0.977-SNAPSHOT</version>
+            <version>0.977</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-service</artifactId>
-            <version>0.977-SNAPSHOT</version>
+            <version>0.977</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-bitmaps-roaring5</artifactId>
-            <version>0.977-SNAPSHOT</version>
+            <version>0.977</version>
         </dependency>
 
         <dependency>
@@ -97,25 +97,25 @@
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-cluster</artifactId>
-            <version>0.977-SNAPSHOT</version>
+            <version>0.977</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-amza</artifactId>
-            <version>0.977-SNAPSHOT</version>
+            <version>0.977</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-wal</artifactId>
-            <version>0.977-SNAPSHOT</version>
+            <version>0.977</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-writer</artifactId>
-            <version>0.977-SNAPSHOT</version>
+            <version>0.977</version>
             <scope>test</scope>
         </dependency>
         <dependency>
