@@ -151,7 +151,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
 
             return streamBitmaps.stream(null, combined);
         }, solutionLog);*/
-        float[] thresholds = report.isPresent() ? new float[]{report.get().threshold} : new float[]{0.5f, 0.2f, 0.08f, 0f};
+        float[] thresholds = report.isPresent() ? new float[] { report.get().threshold } : new float[] { 0f }; // new float[]{0.5f, 0.2f, 0.08f, 0f};
         @SuppressWarnings("unchecked")
         MinMaxPriorityQueue<Scored>[] scored = new MinMaxPriorityQueue[thresholds.length];
 
@@ -211,7 +211,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                     totalTimeFetchingLastId += (System.currentTimeMillis() - fetchLastIdsStart);
 
                     long fetchScoresStart = System.currentTimeMillis();
-                    int[] missed = {0};
+                    int[] missed = { 0 };
                     modelScorer.score(
                         request.query.modelId,
                         miruTermIds,
@@ -293,9 +293,32 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         float scoredThreshold = 0f;
         for (int i = 0; i < scored.length; i++) {
             if (i == scored.length - 1 || scored[i].size() == request.query.desiredNumberOfResults) {
-                for (Scored s : scored[i]) {
+                Scored[] s = scored[i].toArray(new Scored[0]);
+                MiruValue[][][] gatherScoredValues = null;
+                if (gatherFieldIds != null) {
+                    int[] scoredLastIds = new int[s.length];
+                    for (int j = 0; j < s.length; j++) {
+                        scoredLastIds[j] = s[j].lastId;
+                    }
 
-                    MiruValue[][] gatherValues = null;
+                    gatherScoredValues = new MiruValue[scoredLastIds.length][gatherFieldIds.length][];
+                    for (int j = 0; j < gatherFieldIds.length; j++) {
+                        MiruTermId[][] termIds = activityIndex.getAll("strut", scoredLastIds, gatherFieldIds[j], stackBuffer);
+                        for (int k = 0; k < termIds.length; k++) {
+                            gatherScoredValues[k][j] = new MiruValue[termIds[k].length];
+                            for (int l = 0; l < termIds[k].length; l++) {
+                                gatherScoredValues[k][j][l] = new MiruValue(termComposer.decompose(schema,
+                                    schema.getFieldDefinition(gatherFieldIds[j]),
+                                    stackBuffer,
+                                    termIds[k][l]));
+                            }
+                        }
+                    }
+                }
+
+                for (int j = 0; j < s.length; j++) {
+
+                    /*MiruValue[][] gatherValues = null;
                     if (gatherFieldIds != null) {
                         //TODO much more efficient to accumulate lastSetBits and gather these once at the end
                         gatherValues = new MiruValue[gatherFieldIds.length][];
@@ -304,16 +327,18 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                             MiruValue[] gather = new MiruValue[termIds.length];
                             for (int k = 0; k < gather.length; k++) {
                                 gather[k] = new MiruValue(termComposer.decompose(schema,
-                                    schema.getFieldDefinition(gatherFieldIds[k]),
+                                    schema.getFieldDefinition(gatherFieldIds[j]),
                                     stackBuffer,
                                     termIds[k]));
                             }
                             gatherValues[j] = gather;
                         }
-                    }
-                    
-                    String[] decomposed = termComposer.decompose(schema, pivotFieldDefinition, stackBuffer, s.term);
-                    hotOrNots.add(new HotOrNot(new MiruValue(decomposed), gatherValues, s.score, s.termCount, s.features));
+                    }*/
+
+                    String[] decomposed = termComposer.decompose(schema, pivotFieldDefinition, stackBuffer, s[j].term);
+                    hotOrNots.add(new HotOrNot(new MiruValue(decomposed),
+                        gatherScoredValues != null ? gatherScoredValues[j] : null,
+                        s[j].score, s[j].termCount, s[j].features));
                 }
                 solutionLog.log(MiruSolutionLogLevel.INFO, "Strut found {} terms at threshold {}", hotOrNots.size(), thresholds[i]);
                 scoredThreshold = thresholds[i];
