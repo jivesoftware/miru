@@ -82,7 +82,11 @@ public class StrutAnswerMerger implements MiruAnswerMerger<StrutAnswer> {
                         }
                     }
                 }
-                merged.add(new HotOrNot(hotOrNot.value, mergeScores(hotOrNot, otherScore), hotOrNot.count + otherScore.count, features));
+                merged.add(new HotOrNot(hotOrNot.value,
+                    (bigger == lastFeatures) ? hotOrNot.gatherLatestValues : otherScore.gatherLatestValues,
+                    mergeScores(hotOrNot, otherScore),
+                    hotOrNot.count + otherScore.count,
+                    features));
             } else {
                 merged.add(hotOrNot);
             }

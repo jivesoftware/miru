@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.stream.plugins.strut;
 
 import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
@@ -18,6 +19,7 @@ import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
+import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
@@ -174,14 +176,14 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             report,
             (streamBitmaps) -> {
                 long start = System.currentTimeMillis();
-                List<MiruTermId> termIds = Lists.newArrayList();
+                List<LastIdAndTermId> lastIdAndTermIds = Lists.newArrayList();
                 //TODO config batch size
-                aggregateUtil.gather("strut", bitmaps, context, eligible, pivotFieldId, 100, solutionLog, (termId) -> {
-                    termIds.add(termId);
+                aggregateUtil.gather("strut", bitmaps, context, eligible, pivotFieldId, 100, solutionLog, (lastId, termId) -> {
+                    lastIdAndTermIds.add(new LastIdAndTermId(lastId, termId));
                     return true;
                 }, stackBuffer);
 
-                solutionLog.log(MiruSolutionLogLevel.INFO, "Strut accumulated {} terms in {} ms", termIds.size(), System.currentTimeMillis() - start);
+                solutionLog.log(MiruSolutionLogLevel.INFO, "Strut accumulated {} terms in {} ms", lastIdAndTermIds.size(), System.currentTimeMillis() - start);
                 start = System.currentTimeMillis();
 
                 long totalTimeFetchingLastId = 0;
@@ -189,20 +191,23 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
 
                 int batchSize = 100; //TODO config batch size
                 BM[] answers = bitmaps.createArrayOf(batchSize);
-                int[] lastIds = new int[batchSize];
+                int[] scoredToLastIds = new int[batchSize];
                 MiruTermId[] nullableMiruTermIds = new MiruTermId[batchSize];
                 MiruTermId[] miruTermIds = new MiruTermId[batchSize];
                 int totalMisses = 0;
                 done:
-                for (List<MiruTermId> batch : Lists.partition(termIds, answers.length)) {
+                for (List<LastIdAndTermId> batch : Lists.partition(lastIdAndTermIds, answers.length)) {
 
                     Arrays.fill(miruTermIds, null);
-                    batch.toArray(miruTermIds);
+                    for (int i = 0; i < batchSize; i++) {
+                        miruTermIds[i] = batch.get(i).termId;
+                    }
+
                     System.arraycopy(miruTermIds, 0, nullableMiruTermIds, 0, batchSize);
-                    Arrays.fill(lastIds, -1);
+                    Arrays.fill(scoredToLastIds, -1);
 
                     long fetchLastIdsStart = System.currentTimeMillis();
-                    primaryIndex.multiGetLastIds("strut", pivotFieldId, nullableMiruTermIds, lastIds, stackBuffer);
+                    primaryIndex.multiGetLastIds("strut", pivotFieldId, nullableMiruTermIds, scoredToLastIds, stackBuffer);
                     totalTimeFetchingLastId += (System.currentTimeMillis() - fetchLastIdsStart);
 
                     long fetchScoresStart = System.currentTimeMillis();
@@ -211,9 +216,9 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                         request.query.modelId,
                         miruTermIds,
                         cacheStores,
-                        (int termIndex, float score, int lastId) -> {
-                            if (!Float.isNaN(score) && lastId >= lastIds[termIndex]) {
-                                Scored s = new Scored(miruTermIds[termIndex], lastIds[termIndex], score, -1, null);
+                        (termIndex, score, scoredToLastId) -> {
+                            if (!Float.isNaN(score) && scoredToLastId >= scoredToLastIds[termIndex]) {
+                                Scored s = new Scored(batch.get(termIndex).lastId, miruTermIds[termIndex], scoredToLastIds[termIndex], score, -1, null);
                                 miruTermIds[termIndex] = null;
                                 for (int j = 0; j < thresholds.length; j++) {
                                     scored[j].add(s);
@@ -240,7 +245,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                             stackBuffer);
 
                         for (int i = 0; i < batch.size(); i++) {
-                            if (answers[i] != null && !streamBitmaps.stream(batch.get(i), lastIds[i], answers[i])) {
+                            if (answers[i] != null && !streamBitmaps.stream(batch.get(i).lastId, batch.get(i).termId, scoredToLastIds[i], answers[i])) {
                                 break done;
                             }
                         }
@@ -248,7 +253,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 }
 
                 solutionLog.log(MiruSolutionLogLevel.INFO, "Struted our stuff for {} which took lastIds {} ms cached {} ms total {} ms total missed {}",
-                    termIds.size(),
+                    lastIdAndTermIds.size(),
                     totalTimeFetchingLastId,
                     totalTimeFetchingScores,
                     System.currentTimeMillis() - start,
@@ -272,14 +277,43 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 updates.size(), System.currentTimeMillis() - start);
         }
 
+        int[] gatherFieldIds = null;
+        if (request.query.gatherTermsForFields != null && request.query.gatherTermsForFields.length > 0) {
+            gatherFieldIds = new int[request.query.gatherTermsForFields.length];
+            for (int i = 0; i < gatherFieldIds.length; i++) {
+                gatherFieldIds[i] = schema.getFieldId(request.query.gatherTermsForFields[i]);
+                Preconditions.checkArgument(schema.getFieldDefinition(gatherFieldIds[i]).type.hasFeature(MiruFieldDefinition.Feature.stored),
+                    "You can only gather stored fields");
+            }
+        }
+
+        MiruActivityIndex activityIndex = context.getActivityIndex();
         MiruFieldDefinition pivotFieldDefinition = schema.getFieldDefinition(pivotFieldId);
         List<HotOrNot> hotOrNots = new ArrayList<>(request.query.desiredNumberOfResults);
         float scoredThreshold = 0f;
         for (int i = 0; i < scored.length; i++) {
             if (i == scored.length - 1 || scored[i].size() == request.query.desiredNumberOfResults) {
                 for (Scored s : scored[i]) {
-                    hotOrNots.add(new HotOrNot(new MiruValue(termComposer.decompose(schema, pivotFieldDefinition, stackBuffer, s.term)),
-                        s.score, s.termCount, s.features));
+
+                    MiruValue[][] gatherValues = null;
+                    if (gatherFieldIds != null) {
+                        //TODO much more efficient to accumulate lastSetBits and gather these once at the end
+                        gatherValues = new MiruValue[gatherFieldIds.length][];
+                        for (int j = 0; j < gatherFieldIds.length; j++) {
+                            MiruTermId[] termIds = activityIndex.get("strut", s.lastId, gatherFieldIds[j], stackBuffer);
+                            MiruValue[] gather = new MiruValue[termIds.length];
+                            for (int k = 0; k < gather.length; k++) {
+                                gather[k] = new MiruValue(termComposer.decompose(schema,
+                                    schema.getFieldDefinition(gatherFieldIds[k]),
+                                    stackBuffer,
+                                    termIds[k]));
+                            }
+                            gatherValues[j] = gather;
+                        }
+                    }
+                    
+                    String[] decomposed = termComposer.decompose(schema, pivotFieldDefinition, stackBuffer, s.term);
+                    hotOrNots.add(new HotOrNot(new MiruValue(decomposed), gatherValues, s.score, s.termCount, s.features));
                 }
                 solutionLog.log(MiruSolutionLogLevel.INFO, "Strut found {} terms at threshold {}", hotOrNots.size(), thresholds[i]);
                 scoredThreshold = thresholds[i];
@@ -288,6 +322,17 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         }
 
         return new MiruPartitionResponse<>(strut.composeAnswer(context, request, hotOrNots, scoredThreshold), solutionLog.asList());
+    }
+
+    private static class LastIdAndTermId {
+
+        private final int lastId;
+        private final MiruTermId termId;
+
+        public LastIdAndTermId(int lastId, MiruTermId termId) {
+            this.lastId = lastId;
+            this.termId = termId;
+        }
     }
 
     @Override

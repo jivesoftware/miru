@@ -37,6 +37,7 @@ import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.shared.ClientCall.ClientResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -79,6 +80,7 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
         final String catwalkId;
         final String modelId;
         final String gatherField;
+        final String gatherTermsForFields;
         final String gatherFilters;
         final String featureFields;
         final String featureFilters;
@@ -90,7 +92,7 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
         final String logLevel;
 
         public StrutPluginRegionInput(String tenant, long fromTimeAgo, String fromTimeUnit, long toTimeAgo, String toTimeUnit, String catwalkId, String modelId,
-            String gatherField, String gatherFilters, String featureFields, String featureFilters, String constraintField,
+            String gatherField, String gatherTermsForFields, String gatherFilters, String featureFields, String featureFilters, String constraintField,
             String constraintFilters, Strategy strategy, int desiredNumberOfResults, int desiredModelSize, String logLevel) {
             this.tenant = tenant;
             this.fromTimeAgo = fromTimeAgo;
@@ -100,6 +102,7 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
             this.catwalkId = catwalkId;
             this.modelId = modelId;
             this.gatherField = gatherField;
+            this.gatherTermsForFields = gatherTermsForFields;
             this.gatherFilters = gatherFilters;
             this.featureFields = featureFields;
             this.featureFilters = featureFilters;
@@ -130,6 +133,8 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                     }
                 }
 
+                String[] gatherTermsForFieldSplit = (input.gatherTermsForFields.isEmpty()) ? null : input.gatherTermsForFields.split("\\s*,\\s*");
+
                 TimeUnit fromTimeUnit = TimeUnit.valueOf(input.fromTimeUnit);
                 long fromTimeAgo = input.fromTimeAgo;
                 long fromMillisAgo = fromTimeUnit.toMillis(fromTimeAgo);
@@ -148,6 +153,7 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                 data.put("catwalkId", input.catwalkId);
                 data.put("modelId", input.modelId);
                 data.put("gatherField", input.gatherField);
+                data.put("gatherTermsForFields", input.gatherTermsForFields);
                 data.put("gatherFilters", input.gatherFilters);
                 data.put("featureFields", input.featureFields);
                 data.put("featureFilters", input.featureFilters);
@@ -205,7 +211,8 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                             featureFields, // todo seperate from catwalkQuery
                             featureFilter, // todo seperate from catwalkQuery
                             input.desiredNumberOfResults,
-                            true),
+                            true,
+                            gatherTermsForFieldSplit),
                         MiruSolutionLogLevel.valueOf(input.logLevel)));
                     MiruResponse<StrutAnswer> strutResponse = readerClient.call("",
                         new RoundRobinStrategy(),
@@ -264,6 +271,7 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                             Map<String, Object> r = new HashMap<>();
                             r.put("value", valueToString(hotOrNot.value));
                             r.put("score", String.valueOf(hotOrNot.score));
+                            r.put("terms", (hotOrNot.gatherLatestValues == null) ? "" : Arrays.deepToString(hotOrNot.gatherLatestValues));
                             r.put("features", features);
                             results.add(r);
                         }

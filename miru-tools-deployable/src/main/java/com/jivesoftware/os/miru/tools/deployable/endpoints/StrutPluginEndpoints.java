@@ -45,6 +45,7 @@ public class StrutPluginEndpoints {
         @QueryParam("catwalkId") @DefaultValue("test") String catwalkId,
         @QueryParam("modelId") @DefaultValue("2000") String modelId,
         @QueryParam("gatherField") @DefaultValue("parent") String gatherField,
+        @QueryParam("gatherTermsForFields") @DefaultValue("") String gatherTermsForFields,
         @QueryParam("gatherFilters") @DefaultValue("activityType:0, user:3 2000") String gatherFilters,
         @QueryParam("featureFields") @DefaultValue("activityType context,"
             + "activityType objectType,"
@@ -75,6 +76,7 @@ public class StrutPluginEndpoints {
                     catwalkId,
                     modelId,
                     gatherField,
+                    gatherTermsForFields.trim(),
                     gatherFilters.trim(),
                     featureFields,
                     featureFilters.trim(),

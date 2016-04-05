@@ -2,7 +2,6 @@ package com.jivesoftware.os.miru.stream.plugins.strut;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import java.io.Serializable;
 import java.util.Arrays;
@@ -14,6 +13,7 @@ import java.util.List;
 public class HotOrNot implements Comparable<HotOrNot>, Serializable {
 
     public final MiruValue value;
+    public final MiruValue[][] gatherLatestValues;
     public final float score;
     public final int count;
     public final List<Hotness>[] features;
@@ -21,10 +21,12 @@ public class HotOrNot implements Comparable<HotOrNot>, Serializable {
     @JsonCreator
     public HotOrNot(
         @JsonProperty("value") MiruValue value,
+        @JsonProperty("gatherLatestValues") MiruValue[][] gatherLatestValues,
         @JsonProperty("score") float score,
         @JsonProperty("count") int count,
         @JsonProperty("features") List<Hotness>[] features) {
         this.value = value;
+        this.gatherLatestValues = gatherLatestValues;
         this.score = score;
         this.count = count;
         this.features = features;
@@ -32,12 +34,13 @@ public class HotOrNot implements Comparable<HotOrNot>, Serializable {
 
     @Override
     public String toString() {
-        return "HotOrNot{" +
-            "value=" + value +
-            ", score=" + score +
-            ", count=" + count +
-            ", features=" + Arrays.toString(features) +
-            '}';
+        return "HotOrNot{"
+            + "value=" + value
+            + ", gatherLatestValues=" + Arrays.deepToString(gatherLatestValues)
+            + ", score=" + score
+            + ", count=" + count
+            + ", features=" + Arrays.toString(features)
+            + '}';
     }
 
     @Override
@@ -70,6 +73,7 @@ public class HotOrNot implements Comparable<HotOrNot>, Serializable {
     }
 
     public static class Hotness implements Serializable {
+
         public final MiruValue[] values;
         public final float score;
 

@@ -48,7 +48,7 @@ public class StrutModelScorer {
         for (int i = 0; i < keys.length; i++) {
             Scored update = updates.get(i);
             byte[] scoreBytes = FilerIO.floatBytes(update.score);
-            byte[] lastId = FilerIO.intBytes(update.lastId);
+            byte[] lastId = FilerIO.intBytes(update.scoredToLastId);
 
             byte[] payload = new byte[8];
             System.arraycopy(scoreBytes, 0, payload, 0, 4);

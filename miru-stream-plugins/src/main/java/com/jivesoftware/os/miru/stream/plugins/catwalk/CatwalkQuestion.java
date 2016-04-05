@@ -105,7 +105,7 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
         int pivotFieldId = context.getSchema().getFieldId(request.query.gatherField);
 
         List<MiruTermId> termIds = Lists.newArrayList();
-        aggregateUtil.gather("catwalk", bitmaps, context, eligible, pivotFieldId, 100, solutionLog, termId -> {
+        aggregateUtil.gather("catwalk", bitmaps, context, eligible, pivotFieldId, 100, solutionLog, (lastId1, termId) -> {
             termIds.add(termId);
             return true;
         }, stackBuffer);
