@@ -100,7 +100,7 @@ public class Strut {
         }
 
         StrutModel model = cache.get(request.tenantId, request.query.catwalkId, request.query.modelId, coord.partitionId.getId(), request.query.catwalkQuery);
-        boolean[] cacheable = { true };
+        boolean[] cacheable = {true};
         for (int i = 0; i < featureFields.length; i++) {
             if (model.numberOfModels[i] == 0) {
                 cacheable[0] = false;
@@ -109,7 +109,7 @@ public class Strut {
         }
 
         long start = System.currentTimeMillis();
-        int[] featureCount = { 0 };
+        int[] featureCount = {0};
         float[] score = new float[thresholds.length];
         int[] termCount = new int[thresholds.length];
         aggregateUtil.gatherFeatures(name,
@@ -118,7 +118,7 @@ public class Strut {
             consumeAnswers,
             featureFieldIds,
             true,
-            (answerTermId, answerLastId, featureId, termIds) -> {
+            (lastId, answerTermId, answerScoredLastId, featureId, termIds) -> {
                 if (featureId == -1) {
                     for (int i = 0; i < thresholds.length; i++) {
                         boolean stopped = false;
@@ -129,10 +129,10 @@ public class Strut {
                                 System.arraycopy(features[i], 0, scoredFeatures, 0, features[i].length);
                             }
                             float s = finalizeScore(score[i], termCount[i], request.query.strategy);
-                            if (!hotStuff.steamStream(i, new Scored(answerTermId, answerLastId, s, termCount[i], scoredFeatures), cacheable[0])) {
+                            if (!hotStuff.steamStream(i, new Scored(lastId, answerTermId, answerScoredLastId, s, termCount[i], scoredFeatures), cacheable[0])) {
                                 stopped = true;
                             }
-                        } else if (!hotStuff.steamStream(i, new Scored(answerTermId, answerLastId, 0f, 0, null), cacheable[0])) {
+                        } else if (!hotStuff.steamStream(i, new Scored(lastId, answerTermId, answerScoredLastId, 0f, 0, null), cacheable[0])) {
                             stopped = true;
                         }
                         score[i] = 0f;
@@ -208,15 +208,17 @@ public class Strut {
 
     static class Scored implements Comparable<Scored> {
 
-        MiruTermId term;
         int lastId;
+        MiruTermId term;
+        int scoredToLastId;
         float score;
         int termCount;
         List<Hotness>[] features;
 
-        public Scored(MiruTermId term, int lastId, float score, int termCount, List<Hotness>[] features) {
-            this.term = term;
+        public Scored(int lastId, MiruTermId term, int scoredToLastId, float score, int termCount, List<Hotness>[] features) {
             this.lastId = lastId;
+            this.term = term;
+            this.scoredToLastId = scoredToLastId;
             this.score = score;
             this.termCount = termCount;
             this.features = features;

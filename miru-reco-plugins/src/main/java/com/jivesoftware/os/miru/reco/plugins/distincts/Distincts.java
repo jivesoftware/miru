@@ -127,7 +127,7 @@ public class Distincts {
 
                 start = System.currentTimeMillis();
                 //TODO expose batch size to query?
-                aggregateUtil.gather(name, bitmaps, requestContext, result, fieldId, gatherBatchSize, solutionLog, termId -> {
+                aggregateUtil.gather(name, bitmaps, requestContext, result, fieldId, gatherBatchSize, solutionLog, (lastId, termId) -> {
                     if (prefixesAsBytes.length > 0) {
                         byte[] termBytes = termId.getBytes();
                         for (byte[] prefixAsBytes : prefixesAsBytes) {

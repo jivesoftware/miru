@@ -11,6 +11,7 @@
  * @param? catwalkId
  * @param? modelId
  * @param? gatherField
+ * @param? gatherTermsForFields
  * @param? gatherFilters
  * @param? featureFields
  * @param? featureFilters
@@ -112,6 +113,14 @@
                         </td>
                     </tr>
                     <tr>
+                        <td>Gather Terms for Fields</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-gatherTermsForFields-autocomplete j-autocomplete-input j-ui-elem" placeholder="Gather Terms for Fields" value="{$gatherTermsForFields?:''}"
+                                name="gatherTermsForFields" id="gatherTermsForFieldsPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
                         <td>Gather Filters</td>
                         <td>
                             <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
@@ -203,6 +212,7 @@
                         <tr>
                             <th>Id</th>
                             <th>Score</th>
+                            <th>Terms</th>
                             <th>Features</th>
                         </tr>
                     </thead>
@@ -214,6 +224,9 @@
                                 </td>
                                 <td>
                                     {$r.score}
+                                </td>
+                                <td>
+                                    {$r.terms}
                                 </td>
                                 <td>
                                     {foreach $f in $r.features}

@@ -121,7 +121,7 @@ public class StrutModelScorerNGTest {
 
         List<Scored> updates = Lists.newArrayList();
         for (int i = 0; i < 1; i++) {
-            updates.add(new Scored(new MiruTermId(new byte[]{(byte) 97, (byte) (97 + i)}), 10, 0.5f, 1, null));
+            updates.add(new Scored(-1, new MiruTermId(new byte[]{(byte) 97, (byte) (97 + i)}), 10, 0.5f, 1, null));
         }
 
         scorer.commit(modelId, cacheKeyValues, updates, stackBuffer);

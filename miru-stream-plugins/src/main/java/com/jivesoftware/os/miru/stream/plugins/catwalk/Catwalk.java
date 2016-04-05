@@ -67,10 +67,10 @@ public class Catwalk {
         aggregateUtil.gatherFeatures(name,
             bitmaps,
             requestContext,
-            streamBitmaps -> streamBitmaps.stream(null, -1, answer),
+            streamBitmaps -> streamBitmaps.stream(-1, null, -1, answer),
             featureFieldIds,
             false,
-            (answerTermId, answerLastId, featureId, termIds) -> {
+            (lastId, answerTermId, answerScoredLastId, featureId, termIds) -> {
                 if (featureId >= 0) {
                     featureValueSets[featureId].add(new Feature(termIds));
                 }
