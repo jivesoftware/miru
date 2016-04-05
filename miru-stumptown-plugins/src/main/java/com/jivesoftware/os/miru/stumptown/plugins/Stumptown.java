@@ -56,7 +56,7 @@ public class Stumptown {
             int index = iter.next();
             if (i > (cardinality - 1 - desiredNumberOfResults)) {
                 //TODO formalize gathering of fields/terms
-                TimeAndVersion timeAndVersion = requestContext.getActivityIndex().get(name, index, stackBuffer);
+                TimeAndVersion timeAndVersion = requestContext.getActivityIndex().getTimeAndVersion(name, index, stackBuffer);
                 MiruInternalActivity activity = new MiruInternalActivity(tenantId, timeAndVersion.timestamp, timeAndVersion.version, new String[0],
                     new MiruTermId[0][], new MiruIBA[0][]);
                 results.add(internExtern.extern(activity, schema, stackBuffer));

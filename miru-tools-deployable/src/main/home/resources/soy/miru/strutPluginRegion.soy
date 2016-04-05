@@ -213,6 +213,7 @@
                             <th>Id</th>
                             <th>Score</th>
                             <th>Terms</th>
+                            <th>Age</th>
                             <th>Features</th>
                         </tr>
                     </thead>
@@ -227,6 +228,9 @@
                                 </td>
                                 <td>
                                     {$r.terms}
+                                </td>
+                                <td>
+                                    {$r.timeAgo}
                                 </td>
                                 <td>
                                     {foreach $f in $r.features}

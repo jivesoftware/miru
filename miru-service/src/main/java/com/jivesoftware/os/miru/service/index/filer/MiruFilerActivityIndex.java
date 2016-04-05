@@ -51,7 +51,7 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
     }
 
     @Override
-    public TimeAndVersion get(String name, int index, StackBuffer stackBuffer) throws IOException, InterruptedException {
+    public TimeAndVersion getTimeAndVersion(String name, int index, StackBuffer stackBuffer) throws IOException, InterruptedException {
         int capacity = capacity(stackBuffer);
         checkArgument(index >= 0 && index < capacity, "Index parameter is out of bounds. The value %s must be >=0 and <%s", index, capacity);
 
@@ -72,9 +72,38 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
             },
             stackBuffer);
 
-        LOG.inc("count>getActivity>total");
-        LOG.inc("count>getActivity>" + name);
+        LOG.inc("count>getTimeAndVersion>total");
+        LOG.inc("count>getTimeAndVersion>" + name);
         return (values[0] != -1L || values[1] != -1L) ? new TimeAndVersion(values[0], values[1]) : null;
+    }
+
+    @Override
+    public TimeAndVersion[] getAllTimeAndVersions(String name, int[] indexes, StackBuffer stackBuffer) throws Exception {
+        TimeAndVersion[] tav = new TimeAndVersion[indexes.length];
+        timeAndVersionFiler.read(null,
+            (monkey, filer, stackBuffer1, lock) -> {
+                if (filer != null) {
+                    synchronized (lock) {
+                        for (int i = 0; i < indexes.length; i++) {
+                            int index = indexes[i];
+                            int offset = index * 16;
+                            if (filer.length() >= offset + 16) {
+                                filer.seek(offset);
+                                tav[i] = new TimeAndVersion(
+                                    FilerIO.readLong(filer, "time", stackBuffer1),
+                                    FilerIO.readLong(filer, "version", stackBuffer1));
+                            }
+                        }
+                    }
+                }
+                return null;
+            },
+            stackBuffer);
+
+        LOG.inc("count>getAllTimeAndVersions>total");
+        LOG.inc("count>getAllTimeAndVersions>count", indexes.length);
+        LOG.inc("count>getAllTimeAndVersions>" + name);
+        return tav;
     }
 
     @Override

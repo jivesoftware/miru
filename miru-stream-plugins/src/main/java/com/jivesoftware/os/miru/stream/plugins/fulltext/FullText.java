@@ -179,7 +179,7 @@ public class FullText {
             if (scores[i] > minScore) {
                 RawBitScore bitScore = new RawBitScore(new Promise<>(() -> {
                     //TODO formalize gathering of fields/terms
-                    TimeAndVersion timeAndVersion = requestContext.getActivityIndex().get(name, ids[_i], stackBuffer);
+                    TimeAndVersion timeAndVersion = requestContext.getActivityIndex().getTimeAndVersion(name, ids[_i], stackBuffer);
                     MiruInternalActivity internalActivity = new MiruInternalActivity(request.tenantId, timeAndVersion.timestamp, timeAndVersion.version,
                         new String[0], new MiruTermId[0][], new MiruIBA[0][]);
                     return internExtern.extern(internalActivity, schema, stackBuffer);
@@ -188,7 +188,7 @@ public class FullText {
             } else if (acceptableBelowMin.intValue() > 0) {
                 RawBitScore bitScore = new RawBitScore(new Promise<>(() -> {
                     //TODO formalize gathering of fields/terms
-                    TimeAndVersion timeAndVersion = requestContext.getActivityIndex().get(name, ids[_i], stackBuffer);
+                    TimeAndVersion timeAndVersion = requestContext.getActivityIndex().getTimeAndVersion(name, ids[_i], stackBuffer);
                     MiruInternalActivity internalActivity = new MiruInternalActivity(request.tenantId, timeAndVersion.timestamp, timeAndVersion.version,
                         new String[0], new MiruTermId[0][], new MiruIBA[0][]);
                     return internExtern.extern(internalActivity, schema, stackBuffer);
@@ -218,7 +218,7 @@ public class FullText {
         while (iter.hasNext()) {
             int lastSetBit = iter.next();
             //TODO formalize gathering of fields/terms
-            TimeAndVersion timeAndVersion = requestContext.getActivityIndex().get(name, lastSetBit, stackBuffer);
+            TimeAndVersion timeAndVersion = requestContext.getActivityIndex().getTimeAndVersion(name, lastSetBit, stackBuffer);
             MiruInternalActivity internalActivity = new MiruInternalActivity(request.tenantId, timeAndVersion.timestamp, timeAndVersion.version,
                 new String[0], new MiruTermId[0][], new MiruIBA[0][]);
             float score = 0f; //TODO ?

@@ -89,7 +89,7 @@ public class MiruJustInTimeBackfillerizer {
                     while (intIterator.hasNext()) {
                         int i = intIterator.next();
                         if (i > lastActivityIndex && i <= lastId) {
-                            TimeAndVersion timeAndVersion = requestContext.getActivityIndex().get("justInTimeBackfillerizer", i, stackBuffer);
+                            TimeAndVersion timeAndVersion = requestContext.getActivityIndex().getTimeAndVersion("justInTimeBackfillerizer", i, stackBuffer);
                             if (timeAndVersion == null) {
                                 log.warn("Missing activity at index {}, timeIndex={}, activityIndex={}",
                                     i, requestContext.getTimeIndex().lastId(), requestContext.getActivityIndex().lastId(stackBuffer));

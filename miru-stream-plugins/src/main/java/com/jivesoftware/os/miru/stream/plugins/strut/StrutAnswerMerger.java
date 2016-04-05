@@ -86,7 +86,8 @@ public class StrutAnswerMerger implements MiruAnswerMerger<StrutAnswer> {
                     (bigger == lastFeatures) ? hotOrNot.gatherLatestValues : otherScore.gatherLatestValues,
                     mergeScores(hotOrNot, otherScore),
                     hotOrNot.count + otherScore.count,
-                    features));
+                    features,
+                    (bigger == lastFeatures) ? hotOrNot.timestamp : otherScore.timestamp));
             } else {
                 merged.add(hotOrNot);
             }

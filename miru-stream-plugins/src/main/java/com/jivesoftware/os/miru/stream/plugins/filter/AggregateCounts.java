@@ -298,7 +298,7 @@ public class AggregateCounts {
                             gatherValues[i] = gather;
                         }
                         //TODO much more efficient to accumulate lastSetBits and gather these once at the end
-                        TimeAndVersion activity = requestContext.getActivityIndex().get(name, lastSetBit, stackBuffer);
+                        TimeAndVersion activity = requestContext.getActivityIndex().getTimeAndVersion(name, lastSetBit, stackBuffer);
 
                         AggregateCount aggregateCount = new AggregateCount(
                             aggregateValue,

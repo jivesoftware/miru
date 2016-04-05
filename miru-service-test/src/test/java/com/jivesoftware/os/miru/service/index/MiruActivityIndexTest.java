@@ -128,19 +128,19 @@ public class MiruActivityIndexTest {
     public void testGetActivity(MiruActivityIndex miruActivityIndex, MiruInternalActivity[] expectedActivities) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
         assertTrue(expectedActivities.length == 3);
-        assertEquals(miruActivityIndex.get("test", 0, stackBuffer).timestamp, expectedActivities[0].time);
-        assertEquals(miruActivityIndex.get("test", 0, stackBuffer).version, expectedActivities[0].version);
-        assertEquals(miruActivityIndex.get("test", 1, stackBuffer).timestamp, expectedActivities[1].time);
-        assertEquals(miruActivityIndex.get("test", 1, stackBuffer).version, expectedActivities[1].version);
-        assertEquals(miruActivityIndex.get("test", 2, stackBuffer).timestamp, expectedActivities[2].time);
-        assertEquals(miruActivityIndex.get("test", 2, stackBuffer).version, expectedActivities[2].version);
+        assertEquals(miruActivityIndex.getTimeAndVersion("test", 0, stackBuffer).timestamp, expectedActivities[0].time);
+        assertEquals(miruActivityIndex.getTimeAndVersion("test", 0, stackBuffer).version, expectedActivities[0].version);
+        assertEquals(miruActivityIndex.getTimeAndVersion("test", 1, stackBuffer).timestamp, expectedActivities[1].time);
+        assertEquals(miruActivityIndex.getTimeAndVersion("test", 1, stackBuffer).version, expectedActivities[1].version);
+        assertEquals(miruActivityIndex.getTimeAndVersion("test", 2, stackBuffer).timestamp, expectedActivities[2].time);
+        assertEquals(miruActivityIndex.getTimeAndVersion("test", 2, stackBuffer).version, expectedActivities[2].version);
     }
 
     @Test(dataProvider = "miruActivityIndexDataProviderWithData", expectedExceptions = IllegalArgumentException.class)
     public void testGetActivityOverCapacity(MiruActivityIndex miruActivityIndex, MiruInternalActivity[] expectedActivities) throws Exception,
         InterruptedException {
         StackBuffer stackBuffer = new StackBuffer();
-        miruActivityIndex.get("test", expectedActivities.length, stackBuffer); // This should throw an exception
+        miruActivityIndex.getTimeAndVersion("test", expectedActivities.length, stackBuffer); // This should throw an exception
     }
 
     @DataProvider(name = "miruActivityIndexDataProvider")

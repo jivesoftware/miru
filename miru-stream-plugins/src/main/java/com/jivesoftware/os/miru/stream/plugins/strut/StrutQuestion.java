@@ -8,6 +8,7 @@ import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.api.activity.TimeAndVersion;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -294,16 +295,19 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         for (int i = 0; i < scored.length; i++) {
             if (i == scored.length - 1 || scored[i].size() == request.query.desiredNumberOfResults) {
                 Scored[] s = scored[i].toArray(new Scored[0]);
+                int[] scoredLastIds = new int[s.length];
+                for (int j = 0; j < s.length; j++) {
+                    scoredLastIds[j] = s[j].lastId;
+                }
+
                 MiruValue[][][] gatherScoredValues = null;
                 if (gatherFieldIds != null) {
-                    int[] scoredLastIds = new int[s.length];
-                    for (int j = 0; j < s.length; j++) {
-                        scoredLastIds[j] = s[j].lastId;
-                    }
 
-                    gatherScoredValues = new MiruValue[scoredLastIds.length][gatherFieldIds.length][];
+                    int[] consumeLastIds = new int[scoredLastIds.length];
+                    System.arraycopy(scoredLastIds, 0, consumeLastIds, 0, scoredLastIds.length);
+                    gatherScoredValues = new MiruValue[consumeLastIds.length][gatherFieldIds.length][];
                     for (int j = 0; j < gatherFieldIds.length; j++) {
-                        MiruTermId[][] termIds = activityIndex.getAll("strut", scoredLastIds, gatherFieldIds[j], stackBuffer);
+                        MiruTermId[][] termIds = activityIndex.getAll("strut", consumeLastIds, gatherFieldIds[j], stackBuffer);
                         for (int k = 0; k < termIds.length; k++) {
                             gatherScoredValues[k][j] = new MiruValue[termIds[k].length];
                             for (int l = 0; l < termIds[k].length; l++) {
@@ -315,6 +319,10 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                         }
                     }
                 }
+
+                int[] consumeLastIds = new int[scoredLastIds.length];
+                System.arraycopy(scoredLastIds, 0, consumeLastIds, 0, scoredLastIds.length);
+                TimeAndVersion[] timeAndVersions = activityIndex.getAllTimeAndVersions("strut", consumeLastIds, stackBuffer);
 
                 for (int j = 0; j < s.length; j++) {
 
@@ -338,7 +346,8 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                     String[] decomposed = termComposer.decompose(schema, pivotFieldDefinition, stackBuffer, s[j].term);
                     hotOrNots.add(new HotOrNot(new MiruValue(decomposed),
                         gatherScoredValues != null ? gatherScoredValues[j] : null,
-                        s[j].score, s[j].termCount, s[j].features));
+                        s[j].score, s[j].termCount, s[j].features,
+                        timeAndVersions[j].timestamp));
                 }
                 solutionLog.log(MiruSolutionLogLevel.INFO, "Strut found {} terms at threshold {}", hotOrNots.size(), thresholds[i]);
                 scoredThreshold = thresholds[i];

@@ -17,6 +17,7 @@ public class HotOrNot implements Comparable<HotOrNot>, Serializable {
     public final float score;
     public final int count;
     public final List<Hotness>[] features;
+    public final long timestamp;
 
     @JsonCreator
     public HotOrNot(
@@ -24,23 +25,26 @@ public class HotOrNot implements Comparable<HotOrNot>, Serializable {
         @JsonProperty("gatherLatestValues") MiruValue[][] gatherLatestValues,
         @JsonProperty("score") float score,
         @JsonProperty("count") int count,
-        @JsonProperty("features") List<Hotness>[] features) {
+        @JsonProperty("features") List<Hotness>[] features,
+        @JsonProperty("timestamp") long timestamp) {
         this.value = value;
         this.gatherLatestValues = gatherLatestValues;
         this.score = score;
         this.count = count;
         this.features = features;
+        this.timestamp = timestamp;
     }
 
     @Override
     public String toString() {
-        return "HotOrNot{"
-            + "value=" + value
-            + ", gatherLatestValues=" + Arrays.deepToString(gatherLatestValues)
-            + ", score=" + score
-            + ", count=" + count
-            + ", features=" + Arrays.toString(features)
-            + '}';
+        return "HotOrNot{" +
+            "value=" + value +
+            ", gatherLatestValues=" + Arrays.toString(gatherLatestValues) +
+            ", score=" + score +
+            ", count=" + count +
+            ", features=" + Arrays.toString(features) +
+            ", timestamp=" + timestamp +
+            '}';
     }
 
     @Override
