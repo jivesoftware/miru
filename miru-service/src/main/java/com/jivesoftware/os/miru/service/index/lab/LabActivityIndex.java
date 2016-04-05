@@ -56,7 +56,7 @@ public class LabActivityIndex implements MiruActivityIndex {
     }
 
     @Override
-    public TimeAndVersion get(String name, int index, StackBuffer stackBuffer) throws Exception {
+    public TimeAndVersion getTimeAndVersion(String name, int index, StackBuffer stackBuffer) throws Exception {
         int capacity = capacity();
         checkArgument(index >= 0 && index < capacity, "Index parameter is out of bounds. The value %s must be >=0 and <%s", index, capacity);
 
@@ -69,9 +69,37 @@ public class LabActivityIndex implements MiruActivityIndex {
             return false;
         });
 
-        LOG.inc("count>getActivity>total");
-        LOG.inc("count>getActivity>" + name);
+        LOG.inc("count>getTimeAndVersion>total");
+        LOG.inc("count>getTimeAndVersion>" + name);
         return (values[0] != -1L || values[1] != -1L) ? new TimeAndVersion(values[0], values[1]) : null;
+    }
+
+    @Override
+    public TimeAndVersion[] getAllTimeAndVersions(String name, int[] indexes, StackBuffer stackBuffer) throws Exception {
+        TimeAndVersion[] tav = new TimeAndVersion[indexes.length];
+        timeAndVersionIndex.get(keyStream -> {
+            for (int i = 0; i < indexes.length; i++) {
+                if (indexes[i] != -1) {
+                    byte[] key = UIO.intBytes(indexes[i]);
+                    if (!keyStream.key(i, key, 0, metaKey.length)) {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }, (index1, key, timestamp, tombstoned, version, payload) -> {
+            if (payload != null && !tombstoned) {
+                tav[index1] = new TimeAndVersion(
+                    UIO.bytesLong(payload, 0),
+                    UIO.bytesLong(payload, 8));
+            }
+            return true;
+        });
+
+        LOG.inc("count>getTimeAndVersion>total");
+        LOG.inc("count>getTimeAndVersion>count", indexes.length);
+        LOG.inc("count>getTimeAndVersion>" + name);
+        return tav;
     }
 
     @Override

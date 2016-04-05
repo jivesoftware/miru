@@ -34,13 +34,36 @@ public class MiruDeltaActivityIndex implements MiruActivityIndex, Mergeable {
     }
 
     @Override
-    public TimeAndVersion get(String name, int index, StackBuffer stackBuffer) throws Exception, InterruptedException {
+    public TimeAndVersion getTimeAndVersion(String name, int index, StackBuffer stackBuffer) throws Exception, InterruptedException {
         MiruActivityAndId<MiruInternalActivity> activityAndId = activities.get(index);
         if (activityAndId != null) {
             return new TimeAndVersion(activityAndId.activity.time, activityAndId.activity.version);
         } else {
-            return backingIndex.get(name, index, stackBuffer);
+            return backingIndex.getTimeAndVersion(name, index, stackBuffer);
         }
+    }
+
+    @Override
+    public TimeAndVersion[] getAllTimeAndVersions(String name, int[] indexes, StackBuffer stackBuffer) throws Exception {
+        TimeAndVersion[] tav = new TimeAndVersion[indexes.length];
+        for (int i = 0; i < indexes.length; i++) {
+            int index = indexes[i];
+            if (index != -1) {
+                MiruActivityAndId<MiruInternalActivity> activityAndId = activities.get(index);
+                if (activityAndId != null) {
+                    tav[i] = new TimeAndVersion(activityAndId.activity.time, activityAndId.activity.version);
+                    indexes[i] = -1;
+                }
+            }
+        }
+
+        TimeAndVersion[] backing = backingIndex.getAllTimeAndVersions(name, indexes, stackBuffer);
+        for (int i = 0; i < backing.length; i++) {
+            if (tav[i] == null) {
+                tav[i] = backing[i];
+            }
+        }
+        return tav;
     }
 
     @Override

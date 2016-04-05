@@ -20,9 +20,17 @@ public interface MiruActivityIndex {
      * Returns the time and version that was recorded at the given index
      *
      * @param index the index of the activity
-     * @return the activity at the given index
+     * @return the time and version at the given index
      */
-    TimeAndVersion get(String name, int index, StackBuffer stackBuffer) throws Exception;
+    TimeAndVersion getTimeAndVersion(String name, int index, StackBuffer stackBuffer) throws Exception;
+
+    /**
+     * Returns the times and versions that were recorded at the given indexes
+     *
+     * @param indexes the indexes of the activity
+     * @return the times and versions at the given indexes
+     */
+    TimeAndVersion[] getAllTimeAndVersions(String name, int[] indexes, StackBuffer stackBuffer) throws Exception;
 
     /**
      * Get the terms from the given field for the activity at the requested index.

@@ -222,7 +222,7 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                             @SuppressWarnings("unchecked")
                             MiruResponse<StrutAnswer> extractResponse = responseMapper.extractResultFromResponse(httpResponse,
                                 MiruResponse.class,
-                                new Class<?>[]{StrutAnswer.class},
+                                new Class<?>[] { StrutAnswer.class },
                                 null);
                             return new ClientResponse<>(extractResponse, true);
                         });
@@ -268,10 +268,14 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                                 }
                             }
 
+                            long hotTime = snowflakeIdPacker.unpack(hotOrNot.timestamp)[0];
+                            long millisAgo = jiveCurrentTime - hotTime;
+
                             Map<String, Object> r = new HashMap<>();
                             r.put("value", valueToString(hotOrNot.value));
                             r.put("score", String.valueOf(hotOrNot.score));
                             r.put("terms", (hotOrNot.gatherLatestValues == null) ? "" : Arrays.deepToString(hotOrNot.gatherLatestValues));
+                            r.put("timeAgo", timeAgo(millisAgo));
                             r.put("features", features);
                             results.add(r);
                         }
@@ -326,6 +330,22 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
             }
             return 0;
         }
+    }
+
+    private static String timeAgo(long millis) {
+        String suffix;
+        if (millis >= 0) {
+            suffix = "ago";
+        } else {
+            suffix = "from now";
+            millis = Math.abs(millis);
+        }
+
+        final long hr = TimeUnit.MILLISECONDS.toHours(millis);
+        final long min = TimeUnit.MILLISECONDS.toMinutes(millis - TimeUnit.HOURS.toMillis(hr));
+        final long sec = TimeUnit.MILLISECONDS.toSeconds(millis - TimeUnit.HOURS.toMillis(hr) - TimeUnit.MINUTES.toMillis(min));
+        final long ms = TimeUnit.MILLISECONDS.toMillis(millis - TimeUnit.HOURS.toMillis(hr) - TimeUnit.MINUTES.toMillis(min) - TimeUnit.SECONDS.toMillis(sec));
+        return String.format("%02d:%02d:%02d.%03d " + suffix, hr, min, sec, ms);
     }
 
     @Override
