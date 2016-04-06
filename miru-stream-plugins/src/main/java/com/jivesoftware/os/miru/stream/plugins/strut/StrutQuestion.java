@@ -152,7 +152,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
 
             return streamBitmaps.stream(null, combined);
         }, solutionLog);*/
-        float[] thresholds = report.isPresent() ? new float[]{report.get().threshold} : new float[]{0f}; // new float[]{0.5f, 0.2f, 0.08f, 0f};
+        float[] thresholds = report.isPresent() ? new float[] { report.get().threshold } : new float[] { 0f }; // new float[]{0.5f, 0.2f, 0.08f, 0f};
         @SuppressWarnings("unchecked")
         MinMaxPriorityQueue<Scored>[] scored = new MinMaxPriorityQueue[thresholds.length];
 
@@ -212,7 +212,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                     totalTimeFetchingLastId += (System.currentTimeMillis() - fetchLastIdsStart);
 
                     long fetchScoresStart = System.currentTimeMillis();
-                    int[] missed = {0};
+                    int[] missed = { 0 };
                     modelScorer.score(
                         request.query.modelId,
                         miruTermIds,
@@ -302,11 +302,10 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
 
                 MiruValue[][][] gatherScoredValues = null;
                 if (gatherFieldIds != null) {
-
+                    gatherScoredValues = new MiruValue[scoredLastIds.length][gatherFieldIds.length][];
                     int[] consumeLastIds = new int[scoredLastIds.length];
                     for (int j = 0; j < gatherFieldIds.length; j++) {
                         System.arraycopy(scoredLastIds, 0, consumeLastIds, 0, scoredLastIds.length);
-                        gatherScoredValues = new MiruValue[consumeLastIds.length][gatherFieldIds.length][];
                         MiruTermId[][] termIds = activityIndex.getAll("strut", consumeLastIds, gatherFieldIds[j], stackBuffer);
                         for (int k = 0; k < termIds.length; k++) {
                             if (termIds[k] != null) {
