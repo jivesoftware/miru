@@ -540,11 +540,12 @@ public class MiruAggregateUtil {
         BM answer,
         int pivotFieldId,
         int batchSize,
+        boolean descending,
         MiruSolutionLog solutionLog,
         LastIdAndTermIdStream lastIdAndTermIdStream,
         StackBuffer stackBuffer) throws Exception {
 
-        gatherActivityLookup(name, bitmaps, requestContext, answer, pivotFieldId, batchSize, solutionLog, lastIdAndTermIdStream, stackBuffer);
+        gatherActivityLookup(name, bitmaps, requestContext, answer, pivotFieldId, batchSize, descending, solutionLog, lastIdAndTermIdStream, stackBuffer);
 
         /*MiruFieldDefinition fieldDefinition = requestContext.getSchema().getFieldDefinition(pivotFieldId);
         if (fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.indexedValueBits)) {
@@ -582,6 +583,7 @@ public class MiruAggregateUtil {
         BM answer,
         int pivotFieldId,
         int batchSize,
+        boolean descending,
         MiruSolutionLog solutionLog,
         LastIdAndTermIdStream lastIdAndTermIdStream,
         StackBuffer stackBuffer) throws Exception {
@@ -605,7 +607,7 @@ public class MiruAggregateUtil {
         long andNotCost = 0;
         done:
         while (!bitmaps.isEmpty(answer)) {
-            MiruIntIterator intIterator = bitmaps.intIterator(answer);
+            MiruIntIterator intIterator = descending ? bitmaps.descendingIntIterator(answer) : bitmaps.intIterator(answer);
             int added = 0;
             Arrays.fill(ids, -1);
             while (intIterator.hasNext() && added < batchSize) {
