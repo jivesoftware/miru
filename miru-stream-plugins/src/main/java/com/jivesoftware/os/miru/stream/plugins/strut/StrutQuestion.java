@@ -334,7 +334,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                             s[j].score, s[j].termCount, s[j].features,
                             timeAndVersions[j].timestamp));
                     } else {
-                        LOG.warn("Failed to get timestamp for {}", consumeLastIds[j]);
+                        LOG.warn("Failed to get timestamp for {}", scoredLastIds[j]);
                     }
                 }
                 solutionLog.log(MiruSolutionLogLevel.INFO, "Strut found {} terms at threshold {}", hotOrNots.size(), thresholds[i]);

@@ -641,7 +641,7 @@ public class MiruAggregateUtil {
                 if (termIds != null && termIds.length > 0) {
                     for (MiruTermId termId : termIds) {
                         if (distincts.add(termId)) {
-                            if (!lastIdAndTermIdStream.stream(actualIds[i], termId)) {
+                            if (!lastIdAndTermIdStream.stream(ids[i], termId)) {
                                 break done;
                             }
                         }
