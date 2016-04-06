@@ -304,9 +304,9 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 if (gatherFieldIds != null) {
 
                     int[] consumeLastIds = new int[scoredLastIds.length];
-                    System.arraycopy(scoredLastIds, 0, consumeLastIds, 0, scoredLastIds.length);
-                    gatherScoredValues = new MiruValue[consumeLastIds.length][gatherFieldIds.length][];
                     for (int j = 0; j < gatherFieldIds.length; j++) {
+                        System.arraycopy(scoredLastIds, 0, consumeLastIds, 0, scoredLastIds.length);
+                        gatherScoredValues = new MiruValue[consumeLastIds.length][gatherFieldIds.length][];
                         MiruTermId[][] termIds = activityIndex.getAll("strut", consumeLastIds, gatherFieldIds[j], stackBuffer);
                         for (int k = 0; k < termIds.length; k++) {
                             if (termIds[k] != null) {

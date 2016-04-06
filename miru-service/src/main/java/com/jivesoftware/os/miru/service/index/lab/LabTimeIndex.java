@@ -186,7 +186,7 @@ public class LabTimeIndex implements MiruTimeIndex {
      Returns true index of activityTimestamp or where it would have been.
      */
     @Override
-    public int getClosestId(final long timestamp, StackBuffer stackBuffer) throws Exception, InterruptedException {
+    public int getClosestId(final long timestamp, StackBuffer stackBuffer) throws Exception {
         if (timestamp <= smallestTimestamp) {
             return 0;
         } else if (timestamp == largestTimestamp) {

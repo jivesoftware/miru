@@ -14,8 +14,8 @@ import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
  */
 public interface MiruSipIndex<S extends MiruSipCursor<S>> {
 
-    Optional<S> getSip(StackBuffer stackBuffer) throws Exception, InterruptedException;
+    Optional<S> getSip(StackBuffer stackBuffer) throws Exception;
 
-    boolean setSip(S sip, StackBuffer stackBuffer) throws Exception, InterruptedException;
+    boolean setSip(S sip, StackBuffer stackBuffer) throws Exception;
 
 }

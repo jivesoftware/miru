@@ -202,7 +202,7 @@ public class CollaborativeFiltering {
         MiruRequest<RecoQuery> request,
         MiruFieldDefinition fieldDefinition,
         MinMaxPriorityQueue<MiruTermCount> heap,
-        StackBuffer stackBuffer) throws Exception, InterruptedException {
+        StackBuffer stackBuffer) throws Exception {
 
         MiruSchema schema = requestContext.getSchema();
         MiruTermComposer termComposer = requestContext.getTermComposer();
