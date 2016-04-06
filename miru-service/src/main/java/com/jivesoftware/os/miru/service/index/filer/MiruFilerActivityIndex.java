@@ -86,12 +86,14 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
                     synchronized (lock) {
                         for (int i = 0; i < indexes.length; i++) {
                             int index = indexes[i];
-                            int offset = index * 16;
-                            if (filer.length() >= offset + 16) {
-                                filer.seek(offset);
-                                tav[i] = new TimeAndVersion(
-                                    FilerIO.readLong(filer, "time", stackBuffer1),
-                                    FilerIO.readLong(filer, "version", stackBuffer1));
+                            if (index >= 0) {
+                                int offset = index * 16;
+                                if (filer.length() >= offset + 16) {
+                                    filer.seek(offset);
+                                    tav[i] = new TimeAndVersion(
+                                        FilerIO.readLong(filer, "time", stackBuffer1),
+                                        FilerIO.readLong(filer, "version", stackBuffer1));
+                                }
                             }
                         }
                     }
