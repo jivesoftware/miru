@@ -99,90 +99,105 @@ public class Strut {
             }
         }
 
-        StrutModel model = cache.get(request.tenantId, request.query.catwalkId, request.query.modelId, coord.partitionId.getId(), request.query.catwalkQuery);
-        boolean[] cacheable = {true};
-        for (int i = 0; i < featureFields.length; i++) {
-            if (model.numberOfModels[i] == 0) {
-                cacheable[0] = false;
-                break;
-            }
-        }
-
         long start = System.currentTimeMillis();
         int[] featureCount = {0};
-        float[] score = new float[thresholds.length];
-        int[] termCount = new int[thresholds.length];
-        aggregateUtil.gatherFeatures(name,
-            bitmaps,
-            requestContext,
-            consumeAnswers,
-            featureFieldIds,
-            true,
-            (lastId, answerTermId, answerScoredLastId, featureId, termIds) -> {
-                if (featureId == -1) {
-                    for (int i = 0; i < thresholds.length; i++) {
-                        boolean stopped = false;
-                        if (termCount[i] > 0) {
-                            List<Hotness>[] scoredFeatures = null;
-                            if (request.query.includeFeatures) {
-                                scoredFeatures = new List[features[i].length];
-                                System.arraycopy(features[i], 0, scoredFeatures, 0, features[i].length);
-                            }
-                            float s = finalizeScore(score[i], termCount[i], request.query.strategy);
-                            if (!hotStuff.steamStream(i, new Scored(lastId, answerTermId, answerScoredLastId, s, termCount[i], scoredFeatures), cacheable[0])) {
+
+        StrutModel model = cache.get(request.tenantId, request.query.catwalkId, request.query.modelId, coord.partitionId.getId(), request.query.catwalkQuery);
+        if (model == null) {
+
+            consumeAnswers.consume((int lastId, MiruTermId termId, int scoredToLastId, BM answer) -> {
+                boolean more = true;
+                for (int i = 0; i < thresholds.length; i++) {
+                    if (!hotStuff.steamStream(i, new Scored(lastId, termId, scoredToLastId, 0.0f, 0, null), false)) {
+                        more = false;
+                    }
+                }
+                return more;
+            });
+
+        } else {
+            boolean[] cacheable = new boolean[]{true};
+            for (int i = 0; i < featureFields.length; i++) {
+                if (model.numberOfModels[i] == 0) {
+                    cacheable[0] = false;
+                    break;
+                }
+            }
+
+            float[] score = new float[thresholds.length];
+            int[] termCount = new int[thresholds.length];
+            aggregateUtil.gatherFeatures(name,
+                bitmaps,
+                requestContext,
+                consumeAnswers,
+                featureFieldIds,
+                true,
+                (lastId, answerTermId, answerScoredLastId, featureId, termIds) -> {
+                    if (featureId == -1) {
+                        for (int i = 0; i < thresholds.length; i++) {
+                            boolean stopped = false;
+                            if (termCount[i] > 0) {
+                                List<Hotness>[] scoredFeatures = null;
+                                if (request.query.includeFeatures) {
+                                    scoredFeatures = new List[features[i].length];
+                                    System.arraycopy(features[i], 0, scoredFeatures, 0, features[i].length);
+                                }
+                                float s = finalizeScore(score[i], termCount[i], request.query.strategy);
+                                if (!hotStuff.steamStream(i, new Scored(lastId, answerTermId, answerScoredLastId, s, termCount[i], scoredFeatures), cacheable[0])) {
+                                    stopped = true;
+                                }
+                            } else if (!hotStuff.steamStream(i, new Scored(lastId, answerTermId, answerScoredLastId, 0f, 0, null), cacheable[0])) {
                                 stopped = true;
                             }
-                        } else if (!hotStuff.steamStream(i, new Scored(lastId, answerTermId, answerScoredLastId, 0f, 0, null), cacheable[0])) {
-                            stopped = true;
-                        }
-                        score[i] = 0f;
-                        termCount[i] = 0;
+                            score[i] = 0f;
+                            termCount[i] = 0;
 
-                        if (request.query.includeFeatures) {
-                            Arrays.fill(features[i], null);
+                            if (request.query.includeFeatures) {
+                                Arrays.fill(features[i], null);
+                            }
+                            if (stopped) {
+                                return false;
+                            }
                         }
-                        if (stopped) {
-                            return false;
-                        }
-                    }
-                } else {
-                    featureCount[0]++;
-                    ModelScore modelScore = model.score(featureId, termIds);
-                    if (modelScore != null) { // if (!Float.isNaN(s) && s > 0.0f) {
-                        float s = (float) modelScore.numerator / modelScore.denominator;
-                        if (s > 1.0f) {
-                            LOG.warn("Encountered score {} > 1.0 for answerTermId:{} featureId:{} termIds:{}",
-                                s, answerTermId, featureId, Arrays.toString(termIds));
-                        } else if (!Float.isNaN(s) && s > 0f) {
-                            //TODO tiered scoring based on thresholds
-                            for (int i = 0; i < thresholds.length; i++) {
-                                if (s > thresholds[i]) {
-                                    score[i] = score(score[i], s, request.query.strategy);
-                                    termCount[i]++;
+                    } else {
+                        featureCount[0]++;
+                        ModelScore modelScore = model.score(featureId, termIds);
+                        if (modelScore != null) { // if (!Float.isNaN(s) && s > 0.0f) {
+                            float s = (float) modelScore.numerator / modelScore.denominator;
+                            if (s > 1.0f) {
+                                LOG.warn("Encountered score {} > 1.0 for answerTermId:{} featureId:{} termIds:{}",
+                                    s, answerTermId, featureId, Arrays.toString(termIds));
+                            } else if (!Float.isNaN(s) && s > 0f) {
+                                //TODO tiered scoring based on thresholds
+                                for (int i = 0; i < thresholds.length; i++) {
+                                    if (s > thresholds[i]) {
+                                        score[i] = score(score[i], s, request.query.strategy);
+                                        termCount[i]++;
 
-                                    if (request.query.includeFeatures) {
-                                        if (features[i][featureId] == null) {
-                                            features[i][featureId] = Lists.newArrayList();
+                                        if (request.query.includeFeatures) {
+                                            if (features[i][featureId] == null) {
+                                                features[i][featureId] = Lists.newArrayList();
+                                            }
+                                            MiruValue[] values = new MiruValue[termIds.length];
+                                            for (int j = 0; j < termIds.length; j++) {
+                                                values[j] = new MiruValue(termComposer.decompose(schema,
+                                                    schema.getFieldDefinition(featureFieldIds[featureId][j]), stackBuffer, termIds[j]));
+                                            }
+                                            features[i][featureId].add(new Hotness(values, s));
                                         }
-                                        MiruValue[] values = new MiruValue[termIds.length];
-                                        for (int j = 0; j < termIds.length; j++) {
-                                            values[j] = new MiruValue(termComposer.decompose(schema,
-                                                schema.getFieldDefinition(featureFieldIds[featureId][j]), stackBuffer, termIds[j]));
-                                        }
-                                        features[i][featureId].add(new Hotness(values, s));
                                     }
                                 }
                             }
                         }
                     }
-                }
-                return true;
-            },
-            solutionLog,
-            stackBuffer);
+                    return true;
+                },
+                solutionLog,
+                stackBuffer);
 
-        solutionLog.log(MiruSolutionLogLevel.INFO, "Strut scored {} features in {} ms",
-            featureCount[0], System.currentTimeMillis() - start);
+        }
+
+        solutionLog.log(MiruSolutionLogLevel.INFO, "Strut scored {} features in {} ms", featureCount[0], System.currentTimeMillis() - start);
 
     }
 
@@ -227,6 +242,10 @@ public class Strut {
         @Override
         public int compareTo(Scored o) {
             int c = Float.compare(o.score, score); // reversed
+            if (c != 0) {
+                return c;
+            }
+            c = Integer.compare(o.lastId, lastId); // reversed
             if (c != 0) {
                 return c;
             }

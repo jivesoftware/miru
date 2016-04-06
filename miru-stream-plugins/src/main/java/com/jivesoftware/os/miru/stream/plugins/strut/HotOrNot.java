@@ -63,6 +63,10 @@ public class HotOrNot implements Comparable<HotOrNot>, Serializable {
         if (c != 0) {
             return c;
         }
+        c = Long.compare(o.timestamp, timestamp); // reversed
+        if (c != 0) {
+            return c;
+        }
         c = Integer.compare(value.parts.length, o.value.parts.length);
         if (c != 0) {
             return c;
