@@ -21,7 +21,7 @@ public class MiruDeltaSipIndex<S extends MiruSipCursor<S>> implements MiruSipInd
     }
 
     @Override
-    public Optional<S> getSip(StackBuffer stackBuffer) throws Exception, InterruptedException {
+    public Optional<S> getSip(StackBuffer stackBuffer) throws Exception {
         S sip = sipReference.get();
         if (sip == null) {
             return backingIndex.getSip(stackBuffer);
@@ -30,7 +30,7 @@ public class MiruDeltaSipIndex<S extends MiruSipCursor<S>> implements MiruSipInd
     }
 
     @Override
-    public boolean setSip(final S sip, StackBuffer stackBuffer) throws Exception, InterruptedException {
+    public boolean setSip(final S sip, StackBuffer stackBuffer) throws Exception {
         S existing = sipReference.get();
         if (existing == null) {
             existing = backingIndex.getSip(stackBuffer).orNull();

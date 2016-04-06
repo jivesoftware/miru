@@ -41,7 +41,7 @@ public class Strut {
     public <BM extends IBM, IBM> StrutAnswer composeAnswer(MiruRequestContext<BM, IBM, ?> requestContext,
         MiruRequest<StrutQuery> request,
         List<HotOrNot> hotOrNots,
-        float threshold) throws Exception, InterruptedException {
+        float threshold) throws Exception {
         boolean resultsExhausted = request.query.timeRange.smallestTimestamp > requestContext.getTimeIndex().getLargestTimestamp();
         return new StrutAnswer(hotOrNots, threshold, resultsExhausted);
     }

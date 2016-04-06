@@ -34,7 +34,7 @@ public class MiruDeltaActivityIndex implements MiruActivityIndex, Mergeable {
     }
 
     @Override
-    public TimeAndVersion getTimeAndVersion(String name, int index, StackBuffer stackBuffer) throws Exception, InterruptedException {
+    public TimeAndVersion getTimeAndVersion(String name, int index, StackBuffer stackBuffer) throws Exception {
         MiruActivityAndId<MiruInternalActivity> activityAndId = activities.get(index);
         if (activityAndId != null) {
             return new TimeAndVersion(activityAndId.activity.time, activityAndId.activity.version);
@@ -67,7 +67,7 @@ public class MiruDeltaActivityIndex implements MiruActivityIndex, Mergeable {
     }
 
     @Override
-    public MiruTermId[] get(String name, int index, int fieldId, StackBuffer stackBuffer) throws Exception, InterruptedException {
+    public MiruTermId[] get(String name, int index, int fieldId, StackBuffer stackBuffer) throws Exception {
         MiruActivityAndId<MiruInternalActivity> activityAndId = activities.get(index);
         if (activityAndId != null) {
             return activityAndId.activity.fieldsValues[fieldId];
@@ -77,7 +77,7 @@ public class MiruDeltaActivityIndex implements MiruActivityIndex, Mergeable {
     }
 
     @Override
-    public MiruTermId[][] getAll(String name, int[] indexes, int fieldId, StackBuffer stackBuffer) throws Exception, InterruptedException {
+    public MiruTermId[][] getAll(String name, int[] indexes, int fieldId, StackBuffer stackBuffer) throws Exception {
         return getAll(name, indexes, 0, indexes.length, fieldId, stackBuffer);
     }
 
@@ -97,7 +97,7 @@ public class MiruDeltaActivityIndex implements MiruActivityIndex, Mergeable {
         int offset,
         int length,
         int fieldId,
-        StackBuffer stackBuffer) throws Exception, InterruptedException {
+        StackBuffer stackBuffer) throws Exception {
 
         MiruTermId[][] allTermIds = new MiruTermId[length][];
         boolean missed = false;
