@@ -230,6 +230,10 @@ public class Strut {
             if (c != 0) {
                 return c;
             }
+            c = Integer.compare(o.lastId, lastId); // reversed
+            if (c != 0) {
+                return c;
+            }
             return term.compareTo(o.term);
         }
 
