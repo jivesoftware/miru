@@ -19,6 +19,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 /**
  * @author jonathan.colt
@@ -44,6 +45,13 @@ public class StrutModelCache {
         this.modelCache = modelCache;
     }
 
+    private static class ModelNotAvailable extends RuntimeException {
+
+        public ModelNotAvailable(String message) {
+            super(message);
+        }
+    }
+
     public StrutModel get(MiruTenantId tenantId,
         String catwalkId,
         String modelId,
@@ -54,21 +62,29 @@ public class StrutModelCache {
 
         StrutModel model = modelCache.getIfPresent(key);
         if (model == null) {
-            model = modelCache.get(key, () -> {
-                String json = requestMapper.writeValueAsString(catwalkQuery);
-                HttpResponse response = catwalkClient.call("",
-                    robinStrategy,
-                    "strutModelCache",
-                    (c) -> new ClientResponse<>(c.postJson("/miru/catwalk/model/get/" + key + "/" + partitionId, json, null), true));
+            try {
+                model = modelCache.get(key, () -> {
+                    String json = requestMapper.writeValueAsString(catwalkQuery);
+                    HttpResponse response = catwalkClient.call("",
+                        robinStrategy,
+                        "strutModelCache",
+                        (c) -> new ClientResponse<>(c.postJson("/miru/catwalk/model/get/" + key + "/" + partitionId, json, null), true));
 
-                CatwalkModel catwalkModel = responseMapper.extractResultFromResponse(response, CatwalkModel.class, null);
-                if (catwalkModel == null) {
-                    throw new IllegalStateException("Model not available,"
-                        + " status code: " + response.getStatusCode()
-                        + " reason: " + response.getStatusReasonPhrase());
+                    CatwalkModel catwalkModel = responseMapper.extractResultFromResponse(response, CatwalkModel.class, null);
+                    if (catwalkModel == null) {
+                        throw new ModelNotAvailable("Model not available,"
+                            + " status code: " + response.getStatusCode()
+                            + " reason: " + response.getStatusReasonPhrase());
+                    }
+                    return convert(catwalkQuery, catwalkModel);
+                });
+            } catch (ExecutionException ee) {
+                if (ee.getCause() instanceof ModelNotAvailable) {
+                    LOG.info(ee.getCause().getMessage());
+                    return null;
                 }
-                return convert(catwalkQuery, catwalkModel);
-            });
+                throw ee;
+            }
 
             if (model.model == null) {
                 LOG.info("Discarded null model for tenantId:{} partitionId:{} catwalkId:{} modelId:{}", tenantId, partitionId, catwalkId, modelId);
