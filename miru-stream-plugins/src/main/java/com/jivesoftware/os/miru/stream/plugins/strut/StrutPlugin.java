@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.jivesoftware.os.miru.plugin.Miru;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.plugin.MiruEndpointInjectable;
@@ -16,6 +17,8 @@ import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -48,10 +51,13 @@ public class StrutPlugin implements MiruPlugin<StrutEndpoints, StrutInjectable> 
 
         StrutModelCache cache = new StrutModelCache(catwalkHttpClient, mapper, responseMapper, modelCache);
 
+        ExecutorService asyncExecutorService = Executors.newFixedThreadPool(config.getAsyncThreadPoolSize(),
+            new ThreadFactoryBuilder().setNameFormat("strut-async-%d").build());
+
         Strut strut = new Strut(cache);
         return Collections.singletonList(new MiruEndpointInjectable<>(
             StrutInjectable.class,
-            new StrutInjectable(miruProvider, strut)
+            new StrutInjectable(miruProvider, asyncExecutorService, strut)
         ));
     }
 

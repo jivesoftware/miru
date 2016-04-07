@@ -9,6 +9,7 @@ import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.partition.MiruQueryablePartition;
 import com.jivesoftware.os.miru.plugin.partition.TrackError;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
+import java.util.concurrent.ExecutorService;
 
 /** @author jonathan */
 public class MiruRemoteQueryablePartitionFactory {
@@ -83,6 +84,11 @@ public class MiruRemoteQueryablePartitionFactory {
 
                     @Override
                     public void close() throws Exception {
+                    }
+
+                    @Override
+                    public void submit(ExecutorService executorService, MiruRequestHandle.AsyncQuestion<BM, IBM> asyncQuestion) {
+                        throw new UnsupportedOperationException();
                     }
                 };
             }
