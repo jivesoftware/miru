@@ -160,7 +160,7 @@ public class CollaborativeFiltering {
         BM[] contributorBitmaps = bitmaps.createArrayOf(contributorTermCounts.length);
         FieldMultiTermTxIndex<BM, IBM> field2MultiTermTxIndex = new FieldMultiTermTxIndex<>(name, primaryFieldIndex, fieldId2, -1);
         field2MultiTermTxIndex.setTermIds(contributorTermIds);
-        bitmaps.multiTx(field2MultiTermTxIndex, (index, contributorActivity) -> {
+        bitmaps.multiTx(field2MultiTermTxIndex, (index, lastId, contributorActivity) -> {
             if (bitmaps.supportsInPlace()) {
                 bitmaps.inPlaceAnd(contributorActivity, okActivity);
             } else {

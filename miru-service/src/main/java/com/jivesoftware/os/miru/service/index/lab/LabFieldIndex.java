@@ -285,7 +285,7 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
                         lastId = UIO.bytesInt(payload);
                     }
                     if (lastId < 0 || lastId > considerIfLastIdGreaterThanN) {
-                        indexTx.tx(index, null, new ByteArrayFiler(payload), LabInvertedIndex.LAST_ID_LENGTH, stackBuffer);
+                        indexTx.tx(index, lastId, null, new ByteArrayFiler(payload), LabInvertedIndex.LAST_ID_LENGTH, stackBuffer);
                     }
                 }
                 return true;

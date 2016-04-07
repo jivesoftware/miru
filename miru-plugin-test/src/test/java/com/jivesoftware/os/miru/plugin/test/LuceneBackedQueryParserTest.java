@@ -29,6 +29,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.NavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import org.roaringbitmap.IntIterator;
 import org.roaringbitmap.RoaringBitmap;
 import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
@@ -208,7 +209,9 @@ public class LuceneBackedQueryParserTest {
                 if (termId != null) {
                     RoaringBitmap bitmap = terms.get(termId);
                     if (bitmap != null) {
-                        indexTx.tx(i, bitmap, null, -1, stackBuffer);
+                        IntIterator reverse = bitmap.getReverseIntIterator();
+                        int lastId = reverse.hasNext() ? reverse.next() : -1;
+                        indexTx.tx(i, lastId, bitmap, null, -1, stackBuffer);
                     }
                 }
             }

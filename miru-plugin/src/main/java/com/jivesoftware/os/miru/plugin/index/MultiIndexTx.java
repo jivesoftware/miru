@@ -8,5 +8,5 @@ import com.jivesoftware.os.filer.io.api.StackBuffer;
  */
 public interface MultiIndexTx<IBM> {
 
-    void tx(int index, IBM bitmap, Filer filer, int offset, StackBuffer stackBuffer) throws Exception;
+    void tx(int index, int lastId, IBM bitmap, Filer filer, int offset, StackBuffer stackBuffer) throws Exception;
 }

@@ -115,14 +115,14 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
             BM or = bitmaps.create();
             bitmaps.multiTx(
                 (tx, stackBuffer1) -> primaryFieldIndex.multiTxIndex("catwalk", pivotFieldId, termIds.toArray(new MiruTermId[0]), -1, stackBuffer1, tx),
-                (index, bitmap) -> bitmaps.inPlaceOr(or, bitmap),
+                (index, lastId1, bitmap) -> bitmaps.inPlaceOr(or, bitmap),
                 stackBuffer);
             answer = or;
         } else {
             List<IBM> ors = Lists.newArrayList();
             bitmaps.multiTx(
                 (tx, stackBuffer1) -> primaryFieldIndex.multiTxIndex("catwalk", pivotFieldId, termIds.toArray(new MiruTermId[0]), -1, stackBuffer1, tx),
-                (index, bitmap) -> ors.add(bitmap),
+                (index, lastId1, bitmap) -> ors.add(bitmap),
                 stackBuffer);
             answer = bitmaps.or(ors);
         }

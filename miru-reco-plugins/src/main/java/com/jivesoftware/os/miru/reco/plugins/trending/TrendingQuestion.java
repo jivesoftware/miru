@@ -157,7 +157,7 @@ public class TrendingQuestion implements Question<TrendingQuery, AnalyticsAnswer
             (Analytics.ToAnalyze<MiruTermId, BM> toAnalyze) -> {
                 bitmaps.multiTx(
                     (tx, stackBuffer1) -> primaryFieldIndex.multiTxIndex("trending", fieldId, termIds, -1, stackBuffer1, tx),
-                    (index, bitmap) -> toAnalyze.analyze(termIds[index], bitmap),
+                    (index, lastId, bitmap) -> toAnalyze.analyze(termIds[index], bitmap),
                     stackBuffer);
                 return true;
             },
