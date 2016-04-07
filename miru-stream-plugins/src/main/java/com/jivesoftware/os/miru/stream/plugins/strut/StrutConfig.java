@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.stream.plugins.strut;
 
 import org.merlin.config.Config;
+import org.merlin.config.defaults.IntDefault;
 import org.merlin.config.defaults.LongDefault;
 
 /**
@@ -14,4 +15,7 @@ public interface StrutConfig extends Config {
 
     @LongDefault(1024)
     long getModelCacheMaxSize();
+
+    @IntDefault(24)
+    int getAsyncThreadPoolSize();
 }

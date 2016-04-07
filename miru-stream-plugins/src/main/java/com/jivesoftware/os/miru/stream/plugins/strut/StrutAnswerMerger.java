@@ -95,9 +95,9 @@ public class StrutAnswerMerger implements MiruAnswerMerger<StrutAnswer> {
         merged.addAll(smallerMap.values());
         Collections.sort(merged);
         if (merged.size() > desiredNumberOfResults) {
-            return new StrutAnswer(Lists.newArrayList(merged.subList(0, desiredNumberOfResults)), currentAnswer.threshold, currentAnswer.resultsExhausted);
+            return new StrutAnswer(Lists.newArrayList(merged.subList(0, desiredNumberOfResults)), currentAnswer.resultsExhausted);
         } else {
-            return new StrutAnswer(merged, currentAnswer.threshold, currentAnswer.resultsExhausted);
+            return new StrutAnswer(merged, currentAnswer.resultsExhausted);
         }
     }
 

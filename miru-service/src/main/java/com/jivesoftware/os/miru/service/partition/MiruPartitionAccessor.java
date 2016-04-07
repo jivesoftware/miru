@@ -53,7 +53,7 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, S>, S extends MiruSipCursor<S>> {
 
-    private static final MetricLogger log = MetricLoggerFactory.getLogger();
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
     private static final int PERMITS = 64; //TODO config?
 
     public final MiruStats miruStats;
@@ -348,7 +348,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
                 elapsed = System.currentTimeMillis() - start;
                 chits.refundAll(coord);
             }
-            log.inc("merge>time>pow>" + FilerIO.chunkPower(elapsed, 0));
+            LOG.inc("merge>time>pow>" + FilerIO.chunkPower(elapsed, 0));
         }
     }
 
@@ -421,9 +421,9 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
                     indexRepairs.current(strategy, coord);
                 }
 
-                log.set(ValueType.COUNT, "lastId>partition>" + coord.partitionId,
+                LOG.set(ValueType.COUNT, "lastId>partition>" + coord.partitionId,
                     got.activityIndex.lastId(stackBuffer), coord.tenantId.toString());
-                log.set(ValueType.COUNT, "largestTimestamp>partition>" + coord.partitionId,
+                LOG.set(ValueType.COUNT, "largestTimestamp>partition>" + coord.partitionId,
                     got.timeIndex.getLargestTimestamp(), coord.tenantId.toString());
             }
         } catch (Exception e) {
@@ -448,7 +448,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         Throwable t = e;
         while (t != null) {
             if (t instanceof CorruptionException) {
-                log.warn("Corruption detected for {}: {}", coord, t.getMessage());
+                LOG.warn("Corruption detected for {}: {}", coord, t.getMessage());
                 got.markCorrupt();
                 break;
             }
@@ -476,7 +476,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
             } else if (batchType == MiruPartitionedActivity.Type.REMOVE) {
                 count = handleRemoveType(got, batch, strategy, stackBuffer);
             } else {
-                log.warn("Attempt to index unsupported type {}", batchType);
+                LOG.warn("Attempt to index unsupported type {}", batchType);
             }
             miruStats.ingressed(strategy.name() + ">" + coord.tenantId.toString() + ">" + coord.partitionId.getId() + ">index", count,
                 System.currentTimeMillis() - start);
@@ -601,20 +601,20 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         //TODO batch remove
         for (MiruPartitionedActivity partitionedActivity : partitionedActivities) {
             MiruActivity activity = partitionedActivity.activity.get();
-            log.debug("Handling removal type for {} with strategy {}", activity, strategy);
+            LOG.debug("Handling removal type for {} with strategy {}", activity, strategy);
 
             int id;
             if (strategy != IndexStrategy.rebuild || timeIndex.contains(Arrays.asList(activity.time), stackBuffer)[0]) {
                 id = timeIndex.getExactId(activity.time, stackBuffer);
-                log.trace("Removing activity for exact id {}", id);
+                LOG.trace("Removing activity for exact id {}", id);
             } else {
                 id = timeIndex.nextId(stackBuffer, activity.time)[0];
                 indexer.set(got, Arrays.asList(new MiruActivityAndId<>(activity, id)));
-                log.trace("Removing activity for next id {}", id);
+                LOG.trace("Removing activity for next id {}", id);
             }
 
             if (id < 0) {
-                log.warn("Attempted to remove an activity that does not belong to this partition: {}", activity);
+                LOG.warn("Attempted to remove an activity that does not belong to this partition: {}", activity);
             } else {
                 indexer.remove(got, activity, id);
                 count++;
@@ -624,7 +624,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
     }
 
     MiruRequestHandle<BM, IBM, S> getRequestHandle(TrackError trackError) {
-        log.debug("Request handle requested for {}", coord);
+        LOG.debug("Request handle requested for {}", coord);
 
         if (closed.get()) {
             throw new MiruPartitionUnavailableException("Partition is closed");
@@ -686,6 +686,18 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
             @Override
             public void close() throws Exception {
                 readSemaphore.release();
+            }
+
+            @Override
+            public void submit(ExecutorService executorService, MiruRequestHandle.AsyncQuestion<BM, IBM> asyncQuestion) {
+                executorService.submit(() -> {
+                    try (MiruRequestHandle<BM, IBM, S> requestHandle = getRequestHandle(trackError)) {
+                        asyncQuestion.ask(requestHandle);
+                    } catch (Exception x) {
+                        LOG.error("Failed handling async request.", x);
+                    }
+                });
+
             }
         };
     }

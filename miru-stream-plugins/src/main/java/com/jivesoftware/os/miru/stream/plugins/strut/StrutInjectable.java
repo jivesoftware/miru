@@ -13,6 +13,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRequestAndReport;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolvableFactory;
+import java.util.concurrent.ExecutorService;
 
 /**
  *
@@ -20,11 +21,14 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolvableFactory;
 public class StrutInjectable {
 
     private final MiruProvider<? extends Miru> provider;
+    private final  ExecutorService asyncExecutorService;
     private final Strut strut;
 
     public StrutInjectable(MiruProvider<? extends Miru> provider,
+        ExecutorService asyncExecutorService,
         Strut strut) {
         this.provider = provider;
+        this.asyncExecutorService = asyncExecutorService;
         this.strut = strut;
     }
 
@@ -35,7 +39,8 @@ public class StrutInjectable {
             return miru.askAndMerge(tenantId,
                 new MiruSolvableFactory<>(request.name, provider.getStats(),
                     "strut",
-                    new StrutQuestion(strut,
+                    new StrutQuestion(asyncExecutorService,
+                        strut,
                         request,
                         provider.getRemotePartition(StrutRemotePartition.class))),
                 new StrutAnswerEvaluator(),
@@ -60,7 +65,8 @@ public class StrutInjectable {
                 partitionId,
                 new MiruSolvableFactory<>(requestAndReport.request.name, provider.getStats(),
                     "strut",
-                    new StrutQuestion(strut,
+                    new StrutQuestion(asyncExecutorService,
+                        strut,
                         requestAndReport.request,
                         provider.getRemotePartition(StrutRemotePartition.class))),
                 Optional.fromNullable(requestAndReport.report),
@@ -83,7 +89,8 @@ public class StrutInjectable {
                 partitionId,
                 new MiruSolvableFactory<>(request.name, provider.getStats(),
                     "strut",
-                    new StrutQuestion(strut,
+                    new StrutQuestion(asyncExecutorService,
+                        strut,
                         request,
                         provider.getRemotePartition(StrutRemotePartition.class))),
                 new StrutAnswerMerger(request.query.strategy, request.query.desiredNumberOfResults),

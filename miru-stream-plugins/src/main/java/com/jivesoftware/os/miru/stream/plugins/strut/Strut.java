@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.stream.plugins.strut;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
@@ -40,10 +39,9 @@ public class Strut {
 
     public <BM extends IBM, IBM> StrutAnswer composeAnswer(MiruRequestContext<BM, IBM, ?> requestContext,
         MiruRequest<StrutQuery> request,
-        List<HotOrNot> hotOrNots,
-        float threshold) throws Exception {
+        List<HotOrNot> hotOrNots) throws Exception {
         boolean resultsExhausted = request.query.timeRange.smallestTimestamp > requestContext.getTimeIndex().getLargestTimestamp();
-        return new StrutAnswer(hotOrNots, threshold, resultsExhausted);
+        return new StrutAnswer(hotOrNots, resultsExhausted);
     }
 
     public static interface HotStuff {
@@ -56,7 +54,6 @@ public class Strut {
         MiruBitmaps<BM, IBM> bitmaps,
         MiruRequestContext<BM, IBM, ?> requestContext,
         MiruRequest<StrutQuery> request,
-        Optional<StrutReport> report,
         ConsumeBitmaps<BM> consumeAnswers,
         float[] thresholds,
         HotStuff hotStuff,
