@@ -93,11 +93,11 @@ public class MiruAggregateUtil {
             }
         }
 
-        int[] featureCount = {0};
-        int[] termCount = {0};
+        int[] featureCount = { 0 };
+        int[] termCount = { 0 };
         int batchSize = 1_000;
         int[] ids = new int[batchSize];
-        int[] count = {0};
+        int[] count = { 0 };
         long start = System.currentTimeMillis();
         consumeAnswers.consume((lastId, answerTermId, answerScoredLastId, answerBitmap) -> {
             termCount[0]++;
@@ -149,25 +149,71 @@ public class MiruAggregateUtil {
         for (int fieldId : uniqueFieldIds) {
             fieldTerms[fieldId] = activityIndex.getAll(name, ids, 0, count, fieldId, stackBuffer);
         }
+
+        PermutationStream permutationStream = (fi, termIds1) -> {
+            if (features[fi] == null || features[fi].add(new Feature(termIds1))) {
+                featureCount[0]++;
+                if (!stream.stream(lastId, answerTermId, answerScoredLastId, fi, termIds1)) {
+                    return false;
+                }
+            }
+            return true;
+        };
+
         for (int index = 0; index < count; index++) {
             NEXT_FEATURE:
             for (int i = 0; i < featureFieldIds.length; i++) {
                 int[] fieldIds = featureFieldIds[i];
-                //TODO handle multiTerm fields
-                MiruTermId[] termIds = new MiruTermId[fieldIds.length];
+
+                MiruTermId[][] termIds = new MiruTermId[fieldIds.length][];
                 for (int j = 0; j < fieldIds.length; j++) {
                     MiruTermId[] fieldTermIds = fieldTerms[fieldIds[j]][index];
                     if (fieldTermIds == null || fieldTermIds.length == 0) {
                         continue NEXT_FEATURE;
                     }
-                    termIds[j] = fieldTermIds[0];
+                    termIds[j] = fieldTermIds;
                 }
-                if (features[i] == null || features[i].add(new Feature(termIds))) {
-                    featureCount[0]++;
-                    if (!stream.stream(lastId, answerTermId, answerScoredLastId, i, termIds)) {
-                        return false;
-                    }
+
+                if (!permutate(i, fieldIds.length, termIds, permutationStream)) {
+                    return false;
                 }
+            }
+        }
+        return true;
+    }
+
+    interface PermutationStream {
+        boolean permutation(int index, MiruTermId[] termIds) throws Exception;
+    }
+
+    boolean permutate(int index, int depth, MiruTermId[][] termIds, PermutationStream stream) throws Exception {
+        MiruTermId[] feature = new MiruTermId[depth];
+        for (int k = 0; k < depth; k++) {
+            feature[k] = termIds[k][0];
+        }
+
+        int[] position = new int[depth];
+        DONE:
+        while (true) {
+            MiruTermId[] copy = new MiruTermId[feature.length];
+            System.arraycopy(feature, 0, copy, 0, feature.length);
+            if (!stream.permutation(index, copy)) {
+                return false;
+            }
+
+            int k;
+            for (k = depth - 1; k >= 0; k--) {
+                position[k]++;
+                if (position[k] >= termIds[k].length) {
+                    position[k] = 0;
+                    feature[k] = termIds[k][position[k]];
+                } else {
+                    feature[k] = termIds[k][position[k]];
+                    break;
+                }
+            }
+            if (k < 0) {
+                break;
             }
         }
         return true;
@@ -565,7 +611,7 @@ public class MiruAggregateUtil {
         TermIdStream termIdStream,
         StackBuffer stackBuffer) throws Exception {
 
-        int[][] featureFieldIds = new int[][]{new int[]{pivotFieldId}};
+        int[][] featureFieldIds = new int[][] { new int[] { pivotFieldId } };
         gatherFeatures(name,
             bitmaps,
             requestContext,
