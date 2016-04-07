@@ -505,7 +505,7 @@ public class MiruAggregateUtil {
 
             bitmaps.multiTx(
                 (tx, stackBuffer1) -> primaryFieldIndex.multiTxIndex(name, pivotFieldId, termIds, -1, stackBuffer1, tx),
-                (index, bitmap) -> {
+                (index, lastId, bitmap) -> {
                     if (bitmaps.supportsInPlace()) {
                         bitmaps.inPlaceAndNot(answer[0], bitmap);
                         if (counter != null) {

@@ -213,7 +213,7 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
     @Override
     public MutableRoaringBitmap orMultiTx(MiruMultiTxIndex<ImmutableRoaringBitmap> multiTermTxIndex, StackBuffer stackBuffer) throws Exception {
         MutableRoaringBitmap container = new MutableRoaringBitmap();
-        multiTermTxIndex.txIndex((index, bitmap, filer, offset, stackBuffer1) -> {
+        multiTermTxIndex.txIndex((index, lastId, bitmap, filer, offset, stackBuffer1) -> {
             if (bitmap != null) {
                 container.or(bitmap);
             } else if (filer != null) {
@@ -309,7 +309,7 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
     public void inPlaceAndNotMultiTx(MutableRoaringBitmap original,
         MiruMultiTxIndex<ImmutableRoaringBitmap> multiTermTxIndex,
         StackBuffer stackBuffer) throws Exception {
-        multiTermTxIndex.txIndex((index, bitmap, filer, offset, stackBuffer1) -> {
+        multiTermTxIndex.txIndex((index, lastId, bitmap, filer, offset, stackBuffer1) -> {
             if (bitmap != null) {
                 original.andNot(bitmap);
             } else if (filer != null) {
@@ -323,11 +323,11 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
         IndexAlignedBitmapStream<MutableRoaringBitmap> stream,
         StackBuffer stackBuffer) throws Exception {
 
-        multiTermTxIndex.txIndex((index, bitmap, filer, offset, stackBuffer1) -> {
+        multiTermTxIndex.txIndex((index, lastId, bitmap, filer, offset, stackBuffer1) -> {
             if (bitmap != null) {
-                stream.stream(index, copy(bitmap));
+                stream.stream(index, lastId, copy(bitmap));
             } else if (filer != null) {
-                stream.stream(index, bitmapFromFiler(filer, offset, stackBuffer1));
+                stream.stream(index, lastId, bitmapFromFiler(filer, offset, stackBuffer1));
             }
         }, stackBuffer);
     }

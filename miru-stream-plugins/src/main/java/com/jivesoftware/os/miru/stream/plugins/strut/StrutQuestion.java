@@ -196,7 +196,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         if (!asyncRescore.isEmpty()) {
             asyncRescorers.submit(() -> {
                 try {
-                    rescore(handle, asyncRescore, pivotFieldId, scoredToLastIds, modelScorer, cacheStores);
+                    rescore(handle, asyncRescore, pivotFieldId, modelScorer, cacheStores);
                 } catch (Exception x) {
                     LOG.warn("Failed while trying to rescore.", x);
                 }
@@ -217,50 +217,50 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         MiruFieldDefinition pivotFieldDefinition = schema.getFieldDefinition(pivotFieldId);
         List<HotOrNot> hotOrNots = new ArrayList<>(request.query.desiredNumberOfResults);
 
-                Scored[] s = scored.toArray(new Scored[0]);
-                int[] scoredLastIds = new int[s.length];
-                for (int j = 0; j < s.length; j++) {
-                    scoredLastIds[j] = s[j].lastId;
-                }
+        Scored[] s = scored.toArray(new Scored[0]);
+        int[] scoredLastIds = new int[s.length];
+        for (int j = 0; j < s.length; j++) {
+            scoredLastIds[j] = s[j].lastId;
+        }
 
-                MiruValue[][][] gatherScoredValues = null;
-                if (gatherFieldIds != null) {
-                    gatherScoredValues = new MiruValue[scoredLastIds.length][gatherFieldIds.length][];
-                    int[] consumeLastIds = new int[scoredLastIds.length];
-                    for (int j = 0; j < gatherFieldIds.length; j++) {
-                        System.arraycopy(scoredLastIds, 0, consumeLastIds, 0, scoredLastIds.length);
-                        MiruTermId[][] termIds = activityIndex.getAll("strut", consumeLastIds, gatherFieldIds[j], stackBuffer);
-                        for (int k = 0; k < termIds.length; k++) {
-                            if (termIds[k] != null) {
-                                gatherScoredValues[k][j] = new MiruValue[termIds[k].length];
-                                for (int l = 0; l < termIds[k].length; l++) {
-                                    gatherScoredValues[k][j][l] = new MiruValue(termComposer.decompose(schema,
-                                        schema.getFieldDefinition(gatherFieldIds[j]),
-                                        stackBuffer,
-                                        termIds[k][l]));
-                                }
-                            }
+        MiruValue[][][] gatherScoredValues = null;
+        if (gatherFieldIds != null) {
+            gatherScoredValues = new MiruValue[scoredLastIds.length][gatherFieldIds.length][];
+            int[] consumeLastIds = new int[scoredLastIds.length];
+            for (int j = 0; j < gatherFieldIds.length; j++) {
+                System.arraycopy(scoredLastIds, 0, consumeLastIds, 0, scoredLastIds.length);
+                MiruTermId[][] termIds = activityIndex.getAll("strut", consumeLastIds, gatherFieldIds[j], stackBuffer);
+                for (int k = 0; k < termIds.length; k++) {
+                    if (termIds[k] != null) {
+                        gatherScoredValues[k][j] = new MiruValue[termIds[k].length];
+                        for (int l = 0; l < termIds[k].length; l++) {
+                            gatherScoredValues[k][j][l] = new MiruValue(termComposer.decompose(schema,
+                                schema.getFieldDefinition(gatherFieldIds[j]),
+                                stackBuffer,
+                                termIds[k][l]));
                         }
                     }
                 }
+            }
+        }
 
-                int[] consumeLastIds = new int[scoredLastIds.length];
-                System.arraycopy(scoredLastIds, 0, consumeLastIds, 0, scoredLastIds.length);
-                TimeAndVersion[] timeAndVersions = activityIndex.getAllTimeAndVersions("strut", consumeLastIds, stackBuffer);
+        int[] consumeLastIds = new int[scoredLastIds.length];
+        System.arraycopy(scoredLastIds, 0, consumeLastIds, 0, scoredLastIds.length);
+        TimeAndVersion[] timeAndVersions = activityIndex.getAllTimeAndVersions("strut", consumeLastIds, stackBuffer);
 
-                for (int j = 0; j < s.length; j++) {
-                    if (timeAndVersions[j] != null) {
-                        String[] decomposed = termComposer.decompose(schema, pivotFieldDefinition, stackBuffer, s[j].term);
-                        hotOrNots.add(new HotOrNot(new MiruValue(decomposed),
-                            gatherScoredValues != null ? gatherScoredValues[j] : null,
-                            s[j].score, s[j].termCount, s[j].features,
-                            timeAndVersions[j].timestamp));
-                    } else {
-                        LOG.warn("Failed to get timestamp for {}", scoredLastIds[j]);
-                    }
-                }
-                solutionLog.log(MiruSolutionLogLevel.INFO, "Strut found {} terms", hotOrNots.size());
-        
+        for (int j = 0; j < s.length; j++) {
+            if (timeAndVersions[j] != null) {
+                String[] decomposed = termComposer.decompose(schema, pivotFieldDefinition, stackBuffer, s[j].term);
+                hotOrNots.add(new HotOrNot(new MiruValue(decomposed),
+                    gatherScoredValues != null ? gatherScoredValues[j] : null,
+                    s[j].score, s[j].termCount, s[j].features,
+                    timeAndVersions[j].timestamp));
+            } else {
+                LOG.warn("Failed to get timestamp for {}", scoredLastIds[j]);
+            }
+        }
+        solutionLog.log(MiruSolutionLogLevel.INFO, "Strut found {} terms", hotOrNots.size());
+
         return new MiruPartitionResponse<>(strut.composeAnswer(context, request, hotOrNots), solutionLog.asList());
     }
 
@@ -268,7 +268,6 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         MiruRequestHandle<BM, IBM, ?> handle,
         List<MiruTermId> asyncRescore,
         int pivotFieldId,
-        int[] scoredToLastIds,
         StrutModelScorer modelScorer,
         MiruPluginCacheProvider.CacheKeyValues cacheStores) throws Exception {
 
@@ -300,6 +299,8 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         }
 
         BM[] answers = bitmaps.createArrayOf(asyncRescore.size());
+        int[] scoredToLastIds = new int[asyncRescore.size()];
+        Arrays.fill(scoredToLastIds, -1);
         List<Scored> updates = Lists.newArrayList();
         strut.yourStuff("strut",
             handle.getCoord(),
@@ -312,11 +313,12 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 Arrays.fill(answers, null);
                 bitmaps.multiTx(
                     (tx, stackBuffer1) -> primaryIndex.multiTxIndex("strut", pivotFieldId, rescoreMiruTermIds, -1, stackBuffer1, tx),
-                    (index, bitmap) -> {
+                    (index, lastId, bitmap) -> {
                         if (constrainFeature != null) {
                             bitmaps.inPlaceAnd(bitmap, constrainFeature);
                         }
                         answers[index] = bitmap;
+                        scoredToLastIds[index] = lastId;
                     },
                     stackBuffer);
 
@@ -327,7 +329,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 }
                 return true;
             },
-            new float[]{0.0f},
+            new float[] { 0.0f },
             (thresholdIndex, hotness, cacheable) -> {
                 if (cacheable) {
                     updates.add(hotness);

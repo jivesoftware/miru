@@ -261,7 +261,8 @@ public class MiruDeltaFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
                     Optional<BitmapAndLastId<BM>> index = MiruDeltaInvertedIndex.overlayDelta(bitmaps, delta, backingIndex, considerIfLastIdGreaterThanN,
                         trackError, stackBuffer);
                     if (index.isPresent()) {
-                        indexTx.tx(i, index.get().bitmap, null, -1, stackBuffer);
+                        BitmapAndLastId<BM> got = index.get();
+                        indexTx.tx(i, got.lastId, got.bitmap, null, -1, stackBuffer);
                     }
                     termIds[i] = null;
                     LOG.inc("multiTxIndex>delta");
