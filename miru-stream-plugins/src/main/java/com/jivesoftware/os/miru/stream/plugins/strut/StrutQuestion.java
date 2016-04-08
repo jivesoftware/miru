@@ -150,7 +150,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         int[] scoredToLastIds = new int[batchSize];
         MiruTermId[] nullableMiruTermIds = new MiruTermId[batchSize];
         MiruTermId[] miruTermIds = new MiruTermId[batchSize];
-        List<MiruTermId> asyncRescore = Lists.newArrayList();
+        List<LastIdAndTermId> asyncRescore = Lists.newArrayList();
         int totalMisses = 0;
         done:
         for (List<LastIdAndTermId> batch : Lists.partition(lastIdAndTermIds, answers.length)) {
@@ -175,7 +175,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                     cacheStores,
                     (termIndex, score, scoredToLastId) -> {
                         if (Float.isNaN(score) || scoredToLastId < scoredToLastIds[termIndex]) {
-                            asyncRescore.add(miruTermIds[termIndex]);
+                            asyncRescore.add(batch.get(termIndex));
                         }
                         scored.add(new Scored(batch.get(termIndex).lastId,
                             miruTermIds[termIndex],
@@ -188,7 +188,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                     stackBuffer);
                 totalTimeFetchingScores += (System.currentTimeMillis() - fetchScoresStart);
             } else {
-                List<Scored> rescored = rescore(handle, Arrays.asList(miruTermIds), pivotFieldId, modelScorer, cacheStores);
+                List<Scored> rescored = rescore(handle, batch, pivotFieldId, modelScorer, cacheStores);
                 scored.addAll(rescored);
             }
 
@@ -274,7 +274,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
 
     private <BM extends IBM, IBM> List<Scored> rescore(
         MiruRequestHandle<BM, IBM, ?> handle,
-        List<MiruTermId> score,
+        List<LastIdAndTermId> score,
         int pivotFieldId,
         StrutModelScorer modelScorer,
         MiruPluginCacheProvider.CacheKeyValues cacheStores) throws Exception {
@@ -316,11 +316,14 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             context,
             request,
             (streamBitmaps) -> {
-
-                MiruTermId[] rescoreMiruTermIds = score.toArray(new MiruTermId[0]);
+                LastIdAndTermId[] rescoreMiruTermIds = score.toArray(new LastIdAndTermId[0]);
+                MiruTermId[] miruTermIds = new MiruTermId[rescoreMiruTermIds.length];
+                for (int i = 0; i < rescoreMiruTermIds.length; i++) {
+                    miruTermIds[i] = rescoreMiruTermIds[i].termId;
+                }
                 Arrays.fill(answers, null);
                 bitmaps.multiTx(
-                    (tx, stackBuffer1) -> primaryIndex.multiTxIndex("strut", pivotFieldId, rescoreMiruTermIds, -1, stackBuffer1, tx),
+                    (tx, stackBuffer1) -> primaryIndex.multiTxIndex("strut", pivotFieldId, miruTermIds, -1, stackBuffer1, tx),
                     (index, lastId, bitmap) -> {
                         if (constrainFeature != null) {
                             bitmaps.inPlaceAnd(bitmap, constrainFeature);
@@ -331,14 +334,14 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                     stackBuffer);
 
                 for (int i = 0; i < rescoreMiruTermIds.length; i++) {
-                    if (answers[i] != null && !streamBitmaps.stream(-1, rescoreMiruTermIds[i], scoredToLastIds[i], answers[i])) {
+                    if (answers[i] != null && !streamBitmaps.stream(rescoreMiruTermIds[i].lastId,
+                        rescoreMiruTermIds[i].termId, scoredToLastIds[i], answers[i])) {
                         return false;
                     }
                 }
                 return true;
             },
-            new float[]{0.0f},
-            (thresholdIndex, hotness, cacheable) -> {
+            (hotness, cacheable) -> {
                 if (cacheable) {
                     updates.add(hotness);
                 }
