@@ -87,7 +87,7 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
         final String constraintField;
         final String constraintFilters;
         final Strategy strategy;
-        boolean usePartitionModelCache;
+        final boolean usePartitionModelCache;
         final int desiredNumberOfResults;
         final int desiredModelSize;
         final String logLevel;
@@ -162,7 +162,7 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                 data.put("constraintField", input.constraintField);
                 data.put("constraintFilters", input.constraintFilters);
                 data.put("strategy", input.strategy.name());
-                data.put("usePartitionModelCache", String.valueOf(input.usePartitionModelCache));
+                data.put("usePartitionModelCache", input.usePartitionModelCache);
                 data.put("desiredNumberOfResults", input.desiredNumberOfResults);
                 data.put("desiredModelSize", input.desiredModelSize);
 
