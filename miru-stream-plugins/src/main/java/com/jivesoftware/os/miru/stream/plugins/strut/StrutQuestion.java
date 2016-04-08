@@ -167,25 +167,30 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             primaryIndex.multiGetLastIds("strut", pivotFieldId, nullableMiruTermIds, scoredToLastIds, stackBuffer);
             totalTimeFetchingLastId += (System.currentTimeMillis() - fetchLastIdsStart);
 
-            long fetchScoresStart = System.currentTimeMillis();
-            modelScorer.score(
-                request.query.modelId,
-                miruTermIds,
-                cacheStores,
-                (termIndex, score, scoredToLastId) -> {
-                    if (Float.isNaN(score) || scoredToLastId < scoredToLastIds[termIndex]) {
-                        asyncRescore.add(miruTermIds[termIndex]);
-                    }
-                    scored.add(new Scored(batch.get(termIndex).lastId,
-                        miruTermIds[termIndex],
-                        scoredToLastIds[termIndex],
-                        Float.isNaN(score) ? 0f : score,
-                        -1,
-                        null));
-                    return true;
-                },
-                stackBuffer);
-            totalTimeFetchingScores += (System.currentTimeMillis() - fetchScoresStart);
+            if (request.query.usePartitionModelCache) {
+                long fetchScoresStart = System.currentTimeMillis();
+                modelScorer.score(
+                    request.query.modelId,
+                    miruTermIds,
+                    cacheStores,
+                    (termIndex, score, scoredToLastId) -> {
+                        if (Float.isNaN(score) || scoredToLastId < scoredToLastIds[termIndex]) {
+                            asyncRescore.add(miruTermIds[termIndex]);
+                        }
+                        scored.add(new Scored(batch.get(termIndex).lastId,
+                            miruTermIds[termIndex],
+                            scoredToLastIds[termIndex],
+                            Float.isNaN(score) ? 0f : score,
+                            -1,
+                            null));
+                        return true;
+                    },
+                    stackBuffer);
+                totalTimeFetchingScores += (System.currentTimeMillis() - fetchScoresStart);
+            } else {
+                List<Scored> rescored = rescore(handle, asyncRescore, pivotFieldId, modelScorer, cacheStores);
+                scored.addAll(rescored);
+            }
 
         }
 
@@ -267,9 +272,9 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         return new MiruPartitionResponse<>(strut.composeAnswer(context, request, hotOrNots), solutionLog.asList());
     }
 
-    private <BM extends IBM, IBM> void rescore(
+    private <BM extends IBM, IBM> List<Scored> rescore(
         MiruRequestHandle<BM, IBM, ?> handle,
-        List<MiruTermId> asyncRescore,
+        List<MiruTermId> score,
         int pivotFieldId,
         StrutModelScorer modelScorer,
         MiruPluginCacheProvider.CacheKeyValues cacheStores) throws Exception {
@@ -301,8 +306,8 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             constrainFeature = null;
         }
 
-        BM[] answers = bitmaps.createArrayOf(asyncRescore.size());
-        int[] scoredToLastIds = new int[asyncRescore.size()];
+        BM[] answers = bitmaps.createArrayOf(score.size());
+        int[] scoredToLastIds = new int[score.size()];
         Arrays.fill(scoredToLastIds, -1);
         List<Scored> updates = Lists.newArrayList();
         strut.yourStuff("strut",
@@ -312,7 +317,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             request,
             (streamBitmaps) -> {
 
-                MiruTermId[] rescoreMiruTermIds = asyncRescore.toArray(new MiruTermId[0]);
+                MiruTermId[] rescoreMiruTermIds = score.toArray(new MiruTermId[0]);
                 Arrays.fill(answers, null);
                 bitmaps.multiTx(
                     (tx, stackBuffer1) -> primaryIndex.multiTxIndex("strut", pivotFieldId, rescoreMiruTermIds, -1, stackBuffer1, tx),
@@ -346,6 +351,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             modelScorer.commit(request.query.modelId, cacheStores, updates, stackBuffer);
             LOG.info("Strut score updates {} features in {} ms", updates.size(), System.currentTimeMillis() - startOfUpdates);
         }
+        return updates;
     }
 
     private static class LastIdAndTermId {

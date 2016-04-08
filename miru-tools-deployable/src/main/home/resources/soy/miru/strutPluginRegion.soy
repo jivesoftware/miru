@@ -18,6 +18,7 @@
  * @param? constraintField
  * @param? constraintFilters
  * @param? strategy
+ * @param? usePartitionModelCache
  * @param? desiredNumberOfResults
  * @param? desiredModelSize
  * @param? results
@@ -176,6 +177,12 @@
                                 <option value="MAX" {if $strategy == 'MAX'}selected="selected"{/if}>MAX</option>
                                 <option value="MEAN" {if $strategy == 'MEAN'}selected="selected"{/if}>MEAN</option>
                             </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Use Partition Model Cache</td>
+                        <td>
+                            <input type="checkbox" class="j-ui-elem" value="true" name="usePartitionModelCache" id="usePartitionModelCachePicker" {if $usePartitionModelCache}checked{/if}>
                         </td>
                     </tr>
                     <tr>

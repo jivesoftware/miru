@@ -87,13 +87,14 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
         final String constraintField;
         final String constraintFilters;
         final Strategy strategy;
+        boolean usePartitionModelCache;
         final int desiredNumberOfResults;
         final int desiredModelSize;
         final String logLevel;
 
         public StrutPluginRegionInput(String tenant, long fromTimeAgo, String fromTimeUnit, long toTimeAgo, String toTimeUnit, String catwalkId, String modelId,
             String gatherField, String gatherTermsForFields, String gatherFilters, String featureFields, String featureFilters, String constraintField,
-            String constraintFilters, Strategy strategy, int desiredNumberOfResults, int desiredModelSize, String logLevel) {
+            String constraintFilters, Strategy strategy, boolean usePartitionModelCache, int desiredNumberOfResults, int desiredModelSize, String logLevel) {
             this.tenant = tenant;
             this.fromTimeAgo = fromTimeAgo;
             this.fromTimeUnit = fromTimeUnit;
@@ -109,6 +110,7 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
             this.constraintField = constraintField;
             this.constraintFilters = constraintFilters;
             this.strategy = strategy;
+            this.usePartitionModelCache = usePartitionModelCache;
             this.desiredNumberOfResults = desiredNumberOfResults;
             this.desiredModelSize = desiredModelSize;
             this.logLevel = logLevel;
@@ -160,6 +162,7 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                 data.put("constraintField", input.constraintField);
                 data.put("constraintFilters", input.constraintFilters);
                 data.put("strategy", input.strategy.name());
+                data.put("usePartitionModelCache", String.valueOf(input.usePartitionModelCache));
                 data.put("desiredNumberOfResults", input.desiredNumberOfResults);
                 data.put("desiredModelSize", input.desiredModelSize);
 
@@ -212,6 +215,7 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                             featureFilter, // todo seperate from catwalkQuery
                             input.desiredNumberOfResults,
                             true,
+                            input.usePartitionModelCache,
                             gatherTermsForFieldSplit),
                         MiruSolutionLogLevel.valueOf(input.logLevel)));
                     MiruResponse<StrutAnswer> strutResponse = readerClient.call("",
