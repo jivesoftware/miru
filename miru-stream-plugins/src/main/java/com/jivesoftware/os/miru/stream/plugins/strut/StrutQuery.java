@@ -34,6 +34,7 @@ public class StrutQuery implements Serializable {
     public final MiruFilter featureFilter; // "I viewed"
     public final int desiredNumberOfResults;
     public final boolean includeFeatures;
+    public final boolean usePartitionModelCache;
 
     public final String[] gatherTermsForFields;
 
@@ -49,6 +50,7 @@ public class StrutQuery implements Serializable {
         @JsonProperty("featureFilter") MiruFilter featureFilter,
         @JsonProperty("desiredNumberOfResults") int desiredNumberOfResults,
         @JsonProperty("includeFeatures") boolean includeFeatures,
+        @JsonProperty("usePartitionModelCache") boolean usePartitionModelCache,
         @JsonProperty("gatherTermsForFields") String[] gatherTermsForFields) {
 
         this.catwalkId = Preconditions.checkNotNull(catwalkId);
@@ -63,6 +65,7 @@ public class StrutQuery implements Serializable {
         Preconditions.checkArgument(desiredNumberOfResults > 0, "Number of results must be at least 1");
         this.desiredNumberOfResults = desiredNumberOfResults;
         this.includeFeatures = includeFeatures;
+        this.usePartitionModelCache = usePartitionModelCache;
         this.gatherTermsForFields = gatherTermsForFields;
     }
 
@@ -80,6 +83,7 @@ public class StrutQuery implements Serializable {
             ", featureFilter=" + featureFilter +
             ", desiredNumberOfResults=" + desiredNumberOfResults +
             ", includeFeatures=" + includeFeatures +
+            ", usePartitionModelCache=" + usePartitionModelCache +
             ", gatherTermsForFields=" + Arrays.toString(gatherTermsForFields) +
             '}';
     }

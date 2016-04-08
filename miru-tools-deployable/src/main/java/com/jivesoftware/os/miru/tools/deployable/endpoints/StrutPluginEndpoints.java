@@ -48,19 +48,13 @@ public class StrutPluginEndpoints {
         @QueryParam("gatherTermsForFields") @DefaultValue("") String gatherTermsForFields,
         @QueryParam("gatherFilters") @DefaultValue("activityType:0, user:3 2000") String gatherFilters,
         @QueryParam("featureFields") @DefaultValue("activityType context,"
-            + "activityType objectType,"
-            + "activityType parentType,"
             + "activityType user,"
-            + "context objectType,"
-            + "context parentType,"
-            + "context user,"
-            + "objectType parentType,"
-            + "objectType user,"
-            + "parentType user") String featureFields,
+            + "context user") String featureFields,
         @QueryParam("featureFilters") @DefaultValue("") String featureFilters,
         @QueryParam("constraintField") @DefaultValue("parent") String constraintField,
         @QueryParam("constraintFilters") @DefaultValue("activityType:1|2|65|72") String constraintFilters,
         @QueryParam("strategy") @DefaultValue("MAX") String strategy,
+        @QueryParam("usePartitionModelCache") @DefaultValue("true") boolean usePartitionModelCache,
         @QueryParam("desiredNumberOfResults") @DefaultValue("1000") int desiredNumberOfResults,
         @QueryParam("desiredModelSize") @DefaultValue("10000") int desiredModelSize,
         @QueryParam("logLevel") @DefaultValue("NONE") String logLevel) {
@@ -83,6 +77,7 @@ public class StrutPluginEndpoints {
                     constraintField,
                     constraintFilters.trim(),
                     Strategy.valueOf(strategy),
+                    usePartitionModelCache,
                     desiredNumberOfResults,
                     desiredModelSize,
                     logLevel)));
