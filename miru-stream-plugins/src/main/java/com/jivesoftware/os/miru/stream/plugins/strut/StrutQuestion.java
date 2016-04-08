@@ -316,7 +316,6 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             context,
             request,
             (streamBitmaps) -> {
-
                 MiruTermId[] rescoreMiruTermIds = score.toArray(new MiruTermId[0]);
                 Arrays.fill(answers, null);
                 bitmaps.multiTx(
@@ -337,8 +336,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 }
                 return true;
             },
-            new float[]{0.0f},
-            (thresholdIndex, hotness, cacheable) -> {
+            (hotness, cacheable) -> {
                 if (cacheable) {
                     updates.add(hotness);
                 }

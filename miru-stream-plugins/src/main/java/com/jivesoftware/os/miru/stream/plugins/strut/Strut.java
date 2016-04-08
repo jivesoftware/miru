@@ -46,7 +46,7 @@ public class Strut {
 
     public static interface HotStuff {
 
-        boolean steamStream(int thresholdIndex, Scored scored, boolean cacheable);
+        boolean steamStream(Scored scored, boolean cacheable);
     }
 
     public <BM extends IBM, IBM> void yourStuff(String name,
@@ -55,7 +55,6 @@ public class Strut {
         MiruRequestContext<BM, IBM, ?> requestContext,
         MiruRequest<StrutQuery> request,
         ConsumeBitmaps<BM> consumeAnswers,
-        float[] thresholds,
         HotStuff hotStuff,
         MiruSolutionLog solutionLog) throws Exception {
 
@@ -89,12 +88,7 @@ public class Strut {
         }
 
         @SuppressWarnings("unchecked")
-        List<Hotness>[][] features = request.query.includeFeatures ? new List[thresholds.length][] : null;
-        for (int i = 0; i < thresholds.length; i++) {
-            if (features != null) {
-                features[i] = new List[featureFields.length];
-            }
-        }
+        List<Hotness>[] features = request.query.includeFeatures ? new List[featureFields.length] : null;
 
         long start = System.currentTimeMillis();
         int[] featureCount = {0};
@@ -104,10 +98,8 @@ public class Strut {
 
             consumeAnswers.consume((int lastId, MiruTermId termId, int scoredToLastId, BM answer) -> {
                 boolean more = true;
-                for (int i = 0; i < thresholds.length; i++) {
-                    if (!hotStuff.steamStream(i, new Scored(lastId, termId, scoredToLastId, 0.0f, 0, null), false)) {
-                        more = false;
-                    }
+                if (!hotStuff.steamStream(new Scored(lastId, termId, scoredToLastId, 0.0f, 0, null), false)) {
+                    more = false;
                 }
                 return more;
             });
@@ -121,8 +113,8 @@ public class Strut {
                 }
             }
 
-            float[] score = new float[thresholds.length];
-            int[] termCount = new int[thresholds.length];
+            float[] score = new float[1];
+            int[] termCount = new int[1];
             aggregateUtil.gatherFeatures(name,
                 bitmaps,
                 requestContext,
@@ -131,31 +123,31 @@ public class Strut {
                 true,
                 (lastId, answerTermId, answerScoredLastId, featureId, termIds) -> {
                     if (featureId == -1) {
-                        for (int i = 0; i < thresholds.length; i++) {
-                            boolean stopped = false;
-                            if (termCount[i] > 0) {
-                                List<Hotness>[] scoredFeatures = null;
-                                if (request.query.includeFeatures) {
-                                    scoredFeatures = new List[features[i].length];
-                                    System.arraycopy(features[i], 0, scoredFeatures, 0, features[i].length);
-                                }
-                                float s = finalizeScore(score[i], termCount[i], request.query.strategy);
-                                if (!hotStuff.steamStream(i, new Scored(lastId, answerTermId, answerScoredLastId, s, termCount[i], scoredFeatures), cacheable[0])) {
-                                    stopped = true;
-                                }
-                            } else if (!hotStuff.steamStream(i, new Scored(lastId, answerTermId, answerScoredLastId, 0f, 0, null), cacheable[0])) {
+                        boolean stopped = false;
+                        if (termCount[0] > 0) {
+                            List<Hotness>[] scoredFeatures = null;
+                            if (request.query.includeFeatures) {
+                                scoredFeatures = new List[features.length];
+                                System.arraycopy(features, 0, scoredFeatures, 0, features.length);
+                            }
+                            float s = finalizeScore(score[0], termCount[0], request.query.strategy);
+                            if (!hotStuff
+                            .steamStream(new Scored(lastId, answerTermId, answerScoredLastId, s, termCount[0], scoredFeatures), cacheable[0])) {
                                 stopped = true;
                             }
-                            score[i] = 0f;
-                            termCount[i] = 0;
-
-                            if (request.query.includeFeatures) {
-                                Arrays.fill(features[i], null);
-                            }
-                            if (stopped) {
-                                return false;
-                            }
+                        } else if (!hotStuff.steamStream(new Scored(lastId, answerTermId, answerScoredLastId, 0f, 0, null), cacheable[0])) {
+                            stopped = true;
                         }
+                        score[0] = 0f;
+                        termCount[0] = 0;
+
+                        if (request.query.includeFeatures) {
+                            Arrays.fill(features, null);
+                        }
+                        if (stopped) {
+                            return false;
+                        }
+
                     } else {
                         featureCount[0]++;
                         ModelScore modelScore = model.score(featureId, termIds);
@@ -166,23 +158,19 @@ public class Strut {
                                     s, answerTermId, featureId, Arrays.toString(termIds));
                             } else if (!Float.isNaN(s) && s > 0f) {
                                 //TODO tiered scoring based on thresholds
-                                for (int i = 0; i < thresholds.length; i++) {
-                                    if (s > thresholds[i]) {
-                                        score[i] = score(score[i], s, request.query.strategy);
-                                        termCount[i]++;
+                                score[0] = score(score[0], s, request.query.strategy);
+                                termCount[0]++;
 
-                                        if (request.query.includeFeatures) {
-                                            if (features[i][featureId] == null) {
-                                                features[i][featureId] = Lists.newArrayList();
-                                            }
-                                            MiruValue[] values = new MiruValue[termIds.length];
-                                            for (int j = 0; j < termIds.length; j++) {
-                                                values[j] = new MiruValue(termComposer.decompose(schema,
-                                                    schema.getFieldDefinition(featureFieldIds[featureId][j]), stackBuffer, termIds[j]));
-                                            }
-                                            features[i][featureId].add(new Hotness(values, s));
-                                        }
+                                if (request.query.includeFeatures) {
+                                    if (features[featureId] == null) {
+                                        features[featureId] = Lists.newArrayList();
                                     }
+                                    MiruValue[] values = new MiruValue[termIds.length];
+                                    for (int j = 0; j < termIds.length; j++) {
+                                        values[j] = new MiruValue(termComposer.decompose(schema,
+                                            schema.getFieldDefinition(featureFieldIds[featureId][j]), stackBuffer, termIds[j]));
+                                    }
+                                    features[featureId].add(new Hotness(values, s));
                                 }
                             }
                         }
