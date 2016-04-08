@@ -176,9 +176,12 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                     if (Float.isNaN(score) || scoredToLastId < scoredToLastIds[termIndex]) {
                         asyncRescore.add(miruTermIds[termIndex]);
                     }
-                    if (!Float.isNaN(score)) {
-                        scored.add(new Scored(batch.get(termIndex).lastId, miruTermIds[termIndex], scoredToLastIds[termIndex], score, -1, null));
-                    }
+                    scored.add(new Scored(batch.get(termIndex).lastId,
+                        miruTermIds[termIndex],
+                        scoredToLastIds[termIndex],
+                        Float.isNaN(score) ? 0f : score,
+                        -1,
+                        null));
                     return true;
                 },
                 stackBuffer);
@@ -329,7 +332,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 }
                 return true;
             },
-            new float[] { 0.0f },
+            new float[]{0.0f},
             (thresholdIndex, hotness, cacheable) -> {
                 if (cacheable) {
                     updates.add(hotness);
