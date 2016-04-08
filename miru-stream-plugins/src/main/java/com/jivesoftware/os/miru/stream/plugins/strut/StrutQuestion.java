@@ -188,7 +188,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                     stackBuffer);
                 totalTimeFetchingScores += (System.currentTimeMillis() - fetchScoresStart);
             } else {
-                List<Scored> rescored = rescore(handle, asyncRescore, pivotFieldId, modelScorer, cacheStores);
+                List<Scored> rescored = rescore(handle, Arrays.asList(miruTermIds), pivotFieldId, modelScorer, cacheStores);
                 scored.addAll(rescored);
             }
 
