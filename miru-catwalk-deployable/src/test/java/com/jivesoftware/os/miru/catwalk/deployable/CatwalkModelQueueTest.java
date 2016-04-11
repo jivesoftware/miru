@@ -5,9 +5,10 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkQuery;
+import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkQuery.CatwalkFeature;
 import org.testng.annotations.Test;
 
-import static org.testng.Assert.*;
+import static org.testng.Assert.assertEquals;
 
 /**
  *
@@ -24,8 +25,9 @@ public class CatwalkModelQueueTest {
         CatwalkQuery catwalkQuery = new CatwalkQuery(MiruTimeRange.ALL_TIME,
             "gatherField",
             MiruFilter.NO_FILTER,
-            new String[][] { { "abc", "def" }},
-            MiruFilter.NO_FILTER,
+            new CatwalkFeature[] {
+                new CatwalkFeature("feature1", new String[] { "abc", "def" }, MiruFilter.NO_FILTER)
+            },
             100);
         long timestamp = System.currentTimeMillis();
 

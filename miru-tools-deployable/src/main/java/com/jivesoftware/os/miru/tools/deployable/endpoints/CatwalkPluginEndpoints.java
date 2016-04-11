@@ -43,7 +43,7 @@ public class CatwalkPluginEndpoints {
         @QueryParam("toTimeUnit") @DefaultValue("HOURS") String toTimeUnit,
         @QueryParam("gatherField") @DefaultValue("parent") String gatherField,
         @QueryParam("gatherFilters") @DefaultValue("activityType:0, user:3 2000") String gatherFilters,
-        @QueryParam("featureFields") @DefaultValue("activityType context,"
+        /*@QueryParam("featureFields") @DefaultValue("activityType context,"
             + "activityType objectType,"
             + "activityType parentType,"
             + "activityType user,"
@@ -53,7 +53,14 @@ public class CatwalkPluginEndpoints {
             + "objectType parentType,"
             + "objectType user,"
             + "parentType user") String featureFields,
-        @QueryParam("featureFilters") @DefaultValue("") String featureFilters,
+        @QueryParam("featureFilters") @DefaultValue("") String featureFilters,*/
+        @QueryParam("features") @DefaultValue(
+            "" +
+                "user-views; activityType, user; activityType:0\n" +
+                "user-visible; activityType, user; activityType:1|2|65|72\n" +
+                "place-visible; activityType, context; activityType:1|2|65|72\n" +
+                "user-place; context, user; activityType:1|2|65|72\n" +
+                "mentions; context, user; activityType:20") String features,
         @QueryParam("desiredNumberOfResults") @DefaultValue("1000") int desiredNumberOfResults,
         @QueryParam("logLevel") @DefaultValue("NONE") String logLevel) {
 
@@ -67,8 +74,9 @@ public class CatwalkPluginEndpoints {
                     toTimeUnit,
                     gatherField,
                     gatherFilters.trim(),
-                    featureFields,
-                    featureFilters.trim(),
+                    /*featureFields,
+                    featureFilters.trim(),*/
+                    features.trim(),
                     desiredNumberOfResults,
                     logLevel)));
             return Response.ok(rendered).build();

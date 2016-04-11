@@ -9,16 +9,16 @@ import java.util.Map;
 public class StrutModel {
 
     final Map<StrutModelCache.StrutModelKey, StrutModelCache.ModelScore>[] model;
-    public final long modelCount;
+    public final long[] modelCounts;
     public final long totalCount;
     public final int[] numberOfModels;
 
     public StrutModel(Map<StrutModelCache.StrutModelKey, StrutModelCache.ModelScore>[] model,
-        long modelCount,
+        long[] modelCounts,
         long totalCount,
         int[] numberOfModels) {
         this.model = model;
-        this.modelCount = modelCount;
+        this.modelCounts = modelCounts;
         this.totalCount = totalCount;
         this.numberOfModels = numberOfModels;
     }

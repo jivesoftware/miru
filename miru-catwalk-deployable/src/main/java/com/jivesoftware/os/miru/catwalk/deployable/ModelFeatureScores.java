@@ -11,14 +11,14 @@ import java.util.List;
 class ModelFeatureScores {
 
     final boolean partitionIsClosed;
-    final long modelCount;
+    final long[] modelCounts;
     final long totalCount;
     final List<FeatureScore> featureScores;
     final MiruTimeRange timeRange;
 
-    public ModelFeatureScores(boolean partitionIsClosed, long modelCount, long totalCount, List<FeatureScore> featureScores, MiruTimeRange timeRange) {
+    public ModelFeatureScores(boolean partitionIsClosed, long[] modelCounts, long totalCount, List<FeatureScore> featureScores, MiruTimeRange timeRange) {
         this.partitionIsClosed = partitionIsClosed;
-        this.modelCount = modelCount;
+        this.modelCounts = modelCounts;
         this.totalCount = totalCount;
         this.featureScores = featureScores;
         this.timeRange = timeRange;

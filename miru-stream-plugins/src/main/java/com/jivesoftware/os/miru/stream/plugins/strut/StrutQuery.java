@@ -23,15 +23,11 @@ public class StrutQuery implements Serializable {
     public final CatwalkQuery catwalkQuery;
 
     public final MiruTimeRange timeRange;
-    public final String constraintField; // "parent"
-    public final MiruFilter constraintFilter; // "I viewed"
+    public final String constraintField;
+    public final MiruFilter constraintFilter;
     public final Strategy strategy;
-    /**
-     * {{ user }, { user, context }, { user, activityType }, { user, context, activityType }}
-     * ["bob": 7 / 100], ["bob, water cooler": 2 / 6], ["bob, water cooler, created": 1 / 3]
-     */
-    public final String[][] featureFields;
-    public final MiruFilter featureFilter; // "I viewed"
+    public final String[] featureNames;
+    public final MiruFilter featureFilter;
     public final int desiredNumberOfResults;
     public final boolean includeFeatures;
     public final boolean usePartitionModelCache;
@@ -46,7 +42,7 @@ public class StrutQuery implements Serializable {
         @JsonProperty("constraintField") String constraintField,
         @JsonProperty("constraintFilter") MiruFilter constraintFilter,
         @JsonProperty("strategy") Strategy strategy,
-        @JsonProperty("featureFields") String[][] featureFields,
+        @JsonProperty("featureNames") String[] featureNames,
         @JsonProperty("featureFilter") MiruFilter featureFilter,
         @JsonProperty("desiredNumberOfResults") int desiredNumberOfResults,
         @JsonProperty("includeFeatures") boolean includeFeatures,
@@ -60,7 +56,7 @@ public class StrutQuery implements Serializable {
         this.constraintField = Preconditions.checkNotNull(constraintField);
         this.constraintFilter = Preconditions.checkNotNull(constraintFilter);
         this.strategy = Preconditions.checkNotNull(strategy);
-        this.featureFields = Preconditions.checkNotNull(featureFields);
+        this.featureNames = Preconditions.checkNotNull(featureNames);
         this.featureFilter = Preconditions.checkNotNull(featureFilter);
         Preconditions.checkArgument(desiredNumberOfResults > 0, "Number of results must be at least 1");
         this.desiredNumberOfResults = desiredNumberOfResults;
@@ -79,7 +75,7 @@ public class StrutQuery implements Serializable {
             ", constraintField='" + constraintField + '\'' +
             ", constraintFilter=" + constraintFilter +
             ", strategy=" + strategy +
-            ", featureFields=" + Arrays.toString(featureFields) +
+            ", featureNames=" + Arrays.toString(featureNames) +
             ", featureFilter=" + featureFilter +
             ", desiredNumberOfResults=" + desiredNumberOfResults +
             ", includeFeatures=" + includeFeatures +

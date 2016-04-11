@@ -14,6 +14,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil.ConsumeBitmaps
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
+import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkQuery.CatwalkFeature;
 import com.jivesoftware.os.miru.stream.plugins.strut.HotOrNot.Hotness;
 import com.jivesoftware.os.miru.stream.plugins.strut.StrutModelCache.ModelScore;
 import com.jivesoftware.os.miru.stream.plugins.strut.StrutQuery.Strategy;
@@ -44,9 +45,9 @@ public class Strut {
         return new StrutAnswer(hotOrNots, resultsExhausted);
     }
 
-    public static interface HotStuff {
+    public interface HotStuff {
 
-        boolean steamStream(Scored scored, boolean cacheable);
+        boolean steamStream(int streamIndex, Scored scored, boolean cacheable);
     }
 
     public <BM extends IBM, IBM> void yourStuff(String name,
@@ -63,14 +64,14 @@ public class Strut {
         MiruSchema schema = requestContext.getSchema();
 
         MiruTermComposer termComposer = requestContext.getTermComposer();
-        String[][] modelFeatureFields = request.query.catwalkQuery.featureFields;
-        String[][] desiredFeatureFields = request.query.featureFields;
-        String[][] featureFields = new String[modelFeatureFields.length][];
+        CatwalkFeature[] catwalkFeatures = request.query.catwalkQuery.features;
+        String[] strutFeatureNames = request.query.featureNames;
 
-        for (int i = 0; i < modelFeatureFields.length; i++) {
-            for (int j = 0; j < desiredFeatureFields.length; j++) {
-                if (Arrays.equals(modelFeatureFields[i], desiredFeatureFields[j])) {
-                    featureFields[i] = modelFeatureFields[i];
+        String[][] featureFields = new String[catwalkFeatures.length][];
+        for (int i = 0; i < catwalkFeatures.length; i++) {
+            for (int j = 0; j < strutFeatureNames.length; j++) {
+                if (catwalkFeatures[i].name.equals(strutFeatureNames[j])) {
+                    featureFields[i] = catwalkFeatures[i].featureFields;
                     break;
                 }
             }
@@ -96,9 +97,9 @@ public class Strut {
         StrutModel model = cache.get(request.tenantId, request.query.catwalkId, request.query.modelId, coord.partitionId.getId(), request.query.catwalkQuery);
         if (model == null) {
 
-            consumeAnswers.consume((int lastId, MiruTermId termId, int scoredToLastId, BM answer) -> {
+            consumeAnswers.consume((streamIndex, lastId, termId, scoredToLastId, answers) -> {
                 boolean more = true;
-                if (!hotStuff.steamStream(new Scored(lastId, termId, scoredToLastId, 0.0f, 0, null), false)) {
+                if (!hotStuff.steamStream(streamIndex, new Scored(lastId, termId, scoredToLastId, 0.0f, 0, null), false)) {
                     more = false;
                 }
                 return more;
@@ -121,7 +122,7 @@ public class Strut {
                 consumeAnswers,
                 featureFieldIds,
                 true,
-                (lastId, answerTermId, answerScoredLastId, featureId, termIds) -> {
+                (streamIndex, lastId, answerTermId, answerScoredLastId, featureId, termIds) -> {
                     if (featureId == -1) {
                         boolean stopped = false;
                         if (termCount[0] > 0) {
@@ -131,11 +132,11 @@ public class Strut {
                                 System.arraycopy(features, 0, scoredFeatures, 0, features.length);
                             }
                             float s = finalizeScore(score[0], termCount[0], request.query.strategy);
-                            if (!hotStuff
-                            .steamStream(new Scored(lastId, answerTermId, answerScoredLastId, s, termCount[0], scoredFeatures), cacheable[0])) {
+                            Scored scored = new Scored(lastId, answerTermId, answerScoredLastId, s, termCount[0], scoredFeatures);
+                            if (!hotStuff.steamStream(streamIndex, scored, cacheable[0])) {
                                 stopped = true;
                             }
-                        } else if (!hotStuff.steamStream(new Scored(lastId, answerTermId, answerScoredLastId, 0f, 0, null), cacheable[0])) {
+                        } else if (!hotStuff.steamStream(streamIndex, new Scored(lastId, answerTermId, answerScoredLastId, 0f, 0, null), cacheable[0])) {
                             stopped = true;
                         }
                         score[0] = 0f;

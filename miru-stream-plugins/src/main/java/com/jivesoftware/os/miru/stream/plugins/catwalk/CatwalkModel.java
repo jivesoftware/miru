@@ -11,17 +11,17 @@ import java.util.List;
  */
 public class CatwalkModel implements Serializable {
 
-    public final long modelCount;
+    public final long[] modelCounts;
     public final long totalCount;
     public final int[] numberOfModels;
     public final List<FeatureScore>[] featureScores;
 
     @JsonCreator
-    public CatwalkModel(@JsonProperty("modelCount") long modelCount,
+    public CatwalkModel(@JsonProperty("modelCounts") long[] modelCounts,
         @JsonProperty("totalCount") long totalCount,
         @JsonProperty("numberOfModels") int[] numberOfModels,
         @JsonProperty("featureScores") List<FeatureScore>[] featureScores) {
-        this.modelCount = modelCount;
+        this.modelCounts = modelCounts;
         this.totalCount = totalCount;
         this.numberOfModels = numberOfModels;
         this.featureScores = featureScores;
@@ -30,7 +30,7 @@ public class CatwalkModel implements Serializable {
     @Override
     public String toString() {
         return "CatwalkModel{" +
-            "modelCount=" + modelCount +
+            "modelCounts=" + Arrays.toString(modelCounts) +
             ", totalCount=" + totalCount +
             ", numberOfModels=" + Arrays.toString(numberOfModels) +
             ", featureScores=" + Arrays.toString(featureScores) +
