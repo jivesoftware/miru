@@ -100,9 +100,9 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>Features</td>
-                        <td>
-                            <textarea autocomplete="off" rows="4" cols="80" style="width:560px; padding-left:10px;"
+                        <td style="vertical-align:top">Features</td>
+                        <td style="vertical-align:top">
+                            <textarea autocomplete="off" rows="8" cols="80" style="width:560px; padding-left:10px; vertical-align:top"
                                 class="j-features-autocomplete j-autocomplete-input j-ui-elem" placeholder="Features"
                                 name="features" id="featuresPicker" data-original-title="" title="">
                                 {$features?:''}
@@ -133,7 +133,7 @@
             </div>
             <div class="panel-body">
                 <ul>
-                    <li><h3>Model count: {$model.modelCount}</h3></li>
+                    <li><h3>Model count: {$model.modelCounts}</h3></li>
                     <li><h3>Total count: {$model.totalCount}</h3></li>
                     {foreach $featureClass in $model.featureClasses}
                         <li><h3>Feature: {$featureClass.name}</h3>
