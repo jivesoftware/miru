@@ -146,15 +146,17 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                 // name1; field1, field2; field1:a|b|c, field2:x|y|z
                 // name2; field1, field3; field1:a|b|c, field3:i|j|k
                 // name3; field2, field3; field2:x|y|z, field3:i|j|k
-                String[] featureSplit = input.features.split("\\s*\\n\\s");
-                CatwalkFeature[] features = new CatwalkFeature[featureSplit.length];
+                String[] featureSplit = input.features.split("\\s*\\n\\s*");
+                List<CatwalkFeature> features = Lists.newArrayList();
                 String[] featureNames = new String[featureSplit.length];
-                for (int i = 0; i < features.length; i++) {
+                for (int i = 0; i < featureSplit.length; i++) {
                     String[] featureParts = featureSplit[i].split("\\s*;\\s*");
-                    featureNames[i] = featureParts[0].trim();
-                    String[] featureFields = featureParts[1].split("\\s*,\\s*");
-                    MiruFilter featureFilter = filterStringUtil.parse(featureParts[2]);
-                    features[i] = new CatwalkFeature(featureNames[i], featureFields, featureFilter);
+                    if (featureParts.length == 3) {
+                        featureNames[i] = featureParts[0].trim();
+                        String[] featureFields = featureParts[1].split("\\s*,\\s*");
+                        MiruFilter featureFilter = filterStringUtil.parse(featureParts[2]);
+                        features.add(new CatwalkFeature(featureNames[i], featureFields, featureFilter));
+                    }
                 }
 
                 // "user context, user activityType context, user activityType contextType"
@@ -230,7 +232,7 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                         gatherFilter,
                         /*featureFields,
                         featureFilter,*/
-                        features,
+                        features.toArray(new CatwalkFeature[0]),
                         input.desiredModelSize);
 
                     String request = requestMapper.writeValueAsString(new MiruRequest<>("toolsStrut",
@@ -282,7 +284,7 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                             List<Hotness>[] featureTerms = hotOrNot.features;
                             if (featureTerms != null) {
                                 for (int i = 0; i < featureTerms.length; i++) {
-                                    String[] fields = features[i].featureFields;
+                                    String[] fields = features.get(i).featureFields;
                                     List<Hotness> feature = featureTerms[i];
                                     if (feature != null) {
                                         Collections.sort(feature, (o1, o2) -> Float.compare(o2.score, o1.score)); // sort descending
