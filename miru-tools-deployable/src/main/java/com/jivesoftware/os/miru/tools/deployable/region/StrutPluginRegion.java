@@ -19,7 +19,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkQuery;
-import com.jivesoftware.os.miru.stream.plugins.catwalk.FeatureScore;
+import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkQuery.CatwalkFeature;
 import com.jivesoftware.os.miru.stream.plugins.strut.HotOrNot;
 import com.jivesoftware.os.miru.stream.plugins.strut.HotOrNot.Hotness;
 import com.jivesoftware.os.miru.stream.plugins.strut.StrutAnswer;
@@ -82,8 +82,9 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
         final String gatherField;
         final String gatherTermsForFields;
         final String gatherFilters;
-        final String featureFields;
-        final String featureFilters;
+        /*final String featureFields;
+        final String featureFilters;*/
+        final String features;
         final String constraintField;
         final String constraintFilters;
         final Strategy strategy;
@@ -92,9 +93,26 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
         final int desiredModelSize;
         final String logLevel;
 
-        public StrutPluginRegionInput(String tenant, long fromTimeAgo, String fromTimeUnit, long toTimeAgo, String toTimeUnit, String catwalkId, String modelId,
-            String gatherField, String gatherTermsForFields, String gatherFilters, String featureFields, String featureFilters, String constraintField,
-            String constraintFilters, Strategy strategy, boolean usePartitionModelCache, int desiredNumberOfResults, int desiredModelSize, String logLevel) {
+        public StrutPluginRegionInput(String tenant,
+            long fromTimeAgo,
+            String fromTimeUnit,
+            long toTimeAgo,
+            String toTimeUnit,
+            String catwalkId,
+            String modelId,
+            String gatherField,
+            String gatherTermsForFields,
+            String gatherFilters,
+            /*String featureFields,
+            String featureFilters,*/
+            String features,
+            String constraintField,
+            String constraintFilters,
+            Strategy strategy,
+            boolean usePartitionModelCache,
+            int desiredNumberOfResults,
+            int desiredModelSize,
+            String logLevel) {
             this.tenant = tenant;
             this.fromTimeAgo = fromTimeAgo;
             this.fromTimeUnit = fromTimeUnit;
@@ -105,8 +123,9 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
             this.gatherField = gatherField;
             this.gatherTermsForFields = gatherTermsForFields;
             this.gatherFilters = gatherFilters;
-            this.featureFields = featureFields;
-            this.featureFilters = featureFilters;
+            /*this.featureFields = featureFields;
+            this.featureFilters = featureFilters;*/
+            this.features = features;
             this.constraintField = constraintField;
             this.constraintFilters = constraintFilters;
             this.strategy = strategy;
@@ -124,8 +143,22 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
             if (optionalInput.isPresent()) {
                 StrutPluginRegionInput input = optionalInput.get();
 
+                // name1; field1, field2; field1:a|b|c, field2:x|y|z
+                // name2; field1, field3; field1:a|b|c, field3:i|j|k
+                // name3; field2, field3; field2:x|y|z, field3:i|j|k
+                String[] featureSplit = input.features.split("\\s*\\n\\s");
+                CatwalkFeature[] features = new CatwalkFeature[featureSplit.length];
+                String[] featureNames = new String[featureSplit.length];
+                for (int i = 0; i < features.length; i++) {
+                    String[] featureParts = featureSplit[i].split("\\s*;\\s*");
+                    featureNames[i] = featureParts[0].trim();
+                    String[] featureFields = featureParts[1].split("\\s*,\\s*");
+                    MiruFilter featureFilter = filterStringUtil.parse(featureParts[2]);
+                    features[i] = new CatwalkFeature(featureNames[i], featureFields, featureFilter);
+                }
+
                 // "user context, user activityType context, user activityType contextType"
-                String[] featuresSplit = input.featureFields.split("\\s*,\\s*");
+                /*String[] featuresSplit = input.featureFields.split("\\s*,\\s*");
                 String[][] featureFields = new String[featuresSplit.length][];
                 for (int i = 0; i < featuresSplit.length; i++) {
                     String[] fields = featuresSplit[i].trim().split("\\s+");
@@ -133,7 +166,7 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                     for (int j = 0; j < fields.length; j++) {
                         featureFields[i][j] = fields[j].trim();
                     }
-                }
+                }*/
 
                 String[] gatherTermsForFieldSplit = (input.gatherTermsForFields.isEmpty()) ? null : input.gatherTermsForFields.split("\\s*,\\s*");
 
@@ -157,8 +190,9 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                 data.put("gatherField", input.gatherField);
                 data.put("gatherTermsForFields", input.gatherTermsForFields);
                 data.put("gatherFilters", input.gatherFilters);
-                data.put("featureFields", input.featureFields);
-                data.put("featureFilters", input.featureFilters);
+                /*data.put("featureFields", input.featureFields);
+                data.put("featureFilters", input.featureFilters);*/
+                data.put("features", input.features);
                 data.put("constraintField", input.constraintField);
                 data.put("constraintFilters", input.constraintFilters);
                 data.put("strategy", input.strategy.name());
@@ -189,14 +223,14 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                     MiruFilter constraintFilter = filterStringUtil.parse(input.constraintFilters);
 
                     MiruFilter gatherFilter = filterStringUtil.parse(input.gatherFilters);
-                    MiruFilter featureFilter = filterStringUtil.parse(input.featureFilters);
                     String endpoint = StrutConstants.STRUT_PREFIX + StrutConstants.CUSTOM_QUERY_ENDPOINT;
 
                     CatwalkQuery catwalkQuery = new CatwalkQuery(MiruTimeRange.ALL_TIME,
                         input.gatherField,
                         gatherFilter,
-                        featureFields,
-                        featureFilter,
+                        /*featureFields,
+                        featureFilter,*/
+                        features,
                         input.desiredModelSize);
 
                     String request = requestMapper.writeValueAsString(new MiruRequest<>("toolsStrut",
@@ -211,8 +245,8 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                             input.constraintField,
                             constraintFilter,
                             input.strategy,
-                            featureFields, // todo seperate from catwalkQuery
-                            featureFilter, // todo seperate from catwalkQuery
+                            featureNames,
+                            MiruFilter.NO_FILTER,
                             input.desiredNumberOfResults,
                             true,
                             input.usePartitionModelCache,
@@ -244,17 +278,17 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                         List<Map<String, Object>> results = new ArrayList<>();
                         StringBuilder buf = new StringBuilder();
                         for (HotOrNot hotOrNot : hotOrNots) {
-                            List<String> features = Lists.newArrayList();
+                            List<String> hotFeatures = Lists.newArrayList();
                             List<Hotness>[] featureTerms = hotOrNot.features;
                             if (featureTerms != null) {
                                 for (int i = 0; i < featureTerms.length; i++) {
-                                    String[] fields = featureFields[i];
+                                    String[] fields = features[i].featureFields;
                                     List<Hotness> feature = featureTerms[i];
                                     if (feature != null) {
                                         Collections.sort(feature, (o1, o2) -> Float.compare(o2.score, o1.score)); // sort descending
                                         for (Hotness hotness : feature) {
                                             if (hotness.values.length != fields.length) {
-                                                features.add("[unknown=" + hotness.score + "]");
+                                                hotFeatures.add("[unknown=" + hotness.score + "]");
                                             } else {
                                                 buf.append('[');
                                                 for (int j = 0; j < hotness.values.length; j++) {
@@ -264,7 +298,7 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                                                     buf.append(fields[j]).append(':').append(valueToString(hotness.values[j]));
                                                 }
                                                 buf.append('=').append(hotness.score).append("] ");
-                                                features.add(buf.toString());
+                                                hotFeatures.add(buf.toString());
                                                 buf.setLength(0);
                                             }
                                         }
@@ -280,7 +314,7 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                             r.put("score", String.valueOf(hotOrNot.score));
                             r.put("terms", (hotOrNot.gatherLatestValues == null) ? "" : Arrays.deepToString(hotOrNot.gatherLatestValues));
                             r.put("timeAgo", timeAgo(millisAgo));
-                            r.put("features", features);
+                            r.put("features", hotFeatures);
                             results.add(r);
                         }
 
@@ -304,36 +338,6 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
 
     private String valueToString(MiruValue value) {
         return Joiner.on(',').join(value.parts);
-    }
-
-    public static class ScoredFeature implements Comparable<ScoredFeature> {
-
-        private final FeatureScore featureScore;
-        private final float score;
-
-        public ScoredFeature(FeatureScore featureScore) {
-            this.featureScore = featureScore;
-            this.score = (float) featureScore.numerator / featureScore.denominator;
-        }
-
-        @Override
-        public int compareTo(ScoredFeature o) {
-            int c = -Float.compare(score, o.score);
-            if (c != 0) {
-                return c;
-            }
-            c = Integer.compare(featureScore.termIds.length, o.featureScore.termIds.length);
-            if (c != 0) {
-                return c;
-            }
-            for (int j = 0; j < featureScore.termIds.length; j++) {
-                c = featureScore.termIds[j].compareTo(o.featureScore.termIds[j]);
-                if (c != 0) {
-                    return c;
-                }
-            }
-            return 0;
-        }
     }
 
     private static String timeAgo(long millis) {

@@ -13,8 +13,7 @@
  * @param? gatherField
  * @param? gatherTermsForFields
  * @param? gatherFilters
- * @param? featureFields
- * @param? featureFilters
+ * @param? features
  * @param? constraintField
  * @param? constraintFilters
  * @param? strategy
@@ -132,21 +131,15 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>Feature Fields</td>
+                        <td>Features</td>
                         <td>
-                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
-                                class="j-featureFields-autocomplete j-autocomplete-input j-ui-elem" placeholder="Feature Fields" value="{$featureFields?:''}"
-                                name="featureFields" id="featureFieldsPicker" data-original-title="" title="">
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Feature Filters</td>
-                        <td>
-                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
-                                class="j-featureFilters-autocomplete j-autocomplete-input j-ui-elem" placeholder="Feature Filters" value="{$featureFilters?:''}"
-                                name="featureFilters" id="featureFiltersPicker" data-original-title="" title="">
+                            <textarea autocomplete="off" rows="4" cols="80" style="width:560px; padding-left:10px;"
+                                class="j-features-autocomplete j-autocomplete-input j-ui-elem" placeholder="Features"
+                                name="features" id="featuresPicker" data-original-title="" title="">
+                                {$features?:''}
+                            </textarea>
                             &nbsp;
-                            <em>(e.g. user:3 3765, parentType:102|2|38)</em>
+                            <em>name; field1, field2; field1:a|b|c, field2:x|y|z</em>
                         </td>
                     </tr>
 

@@ -19,6 +19,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
+import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkQuery.CatwalkFeature;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.Arrays;
@@ -39,25 +40,27 @@ public class Catwalk {
         MiruRequest<CatwalkQuery> request,
         MiruPartitionCoord coord,
         Optional<CatwalkReport> report,
-        BM answer,
+        BM[] featureAnswers,
         MiruSolutionLog solutionLog) throws Exception {
 
         StackBuffer stackBuffer = new StackBuffer();
 
-        log.debug("Catwalk for answer={} request={}", answer, request);
+        if (log.isDebugEnabled()) {
+            log.debug("Catwalk for answer={} request={}", Arrays.toString(featureAnswers), request);
+        }
         //System.out.println("Number of matches: " + bitmaps.cardinality(answer));
 
         MiruFieldIndex<BM, IBM> primaryIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
 
-        String[][] featureFields = request.query.featureFields;
+        CatwalkFeature[] features = request.query.features;
         @SuppressWarnings("unchecked")
-        Multiset<Feature>[] featureValueSets = new Multiset[featureFields.length];
-        for (int i = 0; i < featureFields.length; i++) {
+        Multiset<Feature>[] featureValueSets = new Multiset[features.length];
+        for (int i = 0; i < features.length; i++) {
             featureValueSets[i] = HashMultiset.create();
         }
-        int[][] featureFieldIds = new int[featureFields.length][];
-        for (int i = 0; i < featureFields.length; i++) {
-            String[] featureField = featureFields[i];
+        int[][] featureFieldIds = new int[features.length][];
+        for (int i = 0; i < features.length; i++) {
+            String[] featureField = features[i].featureFields;
             featureFieldIds[i] = new int[featureField.length];
             for (int j = 0; j < featureField.length; j++) {
                 featureFieldIds[i][j] = requestContext.getSchema().getFieldId(featureField[j]);
@@ -67,10 +70,10 @@ public class Catwalk {
         aggregateUtil.gatherFeatures(name,
             bitmaps,
             requestContext,
-            streamBitmaps -> streamBitmaps.stream(-1, null, -1, answer),
+            streamBitmaps -> streamBitmaps.stream(0, -1, null, -1, featureAnswers),
             featureFieldIds,
             false,
-            (lastId, answerTermId, answerScoredLastId, featureId, termIds) -> {
+            (streamIndex, lastId, answerTermId, answerScoredLastId, featureId, termIds) -> {
                 if (featureId >= 0) {
                     featureValueSets[featureId].add(new Feature(termIds));
                 }
@@ -82,7 +85,7 @@ public class Catwalk {
         long start = System.currentTimeMillis();
 
         @SuppressWarnings("unchecked")
-        List<FeatureScore>[] featureScoreResults = new List[featureFields.length];
+        List<FeatureScore>[] featureScoreResults = new List[features.length];
 
         for (int i = 0; i < featureValueSets.length; i++) {
             Multiset<Feature> valueSet = featureValueSets[i];
@@ -115,9 +118,12 @@ public class Catwalk {
             requestContext.getTimeIndex().getSmallestTimestamp(),
             requestContext.getTimeIndex().getLargestTimestamp());
 
-        long modelCount = bitmaps.cardinality(answer);
+        long[] modelCounts = new long[featureAnswers.length];
+        for (int i = 0; i < featureAnswers.length; i++) {
+            modelCounts[i] = bitmaps.cardinality(featureAnswers[i]);
+        }
         long totalCount = requestContext.getTimeIndex().lastId();
-        CatwalkAnswer result = new CatwalkAnswer(featureScoreResults, modelCount, totalCount, timeRange, resultsExhausted, resultsClosed);
+        CatwalkAnswer result = new CatwalkAnswer(featureScoreResults, modelCounts, totalCount, timeRange, resultsExhausted, resultsClosed);
         log.debug("result={}", result);
         return result;
     }

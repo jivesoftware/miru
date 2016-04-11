@@ -13,6 +13,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
+import com.jivesoftware.os.miru.plugin.index.FieldMultiTermTxIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
@@ -23,6 +24,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.solution.Question;
+import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkQuery.CatwalkFeature;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
@@ -65,7 +67,8 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
         if (!context.getTimeIndex().intersects(timeRange)) {
             solutionLog.log(MiruSolutionLogLevel.WARN, "No time index intersection. Partition {}: {} doesn't intersect with {}",
                 handle.getCoord().partitionId, context.getTimeIndex(), timeRange);
-            return new MiruPartitionResponse<>(catwalk.model("catwalk", bitmaps, context, request, handle.getCoord(), report, bitmaps.create(), solutionLog),
+            BM[] featureAnswers = bitmaps.createArrayOf(request.query.features.length);
+            return new MiruPartitionResponse<>(catwalk.model("catwalk", bitmaps, context, request, handle.getCoord(), report, featureAnswers, solutionLog),
                 solutionLog.asList());
         }
 
@@ -110,43 +113,33 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
             return true;
         }, stackBuffer);
 
-        BM answer;
-        if (bitmaps.supportsInPlace()) {
-            BM or = bitmaps.create();
-            bitmaps.multiTx(
-                (tx, stackBuffer1) -> primaryFieldIndex.multiTxIndex("catwalk", pivotFieldId, termIds.toArray(new MiruTermId[0]), -1, stackBuffer1, tx),
-                (index, lastId1, bitmap) -> bitmaps.inPlaceOr(or, bitmap),
-                stackBuffer);
-            answer = or;
-        } else {
-            List<IBM> ors = Lists.newArrayList();
-            bitmaps.multiTx(
-                (tx, stackBuffer1) -> primaryFieldIndex.multiTxIndex("catwalk", pivotFieldId, termIds.toArray(new MiruTermId[0]), -1, stackBuffer1, tx),
-                (index, lastId1, bitmap) -> ors.add(bitmap),
-                stackBuffer);
-            answer = bitmaps.or(ors);
-        }
+        FieldMultiTermTxIndex<BM, IBM> multiTermTxIndex = new FieldMultiTermTxIndex<>("catwalk", primaryFieldIndex, pivotFieldId, -1);
+        multiTermTxIndex.setTermIds(termIds.toArray(new MiruTermId[0]));
+        BM answer = bitmaps.orMultiTx(multiTermTxIndex, stackBuffer);
 
-        if (!MiruFilter.NO_FILTER.equals(request.query.featureFilter)) {
-            BM constrainFeature = aggregateUtil.filter("catwalkFeature",
-                bitmaps,
-                context.getSchema(),
-                context.getTermComposer(),
-                context.getFieldIndexProvider(),
-                request.query.featureFilter,
-                solutionLog,
-                null,
-                lastId,
-                -1,
-                stackBuffer);
-            if (bitmaps.supportsInPlace()) {
-                bitmaps.inPlaceAnd(answer, constrainFeature);
+        CatwalkFeature[] features = request.query.features;
+        BM[] featureAnswers = bitmaps.createArrayOf(features.length);
+
+        for (int i = 0; i < features.length; i++) {
+            if (MiruFilter.NO_FILTER.equals(features[i].featureFilter)) {
+                featureAnswers[i] = answer;
             } else {
-                answer = bitmaps.and(Arrays.asList(answer, constrainFeature));
+                BM constrainFeature = aggregateUtil.filter("catwalkFeature",
+                    bitmaps,
+                    context.getSchema(),
+                    context.getTermComposer(),
+                    context.getFieldIndexProvider(),
+                    features[i].featureFilter,
+                    solutionLog,
+                    null,
+                    lastId,
+                    -1,
+                    stackBuffer);
+                featureAnswers[i] = bitmaps.and(Arrays.asList(constrainFeature, answer));
             }
         }
 
-        return new MiruPartitionResponse<>(catwalk.model("catwalk", bitmaps, context, request, handle.getCoord(), report, answer, solutionLog),
+        return new MiruPartitionResponse<>(catwalk.model("catwalk", bitmaps, context, request, handle.getCoord(), report, featureAnswers, solutionLog),
             solutionLog.asList());
     }
 

@@ -36,9 +36,12 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.lang.mutable.MutableInt;
@@ -53,7 +56,7 @@ public class MiruAggregateUtil {
 
     public interface StreamBitmaps<BM> {
 
-        boolean stream(int lastId, MiruTermId termId, int scoredToLastId, BM answer) throws Exception;
+        boolean stream(int streamIndex, int lastId, MiruTermId termId, int scoredToLastId, BM[] answers) throws Exception;
     }
 
     public interface ConsumeBitmaps<BM> {
@@ -95,43 +98,54 @@ public class MiruAggregateUtil {
 
         int[] featureCount = { 0 };
         int[] termCount = { 0 };
-        int batchSize = 1_000;
-        int[] ids = new int[batchSize];
-        int[] count = { 0 };
         long start = System.currentTimeMillis();
-        consumeAnswers.consume((lastId, answerTermId, answerScoredLastId, answerBitmap) -> {
+        consumeAnswers.consume((streamIndex, lastId, answerTermId, answerScoredLastId, answerBitmaps) -> {
+            int batchSize = 1_000;
+            int[] ids = new int[batchSize];
+            boolean[][] featuresContained = new boolean[batchSize][featureFieldIds.length];
+            int[] count = { 0 };
+
             termCount[0]++;
             for (Set<Feature> featureSet : features) {
                 if (featureSet != null) {
                     featureSet.clear();
                 }
             }
-            MiruIntIterator iter = bitmaps.intIterator(answerBitmap);
+            MiruIntIterator[] intIters = new MiruIntIterator[answerBitmaps.length];
+            for (int i = 0; i < intIters.length; i++) {
+                if (answerBitmaps[i] != null) {
+                    intIters[i] = bitmaps.intIterator(answerBitmaps[i]);
+                }
+            }
+            CollatingIntIterator iter = new CollatingIntIterator(intIters, false);
+            boolean[] contained = new boolean[intIters.length];
             while (iter.hasNext()) {
-                ids[count[0]] = iter.next();
+                ids[count[0]] = iter.next(contained);
+                System.arraycopy(contained, 0, featuresContained[count[0]], 0, contained.length);
                 count[0]++;
                 if (count[0] == batchSize) {
-                    if (!gatherAndStreamFeatures(name, featureFieldIds, stream, stackBuffer, uniqueFieldIds, activityIndex, fieldTerms,
-                        ids, ids.length, lastId, answerTermId, answerScoredLastId, featureCount, features)) {
+                    if (!gatherAndStreamFeatures(name, streamIndex, featureFieldIds, stream, stackBuffer, uniqueFieldIds, activityIndex, fieldTerms,
+                        ids, featuresContained, ids.length, lastId, answerTermId, answerScoredLastId, featureCount, features)) {
                         return false;
                     }
                     count[0] = 0;
                 }
             }
             if (count[0] > 0) {
-                if (!gatherAndStreamFeatures(name, featureFieldIds, stream, stackBuffer, uniqueFieldIds, activityIndex, fieldTerms,
-                    ids, count[0], lastId, answerTermId, answerScoredLastId, featureCount, features)) {
+                if (!gatherAndStreamFeatures(name, streamIndex, featureFieldIds, stream, stackBuffer, uniqueFieldIds, activityIndex, fieldTerms,
+                    ids, featuresContained, count[0], lastId, answerTermId, answerScoredLastId, featureCount, features)) {
                     return false;
                 }
                 count[0] = 0;
             }
-            return stream.stream(lastId, answerTermId, answerScoredLastId, -1, null);
+            return stream.stream(streamIndex, lastId, answerTermId, answerScoredLastId, -1, null);
         });
         solutionLog.log(MiruSolutionLogLevel.INFO, "Gathered {} features for {} terms in {} ms",
             featureCount[0], termCount[0], System.currentTimeMillis() - start);
     }
 
     private boolean gatherAndStreamFeatures(String name,
+        int streamIndex,
         int[][] featureFieldIds,
         FeatureStream stream,
         StackBuffer stackBuffer,
@@ -139,6 +153,7 @@ public class MiruAggregateUtil {
         MiruActivityIndex activityIndex,
         MiruTermId[][][] fieldTerms,
         int[] ids,
+        boolean[][] contained,
         int count,
         int lastId,
         MiruTermId answerTermId,
@@ -153,7 +168,7 @@ public class MiruAggregateUtil {
         PermutationStream permutationStream = (fi, termIds1) -> {
             if (features[fi] == null || features[fi].add(new Feature(termIds1))) {
                 featureCount[0]++;
-                if (!stream.stream(lastId, answerTermId, answerScoredLastId, fi, termIds1)) {
+                if (!stream.stream(streamIndex, lastId, answerTermId, answerScoredLastId, fi, termIds1)) {
                     return false;
                 }
             }
@@ -163,19 +178,21 @@ public class MiruAggregateUtil {
         for (int index = 0; index < count; index++) {
             NEXT_FEATURE:
             for (int i = 0; i < featureFieldIds.length; i++) {
-                int[] fieldIds = featureFieldIds[i];
+                if (contained[index][i]) {
+                    int[] fieldIds = featureFieldIds[i];
 
-                MiruTermId[][] termIds = new MiruTermId[fieldIds.length][];
-                for (int j = 0; j < fieldIds.length; j++) {
-                    MiruTermId[] fieldTermIds = fieldTerms[fieldIds[j]][index];
-                    if (fieldTermIds == null || fieldTermIds.length == 0) {
-                        continue NEXT_FEATURE;
+                    MiruTermId[][] termIds = new MiruTermId[fieldIds.length][];
+                    for (int j = 0; j < fieldIds.length; j++) {
+                        MiruTermId[] fieldTermIds = fieldTerms[fieldIds[j]][index];
+                        if (fieldTermIds == null || fieldTermIds.length == 0) {
+                            continue NEXT_FEATURE;
+                        }
+                        termIds[j] = fieldTermIds;
                     }
-                    termIds[j] = fieldTermIds;
-                }
 
-                if (!permutate(i, fieldIds.length, termIds, permutationStream)) {
-                    return false;
+                    if (!permutate(i, fieldIds.length, termIds, permutationStream)) {
+                        return false;
+                    }
                 }
             }
         }
@@ -219,7 +236,7 @@ public class MiruAggregateUtil {
         return true;
     }
 
-    private <BM extends IBM, IBM, S extends MiruSipCursor<S>> void indexValueBitsGatherFeatures(String name,
+    /*private <BM extends IBM, IBM, S extends MiruSipCursor<S>> void indexValueBitsGatherFeatures(String name,
         MiruBitmaps<BM, IBM> bitmaps,
         MiruRequestContext<BM, IBM, S> requestContext,
         ConsumeBitmaps<BM> consumeAnswers,
@@ -287,7 +304,7 @@ public class MiruAggregateUtil {
             uniqueFieldIds.size(), bitmapCount, bitmapBytes, System.currentTimeMillis() - start);
         start = System.currentTimeMillis();
 
-        consumeAnswers.consume((lastId, answerTermId, answerScoredLastId, answerBitmap) -> {
+        consumeAnswers.consume((streamIndex, lastId, answerTermId, answerScoredLastId, answerBitmap) -> {
             List<FieldBits<BM, IBM>> fieldBits = Lists.newArrayList();
             for (FieldBits<BM, IBM> base : baseFieldBits) {
                 BM bitmap;
@@ -374,7 +391,7 @@ public class MiruAggregateUtil {
                             continue;
                         }
 
-                        if (!stream.stream(lastId, answerTermId, answerScoredLastId, featureId, featureTermIds)) {
+                        if (!stream.stream(streamIndex, lastId, answerTermId, answerScoredLastId, featureId, featureTermIds)) {
                             break done;
                         }
                     }
@@ -386,11 +403,11 @@ public class MiruAggregateUtil {
 
         solutionLog.log(MiruSolutionLogLevel.INFO, "Gather value bits took {} ms", System.currentTimeMillis() - start);
         start = System.currentTimeMillis();
-    }
+    }*/
 
     public interface FeatureStream {
 
-        boolean stream(int lastId, MiruTermId answerTermId, int answerScoredLastId, int featureId, MiruTermId[] termIds) throws Exception;
+        boolean stream(int streamIndex, int lastId, MiruTermId answerTermId, int answerScoredLastId, int featureId, MiruTermId[] termIds) throws Exception;
     }
 
     public static class Feature {
@@ -602,7 +619,7 @@ public class MiruAggregateUtil {
     }
 
     // ooh that tickles
-    private <BM extends IBM, IBM, S extends MiruSipCursor<S>> void gatherValueBits(String name,
+    /*private <BM extends IBM, IBM, S extends MiruSipCursor<S>> void gatherValueBits(String name,
         MiruBitmaps<BM, IBM> bitmaps,
         MiruRequestContext<BM, IBM, S> requestContext,
         BM answer,
@@ -615,13 +632,13 @@ public class MiruAggregateUtil {
         gatherFeatures(name,
             bitmaps,
             requestContext,
-            streamBitmaps -> streamBitmaps.stream(-1, null, -1, answer),
+            streamBitmaps -> streamBitmaps.stream(0, -1, null, -1, answer),
             featureFieldIds,
             true,
-            (lastId, answerTermId, answerScoredLastId, featureId, termIds) -> featureId == -1 || termIdStream.stream(termIds[0]),
+            (streamIndex, lastId, answerTermId, answerScoredLastId, featureId, termIds) -> featureId == -1 || termIdStream.stream(termIds[0]),
             solutionLog,
             stackBuffer);
-    }
+    }*/
 
     private <BM extends IBM, IBM, S extends MiruSipCursor<S>> void gatherActivityLookup(String name,
         MiruBitmaps<BM, IBM> bitmaps,

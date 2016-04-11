@@ -15,6 +15,7 @@ import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
+import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
@@ -32,6 +33,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.solution.Question;
+import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkQuery.CatwalkFeature;
 import com.jivesoftware.os.miru.stream.plugins.strut.Strut.Scored;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -291,10 +293,30 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
 
         int activityIndexLastId = context.getActivityIndex().lastId(stackBuffer);
 
-        BM constrainFeature;
+        List<MiruFilter> catwalkOrFilters = Lists.newArrayList();
+        for (CatwalkFeature feature : request.query.catwalkQuery.features) {
+            catwalkOrFilters.add(feature.featureFilter);
+        }
+        BM constrainFeature = aggregateUtil.filter("strutCatwalk",
+            bitmaps,
+            schema,
+            termComposer,
+            context.getFieldIndexProvider(),
+            new MiruFilter(MiruFilterOperation.or,
+                false,
+                null,
+                catwalkOrFilters),
+            solutionLog,
+            null,
+            activityIndexLastId,
+            -1,
+            stackBuffer);
+
         if (!MiruFilter.NO_FILTER.equals(request.query.featureFilter)) {
-            constrainFeature = aggregateUtil.filter("strutFeature",
-                bitmaps, schema, termComposer,
+            BM strutFeature = aggregateUtil.filter("strutFeature",
+                bitmaps,
+                schema,
+                termComposer,
                 context.getFieldIndexProvider(),
                 request.query.featureFilter,
                 solutionLog,
@@ -302,11 +324,11 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 activityIndexLastId,
                 -1,
                 stackBuffer);
-        } else {
-            constrainFeature = null;
+            bitmaps.inPlaceAnd(constrainFeature, strutFeature);
         }
 
         BM[] answers = bitmaps.createArrayOf(score.size());
+        BM[] answer = bitmaps.createArrayOf(1);
         int[] scoredToLastIds = new int[score.size()];
         Arrays.fill(scoredToLastIds, -1);
         List<Scored> updates = Lists.newArrayList();
@@ -334,14 +356,15 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                     stackBuffer);
 
                 for (int i = 0; i < rescoreMiruTermIds.length; i++) {
-                    if (answers[i] != null && !streamBitmaps.stream(rescoreMiruTermIds[i].lastId,
-                        rescoreMiruTermIds[i].termId, scoredToLastIds[i], answers[i])) {
+                    answer[0] = answers[i];
+                    if (answer[0] != null &&
+                        !streamBitmaps.stream(i, rescoreMiruTermIds[i].lastId, rescoreMiruTermIds[i].termId, scoredToLastIds[i], answer)) {
                         return false;
                     }
                 }
                 return true;
             },
-            (hotness, cacheable) -> {
+            (streamIndex, hotness, cacheable) -> {
                 if (cacheable) {
                     updates.add(hotness);
                 }

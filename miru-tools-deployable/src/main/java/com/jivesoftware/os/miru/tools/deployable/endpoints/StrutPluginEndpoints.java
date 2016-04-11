@@ -47,10 +47,17 @@ public class StrutPluginEndpoints {
         @QueryParam("gatherField") @DefaultValue("parent") String gatherField,
         @QueryParam("gatherTermsForFields") @DefaultValue("") String gatherTermsForFields,
         @QueryParam("gatherFilters") @DefaultValue("activityType:0, user:3 2000") String gatherFilters,
-        @QueryParam("featureFields") @DefaultValue("activityType context,"
+        /*@QueryParam("featureFields") @DefaultValue("activityType context,"
             + "activityType user,"
             + "context user") String featureFields,
-        @QueryParam("featureFilters") @DefaultValue("") String featureFilters,
+        @QueryParam("featureFilters") @DefaultValue("") String featureFilters,*/
+        @QueryParam("features") @DefaultValue(
+            "" +
+                "user-views; activityType, user; activityType:0\n" +
+                "user-visible; activityType, user; activityType:1|2|65|72\n" +
+                "place-visible; activityType, context; activityType:1|2|65|72\n" +
+                "user-place; context, user; activityType:1|2|65|72\n" +
+                "mentions; context, user; activityType:20") String features,
         @QueryParam("constraintField") @DefaultValue("parent") String constraintField,
         @QueryParam("constraintFilters") @DefaultValue("activityType:1|2|65|72") String constraintFilters,
         @QueryParam("strategy") @DefaultValue("MAX") String strategy,
@@ -72,8 +79,9 @@ public class StrutPluginEndpoints {
                     gatherField,
                     gatherTermsForFields.trim(),
                     gatherFilters.trim(),
-                    featureFields,
-                    featureFilters.trim(),
+                    /*featureFields,
+                    featureFilters.trim(),*/
+                    features.trim(),
                     constraintField,
                     constraintFilters.trim(),
                     Strategy.valueOf(strategy),

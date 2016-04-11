@@ -116,11 +116,11 @@ public class StrutModelCache {
     private StrutModel convert(CatwalkQuery catwalkQuery, CatwalkModel model) {
 
         @SuppressWarnings("unchecked")
-        Map<StrutModelKey, ModelScore>[] modelFeatureScore = new Map[catwalkQuery.featureFields.length];
+        Map<StrutModelKey, ModelScore>[] modelFeatureScore = new Map[catwalkQuery.features.length];
         for (int i = 0; i < modelFeatureScore.length; i++) {
             modelFeatureScore[i] = new HashMap<>();
         }
-        for (int i = 0; i < catwalkQuery.featureFields.length; i++) {
+        for (int i = 0; i < catwalkQuery.features.length; i++) {
             if (model != null && model.featureScores != null && model.featureScores[i] != null) {
                 List<FeatureScore> featureScores = model.featureScores[i];
                 for (FeatureScore featureScore : featureScores) {
@@ -129,9 +129,9 @@ public class StrutModelCache {
             }
         }
         return new StrutModel(modelFeatureScore,
-            model != null ? model.modelCount : 0,
+            model != null ? model.modelCounts : new long[catwalkQuery.features.length],
             model != null ? model.totalCount : 0,
-            model != null ? model.numberOfModels : new int[catwalkQuery.featureFields.length]);
+            model != null ? model.numberOfModels : new int[catwalkQuery.features.length]);
     }
 
     static class StrutModelKey {

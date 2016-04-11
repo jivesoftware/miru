@@ -10,10 +10,10 @@ import java.util.List;
 /** @author jonathan */
 public class CatwalkAnswer implements Serializable {
 
-    public static final CatwalkAnswer EMPTY_RESULTS = new CatwalkAnswer(null, -1L, -1L, MiruTimeRange.ALL_TIME, true, false);
+    public static final CatwalkAnswer EMPTY_RESULTS = new CatwalkAnswer(null, null, -1L, MiruTimeRange.ALL_TIME, true, false);
 
     public final List<FeatureScore>[] results;
-    public final long modelCount;
+    public final long[] modelCounts;
     public final long totalCount;
     public final MiruTimeRange timeRange;
     public final boolean resultsExhausted;
@@ -22,13 +22,13 @@ public class CatwalkAnswer implements Serializable {
     @JsonCreator
     public CatwalkAnswer(
         @JsonProperty("results") List<FeatureScore>[] results,
-        @JsonProperty("modelCount") long modelCount,
+        @JsonProperty("modelCounts") long[] modelCounts,
         @JsonProperty("totalCount") long totalCount,
         @JsonProperty("timeRange") MiruTimeRange timeRange,
         @JsonProperty("resultsExhausted") boolean resultsExhausted,
         @JsonProperty("resultsClosed") boolean resultsClosed) {
         this.results = results;
-        this.modelCount = modelCount;
+        this.modelCounts = modelCounts;
         this.totalCount = totalCount;
         this.timeRange = timeRange;
         this.resultsExhausted = resultsExhausted;
@@ -39,7 +39,7 @@ public class CatwalkAnswer implements Serializable {
     public String toString() {
         return "CatwalkAnswer{" +
             "results=" + Arrays.toString(results) +
-            ", modelCount=" + modelCount +
+            ", modelCounts=" + Arrays.toString(modelCounts) +
             ", totalCount=" + totalCount +
             ", timeRange=" + timeRange +
             ", resultsExhausted=" + resultsExhausted +
