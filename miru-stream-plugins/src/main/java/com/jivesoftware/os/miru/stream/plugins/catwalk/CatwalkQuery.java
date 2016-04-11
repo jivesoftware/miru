@@ -44,7 +44,7 @@ public class CatwalkQuery implements Serializable {
             + '}';
     }
 
-    public static class CatwalkFeature {
+    public static class CatwalkFeature implements Serializable {
 
         public final String name;
         /**

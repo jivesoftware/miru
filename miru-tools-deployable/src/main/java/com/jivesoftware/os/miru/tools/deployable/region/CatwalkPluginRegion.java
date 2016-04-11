@@ -119,15 +119,17 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
                 // name1; field1, field2; field1:a|b|c, field2:x|y|z
                 // name2; field1, field3; field1:a|b|c, field3:i|j|k
                 // name3; field2, field3; field2:x|y|z, field3:i|j|k
-                String[] featureSplit = input.features.split("\\s*\\n\\s");
-                CatwalkFeature[] features = new CatwalkFeature[featureSplit.length];
+                String[] featureSplit = input.features.split("\\s*\\n\\s*");
+                List<CatwalkFeature> features = Lists.newArrayList();
                 String[] featureNames = new String[featureSplit.length];
-                for (int i = 0; i < features.length; i++) {
+                for (int i = 0; i < featureSplit.length; i++) {
                     String[] featureParts = featureSplit[i].split("\\s*;\\s*");
-                    featureNames[i] = featureParts[0].trim();
-                    String[] featureFields = featureParts[1].split("\\s*,\\s*");
-                    MiruFilter featureFilter = filterStringUtil.parse(featureParts[2]);
-                    features[i] = new CatwalkFeature(featureNames[i], featureFields, featureFilter);
+                    if (featureParts.length == 3) {
+                        featureNames[i] = featureParts[0].trim();
+                        String[] featureFields = featureParts[1].split("\\s*,\\s*");
+                        MiruFilter featureFilter = filterStringUtil.parse(featureParts[2]);
+                        features.add(new CatwalkFeature(featureNames[i], featureFields, featureFilter));
+                    }
                 }
 
                 // "user context, user activityType context, user activityType contextType"
@@ -193,7 +195,7 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
                             new MiruTimeRange(fromTime, toTime),
                             input.gatherField,
                             gatherFilter,
-                            features,
+                            features.toArray(new CatwalkFeature[0]),
                             input.desiredNumberOfResults),
                         MiruSolutionLogLevel.valueOf(input.logLevel)));
                     MiruResponse<CatwalkAnswer> catwalkResponse = readerClient.call("",
@@ -239,10 +241,11 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
                                 modelFeatures.add(feature);
                             }
 
-                            String name = Joiner.on(',').join(features[i].featureFields);
+                            CatwalkFeature feature = features.get(i);
+                            String name = Joiner.on(',').join(feature.featureFields);
                             Map<String, Object> featureClass = new HashMap<>();
                             featureClass.put("name", name);
-                            featureClass.put("nameParts", Arrays.asList(features[i].featureFields[i]));
+                            featureClass.put("nameParts", Arrays.asList(feature.featureFields[i]));
                             featureClass.put("modelFeatures", modelFeatures);
 
                             featureClasses.add(featureClass);
