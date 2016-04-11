@@ -8,7 +8,7 @@ import java.util.Arrays;
 import java.util.List;
 import org.testng.annotations.Test;
 
-import static org.testng.Assert.*;
+import static org.testng.Assert.assertEquals;
 
 /**
  *
@@ -19,15 +19,15 @@ public class CatwalkModelServiceTest {
     public void testKeySerDer() throws Exception {
         int fromPartitionId = 123;
         int toPartitionId = Integer.MAX_VALUE - 456;
-        String[] fields = { "field1", "field2", "field3" };
+        String fieldName = "test";
         byte[] keyBytes = CatwalkModelService.modelPartitionKey("catwalkId",
             "modelId",
-            fields,
+            fieldName,
             fromPartitionId,
             toPartitionId);
 
         FeatureRange featureRange = CatwalkModelService.getFeatureRange(keyBytes);
-        assertEquals(featureRange.fieldIds, fields);
+        assertEquals(featureRange.featureName, fieldName);
         assertEquals(featureRange.fromPartitionId, fromPartitionId);
         assertEquals(featureRange.toPartitionId, toPartitionId);
     }

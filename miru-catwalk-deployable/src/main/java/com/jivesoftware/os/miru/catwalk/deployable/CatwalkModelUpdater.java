@@ -138,16 +138,16 @@ public class CatwalkModelUpdater {
                         modelUpdateFutures.add(modelUpdaters.submit(() -> {
                             if (modelQueue.isLeader(queueId)) {
                                 ModelFeatureScores[] models = fetchModel(request);
-                                String[][] featureFields = new String[request.catwalkQuery.features.length][];
-                                for (int i = 0; i < featureFields.length; i++) {
-                                    featureFields[i] = request.catwalkQuery.features[i].featureFields;
+                                String[] featureNames = new String[request.catwalkQuery.features.length];
+                                for (int i = 0; i < featureNames.length; i++) {
+                                    featureNames[i] = request.catwalkQuery.features[i].name;
                                 }
                                 modelService.saveModel(request.tenantId,
                                     request.catwalkId,
                                     request.modelId,
                                     request.partitionId,
                                     request.partitionId,
-                                    featureFields,
+                                    featureNames,
                                     models);
                                 return request;
                             } else {
