@@ -124,9 +124,12 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
         BM[] featureAnswers = bitmaps.createArrayOf(features.length);
 
         for (int i = 0; i < features.length; i++) {
-            if (MiruFilter.NO_FILTER.equals(features[i].featureFilter)) {
-                featureAnswers[i] = answer;
-            } else {
+            List<IBM> featureAnds = Lists.newArrayList();
+            featureAnds.add(answer);
+            if (timeRangeMask != null) {
+                featureAnds.add(timeRangeMask);
+            }
+            if (!MiruFilter.NO_FILTER.equals(features[i].featureFilter)) {
                 BM constrainFeature = aggregateUtil.filter("catwalkFeature",
                     bitmaps,
                     context.getSchema(),
@@ -138,8 +141,9 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
                     lastId,
                     -1,
                     stackBuffer);
-                featureAnswers[i] = bitmaps.and(Arrays.asList(constrainFeature, answer));
+                ands.add(constrainFeature);
             }
+            featureAnswers[i] = bitmaps.and(featureAnds);
         }
 
         return new MiruPartitionResponse<>(
