@@ -42,7 +42,7 @@ public class Catwalk {
         MiruPartitionCoord coord,
         Optional<CatwalkReport> report,
         BM[] featureAnswers,
-        IBM timeRangeMask,
+        IBM[] featureMasks,
         MiruSolutionLog solutionLog) throws Exception {
 
         StackBuffer stackBuffer = new StackBuffer();
@@ -100,8 +100,8 @@ public class Catwalk {
                 for (int j = 0; j < fieldIds.length; j++) {
                     ands.add(primaryIndex.get(name, fieldIds[j], termIds[j]));
                 }
-                if (timeRangeMask != null) {
-                    ands.add(new SimpleInvertedIndex<>(timeRangeMask));
+                if (featureMasks != null && featureMasks[i] != null) {
+                    ands.add(new SimpleInvertedIndex<>(featureMasks[i]));
                 }
 
                 BM bitmap = bitmaps.andTx(ands, stackBuffer);
