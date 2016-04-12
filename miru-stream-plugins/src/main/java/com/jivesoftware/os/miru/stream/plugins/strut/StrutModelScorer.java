@@ -57,6 +57,6 @@ public class StrutModelScorer {
             keys[i] = update.term.getBytes();
             values[i] = payload;
         }
-        cacheKeyValues.put(modelId, keys, values, stackBuffer);
+        cacheKeyValues.put(modelId, keys, values, false, false, stackBuffer);
     }
 }

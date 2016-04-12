@@ -14,6 +14,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolvableFactory;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  *
@@ -21,15 +22,21 @@ import java.util.concurrent.ExecutorService;
 public class StrutInjectable {
 
     private final MiruProvider<? extends Miru> provider;
-    private final  ExecutorService asyncExecutorService;
+    private final ExecutorService asyncExecutorService;
     private final Strut strut;
+    private final AtomicLong pendingUpdates;
+    private final int maxUpdatesBeforeFlush;
 
     public StrutInjectable(MiruProvider<? extends Miru> provider,
         ExecutorService asyncExecutorService,
-        Strut strut) {
+        Strut strut,
+        AtomicLong pendingUpdates,
+        int maxUpdatesBeforeFlush) {
         this.provider = provider;
         this.asyncExecutorService = asyncExecutorService;
         this.strut = strut;
+        this.pendingUpdates = pendingUpdates;
+        this.maxUpdatesBeforeFlush = maxUpdatesBeforeFlush;
     }
 
     public MiruResponse<StrutAnswer> strut(MiruRequest<StrutQuery> request) throws MiruQueryServiceException, InterruptedException {
@@ -42,7 +49,9 @@ public class StrutInjectable {
                     new StrutQuestion(asyncExecutorService,
                         strut,
                         request,
-                        provider.getRemotePartition(StrutRemotePartition.class))),
+                        provider.getRemotePartition(StrutRemotePartition.class),
+                        pendingUpdates,
+                        maxUpdatesBeforeFlush)),
                 new StrutAnswerEvaluator(),
                 new StrutAnswerMerger(request.query.strategy, request.query.desiredNumberOfResults),
                 StrutAnswer.EMPTY_RESULTS,
@@ -68,7 +77,9 @@ public class StrutInjectable {
                     new StrutQuestion(asyncExecutorService,
                         strut,
                         requestAndReport.request,
-                        provider.getRemotePartition(StrutRemotePartition.class))),
+                        provider.getRemotePartition(StrutRemotePartition.class),
+                        pendingUpdates,
+                        maxUpdatesBeforeFlush)),
                 Optional.fromNullable(requestAndReport.report),
                 StrutAnswer.EMPTY_RESULTS,
                 MiruSolutionLogLevel.NONE);
@@ -92,7 +103,9 @@ public class StrutInjectable {
                     new StrutQuestion(asyncExecutorService,
                         strut,
                         request,
-                        provider.getRemotePartition(StrutRemotePartition.class))),
+                        provider.getRemotePartition(StrutRemotePartition.class),
+                        pendingUpdates,
+                        maxUpdatesBeforeFlush)),
                 new StrutAnswerMerger(request.query.strategy, request.query.desiredNumberOfResults),
                 StrutAnswer.EMPTY_RESULTS,
                 request.logLevel);

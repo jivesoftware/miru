@@ -9,6 +9,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.query.MiruQueryParser;
 import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
+import com.jivesoftware.os.routing.bird.health.HealthCheck;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import java.util.Map;
 import org.merlin.config.Config;
@@ -39,4 +40,6 @@ public interface MiruProvider<T extends Miru> {
     Map<MiruHost, MiruHostSelectiveStrategy> getReaderStrategyCache();
 
     <C extends Config> C getConfig(Class<C> configClass);
+
+    void addHealthCheck(HealthCheck healthCheck);
 }

@@ -5,12 +5,12 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-build-management</artifactId>
-        <version>0.1008</version>
+        <version>0.1009</version>
         <relativePath>../inheritance-poms/global-build-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru</groupId>
     <artifactId>miru-stream-plugins</artifactId>
-    <version>0.1008</version>
+    <version>0.1009</version>
     <properties>
         <module.type>shared_lib</module.type>
     </properties>
@@ -32,6 +32,10 @@
             <artifactId>routing-bird-shared</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.jivesoftware.os.routing.bird</groupId>
+            <artifactId>routing-bird-health</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.jivesoftware.os.mlogger</groupId>
             <artifactId>core</artifactId>
         </dependency>
@@ -42,12 +46,12 @@
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-api</artifactId>
-            <version>0.1008</version>
+            <version>0.1009</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-plugin</artifactId>
-            <version>0.1008</version>
+            <version>0.1009</version>
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>

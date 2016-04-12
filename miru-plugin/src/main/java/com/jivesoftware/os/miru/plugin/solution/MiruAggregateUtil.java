@@ -90,12 +90,11 @@ public class MiruAggregateUtil {
 
         int[] featureCount = { 0 };
         int[] termCount = { 0 };
+        int batchSize = 1_000;
+        boolean[][] featuresContained = new boolean[batchSize][featureFieldIds.length];
+        int[] ids = new int[batchSize];
         long start = System.currentTimeMillis();
         consumeAnswers.consume((streamIndex, lastId, answerTermId, answerScoredLastId, answerBitmaps) -> {
-            int batchSize = 1_000;
-            int[] ids = new int[batchSize];
-            boolean[][] featuresContained = new boolean[batchSize][featureFieldIds.length];
-            int[] count = { 0 };
 
             termCount[0]++;
             for (Set<Feature> featureSet : features) {
@@ -109,26 +108,26 @@ public class MiruAggregateUtil {
                     intIters[i] = bitmaps.intIterator(answerBitmaps[i]);
                 }
             }
+
             CollatingIntIterator iter = new CollatingIntIterator(intIters, false);
-            boolean[] contained = new boolean[intIters.length];
+            int count = 0;
             while (iter.hasNext()) {
-                ids[count[0]] = iter.next(contained);
-                System.arraycopy(contained, 0, featuresContained[count[0]], 0, contained.length);
-                count[0]++;
-                if (count[0] == batchSize) {
+                ids[count] = iter.next(featuresContained[count]);
+                count++;
+                if (count == batchSize) {
                     if (!gatherAndStreamFeatures(name, streamIndex, featureFieldIds, stream, stackBuffer, uniqueFieldIds, activityIndex, fieldTerms,
-                        ids, featuresContained, ids.length, lastId, answerTermId, answerScoredLastId, featureCount, features)) {
+                        ids, featuresContained, count, lastId, answerTermId, answerScoredLastId, featureCount, features)) {
                         return false;
                     }
-                    count[0] = 0;
+                    count = 0;
                 }
             }
-            if (count[0] > 0) {
+            if (count > 0) {
                 if (!gatherAndStreamFeatures(name, streamIndex, featureFieldIds, stream, stackBuffer, uniqueFieldIds, activityIndex, fieldTerms,
-                    ids, featuresContained, count[0], lastId, answerTermId, answerScoredLastId, featureCount, features)) {
+                    ids, featuresContained, count, lastId, answerTermId, answerScoredLastId, featureCount, features)) {
                     return false;
                 }
-                count[0] = 0;
+                count = 0;
             }
             return stream.stream(streamIndex, lastId, answerTermId, answerScoredLastId, -1, null);
         });

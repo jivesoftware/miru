@@ -18,4 +18,7 @@ public interface StrutConfig extends Config {
 
     @IntDefault(24)
     int getAsyncThreadPoolSize();
+
+    @IntDefault(1_000)
+    int getMaxUpdatesBeforeFlush();
 }

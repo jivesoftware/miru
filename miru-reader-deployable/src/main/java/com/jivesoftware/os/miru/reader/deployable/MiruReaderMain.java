@@ -91,6 +91,7 @@ import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.deployable.Deployable;
 import com.jivesoftware.os.routing.bird.deployable.InstanceConfig;
 import com.jivesoftware.os.routing.bird.endpoints.base.HasUI;
+import com.jivesoftware.os.routing.bird.health.HealthCheck;
 import com.jivesoftware.os.routing.bird.health.api.HealthCheckRegistry;
 import com.jivesoftware.os.routing.bird.health.api.HealthChecker;
 import com.jivesoftware.os.routing.bird.health.api.HealthFactory;
@@ -428,7 +429,12 @@ public class MiruReaderMain {
                 @Override
                 public <C extends Config> C getConfig(Class<C> configClass) {
                     return deployable.config(configClass);
-                }                
+                }
+
+                @Override
+                public void addHealthCheck(HealthCheck healthCheck) {
+                    deployable.addHealthCheck(healthCheck);
+                }
             };
 
             for (String pluginPackage : miruServiceConfig.getPluginPackages().split(",")) {
