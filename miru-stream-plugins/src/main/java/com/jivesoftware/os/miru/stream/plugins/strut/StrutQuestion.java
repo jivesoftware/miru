@@ -33,7 +33,6 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.solution.Question;
 import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkQuery;
-import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkQuery.CatwalkFeature;
 import com.jivesoftware.os.miru.stream.plugins.strut.Strut.Scored;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -147,6 +146,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         long totalTimeFetchingLastId = 0;
         long totalTimeFetchingScores = 0;
         long totalTimeRescores = 0;
+        long totalTimeHeaped = 0;
 
         BM[] constrainFeature = null;
         if (!request.query.usePartitionModelCache) {
@@ -196,19 +196,29 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                     stackBuffer);
                 totalTimeFetchingScores += (System.currentTimeMillis() - fetchScoresStart);
             } else {
-                long recoreStart = System.currentTimeMillis();
+                long rescoreStart = System.currentTimeMillis();
                 List<Scored> rescored = rescore(handle, batch, pivotFieldId, constrainFeature, modelScorer, cacheStores, solutionLog);
+                totalTimeRescores += (System.currentTimeMillis() - rescoreStart);
+
+                long heapedStart = System.currentTimeMillis();
                 scored.addAll(rescored);
-                totalTimeRescores += (System.currentTimeMillis() - recoreStart);
+                totalTimeHeaped += (System.currentTimeMillis() - heapedStart);
             }
 
         }
 
-        solutionLog.log(MiruSolutionLogLevel.INFO, "Strut your stuff for {} which took lastIds {} ms cached {} ms rescore {} ms total {} ms total missed {}",
+        solutionLog.log(MiruSolutionLogLevel.INFO, "Strut your stuff for {} which took" +
+                " lastIds {} ms" +
+                " cached {} ms" +
+                " rescore {} ms" +
+                " heaped {} ms" +
+                " total {} ms" +
+                " total missed {}",
             lastIdAndTermIds.size(),
             totalTimeFetchingLastId,
             totalTimeFetchingScores,
             totalTimeRescores,
+            totalTimeHeaped,
             System.currentTimeMillis() - start,
             totalMisses);
 
