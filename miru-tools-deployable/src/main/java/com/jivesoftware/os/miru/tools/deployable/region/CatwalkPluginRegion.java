@@ -142,7 +142,6 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
                         featureFields[i][j] = fields[j].trim();
                     }
                 }*/
-
                 TimeUnit fromTimeUnit = TimeUnit.valueOf(input.fromTimeUnit);
                 long fromTimeAgo = input.fromTimeAgo;
                 long fromMillisAgo = fromTimeUnit.toMillis(fromTimeAgo);
@@ -206,7 +205,7 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
                             @SuppressWarnings("unchecked")
                             MiruResponse<CatwalkAnswer> extractResponse = responseMapper.extractResultFromResponse(httpResponse,
                                 MiruResponse.class,
-                                new Class<?>[] { CatwalkAnswer.class },
+                                new Class<?>[]{CatwalkAnswer.class},
                                 null);
                             return new ClientResponse<>(extractResponse, true);
                         });
@@ -244,7 +243,7 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
                             CatwalkFeature feature = features.get(i);
                             String name = Joiner.on(',').join(feature.featureFields);
                             Map<String, Object> featureClass = new HashMap<>();
-                            featureClass.put("name", name);
+                            featureClass.put("name", feature.name + ":" + name);
                             featureClass.put("nameParts", Arrays.asList(feature.featureFields));
                             featureClass.put("modelFeatures", modelFeatures);
 
