@@ -59,6 +59,7 @@ public class Strut {
         HotStuff hotStuff,
         MiruSolutionLog solutionLog) throws Exception {
 
+        long start = System.currentTimeMillis();
         StackBuffer stackBuffer = new StackBuffer();
 
         MiruSchema schema = requestContext.getSchema();
@@ -90,8 +91,6 @@ public class Strut {
 
         @SuppressWarnings("unchecked")
         List<Hotness>[] features = request.query.includeFeatures ? new List[featureFields.length] : null;
-
-        long start = System.currentTimeMillis();
         int[] featureCount = {0};
 
         StrutModel model = cache.get(request.tenantId, request.query.catwalkId, request.query.modelId, coord.partitionId.getId(), request.query.catwalkQuery);

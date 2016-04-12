@@ -122,6 +122,7 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
 
         CatwalkFeature[] features = request.query.features;
         BM[] featureAnswers = bitmaps.createArrayOf(features.length);
+        IBM[] featureMasks = bitmaps.createArrayOf(features.length);
 
         for (int i = 0; i < features.length; i++) {
             List<IBM> featureAnds = Lists.newArrayList();
@@ -129,7 +130,9 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
             if (timeRangeMask != null) {
                 featureAnds.add(timeRangeMask);
             }
-            if (!MiruFilter.NO_FILTER.equals(features[i].featureFilter)) {
+            if (MiruFilter.NO_FILTER.equals(features[i].featureFilter)) {
+                featureMasks[i] = (timeRangeMask != null) ? timeRangeMask : null;
+            } else {
                 BM constrainFeature = aggregateUtil.filter("catwalkFeature",
                     bitmaps,
                     context.getSchema(),
@@ -142,12 +145,18 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
                     -1,
                     stackBuffer);
                 featureAnds.add(constrainFeature);
+
+                if (timeRangeMask != null) {
+                    featureMasks[i] = constrainFeature;
+                } else {
+                    featureMasks[i] = bitmaps.and(Arrays.asList(constrainFeature, timeRangeMask));
+                }
             }
             featureAnswers[i] = bitmaps.and(featureAnds);
         }
 
         return new MiruPartitionResponse<>(
-            catwalk.model("catwalk", bitmaps, context, request, handle.getCoord(), report, featureAnswers, timeRangeMask, solutionLog),
+            catwalk.model("catwalk", bitmaps, context, request, handle.getCoord(), report, featureAnswers, featureMasks, solutionLog),
             solutionLog.asList());
     }
 

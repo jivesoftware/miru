@@ -306,6 +306,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         MiruPluginCacheProvider.CacheKeyValues cacheStores,
         MiruSolutionLog solutionLog) throws Exception {
 
+        long startStrut = System.currentTimeMillis();
         MiruBitmaps<BM, IBM> bitmaps = handle.getBitmaps();
         MiruRequestContext<BM, IBM, ?> context = handle.getRequestContext();
         MiruFieldIndex<BM, IBM> primaryIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
@@ -317,6 +318,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         Arrays.fill(scoredToLastIds, -1);
         List<Scored> results = Lists.newArrayList();
         List<Scored> updates = Lists.newArrayList();
+
         strut.yourStuff("strut",
             handle.getCoord(),
             bitmaps,
@@ -357,6 +359,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 return true;
             },
             solutionLog);
+        solutionLog.log(MiruSolutionLogLevel.INFO, "Strut rescore took {} ms", System.currentTimeMillis() - startStrut);
 
         if (!updates.isEmpty()) {
             long startOfUpdates = System.currentTimeMillis();
