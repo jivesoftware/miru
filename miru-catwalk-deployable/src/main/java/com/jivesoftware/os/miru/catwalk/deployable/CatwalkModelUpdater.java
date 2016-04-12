@@ -205,7 +205,7 @@ public class CatwalkModelUpdater {
         MiruResponse<CatwalkAnswer> catwalkResponse = tenantQueryRouting.query("", "catwalkModelQueue", readerClient, requestMapper, responseMapper,
             request, endpoint, CatwalkAnswer.class);
 
-        if (catwalkResponse != null && catwalkResponse.answer != null) {
+        if (catwalkResponse != null && catwalkResponse.answer != null && catwalkResponse.answer.results != null) {
             ModelFeatureScores[] featureScores = new ModelFeatureScores[updateModelRequest.catwalkQuery.features.length];
             for (int i = 0; i < featureScores.length; i++) {
                 featureScores[i] = new ModelFeatureScores(catwalkResponse.answer.resultsClosed,
