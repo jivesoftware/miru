@@ -174,6 +174,11 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
     }
 
     @Override
+    public RoaringBitmap[][] createMultiArrayOf(int size1, int size2) {
+        return new RoaringBitmap[size1][size2];
+    }
+
+    @Override
     public boolean supportsInPlace() {
         return true;
     }
@@ -610,8 +615,8 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
     }
 
     public static void main(String[] args) throws Exception {
-        int[] pieces = {4}; //{ 4, 8, 4, 8 };
-        int[] cardinalities = {3_000}; //{ 1, 100, 3, 10 };
+        int[] pieces = { 4 }; //{ 4, 8, 4, 8 };
+        int[] cardinalities = { 3_000 }; //{ 1, 100, 3, 10 };
         int numInserts = 10_000;
 
         int numBytes = 0;
@@ -701,7 +706,7 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
             }
 
             Multiset<Value> found = HashMultiset.create(expected.size());
-            int[] streamed = {0};
+            int[] streamed = { 0 };
             int maxQuickSize = 0;
 
             long start = System.currentTimeMillis();

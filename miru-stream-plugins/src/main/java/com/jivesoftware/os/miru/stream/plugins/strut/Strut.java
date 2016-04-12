@@ -152,13 +152,12 @@ public class Strut {
                     } else {
                         featureCount[0]++;
                         ModelScore modelScore = model.score(featureId, termIds);
-                        if (modelScore != null) { // if (!Float.isNaN(s) && s > 0.0f) {
+                        if (modelScore != null) {
                             float s = (float) modelScore.numerator / modelScore.denominator;
                             if (s > 1.0f) {
                                 LOG.warn("Encountered score {} > 1.0 for answerTermId:{} featureId:{} termIds:{}",
                                     s, answerTermId, featureId, Arrays.toString(termIds));
                             } else if (!Float.isNaN(s) && s > 0f) {
-                                //TODO tiered scoring based on thresholds
                                 score[0] = score(score[0], s, request.query.strategy);
                                 termCount[0]++;
 
