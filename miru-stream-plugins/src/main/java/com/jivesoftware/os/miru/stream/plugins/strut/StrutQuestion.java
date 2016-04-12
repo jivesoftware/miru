@@ -196,7 +196,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         } else {
             int batchSize = 100; //TODO config batch size
             BM[] answers = bitmaps.createArrayOf(batchSize);
-            BM[] constrainFeature = buildConstrainFeatures(solutionLog, bitmaps, context, schema, termComposer, stackBuffer, activityIndexLastId);
+            BM[] constrainFeature = buildConstrainFeatures(bitmaps, context, activityIndexLastId, stackBuffer, solutionLog);
             long rescoreStart = System.currentTimeMillis();
             for (List<LastIdAndTermId> batch : Lists.partition(lastIdAndTermIds, answers.length)) {
                 List<Scored> rescored = rescore(handle, batch, pivotFieldId, constrainFeature, modelScorer, cacheStores, solutionLog);
@@ -210,7 +210,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             pendingUpdates.addAndGet(numberOfUpdates);
             asyncRescorers.submit(() -> {
                 try {
-                    BM[] asyncConstrainFeature = buildConstrainFeatures(solutionLog, bitmaps, context, schema, termComposer, stackBuffer, activityIndexLastId);
+                    BM[] asyncConstrainFeature = buildConstrainFeatures(bitmaps, context, activityIndexLastId, stackBuffer, solutionLog);
                     MiruSolutionLog asyncSolutionLog = new MiruSolutionLog(MiruSolutionLogLevel.NONE);
                     rescore(handle, asyncRescore, pivotFieldId, asyncConstrainFeature, modelScorer, cacheStores, asyncSolutionLog);
                 } catch (Exception x) {
@@ -379,28 +379,18 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         return results;
     }
 
-    private <BM extends IBM, IBM> BM[] buildConstrainFeatures(MiruSolutionLog solutionLog,
-        MiruBitmaps<BM, IBM> bitmaps,
+    private <BM extends IBM, IBM> BM[] buildConstrainFeatures(MiruBitmaps<BM, IBM> bitmaps,
         MiruRequestContext<BM, IBM, ?> context,
-        MiruSchema schema, MiruTermComposer termComposer, StackBuffer stackBuffer, int activityIndexLastId) throws Exception {
-        CatwalkQuery.CatwalkFeature[] features = request.query.catwalkQuery.features;
-        BM[] constrainFeature = bitmaps.createArrayOf(features.length);
-        for (int i = 0; i < features.length; i++) {
-            constrainFeature[i] = aggregateUtil.filter("strutCatwalk",
-                bitmaps,
-                schema,
-                termComposer,
-                context.getFieldIndexProvider(),
-                request.query.catwalkQuery.features[i].featureFilter,
-                solutionLog,
-                null,
-                activityIndexLastId,
-                -1,
-                stackBuffer);
-        }
+        int activityIndexLastId,
+        StackBuffer stackBuffer,
+        MiruSolutionLog solutionLog) throws Exception {
 
+        MiruSchema schema = context.getSchema();
+        MiruTermComposer termComposer = context.getTermComposer();
+
+        BM strutFeature = null;
         if (!MiruFilter.NO_FILTER.equals(request.query.featureFilter)) {
-            BM strutFeature = aggregateUtil.filter("strutFeature",
+            strutFeature = aggregateUtil.filter("strutFeature",
                 bitmaps,
                 schema,
                 termComposer,
@@ -411,10 +401,31 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 activityIndexLastId,
                 -1,
                 stackBuffer);
-            for (int i = 0; i < features.length; i++) {
-                bitmaps.inPlaceAnd(constrainFeature[i], strutFeature);
-            }
         }
+
+        CatwalkQuery.CatwalkFeature[] features = request.query.catwalkQuery.features;
+        BM[] constrainFeature = bitmaps.createArrayOf(features.length);
+        for (int i = 0; i < features.length; i++) {
+            List<IBM> constrainAnds = Lists.newArrayList();
+            if (request.query.catwalkQuery.features[i] != null) {
+                constrainAnds.add(aggregateUtil.filter("strutCatwalk",
+                    bitmaps,
+                    schema,
+                    termComposer,
+                    context.getFieldIndexProvider(),
+                    request.query.catwalkQuery.features[i].featureFilter,
+                    solutionLog,
+                    null,
+                    activityIndexLastId,
+                    -1,
+                    stackBuffer));
+            }
+            if (strutFeature != null) {
+                constrainAnds.add(strutFeature);
+            }
+            constrainFeature[i] = bitmaps.and(constrainAnds);
+        }
+
         return constrainFeature;
     }
 
