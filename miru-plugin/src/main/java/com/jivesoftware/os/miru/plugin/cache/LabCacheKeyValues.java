@@ -16,12 +16,10 @@ public class LabCacheKeyValues implements CacheKeyValues {
 
     private final OrderIdProvider idProvider;
     private final ValueIndex[] indexes;
-    private final boolean fsyncOnCommit;
 
-    public LabCacheKeyValues(OrderIdProvider idProvider, ValueIndex[] indexes, boolean fsyncOnCommit) {
+    public LabCacheKeyValues(OrderIdProvider idProvider, ValueIndex[] indexes) {
         this.idProvider = idProvider;
         this.indexes = indexes;
-        this.fsyncOnCommit = fsyncOnCommit;
     }
 
     @Override
@@ -64,7 +62,13 @@ public class LabCacheKeyValues implements CacheKeyValues {
     }
 
     @Override
-    public void put(String cacheId, byte[][] keys, byte[][] values, StackBuffer stackBuffer) throws Exception {
+    public void put(String cacheId,
+        byte[][] keys,
+        byte[][] values,
+        boolean commitOnUpdate,
+        boolean fsyncOnCommit,
+        StackBuffer stackBuffer) throws Exception {
+
         byte[] cacheIdBytes = cacheId.getBytes(StandardCharsets.UTF_8);
         byte[][][] stripeKeyBytes = new byte[indexes.length][][];
         for (int i = 0; i < keys.length; i++) {
@@ -94,8 +98,9 @@ public class LabCacheKeyValues implements CacheKeyValues {
                     return true;
                 }, fsyncOnCommit);
 
-                //TODO consider making this a lazy commit
-                indexes[stripe].commit(fsyncOnCommit);
+                if (commitOnUpdate) {
+                    indexes[stripe].commit(fsyncOnCommit);
+                }
             }
         }
     }

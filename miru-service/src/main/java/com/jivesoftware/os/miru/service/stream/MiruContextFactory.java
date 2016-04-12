@@ -387,24 +387,24 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
 
         Map<String, CacheKeyValues> pluginPersistentCache = Maps.newConcurrentMap();
 
-        MiruPluginCacheProvider cacheProvider = (name, payloadSize, variablePayloadSize) -> pluginPersistentCache.computeIfAbsent(name, (key) -> {
+        MiruPluginCacheProvider cacheProvider = (name, payloadSize, variablePayloadSize, maxUpdatesBeforeFlush) ->
+            pluginPersistentCache.computeIfAbsent(name, (key) -> {
+                @SuppressWarnings("unchecked")
+                TxKeyedFilerStore<Integer, MapContext>[] powerIndex = new TxKeyedFilerStore[16];
+                for (int power = 0; power < powerIndex.length; power++) {
+                    powerIndex[power] = new TxKeyedFilerStore<>(cogs,
+                        seed,
+                        chunkStores,
+                        keyBytes("cache-" + power + "-" + key),
+                        false,
+                        new MapCreator(100, (int) FilerIO.chunkLength(power), true, payloadSize, variablePayloadSize),
+                        MapOpener.INSTANCE,
+                        TxMapGrower.MAP_OVERWRITE_GROWER,
+                        TxMapGrower.MAP_REWRITE_GROWER);
+                }
 
-            @SuppressWarnings("unchecked")
-            TxKeyedFilerStore<Integer, MapContext>[] powerIndex = new TxKeyedFilerStore[16];
-            for (int power = 0; power < powerIndex.length; power++) {
-                powerIndex[power] = new TxKeyedFilerStore<>(cogs,
-                    seed,
-                    chunkStores,
-                    keyBytes("cache-" + power + "-" + key),
-                    false,
-                    new MapCreator(100, (int) FilerIO.chunkLength(power), true, payloadSize, variablePayloadSize),
-                    MapOpener.INSTANCE,
-                    TxMapGrower.MAP_OVERWRITE_GROWER,
-                    TxMapGrower.MAP_REWRITE_GROWER);
-            }
-
-            return new MiruFilerCacheKeyValues(powerIndex);
-        });
+                return new MiruFilerCacheKeyValues(powerIndex);
+            });
 
         MiruContext<BM, IBM, S> context = new MiruContext<>(schema,
             termComposer,
@@ -593,18 +593,25 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
 
         Map<String, CacheKeyValues> pluginPersistentCache = Maps.newConcurrentMap();
 
-        MiruPluginCacheProvider cacheProvider = (name, payloadSize, variablePayloadSize) -> pluginPersistentCache.computeIfAbsent(name, (key) -> {
-            try {
-                ValueIndex[] cacheIndexes = new ValueIndex[labEnvironments.length];
-                for (int i = 0; i < cacheIndexes.length; i++) {
-                    // currently not commitable, as the commit is done immediately at write time
-                    cacheIndexes[i] = labEnvironments[i].open("pluginCache-" + key, 4096, Integer.MAX_VALUE, 10 * 1024 * 1024, -1L, -1L, new KeyValueRawhide());
+        MiruPluginCacheProvider cacheProvider = (name, payloadSize, variablePayloadSize, maxUpdatesBeforeFlush) ->
+            pluginPersistentCache.computeIfAbsent(name, (key) -> {
+                try {
+                    ValueIndex[] cacheIndexes = new ValueIndex[labEnvironments.length];
+                    for (int i = 0; i < cacheIndexes.length; i++) {
+                        // currently not commitable, as the commit is done immediately at write time
+                        cacheIndexes[i] = labEnvironments[i].open("pluginCache-" + key,
+                            4096,
+                            maxUpdatesBeforeFlush,
+                            10 * 1024 * 1024,
+                            -1L,
+                            -1L,
+                            new KeyValueRawhide());
+                    }
+                    return new LabCacheKeyValues(idProvider, cacheIndexes);
+                } catch (Exception x) {
+                    throw new RuntimeException("Failed to initialize plugin cache", x);
                 }
-                return new LabCacheKeyValues(idProvider, cacheIndexes, fsyncOnCommit);
-            } catch (Exception x) {
-                throw new RuntimeException("Failed to initialize plugin cache", x);
-            }
-        });
+            });
 
         MiruContext<BM, IBM, S> context = new MiruContext<>(schema,
             termComposer,

@@ -8,13 +8,18 @@ import java.io.IOException;
  */
 public interface MiruPluginCacheProvider {
 
-    CacheKeyValues get(String name, int payloadSize, boolean variablePayloadSize);
+    CacheKeyValues get(String name, int payloadSize, boolean variablePayloadSize, int maxUpdatesBeforeFlush);
 
     interface CacheKeyValues {
 
         boolean get(String cacheId, byte[][] keys, GetKeyValueStream stream, StackBuffer stackBuffer) throws Exception;
 
-        void put(String cacheId, byte[][] keys, byte[][] values, StackBuffer stackBuffer) throws Exception;
+        void put(String cacheId,
+            byte[][] keys,
+            byte[][] values,
+            boolean commitOnUpdate,
+            boolean fsyncOnCommit,
+            StackBuffer stackBuffer) throws Exception;
     }
 
     interface GetKeyValueStream {

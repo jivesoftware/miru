@@ -31,11 +31,11 @@ public class CollatingIntIteratorTest {
     @Test
     public void testAscending() throws Exception {
         MiruIntIterator[] iterators = new MiruIntIterator[] {
-            iter(false, 0, 2, 4, 6, 8),
-            iter(false, 1, 3, 5, 7, 9),
+            iter(false, 0, 2, 4, 6, 8, 10),
+            iter(false, 1, 3, 5, 7, 9, 11),
             null,
-            iter(false, 2, 3, 5, 8, 9),
-            iter(false, 3, 4, 5, 6, 7),
+            iter(false, 2, 3, 5, 8, 9, 12),
+            iter(false, 3, 4, 5, 6, 7, 13),
         };
         CollatingIntIterator iter = new CollatingIntIterator(iterators, false);
 
@@ -80,6 +80,22 @@ public class CollatingIntIteratorTest {
         assertTrue(iter.hasNext());
         assertEquals(iter.next(contained), 9);
         assertEquals(contained, new boolean[] { false, true, false, true, false });
+
+        assertTrue(iter.hasNext());
+        assertEquals(iter.next(contained), 10);
+        assertEquals(contained, new boolean[] { true, false, false, false, false });
+
+        assertTrue(iter.hasNext());
+        assertEquals(iter.next(contained), 11);
+        assertEquals(contained, new boolean[] { false, true, false, false, false });
+
+        assertTrue(iter.hasNext());
+        assertEquals(iter.next(contained), 12);
+        assertEquals(contained, new boolean[] { false, false, false, true, false });
+
+        assertTrue(iter.hasNext());
+        assertEquals(iter.next(contained), 13);
+        assertEquals(contained, new boolean[] { false, false, false, false, true });
 
         assertFalse(iter.hasNext());
     }

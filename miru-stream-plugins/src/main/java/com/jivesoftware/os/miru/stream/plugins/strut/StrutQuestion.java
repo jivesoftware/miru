@@ -41,6 +41,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * @author jonathan
@@ -53,17 +54,24 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
     private final Strut strut;
     private final MiruRequest<StrutQuery> request;
     private final MiruRemotePartition<StrutQuery, StrutAnswer, StrutReport> remotePartition;
+    private final AtomicLong pendingUpdates;
+    private final int maxUpdatesBeforeFlush;
+
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
 
     public StrutQuestion(ExecutorService asyncRescorers,
         Strut strut,
         MiruRequest<StrutQuery> request,
-        MiruRemotePartition<StrutQuery, StrutAnswer, StrutReport> remotePartition) {
+        MiruRemotePartition<StrutQuery, StrutAnswer, StrutReport> remotePartition,
+        AtomicLong pendingUpdates,
+        int maxUpdatesBeforeFlush) {
         this.asyncRescorers = asyncRescorers;
         this.strut = strut;
         this.request = request;
         this.remotePartition = remotePartition;
+        this.pendingUpdates = pendingUpdates;
+        this.maxUpdatesBeforeFlush = maxUpdatesBeforeFlush;
     }
 
     @Override
@@ -128,7 +136,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
 
         MiruPluginCacheProvider.CacheKeyValues cacheStores = handle.getRequestContext()
             .getCacheProvider()
-            .get("strut-" + request.query.catwalkId, 8, false);
+            .get("strut-" + request.query.catwalkId, 8, false, maxUpdatesBeforeFlush);
 
         StrutModelScorer modelScorer = new StrutModelScorer(); // Ahh
 
@@ -198,6 +206,8 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         }
 
         if (!asyncRescore.isEmpty()) {
+            int numberOfUpdates = asyncRescore.size();
+            pendingUpdates.addAndGet(numberOfUpdates);
             asyncRescorers.submit(() -> {
                 try {
                     BM[] asyncConstrainFeature = buildConstrainFeatures(solutionLog, bitmaps, context, schema, termComposer, stackBuffer, activityIndexLastId);
@@ -205,6 +215,8 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                     rescore(handle, asyncRescore, pivotFieldId, asyncConstrainFeature, modelScorer, cacheStores, asyncSolutionLog);
                 } catch (Exception x) {
                     LOG.warn("Failed while trying to rescore.", x);
+                } finally {
+                    pendingUpdates.addAndGet(-numberOfUpdates);
                 }
             });
         }
@@ -308,7 +320,6 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
 
         StackBuffer stackBuffer = new StackBuffer();
 
-        BM[][] answers = bitmaps.createMultiArrayOf(score.size(), constrainFeature.length);
         int[] scoredToLastIds = new int[score.size()];
         Arrays.fill(scoredToLastIds, -1);
         List<Scored> results = Lists.newArrayList();
@@ -325,6 +336,8 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 for (int i = 0; i < rescoreMiruTermIds.length; i++) {
                     miruTermIds[i] = rescoreMiruTermIds[i].termId;
                 }
+
+                BM[][] answers = bitmaps.createMultiArrayOf(score.size(), constrainFeature.length);
                 bitmaps.multiTx(
                     (tx, stackBuffer1) -> primaryIndex.multiTxIndex("strut", pivotFieldId, miruTermIds, -1, stackBuffer1, tx),
                     (index, lastId, bitmap) -> {
@@ -359,7 +372,9 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         if (!updates.isEmpty()) {
             long startOfUpdates = System.currentTimeMillis();
             modelScorer.commit(request.query.modelId, cacheStores, updates, stackBuffer);
-            LOG.info("Strut score updates {} features in {} ms", updates.size(), System.currentTimeMillis() - startOfUpdates);
+            long totalTimeScoreUpdates = System.currentTimeMillis() - startOfUpdates;
+            LOG.info("Strut score updates {} features in {} ms", updates.size(), totalTimeScoreUpdates);
+            solutionLog.log(MiruSolutionLogLevel.INFO, "Strut score updates {} features in {} ms", updates.size(), totalTimeScoreUpdates);
         }
         return results;
     }

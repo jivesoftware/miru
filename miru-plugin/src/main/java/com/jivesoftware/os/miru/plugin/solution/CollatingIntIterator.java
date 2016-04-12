@@ -35,7 +35,6 @@ public class CollatingIntIterator {
     }
 
     public int next(boolean[] contained) throws NoSuchElementException {
-        int leastIndex = -1;
         int leastObject = -1;
         for (int i = 0; i < values.length; i++) {
             if (values[i] == -1) {
@@ -45,14 +44,12 @@ public class CollatingIntIterator {
                 }
             }
             if (values[i] != -1) {
-                if (leastIndex == -1) {
-                    leastIndex = i;
+                if (leastObject == -1) {
                     leastObject = values[i];
                 } else {
                     int curObject = values[i];
                     if (compare(curObject, leastObject) < 0) {
                         leastObject = curObject;
-                        leastIndex = i;
                     }
                 }
             }
@@ -61,16 +58,15 @@ public class CollatingIntIterator {
             contained[i] = (values[i] == leastObject);
         }
 
-        if (leastIndex == -1) {
+        if (leastObject == -1) {
             throw new NoSuchElementException();
         }
-        int val = values[leastIndex];
         for (int i = 0; i < values.length; i++) {
-            if (values[i] == val) {
+            if (values[i] == leastObject) {
                 values[i] = -1;
             }
         }
-        return val;
+        return leastObject;
     }
 
     private int compare(int o1, int o2) {

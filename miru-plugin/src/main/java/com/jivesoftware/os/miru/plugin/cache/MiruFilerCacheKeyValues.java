@@ -73,7 +73,12 @@ public class MiruFilerCacheKeyValues implements CacheKeyValues {
     }
 
     @Override
-    public void put(String cacheId, byte[][] keys, byte[][] values, StackBuffer stackBuffer) throws Exception {
+    public void put(String cacheId,
+        byte[][] keys,
+        byte[][] values,
+        boolean commitOnUpdate,
+        boolean fsyncOnCommit,
+        StackBuffer stackBuffer) throws Exception {
 
         byte[] cacheIdBytes = cacheId.getBytes(StandardCharsets.UTF_8);
 

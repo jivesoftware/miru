@@ -73,6 +73,7 @@ import com.jivesoftware.os.miru.wal.readtracking.rcvs.RCVSReadTrackingWALReader;
 import com.jivesoftware.os.miru.wal.readtracking.rcvs.RCVSReadTrackingWALWriter;
 import com.jivesoftware.os.rcvs.inmemory.InMemoryRowColumnValueStoreInitializer;
 import com.jivesoftware.os.routing.bird.deployable.Deployable;
+import com.jivesoftware.os.routing.bird.health.HealthCheck;
 import com.jivesoftware.os.routing.bird.health.api.HealthCheckRegistry;
 import com.jivesoftware.os.routing.bird.health.api.HealthChecker;
 import com.jivesoftware.os.routing.bird.health.api.HealthFactory;
@@ -372,6 +373,10 @@ public class MiruPluginTestBootstrap {
             @Override
             public <C extends Config> C getConfig(Class<C> configClass) {
                 return BindInterfaceToConfiguration.bindDefault(configClass);
+            }
+
+            @Override
+            public void addHealthCheck(HealthCheck healthCheck) {
             }
         };
     }
