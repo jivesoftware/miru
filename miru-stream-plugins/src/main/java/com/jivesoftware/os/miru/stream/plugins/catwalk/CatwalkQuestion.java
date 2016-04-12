@@ -68,7 +68,8 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
             solutionLog.log(MiruSolutionLogLevel.WARN, "No time index intersection. Partition {}: {} doesn't intersect with {}",
                 handle.getCoord().partitionId, context.getTimeIndex(), timeRange);
             BM[] featureAnswers = bitmaps.createArrayOf(request.query.features.length);
-            return new MiruPartitionResponse<>(catwalk.model("catwalk", bitmaps, context, request, handle.getCoord(), report, featureAnswers, solutionLog),
+            return new MiruPartitionResponse<>(
+                catwalk.model("catwalk", bitmaps, context, request, handle.getCoord(), report, featureAnswers, null, solutionLog),
                 solutionLog.asList());
         }
 
@@ -96,8 +97,10 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
             ands.add(context.getAuthzIndex().getCompositeAuthz(request.authzExpression, stackBuffer));
         }
 
+        IBM timeRangeMask = null;
         if (!MiruTimeRange.ALL_TIME.equals(request.query.timeRange)) {
-            ands.add(bitmaps.buildTimeRangeMask(context.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp, stackBuffer));
+            timeRangeMask = bitmaps.buildTimeRangeMask(context.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp, stackBuffer);
+            ands.add(timeRangeMask);
         }
 
         ands.add(bitmaps.buildIndexMask(context.getActivityIndex().lastId(stackBuffer), context.getRemovalIndex().getIndex(stackBuffer)));
@@ -139,7 +142,8 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
             }
         }
 
-        return new MiruPartitionResponse<>(catwalk.model("catwalk", bitmaps, context, request, handle.getCoord(), report, featureAnswers, solutionLog),
+        return new MiruPartitionResponse<>(
+            catwalk.model("catwalk", bitmaps, context, request, handle.getCoord(), report, featureAnswers, timeRangeMask, solutionLog),
             solutionLog.asList());
     }
 

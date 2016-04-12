@@ -145,6 +145,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
 
         long totalTimeFetchingLastId = 0;
         long totalTimeFetchingScores = 0;
+        long totalTimeRescores = 0;
 
         int batchSize = 100; //TODO config batch size
         BM[] answers = bitmaps.createArrayOf(batchSize);
@@ -189,13 +190,15 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                     stackBuffer);
                 totalTimeFetchingScores += (System.currentTimeMillis() - fetchScoresStart);
             } else {
-                List<Scored> rescored = rescore(handle, batch, pivotFieldId, modelScorer, cacheStores);
+                long recoreStart = System.currentTimeMillis();
+                List<Scored> rescored = rescore(handle, batch, pivotFieldId, modelScorer, cacheStores, solutionLog);
                 scored.addAll(rescored);
+                totalTimeRescores += (System.currentTimeMillis() - recoreStart);
             }
 
         }
 
-        solutionLog.log(MiruSolutionLogLevel.INFO, "Struted our stuff for {} which took lastIds {} ms cached {} ms total {} ms total missed {}",
+        solutionLog.log(MiruSolutionLogLevel.INFO, "Strut your stuff for {} which took lastIds {} ms cached {} ms total {} ms total missed {}",
             lastIdAndTermIds.size(),
             totalTimeFetchingLastId,
             totalTimeFetchingScores,
@@ -205,7 +208,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         if (!asyncRescore.isEmpty()) {
             asyncRescorers.submit(() -> {
                 try {
-                    rescore(handle, asyncRescore, pivotFieldId, modelScorer, cacheStores);
+                    rescore(handle, asyncRescore, pivotFieldId, modelScorer, cacheStores, new MiruSolutionLog(MiruSolutionLogLevel.NONE));
                 } catch (Exception x) {
                     LOG.warn("Failed while trying to rescore.", x);
                 }
@@ -280,7 +283,8 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         List<LastIdAndTermId> score,
         int pivotFieldId,
         StrutModelScorer modelScorer,
-        MiruPluginCacheProvider.CacheKeyValues cacheStores) throws Exception {
+        MiruPluginCacheProvider.CacheKeyValues cacheStores,
+        MiruSolutionLog solutionLog) throws Exception {
 
         MiruBitmaps<BM, IBM> bitmaps = handle.getBitmaps();
         MiruRequestContext<BM, IBM, ?> context = handle.getRequestContext();
@@ -289,7 +293,6 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         MiruSchema schema = context.getSchema();
         MiruTermComposer termComposer = context.getTermComposer();
 
-        MiruSolutionLog solutionLog = new MiruSolutionLog(MiruSolutionLogLevel.NONE);
         StackBuffer stackBuffer = new StackBuffer();
 
         int activityIndexLastId = context.getActivityIndex().lastId(stackBuffer);
