@@ -19,6 +19,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
+import com.jivesoftware.os.miru.plugin.solution.SimpleInvertedIndex;
 import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkQuery.CatwalkFeature;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -41,6 +42,7 @@ public class Catwalk {
         MiruPartitionCoord coord,
         Optional<CatwalkReport> report,
         BM[] featureAnswers,
+        IBM timeRangeMask,
         MiruSolutionLog solutionLog) throws Exception {
 
         StackBuffer stackBuffer = new StackBuffer();
@@ -98,6 +100,10 @@ public class Catwalk {
                 for (int j = 0; j < fieldIds.length; j++) {
                     ands.add(primaryIndex.get(name, fieldIds[j], termIds[j]));
                 }
+                if (timeRangeMask != null) {
+                    ands.add(new SimpleInvertedIndex<>(timeRangeMask));
+                }
+
                 BM bitmap = bitmaps.andTx(ands, stackBuffer);
                 int numerator = entry.getCount();
                 long denominator = bitmaps.cardinality(bitmap);

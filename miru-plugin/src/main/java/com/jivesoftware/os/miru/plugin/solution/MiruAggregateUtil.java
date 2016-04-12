@@ -1,7 +1,6 @@
 package com.jivesoftware.os.miru.plugin.solution;
 
 import com.google.common.base.Optional;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.filer.io.api.KeyRange;
@@ -20,28 +19,21 @@ import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
-import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.plugin.index.FieldMultiTermTxIndex;
-import com.jivesoftware.os.miru.plugin.index.IndexTx;
 import com.jivesoftware.os.miru.plugin.index.LastIdAndTermIdStream;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndexProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.index.MiruTxIndex;
-import com.jivesoftware.os.miru.plugin.index.TermIdStream;
-import com.jivesoftware.os.miru.plugin.index.ValueIndex;
 import com.jivesoftware.os.miru.plugin.partition.TrackError;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.BitSet;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.lang.mutable.MutableInt;
@@ -861,20 +853,6 @@ public class MiruAggregateUtil {
     @Override
     public String toString() {
         return "MiruAggregateUtil{" + '}';
-    }
-
-    private static class SimpleInvertedIndex<IBM> implements MiruTxIndex<IBM> {
-
-        private final IBM bitmap;
-
-        public SimpleInvertedIndex(IBM bitmap) {
-            this.bitmap = bitmap;
-        }
-
-        @Override
-        public <R> R txIndex(IndexTx<R, IBM> tx, StackBuffer stackBuffer) throws Exception {
-            return tx.tx(bitmap, null, -1, null);
-        }
     }
 
 }
