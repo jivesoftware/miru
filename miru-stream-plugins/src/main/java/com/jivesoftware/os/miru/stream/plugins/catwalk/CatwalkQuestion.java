@@ -147,9 +147,9 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
                 featureAnds.add(constrainFeature);
 
                 if (timeRangeMask != null) {
-                    featureMasks[i] = constrainFeature;
-                } else {
                     featureMasks[i] = bitmaps.and(Arrays.asList(constrainFeature, timeRangeMask));
+                } else {
+                    featureMasks[i] = constrainFeature;
                 }
             }
             featureAnswers[i] = bitmaps.and(featureAnds);

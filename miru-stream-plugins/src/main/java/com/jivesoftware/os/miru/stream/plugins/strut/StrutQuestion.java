@@ -146,81 +146,56 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         long totalTimeFetchingLastId = 0;
         long totalTimeFetchingScores = 0;
         long totalTimeRescores = 0;
-        long totalTimeHeaped = 0;
 
-        BM[] constrainFeature = null;
-        if (!request.query.usePartitionModelCache) {
-            constrainFeature = buildConstrainFeatures(solutionLog, bitmaps, context, schema, termComposer, stackBuffer, activityIndexLastId);
-        }
-
-        int batchSize = 100; //TODO config batch size
-        BM[] answers = bitmaps.createArrayOf(batchSize);
-        int[] scoredToLastIds = new int[batchSize];
-        MiruTermId[] nullableMiruTermIds = new MiruTermId[batchSize];
-        MiruTermId[] miruTermIds = new MiruTermId[batchSize];
         List<LastIdAndTermId> asyncRescore = Lists.newArrayList();
-        int totalMisses = 0;
-        done:
-        for (List<LastIdAndTermId> batch : Lists.partition(lastIdAndTermIds, answers.length)) {
+        if (request.query.usePartitionModelCache) {
+            long fetchScoresStart = System.currentTimeMillis();
+
+            int[] scoredToLastIds = new int[lastIdAndTermIds.size()];
+            MiruTermId[] nullableMiruTermIds = new MiruTermId[lastIdAndTermIds.size()];
+            MiruTermId[] miruTermIds = new MiruTermId[lastIdAndTermIds.size()];
 
             Arrays.fill(miruTermIds, null);
-            for (int i = 0; i < batch.size(); i++) {
-                miruTermIds[i] = batch.get(i).termId;
+            for (int i = 0; i < lastIdAndTermIds.size(); i++) {
+                miruTermIds[i] = lastIdAndTermIds.get(i).termId;
             }
 
-            System.arraycopy(miruTermIds, 0, nullableMiruTermIds, 0, batchSize);
+            System.arraycopy(miruTermIds, 0, nullableMiruTermIds, 0, lastIdAndTermIds.size());
             Arrays.fill(scoredToLastIds, -1);
 
             long fetchLastIdsStart = System.currentTimeMillis();
             primaryIndex.multiGetLastIds("strut", pivotFieldId, nullableMiruTermIds, scoredToLastIds, stackBuffer);
             totalTimeFetchingLastId += (System.currentTimeMillis() - fetchLastIdsStart);
 
-            if (request.query.usePartitionModelCache) {
-                long fetchScoresStart = System.currentTimeMillis();
-                modelScorer.score(
-                    request.query.modelId,
-                    miruTermIds,
-                    cacheStores,
-                    (termIndex, score, scoredToLastId) -> {
-                        if (Float.isNaN(score) || scoredToLastId < scoredToLastIds[termIndex]) {
-                            asyncRescore.add(batch.get(termIndex));
-                        }
-                        scored.add(new Scored(batch.get(termIndex).lastId,
-                            miruTermIds[termIndex],
-                            scoredToLastIds[termIndex],
-                            Float.isNaN(score) ? 0f : score,
-                            -1,
-                            null));
-                        return true;
-                    },
-                    stackBuffer);
-                totalTimeFetchingScores += (System.currentTimeMillis() - fetchScoresStart);
-            } else {
-                long rescoreStart = System.currentTimeMillis();
+            modelScorer.score(
+                request.query.modelId,
+                miruTermIds,
+                cacheStores,
+                (termIndex, score, scoredToLastId) -> {
+                    if (Float.isNaN(score) || scoredToLastId < scoredToLastIds[termIndex]) {
+                        asyncRescore.add(lastIdAndTermIds.get(termIndex));
+                    }
+                    scored.add(new Scored(lastIdAndTermIds.get(termIndex).lastId,
+                        miruTermIds[termIndex],
+                        scoredToLastIds[termIndex],
+                        Float.isNaN(score) ? 0f : score,
+                        -1,
+                        null));
+                    return true;
+                },
+                stackBuffer);
+            totalTimeFetchingScores += (System.currentTimeMillis() - fetchScoresStart);
+        } else {
+            int batchSize = 100; //TODO config batch size
+            BM[] answers = bitmaps.createArrayOf(batchSize);
+            BM[] constrainFeature = buildConstrainFeatures(solutionLog, bitmaps, context, schema, termComposer, stackBuffer, activityIndexLastId);
+            long rescoreStart = System.currentTimeMillis();
+            for (List<LastIdAndTermId> batch : Lists.partition(lastIdAndTermIds, answers.length)) {
                 List<Scored> rescored = rescore(handle, batch, pivotFieldId, constrainFeature, modelScorer, cacheStores, solutionLog);
-                totalTimeRescores += (System.currentTimeMillis() - rescoreStart);
-
-                long heapedStart = System.currentTimeMillis();
                 scored.addAll(rescored);
-                totalTimeHeaped += (System.currentTimeMillis() - heapedStart);
             }
-
+            totalTimeRescores += (System.currentTimeMillis() - rescoreStart);
         }
-
-        solutionLog.log(MiruSolutionLogLevel.INFO, "Strut your stuff for {} which took" +
-                " lastIds {} ms" +
-                " cached {} ms" +
-                " rescore {} ms" +
-                " heaped {} ms" +
-                " total {} ms" +
-                " total missed {}",
-            lastIdAndTermIds.size(),
-            totalTimeFetchingLastId,
-            totalTimeFetchingScores,
-            totalTimeRescores,
-            totalTimeHeaped,
-            System.currentTimeMillis() - start,
-            totalMisses);
 
         if (!asyncRescore.isEmpty()) {
             asyncRescorers.submit(() -> {
@@ -254,6 +229,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             scoredLastIds[j] = s[j].lastId;
         }
 
+        long gatherStart = System.currentTimeMillis();
         MiruValue[][][] gatherScoredValues = null;
         if (gatherFieldIds != null) {
             gatherScoredValues = new MiruValue[scoredLastIds.length][gatherFieldIds.length][];
@@ -274,10 +250,13 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 }
             }
         }
+        long totalTimeGather = System.currentTimeMillis() - gatherStart;
 
+        long timeAndVersionStart = System.currentTimeMillis();
         int[] consumeLastIds = new int[scoredLastIds.length];
         System.arraycopy(scoredLastIds, 0, consumeLastIds, 0, scoredLastIds.length);
         TimeAndVersion[] timeAndVersions = activityIndex.getAllTimeAndVersions("strut", consumeLastIds, stackBuffer);
+        long totalTimeAndVersion = System.currentTimeMillis() - timeAndVersionStart;
 
         for (int j = 0; j < s.length; j++) {
             if (timeAndVersions[j] != null) {
@@ -292,6 +271,22 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 LOG.warn("Failed to get timestamp for {}", scoredLastIds[j]);
             }
         }
+
+        solutionLog.log(MiruSolutionLogLevel.INFO, "Strut your stuff for {} terms took" +
+                " lastIds {} ms," +
+                " cached {} ms," +
+                " rescore {} ms," +
+                " gather {} ms," +
+                " timeAndVersion {} ms," +
+                " total {} ms",
+            lastIdAndTermIds.size(),
+            totalTimeFetchingLastId,
+            totalTimeFetchingScores,
+            totalTimeRescores,
+            totalTimeGather,
+            totalTimeAndVersion,
+            System.currentTimeMillis() - start);
+
         solutionLog.log(MiruSolutionLogLevel.INFO, "Strut found {} terms", hotOrNots.size());
 
         return new MiruPartitionResponse<>(strut.composeAnswer(context, request, hotOrNots), solutionLog.asList());
