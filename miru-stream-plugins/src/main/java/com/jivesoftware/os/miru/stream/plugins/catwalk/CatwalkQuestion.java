@@ -141,7 +141,7 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
                     lastId,
                     -1,
                     stackBuffer);
-                ands.add(constrainFeature);
+                featureAnds.add(constrainFeature);
             }
             featureAnswers[i] = bitmaps.and(featureAnds);
         }
