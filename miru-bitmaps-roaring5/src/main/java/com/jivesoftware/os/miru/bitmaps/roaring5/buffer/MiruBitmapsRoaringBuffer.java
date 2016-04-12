@@ -164,6 +164,11 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
     }
 
     @Override
+    public MutableRoaringBitmap[][] createMultiArrayOf(int size1, int size2) {
+        return new MutableRoaringBitmap[size1][size2];
+    }
+
+    @Override
     public boolean supportsInPlace() {
         return true;
     }
@@ -555,8 +560,8 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
     }
 
     private MutableRoaringBitmap bitmapFromFiler(Filer filer, int offset, StackBuffer stackBuffer1) throws IOException {
-        if (filer instanceof ChunkFiler && ((ChunkFiler)filer).canLeakUnsafeByteBuffer()) {
-            ByteBuffer buf = ((ChunkFiler)filer).leakUnsafeByteBuffer();
+        if (filer instanceof ChunkFiler && ((ChunkFiler) filer).canLeakUnsafeByteBuffer()) {
+            ByteBuffer buf = ((ChunkFiler) filer).leakUnsafeByteBuffer();
             buf.position(offset);
             return new ImmutableRoaringBitmap(buf).toMutableRoaringBitmap();
         } else {

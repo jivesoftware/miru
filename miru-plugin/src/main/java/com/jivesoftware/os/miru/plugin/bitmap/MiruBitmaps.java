@@ -38,6 +38,8 @@ public interface MiruBitmaps<BM extends IBM, IBM> {
 
     BM[] createArrayOf(int size);
 
+    BM[][] createMultiArrayOf(int size1, int size2);
+
     BM append(IBM bitmap, int... indexes);
 
     BM set(IBM bitmap, int... indexes);
