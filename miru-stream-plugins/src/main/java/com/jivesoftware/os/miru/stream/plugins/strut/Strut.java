@@ -67,7 +67,7 @@ public class Strut {
         MiruTermComposer termComposer = requestContext.getTermComposer();
         CatwalkFeature[] catwalkFeatures = request.query.catwalkQuery.features;
         float[] featureScalar = request.query.featureScalars;
-        
+
         int[][] featureFieldIds = new int[catwalkFeatures.length][];
         for (int i = 0; i < catwalkFeatures.length; i++) {
             String[] featureField = catwalkFeatures[i].featureFields;
