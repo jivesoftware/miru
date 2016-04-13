@@ -168,7 +168,8 @@
                                 class="j-strategy-autocomplete j-autocomplete-input j-ui-elem" placeholder="Strategy"
                                 name="strategy" id="strategyPicker" data-original-title="" title="">
                                 <option value="MAX" {if $strategy == 'MAX'}selected="selected"{/if}>MAX</option>
-                                <option value="MEAN" {if $strategy == 'MEAN'}selected="selected"{/if}>MEAN</option>
+                                <option value="UNIT_WEIGHTED" {if $strategy == 'UNIT_WEIGHTED'}selected="selected"{/if}>MAX</option>
+                                <option value="REGRESSION_WEIGHTED" {if $strategy == 'REGRESSION_WEIGHTED'}selected="selected"{/if}>MAX</option>
                             </select>
                         </td>
                     </tr>
@@ -234,7 +235,7 @@
                                 </td>
                                 <td>
                                     {foreach $f in $r.features}
-                                        <p>{$f}</p>
+                                        <p>{$f|noAutoescape}</p>
                                     {/foreach}
                                 </td>
                             </tr>

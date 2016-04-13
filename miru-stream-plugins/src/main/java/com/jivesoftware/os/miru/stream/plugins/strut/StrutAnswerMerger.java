@@ -7,7 +7,6 @@ import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.miru.plugin.solution.MiruAnswerMerger;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.stream.plugins.strut.HotOrNot.Hotness;
-import com.jivesoftware.os.miru.stream.plugins.strut.StrutQuery.Strategy;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -17,11 +16,9 @@ import java.util.Map;
  */
 public class StrutAnswerMerger implements MiruAnswerMerger<StrutAnswer> {
 
-    private final Strategy strategy;
     private final int desiredNumberOfResults;
 
-    public StrutAnswerMerger(Strategy strategy, int desiredNumberOfResults) {
-        this.strategy = strategy;
+    public StrutAnswerMerger(int desiredNumberOfResults) {
         this.desiredNumberOfResults = desiredNumberOfResults;
     }
 
@@ -89,7 +86,6 @@ public class StrutAnswerMerger implements MiruAnswerMerger<StrutAnswer> {
                 merged.add(new HotOrNot(hotOrNot.value,
                     (bigger == lastFeatures) ? hotOrNot.gatherLatestValues : otherScore.gatherLatestValues,
                     mergeScores(hotOrNot, otherScore),
-                    hotOrNot.count + otherScore.count,
                     features,
                     (bigger == lastFeatures) ? hotOrNot.timestamp : otherScore.timestamp));
             } else {
@@ -106,13 +102,7 @@ public class StrutAnswerMerger implements MiruAnswerMerger<StrutAnswer> {
     }
 
     private float mergeScores(HotOrNot left, HotOrNot right) {
-        if (strategy == Strategy.MAX) {
-            return Math.max(left.score, right.score);
-        } else if (strategy == Strategy.MEAN) {
-            return (left.score * left.count + right.score * right.count) / (left.count + right.count);
-        } else {
-            throw new UnsupportedOperationException("Strategy not supported: " + strategy);
-        }
+        return Math.max(left.score, right.score);
     }
 
     @Override

@@ -53,7 +53,7 @@ public class StrutInjectable {
                         pendingUpdates,
                         maxUpdatesBeforeFlush)),
                 new StrutAnswerEvaluator(),
-                new StrutAnswerMerger(request.query.strategy, request.query.desiredNumberOfResults),
+                new StrutAnswerMerger(request.query.desiredNumberOfResults),
                 StrutAnswer.EMPTY_RESULTS,
                 request.logLevel);
         } catch (MiruPartitionUnavailableException | InterruptedException e) {
@@ -106,7 +106,7 @@ public class StrutInjectable {
                         provider.getRemotePartition(StrutRemotePartition.class),
                         pendingUpdates,
                         maxUpdatesBeforeFlush)),
-                new StrutAnswerMerger(request.query.strategy, request.query.desiredNumberOfResults),
+                new StrutAnswerMerger(request.query.desiredNumberOfResults),
                 StrutAnswer.EMPTY_RESULTS,
                 request.logLevel);
         } catch (MiruPartitionUnavailableException | InterruptedException e) {

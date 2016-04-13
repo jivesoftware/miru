@@ -66,17 +66,8 @@ public class Strut {
 
         MiruTermComposer termComposer = requestContext.getTermComposer();
         CatwalkFeature[] catwalkFeatures = request.query.catwalkQuery.features;
-        String[] strutFeatureNames = request.query.featureNames;
-
+        float[] featureScalar = request.query.featureScalars;
         String[][] featureFields = new String[catwalkFeatures.length][];
-        for (int i = 0; i < catwalkFeatures.length; i++) {
-            for (int j = 0; j < strutFeatureNames.length; j++) {
-                if (catwalkFeatures[i].name.equals(strutFeatureNames[j])) {
-                    featureFields[i] = catwalkFeatures[i].featureFields;
-                    break;
-                }
-            }
-        }
 
         int[][] featureFieldIds = new int[featureFields.length][];
         for (int i = 0; i < featureFields.length; i++) {
@@ -98,7 +89,7 @@ public class Strut {
 
             consumeAnswers.consume((streamIndex, lastId, termId, scoredToLastId, answers) -> {
                 boolean more = true;
-                if (!hotStuff.steamStream(streamIndex, new Scored(lastId, termId, scoredToLastId, 0.0f, 0, null), false)) {
+                if (!hotStuff.steamStream(streamIndex, new Scored(lastId, termId, scoredToLastId, 0.0f, null), false)) {
                     more = false;
                 }
                 return more;
@@ -113,8 +104,8 @@ public class Strut {
                 }
             }
 
-            float[] score = new float[1];
-            int[] termCount = new int[1];
+            float[] scores = new float[featureFields.length];
+            int[] counts = new int[featureFields.length];
             aggregateUtil.gatherFeatures(name,
                 bitmaps,
                 requestContext,
@@ -124,22 +115,18 @@ public class Strut {
                 (streamIndex, lastId, answerTermId, answerScoredLastId, featureId, termIds) -> {
                     if (featureId == -1) {
                         boolean stopped = false;
-                        if (termCount[0] > 0) {
-                            List<Hotness>[] scoredFeatures = null;
-                            if (request.query.includeFeatures) {
-                                scoredFeatures = new List[features.length];
-                                System.arraycopy(features, 0, scoredFeatures, 0, features.length);
-                            }
-                            float s = finalizeScore(score[0], termCount[0], request.query.strategy);
-                            Scored scored = new Scored(lastId, answerTermId, answerScoredLastId, s, termCount[0], scoredFeatures);
-                            if (!hotStuff.steamStream(streamIndex, scored, cacheable[0])) {
-                                stopped = true;
-                            }
-                        } else if (!hotStuff.steamStream(streamIndex, new Scored(lastId, answerTermId, answerScoredLastId, 0f, 0, null), cacheable[0])) {
+                        List<Hotness>[] scoredFeatures = null;
+                        if (request.query.includeFeatures) {
+                            scoredFeatures = new List[features.length];
+                            System.arraycopy(features, 0, scoredFeatures, 0, features.length);
+                        }
+                        float s = finalizeScore(scores, counts, request.query.strategy);
+                        Scored scored = new Scored(lastId, answerTermId, answerScoredLastId, s, scoredFeatures);
+                        if (!hotStuff.steamStream(streamIndex, scored, cacheable[0])) {
                             stopped = true;
                         }
-                        score[0] = 0f;
-                        termCount[0] = 0;
+                        Arrays.fill(scores, 0.0f);
+                        Arrays.fill(counts, 0);
 
                         if (request.query.includeFeatures) {
                             Arrays.fill(features, null);
@@ -157,8 +144,9 @@ public class Strut {
                                 LOG.warn("Encountered score {} > 1.0 for answerTermId:{} featureId:{} termIds:{}",
                                     s, answerTermId, featureId, Arrays.toString(termIds));
                             } else if (!Float.isNaN(s) && s > 0f) {
-                                score[0] = score(score[0], s, request.query.strategy);
-                                termCount[0]++;
+
+                                scores[featureId] = score(scores[featureId], s, featureScalar[featureId], request.query.strategy);
+                                counts[featureId]++;
 
                                 if (request.query.includeFeatures) {
                                     if (features[featureId] == null) {
@@ -185,21 +173,45 @@ public class Strut {
 
     }
 
-    private float score(float score, float s, Strategy strategy) {
-        if (strategy == Strategy.MAX) {
-            return Math.max(score, s);
-        } else if (strategy == Strategy.MEAN) {
-            return score + s;
+    private float score(float current, float update, float scalar, Strategy strategy) {
+        if (scalar > 0f) {
+            if (strategy == Strategy.UNIT_WEIGHTED || strategy == Strategy.REGRESSION_WEIGHTED || strategy == Strategy.MAX) {
+                return current > 0f ? Math.max(current, update * scalar) : update * scalar;
+            } else {
+                throw new UnsupportedOperationException("Strategy not supported: " + strategy);
+            }
         } else {
-            throw new UnsupportedOperationException("Strategy not supported: " + strategy);
+            return current;
         }
     }
 
-    private float finalizeScore(float score, int termCount, Strategy strategy) {
-        if (strategy == Strategy.MAX) {
-            return score;
-        } else if (strategy == Strategy.MEAN) {
-            return score / termCount;
+    private float finalizeScore(float[] scores, int[] counts, Strategy strategy) {
+        if (strategy == Strategy.UNIT_WEIGHTED) {
+            float sum = 0;
+            int count = 0;
+            for (int i = 0; i < scores.length; i++) {
+                if (scores[i] > 0f && counts[i] > 0) {
+                    sum += scores[i];
+                    count++;
+                }
+            }
+            return count == 0 ? 0.0f : sum / scores.length;
+        } else if (strategy == Strategy.REGRESSION_WEIGHTED) {
+            float sum = 0;
+            for (int i = 0; i < scores.length; i++) {
+                if (scores[i] > 0f && counts[i] > 0) {
+                    sum += scores[i];
+                }
+            }
+            return sum;
+        } else if (strategy == Strategy.MAX) {
+            float max = 0;
+            for (int i = 0; i < scores.length; i++) {
+                if (scores[i] > 0f && counts[i] > 0) {
+                    max = Math.max(max, scores[i]);
+                }
+            }
+            return max;
         } else {
             throw new UnsupportedOperationException("Strategy not supported: " + strategy);
         }
@@ -211,15 +223,13 @@ public class Strut {
         MiruTermId term;
         int scoredToLastId;
         float score;
-        int termCount;
         List<Hotness>[] features;
 
-        public Scored(int lastId, MiruTermId term, int scoredToLastId, float score, int termCount, List<Hotness>[] features) {
+        public Scored(int lastId, MiruTermId term, int scoredToLastId, float score, List<Hotness>[] features) {
             this.lastId = lastId;
             this.term = term;
             this.scoredToLastId = scoredToLastId;
             this.score = score;
-            this.termCount = termCount;
             this.features = features;
         }
 

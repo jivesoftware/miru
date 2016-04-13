@@ -187,15 +187,13 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                         miruTermIds[termIndex],
                         scoredToLastIds[termIndex],
                         Float.isNaN(score) ? 0f : score,
-                        -1,
                         null));
                     return true;
                 },
                 stackBuffer);
             totalTimeFetchingScores += (System.currentTimeMillis() - fetchScoresStart);
         } else {
-            int batchSize = 100; //TODO config batch size
-            BM[] answers = bitmaps.createArrayOf(batchSize);
+            BM[] answers = bitmaps.createArrayOf(request.query.batchSize);
             BM[] constrainFeature = buildConstrainFeatures(bitmaps, context, activityIndexLastId, stackBuffer, solutionLog);
             long rescoreStart = System.currentTimeMillis();
             for (List<LastIdAndTermId> batch : Lists.partition(lastIdAndTermIds, answers.length)) {
@@ -276,7 +274,6 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 hotOrNots.add(new HotOrNot(new MiruValue(decomposed),
                     gatherScoredValues != null ? gatherScoredValues[j] : null,
                     s[j].score,
-                    s[j].termCount,
                     s[j].features,
                     timeAndVersions[j].timestamp));
             } else {
