@@ -66,17 +66,17 @@ public class CatwalkModelService {
         this.stats = stats;
     }
 
-    public CatwalkModel getModel(MiruTenantId tenantId, String catwalkId, String modelId, CatwalkQuery catwalkQuery) throws Exception {
-        long start = System.currentTimeMillis();
+    public Map<String, MergedScores> gatherModel(MiruTenantId tenantId,
+        String catwalkId,
+        String modelId,
+        CatwalkFeature[] features,
+        TreeSet<Integer> partitionIds,
+        List<FeatureRange> deletableRanges) throws Exception {
 
         PartitionClient client = modelClient(tenantId);
-
-        List<FeatureRange> deletableRanges = Lists.newArrayList();
-        TreeSet<Integer> partitionIds = Sets.newTreeSet();
+        FeatureRange[] currentRange = { null };
 
         Map<String, MergedScores> fieldIdsToFeatureScores = new HashMap<>();
-        FeatureRange[] currentRange = { null };
-        CatwalkFeature[] features = catwalkQuery.features;
         client.scan(Consistency.leader_quorum,
             prefixedKeyRangeStream -> {
                 for (int i = 0; i < features.length; i++) {
@@ -91,7 +91,7 @@ public class CatwalkModelService {
             },
             (prefix, key, value, timestamp, version) -> {
 
-                FeatureRange range = getFeatureRange(key);
+                FeatureRange range = getFeatureRange(key, features);
                 if (currentRange[0] == null || !currentRange[0].intersects(range)) {
                     currentRange[0] = range;
 
@@ -99,9 +99,11 @@ public class CatwalkModelService {
                         partitionIds.add(partitionId);
                     }
 
-                    ModelFeatureScores scores = valueFromBytes(value, catwalkQuery.features.length);
-                    String fieldIdsKey = range.featureName;
-                    fieldIdsToFeatureScores.compute(fieldIdsKey, (t, currentMerged) -> {
+                    String featureName = range.featureName;
+                    int featureId = range.featureId;
+                    ModelFeatureScores scores = valueFromBytes(value, featureId);
+
+                    fieldIdsToFeatureScores.compute(featureName, (t, currentMerged) -> {
                         if (currentMerged == null) {
                             MergedScores mergedScores = new MergedScores(range, scores);
                             if (scores.partitionIsClosed) {
@@ -156,12 +158,8 @@ public class CatwalkModelService {
                             }
                         }
 
-                        long[] mergedModelCounts = new long[currentMerged.mergedScores.modelCounts.length];
-                        for (int i = 0; i < mergedModelCounts.length; i++) {
-                            mergedModelCounts[i] = currentMerged.mergedScores.modelCounts[i] + scores.modelCounts[i];
-                        }
                         ModelFeatureScores mergedScores = new ModelFeatureScores(scores.partitionIsClosed,
-                            mergedModelCounts,
+                            currentMerged.mergedScores.modelCount + scores.modelCount,
                             currentMerged.mergedScores.totalCount + scores.totalCount,
                             merged,
                             scores.timeRange);
@@ -182,7 +180,7 @@ public class CatwalkModelService {
 
                         currentMerged.numberOfMerges++;
                         currentMerged.mergedRange = new FeatureRange(range.featureName,
-                            Math.min(range.fromPartitionId, currentMerged.mergedRange.fromPartitionId),
+                            featureId, Math.min(range.fromPartitionId, currentMerged.mergedRange.fromPartitionId),
                             Math.min(range.toPartitionId, currentMerged.mergedRange.toPartitionId));
                         currentMerged.mergedScores = mergedScores;
                         return currentMerged;
@@ -198,6 +196,18 @@ public class CatwalkModelService {
             abandonSolutionAfterNMillis,
             Optional.<List<String>>empty());
 
+        return fieldIdsToFeatureScores;
+    }
+
+    public CatwalkModel getModel(MiruTenantId tenantId, String catwalkId, String modelId, CatwalkQuery catwalkQuery) throws Exception {
+        long start = System.currentTimeMillis();
+
+        List<FeatureRange> deletableRanges = Lists.newArrayList();
+        TreeSet<Integer> partitionIds = Sets.newTreeSet();
+
+        CatwalkFeature[] features = catwalkQuery.features;
+        Map<String, MergedScores> fieldIdsToFeatureScores = gatherModel(tenantId, catwalkId, modelId, features, partitionIds, deletableRanges);
+
         long[] modelCounts = new long[features.length];
         long totalCount = 0;
         int[] numberOfModels = new int[features.length];
@@ -209,7 +219,7 @@ public class CatwalkModelService {
             if (mergedScores != null) {
                 int featureModels = 1 + mergedScores.numberOfMerges;
 
-                modelCounts[i] = Math.max(modelCounts[i], mergedScores.mergedScores.modelCounts[i]);
+                modelCounts[i] = mergedScores.mergedScores.modelCount;
                 totalCount = Math.max(totalCount, mergedScores.mergedScores.totalCount);
                 numberOfModels[i] = featureModels;
 
@@ -277,7 +287,7 @@ public class CatwalkModelService {
                 for (int i = 0; i < featureNames.length; i++) {
                     byte[] key = modelPartitionKey(catwalkId, modelId, featureNames[i], fromPartitionId, toPartitionId);
                     byte[] value = valueToBytes(models[i].partitionIsClosed,
-                        models[i].modelCounts,
+                        models[i].modelCount,
                         models[i].totalCount,
                         models[i].featureScores,
                         models[i].timeRange);
@@ -341,23 +351,20 @@ public class CatwalkModelService {
     }
 
     static byte[] valueToBytes(boolean partitionIsClosed,
-        long[] modelCounts,
+        long modelCount,
         long totalCount,
         List<FeatureScore> scores,
         MiruTimeRange timeRange) throws IOException {
 
-        HeapFiler filer = new HeapFiler(1 + 1 + 4 + (modelCounts.length * 8) + 8 + scores.size() * (8 + 8 + 4 + 4 + 10) + 8 + 8); //TODO rough guesstimation
+        HeapFiler filer = new HeapFiler(1 + 1 + 8 + 8 + scores.size() * (8 + 8 + 4 + 4 + 10) + 8 + 8); //TODO rough guesstimation
 
-        UIO.writeByte(filer, (byte) 1, "version");
+        UIO.writeByte(filer, (byte) 2, "version");
         UIO.writeByte(filer, partitionIsClosed ? (byte) 1 : (byte) 0, "partitionIsClosed");
 
-        byte[] lengthBuffer = new byte[4];
-        UIO.writeInt(filer, modelCounts.length, "modelCountsLength", lengthBuffer);
-        for (int i = 0; i < modelCounts.length; i++) {
-            UIO.writeLong(filer, modelCounts[i], "modelCount");
-        }
+        UIO.writeLong(filer, modelCount, "modelCount");
         UIO.writeLong(filer, totalCount, "totalCount");
 
+        byte[] lengthBuffer = new byte[4];
         UIO.writeInt(filer, scores.size(), "scoresLength", lengthBuffer);
         for (FeatureScore score : scores) {
             UIO.writeInt(filer, score.termIds.length, "termsLength", lengthBuffer);
@@ -374,23 +381,29 @@ public class CatwalkModelService {
         return filer.getBytes();
     }
 
-    static ModelFeatureScores valueFromBytes(byte[] value, int numFeatures) throws IOException {
+    static ModelFeatureScores valueFromBytes(byte[] value, int featureIndex) throws IOException {
         HeapFiler filer = HeapFiler.fromBytes(value, value.length);
         byte version = UIO.readByte(filer, "version");
-        if (version != 1) {
+        if (version != 1 && version != 2) {
             throw new IllegalStateException("Unexpected version " + version);
         }
         boolean partitionIsClosed = UIO.readByte(filer, "partitionIsClosed") == 1;
 
         byte[] lengthBuffer = new byte[8];
 
-        long[] modelCounts = new long[numFeatures];
-        int modelCountsLength = UIO.readInt(filer, "modelCountsLength", lengthBuffer);
-        if (modelCountsLength != numFeatures) {
-            throw new IllegalStateException("Unexpected model count " + modelCountsLength + " != " + numFeatures);
-        }
-        for (int i = 0; i < numFeatures; i++) {
-            modelCounts[i] = UIO.readLong(filer, "modelCount", lengthBuffer);
+        long modelCount;
+        if (version == 1) {
+            int modelCountsLength = UIO.readInt(filer, "modelCountsLength", lengthBuffer);
+            long[] modelCounts = new long[modelCountsLength];
+            if (featureIndex >= modelCountsLength) {
+                throw new IllegalStateException("Unexpected feature index:" + filer + " for length:" + modelCountsLength);
+            }
+            for (int i = 0; i < modelCountsLength; i++) {
+                modelCounts[i] = UIO.readLong(filer, "modelCount", lengthBuffer);
+            }
+            modelCount = modelCounts[featureIndex];
+        } else {
+            modelCount = UIO.readLong(filer, "modelCount", lengthBuffer);
         }
 
         long totalCount = UIO.readLong(filer, "totalCount", lengthBuffer);
@@ -409,7 +422,7 @@ public class CatwalkModelService {
         MiruTimeRange timeRange = new MiruTimeRange(
             UIO.readLong(filer, "smallestTimestamp", lengthBuffer),
             UIO.readLong(filer, "largestTimestamp", lengthBuffer));
-        return new ModelFeatureScores(partitionIsClosed, modelCounts, totalCount, scores, timeRange);
+        return new ModelFeatureScores(partitionIsClosed, modelCount, totalCount, scores, timeRange);
     }
 
     private PartitionClient modelClient(MiruTenantId tenantId) throws Exception {
@@ -461,7 +474,7 @@ public class CatwalkModelService {
         return keyBytes;
     }
 
-    static FeatureRange getFeatureRange(byte[] key) {
+    static FeatureRange getFeatureRange(byte[] key, CatwalkFeature[] features) {
 
         int offset = 0;
 
@@ -476,7 +489,7 @@ public class CatwalkModelService {
         int fieldNameLength = key[offset];
         offset++;
 
-        String fieldName = new String(key, offset, fieldNameLength, StandardCharsets.UTF_8);
+        String featureName = new String(key, offset, fieldNameLength, StandardCharsets.UTF_8);
         offset += fieldNameLength;
 
         int fromPartitionId = UIO.bytesInt(key, offset);
@@ -485,17 +498,27 @@ public class CatwalkModelService {
         int toPartitionId = Integer.MAX_VALUE - UIO.bytesInt(key, offset);
         offset += 4;
 
-        return new FeatureRange(fieldName, fromPartitionId, toPartitionId);
+        int featureId = -1;
+        for (int i = 0; i < features.length; i++) {
+            if (features[i].name.equals(featureName)) {
+                featureId = i;
+                break;
+            }
+        }
+
+        return new FeatureRange(featureName, featureId, fromPartitionId, toPartitionId);
     }
 
-    static class FeatureRange {
+    public static class FeatureRange {
 
         public final String featureName;
+        public final int featureId;
         public final int fromPartitionId;
         public final int toPartitionId;
 
-        public FeatureRange(String featureName, int fromPartitionId, int toPartitionId) {
+        public FeatureRange(String featureName, int featureId, int fromPartitionId, int toPartitionId) {
             this.featureName = featureName;
+            this.featureId = featureId;
             this.fromPartitionId = fromPartitionId;
             this.toPartitionId = toPartitionId;
         }
@@ -511,7 +534,7 @@ public class CatwalkModelService {
             if (!featureName.equals(range.featureName)) {
                 throw new IllegalStateException("Trying to merge ranges that are for different features " + featureName + " vs " + range.featureName);
             }
-            return new FeatureRange(featureName, Math.min(fromPartitionId, range.fromPartitionId), Math.max(toPartitionId, range.toPartitionId));
+            return new FeatureRange(featureName, featureId, Math.min(fromPartitionId, range.fromPartitionId), Math.max(toPartitionId, range.toPartitionId));
         }
     }
 
@@ -547,7 +570,7 @@ public class CatwalkModelService {
                     LOG.info("Merging model for tenantId:{} catwalkId:{} modelId:{} from:{} to:{}",
                         tenantId, catwalkId, modelId, merged.fromPartitionId, merged.toPartitionId);
                     ModelFeatureScores modelFeatureScores = new ModelFeatureScores(true,
-                        mergedScores.scores.modelCounts,
+                        mergedScores.scores.modelCount,
                         mergedScores.scores.totalCount,
                         mergedScores.scores.featureScores,
                         mergedScores.timeRange);
@@ -588,14 +611,14 @@ public class CatwalkModelService {
 
     }
 
-    private static class MergedScores {
+    public static class MergedScores {
 
         boolean contiguousClosedPartitions = true;
         int numberOfMerges = 0;
 
         final FeatureRange firstRange;
         FeatureRange mergedRange;
-        ModelFeatureScores mergedScores;
+        public ModelFeatureScores mergedScores;
 
         final List<FeatureRange> ranges = new ArrayList<>();
         ModelFeatureScores scores;

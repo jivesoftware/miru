@@ -238,14 +238,6 @@ public class MiruCatwalkMain {
             MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize(stats, "", manageHttpClient, mapper);
             MiruSchemaProvider miruSchemaProvider = new ClusterSchemaProvider(clusterClient, 10000); // TODO config
 
-            MiruCatwalkUIService miruCatwalkUIService = new MiruCatwalkUIInitializer().initialize(
-                instanceConfig.getClusterName(),
-                instanceConfig.getInstanceName(),
-                renderer,
-                stats,
-                tenantRoutingProvider,
-                mapper);
-
             int numProcs = Runtime.getRuntime().availableProcessors();
             ScheduledExecutorService queueConsumers = Executors.newScheduledThreadPool(numProcs, new ThreadFactoryBuilder().setNameFormat("queueConsumers-%d")
                 .build());
@@ -274,6 +266,14 @@ public class MiruCatwalkMain {
                 embeddedClientProvider,
                 stats,
                 amzaCatwalkConfig.getModelUpdateIntervalInMillis());
+
+            MiruCatwalkUIService miruCatwalkUIService = new MiruCatwalkUIInitializer().initialize(
+                instanceConfig.getClusterName(),
+                instanceConfig.getInstanceName(),
+                renderer,
+                stats,
+                tenantRoutingProvider,
+                catwalkModelService);
 
             File staticResourceDir = new File(System.getProperty("user.dir"));
             System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());

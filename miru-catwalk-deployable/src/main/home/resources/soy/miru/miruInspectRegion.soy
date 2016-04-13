@@ -1,0 +1,99 @@
+{namespace soy.miru.page}
+
+/**
+ * Balancer page
+ *
+ * @param? tenant
+ * @param? catwalkId
+ * @param? modelId
+ * @param? features
+ * @param? model
+ */
+{template .inspectRegion}
+    <div class="panel panel-default">
+        <div class="panel-heading">Inspect</div>
+        <div class="panel-body">
+            <form id="requestPickerForm" class="j-form" data-active-class="btn-default" data-input-el="#requestPicker" data-form-el="#requestPickerForm"
+                data-jive-ui="jive/ui/typeahead/request_typeahead" method="get" name="requestPickerForm">
+                <table>
+                    <tr>
+                        <td>Tenant</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-tenant-autocomplete j-autocomplete-input j-ui-elem" placeholder="Tenant" value="{$tenant?:''}"
+                                name="tenantId" id="tenantPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Catwalk ID</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-time-autocomplete j-autocomplete-input j-ui-elem" placeholder="From Time Ago" value="{$catwalkId?:''}"
+                                name="catwalkId" id="catwalkIdPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Model ID</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-time-autocomplete j-autocomplete-input j-ui-elem" placeholder="From Time Ago" value="{$modelId?:''}"
+                                name="modelId" id="modelIdPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Features</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-time-autocomplete j-autocomplete-input j-ui-elem" placeholder="From Time Ago" value="{$features?:''}"
+                                name="features" id="featuresPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                </table>
+                <input type="submit" value="Run"/>
+            </form>
+        </div>
+    </div>
+
+    {if $model}
+        <div class="panel panel-default">
+            <div class="panel-heading">Model</div>
+            <div class="panel-body">
+                {foreach $f in $model.features}
+                    <h3>{$f.name}</h3>
+                    <ul>
+                        <li>Model count: {$f.modelCount}</li>
+                        <li>Total count: {$f.totalCount}</li>
+                    </ul>
+                    <table class="table table-condensed">
+                        <thead>
+                            <tr>
+                                <th>Value</th>
+                                <th>Numerator</th>
+                                <th>Denominator</th>
+                                <th>Score</th>
+                            </tr>
+                        </thead>
+                        </tbody>
+                            {foreach $s in $f.scores}
+                                <tr>
+                                    <td>
+                                        {$s.value}
+                                    </td>
+                                    <td>
+                                        {$s.numerator}
+                                    </td>
+                                    <td>
+                                        {$s.denominator}
+                                    </td>
+                                    <td>
+                                        {$s.score}
+                                    </td>
+                                </tr>
+                            {/foreach}
+                        </tbody>
+                    </table>
+                {/foreach}
+            </div>
+        </div>
+    {/if}
+{/template}

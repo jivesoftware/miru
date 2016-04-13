@@ -3,6 +3,8 @@ package com.jivesoftware.os.miru.catwalk.deployable;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.catwalk.deployable.CatwalkModelService.FeatureRange;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
+import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkQuery;
+import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkQuery.CatwalkFeature;
 import com.jivesoftware.os.miru.stream.plugins.catwalk.FeatureScore;
 import java.util.Arrays;
 import java.util.List;
@@ -19,15 +21,16 @@ public class CatwalkModelServiceTest {
     public void testKeySerDer() throws Exception {
         int fromPartitionId = 123;
         int toPartitionId = Integer.MAX_VALUE - 456;
-        String fieldName = "test";
+        String featureName = "test";
+        CatwalkFeature[] features = { new CatwalkFeature(featureName, null, null) };
         byte[] keyBytes = CatwalkModelService.modelPartitionKey("catwalkId",
             "modelId",
-            fieldName,
+            featureName,
             fromPartitionId,
             toPartitionId);
 
-        FeatureRange featureRange = CatwalkModelService.getFeatureRange(keyBytes);
-        assertEquals(featureRange.featureName, fieldName);
+        FeatureRange featureRange = CatwalkModelService.getFeatureRange(keyBytes, features);
+        assertEquals(featureRange.featureName, featureName);
         assertEquals(featureRange.fromPartitionId, fromPartitionId);
         assertEquals(featureRange.toPartitionId, toPartitionId);
     }
@@ -40,12 +43,12 @@ public class CatwalkModelServiceTest {
             new FeatureScore(terms("term7", "term8", "term9"), 3, 5));
         MiruTimeRange timeRange = new MiruTimeRange(123L, Long.MAX_VALUE - 456L);
         byte[] valueBytes = CatwalkModelService.valueToBytes(partitionIsClosed,
-            new long[] { 6, 7, 8 },
+            6,
             12,
             featureScores,
             timeRange);
 
-        ModelFeatureScores modelFeatureScores = CatwalkModelService.valueFromBytes(valueBytes, 3);
+        ModelFeatureScores modelFeatureScores = CatwalkModelService.valueFromBytes(valueBytes, 0);
 
         assertEquals(modelFeatureScores.partitionIsClosed, partitionIsClosed);
         assertEquals(modelFeatureScores.featureScores.size(), featureScores.size());

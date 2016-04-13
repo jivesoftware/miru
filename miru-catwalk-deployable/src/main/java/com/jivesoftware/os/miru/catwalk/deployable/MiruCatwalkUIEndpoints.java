@@ -1,11 +1,13 @@
 package com.jivesoftware.os.miru.catwalk.deployable;
 
+import com.jivesoftware.os.miru.catwalk.deployable.region.MiruInspectRegion.InspectInput;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import javax.inject.Singleton;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -34,10 +36,13 @@ public class MiruCatwalkUIEndpoints {
     }
 
     @GET
-    @Path("/something")
+    @Path("/inspect")
     @Produces(MediaType.TEXT_HTML)
-    public Response getHosts() {
-        String rendered = miruCatwalkUIService.renderSomething();
+    public Response getInspect(@QueryParam("tenant") String tenant,
+        @QueryParam("catwalkId") String catwalkId,
+        @QueryParam("modelId") String modelId,
+        @QueryParam("features") String features) {
+        String rendered = miruCatwalkUIService.renderInspect(new InspectInput(tenant, catwalkId, modelId, features));
         return Response.ok(rendered).build();
     }
 

@@ -5,6 +5,7 @@ import com.google.common.collect.Lists;
 import com.jivesoftware.os.miru.catwalk.deployable.region.MiruCatwalkPlugin;
 import com.jivesoftware.os.miru.catwalk.deployable.region.MiruChromeRegion;
 import com.jivesoftware.os.miru.catwalk.deployable.region.MiruHeaderRegion;
+import com.jivesoftware.os.miru.catwalk.deployable.region.MiruInspectRegion.InspectInput;
 import com.jivesoftware.os.miru.ui.MiruPageRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import java.util.List;
@@ -17,7 +18,7 @@ public class MiruCatwalkUIService {
     private final MiruSoyRenderer renderer;
     private final MiruHeaderRegion headerRegion;
     private final MiruPageRegion<Void> adminRegion;
-    private final MiruPageRegion<Optional<Void>> somethingRegion;
+    private final MiruPageRegion<InspectInput> inspectRegion;
 
     private final List<MiruCatwalkPlugin> plugins = Lists.newCopyOnWriteArrayList();
 
@@ -25,11 +26,11 @@ public class MiruCatwalkUIService {
         MiruSoyRenderer renderer,
         MiruHeaderRegion headerRegion,
         MiruPageRegion<Void> adminRegion,
-        MiruPageRegion<Optional<Void>> somethingRegion) {
+        MiruPageRegion<InspectInput> inspectRegion) {
         this.renderer = renderer;
         this.headerRegion = headerRegion;
         this.adminRegion = adminRegion;
-        this.somethingRegion = somethingRegion;
+        this.inspectRegion = inspectRegion;
     }
 
     public void registerPlugin(MiruCatwalkPlugin plugin) {
@@ -44,8 +45,8 @@ public class MiruCatwalkUIService {
         return chrome(adminRegion).render(null);
     }
 
-    public String renderSomething() {
-        return chrome(somethingRegion).render(Optional.<Void>absent());
+    public String renderInspect(InspectInput input) {
+        return chrome(inspectRegion).render(input);
     }
 
 }
