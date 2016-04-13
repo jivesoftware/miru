@@ -42,8 +42,13 @@ public class MiruCatwalkUIEndpoints {
         @QueryParam("catwalkId") String catwalkId,
         @QueryParam("modelId") String modelId,
         @QueryParam("features") String features) {
-        String rendered = miruCatwalkUIService.renderInspect(new InspectInput(tenant, catwalkId, modelId, features));
-        return Response.ok(rendered).build();
+        try {
+            String rendered = miruCatwalkUIService.renderInspect(new InspectInput(tenant, catwalkId, modelId, features));
+            return Response.ok(rendered).build();
+        } catch (Exception e) {
+            LOG.error("Failed to inspect {} {} {} {}", new Object[] { tenant, catwalkId, modelId, features }, e);
+            return Response.serverError().entity("Failed to inspect").build();
+        }
     }
 
 }

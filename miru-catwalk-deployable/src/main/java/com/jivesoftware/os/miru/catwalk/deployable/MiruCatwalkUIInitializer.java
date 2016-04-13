@@ -22,6 +22,6 @@ public class MiruCatwalkUIInitializer {
             renderer,
             new MiruHeaderRegion(cluster, instance, "soy.miru.chrome.headerRegion", renderer, tenantRoutingProvider),
             new MiruAdminRegion("soy.miru.page.adminRegion", renderer, stats),
-            new MiruInspectRegion("soy.miru.page.somethingRegion", renderer, catwalkModelService));
+            new MiruInspectRegion("soy.miru.page.inspectRegion", renderer, catwalkModelService));
     }
 }

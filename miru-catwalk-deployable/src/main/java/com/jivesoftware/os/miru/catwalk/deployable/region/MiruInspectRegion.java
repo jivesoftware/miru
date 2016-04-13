@@ -109,6 +109,6 @@ public class MiruInspectRegion implements MiruPageRegion<InspectInput> {
 
     @Override
     public String getTitle() {
-        return "Inspect";
+        return "Catwalk - Inspect";
     }
 }
