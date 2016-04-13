@@ -139,7 +139,7 @@ public class MiruAdminRegion implements MiruPageRegion<Void> {
 
     @Override
     public String getTitle() {
-        return "Status";
+        return "Catwalk";
     }
 
     public static String humanReadableLatency(long millis) {
