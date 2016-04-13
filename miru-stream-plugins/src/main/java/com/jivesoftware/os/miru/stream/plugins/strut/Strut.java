@@ -67,21 +67,18 @@ public class Strut {
         MiruTermComposer termComposer = requestContext.getTermComposer();
         CatwalkFeature[] catwalkFeatures = request.query.catwalkQuery.features;
         float[] featureScalar = request.query.featureScalars;
-        String[][] featureFields = new String[catwalkFeatures.length][];
-
-        int[][] featureFieldIds = new int[featureFields.length][];
-        for (int i = 0; i < featureFields.length; i++) {
-            String[] featureField = featureFields[i];
-            if (featureField != null) {
-                featureFieldIds[i] = new int[featureField.length];
-                for (int j = 0; j < featureField.length; j++) {
-                    featureFieldIds[i][j] = requestContext.getSchema().getFieldId(featureField[j]);
-                }
+        
+        int[][] featureFieldIds = new int[catwalkFeatures.length][];
+        for (int i = 0; i < catwalkFeatures.length; i++) {
+            String[] featureField = catwalkFeatures[i].featureFields;
+            featureFieldIds[i] = new int[featureField.length];
+            for (int j = 0; j < featureField.length; j++) {
+                featureFieldIds[i][j] = requestContext.getSchema().getFieldId(featureField[j]);
             }
         }
 
         @SuppressWarnings("unchecked")
-        List<Hotness>[] features = request.query.includeFeatures ? new List[featureFields.length] : null;
+        List<Hotness>[] features = request.query.includeFeatures ? new List[catwalkFeatures.length] : null;
         int[] featureCount = {0};
 
         StrutModel model = cache.get(request.tenantId, request.query.catwalkId, request.query.modelId, coord.partitionId.getId(), request.query.catwalkQuery);
@@ -97,15 +94,15 @@ public class Strut {
 
         } else {
             boolean[] cacheable = new boolean[]{true};
-            for (int i = 0; i < featureFields.length; i++) {
+            for (int i = 0; i < catwalkFeatures.length; i++) {
                 if (model.numberOfModels[i] == 0) {
                     cacheable[0] = false;
                     break;
                 }
             }
 
-            float[] scores = new float[featureFields.length];
-            int[] counts = new int[featureFields.length];
+            float[] scores = new float[catwalkFeatures.length];
+            int[] counts = new int[catwalkFeatures.length];
             aggregateUtil.gatherFeatures(name,
                 bitmaps,
                 requestContext,
