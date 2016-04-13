@@ -62,6 +62,11 @@ public class MiruInspectRegion implements MiruPageRegion<InspectInput> {
     public String render(InspectInput input) {
         Map<String, Object> data = Maps.newHashMap();
         try {
+            data.put("tenantId", input.tenantId != null ? input.tenantId : "");
+            data.put("catwalkId", input.catwalkId != null ? input.catwalkId : "");
+            data.put("modelId", input.modelId != null ? input.modelId : "");
+            data.put("features", input.features != null ? input.features : "");
+
             if (input.tenantId != null && input.catwalkId != null && input.modelId != null && input.features != null) {
                 MiruTenantId tenantId = new MiruTenantId(input.tenantId.trim().getBytes(StandardCharsets.UTF_8));
                 String catwalkId = input.catwalkId.trim();
