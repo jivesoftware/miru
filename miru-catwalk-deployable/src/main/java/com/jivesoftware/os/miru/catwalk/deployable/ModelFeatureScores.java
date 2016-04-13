@@ -8,17 +8,17 @@ import java.util.List;
  *
  * @author jonathan.colt
  */
-class ModelFeatureScores {
+public class ModelFeatureScores {
 
-    final boolean partitionIsClosed;
-    final long[] modelCounts;
-    final long totalCount;
-    final List<FeatureScore> featureScores;
-    final MiruTimeRange timeRange;
+    public final boolean partitionIsClosed;
+    public final long modelCount;
+    public final long totalCount;
+    public final List<FeatureScore> featureScores;
+    public final MiruTimeRange timeRange;
 
-    public ModelFeatureScores(boolean partitionIsClosed, long[] modelCounts, long totalCount, List<FeatureScore> featureScores, MiruTimeRange timeRange) {
+    public ModelFeatureScores(boolean partitionIsClosed, long modelCount, long totalCount, List<FeatureScore> featureScores, MiruTimeRange timeRange) {
         this.partitionIsClosed = partitionIsClosed;
-        this.modelCounts = modelCounts;
+        this.modelCount = modelCount;
         this.totalCount = totalCount;
         this.featureScores = featureScores;
         this.timeRange = timeRange;

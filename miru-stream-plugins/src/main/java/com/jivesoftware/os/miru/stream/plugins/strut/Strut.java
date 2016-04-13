@@ -67,7 +67,7 @@ public class Strut {
         MiruTermComposer termComposer = requestContext.getTermComposer();
         CatwalkFeature[] catwalkFeatures = request.query.catwalkQuery.features;
         float[] featureScalar = request.query.featureScalars;
-        
+
         int[][] featureFieldIds = new int[catwalkFeatures.length][];
         for (int i = 0; i < catwalkFeatures.length; i++) {
             String[] featureField = catwalkFeatures[i].featureFields;
@@ -170,7 +170,7 @@ public class Strut {
 
     }
 
-    private float score(float current, float update, float scalar, Strategy strategy) {
+    static float score(float current, float update, float scalar, Strategy strategy) {
         if (scalar > 0f) {
             if (strategy == Strategy.UNIT_WEIGHTED || strategy == Strategy.REGRESSION_WEIGHTED || strategy == Strategy.MAX) {
                 return current > 0f ? Math.max(current, update * scalar) : update * scalar;
@@ -182,7 +182,7 @@ public class Strut {
         }
     }
 
-    private float finalizeScore(float[] scores, int[] counts, Strategy strategy) {
+    static float finalizeScore(float[] scores, int[] counts, Strategy strategy) {
         if (strategy == Strategy.UNIT_WEIGHTED) {
             float sum = 0;
             int count = 0;

@@ -209,7 +209,7 @@ public class CatwalkModelUpdater {
             ModelFeatureScores[] featureScores = new ModelFeatureScores[updateModelRequest.catwalkQuery.features.length];
             for (int i = 0; i < featureScores.length; i++) {
                 featureScores[i] = new ModelFeatureScores(catwalkResponse.answer.resultsClosed,
-                    catwalkResponse.answer.modelCounts,
+                    catwalkResponse.answer.modelCounts[i],
                     catwalkResponse.answer.totalCount,
                     catwalkResponse.answer.results[i],
                     catwalkResponse.answer.timeRange);
