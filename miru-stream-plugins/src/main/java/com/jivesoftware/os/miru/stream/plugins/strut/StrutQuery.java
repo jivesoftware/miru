@@ -14,8 +14,9 @@ import java.util.Arrays;
 public class StrutQuery implements Serializable {
 
     public enum Strategy {
-        MAX,
-        MEAN
+        UNIT_WEIGHTED, // S = mean(A,B,C,D)
+        REGRESSION_WEIGHTED, // S = 0.5*A + 0.4*B + 0.4*C + 0.3*D
+        MAX
     }
 
     public final String catwalkId;
@@ -26,13 +27,14 @@ public class StrutQuery implements Serializable {
     public final String constraintField;
     public final MiruFilter constraintFilter;
     public final Strategy strategy;
-    public final String[] featureNames;
+    public final float[] featureScalars;
     public final MiruFilter featureFilter;
     public final int desiredNumberOfResults;
     public final boolean includeFeatures;
     public final boolean usePartitionModelCache;
 
     public final String[] gatherTermsForFields;
+    public final int batchSize;
 
     public StrutQuery(
         @JsonProperty("catwalkId") String catwalkId,
@@ -42,12 +44,13 @@ public class StrutQuery implements Serializable {
         @JsonProperty("constraintField") String constraintField,
         @JsonProperty("constraintFilter") MiruFilter constraintFilter,
         @JsonProperty("strategy") Strategy strategy,
-        @JsonProperty("featureNames") String[] featureNames,
+        @JsonProperty("featureScalars") float[] featureScalars,
         @JsonProperty("featureFilter") MiruFilter featureFilter,
         @JsonProperty("desiredNumberOfResults") int desiredNumberOfResults,
         @JsonProperty("includeFeatures") boolean includeFeatures,
         @JsonProperty("usePartitionModelCache") boolean usePartitionModelCache,
-        @JsonProperty("gatherTermsForFields") String[] gatherTermsForFields) {
+        @JsonProperty("gatherTermsForFields") String[] gatherTermsForFields,
+        @JsonProperty("batchSize") int batchSize) {
 
         this.catwalkId = Preconditions.checkNotNull(catwalkId);
         this.modelId = Preconditions.checkNotNull(modelId);
@@ -56,32 +59,35 @@ public class StrutQuery implements Serializable {
         this.constraintField = Preconditions.checkNotNull(constraintField);
         this.constraintFilter = Preconditions.checkNotNull(constraintFilter);
         this.strategy = Preconditions.checkNotNull(strategy);
-        this.featureNames = Preconditions.checkNotNull(featureNames);
+        Preconditions.checkArgument(featureScalars.length != catwalkQuery.features.length, "featureScalars must be the same length as catwalkQuery.features");
+        this.featureScalars = featureScalars;
         this.featureFilter = Preconditions.checkNotNull(featureFilter);
         Preconditions.checkArgument(desiredNumberOfResults > 0, "Number of results must be at least 1");
         this.desiredNumberOfResults = desiredNumberOfResults;
         this.includeFeatures = includeFeatures;
         this.usePartitionModelCache = usePartitionModelCache;
         this.gatherTermsForFields = gatherTermsForFields;
+        this.batchSize = batchSize;
     }
 
     @Override
     public String toString() {
-        return "StrutQuery{" +
-            "catwalkId='" + catwalkId + '\'' +
-            ", modelId='" + modelId + '\'' +
-            ", catwalkQuery=" + catwalkQuery +
-            ", timeRange=" + timeRange +
-            ", constraintField='" + constraintField + '\'' +
-            ", constraintFilter=" + constraintFilter +
-            ", strategy=" + strategy +
-            ", featureNames=" + Arrays.toString(featureNames) +
-            ", featureFilter=" + featureFilter +
-            ", desiredNumberOfResults=" + desiredNumberOfResults +
-            ", includeFeatures=" + includeFeatures +
-            ", usePartitionModelCache=" + usePartitionModelCache +
-            ", gatherTermsForFields=" + Arrays.toString(gatherTermsForFields) +
-            '}';
+        return "StrutQuery{"
+            + "catwalkId='" + catwalkId + '\''
+            + ", modelId='" + modelId + '\''
+            + ", catwalkQuery=" + catwalkQuery
+            + ", timeRange=" + timeRange
+            + ", constraintField='" + constraintField + '\''
+            + ", constraintFilter=" + constraintFilter
+            + ", strategy=" + strategy
+            + ", featureScalars=" + Arrays.toString(featureScalars)
+            + ", featureFilter=" + featureFilter
+            + ", desiredNumberOfResults=" + desiredNumberOfResults
+            + ", includeFeatures=" + includeFeatures
+            + ", usePartitionModelCache=" + usePartitionModelCache
+            + ", gatherTermsForFields=" + Arrays.toString(gatherTermsForFields)
+            + ", batchSize=" + batchSize
+            + '}';
     }
 
 }

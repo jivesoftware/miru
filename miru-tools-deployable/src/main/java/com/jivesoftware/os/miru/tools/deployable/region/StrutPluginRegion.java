@@ -148,16 +148,18 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                 // name3; field2, field3; field2:x|y|z, field3:i|j|k
                 String[] featureSplit = input.features.split("\\s*\\n\\s*");
                 List<CatwalkFeature> features = Lists.newArrayList();
-                String[] featureNames = new String[featureSplit.length];
                 for (int i = 0; i < featureSplit.length; i++) {
                     String[] featureParts = featureSplit[i].split("\\s*;\\s*");
                     if (featureParts.length == 3) {
-                        featureNames[i] = featureParts[0].trim();
+                        String featureName = featureParts[0].trim();
                         String[] featureFields = featureParts[1].split("\\s*,\\s*");
                         MiruFilter featureFilter = filterStringUtil.parse(featureParts[2]);
-                        features.add(new CatwalkFeature(featureNames[i], featureFields, featureFilter));
+                        features.add(new CatwalkFeature(featureName, featureFields, featureFilter));
                     }
                 }
+
+                float[] featureScalars = new float[features.size()];
+                Arrays.fill(featureScalars, 1f);
 
                 // "user context, user activityType context, user activityType contextType"
                 /*String[] featuresSplit = input.featureFields.split("\\s*,\\s*");
@@ -169,7 +171,6 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                         featureFields[i][j] = fields[j].trim();
                     }
                 }*/
-
                 String[] gatherTermsForFieldSplit = (input.gatherTermsForFields.isEmpty()) ? null : input.gatherTermsForFields.split("\\s*,\\s*");
 
                 TimeUnit fromTimeUnit = TimeUnit.valueOf(input.fromTimeUnit);
@@ -247,12 +248,13 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                             input.constraintField,
                             constraintFilter,
                             input.strategy,
-                            featureNames,
+                            featureScalars,
                             MiruFilter.NO_FILTER,
                             input.desiredNumberOfResults,
                             true,
                             input.usePartitionModelCache,
-                            gatherTermsForFieldSplit),
+                            gatherTermsForFieldSplit,
+                            100), // TODO expose to UI??
                         MiruSolutionLogLevel.valueOf(input.logLevel)));
                     MiruResponse<StrutAnswer> strutResponse = readerClient.call("",
                         new RoundRobinStrategy(),
@@ -262,7 +264,7 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                             @SuppressWarnings("unchecked")
                             MiruResponse<StrutAnswer> extractResponse = responseMapper.extractResultFromResponse(httpResponse,
                                 MiruResponse.class,
-                                new Class<?>[] { StrutAnswer.class },
+                                new Class<?>[]{StrutAnswer.class},
                                 null);
                             return new ClientResponse<>(extractResponse, true);
                         });
@@ -287,6 +289,8 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                                     String[] fields = features.get(i).featureFields;
                                     List<Hotness> feature = featureTerms[i];
                                     if (feature != null) {
+                                        hotFeatures.add("<b>" + features.get(i).name + "</b>");
+
                                         Collections.sort(feature, (o1, o2) -> Float.compare(o2.score, o1.score)); // sort descending
                                         for (Hotness hotness : feature) {
                                             if (hotness.values.length != fields.length) {
