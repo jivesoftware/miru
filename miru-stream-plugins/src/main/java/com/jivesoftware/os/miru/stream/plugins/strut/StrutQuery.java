@@ -59,7 +59,7 @@ public class StrutQuery implements Serializable {
         this.constraintField = Preconditions.checkNotNull(constraintField);
         this.constraintFilter = Preconditions.checkNotNull(constraintFilter);
         this.strategy = Preconditions.checkNotNull(strategy);
-        Preconditions.checkArgument(featureScalars.length != catwalkQuery.features.length, "featureScalars must be the same length as catwalkQuery.features");
+        Preconditions.checkArgument(featureScalars.length == catwalkQuery.features.length, "featureScalars must be the same length as catwalkQuery.features");
         this.featureScalars = featureScalars;
         this.featureFilter = Preconditions.checkNotNull(featureFilter);
         Preconditions.checkArgument(desiredNumberOfResults > 0, "Number of results must be at least 1");
