@@ -3,7 +3,7 @@
 /**
  * Balancer page
  *
- * @param? tenant
+ * @param? tenantId
  * @param? catwalkId
  * @param? modelId
  * @param? features
@@ -20,15 +20,15 @@
                         <td>Tenant</td>
                         <td>
                             <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
-                                class="j-tenant-autocomplete j-autocomplete-input j-ui-elem" placeholder="Tenant" value="{$tenant?:''}"
-                                name="tenantId" id="tenantPicker" data-original-title="" title="">
+                                class="j-tenant-autocomplete j-autocomplete-input j-ui-elem" placeholder="Tenant" value="{$tenantId?:''}"
+                                name="tenantId" id="tenantIdPicker" data-original-title="" title="">
                         </td>
                     </tr>
                     <tr>
                         <td>Catwalk ID</td>
                         <td>
                             <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
-                                class="j-time-autocomplete j-autocomplete-input j-ui-elem" placeholder="From Time Ago" value="{$catwalkId?:''}"
+                                class="j-time-autocomplete j-autocomplete-input j-ui-elem" placeholder="Catwalk ID" value="{$catwalkId?:''}"
                                 name="catwalkId" id="catwalkIdPicker" data-original-title="" title="">
                         </td>
                     </tr>
@@ -36,7 +36,7 @@
                         <td>Model ID</td>
                         <td>
                             <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
-                                class="j-time-autocomplete j-autocomplete-input j-ui-elem" placeholder="From Time Ago" value="{$modelId?:''}"
+                                class="j-time-autocomplete j-autocomplete-input j-ui-elem" placeholder="Model ID" value="{$modelId?:''}"
                                 name="modelId" id="modelIdPicker" data-original-title="" title="">
                         </td>
                     </tr>
@@ -44,7 +44,7 @@
                         <td>Features</td>
                         <td>
                             <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
-                                class="j-time-autocomplete j-autocomplete-input j-ui-elem" placeholder="From Time Ago" value="{$features?:''}"
+                                class="j-time-autocomplete j-autocomplete-input j-ui-elem" placeholder="Separate with commas" value="{$features?:''}"
                                 name="features" id="featuresPicker" data-original-title="" title="">
                         </td>
                     </tr>
