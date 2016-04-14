@@ -53,7 +53,7 @@ public class MiruStumptownPayloadsAmza implements MiruStumptownPayloadStorage {
         this.mapper = mapper;
         BAInterner interner = new BAInterner();
 
-        payload = new PartitionName(false, "p".getBytes(StandardCharsets.UTF_8), (nameSpace + "-payload").getBytes(StandardCharsets.UTF_8));
+        payload = new PartitionName(false, "p".getBytes(StandardCharsets.UTF_8), (nameSpace + "-stumptown").getBytes(StandardCharsets.UTF_8));
 
         this.clientProvider = new AmzaClientProvider<>(
             new HttpPartitionClientFactory(interner),
@@ -131,7 +131,7 @@ public class MiruStumptownPayloadsAmza implements MiruStumptownPayloadStorage {
                 if (value != null) {
                     payloads.add(mapper.readValue(value, payloadClass));
                 }
-                return false;
+                return true;
             }, additionalSolverAfterNMillis, abandonLeaderSolutionAfterNMillis, abandonSolutionAfterNMillis, Optional.empty());
 
         return payloads;
