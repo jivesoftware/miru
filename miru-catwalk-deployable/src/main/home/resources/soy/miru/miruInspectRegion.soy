@@ -63,6 +63,14 @@
                     <ul>
                         <li>Model count: {$f.modelCount}</li>
                         <li>Total count: {$f.totalCount}</li>
+                        <li>
+                            Ranges:
+                            <ul>
+                                {foreach $r in $f.ranges}
+                                    <li>{$r}</li>
+                                {/foreach}
+                            </ul>
+                        </li>
                     </ul>
                     <table class="table table-condensed">
                         <thead>

@@ -206,7 +206,7 @@ public class CatwalkModelService {
         TreeSet<Integer> partitionIds = Sets.newTreeSet();
 
         CatwalkFeature[] features = catwalkQuery.features;
-        Map<String, MergedScores> fieldIdsToFeatureScores = gatherModel(tenantId, catwalkId, modelId, features, partitionIds, deletableRanges);
+        Map<String, MergedScores> featureNameToMergedScores = gatherModel(tenantId, catwalkId, modelId, features, partitionIds, deletableRanges);
 
         long[] modelCounts = new long[features.length];
         long totalCount = 0;
@@ -215,7 +215,7 @@ public class CatwalkModelService {
         @SuppressWarnings("unchecked")
         List<FeatureScore>[] featureScores = new List[features.length];
         for (int i = 0; i < features.length; i++) {
-            MergedScores mergedScores = fieldIdsToFeatureScores.get(features[i].name);
+            MergedScores mergedScores = featureNameToMergedScores.get(features[i].name);
             if (mergedScores != null) {
                 int featureModels = 1 + mergedScores.numberOfMerges;
 
@@ -233,7 +233,7 @@ public class CatwalkModelService {
             }
         }
 
-        for (Map.Entry<String, MergedScores> entry : fieldIdsToFeatureScores.entrySet()) {
+        for (Map.Entry<String, MergedScores> entry : featureNameToMergedScores.entrySet()) {
             List<FeatureRange> ranges = entry.getValue().ranges;
             if (ranges != null && ranges.size() > 1) {
                 readRepairers.submit(new ReadRepair(tenantId, catwalkId, modelId, entry.getKey(), entry.getValue()));
@@ -311,8 +311,8 @@ public class CatwalkModelService {
         client.commit(Consistency.leader_quorum, null,
             commitKeyValueStream -> {
                 for (FeatureRange range : ranges) {
-                    LOG.info("Removing model for tenantId:{} catwalkId:{} modelId:{} featureName:{} from:{} to:{}",
-                        tenantId, catwalkId, modelId, range.featureName, range.fromPartitionId, range.toPartitionId);
+                    LOG.info("Removing model for tenantId:{} catwalkId:{} modelId:{} feature:{} from:{} to:{}",
+                        tenantId, catwalkId, modelId, range.featureId, range.fromPartitionId, range.toPartitionId);
                     byte[] key = modelPartitionKey(catwalkId, modelId, range.featureName, range.fromPartitionId, range.toPartitionId);
                     if (!commitKeyValueStream.commit(key, null, -1, true)) {
                         return false;
@@ -567,8 +567,8 @@ public class CatwalkModelService {
                 }
 
                 if (merged != null) {
-                    LOG.info("Merging model for tenantId:{} catwalkId:{} modelId:{} from:{} to:{}",
-                        tenantId, catwalkId, modelId, merged.fromPartitionId, merged.toPartitionId);
+                    LOG.info("Merging model for tenantId:{} catwalkId:{} modelId:{} feature:{} from:{} to:{}",
+                        tenantId, catwalkId, modelId, merged.featureId, merged.fromPartitionId, merged.toPartitionId);
                     ModelFeatureScores modelFeatureScores = new ModelFeatureScores(true,
                         mergedScores.scores.modelCount,
                         mergedScores.scores.totalCount,
@@ -620,7 +620,7 @@ public class CatwalkModelService {
         FeatureRange mergedRange;
         public ModelFeatureScores mergedScores;
 
-        final List<FeatureRange> ranges = new ArrayList<>();
+        public final List<FeatureRange> ranges = new ArrayList<>();
         ModelFeatureScores scores;
         MiruTimeRange timeRange;
 

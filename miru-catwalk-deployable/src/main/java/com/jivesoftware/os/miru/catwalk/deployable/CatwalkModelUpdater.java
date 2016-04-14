@@ -138,21 +138,22 @@ public class CatwalkModelUpdater {
                         modelUpdateFutures.add(modelUpdaters.submit(() -> {
                             if (modelQueue.isLeader(queueId)) {
                                 ModelFeatureScores[] models = fetchModel(request);
-                                String[] featureNames = new String[request.catwalkQuery.features.length];
-                                for (int i = 0; i < featureNames.length; i++) {
-                                    featureNames[i] = request.catwalkQuery.features[i].name;
+                                if (models != null) {
+                                    String[] featureNames = new String[request.catwalkQuery.features.length];
+                                    for (int i = 0; i < featureNames.length; i++) {
+                                        featureNames[i] = request.catwalkQuery.features[i].name;
+                                    }
+                                    modelService.saveModel(request.tenantId,
+                                        request.catwalkId,
+                                        request.modelId,
+                                        request.partitionId,
+                                        request.partitionId,
+                                        featureNames,
+                                        models);
+                                    return request;
                                 }
-                                modelService.saveModel(request.tenantId,
-                                    request.catwalkId,
-                                    request.modelId,
-                                    request.partitionId,
-                                    request.partitionId,
-                                    featureNames,
-                                    models);
-                                return request;
-                            } else {
-                                return null;
                             }
+                            return null;
                         }));
                     }
 
