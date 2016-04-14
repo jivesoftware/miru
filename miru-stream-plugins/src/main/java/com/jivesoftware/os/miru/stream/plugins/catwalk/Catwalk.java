@@ -111,7 +111,7 @@ public class Catwalk {
                     log.warn("Catwalk computed numerator:{} denominator:{} for tenantId:{} partitionId:{} featureId:{} fieldIds:{} terms:{}",
                         numerator, denominator, coord.tenantId, coord.partitionId, i, Arrays.toString(fieldIds), Arrays.toString(termIds));
                 }
-                featureScoreResults[i].add(new FeatureScore(termIds, numerator, denominator));
+                featureScoreResults[i].add(new FeatureScore(termIds, numerator, denominator, 1));
             }
         }
 

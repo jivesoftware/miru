@@ -3,7 +3,6 @@ package com.jivesoftware.os.miru.catwalk.deployable;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.catwalk.deployable.CatwalkModelService.FeatureRange;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
-import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkQuery;
 import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkQuery.CatwalkFeature;
 import com.jivesoftware.os.miru.stream.plugins.catwalk.FeatureScore;
 import java.util.Arrays;
@@ -22,7 +21,7 @@ public class CatwalkModelServiceTest {
         int fromPartitionId = 123;
         int toPartitionId = Integer.MAX_VALUE - 456;
         String featureName = "test";
-        CatwalkFeature[] features = { new CatwalkFeature(featureName, null, null) };
+        CatwalkFeature[] features = {new CatwalkFeature(featureName, null, null)};
         byte[] keyBytes = CatwalkModelService.modelPartitionKey("catwalkId",
             "modelId",
             featureName,
@@ -38,9 +37,9 @@ public class CatwalkModelServiceTest {
     @Test
     public void testValueSerDer() throws Exception {
         boolean partitionIsClosed = false;
-        List<FeatureScore> featureScores = Arrays.asList(new FeatureScore(terms("term1", "term2", "term3"), 1, 3),
-            new FeatureScore(terms("term4", "term5", "term6"), 2, 4),
-            new FeatureScore(terms("term7", "term8", "term9"), 3, 5));
+        List<FeatureScore> featureScores = Arrays.asList(new FeatureScore(terms("term1", "term2", "term3"), 1, 3, 1),
+            new FeatureScore(terms("term4", "term5", "term6"), 2, 4, 1),
+            new FeatureScore(terms("term7", "term8", "term9"), 3, 5, 1));
         MiruTimeRange timeRange = new MiruTimeRange(123L, Long.MAX_VALUE - 456L);
         byte[] valueBytes = CatwalkModelService.valueToBytes(partitionIsClosed,
             6,

@@ -124,7 +124,9 @@ public class StrutModelCache {
             if (model != null && model.featureScores != null && model.featureScores[i] != null) {
                 List<FeatureScore> featureScores = model.featureScores[i];
                 for (FeatureScore featureScore : featureScores) {
-                    modelFeatureScore[i].put(new StrutModelKey(featureScore.termIds), new ModelScore(featureScore.numerator, featureScore.denominator));
+                    // magical deflation
+                    long denominator = (featureScore.denominator * model.totalNumPartitions[i]) / featureScore.numPartitions;
+                    modelFeatureScore[i].put(new StrutModelKey(featureScore.termIds), new ModelScore(featureScore.numerator, denominator));
                 }
             }
         }

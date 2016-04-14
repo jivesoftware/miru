@@ -100,6 +100,7 @@ public class MiruInspectRegion implements MiruPageRegion<InspectInput> {
                             "value", Arrays.toString(featureScore.termIds),
                             "numerator", String.valueOf(featureScore.numerator),
                             "denominator", String.valueOf(featureScore.denominator),
+                            "numPartitions", String.valueOf(featureScore.numPartitions),
                             "score", String.valueOf((float) featureScore.numerator / featureScore.denominator)));
                     }
 
