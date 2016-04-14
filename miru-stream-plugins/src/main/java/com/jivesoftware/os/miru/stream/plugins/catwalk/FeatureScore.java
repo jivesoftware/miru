@@ -21,7 +21,7 @@ public class FeatureScore implements Serializable {
         @JsonProperty("termIds") MiruTermId[] termIds,
         @JsonProperty("numerator") long numerator,
         @JsonProperty("denominator") long denominator,
-        @JsonProperty("denominator")  int numPartitions) {
+        @JsonProperty("numPartitions")  int numPartitions) {
         this.termIds = termIds;
         this.numerator = numerator;
         this.denominator = denominator;
