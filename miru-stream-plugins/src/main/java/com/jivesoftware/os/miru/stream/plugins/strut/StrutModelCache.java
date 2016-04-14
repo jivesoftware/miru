@@ -133,7 +133,9 @@ public class StrutModelCache {
         return new StrutModel(modelFeatureScore,
             model != null ? model.modelCounts : new long[catwalkQuery.features.length],
             model != null ? model.totalCount : 0,
-            model != null ? model.numberOfModels : new int[catwalkQuery.features.length]);
+            model != null ? model.numberOfModels : new int[catwalkQuery.features.length],
+            model != null ? model.totalNumPartitions : new int[catwalkQuery.features.length]
+            );
     }
 
     static class StrutModelKey {
