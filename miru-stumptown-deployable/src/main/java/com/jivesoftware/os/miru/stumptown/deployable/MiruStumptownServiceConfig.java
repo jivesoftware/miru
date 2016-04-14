@@ -22,6 +22,8 @@ public interface MiruStumptownServiceConfig extends Config {
     @StringDefault("unspecifiedHost:0")
     public String getMiruReaderHosts();
 
+    @StringDefault("hbase") // hbase or amza
+    public String getPayloadStorageSolution();
 
     @ClassDefault(IllegalStateException.class)
     <C extends Config, I extends RowColumnValueStoreInitializer<E>, E extends Exception> Class<RowColumnValueStoreProvider<C, I, E>>

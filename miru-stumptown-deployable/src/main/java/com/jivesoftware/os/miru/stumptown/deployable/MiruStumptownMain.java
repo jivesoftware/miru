@@ -34,8 +34,9 @@ import com.jivesoftware.os.miru.stumptown.deployable.region.MiruManagePlugin;
 import com.jivesoftware.os.miru.stumptown.deployable.region.StumptownQueryPluginRegion;
 import com.jivesoftware.os.miru.stumptown.deployable.region.StumptownStatusPluginRegion;
 import com.jivesoftware.os.miru.stumptown.deployable.region.StumptownTrendsPluginRegion;
-import com.jivesoftware.os.miru.stumptown.deployable.storage.MiruStumptownPayloads;
-import com.jivesoftware.os.miru.stumptown.deployable.storage.MiruStumptownPayloadsIntializer;
+import com.jivesoftware.os.miru.stumptown.deployable.storage.MiruStumptownPayloadStorage;
+import com.jivesoftware.os.miru.stumptown.deployable.storage.MiruStumptownPayloadsAmzaIntializer;
+import com.jivesoftware.os.miru.stumptown.deployable.storage.MiruStumptownPayloadsHBaseIntializer;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer.MiruSoyRendererConfig;
@@ -114,44 +115,60 @@ public class MiruStumptownMain {
             ObjectMapper mapper = new ObjectMapper();
             mapper.registerModule(new GuavaModule());
 
-
-            MiruStumptownPayloads payloads = null;
-            try {
-                RowColumnValueStoreProvider rowColumnValueStoreProvider = stumptownServiceConfig.getRowColumnValueStoreProviderClass()
-                    .newInstance();
-                @SuppressWarnings("unchecked")
-                RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer = rowColumnValueStoreProvider
-                    .create(deployable.config(rowColumnValueStoreProvider.getConfigurationClass()));
-
-                //RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer = new InMemoryRowColumnValueStoreInitializer();
-                payloads = new MiruStumptownPayloadsIntializer().initialize(instanceConfig.getClusterName(), rowColumnValueStoreInitializer, mapper);
-            } catch (Exception x) {
-                serviceStartupHealthCheck.info("Failed to setup connection to RCVS.", x);
-            }
-
-            OrderIdProvider orderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName()));
-
-
             HttpDeliveryClientHealthProvider clientHealthProvider = new HttpDeliveryClientHealthProvider(instanceConfig.getInstanceKey(),
                 HttpRequestHelperUtils.buildRequestHelper(instanceConfig.getRoutesHost(), instanceConfig.getRoutesPort()),
                 instanceConfig.getConnectionsHealth(), 5_000, 100);
             TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
 
+            MiruStumptownPayloadStorage payloads = null;
+            if (stumptownServiceConfig.getPayloadStorageSolution().equals("hbase")) {
+                try {
+                    RowColumnValueStoreProvider rowColumnValueStoreProvider = stumptownServiceConfig.getRowColumnValueStoreProviderClass()
+                        .newInstance();
+                    @SuppressWarnings("unchecked")
+                    RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer = rowColumnValueStoreProvider
+                        .create(deployable.config(rowColumnValueStoreProvider.getConfigurationClass()));
+
+                    //RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer = new InMemoryRowColumnValueStoreInitializer();
+                    payloads = new MiruStumptownPayloadsHBaseIntializer().initialize(instanceConfig.getClusterName(), rowColumnValueStoreInitializer, mapper);
+                } catch (Exception x) {
+                    serviceStartupHealthCheck.info("Failed to setup connection to RCVS.", x);
+                }
+            } else if (stumptownServiceConfig.getPayloadStorageSolution().equals("amza")) {
+                try {
+                    TenantAwareHttpClient<String> amzaClient = tenantRoutingHttpClientInitializer.initialize(deployable
+                        .getTenantRoutingProvider()
+                        .getConnections("amza", "main"), // TODO expose to conf
+                        clientHealthProvider,
+                        10, 10_000); // TODO expose to conf
+                    long awaitLeaderElectionForNMillis = 30_000;
+                    payloads = new MiruStumptownPayloadsAmzaIntializer().initialize(instanceConfig.getClusterName(),
+                        amzaClient,
+                        awaitLeaderElectionForNMillis,
+                        mapper);
+
+                } catch (Exception x) {
+                    serviceStartupHealthCheck.info("Failed to setup connection to RCVS.", x);
+                }
+            }
+
+            OrderIdProvider orderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName()));
+
             TenantAwareHttpClient<String> miruWriterClient = tenantRoutingHttpClientInitializer.initialize(deployable
-                    .getTenantRoutingProvider()
-                    .getConnections("miru-writer", "main"),
+                .getTenantRoutingProvider()
+                .getConnections("miru-writer", "main"),
                 clientHealthProvider,
                 10, 10_000);  // TODO expose to conf
 
             TenantAwareHttpClient<String> miruManageClient = tenantRoutingHttpClientInitializer.initialize(deployable
-                    .getTenantRoutingProvider()
-                    .getConnections("miru-manage", "main"),
+                .getTenantRoutingProvider()
+                .getConnections("miru-manage", "main"),
                 clientHealthProvider,
                 10, 10_000); // TODO expose to conf
 
             TenantAwareHttpClient<String> readerClient = tenantRoutingHttpClientInitializer.initialize(deployable
-                    .getTenantRoutingProvider()
-                    .getConnections("miru-reader", "main"),
+                .getTenantRoutingProvider()
+                .getConnections("miru-reader", "main"),
                 clientHealthProvider,
                 10, 10_000); // TODO expose to conf
 

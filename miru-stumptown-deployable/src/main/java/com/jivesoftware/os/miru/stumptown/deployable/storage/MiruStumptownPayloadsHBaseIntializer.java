@@ -17,12 +17,12 @@ import java.io.IOException;
  *
  * @author jonathan.colt
  */
-public class MiruStumptownPayloadsIntializer {
+public class MiruStumptownPayloadsHBaseIntializer {
 
-    public MiruStumptownPayloadsIntializer() {
+    public MiruStumptownPayloadsHBaseIntializer() {
     }
 
-    public MiruStumptownPayloads initialize(String tableNameSpace,
+    public MiruStumptownPayloadStorage initialize(String tableNameSpace,
         RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer,
         ObjectMapper mapper) throws IOException {
         RowColumnValueStore<MiruTenantId, Long, String, byte[], ? extends Exception> stumptownPayloadTable =
@@ -37,6 +37,6 @@ public class MiruStumptownPayloadsIntializer {
                     new ByteArrayTypeMarshaller()),
                 new CurrentTimestamper()
             );
-        return new MiruStumptownPayloads(mapper, stumptownPayloadTable);
+        return new MiruStumptownPayloadsHBase(mapper, stumptownPayloadTable);
     }
 }

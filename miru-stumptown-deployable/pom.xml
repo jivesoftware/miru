@@ -5,18 +5,18 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-build-management</artifactId>
-        <version>0.1022</version>
+        <version>0.1023</version>
         <relativePath>../inheritance-poms/global-build-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru</groupId>
     <artifactId>miru-stumptown-deployable</artifactId>
-    <version>0.1022</version>
+    <version>0.1023</version>
     <properties>
         <java.main>com.jivesoftware.os.miru.stumptown.deployable.MiruStumptownMain</java.main>
         <assembly.home>${project.basedir}</assembly.home>
     </properties>
     <dependencies>
-         <dependency>
+        <dependency>
             <groupId>com.jivesoftware.os.routing.bird</groupId>
             <artifactId>deployable-scripts</artifactId>
             <type>tar.gz</type>
@@ -104,28 +104,28 @@
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-api</artifactId>
-            <version>0.1022</version>
+            <version>0.1023</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-ui</artifactId>
-            <version>0.1022</version>
+            <version>0.1023</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-stumptown-plugins</artifactId>
-            <version>0.1022</version>
+            <version>0.1023</version>
             <type>jar</type>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-plugin</artifactId>
-            <version>0.1022</version>
+            <version>0.1023</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-logappender</artifactId>
-            <version>0.1022</version>
+            <version>0.1023</version>
         </dependency>
         <dependency>
             <groupId>org.testng</groupId>
@@ -135,7 +135,7 @@
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-reco-plugins</artifactId>
-            <version>0.1022</version>
+            <version>0.1023</version>
         </dependency>
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
@@ -161,11 +161,19 @@
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-cluster-client</artifactId>
-            <version>0.1022</version>
+            <version>0.1023</version>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.amza</groupId>
+            <artifactId>amza-client</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.amza</groupId>
+            <artifactId>amza-api</artifactId>
         </dependency>
     </dependencies>
 </project>
