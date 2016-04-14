@@ -41,6 +41,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -88,7 +89,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         if (!context.getTimeIndex().intersects(timeRange)) {
             solutionLog.log(MiruSolutionLogLevel.WARN, "No time index intersection. Partition {}: {} doesn't intersect with {}",
                 handle.getCoord().partitionId, context.getTimeIndex(), timeRange);
-            StrutAnswer answer = strut.composeAnswer(context, request, Collections.emptyList());
+            StrutAnswer answer = strut.composeAnswer(context, request, Collections.emptyList(), 0);
             return new MiruPartitionResponse<>(answer, solutionLog.asList());
         }
 
@@ -139,6 +140,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             .get("strut-" + request.query.catwalkId, 8, false, maxUpdatesBeforeFlush);
 
         StrutModelScorer modelScorer = new StrutModelScorer(); // Ahh
+        AtomicInteger modelTotalPartitionCount = new AtomicInteger();
 
         long start = System.currentTimeMillis();
         List<LastIdAndTermId> lastIdAndTermIds = Lists.newArrayList();
@@ -197,7 +199,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             BM[] constrainFeature = buildConstrainFeatures(bitmaps, context, activityIndexLastId, stackBuffer, solutionLog);
             long rescoreStart = System.currentTimeMillis();
             for (List<LastIdAndTermId> batch : Lists.partition(lastIdAndTermIds, answers.length)) {
-                List<Scored> rescored = rescore(handle, batch, pivotFieldId, constrainFeature, modelScorer, cacheStores, solutionLog);
+                List<Scored> rescored = rescore(handle, batch, pivotFieldId, constrainFeature, modelScorer, cacheStores, modelTotalPartitionCount, solutionLog);
                 scored.addAll(rescored);
             }
             totalTimeRescores += (System.currentTimeMillis() - rescoreStart);
@@ -210,7 +212,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 try {
                     BM[] asyncConstrainFeature = buildConstrainFeatures(bitmaps, context, activityIndexLastId, stackBuffer, solutionLog);
                     MiruSolutionLog asyncSolutionLog = new MiruSolutionLog(MiruSolutionLogLevel.NONE);
-                    rescore(handle, asyncRescore, pivotFieldId, asyncConstrainFeature, modelScorer, cacheStores, asyncSolutionLog);
+                    rescore(handle, asyncRescore, pivotFieldId, asyncConstrainFeature, modelScorer, cacheStores, new AtomicInteger(), asyncSolutionLog);
                 } catch (Exception x) {
                     LOG.warn("Failed while trying to rescore.", x);
                 } finally {
@@ -281,13 +283,13 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             }
         }
 
-        solutionLog.log(MiruSolutionLogLevel.INFO, "Strut your stuff for {} terms took" +
-                " lastIds {} ms," +
-                " cached {} ms," +
-                " rescore {} ms," +
-                " gather {} ms," +
-                " timeAndVersion {} ms," +
-                " total {} ms",
+        solutionLog.log(MiruSolutionLogLevel.INFO, "Strut your stuff for {} terms took"
+            + " lastIds {} ms,"
+            + " cached {} ms,"
+            + " rescore {} ms,"
+            + " gather {} ms,"
+            + " timeAndVersion {} ms,"
+            + " total {} ms",
             lastIdAndTermIds.size(),
             totalTimeFetchingLastId,
             totalTimeFetchingScores,
@@ -298,7 +300,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
 
         solutionLog.log(MiruSolutionLogLevel.INFO, "Strut found {} terms", hotOrNots.size());
 
-        return new MiruPartitionResponse<>(strut.composeAnswer(context, request, hotOrNots), solutionLog.asList());
+        return new MiruPartitionResponse<>(strut.composeAnswer(context, request, hotOrNots, modelTotalPartitionCount.get()), solutionLog.asList());
     }
 
     private <BM extends IBM, IBM> List<Scored> rescore(
@@ -308,6 +310,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         BM[] constrainFeature,
         StrutModelScorer modelScorer,
         MiruPluginCacheProvider.CacheKeyValues cacheStores,
+        AtomicInteger totalPartitionCount,
         MiruSolutionLog solutionLog) throws Exception {
 
         long startStrut = System.currentTimeMillis();
@@ -363,6 +366,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 }
                 return true;
             },
+            totalPartitionCount,
             solutionLog);
         solutionLog.log(MiruSolutionLogLevel.INFO, "Strut rescore took {} ms", System.currentTimeMillis() - startStrut);
 

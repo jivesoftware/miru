@@ -12,15 +12,18 @@ public class StrutModel {
     public final long[] modelCounts;
     public final long totalCount;
     public final int[] numberOfModels;
+    public final int[] totalNumPartitions;
 
     public StrutModel(Map<StrutModelCache.StrutModelKey, StrutModelCache.ModelScore>[] model,
         long[] modelCounts,
         long totalCount,
-        int[] numberOfModels) {
+        int[] numberOfModels,
+        int[] totalNumPartitions) {
         this.model = model;
         this.modelCounts = modelCounts;
         this.totalCount = totalCount;
         this.numberOfModels = numberOfModels;
+        this.totalNumPartitions = totalNumPartitions;
     }
 
     public StrutModelCache.ModelScore score(int featureId, MiruTermId[] values) {

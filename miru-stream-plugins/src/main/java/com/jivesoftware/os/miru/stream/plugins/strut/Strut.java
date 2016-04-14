@@ -22,6 +22,7 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  *
@@ -40,9 +41,11 @@ public class Strut {
 
     public <BM extends IBM, IBM> StrutAnswer composeAnswer(MiruRequestContext<BM, IBM, ?> requestContext,
         MiruRequest<StrutQuery> request,
-        List<HotOrNot> hotOrNots) throws Exception {
+        List<HotOrNot> hotOrNots,
+        int modelTotalPartitionCount) throws Exception {
+
         boolean resultsExhausted = request.query.timeRange.smallestTimestamp > requestContext.getTimeIndex().getLargestTimestamp();
-        return new StrutAnswer(hotOrNots, resultsExhausted);
+        return new StrutAnswer(hotOrNots, modelTotalPartitionCount, resultsExhausted);
     }
 
     public interface HotStuff {
@@ -57,6 +60,7 @@ public class Strut {
         MiruRequest<StrutQuery> request,
         ConsumeBitmaps<BM> consumeAnswers,
         HotStuff hotStuff,
+        AtomicInteger totalPartitionCount,
         MiruSolutionLog solutionLog) throws Exception {
 
         long start = System.currentTimeMillis();
@@ -93,11 +97,12 @@ public class Strut {
             });
 
         } else {
+
             boolean[] cacheable = new boolean[]{true};
             for (int i = 0; i < catwalkFeatures.length; i++) {
+                totalPartitionCount.set(Math.max(totalPartitionCount.get(),model.totalNumPartitions[i]));
                 if (model.numberOfModels[i] == 0) {
                     cacheable[0] = false;
-                    break;
                 }
             }
 

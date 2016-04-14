@@ -8,25 +8,29 @@ import java.util.List;
 /** @author jonathan */
 public class StrutAnswer implements Serializable {
 
-    public static final StrutAnswer EMPTY_RESULTS = new StrutAnswer(null, true);
+    public static final StrutAnswer EMPTY_RESULTS = new StrutAnswer(null, -1, true);
 
     public final List<HotOrNot> results;
+    public final int modelTotalPartitionCount;
     public final boolean resultsExhausted;
 
     @JsonCreator
     public StrutAnswer(
         @JsonProperty("results") List<HotOrNot> results,
+        @JsonProperty("modelTotalPartitionCount") int modelTotalPartitionCount,
         @JsonProperty("resultsExhausted") boolean resultsExhausted) {
         this.results = results;
+        this.modelTotalPartitionCount = modelTotalPartitionCount;
         this.resultsExhausted = resultsExhausted;
     }
 
     @Override
     public String toString() {
-        return "StrutAnswer{" +
-            "results=" + results +
-            ", resultsExhausted=" + resultsExhausted +
-            '}';
+        return "StrutAnswer{"
+            + "results=" + results
+            + ", modelTotalPartitionCount=" + modelTotalPartitionCount
+            + ", resultsExhausted=" + resultsExhausted
+            + '}';
     }
 
     @Override
