@@ -131,7 +131,7 @@ public class MiruStumptownPayloadsAmza implements MiruStumptownPayloadStorage {
                 if (value != null) {
                     payloads.add(mapper.readValue(value, payloadClass));
                 }
-                return false;
+                return true;
             }, additionalSolverAfterNMillis, abandonLeaderSolutionAfterNMillis, abandonSolutionAfterNMillis, Optional.empty());
 
         return payloads;
