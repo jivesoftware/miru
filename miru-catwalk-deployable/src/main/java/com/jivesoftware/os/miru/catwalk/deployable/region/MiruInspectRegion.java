@@ -1,8 +1,6 @@
 package com.jivesoftware.os.miru.catwalk.deployable.region;
 
-import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -20,7 +18,6 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -88,28 +85,13 @@ public class MiruInspectRegion implements MiruPageRegion<InspectInput> {
                 List<Map<String, Object>> modelFeatures = Lists.newArrayList();
                 for (Entry<String, MergedScores> entry : scores.entrySet()) {
                     ModelFeatureScores mergedScores = entry.getValue().mergedScores;
-                    List<FeatureRange> ranges = entry.getValue().ranges;
-
-                    ListMultimap<String, FeatureRange> featureRanges = ArrayListMultimap.create();
+                    List<FeatureRange> ranges = entry.getValue().allRanges;
+                    StringBuilder rangeData = new StringBuilder();
                     for (FeatureRange range : ranges) {
-                        featureRanges.put(range.featureName, range);
-                    }
-
-                    List<String> rangeData = Lists.newArrayList();
-                    for (Entry<String, Collection<FeatureRange>> rangeEntry : featureRanges.asMap().entrySet()) {
-                        StringBuilder buf = new StringBuilder();
-                        buf.append(rangeEntry.getKey()).append(": ");
-                        boolean first = true;
-                        for (FeatureRange range : rangeEntry.getValue()) {
-                            if (first) {
-                                first = false;
-                            } else {
-                                buf.append(", ");
-                            }
-                            buf.append(range.fromPartitionId).append('-').append(range.toPartitionId);
+                        if (rangeData.length() > 0) {
+                            rangeData.append(", ");
                         }
-
-                        rangeData.add(buf.toString());
+                        rangeData.append(range.fromPartitionId).append('-').append(range.toPartitionId);
                     }
 
                     List<Map<String, Object>> scoreData = Lists.newArrayList();
@@ -118,6 +100,7 @@ public class MiruInspectRegion implements MiruPageRegion<InspectInput> {
                             "value", Arrays.toString(featureScore.termIds),
                             "numerator", String.valueOf(featureScore.numerator),
                             "denominator", String.valueOf(featureScore.denominator),
+                            "numPartitions", String.valueOf(featureScore.numPartitions),
                             "score", String.valueOf((float) featureScore.numerator / featureScore.denominator)));
                     }
 
@@ -125,7 +108,7 @@ public class MiruInspectRegion implements MiruPageRegion<InspectInput> {
                         .put("name", entry.getKey())
                         .put("modelCount", String.valueOf(mergedScores.modelCount))
                         .put("totalCount", String.valueOf(mergedScores.totalCount))
-                        .put("ranges", rangeData)
+                        .put("ranges", rangeData.toString())
                         .put("scores", scoreData)
                         .build());
                 }

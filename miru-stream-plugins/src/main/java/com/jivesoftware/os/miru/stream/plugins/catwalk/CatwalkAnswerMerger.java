@@ -72,7 +72,9 @@ public class CatwalkAnswerMerger implements MiruAnswerMerger<CatwalkAnswer> {
                 if (otherScore != null) {
                     merged.add(new FeatureScore(featureScore.termIds,
                         featureScore.numerator + otherScore.numerator,
-                        featureScore.denominator + otherScore.denominator));
+                        featureScore.denominator + otherScore.denominator,
+                        featureScore.numPartitions + otherScore.numPartitions
+                    ));
                 } else {
                     merged.add(featureScore);
                 }

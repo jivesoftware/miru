@@ -14,15 +14,18 @@ public class FeatureScore implements Serializable {
     public final MiruTermId[] termIds;
     public final long numerator;
     public final long denominator;
+    public final int numPartitions;
 
     @JsonCreator
     public FeatureScore(
         @JsonProperty("termIds") MiruTermId[] termIds,
         @JsonProperty("numerator") long numerator,
-        @JsonProperty("denominator") long denominator) {
+        @JsonProperty("denominator") long denominator,
+        @JsonProperty("denominator")  int numPartitions) {
         this.termIds = termIds;
         this.numerator = numerator;
         this.denominator = denominator;
+        this.numPartitions = numPartitions;
     }
 
     @Override
@@ -31,6 +34,7 @@ public class FeatureScore implements Serializable {
             + "termIds=" + Arrays.toString(termIds)
             + ", numerator=" + numerator
             + ", denominator=" + denominator
+            + ", numPartitions=" + numPartitions
             + '}';
     }
 

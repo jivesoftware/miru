@@ -15,16 +15,19 @@ public class CatwalkModel implements Serializable {
     public final long totalCount;
     public final int[] numberOfModels;
     public final List<FeatureScore>[] featureScores;
+    public final int[] totalNumPartitions;
 
     @JsonCreator
     public CatwalkModel(@JsonProperty("modelCounts") long[] modelCounts,
         @JsonProperty("totalCount") long totalCount,
         @JsonProperty("numberOfModels") int[] numberOfModels,
-        @JsonProperty("featureScores") List<FeatureScore>[] featureScores) {
+        @JsonProperty("featureScores") List<FeatureScore>[] featureScores,
+        @JsonProperty("totalNumPartitions") int[] totalNumPartitions) {
         this.modelCounts = modelCounts;
         this.totalCount = totalCount;
         this.numberOfModels = numberOfModels;
         this.featureScores = featureScores;
+        this.totalNumPartitions = totalNumPartitions;
     }
 
     @Override
@@ -34,6 +37,7 @@ public class CatwalkModel implements Serializable {
             ", totalCount=" + totalCount +
             ", numberOfModels=" + Arrays.toString(numberOfModels) +
             ", featureScores=" + Arrays.toString(featureScores) +
+            ", totalNumPartitions=" + Arrays.toString(totalNumPartitions) +
             '}';
     }
 
