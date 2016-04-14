@@ -106,6 +106,7 @@ public class CatwalkModelService {
                     fieldIdsToFeatureScores.compute(featureName, (t, currentMerged) -> {
                         if (currentMerged == null) {
                             MergedScores mergedScores = new MergedScores(range, scores);
+                            mergedScores.allRanges.add(range);
                             if (scores.partitionIsClosed) {
                                 mergedScores.ranges.add(range);
                                 mergedScores.scores = scores;
@@ -179,6 +180,7 @@ public class CatwalkModelService {
                         }
 
                         currentMerged.numberOfMerges++;
+                        currentMerged.allRanges.add(range);
                         currentMerged.mergedRange = new FeatureRange(range.featureName,
                             featureId, Math.min(range.fromPartitionId, currentMerged.mergedRange.fromPartitionId),
                             Math.min(range.toPartitionId, currentMerged.mergedRange.toPartitionId));
@@ -620,7 +622,8 @@ public class CatwalkModelService {
         FeatureRange mergedRange;
         public ModelFeatureScores mergedScores;
 
-        public final List<FeatureRange> ranges = new ArrayList<>();
+        final List<FeatureRange> ranges = new ArrayList<>();
+        public final List<FeatureRange> allRanges = new ArrayList<>();
         ModelFeatureScores scores;
         MiruTimeRange timeRange;
 
