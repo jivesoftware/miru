@@ -16,7 +16,7 @@
         <assembly.home>${project.basedir}</assembly.home>
     </properties>
     <dependencies>
-         <dependency>
+        <dependency>
             <groupId>com.jivesoftware.os.routing.bird</groupId>
             <artifactId>deployable-scripts</artifactId>
             <type>tar.gz</type>
@@ -166,6 +166,14 @@
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.amza</groupId>
+            <artifactId>amza-client</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.amza</groupId>
+            <artifactId>amza-api</artifactId>
         </dependency>
     </dependencies>
 </project>

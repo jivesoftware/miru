@@ -20,7 +20,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.stumptown.deployable.StumptownSchemaConstants;
-import com.jivesoftware.os.miru.stumptown.deployable.storage.MiruStumptownPayloads;
+import com.jivesoftware.os.miru.stumptown.deployable.storage.MiruStumptownPayloadStorage;
 import com.jivesoftware.os.miru.stumptown.plugins.StumptownAnswer;
 import com.jivesoftware.os.miru.stumptown.plugins.StumptownConstants;
 import com.jivesoftware.os.miru.stumptown.plugins.StumptownQuery;
@@ -60,7 +60,7 @@ public class StumptownQueryPluginRegion implements MiruPageRegion<Optional<Stump
     private final TenantAwareHttpClient<String> readerClient;
     private final ObjectMapper requestMapper;
     private final HttpResponseMapper responseMapper;
-    private final MiruStumptownPayloads payloads;
+    private final MiruStumptownPayloadStorage payloads;
 
     public StumptownQueryPluginRegion(String template,
         String logEventTemplate,
@@ -69,7 +69,7 @@ public class StumptownQueryPluginRegion implements MiruPageRegion<Optional<Stump
         TenantAwareHttpClient<String> readerClient,
         ObjectMapper requestMapper,
         HttpResponseMapper responseMapper,
-        MiruStumptownPayloads payloads) {
+        MiruStumptownPayloadStorage payloads) {
 
         this.template = template;
         this.logEventTemplate = logEventTemplate;

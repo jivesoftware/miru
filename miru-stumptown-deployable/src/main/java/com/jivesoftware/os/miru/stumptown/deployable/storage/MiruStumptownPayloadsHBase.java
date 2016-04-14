@@ -16,18 +16,19 @@ import java.util.Map;
 /**
  *
  */
-public class MiruStumptownPayloads {
+public class MiruStumptownPayloadsHBase implements MiruStumptownPayloadStorage {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
     private final ObjectMapper objectMapper;
     private final RowColumnValueStore<MiruTenantId, Long, String, byte[], ? extends Exception> payloadTable;
 
-    public MiruStumptownPayloads(ObjectMapper objectMapper,
+    public MiruStumptownPayloadsHBase(ObjectMapper objectMapper,
         RowColumnValueStore<MiruTenantId, Long, String, byte[], ? extends Exception> payloadTable) {
         this.objectMapper = objectMapper;
         this.payloadTable = payloadTable;
     }
 
+    @Override
     public <T> void multiPut(MiruTenantId tenantId, List<TimeAndPayload<T>> timesAndPayloads) throws Exception {
         List<TenantRowColumValueTimestampAdd<MiruTenantId, Long, String, byte[]>> multiAdd = new ArrayList<>();
         for (TimeAndPayload<T> timeAndPayload : timesAndPayloads) {
@@ -37,10 +38,12 @@ public class MiruStumptownPayloads {
         payloadTable.multiRowsMultiAdd(multiAdd);
     }
 
+    @Override
     public <T> T get(MiruTenantId tenantId, long activityTime, Class<T> payloadClass) throws Exception {
         return objectMapper.readValue(payloadTable.get(tenantId, activityTime, "p", null, null), payloadClass);
     }
 
+    @Override
     public <T> List<T> multiGet(MiruTenantId tenantId, Collection<Long> activityTimes, final Class<T> payloadClass) throws Exception {
         if (activityTimes.isEmpty()) {
             return Collections.emptyList();
@@ -69,14 +72,5 @@ public class MiruStumptownPayloads {
         return payloads;
     }
 
-    public static class TimeAndPayload<T> {
-
-        public final long activityTime;
-        public final T payload;
-
-        public TimeAndPayload(long activityTime, T payload) {
-            this.activityTime = activityTime;
-            this.payload = payload;
-        }
-    }
+   
 }
