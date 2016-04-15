@@ -371,11 +371,11 @@ public class SeaAnomalyQueryPluginRegion implements MiruPageRegion<Optional<SeaA
         waveform.put("pointStrokeColor", "\"rgba(" + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + ",1)\"");
         waveform.put("pointHighlightFill", "\"rgba(" + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + ",1)\"");
         waveform.put("pointHighlightStroke", "\"rgba(" + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + ",1)\"");
-        List<Integer> ints = new ArrayList<>();
+        List<Long> data = new ArrayList<>();
         for (long v : values) {
-            ints.add((int) v);
+            data.add(v);
         }
-        waveform.put("data", ints);
+        waveform.put("data", data);
         return waveform;
     }
 
@@ -388,18 +388,18 @@ public class SeaAnomalyQueryPluginRegion implements MiruPageRegion<Optional<SeaA
         waveform.put("pointStrokeColor", "\"rgba(" + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + ",1)\"");
         waveform.put("pointHighlightFill", "\"rgba(" + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + ",1)\"");
         waveform.put("pointHighlightStroke", "\"rgba(" + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + ",1)\"");
-        List<Integer> ints = new ArrayList<>();
+        List<Long> data = new ArrayList<>();
         Long last = null;
         for (long v : values) {
             if (last == null) {
-                ints.add(0);
+                data.add(0L);
                 last = v;
             } else {
-                ints.add((int) (last - v));
+                data.add((last - v));
                 last = v;
             }
         }
-        waveform.put("data", ints);
+        waveform.put("data", data);
         return waveform;
     }
 

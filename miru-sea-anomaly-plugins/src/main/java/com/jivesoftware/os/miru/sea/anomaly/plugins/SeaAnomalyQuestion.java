@@ -212,7 +212,7 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyQuery, SeaAnomalyA
 
                     if (positive.isPresent()) {
                         BM positiveAnswer = bitmaps.and(Arrays.asList(positive.get(), rawAnswer));
-                        Waveform positiveWaveform = getWaveform(solutionLog, bitmaps, indexes, powerBitIndexes, entry, positiveAnswer);
+                        Waveform positiveWaveform = getWaveform(solutionLog, bitmaps, indexes, powerBitIndexes, entry, rawAnswer, positiveAnswer);
                         for (int i = 0; i < mergedWaveform.length; i++) {
                             mergedWaveform[i] += positiveWaveform.waveform[i];
                         }
@@ -220,7 +220,7 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyQuery, SeaAnomalyA
 
                     if (negative.isPresent()) {
                         BM negativeAnswer = bitmaps.and(Arrays.asList(negative.get(), rawAnswer));
-                        Waveform negativeWaveform = getWaveform(solutionLog, bitmaps, indexes, powerBitIndexes, entry, negativeAnswer);
+                        Waveform negativeWaveform = getWaveform(solutionLog, bitmaps, indexes, powerBitIndexes, entry, rawAnswer, negativeAnswer);
                         for (int i = 0; i < mergedWaveform.length; i++) {
                             mergedWaveform[i] -= negativeWaveform.waveform[i];
                         }
@@ -253,13 +253,14 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyQuery, SeaAnomalyA
         int[] indexes,
         List<Optional<BM>> powerBitIndexes,
         Entry<String, MiruFilter> entry,
-        BM rawAnswer) throws Exception {
+        BM rawAnswer,
+        BM signedAnswer) throws Exception {
 
         List<BM> answers = Lists.newArrayList();
         for (int i = 0; i < 64; i++) {
             Optional<BM> powerBitIndex = powerBitIndexes.get(i);
             if (powerBitIndex.isPresent()) {
-                BM answer = bitmaps.and(Arrays.asList(powerBitIndex.get(), rawAnswer));
+                BM answer = bitmaps.and(Arrays.asList(powerBitIndex.get(), signedAnswer));
                 answers.add(answer);
             } else {
                 answers.add(null);
