@@ -7,6 +7,8 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.Arrays;
 import java.util.List;
+import org.apache.commons.math.analysis.interpolation.SplineInterpolator;
+import org.apache.commons.math.analysis.polynomials.PolynomialSplineFunction;
 
 /**
  *
@@ -14,6 +16,8 @@ import java.util.List;
 public class SeaAnomaly {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
+
+    private final SplineInterpolator interpolator = new SplineInterpolator();
 
     public <BM extends IBM, IBM> Waveform metricingSum(MiruBitmaps<BM, IBM> bitmaps,
         BM rawAnswer,
@@ -43,10 +47,37 @@ public class SeaAnomaly {
 
         long[] waveform = sum(indexes, numBits, answers, bitmaps);
 
+        double[] x = new double[waveform.length];
+        double[] y = new double[waveform.length];
+        int count = 0;
         for (int i = 0; i < waveform.length; i++) {
             if (rawCardinalities[i] > 0) {
-                waveform[i] /= rawCardinalities[i];
+                x[count] = i;
+                y[count] /= rawCardinalities[i];
+                count++;
             }
+        }
+
+        if (count == waveform.length) {
+            for (int i = 0; i < waveform.length; i++) {
+                if (rawCardinalities[i] > 0) {
+                    waveform[i] /= rawCardinalities[i];
+                }
+            }
+        } else {
+            double[] ix = new double[count];
+            double[] iy = new double[count];
+            System.arraycopy(x, 0, ix, 0, count);
+            System.arraycopy(y, 0, iy, 0, count);
+
+            PolynomialSplineFunction splineFunction = interpolator.interpolate(ix, iy);
+
+            long[] interpolated = new long[waveform.length];
+            for (int i = 0; i < waveform.length; i++) {
+                interpolated[i] = (long) splineFunction.value((double) i);
+            }
+
+            waveform = interpolated;
         }
         return new Waveform(waveform);
     }
