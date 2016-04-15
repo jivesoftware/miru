@@ -50,8 +50,15 @@ public class SeaAnomaly {
         double[] x = new double[waveform.length];
         double[] y = new double[waveform.length];
         int count = 0;
+        int firstIndex = -1;
+        int lastIndex = -1;
         for (int i = 0; i < waveform.length; i++) {
             if (rawCardinalities[i] > 0) {
+                if (firstIndex == -1) {
+                    firstIndex = i;
+                }
+                lastIndex = i;
+
                 x[count] = i;
                 y[count] /= rawCardinalities[i];
                 count++;
@@ -64,17 +71,26 @@ public class SeaAnomaly {
                     waveform[i] /= rawCardinalities[i];
                 }
             }
-        } else {
-            double[] ix = new double[count];
-            double[] iy = new double[count];
-            System.arraycopy(x, 0, ix, 0, count);
-            System.arraycopy(y, 0, iy, 0, count);
+        } else if (count > 0) {
+            double[] ix = new double[count + 2];
+            double[] iy = new double[count + 2];
+            System.arraycopy(x, 0, ix, 1, count);
+            System.arraycopy(y, 0, iy, 1, count);
+
+            ix[0] = -1;
+            iy[0] = y[firstIndex];
+            ix[ix.length - 1] = x.length;
+            iy[iy.length - 1] = y[lastIndex];
 
             PolynomialSplineFunction splineFunction = interpolator.interpolate(ix, iy);
 
             long[] interpolated = new long[waveform.length];
             for (int i = 0; i < waveform.length; i++) {
-                interpolated[i] = (long) splineFunction.value((double) i);
+                if (rawCardinalities[i] > 0) {
+                    interpolated[i] /= rawCardinalities[i];
+                } else {
+                    interpolated[i] = (long) splineFunction.value((double) i);
+                }
             }
 
             waveform = interpolated;

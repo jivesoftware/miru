@@ -5,12 +5,12 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-build-management</artifactId>
-        <version>0.1029</version>
+        <version>0.1030</version>
         <relativePath>../inheritance-poms/global-build-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru</groupId>
     <artifactId>miru-reco</artifactId>
-    <version>0.1029</version>
+    <version>0.1030</version>
     <properties>
         <module.type>shared_lib</module.type>
     </properties>
