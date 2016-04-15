@@ -19,10 +19,10 @@ public class SeaAnomalyChromeRegion<I, R extends MiruPageRegion<I>> implements M
     private final String template;
     private final MiruSoyRenderer renderer;
     private final MiruHeaderRegion headerRegion;
-    private final List<MiruManagePlugin> plugins;
+    private final List<SeaAnomalyPlugin> plugins;
     private final R region;
 
-    public SeaAnomalyChromeRegion(String template, MiruSoyRenderer renderer, MiruHeaderRegion headerRegion, List<MiruManagePlugin> plugins, R region) {
+    public SeaAnomalyChromeRegion(String template, MiruSoyRenderer renderer, MiruHeaderRegion headerRegion, List<SeaAnomalyPlugin> plugins, R region) {
         this.template = template;
         this.renderer = renderer;
         this.headerRegion = headerRegion;
