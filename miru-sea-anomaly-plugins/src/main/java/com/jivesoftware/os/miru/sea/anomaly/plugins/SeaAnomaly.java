@@ -7,7 +7,7 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.Arrays;
 import java.util.List;
-import org.apache.commons.math.analysis.interpolation.SplineInterpolator;
+import org.apache.commons.math.analysis.interpolation.LinearInterpolator;
 import org.apache.commons.math.analysis.polynomials.PolynomialSplineFunction;
 
 /**
@@ -17,7 +17,7 @@ public class SeaAnomaly {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
-    private final SplineInterpolator interpolator = new SplineInterpolator();
+    private final LinearInterpolator interpolator = new LinearInterpolator();
 
     public <BM extends IBM, IBM> Waveform metricingSum(MiruBitmaps<BM, IBM> bitmaps,
         BM rawAnswer,
