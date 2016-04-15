@@ -32,13 +32,13 @@
     <div class="panel panel-default">
         <div id="anomaly-query" class="panel-heading">
             Query See Anomaly
-            <div class="checkbox">
+            <div class="checkbox" style="display:inline-block; margin-left:20px;">
                 <label><input type="checkbox" onchange="anomaly.query.advanced(this);"> Show advanced filters</label>
             </div>
         </div>
         <div class="panel-body">
             <form id="anom-query-filters" method="get" name="requestPickerForm">
-                <table style="border-collapse: separate; border-spacing: 10px;">
+                <table style="border-collapse: separate; border-spacing: 6px;">
                     <tr class="anom-query-advanced">
                         <td>Cluster</td>
                         <td>
@@ -141,7 +141,7 @@
                         <td colspan="3">
                             <input type="text" autocomplete="off" role="combobox" style="width:580px; padding-left:10px;"
                                 placeholder="Metric Name/s" value="{$metric?:''}"
-                                name="metric" id="messagePicker" data-original-title="" title="">
+                                name="metric" id="metricPicker" data-original-title="" title="">
                         </td>
                     </tr>
                     <tr class="anom-query-advanced">
@@ -149,7 +149,7 @@
                         <td colspan="3">
                             <input type="text" autocomplete="off" role="combobox" style="width:580px; padding-left:10px;"
                                 class="j-tags-autocomplete j-autocomplete-input j-ui-elem" placeholder="Tags" value="{$tags?:''}"
-                                name="tags" id="messagePicker" data-original-title="" title="">
+                                name="tags" id="tagsPicker" data-original-title="" title="">
                         </td>
                     </tr>
                     <tr>
@@ -157,12 +157,12 @@
                         <td>
                             <select style="width:120px; padding-left:10px;"
                                 class="j-type-autocomplete j-autocomplete-input j-ui-elem" placeholder="type"
-                                name="type" id="type" data-original-title="" title="">
-                                <option value="VALUE" {if $type == 'VALUE'}selected="selected"{/if}>VALUE</option>
-                                <option value="counter" {if $type == 'counter'}selected="selected"{/if}>counter</option>
-                                <option value="atomicCounter" {if $type == 'atomicCounter'}selected="selected"{/if}>atomicCounter</option>
-                                <option value="timer" {if $type == 'timer'}selected="selected"{/if}>timer</option>
-                                <option value="all" {if $type == 'all'}selected="selected"{/if}>all</option>
+                                name="type" id="typePicker" data-original-title="" title="">
+                                <option value="VALUE" {if $type == 'VALUE'}selected="selected"{/if}>Value</option>
+                                <option value="counter" {if $type == 'counter'}selected="selected"{/if}>Counter</option>
+                                <option value="atomicCounter" {if $type == 'atomicCounter'}selected="selected"{/if}>Atomic Counter</option>
+                                <option value="timer" {if $type == 'timer'}selected="selected"{/if}>Timer</option>
+                                <option value="all" {if $type == 'all'}selected="selected"{/if}>All</option>
                             </select>
                         </td>
                     </tr>
@@ -172,27 +172,27 @@
                             Expand on&nbsp;
                             <select style="width:120px; padding-left:10px;"
                                 class="j-expansionField-autocomplete j-autocomplete-input j-ui-elem" placeholder="expansionField"
-                                name="expansionField" id="expansionField" data-original-title="" title="">
-                                <option value="metric" {if $expansionField == 'metric'}selected="selected"{/if}>metric</option>
-                                <option value="tags" {if $expansionField == 'tags'}selected="selected"{/if}>tags</option>
-                                <option value="cluster" {if $expansionField == 'cluster'}selected="selected"{/if}>cluster</option>
-                                <option value="host" {if $expansionField == 'host'}selected="selected"{/if}>host</option>
-                                <option value="service" {if $expansionField == 'service'}selected="selected"{/if}>service</option>
-                                <option value="instance" {if $expansionField == 'instance'}selected="selected"{/if}>instance</option>
-                                <option value="version" {if $expansionField == 'version'}selected="selected"{/if}>version</option>
-                                <option value="sampler" {if $expansionField == 'sampler'}selected="selected"{/if}>sampler</option>
-                                <option value="tenant" {if $expansionField == 'tenant'}selected="tenant"{/if}>tenant</option>
+                                name="expansionField" id="expansionFieldPicker" data-original-title="" title="">
+                                <option value="metric" {if $expansionField == 'metric'}selected="selected"{/if}>Metric</option>
+                                <option value="tags" {if $expansionField == 'tags'}selected="selected"{/if}>Tags</option>
+                                <option value="cluster" {if $expansionField == 'cluster'}selected="selected"{/if}>Cluster</option>
+                                <option value="host" {if $expansionField == 'host'}selected="selected"{/if}>Host</option>
+                                <option value="service" {if $expansionField == 'service'}selected="selected"{/if}>Service</option>
+                                <option value="instance" {if $expansionField == 'instance'}selected="selected"{/if}>Instance</option>
+                                <option value="version" {if $expansionField == 'version'}selected="selected"{/if}>Version</option>
+                                <option value="sampler" {if $expansionField == 'sampler'}selected="selected"{/if}>Sampler</option>
+                                <option value="tenant" {if $expansionField == 'tenant'}selected="tenant"{/if}>Tenant</option>
                             </select>
                             &nbsp;limited to terms&nbsp;
                             <input type="text" autocomplete="off" role="combobox" style="width:280px;"
-                                class="j-expansionValue-autocomplete j-autocomplete-input j-ui-elem" placeholder="expansionValue" value="{$expansionValue?:''}"
+                                class="j-expansionValue-autocomplete j-autocomplete-input j-ui-elem" placeholder="Wildcard" value="{$expansionValue?:''}"
                                 name="expansionValue" id="expansionValuePicker" data-original-title="" title="">
                         </td>
                     </tr>
-                    <td>
+                    <tr>
                         <td>Graph type</td>
                         <td>
-                            <select style="width:120px; padding-left:10px;" placeholder="GraphType" name="graphType" >
+                            <select style="width:120px; padding-left:10px;" placeholder="GraphType" name="graphType" id="graphTypePicker">
                                 <option value="Line" {if $graphType == 'Line'}selected="selected"{/if}>Line</option>
                                 <option value="Radar" {if $graphType == 'Radar'}selected="selected"{/if}>Radar</option>
                                 <option value="Bar" {if $graphType == 'Bar'}selected="selected"{/if}>Bar</option>
@@ -259,16 +259,8 @@
                                 <td>
                                     <div class="anom-wave-toggle" style="height:36px;position:relative;overflow:hidden;">
                                         <div>
-                                            <form method="get">
-                                                <input type="hidden" name="{$result.field}" value="{$result.value}">
-                                                <input type="hidden" name="fromAgo" value="{$fromAgo}">
-                                                <input type="hidden" name="fromTimeUnit" value="{$fromTimeUnit}">
-                                                <input type="hidden" name="toAgo" value="{$toAgo}">
-                                                <input type="hidden" name="toTimeUnit" value="{$toTimeUnit}">
-
-                                                avg:{$result.avg}&nbsp;&nbsp;&nbsp;{$result.value}
-                                                <input class="btn btn-default" type="submit" value="Focus"/>
-                                            </form>
+                                            avg:{$result.avg}&nbsp;&nbsp;&nbsp;{$result.value}
+                                            <input class="btn btn-default" type="submit" value="Focus" onclick="anomaly.query.focus('{$result.field}', '{$result.value}'); return false" />
                                         </div>
                                         <br>
                                         (min:{$result.min}  max:{$result.max})
