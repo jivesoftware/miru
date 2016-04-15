@@ -401,11 +401,17 @@ public class SeaAnomalyQueryPluginRegion implements MiruPageRegion<Optional<SeaA
     public Map<String, Object> rates(String graphType, String label, Color color, float alpha, long[] values) {
         Map<String, Object> waveform = new HashMap<>();
         waveform.put("label", "\"" + label + "\"");
-        waveform.put("fillColor", "\"rgba(" + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + "," + String.valueOf(alpha) + ")\"");
 
         boolean filled = filledGraphTypes.contains(graphType);
-        waveform.put("datasetFill", String.valueOf(filled));
-        waveform.put("datasetStrokeWidth", filled ? "2" : "4");
+        if (filled) {
+            waveform.put("datasetFill", "true");
+            waveform.put("fillColor", "\"rgba(" + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + "," + String.valueOf(alpha) + ")\"");
+            waveform.put("datasetStrokeWidth", "2");
+        } else {
+            waveform.put("datasetFill", "false");
+            waveform.put("fillColor", "\"rgba(0,0,0,0)\"");
+            waveform.put("datasetStrokeWidth", "4");
+        }
 
         waveform.put("strokeColor", "\"rgba(" + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + ",1)\"");
         waveform.put("pointColor", "\"rgba(" + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + ",1)\"");
