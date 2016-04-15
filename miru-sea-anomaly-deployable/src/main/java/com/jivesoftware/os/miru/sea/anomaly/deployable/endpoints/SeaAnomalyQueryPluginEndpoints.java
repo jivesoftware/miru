@@ -4,6 +4,8 @@ import com.google.common.base.Optional;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.MiruSeaAnomalyService;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.region.SeaAnomalyQueryPluginRegion;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.region.SeaAnomalyQueryPluginRegion.SeaAnomalyPluginRegionInput;
+import com.jivesoftware.os.mlogger.core.MetricLogger;
+import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import javax.inject.Singleton;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
@@ -20,6 +22,8 @@ import javax.ws.rs.core.Response;
 @Singleton
 @Path("/seaAnomaly/query")
 public class SeaAnomalyQueryPluginEndpoints {
+
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final MiruSeaAnomalyService seaAnomalyService;
     private final SeaAnomalyQueryPluginRegion pluginRegion;
@@ -52,8 +56,9 @@ public class SeaAnomalyQueryPluginEndpoints {
         @QueryParam("expansionField") @DefaultValue("metric") String expansionField,
         @QueryParam("expansionValue") @DefaultValue("*") String expansionValue
     ) {
-        String rendered = seaAnomalyService.renderPlugin(pluginRegion,
-            Optional.of(new SeaAnomalyPluginRegionInput(cluster,
+        try {
+            String rendered = seaAnomalyService.renderPlugin(pluginRegion,
+                Optional.of(new SeaAnomalyPluginRegionInput(cluster,
                     host,
                     service,
                     instance,
@@ -71,6 +76,10 @@ public class SeaAnomalyQueryPluginEndpoints {
                     graphType,
                     expansionField,
                     expansionValue)));
-        return Response.ok(rendered).build();
+            return Response.ok(rendered).build();
+        } catch (Throwable t) {
+            LOG.error("Failed query", t);
+            return Response.serverError().build();
+        }
     }
 }
