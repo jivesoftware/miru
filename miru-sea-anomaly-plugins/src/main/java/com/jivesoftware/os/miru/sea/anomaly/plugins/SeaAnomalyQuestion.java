@@ -166,7 +166,7 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyQuery, SeaAnomalyA
                     }
                     return true;
                 }, stackBuffer);
-            } else {
+            } else if (!expansion.isEmpty()) {
                 // TODO use got.
                 for (Entry<String, MiruFilter> entry : request.query.filters.entrySet()) {
 
@@ -219,7 +219,8 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyQuery, SeaAnomalyA
                     }
 
                     if (negative.isPresent()) {
-                        Waveform negativeWaveform = getWaveform(solutionLog, bitmaps, indexes, powerBitIndexes, entry, rawAnswer);
+                        BM negativeAnswer = bitmaps.and(Arrays.asList(negative.get(), rawAnswer));
+                        Waveform negativeWaveform = getWaveform(solutionLog, bitmaps, indexes, powerBitIndexes, entry, negativeAnswer);
                         for (int i = 0; i < mergedWaveform.length; i++) {
                             mergedWaveform[i] -= negativeWaveform.waveform[i];
                         }
