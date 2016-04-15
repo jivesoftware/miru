@@ -60,7 +60,7 @@ public class SeaAnomaly {
                 lastIndex = i;
 
                 x[count] = i;
-                y[count] /= rawCardinalities[i];
+                y[count] = waveform[i] / rawCardinalities[i];
                 count++;
             }
         }
