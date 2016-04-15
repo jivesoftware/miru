@@ -87,7 +87,7 @@ public class SeaAnomaly {
             long[] interpolated = new long[waveform.length];
             for (int i = 0; i < waveform.length; i++) {
                 if (rawCardinalities[i] > 0) {
-                    interpolated[i] /= rawCardinalities[i];
+                    interpolated[i] = waveform[i] / rawCardinalities[i];
                 } else {
                     interpolated[i] = (long) splineFunction.value((double) i);
                 }
