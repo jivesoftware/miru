@@ -15,7 +15,7 @@ public class SeaAnomaly {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
-    public static <BM extends IBM, IBM> Waveform metricingSum(MiruBitmaps<BM, IBM> bitmaps,
+    public <BM extends IBM, IBM> Waveform metricingSum(MiruBitmaps<BM, IBM> bitmaps,
         BM rawAnswer,
         List<BM> answers,
         int[] indexes,
@@ -29,7 +29,7 @@ public class SeaAnomaly {
         return new Waveform(waveform);
     }
 
-    public static <BM extends IBM, IBM> Waveform metricingAvg(MiruBitmaps<BM, IBM> bitmaps,
+    public <BM extends IBM, IBM> Waveform metricingAvg(MiruBitmaps<BM, IBM> bitmaps,
         BM rawAnswer,
         List<BM> answers,
         int[] indexes,
@@ -51,7 +51,7 @@ public class SeaAnomaly {
         return new Waveform(waveform);
     }
 
-   
+
     static <BM extends IBM, IBM> long[] sum(int[] indexes, int numBits, List<BM> answers, MiruBitmaps<BM, IBM> bitmaps) {
         long[] waveform = null;
         long[] rawCardinalities = new long[indexes.length - 1];

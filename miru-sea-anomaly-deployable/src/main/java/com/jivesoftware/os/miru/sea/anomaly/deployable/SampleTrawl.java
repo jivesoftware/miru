@@ -45,12 +45,23 @@ public class SampleTrawl {
         }
         levelCount.incrementAndGet();
 
+        long value = metric.value;
+
         List<String> bits = new ArrayList<>();
-        bits.add("z");
+        if (value >= 0) {
+            bits.add("+");
+        } else {
+            bits.add("-");
+            if (value == Long.MIN_VALUE) {
+                value = Long.MAX_VALUE; // lossy, but sign flip would remain negative
+            } else {
+                value = -value;
+            }
+        }
 
         String metricName = Joiner.on(">").join(metric.path);
         for (int i = 0; i < 64; i++) {
-            if (((metric.value >>> i) & 1) != 0) {
+            if (((value >>> i) & 1) != 0) {
                 bits.add(String.valueOf(i));
             }
         }
