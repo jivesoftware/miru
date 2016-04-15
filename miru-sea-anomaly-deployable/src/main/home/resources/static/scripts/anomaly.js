@@ -80,6 +80,11 @@ anomaly.query = {
         $toggle.each(function (index, ele) {
             anom.query.toggle(ele);
         });
+    },
+
+    focus: function (field, value) {
+        $('#' + field + 'Picker').val(value);
+        $('#anom-query-filters').submit();
     }
 };
 

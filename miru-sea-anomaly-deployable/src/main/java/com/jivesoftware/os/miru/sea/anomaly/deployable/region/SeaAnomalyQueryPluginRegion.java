@@ -379,9 +379,12 @@ public class SeaAnomalyQueryPluginRegion implements MiruPageRegion<Optional<SeaA
     public Map<String, Object> waveform(String graphType, String label, Color color, float alpha, long[] values) {
         Map<String, Object> waveform = new HashMap<>();
         waveform.put("label", "\"" + label + "\"");
-        if (filledGraphTypes.contains(graphType)) {
-            waveform.put("fillColor", "\"rgba(" + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + "," + String.valueOf(alpha) + ")\"");
-        }
+        waveform.put("fillColor", "\"rgba(" + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + "," + String.valueOf(alpha) + ")\"");
+
+        boolean filled = filledGraphTypes.contains(graphType);
+        waveform.put("datasetFill", String.valueOf(filled));
+        waveform.put("datasetStrokeWidth", filled ? "2" : "4");
+
         waveform.put("strokeColor", "\"rgba(" + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + ",1)\"");
         waveform.put("pointColor", "\"rgba(" + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + ",1)\"");
         waveform.put("pointStrokeColor", "\"rgba(" + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + ",1)\"");
@@ -398,9 +401,12 @@ public class SeaAnomalyQueryPluginRegion implements MiruPageRegion<Optional<SeaA
     public Map<String, Object> rates(String graphType, String label, Color color, float alpha, long[] values) {
         Map<String, Object> waveform = new HashMap<>();
         waveform.put("label", "\"" + label + "\"");
-        if (filledGraphTypes.contains(graphType)) {
-            waveform.put("fillColor", "\"rgba(" + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + "," + String.valueOf(alpha) + ")\"");
-        }
+        waveform.put("fillColor", "\"rgba(" + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + "," + String.valueOf(alpha) + ")\"");
+
+        boolean filled = filledGraphTypes.contains(graphType);
+        waveform.put("datasetFill", String.valueOf(filled));
+        waveform.put("datasetStrokeWidth", filled ? "2" : "4");
+
         waveform.put("strokeColor", "\"rgba(" + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + ",1)\"");
         waveform.put("pointColor", "\"rgba(" + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + ",1)\"");
         waveform.put("pointStrokeColor", "\"rgba(" + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + ",1)\"");
