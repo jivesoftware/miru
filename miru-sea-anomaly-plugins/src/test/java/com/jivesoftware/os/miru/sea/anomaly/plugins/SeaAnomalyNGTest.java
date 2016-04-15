@@ -45,12 +45,13 @@ public class SeaAnomalyNGTest {
             rawAnswer.add(i);
         }
 
-        SeaAnomalyAnswer.Waveform metricingSum = SeaAnomaly.metricingSum(miruBitmapsRoaring, rawAnswer, Arrays.asList(waveformAsBitmaps(waveform)), indexes, 64);
+        SeaAnomaly seaAnomaly = new SeaAnomaly();
+        SeaAnomalyAnswer.Waveform metricingSum = seaAnomaly.metricingSum(miruBitmapsRoaring, rawAnswer, Arrays.asList(waveformAsBitmaps(waveform)), indexes, 64);
 
         System.out.println("metricingSum expected=" + Arrays.toString(expectedSum) + " was=" + metricingSum);
         Assert.assertTrue(Arrays.equals(expectedSum, metricingSum.waveform), Arrays.toString(expectedSum) + " vs " + Arrays.toString(metricingSum.waveform));
 
-        SeaAnomalyAnswer.Waveform metricingAvg = SeaAnomaly.metricingAvg(miruBitmapsRoaring, rawAnswer, Arrays.asList(waveformAsBitmaps(waveform)), indexes, 64);
+        SeaAnomalyAnswer.Waveform metricingAvg = seaAnomaly.metricingAvg(miruBitmapsRoaring, rawAnswer, Arrays.asList(waveformAsBitmaps(waveform)), indexes, 64);
 
         System.out.println("metricingAvg expected=" + Arrays.toString(expectedAvg) + " was=" + metricingAvg);
         Assert.assertTrue(Arrays.equals(expectedAvg, metricingAvg.waveform), Arrays.toString(expectedAvg) + " vs " + Arrays.toString(metricingAvg.waveform));

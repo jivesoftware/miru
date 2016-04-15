@@ -31,6 +31,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.solution.Question;
+import com.jivesoftware.os.miru.sea.anomaly.plugins.SeaAnomalyAnswer.Waveform;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -190,9 +191,11 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyQuery, SeaAnomalyA
         List<Optional<BM>> powerBitIndexes = new ArrayList<>();
 
         for (int i = 0; i < 64; i++) {
-            fetchBits(context, schema, powerBitsFieldDefinition, stackBuffer, String.valueOf(i), primaryFieldIndex, powerBitsFieldId, powerBitIndexes);
+            powerBitIndexes.add(fetchBits(context, schema, powerBitsFieldDefinition, stackBuffer, String.valueOf(i), primaryFieldIndex, powerBitsFieldId));
         }
-        fetchBits(context, schema, powerBitsFieldDefinition, stackBuffer, String.valueOf("z"), primaryFieldIndex, powerBitsFieldId, powerBitIndexes);
+
+        Optional<BM> positive = fetchBits(context, schema, powerBitsFieldDefinition, stackBuffer, String.valueOf("+"), primaryFieldIndex, powerBitsFieldId);
+        Optional<BM> negative = fetchBits(context, schema, powerBitsFieldDefinition, stackBuffer, String.valueOf("-"), primaryFieldIndex, powerBitsFieldId);
 
         Map<String, SeaAnomalyAnswer.Waveform> waveforms = Maps.newHashMapWithExpectedSize(expand.size());
         start = System.currentTimeMillis();
@@ -205,38 +208,24 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyQuery, SeaAnomalyA
 
                 BM rawAnswer = bitmaps.and(Arrays.asList(constrained, waveformFiltered));
                 if (!bitmaps.isEmpty(rawAnswer)) {
+                    long[] mergedWaveform = new long[indexes.length - 1];
 
-                    List<BM> answers = Lists.newArrayList();
-                    for (int i = 0; i < 64; i++) {
-                        Optional<BM> powerBitIndex = powerBitIndexes.get(i);
-                        if (powerBitIndex.isPresent()) {
-                            BM answer = bitmaps.and(Arrays.asList(powerBitIndex.get(), rawAnswer));
-                            answers.add(answer);
-                        } else {
-                            answers.add(null);
+                    if (positive.isPresent()) {
+                        BM positiveAnswer = bitmaps.and(Arrays.asList(positive.get(), rawAnswer));
+                        Waveform positiveWaveform = getWaveform(solutionLog, bitmaps, indexes, powerBitIndexes, entry, positiveAnswer);
+                        for (int i = 0; i < mergedWaveform.length; i++) {
+                            mergedWaveform[i] += positiveWaveform.waveform[i];
                         }
                     }
 
-                    Optional<BM> powerBitIndex = powerBitIndexes.get(powerBitIndexes.size() - 1); // "z"
-                    if (powerBitIndex.isPresent()) {
-                        BM answer = bitmaps.and(Arrays.asList(powerBitIndex.get(), rawAnswer));
-                        answers.add(answer);
-                    } else {
-                        answers.add(null);
+                    if (negative.isPresent()) {
+                        Waveform negativeWaveform = getWaveform(solutionLog, bitmaps, indexes, powerBitIndexes, entry, rawAnswer);
+                        for (int i = 0; i < mergedWaveform.length; i++) {
+                            mergedWaveform[i] -= negativeWaveform.waveform[i];
+                        }
                     }
 
-                    waveform = seaAnomaly.metricingAvg(bitmaps, rawAnswer, answers, indexes, 64);
-                    if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.DEBUG)) {
-                        int cardinality = 0;
-                        for (int i = 0; i < 64; i++) {
-                            BM answer = answers.get(i);
-                            if (answer != null) {
-                                cardinality += bitmaps.cardinality(answer);
-                            }
-                        }
-                        solutionLog.log(MiruSolutionLogLevel.DEBUG, "anomaly answer: {} items.", cardinality);
-                        solutionLog.log(MiruSolutionLogLevel.DEBUG, "anomaly name: {}, waveform: {}.", entry.getKey(), Arrays.toString(waveform.waveform));
-                    }
+                    waveform = new Waveform(mergedWaveform);
                 } else {
                     solutionLog.log(MiruSolutionLogLevel.DEBUG, "anomaly empty answer.");
                 }
@@ -258,12 +247,51 @@ public class SeaAnomalyQuestion implements Question<SeaAnomalyQuery, SeaAnomalyA
         return new MiruPartitionResponse<>(result, solutionLog.asList());
     }
 
-    private <BM extends IBM, IBM> void fetchBits(
-        MiruRequestContext<BM, IBM, ?> context, MiruSchema schema, MiruFieldDefinition powerBitsFieldDefinition, StackBuffer stackBuffer, String bit,
-        MiruFieldIndex<BM, IBM> primaryFieldIndex, int powerBitsFieldId, List<Optional<BM>> powerBitIndexes) throws Exception {
+    private <BM extends IBM, IBM> Waveform getWaveform(MiruSolutionLog solutionLog,
+        MiruBitmaps<BM, IBM> bitmaps,
+        int[] indexes,
+        List<Optional<BM>> powerBitIndexes,
+        Entry<String, MiruFilter> entry,
+        BM rawAnswer) throws Exception {
+
+        List<BM> answers = Lists.newArrayList();
+        for (int i = 0; i < 64; i++) {
+            Optional<BM> powerBitIndex = powerBitIndexes.get(i);
+            if (powerBitIndex.isPresent()) {
+                BM answer = bitmaps.and(Arrays.asList(powerBitIndex.get(), rawAnswer));
+                answers.add(answer);
+            } else {
+                answers.add(null);
+            }
+        }
+
+        Waveform waveform = seaAnomaly.metricingAvg(bitmaps, rawAnswer, answers, indexes, 64);
+        if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.DEBUG)) {
+            int cardinality = 0;
+            for (int i = 0; i < 64; i++) {
+                BM answer = answers.get(i);
+                if (answer != null) {
+                    cardinality += bitmaps.cardinality(answer);
+                }
+            }
+            solutionLog.log(MiruSolutionLogLevel.DEBUG, "anomaly answer: {} items.", cardinality);
+            solutionLog.log(MiruSolutionLogLevel.DEBUG, "anomaly name: {}, waveform: {}.", entry.getKey(), Arrays.toString(waveform.waveform));
+        }
+        return waveform;
+    }
+
+    private <BM extends IBM, IBM> Optional<BM> fetchBits(
+        MiruRequestContext<BM, IBM, ?> context,
+        MiruSchema schema,
+        MiruFieldDefinition powerBitsFieldDefinition,
+        StackBuffer stackBuffer,
+        String bit,
+        MiruFieldIndex<BM, IBM> primaryFieldIndex,
+        int powerBitsFieldId) throws Exception {
+
         MiruTermId powerBitTerm = context.getTermComposer().compose(schema, powerBitsFieldDefinition, stackBuffer, bit);
         MiruInvertedIndex<BM, IBM> invertedIndex = primaryFieldIndex.get("anomaly", powerBitsFieldId, powerBitTerm);
-        powerBitIndexes.add(invertedIndex.getIndex(stackBuffer));
+        return invertedIndex.getIndex(stackBuffer);
     }
 
     @Override
