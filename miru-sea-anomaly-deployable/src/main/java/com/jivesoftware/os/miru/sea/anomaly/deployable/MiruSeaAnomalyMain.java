@@ -32,11 +32,9 @@ import com.jivesoftware.os.miru.metric.sampler.AnomalyMetric;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.MiruSeaAnomalyIntakeInitializer.MiruSeaAnomalyIntakeConfig;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.endpoints.SeaAnomalyQueryPluginEndpoints;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.endpoints.SeaAnomalyStatusPluginEndpoints;
-import com.jivesoftware.os.miru.sea.anomaly.deployable.endpoints.SeaAnomalyTrendsPluginEndpoints;
-import com.jivesoftware.os.miru.sea.anomaly.deployable.region.MiruManagePlugin;
+import com.jivesoftware.os.miru.sea.anomaly.deployable.region.SeaAnomalyPlugin;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.region.SeaAnomalyQueryPluginRegion;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.region.SeaAnomalyStatusPluginRegion;
-import com.jivesoftware.os.miru.sea.anomaly.deployable.region.SeaAnomalyTrendsPluginRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer.MiruSoyRendererConfig;
@@ -194,14 +192,14 @@ public class MiruSeaAnomalyMain {
 
             serviceStartupHealthCheck.info("installing ui plugins...", null);
 
-            List<MiruManagePlugin> plugins = Lists.newArrayList(
-                new MiruManagePlugin("eye-open", "Status", "/seaAnomaly/status",
+            List<SeaAnomalyPlugin> plugins = Lists.newArrayList(
+                new SeaAnomalyPlugin("eye-open", "Status", "/seaAnomaly/status",
                     SeaAnomalyStatusPluginEndpoints.class,
                     new SeaAnomalyStatusPluginRegion("soy.sea.anomaly.page.seaAnomalyStatusPluginRegion", renderer, sampleTrawl)),
-                new MiruManagePlugin("stats", "Trends", "/seaAnomaly/trends",
+                /*new SeaAnomalyPlugin("stats", "Trends", "/seaAnomaly/trends",
                     SeaAnomalyTrendsPluginEndpoints.class,
-                    new SeaAnomalyTrendsPluginRegion("soy.sea.anomaly.page.seaAnomalyTrendsPluginRegion", renderer, readerClient, mapper, responseMapper)),
-                new MiruManagePlugin("search", "Query", "/seaAnomaly/query",
+                    new SeaAnomalyTrendsPluginRegion("soy.sea.anomaly.page.seaAnomalyTrendsPluginRegion", renderer, readerClient, mapper, responseMapper)),*/
+                new SeaAnomalyPlugin("search", "Query", "/seaAnomaly/query",
                     SeaAnomalyQueryPluginEndpoints.class,
                     new SeaAnomalyQueryPluginRegion("soy.sea.anomaly.page.seaAnomalyQueryPluginRegion", renderer, readerClient, mapper, responseMapper)));
 
@@ -218,7 +216,7 @@ public class MiruSeaAnomalyMain {
             deployable.addEndpoints(MiruQuerySeaAnomalyEndpoints.class);
             deployable.addInjectables(MiruSeaAnomalyService.class, queryService);
 
-            for (MiruManagePlugin plugin : plugins) {
+            for (SeaAnomalyPlugin plugin : plugins) {
                 queryService.registerPlugin(plugin);
                 deployable.addEndpoints(plugin.endpointsClass);
                 deployable.addInjectables(plugin.region.getClass(), plugin.region);

@@ -3,7 +3,7 @@ package com.jivesoftware.os.miru.sea.anomaly.deployable;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.region.MiruHeaderRegion;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.region.MiruHomeRegion.HomeInput;
-import com.jivesoftware.os.miru.sea.anomaly.deployable.region.MiruManagePlugin;
+import com.jivesoftware.os.miru.sea.anomaly.deployable.region.SeaAnomalyPlugin;
 import com.jivesoftware.os.miru.sea.anomaly.deployable.region.SeaAnomalyChromeRegion;
 import com.jivesoftware.os.miru.ui.MiruPageRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
@@ -18,7 +18,7 @@ public class MiruSeaAnomalyService {
     private final MiruHeaderRegion headerRegion;
     private final MiruPageRegion<HomeInput> homeRegion;
 
-    private final List<MiruManagePlugin> plugins = Lists.newCopyOnWriteArrayList();
+    private final List<SeaAnomalyPlugin> plugins = Lists.newCopyOnWriteArrayList();
 
     public MiruSeaAnomalyService(
         MiruSoyRenderer renderer,
@@ -35,7 +35,7 @@ public class MiruSeaAnomalyService {
         return chrome(homeRegion).render(new HomeInput(intakeURL));
     }
 
-    public void registerPlugin(MiruManagePlugin plugin) {
+    public void registerPlugin(SeaAnomalyPlugin plugin) {
         plugins.add(plugin);
     }
 

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
@@ -43,6 +44,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.TimeUnit;
 
@@ -97,6 +99,8 @@ public class SeaAnomalyQueryPluginRegion implements MiruPageRegion<Optional<SeaA
         final String expansionField;
         final String expansionValue;
 
+        final int maxWaveforms;
+
         public SeaAnomalyPluginRegionInput(String cluster,
             String host,
             String service,
@@ -114,7 +118,8 @@ public class SeaAnomalyQueryPluginRegion implements MiruPageRegion<Optional<SeaA
             int buckets,
             String graphType,
             String expansionField,
-            String expansionValue) {
+            String expansionValue,
+            int maxWaveforms) {
 
             this.cluster = cluster;
             this.host = host;
@@ -134,6 +139,7 @@ public class SeaAnomalyQueryPluginRegion implements MiruPageRegion<Optional<SeaA
             this.graphType = graphType;
             this.expansionField = expansionField;
             this.expansionValue = expansionValue;
+            this.maxWaveforms = maxWaveforms;
         }
 
     }
@@ -168,6 +174,8 @@ public class SeaAnomalyQueryPluginRegion implements MiruPageRegion<Optional<SeaA
 
                 data.put("expansionField", input.expansionField);
                 data.put("expansionValue", input.expansionValue);
+
+                data.put("maxWaveforms", input.maxWaveforms);
 
                 SnowflakeIdPacker snowflakeIdPacker = new SnowflakeIdPacker();
                 long jiveCurrentTime = new JiveEpochTimestampProvider().getTimestamp();
@@ -259,6 +267,10 @@ public class SeaAnomalyQueryPluginRegion implements MiruPageRegion<Optional<SeaA
                         }
                         String key = e.getKey().substring(e.getKey().indexOf('-') + 1);
                         rawWaveforms.put(new WaveformKey(key, mmd), e.getValue().waveform);
+
+                        if (rawWaveforms.size() >= input.maxWaveforms) {
+                            break;
+                        }
                     }
 
                     List<String> labels = new ArrayList<>();
@@ -283,8 +295,8 @@ public class SeaAnomalyQueryPluginRegion implements MiruPageRegion<Optional<SeaA
 
                         Color c = indexColor((float) id / (float) (rawWaveforms.size()), 0.5f);
 
-                        Map<String, Object> w = waveform(t.getKey().key, c, 0.2f, t.getValue());
-                        Map<String, Object> r = rates(t.getKey().key, c, 0.2f, t.getValue());
+                        Map<String, Object> w = waveform(input.graphType, t.getKey().key, c, 0.2f, t.getValue());
+                        Map<String, Object> r = rates(input.graphType, t.getKey().key, c, 0.2f, t.getValue());
 
                         DecimalFormat df2 = new DecimalFormat("#,###,###,##0.00");
 
@@ -362,10 +374,14 @@ public class SeaAnomalyQueryPluginRegion implements MiruPageRegion<Optional<SeaA
         return "000000".substring(s.length()) + s;
     }
 
-    public Map<String, Object> waveform(String label, Color color, float alpha, long[] values) {
+    private final Set<String> filledGraphTypes = ImmutableSet.of("Bar", "StackedBar");
+
+    public Map<String, Object> waveform(String graphType, String label, Color color, float alpha, long[] values) {
         Map<String, Object> waveform = new HashMap<>();
         waveform.put("label", "\"" + label + "\"");
-        waveform.put("fillColor", "\"rgba(" + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + "," + String.valueOf(alpha) + ")\"");
+        if (filledGraphTypes.contains(graphType)) {
+            waveform.put("fillColor", "\"rgba(" + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + "," + String.valueOf(alpha) + ")\"");
+        }
         waveform.put("strokeColor", "\"rgba(" + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + ",1)\"");
         waveform.put("pointColor", "\"rgba(" + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + ",1)\"");
         waveform.put("pointStrokeColor", "\"rgba(" + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + ",1)\"");
@@ -379,10 +395,12 @@ public class SeaAnomalyQueryPluginRegion implements MiruPageRegion<Optional<SeaA
         return waveform;
     }
 
-    public Map<String, Object> rates(String label, Color color, float alpha, long[] values) {
+    public Map<String, Object> rates(String graphType, String label, Color color, float alpha, long[] values) {
         Map<String, Object> waveform = new HashMap<>();
         waveform.put("label", "\"" + label + "\"");
-        waveform.put("fillColor", "\"rgba(" + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + "," + String.valueOf(alpha) + ")\"");
+        if (filledGraphTypes.contains(graphType)) {
+            waveform.put("fillColor", "\"rgba(" + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + "," + String.valueOf(alpha) + ")\"");
+        }
         waveform.put("strokeColor", "\"rgba(" + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + ",1)\"");
         waveform.put("pointColor", "\"rgba(" + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + ",1)\"");
         waveform.put("pointStrokeColor", "\"rgba(" + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + ",1)\"");
@@ -395,7 +413,7 @@ public class SeaAnomalyQueryPluginRegion implements MiruPageRegion<Optional<SeaA
                 data.add(0f);
                 last = v;
             } else {
-                data.add((float) (last - v));
+                data.add((float) (v - last));
                 last = v;
             }
         }
