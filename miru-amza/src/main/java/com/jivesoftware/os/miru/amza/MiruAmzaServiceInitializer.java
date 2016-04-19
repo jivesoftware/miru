@@ -164,9 +164,7 @@ public class MiruAmzaServiceInitializer {
             serviceName,
             amzaService,
             config.getDiscoveryIntervalMillis());
-        // run once to populate system ring
-        routingBirdAmzaDiscovery.run();
-
+        
         amzaService.start(ringMember, ringHost);
 
         System.out.println("-----------------------------------------------------------------------");
