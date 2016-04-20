@@ -9,7 +9,6 @@ import com.google.common.collect.Lists;
 import com.google.common.io.Files;
 import com.jivesoftware.os.amza.api.BAInterner;
 import com.jivesoftware.os.amza.api.partition.PartitionProperties;
-import com.jivesoftware.os.amza.api.partition.PartitionStripeFunction;
 import com.jivesoftware.os.amza.api.ring.RingHost;
 import com.jivesoftware.os.amza.api.ring.RingMember;
 import com.jivesoftware.os.amza.berkeleydb.BerkeleyDBWALIndexProvider;
@@ -17,13 +16,11 @@ import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.amza.service.AmzaServiceInitializer.AmzaServiceConfig;
 import com.jivesoftware.os.amza.service.EmbeddedAmzaServiceInitializer;
 import com.jivesoftware.os.amza.service.SickPartitions;
-import com.jivesoftware.os.amza.service.WALIndexProviderRegistry;
 import com.jivesoftware.os.amza.service.replication.TakeFailureListener;
 import com.jivesoftware.os.amza.service.replication.http.HttpAvailableRowsTaker;
 import com.jivesoftware.os.amza.service.replication.http.HttpRowsTaker;
 import com.jivesoftware.os.amza.service.stats.AmzaStats;
 import com.jivesoftware.os.amza.service.storage.PartitionPropertyMarshaller;
-import com.jivesoftware.os.amza.service.storage.binary.RowIOProvider;
 import com.jivesoftware.os.amza.service.take.AvailableRowsTaker;
 import com.jivesoftware.os.amza.service.take.RowsTakerFactory;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
@@ -110,7 +107,7 @@ public class MiruWriterUIServiceNGTest {
         RowsTakerFactory rowsTakerFactory = () -> new HttpRowsTaker(amzaStats, baInterner);
 
         AmzaServiceConfig amzaServiceConfig = new AmzaServiceConfig();
-        amzaServiceConfig.workingDirectories = new String[] { amzaDataDir.getAbsolutePath() };
+        amzaServiceConfig.workingDirectories = new String[]{amzaDataDir.getAbsolutePath()};
         amzaServiceConfig.numberOfTakerThreads = 1;
 
         PartitionPropertyMarshaller regionPropertyMarshaller = new PartitionPropertyMarshaller() {
@@ -144,9 +141,8 @@ public class MiruWriterUIServiceNGTest {
             orderIdProvider,
             idPacker,
             regionPropertyMarshaller,
-            (File[] workingIndexDirectories, WALIndexProviderRegistry indexProviderRegistry, RowIOProvider ephemeralRowIOProvider,
-                RowIOProvider persistentRowIOProvider, PartitionStripeFunction partitionStripeFunction) -> {
-                indexProviderRegistry.register(new BerkeleyDBWALIndexProvider("berkeleydb", partitionStripeFunction, workingIndexDirectories),
+            (workingIndexDirectories, indexProviderRegistry, ephemeralRowIOProvider, persistentRowIOProvider, numberOfStripes) -> {
+                indexProviderRegistry.register(new BerkeleyDBWALIndexProvider("berkeleydb", numberOfStripes, workingIndexDirectories),
                     persistentRowIOProvider);
             },
             availableRowsTaker,
