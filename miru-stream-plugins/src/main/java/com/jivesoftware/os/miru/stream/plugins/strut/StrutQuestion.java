@@ -210,7 +210,8 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             pendingUpdates.addAndGet(numberOfUpdates);
             asyncRescorers.submit(() -> {
                 try {
-                    BM[] asyncConstrainFeature = buildConstrainFeatures(bitmaps, context, activityIndexLastId, stackBuffer, solutionLog);
+                    StackBuffer asyncStackBuffer = new StackBuffer();
+                    BM[] asyncConstrainFeature = buildConstrainFeatures(bitmaps, context, activityIndexLastId, asyncStackBuffer, solutionLog);
                     MiruSolutionLog asyncSolutionLog = new MiruSolutionLog(MiruSolutionLogLevel.NONE);
                     rescore(handle, asyncRescore, pivotFieldId, asyncConstrainFeature, modelScorer, cacheStores, new AtomicInteger(), asyncSolutionLog);
                 } catch (Exception x) {
