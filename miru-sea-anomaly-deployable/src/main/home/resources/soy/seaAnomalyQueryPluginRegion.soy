@@ -228,28 +228,23 @@
     <div class="panel panel-default">
         <div class="panel-heading">Aggregate</div>
         <div class="panel-body">
-            <div class="container" style="margin-bottom:20px;">
-                <div class="panel-heading">
-                    <h3 class="panel-title">Values</h3>
-                </div>
-                <div class="panel-body">
-                    <div  style="width:1070px">
-                        <canvas id="values" height="300px" width="1070px"
-                            data-anom-wave-id="myValues" data-anom-wave-type="{$graphType}">
-                        </canvas>
-                        <script>
-                            anomaly.query.data['myValues'] = {$values|noAutoescape};
-                        </script>
-                    </div>
-                </div>
-            </div>
-            <div class="container" style="margin-bottom:20px;">
-                <div class="panel-heading">
-                    <h3 class="panel-title">Rates</h3>
-                </div>
-                <div class="panel-body">
-                    <div style="width:1070px">
-                            <canvas id="rates" height="300px" width="1070px"
+            div class="container">
+                <div id="content" style="width:1070px">
+                    <ul id="tabs" class="nav nav-dark nav-pills nav-pills-dark" data-tabs="tabs">
+                        <li><a href="#value-tab" data-toggle="tab">Values</a></li>
+                        <li><a href="#rate-tab" data-toggle="tab">Rates</a></li>
+                    </ul>
+                    <div id="my-tab-content" class="tab-content" style="width:1070px">
+                        <div class="tab-pane active" id="value-tab" style="width:1070px">
+                            <canvas id="values" height="300" width="1070px"
+                                data-anom-wave-id="myValues" data-anom-wave-type="{$graphType}">
+                            </canvas>
+                            <script>
+                                anomaly.query.data['myValues'] = {$values|noAutoescape};
+                            </script>
+                        </div>
+                        <div class="tab-pane" id="rate-tab" style="width:1070px">
+                            <canvas id="rates" height="300" width="1070px"
                                 data-anom-wave-id="myRates" data-anom-wave-type="{$graphType}">
                             </canvas>
                             <script>
@@ -264,9 +259,7 @@
                     <ul>
                         {foreach $result in $results}
                             <li>
-                                <input class="btn btn-default" type="submit" value="focus" onclick="anomaly.query.focus('{$result.field}', '{$result.value}'); return false">
-                                    <span class="glyphicon glyphicon-eye-open"></span>
-                                </input>
+                                <input class="btn btn-default" type="submit" value="focus" onclick="anomaly.query.focus('{$result.field}', '{$result.value}'); return false"/>
                                 {$result.value} &nbsp;&nbsp;&nbsp; (min:{$result.min}{sp}avg:{$result.avg}{sp}max:{$result.max})
                             </li>
                         {/foreach}
