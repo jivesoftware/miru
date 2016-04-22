@@ -162,14 +162,13 @@
                                 <option value="counter" {if $type == 'counter'}selected="selected"{/if}>Counter</option>
                                 <option value="atomicCounter" {if $type == 'atomicCounter'}selected="selected"{/if}>Atomic Counter</option>
                                 <option value="timer" {if $type == 'timer'}selected="selected"{/if}>Timer</option>
-                                <option value="all" {if $type == 'all'}selected="selected"{/if}>All</option>
+                                <option value="all" {if $type == ''}selected="selected"{/if}>All</option>
                             </select>
                         </td>
                     </tr>
                     <tr>
-                        <td>Expansion</td>
+                        <td>Expand on</td>
                         <td>
-                            Expand on&nbsp;
                             <select style="width:120px; padding-left:10px;"
                                 class="j-expansionField-autocomplete j-autocomplete-input j-ui-elem" placeholder="expansionField"
                                 name="expansionField" id="expansionFieldPicker" data-original-title="" title="">
@@ -208,6 +207,14 @@
                                 name="maxWaveforms" id="maxWaveformsPicker" data-original-title="" title="">
                         </td>
                     </tr>
+                    <tr class="anom-query-advanced">
+                        <td>Display Query Summary</td>
+                        <td>
+                            <input type="checkbox" autocomplete="off" style="padding-left:10px;"
+                                class="form-control" placeholder="Query Summary" value="true"
+                                name="querySummary" id="querySummary" data-original-title="" title="">
+                        </td>
+                    </tr>
                     <tr>
                         <td></td>
                         <td>
@@ -221,24 +228,28 @@
     <div class="panel panel-default">
         <div class="panel-heading">Aggregate</div>
         <div class="panel-body">
-            <div class="container">
-
-                <div id="content" style="wdith:1070px">
-                    <ul id="tabs" class="nav nav-dark nav-pills nav-pills-dark" data-tabs="tabs">
-                        <li><a href="#value-tab" data-toggle="tab">Values</a></li>
-                        <li><a href="#rate-tab" data-toggle="tab">Rates</a></li>
-                    </ul>
-                    <div id="my-tab-content" class="tab-content" style="wdith:1070px">
-                        <div class="tab-pane active" id="value-tab" style="wdith:1070px">
-                            <canvas id="values" height="400" width="1070px"
-                                data-anom-wave-id="myValues" data-anom-wave-type="{$graphType}">
-                            </canvas>
-                            <script>
-                                anomaly.query.data['myValues'] = {$values|noAutoescape};
-                            </script>
-                        </div>
-                        <div class="tab-pane" id="rate-tab" style="wdith:1070px">
-                            <canvas id="rates" height="400" width="1070px"
+            <div class="container" style="margin-bottom:20px;">
+                <div class="panel-heading">
+                    <h3 class="panel-title">Values</h3>
+                </div>
+                <div class="panel-body">
+                    <div  style="width:1070px">
+                        <canvas id="values" height="300px" width="1070px"
+                            data-anom-wave-id="myValues" data-anom-wave-type="{$graphType}">
+                        </canvas>
+                        <script>
+                            anomaly.query.data['myValues'] = {$values|noAutoescape};
+                        </script>
+                    </div>
+                </div>
+            </div>
+            <div class="container" style="margin-bottom:20px;">
+                <div class="panel-heading">
+                    <h3 class="panel-title">Rates</h3>
+                </div>
+                <div class="panel-body">
+                    <div style="width:1070px">
+                            <canvas id="rates" height="300px" width="1070px"
                                 data-anom-wave-id="myRates" data-anom-wave-type="{$graphType}">
                             </canvas>
                             <script>
@@ -250,46 +261,18 @@
             </div>
             {if $results}
                 <div class="container" style="margin-bottom:20px;">
-                    <table cellspacing="4">
+                    <ul>
                         {foreach $result in $results}
-                            <tr>
-                                <td style="width:32; height:32; background-color:{$result.color}">
-                                    <span class="glyphicon glyphicon-fullscreen"></span>
-                                </td>
-                                <td>
-                                    <div class="anom-wave-toggle" style="height:36px;position:relative;overflow:hidden;">
-                                        <div>
-                                            avg:{$result.avg}&nbsp;&nbsp;&nbsp;{$result.value}
-                                            <input class="btn btn-default" type="submit" value="Focus" onclick="anomaly.query.focus('{$result.field}', '{$result.value}'); return false" />
-                                        </div>
-                                        <br>
-                                        (min:{$result.min}  max:{$result.max})
-                                        <div>Value:</div>
-                                        <div>
-                                            <canvas class="anom-single-wave" height="200" width="1070px"
-                                                data-anom-wave-id="singleValue{$result.id|noAutoescape}"
-                                                data-anom-wave-type="{$graphType}">
-                                            </canvas>
-                                        </div>
-                                        <div>Rate:</div>
-                                        <div>
-                                            <canvas class="anom-single-wave" height="200" width="1070px"
-                                                data-anom-wave-id="singleRate{$result.id|noAutoescape}"
-                                                data-anom-wave-type="{$graphType}">
-                                            </canvas>
-                                        </div>
-                                        <script>
-                                            anomaly.query.data['singleRate{$result.id|noAutoescape}'] = {$result.rates|noAutoescape};
-                                            anomaly.query.data['singleValue{$result.id|noAutoescape}'] = {$result.values|noAutoescape};
-                                        </script>
-                                    </div>
-                                </td>
-                            </tr>
+                            <li>
+                                <input class="btn btn-default" type="submit" value="focus" onclick="anomaly.query.focus('{$result.field}', '{$result.value}'); return false">
+                                    <span class="glyphicon glyphicon-eye-open"></span>
+                                </input>
+                                {$result.value} &nbsp;&nbsp;&nbsp; (min:{$result.min}{sp}avg:{$result.avg}{sp}max:{$result.max})
+                            </li>
                         {/foreach}
-                    </table>
+                    </ul>
                 </div>
             {/if}
-            
         </div>
     </div>
 
