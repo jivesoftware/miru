@@ -100,6 +100,7 @@ public class SeaAnomalyQueryPluginRegion implements MiruPageRegion<Optional<SeaA
         final String expansionValue;
 
         final int maxWaveforms;
+        final boolean querySummary;
 
         public SeaAnomalyPluginRegionInput(String cluster,
             String host,
@@ -119,7 +120,8 @@ public class SeaAnomalyQueryPluginRegion implements MiruPageRegion<Optional<SeaA
             String graphType,
             String expansionField,
             String expansionValue,
-            int maxWaveforms) {
+            int maxWaveforms,
+            boolean querySummary) {
 
             this.cluster = cluster;
             this.host = host;
@@ -140,6 +142,7 @@ public class SeaAnomalyQueryPluginRegion implements MiruPageRegion<Optional<SeaA
             this.expansionField = expansionField;
             this.expansionValue = expansionValue;
             this.maxWaveforms = maxWaveforms;
+            this.querySummary = querySummary;
         }
 
     }
@@ -176,6 +179,7 @@ public class SeaAnomalyQueryPluginRegion implements MiruPageRegion<Optional<SeaA
                 data.put("expansionValue", input.expansionValue);
 
                 data.put("maxWaveforms", input.maxWaveforms);
+                data.put("querySummary", input.querySummary);
 
                 SnowflakeIdPacker snowflakeIdPacker = new SnowflakeIdPacker();
                 long jiveCurrentTime = new JiveEpochTimestampProvider().getTimestamp();
@@ -236,7 +240,7 @@ public class SeaAnomalyQueryPluginRegion implements MiruPageRegion<Optional<SeaA
                         @SuppressWarnings("unchecked")
                         MiruResponse<SeaAnomalyAnswer> extractResponse = responseMapper.extractResultFromResponse(httpResponse,
                             MiruResponse.class,
-                            new Class[] { SeaAnomalyAnswer.class },
+                            new Class[]{SeaAnomalyAnswer.class},
                             null);
                         return new ClientResponse<>(extractResponse, true);
                     });
@@ -308,8 +312,8 @@ public class SeaAnomalyQueryPluginRegion implements MiruPageRegion<Optional<SeaA
                         m.put("min", df2.format(t.getKey().mmd.min));
                         m.put("max", df2.format(t.getKey().mmd.max));
                         m.put("avg", df2.format(t.getKey().mmd.mean()));
-                        m.put("values", (Object) ImmutableMap.of("labels", labels, "datasets", Arrays.asList(w)));
-                        m.put("rates", (Object) ImmutableMap.of("labels", labels, "datasets", Arrays.asList(r)));
+                        m.put("values", ImmutableMap.of("labels", labels, "datasets", Arrays.asList(w)));
+                        m.put("rates", ImmutableMap.of("labels", labels, "datasets", Arrays.asList(r)));
 
                         results.add(m);
 
@@ -322,10 +326,11 @@ public class SeaAnomalyQueryPluginRegion implements MiruPageRegion<Optional<SeaA
                     data.put("rates", ImmutableMap.of("labels", labels, "datasets", rateDatasets));
                     data.put("results", results);
 
-                    ObjectMapper mapper = new ObjectMapper();
-                    mapper.enable(SerializationFeature.INDENT_OUTPUT);
-
-                    data.put("summary", Joiner.on("\n").join(response.log) + "\n\n" + mapper.writeValueAsString(response.solutions));
+                    if (input.querySummary) {
+                        ObjectMapper mapper = new ObjectMapper();
+                        mapper.enable(SerializationFeature.INDENT_OUTPUT);
+                        data.put("summary", Joiner.on("\n").join(response.log) + "\n\n" + mapper.writeValueAsString(response.solutions));
+                    }
                 }
             }
         } catch (Exception e) {

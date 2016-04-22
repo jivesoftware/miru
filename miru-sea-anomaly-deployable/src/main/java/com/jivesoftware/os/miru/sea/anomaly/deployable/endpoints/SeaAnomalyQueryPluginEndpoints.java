@@ -50,12 +50,13 @@ public class SeaAnomalyQueryPluginEndpoints {
         @QueryParam("sampler") @DefaultValue("") String sampler,
         @QueryParam("metric") @DefaultValue("") String metric,
         @QueryParam("tags") @DefaultValue("") String tags,
-        @QueryParam("type") @DefaultValue("VALUE") String type,
+        @QueryParam("type") @DefaultValue("") String type,
         @QueryParam("buckets") @DefaultValue("30") int buckets,
         @QueryParam("graphType") @DefaultValue("Line") String graphType,
         @QueryParam("expansionField") @DefaultValue("metric") String expansionField,
         @QueryParam("expansionValue") @DefaultValue("") String expansionValue,
-        @QueryParam("maxWaveforms") @DefaultValue("10") int maxWaveforms
+        @QueryParam("maxWaveforms") @DefaultValue("100") int maxWaveforms,
+        @QueryParam("querySummary") @DefaultValue("false") boolean querySummary
     ) {
         try {
             String rendered = seaAnomalyService.renderPlugin(pluginRegion,
@@ -77,7 +78,8 @@ public class SeaAnomalyQueryPluginEndpoints {
                     graphType,
                     expansionField,
                     expansionValue,
-                    maxWaveforms)));
+                    maxWaveforms,
+                    querySummary)));
             return Response.ok(rendered).build();
         } catch (Throwable t) {
             LOG.error("Failed query", t);
