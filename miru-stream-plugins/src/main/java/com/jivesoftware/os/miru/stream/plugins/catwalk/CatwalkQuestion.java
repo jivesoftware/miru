@@ -177,7 +177,7 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
                             if (answers[i] != null) {
                                 BM[] featureAnswers = bitmaps.createArrayOf(features.length);
                                 for (int j = 0; j < features.length; j++) {
-                                    featureAnswers[j] = featureMasks[i] != null ? bitmaps.and(Arrays.asList(answers[i], featureMasks[j])) : answers[i];
+                                    featureAnswers[j] = featureMasks[j] != null ? bitmaps.and(Arrays.asList(answers[i], featureMasks[j])) : answers[i];
                                 }
                                 if (!answerBitmap.consume(i, batch.get(i), featureAnswers)) {
                                     return false;
