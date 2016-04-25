@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.stream.plugins.catwalk;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
@@ -30,6 +31,7 @@ import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 
 /**
  * @author jonathan
@@ -69,7 +71,7 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
                 handle.getCoord().partitionId, context.getTimeIndex(), timeRange);
             BM[] featureAnswers = bitmaps.createArrayOf(request.query.features.length);
             return new MiruPartitionResponse<>(
-                catwalk.model("catwalk", bitmaps, context, request, handle.getCoord(), report, featureAnswers, null, solutionLog),
+                catwalk.model("catwalk", bitmaps, context, request, handle.getCoord(), report, featureAnswers, null, null, solutionLog),
                 solutionLog.asList());
         }
 
@@ -78,19 +80,10 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
         List<IBM> ands = new ArrayList<>();
         ands.add(bitmaps.buildIndexMask(lastId, context.getRemovalIndex().getIndex(stackBuffer)));
 
-        if (!MiruFilter.NO_FILTER.equals(request.query.gatherFilter)) {
-            BM constrained = aggregateUtil.filter("catwalkGather",
-                bitmaps,
-                context.getSchema(),
-                context.getTermComposer(),
-                context.getFieldIndexProvider(),
-                request.query.gatherFilter,
-                solutionLog,
-                null,
-                lastId,
-                -1,
-                stackBuffer);
-            ands.add(constrained);
+        @SuppressWarnings("unchecked")
+        Set<MiruTermId>[] numeratorTermSets = new Set[request.query.gatherFilters.length];
+        for (int i = 0; i < numeratorTermSets.length; i++) {
+            numeratorTermSets[i] = Sets.newHashSet();
         }
 
         if (!MiruAuthzExpression.NOT_PROVIDED.equals(request.authzExpression)) {
@@ -105,16 +98,38 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
 
         ands.add(bitmaps.buildIndexMask(context.getActivityIndex().lastId(stackBuffer), context.getRemovalIndex().getIndex(stackBuffer)));
 
-        bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
-        BM eligible = bitmaps.and(ands);
-
+        Set<MiruTermId> termIds = Sets.newHashSet();
         int pivotFieldId = context.getSchema().getFieldId(request.query.gatherField);
 
-        List<MiruTermId> termIds = Lists.newArrayList();
-        aggregateUtil.gather("catwalk", bitmaps, context, eligible, pivotFieldId, 100, false, solutionLog, (lastId1, termId) -> {
-            termIds.add(termId);
-            return true;
-        }, stackBuffer);
+        for (int i = 0; i < numeratorTermSets.length; i++) {
+            int gatherIndex = i;
+            MiruFilter gatherFilter = request.query.gatherFilters[i];
+            List<IBM> gatherAnds;
+            if (MiruFilter.NO_FILTER.equals(gatherFilter)) {
+                gatherAnds = ands;
+            } else {
+                gatherAnds = Lists.newArrayList(ands);
+                gatherAnds.add(aggregateUtil.filter("catwalkGather",
+                    bitmaps,
+                    context.getSchema(),
+                    context.getTermComposer(),
+                    context.getFieldIndexProvider(),
+                    gatherFilter,
+                    solutionLog,
+                    null,
+                    lastId,
+                    -1,
+                    stackBuffer));
+            }
+            bitmapsDebug.debug(solutionLog, bitmaps, "gatherAnds", gatherAnds);
+            BM eligible = bitmaps.and(gatherAnds);
+
+            aggregateUtil.gather("catwalk", bitmaps, context, eligible, pivotFieldId, 100, false, solutionLog, (lastId1, termId) -> {
+                numeratorTermSets[gatherIndex].add(termId);
+                termIds.add(termId);
+                return true;
+            }, stackBuffer);
+        }
 
         FieldMultiTermTxIndex<BM, IBM> multiTermTxIndex = new FieldMultiTermTxIndex<>("catwalk", primaryFieldIndex, pivotFieldId, -1);
         multiTermTxIndex.setTermIds(termIds.toArray(new MiruTermId[0]));
@@ -156,7 +171,7 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
         }
 
         return new MiruPartitionResponse<>(
-            catwalk.model("catwalk", bitmaps, context, request, handle.getCoord(), report, featureAnswers, featureMasks, solutionLog),
+            catwalk.model("catwalk", bitmaps, context, request, handle.getCoord(), report, featureAnswers, featureMasks, numeratorTermSets, solutionLog),
             solutionLog.asList());
     }
 

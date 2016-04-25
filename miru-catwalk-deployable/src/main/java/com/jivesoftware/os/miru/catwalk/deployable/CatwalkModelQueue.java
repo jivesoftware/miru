@@ -165,9 +165,11 @@ public class CatwalkModelQueue {
             null,
             (commitKeyValueStream) -> {
                 for (UpdateModelRequest request : processedRequests) {
-                    byte[] key = updateModelKey(request.tenantId, request.catwalkId, request.modelId, request.partitionId);
-                    if (!commitKeyValueStream.commit(key, null, request.timestamp, true)) {
-                        return false;
+                    if (request.removeFromQueue) {
+                        byte[] key = updateModelKey(request.tenantId, request.catwalkId, request.modelId, request.partitionId);
+                        if (!commitKeyValueStream.commit(key, null, request.timestamp, true)) {
+                            return false;
+                        }
                     }
                 }
                 return true;

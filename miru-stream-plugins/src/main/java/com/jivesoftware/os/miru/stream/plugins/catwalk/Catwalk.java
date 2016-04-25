@@ -1,10 +1,8 @@
 package com.jivesoftware.os.miru.stream.plugins.catwalk;
 
 import com.google.common.base.Optional;
-import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Multiset;
-import com.google.common.collect.Multiset.Entry;
+import com.google.common.collect.Maps;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -25,6 +23,8 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  *
@@ -43,6 +43,7 @@ public class Catwalk {
         Optional<CatwalkReport> report,
         BM[] featureAnswers,
         IBM[] featureMasks,
+        Set<MiruTermId>[] numeratorTermSets,
         MiruSolutionLog solutionLog) throws Exception {
 
         StackBuffer stackBuffer = new StackBuffer();
@@ -56,9 +57,9 @@ public class Catwalk {
 
         CatwalkFeature[] features = request.query.features;
         @SuppressWarnings("unchecked")
-        Multiset<Feature>[] featureValueSets = new Multiset[features.length];
+        Map<Feature, long[]>[] featureValueSets = new Map[features.length];
         for (int i = 0; i < features.length; i++) {
-            featureValueSets[i] = HashMultiset.create();
+            featureValueSets[i] = Maps.newHashMap();
         }
         int[][] featureFieldIds = new int[features.length][];
         for (int i = 0; i < features.length; i++) {
@@ -77,7 +78,12 @@ public class Catwalk {
             false,
             (streamIndex, lastId, answerTermId, answerScoredLastId, featureId, termIds) -> {
                 if (featureId >= 0) {
-                    featureValueSets[featureId].add(new Feature(termIds));
+                    long[] numerators = featureValueSets[featureId].computeIfAbsent(new Feature(termIds), key -> new long[numeratorTermSets.length]);
+                    for (int i = 0; i < numeratorTermSets.length; i++) {
+                        if (numeratorTermSets[i].contains(answerTermId)) {
+                            numerators[i]++;
+                        }
+                    }
                 }
                 return true;
             },
@@ -90,11 +96,11 @@ public class Catwalk {
         List<FeatureScore>[] featureScoreResults = new List[features.length];
 
         for (int i = 0; i < featureValueSets.length; i++) {
-            Multiset<Feature> valueSet = featureValueSets[i];
+            Map<Feature, long[]> valueSet = featureValueSets[i];
             featureScoreResults[i] = Lists.newArrayListWithCapacity(valueSet.size());
-            for (Entry<Feature> entry : valueSet.entrySet()) {
+            for (Map.Entry<Feature, long[]> entry : valueSet.entrySet()) {
                 int[] fieldIds = featureFieldIds[i];
-                MiruTermId[] termIds = entry.getElement().termIds;
+                MiruTermId[] termIds = entry.getKey().termIds;
 
                 List<MiruTxIndex<IBM>> ands = Lists.newArrayList();
                 for (int j = 0; j < fieldIds.length; j++) {
@@ -105,13 +111,18 @@ public class Catwalk {
                 }
 
                 BM bitmap = bitmaps.andTx(ands, stackBuffer);
-                int numerator = entry.getCount();
+                long[] numerators = entry.getValue();
                 long denominator = bitmaps.cardinality(bitmap);
-                if (numerator > denominator) {
-                    log.warn("Catwalk computed numerator:{} denominator:{} for tenantId:{} partitionId:{} featureId:{} fieldIds:{} terms:{}",
-                        numerator, denominator, coord.tenantId, coord.partitionId, i, Arrays.toString(fieldIds), Arrays.toString(termIds));
+                int numeratorSum = 0;
+                for (int j = 0; j < numerators.length; j++) {
+                    numeratorSum += numerators[i];
                 }
-                featureScoreResults[i].add(new FeatureScore(termIds, numerator, denominator, 1));
+                if (numeratorSum > denominator) {
+                    log.warn("Catwalk computed numerators:{} numeratorSum:{} denominator:{} for tenantId:{} partitionId:{} featureId:{} fieldIds:{} terms:{}",
+                        Arrays.toString(numerators), numeratorSum, denominator, coord.tenantId, coord.partitionId, i, Arrays.toString(fieldIds),
+                        Arrays.toString(termIds));
+                }
+                featureScoreResults[i].add(new FeatureScore(termIds, numerators, denominator, 1));
             }
         }
 

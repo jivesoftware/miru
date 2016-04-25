@@ -70,8 +70,12 @@ public class CatwalkAnswerMerger implements MiruAnswerMerger<CatwalkAnswer> {
             for (FeatureScore featureScore : bigger) {
                 FeatureScore otherScore = smallerMap.remove(new Key(featureScore.termIds));
                 if (otherScore != null) {
+                    long[] numerators = new long[featureScore.numerators.length];
+                    for (int j = 0; j < featureScore.numerators.length; j++) {
+                        numerators[j] = featureScore.numerators[j] + otherScore.numerators[j];
+                    }
                     merged.add(new FeatureScore(featureScore.termIds,
-                        featureScore.numerator + otherScore.numerator,
+                        numerators,
                         featureScore.denominator + otherScore.denominator,
                         featureScore.numPartitions + otherScore.numPartitions
                     ));

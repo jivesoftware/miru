@@ -14,6 +14,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil.ConsumeBitmaps
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
+import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkQuery;
 import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkQuery.CatwalkFeature;
 import com.jivesoftware.os.miru.stream.plugins.strut.HotOrNot.Hotness;
 import com.jivesoftware.os.miru.stream.plugins.strut.StrutModelCache.ModelScore;
@@ -69,8 +70,10 @@ public class Strut {
         MiruSchema schema = requestContext.getSchema();
 
         MiruTermComposer termComposer = requestContext.getTermComposer();
-        CatwalkFeature[] catwalkFeatures = request.query.catwalkQuery.features;
-        float[] featureScalar = request.query.featureScalars;
+        CatwalkQuery catwalkQuery = request.query.catwalkQuery;
+        CatwalkFeature[] catwalkFeatures = catwalkQuery.features;
+        int numeratorsCount = catwalkQuery.gatherFilters.length;
+        float[] featureScalars = request.query.featureScalars;
 
         int[][] featureFieldIds = new int[catwalkFeatures.length][];
         for (int i = 0; i < catwalkFeatures.length; i++) {
@@ -83,14 +86,14 @@ public class Strut {
 
         @SuppressWarnings("unchecked")
         List<Hotness>[] features = request.query.includeFeatures ? new List[catwalkFeatures.length] : null;
-        int[] featureCount = {0};
+        int[] featureCount = { 0 };
 
-        StrutModel model = cache.get(request.tenantId, request.query.catwalkId, request.query.modelId, coord.partitionId.getId(), request.query.catwalkQuery);
+        StrutModel model = cache.get(request.tenantId, request.query.catwalkId, request.query.modelId, coord.partitionId.getId(), catwalkQuery);
         if (model == null) {
 
             consumeAnswers.consume((streamIndex, lastId, termId, scoredToLastId, answers) -> {
                 boolean more = true;
-                if (!hotStuff.steamStream(streamIndex, new Scored(lastId, termId, scoredToLastId, 0.0f, null), false)) {
+                if (!hotStuff.steamStream(streamIndex, new Scored(lastId, termId, scoredToLastId, 0f, new float[numeratorsCount], null), false)) {
                     more = false;
                 }
                 return more;
@@ -98,16 +101,16 @@ public class Strut {
 
         } else {
 
-            boolean[] cacheable = new boolean[]{true};
+            boolean[] cacheable = new boolean[] { true };
             for (int i = 0; i < catwalkFeatures.length; i++) {
-                totalPartitionCount.set(Math.max(totalPartitionCount.get(),model.totalNumPartitions[i]));
+                totalPartitionCount.set(Math.max(totalPartitionCount.get(), model.totalNumPartitions[i]));
                 if (model.numberOfModels[i] == 0) {
                     cacheable[0] = false;
                 }
             }
 
-            float[] scores = new float[catwalkFeatures.length];
-            int[] counts = new int[catwalkFeatures.length];
+            float[][] scores = new float[numeratorsCount][catwalkFeatures.length];
+            int[][] counts = new int[numeratorsCount][catwalkFeatures.length];
             aggregateUtil.gatherFeatures(name,
                 bitmaps,
                 requestContext,
@@ -122,13 +125,20 @@ public class Strut {
                             scoredFeatures = new List[features.length];
                             System.arraycopy(features, 0, scoredFeatures, 0, features.length);
                         }
-                        float s = finalizeScore(scores, counts, request.query.strategy);
-                        Scored scored = new Scored(lastId, answerTermId, answerScoredLastId, s, scoredFeatures);
+                        float[] termScores = new float[numeratorsCount];
+                        for (int i = 0; i < termScores.length; i++) {
+                            termScores[i] = finalizeScore(scores[i], counts[i], request.query.featureStrategy);
+                        }
+                        float scaledScore = Strut.scaleScore(termScores, request.query.numeratorScalars, request.query.numeratorStrategy);
+                        Scored scored = new Scored(lastId, answerTermId, answerScoredLastId, scaledScore, termScores, scoredFeatures);
                         if (!hotStuff.steamStream(streamIndex, scored, cacheable[0])) {
                             stopped = true;
                         }
-                        Arrays.fill(scores, 0.0f);
-                        Arrays.fill(counts, 0);
+
+                        for (int i = 0; i < numeratorsCount; i++) {
+                            Arrays.fill(scores[i], 0.0f);
+                            Arrays.fill(counts[i], 0);
+                        }
 
                         if (request.query.includeFeatures) {
                             Arrays.fill(features, null);
@@ -141,26 +151,27 @@ public class Strut {
                         featureCount[0]++;
                         ModelScore modelScore = model.score(featureId, termIds);
                         if (modelScore != null) {
-                            float s = (float) modelScore.numerator / modelScore.denominator;
-                            if (s > 1.0f) {
-                                LOG.warn("Encountered score {} > 1.0 for answerTermId:{} featureId:{} termIds:{}",
-                                    s, answerTermId, featureId, Arrays.toString(termIds));
-                            } else if (!Float.isNaN(s) && s > 0f) {
-
-                                scores[featureId] = score(scores[featureId], s, featureScalar[featureId], request.query.strategy);
-                                counts[featureId]++;
-
-                                if (request.query.includeFeatures) {
-                                    if (features[featureId] == null) {
-                                        features[featureId] = Lists.newArrayList();
-                                    }
-                                    MiruValue[] values = new MiruValue[termIds.length];
-                                    for (int j = 0; j < termIds.length; j++) {
-                                        values[j] = new MiruValue(termComposer.decompose(schema,
-                                            schema.getFieldDefinition(featureFieldIds[featureId][j]), stackBuffer, termIds[j]));
-                                    }
-                                    features[featureId].add(new Hotness(values, s));
+                            float[] s = new float[modelScore.numerators.length];
+                            for (int i = 0; i < s.length; i++) {
+                                s[i] = (float) modelScore.numerators[i] / modelScore.denominator;
+                                if (s[i] > 1.0f) {
+                                    LOG.warn("Encountered score {} > 1.0 for answerTermId:{} numeratorIndex:{} featureId:{} termIds:{}",
+                                        s, answerTermId, i, featureId, Arrays.toString(termIds));
                                 }
+                                scores[i][featureId] = score(scores[i][featureId], s[i], featureScalars[featureId], request.query.featureStrategy);
+                                counts[i][featureId]++;
+                            }
+
+                            if (request.query.includeFeatures) {
+                                if (features[featureId] == null) {
+                                    features[featureId] = Lists.newArrayList();
+                                }
+                                MiruValue[] values = new MiruValue[termIds.length];
+                                for (int j = 0; j < termIds.length; j++) {
+                                    values[j] = new MiruValue(termComposer.decompose(schema,
+                                        schema.getFieldDefinition(featureFieldIds[featureId][j]), stackBuffer, termIds[j]));
+                                }
+                                features[featureId].add(new Hotness(values, s));
                             }
                         }
                     }
@@ -219,25 +230,43 @@ public class Strut {
         }
     }
 
+    static float scaleScore(float[] scores, float[] scalars, Strategy strategy) {
+        float[] scaled = new float[scores.length];
+        int[] scaledCounts = new int[scores.length];
+        for (int i = 0; i < scaled.length; i++) {
+            scaled[i] = scores[i] * scalars[i];
+            scaledCounts[i] = (!Float.isNaN(scaled[i]) && scaled[i] > 0f) ? 1 : 0;
+        }
+        return finalizeScore(scaled, scaledCounts, strategy);
+    }
+
     static class Scored implements Comparable<Scored> {
 
         int lastId;
         MiruTermId term;
         int scoredToLastId;
-        float score;
+        float scaledScore;
+        float[] scores;
         List<Hotness>[] features;
 
-        public Scored(int lastId, MiruTermId term, int scoredToLastId, float score, List<Hotness>[] features) {
+        public Scored(int lastId,
+            MiruTermId term,
+            int scoredToLastId,
+            float scaledScore,
+            float[] scores,
+            List<Hotness>[] features) {
+
             this.lastId = lastId;
             this.term = term;
+            this.scaledScore = scaledScore;
             this.scoredToLastId = scoredToLastId;
-            this.score = score;
+            this.scores = scores;
             this.features = features;
         }
 
         @Override
         public int compareTo(Scored o) {
-            int c = Float.compare(o.score, score); // reversed
+            int c = Float.compare(o.scaledScore, scaledScore); // reversed
             if (c != 0) {
                 return c;
             }

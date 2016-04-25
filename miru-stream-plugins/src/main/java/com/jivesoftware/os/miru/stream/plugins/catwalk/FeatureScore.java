@@ -12,18 +12,18 @@ import java.util.Arrays;
 public class FeatureScore implements Serializable {
 
     public final MiruTermId[] termIds;
-    public final long numerator;
+    public final long[] numerators;
     public final long denominator;
     public final int numPartitions;
 
     @JsonCreator
     public FeatureScore(
         @JsonProperty("termIds") MiruTermId[] termIds,
-        @JsonProperty("numerator") long numerator,
+        @JsonProperty("numerators") long[] numerators,
         @JsonProperty("denominator") long denominator,
         @JsonProperty("numPartitions")  int numPartitions) {
         this.termIds = termIds;
-        this.numerator = numerator;
+        this.numerators = numerators;
         this.denominator = denominator;
         this.numPartitions = numPartitions;
     }
@@ -32,7 +32,7 @@ public class FeatureScore implements Serializable {
     public String toString() {
         return "FeatureScore{"
             + "termIds=" + Arrays.toString(termIds)
-            + ", numerator=" + numerator
+            + ", numerators=" + Arrays.toString(numerators)
             + ", denominator=" + denominator
             + ", numPartitions=" + numPartitions
             + '}';

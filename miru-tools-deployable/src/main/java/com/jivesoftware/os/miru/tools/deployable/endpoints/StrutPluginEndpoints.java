@@ -44,23 +44,20 @@ public class StrutPluginEndpoints {
         @QueryParam("toTimeUnit") @DefaultValue("HOURS") String toTimeUnit,
         @QueryParam("catwalkId") @DefaultValue("test") String catwalkId,
         @QueryParam("modelId") @DefaultValue("2000") String modelId,
-        @QueryParam("gatherField") @DefaultValue("parent") String gatherField,
+        @QueryParam("scorableField") @DefaultValue("parent") String scorableField,
+        @QueryParam("numeratorFilters") @DefaultValue("activityType:0, user:3 2000\n" +
+            "activityType:1, user:3 2000\n" +
+            "activityType:72, user:3 2000") String numeratorFilters,
         @QueryParam("gatherTermsForFields") @DefaultValue("") String gatherTermsForFields,
-        @QueryParam("gatherFilters") @DefaultValue("activityType:0, user:3 2000") String gatherFilters,
-        /*@QueryParam("featureFields") @DefaultValue("activityType context,"
-            + "activityType user,"
-            + "context user") String featureFields,
-        @QueryParam("featureFilters") @DefaultValue("") String featureFilters,*/
-        @QueryParam("features") @DefaultValue(
-            "" +
-                "user-views; activityType, user; activityType:0\n" +
-                "user-visible; activityType, user; activityType:1|2|65|72\n" +
-                "place-visible; activityType, context; activityType:1|2|65|72\n" +
-                "user-place; context, user; activityType:1|2|65|72\n" +
-                "mentions; context, user; activityType:20") String features,
+        @QueryParam("features") @DefaultValue("user-views; activityType, user; activityType:0\n" +
+            "user-visible; activityType, user; activityType:1|2|65|72\n" +
+            "place-visible; activityType, context; activityType:1|2|65|72\n" +
+            "user-place; context, user; activityType:1|2|65|72\n" +
+            "mentions; context, user; activityType:20") String features,
         @QueryParam("constraintField") @DefaultValue("parent") String constraintField,
         @QueryParam("constraintFilters") @DefaultValue("activityType:1|2|65|72") String constraintFilters,
-        @QueryParam("strategy") @DefaultValue("MAX") String strategy,
+        @QueryParam("numeratorStrategy") @DefaultValue("MAX") String numeratorStrategy,
+        @QueryParam("featureStrategy") @DefaultValue("MAX") String featureStrategy,
         @QueryParam("usePartitionModelCache") @DefaultValue("false") boolean usePartitionModelCache,
         @QueryParam("desiredNumberOfResults") @DefaultValue("1000") int desiredNumberOfResults,
         @QueryParam("desiredModelSize") @DefaultValue("10000") int desiredModelSize,
@@ -76,15 +73,16 @@ public class StrutPluginEndpoints {
                     toTimeUnit,
                     catwalkId,
                     modelId,
-                    gatherField,
+                    scorableField,
+                    numeratorFilters.trim(),
                     gatherTermsForFields.trim(),
-                    gatherFilters.trim(),
                     /*featureFields,
                     featureFilters.trim(),*/
                     features.trim(),
                     constraintField,
                     constraintFilters.trim(),
-                    Strategy.valueOf(strategy),
+                    Strategy.valueOf(numeratorStrategy),
+                    Strategy.valueOf(featureStrategy),
                     usePartitionModelCache,
                     desiredNumberOfResults,
                     desiredModelSize,

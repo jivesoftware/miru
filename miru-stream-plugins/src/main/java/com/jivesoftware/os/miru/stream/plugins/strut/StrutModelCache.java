@@ -126,7 +126,7 @@ public class StrutModelCache {
                 for (FeatureScore featureScore : featureScores) {
                     // magical deflation
                     long denominator = (featureScore.denominator * model.totalNumPartitions[i]) / featureScore.numPartitions;
-                    modelFeatureScore[i].put(new StrutModelKey(featureScore.termIds), new ModelScore(featureScore.numerator, denominator));
+                    modelFeatureScore[i].put(new StrutModelKey(featureScore.termIds), new ModelScore(featureScore.numerators, denominator));
                 }
             }
         }
@@ -175,11 +175,11 @@ public class StrutModelCache {
 
     public static class ModelScore {
 
-        public final long numerator;
+        public final long[] numerators;
         public final long denominator;
 
-        public ModelScore(long numerator, long denominator) {
-            this.numerator = numerator;
+        public ModelScore(long[] numerators, long denominator) {
+            this.numerators = numerators;
             this.denominator = denominator;
         }
     }

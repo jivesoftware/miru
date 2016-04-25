@@ -41,26 +41,15 @@ public class CatwalkPluginEndpoints {
         @QueryParam("fromTimeUnit") @DefaultValue("HOURS") String fromTimeUnit,
         @QueryParam("toTimeAgo") @DefaultValue("0") long toTimeAgo,
         @QueryParam("toTimeUnit") @DefaultValue("HOURS") String toTimeUnit,
-        @QueryParam("gatherField") @DefaultValue("parent") String gatherField,
-        @QueryParam("gatherFilters") @DefaultValue("activityType:0, user:3 2000") String gatherFilters,
-        /*@QueryParam("featureFields") @DefaultValue("activityType context,"
-            + "activityType objectType,"
-            + "activityType parentType,"
-            + "activityType user,"
-            + "context objectType,"
-            + "context parentType,"
-            + "context user,"
-            + "objectType parentType,"
-            + "objectType user,"
-            + "parentType user") String featureFields,
-        @QueryParam("featureFilters") @DefaultValue("") String featureFilters,*/
-        @QueryParam("features") @DefaultValue(
-            "" +
-                "user-views; activityType, user; activityType:0\n" +
-                "user-visible; activityType, user; activityType:1|2|65|72\n" +
-                "place-visible; activityType, context; activityType:1|2|65|72\n" +
-                "user-place; context, user; activityType:1|2|65|72\n" +
-                "mentions; context, user; activityType:20") String features,
+        @QueryParam("scorableField") @DefaultValue("parent") String scorableField,
+        @QueryParam("numeratorFilters") @DefaultValue("activityType:0, user:3 2000\n" +
+            "activityType:1, user:3 2000\n" +
+            "activityType:72, user:3 2000") String numeratorFilters,
+        @QueryParam("features") @DefaultValue("user-views; activityType, user; activityType:0\n" +
+            "user-visible; activityType, user; activityType:1|2|65|72\n" +
+            "place-visible; activityType, context; activityType:1|2|65|72\n" +
+            "user-place; context, user; activityType:1|2|65|72\n" +
+            "mentions; context, user; activityType:20") String features,
         @QueryParam("desiredNumberOfResults") @DefaultValue("1000") int desiredNumberOfResults,
         @QueryParam("logLevel") @DefaultValue("NONE") String logLevel) {
 
@@ -72,8 +61,8 @@ public class CatwalkPluginEndpoints {
                     fromTimeUnit,
                     toTimeAgo,
                     toTimeUnit,
-                    gatherField,
-                    gatherFilters.trim(),
+                    scorableField,
+                    numeratorFilters.trim(),
                     /*featureFields,
                     featureFilters.trim(),*/
                     features.trim(),
