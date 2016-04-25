@@ -16,7 +16,8 @@
  * @param? features
  * @param? constraintField
  * @param? constraintFilters
- * @param? strategy
+ * @param? numeratorStrategy
+ * @param? featureStrategy
  * @param? usePartitionModelCache
  * @param? desiredNumberOfResults
  * @param? desiredModelSize
@@ -164,14 +165,26 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>Strategy</td>
+                        <td>Numerator Strategy</td>
                         <td>
                             <select style="width:120px; padding-left:10px;"
-                                class="j-strategy-autocomplete j-autocomplete-input j-ui-elem" placeholder="Strategy"
-                                name="strategy" id="strategyPicker" data-original-title="" title="">
-                                <option value="MAX" {if $strategy == 'MAX'}selected="selected"{/if}>MAX</option>
-                                <option value="UNIT_WEIGHTED" {if $strategy == 'UNIT_WEIGHTED'}selected="selected"{/if}>UNIT_WEIGHTED</option>
-                                <option value="REGRESSION_WEIGHTED" {if $strategy == 'REGRESSION_WEIGHTED'}selected="selected"{/if}>REGRESSION_WEIGHTED</option>
+                                class="j-numeratorStrategy-autocomplete j-autocomplete-input j-ui-elem" placeholder="Numerator Strategy"
+                                name="numeratorStrategy" id="numeratorStrategyPicker" data-original-title="" title="">
+                                <option value="MAX" {if $numeratorStrategy == 'MAX'}selected="selected"{/if}>MAX</option>
+                                <option value="UNIT_WEIGHTED" {if $numeratorStrategy == 'UNIT_WEIGHTED'}selected="selected"{/if}>UNIT_WEIGHTED</option>
+                                <option value="REGRESSION_WEIGHTED" {if $numeratorStrategy == 'REGRESSION_WEIGHTED'}selected="selected"{/if}>REGRESSION_WEIGHTED</option>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Feature Strategy</td>
+                        <td>
+                            <select style="width:120px; padding-left:10px;"
+                                class="j-featureStrategy-autocomplete j-autocomplete-input j-ui-elem" placeholder="Feature Strategy"
+                                name="featureStrategy" id="featureStrategyPicker" data-original-title="" title="">
+                                <option value="MAX" {if $featureStrategy == 'MAX'}selected="selected"{/if}>MAX</option>
+                                <option value="UNIT_WEIGHTED" {if $featureStrategy == 'UNIT_WEIGHTED'}selected="selected"{/if}>UNIT_WEIGHTED</option>
+                                <option value="REGRESSION_WEIGHTED" {if $featureStrategy == 'REGRESSION_WEIGHTED'}selected="selected"{/if}>REGRESSION_WEIGHTED</option>
                             </select>
                         </td>
                     </tr>
