@@ -9,8 +9,8 @@
  * @param? fromTimeUnit
  * @param? toTimeAgo
  * @param? toTimeUnit
- * @param? gatherField
- * @param? gatherFilters
+ * @param? scorableField
+ * @param? numeratorFilters
  * @param? features
  * @param? desiredNumberOfResults
  * @param? model
@@ -82,21 +82,23 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>Gather Field</td>
+                        <td>Scorable Field</td>
                         <td>
                             <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
-                                class="j-gatherField-autocomplete j-autocomplete-input j-ui-elem" placeholder="Gather Field" value="{$gatherField?:''}"
-                                name="gatherField" id="gatherFieldPicker" data-original-title="" title="">
+                                class="j-scorableField-autocomplete j-autocomplete-input j-ui-elem" placeholder="Gather Field" value="{$scorableField?:''}"
+                                name="scorableField" id="scorableFieldPicker" data-original-title="" title="">
                         </td>
                     </tr>
                     <tr>
-                        <td>Gather Filters</td>
+                        <td>Numerator Filters</td>
                         <td>
-                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
-                                class="j-gatherFilters-autocomplete j-autocomplete-input j-ui-elem" placeholder="Gather Filters" value="{$gatherFilters?:''}"
-                                name="gatherFilters" id="gatherFiltersPicker" data-original-title="" title="">
+                            <textarea autocomplete="off" rows="3" cols="80" style="width:560px; padding-left:10px; vertical-align:top"
+                                class="j-numeratorFilters-autocomplete j-autocomplete-input j-ui-elem" placeholder="Numerator Filters"
+                                name="numeratorFilters" id="numeratorFiltersPicker" data-original-title="" title="">
+                                {$numeratorFilters?:''}
+                            </textarea>
                             &nbsp;
-                            <em>(e.g. user:3 3765, parentType:102|2|38)</em>
+                            <em>activityType:0, user:3 2000 (each filter on new line)</em>
                         </td>
                     </tr>
                     <tr>
@@ -108,7 +110,7 @@
                                 {$features?:''}
                             </textarea>
                             &nbsp;
-                            <em>name; field1, field2; field1:a|b|c, field2:x|y|z</em>
+                            <em>name; field1, field2; field1:a|b|c, field2:x|y|z (each feature on new line)</em>
                         </td>
                     </tr>
                     <tr>

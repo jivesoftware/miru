@@ -15,19 +15,19 @@ public class CatwalkQuery implements Serializable {
 
     public final MiruTimeRange timeRange;
     public final String gatherField; // "parent"
-    public final MiruFilter gatherFilter; // "I viewed"
+    public final MiruFilter[] gatherFilters; // "I viewed"
     public final CatwalkFeature[] features;
     public final int desiredNumberOfResults;
 
     public CatwalkQuery(
         @JsonProperty("timeRange") MiruTimeRange timeRange,
         @JsonProperty("gatherField") String gatherField,
-        @JsonProperty("gatherFilter") MiruFilter gatherFilter,
+        @JsonProperty("gatherFilters") MiruFilter[] gatherFilters,
         @JsonProperty("features") CatwalkFeature[] features,
         @JsonProperty("desiredNumberOfResults") int desiredNumberOfResults) {
         this.timeRange = Preconditions.checkNotNull(timeRange);
         this.gatherField = Preconditions.checkNotNull(gatherField);
-        this.gatherFilter = Preconditions.checkNotNull(gatherFilter);
+        this.gatherFilters = Preconditions.checkNotNull(gatherFilters);
         this.features = Preconditions.checkNotNull(features);
         Preconditions.checkArgument(desiredNumberOfResults > 0, "Number of results must be at least 1");
         this.desiredNumberOfResults = desiredNumberOfResults;
@@ -38,7 +38,7 @@ public class CatwalkQuery implements Serializable {
         return "CatwalkQuery{"
             + "timeRange=" + timeRange
             + ", gatherField='" + gatherField + '\''
-            + ", gatherFilter=" + gatherFilter
+            + ", gatherFilters=" + Arrays.toString(gatherFilters)
             + ", features=" + Arrays.toString(features)
             + ", desiredNumberOfResults=" + desiredNumberOfResults
             + '}';

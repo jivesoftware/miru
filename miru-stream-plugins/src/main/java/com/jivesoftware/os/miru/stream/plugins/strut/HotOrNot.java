@@ -79,13 +79,13 @@ public class HotOrNot implements Comparable<HotOrNot>, Serializable {
     public static class Hotness implements Serializable {
 
         public final MiruValue[] values;
-        public final float score;
+        public final float[] scores;
 
         @JsonCreator
         public Hotness(@JsonProperty("values") MiruValue[] values,
-            @JsonProperty("score") float score) {
+            @JsonProperty("scores") float[] scores) {
             this.values = values;
-            this.score = score;
+            this.scores = scores;
         }
 
         @Override

@@ -15,6 +15,9 @@ public class UpdateModelRequest {
     public final CatwalkQuery catwalkQuery;
     public final long timestamp;
 
+    public boolean markProcessed;
+    public boolean removeFromQueue;
+
     public UpdateModelRequest(MiruTenantId tenantId,
         String catwalkId,
         String modelId,

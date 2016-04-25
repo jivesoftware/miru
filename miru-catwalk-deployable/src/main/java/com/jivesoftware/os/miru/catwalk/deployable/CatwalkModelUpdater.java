@@ -30,6 +30,7 @@ import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
+import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.query.MiruTenantQueryRouting;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
@@ -137,8 +138,16 @@ public class CatwalkModelUpdater {
                     for (UpdateModelRequest request : batch) {
                         modelUpdateFutures.add(modelUpdaters.submit(() -> {
                             if (modelQueue.isLeader(queueId)) {
+                                MiruFilter[] gatherFilters = request.catwalkQuery.gatherFilters;
+                                if (gatherFilters == null) {
+                                    request.markProcessed = false;
+                                    request.removeFromQueue = true;
+                                    return request;
+                                }
+
                                 ModelFeatureScores[] models = fetchModel(request);
                                 if (models != null) {
+                                    int numeratorsCount = gatherFilters.length;
                                     String[] featureNames = new String[request.catwalkQuery.features.length];
                                     for (int i = 0; i < featureNames.length; i++) {
                                         featureNames[i] = request.catwalkQuery.features[i].name;
@@ -146,10 +155,13 @@ public class CatwalkModelUpdater {
                                     modelService.saveModel(request.tenantId,
                                         request.catwalkId,
                                         request.modelId,
+                                        numeratorsCount,
                                         request.partitionId,
                                         request.partitionId,
                                         featureNames,
                                         models);
+                                    request.markProcessed = true;
+                                    request.removeFromQueue = true;
                                     return request;
                                 }
                             }
@@ -172,9 +184,11 @@ public class CatwalkModelUpdater {
                         null,
                         commitKeyValueStream -> {
                             for (UpdateModelRequest request : processedRequests) {
-                                byte[] key = CatwalkModelQueue.updateModelKey(request.tenantId, request.catwalkId, request.modelId, request.partitionId);
-                                if (!commitKeyValueStream.commit(key, new byte[0], request.timestamp, false)) {
-                                    return false;
+                                if (request.markProcessed) {
+                                    byte[] key = CatwalkModelQueue.updateModelKey(request.tenantId, request.catwalkId, request.modelId, request.partitionId);
+                                    if (!commitKeyValueStream.commit(key, new byte[0], request.timestamp, false)) {
+                                        return false;
+                                    }
                                 }
                             }
                             return true;

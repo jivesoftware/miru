@@ -74,7 +74,7 @@ public class CatwalkModelService {
         List<FeatureRange> deletableRanges) throws Exception {
 
         PartitionClient client = modelClient(tenantId);
-        FeatureRange[] currentRange = {null};
+        FeatureRange[] currentRange = { null };
 
         Map<String, MergedScores> fieldIdsToFeatureScores = new HashMap<>();
         client.scan(Consistency.leader_quorum,
@@ -202,6 +202,7 @@ public class CatwalkModelService {
         TreeSet<Integer> partitionIds = Sets.newTreeSet();
 
         CatwalkFeature[] features = catwalkQuery.features;
+        int numeratorsCount = catwalkQuery.gatherFilters.length;
         Map<String, MergedScores> featureNameToMergedScores = gatherModel(tenantId, catwalkId, modelId, features, partitionIds, deletableRanges);
 
         long[] modelCounts = new long[features.length];
@@ -237,7 +238,7 @@ public class CatwalkModelService {
         for (Map.Entry<String, MergedScores> entry : featureNameToMergedScores.entrySet()) {
             List<FeatureRange> ranges = entry.getValue().ranges;
             if (ranges != null && ranges.size() > 1) {
-                readRepairers.submit(new ReadRepair(tenantId, catwalkId, modelId, entry.getKey(), entry.getValue()));
+                readRepairers.submit(new ReadRepair(tenantId, catwalkId, modelId, entry.getKey(), numeratorsCount, entry.getValue()));
             }
         }
 
@@ -270,6 +271,7 @@ public class CatwalkModelService {
     public void saveModel(MiruTenantId tenantId,
         String catwalkId,
         String modelId,
+        int numeratorsCount,
         int fromPartitionId,
         int toPartitionId,
         String[] featureNames,
@@ -290,6 +292,7 @@ public class CatwalkModelService {
                     byte[] value = valueToBytes(models[i].partitionIsClosed,
                         models[i].modelCount,
                         models[i].totalCount,
+                        numeratorsCount,
                         models[i].featureScores,
                         models[i].timeRange);
                     if (!commitKeyValueStream.commit(key, value, -1, false)) {
@@ -329,13 +332,18 @@ public class CatwalkModelService {
     }
 
     private FeatureScore merge(FeatureScore a, FeatureScore b) {
-        long numerator = a.numerator + b.numerator;
+        long[] numerators = new long[a.numerators.length];
+        long numeratorSum = 0;
+        for (int i = 0; i < a.numerators.length; i++) {
+            numerators[i] = a.numerators[i] + b.numerators[i];
+            numeratorSum += numerators[i];
+        }
         long denominator = a.denominator + b.denominator;
-        if (numerator > denominator) {
-            LOG.warn("Merged numerator:{} denominator:{} for scores: {} {}", numerator, denominator, a, b);
+        if (numeratorSum > denominator) {
+            LOG.warn("Merged numerator:{} denominator:{} for scores: {} {}", numeratorSum, denominator, a, b);
         }
         int numPartitions = a.numPartitions + b.numPartitions;
-        return new FeatureScore(a.termIds, numerator, denominator, numPartitions);
+        return new FeatureScore(a.termIds, numerators, denominator, numPartitions);
     }
 
     //  0 ->  25 / 73
@@ -354,12 +362,13 @@ public class CatwalkModelService {
     static byte[] valueToBytes(boolean partitionIsClosed,
         long modelCount,
         long totalCount,
+        int numeratorsCount,
         List<FeatureScore> scores,
         MiruTimeRange timeRange) throws IOException {
 
-        HeapFiler filer = new HeapFiler(1 + 1 + 4 + 8 + 8 + 4 + scores.size() * (8 + 8 + 4 + 4 + 10) + 8 + 8);
+        HeapFiler filer = new HeapFiler(1 + 1 + 4 + 8 + 8 + 4 + scores.size() * (4 + 4 + 10 + 1 + (numeratorsCount * 8) + 8) + 8 + 8);
 
-        UIO.writeByte(filer, (byte) 2, "version");
+        UIO.writeByte(filer, (byte) 3, "version");
         UIO.writeByte(filer, partitionIsClosed ? (byte) 1 : (byte) 0, "partitionIsClosed");
 
         UIO.writeLong(filer, modelCount, "modelCount");
@@ -372,7 +381,10 @@ public class CatwalkModelService {
             for (MiruTermId termId : score.termIds) {
                 UIO.writeByteArray(filer, termId.getBytes(), "term", lengthBuffer);
             }
-            UIO.writeLong(filer, score.numerator, "numerator");
+            UIO.writeByte(filer, (byte) score.numerators.length, "numeratorsCount");
+            for (int i = 0; i < score.numerators.length; i++) {
+                UIO.writeLong(filer, score.numerators[i], "numerator");
+            }
             UIO.writeLong(filer, score.denominator, "denominator");
             UIO.writeInt(filer, score.numPartitions, "numPartitions", lengthBuffer);
         }
@@ -386,7 +398,7 @@ public class CatwalkModelService {
     static ModelFeatureScores valueFromBytes(byte[] value, int featureIndex) throws IOException {
         HeapFiler filer = HeapFiler.fromBytes(value, value.length);
         byte version = UIO.readByte(filer, "version");
-        if (version != 1 && version != 2) {
+        if (version < 1 || version > 3) {
             throw new IllegalStateException("Unexpected version " + version);
         }
         boolean partitionIsClosed = UIO.readByte(filer, "partitionIsClosed") == 1;
@@ -394,7 +406,7 @@ public class CatwalkModelService {
         byte[] lengthBuffer = new byte[8];
 
         long modelCount;
-        if (version == 1) {
+        if (version < 2) {
             int modelCountsLength = UIO.readInt(filer, "modelCountsLength", lengthBuffer);
             long[] modelCounts = new long[modelCountsLength];
             if (featureIndex >= modelCountsLength) {
@@ -416,10 +428,19 @@ public class CatwalkModelService {
             for (int j = 0; j < terms.length; j++) {
                 terms[j] = new MiruTermId(UIO.readByteArray(filer, "term", lengthBuffer));
             }
-            long numerator = UIO.readLong(filer, "numerator", lengthBuffer);
+            long[] numerators;
+            if (version < 3) {
+                numerators = new long[] { UIO.readLong(filer, "numerator", lengthBuffer) };
+            } else {
+                int numeratorCount = UIO.readByte(filer, "numeratorCount");
+                numerators = new long[numeratorCount];
+                for (int j = 0; j < numeratorCount; j++) {
+                    numerators[j] = UIO.readLong(filer, "numerator", lengthBuffer);
+                }
+            }
             long denominator = UIO.readLong(filer, "denominator", lengthBuffer);
             int numPartitions = UIO.readInt(filer, "numPartitions", lengthBuffer);
-            scores.add(new FeatureScore(terms, numerator, denominator, numPartitions));
+            scores.add(new FeatureScore(terms, numerators, denominator, numPartitions));
         }
 
         MiruTimeRange timeRange = new MiruTimeRange(
@@ -547,13 +568,15 @@ public class CatwalkModelService {
         private final String catwalkId;
         private final String modelId;
         private final String featureName;
+        private final int numeratorsCount;
         private final MergedScores mergedScores;
 
-        public ReadRepair(MiruTenantId tenantId, String catwalkId, String modelId, String featureName, MergedScores mergedScores) {
+        public ReadRepair(MiruTenantId tenantId, String catwalkId, String modelId, String featureName, int numeratorsCount, MergedScores mergedScores) {
             this.tenantId = tenantId;
             this.catwalkId = catwalkId;
             this.modelId = modelId;
             this.featureName = featureName;
+            this.numeratorsCount = numeratorsCount;
             this.mergedScores = mergedScores;
         }
 
@@ -580,10 +603,11 @@ public class CatwalkModelService {
                     saveModel(tenantId,
                         catwalkId,
                         modelId,
+                        numeratorsCount,
                         merged.fromPartitionId,
                         merged.toPartitionId,
-                        new String[]{featureName},
-                        new ModelFeatureScores[]{modelFeatureScores});
+                        new String[] { featureName },
+                        new ModelFeatureScores[] { modelFeatureScores });
                     removeModel(tenantId, catwalkId, modelId, mergedScores.ranges);
                 }
             } catch (Exception x) {

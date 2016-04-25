@@ -130,6 +130,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
 
         MiruFieldIndex<BM, IBM> primaryIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
 
+        CatwalkQuery catwalkQuery = request.query.catwalkQuery;
         MinMaxPriorityQueue<Scored> scored = MinMaxPriorityQueue
             .expectedSize(request.query.desiredNumberOfResults)
             .maximumSize(request.query.desiredNumberOfResults)
@@ -179,16 +180,23 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
 
             modelScorer.score(
                 request.query.modelId,
+                catwalkQuery.gatherFilters.length,
                 miruTermIds,
                 cacheStores,
-                (termIndex, score, scoredToLastId) -> {
-                    if (Float.isNaN(score) || scoredToLastId < scoredToLastIds[termIndex]) {
+                (termIndex, scores, scoredToLastId) -> {
+                    boolean needsRescore = scoredToLastId < scoredToLastIds[termIndex];
+                    for (int i = 0; !needsRescore && i < scores.length; i++) {
+                        needsRescore = Float.isNaN(scores[i]);
+                    }
+                    if (needsRescore) {
                         asyncRescore.add(lastIdAndTermIds.get(termIndex));
                     }
+                    float scaledScore = Strut.scaleScore(scores, request.query.numeratorScalars, request.query.numeratorStrategy);
                     scored.add(new Scored(lastIdAndTermIds.get(termIndex).lastId,
                         miruTermIds[termIndex],
                         scoredToLastIds[termIndex],
-                        Float.isNaN(score) ? 0f : score,
+                        scaledScore,
+                        scores,
                         null));
                     return true;
                 },
@@ -274,9 +282,14 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         for (int j = 0; j < s.length; j++) {
             if (timeAndVersions[j] != null) {
                 String[] decomposed = termComposer.decompose(schema, pivotFieldDefinition, stackBuffer, s[j].term);
+                float score = 0f;
+                for (int i = 0; i < s[j].scores.length; i++) {
+
+                }
+                //s[j].scores
                 hotOrNots.add(new HotOrNot(new MiruValue(decomposed),
                     gatherScoredValues != null ? gatherScoredValues[j] : null,
-                    s[j].score,
+                    score,
                     s[j].features,
                     timeAndVersions[j].timestamp));
             } else {

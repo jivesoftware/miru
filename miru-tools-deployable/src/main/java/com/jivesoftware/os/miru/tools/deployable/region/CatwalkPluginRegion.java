@@ -6,6 +6,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.primitives.Floats;
 import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.miru.api.MiruActorId;
@@ -74,8 +75,8 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
         final String fromTimeUnit;
         final long toTimeAgo;
         final String toTimeUnit;
-        final String gatherField;
-        final String gatherFilters;
+        final String scorableField;
+        final String numeratorFilters;
         /*final String featureFields;
         final String featureFilters;*/
         final String features;
@@ -87,8 +88,8 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
             String fromTimeUnit,
             long toTimeAgo,
             String toTimeUnit,
-            String gatherField,
-            String gatherFilters,
+            String scorableField,
+            String numeratorFilters,
             /*String featureFields,
             String featureFilters,*/
             String features,
@@ -99,8 +100,8 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
             this.fromTimeUnit = fromTimeUnit;
             this.toTimeAgo = toTimeAgo;
             this.toTimeUnit = toTimeUnit;
-            this.gatherField = gatherField;
-            this.gatherFilters = gatherFilters;
+            this.scorableField = scorableField;
+            this.numeratorFilters = numeratorFilters;
             /*this.featureFields = featureFields;
             this.featureFilters = featureFilters;*/
             this.features = features;
@@ -132,16 +133,6 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
                     }
                 }
 
-                // "user context, user activityType context, user activityType contextType"
-                /*String[] featuresSplit = input.featureFields.split("\\s*,\\s*");
-                String[][] featureFields = new String[featuresSplit.length][];
-                for (int i = 0; i < featuresSplit.length; i++) {
-                    String[] fields = featuresSplit[i].trim().split("\\s+");
-                    featureFields[i] = new String[fields.length];
-                    for (int j = 0; j < fields.length; j++) {
-                        featureFields[i][j] = fields[j].trim();
-                    }
-                }*/
                 TimeUnit fromTimeUnit = TimeUnit.valueOf(input.fromTimeUnit);
                 long fromTimeAgo = input.fromTimeAgo;
                 long fromMillisAgo = fromTimeUnit.toMillis(fromTimeAgo);
@@ -157,8 +148,8 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
                 data.put("toTimeAgo", String.valueOf(toTimeAgo));
                 data.put("toTimeUnit", String.valueOf(toTimeUnit));
                 data.put("toTimeUnit", String.valueOf(toTimeUnit));
-                data.put("gatherField", input.gatherField);
-                data.put("gatherFilters", input.gatherFilters);
+                data.put("scorableField", input.scorableField);
+                data.put("numeratorFilters", input.numeratorFilters);
                 /*data.put("featureFields", input.featureFields);
                 data.put("featureFilters", input.featureFilters);*/
                 data.put("features", input.features);
@@ -180,11 +171,14 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
                 if (!input.tenant.trim().isEmpty()) {
                     MiruTenantId tenantId = new MiruTenantId(input.tenant.trim().getBytes(StandardCharsets.UTF_8));
 
-                    /*String[][] featureFields = new String[input.featureFields.size()][];
-                    for (int i = 0; i < featureFields.length; i++) {
-                        featureFields[i] = input.featureFields.toArray(new String[0]);
-                    }*/
-                    MiruFilter gatherFilter = filterStringUtil.parse(input.gatherFilters);
+                    String[] numeratorFiltersSplit = input.numeratorFilters.split("\\s*\\n\\s*");
+                    List<MiruFilter> numeratorFilters = Lists.newArrayList();
+                    for (int i = 0; i < numeratorFiltersSplit.length; i++) {
+                        String filterString = numeratorFiltersSplit[i].trim();
+                        if (!filterString.isEmpty()) {
+                            numeratorFilters.add(filterStringUtil.parse(filterString));
+                        }
+                    }
                     String endpoint = CatwalkConstants.CATWALK_PREFIX + CatwalkConstants.CUSTOM_QUERY_ENDPOINT;
                     String request = requestMapper.writeValueAsString(new MiruRequest<>("toolsCatwalk",
                         tenantId,
@@ -192,8 +186,8 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
                         MiruAuthzExpression.NOT_PROVIDED,
                         new CatwalkQuery(
                             new MiruTimeRange(fromTime, toTime),
-                            input.gatherField,
-                            gatherFilter,
+                            input.scorableField,
+                            numeratorFilters.toArray(new MiruFilter[0]),
                             features.toArray(new CatwalkFeature[0]),
                             input.desiredNumberOfResults),
                         MiruSolutionLogLevel.valueOf(input.logLevel)));
@@ -205,7 +199,7 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
                             @SuppressWarnings("unchecked")
                             MiruResponse<CatwalkAnswer> extractResponse = responseMapper.extractResultFromResponse(httpResponse,
                                 MiruResponse.class,
-                                new Class<?>[]{CatwalkAnswer.class},
+                                new Class<?>[] { CatwalkAnswer.class },
                                 null);
                             return new ClientResponse<>(extractResponse, true);
                         });
@@ -234,9 +228,9 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
                                 List<String> values = Lists.transform(Arrays.asList(scoredFeature.featureScore.termIds),
                                     (input1) -> new String(input1.getBytes(), StandardCharsets.UTF_8));
                                 feature.put("values", values);
-                                feature.put("numerator", String.valueOf(scoredFeature.featureScore.numerator));
+                                feature.put("numerator", Arrays.toString(scoredFeature.featureScore.numerators));
                                 feature.put("denominator", String.valueOf(scoredFeature.featureScore.denominator));
-                                feature.put("score", String.valueOf(scoredFeature.score));
+                                feature.put("score", Arrays.toString(scoredFeature.scores));
                                 modelFeatures.add(feature);
                             }
 
@@ -275,16 +269,19 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
     public static class ScoredFeature implements Comparable<ScoredFeature> {
 
         private final FeatureScore featureScore;
-        private final float score;
+        private final float[] scores;
 
         public ScoredFeature(FeatureScore featureScore) {
             this.featureScore = featureScore;
-            this.score = (float) featureScore.numerator / featureScore.denominator;
+            this.scores = new float[featureScore.numerators.length];
+            for (int i = 0; i < this.scores.length; i++) {
+                this.scores[i] = (float) featureScore.numerators[i] / featureScore.denominator;
+            }
         }
 
         @Override
         public int compareTo(ScoredFeature o) {
-            int c = -Float.compare(score, o.score);
+            int c = -Float.compare(Floats.max(scores), Floats.max(o.scores));
             if (c != 0) {
                 return c;
             }

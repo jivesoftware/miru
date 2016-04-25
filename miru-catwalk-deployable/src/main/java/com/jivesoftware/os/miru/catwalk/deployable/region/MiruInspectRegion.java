@@ -96,12 +96,16 @@ public class MiruInspectRegion implements MiruPageRegion<InspectInput> {
 
                     List<Map<String, Object>> scoreData = Lists.newArrayList();
                     for (FeatureScore featureScore : mergedScores.featureScores) {
+                        float[] s = new float[featureScore.numerators.length];
+                        for (int i = 0; i < s.length; i++) {
+                            s[i] = (float) featureScore.numerators[i] / featureScore.denominator;
+                        }
                         scoreData.add(ImmutableMap.of(
                             "value", Arrays.toString(featureScore.termIds),
-                            "numerator", String.valueOf(featureScore.numerator),
+                            "numerator", Arrays.toString(featureScore.numerators),
                             "denominator", String.valueOf(featureScore.denominator),
                             "numPartitions", String.valueOf(featureScore.numPartitions),
-                            "score", String.valueOf((float) featureScore.numerator / featureScore.denominator)));
+                            "score", Arrays.toString(s)));
                     }
 
                     modelFeatures.add(ImmutableMap.<String, Object>builder()

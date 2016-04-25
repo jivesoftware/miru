@@ -6,6 +6,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.primitives.Floats;
 import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.miru.api.MiruActorId;
@@ -79,15 +80,16 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
         final String toTimeUnit;
         final String catwalkId;
         final String modelId;
-        final String gatherField;
+        final String scorableField;
+        final String numeratorFilters;
         final String gatherTermsForFields;
-        final String gatherFilters;
         /*final String featureFields;
         final String featureFilters;*/
         final String features;
         final String constraintField;
         final String constraintFilters;
-        final Strategy strategy;
+        final Strategy numeratorStrategy;
+        final Strategy featureStrategy;
         final boolean usePartitionModelCache;
         final int desiredNumberOfResults;
         final int desiredModelSize;
@@ -100,15 +102,16 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
             String toTimeUnit,
             String catwalkId,
             String modelId,
-            String gatherField,
+            String scorableField,
+            String numeratorFilters,
             String gatherTermsForFields,
-            String gatherFilters,
             /*String featureFields,
             String featureFilters,*/
             String features,
             String constraintField,
             String constraintFilters,
-            Strategy strategy,
+            Strategy numeratorStrategy,
+            Strategy featureStrategy,
             boolean usePartitionModelCache,
             int desiredNumberOfResults,
             int desiredModelSize,
@@ -120,15 +123,16 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
             this.toTimeUnit = toTimeUnit;
             this.catwalkId = catwalkId;
             this.modelId = modelId;
-            this.gatherField = gatherField;
+            this.scorableField = scorableField;
+            this.numeratorFilters = numeratorFilters;
             this.gatherTermsForFields = gatherTermsForFields;
-            this.gatherFilters = gatherFilters;
             /*this.featureFields = featureFields;
             this.featureFilters = featureFilters;*/
             this.features = features;
             this.constraintField = constraintField;
             this.constraintFilters = constraintFilters;
-            this.strategy = strategy;
+            this.numeratorStrategy = numeratorStrategy;
+            this.featureStrategy = featureStrategy;
             this.usePartitionModelCache = usePartitionModelCache;
             this.desiredNumberOfResults = desiredNumberOfResults;
             this.desiredModelSize = desiredModelSize;
@@ -158,8 +162,20 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                     }
                 }
 
+                String[] numeratorFiltersSplit = input.numeratorFilters.split("\\s*\\n\\s*");
+                List<MiruFilter> numeratorFilters = Lists.newArrayList();
+                for (int i = 0; i < numeratorFiltersSplit.length; i++) {
+                    String filterString = numeratorFiltersSplit[i].trim();
+                    if (!filterString.isEmpty()) {
+                        numeratorFilters.add(filterStringUtil.parse(filterString));
+                    }
+                }
+
+                float[] numeratorScalars = new float[numeratorFilters.size()];
+                Arrays.fill(numeratorScalars, 1f); //TODO
+
                 float[] featureScalars = new float[features.size()];
-                Arrays.fill(featureScalars, 1f);
+                Arrays.fill(featureScalars, 1f); //TODO
 
                 // "user context, user activityType context, user activityType contextType"
                 /*String[] featuresSplit = input.featureFields.split("\\s*,\\s*");
@@ -190,15 +206,16 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                 data.put("toTimeUnit", String.valueOf(toTimeUnit));
                 data.put("catwalkId", input.catwalkId);
                 data.put("modelId", input.modelId);
-                data.put("gatherField", input.gatherField);
+                data.put("scorableField", input.scorableField);
+                data.put("numeratorFilters", input.numeratorFilters);
                 data.put("gatherTermsForFields", input.gatherTermsForFields);
-                data.put("gatherFilters", input.gatherFilters);
                 /*data.put("featureFields", input.featureFields);
                 data.put("featureFilters", input.featureFilters);*/
                 data.put("features", input.features);
                 data.put("constraintField", input.constraintField);
                 data.put("constraintFilters", input.constraintFilters);
-                data.put("strategy", input.strategy.name());
+                data.put("numeratorStrategy", input.numeratorStrategy.name());
+                data.put("featureStrategy", input.featureStrategy.name());
                 data.put("usePartitionModelCache", input.usePartitionModelCache);
                 data.put("desiredNumberOfResults", input.desiredNumberOfResults);
                 data.put("desiredModelSize", input.desiredModelSize);
@@ -219,20 +236,13 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                 if (!input.tenant.trim().isEmpty()) {
                     MiruTenantId tenantId = new MiruTenantId(input.tenant.trim().getBytes(StandardCharsets.UTF_8));
 
-                    /*String[][] featureFields = new String[input.featureFields.size()][];
-                    for (int i = 0; i < featureFields.length; i++) {
-                        featureFields[i] = input.featureFields.toArray(new String[0]);
-                    }*/
                     MiruFilter constraintFilter = filterStringUtil.parse(input.constraintFilters);
 
-                    MiruFilter gatherFilter = filterStringUtil.parse(input.gatherFilters);
                     String endpoint = StrutConstants.STRUT_PREFIX + StrutConstants.CUSTOM_QUERY_ENDPOINT;
 
                     CatwalkQuery catwalkQuery = new CatwalkQuery(MiruTimeRange.ALL_TIME,
-                        input.gatherField,
-                        gatherFilter,
-                        /*featureFields,
-                        featureFilter,*/
+                        input.scorableField,
+                        numeratorFilters.toArray(new MiruFilter[0]),
                         features.toArray(new CatwalkFeature[0]),
                         input.desiredModelSize);
 
@@ -247,7 +257,9 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                             new MiruTimeRange(fromTime, toTime),
                             input.constraintField,
                             constraintFilter,
-                            input.strategy,
+                            input.numeratorStrategy,
+                            numeratorScalars,
+                            input.featureStrategy,
                             featureScalars,
                             MiruFilter.NO_FILTER,
                             input.desiredNumberOfResults,
@@ -264,7 +276,7 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                             @SuppressWarnings("unchecked")
                             MiruResponse<StrutAnswer> extractResponse = responseMapper.extractResultFromResponse(httpResponse,
                                 MiruResponse.class,
-                                new Class<?>[]{StrutAnswer.class},
+                                new Class<?>[] { StrutAnswer.class },
                                 null);
                             return new ClientResponse<>(extractResponse, true);
                         });
@@ -291,10 +303,11 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                                     if (feature != null) {
                                         hotFeatures.add("<b>" + features.get(i).name + "</b>");
 
-                                        Collections.sort(feature, (o1, o2) -> Float.compare(o2.score, o1.score)); // sort descending
+                                        // sort descending
+                                        Collections.sort(feature, (o1, o2) -> Float.compare(Floats.max(o2.scores), Floats.max(o1.scores)));
                                         for (Hotness hotness : feature) {
                                             if (hotness.values.length != fields.length) {
-                                                hotFeatures.add("[unknown=" + hotness.score + "]");
+                                                hotFeatures.add("[unknown=" + Arrays.toString(hotness.scores) + "]");
                                             } else {
                                                 buf.append('[');
                                                 for (int j = 0; j < hotness.values.length; j++) {
@@ -303,7 +316,7 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                                                     }
                                                     buf.append(fields[j]).append(':').append(valueToString(hotness.values[j]));
                                                 }
-                                                buf.append('=').append(hotness.score).append("] ");
+                                                buf.append('=').append(Arrays.toString(hotness.scores)).append("] ");
                                                 hotFeatures.add(buf.toString());
                                                 buf.setLength(0);
                                             }

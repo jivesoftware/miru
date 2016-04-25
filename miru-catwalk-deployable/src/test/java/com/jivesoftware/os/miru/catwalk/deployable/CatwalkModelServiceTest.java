@@ -37,13 +37,14 @@ public class CatwalkModelServiceTest {
     @Test
     public void testValueSerDer() throws Exception {
         boolean partitionIsClosed = false;
-        List<FeatureScore> featureScores = Arrays.asList(new FeatureScore(terms("term1", "term2", "term3"), 1, 3, 1),
-            new FeatureScore(terms("term4", "term5", "term6"), 2, 4, 1),
-            new FeatureScore(terms("term7", "term8", "term9"), 3, 5, 1));
+        List<FeatureScore> featureScores = Arrays.asList(new FeatureScore(terms("term1", "term2", "term3"), new long[] { 1 }, 3, 1),
+            new FeatureScore(terms("term4", "term5", "term6"), new long[] { 2 }, 4, 1),
+            new FeatureScore(terms("term7", "term8", "term9"), new long[] { 3 }, 5, 1));
         MiruTimeRange timeRange = new MiruTimeRange(123L, Long.MAX_VALUE - 456L);
         byte[] valueBytes = CatwalkModelService.valueToBytes(partitionIsClosed,
             6,
             12,
+            1,
             featureScores,
             timeRange);
 
@@ -55,7 +56,7 @@ public class CatwalkModelServiceTest {
             FeatureScore actual = modelFeatureScores.featureScores.get(i);
             FeatureScore expected = featureScores.get(i);
             assertEquals(actual.termIds, expected.termIds);
-            assertEquals(actual.numerator, expected.numerator);
+            assertEquals(actual.numerators, expected.numerators);
             assertEquals(actual.denominator, expected.denominator);
         }
         assertEquals(modelFeatureScores.timeRange, timeRange);

@@ -26,7 +26,9 @@ public class StrutQuery implements Serializable {
     public final MiruTimeRange timeRange;
     public final String constraintField;
     public final MiruFilter constraintFilter;
-    public final Strategy strategy;
+    public final Strategy numeratorStrategy;
+    public final float[] numeratorScalars;
+    public final Strategy featureStrategy;
     public final float[] featureScalars;
     public final MiruFilter featureFilter;
     public final int desiredNumberOfResults;
@@ -43,7 +45,9 @@ public class StrutQuery implements Serializable {
         @JsonProperty("timeRange") MiruTimeRange timeRange,
         @JsonProperty("constraintField") String constraintField,
         @JsonProperty("constraintFilter") MiruFilter constraintFilter,
-        @JsonProperty("strategy") Strategy strategy,
+        @JsonProperty("numeratorStrategy") Strategy numeratorStrategy,
+        @JsonProperty("numeratorScalars") float[] numeratorScalars,
+        @JsonProperty("featureStrategy") Strategy featureStrategy,
         @JsonProperty("featureScalars") float[] featureScalars,
         @JsonProperty("featureFilter") MiruFilter featureFilter,
         @JsonProperty("desiredNumberOfResults") int desiredNumberOfResults,
@@ -58,8 +62,13 @@ public class StrutQuery implements Serializable {
         this.timeRange = Preconditions.checkNotNull(timeRange);
         this.constraintField = Preconditions.checkNotNull(constraintField);
         this.constraintFilter = Preconditions.checkNotNull(constraintFilter);
-        this.strategy = Preconditions.checkNotNull(strategy);
-        Preconditions.checkArgument(featureScalars.length == catwalkQuery.features.length, "featureScalars must be the same length as catwalkQuery.features");
+        this.numeratorStrategy = Preconditions.checkNotNull(numeratorStrategy);
+        Preconditions.checkArgument(numeratorScalars.length == catwalkQuery.gatherFilters.length,
+            "numeratorScalars must be the same length as catwalkQuery.gatherFilters");
+        this.numeratorScalars = numeratorScalars;
+        this.featureStrategy = Preconditions.checkNotNull(featureStrategy);
+        Preconditions.checkArgument(featureScalars.length == catwalkQuery.features.length,
+            "featureScalars must be the same length as catwalkQuery.features");
         this.featureScalars = featureScalars;
         this.featureFilter = Preconditions.checkNotNull(featureFilter);
         Preconditions.checkArgument(desiredNumberOfResults > 0, "Number of results must be at least 1");
@@ -79,7 +88,9 @@ public class StrutQuery implements Serializable {
             + ", timeRange=" + timeRange
             + ", constraintField='" + constraintField + '\''
             + ", constraintFilter=" + constraintFilter
-            + ", strategy=" + strategy
+            + ", numeratorStrategy=" + numeratorStrategy
+            + ", numeratorScalars=" + Arrays.toString(numeratorScalars)
+            + ", featureStrategy=" + featureStrategy
             + ", featureScalars=" + Arrays.toString(featureScalars)
             + ", featureFilter=" + featureFilter
             + ", desiredNumberOfResults=" + desiredNumberOfResults
