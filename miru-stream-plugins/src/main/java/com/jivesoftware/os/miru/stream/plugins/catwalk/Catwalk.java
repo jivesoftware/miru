@@ -115,7 +115,7 @@ public class Catwalk {
                 long denominator = bitmaps.cardinality(bitmap);
                 int numeratorSum = 0;
                 for (int j = 0; j < numerators.length; j++) {
-                    numeratorSum += numerators[i];
+                    numeratorSum += numerators[j];
                 }
                 if (numeratorSum > denominator) {
                     log.warn("Catwalk computed numerators:{} numeratorSum:{} denominator:{} for tenantId:{} partitionId:{} featureId:{} fieldIds:{} terms:{}",
