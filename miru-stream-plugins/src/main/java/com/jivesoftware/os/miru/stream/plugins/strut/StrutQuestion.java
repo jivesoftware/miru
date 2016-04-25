@@ -282,14 +282,9 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         for (int j = 0; j < s.length; j++) {
             if (timeAndVersions[j] != null) {
                 String[] decomposed = termComposer.decompose(schema, pivotFieldDefinition, stackBuffer, s[j].term);
-                float score = 0f;
-                for (int i = 0; i < s[j].scores.length; i++) {
-
-                }
-                //s[j].scores
                 hotOrNots.add(new HotOrNot(new MiruValue(decomposed),
                     gatherScoredValues != null ? gatherScoredValues[j] : null,
-                    score,
+                    s[j].scaledScore,
                     s[j].features,
                     timeAndVersions[j].timestamp));
             } else {
@@ -297,13 +292,14 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             }
         }
 
-        solutionLog.log(MiruSolutionLogLevel.INFO, "Strut your stuff for {} terms took"
-            + " lastIds {} ms,"
-            + " cached {} ms,"
-            + " rescore {} ms,"
-            + " gather {} ms,"
-            + " timeAndVersion {} ms,"
-            + " total {} ms",
+        solutionLog.log(MiruSolutionLogLevel.INFO,
+            "Strut your stuff for {} terms took"
+                + " lastIds {} ms,"
+                + " cached {} ms,"
+                + " rescore {} ms,"
+                + " gather {} ms,"
+                + " timeAndVersion {} ms,"
+                + " total {} ms",
             lastIdAndTermIds.size(),
             totalTimeFetchingLastId,
             totalTimeFetchingScores,
