@@ -35,13 +35,23 @@ public class Catwalk {
 
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
 
+    public interface ConsumeAnswers<BM extends IBM, IBM> {
+
+        boolean consume(ConsumeAnswerBitmap<BM, IBM> answerBitmap) throws Exception;
+    }
+
+    public interface ConsumeAnswerBitmap<BM extends IBM, IBM> {
+
+        boolean consume(int index, MiruTermId answerTermId, BM[] featureAnswers) throws Exception;
+    }
+
     public <BM extends IBM, IBM> CatwalkAnswer model(String name,
         MiruBitmaps<BM, IBM> bitmaps,
         MiruRequestContext<BM, IBM, ?> requestContext,
         MiruRequest<CatwalkQuery> request,
         MiruPartitionCoord coord,
         Optional<CatwalkReport> report,
-        BM[] featureAnswers,
+        ConsumeAnswers<BM, IBM> consumeAnswers,
         IBM[] featureMasks,
         Set<MiruTermId>[] numeratorTermSets,
         MiruSolutionLog solutionLog) throws Exception {
@@ -49,7 +59,7 @@ public class Catwalk {
         StackBuffer stackBuffer = new StackBuffer();
 
         if (log.isDebugEnabled()) {
-            log.debug("Catwalk for answer={} request={}", Arrays.toString(featureAnswers), request);
+            log.debug("Catwalk for request={}", request);
         }
         //System.out.println("Number of matches: " + bitmaps.cardinality(answer));
 
@@ -70,10 +80,18 @@ public class Catwalk {
             }
         }
 
+        long[] modelCounts = new long[features.length];
         aggregateUtil.gatherFeatures(name,
             bitmaps,
             requestContext,
-            streamBitmaps -> streamBitmaps.stream(0, -1, null, -1, featureAnswers),
+            streamBitmaps -> {
+                return consumeAnswers.consume((index, answerTermId, featureAnswers) -> {
+                    for (int i = 0; i < featureAnswers.length; i++) {
+                        modelCounts[i] += bitmaps.cardinality(featureAnswers[i]);
+                    }
+                    return streamBitmaps.stream(index, -1, answerTermId, -1, featureAnswers);
+                });
+            },
             featureFieldIds,
             false,
             (streamIndex, lastId, answerTermId, answerScoredLastId, featureId, termIds) -> {
@@ -106,6 +124,7 @@ public class Catwalk {
                 for (int j = 0; j < fieldIds.length; j++) {
                     ands.add(primaryIndex.get(name, fieldIds[j], termIds[j]));
                 }
+
                 if (featureMasks != null && featureMasks[i] != null) {
                     ands.add(new SimpleInvertedIndex<>(featureMasks[i]));
                 }
@@ -135,10 +154,6 @@ public class Catwalk {
             requestContext.getTimeIndex().getSmallestTimestamp(),
             requestContext.getTimeIndex().getLargestTimestamp());
 
-        long[] modelCounts = new long[featureAnswers.length];
-        for (int i = 0; i < featureAnswers.length; i++) {
-            modelCounts[i] = bitmaps.cardinality(featureAnswers[i]);
-        }
         long totalCount = requestContext.getTimeIndex().lastId();
         CatwalkAnswer result = new CatwalkAnswer(featureScoreResults, modelCounts, totalCount, timeRange, resultsExhausted, resultsClosed);
         log.debug("result={}", result);
