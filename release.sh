@@ -72,7 +72,7 @@ fi
 
 git checkout master
 git pull
-git merge ${ON_BRANCH}
+git merge --no-edit ${ON_BRANCH}
 if [ "$?" -ne "0" ]; then
 	echo "Failed to merge to master."
 	exit 1

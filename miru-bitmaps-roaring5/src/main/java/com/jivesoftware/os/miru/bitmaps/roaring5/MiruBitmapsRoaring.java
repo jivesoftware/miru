@@ -174,6 +174,11 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
     }
 
     @Override
+    public RoaringBitmap[] createImmutableArrayOf(int size) {
+        return new RoaringBitmap[size];
+    }
+
+    @Override
     public RoaringBitmap[][] createMultiArrayOf(int size1, int size2) {
         return new RoaringBitmap[size1][size2];
     }

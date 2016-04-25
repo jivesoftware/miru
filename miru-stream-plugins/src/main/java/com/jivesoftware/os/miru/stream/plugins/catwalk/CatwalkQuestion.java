@@ -69,9 +69,8 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
         if (!context.getTimeIndex().intersects(timeRange)) {
             solutionLog.log(MiruSolutionLogLevel.WARN, "No time index intersection. Partition {}: {} doesn't intersect with {}",
                 handle.getCoord().partitionId, context.getTimeIndex(), timeRange);
-            BM[] featureAnswers = bitmaps.createArrayOf(request.query.features.length);
             return new MiruPartitionResponse<>(
-                catwalk.model("catwalk", bitmaps, context, request, handle.getCoord(), report, featureAnswers, null, null, solutionLog),
+                catwalk.model("catwalk", bitmaps, context, request, handle.getCoord(), report, answerBitmap -> true, null, null, solutionLog),
                 solutionLog.asList());
         }
 
@@ -102,7 +101,7 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
         int pivotFieldId = context.getSchema().getFieldId(request.query.gatherField);
 
         for (int i = 0; i < numeratorTermSets.length; i++) {
-            int gatherIndex = i;
+            int ni = i;
             MiruFilter gatherFilter = request.query.gatherFilters[i];
             List<IBM> gatherAnds;
             if (MiruFilter.NO_FILTER.equals(gatherFilter)) {
@@ -125,26 +124,16 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
             BM eligible = bitmaps.and(gatherAnds);
 
             aggregateUtil.gather("catwalk", bitmaps, context, eligible, pivotFieldId, 100, false, solutionLog, (lastId1, termId) -> {
-                numeratorTermSets[gatherIndex].add(termId);
+                numeratorTermSets[ni].add(termId);
                 termIds.add(termId);
                 return true;
             }, stackBuffer);
         }
 
-        FieldMultiTermTxIndex<BM, IBM> multiTermTxIndex = new FieldMultiTermTxIndex<>("catwalk", primaryFieldIndex, pivotFieldId, -1);
-        multiTermTxIndex.setTermIds(termIds.toArray(new MiruTermId[0]));
-        BM answer = bitmaps.orMultiTx(multiTermTxIndex, stackBuffer);
-
         CatwalkFeature[] features = request.query.features;
-        BM[] featureAnswers = bitmaps.createArrayOf(features.length);
         IBM[] featureMasks = bitmaps.createArrayOf(features.length);
 
         for (int i = 0; i < features.length; i++) {
-            List<IBM> featureAnds = Lists.newArrayList();
-            featureAnds.add(answer);
-            if (timeRangeMask != null) {
-                featureAnds.add(timeRangeMask);
-            }
             if (MiruFilter.NO_FILTER.equals(features[i].featureFilter)) {
                 featureMasks[i] = (timeRangeMask != null) ? timeRangeMask : null;
             } else {
@@ -159,7 +148,6 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
                     lastId,
                     -1,
                     stackBuffer);
-                featureAnds.add(constrainFeature);
 
                 if (timeRangeMask != null) {
                     featureMasks[i] = bitmaps.and(Arrays.asList(constrainFeature, timeRangeMask));
@@ -167,11 +155,41 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
                     featureMasks[i] = constrainFeature;
                 }
             }
-            featureAnswers[i] = bitmaps.and(featureAnds);
         }
 
+        List<MiruTermId> uniqueTermIds = Lists.newArrayList(termIds);
         return new MiruPartitionResponse<>(
-            catwalk.model("catwalk", bitmaps, context, request, handle.getCoord(), report, featureAnswers, featureMasks, numeratorTermSets, solutionLog),
+            catwalk.model("catwalk",
+                bitmaps,
+                context,
+                request,
+                handle.getCoord(),
+                report,
+                answerBitmap -> {
+                    FieldMultiTermTxIndex<BM, IBM> multiTermTxIndex = new FieldMultiTermTxIndex<>("catwalk", primaryFieldIndex, pivotFieldId, -1);
+                    for (List<MiruTermId> batch : Lists.partition(uniqueTermIds, 100)) {
+                        BM[] answers = bitmaps.createArrayOf(batch.size());
+                        multiTermTxIndex.setTermIds(batch.toArray(new MiruTermId[0]));
+                        bitmaps.multiTx(multiTermTxIndex, (index, lastId1, bitmap) -> {
+                            answers[index] = bitmap;
+                        }, stackBuffer);
+                        for (int i = 0; i < answers.length; i++) {
+                            if (answers[i] != null) {
+                                BM[] featureAnswers = bitmaps.createArrayOf(features.length);
+                                for (int j = 0; j < features.length; j++) {
+                                    featureAnswers[j] = featureMasks[i] != null ? bitmaps.and(Arrays.asList(answers[i], featureMasks[j])) : answers[i];
+                                }
+                                if (!answerBitmap.consume(i, batch.get(i), featureAnswers)) {
+                                    return false;
+                                }
+                            }
+                        }
+                    }
+                    return true;
+                },
+                featureMasks,
+                numeratorTermSets,
+                solutionLog),
             solutionLog.asList());
     }
 
