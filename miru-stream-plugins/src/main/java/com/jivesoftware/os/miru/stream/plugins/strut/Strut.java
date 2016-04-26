@@ -171,7 +171,7 @@ public class Strut {
                                     values[j] = new MiruValue(termComposer.decompose(schema,
                                         schema.getFieldDefinition(featureFieldIds[featureId][j]), stackBuffer, termIds[j]));
                                 }
-                                features[featureId].add(new Hotness(values, s));
+                                features[featureId].add(new Hotness(values, scaleScore(s, request.query.numeratorScalars, request.query.numeratorStrategy), s));
                             }
                         }
                     }
