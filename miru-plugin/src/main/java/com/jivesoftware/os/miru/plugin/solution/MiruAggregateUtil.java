@@ -152,8 +152,10 @@ public class MiruAggregateUtil {
         int[] featureCount,
         Set<Feature>[] features) throws Exception {
 
+        int[] consumableIds = new int[ids.length];
         for (int fieldId : uniqueFieldIds) {
-            fieldTerms[fieldId] = activityIndex.getAll(name, ids, 0, count, fieldId, stackBuffer);
+            System.arraycopy(ids, 0, consumableIds, 0, ids.length);
+            fieldTerms[fieldId] = activityIndex.getAll(name, consumableIds, 0, count, fieldId, stackBuffer);
         }
 
         PermutationStream permutationStream = (fi, termIds1) -> {
