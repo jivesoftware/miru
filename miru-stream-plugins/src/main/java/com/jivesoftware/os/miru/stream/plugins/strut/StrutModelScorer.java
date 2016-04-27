@@ -5,6 +5,8 @@ import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.CacheKeyValues;
 import com.jivesoftware.os.miru.stream.plugins.strut.Strut.Scored;
+import com.jivesoftware.os.mlogger.core.MetricLogger;
+import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.Arrays;
 import java.util.List;
 
@@ -12,6 +14,8 @@ import java.util.List;
  * @author jonathan.colt
  */
 public class StrutModelScorer {
+
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     public interface ScoredStream {
 
@@ -34,7 +38,7 @@ public class StrutModelScorer {
         cacheKeyValues.get(modelId, keys, (index, key, value) -> {
             float[] scores = new float[numeratorsCount];
             int lastId;
-            if (value != null) {
+            if (value != null && value.length == (4 * numeratorsCount + 4)) {
                 int offset = 0;
                 for (int i = 0; i < numeratorsCount; i++) {
                     scores[i] = FilerIO.bytesFloat(value, offset);
@@ -42,6 +46,9 @@ public class StrutModelScorer {
                 }
                 lastId = FilerIO.bytesInt(value, offset);
             } else {
+                if (value != null) {
+                    LOG.warn("Ignored strut model score with invalid length {}", value.length);
+                }
                 Arrays.fill(scores, Float.NaN);
                 lastId = -1;
             }
@@ -65,9 +72,8 @@ public class StrutModelScorer {
                 System.arraycopy(scoreBytes, 0, payload, offset, 4);
                 offset += 4;
             }
-            byte[] lastId = FilerIO.intBytes(update.scoredToLastId);
 
-            System.arraycopy(lastId, 0, payload, offset, 4);
+            FilerIO.intBytes(update.scoredToLastId, payload, offset);
 
             keys[i] = update.term.getBytes();
             values[i] = payload;
