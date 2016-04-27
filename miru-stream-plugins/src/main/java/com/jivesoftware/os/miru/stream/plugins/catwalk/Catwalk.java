@@ -132,14 +132,12 @@ public class Catwalk {
                 BM bitmap = bitmaps.andTx(ands, stackBuffer);
                 long[] numerators = entry.getValue();
                 long denominator = bitmaps.cardinality(bitmap);
-                int numeratorSum = 0;
                 for (int j = 0; j < numerators.length; j++) {
-                    numeratorSum += numerators[j];
-                }
-                if (numeratorSum > denominator) {
-                    log.warn("Catwalk computed numerators:{} numeratorSum:{} denominator:{} for tenantId:{} partitionId:{} featureId:{} fieldIds:{} terms:{}",
-                        Arrays.toString(numerators), numeratorSum, denominator, coord.tenantId, coord.partitionId, i, Arrays.toString(fieldIds),
-                        Arrays.toString(termIds));
+                    if (numerators[j] > denominator) {
+                        log.warn("Catwalk computed numerators:{} index:{} denominator:{} for tenantId:{} partitionId:{} featureId:{} fieldIds:{} terms:{}",
+                            Arrays.toString(numerators), j, denominator, coord.tenantId, coord.partitionId, i, Arrays.toString(fieldIds),
+                            Arrays.toString(termIds));
+                    }
                 }
                 featureScoreResults[i].add(new FeatureScore(termIds, numerators, denominator, 1));
             }

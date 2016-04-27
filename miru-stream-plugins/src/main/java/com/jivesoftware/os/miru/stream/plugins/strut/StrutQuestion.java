@@ -136,9 +136,10 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             .maximumSize(request.query.desiredNumberOfResults)
             .create();
 
+        int payloadSize = 4 * request.query.catwalkQuery.gatherFilters.length + 4; // this is amazing
         MiruPluginCacheProvider.CacheKeyValues cacheStores = handle.getRequestContext()
             .getCacheProvider()
-            .get("strut-" + request.query.catwalkId, 8, false, maxUpdatesBeforeFlush);
+            .get("strut-" + request.query.catwalkId, payloadSize, false, maxUpdatesBeforeFlush);
 
         StrutModelScorer modelScorer = new StrutModelScorer(); // Ahh
         AtomicInteger modelTotalPartitionCount = new AtomicInteger();
