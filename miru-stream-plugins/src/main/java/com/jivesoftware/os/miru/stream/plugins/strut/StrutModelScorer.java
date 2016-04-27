@@ -35,10 +35,12 @@ public class StrutModelScorer {
             float[] scores = new float[numeratorsCount];
             int lastId;
             if (value != null) {
+                int offset = 0;
                 for (int i = 0; i < numeratorsCount; i++) {
-                    scores[i] = FilerIO.bytesFloat(value, 0);
+                    scores[i] = FilerIO.bytesFloat(value, offset);
+                    offset += 4;
                 }
-                lastId = FilerIO.bytesInt(value, 4);
+                lastId = FilerIO.bytesInt(value, offset);
             } else {
                 Arrays.fill(scores, Float.NaN);
                 lastId = -1;
