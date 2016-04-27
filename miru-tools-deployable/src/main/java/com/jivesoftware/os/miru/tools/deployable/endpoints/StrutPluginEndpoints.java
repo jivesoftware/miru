@@ -44,6 +44,7 @@ public class StrutPluginEndpoints {
         @QueryParam("toTimeUnit") @DefaultValue("HOURS") String toTimeUnit,
         @QueryParam("catwalkId") @DefaultValue("test") String catwalkId,
         @QueryParam("modelId") @DefaultValue("2000") String modelId,
+        @QueryParam("unreadStreamId") @DefaultValue("") String unreadStreamId,
         @QueryParam("scorableField") @DefaultValue("parent") String scorableField,
         @QueryParam("numeratorFilters") @DefaultValue("activityType:0, user:3 2000\n" +
             "activityType:1, user:3 2000\n" +
@@ -73,6 +74,7 @@ public class StrutPluginEndpoints {
                     toTimeUnit,
                     catwalkId,
                     modelId,
+                    unreadStreamId,
                     scorableField,
                     numeratorFilters.trim(),
                     gatherTermsForFields.trim(),

@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.stream.plugins.strut;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkQuery;
@@ -36,6 +37,7 @@ public class StrutQuery implements Serializable {
     public final boolean usePartitionModelCache;
 
     public final String[] gatherTermsForFields;
+    public final MiruStreamId unreadStreamId;
     public final int batchSize;
 
     public StrutQuery(
@@ -54,6 +56,7 @@ public class StrutQuery implements Serializable {
         @JsonProperty("includeFeatures") boolean includeFeatures,
         @JsonProperty("usePartitionModelCache") boolean usePartitionModelCache,
         @JsonProperty("gatherTermsForFields") String[] gatherTermsForFields,
+        @JsonProperty("unreadStreamId") MiruStreamId unreadStreamId, // nullable
         @JsonProperty("batchSize") int batchSize) {
 
         this.catwalkId = Preconditions.checkNotNull(catwalkId);
@@ -76,6 +79,7 @@ public class StrutQuery implements Serializable {
         this.includeFeatures = includeFeatures;
         this.usePartitionModelCache = usePartitionModelCache;
         this.gatherTermsForFields = gatherTermsForFields;
+        this.unreadStreamId = unreadStreamId;
         this.batchSize = batchSize;
     }
 
@@ -97,6 +101,7 @@ public class StrutQuery implements Serializable {
             + ", includeFeatures=" + includeFeatures
             + ", usePartitionModelCache=" + usePartitionModelCache
             + ", gatherTermsForFields=" + Arrays.toString(gatherTermsForFields)
+            + ", unreadStreamId=" + unreadStreamId
             + ", batchSize=" + batchSize
             + '}';
     }
