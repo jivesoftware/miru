@@ -61,4 +61,9 @@ public class MiruFilerUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUn
     public void close() {
         store.close();
     }
+
+    @Override
+    public int getLastActivityIndex(MiruStreamId streamId, StackBuffer stackBuffer) throws Exception {
+        return getUnread(streamId).lastId(stackBuffer);
+    }
 }

@@ -16,6 +16,7 @@ import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruValue;
+import com.jivesoftware.os.miru.plugin.backfill.MiruJustInTimeBackfillerizer;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider;
@@ -53,6 +54,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
 
     private final ExecutorService asyncRescorers;
     private final Strut strut;
+    private final MiruJustInTimeBackfillerizer backfillerizer;
     private final MiruRequest<StrutQuery> request;
     private final MiruRemotePartition<StrutQuery, StrutAnswer, StrutReport> remotePartition;
     private final AtomicLong pendingUpdates;
@@ -63,12 +65,14 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
 
     public StrutQuestion(ExecutorService asyncRescorers,
         Strut strut,
+        MiruJustInTimeBackfillerizer backfillerizer,
         MiruRequest<StrutQuery> request,
         MiruRemotePartition<StrutQuery, StrutAnswer, StrutReport> remotePartition,
         AtomicLong pendingUpdates,
         int maxUpdatesBeforeFlush) {
         this.asyncRescorers = asyncRescorers;
         this.strut = strut;
+        this.backfillerizer = backfillerizer;
         this.request = request;
         this.remotePartition = remotePartition;
         this.pendingUpdates = pendingUpdates;
@@ -111,6 +115,22 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 -1,
                 stackBuffer);
             ands.add(constrained);
+        }
+
+        if (request.query.unreadStreamId != null) {
+            if (handle.canBackfill()) {
+                backfillerizer.backfillUnread(bitmaps,
+                    context,
+                    solutionLog,
+                    request.tenantId,
+                    handle.getCoord().partitionId, 
+                    request.query.unreadStreamId);
+            }
+
+            Optional<BM> unreadIndex = context.getUnreadTrackingIndex().getUnread(request.query.unreadStreamId).getIndex(stackBuffer);
+            if (unreadIndex.isPresent()) {
+                ands.add(unreadIndex.get());
+            }
         }
 
         if (!MiruAuthzExpression.NOT_PROVIDED.equals(request.authzExpression)) {

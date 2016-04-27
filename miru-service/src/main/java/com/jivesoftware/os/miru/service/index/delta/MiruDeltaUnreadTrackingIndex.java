@@ -76,4 +76,9 @@ public class MiruDeltaUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUn
         }
         unreadDeltas.clear();
     }
+
+    @Override
+    public int getLastActivityIndex(MiruStreamId streamId, StackBuffer stackBuffer) throws Exception {
+         return getUnread(streamId).lastId(stackBuffer);
+    }
 }

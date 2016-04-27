@@ -80,4 +80,9 @@ public class LabUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUnreadTr
     @Override
     public void close() throws Exception {
     }
+
+    @Override
+    public int getLastActivityIndex(MiruStreamId streamId, StackBuffer stackBuffer) throws Exception {
+        return getUnread(streamId).lastId(stackBuffer);
+    }
 }

@@ -47,6 +47,68 @@ public class MiruJustInTimeBackfillerizer {
         this.backfillExecutor = backfillExecutor;
     }
 
+    public <BM extends IBM, IBM> void backfillUnread(MiruBitmaps<BM, IBM> bitmaps,
+        MiruRequestContext<BM, IBM, ?> requestContext,
+        MiruSolutionLog solutionLog,
+        MiruTenantId tenantId,
+        MiruPartitionId partitionId,
+        MiruStreamId streamId)
+        throws Exception {
+
+        // backfill in another thread to guard WAL interface from solver cancellation/interruption
+        Future<?> future = backfillExecutor.submit(() -> {
+            try {
+                StackBuffer stackBuffer = new StackBuffer();
+                synchronized (requestContext.getStreamLocks().lock(streamId, 0)) {
+                    int lastActivityIndex = requestContext.getUnreadTrackingIndex().getLastActivityIndex(streamId, stackBuffer);
+                    int lastId = Math.min(requestContext.getTimeIndex().lastId(), requestContext.getActivityIndex().lastId(stackBuffer));
+
+                    MiruInvertedIndexAppender unread = requestContext.getUnreadTrackingIndex().getAppender(streamId);
+                    if (log.isDebugEnabled()) {
+                        log.debug("before:\n  host={}\n  streamId={}\n  unread={}\n  last={}",
+                            localHost,
+                            streamId.getBytes(),
+                            requestContext.getUnreadTrackingIndex().getUnread(streamId).getIndex(stackBuffer),
+                            lastActivityIndex);
+                    }
+
+                    long oldestBackfilledEventId = Long.MAX_VALUE;
+                    List<Integer> unreadIds = Lists.newLinkedList();
+                    for (int i = lastActivityIndex + 1; i <= lastId; i++) {
+                        unreadIds.add(i);
+                    }
+                    unread.appendAndExtend(unreadIds, lastId, stackBuffer);
+
+                    if (log.isDebugEnabled()) {
+                        log.debug("after:\n  host={}\n  streamId={}\n  unread={}\n  last={}",
+                            localHost,
+                            streamId.getBytes(),
+                            requestContext.getUnreadTrackingIndex().getUnread(streamId).getIndex(stackBuffer),
+                            lastActivityIndex);
+                    }
+
+                    inboxReadTracker.sipAndApplyReadTracking(bitmaps,
+                        requestContext,
+                        tenantId,
+                        partitionId,
+                        streamId,
+                        solutionLog,
+                        lastId,
+                        oldestBackfilledEventId,
+                        stackBuffer);
+                }
+
+            } catch (Exception e) {
+                log.error("Backfillerizer failed", e);
+                throw new RuntimeException("Backfillerizer failed");
+            }
+            return null;
+        });
+
+        // if this is interrupted, the backfill will still complete
+        future.get();
+    }
+
     public <BM extends IBM, IBM> void backfill(final MiruBitmaps<BM, IBM> bitmaps,
         final MiruRequestContext<BM, IBM, ?> requestContext,
         final MiruFilter streamFilter,
@@ -99,8 +161,8 @@ public class MiruJustInTimeBackfillerizer {
 
                             inboxIds.add(i);
 
-                            MiruIBA[] readStreamIds = propId < 0 ? null :
-                                requestContext.getActivityIndex().getProp("justInTimeBackfillerizer", i, propId, stackBuffer);
+                            MiruIBA[] readStreamIds = propId < 0 ? null
+                                : requestContext.getActivityIndex().getProp("justInTimeBackfillerizer", i, propId, stackBuffer);
                             if (readStreamIds == null || !Arrays.asList(readStreamIds).contains(streamIdAsIBA)) {
                                 unreadIds.add(i);
                             }

@@ -86,7 +86,11 @@ public class StrutPlugin implements MiruPlugin<StrutEndpoints, StrutInjectable> 
 
         return Collections.singletonList(new MiruEndpointInjectable<>(
             StrutInjectable.class,
-            new StrutInjectable(miruProvider, asyncExecutorService, strut, pendingUpdates, config.getMaxUpdatesBeforeFlush())
+            new StrutInjectable(miruProvider,
+                asyncExecutorService,
+                strut,
+                pendingUpdates,
+                config.getMaxUpdatesBeforeFlush())
         ));
     }
 
