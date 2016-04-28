@@ -349,16 +349,18 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
             count[0]++;
             return count[0] < batchSize;
         });
-        C cursor = readTrackingWALReader.getCursor(minEventId[0]);
 
         // Take either the oldest eventId or the oldest readtracking sip time
         minEventId[0] = Math.min(minEventId[0], oldestEventId);
+        C cursor = minEventId[0] > 0 ? readTrackingWALReader.getCursor(minEventId[0]) : null;
 
         List<MiruWALEntry> batch = new ArrayList<>();
-        readTrackingWALReader.stream(tenantId, streamId, cursor, batchSize, (collisionId, partitionedActivity, timestamp) -> {
-            batch.add(new MiruWALEntry(collisionId, timestamp, partitionedActivity));
-            return true; // always consume completely
-        });
+        if (cursor != null) {
+            readTrackingWALReader.stream(tenantId, streamId, cursor, batchSize, (collisionId, partitionedActivity, timestamp) -> {
+                batch.add(new MiruWALEntry(collisionId, timestamp, partitionedActivity));
+                return true; // always consume completely
+            });
+        }
         return new StreamBatch<>(batch, nextCursor, batch.size() < batchSize, null);
     }
 
