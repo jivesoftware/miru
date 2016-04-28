@@ -342,10 +342,10 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
         long oldestEventId,
         int batchSize) throws Exception {
 
-        long[] minEventId = new long[1];
+        long[] minEventId = { -1L };
         int[] count = new int[1];
         S nextCursor = readTrackingWALReader.streamSip(tenantId, streamId, sipCursor, batchSize, (eventId, timestamp) -> {
-            minEventId[0] = Math.min(minEventId[0], eventId);
+            minEventId[0] = (minEventId[0] == -1) ? eventId : Math.min(minEventId[0], eventId);
             count[0]++;
             return count[0] < batchSize;
         });
