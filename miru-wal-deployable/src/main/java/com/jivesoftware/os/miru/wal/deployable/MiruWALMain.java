@@ -233,7 +233,7 @@ public class MiruWALMain {
                 true, //TODO use for ring config? amzaServiceConfig.getTakeFromFactor(),
                 false,
                 RowType.snappy_primary,
-                "berkeleydb",
+                "lab",
                 null,
                 -1,
                 -1);
@@ -244,7 +244,7 @@ public class MiruWALMain {
                 true, //TODO use for ring config? amzaServiceConfig.getTakeFromFactor(),
                 false,
                 RowType.snappy_primary,
-                "berkeleydb",
+                "lab",
                 null,
                 -1,
                 -1);
@@ -255,7 +255,7 @@ public class MiruWALMain {
                 true, //TODO use for ring config? amzaServiceConfig.getTakeFromFactor(),
                 false,
                 RowType.primary,
-                "berkeleydb",
+                "lab",
                 null,
                 -1,
                 -1);

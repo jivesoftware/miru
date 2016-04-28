@@ -213,7 +213,7 @@ public class MiruWriterMain {
                 throw new IllegalStateException("Invalid activity WAL type: " + walConfig.getActivityWALType());
             }
 
-            String indexClass = "berkeleydb";
+            String indexClass = "lab";
 
             EmbeddedClientProvider clientProvider = new EmbeddedClientProvider(amzaService);
             AmzaPartitionIdProvider amzaPartitionIdProvider = new AmzaPartitionIdProvider(amzaService,

@@ -11,7 +11,8 @@ import com.jivesoftware.os.amza.api.BAInterner;
 import com.jivesoftware.os.amza.api.partition.PartitionProperties;
 import com.jivesoftware.os.amza.api.ring.RingHost;
 import com.jivesoftware.os.amza.api.ring.RingMember;
-import com.jivesoftware.os.amza.berkeleydb.BerkeleyDBWALIndexProvider;
+import com.jivesoftware.os.amza.lab.pointers.LABPointerIndexConfig;
+import com.jivesoftware.os.amza.lab.pointers.LABPointerIndexWALIndexProvider;
 import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.amza.service.AmzaServiceInitializer.AmzaServiceConfig;
 import com.jivesoftware.os.amza.service.EmbeddedAmzaServiceInitializer;
@@ -142,7 +143,8 @@ public class MiruWriterUIServiceNGTest {
             idPacker,
             regionPropertyMarshaller,
             (workingIndexDirectories, indexProviderRegistry, ephemeralRowIOProvider, persistentRowIOProvider, numberOfStripes) -> {
-                indexProviderRegistry.register(new BerkeleyDBWALIndexProvider("berkeleydb", numberOfStripes, workingIndexDirectories),
+                LABPointerIndexConfig labConfig = BindInterfaceToConfiguration.bindDefault(LABPointerIndexConfig.class);
+                indexProviderRegistry.register(new LABPointerIndexWALIndexProvider(labConfig, "lab", numberOfStripes, workingIndexDirectories),
                     persistentRowIOProvider);
             },
             availableRowsTaker,
