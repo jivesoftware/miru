@@ -37,6 +37,10 @@
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.amza</groupId>
+            <artifactId>amza-berkeleydb-storage</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.amza</groupId>
             <artifactId>amza-lab-storage</artifactId>
         </dependency>
         <dependency>

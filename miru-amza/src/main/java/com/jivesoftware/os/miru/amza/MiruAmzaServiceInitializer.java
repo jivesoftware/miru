@@ -12,6 +12,7 @@ import com.jivesoftware.os.amza.api.partition.VersionedPartitionName;
 import com.jivesoftware.os.amza.api.ring.RingHost;
 import com.jivesoftware.os.amza.api.ring.RingMember;
 import com.jivesoftware.os.amza.api.scan.RowChanges;
+import com.jivesoftware.os.amza.berkeleydb.BerkeleyDBWALIndexProvider;
 import com.jivesoftware.os.amza.client.http.AmzaClientProvider;
 import com.jivesoftware.os.amza.client.http.HttpPartitionClientFactory;
 import com.jivesoftware.os.amza.client.http.HttpPartitionHostsProvider;
@@ -173,6 +174,8 @@ public class MiruAmzaServiceInitializer {
                 persistentRowIOProvider,
                 numberOfStripes) -> {
                 indexProviderRegistry.register(new LABPointerIndexWALIndexProvider(amzaLabConfig, "lab", numberOfStripes, workingIndexDirectories),
+                    persistentRowIOProvider);
+                indexProviderRegistry.register(new BerkeleyDBWALIndexProvider("berkeleydb", numberOfStripes, workingIndexDirectories),
                     persistentRowIOProvider);
             },
             availableRowsTaker,
