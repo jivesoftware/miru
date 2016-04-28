@@ -25,16 +25,17 @@ import org.apache.lucene.util.Version;
  */
 public class LuceneBackedQueryParser implements MiruQueryParser {
 
-    private final QueryParser parser;
+    private final String defaultField;
     //TODO it would be lovely if this was passed in
     private final Analyzer analyzer = new SnowballAnalyzer(Version.LUCENE_4_10_3, "English", StandardAnalyzer.STOP_WORDS_SET);
 
     public LuceneBackedQueryParser(String defaultField) {
-        this.parser = new QueryParser(defaultField, analyzer);
+        this.defaultField = defaultField;
     }
 
     @Override
     public MiruFilter parse(String queryString) throws Exception {
+        QueryParser parser = new QueryParser(defaultField, analyzer);
         return makeFilter(parser.parse(queryString));
     }
 
