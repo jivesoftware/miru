@@ -10,7 +10,8 @@ import com.jivesoftware.os.amza.api.BAInterner;
 import com.jivesoftware.os.amza.api.partition.PartitionProperties;
 import com.jivesoftware.os.amza.api.ring.RingHost;
 import com.jivesoftware.os.amza.api.ring.RingMember;
-import com.jivesoftware.os.amza.berkeleydb.BerkeleyDBWALIndexProvider;
+import com.jivesoftware.os.amza.lab.pointers.LABPointerIndexConfig;
+import com.jivesoftware.os.amza.lab.pointers.LABPointerIndexWALIndexProvider;
 import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.amza.service.AmzaServiceInitializer.AmzaServiceConfig;
 import com.jivesoftware.os.amza.service.EmbeddedAmzaServiceInitializer;
@@ -150,9 +151,10 @@ public class MiruWALUIServiceNGTest {
             orderIdProvider,
             idPacker,
             partitionPropertyMarshaller,
-            (workingIndexDirectories, indexProviderRegistry1, ephemeralRowIOProvider, persistentRowIOProvider, partitionStripeFunction) -> {
+            (workingIndexDirectories, indexProviderRegistry1, ephemeralRowIOProvider, persistentRowIOProvider, numberOfStripes) -> {
+                LABPointerIndexConfig labConfig = BindInterfaceToConfiguration.bindDefault(LABPointerIndexConfig.class);
                 indexProviderRegistry1.register(
-                    new BerkeleyDBWALIndexProvider("berkeleydb", partitionStripeFunction, workingIndexDirectories), persistentRowIOProvider);
+                    new LABPointerIndexWALIndexProvider(labConfig, "lab", numberOfStripes, workingIndexDirectories), persistentRowIOProvider);
             },
             availableRowsTaker,
             rowsTakerFactory,

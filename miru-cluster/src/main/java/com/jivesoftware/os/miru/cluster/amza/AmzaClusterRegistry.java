@@ -133,7 +133,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
         this.defaultTopologyIsIdleAfterMillis = defaultTopologyIsIdleAfterMillis;
         this.defaultTopologyDestroyAfterMillis = defaultTopologyDestroyAfterMillis;
         this.takeFromFactor = takeFromFactor; //TODO use for ring config?
-        this.indexClass = "berkeleydb"; //TODO config
+        this.indexClass = "lab"; //TODO config
     }
 
     private EmbeddedClient ensureClient(String name, Consistency consistency, boolean requiresConsistency) throws Exception {

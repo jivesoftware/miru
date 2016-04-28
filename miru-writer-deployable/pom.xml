@@ -170,7 +170,8 @@
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.amza</groupId>
-            <artifactId>amza-berkeleydb-storage</artifactId>
+            <artifactId>amza-lab-storage</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 </project>

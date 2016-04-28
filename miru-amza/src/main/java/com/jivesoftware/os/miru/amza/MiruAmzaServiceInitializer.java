@@ -12,11 +12,12 @@ import com.jivesoftware.os.amza.api.partition.VersionedPartitionName;
 import com.jivesoftware.os.amza.api.ring.RingHost;
 import com.jivesoftware.os.amza.api.ring.RingMember;
 import com.jivesoftware.os.amza.api.scan.RowChanges;
-import com.jivesoftware.os.amza.berkeleydb.BerkeleyDBWALIndexProvider;
 import com.jivesoftware.os.amza.client.http.AmzaClientProvider;
 import com.jivesoftware.os.amza.client.http.HttpPartitionClientFactory;
 import com.jivesoftware.os.amza.client.http.HttpPartitionHostsProvider;
 import com.jivesoftware.os.amza.client.http.RingHostHttpClientProvider;
+import com.jivesoftware.os.amza.lab.pointers.LABPointerIndexConfig;
+import com.jivesoftware.os.amza.lab.pointers.LABPointerIndexWALIndexProvider;
 import com.jivesoftware.os.amza.service.AmzaInstance;
 import com.jivesoftware.os.amza.service.AmzaRingStoreWriter;
 import com.jivesoftware.os.amza.service.AmzaService;
@@ -63,11 +64,29 @@ import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import org.merlin.config.defaults.BooleanDefault;
+import org.merlin.config.defaults.IntDefault;
+import org.merlin.config.defaults.LongDefault;
 
 /**
  *
  */
 public class MiruAmzaServiceInitializer {
+
+    public interface MiruAmzaLabConfig extends LABPointerIndexConfig {
+
+        @Override
+        @BooleanDefault(true)
+        boolean getUseMemMap();
+
+        @Override
+        @IntDefault(1_000)
+        int getMaxUpdatesBeforeFlush();
+
+        @Override
+        @LongDefault(10_485_760L)
+        long getSplitWhenValuesAndKeysTotalExceedsNBytes();
+    }
 
     public AmzaService initialize(Deployable deployable,
         String routesHost,
@@ -112,6 +131,8 @@ public class MiruAmzaServiceInitializer {
         amzaServiceConfig.hardFsync = config.getHardFsync();
         amzaServiceConfig.takeSlowThresholdInMillis = config.getTakeSlowThresholdInMillis();
 
+        MiruAmzaLabConfig amzaLabConfig = deployable.config(MiruAmzaLabConfig.class);
+
         PartitionPropertyMarshaller partitionPropertyMarshaller = new PartitionPropertyMarshaller() {
 
             @Override
@@ -150,8 +171,8 @@ public class MiruAmzaServiceInitializer {
                 indexProviderRegistry,
                 ephemeralRowIOProvider,
                 persistentRowIOProvider,
-                partitionStripeFunction) -> {
-                indexProviderRegistry.register(new BerkeleyDBWALIndexProvider("berkeleydb", partitionStripeFunction, workingIndexDirectories),
+                numberOfStripes) -> {
+                indexProviderRegistry.register(new LABPointerIndexWALIndexProvider(amzaLabConfig, "lab", numberOfStripes, workingIndexDirectories),
                     persistentRowIOProvider);
             },
             availableRowsTaker,
