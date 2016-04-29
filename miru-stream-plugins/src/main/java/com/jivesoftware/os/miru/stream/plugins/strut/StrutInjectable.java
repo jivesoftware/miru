@@ -25,17 +25,20 @@ public class StrutInjectable {
     private final ExecutorService asyncExecutorService;
     private final Strut strut;
     private final AtomicLong pendingUpdates;
+    private final int maxTermIdsPerRequest;
     private final int maxUpdatesBeforeFlush;
 
     public StrutInjectable(MiruProvider<? extends Miru> provider,
         ExecutorService asyncExecutorService,
         Strut strut,
         AtomicLong pendingUpdates,
+        int maxTermIdsPerRequest,
         int maxUpdatesBeforeFlush) {
         this.provider = provider;
         this.asyncExecutorService = asyncExecutorService;
         this.strut = strut;
         this.pendingUpdates = pendingUpdates;
+        this.maxTermIdsPerRequest = maxTermIdsPerRequest;
         this.maxUpdatesBeforeFlush = maxUpdatesBeforeFlush;
     }
 
@@ -52,6 +55,7 @@ public class StrutInjectable {
                         request,
                         provider.getRemotePartition(StrutRemotePartition.class),
                         pendingUpdates,
+                        maxTermIdsPerRequest,
                         maxUpdatesBeforeFlush)),
                 new StrutAnswerEvaluator(),
                 new StrutAnswerMerger(request.query.desiredNumberOfResults),
@@ -81,6 +85,7 @@ public class StrutInjectable {
                         requestAndReport.request,
                         provider.getRemotePartition(StrutRemotePartition.class),
                         pendingUpdates,
+                        maxTermIdsPerRequest,
                         maxUpdatesBeforeFlush)),
                 Optional.fromNullable(requestAndReport.report),
                 StrutAnswer.EMPTY_RESULTS,
@@ -108,6 +113,7 @@ public class StrutInjectable {
                         request,
                         provider.getRemotePartition(StrutRemotePartition.class),
                         pendingUpdates,
+                        maxTermIdsPerRequest,
                         maxUpdatesBeforeFlush)),
                 new StrutAnswerMerger(request.query.desiredNumberOfResults),
                 StrutAnswer.EMPTY_RESULTS,
