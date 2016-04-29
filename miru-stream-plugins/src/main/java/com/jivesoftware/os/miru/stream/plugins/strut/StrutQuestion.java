@@ -120,6 +120,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             ands.add(constrained);
         }
 
+        Optional<BM> unreadIndex = Optional.absent();
         if (request.query.unreadStreamId != null) {
             if (handle.canBackfill()) {
                 backfillerizer.backfillUnread(bitmaps,
@@ -130,8 +131,8 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                     request.query.unreadStreamId);
             }
 
-            Optional<BM> unreadIndex = context.getUnreadTrackingIndex().getUnread(request.query.unreadStreamId).getIndex(stackBuffer);
-            if (unreadIndex.isPresent()) {
+            unreadIndex = context.getUnreadTrackingIndex().getUnread(request.query.unreadStreamId).getIndex(stackBuffer);
+            if (unreadIndex.isPresent() && request.query.unreadOnly) {
                 ands.add(unreadIndex.get());
             }
         }
@@ -310,7 +311,8 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                     gatherScoredValues != null ? gatherScoredValues[j] : null,
                     s[j].scaledScore,
                     s[j].features,
-                    timeAndVersions[j].timestamp));
+                    timeAndVersions[j].timestamp,
+                    unreadIndex.isPresent() && bitmaps.isSet(unreadIndex.get(), s[j].lastId)));
             } else {
                 LOG.warn("Failed to get timestamp for {}", scoredLastIds[j]);
             }

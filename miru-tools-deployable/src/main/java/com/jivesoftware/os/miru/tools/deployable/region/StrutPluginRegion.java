@@ -82,6 +82,7 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
         final String catwalkId;
         final String modelId;
         final String unreadStreamId;
+        final boolean unreadOnly;
         final String scorableField;
         final String numeratorFilters;
         final String gatherTermsForFields;
@@ -105,6 +106,7 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
             String catwalkId,
             String modelId,
             String unreadStreamId,
+            boolean unreadOnly,
             String scorableField,
             String numeratorFilters,
             String gatherTermsForFields,
@@ -127,6 +129,7 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
             this.catwalkId = catwalkId;
             this.modelId = modelId;
             this.unreadStreamId=unreadStreamId;
+            this.unreadOnly = unreadOnly;
             this.scorableField = scorableField;
             this.numeratorFilters = numeratorFilters;
             this.gatherTermsForFields = gatherTermsForFields;
@@ -213,6 +216,7 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                 data.put("scorableField", input.scorableField);
                 data.put("numeratorFilters", input.numeratorFilters);
                 data.put("unreadStreamId", input.unreadStreamId);
+                data.put("unreadOnly", input.unreadOnly);
                 data.put("gatherTermsForFields", input.gatherTermsForFields);
                 /*data.put("featureFields", input.featureFields);
                 data.put("featureFilters", input.featureFilters);*/
@@ -272,6 +276,7 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                             input.usePartitionModelCache,
                             gatherTermsForFieldSplit,
                             input.unreadStreamId.isEmpty() ? null : new MiruStreamId(input.unreadStreamId.getBytes(StandardCharsets.UTF_8)),
+                            input.unreadOnly,
                             100), // TODO expose to UI??
                         MiruSolutionLogLevel.valueOf(input.logLevel)));
                     MiruResponse<StrutAnswer> strutResponse = readerClient.call("",

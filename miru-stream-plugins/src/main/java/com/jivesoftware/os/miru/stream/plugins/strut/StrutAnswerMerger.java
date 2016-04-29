@@ -61,35 +61,36 @@ public class StrutAnswerMerger implements MiruAnswerMerger<StrutAnswer> {
         }
 
         List<HotOrNot> merged = Lists.newArrayListWithCapacity(bigger.size() + smaller.size());
-        for (HotOrNot hotOrNot : bigger) {
-            HotOrNot otherScore = smallerMap.remove(hotOrNot.value);
-            if (otherScore != null) {
+        for (HotOrNot big : bigger) {
+            HotOrNot small = smallerMap.remove(big.value);
+            if (small != null) {
                 List<Hotness>[] features = null;
-                if (hotOrNot.features != null && otherScore.features != null) {
-                    features = new List[hotOrNot.features.length];
+                if (big.features != null && small.features != null) {
+                    features = new List[big.features.length];
                     for (int i = 0; i < features.length; i++) {
-                        int sizeA = hotOrNot.features[i] != null ? hotOrNot.features[i].size() : 0;
-                        int sizeB = otherScore.features[i] != null ? otherScore.features[i].size() : 0;
+                        int sizeA = big.features[i] != null ? big.features[i].size() : 0;
+                        int sizeB = small.features[i] != null ? small.features[i].size() : 0;
                         features[i] = Lists.newArrayListWithCapacity(sizeA + sizeB);
-                        if (hotOrNot.features[i] != null) {
-                            features[i].addAll(hotOrNot.features[i]);
+                        if (big.features[i] != null) {
+                            features[i].addAll(big.features[i]);
                         }
-                        if (otherScore.features[i] != null) {
-                            features[i].addAll(otherScore.features[i]);
+                        if (small.features[i] != null) {
+                            features[i].addAll(small.features[i]);
                         }
                     }
-                } else if (hotOrNot.features != null) {
-                    features = hotOrNot.features;
-                } else if (otherScore.features != null) {
-                    features = otherScore.features;
+                } else if (big.features != null) {
+                    features = big.features;
+                } else if (small.features != null) {
+                    features = small.features;
                 }
-                merged.add(new HotOrNot(hotOrNot.value,
-                    (bigger == lastFeatures) ? hotOrNot.gatherLatestValues : otherScore.gatherLatestValues,
-                    mergeScores(hotOrNot, otherScore),
+                merged.add(new HotOrNot(big.value,
+                    (bigger == lastFeatures) ? big.gatherLatestValues : small.gatherLatestValues,
+                    mergeScores(big, small),
                     features,
-                    (bigger == lastFeatures) ? hotOrNot.timestamp : otherScore.timestamp));
+                    (bigger == lastFeatures) ? big.timestamp : small.timestamp,
+                    (bigger == lastFeatures) ? big.unread : small.unread));
             } else {
-                merged.add(hotOrNot);
+                merged.add(big);
             }
         }
         merged.addAll(smallerMap.values());
