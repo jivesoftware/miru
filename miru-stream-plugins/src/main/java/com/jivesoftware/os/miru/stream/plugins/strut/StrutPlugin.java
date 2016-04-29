@@ -90,6 +90,7 @@ public class StrutPlugin implements MiruPlugin<StrutEndpoints, StrutInjectable> 
                 asyncExecutorService,
                 strut,
                 pendingUpdates,
+                config.getMaxTermIdsPerRequest(),
                 config.getMaxUpdatesBeforeFlush())
         ));
     }

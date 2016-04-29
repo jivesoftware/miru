@@ -58,6 +58,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
     private final MiruRequest<StrutQuery> request;
     private final MiruRemotePartition<StrutQuery, StrutAnswer, StrutReport> remotePartition;
     private final AtomicLong pendingUpdates;
+    private final int maxTermIdsPerRequest;
     private final int maxUpdatesBeforeFlush;
 
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
@@ -69,6 +70,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         MiruRequest<StrutQuery> request,
         MiruRemotePartition<StrutQuery, StrutAnswer, StrutReport> remotePartition,
         AtomicLong pendingUpdates,
+        int maxTermIdsPerRequest,
         int maxUpdatesBeforeFlush) {
         this.asyncRescorers = asyncRescorers;
         this.strut = strut;
@@ -76,6 +78,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         this.request = request;
         this.remotePartition = remotePartition;
         this.pendingUpdates = pendingUpdates;
+        this.maxTermIdsPerRequest = maxTermIdsPerRequest;
         this.maxUpdatesBeforeFlush = maxUpdatesBeforeFlush;
     }
 
@@ -169,7 +172,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         //TODO config batch size
         aggregateUtil.gather("strut", bitmaps, context, eligible, pivotFieldId, 100, true, solutionLog, (lastId, termId) -> {
             lastIdAndTermIds.add(new LastIdAndTermId(lastId, termId));
-            return true;
+            return maxTermIdsPerRequest <= 0 || lastIdAndTermIds.size() < maxTermIdsPerRequest;
         }, stackBuffer);
 
         solutionLog.log(MiruSolutionLogLevel.INFO, "Strut accumulated {} terms in {} ms", lastIdAndTermIds.size(), System.currentTimeMillis() - start);
