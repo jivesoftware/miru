@@ -11,6 +11,7 @@
  * @param? catwalkId
  * @param? modelId
  * @param? unreadStreamId
+ * @param? unreadOnly
  * @param? scorableField
  * @param? numeratorFilters
  * @param? gatherTermsForFields
@@ -112,6 +113,14 @@
                             <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
                                 placeholder="Unread Stream Id" value="{$unreadStreamId?:''}"
                                 name="unreadStreamId" id="unreadStreamIdPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Unread Only</td>
+                        <td>
+                            <input type="checkbox" autocomplete="off" role="combobox" style="padding-left:10px;"
+                                placeholder="Unread Only" value="true" {if $unreadOnly}checked="checked"{/if}
+                                name="unreadOnly" id="unreadOnlyPicker" data-original-title="" title="">
                         </td>
                     </tr>
                     <tr>

@@ -45,6 +45,7 @@ public class StrutPluginEndpoints {
         @QueryParam("catwalkId") @DefaultValue("test") String catwalkId,
         @QueryParam("modelId") @DefaultValue("2000") String modelId,
         @QueryParam("unreadStreamId") @DefaultValue("") String unreadStreamId,
+        @QueryParam("unreadOnly") @DefaultValue("false") boolean unreadOnly,
         @QueryParam("scorableField") @DefaultValue("parent") String scorableField,
         @QueryParam("numeratorFilters") @DefaultValue("activityType:0, user:3 2000\n" +
             "activityType:1, user:3 2000\n" +
@@ -75,6 +76,7 @@ public class StrutPluginEndpoints {
                     catwalkId,
                     modelId,
                     unreadStreamId,
+                    unreadOnly,
                     scorableField,
                     numeratorFilters.trim(),
                     gatherTermsForFields.trim(),

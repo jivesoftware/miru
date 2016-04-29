@@ -38,6 +38,7 @@ public class StrutQuery implements Serializable {
 
     public final String[] gatherTermsForFields;
     public final MiruStreamId unreadStreamId;
+    public final boolean unreadOnly;
     public final int batchSize;
 
     public StrutQuery(
@@ -57,6 +58,7 @@ public class StrutQuery implements Serializable {
         @JsonProperty("usePartitionModelCache") boolean usePartitionModelCache,
         @JsonProperty("gatherTermsForFields") String[] gatherTermsForFields,
         @JsonProperty("unreadStreamId") MiruStreamId unreadStreamId, // nullable
+        @JsonProperty("unreadOnly") boolean unreadOnly,
         @JsonProperty("batchSize") int batchSize) {
 
         this.catwalkId = Preconditions.checkNotNull(catwalkId);
@@ -80,6 +82,7 @@ public class StrutQuery implements Serializable {
         this.usePartitionModelCache = usePartitionModelCache;
         this.gatherTermsForFields = gatherTermsForFields;
         this.unreadStreamId = unreadStreamId;
+        this.unreadOnly = unreadOnly;
         this.batchSize = batchSize;
     }
 
@@ -102,6 +105,7 @@ public class StrutQuery implements Serializable {
             + ", usePartitionModelCache=" + usePartitionModelCache
             + ", gatherTermsForFields=" + Arrays.toString(gatherTermsForFields)
             + ", unreadStreamId=" + unreadStreamId
+            + ", unreadOnly=" + unreadOnly
             + ", batchSize=" + batchSize
             + '}';
     }
