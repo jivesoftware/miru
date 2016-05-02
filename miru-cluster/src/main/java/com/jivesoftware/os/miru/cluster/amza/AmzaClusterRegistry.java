@@ -141,7 +141,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
             try {
                 amzaService.getRingWriter().ensureMaximalRing(CLUSTER_REGISTRY_RING_NAME);
                 PartitionName partitionName = new PartitionName(false, CLUSTER_REGISTRY_RING_NAME, name.getBytes(Charsets.UTF_8));
-                amzaService.setPropertiesIfAbsent(partitionName,
+                amzaService.createPartitionIfAbsent(partitionName,
                     new PartitionProperties(Durability.fsync_async, 0, 0, 0, 0, 0, 0, 0, 0, false, consistency, requiresConsistency, true, false,
                         RowType.primary, indexClass, null, -1, -1));
                 amzaService.awaitOnline(partitionName, 10_000L); //TODO config

@@ -86,7 +86,7 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
             ringInitialized.set(true);
         }
 
-        amzaService.setPropertiesIfAbsent(partitionName, new PartitionProperties(Durability.fsync_async,
+        amzaService.createPartitionIfAbsent(partitionName, new PartitionProperties(Durability.fsync_async,
             0, 0, 0, 0, 0, 0, 0, 0, false,
             consistency,
             requireConsistency,

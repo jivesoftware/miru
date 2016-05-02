@@ -263,7 +263,7 @@ public class CatwalkModelUpdater {
     private EmbeddedClient catsClient() throws Exception {
         PartitionName partitionName = catsPartition();
         amzaService.getRingWriter().ensureMaximalRing(partitionName.getRingName());
-        amzaService.setPropertiesIfAbsent(partitionName, CATS_WALKED);
+        amzaService.createPartitionIfAbsent(partitionName, CATS_WALKED);
         amzaService.awaitOnline(partitionName, 30_000);
         return embeddedClientProvider.getClient(partitionName);
     }
@@ -281,7 +281,7 @@ public class CatwalkModelUpdater {
     private EmbeddedClient processedClient(int queueId) throws Exception {
         PartitionName partitionName = processedPartition(queueId);
         amzaService.getRingWriter().ensureMaximalRing(partitionName.getRingName());
-        amzaService.setPropertiesIfAbsent(partitionName, PROCESSED_MODEL);
+        amzaService.createPartitionIfAbsent(partitionName, PROCESSED_MODEL);
         amzaService.awaitOnline(partitionName, 30_000);
         return embeddedClientProvider.getClient(partitionName);
     }
