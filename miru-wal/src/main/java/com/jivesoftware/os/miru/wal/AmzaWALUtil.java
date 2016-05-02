@@ -74,7 +74,7 @@ public class AmzaWALUtil {
         Optional<PartitionProperties> regionProperties) throws Exception {
         PartitionName partitionName = getActivityPartitionName(tenantId, partitionId);
         amzaService.getRingWriter().ensureSubRing(partitionName.getRingName(), activityRingSize);
-        amzaService.setPropertiesIfAbsent(partitionName, regionProperties.or(activityProperties));
+        amzaService.createPartitionIfAbsent(partitionName, regionProperties.or(activityProperties));
         AmzaService.AmzaPartitionRoute partitionRoute = amzaService.getPartitionRoute(partitionName, activityRoutingTimeoutMillis); //TODO config timeout
         if (partitionRoute.leader != null) {
             return new HostPort[] { new HostPort(partitionRoute.leader.ringHost.getHost(), partitionRoute.leader.ringHost.getPort()) };
@@ -88,7 +88,7 @@ public class AmzaWALUtil {
     public HostPort[] getReadTrackingRoutingGroup(MiruTenantId tenantId, Optional<PartitionProperties> partitionProperties) throws Exception {
         PartitionName partitionName = getReadTrackingPartitionName(tenantId);
         amzaService.getRingWriter().ensureSubRing(partitionName.getRingName(), readTrackingRingSize);
-        amzaService.setPropertiesIfAbsent(partitionName, partitionProperties.or(readTrackingProperties));
+        amzaService.createPartitionIfAbsent(partitionName, partitionProperties.or(readTrackingProperties));
         AmzaService.AmzaPartitionRoute partitionRoute = amzaService.getPartitionRoute(partitionName, readTrackingRoutingTimeoutMillis); //TODO config timeout
         if (partitionRoute.leader != null) {
             return new HostPort[] { new HostPort(partitionRoute.leader.ringHost.getHost(), partitionRoute.leader.ringHost.getPort()) };
@@ -171,7 +171,7 @@ public class AmzaWALUtil {
         return clientMap.computeIfAbsent(partitionName, key -> {
             try {
                 amzaService.getRingWriter().ensureMaximalRing(partitionName.getRingName());
-                amzaService.setPropertiesIfAbsent(partitionName, partitionProperties.or(lookupProperties));
+                amzaService.createPartitionIfAbsent(partitionName, partitionProperties.or(lookupProperties));
                 amzaService.awaitOnline(partitionName, 10_000); //TODO config
                 return clientProvider.getClient(partitionName);
             } catch (Exception e) {
