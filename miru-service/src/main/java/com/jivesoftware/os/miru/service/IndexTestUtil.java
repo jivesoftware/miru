@@ -17,9 +17,12 @@ import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.filer.io.chunk.ChunkStore;
 import com.jivesoftware.os.filer.keyed.store.TxKeyValueStore;
 import com.jivesoftware.os.filer.keyed.store.TxKeyedFilerStore;
+import com.jivesoftware.os.jive.utils.collections.bah.LRUConcurrentBAHLinkedHash;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
+import com.jivesoftware.os.lab.LABEnvironment;
+import com.jivesoftware.os.lab.guts.Leaps;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.schema.DefaultMiruSchemaDefinition;
@@ -95,6 +98,7 @@ public class IndexTestUtil {
             termComposer);
 
         final MiruResourceLocator diskResourceLocator = new MiruTempDirectoryResourceLocator();
+        LRUConcurrentBAHLinkedHash<Leaps> leapCache = LABEnvironment.buildLeapsCache(1_000_000, 10);
         MiruChunkAllocator inMemoryChunkAllocator = new InMemoryChunkAllocator(
             diskResourceLocator,
             new HeapByteBufferFactory(),
@@ -104,13 +108,15 @@ public class IndexTestUtil {
             true,
             100,
             1_000,
-            useLabIndexes);
+            useLabIndexes,
+            leapCache);
 
         MiruChunkAllocator onDiskChunkAllocator = new OnDiskChunkAllocator(diskResourceLocator,
             new HeapByteBufferFactory(),
             numberOfChunkStores,
             100,
-            1_000);
+            1_000,
+            leapCache);
 
         OrderIdProvider idProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(1));
         return new MiruContextFactory<>(idProvider,
@@ -120,9 +126,9 @@ public class IndexTestUtil {
             termComposer,
             activityInternExtern,
             ImmutableMap.<MiruBackingStorage, MiruChunkAllocator>builder()
-                .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
-                .put(MiruBackingStorage.disk, onDiskChunkAllocator)
-                .build(),
+            .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
+            .put(MiruBackingStorage.disk, onDiskChunkAllocator)
+            .build(),
             new RCVSSipIndexMarshaller(),
             new MiruTempDirectoryResourceLocator(),
             1024,

@@ -5,7 +5,9 @@ import com.jivesoftware.os.filer.chunk.store.ChunkStoreInitializer;
 import com.jivesoftware.os.filer.io.ByteBufferFactory;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.filer.io.chunk.ChunkStore;
+import com.jivesoftware.os.jive.utils.collections.bah.LRUConcurrentBAHLinkedHash;
 import com.jivesoftware.os.lab.LABEnvironment;
+import com.jivesoftware.os.lab.guts.Leaps;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.service.locator.MiruResourceLocator;
 import com.jivesoftware.os.miru.service.locator.MiruResourcePartitionIdentifier;
@@ -34,6 +36,7 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
     private final boolean partitionDeleteChunkStoreOnClose;
     private final int partitionInitialChunkCacheSize;
     private final int partitionMaxChunkCacheSize;
+    private final LRUConcurrentBAHLinkedHash<Leaps> leapCache;
     private final boolean useLabIndexes;
 
     private final ExecutorService buildLABCompactorThreadPool = LABEnvironment.buildLABCompactorThreadPool(12);
@@ -47,7 +50,8 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
         boolean partitionDeleteChunkStoreOnClose,
         int partitionInitialChunkCacheSize,
         int partitionMaxChunkCacheSize,
-        boolean useLabIndexes) {
+        boolean useLabIndexes,
+        LRUConcurrentBAHLinkedHash<Leaps> leapCache) {
         this.resourceLocator = resourceLocator;
         this.rebuildByteBufferFactory = rebuildByteBufferFactory;
         this.cacheByteBufferFactory = cacheByteBufferFactory;
@@ -57,6 +61,7 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
         this.partitionInitialChunkCacheSize = partitionInitialChunkCacheSize;
         this.partitionMaxChunkCacheSize = partitionMaxChunkCacheSize;
         this.useLabIndexes = useLabIndexes;
+        this.leapCache = leapCache;
     }
 
     @Override
@@ -115,7 +120,7 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
             environments[i] = new LABEnvironment(buildLABCompactorThreadPool,
                 buildLABDestroyThreadPool,
                 labDirs[i],
-                true, 4, 16, 1024);
+                true, 4, 16, leapCache);
 
         }
         return environments;
