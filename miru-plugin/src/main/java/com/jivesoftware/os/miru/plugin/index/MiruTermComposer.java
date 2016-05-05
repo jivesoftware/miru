@@ -103,7 +103,7 @@ public class MiruTermComposer {
             return parts;
         } else {
             byte[] bytes = term.getBytes();
-            return new String[]{decomposeBytes(fieldDefinition, bytes, 0, bytes.length)};
+            return new String[] { decomposeBytes(fieldDefinition, bytes, 0, bytes.length) };
         }
     }
 
@@ -210,7 +210,7 @@ public class MiruTermComposer {
         }
     }
 
-    private static final byte[] NULL_BYTE = new byte[]{0};
+    private static final byte[] NULL_BYTE = new byte[] { 0 };
 
     public byte[] prefixUpperExclusive(MiruSchema schema, MiruFieldDefinition fieldDefinition, StackBuffer stackBuffer, String... parts) throws Exception {
         CompositeFieldDefinition[] compositeFieldDefinitions = schema.getCompositeFieldDefinitions(fieldDefinition.fieldId);
@@ -263,9 +263,15 @@ public class MiruTermComposer {
     }
 
     public static void makeUpperExclusive(byte[] raw) {
+        // given: [64,72,96,0] want: [64,72,97,1]
+        // given: [64,72,96,127] want: [64,72,96,-128] because -128 is the next lex value after 127
+        // given: [64,72,96,-1] want: [64,72,97,0] because -1 is the lex largest value and we roll to the next digit
         for (int i = raw.length - 1; i >= 0; i--) {
-            if (raw[i] == Byte.MAX_VALUE) {
+            if (raw[i] == -1) {
+                raw[i] = 0;
+            } else if (raw[i] == Byte.MAX_VALUE) {
                 raw[i] = Byte.MIN_VALUE;
+                break;
             } else {
                 raw[i]++;
                 break;
