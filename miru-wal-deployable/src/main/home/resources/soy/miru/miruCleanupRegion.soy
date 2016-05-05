@@ -28,6 +28,7 @@
                             <th>Partition</th>
                             <th>Last Ingress</th>
                             <th>Destroy After</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -38,6 +39,7 @@
                                     <td>{$partition.partitionId}</td>
                                     <td>{$partition.lastIngressTimestamp}</td>
                                     <td>{$partition.destroyAfterTimestamp}</td>
+                                    <td><input type="button" value="Remove" onclick="miru.cleanup.removePartition(this, '{$tenant.tenantId}', {$partition.partitionId}"></td>
                                 </tr>
                             {/foreach}
                         {ifempty}
