@@ -4,12 +4,12 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-repo-management</artifactId>
-        <version>0.1071</version>
+        <version>0.1072</version>
         <relativePath>../global-repo-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
     <artifactId>global-build-management</artifactId>
-    <version>0.1071</version>
+    <version>0.1072</version>
     <packaging>pom</packaging>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -117,7 +117,7 @@
             <dependency>
                 <groupId>com.jivesoftware.os.miru</groupId>
                 <artifactId>miru-reco</artifactId>
-                <version>0.1071</version>
+                <version>0.1072</version>
             </dependency>
             <dependency>
                 <groupId>commons-cli</groupId>
@@ -794,7 +794,7 @@
                             </execution>
                         </executions>
                     </plugin>
-<!--                    <plugin>
+                    <plugin>
                         <groupId>com.github.danielflower.mavenplugins</groupId>
                         <artifactId>gitlog-maven-plugin</artifactId>
                         <version>1.12.3</version>
@@ -812,7 +812,7 @@
                                 </goals>
                             </execution>
                         </executions>
-                    </plugin>-->
+                    </plugin>
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-deploy-plugin</artifactId>
