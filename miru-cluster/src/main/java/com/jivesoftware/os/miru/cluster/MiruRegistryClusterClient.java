@@ -68,12 +68,7 @@ public class MiruRegistryClusterClient implements MiruClusterClient {
 
     @Override
     public List<PartitionRange> getIngressRanges(MiruTenantId tenantId) throws Exception {
-        List<PartitionRange> partitionRanges = Lists.newArrayList();
-        Map<MiruPartitionId, RangeMinMax> ingressRanges = clusterRegistry.getIngressRanges(tenantId);
-        for (Map.Entry<MiruPartitionId, RangeMinMax> entry : ingressRanges.entrySet()) {
-            partitionRanges.add(new PartitionRange(entry.getKey(), entry.getValue()));
-        }
-        return partitionRanges;
+        return clusterRegistry.getIngressRanges(tenantId);
     }
 
     @Override

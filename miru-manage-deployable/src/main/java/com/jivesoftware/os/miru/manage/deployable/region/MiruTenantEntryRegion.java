@@ -5,6 +5,7 @@ import com.jivesoftware.os.miru.api.MiruPartition;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.topology.MiruClusterClient.PartitionRange;
 import com.jivesoftware.os.miru.api.topology.MiruTenantConfig;
 import com.jivesoftware.os.miru.api.topology.MiruTopologyStatus;
 import com.jivesoftware.os.miru.api.topology.RangeMinMax;
@@ -122,15 +123,15 @@ public class MiruTenantEntryRegion implements MiruRegion<MiruTenantId> {
                 }
             }
 
-            Map<MiruPartitionId, RangeMinMax> lookupRanges = clusterRegistry.getIngressRanges(tenant);
-            for (Map.Entry<MiruPartitionId, RangeMinMax> entry : lookupRanges.entrySet()) {
-                MiruPartitionId partitionId = entry.getKey();
+            List<PartitionRange> partitionRanges = clusterRegistry.getIngressRanges(tenant);
+            for (PartitionRange partitionRange : partitionRanges) {
+                MiruPartitionId partitionId = partitionRange.partitionId;
                 partitionsMap.compute(partitionId, (key, partitionBean) -> {
                     if (partitionBean == null) {
                         partitionBean = new PartitionBean(partitionId.getId());
                     }
                     if (!partitionBean.isDestroyed()) {
-                        RangeMinMax lookupRange = entry.getValue();
+                        RangeMinMax lookupRange = partitionRange.rangeMinMax;
                         partitionBean.setMinClock(String.valueOf(lookupRange.clockMin));
                         partitionBean.setMaxClock(String.valueOf(lookupRange.clockMax));
                         partitionBean.setMinOrderId(String.valueOf(lookupRange.orderIdMin));
