@@ -12,6 +12,7 @@ import com.jivesoftware.os.miru.api.activity.TenantAndPartition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.topology.HostHeartbeat;
+import com.jivesoftware.os.miru.api.topology.MiruClusterClient.PartitionRange;
 import com.jivesoftware.os.miru.api.topology.MiruIngressUpdate;
 import com.jivesoftware.os.miru.api.topology.MiruPartitionActiveUpdate;
 import com.jivesoftware.os.miru.api.topology.MiruPartitionStatus;
@@ -20,7 +21,6 @@ import com.jivesoftware.os.miru.api.topology.MiruTenantTopologyUpdate;
 import com.jivesoftware.os.miru.api.topology.MiruTopologyStatus;
 import com.jivesoftware.os.miru.api.topology.NamedCursor;
 import com.jivesoftware.os.miru.api.topology.NamedCursorsResult;
-import com.jivesoftware.os.miru.api.topology.RangeMinMax;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -86,7 +86,7 @@ public interface MiruClusterRegistry {
 
     int upgradeSchema(MiruSchema schema, boolean upgradeOnMissing, boolean upgradeOnError) throws Exception;
 
-    Map<MiruPartitionId, RangeMinMax> getIngressRanges(MiruTenantId tenantId) throws Exception;
+    List<PartitionRange> getIngressRanges(MiruTenantId tenantId) throws Exception;
 
     class TopologyUpdate {
         public final MiruPartitionCoord coord;

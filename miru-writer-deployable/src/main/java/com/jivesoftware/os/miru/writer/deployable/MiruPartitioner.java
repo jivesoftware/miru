@@ -43,7 +43,7 @@ public class MiruPartitioner {
     private final long partitionMaximumAgeInMillis;
     private final MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory();
     private final StripingLocksProvider<MiruTenantId> locks = new StripingLocksProvider<>(64);
-    private final Cache<MiruTenantId, Map<MiruPartitionId, RangeMinMax>> tenantIngressRangeCache;
+    private final Cache<MiruTenantId, Map<MiruPartitionId, MiruClusterClient.PartitionRange>> tenantIngressRangeCache;
     private final Set<TenantAndPartition> closedTenantPartitions = Collections.newSetFromMap(Maps.newConcurrentMap());
 
     public MiruPartitioner(int writerId,
@@ -302,14 +302,14 @@ public class MiruPartitioner {
 
     private List<MiruVersionedActivityLookupEntry> getVersionedEntries(MiruTenantId tenantId, Long[] times) throws Exception {
         List<MiruPartitionId> partitionIds = Lists.newArrayList();
-        Map<MiruPartitionId, RangeMinMax> ingressRanges = tenantIngressRangeCache.get(tenantId, () -> {
+        Map<MiruPartitionId, MiruClusterClient.PartitionRange> ingressRanges = tenantIngressRangeCache.get(tenantId, () -> {
             List<MiruClusterClient.PartitionRange> partitionRanges = clusterClient.getIngressRanges(tenantId);
             if (partitionRanges == null) {
                 throw new IllegalStateException("Partition ranges not available");
             }
-            Map<MiruPartitionId, RangeMinMax> result = Maps.newHashMapWithExpectedSize(partitionRanges.size());
+            Map<MiruPartitionId, MiruClusterClient.PartitionRange> result = Maps.newHashMapWithExpectedSize(partitionRanges.size());
             for (MiruClusterClient.PartitionRange partitionRange : partitionRanges) {
-                result.put(partitionRange.partitionId, partitionRange.rangeMinMax);
+                result.put(partitionRange.partitionId, partitionRange);
             }
             return result;
         });
@@ -321,9 +321,11 @@ public class MiruPartitioner {
             maxTime = Math.max(maxTime, time);
         }
 
-        for (Map.Entry<MiruPartitionId, RangeMinMax> entry : ingressRanges.entrySet()) {
-            RangeMinMax range = entry.getValue();
-            if (range.orderIdMin != -1 && range.orderIdMax != -1 && range.orderIdMin <= maxTime && range.orderIdMax >= minTime) {
+        for (Map.Entry<MiruPartitionId, MiruClusterClient.PartitionRange> entry : ingressRanges.entrySet()) {
+            RangeMinMax range = entry.getValue().rangeMinMax;
+            long destroyAfterTimestamp = entry.getValue().destroyAfterTimestamp;
+            boolean destroyed = destroyAfterTimestamp > 0 && System.currentTimeMillis() > destroyAfterTimestamp;
+            if (!destroyed && range.orderIdMin != -1 && range.orderIdMax != -1 && range.orderIdMin <= maxTime && range.orderIdMax >= minTime) {
                 partitionIds.add(entry.getKey());
             }
         }

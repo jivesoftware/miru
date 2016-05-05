@@ -81,7 +81,7 @@ public class AmzaActivityWALWriter implements MiruActivityWALWriter {
             TimeUnit.MILLISECONDS);
 
         for (MiruPartitionedActivity activity : partitionedActivities) {
-            if (partitionId.equals(activity.partitionId)) {
+            if (partitionId.equals(activity.partitionId) && activity.type.isActivityType()) {
                 partitionMinMax.put(activity.clockTimestamp, activity.timestamp);
             }
         }

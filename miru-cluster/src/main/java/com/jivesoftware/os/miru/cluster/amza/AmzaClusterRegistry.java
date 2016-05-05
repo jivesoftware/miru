@@ -39,6 +39,7 @@ import com.jivesoftware.os.miru.api.activity.TenantAndPartition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.topology.HostHeartbeat;
+import com.jivesoftware.os.miru.api.topology.MiruClusterClient.PartitionRange;
 import com.jivesoftware.os.miru.api.topology.MiruIngressUpdate;
 import com.jivesoftware.os.miru.api.topology.MiruPartitionActive;
 import com.jivesoftware.os.miru.api.topology.MiruPartitionActiveUpdate;
@@ -65,9 +66,11 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.NavigableMap;
 import java.util.Set;
 import java.util.TreeMap;
@@ -1002,8 +1005,8 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
     }
 
     @Override
-    public Map<MiruPartitionId, RangeMinMax> getIngressRanges(MiruTenantId tenantId) throws Exception {
-        final Map<MiruPartitionId, RangeMinMax> partitionLookupRange = Maps.newHashMap();
+    public List<PartitionRange> getIngressRanges(MiruTenantId tenantId) throws Exception {
+        final LinkedHashMap<MiruPartitionId, RangeMinMax> partitionLookupRange = Maps.newLinkedHashMap();
         streamRanges(tenantId, null, (partitionId, type, timestamp) -> {
             RangeMinMax lookupRange = partitionLookupRange.get(partitionId);
             if (lookupRange == null) {
@@ -1021,7 +1024,14 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
             }
             return true;
         });
-        return partitionLookupRange;
+
+        List<PartitionRange> partitionRanges = Lists.newArrayList();
+        for (Entry<MiruPartitionId, RangeMinMax> entry : partitionLookupRange.entrySet()) {
+            MiruPartitionId partitionId = entry.getKey();
+            long destroyAfterTimestamp = getDestroyAfterTimestamp(tenantId, partitionId);
+            partitionRanges.add(new PartitionRange(partitionId, entry.getValue(), destroyAfterTimestamp));
+        }
+        return partitionRanges;
     }
 
     private long getIngressUpdate(MiruTenantId tenantId, MiruPartitionId partitionId, IngressType type, long defaultValue) throws Exception {

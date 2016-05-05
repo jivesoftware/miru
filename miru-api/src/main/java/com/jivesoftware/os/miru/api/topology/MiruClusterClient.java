@@ -21,13 +21,15 @@ public interface MiruClusterClient {
     class PartitionRange {
         public MiruPartitionId partitionId;
         public RangeMinMax rangeMinMax;
+        public long destroyAfterTimestamp;
 
         public PartitionRange() {
         }
 
-        public PartitionRange(MiruPartitionId partitionId, RangeMinMax rangeMinMax) {
+        public PartitionRange(MiruPartitionId partitionId, RangeMinMax rangeMinMax, long destroyAfterTimestamp) {
             this.partitionId = partitionId;
             this.rangeMinMax = rangeMinMax;
+            this.destroyAfterTimestamp = destroyAfterTimestamp;
         }
     }
 
