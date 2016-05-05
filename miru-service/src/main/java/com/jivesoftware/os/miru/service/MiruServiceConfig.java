@@ -181,6 +181,13 @@ public interface MiruServiceConfig extends Config {
     @BooleanDefault(false)
     boolean getUseLabIndexes();
 
+
+    @LongDefault(1_000_000)
+    long getLabLeapCacheMaxCapacity();
+
+    @IntDefault(32)
+    int getLabLeapCacheConcurrency();
+
     @BooleanDefault(false)
     boolean getFsyncOnCommit();
 }

@@ -5,7 +5,9 @@ import com.jivesoftware.os.filer.chunk.store.ChunkStoreInitializer;
 import com.jivesoftware.os.filer.io.ByteBufferFactory;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.filer.io.chunk.ChunkStore;
+import com.jivesoftware.os.jive.utils.collections.bah.LRUConcurrentBAHLinkedHash;
 import com.jivesoftware.os.lab.LABEnvironment;
+import com.jivesoftware.os.lab.guts.Leaps;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.service.locator.MiruPartitionCoordIdentifier;
 import com.jivesoftware.os.miru.service.locator.MiruResourceLocator;
@@ -30,6 +32,7 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
     private final int numberOfChunkStores;
     private final int partitionInitialChunkCacheSize;
     private final int partitionMaxChunkCacheSize;
+    private final LRUConcurrentBAHLinkedHash<Leaps> leapCache;
     private final ChunkStoreInitializer chunkStoreInitializer = new ChunkStoreInitializer();
     private final ExecutorService buildLABCompactorThreadPool = LABEnvironment.buildLABCompactorThreadPool(12); // TODO config
     private final ExecutorService buildLABDestroyThreadPool = LABEnvironment.buildLABDestroyThreadPool(12); // TODO config
@@ -39,18 +42,20 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
         ByteBufferFactory cacheByteBufferFactory,
         int numberOfChunkStores,
         int partitionInitialChunkCacheSize,
-        int partitionMaxChunkCacheSize) {
+        int partitionMaxChunkCacheSize,
+        LRUConcurrentBAHLinkedHash<Leaps> leapCache) {
         this.resourceLocator = resourceLocator;
         this.cacheByteBufferFactory = cacheByteBufferFactory;
         this.numberOfChunkStores = numberOfChunkStores;
         this.partitionInitialChunkCacheSize = partitionInitialChunkCacheSize;
         this.partitionMaxChunkCacheSize = partitionMaxChunkCacheSize;
+        this.leapCache = leapCache;
     }
 
     public static void main(String[] args) {
 
         int count = 3;
-        for (int hashCode : new int[] { -13, -7, -2, -1, 0, 1, 2, 7, 13 }) {
+        for (int hashCode : new int[]{-13, -7, -2, -1, 0, 1, 2, 7, 13}) {
             for (int shift = 0; shift < count; shift++) {
                 System.out.println("--- " + hashCode + ", " + shift);
                 for (int i = 0; i < count; i++) {
@@ -172,7 +177,7 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
         LABEnvironment[] environments = new LABEnvironment[labDirs.length];
         for (int i = 0; i < numberOfChunkStores; i++) {
             environments[i] = new LABEnvironment(buildLABCompactorThreadPool, buildLABDestroyThreadPool, labDirs[i],
-                true, 4, 16, 1024);
+                true, 4, 16, leapCache);
         }
         return environments;
     }

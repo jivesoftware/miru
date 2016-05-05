@@ -45,6 +45,7 @@ import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStoreInitializer;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStoreProvider;
 import com.jivesoftware.os.routing.bird.deployable.Deployable;
+import com.jivesoftware.os.routing.bird.deployable.ErrorHealthCheckConfig;
 import com.jivesoftware.os.routing.bird.deployable.InstanceConfig;
 import com.jivesoftware.os.routing.bird.endpoints.base.HasUI;
 import com.jivesoftware.os.routing.bird.health.api.HealthCheckConfigBinder;
@@ -98,7 +99,6 @@ public class MiruStumptownMain {
                 }
             });
 
-            deployable.addErrorHealthChecks();
             deployable.buildStatusReporter(null).start();
             deployable.addManageInjectables(HasUI.class, new HasUI(Arrays.asList(new HasUI.UI("manage", "manage", "/manage/ui"),
                 new HasUI.UI("Reset Errors", "manage", "/manage/resetErrors"),
@@ -108,6 +108,7 @@ public class MiruStumptownMain {
                 new HasUI.UI("Stumptown", "main", "/"))));
             deployable.addHealthCheck(new GCLoadHealthChecker(deployable.config(GCLoadHealthChecker.GCLoadHealthCheckerConfig.class)));
             deployable.addHealthCheck(serviceStartupHealthCheck);
+            deployable.addErrorHealthChecks(deployable.config(ErrorHealthCheckConfig.class));
             deployable.buildManageServer().start();
 
             MiruStumptownServiceConfig stumptownServiceConfig = deployable.config(MiruStumptownServiceConfig.class);

@@ -17,10 +17,12 @@ import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.filer.io.chunk.ChunkStore;
 import com.jivesoftware.os.filer.io.map.MapContext;
 import com.jivesoftware.os.filer.keyed.store.TxKeyedFilerStore;
+import com.jivesoftware.os.jive.utils.collections.bah.LRUConcurrentBAHLinkedHash;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.lab.LABEnvironment;
 import com.jivesoftware.os.lab.api.ValueIndex;
+import com.jivesoftware.os.lab.guts.Leaps;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.cache.LabCacheKeyValues;
 import com.jivesoftware.os.miru.plugin.cache.MiruFilerCacheKeyValues;
@@ -88,8 +90,10 @@ public class StrutModelScorerNGTest {
     public void testLab() throws Exception {
 
         File root = Files.createTempDir();
+        LRUConcurrentBAHLinkedHash<Leaps> leapCache = LABEnvironment.buildLeapsCache(1_000_000, 8);
+
         LABEnvironment env = new LABEnvironment(LABEnvironment.buildLABCompactorThreadPool(4), LABEnvironment.buildLABDestroyThreadPool(1), root,
-            false, 4, 10, 8);
+            false, 4, 10, leapCache);
         String catwalkId = "catwalkId";
         String modelId = "modelId";
 
@@ -106,10 +110,10 @@ public class StrutModelScorerNGTest {
     }
 
     private void assertScores(String modelId, CacheKeyValues cacheKeyValues, StackBuffer stackBuffer) throws Exception {
-        MiruTermId[] termIds = new MiruTermId[] {
-            new MiruTermId(new byte[] { (byte) 124 }),
-            new MiruTermId(new byte[] { (byte) 124, (byte) 124 }),
-            new MiruTermId(new byte[] { (byte) 124, (byte) 124, (byte) 124, (byte) 124 })
+        MiruTermId[] termIds = new MiruTermId[]{
+            new MiruTermId(new byte[]{(byte) 124}),
+            new MiruTermId(new byte[]{(byte) 124, (byte) 124}),
+            new MiruTermId(new byte[]{(byte) 124, (byte) 124, (byte) 124, (byte) 124})
         };
 
         StrutModelScorer scorer = new StrutModelScorer();
@@ -121,7 +125,7 @@ public class StrutModelScorerNGTest {
 
         List<Scored> updates = Lists.newArrayList();
         for (int i = 0; i < 1; i++) {
-            updates.add(new Scored(-1, new MiruTermId(new byte[] { (byte) 97, (byte) (97 + i) }), 10, 0.5f, new float[] { 0.5f }, null));
+            updates.add(new Scored(-1, new MiruTermId(new byte[]{(byte) 97, (byte) (97 + i)}), 10, 0.5f, new float[]{0.5f}, null));
         }
 
         scorer.commit(modelId, cacheKeyValues, updates, stackBuffer);

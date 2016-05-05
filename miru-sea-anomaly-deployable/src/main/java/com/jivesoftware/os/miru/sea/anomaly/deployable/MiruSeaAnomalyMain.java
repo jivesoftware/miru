@@ -41,6 +41,7 @@ import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer.MiruSoyRendererCon
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.deployable.Deployable;
+import com.jivesoftware.os.routing.bird.deployable.ErrorHealthCheckConfig;
 import com.jivesoftware.os.routing.bird.deployable.InstanceConfig;
 import com.jivesoftware.os.routing.bird.endpoints.base.HasUI;
 import com.jivesoftware.os.routing.bird.health.api.HealthCheckConfigBinder;
@@ -91,7 +92,6 @@ public class MiruSeaAnomalyMain {
                     throw new UnsupportedOperationException("Not supported yet.");
                 }
             });
-            deployable.addErrorHealthChecks();
             deployable.buildStatusReporter(null).start();
             deployable.addManageInjectables(HasUI.class, new HasUI(Arrays.asList(new HasUI.UI("manage", "manage", "/manage/ui"),
                 new HasUI.UI("Reset Errors", "manage", "/manage/resetErrors"),
@@ -101,6 +101,7 @@ public class MiruSeaAnomalyMain {
                 new HasUI.UI("Anomaly", "main", "/"))));
             deployable.addHealthCheck(new GCLoadHealthChecker(deployable.config(GCLoadHealthChecker.GCLoadHealthCheckerConfig.class)));
             deployable.addHealthCheck(serviceStartupHealthCheck);
+            deployable.addErrorHealthChecks(deployable.config(ErrorHealthCheckConfig.class));
             deployable.buildManageServer().start();
 
             InstanceConfig instanceConfig = deployable.config(InstanceConfig.class);

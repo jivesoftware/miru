@@ -4,22 +4,22 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-repo-management</artifactId>
-        <version>0.1070</version>
+        <version>0.1071</version>
         <relativePath>../global-repo-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
     <artifactId>global-build-management</artifactId>
-    <version>0.1070</version>
+    <version>0.1071</version>
     <packaging>pom</packaging>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <mlogger-version>0.15</mlogger-version>
-        <jive-utils-version>0.98</jive-utils-version>
+        <jive-utils-version>0.102</jive-utils-version>
         <rcvs-version>0.18</rcvs-version>
         <filer-version>0.95</filer-version>
-        <lab-version>0.51</lab-version>
-        <amza-version>0.348</amza-version>
-        <routing-bird-version>0.42</routing-bird-version>
+        <lab-version>0.52</lab-version>
+        <amza-version>0.349</amza-version>
+        <routing-bird-version>0.44</routing-bird-version>
         <jackson-version>2.5.3</jackson-version>
         <jersey-version>2.13</jersey-version>
         <jetty-version>9.1.1.v20140108</jetty-version>
@@ -117,7 +117,7 @@
             <dependency>
                 <groupId>com.jivesoftware.os.miru</groupId>
                 <artifactId>miru-reco</artifactId>
-                <version>0.1070</version>
+                <version>0.1071</version>
             </dependency>
             <dependency>
                 <groupId>commons-cli</groupId>
@@ -794,7 +794,7 @@
                             </execution>
                         </executions>
                     </plugin>
-                    <plugin>
+<!--                    <plugin>
                         <groupId>com.github.danielflower.mavenplugins</groupId>
                         <artifactId>gitlog-maven-plugin</artifactId>
                         <version>1.12.3</version>
@@ -812,7 +812,7 @@
                                 </goals>
                             </execution>
                         </executions>
-                    </plugin>
+                    </plugin>-->
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-deploy-plugin</artifactId>

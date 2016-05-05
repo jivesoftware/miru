@@ -72,6 +72,7 @@ import com.jivesoftware.os.miru.wal.readtracking.rcvs.RCVSReadTrackingWALWriter;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStoreInitializer;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStoreProvider;
 import com.jivesoftware.os.routing.bird.deployable.Deployable;
+import com.jivesoftware.os.routing.bird.deployable.ErrorHealthCheckConfig;
 import com.jivesoftware.os.routing.bird.deployable.InstanceConfig;
 import com.jivesoftware.os.routing.bird.endpoints.base.HasUI;
 import com.jivesoftware.os.routing.bird.health.api.HealthCheckRegistry;
@@ -141,7 +142,6 @@ public class MiruWALMain {
                     throw new UnsupportedOperationException("Not supported yet.");
                 }
             });
-            deployable.addErrorHealthChecks();
             deployable.addManageInjectables(HasUI.class, new HasUI(Arrays.asList(
                 new HasUI.UI("Reset Errors", "manage", "/manage/resetErrors"),
                 new HasUI.UI("Tail", "manage", "/manage/tail?lastNLines=1000"),
@@ -153,6 +153,7 @@ public class MiruWALMain {
             deployable.buildStatusReporter(null).start();
             deployable.addHealthCheck(new GCLoadHealthChecker(deployable.config(GCLoadHealthChecker.GCLoadHealthCheckerConfig.class)));
             deployable.addHealthCheck(serviceStartupHealthCheck);
+            deployable.addErrorHealthChecks(deployable.config(ErrorHealthCheckConfig.class));
             deployable.buildManageServer().start();
 
             WALAmzaServiceConfig amzaServiceConfig = deployable.config(WALAmzaServiceConfig.class);

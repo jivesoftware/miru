@@ -12,9 +12,12 @@ import com.jivesoftware.os.filer.io.DirectByteBufferFactory;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
 import com.jivesoftware.os.filer.io.IBA;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
+import com.jivesoftware.os.jive.utils.collections.bah.LRUConcurrentBAHLinkedHash;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
+import com.jivesoftware.os.lab.LABEnvironment;
+import com.jivesoftware.os.lab.guts.Leaps;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruLifecyle;
@@ -133,6 +136,9 @@ public class MiruServiceInitializer {
         StripingLocksProvider<MiruStreamId> streamStripingLocksProvider = new StripingLocksProvider<>(config.getStreamNumberOfLocks());
         StripingLocksProvider<String> authzStripingLocksProvider = new StripingLocksProvider<>(config.getAuthzNumberOfLocks());
 
+        LRUConcurrentBAHLinkedHash<Leaps> leapCache = LABEnvironment.buildLeapsCache((int) config.getLabLeapCacheMaxCapacity(),
+            config.getLabLeapCacheConcurrency());
+
         MiruChunkAllocator inMemoryChunkAllocator = new InMemoryChunkAllocator(resourceLocator,
             byteBufferFactory,
             byteBufferFactory,
@@ -141,13 +147,15 @@ public class MiruServiceInitializer {
             config.getPartitionDeleteChunkStoreOnClose(),
             config.getPartitionInitialChunkCacheSize(),
             config.getPartitionMaxChunkCacheSize(),
-            config.getUseLabIndexes());
+            config.getUseLabIndexes(),
+            leapCache);
 
         MiruChunkAllocator onDiskChunkAllocator = new OnDiskChunkAllocator(resourceLocator,
             byteBufferFactory,
             config.getPartitionNumberOfChunkStores(),
             config.getPartitionInitialChunkCacheSize(),
-            config.getPartitionMaxChunkCacheSize());
+            config.getPartitionMaxChunkCacheSize(),
+            leapCache);
 
         TxCogs persistentCogs = new TxCogs(1024, 1024,
             new ConcurrentKeyToFPCacheFactory(),
