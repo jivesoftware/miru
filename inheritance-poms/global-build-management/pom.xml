@@ -18,8 +18,8 @@
         <rcvs-version>0.18</rcvs-version>
         <filer-version>0.95</filer-version>
         <lab-version>0.52</lab-version>
-        <amza-version>0.349</amza-version>
-        <routing-bird-version>0.44</routing-bird-version>
+        <amza-version>0.350</amza-version>
+        <routing-bird-version>0.45</routing-bird-version>
         <jackson-version>2.5.3</jackson-version>
         <jersey-version>2.13</jersey-version>
         <jetty-version>9.1.1.v20140108</jetty-version>
