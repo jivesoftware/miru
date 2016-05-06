@@ -81,7 +81,7 @@ public class MiruHttpClusterClient implements MiruClusterClient {
     public void removeIngress(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         sendRoundRobin("removeIngress", client -> {
             long start = System.currentTimeMillis();
-            HttpResponse response = client.postJson("/miru/topology/remove/ingress/" + tenantId.toString() + "/" + partitionId.toString(), null, null);
+            HttpResponse response = client.postJson("/miru/topology/remove/ingress/" + tenantId.toString() + "/" + partitionId.toString(), "null", null);
             String r = responseMapper.extractResultFromResponse(response, String.class, null);
             miruStats.egressed("/miru/topology/remove/ingress/" + tenantId.toString() + "/" + partitionId.toString(), 1, System.currentTimeMillis() - start);
             return new ClientResponse<>(r, true);
@@ -92,7 +92,7 @@ public class MiruHttpClusterClient implements MiruClusterClient {
     public void destroyPartition(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         sendRoundRobin("destroyPartition", client -> {
             long start = System.currentTimeMillis();
-            HttpResponse response = client.postJson("/miru/topology/destroy/partition/" + tenantId.toString() + "/" + partitionId.toString(), null, null);
+            HttpResponse response = client.postJson("/miru/topology/destroy/partition/" + tenantId.toString() + "/" + partitionId.toString(), "null", null);
             String r = responseMapper.extractResultFromResponse(response, String.class, null);
             miruStats.egressed("/miru/topology/destroy/partition/" + tenantId.toString() + "/" + partitionId.toString(), 1, System.currentTimeMillis() - start);
             return new ClientResponse<>(r, true);
