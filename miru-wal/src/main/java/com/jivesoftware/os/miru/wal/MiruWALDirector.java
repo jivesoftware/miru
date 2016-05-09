@@ -119,7 +119,7 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
                     count++;
                     if (fast) {
                         long clockMax = activityWALReader.clockMax(tenantId, checkPartitionId);
-                        if (clockMax > 0) {
+                        if (clockMax != -1) {
                             RangeMinMax minMax = new RangeMinMax();
                             minMax.clockMax = clockMax;
                             clusterClient.updateIngress(new MiruIngressUpdate(tenantId, checkPartitionId, minMax, -1, false));
