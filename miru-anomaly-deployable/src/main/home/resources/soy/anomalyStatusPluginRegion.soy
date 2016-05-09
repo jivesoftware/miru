@@ -1,0 +1,44 @@
+{namespace soy.anomaly.page}
+
+/**
+ * Anomaly Status plugin page
+ * 
+ * @param? serviceStatus
+ */
+{template .anomalyStatusPluginRegion}
+    {if $serviceStatus}
+        <div class="panel panel-default">
+            <div class="panel-heading">Status</div>
+                <div class="panel-body">
+                    <table class="table table-condensed">
+                        <thead>
+                            <tr>
+                                <th>Events</th>
+                                <th>Cluster</th>
+                                <th>Host</th>
+                                <th>Service</th>
+                                <th>Instance</th>
+                                <th>Version</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {foreach $status in $serviceStatus}
+                                <tr>
+                                    <td>
+                                        <input type="button" value="{$status.ingressed}"
+                                            onclick="document.location.href='query?cluster={$status.cluster}&amp;host={$status.host}&amp;service={$status.service}&amp;instance={$status.instance}';" />
+                                    </td>
+                                    <td>{$status.cluster}</td>
+                                    <td>{$status.host}</td>
+                                    <td>{$status.service}</td>
+                                    <td>{$status.instance}</td>
+                                    <td>{$status.version}</td>
+                                </tr>
+                            {/foreach}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    {/if}
+{/template}

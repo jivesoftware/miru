@@ -3,12 +3,12 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.jivesoftware.miru</groupId>
     <artifactId>miru</artifactId>
-    <version>0.1083</version>
+    <version>0.1084</version>
     <packaging>pom</packaging>
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-repo-management</artifactId>
-        <version>0.1083</version>
+        <version>0.1084</version>
         <relativePath>inheritance-poms/global-repo-management/pom.xml</relativePath>
     </parent>
     <modules>
@@ -42,9 +42,9 @@
         <module>miru-stumptown-deployable</module>
         <module>miru-stumptown-plugins</module>
         <module>miru-stumptown-plugins-test</module>
-        <module>miru-sea-anomaly-deployable</module>
-        <module>miru-sea-anomaly-plugins</module>
-        <module>miru-sea-anomaly-plugins-test</module>
+        <module>miru-anomaly-deployable</module>
+        <module>miru-anomaly-plugins</module>
+        <module>miru-anomaly-plugins-test</module>
         <module>miru-metric-sampler</module>
         <module>miru-wal-client</module>
   </modules>

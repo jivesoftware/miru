@@ -1,0 +1,280 @@
+{namespace soy.anomaly.page}
+
+/**
+ * Anomaly Query plugin page
+ * 
+ * @param? cluster
+ * @param? host
+ * @param? version
+ * @param? service
+ * @param? instance
+ * @param? fromAgo
+ * @param? toAgo
+ * @param? fromTimeUnit
+ * @param? toTimeUnit
+ * @param? tenant
+ * @param? sampler
+ * @param? metric
+ * @param? tags
+ * @param? type
+ * @param? expansionField
+ * @param? expansionValue
+ * @param? results
+ * @param? buckets
+ * @param? summary
+ * @param? elapse
+ * @param? rates
+ * @param? values
+ * @param? graphType
+ * @param? maxWaveforms
+ */
+{template .anomalyQueryPluginRegion}
+    <div class="panel panel-default">
+        <div id="anomaly-query" class="panel-heading">
+            Query Anomaly
+            <div class="checkbox" style="display:inline-block; margin-left:20px;">
+                <label><input type="checkbox" onchange="anomaly.query.advanced(this);"> Show advanced filters</label>
+            </div>
+        </div>
+        <div class="panel-body">
+            <form id="anom-query-filters" method="get" name="requestPickerForm">
+                <table style="border-collapse: separate; border-spacing: 6px;">
+                    <tr class="anom-query-advanced">
+                        <td>Cluster</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-tenant-autocomplete j-autocomplete-input j-ui-elem" placeholder="Cluster" value="{$cluster?:''}"
+                                name="cluster" id="clusterPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr class="anom-query-advanced">
+                        <td>Host</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-host-autocomplete j-autocomplete-input j-ui-elem" placeholder="Host" value="{$host?:''}"
+                                name="host" id="hostPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Service</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-service-autocomplete j-autocomplete-input j-ui-elem" placeholder="Service" value="{$service?:''}"
+                                name="service" id="servicePicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr class="anom-query-advanced">
+                        <td>Instance</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-host-autocomplete j-autocomplete-input j-ui-elem" placeholder="Instance" value="{$instance?:''}"
+                                name="instance" id="instancePicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr class="anom-query-advanced">
+                        <td>Version</td>
+                        <td colspan="3">
+                            <input type="text" autocomplete="off" role="combobox" style="width:560px; padding-left:10px;"
+                                class="j-version-autocomplete j-autocomplete-input j-ui-elem" placeholder="Version" value="{$version?:''}"
+                                name="version" id="versionPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>From</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:80px; padding-left:10px;"
+                                class="j-hours-autocomplete j-autocomplete-input j-ui-elem" placeholder="To Time Ago" value="{$toAgo?:''}"
+                                name="toAgo" id="toTimePicker" data-original-title="" title="">
+                            &nbsp;
+                            <select style="width:120px; padding-left:10px;"
+                                class="j-timeunit-autocomplete j-autocomplete-input j-ui-elem" placeholder="ToTimeUnit"
+                                name="toTimeUnit" id="toTimeUnitPicker" data-original-title="" title="">
+                                <option value="DAYS" {if $toTimeUnit == 'DAYS'}selected="selected"{/if}>DAYS</option>
+                                <option value="HOURS" {if $toTimeUnit == 'HOURS'}selected="selected"{/if}>HOURS</option>
+                                <option value="MINUTES" {if $toTimeUnit == 'MINUTES'}selected="selected"{/if}>MINUTES</option>
+                                <option value="SECONDS" {if $toTimeUnit == 'SECONDS'}selected="selected"{/if}>SECONDS</option>
+                            </select>
+                            &nbsp;
+                            ago to
+                            &nbsp;
+                            <input type="text" autocomplete="off" role="combobox" style="width:80px; padding-left:10px;"
+                                class="j-hours-autocomplete j-autocomplete-input j-ui-elem" placeholder="From Time Ago" value="{$fromAgo?:''}"
+                                name="fromAgo" id="fromTimePicker" data-original-title="" title="">
+                            &nbsp;
+                            <select style="width:120px; padding-left:10px;"
+                                class="j-timeunit-autocomplete j-autocomplete-input j-ui-elem" placeholder="FromTimeUnit"
+                                name="fromTimeUnit" id="fromTimeUnitPicker" data-original-title="" title="">
+                                <option value="DAYS" {if $fromTimeUnit == 'DAYS'}selected="selected"{/if}>DAYS</option>
+                                <option value="HOURS" {if $fromTimeUnit == 'HOURS'}selected="selected"{/if}>HOURS</option>
+                                <option value="MINUTES" {if $fromTimeUnit == 'MINUTES'}selected="selected"{/if}>MINUTES</option>
+                                <option value="SECONDS" {if $fromTimeUnit == 'SECONDS'}selected="selected"{/if}>SECONDS</option>
+                            </select>
+                            &nbsp;ago
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Buckets</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-buckets-autocomplete j-autocomplete-input j-ui-elem" placeholder="Buckets" value="{$buckets?:''}"
+                                name="buckets" id="bucketsPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr class="anom-query-advanced">
+                        <td>Tenant</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-tenant-autocomplete j-autocomplete-input j-ui-elem" placeholder="Tenant Name/s" value="{$tenant?:''}"
+                                name="tenant" id="tenantPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr class="anom-query-advanced">
+                        <td>Samplers</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                placeholder="Sampler Name/s" value="{$sampler?:''}"
+                                name="sampler" id="samplerPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Metrics</td>
+                        <td colspan="3">
+                            <input type="text" autocomplete="off" role="combobox" style="width:580px; padding-left:10px;"
+                                placeholder="Metric Name/s" value="{$metric?:''}"
+                                name="metric" id="metricPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr class="anom-query-advanced">
+                        <td>Tags</td>
+                        <td colspan="3">
+                            <input type="text" autocomplete="off" role="combobox" style="width:580px; padding-left:10px;"
+                                class="j-tags-autocomplete j-autocomplete-input j-ui-elem" placeholder="Tags" value="{$tags?:''}"
+                                name="tags" id="tagsPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Type</td>
+                        <td>
+                            <select style="width:120px; padding-left:10px;"
+                                class="j-type-autocomplete j-autocomplete-input j-ui-elem" placeholder="type"
+                                name="type" id="typePicker" data-original-title="" title="">
+                                <option value="VALUE" {if $type == 'VALUE'}selected="selected"{/if}>Value</option>
+                                <option value="counter" {if $type == 'counter'}selected="selected"{/if}>Counter</option>
+                                <option value="atomicCounter" {if $type == 'atomicCounter'}selected="selected"{/if}>Atomic Counter</option>
+                                <option value="timer" {if $type == 'timer'}selected="selected"{/if}>Timer</option>
+                                <option value="all" {if $type == ''}selected="selected"{/if}>All</option>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Expand on</td>
+                        <td>
+                            <select style="width:120px; padding-left:10px;"
+                                class="j-expansionField-autocomplete j-autocomplete-input j-ui-elem" placeholder="expansionField"
+                                name="expansionField" id="expansionFieldPicker" data-original-title="" title="">
+                                <option value="metric" {if $expansionField == 'metric'}selected="selected"{/if}>Metric</option>
+                                <option value="tags" {if $expansionField == 'tags'}selected="selected"{/if}>Tags</option>
+                                <option value="cluster" {if $expansionField == 'cluster'}selected="selected"{/if}>Cluster</option>
+                                <option value="host" {if $expansionField == 'host'}selected="selected"{/if}>Host</option>
+                                <option value="service" {if $expansionField == 'service'}selected="selected"{/if}>Service</option>
+                                <option value="instance" {if $expansionField == 'instance'}selected="selected"{/if}>Instance</option>
+                                <option value="version" {if $expansionField == 'version'}selected="selected"{/if}>Version</option>
+                                <option value="sampler" {if $expansionField == 'sampler'}selected="selected"{/if}>Sampler</option>
+                                <option value="tenant" {if $expansionField == 'tenant'}selected="tenant"{/if}>Tenant</option>
+                            </select>
+                            &nbsp;limited to terms&nbsp;
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px;"
+                                class="j-expansionValue-autocomplete j-autocomplete-input j-ui-elem" placeholder="Wildcard" value="{$expansionValue?:''}"
+                                name="expansionValue" id="expansionValuePicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Graph type</td>
+                        <td>
+                            <select style="width:120px; padding-left:10px;" placeholder="GraphType" name="graphType" id="graphTypePicker">
+                                <option value="Line" {if $graphType == 'Line'}selected="selected"{/if}>Line</option>
+                                <option value="Radar" {if $graphType == 'Radar'}selected="selected"{/if}>Radar</option>
+                                <option value="Bar" {if $graphType == 'Bar'}selected="selected"{/if}>Bar</option>
+                                <option value="StackedBar" {if $graphType == 'StackedBar'}selected="selected"{/if}>StackedBar</option>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr class="anom-query-advanced">
+                        <td>Max waveforms</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-buckets-autocomplete j-autocomplete-input j-ui-elem" placeholder="Buckets" value="{$maxWaveforms?:''}"
+                                name="maxWaveforms" id="maxWaveformsPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr class="anom-query-advanced">
+                        <td>Display Query Summary</td>
+                        <td>
+                            <input type="checkbox" autocomplete="off" style="padding-left:10px;"
+                                class="form-control" placeholder="Query Summary" value="true"
+                                name="querySummary" id="querySummary" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td>
+                            <input class="btn btn-primary" type="submit" value="Refresh"/>
+                        </td>
+                    </tr>
+                </table>
+            </form>
+        </div>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading">Aggregate</div>
+        <div class="panel-body">
+            <div class="container">
+                <div id="content" style="width:1070px">
+                    <ul id="tabs" class="nav nav-dark nav-pills nav-pills-dark" data-tabs="tabs">
+                        <li><a href="#value-tab" data-toggle="tab">Values</a></li>
+                        <li><a href="#rate-tab" data-toggle="tab">Rates</a></li>
+                    </ul>
+                    <div id="my-tab-content" class="tab-content" style="width:1070px">
+                        <div class="tab-pane active" id="value-tab" style="width:1070px">
+                            <canvas id="values" height="300" width="1070px"
+                                data-anom-wave-id="myValues" data-anom-wave-type="{$graphType}">
+                            </canvas>
+                            <script>
+                                anomaly.query.data['myValues'] = {$values|noAutoescape};
+                            </script>
+                        </div>
+                        <div class="tab-pane" id="rate-tab" style="width:1070px">
+                            <canvas id="rates" height="300" width="1070px"
+                                data-anom-wave-id="myRates" data-anom-wave-type="{$graphType}">
+                            </canvas>
+                            <script>
+                                anomaly.query.data['myRates'] = {$rates|noAutoescape};
+                            </script>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {if $results}
+                <div class="container" style="margin-bottom:20px;">
+                    <ul>
+                        {foreach $result in $results}
+                            <li>
+                                <input class="btn btn-default" type="submit" value="focus" onclick="anomaly.query.focus('{$result.field}', '{$result.value}'); return false"/>
+                                {$result.value} &nbsp;&nbsp;&nbsp; (min:{$result.min}{sp}avg:{$result.avg}{sp}max:{$result.max})
+                            </li>
+                        {/foreach}
+                    </ul>
+                </div>
+            {/if}
+        </div>
+    </div>
+
+    {if $summary}
+        <div class="panel panel-default">
+            <div class="panel-heading">Query Summary {$elapse}</div>
+            <div class="panel-body">
+                <pre>{$summary}</pre>
+            </div>
+        </div>
+    {/if}
+{/template}
