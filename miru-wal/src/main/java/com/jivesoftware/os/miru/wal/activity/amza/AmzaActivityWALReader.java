@@ -328,8 +328,10 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
                         }
                         return true;
                     });
-            } catch (PropertiesNotPresentException | PartitionIsDisposedException e) {
+            } catch (PropertiesNotPresentException e) {
                 // ignored
+            } catch (PartitionIsDisposedException e) {
+                return 0;
             } catch (FailedToAchieveQuorumException e) {
                 throw new MiruWALWrongRouteException(e);
             }
