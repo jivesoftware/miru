@@ -856,7 +856,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                         streamBatch = queue.poll(1, TimeUnit.SECONDS);
                     }
 
-                    if (streamBatch != null) {
+                    if (streamBatch != null && streamBatch.cursor != null) {
                         partitionedActivities = new ArrayList<>(streamBatch.activities.size());
                         for (MiruWALEntry batch : streamBatch.activities) {
                             partitionedActivities.add(batch.activity);
