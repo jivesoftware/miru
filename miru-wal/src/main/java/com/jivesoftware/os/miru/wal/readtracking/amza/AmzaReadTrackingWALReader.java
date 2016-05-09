@@ -6,6 +6,8 @@ import com.google.common.collect.Maps;
 import com.jivesoftware.os.amza.api.partition.PartitionProperties;
 import com.jivesoftware.os.amza.api.take.TakeCursors;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider.EmbeddedClient;
+import com.jivesoftware.os.amza.service.PartitionIsDisposedException;
+import com.jivesoftware.os.amza.service.PropertiesNotPresentException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -92,10 +94,13 @@ public class AmzaReadTrackingWALReader implements MiruReadTrackingWALReader<Amza
         if (client == null) {
             return cursor;
         }
+        try {
+            Map<String, NamedCursor> cursorsByName = cursor != null ? extractCursors(cursor.cursors) : Maps.newHashMap();
 
-        Map<String, NamedCursor> cursorsByName = cursor != null ? extractCursors(cursor.cursors) : Maps.newHashMap();
-
-        return scanCursors(streamReadTrackingWAL, client, streamId, cursorsByName);
+            return scanCursors(streamReadTrackingWAL, client, streamId, cursorsByName);
+        } catch (PropertiesNotPresentException | PartitionIsDisposedException e) {
+            return cursor;
+        }
     }
 
     @Override
@@ -109,13 +114,16 @@ public class AmzaReadTrackingWALReader implements MiruReadTrackingWALReader<Amza
         if (client == null) {
             return sipCursor;
         }
+        try {
+            Map<String, NamedCursor> sipCursorsByName = sipCursor != null ? extractCursors(sipCursor.cursors) : Maps.newHashMap();
 
-        Map<String, NamedCursor> sipCursorsByName = sipCursor != null ? extractCursors(sipCursor.cursors) : Maps.newHashMap();
+            TakeCursors takeCursors = takeSipCursors(streamReadTrackingSipWAL, client, streamId, sipCursorsByName);
 
-        TakeCursors takeCursors = takeSipCursors(streamReadTrackingSipWAL, client, streamId, sipCursorsByName);
+            amzaWALUtil.mergeCursors(sipCursorsByName, takeCursors);
 
-        amzaWALUtil.mergeCursors(sipCursorsByName, takeCursors);
-
-        return new AmzaSipCursor(sipCursorsByName.values(), false);
+            return new AmzaSipCursor(sipCursorsByName.values(), false);
+        } catch (PropertiesNotPresentException | PartitionIsDisposedException e) {
+            return sipCursor;
+        }
     }
 }
