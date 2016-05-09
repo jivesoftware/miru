@@ -905,7 +905,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
         }
 
         long clockMax = getIngressUpdate(tenantId, partitionId, IngressType.clockMax, -1);
-        if (clockMax > 0) {
+        if (clockMax != -1) {
             return clockMax + defaultTopologyDestroyAfterMillis;
         }
         return -1;
