@@ -176,9 +176,11 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
             amzaWALUtil.mergeCursors(sipCursorsByName, takeCursors);
 
             return new AmzaSipCursor(sipCursorsByName.values(), endOfStream);
-        } catch (PropertiesNotPresentException | PartitionIsDisposedException e) {
+        } catch (PropertiesNotPresentException e) {
             LOG.warn("Empty streamSip for nonexistent partition {} {}", tenantId, partitionId);
             return sipCursor;
+        } catch (PartitionIsDisposedException e) {
+            return new AmzaSipCursor(Collections.emptyList(), true);
         } catch (FailedToAchieveQuorumException e) {
             throw new MiruWALWrongRouteException(e);
         }
