@@ -141,7 +141,7 @@ public class MiruTenantEntryRegion implements MiruRegion<MiruTenantId> {
                 });
             }
         } catch (Exception e) {
-            log.error("Unable to get partitions for tenant: " + tenant);
+            log.error("Unable to get partitions for tenant: {}", new Object[] { tenant }, e);
         }
 
         data.put("tenant", tenant.toString());
