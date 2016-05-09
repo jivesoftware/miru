@@ -3,6 +3,8 @@ package com.jivesoftware.os.miru.wal.readtracking.amza;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.jivesoftware.os.amza.api.partition.Consistency;
+import com.jivesoftware.os.amza.service.PartitionIsDisposedException;
+import com.jivesoftware.os.amza.service.PropertiesNotPresentException;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
@@ -10,6 +12,8 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.marshall.JacksonJsonObjectTypeMarshaller;
 import com.jivesoftware.os.miru.wal.AmzaWALUtil;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALWriter;
+import com.jivesoftware.os.mlogger.core.MetricLogger;
+import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -17,6 +21,8 @@ import java.util.concurrent.TimeUnit;
  *
  */
 public class AmzaReadTrackingWALWriter implements MiruReadTrackingWALWriter {
+
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final AmzaWALUtil amzaWALUtil;
     private final long replicateTimeoutMillis;
@@ -43,18 +49,22 @@ public class AmzaReadTrackingWALWriter implements MiruReadTrackingWALWriter {
 
     @Override
     public void write(MiruTenantId tenantId, MiruStreamId streamId, List<MiruPartitionedActivity> partitionedActivities) throws Exception {
-        amzaWALUtil.getReadTrackingClient(tenantId).commit(Consistency.leader_quorum, streamId.getBytes(),
-            (txKeyValueStream) -> {
-                for (MiruPartitionedActivity activity : partitionedActivities) {
-                    byte[] key = readTrackingWALKeyFunction.apply(activity);
-                    byte[] value = activitySerializerFunction.apply(activity);
-                    if (!txKeyValueStream.commit(key, value, System.currentTimeMillis(), false)) {
-                        return false;
+        try {
+            amzaWALUtil.getReadTrackingClient(tenantId).commit(Consistency.leader_quorum, streamId.getBytes(),
+                (txKeyValueStream) -> {
+                    for (MiruPartitionedActivity activity : partitionedActivities) {
+                        byte[] key = readTrackingWALKeyFunction.apply(activity);
+                        byte[] value = activitySerializerFunction.apply(activity);
+                        if (!txKeyValueStream.commit(key, value, System.currentTimeMillis(), false)) {
+                            return false;
+                        }
                     }
-                }
-                return true;
-            },
-            replicateTimeoutMillis,
-            TimeUnit.MILLISECONDS);
+                    return true;
+                },
+                replicateTimeoutMillis,
+                TimeUnit.MILLISECONDS);
+        } catch (PropertiesNotPresentException | PartitionIsDisposedException e) {
+            LOG.warn("Write dropped on floor because properties missing or partition is dispose. tenant:{} streamId:{}", tenantId, streamId);
+        }
     }
 }

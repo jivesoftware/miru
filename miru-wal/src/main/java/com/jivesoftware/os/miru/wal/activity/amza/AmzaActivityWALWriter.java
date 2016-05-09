@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.jivesoftware.os.amza.api.partition.Consistency;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider.EmbeddedClient;
+import com.jivesoftware.os.amza.service.PartitionIsDisposedException;
+import com.jivesoftware.os.amza.service.PropertiesNotPresentException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -93,18 +95,22 @@ public class AmzaActivityWALWriter implements MiruActivityWALWriter {
     public void delete(MiruTenantId tenantId, MiruPartitionId partitionId, Collection<MiruActivityWALColumnKey> keys) throws Exception {
         EmbeddedClient client = amzaWALUtil.getActivityClient(tenantId, partitionId);
         if (client != null) {
-            client.commit(Consistency.leader_quorum,
-                null,
-                (txKeyValueStream) -> {
-                    for (MiruActivityWALColumnKey columnKey : keys) {
-                        if (!txKeyValueStream.commit(columnKeyMarshaller.toLexBytes(columnKey), null, -1, true)) {
-                            return false;
+            try {
+                client.commit(Consistency.leader_quorum,
+                    null,
+                    (txKeyValueStream) -> {
+                        for (MiruActivityWALColumnKey columnKey : keys) {
+                            if (!txKeyValueStream.commit(columnKeyMarshaller.toLexBytes(columnKey), null, -1, true)) {
+                                return false;
+                            }
                         }
-                    }
-                    return true;
-                },
-                replicateTimeoutMillis,
-                TimeUnit.MILLISECONDS);
+                        return true;
+                    },
+                    replicateTimeoutMillis,
+                    TimeUnit.MILLISECONDS);
+            } catch (PropertiesNotPresentException | PartitionIsDisposedException e) {
+                // Ignored
+            }
         }
     }
 

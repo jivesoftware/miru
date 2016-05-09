@@ -76,8 +76,8 @@ public class AmzaWALUtil {
         amzaService.getRingWriter().ensureSubRing(partitionName.getRingName(), activityRingSize);
         amzaService.createPartitionIfAbsent(partitionName, regionProperties.or(activityProperties));
         AmzaService.AmzaPartitionRoute partitionRoute = amzaService.getPartitionRoute(partitionName, activityRoutingTimeoutMillis); //TODO config timeout
-        if (partitionRoute.leader != null) {
-            return new HostPort[] { new HostPort(partitionRoute.leader.ringHost.getHost(), partitionRoute.leader.ringHost.getPort()) };
+        if (!partitionRoute.disposed && partitionRoute.leader != null) {
+            return new HostPort[]{new HostPort(partitionRoute.leader.ringHost.getHost(), partitionRoute.leader.ringHost.getPort())};
         } else {
             return partitionRoute.orderedMembers.stream()
                 .map(ringMemberAndHost -> new HostPort(ringMemberAndHost.ringHost.getHost(), ringMemberAndHost.ringHost.getPort()))
@@ -90,8 +90,8 @@ public class AmzaWALUtil {
         amzaService.getRingWriter().ensureSubRing(partitionName.getRingName(), readTrackingRingSize);
         amzaService.createPartitionIfAbsent(partitionName, partitionProperties.or(readTrackingProperties));
         AmzaService.AmzaPartitionRoute partitionRoute = amzaService.getPartitionRoute(partitionName, readTrackingRoutingTimeoutMillis); //TODO config timeout
-        if (partitionRoute.leader != null) {
-            return new HostPort[] { new HostPort(partitionRoute.leader.ringHost.getHost(), partitionRoute.leader.ringHost.getPort()) };
+        if (!partitionRoute.disposed && partitionRoute.leader != null) {
+            return new HostPort[]{new HostPort(partitionRoute.leader.ringHost.getHost(), partitionRoute.leader.ringHost.getPort())};
         } else {
             return partitionRoute.orderedMembers.stream()
                 .map(ringMemberAndHost -> new HostPort(ringMemberAndHost.ringHost.getHost(), ringMemberAndHost.ringHost.getPort()))
@@ -132,12 +132,6 @@ public class AmzaWALUtil {
         String walName = "readTrackingWAL-" + tenantId.toString();
         byte[] walNameBytes = walName.getBytes(Charsets.UTF_8);
         return new PartitionName(false, walNameBytes, walNameBytes);
-    }
-
-    private PartitionName getLookupPartitionName(MiruTenantId tenantId) {
-        String lookupName = "lookup-activity-" + tenantId.toString();
-        byte[] lookupNameBytes = lookupName.getBytes(Charsets.UTF_8);
-        return new PartitionName(false, lookupNameBytes, lookupNameBytes);
     }
 
     /* TODO should be done by the remote client looking up ordered hosts

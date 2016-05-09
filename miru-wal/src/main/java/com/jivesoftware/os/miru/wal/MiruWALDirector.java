@@ -110,7 +110,7 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
                 }
                 return true;
             });
-            */
+             */
 
             int count = 0;
             MiruPartitionId latestPartitionId = getLargestPartitionId(tenantId);
@@ -168,7 +168,7 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
 
     public void removePartition(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         activityWALWriter.removePartition(tenantId, partitionId);
-        clusterClient.removeIngress(tenantId, partitionId);
+        // We do not remove ingress because it acts as tombstones
     }
 
     private long packTimestamp(long millisIntoTheFuture) {
@@ -320,7 +320,7 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
 
         List<MiruWALEntry> activities = new ArrayList<>();
         Set<TimeAndVersion> suppressed = Sets.newHashSet();
-        boolean[] endOfWAL = { false };
+        boolean[] endOfWAL = {false};
         S nextCursor = activityWALReader.streamSip(tenantId, partitionId, cursor, lastSeen, batchSize,
             (collisionId, partitionedActivity, timestamp) -> {
                 if (collisionId != -1) {
@@ -342,7 +342,7 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
         long oldestEventId,
         int batchSize) throws Exception {
 
-        long[] minEventId = { -1L };
+        long[] minEventId = {-1L};
         int[] count = new int[1];
         S nextCursor = readTrackingWALReader.streamSip(tenantId, streamId, sipCursor, batchSize, (eventId, timestamp) -> {
             minEventId[0] = (minEventId[0] == -1) ? eventId : Math.min(minEventId[0], eventId);

@@ -11,6 +11,7 @@ import com.jivesoftware.os.amza.api.partition.PartitionProperties;
 import com.jivesoftware.os.amza.api.take.TakeCursors;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider.EmbeddedClient;
 import com.jivesoftware.os.amza.service.Partition.ScanRange;
+import com.jivesoftware.os.amza.service.PartitionIsDisposedException;
 import com.jivesoftware.os.amza.service.PropertiesNotPresentException;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
@@ -67,8 +68,8 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
             (long rowTxId, byte[] prefix, byte[] key, byte[] value, long valueTimestamp, boolean valueTombstoned, long valueVersion) -> {
                 MiruPartitionedActivity partitionedActivity = partitionedActivityMarshaller.fromBytes(value);
                 if (partitionedActivity != null
-                    && partitionedActivity.type.isActivityType()
-                    && !streamAlreadySeen(lastSeen, partitionedActivity, streamSuppressed)) {
+                && partitionedActivity.type.isActivityType()
+                && !streamAlreadySeen(lastSeen, partitionedActivity, streamSuppressed)) {
                     if (!streamMiruActivityWAL.stream(partitionedActivity.timestamp, partitionedActivity, valueTimestamp)) {
                         return false;
                     }
@@ -141,7 +142,7 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
             amzaWALUtil.mergeCursors(sipCursorsByName, takeCursors);
 
             return new AmzaCursor(cursorsByName.values(), new AmzaSipCursor(sipCursorsByName.values(), false));
-        } catch (PropertiesNotPresentException e) {
+        } catch (PropertiesNotPresentException | PartitionIsDisposedException e) {
             LOG.warn("Empty stream for nonexistent partition {} {}", tenantId, partitionId);
             return cursor;
         } catch (FailedToAchieveQuorumException e) {
@@ -175,7 +176,7 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
             amzaWALUtil.mergeCursors(sipCursorsByName, takeCursors);
 
             return new AmzaSipCursor(sipCursorsByName.values(), endOfStream);
-        } catch (PropertiesNotPresentException e) {
+        } catch (PropertiesNotPresentException | PartitionIsDisposedException e) {
             LOG.warn("Empty streamSip for nonexistent partition {} {}", tenantId, partitionId);
             return sipCursor;
         } catch (FailedToAchieveQuorumException e) {
@@ -196,7 +197,7 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
                     MiruPartitionedActivity latestBoundaryActivity = partitionedActivityMarshaller.fromBytes(valueBytes);
                     return new WriterCursor(latestBoundaryActivity.getPartitionId(), latestBoundaryActivity.index);
                 }
-            } catch (PropertiesNotPresentException e) {
+            } catch (PropertiesNotPresentException | PartitionIsDisposedException e) {
                 // ignored
             } catch (FailedToAchieveQuorumException e) {
                 throw new MiruWALWrongRouteException(e);
@@ -228,7 +229,7 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
                         }
                         return true;
                     });
-            } catch (PropertiesNotPresentException e) {
+            } catch (PropertiesNotPresentException | PartitionIsDisposedException e) {
                 // ignored
             } catch (FailedToAchieveQuorumException e) {
                 throw new MiruWALWrongRouteException(e);
@@ -256,7 +257,7 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
                         }
                         return true;
                     });
-            } catch (PropertiesNotPresentException e) {
+            } catch (PropertiesNotPresentException | PartitionIsDisposedException e) {
                 // ignored
             } catch (FailedToAchieveQuorumException e) {
                 throw new MiruWALWrongRouteException(e);
@@ -294,7 +295,7 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
                     }
                     return true;
                 });
-            } catch (PropertiesNotPresentException e) {
+            } catch (PropertiesNotPresentException | PartitionIsDisposedException e) {
                 // ignored
             } catch (FailedToAchieveQuorumException e) {
                 throw new MiruWALWrongRouteException(e);
@@ -311,7 +312,7 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
     @Override
     public long clockMax(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         EmbeddedClient client = amzaWALUtil.getActivityClient(tenantId, partitionId);
-        long[] clockTimestamp = { -1L };
+        long[] clockTimestamp = {-1L};
         if (client != null) {
             try {
                 byte[] fromKey = columnKeyMarshaller.toBytes(new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.END.getSort(), Long.MIN_VALUE));
@@ -325,7 +326,7 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
                         }
                         return true;
                     });
-            } catch (PropertiesNotPresentException e) {
+            } catch (PropertiesNotPresentException | PartitionIsDisposedException e) {
                 // ignored
             } catch (FailedToAchieveQuorumException e) {
                 throw new MiruWALWrongRouteException(e);
