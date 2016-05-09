@@ -68,26 +68,29 @@ public class AmzaActivityWALWriter implements MiruActivityWALWriter {
         List<MiruPartitionedActivity> partitionedActivities) throws Exception {
 
         RangeMinMax partitionMinMax = new RangeMinMax();
-
-        amzaWALUtil.getActivityClient(tenantId, partitionId).commit(Consistency.leader_quorum, null,
-            (txKeyValueStream) -> {
-                for (MiruPartitionedActivity activity : partitionedActivities) {
-                    long timestamp = activity.activity.isPresent() ? activity.activity.get().version : System.currentTimeMillis();
-                    if (!txKeyValueStream.commit(activityWALKeyFunction.apply(activity), activitySerializerFunction.apply(activity), timestamp, false)) {
-                        return false;
+        EmbeddedClient client = amzaWALUtil.getActivityClient(tenantId, partitionId);
+        try {
+            client.commit(Consistency.leader_quorum, null,
+                (txKeyValueStream) -> {
+                    for (MiruPartitionedActivity activity : partitionedActivities) {
+                        long timestamp = activity.activity.isPresent() ? activity.activity.get().version : System.currentTimeMillis();
+                        if (!txKeyValueStream.commit(activityWALKeyFunction.apply(activity), activitySerializerFunction.apply(activity), timestamp, false)) {
+                            return false;
+                        }
                     }
+                    return true;
+                },
+                replicateTimeoutMillis,
+                TimeUnit.MILLISECONDS);
+
+            for (MiruPartitionedActivity activity : partitionedActivities) {
+                if (partitionId.equals(activity.partitionId) && activity.type.isActivityType()) {
+                    partitionMinMax.put(activity.clockTimestamp, activity.timestamp);
                 }
-                return true;
-            },
-            replicateTimeoutMillis,
-            TimeUnit.MILLISECONDS);
-
-        for (MiruPartitionedActivity activity : partitionedActivities) {
-            if (partitionId.equals(activity.partitionId) && activity.type.isActivityType()) {
-                partitionMinMax.put(activity.clockTimestamp, activity.timestamp);
             }
+        } catch (PartitionIsDisposedException e) {
+            // Ignored
         }
-
         return partitionMinMax;
     }
 
