@@ -28,326 +28,323 @@
  * @param? execute
  */
 {template .stumptownQueryPluginRegion}
-    <div class="side-by-side">
-        <div class="panel panel-default">
-            <div class="panel-heading">Query</div>
-            <div class="panel-body">
-                <form id="stump-query-filters" class="form-inline  j-form" data-active-class="btn-default" data-input-el="#requestPicker" data-form-el="#requestPickerForm"
-                    data-jive-ui="jive/ui/typeahead/request_typeahead" method="get" name="requestPickerForm">
-                    <table>
-                        <tr>
-                            <td colspan="2">
-                                 <input class="form-control btn btn-primary" type="submit" value="Refresh"/>
-                            </td>
+    <div class="panel panel-default" style="float:left; width:300px">
+        <div class="panel-heading">Query</div>
+        <div class="panel-body">
+            <form id="stump-query-filters" class="form-inline  j-form" data-active-class="btn-default" data-input-el="#requestPicker" data-form-el="#requestPickerForm"
+                data-jive-ui="jive/ui/typeahead/request_typeahead" method="get" name="requestPickerForm">
+                <table>
+                    <tr>
+                        <td colspan="2">
+                             <input class="form-control btn btn-primary" type="submit" value="Refresh"/>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            From
+                        </td><td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
+                                class="form-control" placeholder="To Time Ago" value="{$toAgo?:''}"
+                                name="toAgo" id="toTimePicker" data-original-title="" title="">
+                            <select style="width:120px; padding-left:10px;"
+                                class="form-control" placeholder="ToTimeUnit"
+                                name="toTimeUnit" id="toTimeUnitPicker" data-original-title="" title="">
+                                <option value="DAYS" {if $toTimeUnit == 'DAYS'}selected="selected"{/if}>DAYS</option>
+                                <option value="HOURS" {if $toTimeUnit == 'HOURS'}selected="selected"{/if}>HOURS</option>
+                                <option value="MINUTES" {if $toTimeUnit == 'MINUTES'}selected="selected"{/if}>MINUTES</option>
+                                <option value="SECONDS" {if $toTimeUnit == 'SECONDS'}selected="selected"{/if}>SECONDS</option>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            To
+                        </td><td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
+                             class="form-control" placeholder="From Time Ago" value="{$fromAgo?:''}"
+                             name="fromAgo" id="fromTimePicker" data-original-title="" title="">
+                            <select style="width:120px; padding-left:10px;"
+                                class="form-control" placeholder="FromTimeUnit"
+                                name="fromTimeUnit" id="fromTimeUnitPicker" data-original-title="" title="">
+                                <option value="DAYS" {if $fromTimeUnit == 'DAYS'}selected="selected"{/if}>DAYS</option>
+                                <option value="HOURS" {if $fromTimeUnit == 'HOURS'}selected="selected"{/if}>HOURS</option>
+                                <option value="MINUTES" {if $fromTimeUnit == 'MINUTES'}selected="selected"{/if}>MINUTES</option>
+                                <option value="SECONDS" {if $fromTimeUnit == 'SECONDS'}selected="selected"{/if}>SECONDS</option>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Cluster</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
+                                class="form-control" placeholder="Cluster" value="{$cluster?:''}"
+                                name="cluster" id="clusterPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Host</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
+                                class="form-control" placeholder="Host" value="{$host?:''}"
+                                name="host" id="hostPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Service</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
+                                class="form-control" placeholder="Service" value="{$service?:''}"
+                                name="service" id="servicePicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Instance</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
+                                class="form-control" placeholder="Instance" value="{$instance?:''}"
+                                name="instance" id="instancePicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Version</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
+                                class="form-control" placeholder="Version" value="{$version?:''}"
+                                name="version" id="versionPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Method</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
+                                class="form-control" placeholder="Method" value="{$method?:''}"
+                                name="method" id="methodPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Line</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
+                                class="form-control" placeholder="Line" value="{$line?:''}"
+                                name="line" id="linePicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Message</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
+                                class="form-control" placeholder="Message" value="{$message?:''}"
+                                name="message" id="messagePicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Thread</td>
+                        <td>
+                            <input type="text" role="combobox" style="width:120px; padding-left:10px;"
+                                class="form-control" placeholder="Thread" value="{$thread?:''}"
+                                name="thread" id="threadPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Logger</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
+                                class="form-control" placeholder="Logger" value="{$logger?:''}"
+                                name="logger" id="loggerPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Level</td>
+                        <td>
+                            <div>
+                                <label><input type="checkbox" name="logLevels" value="TRACE" {if $logLevels.trace}checked="checked"{/if}>
+                                Trace &nbsp;</label>
+                            </div>
+                            <div>
+                                <label><input type="checkbox" name="logLevels" value="DEBUG" {if $logLevels.debug}checked="checked"{/if}>
+                                Debug &nbsp;</label>
+                            </div>
+                            <div>
+                                <label><input type="checkbox" name="logLevels" value="INFO" {if $logLevels.info}checked="checked"{/if}>
+                                Info &nbsp;</label>
+                            </div>
+                            <div>
+                                <label><input type="checkbox" name="logLevels" value="WARN" {if $logLevels.warn}checked="checked"{/if}>
+                                Warn &nbsp;</label>
+                            </div>
+                            <div>
+                                <label><input type="checkbox" name="logLevels" value="ERROR" {if $logLevels.error}checked="checked"{/if}>
+                                Error &nbsp;</label>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Exception Class</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
+                                class="form-control" placeholder="Thrown Stack Trace" value="{$exceptionClass?:''}"
+                                name="exceptionClass" id="exceptionClassPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Thrown</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
+                                class="form-control" placeholder="Thrown Stack Trace" value="{$thrown?:''}"
+                                name="thrown" id="thrownPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Buckets</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
+                                class="form-control" placeholder="Buckets" value="{$buckets?:''}"
+                                name="buckets" id="bucketsPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Count</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
+                                class="form-control" placeholder="Message Count" value="{$messageCount?:''}"
+                                name="messageCount" id="messageCountPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Graph Type</td>
+                        <td>
+                            <select style="width:120px; padding-left:10px;" class="form-control"
+                                placeholder="Graph Type" name="graphType" id="graphTypePicker">
+                                <option value="Line" {if $graphType == 'Line'}selected="selected"{/if}>Line</option>
+                                <option value="Radar" {if $graphType == 'Radar'}selected="selected"{/if}>Radar</option>
+                                <option value="Bar" {if $graphType == 'Bar'}selected="selected"{/if}>Bar</option>
+                            </select>
+                        </td>
+                    </tr>
+                </table>
+
+            </form>
+        </div>
+    </div>
+    {if $execute}
+        <div class="panel panel-default" style="margin-left:320px">
+            <div class="panel-heading">
+                <table>
+                    <tr>
+                        <td>
+                            Results
+                        </td>
+                        <td>
+                            <div class="checkbox">
+                                <label><input type="checkbox" class="stump-toggle" onchange="stump.query.toggle(this);" data-name="datacenter">
+                                Datacenter &nbsp;</label>
+                            </div>
+                        </td><td>
+                            <div class="checkbox">
+                                <label><input type="checkbox" class="stump-toggle" onchange="stump.query.toggle(this);" data-name="cluster">
+                                Cluster &nbsp;</label>
+                            </div>
+                        </td><td>
+                            <div class="checkbox">
+                                <label><input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="host">
+                                Host &nbsp;</label>
+                            </div>
+                        </td><td>
+                            <div class="checkbox">
+                                <label><input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="service"/>
+                                Service &nbsp;</label></span>
+                            </div>
+                        </td><td>
+                            <div class="checkbox">
+                                <label><input type="checkbox" class="stump-toggle" onchange="stump.query.toggle(this);" data-name="instance"/>
+                                Instance &nbsp;</label>
+                            </div>
+                        </td><td>
+                            <div class="checkbox">
+                                <label><input type="checkbox" class="stump-toggle" onchange="stump.query.toggle(this);" data-name="version" />
+                                Version &nbsp;</label>
+                            </div>
+                        </td><td>
+                            <div class="checkbox">
+                                <label><input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="time" />
+                                Time &nbsp;</label>
+                            </div>
+                        </td><td>
+                            <div class="checkbox">
+                                <label><input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="thread" />
+                                Thread &nbsp;</label>
+                            </div>
+                        </td><td>
+                            <div class="checkbox">
+                                <label><input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="level" />
+                                Level &nbsp;</label>
+                            </div>
+                        </td><td>
+                            <div class="checkbox">
+                                <label><input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="method" />
+                                Method &nbsp;</label>
+                            </div>
+                        </td><td>
+                            <div class="checkbox">
+                                <label><input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="line" />
+                                Line &nbsp;</label>
+                            </div>
+                        </td><td>
+                            <div class="checkbox">
+                                <label><input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="message" />
+                                Message &nbsp;</label>
+                            </div>
+                        </td>
+                    <tr>
+                </table>
+            </div>
+            <div class="panel-body" id="stump-rt-poll"
+                data-cluster="{$cluster?:''}"
+                data-host="{$host?:''}"
+                data-version="{$version?:''}"
+                data-service="{$service?:''}"
+                data-instance="{$instance?:''}"
+                data-log-levels="{$logLevelsList?:''}"
+                data-from-ago="{$fromAgo?:''}"
+                data-to-ago="{$toAgo?:''}"
+                data-from-time-unit="{$fromTimeUnit?:''}"
+                data-to-time-unit="{$toTimeUnit?:''}"
+                data-thread="{$thread?:''}"
+                data-logger="{$logger?:''}"
+                data-method="{$method?:''}"
+                data-line="{$line?:''}"
+                data-message="{$message?:''}"
+                data-exception-class="{$exceptionClass?:''}"
+                data-thrown="{$thrown?:''}"
+                data-events="{$events?:''}"
+                data-buckets="{$buckets?:''}"
+                data-message-count="{$messageCount?:''}"
+                data-graph-type="{$graphType?:''}">
+                <div id="stump-rt-legend"></div>
+                <div>
+                    <canvas id="stump-rt-canvas" height="80" width="480"></canvas>
+                </div>
+                <table id="stump-rt-events" class="table table-condensed">
+                    <tbody>
+                        <tr style="background-color: #ccc; font-weight: bold;">
+                            <th class="stump-event-datacenter">Datacenter</th>
+                            <th class="stump-event-cluster">Cluster</th>
+                            <th class="stump-event-host">Host</th>
+                            <th class="stump-event-service">Service</th>
+                            <th class="stump-event-instance">Instance</th>
+                            <th class="stump-event-version">Version</th>
+                            <th class="stump-event-time">Time</th>
+                            <th class="stump-event-thread">Thread</th>
+                            <th class="stump-event-level">Level</th>
+                            <th class="stump-event-method">Method</th>
+                            <th class="stump-event-line">Line</th>
+                            <th class="stump-event-message" width="99%">Message</th>
                         </tr>
-                        <tr>
-                            <td>
-                                From
-                            </td><td>
-                                <input type="text" autocomplete="off" role="combobox" style="width:80px; padding-left:10px;"
-                                    class="form-control" placeholder="To Time Ago" value="{$toAgo?:''}"
-                                    name="toAgo" id="toTimePicker" data-original-title="" title="">
-                                <select style="width:120px; padding-left:10px;"
-                                    class="form-control" placeholder="ToTimeUnit"
-                                    name="toTimeUnit" id="toTimeUnitPicker" data-original-title="" title="">
-                                    <option value="DAYS" {if $toTimeUnit == 'DAYS'}selected="selected"{/if}>DAYS</option>
-                                    <option value="HOURS" {if $toTimeUnit == 'HOURS'}selected="selected"{/if}>HOURS</option>
-                                    <option value="MINUTES" {if $toTimeUnit == 'MINUTES'}selected="selected"{/if}>MINUTES</option>
-                                    <option value="SECONDS" {if $toTimeUnit == 'SECONDS'}selected="selected"{/if}>SECONDS</option>
-                                </select>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>
-                                To
-                            </td><td>
-                                <input type="text" autocomplete="off" role="combobox" style="width:80px; padding-left:10px;"
-                                 class="form-control" placeholder="From Time Ago" value="{$fromAgo?:''}"
-                                 name="fromAgo" id="fromTimePicker" data-original-title="" title="">
-                                <select style="width:120px; padding-left:10px;"
-                                    class="form-control" placeholder="FromTimeUnit"
-                                    name="fromTimeUnit" id="fromTimeUnitPicker" data-original-title="" title="">
-                                    <option value="DAYS" {if $fromTimeUnit == 'DAYS'}selected="selected"{/if}>DAYS</option>
-                                    <option value="HOURS" {if $fromTimeUnit == 'HOURS'}selected="selected"{/if}>HOURS</option>
-                                    <option value="MINUTES" {if $fromTimeUnit == 'MINUTES'}selected="selected"{/if}>MINUTES</option>
-                                    <option value="SECONDS" {if $fromTimeUnit == 'SECONDS'}selected="selected"{/if}>SECONDS</option>
-                                </select>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>Cluster</td>
-                            <td>
-                                <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
-                                    class="form-control" placeholder="Cluster" value="{$cluster?:''}"
-                                    name="cluster" id="clusterPicker" data-original-title="" title="">
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>Host</td>
-                            <td>
-                                <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
-                                    class="form-control" placeholder="Host" value="{$host?:''}"
-                                    name="host" id="hostPicker" data-original-title="" title="">
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>Service</td>
-                            <td>
-                                <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
-                                    class="form-control" placeholder="Service" value="{$service?:''}"
-                                    name="service" id="servicePicker" data-original-title="" title="">
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>Instance</td>
-                            <td>
-                                <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
-                                    class="form-control" placeholder="Instance" value="{$instance?:''}"
-                                    name="instance" id="instancePicker" data-original-title="" title="">
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>Version</td>
-                            <td>
-                                <input type="text" autocomplete="off" role="combobox" style="width:560px; padding-left:10px;"
-                                    class="form-control" placeholder="Version" value="{$version?:''}"
-                                    name="version" id="versionPicker" data-original-title="" title="">
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>Method</td>
-                            <td>
-                                <input type="text" autocomplete="off" role="combobox" style="width:300px; padding-left:10px;"
-                                    class="form-control" placeholder="Method" value="{$method?:''}"
-                                    name="method" id="methodPicker" data-original-title="" title="">
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>Line</td>
-                            <td>
-                                <input type="text" autocomplete="off" role="combobox" style="width:100px; padding-left:10px;"
-                                    class="form-control" placeholder="Line" value="{$line?:''}"
-                                    name="line" id="linePicker" data-original-title="" title="">
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>Message</td>
-                            <td>
-                                <input type="text" autocomplete="off" role="combobox" style="width:580px; padding-left:10px;"
-                                    class="form-control" placeholder="Message" value="{$message?:''}"
-                                    name="message" id="messagePicker" data-original-title="" title="">
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>Thread</td>
-                            <td>
-                                <input type="text" role="combobox" style="width:280px; padding-left:10px;"
-                                    class="form-control" placeholder="Thread" value="{$thread?:''}"
-                                    name="thread" id="threadPicker" data-original-title="" title="">
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>Logger</td>
-                            <td>
-                                <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
-                                    class="form-control" placeholder="Logger" value="{$logger?:''}"
-                                    name="logger" id="loggerPicker" data-original-title="" title="">
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>Level</td>
-                            <td>
-                                <div>
-                                    <label><input type="checkbox" name="logLevels" value="TRACE" {if $logLevels.trace}checked="checked"{/if}>
-                                    Trace &nbsp;</label>
-                                </div>
-                                <div>
-                                    <label><input type="checkbox" name="logLevels" value="DEBUG" {if $logLevels.debug}checked="checked"{/if}>
-                                    Debug &nbsp;</label>
-                                </div>
-                                <div>
-                                    <label><input type="checkbox" name="logLevels" value="INFO" {if $logLevels.info}checked="checked"{/if}>
-                                    Info &nbsp;</label>
-                                </div>
-                                <div>
-                                    <label><input type="checkbox" name="logLevels" value="WARN" {if $logLevels.warn}checked="checked"{/if}>
-                                    Warn &nbsp;</label>
-                                </div>
-                                <div>
-                                    <label><input type="checkbox" name="logLevels" value="ERROR" {if $logLevels.error}checked="checked"{/if}>
-                                    Error &nbsp;</label>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>Exception Class</td>
-                            <td>
-                                <input type="text" autocomplete="off" role="combobox" style="width:250px; padding-left:10px;"
-                                    class="form-control" placeholder="Thrown Stack Trace" value="{$exceptionClass?:''}"
-                                    name="exceptionClass" id="exceptionClassPicker" data-original-title="" title="">
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>Thrown</td>
-                            <td>
-                                <input type="text" autocomplete="off" role="combobox" style="width:580px; padding-left:10px;"
-                                    class="form-control" placeholder="Thrown Stack Trace" value="{$thrown?:''}"
-                                    name="thrown" id="thrownPicker" data-original-title="" title="">
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>Buckets</td>
-                            <td>
-                                <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
-                                    class="form-control" placeholder="Buckets" value="{$buckets?:''}"
-                                    name="buckets" id="bucketsPicker" data-original-title="" title="">
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>Count</td>
-                            <td>
-                                <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
-                                    class="form-control" placeholder="Message Count" value="{$messageCount?:''}"
-                                    name="messageCount" id="messageCountPicker" data-original-title="" title="">
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>Graph Type</td>
-                            <td>
-                                <select style="width:120px; padding-left:10px;" class="form-control"
-                                    placeholder="Graph Type" name="graphType" id="graphTypePicker">
-                                    <option value="Line" {if $graphType == 'Line'}selected="selected"{/if}>Line</option>
-                                    <option value="Radar" {if $graphType == 'Radar'}selected="selected"{/if}>Radar</option>
-                                    <option value="Bar" {if $graphType == 'Bar'}selected="selected"{/if}>Bar</option>
-                                </select>
-                            </td>
-                        </tr>
-                    </table>
-                   
-                </form>
+                    </tbody>
+                </table>
             </div>
         </div>
-        {if $execute}
-            <div class="panel panel-default">
-                <div class="panel-heading">
-                    <table>
-                        <tr>
-                            <td>
-                                Results
-                            </td>
-                            <td>
-                                <div class="checkbox">
-                                    <label><input type="checkbox" class="stump-toggle" onchange="stump.query.toggle(this);" data-name="datacenter">
-                                    Datacenter &nbsp;</label>
-                                </div>
-                            </td><td>
-                                <div class="checkbox">
-                                    <label><input type="checkbox" class="stump-toggle" onchange="stump.query.toggle(this);" data-name="cluster">
-                                    Cluster &nbsp;</label>
-                                </div>
-                            </td><td>
-                                <div class="checkbox">
-                                    <label><input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="host">
-                                    Host &nbsp;</label>
-                                </div>
-                            </td><td>
-                                <div class="checkbox">
-                                    <label><input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="service"/>
-                                    Service &nbsp;</label></span>
-                                </div>
-                            </td><td>
-                                <div class="checkbox">
-                                    <label><input type="checkbox" class="stump-toggle" onchange="stump.query.toggle(this);" data-name="instance"/>
-                                    Instance &nbsp;</label>
-                                </div>
-                            </td><td>
-                                <div class="checkbox">
-                                    <label><input type="checkbox" class="stump-toggle" onchange="stump.query.toggle(this);" data-name="version" />
-                                    Version &nbsp;</label>
-                                </div>
-                            </td><td>
-                                <div class="checkbox">
-                                    <label><input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="time" />
-                                    Time &nbsp;</label>
-                                </div>
-                            </td><td>
-                                <div class="checkbox">
-                                    <label><input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="thread" />
-                                    Thread &nbsp;</label>
-                                </div>
-                            </td><td>
-                                <div class="checkbox">
-                                    <label><input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="level" />
-                                    Level &nbsp;</label>
-                                </div>
-                            </td><td>
-                                <div class="checkbox">
-                                    <label><input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="method" />
-                                    Method &nbsp;</label>
-                                </div>
-                            </td><td>
-                                <div class="checkbox">
-                                    <label><input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="line" />
-                                    Line &nbsp;</label>
-                                </div>
-                            </td><td>
-                                <div class="checkbox">
-                                    <label><input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="message" />
-                                    Message &nbsp;</label>
-                                </div>
-                            </td>
-                        <tr>
-                    </table>
-                </div>
-                <div class="panel-body" id="stump-rt-poll"
-                    data-cluster="{$cluster?:''}"
-                    data-host="{$host?:''}"
-                    data-version="{$version?:''}"
-                    data-service="{$service?:''}"
-                    data-instance="{$instance?:''}"
-                    data-log-levels="{$logLevelsList?:''}"
-                    data-from-ago="{$fromAgo?:''}"
-                    data-to-ago="{$toAgo?:''}"
-                    data-from-time-unit="{$fromTimeUnit?:''}"
-                    data-to-time-unit="{$toTimeUnit?:''}"
-                    data-thread="{$thread?:''}"
-                    data-logger="{$logger?:''}"
-                    data-method="{$method?:''}"
-                    data-line="{$line?:''}"
-                    data-message="{$message?:''}"
-                    data-exception-class="{$exceptionClass?:''}"
-                    data-thrown="{$thrown?:''}"
-                    data-events="{$events?:''}"
-                    data-buckets="{$buckets?:''}"
-                    data-message-count="{$messageCount?:''}"
-                    data-graph-type="{$graphType?:''}">
-                    <div id="stump-rt-legend"></div>
-                    <div>
-                        <canvas id="stump-rt-canvas" height="80" width="480"></canvas>
-                    </div>
-                    <table id="stump-rt-events" class="table table-condensed">
-                        <tbody>
-                            <tr style="background-color: #ccc; font-weight: bold;">
-                                <th class="stump-event-datacenter">Datacenter</th>
-                                <th class="stump-event-cluster">Cluster</th>
-                                <th class="stump-event-host">Host</th>
-                                <th class="stump-event-service">Service</th>
-                                <th class="stump-event-instance">Instance</th>
-                                <th class="stump-event-version">Version</th>
-                                <th class="stump-event-time">Time</th>
-                                <th class="stump-event-thread">Thread</th>
-                                <th class="stump-event-level">Level</th>
-                                <th class="stump-event-method">Method</th>
-                                <th class="stump-event-line">Line</th>
-                                <th class="stump-event-message" width="99%">Message</th>
-                            </tr>
-                            <!-- logEvents or noEvents go here -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        {/if}
-    </div>
+    {/if}
 {/template}
 
 /**
