@@ -120,7 +120,7 @@ public class DistinctsPluginRegion implements MiruPageRegion<Optional<DistinctsP
                 final long fromTime = packCurrentTime - snowflakeIdPacker.pack(TimeUnit.HOURS.toMillis(fromHoursAgo), 0, 0);
                 final long toTime = packCurrentTime - snowflakeIdPacker.pack(TimeUnit.HOURS.toMillis(toHoursAgo), 0, 0);
 
-                MiruFilter constraintsFilter = filterStringUtil.parse(input.filters);
+                MiruFilter constraintsFilter = filterStringUtil.parseFilters(input.filters);
                 /*
                 List<MiruFieldFilter> fieldFilters = Lists.newArrayList();
                 fieldFilters.add(new MiruFieldFilter(MiruFieldType.primary, "locale", Collections.singletonList("en")));

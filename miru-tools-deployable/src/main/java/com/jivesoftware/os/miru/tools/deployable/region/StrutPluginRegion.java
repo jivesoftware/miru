@@ -164,7 +164,7 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                     if (featureParts.length == 3) {
                         String featureName = featureParts[0].trim();
                         String[] featureFields = featureParts[1].split("\\s*,\\s*");
-                        MiruFilter featureFilter = filterStringUtil.parse(featureParts[2]);
+                        MiruFilter featureFilter = filterStringUtil.parseFilters(featureParts[2]);
                         features.add(new CatwalkFeature(featureName, featureFields, featureFilter));
                     }
                 }
@@ -174,7 +174,7 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                 for (int i = 0; i < numeratorFiltersSplit.length; i++) {
                     String filterString = numeratorFiltersSplit[i].trim();
                     if (!filterString.isEmpty()) {
-                        numeratorFilters.add(filterStringUtil.parse(filterString));
+                        numeratorFilters.add(filterStringUtil.parseFilters(filterString));
                     }
                 }
 
@@ -245,7 +245,7 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                 if (!input.tenant.trim().isEmpty()) {
                     MiruTenantId tenantId = new MiruTenantId(input.tenant.trim().getBytes(StandardCharsets.UTF_8));
 
-                    MiruFilter constraintFilter = filterStringUtil.parse(input.constraintFilters);
+                    MiruFilter constraintFilter = filterStringUtil.parseFilters(input.constraintFilters);
 
                     String endpoint = StrutConstants.STRUT_PREFIX + StrutConstants.CUSTOM_QUERY_ENDPOINT;
 

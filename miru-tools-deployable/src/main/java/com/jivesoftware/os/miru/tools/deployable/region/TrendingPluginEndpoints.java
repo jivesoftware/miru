@@ -40,6 +40,7 @@ public class TrendingPluginEndpoints {
         @QueryParam("buckets") @DefaultValue("30") int buckets,
         @QueryParam("field") @DefaultValue("authors") String field,
         @QueryParam("filter") @DefaultValue("") String filter,
+        @QueryParam("subFilters") @DefaultValue("") String subFilters,
         @QueryParam("fieldPrefixes") @DefaultValue("") String fieldPrefixesString,
         @QueryParam("distinctsFilter") @DefaultValue("") String distinctsFilter,
         @QueryParam("logLevel") @DefaultValue("NONE") String logLevel) {
@@ -59,6 +60,7 @@ public class TrendingPluginEndpoints {
                 buckets,
                 field.trim(),
                 filter.trim(),
+                subFilters.trim(),
                 fieldPrefixes,
                 distinctsFilter.trim(),
                 logLevel)));

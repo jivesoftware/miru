@@ -128,7 +128,7 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
                     if (featureParts.length == 3) {
                         featureNames[i] = featureParts[0].trim();
                         String[] featureFields = featureParts[1].split("\\s*,\\s*");
-                        MiruFilter featureFilter = filterStringUtil.parse(featureParts[2]);
+                        MiruFilter featureFilter = filterStringUtil.parseFilters(featureParts[2]);
                         features.add(new CatwalkFeature(featureNames[i], featureFields, featureFilter));
                     }
                 }
@@ -176,7 +176,7 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
                     for (int i = 0; i < numeratorFiltersSplit.length; i++) {
                         String filterString = numeratorFiltersSplit[i].trim();
                         if (!filterString.isEmpty()) {
-                            numeratorFilters.add(filterStringUtil.parse(filterString));
+                            numeratorFilters.add(filterStringUtil.parseFilters(filterString));
                         }
                     }
                     String endpoint = CatwalkConstants.CATWALK_PREFIX + CatwalkConstants.CUSTOM_QUERY_ENDPOINT;

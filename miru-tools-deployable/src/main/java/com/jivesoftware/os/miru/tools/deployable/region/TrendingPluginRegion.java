@@ -12,7 +12,6 @@ import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.FilterStringUtil;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
@@ -82,6 +81,7 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
         final int buckets;
         final String field;
         final String filter;
+        final String subFilters;
         final List<String> fieldPrefixes;
         final String distinctsFilter;
         final String logLevel;
@@ -92,6 +92,7 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
             int buckets,
             String field,
             String filter,
+            String subFilters,
             List<String> fieldPrefixes,
             String distinctsFilter,
             String logLevel) {
@@ -101,6 +102,7 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
             this.buckets = buckets;
             this.field = field;
             this.filter = filter;
+            this.subFilters = subFilters;
             this.fieldPrefixes = fieldPrefixes;
             this.distinctsFilter = distinctsFilter;
             this.logLevel = logLevel;
@@ -123,6 +125,7 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
                 data.put("buckets", String.valueOf(input.buckets));
                 data.put("field", input.field);
                 data.put("filter", input.filter);
+                data.put("subFilters", input.subFilters);
                 data.put("fieldPrefixes", input.fieldPrefixes != null ? Joiner.on(", ").join(input.fieldPrefixes) : "");
                 data.put("distinctsFilter", input.distinctsFilter);
 
@@ -131,16 +134,22 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
                 final long packCurrentTime = snowflakeIdPacker.pack(jiveCurrentTime, 0, 0);
                 final long fromTime = packCurrentTime - snowflakeIdPacker.pack(TimeUnit.HOURS.toMillis(fromHoursAgo), 0, 0);
                 final long toTime = packCurrentTime - snowflakeIdPacker.pack(TimeUnit.HOURS.toMillis(toHoursAgo), 0, 0);
-                List<MiruFieldFilter> fieldFilters = Lists.newArrayList();
-                fieldFilters.add(MiruFieldFilter.ofTerms(MiruFieldType.primary, "activityType", 0, 1, 11, 65));
+
+                List<MiruFieldFilter> fieldFilters = null;
+                if (!input.subFilters.isEmpty()) {
+                    fieldFilters = Collections.singletonList(filterStringUtil.parseFilter(input.subFilters));
+                }
 
                 List<MiruFilter> constraintsSubFilters = null;
                 if (!input.filter.isEmpty()) {
-                    constraintsSubFilters = Collections.singletonList(filterStringUtil.parse(input.filter));
+                    constraintsSubFilters = Collections.singletonList(filterStringUtil.parseFilters(input.filter));
                 }
-                MiruFilter constraintsFilter = new MiruFilter(MiruFilterOperation.and, false, fieldFilters, constraintsSubFilters);
+                MiruFilter constraintsFilter = MiruFilter.NO_FILTER;
+                if (fieldFilters != null || constraintsSubFilters != null) {
+                    constraintsFilter = new MiruFilter(MiruFilterOperation.and, false, fieldFilters, constraintsSubFilters);
+                }
 
-                MiruFilter distinctsFilter = input.distinctsFilter.isEmpty() ? MiruFilter.NO_FILTER : filterStringUtil.parse(input.distinctsFilter);
+                MiruFilter distinctsFilter = input.distinctsFilter.isEmpty() ? MiruFilter.NO_FILTER : filterStringUtil.parseFilters(input.distinctsFilter);
 
                 MiruResponse<TrendingAnswer> response = null;
                 if (!input.tenant.trim().isEmpty()) {
@@ -174,7 +183,7 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
                             @SuppressWarnings("unchecked")
                             MiruResponse<TrendingAnswer> extractResponse = responseMapper.extractResultFromResponse(httpResponse,
                                 MiruResponse.class,
-                                new Class[] { TrendingAnswer.class },
+                                new Class[]{TrendingAnswer.class},
                                 null);
                             return new ClientResponse<>(extractResponse, true);
                         });
@@ -213,9 +222,9 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
                         "name", trendy.distinctValue.last(),
                         "rank", String.valueOf(trendy.rank),
                         "waveform", "data:image/png;base64," + new PNGWaveforms()
-                            .hitsToBase64PNGWaveform(600, 128, 10,
-                                ImmutableMap.of(trendy.distinctValue.last(), pngWaveforms.get(trendy.distinctValue.last())),
-                                Optional.of(mmd)))));
+                        .hitsToBase64PNGWaveform(600, 128, 10,
+                            ImmutableMap.of(trendy.distinctValue.last(), pngWaveforms.get(trendy.distinctValue.last())),
+                            Optional.of(mmd)))));
                     ObjectMapper mapper = new ObjectMapper();
                     mapper.enable(SerializationFeature.INDENT_OUTPUT);
                     data.put("summary", Joiner.on("\n").join(response.log) + "\n\n" + mapper.writeValueAsString(response.solutions));

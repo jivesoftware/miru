@@ -169,7 +169,7 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                     toTime = packCurrentTime - snowflakeIdPacker.pack(fromMillisAgo, 0, 0);
                 }
 
-                MiruFilter constraintsFilter = filterStringUtil.parse(input.filters);
+                MiruFilter constraintsFilter = filterStringUtil.parseFilters(input.filters);
 
                 MiruResponse<AnalyticsAnswer> response = null;
                 if (!input.tenant.trim().isEmpty()) {
