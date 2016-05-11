@@ -149,7 +149,11 @@ public class MiruTopologyEndpoints {
             return r;
         } catch (Exception x) {
             String msg = "Failed to thumpthump for " + logicalName;
-            LOG.error(msg, x);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug(msg, x);
+            } else {
+                LOG.error(msg);
+            }
             return ResponseHelper.INSTANCE.errorResponse(msg, x);
         }
     }

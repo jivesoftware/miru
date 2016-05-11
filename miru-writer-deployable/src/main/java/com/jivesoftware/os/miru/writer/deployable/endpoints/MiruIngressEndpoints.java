@@ -45,7 +45,7 @@ import org.merlin.config.defaults.StringDefault;
 @Path(MiruWriterEndpointConstants.INGRESS_PREFIX)
 public class MiruIngressEndpoints {
 
-    private static final MetricLogger log = MetricLoggerFactory.getLogger();
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final MiruActivityIngress activityIngress;
     private final ResponseHelper responseHelper = ResponseHelper.INSTANCE;
@@ -90,7 +90,11 @@ public class MiruIngressEndpoints {
             }
             return responseHelper.jsonResponse("Success");
         } catch (Exception e) {
-            log.error("Failed to add activities.", e);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Failed to add activities.", e);
+            } else {
+                LOG.error("Failed to add activities.");
+            }
             return Response.serverError().build();
         } finally {
             ingressHealthTimer.stopTimer("Activity Ingress Latency", " Add more capacity. Increase batching. Look for down stream issue.");
@@ -123,7 +127,7 @@ public class MiruIngressEndpoints {
             activityIngress.removeActivity(activities);
             return responseHelper.jsonResponse("Success");
         } catch (Exception e) {
-            log.error("Failed to remove activities.", e);
+            LOG.error("Failed to remove activities.", e);
             return Response.serverError().build();
         } finally {
             removeHealthTimer.stopTimer("Activity Removal Latency", " Add more capacity. Increase batching. Look for down stream issue.");
@@ -158,7 +162,7 @@ public class MiruIngressEndpoints {
             }
             return responseHelper.jsonResponse("Success");
         } catch (Exception e) {
-            log.error("Failed to read activities.", e);
+            LOG.error("Failed to read activities.", e);
             return Response.serverError().build();
         } finally {
             ingressReadAllTimer.stopTimer("Read All Latency", " Add more capacity. Increase batching. Look for down stream issue.");
@@ -193,7 +197,7 @@ public class MiruIngressEndpoints {
             }
             return responseHelper.jsonResponse("Success");
         } catch (Exception e) {
-            log.error("Failed to read activities.", e);
+            LOG.error("Failed to read activities.", e);
             return Response.serverError().build();
         } finally {
             ingressReadTimer.stopTimer("Ingress Read Event Latency", " Add more capacity. Increase batching. Look for down stream issue.");
@@ -228,7 +232,7 @@ public class MiruIngressEndpoints {
             }
             return responseHelper.jsonResponse("Success");
         } catch (Exception e) {
-            log.error("Failed to unread activities.", e);
+            LOG.error("Failed to unread activities.", e);
             return Response.serverError().build();
         } finally {
             ingressUnreadTimer.stopTimer("Ingress Unread Event Latency", " Add more capacity. Increase batching. Look for down stream issue.");
