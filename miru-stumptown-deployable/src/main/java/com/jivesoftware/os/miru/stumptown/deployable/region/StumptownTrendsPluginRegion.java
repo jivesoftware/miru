@@ -21,6 +21,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.solution.Waveform;
+import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsQuery;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingAnswer;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingConstants;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery;
@@ -163,8 +164,14 @@ public class StumptownTrendsPluginRegion implements MiruPageRegion<Optional<Stum
                             100)),
                         constraintsFilter,
                         input.aggregateAroundField,
-                        Collections.emptyList()),
+                        Collections.singletonList(Collections.singletonList(new DistinctsQuery(
+                            miruTimeRange,
+                            input.aggregateAroundField,
+                            null,
+                            constraintsFilter,
+                            null)))),
                     MiruSolutionLogLevel.INFO));
+
                 MiruResponse<TrendingAnswer> trendingResponse = readerClient.call("",
                     new RoundRobinStrategy(),
                     "stumptownTrends",
@@ -173,7 +180,7 @@ public class StumptownTrendsPluginRegion implements MiruPageRegion<Optional<Stum
                         @SuppressWarnings("unchecked")
                         MiruResponse<TrendingAnswer> extractResponse = responseMapper.extractResultFromResponse(httpResponse,
                             MiruResponse.class,
-                            new Class[] { TrendingAnswer.class },
+                            new Class[]{TrendingAnswer.class},
                             null);
                         return new ClientResponse<>(extractResponse, true);
                     });
@@ -211,9 +218,9 @@ public class StumptownTrendsPluginRegion implements MiruPageRegion<Optional<Stum
                         "name", trendy.distinctValue,
                         "rank", String.valueOf(Math.round(trendy.rank * 100.0) / 100.0),
                         "waveform", "data:image/png;base64," + new PNGWaveforms()
-                            .hitsToBase64PNGWaveform(600, 96, 10, 4,
-                                ImmutableMap.of(trendy.distinctValue.last(), pngWaveforms.get(trendy.distinctValue.last())),
-                                Optional.of(mmd)))));
+                        .hitsToBase64PNGWaveform(600, 96, 10, 4,
+                            ImmutableMap.of(trendy.distinctValue.last(), pngWaveforms.get(trendy.distinctValue.last())),
+                            Optional.of(mmd)))));
                     ObjectMapper mapper = new ObjectMapper();
                     mapper.enable(SerializationFeature.INDENT_OUTPUT);
                     data.put("summary", Joiner.on("\n").join(response.log) + "\n\n" + mapper.writeValueAsString(response.solutions));
