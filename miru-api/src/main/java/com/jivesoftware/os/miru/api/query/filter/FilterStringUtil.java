@@ -13,7 +13,7 @@ public class FilterStringUtil {
     /**
      * Example input: activityType:0|1|2, authors:3765
      */
-    public MiruFilter parse(String filtersString) {
+    public MiruFilter parseFilters(String filtersString) {
         filtersString = filtersString == null ? null : filtersString.trim();
         if (filtersString == null || filtersString.isEmpty()) {
             return MiruFilter.NO_FILTER;
@@ -24,26 +24,37 @@ public class FilterStringUtil {
         List<MiruFieldFilter> fieldFilters = Lists.newArrayList();
 
         for (String filterString : filtersArray) {
-            String[] filterTokens = filterString.trim().split(":");
-            String fieldName = filterTokens[0].trim();
-            String[] values = filterTokens[1].split("\\s*\\|\\s*");
-
-            MiruFieldType fieldType = MiruFieldType.primary;
-            if (fieldName.startsWith("~")) {
-                fieldName = fieldName.substring(1);
-                fieldType = MiruFieldType.latest;
-            } else if (fieldName.startsWith("^")) {
-                fieldName = fieldName.substring(1);
-                fieldType = MiruFieldType.pairedLatest;
-            } else if (fieldName.startsWith("%")) {
-                fieldName = fieldName.substring(1);
-                fieldType = MiruFieldType.bloom;
+            MiruFieldFilter filter = parseFilter(filterString);
+            if (filter != null) {
+                fieldFilters.add(filter);
             }
-
-            fieldFilters.add(MiruFieldFilter.ofTerms(fieldType, fieldName, values));
         }
 
         return new MiruFilter(MiruFilterOperation.and, false, fieldFilters, Arrays.<MiruFilter>asList());
+    }
+
+    public MiruFieldFilter parseFilter(String filterString) {
+        filterString = filterString == null ? null : filterString.trim();
+        if (filterString == null || filterString.isEmpty()) {
+            return null;
+        }
+
+        String[] filterTokens = filterString.trim().split(":");
+        String fieldName = filterTokens[0].trim();
+        String[] values = filterTokens[1].split("\\s*\\|\\s*");
+        MiruFieldType fieldType = MiruFieldType.primary;
+        if (fieldName.startsWith("~")) {
+            fieldName = fieldName.substring(1);
+            fieldType = MiruFieldType.latest;
+        } else if (fieldName.startsWith("^")) {
+            fieldName = fieldName.substring(1);
+            fieldType = MiruFieldType.pairedLatest;
+        } else if (fieldName.startsWith("%")) {
+            fieldName = fieldName.substring(1);
+            fieldType = MiruFieldType.bloom;
+        }
+        MiruFieldFilter filter = MiruFieldFilter.ofTerms(fieldType, fieldName, values);
+        return filter;
     }
 
     public List<MiruValue> buildFieldPrefixes(List<String> inputFieldPrefixes) {

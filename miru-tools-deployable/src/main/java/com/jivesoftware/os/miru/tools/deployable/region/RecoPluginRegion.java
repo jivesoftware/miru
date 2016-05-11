@@ -141,12 +141,12 @@ public class RecoPluginRegion implements MiruPageRegion<Optional<RecoPluginRegio
                         timeRange,
                         input.recommendField,
                         null,
-                        filterStringUtil.parse(input.removeDistinctsFilter),
+                        filterStringUtil.parseFilters(input.removeDistinctsFilter),
                         filterStringUtil.buildFieldPrefixes(input.removeDistinctsPrefixes));
                 }
 
-                MiruFilter constraintsFilter = filterStringUtil.parse(input.constraintsFilter);
-                MiruFilter scorableFilter = filterStringUtil.parse(input.scorableFilter);
+                MiruFilter constraintsFilter = filterStringUtil.parseFilters(input.constraintsFilter);
+                MiruFilter scorableFilter = filterStringUtil.parseFilters(input.scorableFilter);
 
                 MiruResponse<RecoAnswer> response = null;
                 if (!input.tenant.trim().isEmpty()) {

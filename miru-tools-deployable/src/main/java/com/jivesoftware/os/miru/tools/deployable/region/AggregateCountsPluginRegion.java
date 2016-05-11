@@ -122,8 +122,8 @@ public class AggregateCountsPluginRegion implements MiruPageRegion<Optional<Aggr
                 data.put("count", input.count);
                 data.put("pages", input.pages);
 
-                MiruFilter streamFilter = filterStringUtil.parse(input.streamFilters);
-                MiruFilter constraintsFilter = filterStringUtil.parse(input.constraintsFilters);
+                MiruFilter streamFilter = filterStringUtil.parseFilters(input.streamFilters);
+                MiruFilter constraintsFilter = filterStringUtil.parseFilters(input.constraintsFilters);
 
                 List<MiruResponse<AggregateCountsAnswer>> responses = Lists.newArrayList();
                 if (!input.tenant.trim().isEmpty()) {

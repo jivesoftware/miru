@@ -172,7 +172,7 @@ public class RealwavePluginRegion implements MiruPageRegion<Optional<RealwavePlu
         final long packCeilingTime = snowflakeIdPacker.pack(jiveCeilingTime, 0, 0);
         final long packLookbackTime = packCeilingTime - snowflakeIdPacker.pack(TimeUnit.SECONDS.toMillis(input.lookbackSeconds), 0, 0);
 
-        MiruFilter constraintsFilter = filterStringUtil.parse(input.filters);
+        MiruFilter constraintsFilter = filterStringUtil.parseFilters(input.filters);
 
         MiruResponse<AnalyticsAnswer> response = null;
         if (!input.tenant.trim().isEmpty()) {

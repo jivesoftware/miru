@@ -120,7 +120,7 @@ public class FullTextPluginRegion implements MiruPageRegion<Optional<FullTextPlu
                 final long fromTime = packCurrentTime - snowflakeIdPacker.pack(TimeUnit.HOURS.toMillis(fromHoursAgo), 0, 0);
                 final long toTime = packCurrentTime - snowflakeIdPacker.pack(TimeUnit.HOURS.toMillis(toHoursAgo), 0, 0);
 
-                MiruFilter constraintsFilter = filterStringUtil.parse(input.filters);
+                MiruFilter constraintsFilter = filterStringUtil.parseFilters(input.filters);
 
                 MiruResponse<FullTextAnswer> response = null;
                 if (!input.tenant.trim().isEmpty()) {
