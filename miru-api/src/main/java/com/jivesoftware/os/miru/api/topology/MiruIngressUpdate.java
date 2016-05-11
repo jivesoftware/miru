@@ -25,4 +25,10 @@ public class MiruIngressUpdate {
         this.ingressTimestamp = ingressTimestamp;
         this.absolute = absolute;
     }
+
+    @Override
+    public String toString() {
+        return "MiruIngressUpdate{" + "tenantId=" + tenantId + ", partitionId=" + partitionId + ", minMax=" + minMax + ", ingressTimestamp=" + ingressTimestamp + ", absolute=" + absolute + '}';
+    }
+
 }

@@ -68,8 +68,12 @@ public class MiruTopologyEndpoints {
             stats.ingressed("/update/ingress", 1, System.currentTimeMillis() - start);
             return r;
         } catch (Exception x) {
-            String msg = "Failed to update ingress";
-            LOG.error(msg, x);
+            String msg = "Failed to update ingress " + update;
+            if (LOG.isDebugEnabled()) {
+                LOG.debug(msg, x);
+            } else {
+                LOG.error(msg);
+            }
             return ResponseHelper.INSTANCE.errorResponse(msg, x);
         }
     }
@@ -145,7 +149,11 @@ public class MiruTopologyEndpoints {
             return r;
         } catch (Exception x) {
             String msg = "Failed to thumpthump for " + logicalName;
-            LOG.error(msg, x);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug(msg, x);
+            } else {
+                LOG.error(msg);
+            }
             return ResponseHelper.INSTANCE.errorResponse(msg, x);
         }
     }
@@ -213,7 +221,11 @@ public class MiruTopologyEndpoints {
             return r;
         } catch (Exception x) {
             String msg = "Failed to getIngressRanges for " + tenantId;
-            LOG.error(msg, x);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug(msg, x);
+            } else {
+                LOG.error(msg);
+            }
             return ResponseHelper.INSTANCE.errorResponse(msg, x);
         }
     }
@@ -271,7 +283,11 @@ public class MiruTopologyEndpoints {
             return r;
         } catch (Exception x) {
             String msg = "Failed to getSchema for " + tenantId;
-            LOG.error(msg, x);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug(msg, x);
+            } else {
+                LOG.error(msg);
+            }
             return ResponseHelper.INSTANCE.errorResponse(msg, x);
         }
     }
@@ -287,7 +303,7 @@ public class MiruTopologyEndpoints {
             stats.ingressed("/schema/" + tenantId, 1, System.currentTimeMillis() - start);
             return ResponseHelper.INSTANCE.jsonResponse("");
         } catch (Exception x) {
-            String msg = "Failed to getSchema for " + tenantId;
+            String msg = "Failed to registerSchema for " + tenantId;
             LOG.error(msg, x);
             return ResponseHelper.INSTANCE.errorResponse(msg, x);
         }

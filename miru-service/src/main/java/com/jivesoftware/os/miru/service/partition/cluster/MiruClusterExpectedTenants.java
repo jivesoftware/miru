@@ -167,15 +167,21 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
     @Override
     public void thumpthump() throws Exception {
         MiruHeartbeatResponse thumpthump = heartbeatHandler.thumpthump(localHost);
-
         ListMultimap<MiruTenantId, MiruPartitionActiveUpdate> tenantPartitionActive = ArrayListMultimap.create();
-        for (MiruPartitionActiveUpdate active : thumpthump.activeHasChanged.result) {
-            tenantPartitionActive.put(active.tenantId, active);
-        }
-        expect(tenantPartitionActive);
+        if (thumpthump.activeHasChanged == null) {
+            LOG.warn("Thumpthumps activeHasChanged was null");
+        } else if (thumpthump.activeHasChanged.result == null) {
+            LOG.warn("Thumpthumps activeHasChanged results were null");
+        } else {
 
-        for (MiruTenantTopologyUpdate update : thumpthump.topologyHasChanged.result) {
-            routingTopologies.invalidate(update.tenantId);
+            for (MiruPartitionActiveUpdate active : thumpthump.activeHasChanged.result) {
+                tenantPartitionActive.put(active.tenantId, active);
+            }
+            expect(tenantPartitionActive);
+
+            for (MiruTenantTopologyUpdate update : thumpthump.topologyHasChanged.result) {
+                routingTopologies.invalidate(update.tenantId);
+            }
         }
     }
 
@@ -255,7 +261,7 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
                         topology.rebuild(coord.partitionId);
                     }
                 } catch (Exception x) {
-                    LOG.warn("Attempt to rebuild offline non disk partition was ignored for {}.", new Object[] { coord }, x);
+                    LOG.warn("Attempt to rebuild offline non disk partition was ignored for {}.", new Object[]{coord}, x);
                 }
             }
         }
