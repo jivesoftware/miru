@@ -56,4 +56,7 @@ public interface MiruAmzaServiceConfig extends Config {
 
     @LongDefault(60_000L)
     long getTakeSlowThresholdInMillis();
+    
+    @LongDefault(60_000)
+    long getInterruptBlockingReadsIfLingersForNMillis();
 }
