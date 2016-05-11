@@ -34,6 +34,7 @@ import com.jivesoftware.os.amza.service.ring.AmzaRingWriter;
 import com.jivesoftware.os.amza.service.stats.AmzaStats;
 import com.jivesoftware.os.amza.service.storage.PartitionPropertyMarshaller;
 import com.jivesoftware.os.amza.service.take.AvailableRowsTaker;
+import com.jivesoftware.os.amza.service.take.Interruptables;
 import com.jivesoftware.os.amza.service.take.RowsTakerFactory;
 import com.jivesoftware.os.amza.ui.AmzaUIInitializer;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
@@ -119,8 +120,10 @@ public class MiruAmzaServiceInitializer {
 
         AmzaStats amzaStats = new AmzaStats();
         BAInterner baInterner = new BAInterner();
-        RowsTakerFactory rowsTakerFactory = () -> new HttpRowsTaker(amzaStats, baInterner);
-        AvailableRowsTaker availableRowsTaker = new HttpAvailableRowsTaker(baInterner);
+        Interruptables interruptables = new Interruptables("main", config.getInterruptBlockingReadsIfLingersForNMillis());
+        interruptables.start();
+        RowsTakerFactory rowsTakerFactory = () -> new HttpRowsTaker(amzaStats, baInterner, interruptables);
+        AvailableRowsTaker availableRowsTaker = new HttpAvailableRowsTaker(baInterner, interruptables);
 
         AmzaServiceConfig amzaServiceConfig = new AmzaServiceConfig();
         amzaServiceConfig.workingDirectories = config.getWorkingDirectories().split(",");
@@ -187,7 +190,7 @@ public class MiruAmzaServiceInitializer {
             serviceName,
             amzaService,
             config.getDiscoveryIntervalMillis());
-        
+
         amzaService.start(ringMember, ringHost);
 
         System.out.println("-----------------------------------------------------------------------");
