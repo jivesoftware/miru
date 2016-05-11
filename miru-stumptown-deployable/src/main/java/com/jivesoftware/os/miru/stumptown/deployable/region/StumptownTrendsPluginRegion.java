@@ -215,7 +215,7 @@ public class StumptownTrendsPluginRegion implements MiruPageRegion<Optional<Stum
                     }
 
                     data.put("results", Lists.transform(results, trendy -> ImmutableMap.of(
-                        "name", trendy.distinctValue,
+                        "name", trendy.distinctValue.last(),
                         "rank", String.valueOf(Math.round(trendy.rank * 100.0) / 100.0),
                         "waveform", "data:image/png;base64," + new PNGWaveforms()
                         .hitsToBase64PNGWaveform(600, 96, 10, 4,
