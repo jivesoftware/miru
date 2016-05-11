@@ -88,8 +88,8 @@ public class MiruAggregateUtil {
             }
         }
 
-        int[] featureCount = { 0 };
-        int[] termCount = { 0 };
+        int[] featureCount = {0};
+        int[] termCount = {0};
         int batchSize = 1_000;
         boolean[][] featuresContained = new boolean[batchSize][featureFieldIds.length];
         int[] ids = new int[batchSize];
@@ -193,6 +193,7 @@ public class MiruAggregateUtil {
     }
 
     interface PermutationStream {
+
         boolean permutation(int index, MiruTermId[] termIds) throws Exception;
     }
 
@@ -397,7 +398,6 @@ public class MiruAggregateUtil {
         solutionLog.log(MiruSolutionLogLevel.INFO, "Gather value bits took {} ms", System.currentTimeMillis() - start);
         start = System.currentTimeMillis();
     }*/
-
     public interface FeatureStream {
 
         boolean stream(int streamIndex, int lastId, MiruTermId answerTermId, int answerScoredLastId, int featureId, MiruTermId[] termIds) throws Exception;
@@ -632,7 +632,6 @@ public class MiruAggregateUtil {
             solutionLog,
             stackBuffer);
     }*/
-
     private <BM extends IBM, IBM, S extends MiruSipCursor<S>> void gatherActivityLookup(String name,
         MiruBitmaps<BM, IBM> bitmaps,
         MiruRequestContext<BM, IBM, S> requestContext,
@@ -756,16 +755,16 @@ public class MiruAggregateUtil {
         }
         if (filter.fieldFilters != null) {
             boolean abortIfEmpty = filter.operation == MiruFilterOperation.and;
-            for (final MiruFieldFilter fieldFilter : filter.fieldFilters) {
-                final int fieldId = schema.getFieldId(fieldFilter.fieldName);
-                final MiruFieldDefinition fieldDefinition = schema.getFieldDefinition(fieldId);
+            for (MiruFieldFilter fieldFilter : filter.fieldFilters) {
+                int fieldId = schema.getFieldId(fieldFilter.fieldName);
                 if (fieldId >= 0) {
+                    MiruFieldDefinition fieldDefinition = schema.getFieldDefinition(fieldId);
                     final List<MiruTermId> fieldTermIds = new ArrayList<>();
                     boolean fieldTermIn = filter.operation == MiruFilterOperation.pButNotQ && !filterBitmaps.isEmpty() ? !termIn : termIn;
                     long start = System.currentTimeMillis();
                     List<MiruValue> values = fieldFilter.values != null ? fieldFilter.values : Collections.emptyList();
                     MiruFieldIndex<BM, IBM> fieldIndex = fieldIndexProvider.getFieldIndex(fieldFilter.fieldType);
-                    for (final MiruValue value : values) {
+                    for (MiruValue value : values) {
                         if (fieldDefinition.prefix.type != MiruFieldDefinition.Prefix.Type.none && value.last().equals("*")) {
                             String[] baseParts = value.slice(0, value.parts.length - 1);
                             byte[] lowerInclusive = termComposer.prefixLowerInclusive(schema, fieldDefinition, stackBuffer, baseParts);
@@ -798,6 +797,8 @@ public class MiruAggregateUtil {
                         solutionLog.log(MiruSolutionLogLevel.DEBUG, "filter: fieldId={} bitmaps={} aggregate took {} millis.",
                             fieldId, fieldTermIds.size(), System.currentTimeMillis() - start);
                     }
+                } else {
+                    solutionLog.log(MiruSolutionLogLevel.INFO, "schema lacks field definition for fieldName:" + fieldFilter.fieldName);
                 }
             }
         }
