@@ -40,7 +40,7 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>
+                        <td  style="font-weight:bold; vertical-align:top;">
                             From
                         </td><td>
                             <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
@@ -57,7 +57,7 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>
+                        <td  style="font-weight:bold; vertical-align:top;">
                             To
                         </td><td>
                             <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
@@ -74,7 +74,9 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>Cluster</td>
+                        <td  style="font-weight:bold; vertical-align:top;">
+                            Cluster
+                        </td>
                         <td>
                             <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
                                 class="form-control" placeholder="Cluster" value="{$cluster?:''}"
@@ -82,7 +84,9 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>Host</td>
+                        <td  style="font-weight:bold; vertical-align:top;">
+                            Host
+                        </td>
                         <td>
                             <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
                                 class="form-control" placeholder="Host" value="{$host?:''}"
@@ -90,7 +94,9 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>Service</td>
+                        <td  style="font-weight:bold; vertical-align:top;">
+                            Service
+                        </td>
                         <td>
                             <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
                                 class="form-control" placeholder="Service" value="{$service?:''}"
@@ -98,7 +104,9 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>Instance</td>
+                        <td  style="font-weight:bold; vertical-align:top;">
+                            Instance
+                        </td>
                         <td>
                             <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
                                 class="form-control" placeholder="Instance" value="{$instance?:''}"
@@ -106,7 +114,9 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>Version</td>
+                        <td  style="font-weight:bold; vertical-align:top;">
+                            Version
+                        </td>
                         <td>
                             <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
                                 class="form-control" placeholder="Version" value="{$version?:''}"
@@ -114,7 +124,9 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>Method</td>
+                        <td  style="font-weight:bold; vertical-align:top;">
+                            Method
+                        </td>
                         <td>
                             <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
                                 class="form-control" placeholder="Method" value="{$method?:''}"
@@ -122,7 +134,9 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>Line</td>
+                        <td  style="font-weight:bold; vertical-align:top;">
+                            Line
+                        </td>
                         <td>
                             <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
                                 class="form-control" placeholder="Line" value="{$line?:''}"
@@ -130,7 +144,9 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>Message</td>
+                        <td  style="font-weight:bold; vertical-align:top;">
+                            Message
+                        </td>
                         <td>
                             <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
                                 class="form-control" placeholder="Message" value="{$message?:''}"
@@ -138,7 +154,9 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>Thread</td>
+                        <td  style="font-weight:bold; vertical-align:top;">
+                            Thread
+                        </td>
                         <td>
                             <input type="text" role="combobox" style="width:120px; padding-left:10px;"
                                 class="form-control" placeholder="Thread" value="{$thread?:''}"
@@ -146,7 +164,9 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>Logger</td>
+                        <td  style="font-weight:bold; vertical-align:top;">
+                            Logger
+                        </td>
                         <td>
                             <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
                                 class="form-control" placeholder="Logger" value="{$logger?:''}"
@@ -154,32 +174,36 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>Level</td>
+                        <td  style="font-weight:bold; vertical-align:top;">
+                            Level
+                        </td>
                         <td>
                             <div>
-                                <label><input type="checkbox" name="logLevels" value="TRACE" {if $logLevels.trace}checked="checked"{/if}>
+                                <label style="font-weight:normal;"><input type="checkbox" name="logLevels" value="TRACE" {if $logLevels.trace}checked="checked"{/if}>
                                 Trace &nbsp;</label>
                             </div>
                             <div>
-                                <label><input type="checkbox" name="logLevels" value="DEBUG" {if $logLevels.debug}checked="checked"{/if}>
+                                <label style="font-weight:normal;"><input type="checkbox" name="logLevels" value="DEBUG" {if $logLevels.debug}checked="checked"{/if}>
                                 Debug &nbsp;</label>
                             </div>
                             <div>
-                                <label><input type="checkbox" name="logLevels" value="INFO" {if $logLevels.info}checked="checked"{/if}>
+                                <label style="font-weight:normal;"><input type="checkbox" name="logLevels" value="INFO" {if $logLevels.info}checked="checked"{/if}>
                                 Info &nbsp;</label>
                             </div>
                             <div>
-                                <label><input type="checkbox" name="logLevels" value="WARN" {if $logLevels.warn}checked="checked"{/if}>
+                                <label style="font-weight:normal;"><input type="checkbox" name="logLevels" value="WARN" {if $logLevels.warn}checked="checked"{/if}>
                                 Warn &nbsp;</label>
                             </div>
                             <div>
-                                <label><input type="checkbox" name="logLevels" value="ERROR" {if $logLevels.error}checked="checked"{/if}>
+                                <label style="font-weight:normal;"><input type="checkbox" name="logLevels" value="ERROR" {if $logLevels.error}checked="checked"{/if}>
                                 Error &nbsp;</label>
                             </div>
                         </td>
                     </tr>
                     <tr>
-                        <td>Exception Class</td>
+                        <td  style="font-weight:bold; vertical-align:top;">
+                            Exception Class
+                        </td>
                         <td>
                             <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
                                 class="form-control" placeholder="Thrown Stack Trace" value="{$exceptionClass?:''}"
@@ -187,7 +211,9 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>Thrown</td>
+                        <td  style="font-weight:bold; vertical-align:top;">
+                            Thrown
+                        </td>
                         <td>
                             <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
                                 class="form-control" placeholder="Thrown Stack Trace" value="{$thrown?:''}"
@@ -195,7 +221,9 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>Buckets</td>
+                        <td  style="font-weight:bold; vertical-align:top;">
+                            Buckets
+                        </td>
                         <td>
                             <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
                                 class="form-control" placeholder="Buckets" value="{$buckets?:''}"
@@ -203,7 +231,9 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>Count</td>
+                        <td  style="font-weight:bold; vertical-align:top;">
+                            Count
+                        </td>
                         <td>
                             <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
                                 class="form-control" placeholder="Message Count" value="{$messageCount?:''}"
@@ -211,7 +241,9 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>Graph Type</td>
+                        <td  style="font-weight:bold; vertical-align:top;">
+                            Graph Type
+                        </td>
                         <td>
                             <select style="width:120px; padding-left:10px;" class="form-control"
                                 placeholder="Graph Type" name="graphType" id="graphTypePicker">
@@ -236,62 +268,62 @@
                         </td>
                         <td>
                             <div class="checkbox">
-                                <label><input type="checkbox" class="stump-toggle" onchange="stump.query.toggle(this);" data-name="datacenter">
+                                <label style="font-weight:normal;"><input type="checkbox" class="stump-toggle" onchange="stump.query.toggle(this);" data-name="datacenter">
                                 Datacenter &nbsp;</label>
                             </div>
                         </td><td>
                             <div class="checkbox">
-                                <label><input type="checkbox" class="stump-toggle" onchange="stump.query.toggle(this);" data-name="cluster">
+                                <label style="font-weight:normal;"><input type="checkbox" class="stump-toggle" onchange="stump.query.toggle(this);" data-name="cluster">
                                 Cluster &nbsp;</label>
                             </div>
                         </td><td>
                             <div class="checkbox">
-                                <label><input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="host">
+                                <label style="font-weight:normal;"><input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="host">
                                 Host &nbsp;</label>
                             </div>
                         </td><td>
                             <div class="checkbox">
-                                <label><input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="service"/>
+                                <label style="font-weight:normal;"><input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="service"/>
                                 Service &nbsp;</label></span>
                             </div>
                         </td><td>
                             <div class="checkbox">
-                                <label><input type="checkbox" class="stump-toggle" onchange="stump.query.toggle(this);" data-name="instance"/>
+                                <label style="font-weight:normal;"><input type="checkbox" class="stump-toggle" onchange="stump.query.toggle(this);" data-name="instance"/>
                                 Instance &nbsp;</label>
                             </div>
                         </td><td>
                             <div class="checkbox">
-                                <label><input type="checkbox" class="stump-toggle" onchange="stump.query.toggle(this);" data-name="version" />
+                                <label style="font-weight:normal;"><input type="checkbox" class="stump-toggle" onchange="stump.query.toggle(this);" data-name="version" />
                                 Version &nbsp;</label>
                             </div>
                         </td><td>
                             <div class="checkbox">
-                                <label><input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="time" />
+                                <label style="font-weight:normal;"><input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="time" />
                                 Time &nbsp;</label>
                             </div>
                         </td><td>
                             <div class="checkbox">
-                                <label><input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="thread" />
+                                <label style="font-weight:normal;"><input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="thread" />
                                 Thread &nbsp;</label>
                             </div>
                         </td><td>
                             <div class="checkbox">
-                                <label><input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="level" />
+                                <label style="font-weight:normal;"><input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="level" />
                                 Level &nbsp;</label>
                             </div>
                         </td><td>
                             <div class="checkbox">
-                                <label><input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="method" />
+                                <label style="font-weight:normal;"><input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="method" />
                                 Method &nbsp;</label>
                             </div>
                         </td><td>
                             <div class="checkbox">
-                                <label><input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="line" />
+                                <label style="font-weight:normal;"><input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="line" />
                                 Line &nbsp;</label>
                             </div>
                         </td><td>
                             <div class="checkbox">
-                                <label><input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="message" />
+                                <label style="font-weight:normal;"><input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="message" />
                                 Message &nbsp;</label>
                             </div>
                         </td>

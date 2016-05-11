@@ -24,14 +24,14 @@
         <div class="panel-heading">Trends</div>
         <div class="panel-body">
             <form id="requestPickerForm" class="form" data-input-el="#requestPicker" method="get" name="requestPickerForm">
-                <table>
+                <table style="border-spacing: 10px; border-collapse: separate;">
                     <tr>
                         <td colspan="2">
                              <input class="form-control btn btn-primary" type="submit" value="Refresh"/>
                         </td>
                     </tr>
                     <tr>
-                        <td>
+                        <td  style="font-weight:bold; vertical-align:top;">
                             From{sp}
                         </td>
                         <td>
@@ -48,7 +48,7 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>
+                        <td  style="font-weight:bold; vertical-align:top;">
                             To{sp}
                         </td>
                         <td>
@@ -66,7 +66,7 @@
                        </td>
                     </tr>
                     <tr>
-                        <td>
+                        <td  style="font-weight:bold; vertical-align:top;">
                             Buckets{sp}
                         </td>
                         <td>
@@ -76,51 +76,51 @@
                          </td>
                     </tr>
                     <tr>
-                        <td>
+                        <td  style="font-weight:bold; vertical-align:top;">
                             Log Level{sp}
                         </td>
                         <td>
                             <div>
-                                <label><input type="checkbox" name="logLevels" value="TRACE" {if $logLevels.trace}checked="checked"{/if}>
+                                <label style="font-weight:normal;"><input type="checkbox" name="logLevels" value="TRACE" {if $logLevels.trace}checked="checked"{/if}>
                                 Trace &nbsp;</label>
                             </div>
                             <div>
-                                <label><input type="checkbox" name="logLevels" value="DEBUG" {if $logLevels.debug}checked="checked"{/if}>
+                                <label style="font-weight:normal;"><input type="checkbox" name="logLevels" value="DEBUG" {if $logLevels.debug}checked="checked"{/if}>
                                 Debug &nbsp;</label>
                             </div>
                             <div>
-                                <label><input type="checkbox" name="logLevels" value="INFO" {if $logLevels.info}checked="checked"{/if}>
+                                <label style="font-weight:normal;"><input type="checkbox" name="logLevels" value="INFO" {if $logLevels.info}checked="checked"{/if}>
                                 Info &nbsp;</label>
                             </div>
                             <div>
-                                <label><input type="checkbox" name="logLevels" value="WARN" {if $logLevels.warn}checked="checked"{/if}>
+                                <label style="font-weight:normal;"><input type="checkbox" name="logLevels" value="WARN" {if $logLevels.warn}checked="checked"{/if}>
                                 Warn &nbsp;</label>
                             </div>
                             <div>
-                                <label><input type="checkbox" name="logLevels" value="ERROR" {if $logLevels.error}checked="checked"{/if}>
+                                <label style="font-weight:normal;"><input type="checkbox" name="logLevels" value="ERROR" {if $logLevels.error}checked="checked"{/if}>
                                 Error &nbsp;</label>
                             </div>
                         </td>
                     </tr>
                     <tr>
-                        <td>
+                        <td  style="font-weight:bold; vertical-align:top;">
                             Focus{sp}
                         </td>
                         <td>
                             {foreach $af in $aggregatableFields}
-                                <label style="text-align: left;" class="{if $aggregateAroundField == $af}{sp}active{sp}{/if}">
+                                <label style="text-align: left; font-weight:normal;" class="{if $aggregateAroundField == $af}{sp}active{sp}{/if}">
                                     <input {if $aggregateAroundField == $af}{sp}checked{sp}{/if} onclick="this.form.submit()" type="radio"
                                     name="aggregateAroundField" value="{$af}">&nbsp;{$af}&nbsp;&nbsp;&nbsp;&nbsp;</label>
                             {/foreach}
                         </td>
                     </tr>
                     <tr>
-                        <td>
+                        <td  style="font-weight:bold; vertical-align:top;">
                             Strategy{sp}
                         </td>
                         <td>
                             {foreach $s in $strategyFields}
-                                <label style="text-align: left;" class="{if $strategy == $s}{sp}active{sp}{/if}">
+                                <label style="text-align: left; font-weight:normal;" class="{if $strategy == $s}{sp}active{sp}{/if}">
                                     <input {if $strategy == $s}{sp}checked{sp}{/if} onclick="this.form.submit()" type="radio"
                                     name="strategy" value="{$s}">&nbsp;{$s}&nbsp;&nbsp;&nbsp;&nbsp;</label>
                             {/foreach}
@@ -147,7 +147,7 @@
                                 <td>{$service}</td>
                                 <td>{$result.name}</td>
                             {else}
-                                <td><a href="#" onclick="document.location.href='/stumptown/trends?aggregateAroundField=instance&amp;service={$result.name}&amp;logLevels='+document.getElementById('logLevelPicker').value; return false;">{$result.name}</a></td>
+                                <td><a href="#" onclick="document.location.href='/stumptown/trends?aggregateAroundField=instance&amp;service={$result.name}'; return false;">{$result.name}</a></td>
                             {/if}
                             <td>{$result.rank}</td>
                             <td>
