@@ -32,6 +32,12 @@ div.container {
     width: 100% !important;
 }
 
+.side-by-side > div {
+  display: inline-block;
+  vertical-align: top;
+  margin-right: 1em;
+}
+
 form#stump-query-filters .stump-query-advanced { display: none; }
 form#stump-query-filters.stump-query-show-advanced tr.stump-query-advanced { display: table-row; }
 form#stump-query-filters.stump-query-show-advanced td.stump-query-advanced { display: table-cell; }
