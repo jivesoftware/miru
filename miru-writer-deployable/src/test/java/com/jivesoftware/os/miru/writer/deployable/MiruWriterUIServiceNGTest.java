@@ -23,7 +23,6 @@ import com.jivesoftware.os.amza.service.replication.http.HttpRowsTaker;
 import com.jivesoftware.os.amza.service.stats.AmzaStats;
 import com.jivesoftware.os.amza.service.storage.PartitionPropertyMarshaller;
 import com.jivesoftware.os.amza.service.take.AvailableRowsTaker;
-import com.jivesoftware.os.amza.service.take.Interruptables;
 import com.jivesoftware.os.amza.service.take.RowsTakerFactory;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
@@ -105,10 +104,8 @@ public class MiruWriterUIServiceNGTest {
 
         AmzaStats amzaStats = new AmzaStats();
         BAInterner baInterner = new BAInterner();
-        Interruptables interruptables = new Interruptables("main", 60_000);
-        interruptables.start();
-        AvailableRowsTaker availableRowsTaker = new HttpAvailableRowsTaker(baInterner, interruptables);
-        RowsTakerFactory rowsTakerFactory = () -> new HttpRowsTaker(amzaStats, baInterner, interruptables);
+        AvailableRowsTaker availableRowsTaker = new HttpAvailableRowsTaker(baInterner, 60_000);
+        RowsTakerFactory rowsTakerFactory = () -> new HttpRowsTaker(amzaStats, baInterner, 60_000);
 
         AmzaServiceConfig amzaServiceConfig = new AmzaServiceConfig();
         amzaServiceConfig.workingDirectories = new String[]{amzaDataDir.getAbsolutePath()};
