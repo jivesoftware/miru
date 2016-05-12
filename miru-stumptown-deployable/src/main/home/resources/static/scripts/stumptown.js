@@ -3,7 +3,6 @@ window.$ = window.jQuery;
 window.stump = {};
 
 stump.query = {
-
     advanced: function (ele) {
         var $e = $(ele);
         if ($e.prop('checked')) {
@@ -12,7 +11,6 @@ stump.query = {
             $('#stump-query-filters').removeClass('stump-query-show-advanced');
         }
     },
-
     toggle: function (ele) {
         var $e = $(ele);
         if ($e.prop('checked')) {
@@ -21,7 +19,6 @@ stump.query = {
             $('#stump-rt-events').removeClass('stump-show-' + $e.data('name'));
         }
     },
-
     initEvents: function () {
         var $toggle = $('.stump-toggle');
         var $toggleOn = $('.stump-toggle-on');
@@ -37,13 +34,11 @@ stump.query = {
 };
 
 stump.realtime = {
-
     input: {},
     lastBucketIndex: -1,
     chart: null,
     requireFocus: true,
     eventsBody: null,
-
     fillColors: [
         "rgba(220,220,220,0.5)",
         "rgba(151,187,205,0.5)",
@@ -80,7 +75,6 @@ stump.realtime = {
         "rgba(205,187,151,1)",
         "rgba(187,151,205,1)"
     ],
-
     init: function () {
         stump.realtime.eventsBody = $('#stump-rt-events > tbody');
 
@@ -110,8 +104,8 @@ stump.realtime = {
         stump.realtime.requireFocus = $waveform.data('requireFocus') != "false";
         stump.realtime.graphType = $waveform.data('graphType');
         stump.realtime.graphProp = (stump.realtime.graphType == 'Line' || stump.realtime.graphType == 'Radar') ? 'points'
-            : (stump.realtime.graphType == 'Bar' || stump.realtime.graphType == 'StackedBar') ? 'bars'
-            : 'unknown';
+                : (stump.realtime.graphType == 'Bar' || stump.realtime.graphType == 'StackedBar') ? 'bars'
+                : 'unknown';
 
         if (stump.realtime.requireFocus) {
             stump.onWindowFocus.push(function () {
@@ -123,7 +117,6 @@ stump.realtime = {
 
         stump.realtime.poll();
     },
-
     poll: function () {
         $.ajax({
             type: "POST",
@@ -160,7 +153,6 @@ stump.realtime = {
             }
         });
     },
-
     update: function (data) {
         var i;
         if (data.waveforms) {
@@ -224,11 +216,10 @@ stump.realtime = {
                 stump.realtime.eventsBody.append(data.logEvents[i]);
             }
         }
-        if ($(live).prop("checked")) {
+        if ($('#live').prop("checked")) {
             setTimeout(stump.realtime.poll, 1000);
         }
     },
-
     elapsed: function (seconds) {
         var years, months, days, hours, minutes;
         if (seconds < 0) {
@@ -291,6 +282,12 @@ $(document).ready(function () {
     stump.windowFocused = true;
     stump.onWindowFocus = [];
     stump.onWindowBlur = [];
+
+    $('#live').change(function () {
+        if ($(this).is(":checked")) {
+            stump.realtime.poll();
+        }
+    });
 
     stump.query.initEvents();
 });
