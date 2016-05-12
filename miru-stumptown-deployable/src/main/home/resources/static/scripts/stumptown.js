@@ -224,7 +224,7 @@ stump.realtime = {
                 stump.realtime.eventsBody.append(data.logEvents[i]);
             }
         }
-        if ($(live)[0].value == "on") {
+        if ($(live).prop("checked")) {
             setTimeout(stump.realtime.poll, 1000);
         }
     },
