@@ -147,7 +147,7 @@ public class MiruCatwalkMain {
 
             TenantRoutingProvider tenantRoutingProvider = deployable.getTenantRoutingProvider();
             MiruLogAppenderInitializer.MiruLogAppenderConfig miruLogAppenderConfig = deployable.config(MiruLogAppenderInitializer.MiruLogAppenderConfig.class);
-            TenantsServiceConnectionDescriptorProvider logConnections = tenantRoutingProvider.getConnections("miru-stumptown", "main");
+            TenantsServiceConnectionDescriptorProvider logConnections = tenantRoutingProvider.getConnections("miru-stumptown", "main", 10_000); // TODO config
             MiruLogAppender miruLogAppender = new MiruLogAppenderInitializer().initialize(null, //TODO datacenter
                 instanceConfig.getClusterName(),
                 instanceConfig.getHost(),
@@ -159,7 +159,7 @@ public class MiruCatwalkMain {
             miruLogAppender.install();
 
             MiruMetricSamplerConfig metricSamplerConfig = deployable.config(MiruMetricSamplerConfig.class);
-            TenantsServiceConnectionDescriptorProvider metricConnections = tenantRoutingProvider.getConnections("miru-anomaly", "main");
+            TenantsServiceConnectionDescriptorProvider metricConnections = tenantRoutingProvider.getConnections("miru-anomaly", "main", 10_000); // TODO config
             MiruMetricSampler sampler = new MiruMetricSamplerInitializer().initialize(null, //TODO datacenter
                 instanceConfig.getClusterName(),
                 instanceConfig.getHost(),
@@ -179,16 +179,16 @@ public class MiruCatwalkMain {
             TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
 
             TenantAwareHttpClient<String> amzaClient = tenantRoutingHttpClientInitializer.initialize(
-                tenantRoutingProvider.getConnections("amza", "main"), // TODO expose to conf
+                tenantRoutingProvider.getConnections("amza", "main", 10_000), // TODO config
                 clientHealthProvider,
                 10, 10_000); // TODO expose to conf
 
             TenantAwareHttpClient<String> manageHttpClient = tenantRoutingHttpClientInitializer.initialize(
-                tenantRoutingProvider.getConnections("miru-manage", "main"),
+                tenantRoutingProvider.getConnections("miru-manage", "main", 10_000), // TODO config
                 clientHealthProvider,
                 10, 10_000); // TODO expose to conf
             TenantAwareHttpClient<String> readerClient = tenantRoutingHttpClientInitializer.initialize(
-                tenantRoutingProvider.getConnections("miru-reader", "main"),
+                tenantRoutingProvider.getConnections("miru-reader", "main", 10_000), // TODO config
                 clientHealthProvider,
                 10, 10_000); // TODO expose to conf
 

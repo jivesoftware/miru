@@ -159,8 +159,8 @@ public class MiruWALMain {
             WALAmzaServiceConfig amzaServiceConfig = deployable.config(WALAmzaServiceConfig.class);
 
             List<File> amzaPaths = Lists.newArrayList(Iterables.transform(
-                    Splitter.on(',').split(amzaServiceConfig.getWorkingDirectories()),
-                    input -> new File(input.trim())));
+                Splitter.on(',').split(amzaServiceConfig.getWorkingDirectories()),
+                input -> new File(input.trim())));
             HealthFactory.scheduleHealthChecker(DiskFreeCheck.class,
                 config1 -> (HealthChecker) new DiskFreeHealthChecker(config1, amzaPaths.toArray(new File[amzaPaths.size()])));
 
@@ -171,7 +171,7 @@ public class MiruWALMain {
             mapper.registerModule(new GuavaModule());
 
             MiruLogAppenderInitializer.MiruLogAppenderConfig miruLogAppenderConfig = deployable.config(MiruLogAppenderInitializer.MiruLogAppenderConfig.class);
-            TenantsServiceConnectionDescriptorProvider logConnections = deployable.getTenantRoutingProvider().getConnections("miru-stumptown", "main");
+            TenantsServiceConnectionDescriptorProvider logConnections = deployable.getTenantRoutingProvider().getConnections("miru-stumptown", "main", 10_000); // TODO config
             MiruLogAppender miruLogAppender = new MiruLogAppenderInitializer().initialize(null, //TODO datacenter
                 instanceConfig.getClusterName(),
                 instanceConfig.getHost(),
@@ -183,7 +183,7 @@ public class MiruWALMain {
             miruLogAppender.install();
 
             MiruMetricSamplerConfig metricSamplerConfig = deployable.config(MiruMetricSamplerConfig.class);
-            TenantsServiceConnectionDescriptorProvider metricConnections = deployable.getTenantRoutingProvider().getConnections("miru-anomaly", "main");
+            TenantsServiceConnectionDescriptorProvider metricConnections = deployable.getTenantRoutingProvider().getConnections("miru-anomaly", "main", 10_000); // TODO config
             MiruMetricSampler sampler = new MiruMetricSamplerInitializer().initialize(null, //TODO datacenter
                 instanceConfig.getClusterName(),
                 instanceConfig.getHost(),
@@ -275,7 +275,7 @@ public class MiruWALMain {
                 instanceConfig.getConnectionsHealth(), 5_000, 100);
 
             TenantRoutingProvider tenantRoutingProvider = deployable.getTenantRoutingProvider();
-            TenantsServiceConnectionDescriptorProvider walConnectionDescriptorProvider = tenantRoutingProvider.getConnections("miru-wal", "main");
+            TenantsServiceConnectionDescriptorProvider walConnectionDescriptorProvider = tenantRoutingProvider.getConnections("miru-wal", "main", 10_000); // TODO config
             HostPortProvider hostPortProvider = host -> {
                 //TODO cache?
                 List<ConnectionDescriptor> connectionDescriptors = walConnectionDescriptorProvider.getConnections("").getConnectionDescriptors();
@@ -290,7 +290,7 @@ public class MiruWALMain {
 
             TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
             TenantAwareHttpClient<String> manageHttpClient = tenantRoutingHttpClientInitializer.initialize(tenantRoutingProvider
-                .getConnections("miru-manage", "main"),
+                .getConnections("miru-manage", "main", 10_000), // TODO config
                 clientHealthProvider,
                 10, 10_000); // TODO expose to conf
 

@@ -138,16 +138,16 @@ public class MiruReaderMain {
             HealthFactory.initialize(
                 deployable::config,
                 new HealthCheckRegistry() {
-                    @Override
-                    public void register(HealthChecker healthChecker) {
-                        deployable.addHealthCheck(healthChecker);
-                    }
+                @Override
+                public void register(HealthChecker healthChecker) {
+                    deployable.addHealthCheck(healthChecker);
+                }
 
-                    @Override
-                    public void unregister(HealthChecker healthChecker) {
-                        throw new UnsupportedOperationException("Not supported yet.");
-                    }
-                });
+                @Override
+                public void unregister(HealthChecker healthChecker) {
+                    throw new UnsupportedOperationException("Not supported yet.");
+                }
+            });
             deployable.buildStatusReporter(null).start();
             deployable.addManageInjectables(HasUI.class, new HasUI(Arrays.asList(new HasUI.UI("manage", "manage", "/manage/ui"),
                 new HasUI.UI("Reset Errors", "manage", "/manage/resetErrors"),
@@ -169,7 +169,7 @@ public class MiruReaderMain {
 
             TenantRoutingProvider tenantRoutingProvider = deployable.getTenantRoutingProvider();
             MiruLogAppenderInitializer.MiruLogAppenderConfig miruLogAppenderConfig = deployable.config(MiruLogAppenderInitializer.MiruLogAppenderConfig.class);
-            TenantsServiceConnectionDescriptorProvider logConnections = tenantRoutingProvider.getConnections("miru-stumptown", "main");
+            TenantsServiceConnectionDescriptorProvider logConnections = tenantRoutingProvider.getConnections("miru-stumptown", "main", 10_000); // TODO config
             MiruLogAppender miruLogAppender = new MiruLogAppenderInitializer().initialize(null, //TODO datacenter
                 instanceConfig.getClusterName(),
                 instanceConfig.getHost(),
@@ -181,7 +181,7 @@ public class MiruReaderMain {
             miruLogAppender.install();
 
             MiruMetricSamplerConfig metricSamplerConfig = deployable.config(MiruMetricSamplerConfig.class);
-            TenantsServiceConnectionDescriptorProvider metricConnections = tenantRoutingProvider.getConnections("miru-anomaly", "main");
+            TenantsServiceConnectionDescriptorProvider metricConnections = tenantRoutingProvider.getConnections("miru-anomaly", "main", 10_000); // TODO config
             MiruMetricSampler sampler = new MiruMetricSamplerInitializer().initialize(null, //TODO datacenter
                 instanceConfig.getClusterName(),
                 instanceConfig.getHost(),
@@ -236,22 +236,22 @@ public class MiruReaderMain {
 
             TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
             TenantAwareHttpClient<String> walHttpClient = tenantRoutingHttpClientInitializer.initialize(tenantRoutingProvider
-                    .getConnections("miru-wal", "main"),
+                .getConnections("miru-wal", "main", 10_000), // TODO config
                 clientHealthProvider,
                 10, 10_000); // TODO expose to conf
 
             TenantAwareHttpClient<String> manageHttpClient = tenantRoutingHttpClientInitializer.initialize(tenantRoutingProvider
-                    .getConnections("miru-manage", "main"),
+                .getConnections("miru-manage", "main", 10_000), // TODO config
                 clientHealthProvider,
                 10, 10_000);  // TODO expose to conf
 
             TenantAwareHttpClient<String> readerHttpClient = tenantRoutingHttpClientInitializer.initialize(tenantRoutingProvider
-                    .getConnections("miru-reader", "main"),
+                .getConnections("miru-reader", "main", 10_000), // TODO config
                 clientHealthProvider,
                 10, 10_000);  // TODO expose to conf
 
             TenantAwareHttpClient<String> catwalkHttpClient = tenantRoutingHttpClientInitializer.initialize(tenantRoutingProvider
-                    .getConnections("miru-catwalk", "main"),
+                .getConnections("miru-catwalk", "main", 10_000), // TODO config
                 clientHealthProvider,
                 10, 10_000);  // TODO expose to conf
 
@@ -268,14 +268,14 @@ public class MiruReaderMain {
 
             final ThreadGroup threadGroup = Thread.currentThread().getThreadGroup();
             final ScheduledExecutorService scheduledBootstrapExecutor = Executors.newScheduledThreadPool(miruServiceConfig
-                    .getPartitionScheduledBootstrapThreads(),
+                .getPartitionScheduledBootstrapThreads(),
                 new NamedThreadFactory(threadGroup, "scheduled_bootstrap"));
 
             final ScheduledExecutorService scheduledRebuildExecutor = Executors.newScheduledThreadPool(miruServiceConfig.getPartitionScheduledRebuildThreads(),
                 new NamedThreadFactory(threadGroup, "scheduled_rebuild"));
 
             final ScheduledExecutorService scheduledSipMigrateExecutor = Executors.newScheduledThreadPool(miruServiceConfig
-                    .getPartitionScheduledSipMigrateThreads(),
+                .getPartitionScheduledSipMigrateThreads(),
                 new NamedThreadFactory(threadGroup, "scheduled_sip_migrate"));
 
             SickThreads walClientSickThreads = new SickThreads();

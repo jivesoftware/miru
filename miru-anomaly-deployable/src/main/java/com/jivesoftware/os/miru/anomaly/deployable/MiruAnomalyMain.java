@@ -126,19 +126,19 @@ public class MiruAnomalyMain {
             TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
             TenantAwareHttpClient<String> miruManageClient = tenantRoutingHttpClientInitializer.initialize(deployable
                     .getTenantRoutingProvider()
-                    .getConnections("miru-manage", "main"),
+                    .getConnections("miru-manage", "main", 10_000), // TODO config
                 clientHealthProvider,
                 10, 10_000); // TODO expose to conf
 
             TenantAwareHttpClient<String> miruWriteClient = tenantRoutingHttpClientInitializer.initialize(deployable
                     .getTenantRoutingProvider()
-                    .getConnections("miru-writer", "main"),
+                    .getConnections("miru-writer", "main", 10_000), // TODO config
                 clientHealthProvider,
                 10, 10_000);  // TODO expose to conf
 
             TenantAwareHttpClient<String> readerClient = tenantRoutingHttpClientInitializer.initialize(deployable
                     .getTenantRoutingProvider()
-                    .getConnections("miru-reader", "main"),
+                    .getConnections("miru-reader", "main", 10_000), // TODO config
                 clientHealthProvider,
                 10, 10_000);  // TODO expose to conf
 
@@ -176,7 +176,7 @@ public class MiruAnomalyMain {
                 intakeConfig.getPathToQueues(), intakeConfig.getNumberOfQueues(), intakeConfig.getNumberOfThreadsPerQueue(), deliveryCallback);
 
             MiruLogAppenderInitializer.MiruLogAppenderConfig miruLogAppenderConfig = deployable.config(MiruLogAppenderInitializer.MiruLogAppenderConfig.class);
-            TenantsServiceConnectionDescriptorProvider connections = deployable.getTenantRoutingProvider().getConnections("miru-stumptown", "main");
+            TenantsServiceConnectionDescriptorProvider connections = deployable.getTenantRoutingProvider().getConnections("miru-stumptown", "main", 10_000); // TODO config
             MiruLogAppender miruLogAppender = new MiruLogAppenderInitializer().initialize(null, //TODO datacenter
                 instanceConfig.getClusterName(),
                 instanceConfig.getHost(),
