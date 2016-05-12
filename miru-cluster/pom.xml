@@ -5,12 +5,11 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-build-management</artifactId>
-        <version>0.1107</version>
+        <version>0.1108</version>
         <relativePath>../inheritance-poms/global-build-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru</groupId>
     <artifactId>miru-cluster</artifactId>
-    <version>0.1107</version>
     <properties>
         <module.type>shared_lib</module.type>
     </properties>
@@ -45,7 +44,7 @@
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-api</artifactId>
-            <version>0.1107</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.rcvs</groupId>
@@ -95,7 +94,7 @@
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-amza</artifactId>
-            <version>0.1107</version>
+            <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
