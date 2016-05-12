@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.wal.readtracking.amza;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
+import com.jivesoftware.os.amza.api.FailedToAchieveQuorumException;
 import com.jivesoftware.os.amza.api.partition.Consistency;
 import com.jivesoftware.os.amza.service.PartitionIsDisposedException;
 import com.jivesoftware.os.amza.service.PropertiesNotPresentException;
@@ -11,6 +12,7 @@ import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.marshall.JacksonJsonObjectTypeMarshaller;
 import com.jivesoftware.os.miru.wal.AmzaWALUtil;
+import com.jivesoftware.os.miru.wal.MiruWALWrongRouteException;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALWriter;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -65,6 +67,8 @@ public class AmzaReadTrackingWALWriter implements MiruReadTrackingWALWriter {
                 TimeUnit.MILLISECONDS);
         } catch (PropertiesNotPresentException | PartitionIsDisposedException e) {
             LOG.warn("Write dropped on floor because properties missing or partition is dispose. tenant:{} streamId:{}", tenantId, streamId);
+        } catch (FailedToAchieveQuorumException e) {
+            throw new MiruWALWrongRouteException(e);
         }
     }
 }

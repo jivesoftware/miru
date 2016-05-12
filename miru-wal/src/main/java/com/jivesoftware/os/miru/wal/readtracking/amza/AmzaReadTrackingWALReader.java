@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.wal.readtracking.amza;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
+import com.jivesoftware.os.amza.api.FailedToAchieveQuorumException;
 import com.jivesoftware.os.amza.api.partition.PartitionProperties;
 import com.jivesoftware.os.amza.api.take.TakeCursors;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider.EmbeddedClient;
@@ -16,6 +17,7 @@ import com.jivesoftware.os.miru.api.topology.NamedCursor;
 import com.jivesoftware.os.miru.api.wal.AmzaCursor;
 import com.jivesoftware.os.miru.api.wal.AmzaSipCursor;
 import com.jivesoftware.os.miru.wal.AmzaWALUtil;
+import com.jivesoftware.os.miru.wal.MiruWALWrongRouteException;
 import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
 import com.jivesoftware.os.routing.bird.shared.HostPort;
 import java.util.Collections;
@@ -100,6 +102,8 @@ public class AmzaReadTrackingWALReader implements MiruReadTrackingWALReader<Amza
             return scanCursors(streamReadTrackingWAL, client, streamId, cursorsByName);
         } catch (PropertiesNotPresentException | PartitionIsDisposedException e) {
             return cursor;
+        } catch (FailedToAchieveQuorumException e) {
+            throw new MiruWALWrongRouteException(e);
         }
     }
 
@@ -124,6 +128,8 @@ public class AmzaReadTrackingWALReader implements MiruReadTrackingWALReader<Amza
             return new AmzaSipCursor(sipCursorsByName.values(), false);
         } catch (PropertiesNotPresentException | PartitionIsDisposedException e) {
             return sipCursor;
+        } catch (FailedToAchieveQuorumException e) {
+            throw new MiruWALWrongRouteException(e);
         }
     }
 }

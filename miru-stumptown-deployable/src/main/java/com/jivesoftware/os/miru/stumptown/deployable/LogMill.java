@@ -77,7 +77,7 @@ public class LogMill {
         if (raw == null) {
             return Collections.emptySet();
         }
-        String[] split = raw.toLowerCase().split("\\s+");
+        String[] split = raw.toLowerCase().split("[^a-zA-Z0-9']+");
         HashSet<String> set = Sets.newHashSet();
         for (String s : split) {
             if (!Strings.isNullOrEmpty(s)) {
