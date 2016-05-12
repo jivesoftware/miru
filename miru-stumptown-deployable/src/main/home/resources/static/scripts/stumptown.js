@@ -224,7 +224,9 @@ stump.realtime = {
                 stump.realtime.eventsBody.append(data.logEvents[i]);
             }
         }
-        setTimeout(stump.realtime.poll, 1000);
+        if ($(live)[0].value == "on") {
+            setTimeout(stump.realtime.poll, 1000);
+        }
     },
 
     elapsed: function (seconds) {
