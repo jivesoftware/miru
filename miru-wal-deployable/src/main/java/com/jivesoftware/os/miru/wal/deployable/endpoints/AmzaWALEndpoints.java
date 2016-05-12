@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.wal.deployable.endpoints;
 
 import com.google.common.base.Charsets;
+import com.jivesoftware.os.amza.api.FailedToAchieveQuorumException;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;

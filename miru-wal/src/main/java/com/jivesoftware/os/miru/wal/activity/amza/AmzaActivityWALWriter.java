@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.wal.activity.amza;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
+import com.jivesoftware.os.amza.api.FailedToAchieveQuorumException;
 import com.jivesoftware.os.amza.api.partition.Consistency;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider.EmbeddedClient;
 import com.jivesoftware.os.amza.service.PartitionIsDisposedException;
@@ -12,6 +13,7 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.marshall.JacksonJsonObjectTypeMarshaller;
 import com.jivesoftware.os.miru.api.topology.RangeMinMax;
 import com.jivesoftware.os.miru.wal.AmzaWALUtil;
+import com.jivesoftware.os.miru.wal.MiruWALWrongRouteException;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivitySipWALColumnKey;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALColumnKey;
@@ -90,6 +92,8 @@ public class AmzaActivityWALWriter implements MiruActivityWALWriter {
             }
         } catch (PartitionIsDisposedException e) {
             // Ignored
+        } catch (FailedToAchieveQuorumException e) {
+            throw new MiruWALWrongRouteException(e);
         }
         return partitionMinMax;
     }
@@ -113,6 +117,8 @@ public class AmzaActivityWALWriter implements MiruActivityWALWriter {
                     TimeUnit.MILLISECONDS);
             } catch (PropertiesNotPresentException | PartitionIsDisposedException e) {
                 // Ignored
+            } catch (FailedToAchieveQuorumException e) {
+                throw new MiruWALWrongRouteException(e);
             }
         }
     }
