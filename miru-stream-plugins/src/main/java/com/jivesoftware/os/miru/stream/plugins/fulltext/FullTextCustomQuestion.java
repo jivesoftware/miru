@@ -66,7 +66,7 @@ public class FullTextCustomQuestion implements Question<FullTextQuery, FullTextA
                 solutionLog.asList());
         }
 
-        MiruFilter filter = fullText.parseQuery(request.query.defaultField, request.query.query);
+        MiruFilter filter = fullText.parseQuery(request.query.defaultField, request.query.locale, request.query.query);
         Map<FieldAndTermId, MutableInt> termCollector = request.query.strategy == FullTextQuery.Strategy.TF_IDF ? Maps.newHashMap() : null;
 
         BM filtered = aggregateUtil.filter("fullTextCustom", bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(),

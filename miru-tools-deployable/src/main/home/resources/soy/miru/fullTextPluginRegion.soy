@@ -8,6 +8,7 @@
  * @param? fromHoursAgo
  * @param? toHoursAgo
  * @param? defaultField
+ * @param? locale
  * @param? queryString
  * @param? strategy
  * @param? filters
@@ -69,6 +70,14 @@
                             <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
                                 class="j-field-autocomplete j-autocomplete-input j-ui-elem" placeholder="Field" value="{$defaultField?:''}"
                                 name="defaultField" id="defaultFieldPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Locale</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-locale-autocomplete j-autocomplete-input j-ui-elem" placeholder="Locale" value="{$locale?:''}"
+                                name="locale" id="localePicker" data-original-title="" title="">
                         </td>
                     </tr>
                     <tr>
