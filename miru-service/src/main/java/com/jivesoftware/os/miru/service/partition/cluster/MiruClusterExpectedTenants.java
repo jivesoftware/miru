@@ -168,19 +168,24 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
     public void thumpthump() throws Exception {
         MiruHeartbeatResponse thumpthump = heartbeatHandler.thumpthump(localHost);
         ListMultimap<MiruTenantId, MiruPartitionActiveUpdate> tenantPartitionActive = ArrayListMultimap.create();
-        if (thumpthump.activeHasChanged == null) {
-            LOG.warn("Thumpthumps activeHasChanged was null");
-        } else if (thumpthump.activeHasChanged.result == null) {
-            LOG.warn("Thumpthumps activeHasChanged results were null");
+        if (thumpthump == null) {
+            LOG.warn("Heartbeat was empty");
         } else {
-
-            for (MiruPartitionActiveUpdate active : thumpthump.activeHasChanged.result) {
-                tenantPartitionActive.put(active.tenantId, active);
+            if (thumpthump.activeHasChanged == null || thumpthump.activeHasChanged.result == null) {
+                LOG.warn("Thumpthumps activeHasChanged was empty");
+            } else {
+                for (MiruPartitionActiveUpdate active : thumpthump.activeHasChanged.result) {
+                    tenantPartitionActive.put(active.tenantId, active);
+                }
+                expect(tenantPartitionActive);
             }
-            expect(tenantPartitionActive);
 
-            for (MiruTenantTopologyUpdate update : thumpthump.topologyHasChanged.result) {
-                routingTopologies.invalidate(update.tenantId);
+            if (thumpthump.topologyHasChanged == null || thumpthump.topologyHasChanged.result == null) {
+                LOG.warn("Thumpthumps topologyHasChanged was empty");
+            } else {
+                for (MiruTenantTopologyUpdate update : thumpthump.topologyHasChanged.result) {
+                    routingTopologies.invalidate(update.tenantId);
+                }
             }
         }
     }
@@ -261,7 +266,7 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
                         topology.rebuild(coord.partitionId);
                     }
                 } catch (Exception x) {
-                    LOG.warn("Attempt to rebuild offline non disk partition was ignored for {}.", new Object[]{coord}, x);
+                    LOG.warn("Attempt to rebuild offline non disk partition was ignored for {}.", new Object[] { coord }, x);
                 }
             }
         }
