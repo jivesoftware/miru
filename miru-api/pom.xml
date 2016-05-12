@@ -10,7 +10,6 @@
     </parent>
     <groupId>com.jivesoftware.os.miru</groupId>
     <artifactId>miru-api</artifactId>
-    <version>0.1108-SNAPSHOT</version>
     <properties>
         <module.type>shared_lib</module.type>
     </properties>

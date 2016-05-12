@@ -10,7 +10,6 @@
     </parent>
     <groupId>com.jivesoftware.os.miru</groupId>
     <artifactId>miru-stream-plugins</artifactId>
-    <version>0.1108-SNAPSHOT</version>
     <properties>
         <module.type>shared_lib</module.type>
     </properties>
@@ -46,12 +45,12 @@
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-api</artifactId>
-            <version>0.1108-SNAPSHOT</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-plugin</artifactId>
-            <version>0.1108-SNAPSHOT</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>

@@ -10,7 +10,6 @@
     </parent>
     <groupId>com.jivesoftware.os.miru</groupId>
     <artifactId>miru-service</artifactId>
-    <version>0.1108-SNAPSHOT</version>
     <properties>
         <module.type>service_lib</module.type>
     </properties>
@@ -36,13 +35,13 @@
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-api</artifactId>
-            <version>0.1108-SNAPSHOT</version>
-        </dependency>
+                    <version>${project.version}</version>
+</dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-plugin</artifactId>
-            <version>0.1108-SNAPSHOT</version>
-        </dependency>
+                    <version>${project.version}</version>
+</dependency>
         <dependency>
             <groupId>com.jivesoftware.os.filer</groupId>
             <artifactId>io</artifactId>
