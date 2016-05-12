@@ -67,7 +67,7 @@ public class MiruHeaderRegion implements MiruRegion<Void> {
     }
 
     private int addPeers(List<Map<String, Object>> services, String name, String portName, String path) {
-        TenantsServiceConnectionDescriptorProvider readers = tenantRoutingProvider.getConnections(name, portName);
+        TenantsServiceConnectionDescriptorProvider readers = tenantRoutingProvider.getConnections(name, portName, 10_000); // TODO config
         ConnectionDescriptors connectionDescriptors = readers.getConnections("");
         if (connectionDescriptors != null) {
             List<Map<String, String>> instances = new ArrayList<>();

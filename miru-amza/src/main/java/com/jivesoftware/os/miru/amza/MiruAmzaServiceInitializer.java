@@ -206,7 +206,7 @@ public class MiruAmzaServiceInitializer {
 
         TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
         TenantAwareHttpClient<String> httpClient = tenantRoutingHttpClientInitializer.initialize(
-            deployable.getTenantRoutingProvider().getConnections(serviceName, "main"),
+            deployable.getTenantRoutingProvider().getConnections(serviceName, "main", 10_000), // TODO config
             clientHealthProvider,
             10,
             10_000); // TODO expose to conf
@@ -366,7 +366,7 @@ public class MiruAmzaServiceInitializer {
         public void run() {
             try {
                 TenantRoutingProvider tenantRoutingProvider = deployable.getTenantRoutingProvider();
-                TenantsServiceConnectionDescriptorProvider connections = tenantRoutingProvider.getConnections(serviceName, "main");
+                TenantsServiceConnectionDescriptorProvider connections = tenantRoutingProvider.getConnections(serviceName, "main", 10_000); // TODO config
                 ConnectionDescriptors selfConnections = connections.getConnections("");
                 for (ConnectionDescriptor connectionDescriptor : selfConnections.getConnectionDescriptors()) {
 

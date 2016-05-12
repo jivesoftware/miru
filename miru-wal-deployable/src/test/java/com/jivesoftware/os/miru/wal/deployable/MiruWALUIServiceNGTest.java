@@ -58,6 +58,7 @@ import com.jivesoftware.os.routing.bird.health.checkers.SickThreads;
 import com.jivesoftware.os.routing.bird.shared.TenantRoutingProvider;
 import java.io.File;
 import java.io.IOException;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import org.merlin.config.BindInterfaceToConfiguration;
 import org.testng.annotations.BeforeClass;
@@ -186,7 +187,7 @@ public class MiruWALUIServiceNGTest {
 
         MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(config);
         service = new MiruWALUIServiceInitializer().initialize("cluster", 1, renderer, null,
-            new TenantRoutingProvider("1", cdr -> null), director, director, null, activityWALReader, new MiruStats());
+            new TenantRoutingProvider(Executors.newScheduledThreadPool(1), "1", cdr -> null), director, director, null, activityWALReader, new MiruStats());
     }
 
     @Test

@@ -139,7 +139,7 @@ public class MiruStumptownMain {
                 try {
                     TenantAwareHttpClient<String> amzaClient = tenantRoutingHttpClientInitializer.initialize(deployable
                         .getTenantRoutingProvider()
-                        .getConnections("amza", "main"), // TODO expose to conf
+                        .getConnections("amza", "main", 10_000), // TODO config
                         clientHealthProvider,
                         10, 10_000); // TODO expose to conf
                     long awaitLeaderElectionForNMillis = 30_000;
@@ -157,19 +157,19 @@ public class MiruStumptownMain {
 
             TenantAwareHttpClient<String> miruWriterClient = tenantRoutingHttpClientInitializer.initialize(deployable
                 .getTenantRoutingProvider()
-                .getConnections("miru-writer", "main"),
+                .getConnections("miru-writer", "main", 10_000), // TODO config
                 clientHealthProvider,
                 10, 10_000);  // TODO expose to conf
 
             TenantAwareHttpClient<String> miruManageClient = tenantRoutingHttpClientInitializer.initialize(deployable
                 .getTenantRoutingProvider()
-                .getConnections("miru-manage", "main"),
+                .getConnections("miru-manage", "main", 10_000), // TODO config
                 clientHealthProvider,
                 10, 10_000); // TODO expose to conf
 
             TenantAwareHttpClient<String> readerClient = tenantRoutingHttpClientInitializer.initialize(deployable
                 .getTenantRoutingProvider()
-                .getConnections("miru-reader", "main"),
+                .getConnections("miru-reader", "main", 10_000), // TODO config
                 clientHealthProvider,
                 10, 10_000); // TODO expose to conf
 
