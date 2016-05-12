@@ -374,9 +374,6 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
 
     @Override
     public RoaringBitmap andNotTx(MiruTxIndex<RoaringBitmap> original, List<MiruTxIndex<RoaringBitmap>> not, StackBuffer stackBuffer) throws Exception {
-        if (not.isEmpty()) {
-            return new RoaringBitmap();
-        }
 
         RoaringBitmap container = original.txIndex((bitmap, filer, offset, stackBuffer1) -> {
             if (bitmap != null) {
@@ -388,7 +385,7 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
             }
         }, stackBuffer);
 
-        if (container.isEmpty()) {
+        if (container.isEmpty() || not.isEmpty()) {
             return container;
         }
 
