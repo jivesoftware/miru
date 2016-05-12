@@ -16,6 +16,7 @@ public class FullTextQuery {
 
     public final MiruTimeRange timeRange;
     public final String defaultField;
+    public final String locale;
     public final String query;
     public final MiruFilter constraintsFilter;
     public final Strategy strategy;
@@ -24,15 +25,17 @@ public class FullTextQuery {
     public FullTextQuery(
         @JsonProperty("timeRange") MiruTimeRange timeRange,
         @JsonProperty("defaultField") String defaultField,
+        @JsonProperty("locale") String locale,
         @JsonProperty("query") String query,
         @JsonProperty("constraintsFilter") MiruFilter constraintsFilter,
         @JsonProperty("strategy") Strategy strategy,
         @JsonProperty("desiredNumberOfResults") int desiredNumberOfResults) {
         this.timeRange = Preconditions.checkNotNull(timeRange);
         this.defaultField = Preconditions.checkNotNull(defaultField);
+        this.locale = locale;
         this.query = Preconditions.checkNotNull(query);
         this.constraintsFilter = Preconditions.checkNotNull(constraintsFilter);
-        this.strategy = strategy;
+        this.strategy = Preconditions.checkNotNull(strategy);
         Preconditions.checkArgument(desiredNumberOfResults > 0, "Number of results must be at least 1");
         this.desiredNumberOfResults = desiredNumberOfResults;
     }
@@ -42,6 +45,7 @@ public class FullTextQuery {
         return "FullTextQuery{" +
             "timeRange=" + timeRange +
             ", defaultField='" + defaultField + '\'' +
+            ", locale='" + locale + '\'' +
             ", query='" + query + '\'' +
             ", constraintsFilter=" + constraintsFilter +
             ", strategy=" + strategy +

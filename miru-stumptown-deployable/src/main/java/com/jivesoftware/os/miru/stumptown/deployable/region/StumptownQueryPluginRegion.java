@@ -15,6 +15,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.logappender.MiruLogEvent;
+import com.jivesoftware.os.miru.plugin.query.LuceneBackedQueryParser;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
@@ -61,6 +62,9 @@ public class StumptownQueryPluginRegion implements MiruPageRegion<Optional<Stump
     private final ObjectMapper requestMapper;
     private final HttpResponseMapper responseMapper;
     private final MiruStumptownPayloadStorage payloads;
+
+    private final LuceneBackedQueryParser messageQueryParser = new LuceneBackedQueryParser("message");
+    private final LuceneBackedQueryParser thrownQueryParser = new LuceneBackedQueryParser("thrownStackTrace");
 
     public StumptownQueryPluginRegion(String template,
         String logEventTemplate,
@@ -222,26 +226,30 @@ public class StumptownQueryPluginRegion implements MiruPageRegion<Optional<Stump
         QueryUtils.addFieldFilter(fieldFilters, notFieldFilters, "methodName", input.method);
         QueryUtils.addFieldFilter(fieldFilters, notFieldFilters, "lineNumber", input.line);
         QueryUtils.addFieldFilter(fieldFilters, notFieldFilters, "logger", input.logger);
-        QueryUtils.addFieldFilter(fieldFilters, notFieldFilters, "message", input.message.toLowerCase());
         QueryUtils.addFieldFilter(fieldFilters, notFieldFilters, "level", input.logLevel);
         QueryUtils.addFieldFilter(fieldFilters, notFieldFilters, "exceptionClass", input.exceptionClass);
-        QueryUtils.addFieldFilter(fieldFilters, notFieldFilters, "thrownStackTrace", input.thrown.toLowerCase());
 
-        List<MiruFilter> notFilters = null;
+        List<MiruFilter> subFilters = Lists.newArrayList();
+        if (!input.message.isEmpty()) {
+            subFilters.add(messageQueryParser.parse("en", input.message.toLowerCase()));
+        }
+        if (!input.thrown.isEmpty()) {
+            subFilters.add(messageQueryParser.parse("en", input.thrown.toLowerCase()));
+        }
+
+        List<MiruFilter> filters = Lists.newArrayList();
+        filters.add(new MiruFilter(MiruFilterOperation.and, false, fieldFilters, subFilters));
+
         if (!notFieldFilters.isEmpty()) {
-            notFilters = Arrays.asList(
-                new MiruFilter(MiruFilterOperation.pButNotQ,
-                    true,
-                    notFieldFilters,
-                    null));
+            filters.add(new MiruFilter(MiruFilterOperation.or, false, notFieldFilters, null));
         }
 
         ImmutableMap<String, MiruFilter> stumptownFilters = ImmutableMap.of(
             "stumptown",
-            new MiruFilter(MiruFilterOperation.and,
+            new MiruFilter(MiruFilterOperation.pButNotQ,
                 false,
-                fieldFilters,
-                notFilters));
+                null,
+                filters));
 
         String endpoint = StumptownConstants.STUMPTOWN_PREFIX + StumptownConstants.CUSTOM_QUERY_ENDPOINT;
         String request = requestMapper.writeValueAsString(new MiruRequest<>("stumptownQuery",

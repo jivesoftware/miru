@@ -44,8 +44,8 @@ public class FullText {
         this.miruProvider = miruProvider;
     }
 
-    public MiruFilter parseQuery(String defaultField, String query) throws Exception {
-        return miruProvider.getQueryParser(defaultField).parse(query);
+    public MiruFilter parseQuery(String defaultField, String locale, String query) throws Exception {
+        return miruProvider.getQueryParser(defaultField).parse(locale, query);
     }
 
     public <BM extends IBM, IBM> FullTextAnswer getActivityScores(String name,

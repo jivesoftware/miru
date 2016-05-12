@@ -7,5 +7,5 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
  */
 public interface MiruQueryParser {
 
-    MiruFilter parse(String query) throws Exception;
+    MiruFilter parse(String locale, String query) throws Exception;
 }
