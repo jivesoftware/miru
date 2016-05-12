@@ -380,7 +380,7 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
             }
         }, stackBuffer);
 
-        if (container.isEmpty()) {
+        if (container.isEmpty() || not.isEmpty()) {
             return container;
         }
 
