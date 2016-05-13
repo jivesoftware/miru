@@ -18,7 +18,7 @@
         <rcvs-version>0.18</rcvs-version>
         <filer-version>0.96</filer-version>
         <lab-version>0.53</lab-version>
-        <amza-version>0.375</amza-version>
+        <amza-version>0.377</amza-version>
         <routing-bird-version>0.49</routing-bird-version>
         <jackson-version>2.5.3</jackson-version>
         <jersey-version>2.13</jersey-version>
