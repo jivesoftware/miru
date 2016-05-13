@@ -31,6 +31,7 @@ import com.jivesoftware.os.miru.amza.MiruAmzaServiceConfig;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceInitializer;
 import com.jivesoftware.os.miru.api.HostPortProvider;
 import com.jivesoftware.os.miru.api.MiruStats;
+import com.jivesoftware.os.miru.api.RoutingBirdHostPortProvider;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.api.wal.AmzaCursor;
 import com.jivesoftware.os.miru.api.wal.AmzaSipCursor;
@@ -87,8 +88,6 @@ import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelperUtils;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.http.client.TenantRoutingHttpClientInitializer;
 import com.jivesoftware.os.routing.bird.server.util.Resource;
-import com.jivesoftware.os.routing.bird.shared.ConnectionDescriptor;
-import com.jivesoftware.os.routing.bird.shared.HostPort;
 import com.jivesoftware.os.routing.bird.shared.TenantRoutingProvider;
 import com.jivesoftware.os.routing.bird.shared.TenantsServiceConnectionDescriptorProvider;
 import java.io.File;
@@ -276,17 +275,7 @@ public class MiruWALMain {
 
             TenantRoutingProvider tenantRoutingProvider = deployable.getTenantRoutingProvider();
             TenantsServiceConnectionDescriptorProvider walConnectionDescriptorProvider = tenantRoutingProvider.getConnections("miru-wal", "main", 10_000); // TODO config
-            HostPortProvider hostPortProvider = host -> {
-                //TODO cache?
-                List<ConnectionDescriptor> connectionDescriptors = walConnectionDescriptorProvider.getConnections("").getConnectionDescriptors();
-                for (ConnectionDescriptor connectionDescriptor : connectionDescriptors) {
-                    HostPort hostPort = connectionDescriptor.getHostPort();
-                    if (hostPort.getHost().equals(host)) {
-                        return hostPort.getPort();
-                    }
-                }
-                return -1;
-            };
+            HostPortProvider hostPortProvider = new RoutingBirdHostPortProvider(walConnectionDescriptorProvider, "");
 
             TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
             TenantAwareHttpClient<String> manageHttpClient = tenantRoutingHttpClientInitializer.initialize(tenantRoutingProvider
