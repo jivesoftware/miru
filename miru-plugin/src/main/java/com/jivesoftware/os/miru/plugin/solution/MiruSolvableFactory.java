@@ -7,6 +7,7 @@ import com.jivesoftware.os.miru.plugin.partition.MiruQueryablePartition;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.IOException;
+import java.nio.channels.ClosedByInterruptException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 
@@ -55,7 +56,7 @@ public class MiruSolvableFactory<Q, A, R> {
             } catch (MiruPartitionUnavailableException e) {
                 LOG.info("Partition unavailable on {} {} {}: {}", requestName, queryKey, replica.getCoord(), e.getMessage());
                 throw e;
-            } catch (InterruptedException ie) {
+            } catch (InterruptedException | ClosedByInterruptException ie) {
                 LOG.debug("Solvable encountered an InterruptedException for {} {} {}", new Object[]{requestName, queryKey, replica.getCoord()}, ie);
                 throw ie;
             } catch (IOException io) {
