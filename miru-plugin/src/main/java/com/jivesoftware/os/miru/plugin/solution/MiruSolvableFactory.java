@@ -63,7 +63,7 @@ public class MiruSolvableFactory<Q, A, R> {
                 LOG.error("Solvable encountered an IOException for {} {} {}", new Object[]{requestName, queryKey, replica.getCoord()}, io);
                 throw io;
             } catch (ExecutionException ee) {
-                if (ee.getCause() instanceof InterruptedException) {
+                if (ee.getCause() instanceof InterruptedException || ee.getCause() instanceof ClosedByInterruptException) {
                     LOG.debug("Solvable encountered an InterruptedException for {} {} {}", new Object[]{requestName, queryKey, replica.getCoord()}, ee);
                     throw (InterruptedException) ee.getCause();
                 } else {
