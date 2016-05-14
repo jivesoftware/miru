@@ -312,8 +312,12 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
             final MiruContext<BM, IBM, S> got = context.get();
             long elapsed;
             synchronized (got.writeLock) {
-                /*log.info("Merging {} (taken: {}) (remaining: {}) (merges: {})",
-                coord, chits.taken(coord), chits.remaining(), merges.incrementAndGet());*/
+                if (chits.taken(coord) == 0) {
+                    LOG.info("Skipped merge because no chits have been acquired for {}", coord);
+                    chits.refundAll(coord);
+                    LOG.inc("merge>skip>count");
+                    return;
+                }
                 long start = System.currentTimeMillis();
 
                 List<Future<?>> futures = Lists.newArrayList();

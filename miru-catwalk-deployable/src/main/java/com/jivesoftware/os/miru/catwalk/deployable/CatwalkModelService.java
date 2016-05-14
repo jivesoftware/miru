@@ -212,6 +212,10 @@ public class CatwalkModelService {
 
         @SuppressWarnings("unchecked")
         List<FeatureScore>[] featureScores = new List[features.length];
+        int scoreCount = 0;
+        int existingCount = 0;
+        int missingCount = 0;
+        int modelCount = 0;
         for (int i = 0; i < features.length; i++) {
             MergedScores mergedScores = featureNameToMergedScores.get(features[i].name);
             if (mergedScores != null) {
@@ -226,14 +230,16 @@ public class CatwalkModelService {
                 }
 
                 featureScores[i] = mergedScores.mergedScores.featureScores;
-                LOG.info("Gathered {} scores for tenantId:{} catwalkId:{} modelId:{} feature:{} from {} models",
-                    featureScores[i].size(), tenantId, catwalkId, modelId, i, featureModels);
+                scoreCount += featureScores[i].size();
+                existingCount++;
+                modelCount += featureModels;
             } else {
                 featureScores[i] = Collections.emptyList();
-                LOG.info("Gathered no scores for tenantId:{} catwalkId:{} modelId:{} feature:{}",
-                    tenantId, catwalkId, modelId, i);
+                missingCount++;
             }
         }
+        LOG.info("Gathered {} scores for tenantId:{} catwalkId:{} modelId:{} existing:{} missing:{} from {} models",
+            scoreCount, tenantId, catwalkId, modelId, existingCount, missingCount, modelCount);
 
         for (Map.Entry<String, MergedScores> entry : featureNameToMergedScores.entrySet()) {
             List<FeatureRange> ranges = entry.getValue().ranges;
@@ -277,12 +283,18 @@ public class CatwalkModelService {
         String[] featureNames,
         ModelFeatureScores[] models) throws Exception {
 
-        LOG.info("Saving model for tenantId:{} catwalkId:{} modelId:{} from:{} to:{}",
-            tenantId, catwalkId, modelId, fromPartitionId, toPartitionId);
-
+        int modelCount = 0;
+        int totalCount = 0;
+        int featureScores  = 0;
         for (ModelFeatureScores model : models) {
             Collections.sort(model.featureScores, FEATURE_SCORE_COMPARATOR);
+            modelCount += model.modelCount;
+            totalCount += model.totalCount;
+            featureScores += model.featureScores.size();
         }
+
+        LOG.info("Saving model for tenantId:{} catwalkId:{} modelId:{} from:{} to:{} modelCount:{} totalCount:{} featureScores:{}",
+            tenantId, catwalkId, modelId, fromPartitionId, toPartitionId, modelCount, totalCount, featureScores);
 
         PartitionClient client = modelClient(tenantId);
         client.commit(Consistency.leader_quorum, null,
@@ -333,14 +345,12 @@ public class CatwalkModelService {
 
     private FeatureScore merge(FeatureScore a, FeatureScore b) {
         long[] numerators = new long[a.numerators.length];
-        long numeratorSum = 0;
+        long denominator = a.denominator + b.denominator;
         for (int i = 0; i < a.numerators.length; i++) {
             numerators[i] = a.numerators[i] + b.numerators[i];
-            numeratorSum += numerators[i];
-        }
-        long denominator = a.denominator + b.denominator;
-        if (numeratorSum > denominator) {
-            LOG.warn("Merged numerator:{} denominator:{} for scores: {} {}", numeratorSum, denominator, a, b);
+            if (numerators[i] > denominator) {
+                LOG.warn("Merged numerator:{} denominator:{} for scores: {} {}", numerators[i], denominator, a, b);
+            }
         }
         int numPartitions = a.numPartitions + b.numPartitions;
         return new FeatureScore(a.termIds, numerators, denominator, numPartitions);

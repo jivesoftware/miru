@@ -1106,7 +1106,8 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
             }
 
             if (!accessor.hasOpenWriters()) {
-                LOG.info("Sipped forced merging has no open writers. sippedEndOfWAL:{} sippedEndOfStream:{}", sippedEndOfWAL, sippedEndOfStream);
+                LOG.info("Forcing merge after sip with no open writers for coord:{} sippedEndOfWAL:{} sippedEndOfStream:{}",
+                    coord, sippedEndOfWAL, sippedEndOfStream);
                 accessor.merge(persistentMergeExecutor, accessor.persistentContext, persistentMergeChits, trackError);
             }
 
