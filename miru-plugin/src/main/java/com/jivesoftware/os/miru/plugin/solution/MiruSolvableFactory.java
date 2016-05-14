@@ -1,12 +1,14 @@
 package com.jivesoftware.os.miru.plugin.solution;
 
 import com.google.common.base.Optional;
+import com.google.common.base.Throwables;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
 import com.jivesoftware.os.miru.plugin.partition.MiruQueryablePartition;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.nio.channels.ClosedByInterruptException;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -56,22 +58,25 @@ public class MiruSolvableFactory<Q, A, R> {
             } catch (MiruPartitionUnavailableException e) {
                 LOG.info("Partition unavailable on {} {} {}: {}", requestName, queryKey, replica.getCoord(), e.getMessage());
                 throw e;
-            } catch (InterruptedException | ClosedByInterruptException ie) {
-                LOG.debug("Solvable encountered an InterruptedException for {} {} {}", new Object[]{requestName, queryKey, replica.getCoord()}, ie);
+            } catch (InterruptedException | InterruptedIOException | ClosedByInterruptException ie) {
+                LOG.debug("Solvable encountered {} for {} {} {}",
+                    new Object[] { ie.getClass().getSimpleName(), requestName, queryKey, replica.getCoord() }, ie);
                 throw ie;
             } catch (IOException io) {
-                LOG.error("Solvable encountered an IOException for {} {} {}", new Object[]{requestName, queryKey, replica.getCoord()}, io);
+                LOG.error("Solvable encountered an IOException for {} {} {}", new Object[] { requestName, queryKey, replica.getCoord() }, io);
                 throw io;
             } catch (ExecutionException ee) {
-                if (ee.getCause() instanceof InterruptedException || ee.getCause() instanceof ClosedByInterruptException) {
-                    LOG.debug("Solvable encountered an InterruptedException for {} {} {}", new Object[]{requestName, queryKey, replica.getCoord()}, ee);
-                    throw (InterruptedException) ee.getCause();
+                Throwable cause = ee.getCause();
+                if (cause instanceof InterruptedException || cause instanceof InterruptedIOException || cause instanceof ClosedByInterruptException) {
+                    LOG.debug("Solvable encountered {} for {} {} {}",
+                        new Object[] { cause.getClass().getSimpleName(), requestName, queryKey, replica.getCoord() }, ee);
+                    throw Throwables.propagate(cause);
                 } else {
-                    LOG.error("Solvable encountered an ExecutionException for {} {} {}", new Object[]{requestName, queryKey, replica.getCoord()}, ee);
+                    LOG.error("Solvable encountered an ExecutionException for {} {} {}", new Object[] { requestName, queryKey, replica.getCoord() }, ee);
                     throw ee;
                 }
             } catch (Throwable t) {
-                LOG.error("Solvable encountered a problem for {} {} {}", new Object[]{requestName, queryKey, replica.getCoord()}, t);
+                LOG.error("Solvable encountered a problem for {} {} {}", new Object[] { requestName, queryKey, replica.getCoord() }, t);
                 throw t;
             }
 
