@@ -65,14 +65,15 @@ public class MiruSolvableFactory<Q, A, R> {
             } catch (IOException io) {
                 LOG.error("Solvable encountered an IOException for {} {} {}", new Object[] { requestName, queryKey, replica.getCoord() }, io);
                 throw io;
-            } catch (ExecutionException ee) {
+            } catch (ExecutionException | RuntimeException ee) {
                 Throwable cause = ee.getCause();
                 if (cause instanceof InterruptedException || cause instanceof InterruptedIOException || cause instanceof ClosedByInterruptException) {
                     LOG.debug("Solvable encountered {} for {} {} {}",
                         new Object[] { cause.getClass().getSimpleName(), requestName, queryKey, replica.getCoord() }, ee);
                     throw Throwables.propagate(cause);
                 } else {
-                    LOG.error("Solvable encountered an ExecutionException for {} {} {}", new Object[] { requestName, queryKey, replica.getCoord() }, ee);
+                    LOG.error("Solvable encountered {} for {} {} {}",
+                        new Object[] { ee.getClass().getSimpleName(), requestName, queryKey, replica.getCoord() }, ee);
                     throw ee;
                 }
             } catch (Throwable t) {
