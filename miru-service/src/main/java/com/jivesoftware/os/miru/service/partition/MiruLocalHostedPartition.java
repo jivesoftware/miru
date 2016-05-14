@@ -216,6 +216,12 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
         Optional<MiruContext<BM, IBM, S>> optionalTransientContext = Optional.absent();
 
         synchronized (factoryLock) {
+            MiruPartitionAccessor<BM, IBM, C, S> latestAccessor = accessorRef.get();
+            if (latestAccessor != accessor) {
+                LOG.warn("Ignored request for transition to state={} because the accessor changed with state={}",
+                    state, latestAccessor == null ? null : latestAccessor.state);
+                return latestAccessor;
+            }
 
             boolean refundPersistentChits = false;
             boolean obsolete = false;
