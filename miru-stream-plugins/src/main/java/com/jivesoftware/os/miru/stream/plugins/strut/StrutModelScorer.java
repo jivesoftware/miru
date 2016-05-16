@@ -12,7 +12,6 @@ import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
-import com.jivesoftware.os.miru.plugin.Miru;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.CacheKeyValues;
@@ -42,6 +41,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * @author jonathan.colt
@@ -58,6 +58,7 @@ public class StrutModelScorer {
     private final MiruProvider miruProvider;
     private final Strut strut;
     private final MiruAggregateUtil aggregateUtil;
+    private final AtomicLong pendingUpdates;
     private final int maxUpdatesBeforeFlush;
 
     private final Map<String, CatwalkDefinition> catwalks = Maps.newConcurrentMap();
@@ -69,11 +70,13 @@ public class StrutModelScorer {
     public StrutModelScorer(MiruProvider miruProvider,
         Strut strut,
         MiruAggregateUtil aggregateUtil,
+        AtomicLong pendingUpdates,
         int maxUpdatesBeforeFlush,
         int queueStripeCount) {
         this.miruProvider = miruProvider;
         this.strut = strut;
         this.aggregateUtil = aggregateUtil;
+        this.pendingUpdates = pendingUpdates;
         this.maxUpdatesBeforeFlush = maxUpdatesBeforeFlush;
 
         this.queues = new LinkedHashMap[queueStripeCount];
@@ -170,17 +173,21 @@ public class StrutModelScorer {
 
         StrutQueueKey key = new StrutQueueKey(coord, strutQuery.catwalkId, strutQuery.modelId, pivotFieldId);
         int stripe = Math.abs(key.hashCode() % queues.length);
+        int[] count = { 0 };
         synchronized (queues[stripe]) {
             queues[stripe].compute(key, (key1, existing) -> {
                 if (existing == null) {
                     existing = Sets.newHashSet();
                 }
                 for (LastIdAndTermId lastIdAndTermId : lastIdAndTermIds) {
-                    existing.add(lastIdAndTermId.termId);
+                    if (existing.add(lastIdAndTermId.termId)) {
+                        count[0]++;
+                    }
                 }
                 return existing;
             });
         }
+        pendingUpdates.addAndGet(count[0]);
     }
 
     private void consume(LinkedHashMap<StrutQueueKey, Set<MiruTermId>> queue) {
@@ -202,27 +209,31 @@ public class StrutModelScorer {
                     LOG.inc("strut>scorer>consumed");
                     StrutModelScorer.StrutQueueKey key = entry.getKey();
                     Set<MiruTermId> termIds = entry.getValue();
+                    int count = termIds.size();
+                    try {
+                        Optional<? extends MiruQueryablePartition<?, ?>> optionalQueryablePartition = miruProvider.getMiru(key.coord.tenantId)
+                            .getQueryablePartition(key.coord);
+                        if (optionalQueryablePartition.isPresent()) {
+                            MiruQueryablePartition<?, ?> replica = optionalQueryablePartition.get();
 
-                    Optional<? extends MiruQueryablePartition<?, ?>> optionalQueryablePartition = miruProvider.getMiru(key.coord.tenantId)
-                        .getQueryablePartition(key.coord);
-                    if (optionalQueryablePartition.isPresent()) {
-                        MiruQueryablePartition<?, ?> replica = optionalQueryablePartition.get();
-
-                        try {
-                            process((MiruQueryablePartition) replica, key.catwalkId, key.modelId, key.pivotFieldId, termIds, stackBuffer, solutionLog);
-                            LOG.inc("strut>scorer>processed", termIds.size());
-                        } catch (Exception e) {
-                            LOG.inc("strut>scorer>failed", termIds.size());
-                            if (LOG.isDebugEnabled()) {
-                                LOG.debug("Failed to consume catwalkId:{} modelId:{} pivotFieldId:{} termCount:{}",
-                                    new Object[] { key.catwalkId, key.modelId, key.pivotFieldId, termIds.size() }, e);
-                            } else {
-                                LOG.warn("Failed to consume catwalkId:{} modelId:{} pivotFieldId:{} termCount:{} message:{}",
-                                    key.catwalkId, key.modelId, key.pivotFieldId, termIds.size(), e.getMessage());
+                            try {
+                                process((MiruQueryablePartition) replica, key.catwalkId, key.modelId, key.pivotFieldId, termIds, stackBuffer, solutionLog);
+                                LOG.inc("strut>scorer>processed", count);
+                            } catch (Exception e) {
+                                LOG.inc("strut>scorer>failed", count);
+                                if (LOG.isDebugEnabled()) {
+                                    LOG.debug("Failed to consume catwalkId:{} modelId:{} pivotFieldId:{} termCount:{}",
+                                        new Object[] { key.catwalkId, key.modelId, key.pivotFieldId, count }, e);
+                                } else {
+                                    LOG.warn("Failed to consume catwalkId:{} modelId:{} pivotFieldId:{} termCount:{} message:{}",
+                                        key.catwalkId, key.modelId, key.pivotFieldId, count, e.getMessage());
+                                }
                             }
+                        } else {
+                            LOG.inc("strut>scorer>ignored", count);
                         }
-                    } else {
-                        LOG.inc("strut>scorer>ignored", termIds.size());
+                    } finally {
+                        pendingUpdates.addAndGet(-count);
                     }
                 }
             }
