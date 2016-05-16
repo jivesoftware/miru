@@ -181,6 +181,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         long totalTimeRescores = 0;
 
         List<LastIdAndTermId> asyncRescore = Lists.newArrayList();
+        boolean[] needsImmediateRescore = { true };
         if (request.query.usePartitionModelCache) {
             long fetchScoresStart = System.currentTimeMillis();
 
@@ -218,6 +219,8 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                     }
                     if (needsRescore) {
                         asyncRescore.add(lastIdAndTermIds.get(termIndex));
+                    } else {
+                        needsImmediateRescore[0] = false;
                     }
                     float scaledScore = Strut.scaleScore(scores, request.query.numeratorScalars, request.query.numeratorStrategy);
                     scored.add(new Scored(lastIdAndTermIds.get(termIndex).lastId,
@@ -230,7 +233,12 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 },
                 stackBuffer);
             totalTimeFetchingScores += (System.currentTimeMillis() - fetchScoresStart);
-        } else {
+        }
+
+        if (needsImmediateRescore[0]) {
+            LOG.info("Performing immediate rescore for coord:{} catwalkId:{} modelId:{} pivotFieldId:{}",
+                handle.getCoord(), request.query.catwalkId, request.query.modelId, pivotFieldId);
+            LOG.inc("strut>rescore>immediate");
             BM[] answers = bitmaps.createArrayOf(request.query.batchSize);
             BM[] constrainFeature = modelScorer.buildConstrainFeatures(bitmaps,
                 context,
@@ -259,10 +267,12 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 scored.addAll(rescored);
             }
             totalTimeRescores += (System.currentTimeMillis() - rescoreStart);
-        }
 
-        if (!asyncRescore.isEmpty()) {
+        } else if (!asyncRescore.isEmpty()) {
+            LOG.inc("strut>rescore>async");
             modelScorer.enqueue(handle.getCoord(), request.query, pivotFieldId, asyncRescore);
+        } else {
+            LOG.inc("strut>rescore>none");
         }
 
         int[] gatherFieldIds = null;
