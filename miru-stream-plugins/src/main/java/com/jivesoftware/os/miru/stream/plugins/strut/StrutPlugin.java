@@ -88,6 +88,7 @@ public class StrutPlugin implements MiruPlugin<StrutEndpoints, StrutInjectable> 
         StrutModelScorer modelScorer = new StrutModelScorer(miruProvider,
             strut,
             aggregateUtil,
+            pendingUpdates,
             config.getMaxUpdatesBeforeFlush(),
             config.getQueueStripeCount());
         modelScorer.start(asyncExecutorService, config.getQueueStripeCount(), config.getQueueConsumeIntervalMillis());
