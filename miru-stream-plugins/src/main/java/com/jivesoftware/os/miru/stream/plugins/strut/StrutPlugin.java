@@ -11,6 +11,7 @@ import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.plugin.MiruEndpointInjectable;
 import com.jivesoftware.os.miru.plugin.plugin.MiruPlugin;
 import com.jivesoftware.os.miru.plugin.solution.FstRemotePartitionReader;
+import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
 import com.jivesoftware.os.routing.bird.health.HealthCheck;
 import com.jivesoftware.os.routing.bird.health.HealthCheckResponse;
@@ -20,8 +21,8 @@ import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import org.merlin.config.defaults.DoubleDefault;
@@ -75,24 +76,29 @@ public class StrutPlugin implements MiruPlugin<StrutEndpoints, StrutInjectable> 
 
         StrutModelCache cache = new StrutModelCache(catwalkHttpClient, mapper, responseMapper, modelCache);
 
-        ExecutorService asyncExecutorService = Executors.newFixedThreadPool(config.getAsyncThreadPoolSize(),
+        ScheduledExecutorService asyncExecutorService = Executors.newScheduledThreadPool(config.getAsyncThreadPoolSize(),
             new ThreadFactoryBuilder().setNameFormat("strut-async-%d").build());
-
-        Strut strut = new Strut(cache);
 
         AtomicLong pendingUpdates = new AtomicLong();
         HealthCheck pendingUpdatesHealthCheck = new PendingUpdatesHealthChecker(miruProvider.getConfig(PendingUpdatesHealthCheckConfig.class), pendingUpdates);
         miruProvider.addHealthCheck(pendingUpdatesHealthCheck);
 
+        Strut strut = new Strut(cache);
+        MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
+        StrutModelScorer modelScorer = new StrutModelScorer(miruProvider,
+            strut,
+            aggregateUtil,
+            config.getMaxUpdatesBeforeFlush(),
+            config.getQueueStripeCount());
+        modelScorer.start(asyncExecutorService, config.getQueueStripeCount(), config.getQueueConsumeIntervalMillis());
+
         return Collections.singletonList(new MiruEndpointInjectable<>(
             StrutInjectable.class,
             new StrutInjectable(miruProvider,
-                asyncExecutorService,
+                modelScorer,
                 strut,
-                pendingUpdates,
                 config.getMaxTermIdsPerRequest(),
-                config.getMaxUpdatesBeforeFlush())
-        ));
+                config.getMaxTermIdsPerRequest())));
     }
 
     @Override

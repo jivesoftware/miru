@@ -328,6 +328,11 @@ public class MiruService implements Miru {
         return partitionDirector.rebuildTimeRange(miruTimeRange, hotDeploy, chunkStores, labIndex);
     }
 
+    @Override
+    public Optional<? extends MiruQueryablePartition<?, ?>> getQueryablePartition(MiruPartitionCoord coord) throws Exception {
+        return partitionDirector.getQueryablePartition(coord);
+    }
+
     private Optional<? extends MiruQueryablePartition<?, ?>> getLocalTenantPartition(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         MiruPartitionCoord localPartitionCoord = new MiruPartitionCoord(tenantId, partitionId, localhost);
         return partitionDirector.getQueryablePartition(localPartitionCoord);

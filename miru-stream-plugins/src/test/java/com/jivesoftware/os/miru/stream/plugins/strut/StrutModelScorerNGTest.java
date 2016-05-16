@@ -116,8 +116,7 @@ public class StrutModelScorerNGTest {
             new MiruTermId(new byte[]{(byte) 124, (byte) 124, (byte) 124, (byte) 124})
         };
 
-        StrutModelScorer scorer = new StrutModelScorer();
-        scorer.score(modelId, 1, termIds, cacheKeyValues, (int termIndex, float[] scores, int lastId) -> {
+        StrutModelScorer.score(modelId, 1, termIds, cacheKeyValues, (int termIndex, float[] scores, int lastId) -> {
             System.out.println(termIndex + " " + Arrays.toString(scores) + " " + lastId);
             return true;
         }, stackBuffer);
@@ -128,11 +127,11 @@ public class StrutModelScorerNGTest {
             updates.add(new Scored(-1, new MiruTermId(new byte[]{(byte) 97, (byte) (97 + i)}), 10, 0.5f, new float[]{0.5f}, null));
         }
 
-        scorer.commit(modelId, cacheKeyValues, updates, stackBuffer);
+        StrutModelScorer.commit(modelId, cacheKeyValues, updates, stackBuffer);
 
         System.out.println("-----------");
 
-        scorer.score(modelId, 1, termIds, cacheKeyValues, (int termIndex, float[] scores, int lastId) -> {
+        StrutModelScorer.score(modelId, 1, termIds, cacheKeyValues, (int termIndex, float[] scores, int lastId) -> {
             System.out.println(termIndex + " " + Arrays.toString(scores) + " " + lastId);
             return true;
         }, stackBuffer);

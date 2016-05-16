@@ -65,6 +65,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruBackfillerizerInitializer;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.marshaller.AmzaSipIndexMarshaller;
 import com.jivesoftware.os.miru.plugin.marshaller.RCVSSipIndexMarshaller;
+import com.jivesoftware.os.miru.plugin.partition.MiruPartitionDirector;
 import com.jivesoftware.os.miru.plugin.plugin.MiruEndpointInjectable;
 import com.jivesoftware.os.miru.plugin.plugin.MiruPlugin;
 import com.jivesoftware.os.miru.plugin.query.LuceneBackedQueryParser;
@@ -337,10 +338,10 @@ public class MiruReaderMain {
                 .initialize(miruServiceConfig.getReadStreamIdsPropName(), miruHost, inboxReadTracker);
 
             backfillerizerLifecycle.start();
-            final MiruJustInTimeBackfillerizer backfillerizer = backfillerizerLifecycle.getService();
+            MiruJustInTimeBackfillerizer backfillerizer = backfillerizerLifecycle.getService();
 
             miruServiceLifecyle.start();
-            final MiruService miruService = miruServiceLifecyle.getService();
+            MiruService miruService = miruServiceLifecyle.getService();
 
             TimestampedOrderIdProvider timestampedOrderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(0), new SnowflakeIdPacker(),
                 new JiveEpochTimestampProvider());

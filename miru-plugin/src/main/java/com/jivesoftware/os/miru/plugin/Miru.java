@@ -1,8 +1,11 @@
 package com.jivesoftware.os.miru.plugin;
 
 import com.google.common.base.Optional;
+import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.plugin.partition.MiruPartitionDirector;
+import com.jivesoftware.os.miru.plugin.partition.MiruQueryablePartition;
 import com.jivesoftware.os.miru.plugin.solution.MiruAnswerEvaluator;
 import com.jivesoftware.os.miru.plugin.solution.MiruAnswerMerger;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
@@ -40,4 +43,5 @@ public interface Miru {
         A defaultValue,
         MiruSolutionLogLevel logLevel) throws Exception;
 
+    Optional<? extends MiruQueryablePartition<?, ?>> getQueryablePartition(MiruPartitionCoord coord) throws Exception;
 }

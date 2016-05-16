@@ -284,6 +284,10 @@ public class MiruServiceInitializer {
             public void start() throws Exception {
                 long heartbeatInterval = config.getHeartbeatIntervalInMillis();
                 serviceScheduledExecutor.scheduleWithFixedDelay(partitionDirector::heartbeat, 0, heartbeatInterval, TimeUnit.MILLISECONDS);
+                leapCache.start("contextCache", config.getLabLeapCacheCleanupIntervalMillis(), throwable -> {
+                    LOG.error("Failure in LAB leap cache cleaner", throwable);
+                    return false;
+                });
             }
 
             @Override
@@ -295,6 +299,7 @@ public class MiruServiceInitializer {
                 solverExecutor.shutdownNow();
                 parallelExecutor.shutdownNow();
                 streamFactoryExecutor.shutdownNow();
+                leapCache.stop();
             }
         };
     }
