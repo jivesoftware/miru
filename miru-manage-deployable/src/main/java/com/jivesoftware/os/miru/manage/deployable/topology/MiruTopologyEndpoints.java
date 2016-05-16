@@ -152,7 +152,7 @@ public class MiruTopologyEndpoints {
             if (LOG.isDebugEnabled()) {
                 LOG.debug(msg, x);
             } else {
-                LOG.error(msg);
+                LOG.error(msg + ": " + x.getMessage());
             }
             return ResponseHelper.INSTANCE.errorResponse(msg, x);
         }

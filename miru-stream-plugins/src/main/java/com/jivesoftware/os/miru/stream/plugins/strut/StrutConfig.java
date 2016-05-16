@@ -5,7 +5,6 @@ import org.merlin.config.defaults.IntDefault;
 import org.merlin.config.defaults.LongDefault;
 
 /**
- *
  * @author jonathan.colt
  */
 public interface StrutConfig extends Config {
@@ -24,4 +23,10 @@ public interface StrutConfig extends Config {
 
     @IntDefault(1_000)
     int getMaxUpdatesBeforeFlush();
+
+    @IntDefault(24)
+    int getQueueStripeCount();
+
+    @LongDefault(60_000)
+    long getQueueConsumeIntervalMillis();
 }

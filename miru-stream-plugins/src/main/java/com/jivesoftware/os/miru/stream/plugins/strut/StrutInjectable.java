@@ -13,8 +13,6 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRequestAndReport;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolvableFactory;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  *
@@ -22,22 +20,19 @@ import java.util.concurrent.atomic.AtomicLong;
 public class StrutInjectable {
 
     private final MiruProvider<? extends Miru> provider;
-    private final ExecutorService asyncExecutorService;
+    private final StrutModelScorer modelScorer;
     private final Strut strut;
-    private final AtomicLong pendingUpdates;
     private final int maxTermIdsPerRequest;
     private final int maxUpdatesBeforeFlush;
 
     public StrutInjectable(MiruProvider<? extends Miru> provider,
-        ExecutorService asyncExecutorService,
+        StrutModelScorer modelScorer,
         Strut strut,
-        AtomicLong pendingUpdates,
         int maxTermIdsPerRequest,
         int maxUpdatesBeforeFlush) {
         this.provider = provider;
-        this.asyncExecutorService = asyncExecutorService;
+        this.modelScorer = modelScorer;
         this.strut = strut;
-        this.pendingUpdates = pendingUpdates;
         this.maxTermIdsPerRequest = maxTermIdsPerRequest;
         this.maxUpdatesBeforeFlush = maxUpdatesBeforeFlush;
     }
@@ -49,12 +44,11 @@ public class StrutInjectable {
             return miru.askAndMerge(tenantId,
                 new MiruSolvableFactory<>(request.name, provider.getStats(),
                     "strut",
-                    new StrutQuestion(asyncExecutorService,
+                    new StrutQuestion(modelScorer,
                         strut,
                         provider.getBackfillerizer(tenantId),
                         request,
                         provider.getRemotePartition(StrutRemotePartition.class),
-                        pendingUpdates,
                         maxTermIdsPerRequest,
                         maxUpdatesBeforeFlush)),
                 new StrutAnswerEvaluator(),
@@ -79,12 +73,11 @@ public class StrutInjectable {
                 partitionId,
                 new MiruSolvableFactory<>(requestAndReport.request.name, provider.getStats(),
                     "strut",
-                    new StrutQuestion(asyncExecutorService,
+                    new StrutQuestion(modelScorer,
                         strut,
                         provider.getBackfillerizer(tenantId),
                         requestAndReport.request,
                         provider.getRemotePartition(StrutRemotePartition.class),
-                        pendingUpdates,
                         maxTermIdsPerRequest,
                         maxUpdatesBeforeFlush)),
                 Optional.fromNullable(requestAndReport.report),
@@ -107,12 +100,11 @@ public class StrutInjectable {
                 partitionId,
                 new MiruSolvableFactory<>(request.name, provider.getStats(),
                     "strut",
-                    new StrutQuestion(asyncExecutorService,
+                    new StrutQuestion(modelScorer,
                         strut,
                         provider.getBackfillerizer(tenantId),
                         request,
                         provider.getRemotePartition(StrutRemotePartition.class),
-                        pendingUpdates,
                         maxTermIdsPerRequest,
                         maxUpdatesBeforeFlush)),
                 new StrutAnswerMerger(request.query.desiredNumberOfResults),

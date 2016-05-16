@@ -35,6 +35,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.solution.Question;
 import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkQuery;
 import com.jivesoftware.os.miru.stream.plugins.strut.Strut.Scored;
+import com.jivesoftware.os.miru.stream.plugins.strut.StrutModelScorer.LastIdAndTermId;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
@@ -52,32 +53,29 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
-    private final ExecutorService asyncRescorers;
+    private final StrutModelScorer modelScorer;
     private final Strut strut;
     private final MiruJustInTimeBackfillerizer backfillerizer;
     private final MiruRequest<StrutQuery> request;
     private final MiruRemotePartition<StrutQuery, StrutAnswer, StrutReport> remotePartition;
-    private final AtomicLong pendingUpdates;
     private final int maxTermIdsPerRequest;
     private final int maxUpdatesBeforeFlush;
 
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
 
-    public StrutQuestion(ExecutorService asyncRescorers,
+    public StrutQuestion(StrutModelScorer modelScorer,
         Strut strut,
         MiruJustInTimeBackfillerizer backfillerizer,
         MiruRequest<StrutQuery> request,
         MiruRemotePartition<StrutQuery, StrutAnswer, StrutReport> remotePartition,
-        AtomicLong pendingUpdates,
         int maxTermIdsPerRequest,
         int maxUpdatesBeforeFlush) {
-        this.asyncRescorers = asyncRescorers;
+        this.modelScorer = modelScorer;
         this.strut = strut;
         this.backfillerizer = backfillerizer;
         this.request = request;
         this.remotePartition = remotePartition;
-        this.pendingUpdates = pendingUpdates;
         this.maxTermIdsPerRequest = maxTermIdsPerRequest;
         this.maxUpdatesBeforeFlush = maxUpdatesBeforeFlush;
     }
@@ -127,7 +125,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                     context,
                     solutionLog,
                     request.tenantId,
-                    handle.getCoord().partitionId, 
+                    handle.getCoord().partitionId,
                     request.query.unreadStreamId);
             }
 
@@ -165,7 +163,6 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             .getCacheProvider()
             .get("strut-" + request.query.catwalkId, payloadSize, false, maxUpdatesBeforeFlush);
 
-        StrutModelScorer modelScorer = new StrutModelScorer(); // Ahh
         AtomicInteger modelTotalPartitionCount = new AtomicInteger();
 
         long start = System.currentTimeMillis();
@@ -203,15 +200,21 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             primaryIndex.multiGetLastIds("strut", pivotFieldId, nullableMiruTermIds, scoredToLastIds, stackBuffer);
             totalTimeFetchingLastId += (System.currentTimeMillis() - fetchLastIdsStart);
 
-            modelScorer.score(
+            StrutModelScorer.score(
                 request.query.modelId,
                 catwalkQuery.gatherFilters.length,
                 miruTermIds,
                 cacheStores,
                 (termIndex, scores, scoredToLastId) -> {
                     boolean needsRescore = scoredToLastId < scoredToLastIds[termIndex];
+                    if (needsRescore) {
+                        LOG.inc("strut>scores>rescoreId");
+                    }
                     for (int i = 0; !needsRescore && i < scores.length; i++) {
                         needsRescore = Float.isNaN(scores[i]);
+                        if (needsRescore) {
+                            LOG.inc("strut>scores>rescoreNaN");
+                        }
                     }
                     if (needsRescore) {
                         asyncRescore.add(lastIdAndTermIds.get(termIndex));
@@ -229,30 +232,37 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             totalTimeFetchingScores += (System.currentTimeMillis() - fetchScoresStart);
         } else {
             BM[] answers = bitmaps.createArrayOf(request.query.batchSize);
-            BM[] constrainFeature = buildConstrainFeatures(bitmaps, context, activityIndexLastId, stackBuffer, solutionLog);
+            BM[] constrainFeature = modelScorer.buildConstrainFeatures(bitmaps,
+                context,
+                request.query.featureFilter,
+                catwalkQuery,
+                activityIndexLastId,
+                stackBuffer,
+                solutionLog);
             long rescoreStart = System.currentTimeMillis();
             for (List<LastIdAndTermId> batch : Lists.partition(lastIdAndTermIds, answers.length)) {
-                List<Scored> rescored = rescore(handle, batch, pivotFieldId, constrainFeature, modelScorer, cacheStores, modelTotalPartitionCount, solutionLog);
+                List<Scored> rescored = modelScorer.rescore(request.query.catwalkId,
+                    request.query.modelId,
+                    request.query.catwalkQuery,
+                    request.query.featureScalars,
+                    request.query.featureStrategy,
+                    request.query.includeFeatures,
+                    request.query.numeratorScalars,
+                    request.query.numeratorStrategy,
+                    handle,
+                    batch,
+                    pivotFieldId,
+                    constrainFeature,
+                    cacheStores,
+                    modelTotalPartitionCount,
+                    solutionLog);
                 scored.addAll(rescored);
             }
             totalTimeRescores += (System.currentTimeMillis() - rescoreStart);
         }
 
         if (!asyncRescore.isEmpty()) {
-            int numberOfUpdates = asyncRescore.size();
-            pendingUpdates.addAndGet(numberOfUpdates);
-            asyncRescorers.submit(() -> {
-                try {
-                    StackBuffer asyncStackBuffer = new StackBuffer();
-                    BM[] asyncConstrainFeature = buildConstrainFeatures(bitmaps, context, activityIndexLastId, asyncStackBuffer, solutionLog);
-                    MiruSolutionLog asyncSolutionLog = new MiruSolutionLog(MiruSolutionLogLevel.NONE);
-                    rescore(handle, asyncRescore, pivotFieldId, asyncConstrainFeature, modelScorer, cacheStores, new AtomicInteger(), asyncSolutionLog);
-                } catch (Exception x) {
-                    LOG.warn("Failed while trying to rescore.", x);
-                } finally {
-                    pendingUpdates.addAndGet(-numberOfUpdates);
-                }
-            });
+            modelScorer.enqueue(handle.getCoord(), request.query, pivotFieldId, asyncRescore);
         }
 
         int[] gatherFieldIds = null;
@@ -337,144 +347,6 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         solutionLog.log(MiruSolutionLogLevel.INFO, "Strut found {} terms", hotOrNots.size());
 
         return new MiruPartitionResponse<>(strut.composeAnswer(context, request, hotOrNots, modelTotalPartitionCount.get()), solutionLog.asList());
-    }
-
-    private <BM extends IBM, IBM> List<Scored> rescore(
-        MiruRequestHandle<BM, IBM, ?> handle,
-        List<LastIdAndTermId> score,
-        int pivotFieldId,
-        BM[] constrainFeature,
-        StrutModelScorer modelScorer,
-        MiruPluginCacheProvider.CacheKeyValues cacheStores,
-        AtomicInteger totalPartitionCount,
-        MiruSolutionLog solutionLog) throws Exception {
-
-        long startStrut = System.currentTimeMillis();
-        MiruBitmaps<BM, IBM> bitmaps = handle.getBitmaps();
-        MiruRequestContext<BM, IBM, ?> context = handle.getRequestContext();
-        MiruFieldIndex<BM, IBM> primaryIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
-
-        StackBuffer stackBuffer = new StackBuffer();
-
-        int[] scoredToLastIds = new int[score.size()];
-        Arrays.fill(scoredToLastIds, -1);
-        List<Scored> results = Lists.newArrayList();
-        List<Scored> updates = Lists.newArrayList();
-
-        strut.yourStuff("strut",
-            handle.getCoord(),
-            bitmaps,
-            context,
-            request,
-            (streamBitmaps) -> {
-                LastIdAndTermId[] rescoreMiruTermIds = score.toArray(new LastIdAndTermId[0]);
-                MiruTermId[] miruTermIds = new MiruTermId[rescoreMiruTermIds.length];
-                for (int i = 0; i < rescoreMiruTermIds.length; i++) {
-                    miruTermIds[i] = rescoreMiruTermIds[i].termId;
-                }
-
-                BM[][] answers = bitmaps.createMultiArrayOf(score.size(), constrainFeature.length);
-                bitmaps.multiTx(
-                    (tx, stackBuffer1) -> primaryIndex.multiTxIndex("strut", pivotFieldId, miruTermIds, -1, stackBuffer1, tx),
-                    (index, lastId, bitmap) -> {
-                        for (int i = 0; i < constrainFeature.length; i++) {
-                            if (constrainFeature[i] != null) {
-                                answers[index][i] = bitmaps.and(Arrays.asList(bitmap, constrainFeature[i]));
-                            } else {
-                                answers[index][i] = bitmap;
-                            }
-                        }
-                        scoredToLastIds[index] = lastId;
-                    },
-                    stackBuffer);
-
-                for (int i = 0; i < rescoreMiruTermIds.length; i++) {
-                    if (!streamBitmaps.stream(i, rescoreMiruTermIds[i].lastId, rescoreMiruTermIds[i].termId, scoredToLastIds[i], answers[i])) {
-                        return false;
-                    }
-                }
-                return true;
-            },
-            (streamIndex, hotness, cacheable) -> {
-                results.add(hotness);
-                if (cacheable) {
-                    updates.add(hotness);
-                }
-                return true;
-            },
-            totalPartitionCount,
-            solutionLog);
-        solutionLog.log(MiruSolutionLogLevel.INFO, "Strut rescore took {} ms", System.currentTimeMillis() - startStrut);
-
-        if (!updates.isEmpty()) {
-            long startOfUpdates = System.currentTimeMillis();
-            modelScorer.commit(request.query.modelId, cacheStores, updates, stackBuffer);
-            long totalTimeScoreUpdates = System.currentTimeMillis() - startOfUpdates;
-            LOG.info("Strut score updates {} features in {} ms", updates.size(), totalTimeScoreUpdates);
-            solutionLog.log(MiruSolutionLogLevel.INFO, "Strut score updates {} features in {} ms", updates.size(), totalTimeScoreUpdates);
-        }
-        return results;
-    }
-
-    private <BM extends IBM, IBM> BM[] buildConstrainFeatures(MiruBitmaps<BM, IBM> bitmaps,
-        MiruRequestContext<BM, IBM, ?> context,
-        int activityIndexLastId,
-        StackBuffer stackBuffer,
-        MiruSolutionLog solutionLog) throws Exception {
-
-        MiruSchema schema = context.getSchema();
-        MiruTermComposer termComposer = context.getTermComposer();
-
-        BM strutFeature = null;
-        if (!MiruFilter.NO_FILTER.equals(request.query.featureFilter)) {
-            strutFeature = aggregateUtil.filter("strutFeature",
-                bitmaps,
-                schema,
-                termComposer,
-                context.getFieldIndexProvider(),
-                request.query.featureFilter,
-                solutionLog,
-                null,
-                activityIndexLastId,
-                -1,
-                stackBuffer);
-        }
-
-        CatwalkQuery.CatwalkFeature[] features = request.query.catwalkQuery.features;
-        BM[] constrainFeature = bitmaps.createArrayOf(features.length);
-        for (int i = 0; i < features.length; i++) {
-            List<IBM> constrainAnds = Lists.newArrayList();
-            if (request.query.catwalkQuery.features[i] != null) {
-                constrainAnds.add(aggregateUtil.filter("strutCatwalk",
-                    bitmaps,
-                    schema,
-                    termComposer,
-                    context.getFieldIndexProvider(),
-                    request.query.catwalkQuery.features[i].featureFilter,
-                    solutionLog,
-                    null,
-                    activityIndexLastId,
-                    -1,
-                    stackBuffer));
-            }
-            if (strutFeature != null) {
-                constrainAnds.add(strutFeature);
-            }
-            constrainFeature[i] = bitmaps.and(constrainAnds);
-        }
-
-        return constrainFeature;
-    }
-
-    private static class LastIdAndTermId {
-
-        private final int lastId;
-        private final MiruTermId termId;
-
-        public LastIdAndTermId(int lastId, MiruTermId termId) {
-            this.lastId = lastId;
-            this.termId = termId;
-        }
     }
 
     @Override
