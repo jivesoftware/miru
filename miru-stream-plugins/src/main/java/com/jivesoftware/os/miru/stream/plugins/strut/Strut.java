@@ -181,7 +181,7 @@ public class Strut {
 
             @SuppressWarnings("unchecked")
             Set<MiruAggregateUtil.Feature>[] dedupeFeatures = new Set[featureFieldIds.length];
-            for (int i = 0; i < features.length; i++) {
+            for (int i = 0; i < dedupeFeatures.length; i++) {
                 dedupeFeatures[i] = Sets.newHashSet();
             }
 
