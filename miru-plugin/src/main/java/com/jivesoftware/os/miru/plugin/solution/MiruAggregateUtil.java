@@ -87,13 +87,19 @@ public class MiruAggregateUtil {
             }
         }*/
 
-        int[] featureCount = {0};
-        int[] termCount = {0};
+        int[] featureCount = { 0 };
+        int[] termCount = { 0 };
         int batchSize = 1_000;
         boolean[][] featuresContained = new boolean[batchSize][featureFieldIds.length];
         int[] ids = new int[batchSize];
         long start = System.currentTimeMillis();
+        int[] skippedCount = { 0 };
+        int[] consumedCount = { 0 };
+        int[] minFromId = { Integer.MAX_VALUE };
+        int[] maxFromId = { Integer.MIN_VALUE };
         consumeAnswers.consume((streamIndex, lastId, answerTermId, answerScoredLastId, answerBitmaps, fromId, features) -> {
+            minFromId[0] = Math.min(minFromId[0], fromId);
+            maxFromId[0] = Math.max(maxFromId[0], fromId);
 
             termCount[0]++;
             /*for (Set<Feature> featureSet : features) {
@@ -113,8 +119,10 @@ public class MiruAggregateUtil {
             while (iter.hasNext()) {
                 ids[count] = iter.next(featuresContained[count]);
                 if (ids[count] < fromId) {
+                    skippedCount[0]++;
                     continue;
                 }
+                consumedCount[0]++;
                 count++;
                 if (count == batchSize) {
                     if (!gatherAndStreamFeatures(name, streamIndex, featureFieldIds, stream, stackBuffer, uniqueFieldIds, activityIndex, fieldTerms,
@@ -133,8 +141,10 @@ public class MiruAggregateUtil {
             }
             return stream.stream(streamIndex, lastId, answerTermId, answerScoredLastId, -1, null);
         });
-        solutionLog.log(MiruSolutionLogLevel.INFO, "Gathered {} features for {} terms in {} ms",
-            featureCount[0], termCount[0], System.currentTimeMillis() - start);
+        LOG.info("Gathered {} features for {} terms in {} ms - skipped {} consumed {} fromId {}/{}",
+            featureCount[0], termCount[0], System.currentTimeMillis() - start, skippedCount[0], consumedCount[0], minFromId[0], maxFromId[0]);
+        solutionLog.log(MiruSolutionLogLevel.INFO, "Gathered {} features for {} terms in {} ms - skipped {} consumed {} fromId {}/{}",
+            featureCount[0], termCount[0], System.currentTimeMillis() - start, skippedCount[0], consumedCount[0], minFromId[0], maxFromId[0]);
     }
 
     private boolean gatherAndStreamFeatures(String name,
