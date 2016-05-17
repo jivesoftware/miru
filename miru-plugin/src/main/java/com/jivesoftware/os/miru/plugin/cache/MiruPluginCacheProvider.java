@@ -12,9 +12,11 @@ public interface MiruPluginCacheProvider {
 
     interface CacheKeyValues {
 
-        boolean get(String cacheId, byte[][] keys, GetKeyValueStream stream, StackBuffer stackBuffer) throws Exception;
+        boolean get(byte[] cacheId, byte[][] keys, GetKeyValueStream stream, StackBuffer stackBuffer) throws Exception;
 
-        void put(String cacheId,
+        boolean rangeScan(byte[] cacheId, byte[] fromInclusive, byte[] toExclusive, RangeKeyValueStream stream) throws Exception;
+
+        void put(byte[] cacheId,
             byte[][] keys,
             byte[][] values,
             boolean commitOnUpdate,
@@ -24,5 +26,9 @@ public interface MiruPluginCacheProvider {
 
     interface GetKeyValueStream {
         boolean stream(int index, byte[] key, byte[] value) throws IOException;
+    }
+
+    interface RangeKeyValueStream {
+        boolean stream(byte[] key, byte[] value) throws IOException;
     }
 }

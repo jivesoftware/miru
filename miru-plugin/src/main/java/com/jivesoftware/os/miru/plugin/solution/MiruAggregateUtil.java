@@ -48,7 +48,7 @@ public class MiruAggregateUtil {
 
     public interface StreamBitmaps<BM> {
 
-        boolean stream(int streamIndex, int lastId, MiruTermId termId, int scoredToLastId, BM[] answers) throws Exception;
+        boolean stream(int streamIndex, int lastId, MiruTermId termId, int scoredToLastId, BM[] answers, int fromId) throws Exception;
     }
 
     public interface ConsumeBitmaps<BM> {
@@ -94,7 +94,7 @@ public class MiruAggregateUtil {
         boolean[][] featuresContained = new boolean[batchSize][featureFieldIds.length];
         int[] ids = new int[batchSize];
         long start = System.currentTimeMillis();
-        consumeAnswers.consume((streamIndex, lastId, answerTermId, answerScoredLastId, answerBitmaps) -> {
+        consumeAnswers.consume((streamIndex, lastId, answerTermId, answerScoredLastId, answerBitmaps, fromId) -> {
 
             termCount[0]++;
             for (Set<Feature> featureSet : features) {
@@ -113,6 +113,9 @@ public class MiruAggregateUtil {
             int count = 0;
             while (iter.hasNext()) {
                 ids[count] = iter.next(featuresContained[count]);
+                if (ids[count] < fromId) {
+                    continue;
+                }
                 count++;
                 if (count == batchSize) {
                     if (!gatherAndStreamFeatures(name, streamIndex, featureFieldIds, stream, stackBuffer, uniqueFieldIds, activityIndex, fieldTerms,

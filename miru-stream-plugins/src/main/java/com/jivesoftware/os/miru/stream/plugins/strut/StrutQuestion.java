@@ -158,10 +158,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             .maximumSize(request.query.desiredNumberOfResults)
             .create();
 
-        int payloadSize = 4 * request.query.catwalkQuery.gatherFilters.length + 4; // this is amazing
-        MiruPluginCacheProvider.CacheKeyValues cacheStores = handle.getRequestContext()
-            .getCacheProvider()
-            .get("strut-" + request.query.catwalkId, payloadSize, false, maxUpdatesBeforeFlush);
+        MiruPluginCacheProvider.CacheKeyValues termScoresCache = modelScorer.getTermScoreCache(context, request.query.catwalkId, catwalkQuery);
 
         AtomicInteger modelTotalPartitionCount = new AtomicInteger();
 
@@ -205,7 +202,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 request.query.modelId,
                 catwalkQuery.gatherFilters.length,
                 miruTermIds,
-                cacheStores,
+                termScoresCache,
                 (termIndex, scores, scoredToLastId) -> {
                     boolean needsRescore = scoredToLastId < scoredToLastIds[termIndex];
                     if (needsRescore) {
@@ -245,6 +242,8 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             scored.clear();
             asyncRescore.clear();
 
+            MiruPluginCacheProvider.CacheKeyValues termFeaturesCache = modelScorer.getTermFeatureCache(context, request.query.catwalkId);
+
             BM[] answers = bitmaps.createArrayOf(request.query.batchSize);
             BM[] constrainFeature = modelScorer.buildConstrainFeatures(bitmaps,
                 context,
@@ -267,7 +266,8 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                     batch,
                     pivotFieldId,
                     constrainFeature,
-                    cacheStores,
+                    termScoresCache,
+                    termFeaturesCache,
                     modelTotalPartitionCount,
                     solutionLog);
                 scored.addAll(rescored);

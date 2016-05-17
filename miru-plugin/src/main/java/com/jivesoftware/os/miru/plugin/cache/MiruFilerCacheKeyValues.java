@@ -8,12 +8,16 @@ import com.jivesoftware.os.filer.io.map.MapContext;
 import com.jivesoftware.os.filer.io.map.MapStore;
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.CacheKeyValues;
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.GetKeyValueStream;
-import java.nio.charset.StandardCharsets;
+import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.RangeKeyValueStream;
+import com.jivesoftware.os.mlogger.core.MetricLogger;
+import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 
 /**
  *
  */
 public class MiruFilerCacheKeyValues implements CacheKeyValues {
+
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final KeyedFilerStore<Integer, MapContext>[] powerIndex;
 
@@ -22,7 +26,7 @@ public class MiruFilerCacheKeyValues implements CacheKeyValues {
     }
 
     @Override
-    public boolean get(String cacheId, byte[][] keys, GetKeyValueStream stream, StackBuffer stackBuffer) throws Exception {
+    public boolean get(byte[] cacheId, byte[][] keys, GetKeyValueStream stream, StackBuffer stackBuffer) throws Exception {
         byte[][][] powerKeyBytes = new byte[powerIndex.length][][];
         for (int i = 0; i < keys.length; i++) {
             if (keys[i] != null) {
@@ -35,13 +39,12 @@ public class MiruFilerCacheKeyValues implements CacheKeyValues {
             }
         }
 
-        byte[] cacheIdBytes = cacheId.getBytes(StandardCharsets.UTF_8);
         for (int power = 0; power < powerKeyBytes.length; power++) {
             long expectedKeySize = FilerIO.chunkLength(power);
 
             byte[][] keyBytes = powerKeyBytes[power];
             if (keyBytes != null) {
-                powerIndex[power].read(cacheIdBytes, null, (monkey, filer, _stackBuffer, lock) -> {
+                powerIndex[power].read(cacheId, null, (monkey, filer, _stackBuffer, lock) -> {
                     if (filer != null) {
                         if (monkey.keySize != expectedKeySize) {
                             throw new IllegalStateException("provided " + monkey.keySize + " expected " + expectedKeySize);
@@ -73,14 +76,18 @@ public class MiruFilerCacheKeyValues implements CacheKeyValues {
     }
 
     @Override
-    public void put(String cacheId,
+    public boolean rangeScan(byte[] cacheId, byte[] fromInclusive, byte[] toExclusive, RangeKeyValueStream stream) throws Exception {
+        LOG.warn("Ignored range scan against filer cache key values");
+        return true;
+    }
+
+    @Override
+    public void put(byte[] cacheId,
         byte[][] keys,
         byte[][] values,
         boolean commitOnUpdate,
         boolean fsyncOnCommit,
         StackBuffer stackBuffer) throws Exception {
-
-        byte[] cacheIdBytes = cacheId.getBytes(StandardCharsets.UTF_8);
 
         byte[][][] powerKeyBytes = new byte[powerIndex.length][][];
         for (int i = 0; i < keys.length; i++) {
@@ -96,7 +103,7 @@ public class MiruFilerCacheKeyValues implements CacheKeyValues {
             long expectedKeySize = FilerIO.chunkLength(power);
             byte[][] keyBytes = powerKeyBytes[power];
             if (keyBytes != null) {
-                powerIndex[power].readWriteAutoGrow(cacheIdBytes,
+                powerIndex[power].readWriteAutoGrow(cacheId,
                     keys.length, // lazy
                     (MapContext monkey, ChunkFiler chunkFiler, StackBuffer stackBuffer1, Object lock) -> {
                         if (monkey.keySize != expectedKeySize) {
