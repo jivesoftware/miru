@@ -89,11 +89,10 @@ public class Catwalk {
                     for (int i = 0; i < featureAnswers.length; i++) {
                         modelCounts[i] += bitmaps.cardinality(featureAnswers[i]);
                     }
-                    return streamBitmaps.stream(index, -1, answerTermId, -1, featureAnswers, 0);
+                    return streamBitmaps.stream(index, -1, answerTermId, -1, featureAnswers, 0, null);
                 });
             },
             featureFieldIds,
-            false,
             (streamIndex, lastId, answerTermId, answerScoredLastId, featureId, termIds) -> {
                 if (featureId >= 0) {
                     long[] numerators = featureValueSets[featureId].computeIfAbsent(new Feature(termIds), key -> new long[numeratorTermSets.length]);

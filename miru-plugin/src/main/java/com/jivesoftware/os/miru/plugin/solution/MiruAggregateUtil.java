@@ -48,7 +48,7 @@ public class MiruAggregateUtil {
 
     public interface StreamBitmaps<BM> {
 
-        boolean stream(int streamIndex, int lastId, MiruTermId termId, int scoredToLastId, BM[] answers, int fromId) throws Exception;
+        boolean stream(int streamIndex, int lastId, MiruTermId termId, int scoredToLastId, BM[] answers, int fromId, Set<Feature>[] features) throws Exception;
     }
 
     public interface ConsumeBitmaps<BM> {
@@ -61,7 +61,6 @@ public class MiruAggregateUtil {
         MiruRequestContext<BM, IBM, S> requestContext,
         ConsumeBitmaps<BM> consumeAnswers,
         int[][] featureFieldIds,
-        boolean dedupe,
         FeatureStream stream,
         MiruSolutionLog solutionLog,
         StackBuffer stackBuffer) throws Exception {
@@ -80,13 +79,13 @@ public class MiruAggregateUtil {
 
         MiruTermId[][][] fieldTerms = new MiruTermId[schema.fieldCount()][][];
 
-        @SuppressWarnings("unchecked")
+        /*@SuppressWarnings("unchecked")
         Set<Feature>[] features = new Set[featureFieldIds.length];
         if (dedupe) {
             for (int i = 0; i < features.length; i++) {
                 features[i] = Sets.newHashSet();
             }
-        }
+        }*/
 
         int[] featureCount = {0};
         int[] termCount = {0};
@@ -94,14 +93,14 @@ public class MiruAggregateUtil {
         boolean[][] featuresContained = new boolean[batchSize][featureFieldIds.length];
         int[] ids = new int[batchSize];
         long start = System.currentTimeMillis();
-        consumeAnswers.consume((streamIndex, lastId, answerTermId, answerScoredLastId, answerBitmaps, fromId) -> {
+        consumeAnswers.consume((streamIndex, lastId, answerTermId, answerScoredLastId, answerBitmaps, fromId, features) -> {
 
             termCount[0]++;
-            for (Set<Feature> featureSet : features) {
+            /*for (Set<Feature> featureSet : features) {
                 if (featureSet != null) {
                     featureSet.clear();
                 }
-            }
+            }*/
             MiruIntIterator[] intIters = new MiruIntIterator[answerBitmaps.length];
             for (int i = 0; i < intIters.length; i++) {
                 if (answerBitmaps[i] != null) {
@@ -161,10 +160,10 @@ public class MiruAggregateUtil {
             fieldTerms[fieldId] = activityIndex.getAll(name, consumableIds, 0, count, fieldId, stackBuffer);
         }
 
-        PermutationStream permutationStream = (fi, termIds1) -> {
-            if (features[fi] == null || features[fi].add(new Feature(termIds1))) {
+        PermutationStream permutationStream = (fi, permuteTermIds) -> {
+            if (features == null || features[fi] == null || features[fi].add(new Feature(permuteTermIds))) {
                 featureCount[0]++;
-                if (!stream.stream(streamIndex, lastId, answerTermId, answerScoredLastId, fi, termIds1)) {
+                if (!stream.stream(streamIndex, lastId, answerTermId, answerScoredLastId, fi, permuteTermIds)) {
                     return false;
                 }
             }

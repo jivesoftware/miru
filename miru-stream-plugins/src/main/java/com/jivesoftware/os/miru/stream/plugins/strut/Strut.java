@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.stream.plugins.strut;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.jivesoftware.os.filer.io.ByteArrayFiler;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
@@ -13,7 +14,6 @@ import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.CacheKeyVal
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
-import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil.ConsumeBitmaps;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
@@ -28,6 +28,7 @@ import com.jivesoftware.os.rcvs.marshall.api.UtilLexMarshaller;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -101,6 +102,16 @@ public class Strut {
         }
     }
 
+    public interface StrutBitmapStream<BM> {
+
+        boolean stream(int streamIndex, int lastId, MiruTermId termId, int scoredToLastId, BM[] answers) throws Exception;
+    }
+
+    public interface StrutStream<BM> {
+
+        boolean stream(StrutBitmapStream<BM> streamBitmaps) throws Exception;
+    }
+
     public <BM extends IBM, IBM> void yourStuff(String name,
         MiruPartitionCoord coord,
         MiruBitmaps<BM, IBM> bitmaps,
@@ -114,7 +125,7 @@ public class Strut {
         float[] numeratorScalars,
         Strategy numeratorStrategy,
         CacheKeyValues termFeatureCache,
-        ConsumeBitmaps<BM> consumeAnswers,
+        StrutStream<BM> strutStream,
         HotStuff hotStuff,
         AtomicInteger totalPartitionCount,
         MiruSolutionLog solutionLog) throws Exception {
@@ -143,10 +154,14 @@ public class Strut {
         List<Hotness>[] features = includeFeatures ? new List[catwalkFeatures.length] : null;
         int[] featureCount = { 0 };
 
+        int[] persistTermIdCount = { 0 };
+        int[] persistHitCount = { 0 };
+        int[] persistSaveCount = { 0 };
+
         StrutModel model = cache.get(coord.tenantId, catwalkId, modelId, coord.partitionId.getId(), catwalkQuery);
         if (model == null) {
 
-            consumeAnswers.consume((streamIndex, lastId, termId, scoredToLastId, answers, bogusFromId) -> {
+            strutStream.stream((streamIndex, lastId, termId, scoredToLastId, answers) -> {
                 boolean more = true;
                 if (!hotStuff.steamStream(streamIndex, new Scored(lastId, termId, scoredToLastId, 0f, new float[numeratorsCount], null), false)) {
                     more = false;
@@ -164,6 +179,12 @@ public class Strut {
                 }
             }
 
+            @SuppressWarnings("unchecked")
+            Set<MiruAggregateUtil.Feature>[] dedupeFeatures = new Set[featureFieldIds.length];
+            for (int i = 0; i < features.length; i++) {
+                dedupeFeatures[i] = Sets.newHashSet();
+            }
+
             float[][] scores = new float[numeratorsCount][catwalkFeatures.length];
             int[][] counts = new int[numeratorsCount][catwalkFeatures.length];
             @SuppressWarnings("unchecked")
@@ -172,7 +193,11 @@ public class Strut {
                 bitmaps,
                 requestContext,
                 streamBitmaps -> {
-                    return consumeAnswers.consume((streamIndex, lastId, termId, scoredToLastId, answers, bogusFromId) -> {
+                    return strutStream.stream((streamIndex, lastId, termId, scoredToLastId, answers) -> {
+                        for (Set<MiruAggregateUtil.Feature> dedupe : dedupeFeatures) {
+                            dedupe.clear();
+                        }
+
                         int[] fromId = { 0 };
                         termFeatureCache.rangeScan(termId.getBytes(), null, null, (key, value) -> {
                             Feature feature = Feature.unpack(key, stackBuffer);
@@ -183,6 +208,8 @@ public class Strut {
                             }
 
                             MiruTermId[] termIds = feature.featureTermIds;
+                            dedupeFeatures[featureId].add(new MiruAggregateUtil.Feature(termIds));
+                            persistHitCount[0]++;
 
                             ModelScore modelScore = model.score(featureId, termIds);
                             if (modelScore != null) {
@@ -211,11 +238,10 @@ public class Strut {
                             }
                             return true;
                         });
-                        return streamBitmaps.stream(streamIndex, lastId, termId, scoredToLastId, answers, fromId[0]);
+                        return streamBitmaps.stream(streamIndex, lastId, termId, scoredToLastId, answers, fromId[0], dedupeFeatures);
                     });
                 },
                 featureFieldIds,
-                true,
                 (streamIndex, lastId, answerTermId, answerScoredLastId, featureId, termIds) -> {
                     if (featureId == -1) {
                         boolean stopped = false;
@@ -243,6 +269,9 @@ public class Strut {
                             }
                         }
                         if (!persistKeys.isEmpty()) {
+                            persistTermIdCount[0]++;
+                            persistSaveCount[0] += persistKeys.size();
+
                             byte[][] persistKeyBytes = persistKeys.toArray(new byte[0][]);
                             byte[][] persistValueBytes = new byte[persistKeyBytes.length][];
                             Arrays.fill(persistValueBytes, new byte[0]);
@@ -308,7 +337,10 @@ public class Strut {
                 stackBuffer);
         }
 
-        solutionLog.log(MiruSolutionLogLevel.INFO, "Strut scored {} features in {} ms", featureCount[0], System.currentTimeMillis() - start);
+        LOG.info("Strut scored {} features in {} ms, termIds={} hits={} saves={}",
+            featureCount[0], System.currentTimeMillis() - start, persistTermIdCount[0], persistHitCount[0], persistSaveCount[0]);
+        solutionLog.log(MiruSolutionLogLevel.INFO, "Strut scored {} features in {} ms, termIds={} hits={} saves={}",
+            featureCount[0], System.currentTimeMillis() - start, persistTermIdCount[0], persistHitCount[0], persistSaveCount[0]);
 
     }
 
