@@ -181,7 +181,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         long totalTimeRescores = 0;
 
         List<LastIdAndTermId> asyncRescore = Lists.newArrayList();
-        boolean[] needsImmediateRescore = { true };
+        float[] maxScore = { 0f };
         if (request.query.usePartitionModelCache) {
             long fetchScoresStart = System.currentTimeMillis();
 
@@ -211,16 +211,18 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                     if (needsRescore) {
                         LOG.inc("strut>scores>rescoreId");
                     }
-                    for (int i = 0; !needsRescore && i < scores.length; i++) {
-                        needsRescore = Float.isNaN(scores[i]);
-                        if (needsRescore) {
+                    for (int i = 0; i < scores.length; i++) {
+                        boolean isNaN = Float.isNaN(scores[i]);
+                        if (!needsRescore && isNaN) {
                             LOG.inc("strut>scores>rescoreNaN");
+                        }
+                        needsRescore |= isNaN;
+                        if (!isNaN) {
+                            maxScore[0] = Math.max(maxScore[0], scores[i]);
                         }
                     }
                     if (needsRescore) {
                         asyncRescore.add(lastIdAndTermIds.get(termIndex));
-                    } else {
-                        needsImmediateRescore[0] = false;
                     }
                     float scaledScore = Strut.scaleScore(scores, request.query.numeratorScalars, request.query.numeratorStrategy);
                     scored.add(new Scored(lastIdAndTermIds.get(termIndex).lastId,
@@ -235,10 +237,14 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             totalTimeFetchingScores += (System.currentTimeMillis() - fetchScoresStart);
         }
 
-        if (needsImmediateRescore[0]) {
+        if (maxScore[0] == 0f) {
             LOG.info("Performing immediate rescore for coord:{} catwalkId:{} modelId:{} pivotFieldId:{}",
                 handle.getCoord(), request.query.catwalkId, request.query.modelId, pivotFieldId);
             LOG.inc("strut>rescore>immediate");
+
+            scored.clear();
+            asyncRescore.clear();
+
             BM[] answers = bitmaps.createArrayOf(request.query.batchSize);
             BM[] constrainFeature = modelScorer.buildConstrainFeatures(bitmaps,
                 context,
