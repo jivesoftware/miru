@@ -141,6 +141,7 @@ public class LabActivityIndex implements MiruActivityIndex {
         MiruTermId[][] termIds = new MiruTermId[length][];
         ValueIndex termIndex = getTermIndex(fieldId);
         byte[] fieldBytes = UIO.intBytes(fieldId);
+        int[] count = { 0 };
         termIndex.get(
             keyStream -> {
                 for (int i = 0; i < length; i++) {
@@ -162,6 +163,7 @@ public class LabActivityIndex implements MiruActivityIndex {
             });
 
         LOG.inc("count>getAllTerms>total");
+        LOG.inc("count>getAllTerms>count", count[0]);
         LOG.inc("count>getAllTerms>" + name);
         return termIds;
     }

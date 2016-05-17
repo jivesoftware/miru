@@ -28,6 +28,7 @@ import com.jivesoftware.os.miru.stream.plugins.strut.Strut.Scored;
 import com.jivesoftware.os.miru.stream.plugins.strut.StrutQuery.Strategy;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
@@ -119,7 +120,7 @@ public class StrutModelScorer {
                 keys[i] = termIds[i].getBytes();
             }
         }
-        cacheKeyValues.get(modelId, keys, (index, key, value) -> {
+        cacheKeyValues.get(modelId.getBytes(StandardCharsets.UTF_8), keys, (index, key, value) -> {
             float[] scores = new float[numeratorsCount];
             int lastId;
             if (value != null && value.length == (4 * numeratorsCount + 4)) {
@@ -162,7 +163,7 @@ public class StrutModelScorer {
             keys[i] = update.term.getBytes();
             values[i] = payload;
         }
-        cacheKeyValues.put(modelId, keys, values, false, false, stackBuffer);
+        cacheKeyValues.put(modelId.getBytes(StandardCharsets.UTF_8), keys, values, false, false, stackBuffer);
     }
 
     void enqueue(MiruPartitionCoord coord, StrutQuery strutQuery, int pivotFieldId, List<LastIdAndTermId> lastIdAndTermIds) {
@@ -259,7 +260,8 @@ public class StrutModelScorer {
             MiruBitmaps<BM, IBM> bitmaps = handle.getBitmaps();
             MiruRequestContext<BM, IBM, ? extends MiruSipCursor<?>> context = handle.getRequestContext();
 
-            CacheKeyValues cacheStores = getCacheKeyValues(context, catwalkId, catwalkDefinition.catwalkQuery);
+            CacheKeyValues termScoreCache = getTermScoreCache(context, catwalkId, catwalkDefinition.catwalkQuery);
+            CacheKeyValues termFeatureCache = getTermFeatureCache(context, catwalkId);
             int activityIndexLastId = context.getActivityIndex().lastId(stackBuffer);
 
             List<LastIdAndTermId> asyncRescore = Lists.newArrayListWithCapacity(termIds.size());
@@ -286,17 +288,23 @@ public class StrutModelScorer {
                 asyncRescore,
                 pivotFieldId,
                 asyncConstrainFeature,
-                cacheStores,
+                termScoreCache,
+                termFeatureCache,
                 new AtomicInteger(),
                 solutionLog);
         }
     }
 
-    <BM extends IBM, IBM> CacheKeyValues getCacheKeyValues(MiruRequestContext<BM, IBM, ? extends MiruSipCursor<?>> context,
+    <BM extends IBM, IBM> CacheKeyValues getTermScoreCache(MiruRequestContext<BM, IBM, ? extends MiruSipCursor<?>> context,
         String catwalkId,
         CatwalkQuery catwalkQuery) {
         int payloadSize = 4 * catwalkQuery.gatherFilters.length + 4; // this is amazing
-        return context.getCacheProvider().get("strut-" + catwalkId, payloadSize, false, maxUpdatesBeforeFlush);
+        return context.getCacheProvider().get("strut-scores-" + catwalkId, payloadSize, false, maxUpdatesBeforeFlush);
+    }
+
+    <BM extends IBM, IBM> CacheKeyValues getTermFeatureCache(MiruRequestContext<BM, IBM, ? extends MiruSipCursor<?>> context, String catwalkId) {
+        int payloadSize = 4; // this is amazing
+        return context.getCacheProvider().get("strut-features-" + catwalkId, payloadSize, false, maxUpdatesBeforeFlush);
     }
 
     <BM extends IBM, IBM> List<Scored> rescore(
@@ -312,7 +320,8 @@ public class StrutModelScorer {
         List<LastIdAndTermId> score,
         int pivotFieldId,
         BM[] constrainFeature,
-        CacheKeyValues cacheStores,
+        CacheKeyValues termScoreCache,
+        CacheKeyValues termFeatureCache,
         AtomicInteger totalPartitionCount,
         MiruSolutionLog solutionLog) throws Exception {
 
@@ -340,6 +349,7 @@ public class StrutModelScorer {
             includeFeatures,
             numeratorScalars,
             numeratorStrategy,
+            termFeatureCache,
             (streamBitmaps) -> {
                 LastIdAndTermId[] rescoreMiruTermIds = score.toArray(new LastIdAndTermId[0]);
                 MiruTermId[] miruTermIds = new MiruTermId[rescoreMiruTermIds.length];
@@ -363,7 +373,7 @@ public class StrutModelScorer {
                     stackBuffer);
 
                 for (int i = 0; i < rescoreMiruTermIds.length; i++) {
-                    if (!streamBitmaps.stream(i, rescoreMiruTermIds[i].lastId, rescoreMiruTermIds[i].termId, scoredToLastIds[i], answers[i])) {
+                    if (!streamBitmaps.stream(i, rescoreMiruTermIds[i].lastId, rescoreMiruTermIds[i].termId, scoredToLastIds[i], answers[i], -1)) {
                         return false;
                     }
                 }
@@ -382,7 +392,7 @@ public class StrutModelScorer {
 
         if (!updates.isEmpty()) {
             long startOfUpdates = System.currentTimeMillis();
-            commit(modelId, cacheStores, updates, stackBuffer);
+            commit(modelId, termScoreCache, updates, stackBuffer);
             long totalTimeScoreUpdates = System.currentTimeMillis() - startOfUpdates;
             LOG.info("Strut score updates {} features in {} ms", updates.size(), totalTimeScoreUpdates);
             solutionLog.log(MiruSolutionLogLevel.INFO, "Strut score updates {} features in {} ms", updates.size(), totalTimeScoreUpdates);
