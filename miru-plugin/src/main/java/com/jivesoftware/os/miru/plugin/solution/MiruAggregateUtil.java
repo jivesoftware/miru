@@ -141,10 +141,10 @@ public class MiruAggregateUtil {
             }
             return stream.stream(streamIndex, lastId, answerTermId, answerScoredLastId, -1, null);
         });
-        LOG.info("Gathered {} features for {} terms in {} ms - skipped {} consumed {} fromId {}/{}",
-            featureCount[0], termCount[0], System.currentTimeMillis() - start, skippedCount[0], consumedCount[0], minFromId[0], maxFromId[0]);
-        solutionLog.log(MiruSolutionLogLevel.INFO, "Gathered {} features for {} terms in {} ms - skipped {} consumed {} fromId {}/{}",
-            featureCount[0], termCount[0], System.currentTimeMillis() - start, skippedCount[0], consumedCount[0], minFromId[0], maxFromId[0]);
+        LOG.info("Gathered name:{} features:{} terms:{} elapsed:{} - skipped:{} consumed:{} fromId:{}/{}",
+            name, featureCount[0], termCount[0], System.currentTimeMillis() - start, skippedCount[0], consumedCount[0], minFromId[0], maxFromId[0]);
+        solutionLog.log(MiruSolutionLogLevel.INFO, "Gathered name:{} features:{} terms:{} elapsed:{} - skipped:{} consumed:{} fromId:{}/{}",
+            name, featureCount[0], termCount[0], System.currentTimeMillis() - start, skippedCount[0], consumedCount[0], minFromId[0], maxFromId[0]);
     }
 
     private boolean gatherAndStreamFeatures(String name,
