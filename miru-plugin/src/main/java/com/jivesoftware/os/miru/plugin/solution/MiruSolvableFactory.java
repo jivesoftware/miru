@@ -67,15 +67,18 @@ public class MiruSolvableFactory<Q, A, R> {
                 throw io;
             } catch (ExecutionException | RuntimeException ee) {
                 Throwable cause = ee.getCause();
-                if (cause instanceof InterruptedException || cause instanceof InterruptedIOException || cause instanceof ClosedByInterruptException) {
-                    LOG.debug("Solvable encountered {} for {} {} {}",
-                        new Object[] { cause.getClass().getSimpleName(), requestName, queryKey, replica.getCoord() }, ee);
-                    throw Throwables.propagate(cause);
-                } else {
-                    LOG.error("Solvable encountered {} for {} {} {}",
-                        new Object[] { ee.getClass().getSimpleName(), requestName, queryKey, replica.getCoord() }, ee);
-                    throw ee;
+                for (int i = 0; i < 10 && cause != null; i++) {
+                    if (cause instanceof InterruptedException || cause instanceof InterruptedIOException || cause instanceof ClosedByInterruptException) {
+                        LOG.debug("Solvable encountered {} for {} {} {}",
+                            new Object[] { cause.getClass().getSimpleName(), requestName, queryKey, replica.getCoord() }, ee);
+                        throw Throwables.propagate(cause);
+                    }
+                    cause = cause.getCause();
                 }
+
+                LOG.error("Solvable encountered {} for {} {} {}",
+                    new Object[] { ee.getClass().getSimpleName(), requestName, queryKey, replica.getCoord() }, ee);
+                throw ee;
             } catch (Throwable t) {
                 LOG.error("Solvable encountered a problem for {} {} {}", new Object[] { requestName, queryKey, replica.getCoord() }, t);
                 throw t;
