@@ -100,7 +100,7 @@ public class IndexTestUtil {
             termComposer);
 
         final MiruResourceLocator diskResourceLocator = new MiruTempDirectoryResourceLocator();
-        LabHeapPressure labHeapPressure = new LabHeapPressure(1024*1024*10, new AtomicLong());
+        LabHeapPressure labHeapPressure = new LabHeapPressure(1024 * 1024 * 10, new AtomicLong());
         LRUConcurrentBAHLinkedHash<Leaps> leapCache = LABEnvironment.buildLeapsCache(1_000_000, 10);
         MiruChunkAllocator inMemoryChunkAllocator = new InMemoryChunkAllocator(
             diskResourceLocator,
@@ -143,6 +143,7 @@ public class IndexTestUtil {
             new PartitionErrorTracker(BindInterfaceToConfiguration.bindDefault(PartitionErrorTracker.PartitionErrorTrackerConfig.class)),
             termInterner,
             new ObjectMapper(),
+            1024 * 1024 * 10,
             useLabIndexes,
             false);
     }

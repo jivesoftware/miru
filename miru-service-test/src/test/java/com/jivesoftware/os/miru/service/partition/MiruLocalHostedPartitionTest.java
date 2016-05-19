@@ -268,6 +268,7 @@ public class MiruLocalHostedPartitionTest {
             partitionErrorTracker,
             termInterner,
             mapper,
+            1024 * 1024 * 10,
             true,
             false);
         sipTrackerFactory = new RCVSSipTrackerFactory();
