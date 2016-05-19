@@ -181,9 +181,11 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
                     FieldMultiTermTxIndex<BM, IBM> multiTermTxIndex = new FieldMultiTermTxIndex<>("catwalk", primaryFieldIndex, pivotFieldId, -1);
                     for (List<MiruTermId> batch : Lists.partition(uniqueTermIds, 100)) {
                         BM[] answers = bitmaps.createArrayOf(batch.size());
+                        int[] lastIds = new int[batch.size()];
                         multiTermTxIndex.setTermIds(batch.toArray(new MiruTermId[0]));
                         bitmaps.multiTx(multiTermTxIndex, (index, lastId1, bitmap) -> {
                             answers[index] = bitmap;
+                            lastIds[index] = lastId1;
                         }, stackBuffer);
                         for (int i = 0; i < answers.length; i++) {
                             if (answers[i] != null) {
@@ -191,7 +193,7 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
                                 for (int j = 0; j < features.length; j++) {
                                     featureAnswers[j] = featureMasks[j] != null ? bitmaps.and(Arrays.asList(answers[i], featureMasks[j])) : answers[i];
                                 }
-                                if (!answerBitmap.consume(i, batch.get(i), featureAnswers)) {
+                                if (!answerBitmap.consume(i, batch.get(i), lastIds[i], featureAnswers)) {
                                     return false;
                                 }
                             }

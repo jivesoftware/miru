@@ -272,7 +272,6 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                             numeratorScalars,
                             input.featureStrategy,
                             featureScalars,
-                            MiruFilter.NO_FILTER,
                             input.desiredNumberOfResults,
                             true,
                             input.usePartitionModelCache,

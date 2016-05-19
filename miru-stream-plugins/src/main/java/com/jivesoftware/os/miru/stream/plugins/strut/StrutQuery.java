@@ -31,7 +31,6 @@ public class StrutQuery implements Serializable {
     public final float[] numeratorScalars;
     public final Strategy featureStrategy;
     public final float[] featureScalars;
-    public final MiruFilter featureFilter;
     public final int desiredNumberOfResults;
     public final boolean includeFeatures;
     public final boolean usePartitionModelCache;
@@ -52,7 +51,6 @@ public class StrutQuery implements Serializable {
         @JsonProperty("numeratorScalars") float[] numeratorScalars,
         @JsonProperty("featureStrategy") Strategy featureStrategy,
         @JsonProperty("featureScalars") float[] featureScalars,
-        @JsonProperty("featureFilter") MiruFilter featureFilter,
         @JsonProperty("desiredNumberOfResults") int desiredNumberOfResults,
         @JsonProperty("includeFeatures") boolean includeFeatures,
         @JsonProperty("usePartitionModelCache") boolean usePartitionModelCache,
@@ -75,7 +73,6 @@ public class StrutQuery implements Serializable {
         Preconditions.checkArgument(featureScalars.length == catwalkQuery.features.length,
             "featureScalars must be the same length as catwalkQuery.features");
         this.featureScalars = featureScalars;
-        this.featureFilter = Preconditions.checkNotNull(featureFilter);
         Preconditions.checkArgument(desiredNumberOfResults > 0, "Number of results must be at least 1");
         this.desiredNumberOfResults = desiredNumberOfResults;
         this.includeFeatures = includeFeatures;
@@ -99,7 +96,6 @@ public class StrutQuery implements Serializable {
             + ", numeratorScalars=" + Arrays.toString(numeratorScalars)
             + ", featureStrategy=" + featureStrategy
             + ", featureScalars=" + Arrays.toString(featureScalars)
-            + ", featureFilter=" + featureFilter
             + ", desiredNumberOfResults=" + desiredNumberOfResults
             + ", includeFeatures=" + includeFeatures
             + ", usePartitionModelCache=" + usePartitionModelCache

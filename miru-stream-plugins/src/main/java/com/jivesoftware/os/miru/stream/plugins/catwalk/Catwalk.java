@@ -43,7 +43,7 @@ public class Catwalk {
 
     public interface ConsumeAnswerBitmap<BM extends IBM, IBM> {
 
-        boolean consume(int index, MiruTermId answerTermId, BM[] featureAnswers) throws Exception;
+        boolean consume(int index, MiruTermId answerTermId, int answerScoredToLastId, BM[] featureAnswers) throws Exception;
     }
 
     public <BM extends IBM, IBM> CatwalkAnswer model(String name,
@@ -88,7 +88,7 @@ public class Catwalk {
             requestContext,
             termFeatureCache,
             streamBitmaps -> {
-                return consumeAnswers.consume((index, answerTermId, featureAnswers) -> {
+                return consumeAnswers.consume((index, answerTermId, answerScoredToLastId, featureAnswers) -> {
                     for (int i = 0; i < featureAnswers.length; i++) {
                         modelCounts[i] += bitmaps.cardinality(featureAnswers[i]);
                     }

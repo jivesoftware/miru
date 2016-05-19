@@ -173,8 +173,7 @@ public class StrutModelScorer {
             strutQuery.numeratorScalars,
             strutQuery.numeratorStrategy,
             strutQuery.featureScalars,
-            strutQuery.featureStrategy,
-            strutQuery.featureFilter));
+            strutQuery.featureStrategy));
 
         StrutQueueKey key = new StrutQueueKey(coord, strutQuery.catwalkId, strutQuery.modelId, pivotFieldId);
         int stripe = Math.abs(key.hashCode() % queues.length);
@@ -272,7 +271,6 @@ public class StrutModelScorer {
 
             BM[] asyncConstrainFeature = buildConstrainFeatures(bitmaps,
                 context,
-                catwalkDefinition.featureFilter,
                 catwalkDefinition.catwalkQuery,
                 activityIndexLastId,
                 stackBuffer,
@@ -403,7 +401,6 @@ public class StrutModelScorer {
 
     <BM extends IBM, IBM> BM[] buildConstrainFeatures(MiruBitmaps<BM, IBM> bitmaps,
         MiruRequestContext<BM, IBM, ?> context,
-        MiruFilter featureFilter,
         CatwalkQuery catwalkQuery,
         int activityIndexLastId,
         StackBuffer stackBuffer,
@@ -411,21 +408,6 @@ public class StrutModelScorer {
 
         MiruSchema schema = context.getSchema();
         MiruTermComposer termComposer = context.getTermComposer();
-
-        BM strutFeature = null;
-        if (!MiruFilter.NO_FILTER.equals(featureFilter)) {
-            strutFeature = aggregateUtil.filter("strutFeature",
-                bitmaps,
-                schema,
-                termComposer,
-                context.getFieldIndexProvider(),
-                featureFilter,
-                solutionLog,
-                null,
-                activityIndexLastId,
-                -1,
-                stackBuffer);
-        }
 
         CatwalkQuery.CatwalkFeature[] features = catwalkQuery.features;
         BM[] constrainFeature = bitmaps.createArrayOf(features.length);
@@ -443,9 +425,6 @@ public class StrutModelScorer {
                     activityIndexLastId,
                     -1,
                     stackBuffer));
-            }
-            if (strutFeature != null) {
-                constrainAnds.add(strutFeature);
             }
             constrainFeature[i] = bitmaps.and(constrainAnds);
         }
@@ -507,22 +486,19 @@ public class StrutModelScorer {
         final Strategy numeratorStrategy;
         final float[] featureScalars;
         final Strategy featureStrategy;
-        final MiruFilter featureFilter;
 
         public CatwalkDefinition(String catwalkId,
             CatwalkQuery catwalkQuery,
             float[] numeratorScalars,
             Strategy numeratorStrategy,
             float[] featureScalars,
-            Strategy featureStrategy,
-            MiruFilter featureFilter) {
+            Strategy featureStrategy) {
             this.catwalkId = catwalkId;
             this.catwalkQuery = catwalkQuery;
             this.numeratorScalars = numeratorScalars;
             this.numeratorStrategy = numeratorStrategy;
             this.featureScalars = featureScalars;
             this.featureStrategy = featureStrategy;
-            this.featureFilter = featureFilter;
         }
     }
 
