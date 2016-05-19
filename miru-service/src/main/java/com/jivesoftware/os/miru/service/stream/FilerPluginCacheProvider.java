@@ -49,7 +49,7 @@ public class FilerPluginCacheProvider implements MiruPluginCacheProvider {
                     TxMapGrower.MAP_REWRITE_GROWER);
             }
 
-            return new MiruFilerCacheKeyValues(powerIndex);
+            return new MiruFilerCacheKeyValues(name, powerIndex);
         });
     }
 

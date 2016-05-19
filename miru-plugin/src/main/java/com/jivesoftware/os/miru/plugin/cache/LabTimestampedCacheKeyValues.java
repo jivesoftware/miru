@@ -115,6 +115,18 @@ public class LabTimestampedCacheKeyValues implements TimestampedCacheKeyValues {
         return result;
     }
 
+    public void commit(boolean fsyncOnCommit) throws Exception {
+        for (ValueIndex index : indexes) {
+            index.commit(fsyncOnCommit);
+        }
+    }
+
+    public void close(boolean flushUncommited, boolean fsync) throws Exception {
+        for (ValueIndex index : indexes) {
+            index.close(flushUncommited, fsync);
+        }
+    }
+
     @Override
     public Object lock(byte[] cacheId) {
         return stripedLocks[Math.abs(compute(cacheId, 0, cacheId.length) % stripedLocks.length)];

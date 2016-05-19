@@ -570,7 +570,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
 
         StripingLocksProvider<MiruStreamId> streamLocks = new StripingLocksProvider<>(64);
 
-        MiruPluginCacheProvider cacheProvider = new LabPluginCacheProvider(idProvider, labEnvironments);
+        LabPluginCacheProvider cacheProvider = new LabPluginCacheProvider(idProvider, labEnvironments);
 
         MiruContext<BM, IBM, S> context = new MiruContext<>(schema,
             termComposer,
@@ -593,11 +593,13 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                 for (ValueIndex valueIndex : commitables) {
                     valueIndex.commit(fsyncOnCommit);
                 }
+                cacheProvider.commit(fsyncOnCommit);
             },
             () -> {
                 for (ValueIndex valueIndex : commitables) {
                     valueIndex.close(true, fsyncOnCommit);
                 }
+                cacheProvider.close(true, fsyncOnCommit);
                 getAllocator(storage).close(labEnvironments);
             },
             () -> getAllocator(storage).remove(labEnvironments));

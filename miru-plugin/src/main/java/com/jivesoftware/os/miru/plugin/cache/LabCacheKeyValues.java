@@ -16,12 +16,19 @@ import java.util.Arrays;
  */
 public class LabCacheKeyValues implements CacheKeyValues {
 
+    private final String name;
     private final OrderIdProvider idProvider;
     private final ValueIndex[] indexes;
 
-    public LabCacheKeyValues(OrderIdProvider idProvider, ValueIndex[] indexes) {
+    public LabCacheKeyValues(String name, OrderIdProvider idProvider, ValueIndex[] indexes) {
+        this.name = name;
         this.idProvider = idProvider;
         this.indexes = indexes;
+    }
+
+    @Override
+    public String name() {
+        return name;
     }
 
     @Override
@@ -112,6 +119,18 @@ public class LabCacheKeyValues implements CacheKeyValues {
 
         if (commitOnUpdate) {
             indexes[stripe].commit(fsyncOnCommit);
+        }
+    }
+
+    public void commit(boolean fsyncOnCommit) throws Exception {
+        for (ValueIndex index : indexes) {
+            index.commit(fsyncOnCommit);
+        }
+    }
+
+    public void close(boolean flushUncommited, boolean fsync) throws Exception {
+        for (ValueIndex index : indexes) {
+            index.close(flushUncommited, fsync);
         }
     }
 
