@@ -21,10 +21,17 @@ public class MiruFilerCacheKeyValues implements CacheKeyValues {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
+    private final String name;
     private final KeyedFilerStore<Integer, MapContext>[] powerIndex;
 
-    public MiruFilerCacheKeyValues(KeyedFilerStore<Integer, MapContext>[] powerIndex) {
+    public MiruFilerCacheKeyValues(String name, KeyedFilerStore<Integer, MapContext>[] powerIndex) {
+        this.name = name;
         this.powerIndex = powerIndex;
+    }
+
+    @Override
+    public String name() {
+        return name;
     }
 
     @Override

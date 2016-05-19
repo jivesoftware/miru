@@ -9,6 +9,8 @@ import com.jivesoftware.os.miru.plugin.cache.LabCacheKeyValues;
 import com.jivesoftware.os.miru.plugin.cache.LabTimestampedCacheKeyValues;
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider;
 import com.jivesoftware.os.miru.plugin.context.KeyValueRawhide;
+import com.jivesoftware.os.mlogger.core.MetricLogger;
+import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.Map;
 
 /**
@@ -16,11 +18,13 @@ import java.util.Map;
  */
 public class LabPluginCacheProvider implements MiruPluginCacheProvider {
 
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
+
     private final OrderIdProvider idProvider;
     private final LABEnvironment[] labEnvironments;
 
-    private final Map<String, CacheKeyValues> pluginPersistentCache = Maps.newConcurrentMap();
-    private final Map<String, TimestampedCacheKeyValues> timestampedPluginPersistentCache = Maps.newConcurrentMap();
+    private final Map<String, LabCacheKeyValues> pluginPersistentCache = Maps.newConcurrentMap();
+    private final Map<String, LabTimestampedCacheKeyValues> timestampedPluginPersistentCache = Maps.newConcurrentMap();
     private final Object[] stripedLocks;
 
     public LabPluginCacheProvider(OrderIdProvider idProvider,
@@ -48,7 +52,7 @@ public class LabPluginCacheProvider implements MiruPluginCacheProvider {
                         -1L,
                         new KeyValueRawhide());
                 }
-                return new LabCacheKeyValues(idProvider, cacheIndexes);
+                return new LabCacheKeyValues(name, idProvider, cacheIndexes);
             } catch (Exception x) {
                 throw new RuntimeException("Failed to initialize plugin cache", x);
             }
@@ -75,5 +79,31 @@ public class LabPluginCacheProvider implements MiruPluginCacheProvider {
                 throw new RuntimeException("Failed to initialize plugin cache", x);
             }
         });
+    }
+
+    public void commit(boolean fsyncOnCommit) throws Exception {
+        for (LabCacheKeyValues cache : pluginPersistentCache.values()) {
+            try {
+                cache.commit(fsyncOnCommit);
+            } catch (Exception e) {
+                LOG.error("Failed to close plugin cache {}", new Object[] { cache.name() }, e);
+            }
+        }
+        for (LabTimestampedCacheKeyValues cache : timestampedPluginPersistentCache.values()) {
+            try {
+                cache.commit(fsyncOnCommit);
+            } catch (Exception e) {
+                LOG.error("Failed to close timestamped plugin cache {}", new Object[] { cache.name() }, e);
+            }
+        }
+    }
+
+    public void close(boolean flushUncommited, boolean fsync) throws Exception {
+        for (LabCacheKeyValues cacheKeyValues : pluginPersistentCache.values()) {
+            cacheKeyValues.close(flushUncommited, fsync);
+        }
+        for (LabTimestampedCacheKeyValues cacheKeyValues : timestampedPluginPersistentCache.values()) {
+            cacheKeyValues.close(flushUncommited, fsync);
+        }
     }
 }

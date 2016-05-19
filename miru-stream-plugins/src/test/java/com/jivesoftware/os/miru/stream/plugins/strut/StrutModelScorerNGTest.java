@@ -80,7 +80,7 @@ public class StrutModelScorerNGTest {
 
         }
 
-        MiruFilerCacheKeyValues cacheKeyValues = new MiruFilerCacheKeyValues(cacheStores);
+        MiruFilerCacheKeyValues cacheKeyValues = new MiruFilerCacheKeyValues("test", cacheStores);
 
         assertScores(modelId, cacheKeyValues, stackBuffer);
 
@@ -103,7 +103,7 @@ public class StrutModelScorerNGTest {
             stores[i] = env.open("cache-" + i + "-" + catwalkId, 4096, Integer.MAX_VALUE, 0, 0, 0, new KeyValueRawhide());
         }
 
-        CacheKeyValues cacheKeyValues = new LabCacheKeyValues(new OrderIdProviderImpl(new ConstantWriterIdProvider(1)), stores);
+        CacheKeyValues cacheKeyValues = new LabCacheKeyValues("test", new OrderIdProviderImpl(new ConstantWriterIdProvider(1)), stores);
 
         assertScores(modelId, cacheKeyValues, new StackBuffer());
 

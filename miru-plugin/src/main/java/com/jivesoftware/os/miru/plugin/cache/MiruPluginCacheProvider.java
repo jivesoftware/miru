@@ -12,6 +12,8 @@ public interface MiruPluginCacheProvider {
 
     interface CacheKeyValues {
 
+        String name();
+
         boolean get(byte[] cacheId, byte[][] keys, IndexKeyValueStream stream, StackBuffer stackBuffer) throws Exception;
 
         boolean rangeScan(byte[] cacheId, byte[] fromInclusive, byte[] toExclusive, KeyValueStream stream) throws Exception;
