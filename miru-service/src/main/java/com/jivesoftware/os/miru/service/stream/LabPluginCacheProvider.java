@@ -38,7 +38,7 @@ public class LabPluginCacheProvider implements MiruPluginCacheProvider {
     }
 
     @Override
-    public CacheKeyValues getKeyValues(String name, int payloadSize, boolean variablePayloadSize, int maxUpdatesBeforeFlush) {
+    public CacheKeyValues getKeyValues(String name, int payloadSize, boolean variablePayloadSize, long maxHeapPressureInBytes) {
         return pluginPersistentCache.computeIfAbsent(name, (key) -> {
             try {
                 ValueIndex[] cacheIndexes = new ValueIndex[labEnvironments.length];
@@ -46,7 +46,7 @@ public class LabPluginCacheProvider implements MiruPluginCacheProvider {
                     // currently not commitable, as the commit is done immediately at write time
                     cacheIndexes[i] = labEnvironments[i].open("pluginCache-" + key,
                         4096,
-                        maxUpdatesBeforeFlush,
+                        maxHeapPressureInBytes,
                         10 * 1024 * 1024,
                         -1L,
                         -1L,
@@ -60,7 +60,7 @@ public class LabPluginCacheProvider implements MiruPluginCacheProvider {
     }
 
     @Override
-    public TimestampedCacheKeyValues getTimestampedKeyValues(String name, int payloadSize, boolean variablePayloadSize, int maxUpdatesBeforeFlush) {
+    public TimestampedCacheKeyValues getTimestampedKeyValues(String name, int payloadSize, boolean variablePayloadSize, long maxHeapPressureInBytes) {
         return timestampedPluginPersistentCache.computeIfAbsent(name, (key) -> {
             try {
                 ValueIndex[] cacheIndexes = new ValueIndex[labEnvironments.length];
@@ -68,7 +68,7 @@ public class LabPluginCacheProvider implements MiruPluginCacheProvider {
                     // currently not commitable, as the commit is done immediately at write time
                     cacheIndexes[i] = labEnvironments[i].open("timestampedCache-" + key,
                         4096,
-                        maxUpdatesBeforeFlush,
+                        maxHeapPressureInBytes,
                         10 * 1024 * 1024,
                         -1L,
                         -1L,

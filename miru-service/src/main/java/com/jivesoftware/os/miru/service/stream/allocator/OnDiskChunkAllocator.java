@@ -7,6 +7,7 @@ import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.filer.io.chunk.ChunkStore;
 import com.jivesoftware.os.jive.utils.collections.bah.LRUConcurrentBAHLinkedHash;
 import com.jivesoftware.os.lab.LABEnvironment;
+import com.jivesoftware.os.lab.LabHeapPressure;
 import com.jivesoftware.os.lab.guts.Leaps;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.service.locator.MiruPartitionCoordIdentifier;
@@ -32,6 +33,7 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
     private final int numberOfChunkStores;
     private final int partitionInitialChunkCacheSize;
     private final int partitionMaxChunkCacheSize;
+    private final LabHeapPressure labHeapPressure;
     private final LRUConcurrentBAHLinkedHash<Leaps> leapCache;
     private final ChunkStoreInitializer chunkStoreInitializer = new ChunkStoreInitializer();
     private final ExecutorService buildLABCompactorThreadPool = LABEnvironment.buildLABCompactorThreadPool(12); // TODO config
@@ -43,12 +45,14 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
         int numberOfChunkStores,
         int partitionInitialChunkCacheSize,
         int partitionMaxChunkCacheSize,
+        LabHeapPressure labHeapPressure,
         LRUConcurrentBAHLinkedHash<Leaps> leapCache) {
         this.resourceLocator = resourceLocator;
         this.cacheByteBufferFactory = cacheByteBufferFactory;
         this.numberOfChunkStores = numberOfChunkStores;
         this.partitionInitialChunkCacheSize = partitionInitialChunkCacheSize;
         this.partitionMaxChunkCacheSize = partitionMaxChunkCacheSize;
+        this.labHeapPressure = labHeapPressure;
         this.leapCache = leapCache;
     }
 
@@ -177,7 +181,7 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
         LABEnvironment[] environments = new LABEnvironment[labDirs.length];
         for (int i = 0; i < numberOfChunkStores; i++) {
             environments[i] = new LABEnvironment(buildLABCompactorThreadPool, buildLABDestroyThreadPool, labDirs[i],
-                true, 4, 16, leapCache);
+                true, labHeapPressure, 4, 16, leapCache);
         }
         return environments;
     }

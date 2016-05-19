@@ -27,7 +27,6 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.solution.Question;
 import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkQuery.CatwalkFeature;
-import com.jivesoftware.os.miru.stream.plugins.strut.StrutModelScorer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
@@ -45,7 +44,7 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
     private final Catwalk catwalk;
     private final MiruRequest<CatwalkQuery> request;
     private final MiruRemotePartition<CatwalkQuery, CatwalkAnswer, CatwalkReport> remotePartition;
-    private final int maxUpdatesBeforeFlush;
+    private final long maxHeapPressureInBytes;
 
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
@@ -53,11 +52,11 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
     public CatwalkQuestion(Catwalk catwalk,
         MiruRequest<CatwalkQuery> request,
         MiruRemotePartition<CatwalkQuery, CatwalkAnswer, CatwalkReport> remotePartition,
-        int maxUpdatesBeforeFlush) {
+        long maxHeapPressureInBytes) {
         this.catwalk = catwalk;
         this.request = request;
         this.remotePartition = remotePartition;
-        this.maxUpdatesBeforeFlush = maxUpdatesBeforeFlush;
+        this.maxHeapPressureInBytes = maxHeapPressureInBytes;
     }
 
     @Override
@@ -166,7 +165,7 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
         //TODO this duplicates StrutModelScorer behavior
         int payloadSize = 4; // this is amazing
         MiruPluginCacheProvider.TimestampedCacheKeyValues termFeaturesCache = request.query.catwalkId == null ? null
-            : context.getCacheProvider().getTimestampedKeyValues("strut-features-" + request.query.catwalkId, payloadSize, false, maxUpdatesBeforeFlush);
+            : context.getCacheProvider().getTimestampedKeyValues("strut-features-" + request.query.catwalkId, payloadSize, false, maxHeapPressureInBytes);
 
         List<MiruTermId> uniqueTermIds = Lists.newArrayList(termIds);
         return new MiruPartitionResponse<>(

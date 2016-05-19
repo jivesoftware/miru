@@ -33,7 +33,7 @@ public class FilerPluginCacheProvider implements MiruPluginCacheProvider {
     }
 
     @Override
-    public CacheKeyValues getKeyValues(String name, int payloadSize, boolean variablePayloadSize, int maxUpdatesBeforeFlush) {
+    public CacheKeyValues getKeyValues(String name, int payloadSize, boolean variablePayloadSize, long maxHeapPressureInBytes) {
         return pluginPersistentCache.computeIfAbsent(name, (key) -> {
             @SuppressWarnings("unchecked")
             TxKeyedFilerStore<Integer, MapContext>[] powerIndex = new TxKeyedFilerStore[16];
@@ -54,7 +54,7 @@ public class FilerPluginCacheProvider implements MiruPluginCacheProvider {
     }
 
     @Override
-    public TimestampedCacheKeyValues getTimestampedKeyValues(String name, int payloadSize, boolean variablePayloadSize, int maxUpdatesBeforeFlush) {
+    public TimestampedCacheKeyValues getTimestampedKeyValues(String name, int payloadSize, boolean variablePayloadSize, long maxHeapPressureInBytes) {
         return new TimestampedCacheKeyValues() {
             @Override
             public String name() {

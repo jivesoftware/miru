@@ -7,6 +7,7 @@ import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.filer.io.chunk.ChunkStore;
 import com.jivesoftware.os.jive.utils.collections.bah.LRUConcurrentBAHLinkedHash;
 import com.jivesoftware.os.lab.LABEnvironment;
+import com.jivesoftware.os.lab.LabHeapPressure;
 import com.jivesoftware.os.lab.guts.Leaps;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.service.locator.MiruResourceLocator;
@@ -36,6 +37,7 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
     private final boolean partitionDeleteChunkStoreOnClose;
     private final int partitionInitialChunkCacheSize;
     private final int partitionMaxChunkCacheSize;
+    private final LabHeapPressure labHeapPressure;
     private final LRUConcurrentBAHLinkedHash<Leaps> leapCache;
     private final boolean useLabIndexes;
 
@@ -50,6 +52,7 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
         boolean partitionDeleteChunkStoreOnClose,
         int partitionInitialChunkCacheSize,
         int partitionMaxChunkCacheSize,
+        LabHeapPressure labHeapPressure,
         boolean useLabIndexes,
         LRUConcurrentBAHLinkedHash<Leaps> leapCache) {
         this.resourceLocator = resourceLocator;
@@ -61,6 +64,7 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
         this.partitionInitialChunkCacheSize = partitionInitialChunkCacheSize;
         this.partitionMaxChunkCacheSize = partitionMaxChunkCacheSize;
         this.useLabIndexes = useLabIndexes;
+        this.labHeapPressure = labHeapPressure;
         this.leapCache = leapCache;
     }
 
@@ -120,7 +124,7 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
             environments[i] = new LABEnvironment(buildLABCompactorThreadPool,
                 buildLABDestroyThreadPool,
                 labDirs[i],
-                true, 4, 16, leapCache);
+                true, labHeapPressure, 4, 16, leapCache);
 
         }
         return environments;

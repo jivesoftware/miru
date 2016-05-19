@@ -192,4 +192,7 @@ public interface MiruServiceConfig extends Config {
 
     @BooleanDefault(false)
     boolean getFsyncOnCommit();
+
+    @LongDefault(1024 * 1024 * 1024)
+    long getGlobalLabMaxHeapPressureInBytes();
 }

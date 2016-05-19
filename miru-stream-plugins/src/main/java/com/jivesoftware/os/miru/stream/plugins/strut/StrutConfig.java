@@ -21,8 +21,8 @@ public interface StrutConfig extends Config {
     @IntDefault(10_000)
     int getMaxTermIdsPerRequest();
 
-    @IntDefault(1_000)
-    int getMaxUpdatesBeforeFlush();
+    @IntDefault(1024 * 1024)
+    int getMaxHeapPressureInBytes();
 
     @IntDefault(24)
     int getQueueStripeCount();
