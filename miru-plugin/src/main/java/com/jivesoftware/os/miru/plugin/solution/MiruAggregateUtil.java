@@ -93,9 +93,12 @@ public class MiruAggregateUtil {
         for (int i = 0; i < features.length; i++) {
             features[i] = HashMultiset.create();
         }
+
+        String cacheName = null;
         @SuppressWarnings("unchecked")
         Set<Feature>[] gathered = termFeatureCache == null ? null : new Set[featureFieldIds.length];
         if (termFeatureCache != null) {
+            cacheName = termFeatureCache.name();
             for (int i = 0; i < features.length; i++) {
                 gathered[i] = Sets.newHashSet();
             }
@@ -207,6 +210,9 @@ public class MiruAggregateUtil {
                     ids, featuresContained, answerBitmaps, features, null, 0, answerScoredLastId, metrics);
             }
 
+            metrics.minToId = Math.min(metrics.minToId, answerScoredLastId);
+            metrics.maxToId = Math.max(metrics.maxToId, answerScoredLastId);
+
             for (int i = 0; i < features.length; i++) {
                 for (Entry<Feature> entry : features[i].entrySet()) {
                     Feature feature = entry.getElement();
@@ -219,20 +225,28 @@ public class MiruAggregateUtil {
             return stream.stream(streamIndex, lastId, answerTermId, answerScoredLastId, -1, null, -1);
         });
         LOG.info("Gathered name:{} features:{} terms:{} elapsed:{}" +
-                " - skipped:{} consumed:{} fromId:{}/{} cacheHits={} cacheSaves={}",
+                " - cacheName:{} skipped:{} consumed:{} fromId:{}/{} toId:{}/{} cacheHits={} cacheSaves={}",
             name, metrics.featureCount, metrics.termCount, System.currentTimeMillis() - start,
-            metrics.skippedCount, metrics.consumedCount, metrics.minFromId, metrics.maxFromId,
+            cacheName,
+            metrics.skippedCount, metrics.consumedCount,
+            metrics.minFromId, metrics.maxFromId,
+            metrics.minToId, metrics.maxToId,
             metrics.cacheHitCount, metrics.cacheSaveCount);
         solutionLog.log(MiruSolutionLogLevel.INFO, "Gathered name:{} features:{} terms:{} elapsed:{}" +
-                " - skipped:{} consumed:{} fromId:{}/{} cacheHits={} cacheSaves={}",
+                " - cacheName:{} skipped:{} consumed:{} fromId:{}/{} toId:{}/{} cacheHits={} cacheSaves={}",
             name, metrics.featureCount, metrics.termCount, System.currentTimeMillis() - start,
-            metrics.skippedCount, metrics.consumedCount, metrics.minFromId, metrics.maxFromId,
+            cacheName,
+            metrics.skippedCount, metrics.consumedCount,
+            metrics.minFromId, metrics.maxFromId,
+            metrics.minToId, metrics.maxToId,
             metrics.cacheHitCount, metrics.cacheSaveCount);
     }
 
     private static class GatherFeatureMetrics {
         private long minFromId = Integer.MAX_VALUE;
         private long maxFromId = Integer.MIN_VALUE;
+        private long minToId = Integer.MAX_VALUE;
+        private long maxToId = Integer.MIN_VALUE;
         private int termCount;
         private int featureCount;
         private int skippedCount;

@@ -17,14 +17,21 @@ import java.util.Arrays;
  */
 public class LabTimestampedCacheKeyValues implements TimestampedCacheKeyValues {
 
+    private final String name;
     private final OrderIdProvider idProvider;
     private final ValueIndex[] indexes;
     private final Object[] stripedLocks;
 
-    public LabTimestampedCacheKeyValues(OrderIdProvider idProvider, ValueIndex[] indexes, Object[] stripedLocks) {
+    public LabTimestampedCacheKeyValues(String name, OrderIdProvider idProvider, ValueIndex[] indexes, Object[] stripedLocks) {
+        this.name = name;
         this.idProvider = idProvider;
         this.indexes = indexes;
         this.stripedLocks = stripedLocks;
+    }
+
+    @Override
+    public String name() {
+        return name;
     }
 
     @Override

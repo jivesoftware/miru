@@ -56,6 +56,10 @@ public class FilerPluginCacheProvider implements MiruPluginCacheProvider {
     @Override
     public TimestampedCacheKeyValues getTimestampedKeyValues(String name, int payloadSize, boolean variablePayloadSize, int maxUpdatesBeforeFlush) {
         return new TimestampedCacheKeyValues() {
+            @Override
+            public String name() {
+                return name;
+            }
 
             @Override
             public boolean get(byte[] cacheId, byte[][] keys, TimestampedIndexKeyValueStream stream, StackBuffer stackBuffer) throws Exception {

@@ -36,6 +36,8 @@ public interface MiruPluginCacheProvider {
 
     interface TimestampedCacheKeyValues {
 
+        String name();
+
         boolean get(byte[] cacheId, byte[][] keys, TimestampedIndexKeyValueStream stream, StackBuffer stackBuffer) throws Exception;
 
         boolean rangeScan(byte[] cacheId, byte[] fromInclusive, byte[] toExclusive, TimestampedKeyValueStream stream) throws Exception;
