@@ -8,13 +8,13 @@ import java.io.IOException;
  */
 public interface MiruPluginCacheProvider {
 
-    CacheKeyValues get(String name, int payloadSize, boolean variablePayloadSize, int maxUpdatesBeforeFlush);
+    CacheKeyValues getKeyValues(String name, int payloadSize, boolean variablePayloadSize, int maxUpdatesBeforeFlush);
 
     interface CacheKeyValues {
 
-        boolean get(byte[] cacheId, byte[][] keys, GetKeyValueStream stream, StackBuffer stackBuffer) throws Exception;
+        boolean get(byte[] cacheId, byte[][] keys, IndexKeyValueStream stream, StackBuffer stackBuffer) throws Exception;
 
-        boolean rangeScan(byte[] cacheId, byte[] fromInclusive, byte[] toExclusive, RangeKeyValueStream stream) throws Exception;
+        boolean rangeScan(byte[] cacheId, byte[] fromInclusive, byte[] toExclusive, KeyValueStream stream) throws Exception;
 
         void put(byte[] cacheId,
             byte[][] keys,
@@ -24,11 +24,40 @@ public interface MiruPluginCacheProvider {
             StackBuffer stackBuffer) throws Exception;
     }
 
-    interface GetKeyValueStream {
-        boolean stream(int index, byte[] key, byte[] value) throws IOException;
+    interface IndexKeyValueStream {
+        boolean stream(int index, byte[] key, byte[] value) throws Exception;
     }
 
-    interface RangeKeyValueStream {
-        boolean stream(byte[] key, byte[] value) throws IOException;
+    interface KeyValueStream {
+        boolean stream(byte[] key, byte[] value) throws Exception;
+    }
+
+    TimestampedCacheKeyValues getTimestampedKeyValues(String name, int payloadSize, boolean variablePayloadSize, int maxUpdatesBeforeFlush);
+
+    interface TimestampedCacheKeyValues {
+
+        boolean get(byte[] cacheId, byte[][] keys, TimestampedIndexKeyValueStream stream, StackBuffer stackBuffer) throws Exception;
+
+        boolean rangeScan(byte[] cacheId, byte[] fromInclusive, byte[] toExclusive, TimestampedKeyValueStream stream) throws Exception;
+
+        boolean put(byte[] cacheId,
+            boolean commitOnUpdate,
+            boolean fsyncOnCommit,
+            ConsumeTimestampedKeyValueStream consume,
+            StackBuffer stackBuffer) throws Exception;
+
+        Object lock(byte[] cacheId);
+    }
+
+    interface TimestampedIndexKeyValueStream {
+        boolean stream(int index, byte[] key, byte[] value, long timestamp) throws Exception;
+    }
+
+    interface TimestampedKeyValueStream {
+        boolean stream(byte[] key, byte[] value, long timestamp) throws Exception;
+    }
+
+    interface ConsumeTimestampedKeyValueStream {
+        boolean consume(TimestampedKeyValueStream stream) throws Exception;
     }
 }

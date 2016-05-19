@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.plugin.cache;
 
+import com.google.common.base.Throwables;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.api.KeyedFilerStore;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
@@ -7,10 +8,11 @@ import com.jivesoftware.os.filer.io.chunk.ChunkFiler;
 import com.jivesoftware.os.filer.io.map.MapContext;
 import com.jivesoftware.os.filer.io.map.MapStore;
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.CacheKeyValues;
-import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.GetKeyValueStream;
-import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.RangeKeyValueStream;
+import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.IndexKeyValueStream;
+import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.KeyValueStream;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import java.io.IOException;
 
 /**
  *
@@ -26,7 +28,7 @@ public class MiruFilerCacheKeyValues implements CacheKeyValues {
     }
 
     @Override
-    public boolean get(byte[] cacheId, byte[][] keys, GetKeyValueStream stream, StackBuffer stackBuffer) throws Exception {
+    public boolean get(byte[] cacheId, byte[][] keys, IndexKeyValueStream stream, StackBuffer stackBuffer) throws Exception {
         byte[][][] powerKeyBytes = new byte[powerIndex.length][][];
         for (int i = 0; i < keys.length; i++) {
             if (keys[i] != null) {
@@ -45,30 +47,36 @@ public class MiruFilerCacheKeyValues implements CacheKeyValues {
             byte[][] keyBytes = powerKeyBytes[power];
             if (keyBytes != null) {
                 powerIndex[power].read(cacheId, null, (monkey, filer, _stackBuffer, lock) -> {
-                    if (filer != null) {
-                        if (monkey.keySize != expectedKeySize) {
-                            throw new IllegalStateException("provided " + monkey.keySize + " expected " + expectedKeySize);
-                        }
-                        synchronized (lock) {
+                    try {
+                        if (filer != null) {
+                            if (monkey.keySize != expectedKeySize) {
+                                throw new IllegalStateException("provided " + monkey.keySize + " expected " + expectedKeySize);
+                            }
+                            synchronized (lock) {
+                                for (int i = 0; i < keyBytes.length; i++) {
+                                    if (keyBytes[i] != null) {
+                                        byte[] payload = MapStore.INSTANCE.getPayload(filer, monkey, keyBytes[i], _stackBuffer);
+                                        if (!stream.stream(i, keyBytes[i], payload)) {
+                                            return null;
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
                             for (int i = 0; i < keyBytes.length; i++) {
                                 if (keyBytes[i] != null) {
-                                    byte[] payload = MapStore.INSTANCE.getPayload(filer, monkey, keyBytes[i], _stackBuffer);
-                                    if (!stream.stream(i, keyBytes[i], payload)) {
+                                    if (!stream.stream(i, keyBytes[i], null)) {
                                         return null;
                                     }
                                 }
                             }
                         }
-                    } else {
-                        for (int i = 0; i < keyBytes.length; i++) {
-                            if (keyBytes[i] != null) {
-                                if (!stream.stream(i, keyBytes[i], null)) {
-                                    return null;
-                                }
-                            }
-                        }
+                        return null;
+                    } catch (IOException e) {
+                        throw e;
+                    } catch (Exception e) {
+                        throw new IOException(e);
                     }
-                    return null;
                 }, stackBuffer);
             }
         }
@@ -76,7 +84,7 @@ public class MiruFilerCacheKeyValues implements CacheKeyValues {
     }
 
     @Override
-    public boolean rangeScan(byte[] cacheId, byte[] fromInclusive, byte[] toExclusive, RangeKeyValueStream stream) throws Exception {
+    public boolean rangeScan(byte[] cacheId, byte[] fromInclusive, byte[] toExclusive, KeyValueStream stream) throws Exception {
         LOG.warn("Ignored range scan against filer cache key values");
         return true;
     }

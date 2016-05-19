@@ -8,6 +8,7 @@ import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.TimestampedCacheKeyValues;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTxIndex;
@@ -51,6 +52,7 @@ public class Catwalk {
         MiruRequest<CatwalkQuery> request,
         MiruPartitionCoord coord,
         Optional<CatwalkReport> report,
+        TimestampedCacheKeyValues termFeatureCache,
         ConsumeAnswers<BM, IBM> consumeAnswers,
         IBM[] featureMasks,
         Set<MiruTermId>[] numeratorTermSets,
@@ -84,21 +86,22 @@ public class Catwalk {
         aggregateUtil.gatherFeatures(name,
             bitmaps,
             requestContext,
+            termFeatureCache,
             streamBitmaps -> {
                 return consumeAnswers.consume((index, answerTermId, featureAnswers) -> {
                     for (int i = 0; i < featureAnswers.length; i++) {
                         modelCounts[i] += bitmaps.cardinality(featureAnswers[i]);
                     }
-                    return streamBitmaps.stream(index, -1, answerTermId, -1, featureAnswers, 0, null);
+                    return streamBitmaps.stream(index, -1, answerTermId, -1, featureAnswers);
                 });
             },
             featureFieldIds,
-            (streamIndex, lastId, answerTermId, answerScoredLastId, featureId, termIds) -> {
+            (streamIndex, lastId, answerTermId, answerScoredLastId, featureId, termIds, count) -> {
                 if (featureId >= 0) {
-                    long[] numerators = featureValueSets[featureId].computeIfAbsent(new Feature(termIds), key -> new long[numeratorTermSets.length]);
+                    long[] numerators = featureValueSets[featureId].computeIfAbsent(new Feature(featureId, termIds), key -> new long[numeratorTermSets.length]);
                     for (int i = 0; i < numeratorTermSets.length; i++) {
                         if (numeratorTermSets[i].contains(answerTermId)) {
-                            numerators[i]++;
+                            numerators[i] += count; //TODO make this work?
                         }
                     }
                 }

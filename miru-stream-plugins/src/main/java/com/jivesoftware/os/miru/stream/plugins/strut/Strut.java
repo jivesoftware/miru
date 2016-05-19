@@ -1,8 +1,6 @@
 package com.jivesoftware.os.miru.stream.plugins.strut;
 
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
-import com.jivesoftware.os.filer.io.ByteArrayFiler;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
@@ -10,7 +8,7 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
-import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.CacheKeyValues;
+import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.TimestampedCacheKeyValues;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
@@ -24,11 +22,8 @@ import com.jivesoftware.os.miru.stream.plugins.strut.StrutModelCache.ModelScore;
 import com.jivesoftware.os.miru.stream.plugins.strut.StrutQuery.Strategy;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.rcvs.marshall.api.UtilLexMarshaller;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -60,48 +55,6 @@ public class Strut {
         boolean steamStream(int streamIndex, Scored scored, boolean cacheable);
     }
 
-    private static class Feature {
-        public final int featureId;
-        public final MiruTermId[] featureTermIds;
-
-        public Feature(int featureId, MiruTermId[] featureTermIds) {
-            this.featureId = featureId;
-            this.featureTermIds = featureTermIds;
-        }
-
-        public byte[] pack(StackBuffer stackBuffer) throws IOException {
-            return pack(featureId, featureTermIds, stackBuffer);
-        }
-
-        public static byte[] pack(int featureId, MiruTermId[] featureTermIds, StackBuffer stackBuffer) throws IOException {
-            ByteArrayFiler byteArrayFiler = new ByteArrayFiler();
-            FilerIO.write(byteArrayFiler, UtilLexMarshaller.intToLex(featureId), "featureId");
-            FilerIO.writeInt(byteArrayFiler, featureTermIds == null ? -1 : featureTermIds.length, "featureTermIdCount", stackBuffer);
-            if (featureTermIds != null) {
-                for (int i = 0; i < featureTermIds.length; i++) {
-                    FilerIO.writeByteArray(byteArrayFiler, featureTermIds[i].getBytes(), "featureTermId", stackBuffer);
-                }
-            }
-            return byteArrayFiler.getBytes();
-        }
-
-        public static Feature unpack(byte[] bytes, StackBuffer stackBuffer) throws IOException {
-            ByteArrayFiler byteArrayFiler = new ByteArrayFiler(bytes);
-            byte[] lexFeatureId = new byte[4];
-            FilerIO.read(byteArrayFiler, lexFeatureId);
-            int featureId = UtilLexMarshaller.intFromLex(lexFeatureId);
-            int featureTermIdCount = FilerIO.readInt(byteArrayFiler, "featureTermIdCount", stackBuffer);
-            MiruTermId[] featureTermIds = null;
-            if (featureTermIdCount != -1) {
-                featureTermIds = new MiruTermId[featureTermIdCount];
-                for (int i = 0; i < featureTermIdCount; i++) {
-                    featureTermIds[i] = new MiruTermId(FilerIO.readByteArray(byteArrayFiler, "featureTermId", stackBuffer));
-                }
-            }
-            return new Feature(featureId, featureTermIds);
-        }
-    }
-
     public interface StrutBitmapStream<BM> {
 
         boolean stream(int streamIndex, int lastId, MiruTermId termId, int scoredToLastId, BM[] answers) throws Exception;
@@ -124,7 +77,7 @@ public class Strut {
         boolean includeFeatures,
         float[] numeratorScalars,
         Strategy numeratorStrategy,
-        CacheKeyValues termFeatureCache,
+        TimestampedCacheKeyValues termFeatureCache,
         StrutStream<BM> strutStream,
         HotStuff hotStuff,
         AtomicInteger totalPartitionCount,
@@ -154,10 +107,6 @@ public class Strut {
         List<Hotness>[] features = includeFeatures ? new List[catwalkFeatures.length] : null;
         int[] featureCount = { 0 };
 
-        int[] persistTermIdCount = { 0 };
-        int[] persistHitCount = { 0 };
-        int[] persistSaveCount = { 0 };
-
         StrutModel model = cache.get(coord.tenantId, catwalkId, modelId, coord.partitionId.getId(), catwalkQuery);
         if (model == null) {
 
@@ -179,12 +128,6 @@ public class Strut {
                 }
             }
 
-            @SuppressWarnings("unchecked")
-            Set<MiruAggregateUtil.Feature>[] dedupeFeatures = new Set[featureFieldIds.length];
-            for (int i = 0; i < dedupeFeatures.length; i++) {
-                dedupeFeatures[i] = Sets.newHashSet();
-            }
-
             float[][] scores = new float[numeratorsCount][catwalkFeatures.length];
             int[][] counts = new int[numeratorsCount][catwalkFeatures.length];
             @SuppressWarnings("unchecked")
@@ -192,57 +135,10 @@ public class Strut {
             aggregateUtil.gatherFeatures(name,
                 bitmaps,
                 requestContext,
-                streamBitmaps -> {
-                    return strutStream.stream((streamIndex, lastId, termId, scoredToLastId, answers) -> {
-                        for (Set<MiruAggregateUtil.Feature> dedupe : dedupeFeatures) {
-                            dedupe.clear();
-                        }
-
-                        int[] fromId = { 0 };
-                        termFeatureCache.rangeScan(termId.getBytes(), null, null, (key, value) -> {
-                            Feature feature = Feature.unpack(key, stackBuffer);
-                            int featureId = feature.featureId;
-                            if (featureId == -1) {
-                                fromId[0] = FilerIO.bytesInt(value);
-                                return true;
-                            }
-
-                            MiruTermId[] termIds = feature.featureTermIds;
-                            dedupeFeatures[featureId].add(new MiruAggregateUtil.Feature(termIds));
-                            persistHitCount[0]++;
-
-                            ModelScore modelScore = model.score(featureId, termIds);
-                            if (modelScore != null) {
-                                float[] s = new float[modelScore.numerators.length];
-                                for (int i = 0; i < s.length; i++) {
-                                    s[i] = (float) modelScore.numerators[i] / modelScore.denominator;
-                                    if (s[i] > 1.0f) {
-                                        LOG.warn("Encountered score {} > 1.0 for answerTermId:{} numeratorIndex:{} featureId:{} termIds:{}",
-                                            s, termId, i, featureId, Arrays.toString(termIds));
-                                    }
-                                    scores[i][featureId] = score(scores[i][featureId], s[i], featureScalars[featureId], featureStrategy);
-                                    counts[i][featureId]++;
-                                }
-
-                                if (includeFeatures) {
-                                    if (features[featureId] == null) {
-                                        features[featureId] = Lists.newArrayList();
-                                    }
-                                    MiruValue[] values = new MiruValue[termIds.length];
-                                    for (int j = 0; j < termIds.length; j++) {
-                                        values[j] = new MiruValue(termComposer.decompose(schema,
-                                            schema.getFieldDefinition(featureFieldIds[featureId][j]), stackBuffer, termIds[j]));
-                                    }
-                                    features[featureId].add(new Hotness(values, scaleScore(s, numeratorScalars, numeratorStrategy), s));
-                                }
-                            }
-                            return true;
-                        });
-                        return streamBitmaps.stream(streamIndex, lastId, termId, scoredToLastId, answers, fromId[0], dedupeFeatures);
-                    });
-                },
+                termFeatureCache,
+                streamBitmaps -> strutStream.stream(streamBitmaps::stream),
                 featureFieldIds,
-                (streamIndex, lastId, answerTermId, answerScoredLastId, featureId, termIds) -> {
+                (streamIndex, lastId, answerTermId, answerScoredLastId, featureId, termIds, count) -> {
                     if (featureId == -1) {
                         boolean stopped = false;
                         List<Hotness>[] scoredFeatures = null;
@@ -258,31 +154,6 @@ public class Strut {
                         Scored scored = new Scored(lastId, answerTermId, answerScoredLastId, scaledScore, termScores, scoredFeatures);
                         if (!hotStuff.steamStream(streamIndex, scored, cacheable[0])) {
                             stopped = true;
-                        }
-
-                        List<byte[]> persistKeys = Lists.newArrayList();
-                        for (int i = 0; i < featuredTermIds.length; i++) {
-                            if (featuredTermIds[i] != null) {
-                                for (MiruTermId[] feature : featuredTermIds[i]) {
-                                    persistKeys.add(Feature.pack(i, feature, stackBuffer));
-                                }
-                            }
-                        }
-                        if (!persistKeys.isEmpty()) {
-                            persistTermIdCount[0]++;
-                            persistSaveCount[0] += persistKeys.size();
-
-                            byte[][] persistKeyBytes = persistKeys.toArray(new byte[0][]);
-                            byte[][] persistValueBytes = new byte[persistKeyBytes.length][];
-                            Arrays.fill(persistValueBytes, new byte[0]);
-
-                            termFeatureCache.put(answerTermId.getBytes(), persistKeyBytes, persistValueBytes, false, false, stackBuffer);
-                            termFeatureCache.put(answerTermId.getBytes(),
-                                new byte[][] { Feature.pack(-1, null, stackBuffer) },
-                                new byte[][] { FilerIO.intBytes(answerScoredLastId) },
-                                false,
-                                false,
-                                stackBuffer);
                         }
 
                         for (int i = 0; i < numeratorsCount; i++) {
@@ -337,10 +208,8 @@ public class Strut {
                 stackBuffer);
         }
 
-        LOG.info("Strut scored {} features in {} ms, termIds={} hits={} saves={}",
-            featureCount[0], System.currentTimeMillis() - start, persistTermIdCount[0], persistHitCount[0], persistSaveCount[0]);
-        solutionLog.log(MiruSolutionLogLevel.INFO, "Strut scored {} features in {} ms, termIds={} hits={} saves={}",
-            featureCount[0], System.currentTimeMillis() - start, persistTermIdCount[0], persistHitCount[0], persistSaveCount[0]);
+        LOG.info("Strut scored {} features in {} ms", featureCount[0], System.currentTimeMillis() - start);
+        solutionLog.log(MiruSolutionLogLevel.INFO, "Strut scored {} features in {} ms", featureCount[0], System.currentTimeMillis() - start);
 
     }
 

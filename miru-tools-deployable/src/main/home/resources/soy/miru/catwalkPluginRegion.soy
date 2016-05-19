@@ -9,6 +9,7 @@
  * @param? fromTimeUnit
  * @param? toTimeAgo
  * @param? toTimeUnit
+ * @param? catwalkId
  * @param? scorableField
  * @param? numeratorFilters
  * @param? features
@@ -79,6 +80,14 @@
                                 <option value="HOURS" {if $toTimeUnit == 'HOURS'}selected="selected"{/if}>Hours</option>
                                 <option value="DAYS" {if $toTimeUnit == 'DAYS'}selected="selected"{/if}>Days</option>
                             </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>CatwalkId</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-catwalkId-autocomplete j-autocomplete-input j-ui-elem" placeholder="CatwalkId" value="{$catwalkId?:''}"
+                                name="catwalkId" id="catwalkIdPicker" data-original-title="" title="">
                         </td>
                     </tr>
                     <tr>

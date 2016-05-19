@@ -5,27 +5,30 @@ import com.google.common.primitives.Bytes;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.lab.api.ValueIndex;
-import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.CacheKeyValues;
-import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.IndexKeyValueStream;
-import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.KeyValueStream;
+import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.ConsumeTimestampedKeyValueStream;
+import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.TimestampedCacheKeyValues;
+import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.TimestampedIndexKeyValueStream;
+import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.TimestampedKeyValueStream;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import java.util.Arrays;
 
 /**
  *
  */
-public class LabCacheKeyValues implements CacheKeyValues {
+public class LabTimestampedCacheKeyValues implements TimestampedCacheKeyValues {
 
     private final OrderIdProvider idProvider;
     private final ValueIndex[] indexes;
+    private final Object[] stripedLocks;
 
-    public LabCacheKeyValues(OrderIdProvider idProvider, ValueIndex[] indexes) {
+    public LabTimestampedCacheKeyValues(OrderIdProvider idProvider, ValueIndex[] indexes, Object[] stripedLocks) {
         this.idProvider = idProvider;
         this.indexes = indexes;
+        this.stripedLocks = stripedLocks;
     }
 
     @Override
-    public boolean get(byte[] cacheId, byte[][] keys, IndexKeyValueStream stream, StackBuffer stackBuffer) throws Exception {
+    public boolean get(byte[] cacheId, byte[][] keys, TimestampedIndexKeyValueStream stream, StackBuffer stackBuffer) throws Exception {
         int stripe = stripe(cacheId);
         byte[] prefixBytes = { (byte) cacheId.length };
 
@@ -49,13 +52,13 @@ public class LabCacheKeyValues implements CacheKeyValues {
                 return true;
             },
             (index, key, timestamp, tombstoned, version, payload) -> {
-                return stream.stream(index, keys[index], tombstoned ? null : payload);
+                return stream.stream(index, keys[index], tombstoned ? null : payload, timestamp);
             });
         return true;
     }
 
     @Override
-    public boolean rangeScan(byte[] cacheId, byte[] fromInclusive, byte[] toExclusive, KeyValueStream stream) throws Exception {
+    public boolean rangeScan(byte[] cacheId, byte[] fromInclusive, byte[] toExclusive, TimestampedKeyValueStream stream) throws Exception {
         Preconditions.checkArgument(cacheId.length <= Byte.MAX_VALUE, "Max cacheId length is " + Byte.MAX_VALUE);
 
         int stripe = stripe(cacheId);
@@ -75,44 +78,39 @@ public class LabCacheKeyValues implements CacheKeyValues {
             } else {
                 byte[] keyBytes = new byte[key.length - cacheId.length - 1];
                 System.arraycopy(key, cacheId.length + 1, keyBytes, 0, keyBytes.length);
-                return stream.stream(keyBytes, payload);
+                return stream.stream(keyBytes, payload, timestamp);
             }
         });
     }
 
     @Override
-    public void put(byte[] cacheId,
-        byte[][] keys,
-        byte[][] values,
+    public boolean put(byte[] cacheId,
         boolean commitOnUpdate,
         boolean fsyncOnCommit,
+        ConsumeTimestampedKeyValueStream consume,
         StackBuffer stackBuffer) throws Exception {
 
         int stripe = stripe(cacheId);
         byte[] prefixBytes = { (byte) cacheId.length };
 
-        byte[][] keyBytes = new byte[keys.length][];
-        for (int i = 0; i < keys.length; i++) {
-            if (keys[i] != null) {
-                keyBytes[i] = Bytes.concat(prefixBytes, cacheId, keys[i]);
-            }
-        }
-
-        long timestamp = System.currentTimeMillis();
         long version = idProvider.nextId();
-        indexes[stripe].append(stream -> {
-            for (int i = 0; i < keyBytes.length; i++) {
-                byte[] key = keyBytes[i];
-                if (key != null) {
-                    stream.stream(-1, key, timestamp, false, version, values[i]);
-                }
-            }
-            return true;
+        boolean result = indexes[stripe].append(stream -> {
+            return consume.consume((key, value, timestamp) -> {
+                byte[] keyBytes = Bytes.concat(prefixBytes, cacheId, key);
+                return stream.stream(-1, keyBytes, timestamp, false, version, value);
+            });
         }, fsyncOnCommit);
 
         if (commitOnUpdate) {
             indexes[stripe].commit(fsyncOnCommit);
         }
+
+        return result;
+    }
+
+    @Override
+    public Object lock(byte[] cacheId) {
+        return stripedLocks[Math.abs(compute(cacheId, 0, cacheId.length) % stripedLocks.length)];
     }
 
     private int stripe(byte[] cacheId) {

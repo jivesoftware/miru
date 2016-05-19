@@ -75,6 +75,7 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
         final String fromTimeUnit;
         final long toTimeAgo;
         final String toTimeUnit;
+        final String catwalkId;
         final String scorableField;
         final String numeratorFilters;
         /*final String featureFields;
@@ -88,6 +89,7 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
             String fromTimeUnit,
             long toTimeAgo,
             String toTimeUnit,
+            String catwalkId,
             String scorableField,
             String numeratorFilters,
             /*String featureFields,
@@ -100,6 +102,7 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
             this.fromTimeUnit = fromTimeUnit;
             this.toTimeAgo = toTimeAgo;
             this.toTimeUnit = toTimeUnit;
+            this.catwalkId = catwalkId;
             this.scorableField = scorableField;
             this.numeratorFilters = numeratorFilters;
             /*this.featureFields = featureFields;
@@ -148,6 +151,7 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
                 data.put("toTimeAgo", String.valueOf(toTimeAgo));
                 data.put("toTimeUnit", String.valueOf(toTimeUnit));
                 data.put("toTimeUnit", String.valueOf(toTimeUnit));
+                data.put("catwalkId", input.catwalkId);
                 data.put("scorableField", input.scorableField);
                 data.put("numeratorFilters", input.numeratorFilters);
                 /*data.put("featureFields", input.featureFields);
@@ -185,6 +189,7 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
                         MiruActorId.NOT_PROVIDED,
                         MiruAuthzExpression.NOT_PROVIDED,
                         new CatwalkQuery(
+                            input.catwalkId,
                             new MiruTimeRange(fromTime, toTime),
                             input.scorableField,
                             numeratorFilters.toArray(new MiruFilter[0]),

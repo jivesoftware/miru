@@ -249,7 +249,9 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
 
                     String endpoint = StrutConstants.STRUT_PREFIX + StrutConstants.CUSTOM_QUERY_ENDPOINT;
 
-                    CatwalkQuery catwalkQuery = new CatwalkQuery(MiruTimeRange.ALL_TIME,
+                    CatwalkQuery catwalkQuery = new CatwalkQuery(
+                        input.catwalkId,
+                        MiruTimeRange.ALL_TIME,
                         input.scorableField,
                         numeratorFilters.toArray(new MiruFilter[0]),
                         features.toArray(new CatwalkFeature[0]),
