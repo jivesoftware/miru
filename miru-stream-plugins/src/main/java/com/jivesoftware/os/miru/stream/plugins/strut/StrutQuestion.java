@@ -244,7 +244,6 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             BM[] answers = bitmaps.createArrayOf(request.query.batchSize);
             BM[] constrainFeature = modelScorer.buildConstrainFeatures(bitmaps,
                 context,
-                request.query.featureFilter,
                 catwalkQuery,
                 activityIndexLastId,
                 stackBuffer,
