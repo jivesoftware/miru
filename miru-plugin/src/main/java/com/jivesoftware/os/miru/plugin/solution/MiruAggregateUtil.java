@@ -109,6 +109,8 @@ public class MiruAggregateUtil {
         GatherFeatureMetrics metrics = new GatherFeatureMetrics();
 
         consumeAnswers.consume((streamIndex, lastId, answerTermId, answerScoredLastId, answerBitmaps) -> {
+            metrics.termCount++;
+
             for (int i = 0; i < features.length; i++) {
                 features[i].clear();
             }
@@ -177,6 +179,9 @@ public class MiruAggregateUtil {
                     });
 
                     if (answerScoredLastId > fromId[0]) {
+                        metrics.minFromId = Math.min(metrics.minFromId, fromId[0]);
+                        metrics.maxFromId = Math.max(metrics.maxFromId, fromId[0]);
+
                         gatherFeaturesForTerm(name, bitmaps, featureFieldIds, stackBuffer, uniqueFieldIds, activityIndex, fieldTerms,
                             ids, featuresContained, answerBitmaps, features, gathered, fromId[0], answerScoredLastId, metrics);
 
@@ -195,6 +200,9 @@ public class MiruAggregateUtil {
                     }
                 }
             } else {
+                metrics.minFromId = -1;
+                metrics.maxFromId = -1;
+
                 gatherFeaturesForTerm(name, bitmaps, featureFieldIds, stackBuffer, uniqueFieldIds, activityIndex, fieldTerms,
                     ids, featuresContained, answerBitmaps, features, null, 0, answerScoredLastId, metrics);
             }
@@ -202,6 +210,7 @@ public class MiruAggregateUtil {
             for (int i = 0; i < features.length; i++) {
                 for (Entry<Feature> entry : features[i].entrySet()) {
                     Feature feature = entry.getElement();
+                    metrics.featureCount++;
                     if (!stream.stream(streamIndex, lastId, answerTermId, answerScoredLastId, feature.featureId, feature.termIds, entry.getCount())) {
                         return false;
                     }
@@ -247,10 +256,6 @@ public class MiruAggregateUtil {
         int fromIdInclusive,
         int toIdInclusive,
         GatherFeatureMetrics metrics) throws Exception {
-
-        metrics.minFromId = Math.min(metrics.minFromId, fromIdInclusive);
-        metrics.maxFromId = Math.max(metrics.maxFromId, fromIdInclusive);
-        metrics.termCount++;
 
         MiruIntIterator[] intIters = new MiruIntIterator[answerBitmaps.length];
         for (int i = 0; i < intIters.length; i++) {
@@ -307,7 +312,6 @@ public class MiruAggregateUtil {
             if (gathered != null) {
                 gathered[fi].add(feature);
             }
-            metrics.featureCount++;
             return true;
         };
 
