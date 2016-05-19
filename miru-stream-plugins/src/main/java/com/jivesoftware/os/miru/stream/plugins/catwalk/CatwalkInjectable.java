@@ -13,6 +13,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRequestAndReport;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolvableFactory;
+import com.jivesoftware.os.miru.stream.plugins.strut.StrutConfig;
 
 /**
  *
@@ -21,11 +22,14 @@ public class CatwalkInjectable {
 
     private final MiruProvider<? extends Miru> provider;
     private final Catwalk catwalk;
+    private final int maxUpdatesBeforeFlush;
 
     public CatwalkInjectable(MiruProvider<? extends Miru> provider,
-        Catwalk catwalk) {
+        Catwalk catwalk,
+        int maxUpdatesBeforeFlush) {
         this.provider = provider;
         this.catwalk = catwalk;
+        this.maxUpdatesBeforeFlush = maxUpdatesBeforeFlush;
     }
 
     public MiruResponse<CatwalkAnswer> strut(MiruRequest<CatwalkQuery> request) throws MiruQueryServiceException, InterruptedException {
@@ -37,7 +41,8 @@ public class CatwalkInjectable {
                     "catwalk",
                     new CatwalkQuestion(catwalk,
                         request,
-                        provider.getRemotePartition(CatwalkRemotePartition.class))),
+                        provider.getRemotePartition(CatwalkRemotePartition.class),
+                        maxUpdatesBeforeFlush)),
                 new CatwalkAnswerEvaluator(),
                 new CatwalkAnswerMerger(request.query.desiredNumberOfResults),
                 CatwalkAnswer.EMPTY_RESULTS,
@@ -62,7 +67,8 @@ public class CatwalkInjectable {
                     "catwalk",
                     new CatwalkQuestion(catwalk,
                         requestAndReport.request,
-                        provider.getRemotePartition(CatwalkRemotePartition.class))),
+                        provider.getRemotePartition(CatwalkRemotePartition.class),
+                        maxUpdatesBeforeFlush)),
                 Optional.fromNullable(requestAndReport.report),
                 CatwalkAnswer.EMPTY_RESULTS,
                 MiruSolutionLogLevel.NONE);
@@ -85,7 +91,8 @@ public class CatwalkInjectable {
                     "catwalk",
                     new CatwalkQuestion(catwalk,
                         request,
-                        provider.getRemotePartition(CatwalkRemotePartition.class))),
+                        provider.getRemotePartition(CatwalkRemotePartition.class),
+                        maxUpdatesBeforeFlush)),
                 new CatwalkAnswerMerger(request.query.desiredNumberOfResults),
                 CatwalkAnswer.EMPTY_RESULTS,
                 request.logLevel);

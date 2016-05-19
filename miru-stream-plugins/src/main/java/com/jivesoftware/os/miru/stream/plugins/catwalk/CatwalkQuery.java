@@ -13,6 +13,7 @@ import java.util.Arrays;
  */
 public class CatwalkQuery implements Serializable {
 
+    public final String catwalkId;
     public final MiruTimeRange timeRange;
     public final String gatherField; // "parent"
     public final MiruFilter[] gatherFilters; // "I viewed"
@@ -20,11 +21,13 @@ public class CatwalkQuery implements Serializable {
     public final int desiredNumberOfResults;
 
     public CatwalkQuery(
+        @JsonProperty("catwalkId") String catwalkId,
         @JsonProperty("timeRange") MiruTimeRange timeRange,
         @JsonProperty("gatherField") String gatherField,
         @JsonProperty("gatherFilters") MiruFilter[] gatherFilters,
         @JsonProperty("features") CatwalkFeature[] features,
         @JsonProperty("desiredNumberOfResults") int desiredNumberOfResults) {
+        this.catwalkId = catwalkId;
         this.timeRange = Preconditions.checkNotNull(timeRange);
         this.gatherField = Preconditions.checkNotNull(gatherField);
         this.gatherFilters = Preconditions.checkNotNull(gatherFilters);
@@ -36,7 +39,8 @@ public class CatwalkQuery implements Serializable {
     @Override
     public String toString() {
         return "CatwalkQuery{"
-            + "timeRange=" + timeRange
+            + "catwalkId=" + catwalkId
+            + ", timeRange=" + timeRange
             + ", gatherField='" + gatherField + '\''
             + ", gatherFilters=" + Arrays.toString(gatherFilters)
             + ", features=" + Arrays.toString(features)

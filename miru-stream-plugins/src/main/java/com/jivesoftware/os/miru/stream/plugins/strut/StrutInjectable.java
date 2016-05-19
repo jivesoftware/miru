@@ -23,18 +23,15 @@ public class StrutInjectable {
     private final StrutModelScorer modelScorer;
     private final Strut strut;
     private final int maxTermIdsPerRequest;
-    private final int maxUpdatesBeforeFlush;
 
     public StrutInjectable(MiruProvider<? extends Miru> provider,
         StrutModelScorer modelScorer,
         Strut strut,
-        int maxTermIdsPerRequest,
-        int maxUpdatesBeforeFlush) {
+        int maxTermIdsPerRequest) {
         this.provider = provider;
         this.modelScorer = modelScorer;
         this.strut = strut;
         this.maxTermIdsPerRequest = maxTermIdsPerRequest;
-        this.maxUpdatesBeforeFlush = maxUpdatesBeforeFlush;
     }
 
     public MiruResponse<StrutAnswer> strut(MiruRequest<StrutQuery> request) throws MiruQueryServiceException, InterruptedException {
@@ -49,8 +46,7 @@ public class StrutInjectable {
                         provider.getBackfillerizer(tenantId),
                         request,
                         provider.getRemotePartition(StrutRemotePartition.class),
-                        maxTermIdsPerRequest,
-                        maxUpdatesBeforeFlush)),
+                        maxTermIdsPerRequest)),
                 new StrutAnswerEvaluator(),
                 new StrutAnswerMerger(request.query.desiredNumberOfResults),
                 StrutAnswer.EMPTY_RESULTS,
@@ -78,8 +74,7 @@ public class StrutInjectable {
                         provider.getBackfillerizer(tenantId),
                         requestAndReport.request,
                         provider.getRemotePartition(StrutRemotePartition.class),
-                        maxTermIdsPerRequest,
-                        maxUpdatesBeforeFlush)),
+                        maxTermIdsPerRequest)),
                 Optional.fromNullable(requestAndReport.report),
                 StrutAnswer.EMPTY_RESULTS,
                 MiruSolutionLogLevel.NONE);
@@ -105,8 +100,7 @@ public class StrutInjectable {
                         provider.getBackfillerizer(tenantId),
                         request,
                         provider.getRemotePartition(StrutRemotePartition.class),
-                        maxTermIdsPerRequest,
-                        maxUpdatesBeforeFlush)),
+                        maxTermIdsPerRequest)),
                 new StrutAnswerMerger(request.query.desiredNumberOfResults),
                 StrutAnswer.EMPTY_RESULTS,
                 request.logLevel);

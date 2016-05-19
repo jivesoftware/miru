@@ -98,7 +98,6 @@ public class StrutPlugin implements MiruPlugin<StrutEndpoints, StrutInjectable> 
             new StrutInjectable(miruProvider,
                 modelScorer,
                 strut,
-                config.getMaxTermIdsPerRequest(),
                 config.getMaxTermIdsPerRequest())));
     }
 

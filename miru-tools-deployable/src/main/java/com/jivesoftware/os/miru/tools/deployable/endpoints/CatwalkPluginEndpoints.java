@@ -41,6 +41,7 @@ public class CatwalkPluginEndpoints {
         @QueryParam("fromTimeUnit") @DefaultValue("HOURS") String fromTimeUnit,
         @QueryParam("toTimeAgo") @DefaultValue("0") long toTimeAgo,
         @QueryParam("toTimeUnit") @DefaultValue("HOURS") String toTimeUnit,
+        @QueryParam("catwalkId") @DefaultValue("demo") String catwalkId,
         @QueryParam("scorableField") @DefaultValue("parent") String scorableField,
         @QueryParam("numeratorFilters") @DefaultValue("activityType:0, user:3 2000\n" +
             "activityType:1, user:3 2000\n" +
@@ -61,6 +62,7 @@ public class CatwalkPluginEndpoints {
                     fromTimeUnit,
                     toTimeAgo,
                     toTimeUnit,
+                    catwalkId,
                     scorableField,
                     numeratorFilters.trim(),
                     /*featureFields,

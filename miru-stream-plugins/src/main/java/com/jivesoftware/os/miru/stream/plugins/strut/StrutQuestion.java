@@ -59,7 +59,6 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
     private final MiruRequest<StrutQuery> request;
     private final MiruRemotePartition<StrutQuery, StrutAnswer, StrutReport> remotePartition;
     private final int maxTermIdsPerRequest;
-    private final int maxUpdatesBeforeFlush;
 
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
@@ -69,15 +68,13 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         MiruJustInTimeBackfillerizer backfillerizer,
         MiruRequest<StrutQuery> request,
         MiruRemotePartition<StrutQuery, StrutAnswer, StrutReport> remotePartition,
-        int maxTermIdsPerRequest,
-        int maxUpdatesBeforeFlush) {
+        int maxTermIdsPerRequest) {
         this.modelScorer = modelScorer;
         this.strut = strut;
         this.backfillerizer = backfillerizer;
         this.request = request;
         this.remotePartition = remotePartition;
         this.maxTermIdsPerRequest = maxTermIdsPerRequest;
-        this.maxUpdatesBeforeFlush = maxUpdatesBeforeFlush;
     }
 
     @Override
@@ -242,7 +239,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             scored.clear();
             asyncRescore.clear();
 
-            MiruPluginCacheProvider.CacheKeyValues termFeaturesCache = modelScorer.getTermFeatureCache(context, request.query.catwalkId);
+            MiruPluginCacheProvider.TimestampedCacheKeyValues termFeaturesCache = modelScorer.getTermFeatureCache(context, request.query.catwalkId);
 
             BM[] answers = bitmaps.createArrayOf(request.query.batchSize);
             BM[] constrainFeature = modelScorer.buildConstrainFeatures(bitmaps,

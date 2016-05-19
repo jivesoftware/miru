@@ -1,8 +1,13 @@
 package com.jivesoftware.os.miru.plugin.solution;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Multiset;
+import com.google.common.collect.Multiset.Entry;
 import com.google.common.collect.Sets;
+import com.jivesoftware.os.filer.io.ByteArrayFiler;
+import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.api.KeyRange;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.jive.utils.base.interfaces.CallbackStream;
@@ -18,6 +23,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
+import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.TimestampedCacheKeyValues;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.FieldMultiTermTxIndex;
 import com.jivesoftware.os.miru.plugin.index.LastIdAndTermIdStream;
@@ -29,6 +35,8 @@ import com.jivesoftware.os.miru.plugin.index.MiruTxIndex;
 import com.jivesoftware.os.miru.plugin.partition.TrackError;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import com.jivesoftware.os.rcvs.marshall.api.UtilLexMarshaller;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -48,7 +56,7 @@ public class MiruAggregateUtil {
 
     public interface StreamBitmaps<BM> {
 
-        boolean stream(int streamIndex, int lastId, MiruTermId termId, int scoredToLastId, BM[] answers, int fromId, Set<Feature>[] features) throws Exception;
+        boolean stream(int streamIndex, int lastId, MiruTermId termId, int scoredToLastId, BM[] answers) throws Exception;
     }
 
     public interface ConsumeBitmaps<BM> {
@@ -59,6 +67,7 @@ public class MiruAggregateUtil {
     public <BM extends IBM, IBM, S extends MiruSipCursor<S>> void gatherFeatures(String name,
         MiruBitmaps<BM, IBM> bitmaps,
         MiruRequestContext<BM, IBM, S> requestContext,
+        TimestampedCacheKeyValues termFeatureCache,
         ConsumeBitmaps<BM> consumeAnswers,
         int[][] featureFieldIds,
         FeatureStream stream,
@@ -79,78 +88,202 @@ public class MiruAggregateUtil {
 
         MiruTermId[][][] fieldTerms = new MiruTermId[schema.fieldCount()][][];
 
-        /*@SuppressWarnings("unchecked")
-        Set<Feature>[] features = new Set[featureFieldIds.length];
-        if (dedupe) {
+        @SuppressWarnings("unchecked")
+        Multiset<Feature>[] features = new Multiset[featureFieldIds.length];
+        for (int i = 0; i < features.length; i++) {
+            features[i] = HashMultiset.create();
+        }
+        @SuppressWarnings("unchecked")
+        Set<Feature>[] gathered = termFeatureCache == null ? null : new Set[featureFieldIds.length];
+        if (termFeatureCache != null) {
             for (int i = 0; i < features.length; i++) {
-                features[i] = Sets.newHashSet();
+                gathered[i] = Sets.newHashSet();
             }
-        }*/
+        }
 
-        int[] featureCount = { 0 };
-        int[] termCount = { 0 };
         int batchSize = 1_000;
         boolean[][] featuresContained = new boolean[batchSize][featureFieldIds.length];
         int[] ids = new int[batchSize];
         long start = System.currentTimeMillis();
-        int[] skippedCount = { 0 };
-        int[] consumedCount = { 0 };
-        int[] minFromId = { Integer.MAX_VALUE };
-        int[] maxFromId = { Integer.MIN_VALUE };
-        consumeAnswers.consume((streamIndex, lastId, answerTermId, answerScoredLastId, answerBitmaps, fromId, features) -> {
-            minFromId[0] = Math.min(minFromId[0], fromId);
-            maxFromId[0] = Math.max(maxFromId[0], fromId);
 
-            termCount[0]++;
-            /*for (Set<Feature> featureSet : features) {
-                if (featureSet != null) {
-                    featureSet.clear();
-                }
-            }*/
-            MiruIntIterator[] intIters = new MiruIntIterator[answerBitmaps.length];
-            for (int i = 0; i < intIters.length; i++) {
-                if (answerBitmaps[i] != null) {
-                    intIters[i] = bitmaps.intIterator(answerBitmaps[i]);
-                }
+        GatherFeatureMetrics metrics = new GatherFeatureMetrics();
+
+        consumeAnswers.consume((streamIndex, lastId, answerTermId, answerScoredLastId, answerBitmaps) -> {
+            for (int i = 0; i < features.length; i++) {
+                features[i].clear();
             }
 
-            CollatingIntIterator iter = new CollatingIntIterator(intIters, false);
-            int count = 0;
-            while (iter.hasNext()) {
-                ids[count] = iter.next(featuresContained[count]);
-                if (ids[count] < fromId) {
-                    skippedCount[0]++;
-                    continue;
+            if (termFeatureCache != null) {
+                for (int i = 0; i < gathered.length; i++) {
+                    gathered[i].clear();
                 }
-                consumedCount[0]++;
-                count++;
-                if (count == batchSize) {
-                    if (!gatherAndStreamFeatures(name, streamIndex, featureFieldIds, stream, stackBuffer, uniqueFieldIds, activityIndex, fieldTerms,
-                        ids, featuresContained, count, lastId, answerTermId, answerScoredLastId, featureCount, features)) {
+                byte[] cacheId = answerTermId.getBytes();
+                synchronized (termFeatureCache.lock(cacheId)) {
+                    int[] fromId = { 0 };
+                    termFeatureCache.rangeScan(cacheId, null, null, (key, value, timestamp) -> {
+                        Feature feature = Feature.unpack(key, stackBuffer);
+                        int featureId = feature.featureId;
+                        if (featureId == -1) {
+                            fromId[0] = (int) timestamp;
+                            return true;
+                        }
+
+                        if (timestamp > fromId[0]) {
+                            LOG.error("Found termId:{} feature:{} timestamp:{} which is more recent than fromId:{}",
+                                answerTermId, feature, timestamp, fromId[0]);
+                        }
+
+                        // fromId:0 -> 10
+                        // * j:1 @ 10
+                        // * a:1 @ 10
+                        // * b:3 @ 10
+                        // * c:2 @ 10
+
+                        // fromId:0 -> 15
+                        // * j:1 @ 10
+                        // * a:1 @ 15
+                        // * b:3 @ 15
+                        // * c:3 @ 15
+
+                        // fromId:0 -> 16
+                        // * j:1 @ 16
+                        // * z:1 @ 16
+                        // * a:1 @ 16
+                        // * b:3 @ 16
+                        // * c:3 @ 16
+
+                        // fromId:10 -> 20
+                        //   j:1 @ 10
+                        // * z:1 @ 20
+                        //   a:1 @ 10
+                        //   b:3 @ 10
+                        // * c:4 @ 20
+                        // * d:1 @ 20
+
+                        // fromId:15 -> 25
+                        // > j:1 @ 10
+                        // xxx z:1
+                        // > a:1 @ 15
+                        // > b:3 @ 15
+                        // > c:4 @ 15
+                        // > d:1 @ 15
+
+                        int count = FilerIO.bytesInt(value);
+                        MiruTermId[] termIds = feature.termIds;
+                        features[featureId].add(new Feature(featureId, termIds), count);
+                        metrics.cacheHitCount++;
+
+                        return true;
+                    });
+
+                    if (answerScoredLastId > fromId[0]) {
+                        gatherFeaturesForTerm(name, bitmaps, featureFieldIds, stackBuffer, uniqueFieldIds, activityIndex, fieldTerms,
+                            ids, featuresContained, answerBitmaps, features, gathered, fromId[0], answerScoredLastId, metrics);
+
+                        termFeatureCache.put(cacheId, false, false, stream1 -> {
+                            for (int i = 0; i < gathered.length; i++) {
+                                for (Feature feature : gathered[i]) {
+                                    metrics.cacheSaveCount++;
+                                    int count = features[i].count(feature);
+                                    if (!stream1.stream(feature.pack(stackBuffer), FilerIO.intBytes(count), answerScoredLastId)) {
+                                        return false;
+                                    }
+                                }
+                            }
+                            return stream1.stream(Feature.pack(-1, null, stackBuffer), new byte[0], answerScoredLastId);
+                        }, stackBuffer);
+                    }
+                }
+            } else {
+                gatherFeaturesForTerm(name, bitmaps, featureFieldIds, stackBuffer, uniqueFieldIds, activityIndex, fieldTerms,
+                    ids, featuresContained, answerBitmaps, features, null, 0, answerScoredLastId, metrics);
+            }
+
+            for (int i = 0; i < features.length; i++) {
+                for (Entry<Feature> entry : features[i].entrySet()) {
+                    Feature feature = entry.getElement();
+                    if (!stream.stream(streamIndex, lastId, answerTermId, answerScoredLastId, feature.featureId, feature.termIds, entry.getCount())) {
                         return false;
                     }
-                    count = 0;
                 }
             }
-            if (count > 0) {
-                if (!gatherAndStreamFeatures(name, streamIndex, featureFieldIds, stream, stackBuffer, uniqueFieldIds, activityIndex, fieldTerms,
-                    ids, featuresContained, count, lastId, answerTermId, answerScoredLastId, featureCount, features)) {
-                    return false;
-                }
-                count = 0;
-            }
-            return stream.stream(streamIndex, lastId, answerTermId, answerScoredLastId, -1, null);
+            return stream.stream(streamIndex, lastId, answerTermId, answerScoredLastId, -1, null, -1);
         });
-        LOG.info("Gathered name:{} features:{} terms:{} elapsed:{} - skipped:{} consumed:{} fromId:{}/{}",
-            name, featureCount[0], termCount[0], System.currentTimeMillis() - start, skippedCount[0], consumedCount[0], minFromId[0], maxFromId[0]);
-        solutionLog.log(MiruSolutionLogLevel.INFO, "Gathered name:{} features:{} terms:{} elapsed:{} - skipped:{} consumed:{} fromId:{}/{}",
-            name, featureCount[0], termCount[0], System.currentTimeMillis() - start, skippedCount[0], consumedCount[0], minFromId[0], maxFromId[0]);
+        LOG.info("Gathered name:{} features:{} terms:{} elapsed:{}" +
+                " - skipped:{} consumed:{} fromId:{}/{} cacheHits={} cacheSaves={}",
+            name, metrics.featureCount, metrics.termCount, System.currentTimeMillis() - start,
+            metrics.skippedCount, metrics.consumedCount, metrics.minFromId, metrics.maxFromId,
+            metrics.cacheHitCount, metrics.cacheSaveCount);
+        solutionLog.log(MiruSolutionLogLevel.INFO, "Gathered name:{} features:{} terms:{} elapsed:{}" +
+                " - skipped:{} consumed:{} fromId:{}/{} cacheHits={} cacheSaves={}",
+            name, metrics.featureCount, metrics.termCount, System.currentTimeMillis() - start,
+            metrics.skippedCount, metrics.consumedCount, metrics.minFromId, metrics.maxFromId,
+            metrics.cacheHitCount, metrics.cacheSaveCount);
     }
 
-    private boolean gatherAndStreamFeatures(String name,
-        int streamIndex,
+    private static class GatherFeatureMetrics {
+        private long minFromId = Integer.MAX_VALUE;
+        private long maxFromId = Integer.MIN_VALUE;
+        private int termCount;
+        private int featureCount;
+        private int skippedCount;
+        private int consumedCount;
+        private int cacheHitCount;
+        private int cacheSaveCount;
+    }
+
+    private <BM extends IBM, IBM> void gatherFeaturesForTerm(String name,
+        MiruBitmaps<BM, IBM> bitmaps,
         int[][] featureFieldIds,
-        FeatureStream stream,
+        StackBuffer stackBuffer,
+        Set<Integer> uniqueFieldIds,
+        MiruActivityIndex activityIndex,
+        MiruTermId[][][] fieldTerms,
+        int[] ids,
+        boolean[][] featuresContained,
+        BM[] answerBitmaps,
+        Multiset<Feature>[] features,
+        Set<Feature>[] gathered,
+        int fromIdInclusive,
+        int toIdInclusive,
+        GatherFeatureMetrics metrics) throws Exception {
+
+        metrics.minFromId = Math.min(metrics.minFromId, fromIdInclusive);
+        metrics.maxFromId = Math.max(metrics.maxFromId, fromIdInclusive);
+        metrics.termCount++;
+
+        MiruIntIterator[] intIters = new MiruIntIterator[answerBitmaps.length];
+        for (int i = 0; i < intIters.length; i++) {
+            if (answerBitmaps[i] != null) {
+                intIters[i] = bitmaps.intIterator(answerBitmaps[i]);
+            }
+        }
+
+        CollatingIntIterator iter = new CollatingIntIterator(intIters, false);
+        int count = 0;
+        while (iter.hasNext()) {
+            ids[count] = iter.next(featuresContained[count]);
+            if (ids[count] < fromIdInclusive || ids[count] > toIdInclusive) {
+                metrics.skippedCount++;
+                continue;
+            }
+            metrics.consumedCount++;
+            count++;
+            if (count == ids.length) {
+                gatherAndCountFeaturesForTerm(name, featureFieldIds, stackBuffer, uniqueFieldIds, activityIndex, fieldTerms,
+                    ids, featuresContained, count, features, gathered, metrics);
+                count = 0;
+            }
+        }
+        if (count > 0) {
+            gatherAndCountFeaturesForTerm(name, featureFieldIds, stackBuffer, uniqueFieldIds, activityIndex, fieldTerms,
+                ids, featuresContained, count, features, gathered, metrics);
+            count = 0;
+        }
+    }
+
+    private void gatherAndCountFeaturesForTerm(String name,
+        int[][] featureFieldIds,
         StackBuffer stackBuffer,
         Set<Integer> uniqueFieldIds,
         MiruActivityIndex activityIndex,
@@ -158,11 +291,9 @@ public class MiruAggregateUtil {
         int[] ids,
         boolean[][] contained,
         int count,
-        int lastId,
-        MiruTermId answerTermId,
-        int answerScoredLastId,
-        int[] featureCount,
-        Set<Feature>[] features) throws Exception {
+        Multiset<Feature>[] features,
+        Set<Feature>[] gathered,
+        GatherFeatureMetrics metrics) throws Exception {
 
         int[] consumableIds = new int[ids.length];
         for (int fieldId : uniqueFieldIds) {
@@ -171,15 +302,16 @@ public class MiruAggregateUtil {
         }
 
         PermutationStream permutationStream = (fi, permuteTermIds) -> {
-            if (features == null || features[fi] == null || features[fi].add(new Feature(permuteTermIds))) {
-                featureCount[0]++;
-                if (!stream.stream(streamIndex, lastId, answerTermId, answerScoredLastId, fi, permuteTermIds)) {
-                    return false;
-                }
+            Feature feature = new Feature(fi, permuteTermIds);
+            features[fi].add(feature);
+            if (gathered != null) {
+                gathered[fi].add(feature);
             }
+            metrics.featureCount++;
             return true;
         };
 
+        done:
         for (int index = 0; index < count; index++) {
             NEXT_FEATURE:
             for (int i = 0; i < featureFieldIds.length; i++) {
@@ -196,12 +328,11 @@ public class MiruAggregateUtil {
                     }
 
                     if (!permutate(i, fieldIds.length, termIds, permutationStream)) {
-                        return false;
+                        break done;
                     }
                 }
             }
         }
-        return true;
     }
 
     interface PermutationStream {
@@ -410,19 +541,60 @@ public class MiruAggregateUtil {
         solutionLog.log(MiruSolutionLogLevel.INFO, "Gather value bits took {} ms", System.currentTimeMillis() - start);
         start = System.currentTimeMillis();
     }*/
+
     public interface FeatureStream {
 
-        boolean stream(int streamIndex, int lastId, MiruTermId answerTermId, int answerScoredLastId, int featureId, MiruTermId[] termIds) throws Exception;
+        boolean stream(int streamIndex,
+            int lastId,
+            MiruTermId answerTermId,
+            int answerScoredLastId,
+            int featureId,
+            MiruTermId[] termIds,
+            int count) throws Exception;
     }
 
     public static class Feature {
 
+        public final int featureId;
         public final MiruTermId[] termIds;
 
         private int hash = 0;
 
-        public Feature(MiruTermId[] termIds) {
+        public Feature(int featureId, MiruTermId[] termIds) {
+            this.featureId = featureId;
             this.termIds = termIds;
+        }
+
+        public byte[] pack(StackBuffer stackBuffer) throws IOException {
+            return pack(featureId, termIds, stackBuffer);
+        }
+
+        public static byte[] pack(int featureId, MiruTermId[] featureTermIds, StackBuffer stackBuffer) throws IOException {
+            ByteArrayFiler byteArrayFiler = new ByteArrayFiler();
+            FilerIO.write(byteArrayFiler, UtilLexMarshaller.intToLex(featureId), "featureId");
+            FilerIO.writeInt(byteArrayFiler, featureTermIds == null ? -1 : featureTermIds.length, "featureTermIdCount", stackBuffer);
+            if (featureTermIds != null) {
+                for (int i = 0; i < featureTermIds.length; i++) {
+                    FilerIO.writeByteArray(byteArrayFiler, featureTermIds[i].getBytes(), "featureTermId", stackBuffer);
+                }
+            }
+            return byteArrayFiler.getBytes();
+        }
+
+        public static Feature unpack(byte[] bytes, StackBuffer stackBuffer) throws IOException {
+            ByteArrayFiler byteArrayFiler = new ByteArrayFiler(bytes);
+            byte[] lexFeatureId = new byte[4];
+            FilerIO.read(byteArrayFiler, lexFeatureId);
+            int featureId = UtilLexMarshaller.intFromLex(lexFeatureId);
+            int featureTermIdCount = FilerIO.readInt(byteArrayFiler, "featureTermIdCount", stackBuffer);
+            MiruTermId[] featureTermIds = null;
+            if (featureTermIdCount != -1) {
+                featureTermIds = new MiruTermId[featureTermIdCount];
+                for (int i = 0; i < featureTermIdCount; i++) {
+                    featureTermIds[i] = new MiruTermId(FilerIO.readByteArray(byteArrayFiler, "featureTermId", stackBuffer));
+                }
+            }
+            return new Feature(featureId, featureTermIds);
         }
 
         @Override
@@ -447,9 +619,18 @@ public class MiruAggregateUtil {
             }
             return hash;
         }
+
+        @Override
+        public String toString() {
+            return "Feature{" +
+                "featureId=" + featureId +
+                ", termIds=" + Arrays.toString(termIds) +
+                ", hash=" + hash +
+                '}';
+        }
     }
 
-    private static class FieldBits<BM extends IBM, IBM> implements Comparable<FieldBits<BM, IBM>> {
+    /*private static class FieldBits<BM extends IBM, IBM> implements Comparable<FieldBits<BM, IBM>> {
 
         private final int fieldId;
         private final int bit;
@@ -476,7 +657,7 @@ public class MiruAggregateUtil {
             }
             return Integer.compare(bit, o.bit);
         }
-    }
+    }*/
 
     public <BM extends IBM, IBM, S extends MiruSipCursor<S>> void stream(String name,
         MiruBitmaps<BM, IBM> bitmaps,

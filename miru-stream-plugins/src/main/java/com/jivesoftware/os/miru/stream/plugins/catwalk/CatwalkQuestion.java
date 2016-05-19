@@ -13,6 +13,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
+import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.FieldMultiTermTxIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
@@ -26,6 +27,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.solution.Question;
 import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkQuery.CatwalkFeature;
+import com.jivesoftware.os.miru.stream.plugins.strut.StrutModelScorer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
@@ -43,15 +45,19 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
     private final Catwalk catwalk;
     private final MiruRequest<CatwalkQuery> request;
     private final MiruRemotePartition<CatwalkQuery, CatwalkAnswer, CatwalkReport> remotePartition;
+    private final int maxUpdatesBeforeFlush;
+
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
 
     public CatwalkQuestion(Catwalk catwalk,
         MiruRequest<CatwalkQuery> request,
-        MiruRemotePartition<CatwalkQuery, CatwalkAnswer, CatwalkReport> remotePartition) {
+        MiruRemotePartition<CatwalkQuery, CatwalkAnswer, CatwalkReport> remotePartition,
+        int maxUpdatesBeforeFlush) {
         this.catwalk = catwalk;
         this.request = request;
         this.remotePartition = remotePartition;
+        this.maxUpdatesBeforeFlush = maxUpdatesBeforeFlush;
     }
 
     @Override
@@ -70,7 +76,7 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
             solutionLog.log(MiruSolutionLogLevel.WARN, "No time index intersection. Partition {}: {} doesn't intersect with {}",
                 handle.getCoord().partitionId, context.getTimeIndex(), timeRange);
             return new MiruPartitionResponse<>(
-                catwalk.model("catwalk", bitmaps, context, request, handle.getCoord(), report, answerBitmap -> true, null, null, solutionLog),
+                catwalk.model("catwalk", bitmaps, context, request, handle.getCoord(), report, null, answerBitmap -> true, null, null, solutionLog),
                 solutionLog.asList());
         }
 
@@ -157,6 +163,11 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
             }
         }
 
+        //TODO this duplicates StrutModelScorer behavior
+        int payloadSize = 4; // this is amazing
+        MiruPluginCacheProvider.TimestampedCacheKeyValues termFeaturesCache = request.query.catwalkId == null ? null
+            : context.getCacheProvider().getTimestampedKeyValues("strut-features-" + request.query.catwalkId, payloadSize, false, maxUpdatesBeforeFlush);
+
         List<MiruTermId> uniqueTermIds = Lists.newArrayList(termIds);
         return new MiruPartitionResponse<>(
             catwalk.model("catwalk",
@@ -165,6 +176,7 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
                 request,
                 handle.getCoord(),
                 report,
+                termFeaturesCache,
                 answerBitmap -> {
                     FieldMultiTermTxIndex<BM, IBM> multiTermTxIndex = new FieldMultiTermTxIndex<>("catwalk", primaryFieldIndex, pivotFieldId, -1);
                     for (List<MiruTermId> batch : Lists.partition(uniqueTermIds, 100)) {

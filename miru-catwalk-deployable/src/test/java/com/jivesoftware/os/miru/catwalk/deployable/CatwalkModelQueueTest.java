@@ -22,7 +22,8 @@ public class CatwalkModelQueueTest {
         String catwalkId = "catwalkId";
         String modelId = "modelId";
         int partitionId = 1234;
-        CatwalkQuery catwalkQuery = new CatwalkQuery(MiruTimeRange.ALL_TIME,
+        CatwalkQuery catwalkQuery = new CatwalkQuery(catwalkId,
+            MiruTimeRange.ALL_TIME,
             "scorableField",
             new MiruFilter[] { MiruFilter.NO_FILTER },
             new CatwalkFeature[] {

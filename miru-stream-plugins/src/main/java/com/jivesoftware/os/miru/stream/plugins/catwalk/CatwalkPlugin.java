@@ -6,6 +6,7 @@ import com.jivesoftware.os.miru.plugin.plugin.MiruEndpointInjectable;
 import com.jivesoftware.os.miru.plugin.plugin.MiruPlugin;
 import com.jivesoftware.os.miru.plugin.solution.FstRemotePartitionReader;
 import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
+import com.jivesoftware.os.miru.stream.plugins.strut.StrutConfig;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -24,9 +25,10 @@ public class CatwalkPlugin implements MiruPlugin<CatwalkEndpoints, CatwalkInject
     public Collection<MiruEndpointInjectable<CatwalkInjectable>> getInjectables(MiruProvider<? extends Miru> miruProvider) {
 
         Catwalk catwalk = new Catwalk();
+        StrutConfig config = miruProvider.getConfig(StrutConfig.class);
         return Collections.singletonList(new MiruEndpointInjectable<>(
             CatwalkInjectable.class,
-            new CatwalkInjectable(miruProvider, catwalk)
+            new CatwalkInjectable(miruProvider, catwalk, config.getMaxUpdatesBeforeFlush())
         ));
     }
 
