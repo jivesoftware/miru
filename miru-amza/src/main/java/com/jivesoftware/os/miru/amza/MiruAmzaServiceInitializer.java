@@ -66,7 +66,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import org.merlin.config.defaults.BooleanDefault;
-import org.merlin.config.defaults.IntDefault;
 import org.merlin.config.defaults.LongDefault;
 
 /**
@@ -79,10 +78,6 @@ public class MiruAmzaServiceInitializer {
         @Override
         @BooleanDefault(true)
         boolean getUseMemMap();
-
-        @Override
-        @IntDefault(1_000)
-        int getMaxUpdatesBeforeFlush();
 
         @Override
         @LongDefault(10_485_760L)
