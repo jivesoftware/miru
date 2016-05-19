@@ -178,9 +178,9 @@ public class MiruAggregateUtil {
                         return true;
                     });
 
+                    metrics.minFromId = Math.min(metrics.minFromId, fromId[0]);
+                    metrics.maxFromId = Math.max(metrics.maxFromId, fromId[0]);
                     if (answerScoredLastId > fromId[0]) {
-                        metrics.minFromId = Math.min(metrics.minFromId, fromId[0]);
-                        metrics.maxFromId = Math.max(metrics.maxFromId, fromId[0]);
 
                         gatherFeaturesForTerm(name, bitmaps, featureFieldIds, stackBuffer, uniqueFieldIds, activityIndex, fieldTerms,
                             ids, featuresContained, answerBitmaps, features, gathered, fromId[0], answerScoredLastId, metrics);
