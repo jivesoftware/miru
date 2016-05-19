@@ -92,7 +92,7 @@ public class Catwalk {
                     for (int i = 0; i < featureAnswers.length; i++) {
                         modelCounts[i] += bitmaps.cardinality(featureAnswers[i]);
                     }
-                    return streamBitmaps.stream(index, -1, answerTermId, -1, featureAnswers);
+                    return streamBitmaps.stream(index, -1, answerTermId, answerScoredToLastId, featureAnswers);
                 });
             },
             featureFieldIds,
