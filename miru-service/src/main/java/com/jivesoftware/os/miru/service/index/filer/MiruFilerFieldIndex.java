@@ -186,12 +186,9 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
             if (filer != null) {
                 try {
                     bytes.add(filer.length());
-                    int lastId = -1;
-                    if (considerIfLastIdGreaterThanN >= 0) {
-                        lastId = filer.readInt();
-                        filer.seek(0);
-                    }
-                    if (lastId < 0 || lastId > considerIfLastIdGreaterThanN) {
+                    int lastId = filer.readInt();
+                    filer.seek(0);
+                    if (considerIfLastIdGreaterThanN < 0 || lastId > considerIfLastIdGreaterThanN) {
                         indexTx.tx(index, lastId, null, filer, MiruFilerInvertedIndex.LAST_ID_LENGTH, _stackBuffer);
                     }
                 } catch (Exception e) {
