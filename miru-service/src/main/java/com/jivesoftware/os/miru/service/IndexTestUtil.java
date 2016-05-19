@@ -22,6 +22,7 @@ import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.lab.LABEnvironment;
+import com.jivesoftware.os.lab.LabHeapPressure;
 import com.jivesoftware.os.lab.guts.Leaps;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
@@ -49,6 +50,7 @@ import com.jivesoftware.os.miru.service.stream.allocator.MiruChunkAllocator;
 import com.jivesoftware.os.miru.service.stream.allocator.OnDiskChunkAllocator;
 import java.io.File;
 import java.nio.file.Files;
+import java.util.concurrent.atomic.AtomicLong;
 import org.merlin.config.BindInterfaceToConfiguration;
 
 /**
@@ -98,6 +100,7 @@ public class IndexTestUtil {
             termComposer);
 
         final MiruResourceLocator diskResourceLocator = new MiruTempDirectoryResourceLocator();
+        LabHeapPressure labHeapPressure = new LabHeapPressure(1024*1024*10, new AtomicLong());
         LRUConcurrentBAHLinkedHash<Leaps> leapCache = LABEnvironment.buildLeapsCache(1_000_000, 10);
         MiruChunkAllocator inMemoryChunkAllocator = new InMemoryChunkAllocator(
             diskResourceLocator,
@@ -108,6 +111,7 @@ public class IndexTestUtil {
             true,
             100,
             1_000,
+            labHeapPressure,
             useLabIndexes,
             leapCache);
 
@@ -116,6 +120,7 @@ public class IndexTestUtil {
             numberOfChunkStores,
             100,
             1_000,
+            labHeapPressure,
             leapCache);
 
         OrderIdProvider idProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(1));

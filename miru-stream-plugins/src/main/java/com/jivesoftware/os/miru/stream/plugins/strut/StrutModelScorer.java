@@ -10,7 +10,6 @@ import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
-import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
@@ -61,7 +60,7 @@ public class StrutModelScorer {
     private final Strut strut;
     private final MiruAggregateUtil aggregateUtil;
     private final AtomicLong pendingUpdates;
-    private final int maxUpdatesBeforeFlush;
+    private final long maxHeapPressureInBytes;
 
     private final Map<String, CatwalkDefinition> catwalks = Maps.newConcurrentMap();
     private final LinkedHashMap<StrutQueueKey, Set<MiruTermId>>[] queues;
@@ -73,13 +72,13 @@ public class StrutModelScorer {
         Strut strut,
         MiruAggregateUtil aggregateUtil,
         AtomicLong pendingUpdates,
-        int maxUpdatesBeforeFlush,
+        long maxUpdatesBeforeFlush,
         int queueStripeCount) {
         this.miruProvider = miruProvider;
         this.strut = strut;
         this.aggregateUtil = aggregateUtil;
         this.pendingUpdates = pendingUpdates;
-        this.maxUpdatesBeforeFlush = maxUpdatesBeforeFlush;
+        this.maxHeapPressureInBytes = maxUpdatesBeforeFlush;
 
         this.queues = new LinkedHashMap[queueStripeCount];
         for (int i = 0; i < queueStripeCount; i++) {
@@ -298,12 +297,12 @@ public class StrutModelScorer {
         String catwalkId,
         CatwalkQuery catwalkQuery) {
         int payloadSize = 4 * catwalkQuery.gatherFilters.length + 4; // this is amazing
-        return context.getCacheProvider().getKeyValues("strut-scores-" + catwalkId, payloadSize, false, maxUpdatesBeforeFlush);
+        return context.getCacheProvider().getKeyValues("strut-scores-" + catwalkId, payloadSize, false, maxHeapPressureInBytes);
     }
 
     <BM extends IBM, IBM> TimestampedCacheKeyValues getTermFeatureCache(MiruRequestContext<BM, IBM, ? extends MiruSipCursor<?>> context, String catwalkId) {
         int payloadSize = 4; // this is amazing
-        return context.getCacheProvider().getTimestampedKeyValues("strut-features-" + catwalkId, payloadSize, false, maxUpdatesBeforeFlush);
+        return context.getCacheProvider().getTimestampedKeyValues("strut-features-" + catwalkId, payloadSize, false, maxHeapPressureInBytes);
     }
 
     <BM extends IBM, IBM> List<Scored> rescore(

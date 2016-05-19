@@ -19,6 +19,7 @@ import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.lab.LABEnvironment;
+import com.jivesoftware.os.lab.LabHeapPressure;
 import com.jivesoftware.os.lab.guts.Leaps;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceConfig;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceInitializer;
@@ -218,6 +219,7 @@ public class MiruLocalHostedPartitionTest {
             Interners.<String>newWeakInterner(),
             termComposer);
 
+        LabHeapPressure labHeapPressure = new LabHeapPressure(1024 * 1024 * 10, new AtomicLong());
         LRUConcurrentBAHLinkedHash<Leaps> leapCache = LABEnvironment.buildLeapsCache(1_000_000, 32);
 
         MiruTempDirectoryResourceLocator resourceLocator = new MiruTempDirectoryResourceLocator();
@@ -230,6 +232,7 @@ public class MiruLocalHostedPartitionTest {
             config.getPartitionDeleteChunkStoreOnClose(),
             100,
             1_000,
+            labHeapPressure,
             useLabIndexes,
             leapCache);
 
@@ -239,6 +242,7 @@ public class MiruLocalHostedPartitionTest {
             config.getPartitionNumberOfChunkStores(),
             100,
             1_000,
+            labHeapPressure,
             leapCache);
 
         TxCogs cogs = new TxCogs(256, 64, null, null, null);

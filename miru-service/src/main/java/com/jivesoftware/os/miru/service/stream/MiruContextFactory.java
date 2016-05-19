@@ -6,7 +6,6 @@ import com.google.common.base.Optional;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.jivesoftware.os.filer.chunk.store.transaction.MapBackedKeyedFPIndex;
 import com.jivesoftware.os.filer.chunk.store.transaction.MapCreator;
 import com.jivesoftware.os.filer.chunk.store.transaction.MapOpener;
@@ -43,7 +42,6 @@ import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.plugin.MiruInterner;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider;
-import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.CacheKeyValues;
 import com.jivesoftware.os.miru.plugin.context.FixedWidthRawhide;
 import com.jivesoftware.os.miru.plugin.context.KeyValueRawhide;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
@@ -351,7 +349,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                     TxNamedMapOfFiler.CHUNK_FILER_OPENER,
                     TxNamedMapOfFiler.OVERWRITE_GROWER_PROVIDER,
                     TxNamedMapOfFiler.REWRITE_GROWER_PROVIDER),
-                new byte[] { 0 },
+                new byte[]{0},
                 new Object()),
             new MiruDeltaInvertedIndex.Delta<>());
 
@@ -423,15 +421,15 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
 
         // do NOT hash storage, as disk/memory require the same stripe order
         int seed = new HashCodeBuilder().append(coord).toHashCode();
-
-        ValueIndex metaIndex = labEnvironments[Math.abs(seed % labEnvironments.length)].open("meta", 4096, Integer.MAX_VALUE, 10 * 1024 * 1024, -1L, -1L,
+        long maxHeapPressureInBytes = 10 * 1024 * 1024; // TODO config
+        ValueIndex metaIndex = labEnvironments[Math.abs(seed % labEnvironments.length)].open("meta", 4096, maxHeapPressureInBytes, 10 * 1024 * 1024, -1L, -1L,
             new KeyValueRawhide());
         commitables.add(metaIndex);
 
-        ValueIndex monoTimeIndex = labEnvironments[Math.abs((seed + 1) % labEnvironments.length)].open("monoTime", 4096, Integer.MAX_VALUE, 10 * 1024 * 1024,
+        ValueIndex monoTimeIndex = labEnvironments[Math.abs((seed + 1) % labEnvironments.length)].open("monoTime", 4096, maxHeapPressureInBytes, 10 * 1024 * 1024,
             -1L, -1L, new FixedWidthRawhide(12, 0));
         commitables.add(monoTimeIndex);
-        ValueIndex rawTimeIndex = labEnvironments[Math.abs((seed + 1) % labEnvironments.length)].open("rawTime", 4096, Integer.MAX_VALUE, 10 * 1024 * 1024,
+        ValueIndex rawTimeIndex = labEnvironments[Math.abs((seed + 1) % labEnvironments.length)].open("rawTime", 4096, maxHeapPressureInBytes, 10 * 1024 * 1024,
             -1L, -1L, new FixedWidthRawhide(8, 4));
         commitables.add(rawTimeIndex);
         MiruTimeIndex timeIndex = new MiruDeltaTimeIndex(new LabTimeIndex(
@@ -446,7 +444,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
 
         ValueIndex[] termStorage = new ValueIndex[labEnvironments.length];
         for (int i = 0; i < termStorage.length; i++) {
-            termStorage[i] = labEnvironments[i].open("termStorage", 4096, Integer.MAX_VALUE, 10 * 1024 * 1024, -1L, -1L, new KeyValueRawhide());
+            termStorage[i] = labEnvironments[i].open("termStorage", 4096, maxHeapPressureInBytes, 10 * 1024 * 1024, -1L, -1L, new KeyValueRawhide());
             commitables.add(termStorage[i]);
         }
         boolean[] hasTermStorage = new boolean[schema.fieldCount()];
@@ -454,7 +452,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             hasTermStorage[fieldDefinition.fieldId] = fieldDefinition.type.hasFeature(Feature.stored);
         }
 
-        ValueIndex timeAndVersionIndex = labEnvironments[Math.abs((seed + 2) % labEnvironments.length)].open("timeAndVersion", 4096, Integer.MAX_VALUE,
+        ValueIndex timeAndVersionIndex = labEnvironments[Math.abs((seed + 2) % labEnvironments.length)].open("timeAndVersion", 4096, maxHeapPressureInBytes,
             10 * 1024 * 1024, -1L, -1L, new FixedWidthRawhide(4, 16));
         commitables.add(timeAndVersionIndex);
         MiruActivityIndex activityIndex = new MiruDeltaActivityIndex(
@@ -474,11 +472,11 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         ValueIndex[] termIndex = new ValueIndex[labEnvironments.length];
         ValueIndex[] cardinalityIndex = new ValueIndex[labEnvironments.length];
         for (int i = 0; i < bitmapIndex.length; i++) {
-            bitmapIndex[i] = labEnvironments[i].open("field", 4096, Integer.MAX_VALUE, 10 * 1024 * 1024, -1L, -1L, new KeyValueRawhide());
+            bitmapIndex[i] = labEnvironments[i].open("field", 4096, maxHeapPressureInBytes, 10 * 1024 * 1024, -1L, -1L, new KeyValueRawhide());
             commitables.add(bitmapIndex[i]);
-            termIndex[i] = labEnvironments[i].open("term", 4096, Integer.MAX_VALUE, 10 * 1024 * 1024, -1L, -1L, new KeyValueRawhide());
+            termIndex[i] = labEnvironments[i].open("term", 4096, maxHeapPressureInBytes, 10 * 1024 * 1024, -1L, -1L, new KeyValueRawhide());
             commitables.add(termIndex[i]);
-            cardinalityIndex[i] = labEnvironments[i].open("cardinality", 4096, Integer.MAX_VALUE, 10 * 1024 * 1024, -1L, -1L, new KeyValueRawhide());
+            cardinalityIndex[i] = labEnvironments[i].open("cardinality", 4096, maxHeapPressureInBytes, 10 * 1024 * 1024, -1L, -1L, new KeyValueRawhide());
             commitables.add(cardinalityIndex[i]);
         }
 
@@ -490,7 +488,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                 hasCardinalities[fieldDefinition.fieldId] = fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.cardinality);
             }
 
-            byte[] prefix = { (byte) fieldType.getIndex() };
+            byte[] prefix = {(byte) fieldType.getIndex()};
             fieldIndexes[fieldType.getIndex()] = new MiruDeltaFieldIndex<>(
                 bitmaps,
                 trackError,
@@ -533,7 +531,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                 idProvider,
                 bitmaps,
                 trackError,
-                new byte[] { (byte) -1 },
+                new byte[]{(byte) -1},
                 bitmapIndex,
                 streamStripingLocksProvider));
 
@@ -544,7 +542,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                 idProvider,
                 bitmaps,
                 trackError,
-                new byte[] { (byte) -2 },
+                new byte[]{(byte) -2},
                 bitmapIndex,
                 streamStripingLocksProvider));
 
@@ -563,7 +561,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                 idProvider,
                 bitmaps,
                 trackError,
-                new byte[] { (byte) -3 },
+                new byte[]{(byte) -3},
                 bitmapIndex,
                 miruAuthzCache,
                 authzStripingLocksProvider));

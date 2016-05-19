@@ -21,6 +21,7 @@ import com.jivesoftware.os.jive.utils.collections.bah.LRUConcurrentBAHLinkedHash
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.lab.LABEnvironment;
+import com.jivesoftware.os.lab.LabHeapPressure;
 import com.jivesoftware.os.lab.api.ValueIndex;
 import com.jivesoftware.os.lab.guts.Leaps;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -34,6 +35,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 import org.testng.annotations.Test;
 
 /**
@@ -90,17 +92,18 @@ public class StrutModelScorerNGTest {
     public void testLab() throws Exception {
 
         File root = Files.createTempDir();
+        LabHeapPressure labHeapPressure = new LabHeapPressure(1024 * 1024 * 10, new AtomicLong());
         LRUConcurrentBAHLinkedHash<Leaps> leapCache = LABEnvironment.buildLeapsCache(1_000_000, 8);
 
         LABEnvironment env = new LABEnvironment(LABEnvironment.buildLABCompactorThreadPool(4), LABEnvironment.buildLABDestroyThreadPool(1), root,
-            false, 4, 10, leapCache);
+            false, labHeapPressure, 4, 10, leapCache);
         String catwalkId = "catwalkId";
         String modelId = "modelId";
 
         @SuppressWarnings("unchecked")
         ValueIndex[] stores = new ValueIndex[16];
         for (int i = 0; i < stores.length; i++) {
-            stores[i] = env.open("cache-" + i + "-" + catwalkId, 4096, Integer.MAX_VALUE, 0, 0, 0, new KeyValueRawhide());
+            stores[i] = env.open("cache-" + i + "-" + catwalkId, 4096, 1024 * 1024, 0, 0, 0, new KeyValueRawhide());
         }
 
         CacheKeyValues cacheKeyValues = new LabCacheKeyValues("test", new OrderIdProviderImpl(new ConstantWriterIdProvider(1)), stores);

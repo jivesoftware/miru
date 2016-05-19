@@ -1,14 +1,13 @@
 package com.jivesoftware.os.miru.plugin.cache;
 
 import com.jivesoftware.os.filer.io.api.StackBuffer;
-import java.io.IOException;
 
 /**
  * @author jonathan.colt
  */
 public interface MiruPluginCacheProvider {
 
-    CacheKeyValues getKeyValues(String name, int payloadSize, boolean variablePayloadSize, int maxUpdatesBeforeFlush);
+    CacheKeyValues getKeyValues(String name, int payloadSize, boolean variablePayloadSize, long maxHeapPressureInBytes);
 
     interface CacheKeyValues {
 
@@ -34,7 +33,7 @@ public interface MiruPluginCacheProvider {
         boolean stream(byte[] key, byte[] value) throws Exception;
     }
 
-    TimestampedCacheKeyValues getTimestampedKeyValues(String name, int payloadSize, boolean variablePayloadSize, int maxUpdatesBeforeFlush);
+    TimestampedCacheKeyValues getTimestampedKeyValues(String name, int payloadSize, boolean variablePayloadSize, long maxHeapPressureInBytes);
 
     interface TimestampedCacheKeyValues {
 

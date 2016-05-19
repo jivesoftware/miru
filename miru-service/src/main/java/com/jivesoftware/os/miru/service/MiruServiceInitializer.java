@@ -17,6 +17,7 @@ import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.lab.LABEnvironment;
+import com.jivesoftware.os.lab.LabHeapPressure;
 import com.jivesoftware.os.lab.guts.Leaps;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
@@ -136,6 +137,7 @@ public class MiruServiceInitializer {
         StripingLocksProvider<MiruStreamId> streamStripingLocksProvider = new StripingLocksProvider<>(config.getStreamNumberOfLocks());
         StripingLocksProvider<String> authzStripingLocksProvider = new StripingLocksProvider<>(config.getAuthzNumberOfLocks());
 
+        LabHeapPressure labHeapPressure = new LabHeapPressure(config.getGlobalLabMaxHeapPressureInBytes(), new AtomicLong());
         LRUConcurrentBAHLinkedHash<Leaps> leapCache = LABEnvironment.buildLeapsCache((int) config.getLabLeapCacheMaxCapacity(),
             config.getLabLeapCacheConcurrency());
 
@@ -147,6 +149,7 @@ public class MiruServiceInitializer {
             config.getPartitionDeleteChunkStoreOnClose(),
             config.getPartitionInitialChunkCacheSize(),
             config.getPartitionMaxChunkCacheSize(),
+            labHeapPressure,
             config.getUseLabIndexes(),
             leapCache);
 
@@ -155,6 +158,7 @@ public class MiruServiceInitializer {
             config.getPartitionNumberOfChunkStores(),
             config.getPartitionInitialChunkCacheSize(),
             config.getPartitionMaxChunkCacheSize(),
+            labHeapPressure,
             leapCache);
 
         TxCogs persistentCogs = new TxCogs(1024, 1024,
