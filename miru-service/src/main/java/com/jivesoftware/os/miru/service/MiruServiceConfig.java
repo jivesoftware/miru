@@ -181,6 +181,9 @@ public interface MiruServiceConfig extends Config {
     @BooleanDefault(false)
     boolean getUseLabIndexes();
 
+    @LongDefault(1024 * 1024 * 1024)
+    long getLabMaxHeapPressureInBytes();
+
     @LongDefault(100_000)
     long getLabLeapCacheMaxCapacity();
 

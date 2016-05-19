@@ -196,6 +196,7 @@ public class MiruServiceInitializer {
             partitionErrorTracker,
             termInterner,
             objectMapper,
+            config.getLabMaxHeapPressureInBytes(),
             config.getUseLabIndexes(),
             config.getFsyncOnCommit());
 

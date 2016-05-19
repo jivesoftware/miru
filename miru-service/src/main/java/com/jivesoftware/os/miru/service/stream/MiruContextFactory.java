@@ -127,6 +127,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
     private final PartitionErrorTracker partitionErrorTracker;
     private final MiruInterner<MiruTermId> termInterner;
     private final ObjectMapper objectMapper;
+    private final long maxHeapPressureInBytes;
     private final boolean useLabIndexes;
     private final boolean fsyncOnCommit;
 
@@ -146,6 +147,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         PartitionErrorTracker partitionErrorTracker,
         MiruInterner<MiruTermId> termInterner,
         ObjectMapper objectMapper,
+        long maxHeapPressureInBytes,
         boolean useLabIndexes,
         boolean fsyncOnCommit) {
 
@@ -165,6 +167,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         this.partitionErrorTracker = partitionErrorTracker;
         this.termInterner = termInterner;
         this.objectMapper = objectMapper;
+        this.maxHeapPressureInBytes = maxHeapPressureInBytes;
         this.useLabIndexes = useLabIndexes;
         this.fsyncOnCommit = fsyncOnCommit;
     }
@@ -421,7 +424,6 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
 
         // do NOT hash storage, as disk/memory require the same stripe order
         int seed = new HashCodeBuilder().append(coord).toHashCode();
-        long maxHeapPressureInBytes = 10 * 1024 * 1024; // TODO config
         ValueIndex metaIndex = labEnvironments[Math.abs(seed % labEnvironments.length)].open("meta", 4096, maxHeapPressureInBytes, 10 * 1024 * 1024, -1L, -1L,
             new KeyValueRawhide());
         commitables.add(metaIndex);
