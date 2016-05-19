@@ -70,7 +70,7 @@ public class LabPluginCacheProvider implements MiruPluginCacheProvider {
                         -1L,
                         new LABRawhide());
                 }
-                return new LabTimestampedCacheKeyValues(idProvider, cacheIndexes, stripedLocks);
+                return new LabTimestampedCacheKeyValues(name, idProvider, cacheIndexes, stripedLocks);
             } catch (Exception x) {
                 throw new RuntimeException("Failed to initialize plugin cache", x);
             }
