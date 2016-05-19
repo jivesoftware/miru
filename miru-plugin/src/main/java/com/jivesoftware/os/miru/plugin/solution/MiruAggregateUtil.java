@@ -124,18 +124,18 @@ public class MiruAggregateUtil {
                 }
                 byte[] cacheId = answerTermId.getBytes();
                 synchronized (termFeatureCache.lock(cacheId)) {
-                    int[] fromId = { 0 };
+                    int[] lastScoredId = { -1 };
                     termFeatureCache.rangeScan(cacheId, null, null, (key, value, timestamp) -> {
                         Feature feature = Feature.unpack(key, stackBuffer);
                         int featureId = feature.featureId;
                         if (featureId == -1) {
-                            fromId[0] = (int) timestamp;
+                            lastScoredId[0] = (int) timestamp;
                             return true;
                         }
 
-                        if (timestamp > fromId[0]) {
+                        if (timestamp > lastScoredId[0]) {
                             LOG.error("Found termId:{} feature:{} timestamp:{} which is more recent than fromId:{}",
-                                answerTermId, feature, timestamp, fromId[0]);
+                                answerTermId, feature, timestamp, lastScoredId[0]);
                         }
 
                         // fromId:0 -> 10
@@ -181,12 +181,13 @@ public class MiruAggregateUtil {
                         return true;
                     });
 
-                    metrics.minFromId = Math.min(metrics.minFromId, fromId[0]);
-                    metrics.maxFromId = Math.max(metrics.maxFromId, fromId[0]);
-                    if (answerScoredLastId > fromId[0]) {
+                    int fromId = lastScoredId[0] + 1;
+                    metrics.minFromId = Math.min(metrics.minFromId, fromId);
+                    metrics.maxFromId = Math.max(metrics.maxFromId, fromId);
+                    if (answerScoredLastId > fromId) {
 
                         gatherFeaturesForTerm(name, bitmaps, featureFieldIds, stackBuffer, uniqueFieldIds, activityIndex, fieldTerms,
-                            ids, featuresContained, answerBitmaps, features, gathered, fromId[0], answerScoredLastId, metrics);
+                            ids, featuresContained, answerBitmaps, features, gathered, fromId, answerScoredLastId, metrics);
 
                         termFeatureCache.put(cacheId, false, false, stream1 -> {
                             for (int i = 0; i < gathered.length; i++) {
