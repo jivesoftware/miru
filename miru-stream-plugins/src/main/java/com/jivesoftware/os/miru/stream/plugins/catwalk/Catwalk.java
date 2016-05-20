@@ -1,8 +1,10 @@
 package com.jivesoftware.os.miru.stream.plugins.catwalk;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Multiset;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
@@ -73,7 +75,7 @@ public class Catwalk {
 
         CatwalkFeature[] features = request.query.features;
         @SuppressWarnings("unchecked")
-        Map<Feature, long[]>[] featureValueSets = new Map[features.length];
+        Map<Feature, FeatureBag>[] featureValueSets = new Map[features.length];
         for (int i = 0; i < features.length; i++) {
             featureValueSets[i] = Maps.newHashMap();
         }
@@ -103,10 +105,12 @@ public class Catwalk {
             featureFieldIds,
             (streamIndex, lastId, answerTermId, answerScoredLastId, featureId, termIds, count) -> {
                 if (featureId >= 0) {
-                    long[] numerators = featureValueSets[featureId].computeIfAbsent(new Feature(featureId, termIds), key -> new long[numeratorTermSets.length]);
+                    FeatureBag featureBag = featureValueSets[featureId].computeIfAbsent(new Feature(featureId, termIds),
+                        key -> new FeatureBag(numeratorTermSets.length));
                     for (int i = 0; i < numeratorTermSets.length; i++) {
                         if (numeratorTermSets[i].contains(answerTermId)) {
-                            numerators[i] += count;
+                            featureBag.numerators[i] += count;
+                            featureBag.answers.add(answerTermId, count);
                         }
                     }
                 }
@@ -121,9 +125,9 @@ public class Catwalk {
         List<FeatureScore>[] featureScoreResults = new List[features.length];
 
         for (int i = 0; i < featureValueSets.length; i++) {
-            Map<Feature, long[]> valueSet = featureValueSets[i];
+            Map<Feature, FeatureBag> valueSet = featureValueSets[i];
             featureScoreResults[i] = Lists.newArrayListWithCapacity(valueSet.size());
-            for (Map.Entry<Feature, long[]> entry : valueSet.entrySet()) {
+            for (Map.Entry<Feature, FeatureBag> entry : valueSet.entrySet()) {
                 int[] fieldIds = featureFieldIds[i];
                 MiruTermId[] termIds = entry.getKey().termIds;
 
@@ -137,18 +141,19 @@ public class Catwalk {
                 }
 
                 BM bitmap = bitmaps.andTx(ands, stackBuffer);
-                long[] numerators = entry.getValue();
+                FeatureBag featureBag = entry.getValue();
                 long denominator = bitmaps.cardinality(bitmap);
-                for (int j = 0; j < numerators.length; j++) {
-                    if (numerators[j] > denominator) {
-                        LOG.warn("Catwalk computed numerators:{} index:{} denominator:{}" +
-                                " for tenantId:{} partitionId:{} catwalkId:{} featureId:{} fieldIds:{} terms:{}",
-                            Arrays.toString(numerators), j, denominator, coord.tenantId, coord.partitionId,
+                for (int j = 0; j < featureBag.numerators.length; j++) {
+                    if (featureBag.numerators[j] > denominator) {
+                        LOG.warn("Catwalk computed numerators[{}]:{} denominator:{}" +
+                                " for tenantId:{} partitionId:{} catwalkId:{} featureId:{} fieldIds:{} terms:{}" +
+                                " from answers:{}",
+                            j, Arrays.toString(featureBag.numerators), denominator, coord.tenantId, coord.partitionId,
                             request.query.catwalkId, i, Arrays.toString(fieldIds),
-                            Arrays.toString(termIds));
+                            Arrays.toString(termIds), featureBag.answers);
                     }
                 }
-                featureScoreResults[i].add(new FeatureScore(termIds, numerators, denominator, 1));
+                featureScoreResults[i].add(new FeatureScore(termIds, featureBag.numerators, denominator, 1));
             }
         }
 
@@ -165,6 +170,16 @@ public class Catwalk {
         CatwalkAnswer result = new CatwalkAnswer(featureScoreResults, modelCounts, totalCount, timeRange, resultsExhausted, resultsClosed);
         LOG.debug("result={}", result);
         return result;
+    }
+
+    private static class FeatureBag {
+        private final long[] numerators;
+        private final Multiset<MiruTermId> answers;
+
+        public FeatureBag(int count) {
+            this.numerators = new long[count];
+            this.answers = HashMultiset.create();
+        }
     }
 
 }
