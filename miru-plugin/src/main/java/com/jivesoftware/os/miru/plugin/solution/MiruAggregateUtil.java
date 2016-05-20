@@ -128,6 +128,7 @@ public class MiruAggregateUtil {
                 }
                 byte[] cacheId = Bytes.concat(FilerIO.intBytes(answerFieldId), answerTermId.getBytes());
                 synchronized (termFeatureCache.lock(cacheId)) {
+                    boolean[] discardFeatures = { false };
                     int[] lastScoredId = { -1 };
                     termFeatureCache.rangeScan(cacheId, null, null, (key, value, timestamp) -> {
                         Feature feature = Feature.unpack(key, stackBuffer);
@@ -141,8 +142,10 @@ public class MiruAggregateUtil {
                         }
 
                         if (timestamp > lastScoredId[0]) {
-                            LOG.error("Found name:{} cacheName:{} termId:{} feature:{} timestamp:{} which is more recent than lastScoredId:{}",
+                            discardFeatures[0] = true;
+                            LOG.warn("Found name:{} cacheName:{} termId:{} feature:{} timestamp:{} which is more recent than lastScoredId:{}",
                                 name, termFeatureCache.name(), answerTermId, feature, timestamp, lastScoredId[0]);
+                            return false;
                         }
 
                         // fromId:0 -> 10
@@ -191,6 +194,13 @@ public class MiruAggregateUtil {
 
                         return true;
                     });
+
+                    if (discardFeatures[0]) {
+                        lastScoredId[0] = -1;
+                        for (int i = 0; i < features.length; i++) {
+                            features[i].clear();
+                        }
+                    }
 
                     int fromId = lastScoredId[0] + 1;
                     metrics.minFromId = Math.min(metrics.minFromId, fromId);
