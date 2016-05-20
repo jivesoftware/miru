@@ -106,11 +106,7 @@ public class Catwalk {
                     long[] numerators = featureValueSets[featureId].computeIfAbsent(new Feature(featureId, termIds), key -> new long[numeratorTermSets.length]);
                     for (int i = 0; i < numeratorTermSets.length; i++) {
                         if (numeratorTermSets[i].contains(answerTermId)) {
-                            if (numerators[i] > 0) {
-                                LOG.warn("Catwalk numerators found catwalkId:{} featureId:{} termIds:{} with existing:{} adding:{}",
-                                    request.query.catwalkId, featureId, Arrays.toString(termIds), numerators[i], count);
-                            }
-                            numerators[i] = count;
+                            numerators[i] += count;
                         }
                     }
                 }
