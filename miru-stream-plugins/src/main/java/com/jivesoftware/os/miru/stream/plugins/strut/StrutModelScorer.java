@@ -372,7 +372,7 @@ public class StrutModelScorer {
                     stackBuffer);
 
                 for (int i = 0; i < rescoreMiruTermIds.length; i++) {
-                    if (!streamBitmaps.stream(i, rescoreMiruTermIds[i].lastId, rescoreMiruTermIds[i].termId, scoredToLastIds[i], answers[i])) {
+                    if (!streamBitmaps.stream(i, rescoreMiruTermIds[i].lastId, pivotFieldId, rescoreMiruTermIds[i].termId, scoredToLastIds[i], answers[i])) {
                         return false;
                     }
                 }

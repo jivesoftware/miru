@@ -6,6 +6,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multiset;
 import com.google.common.collect.Multiset.Entry;
 import com.google.common.collect.Sets;
+import com.google.common.primitives.Bytes;
 import com.jivesoftware.os.filer.io.ByteArrayFiler;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.api.KeyRange;
@@ -56,7 +57,7 @@ public class MiruAggregateUtil {
 
     public interface StreamBitmaps<BM> {
 
-        boolean stream(int streamIndex, int lastId, MiruTermId termId, int scoredToLastId, BM[] answers) throws Exception;
+        boolean stream(int streamIndex, int lastId, int fieldId, MiruTermId termId, int scoredToLastId, BM[] answers) throws Exception;
     }
 
     public interface ConsumeBitmaps<BM> {
@@ -114,7 +115,7 @@ public class MiruAggregateUtil {
 
         GatherFeatureMetrics metrics = new GatherFeatureMetrics();
 
-        consumeAnswers.consume((streamIndex, lastId, answerTermId, answerScoredLastId, answerBitmaps) -> {
+        consumeAnswers.consume((streamIndex, lastId, answerFieldId, answerTermId, answerScoredLastId, answerBitmaps) -> {
             metrics.termCount++;
 
             for (int i = 0; i < features.length; i++) {
@@ -125,7 +126,7 @@ public class MiruAggregateUtil {
                 for (int i = 0; i < gathered.length; i++) {
                     gathered[i].clear();
                 }
-                byte[] cacheId = answerTermId.getBytes();
+                byte[] cacheId = Bytes.concat(FilerIO.intBytes(answerFieldId), answerTermId.getBytes());
                 synchronized (termFeatureCache.lock(cacheId)) {
                     int[] lastScoredId = { -1 };
                     termFeatureCache.rangeScan(cacheId, null, null, (key, value, timestamp) -> {
@@ -228,12 +229,14 @@ public class MiruAggregateUtil {
                 for (Entry<Feature> entry : features[i].entrySet()) {
                     Feature feature = entry.getElement();
                     metrics.featureCount++;
-                    if (!stream.stream(streamIndex, lastId, answerTermId, answerScoredLastId, feature.featureId, feature.termIds, entry.getCount())) {
+                    boolean result = stream.stream(streamIndex, lastId, answerFieldId, answerTermId, answerScoredLastId, feature.featureId, feature.termIds,
+                        entry.getCount());
+                    if (!result) {
                         return false;
                     }
                 }
             }
-            return stream.stream(streamIndex, lastId, answerTermId, answerScoredLastId, -1, null, -1);
+            return stream.stream(streamIndex, lastId, answerFieldId, answerTermId, answerScoredLastId, -1, null, -1);
         });
         LOG.info("Gathered name:{} features:{} terms:{} elapsed:{}" +
                 " - cacheName:{} skipped:{} consumed:{} fromId:{}/{} toId:{}/{} cacheHits={} cacheSaves={}",
@@ -575,6 +578,7 @@ public class MiruAggregateUtil {
 
         boolean stream(int streamIndex,
             int lastId,
+            int answerFieldId,
             MiruTermId answerTermId,
             int answerScoredLastId,
             int featureId,

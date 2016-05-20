@@ -186,7 +186,7 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
                                 for (int j = 0; j < features.length; j++) {
                                     featureAnswers[j] = featureMasks[j] != null ? bitmaps.and(Arrays.asList(answers[i], featureMasks[j])) : answers[i];
                                 }
-                                if (!answerBitmap.consume(i, batch.get(i), lastIds[i], featureAnswers)) {
+                                if (!answerBitmap.consume(i, pivotFieldId, batch.get(i), lastIds[i], featureAnswers)) {
                                     return false;
                                 }
                             }
