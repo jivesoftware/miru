@@ -47,7 +47,7 @@ public class Catwalk {
 
     public interface ConsumeAnswerBitmap<BM extends IBM, IBM> {
 
-        boolean consume(int index, MiruTermId answerTermId, int answerScoredToLastId, BM[] featureAnswers) throws Exception;
+        boolean consume(int index, int answerFieldId, MiruTermId answerTermId, int answerScoredToLastId, BM[] featureAnswers) throws Exception;
     }
 
     public <BM extends IBM, IBM> CatwalkAnswer model(String name,
@@ -95,15 +95,15 @@ public class Catwalk {
             schema.fieldCount(),
             termFeatureCache,
             streamBitmaps -> {
-                return consumeAnswers.consume((index, answerTermId, answerScoredToLastId, featureAnswers) -> {
+                return consumeAnswers.consume((index, answerFieldId, answerTermId, answerScoredToLastId, featureAnswers) -> {
                     for (int i = 0; i < featureAnswers.length; i++) {
                         modelCounts[i] += bitmaps.cardinality(featureAnswers[i]);
                     }
-                    return streamBitmaps.stream(index, -1, answerTermId, answerScoredToLastId, featureAnswers);
+                    return streamBitmaps.stream(index, -1, answerFieldId, answerTermId, answerScoredToLastId, featureAnswers);
                 });
             },
             featureFieldIds,
-            (streamIndex, lastId, answerTermId, answerScoredLastId, featureId, termIds, count) -> {
+            (streamIndex, lastId, answerFieldId, answerTermId, answerScoredLastId, featureId, termIds, count) -> {
                 if (featureId >= 0) {
                     FeatureBag featureBag = featureValueSets[featureId].computeIfAbsent(new Feature(featureId, termIds),
                         key -> new FeatureBag(numeratorTermSets.length));

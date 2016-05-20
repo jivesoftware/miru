@@ -105,14 +105,14 @@ public class MiruAggregateUtilTest {
                 getAllTermIds,
                 fieldCount,
                 cacheKeyValues,
-                streamBitmaps -> streamBitmaps.stream(-1, -1, new MiruTermId("parent1".getBytes()), toId, answers),
+                streamBitmaps -> streamBitmaps.stream(-1, -1, 0, new MiruTermId("parent1".getBytes()), toId, answers),
                 new int[][] {
                     { 0, 1 },
                     { 0, 2 },
                     { 1, 2 },
                 },
-                (streamIndex, lastId, answerTermId, answerScoredLastId, featureId, termIds, count) -> {
-                    log(streamIndex, lastId, answerTermId, answerScoredLastId, featureId, termIds, count);
+                (streamIndex, lastId, answerFieldId, answerTermId, answerScoredLastId, featureId, termIds, count) -> {
+                    log(streamIndex, lastId, answerFieldId, answerTermId, answerScoredLastId, featureId, termIds, count);
                     return true;
                 },
                 new MiruSolutionLog(MiruSolutionLogLevel.NONE),
@@ -120,10 +120,11 @@ public class MiruAggregateUtilTest {
         }
     }
 
-    private void log(int streamIndex, int lastId, MiruTermId answerTermId, int answerScoredLastId, int featureId, MiruTermId[] termIds, int count) {
+    private void log(int streamIndex, int lastId, int answerFieldId, MiruTermId answerTermId, int answerScoredLastId, int featureId, MiruTermId[] termIds, int count) {
         System.out.println(
             "streamIndex:" + streamIndex +
                 ", lastId:" + lastId +
+                ", answerFieldId:" + answerFieldId +
                 ", answerTermId:" + answerTermId +
                 ", answerScoredLastId:" + answerScoredLastId +
                 ", featureId:" + featureId +

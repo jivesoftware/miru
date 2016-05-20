@@ -231,7 +231,6 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             totalTimeFetchingScores += (System.currentTimeMillis() - fetchScoresStart);
         }
 
-        int catwalkGatherFieldId = schema.getFieldId(request.query.catwalkQuery.gatherField);
         if (maxScore[0] == 0f) {
             LOG.info("Performing immediate rescore for coord:{} catwalkId:{} modelId:{} pivotFieldId:{}",
                 handle.getCoord(), request.query.catwalkId, request.query.modelId, pivotFieldId);
@@ -260,7 +259,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                     request.query.numeratorStrategy,
                     handle,
                     batch,
-                    catwalkGatherFieldId,
+                    pivotFieldId,
                     constrainFeature,
                     termScoresCache,
                     termFeaturesCache,
@@ -272,7 +271,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
 
         } else if (!asyncRescore.isEmpty()) {
             LOG.inc("strut>rescore>async");
-            modelScorer.enqueue(handle.getCoord(), request.query, catwalkGatherFieldId, asyncRescore);
+            modelScorer.enqueue(handle.getCoord(), request.query, pivotFieldId, asyncRescore);
         } else {
             LOG.inc("strut>rescore>none");
         }

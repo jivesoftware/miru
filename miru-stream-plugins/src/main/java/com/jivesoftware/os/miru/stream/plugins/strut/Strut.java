@@ -58,7 +58,7 @@ public class Strut {
 
     public interface StrutBitmapStream<BM> {
 
-        boolean stream(int streamIndex, int lastId, MiruTermId termId, int scoredToLastId, BM[] answers) throws Exception;
+        boolean stream(int streamIndex, int lastId, int fieldId, MiruTermId termId, int scoredToLastId, BM[] answers) throws Exception;
     }
 
     public interface StrutStream<BM> {
@@ -112,7 +112,7 @@ public class Strut {
         StrutModel model = cache.get(coord.tenantId, catwalkId, modelId, coord.partitionId.getId(), catwalkQuery);
         if (model == null) {
 
-            strutStream.stream((streamIndex, lastId, termId, scoredToLastId, answers) -> {
+            strutStream.stream((streamIndex, lastId, fieldId, termId, scoredToLastId, answers) -> {
                 boolean more = true;
                 if (!hotStuff.steamStream(streamIndex, new Scored(lastId, termId, scoredToLastId, 0f, new float[numeratorsCount], null), false)) {
                     more = false;
@@ -141,7 +141,7 @@ public class Strut {
                 termFeatureCache,
                 streamBitmaps -> strutStream.stream(streamBitmaps::stream),
                 featureFieldIds,
-                (streamIndex, lastId, answerTermId, answerScoredLastId, featureId, termIds, count) -> {
+                (streamIndex, lastId, answerFieldId, answerTermId, answerScoredLastId, featureId, termIds, count) -> {
                     if (featureId == -1) {
                         boolean stopped = false;
                         List<Hotness>[] scoredFeatures = null;
