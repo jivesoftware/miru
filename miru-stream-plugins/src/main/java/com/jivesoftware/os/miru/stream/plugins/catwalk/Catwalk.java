@@ -107,7 +107,8 @@ public class Catwalk {
                     for (int i = 0; i < numeratorTermSets.length; i++) {
                         if (numeratorTermSets[i].contains(answerTermId)) {
                             if (numerators[i] > 0) {
-                                LOG.warn("Catwalk numerators found featureId:{} termIds:{} with count:{}", featureId, Arrays.toString(termIds), count);
+                                LOG.warn("Catwalk numerators found catwalkId:{} featureId:{} termIds:{} with existing:{} adding:{}",
+                                    request.query.catwalkId, featureId, Arrays.toString(termIds), numerators[i], count);
                             }
                             numerators[i] = count;
                         }
@@ -144,8 +145,10 @@ public class Catwalk {
                 long denominator = bitmaps.cardinality(bitmap);
                 for (int j = 0; j < numerators.length; j++) {
                     if (numerators[j] > denominator) {
-                        LOG.warn("Catwalk computed numerators:{} index:{} denominator:{} for tenantId:{} partitionId:{} featureId:{} fieldIds:{} terms:{}",
-                            Arrays.toString(numerators), j, denominator, coord.tenantId, coord.partitionId, i, Arrays.toString(fieldIds),
+                        LOG.warn("Catwalk computed numerators:{} index:{} denominator:{}" +
+                                " for tenantId:{} partitionId:{} catwalkId:{} featureId:{} fieldIds:{} terms:{}",
+                            Arrays.toString(numerators), j, denominator, coord.tenantId, coord.partitionId,
+                            request.query.catwalkId, i, Arrays.toString(fieldIds),
                             Arrays.toString(termIds));
                     }
                 }
