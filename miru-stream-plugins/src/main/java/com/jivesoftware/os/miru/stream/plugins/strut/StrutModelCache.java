@@ -67,7 +67,7 @@ public class StrutModelCache {
                     String json = requestMapper.writeValueAsString(catwalkQuery);
                     HttpResponse response = catwalkClient.call("",
                         robinStrategy,
-                        "strutModelCache",
+                        "strutModelCacheGet",
                         (c) -> new ClientResponse<>(c.postJson("/miru/catwalk/model/get/" + key + "/" + partitionId, json, null), true));
 
                     CatwalkModel catwalkModel = responseMapper.extractResultFromResponse(response, CatwalkModel.class, null);
@@ -106,7 +106,7 @@ public class StrutModelCache {
             String json = requestMapper.writeValueAsString(catwalkQuery);
             catwalkClient.call("",
                 robinStrategy,
-                "strutModelCache",
+                "strutModelCacheUpdate",
                 (c) -> new ClientCall.ClientResponse<>(c.postJson("/miru/catwalk/model/update/" + key + "/" + partitionId, json, null), true));
         }
         return model;

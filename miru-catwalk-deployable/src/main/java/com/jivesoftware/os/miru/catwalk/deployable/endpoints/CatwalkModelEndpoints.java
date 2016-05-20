@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.catwalk.deployable.endpoints;
 
+import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.catwalk.deployable.CatwalkModelService;
 import com.jivesoftware.os.miru.catwalk.deployable.CatwalkModelUpdater;
@@ -29,11 +30,14 @@ public class CatwalkModelEndpoints {
 
     private final CatwalkModelService catwalkModelService;
     private final CatwalkModelUpdater catwalkModelUpdater;
+    private final MiruStats stats;
 
     public CatwalkModelEndpoints(@Context CatwalkModelService catwalkModelService,
-        @Context CatwalkModelUpdater catwalkModelUpdater) {
+        @Context CatwalkModelUpdater catwalkModelUpdater,
+        @Context MiruStats stats) {
         this.catwalkModelService = catwalkModelService;
         this.catwalkModelUpdater = catwalkModelUpdater;
+        this.stats = stats;
     }
 
     @POST
@@ -45,6 +49,7 @@ public class CatwalkModelEndpoints {
         @PathParam("modelId") String modelId,
         @PathParam("partitionId") int partitionId,
         CatwalkQuery catwalkQuery) {
+        long start = System.currentTimeMillis();
         try {
             MiruTenantId miruTenantId = new MiruTenantId(tenantId.getBytes(StandardCharsets.UTF_8));
             try {
@@ -53,8 +58,14 @@ public class CatwalkModelEndpoints {
                 LOG.error("Failed to update model for {} {} {} {}", new Object[]{tenantId, catwalkId, modelId, partitionId}, x);
             }
             CatwalkModel model = catwalkModelService.getModel(miruTenantId, catwalkId, modelId, catwalkQuery);
+            long latency = System.currentTimeMillis() - start;
+            stats.ingressed("/miru/catwalk/model/get/success", 1, latency);
+            stats.ingressed("/miru/catwalk/model/get/" + tenantId + "/success", 1, latency);
             return Response.ok(model).build();
         } catch (Exception e) {
+            long latency = System.currentTimeMillis() - start;
+            stats.ingressed("/miru/catwalk/model/get/failure", 1, latency);
+            stats.ingressed("/miru/catwalk/model/get/" + tenantId + "/failure", 1, latency);
             LOG.error("Failed to get model for {} {} {}", new Object[]{tenantId, catwalkId, modelId}, e);
             return Response.serverError().entity("Failed to get model").build();
         }
@@ -68,15 +79,22 @@ public class CatwalkModelEndpoints {
         @PathParam("modelId") String modelId,
         @PathParam("partitionId") int partitionId,
         CatwalkQuery catwalkQuery) {
+        long start = System.currentTimeMillis();
         try {
             catwalkModelUpdater.updateModel(new MiruTenantId(tenantId.getBytes(StandardCharsets.UTF_8)),
                 catwalkId,
                 modelId,
                 partitionId,
                 catwalkQuery);
+            long latency = System.currentTimeMillis() - start;
+            stats.ingressed("/miru/catwalk/model/update/success", 1, latency);
+            stats.ingressed("/miru/catwalk/model/update/" + tenantId + "/success", 1, latency);
             return Response.ok("success").build();
         } catch (Exception e) {
-            LOG.error("Failed to update model for {} {} {} {}", new Object[]{tenantId, catwalkId, modelId, partitionId}, e);
+            long latency = System.currentTimeMillis() - start;
+            stats.ingressed("/miru/catwalk/model/update/failure", 1, latency);
+            stats.ingressed("/miru/catwalk/model/update/" + tenantId + "/failure", 1, latency);
+            LOG.error("Failed to update model for {} {} {} {}", new Object[] { tenantId, catwalkId, modelId, partitionId }, e);
             return Response.serverError().entity("Failed to update model").build();
         }
     }
