@@ -64,9 +64,15 @@ public class MiruAggregateUtil {
         boolean consume(StreamBitmaps<BM> streamBitmaps) throws Exception;
     }
 
-    public <BM extends IBM, IBM, S extends MiruSipCursor<S>> void gatherFeatures(String name,
+    public interface GetAllTermIds {
+
+        MiruTermId[][] getAll(String name, int[] ids, int offset, int count, int fieldId, StackBuffer stackBuffer) throws Exception;
+    }
+
+    public <BM extends IBM, IBM> void gatherFeatures(String name,
         MiruBitmaps<BM, IBM> bitmaps,
-        MiruRequestContext<BM, IBM, S> requestContext,
+        GetAllTermIds getAllTermIds,
+        int fieldCount,
         TimestampedCacheKeyValues termFeatureCache,
         ConsumeBitmaps<BM> consumeAnswers,
         int[][] featureFieldIds,
@@ -83,10 +89,7 @@ public class MiruAggregateUtil {
             }
         }
 
-        MiruSchema schema = requestContext.getSchema();
-        MiruActivityIndex activityIndex = requestContext.getActivityIndex();
-
-        MiruTermId[][][] fieldTerms = new MiruTermId[schema.fieldCount()][][];
+        MiruTermId[][][] fieldTerms = new MiruTermId[fieldCount][][];
 
         @SuppressWarnings("unchecked")
         Multiset<Feature>[] features = new Multiset[featureFieldIds.length];
@@ -104,7 +107,7 @@ public class MiruAggregateUtil {
             }
         }
 
-        int batchSize = 1_000;
+        int batchSize = 1;
         boolean[][] featuresContained = new boolean[batchSize][featureFieldIds.length];
         int[] ids = new int[batchSize];
         long start = System.currentTimeMillis();
@@ -129,13 +132,16 @@ public class MiruAggregateUtil {
                         Feature feature = Feature.unpack(key, stackBuffer);
                         int featureId = feature.featureId;
                         if (featureId == -1) {
+                            if (lastScoredId[0] != -1) {
+                                LOG.error("Cache found multiple lastScoredIds for name:{} cacheName:{} termId:{}", name, termFeatureCache.name(), answerTermId);
+                            }
                             lastScoredId[0] = (int) timestamp;
                             return true;
                         }
 
                         if (timestamp > lastScoredId[0]) {
-                            LOG.error("Found termId:{} feature:{} timestamp:{} which is more recent than fromId:{}",
-                                answerTermId, feature, timestamp, lastScoredId[0]);
+                            LOG.error("Found name:{} cacheName:{} termId:{} feature:{} timestamp:{} which is more recent than lastScoredId:{}",
+                                name, termFeatureCache.name(), answerTermId, feature, timestamp, lastScoredId[0]);
                         }
 
                         // fromId:0 -> 10
@@ -175,7 +181,11 @@ public class MiruAggregateUtil {
 
                         int count = FilerIO.bytesInt(value);
                         MiruTermId[] termIds = feature.termIds;
-                        features[featureId].add(new Feature(featureId, termIds), count);
+                        Feature f = new Feature(featureId, termIds);
+                        if (features[featureId].contains(f)) {
+                            LOG.error("Cache found multiple counts for name:{} cacheName:{} termId:{] feature:{}", name, termFeatureCache.name(), f);
+                        }
+                        features[featureId].add(f, count);
                         metrics.cacheHitCount++;
 
                         return true;
@@ -184,9 +194,9 @@ public class MiruAggregateUtil {
                     int fromId = lastScoredId[0] + 1;
                     metrics.minFromId = Math.min(metrics.minFromId, fromId);
                     metrics.maxFromId = Math.max(metrics.maxFromId, fromId);
-                    if (answerScoredLastId > fromId) {
+                    if (answerScoredLastId >= fromId) {
 
-                        gatherFeaturesForTerm(name, bitmaps, featureFieldIds, stackBuffer, uniqueFieldIds, activityIndex, fieldTerms,
+                        gatherFeaturesForTerm(name, bitmaps, featureFieldIds, stackBuffer, uniqueFieldIds, getAllTermIds, fieldTerms,
                             ids, featuresContained, answerBitmaps, features, gathered, fromId, answerScoredLastId, metrics);
 
                         termFeatureCache.put(cacheId, false, false, stream1 -> {
@@ -207,7 +217,7 @@ public class MiruAggregateUtil {
                 metrics.minFromId = -1;
                 metrics.maxFromId = -1;
 
-                gatherFeaturesForTerm(name, bitmaps, featureFieldIds, stackBuffer, uniqueFieldIds, activityIndex, fieldTerms,
+                gatherFeaturesForTerm(name, bitmaps, featureFieldIds, stackBuffer, uniqueFieldIds, getAllTermIds, fieldTerms,
                     ids, featuresContained, answerBitmaps, features, null, 0, answerScoredLastId, metrics);
             }
 
@@ -261,7 +271,7 @@ public class MiruAggregateUtil {
         int[][] featureFieldIds,
         StackBuffer stackBuffer,
         Set<Integer> uniqueFieldIds,
-        MiruActivityIndex activityIndex,
+        GetAllTermIds getAllTermIds,
         MiruTermId[][][] fieldTerms,
         int[] ids,
         boolean[][] featuresContained,
@@ -290,13 +300,13 @@ public class MiruAggregateUtil {
             metrics.consumedCount++;
             count++;
             if (count == ids.length) {
-                gatherAndCountFeaturesForTerm(name, featureFieldIds, stackBuffer, uniqueFieldIds, activityIndex, fieldTerms,
+                gatherAndCountFeaturesForTerm(name, featureFieldIds, stackBuffer, uniqueFieldIds, getAllTermIds, fieldTerms,
                     ids, featuresContained, count, features, gathered, metrics);
                 count = 0;
             }
         }
         if (count > 0) {
-            gatherAndCountFeaturesForTerm(name, featureFieldIds, stackBuffer, uniqueFieldIds, activityIndex, fieldTerms,
+            gatherAndCountFeaturesForTerm(name, featureFieldIds, stackBuffer, uniqueFieldIds, getAllTermIds, fieldTerms,
                 ids, featuresContained, count, features, gathered, metrics);
             count = 0;
         }
@@ -306,7 +316,7 @@ public class MiruAggregateUtil {
         int[][] featureFieldIds,
         StackBuffer stackBuffer,
         Set<Integer> uniqueFieldIds,
-        MiruActivityIndex activityIndex,
+        GetAllTermIds getAllTermIds,
         MiruTermId[][][] fieldTerms,
         int[] ids,
         boolean[][] contained,
@@ -318,7 +328,7 @@ public class MiruAggregateUtil {
         int[] consumableIds = new int[ids.length];
         for (int fieldId : uniqueFieldIds) {
             System.arraycopy(ids, 0, consumableIds, 0, ids.length);
-            fieldTerms[fieldId] = activityIndex.getAll(name, consumableIds, 0, count, fieldId, stackBuffer);
+            fieldTerms[fieldId] = getAllTermIds.getAll(name, consumableIds, 0, count, fieldId, stackBuffer);
         }
 
         PermutationStream permutationStream = (fi, permuteTermIds) -> {
@@ -644,7 +654,6 @@ public class MiruAggregateUtil {
             return "Feature{" +
                 "featureId=" + featureId +
                 ", termIds=" + Arrays.toString(termIds) +
-                ", hash=" + hash +
                 '}';
         }
     }

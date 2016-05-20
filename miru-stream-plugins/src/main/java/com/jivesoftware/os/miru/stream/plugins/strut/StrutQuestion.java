@@ -241,7 +241,6 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
 
             MiruPluginCacheProvider.TimestampedCacheKeyValues termFeaturesCache = modelScorer.getTermFeatureCache(context, request.query.catwalkId);
 
-            BM[] answers = bitmaps.createArrayOf(request.query.batchSize);
             BM[] constrainFeature = modelScorer.buildConstrainFeatures(bitmaps,
                 context,
                 catwalkQuery,
@@ -249,7 +248,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 stackBuffer,
                 solutionLog);
             long rescoreStart = System.currentTimeMillis();
-            for (List<LastIdAndTermId> batch : Lists.partition(lastIdAndTermIds, answers.length)) {
+            for (List<LastIdAndTermId> batch : Lists.partition(lastIdAndTermIds, request.query.batchSize)) {
                 List<Scored> rescored = modelScorer.rescore(request.query.catwalkId,
                     request.query.modelId,
                     request.query.catwalkQuery,

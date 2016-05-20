@@ -5,11 +5,13 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.TimestampedCacheKeyValues;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
+import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTxIndex;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
@@ -32,7 +34,7 @@ import java.util.Set;
  */
 public class Catwalk {
 
-    private static final MetricLogger log = MetricLoggerFactory.getLogger();
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
 
@@ -60,12 +62,14 @@ public class Catwalk {
 
         StackBuffer stackBuffer = new StackBuffer();
 
-        if (log.isDebugEnabled()) {
-            log.debug("Catwalk for request={}", request);
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Catwalk for request={}", request);
         }
         //System.out.println("Number of matches: " + bitmaps.cardinality(answer));
 
         MiruFieldIndex<BM, IBM> primaryIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
+        MiruActivityIndex activityIndex = requestContext.getActivityIndex();
+        MiruSchema schema = requestContext.getSchema();
 
         CatwalkFeature[] features = request.query.features;
         @SuppressWarnings("unchecked")
@@ -78,14 +82,15 @@ public class Catwalk {
             String[] featureField = features[i].featureFields;
             featureFieldIds[i] = new int[featureField.length];
             for (int j = 0; j < featureField.length; j++) {
-                featureFieldIds[i][j] = requestContext.getSchema().getFieldId(featureField[j]);
+                featureFieldIds[i][j] = schema.getFieldId(featureField[j]);
             }
         }
 
         long[] modelCounts = new long[features.length];
         aggregateUtil.gatherFeatures(name,
             bitmaps,
-            requestContext,
+            activityIndex::getAll,
+            schema.fieldCount(),
             termFeatureCache,
             streamBitmaps -> {
                 return consumeAnswers.consume((index, answerTermId, answerScoredToLastId, featureAnswers) -> {
@@ -101,7 +106,10 @@ public class Catwalk {
                     long[] numerators = featureValueSets[featureId].computeIfAbsent(new Feature(featureId, termIds), key -> new long[numeratorTermSets.length]);
                     for (int i = 0; i < numeratorTermSets.length; i++) {
                         if (numeratorTermSets[i].contains(answerTermId)) {
-                            numerators[i] += count; //TODO make this work?
+                            if (numerators[i] > 0) {
+                                LOG.warn("Catwalk numerators found featureId:{} termIds:{} with count:{}", featureId, Arrays.toString(termIds), count);
+                            }
+                            numerators[i] = count;
                         }
                     }
                 }
@@ -136,7 +144,7 @@ public class Catwalk {
                 long denominator = bitmaps.cardinality(bitmap);
                 for (int j = 0; j < numerators.length; j++) {
                     if (numerators[j] > denominator) {
-                        log.warn("Catwalk computed numerators:{} index:{} denominator:{} for tenantId:{} partitionId:{} featureId:{} fieldIds:{} terms:{}",
+                        LOG.warn("Catwalk computed numerators:{} index:{} denominator:{} for tenantId:{} partitionId:{} featureId:{} fieldIds:{} terms:{}",
                             Arrays.toString(numerators), j, denominator, coord.tenantId, coord.partitionId, i, Arrays.toString(fieldIds),
                             Arrays.toString(termIds));
                     }
@@ -156,7 +164,7 @@ public class Catwalk {
 
         long totalCount = requestContext.getTimeIndex().lastId();
         CatwalkAnswer result = new CatwalkAnswer(featureScoreResults, modelCounts, totalCount, timeRange, resultsExhausted, resultsClosed);
-        log.debug("result={}", result);
+        LOG.debug("result={}", result);
         return result;
     }
 

@@ -1,6 +1,6 @@
 package com.jivesoftware.os.miru.plugin.solution;
 
-import com.beust.jcommander.internal.Sets;
+import com.google.common.collect.Sets;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import java.util.Arrays;
 import java.util.Set;
@@ -11,7 +11,7 @@ import static org.testng.Assert.assertEquals;
 /**
  *
  */
-public class MiruAggregateUtilTest {
+public class AggregateUtilPermutationTest {
 
     @Test
     public void testPermutations() throws Exception {

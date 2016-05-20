@@ -10,6 +10,7 @@ import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
+import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
@@ -411,9 +412,8 @@ public class StrutModelScorer {
         CatwalkQuery.CatwalkFeature[] features = catwalkQuery.features;
         BM[] constrainFeature = bitmaps.createArrayOf(features.length);
         for (int i = 0; i < features.length; i++) {
-            List<IBM> constrainAnds = Lists.newArrayList();
-            if (catwalkQuery.features[i] != null) {
-                constrainAnds.add(aggregateUtil.filter("strutCatwalk",
+            if (catwalkQuery.features[i] != null && !MiruFilter.NO_FILTER.equals(catwalkQuery.features[i].featureFilter)) {
+                BM constrained = aggregateUtil.filter("strutCatwalk",
                     bitmaps,
                     schema,
                     termComposer,
@@ -423,9 +423,9 @@ public class StrutModelScorer {
                     null,
                     activityIndexLastId,
                     -1,
-                    stackBuffer));
+                    stackBuffer);
+                constrainFeature[i] = constrained;
             }
-            constrainFeature[i] = bitmaps.and(constrainAnds);
         }
 
         return constrainFeature;
