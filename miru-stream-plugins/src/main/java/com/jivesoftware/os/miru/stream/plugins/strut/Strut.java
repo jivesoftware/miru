@@ -10,6 +10,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.TimestampedCacheKeyValues;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
+import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
@@ -87,6 +88,7 @@ public class Strut {
         StackBuffer stackBuffer = new StackBuffer();
 
         MiruSchema schema = requestContext.getSchema();
+        MiruActivityIndex activityIndex = requestContext.getActivityIndex();
 
         MiruTermComposer termComposer = requestContext.getTermComposer();
         //CatwalkQuery catwalkQuery = request.query.catwalkQuery;
@@ -134,7 +136,8 @@ public class Strut {
             List<MiruTermId[]>[] featuredTermIds = new List[catwalkFeatures.length];
             aggregateUtil.gatherFeatures(name,
                 bitmaps,
-                requestContext,
+                activityIndex::getAll,
+                schema.fieldCount(),
                 termFeatureCache,
                 streamBitmaps -> strutStream.stream(streamBitmaps::stream),
                 featureFieldIds,
