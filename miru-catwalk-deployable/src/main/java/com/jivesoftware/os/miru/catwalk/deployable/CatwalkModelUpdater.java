@@ -245,6 +245,9 @@ public class CatwalkModelUpdater {
         TimestampedValue timestampedValue = processedClient.getTimestampedValue(Consistency.quorum, null, modelKey);
         long lastProcessed = (timestampedValue != null) ? timestampedValue.getTimestampId() : -1;
         if ((System.currentTimeMillis() - lastProcessed) < modelUpdateIntervalInMillis) {
+            long latency = System.currentTimeMillis() - start;
+            stats.ingressed("updater>model>pushback", 1, latency);
+            stats.ingressed("updater>model>pushback>" + tenantId.toString(), 1, latency);
             return;
         }
 
@@ -257,7 +260,14 @@ public class CatwalkModelUpdater {
             10_000,
             TimeUnit.MILLISECONDS);
 
-        stats.ingressed("/miru/catwalk/model/" + tenantId.toString(), 1, System.currentTimeMillis() - start);
+        long latency = System.currentTimeMillis() - start;
+        if (timestampedValue != null) {
+            stats.ingressed("updater>model>requeued", 1, latency);
+            stats.ingressed("updater>model>requeued>" + tenantId.toString(), 1, latency);
+        } else {
+            stats.ingressed("updater>model>queued", 1, latency);
+            stats.ingressed("updater>model>queued>" + tenantId.toString(), 1, latency);
+        }
     }
 
     private EmbeddedClient catsClient() throws Exception {

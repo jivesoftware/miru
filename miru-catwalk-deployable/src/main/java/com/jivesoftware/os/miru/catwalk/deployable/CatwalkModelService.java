@@ -197,81 +197,86 @@ public class CatwalkModelService {
 
     public CatwalkModel getModel(MiruTenantId tenantId, String catwalkId, String modelId, CatwalkQuery catwalkQuery) throws Exception {
         long start = System.currentTimeMillis();
-
-        List<FeatureRange> deletableRanges = Lists.newArrayList();
-        TreeSet<Integer> partitionIds = Sets.newTreeSet();
-
-        CatwalkFeature[] features = catwalkQuery.features;
-        int numeratorsCount = catwalkQuery.gatherFilters.length;
-        Map<String, MergedScores> featureNameToMergedScores = gatherModel(tenantId, catwalkId, modelId, features, partitionIds, deletableRanges);
-
-        long[] modelCounts = new long[features.length];
-        long totalCount = 0;
-        int[] numberOfModels = new int[features.length];
-        int[] totalNumPartitions = new int[features.length];
-
-        @SuppressWarnings("unchecked")
-        List<FeatureScore>[] featureScores = new List[features.length];
-        int scoreCount = 0;
-        int existingCount = 0;
-        int missingCount = 0;
         int modelCount = 0;
-        for (int i = 0; i < features.length; i++) {
-            MergedScores mergedScores = featureNameToMergedScores.get(features[i].name);
-            if (mergedScores != null) {
-                int featureModels = 1 + mergedScores.numberOfMerges;
+        try {
+            List<FeatureRange> deletableRanges = Lists.newArrayList();
+            TreeSet<Integer> partitionIds = Sets.newTreeSet();
 
-                modelCounts[i] = mergedScores.mergedScores.modelCount;
-                totalCount = Math.max(totalCount, mergedScores.mergedScores.totalCount);
-                numberOfModels[i] = featureModels;
+            CatwalkFeature[] features = catwalkQuery.features;
+            int numeratorsCount = catwalkQuery.gatherFilters.length;
+            Map<String, MergedScores> featureNameToMergedScores = gatherModel(tenantId, catwalkId, modelId, features, partitionIds, deletableRanges);
 
-                for (FeatureRange allRange : mergedScores.allRanges) {
-                    totalNumPartitions[i] += allRange.toPartitionId - allRange.fromPartitionId + 1;
+            long[] modelCounts = new long[features.length];
+            long totalCount = 0;
+            int[] numberOfModels = new int[features.length];
+            int[] totalNumPartitions = new int[features.length];
+
+            @SuppressWarnings("unchecked")
+            List<FeatureScore>[] featureScores = new List[features.length];
+            int scoreCount = 0;
+            int existingCount = 0;
+            int missingCount = 0;
+            for (int i = 0; i < features.length; i++) {
+                MergedScores mergedScores = featureNameToMergedScores.get(features[i].name);
+                if (mergedScores != null) {
+                    int featureModels = 1 + mergedScores.numberOfMerges;
+
+                    modelCounts[i] = mergedScores.mergedScores.modelCount;
+                    totalCount = Math.max(totalCount, mergedScores.mergedScores.totalCount);
+                    numberOfModels[i] = featureModels;
+
+                    for (FeatureRange allRange : mergedScores.allRanges) {
+                        totalNumPartitions[i] += allRange.toPartitionId - allRange.fromPartitionId + 1;
+                    }
+
+                    featureScores[i] = mergedScores.mergedScores.featureScores;
+                    scoreCount += featureScores[i].size();
+                    existingCount++;
+                    modelCount += featureModels;
+                } else {
+                    featureScores[i] = Collections.emptyList();
+                    missingCount++;
                 }
-
-                featureScores[i] = mergedScores.mergedScores.featureScores;
-                scoreCount += featureScores[i].size();
-                existingCount++;
-                modelCount += featureModels;
-            } else {
-                featureScores[i] = Collections.emptyList();
-                missingCount++;
             }
-        }
-        LOG.info("Gathered {} scores for tenantId:{} catwalkId:{} modelId:{} existing:{} missing:{} from {} models",
-            scoreCount, tenantId, catwalkId, modelId, existingCount, missingCount, modelCount);
+            LOG.info("Gathered {} scores for tenantId:{} catwalkId:{} modelId:{} existing:{} missing:{} from {} models",
+                scoreCount, tenantId, catwalkId, modelId, existingCount, missingCount, modelCount);
 
-        for (Map.Entry<String, MergedScores> entry : featureNameToMergedScores.entrySet()) {
-            List<FeatureRange> ranges = entry.getValue().ranges;
-            if (ranges != null && ranges.size() > 1) {
-                readRepairers.submit(new ReadRepair(tenantId, catwalkId, modelId, entry.getKey(), numeratorsCount, entry.getValue()));
-            }
-        }
-
-        if (!deletableRanges.isEmpty()) {
-            readRepairers.submit(() -> {
-                try {
-                    removeModel(tenantId, catwalkId, modelId, deletableRanges);
-                } catch (Exception x) {
-                    LOG.error("Failure while trying to delete.");
+            for (Map.Entry<String, MergedScores> entry : featureNameToMergedScores.entrySet()) {
+                List<FeatureRange> ranges = entry.getValue().ranges;
+                if (ranges != null && ranges.size() > 1) {
+                    readRepairers.submit(new ReadRepair(tenantId, catwalkId, modelId, entry.getKey(), numeratorsCount, entry.getValue()));
                 }
-            });
-        }
-
-        Integer[] repairPartitionIds = partitionIds.toArray(new Integer[0]);
-        for (int i = 1; i < repairPartitionIds.length; i++) {
-            int lastPartitionId = repairPartitionIds[i - 1];
-            int currentPartitionId = repairPartitionIds[i];
-            for (int partitionId = lastPartitionId + 1; partitionId < currentPartitionId; partitionId++) {
-                LOG.info("Requesting repair for missing partitionId:{} for tenantId:{} catwalkId:{} modelId:{}",
-                    partitionId, tenantId, catwalkId, modelId);
-                modelQueue.enqueue(tenantId, catwalkId, modelId, partitionId, catwalkQuery);
             }
-        }
 
-        CatwalkModel model = new CatwalkModel(modelCounts, totalCount, numberOfModels, featureScores, totalNumPartitions);
-        stats.egressed("/miru/catwalk/model/" + tenantId.toString(), 1, System.currentTimeMillis() - start);
-        return model;
+            if (!deletableRanges.isEmpty()) {
+                readRepairers.submit(() -> {
+                    try {
+                        removeModel(tenantId, catwalkId, modelId, deletableRanges);
+                    } catch (Exception x) {
+                        LOG.error("Failure while trying to delete.");
+                    }
+                });
+            }
+
+            Integer[] repairPartitionIds = partitionIds.toArray(new Integer[0]);
+            for (int i = 1; i < repairPartitionIds.length; i++) {
+                int lastPartitionId = repairPartitionIds[i - 1];
+                int currentPartitionId = repairPartitionIds[i];
+                for (int partitionId = lastPartitionId + 1; partitionId < currentPartitionId; partitionId++) {
+                    LOG.info("Requesting repair for missing partitionId:{} for tenantId:{} catwalkId:{} modelId:{}",
+                        partitionId, tenantId, catwalkId, modelId);
+                    modelQueue.enqueue(tenantId, catwalkId, modelId, partitionId, catwalkQuery);
+                }
+            }
+
+            return new CatwalkModel(modelCounts, totalCount, numberOfModels, featureScores, totalNumPartitions);
+        } finally {
+            long latency = System.currentTimeMillis() - start;
+            stats.ingressed("service>model>get", 1, latency);
+            stats.ingressed("service>model>get>" + tenantId.toString(), 1, latency);
+            stats.ingressed("service>model>count", modelCount, latency);
+            stats.ingressed("service>model>count>" + tenantId.toString(), modelCount, latency);
+        }
     }
 
     public void saveModel(MiruTenantId tenantId,
@@ -285,7 +290,7 @@ public class CatwalkModelService {
 
         int modelCount = 0;
         int totalCount = 0;
-        int featureScores  = 0;
+        int featureScores = 0;
         for (ModelFeatureScores model : models) {
             Collections.sort(model.featureScores, FEATURE_SCORE_COMPARATOR);
             modelCount += model.modelCount;
