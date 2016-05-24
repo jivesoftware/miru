@@ -17,8 +17,8 @@
         <jive-utils-version>0.103</jive-utils-version>
         <rcvs-version>0.18</rcvs-version>
         <filer-version>0.96</filer-version>
-        <lab-version>0.70</lab-version>
-        <amza-version>0.403</amza-version>
+        <lab-version>0.71</lab-version>
+        <amza-version>0.404</amza-version>
         <routing-bird-version>0.57</routing-bird-version>
         <jackson-version>2.5.3</jackson-version>
         <jersey-version>2.13</jersey-version>
