@@ -17,7 +17,7 @@ public class StrutAnswerEvaluator implements MiruAnswerEvaluator<StrutAnswer> {
 
     @Override
     public boolean stopOnUnsolvablePartition() {
-        return false;
+        return true;
     }
 
     @Override
