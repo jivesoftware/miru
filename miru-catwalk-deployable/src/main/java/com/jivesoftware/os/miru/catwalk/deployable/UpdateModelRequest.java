@@ -17,6 +17,7 @@ public class UpdateModelRequest {
 
     public boolean markProcessed;
     public boolean removeFromQueue;
+    public boolean delayInQueue;
 
     public UpdateModelRequest(MiruTenantId tenantId,
         String catwalkId,
