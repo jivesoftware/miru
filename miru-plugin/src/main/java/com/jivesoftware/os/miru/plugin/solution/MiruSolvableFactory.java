@@ -58,9 +58,6 @@ public class MiruSolvableFactory<Q, A, R> {
             } catch (MiruPartitionUnavailableException e) {
                 LOG.info("Partition unavailable on {} {} {}: {}", requestName, queryKey, replica.getCoord(), e.getMessage());
                 throw e;
-            } catch (IOException io) {
-                LOG.error("Solvable encountered an IOException for {} {} {}", new Object[] { requestName, queryKey, replica.getCoord() }, io);
-                throw io;
             } catch (Throwable t) {
                 Throwable cause = t;
                 for (int i = 0; i < 10 && cause != null; i++) {
