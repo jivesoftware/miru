@@ -105,6 +105,9 @@ public class MiruCatwalkMain {
 
         @LongDefault(1_000L * 60 * 60)
         long getModelUpdateIntervalInMillis();
+
+        @LongDefault(60_000)
+        long getQueueFailureDelayInMillis();
     }
 
     public void run(String[] args) throws Exception {
@@ -266,7 +269,8 @@ public class MiruCatwalkMain {
                 amzaService,
                 embeddedClientProvider,
                 stats,
-                amzaCatwalkConfig.getModelUpdateIntervalInMillis());
+                amzaCatwalkConfig.getModelUpdateIntervalInMillis(),
+                amzaCatwalkConfig.getQueueFailureDelayInMillis());
 
             MiruCatwalkUIService miruCatwalkUIService = new MiruCatwalkUIInitializer().initialize(
                 instanceConfig.getClusterName(),

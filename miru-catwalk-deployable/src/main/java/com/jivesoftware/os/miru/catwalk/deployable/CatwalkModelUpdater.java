@@ -76,6 +76,7 @@ public class CatwalkModelUpdater {
     private final EmbeddedClientProvider embeddedClientProvider;
     private final MiruStats stats;
     private final long modelUpdateIntervalInMillis;
+    private final long queueFailureDelayInMillis;
 
     public CatwalkModelUpdater(CatwalkModelService modelService,
         CatwalkModelQueue modelQueue,
@@ -88,7 +89,8 @@ public class CatwalkModelUpdater {
         AmzaService amzaService,
         EmbeddedClientProvider embeddedClientProvider,
         MiruStats stats,
-        long modelUpdateIntervalInMillis) {
+        long modelUpdateIntervalInMillis,
+        long queueFailureDelayInMillis) {
 
         this.modelService = modelService;
         this.modelQueue = modelQueue;
@@ -102,6 +104,7 @@ public class CatwalkModelUpdater {
         this.embeddedClientProvider = embeddedClientProvider;
         this.stats = stats;
         this.modelUpdateIntervalInMillis = modelUpdateIntervalInMillis;
+        this.queueFailureDelayInMillis = queueFailureDelayInMillis;
     }
 
     public void start(int numQueues, int checkQueuesBatchSize, long checkQueuesForWorkEveryNMillis) throws Exception {
@@ -142,6 +145,7 @@ public class CatwalkModelUpdater {
                                 if (gatherFilters == null) {
                                     request.markProcessed = false;
                                     request.removeFromQueue = true;
+                                    request.removeFromQueue = false;
                                     return request;
                                 }
 
@@ -162,8 +166,13 @@ public class CatwalkModelUpdater {
                                         models);
                                     request.markProcessed = true;
                                     request.removeFromQueue = true;
-                                    return request;
+                                    request.delayInQueue = false;
+                                } else {
+                                    request.markProcessed = false;
+                                    request.removeFromQueue = false;
+                                    request.delayInQueue = true;
                                 }
+                                return request;
                             }
                             return null;
                         }));
@@ -177,7 +186,7 @@ public class CatwalkModelUpdater {
                         }
                     }
 
-                    modelQueue.remove(queueId, processedRequests);
+                    modelQueue.handleProcessed(queueId, processedRequests, queueFailureDelayInMillis);
 
                     EmbeddedClient processedClient = processedClient(queueId);
                     processedClient.commit(Consistency.quorum,

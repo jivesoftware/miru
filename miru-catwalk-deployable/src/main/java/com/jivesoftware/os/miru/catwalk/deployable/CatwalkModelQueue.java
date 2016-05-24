@@ -69,8 +69,10 @@ public class CatwalkModelQueue {
         List<UpdateModelRequest> batch = new ArrayList<>(batchSize);
         queueClient.scan(Collections.singletonList(ScanRange.ROW_SCAN),
             (prefix, key, value, timestamp, version) -> {
-                UpdateModelRequest request = updateModelRequestFromBytes(requestMapper, key, value, timestamp);
-                batch.add(request);
+                if (timestamp <= System.currentTimeMillis()) {
+                    UpdateModelRequest request = updateModelRequestFromBytes(requestMapper, key, value, timestamp);
+                    batch.add(request);
+                }
                 return (batch.size() < batchSize);
             });
         return batch;
@@ -159,7 +161,7 @@ public class CatwalkModelQueue {
             TimeUnit.MILLISECONDS);
     }
 
-    public void remove(int queueId, List<UpdateModelRequest> processedRequests) throws Exception {
+    public void handleProcessed(int queueId, List<UpdateModelRequest> processedRequests, long delayInMillis) throws Exception {
         EmbeddedClient queueClient = queueClient(queueId);
         queueClient.commit(Consistency.quorum,
             null,
@@ -168,6 +170,12 @@ public class CatwalkModelQueue {
                     if (request.removeFromQueue) {
                         byte[] key = updateModelKey(request.tenantId, request.catwalkId, request.modelId, request.partitionId);
                         if (!commitKeyValueStream.commit(key, null, request.timestamp, true)) {
+                            return false;
+                        }
+                    } else if (request.delayInQueue) {
+                        byte[] key = updateModelKey(request.tenantId, request.catwalkId, request.modelId, request.partitionId);
+                        byte[] modelValue = requestMapper.writeValueAsBytes(request.catwalkQuery);
+                        if (!commitKeyValueStream.commit(key, modelValue, System.currentTimeMillis() + delayInMillis, false)) {
                             return false;
                         }
                     }
