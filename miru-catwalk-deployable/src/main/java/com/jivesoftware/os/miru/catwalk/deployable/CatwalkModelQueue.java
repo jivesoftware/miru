@@ -60,7 +60,7 @@ public class CatwalkModelQueue {
     }
 
     public boolean isLeader(int queueId) throws Exception {
-        RingMember leader = amzaService.awaitLeader(queuePartition(queueId), 0);
+        RingMember leader = amzaService.awaitLeader(queuePartition(queueId), 60_000);
         return leader != null && leader.equals(amzaService.getRingReader().getRingMember());
     }
 
