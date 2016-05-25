@@ -253,7 +253,7 @@ public class CatwalkModelService {
                     try {
                         removeModel(tenantId, catwalkId, modelId, deletableRanges);
                     } catch (Exception x) {
-                        LOG.error("Failure while trying to delete.");
+                        LOG.error("Failure while trying to delete.", x);
                     }
                 });
             }
