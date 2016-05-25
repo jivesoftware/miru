@@ -1,17 +1,14 @@
 package com.jivesoftware.os.miru.plugin.solution;
 
 import com.google.common.base.Optional;
-import com.google.common.base.Throwables;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
 import com.jivesoftware.os.miru.plugin.partition.MiruQueryablePartition;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.nio.channels.ClosedByInterruptException;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 
 /**
  * @param <Q> query type
@@ -73,7 +70,7 @@ public class MiruSolvableFactory<Q, A, R> {
             }
 
         };
-        return new MiruSolvable<>(replica.getCoord(), callable);
+        return new MiruSolvable<>(replica.getCoord(), callable, replica.isLocal());
     }
 
     public Question<Q, A, R> getQuestion() {

@@ -54,7 +54,8 @@ public class MiruLowestLatencySolverTest {
                 () -> {
                     Thread.sleep(id * 1_000); // Fake latency for each callable, 0 should always win
                     return new MiruPartitionResponse<>(id, null);
-                }));
+                },
+                true));
             orderedPartitions.add(new MiruPartition(coord, new MiruPartitionCoordInfo(MiruPartitionState.online, MiruBackingStorage.memory)));
         }
 
