@@ -108,8 +108,9 @@ public class MiruLowestLatencySolver implements MiruSolver {
                                         response.answer);
                                     log.inc("solve>success");
                                     log.inc("solve>success>" + requestName + ">" + queryKey);
-                                    log.incBucket("solve>throughput>success", 1_000L, 60);
-                                    log.incBucket("solve>throughput>success>" + requestName + ">" + queryKey, 1_000L, 60);
+                                    String locality = f.solvable.isLocal() ? "local" : "remote";
+                                    log.incBucket("solve>throughput>success>" + locality, 1_000L, 100);
+                                    log.incBucket("solve>throughput>success>" + locality + ">" + requestName + ">" + queryKey, 1_000L, 100);
                                     if (response.log != null) {
                                         for (String l : response.log) {
                                             solutionLog.log(MiruSolutionLogLevel.INFO, "[{}] {}", f.solvable.getCoord(), l);
@@ -129,8 +130,8 @@ public class MiruLowestLatencySolver implements MiruSolver {
                         }
                     } catch (ExecutionException e) {
                         log.debug("Solver failed to execute", e.getCause());
-                        log.incBucket("solve>throughput>failure", 1_000L, 60);
-                        log.incBucket("solve>throughput>failure>" + requestName + ">" + queryKey, 1_000L, 60);
+                        log.incBucket("solve>throughput>failure", 1_000L, 100);
+                        log.incBucket("solve>throughput>failure>" + requestName + ">" + queryKey, 1_000L, 100);
                         solutionLog.log(MiruSolutionLogLevel.WARN, "WARNING: Solver failed to execute. cause: {}", e.getMessage());
                         solversFailed++;
                     }
@@ -155,8 +156,8 @@ public class MiruLowestLatencySolver implements MiruSolver {
                 f.future.cancel(true);
             }
             int abandoned = solversAdded - solversSuccess - solversFailed;
-            log.incBucket("solve>throughput>abandoned", 1_000L, 60, abandoned);
-            log.incBucket("solve>throughput>abandoned>" + requestName + ">" + queryKey, 1_000L, 60, abandoned);
+            log.incBucket("solve>throughput>abandoned", 1_000L, 100, abandoned);
+            log.incBucket("solve>throughput>abandoned>" + requestName + ">" + queryKey, 1_000L, 100, abandoned);
         }
 
         return solved;
