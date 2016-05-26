@@ -174,12 +174,12 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         long totalTimeFetchingScores = 0;
         long totalTimeRescores = 0;
 
-        List<LastIdAndTermId> asyncRescore = Lists.newArrayList();
+        List<MiruTermId> asyncRescore = Lists.newArrayList();
         float[] maxScore = { 0f };
         if (request.query.usePartitionModelCache) {
             long fetchScoresStart = System.currentTimeMillis();
 
-            int[] scoredToLastIds = new int[lastIdAndTermIds.size()];
+            int[] scorableToLastIds = new int[lastIdAndTermIds.size()];
             MiruTermId[] nullableMiruTermIds = new MiruTermId[lastIdAndTermIds.size()];
             MiruTermId[] miruTermIds = new MiruTermId[lastIdAndTermIds.size()];
 
@@ -189,10 +189,10 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             }
 
             System.arraycopy(miruTermIds, 0, nullableMiruTermIds, 0, lastIdAndTermIds.size());
-            Arrays.fill(scoredToLastIds, -1);
+            Arrays.fill(scorableToLastIds, -1);
 
             long fetchLastIdsStart = System.currentTimeMillis();
-            primaryIndex.multiGetLastIds("strut", pivotFieldId, nullableMiruTermIds, scoredToLastIds, stackBuffer);
+            primaryIndex.multiGetLastIds("strut", pivotFieldId, nullableMiruTermIds, scorableToLastIds, stackBuffer);
             totalTimeFetchingLastId += (System.currentTimeMillis() - fetchLastIdsStart);
 
             StrutModelScorer.score(
@@ -201,7 +201,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 miruTermIds,
                 termScoresCache,
                 (termIndex, scores, scoredToLastId) -> {
-                    boolean needsRescore = scoredToLastId < scoredToLastIds[termIndex];
+                    boolean needsRescore = scoredToLastId < scorableToLastIds[termIndex];
                     if (needsRescore) {
                         LOG.inc("strut>scores>rescoreId");
                     }
@@ -215,13 +215,14 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                             maxScore[0] = Math.max(maxScore[0], scores[i]);
                         }
                     }
+                    LastIdAndTermId lastIdAndTermId = lastIdAndTermIds.get(termIndex);
                     if (needsRescore) {
-                        asyncRescore.add(lastIdAndTermIds.get(termIndex));
+                        asyncRescore.add(lastIdAndTermId.termId);
                     }
                     float scaledScore = Strut.scaleScore(scores, request.query.numeratorScalars, request.query.numeratorStrategy);
-                    scored.add(new Scored(lastIdAndTermIds.get(termIndex).lastId,
+                    scored.add(new Scored(lastIdAndTermId.lastId,
                         miruTermIds[termIndex],
-                        scoredToLastIds[termIndex],
+                        scoredToLastId,
                         scaledScore,
                         scores,
                         null));

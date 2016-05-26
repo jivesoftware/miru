@@ -167,7 +167,7 @@ public class StrutModelScorer {
         cacheKeyValues.put(modelId.getBytes(StandardCharsets.UTF_8), keys, values, false, false, stackBuffer);
     }
 
-    void enqueue(MiruPartitionCoord coord, StrutQuery strutQuery, int pivotFieldId, List<LastIdAndTermId> lastIdAndTermIds) {
+    void enqueue(MiruPartitionCoord coord, StrutQuery strutQuery, int pivotFieldId, List<MiruTermId> termIds) {
         catwalks.computeIfAbsent(strutQuery.catwalkId, key -> new CatwalkDefinition(strutQuery.catwalkId,
             strutQuery.catwalkQuery,
             strutQuery.numeratorScalars,
@@ -183,11 +183,9 @@ public class StrutModelScorer {
                 if (existing == null) {
                     existing = Sets.newHashSet();
                 }
-                for (LastIdAndTermId lastIdAndTermId : lastIdAndTermIds) {
-                    if (existing.add(lastIdAndTermId.termId)) {
-                        count[0]++;
-                    }
-                }
+                int beforeCount = existing.size();
+                existing.addAll(termIds);
+                count[0] += existing.size() - beforeCount;
                 return existing;
             });
         }
@@ -393,7 +391,7 @@ public class StrutModelScorer {
             long startOfUpdates = System.currentTimeMillis();
             commit(modelId, termScoreCache, updates, stackBuffer);
             long totalTimeScoreUpdates = System.currentTimeMillis() - startOfUpdates;
-            LOG.info("Strut score updates {} features in {} ms", updates.size(), totalTimeScoreUpdates);
+            LOG.info("Strut score updates {} features in {} ms for {}", updates.size(), totalTimeScoreUpdates, handle.getCoord());
             solutionLog.log(MiruSolutionLogLevel.INFO, "Strut score updates {} features in {} ms", updates.size(), totalTimeScoreUpdates);
         }
         return results;
