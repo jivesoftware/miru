@@ -44,13 +44,16 @@ public class MiruReplicaSetDirector {
     private final OrderIdProvider orderIdProvider;
     private final MiruClusterRegistry clusterRegistry;
     private final HostDescriptorProvider hostDescriptorProvider;
+    private final boolean rackAwareElections;
 
     public MiruReplicaSetDirector(OrderIdProvider orderIdProvider,
         MiruClusterRegistry clusterRegistry,
-        HostDescriptorProvider hostDescriptorProvider) {
+        HostDescriptorProvider hostDescriptorProvider,
+        boolean rackAwareElections) {
         this.orderIdProvider = orderIdProvider;
         this.clusterRegistry = clusterRegistry;
         this.hostDescriptorProvider = hostDescriptorProvider;
+        this.rackAwareElections = rackAwareElections;
     }
 
     public void elect(MiruHost host, MiruTenantId tenantId, MiruPartitionId partitionId, long electionId) throws Exception {
@@ -82,7 +85,7 @@ public class MiruReplicaSetDirector {
 
         Map<MiruHost, String> hostToRack = Maps.newHashMap();
         hostDescriptorProvider.stream((datacenter, rack, host) -> {
-            hostToRack.put(host, rack);
+            hostToRack.put(host, rackAwareElections ? rack : "");
             return true;
         });
 

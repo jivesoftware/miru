@@ -185,7 +185,7 @@ public class MiruPluginTestBootstrap {
             1);
 
         MiruReplicaSetDirector replicaSetDirector = new MiruReplicaSetDirector(new OrderIdProviderImpl(new ConstantWriterIdProvider(1)), clusterRegistry,
-            stream -> stream.descriptor("datacenter", "rack", miruHost));
+            stream -> stream.descriptor("datacenter", "rack", miruHost), false);
         MiruWALClient<RCVSCursor, RCVSSipCursor> walClient = new MiruWALDirector<>(walLookup, activityWALReader, activityWALWriter, readTrackingWALReader,
             readTrackingWALWriter, new MiruRegistryClusterClient(clusterRegistry, replicaSetDirector));
         MiruInboxReadTracker inboxReadTracker = new RCVSInboxReadTracker(walClient);

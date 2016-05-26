@@ -109,16 +109,16 @@ public class MiruManageMain {
             HealthFactory.initialize(deployable::config,
                 new HealthCheckRegistry() {
 
-                    @Override
-                    public void register(HealthChecker healthChecker) {
-                        deployable.addHealthCheck(healthChecker);
-                    }
+                @Override
+                public void register(HealthChecker healthChecker) {
+                    deployable.addHealthCheck(healthChecker);
+                }
 
-                    @Override
-                    public void unregister(HealthChecker healthChecker) {
-                        throw new UnsupportedOperationException("Not supported yet.");
-                    }
-                });
+                @Override
+                public void unregister(HealthChecker healthChecker) {
+                    throw new UnsupportedOperationException("Not supported yet.");
+                }
+            });
             deployable.addManageInjectables(HasUI.class, new HasUI(Arrays.asList(
                 new HasUI.UI("Reset Errors", "manage", "/manage/resetErrors"),
                 new HasUI.UI("Tail", "manage", "/manage/tail?lastNLines=1000"),
@@ -245,6 +245,8 @@ public class MiruManageMain {
                 tenantRoutingProvider,
                 mapper);
 
+            MiruManageConfig manageConfig = deployable.config(MiruManageConfig.class);
+
             OrderIdProvider orderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(0), new SnowflakeIdPacker(),
                 new JiveEpochTimestampProvider());
             MiruClusterClient clusterClient = new MiruRegistryClusterClient(clusterRegistry, new MiruReplicaSetDirector(orderIdProvider, clusterRegistry,
@@ -262,7 +264,7 @@ public class MiruManageMain {
                             return;
                         }
                     }
-                }));
+                }, manageConfig.getRackAwareElections()));
 
             MiruRebalanceDirector rebalanceDirector = new MiruRebalanceInitializer().initialize(clusterRegistry,
                 miruWALClient,

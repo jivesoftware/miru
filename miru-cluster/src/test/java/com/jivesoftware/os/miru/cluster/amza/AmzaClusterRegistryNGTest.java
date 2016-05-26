@@ -85,7 +85,7 @@ public class AmzaClusterRegistryNGTest {
                 for (MiruHost host : hosts) {
                     stream.descriptor("datacenter", "rack", host);
                 }
-            });
+            }, false);
     }
 
     @Test
