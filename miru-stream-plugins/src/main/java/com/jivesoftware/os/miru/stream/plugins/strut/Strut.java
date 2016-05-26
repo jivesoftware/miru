@@ -180,8 +180,13 @@ public class Strut {
                             for (int i = 0; i < s.length; i++) {
                                 s[i] = (float) modelScore.numerators[i] / modelScore.denominator;
                                 if (s[i] > 1.0f) {
-                                    LOG.warn("Encountered score {} > 1.0 for answerTermId:{} numeratorIndex:{} featureId:{} termIds:{}",
-                                        s, answerTermId, i, featureId, Arrays.toString(termIds));
+                                    LOG.warn("Encountered score {} > 1.0 for answerTermId:{} numerator[{}]:{} denominator:{} featureId:{} termIds:{}",
+                                        s, answerTermId, i, modelScore.numerators[i], modelScore.denominator, featureId, Arrays.toString(termIds));
+                                    s[i] = 1.0f;
+                                } else if (Float.isNaN(s[i])) {
+                                    LOG.warn("Encountered score NaN for answerTermId:{} numerator[{}]:{} denominator:{} featureId:{} termIds:{}",
+                                        answerTermId, i, modelScore.numerators[i], modelScore.denominator, featureId, Arrays.toString(termIds));
+                                    s[i] = 0f;
                                 }
                                 scores[i][featureId] = score(scores[i][featureId], s[i], featureScalars[featureId], featureStrategy);
                                 counts[i][featureId]++;
@@ -211,7 +216,7 @@ public class Strut {
                 stackBuffer);
         }
 
-        LOG.info("Strut scored {} features in {} ms", featureCount[0], System.currentTimeMillis() - start);
+        LOG.info("Strut scored {} features in {} ms for {}", featureCount[0], System.currentTimeMillis() - start, coord);
         solutionLog.log(MiruSolutionLogLevel.INFO, "Strut scored {} features in {} ms", featureCount[0], System.currentTimeMillis() - start);
 
     }
