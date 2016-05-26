@@ -177,7 +177,7 @@ public class MiruWALUIServiceNGTest {
             1);
         MiruRegistryClusterClient clusterClient = new MiruRegistryClusterClient(clusterRegistry, new MiruReplicaSetDirector(orderIdProvider, clusterRegistry,
             stream -> {
-            }));
+            }, false));
         MiruWALDirector<RCVSCursor, RCVSSipCursor> director = new MiruWALDirector<>(walLookup,
             activityWALReader,
             activityWALWriter,
