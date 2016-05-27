@@ -191,7 +191,7 @@ public class MiruRebalanceDirector {
         LOG.inc("rebalance>missed", missed);
     }
 
-    public void debugTenant(MiruTenantId tenantId, StringBuilder stringBuilder) {
+    public void debugTenant(MiruTenantId tenantId, StringBuilder stringBuilder) throws Exception {
         clusterRegistry.debugTenant(tenantId, stringBuilder);
     }
 

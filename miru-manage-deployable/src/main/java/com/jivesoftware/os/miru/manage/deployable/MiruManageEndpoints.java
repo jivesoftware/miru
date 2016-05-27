@@ -236,7 +236,7 @@ public class MiruManageEndpoints {
             rebalanceDirector.debugTenant(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), stringBuilder);
             return Response.ok(stringBuilder.toString()).build();
         } catch (Throwable t) {
-            LOG.error("GET /topology/debugTenant/{}/{}", new Object[] { tenantId }, t);
+            LOG.error("GET /topology/debugTenant/{}", new Object[] { tenantId }, t);
             return Response.serverError().entity(t.getMessage()).build();
         }
     }
