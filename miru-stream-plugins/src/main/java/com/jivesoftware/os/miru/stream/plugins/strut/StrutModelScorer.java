@@ -133,7 +133,9 @@ public class StrutModelScorer {
                 lastId = FilerIO.bytesInt(value, offset);
             } else {
                 if (value != null) {
-                    LOG.warn("Ignored strut model score with invalid length {}", value.length);
+                    LOG.warn("Ignored strut model score for cache:{} model:{} with invalid length {}", cacheKeyValues.name(), modelId, value.length);
+                } else {
+                    LOG.warn("Ignored strut model score for cache:{} model:{} with null value", cacheKeyValues.name(), modelId);
                 }
                 Arrays.fill(scores, Float.NaN);
                 lastId = -1;
@@ -154,7 +156,12 @@ public class StrutModelScorer {
             byte[] payload = new byte[4 * update.scores.length + 4];
             int offset = 0;
             for (int j = 0; j < update.scores.length; j++) {
-                byte[] scoreBytes = FilerIO.floatBytes(update.scores[j]);
+                float score = update.scores[j];
+                if (Float.isNaN(score)) {
+                    LOG.warn("Encountered NaN score for cache:{} model:{} term:{}", cacheKeyValues.name(), modelId, update.term);
+                    score = 0f;
+                }
+                byte[] scoreBytes = FilerIO.floatBytes(score);
                 System.arraycopy(scoreBytes, 0, payload, offset, 4);
                 offset += 4;
             }

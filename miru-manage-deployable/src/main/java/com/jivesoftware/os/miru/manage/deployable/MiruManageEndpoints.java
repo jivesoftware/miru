@@ -226,4 +226,19 @@ public class MiruManageEndpoints {
             return Response.serverError().entity(t.getMessage()).build();
         }
     }
+
+    @GET
+    @Path("/topology/debug/{tenantId}/{partitionId}")
+    @Produces(MediaType.TEXT_HTML)
+    public Response shiftTopologies(@PathParam("logicalName") String tenantId,
+        @PathParam("partitionId") int partitionId) {
+        try {
+            StringBuilder stringBuilder = new StringBuilder();
+            rebalanceDirector.debugTopology(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), MiruPartitionId.of(partitionId), stringBuilder);
+            return Response.ok(stringBuilder.toString()).build();
+        } catch (Throwable t) {
+            LOG.error("GET /topology/debug/{}/{}", new Object[] { tenantId, partitionId }, t);
+            return Response.serverError().entity(t.getMessage()).build();
+        }
+    }
 }

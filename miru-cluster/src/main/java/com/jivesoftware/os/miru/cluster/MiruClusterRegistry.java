@@ -46,6 +46,8 @@ public interface MiruClusterRegistry {
 
     List<MiruPartition> getPartitionsForTenant(MiruTenantId tenantId) throws Exception;
 
+    void debugTenantLatestTopology(MiruTenantId tenantId, MiruPartitionId partitionId, StringBuilder builder) throws Exception;
+
     List<MiruPartition> getPartitionsForTenantHost(MiruTenantId tenantId, MiruHost host) throws Exception;
 
     List<MiruPartitionStatus> getPartitionStatusForTenant(MiruTenantId tenantId, MiruPartitionId largestPartitionId) throws Exception;

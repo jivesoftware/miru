@@ -206,6 +206,10 @@ public class MiruRebalanceDirector {
         LOG.inc("rebalance>missed", missed);
     }
 
+    public void debugTopology(MiruTenantId tenantId, MiruPartitionId partitionId, StringBuilder stringBuilder) throws Exception {
+        clusterRegistry.debugTenantLatestTopology(tenantId, partitionId, stringBuilder);
+    }
+
     private static class Shift {
 
         private final List<MiruHost> fromHosts;
