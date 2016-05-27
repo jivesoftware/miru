@@ -228,16 +228,30 @@ public class MiruManageEndpoints {
     }
 
     @GET
-    @Path("/topology/debug/{tenantId}/{partitionId}")
+    @Path("/topology/debugTenant/{tenantId}")
     @Produces(MediaType.TEXT_HTML)
-    public Response shiftTopologies(@PathParam("tenantId") String tenantId,
+    public Response debugTenant(@PathParam("tenantId") String tenantId) {
+        try {
+            StringBuilder stringBuilder = new StringBuilder();
+            rebalanceDirector.debugTenant(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), stringBuilder);
+            return Response.ok(stringBuilder.toString()).build();
+        } catch (Throwable t) {
+            LOG.error("GET /topology/debugTenant/{}/{}", new Object[] { tenantId }, t);
+            return Response.serverError().entity(t.getMessage()).build();
+        }
+    }
+
+    @GET
+    @Path("/topology/debugTenantPartition/{tenantId}/{partitionId}")
+    @Produces(MediaType.TEXT_HTML)
+    public Response debugTenantPartition(@PathParam("tenantId") String tenantId,
         @PathParam("partitionId") int partitionId) {
         try {
             StringBuilder stringBuilder = new StringBuilder();
-            rebalanceDirector.debugTopology(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), MiruPartitionId.of(partitionId), stringBuilder);
+            rebalanceDirector.debugTenantPartition(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), MiruPartitionId.of(partitionId), stringBuilder);
             return Response.ok(stringBuilder.toString()).build();
         } catch (Throwable t) {
-            LOG.error("GET /topology/debug/{}/{}", new Object[] { tenantId, partitionId }, t);
+            LOG.error("GET /topology/debugTenantPartition/{}/{}", new Object[] { tenantId, partitionId }, t);
             return Response.serverError().entity(t.getMessage()).build();
         }
     }

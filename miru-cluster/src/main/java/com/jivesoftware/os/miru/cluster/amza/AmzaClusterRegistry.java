@@ -11,6 +11,7 @@ import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.Sets;
+import com.jivesoftware.os.amza.api.TimestampedValue;
 import com.jivesoftware.os.amza.api.partition.Consistency;
 import com.jivesoftware.os.amza.api.partition.Durability;
 import com.jivesoftware.os.amza.api.partition.PartitionName;
@@ -651,13 +652,37 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
     }
 
     @Override
-    public void debugTenantLatestTopology(MiruTenantId tenantId, MiruPartitionId partitionId, StringBuilder builder) throws Exception {
+    public void debugTenant(MiruTenantId tenantId, StringBuilder builder) throws Exception {
+        final byte[] from = topologyKeyPrefix(tenantId);
+        final byte[] to = WALKey.prefixUpperExclusive(from);
         for (HostHeartbeat hostHeartbeat : getAllHosts()) {
             EmbeddedClient registryClient = registryClient(hostHeartbeat.host);
-            byte[] got = registryClient.getValue(Consistency.quorum, null, toTopologyKey(tenantId, partitionId));
+            registryClient.scan(Collections.singletonList(new ScanRange(null, from, null, to)),
+                (prefix, key, value, timestamp, version) -> {
+                    RawTenantAndPartition tenantPartitionKey = fromTopologyKey(key);
+                    MiruPartitionId partitionId = MiruPartitionId.of(tenantPartitionKey.partitionId);
+                    builder.append("partition: ").append(partitionId.getId())
+                        .append(", host: ").append(hostHeartbeat.host)
+                        .append(", value: ").append(FilerIO.bytesLong(value))
+                        .append(", timestamp: ").append(timestamp)
+                        .append(", version: ").append(version)
+                        .append("\n");
+                    return true;
+                });
+        }
+    }
+
+    @Override
+    public void debugTenantPartition(MiruTenantId tenantId, MiruPartitionId partitionId, StringBuilder builder) throws Exception {
+        for (HostHeartbeat hostHeartbeat : getAllHosts()) {
+            EmbeddedClient registryClient = registryClient(hostHeartbeat.host);
+            TimestampedValue got = registryClient.getTimestampedValue(Consistency.quorum, null, toTopologyKey(tenantId, partitionId));
             if (got != null) {
-                long timestamp = FilerIO.bytesLong(got);
-                builder.append("host: ").append(hostHeartbeat.host).append(", timestamp: ").append(timestamp).append("\n");
+                builder.append("host: ").append(hostHeartbeat.host)
+                    .append(", value: ").append(FilerIO.bytesLong(got.getValue()))
+                    .append(", timestamp: ").append(got.getTimestampId())
+                    .append(", version: ").append(got.getVersion())
+                    .append("\n");
             }
         }
     }
