@@ -208,7 +208,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                     for (int i = 0; i < scores.length; i++) {
                         boolean isNaN = Float.isNaN(scores[i]);
                         if (!needsRescore && isNaN) {
-                            LOG.inc("strut>scores>rescoreNaN");
+                            LOG.inc("strut>scores>rescoreMissing");
                         }
                         needsRescore |= isNaN;
                         if (!isNaN) {
