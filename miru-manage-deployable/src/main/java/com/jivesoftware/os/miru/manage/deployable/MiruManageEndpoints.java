@@ -230,7 +230,7 @@ public class MiruManageEndpoints {
     @GET
     @Path("/topology/debug/{tenantId}/{partitionId}")
     @Produces(MediaType.TEXT_HTML)
-    public Response shiftTopologies(@PathParam("logicalName") String tenantId,
+    public Response shiftTopologies(@PathParam("tenantId") String tenantId,
         @PathParam("partitionId") int partitionId) {
         try {
             StringBuilder stringBuilder = new StringBuilder();
