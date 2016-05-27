@@ -650,6 +650,18 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
         return latest;
     }
 
+    @Override
+    public void debugTenantLatestTopology(MiruTenantId tenantId, MiruPartitionId partitionId, StringBuilder builder) throws Exception {
+        for (HostHeartbeat hostHeartbeat : getAllHosts()) {
+            EmbeddedClient registryClient = registryClient(hostHeartbeat.host);
+            byte[] got = registryClient.getValue(Consistency.quorum, null, toTopologyKey(tenantId, partitionId));
+            if (got != null) {
+                long timestamp = FilerIO.bytesLong(got);
+                builder.append("host: ").append(hostHeartbeat.host).append(", timestamp: ").append(timestamp).append("\n");
+            }
+        }
+    }
+
     private NavigableMap<MiruPartitionId, MinMaxPriorityQueue<HostAndTimestamp>> tenantLatestTopologies(MiruTenantId tenantId) throws Exception {
         final byte[] from = topologyKeyPrefix(tenantId);
         final byte[] to = WALKey.prefixUpperExclusive(from);
