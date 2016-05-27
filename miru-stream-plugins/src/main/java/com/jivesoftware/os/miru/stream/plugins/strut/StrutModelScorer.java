@@ -134,8 +134,6 @@ public class StrutModelScorer {
             } else {
                 if (value != null) {
                     LOG.warn("Ignored strut model score for cache:{} model:{} with invalid length {}", cacheKeyValues.name(), modelId, value.length);
-                } else {
-                    LOG.warn("Ignored strut model score for cache:{} model:{} with null value", cacheKeyValues.name(), modelId);
                 }
                 Arrays.fill(scores, Float.NaN);
                 lastId = -1;
