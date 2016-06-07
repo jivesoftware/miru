@@ -41,7 +41,6 @@ public class AggregateCountsQuery {
             + ", countTimeRange=" + countTimeRange
             + ", streamFilter=" + streamFilter
             + ", constraints=" + constraints
-
             + '}';
     }
 }
