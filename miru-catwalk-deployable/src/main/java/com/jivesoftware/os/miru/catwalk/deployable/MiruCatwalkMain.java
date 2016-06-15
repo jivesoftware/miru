@@ -118,6 +118,15 @@ public class MiruCatwalkMain {
 
         @FloatDefault(0.01f)
         float getGatherMinFeatureScore();
+
+        @IntDefault(10_000)
+        int getUpdateMaxFeatureScoresPerFeature();
+
+        @IntDefault(1_000)
+        int getRepairMaxFeatureScoresPerFeature();
+
+        @IntDefault(100)
+        int getGatherMaxFeatureScoresPerFeature();
     }
 
     public void run(String[] args) throws Exception {
@@ -269,7 +278,9 @@ public class MiruCatwalkMain {
                 amzaClientProvider,
                 stats,
                 amzaCatwalkConfig.getRepairMinFeatureScore(),
-                amzaCatwalkConfig.getGatherMinFeatureScore());
+                amzaCatwalkConfig.getGatherMinFeatureScore(),
+                amzaCatwalkConfig.getRepairMaxFeatureScoresPerFeature(),
+                amzaCatwalkConfig.getGatherMaxFeatureScoresPerFeature());
             CatwalkModelUpdater catwalkModelUpdater = new CatwalkModelUpdater(catwalkModelService,
                 catwalkModelQueue,
                 queueConsumers,
@@ -283,7 +294,8 @@ public class MiruCatwalkMain {
                 stats,
                 amzaCatwalkConfig.getModelUpdateIntervalInMillis(),
                 amzaCatwalkConfig.getQueueFailureDelayInMillis(),
-                amzaCatwalkConfig.getUpdateMinFeatureScore());
+                amzaCatwalkConfig.getUpdateMinFeatureScore(),
+                amzaCatwalkConfig.getUpdateMaxFeatureScoresPerFeature());
 
             MiruCatwalkUIService miruCatwalkUIService = new MiruCatwalkUIInitializer().initialize(
                 instanceConfig.getClusterName(),
