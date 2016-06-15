@@ -77,6 +77,7 @@ public class CatwalkModelUpdater {
     private final MiruStats stats;
     private final long modelUpdateIntervalInMillis;
     private final long queueFailureDelayInMillis;
+    private final float updateMinFeatureScore;
 
     public CatwalkModelUpdater(CatwalkModelService modelService,
         CatwalkModelQueue modelQueue,
@@ -90,7 +91,8 @@ public class CatwalkModelUpdater {
         EmbeddedClientProvider embeddedClientProvider,
         MiruStats stats,
         long modelUpdateIntervalInMillis,
-        long queueFailureDelayInMillis) {
+        long queueFailureDelayInMillis,
+        float updateMinFeatureScore) {
 
         this.modelService = modelService;
         this.modelQueue = modelQueue;
@@ -105,6 +107,7 @@ public class CatwalkModelUpdater {
         this.stats = stats;
         this.modelUpdateIntervalInMillis = modelUpdateIntervalInMillis;
         this.queueFailureDelayInMillis = queueFailureDelayInMillis;
+        this.updateMinFeatureScore = updateMinFeatureScore;
     }
 
     public void start(int numQueues, int checkQueuesBatchSize, long checkQueuesForWorkEveryNMillis) throws Exception {
@@ -163,7 +166,8 @@ public class CatwalkModelUpdater {
                                         request.partitionId,
                                         request.partitionId,
                                         featureNames,
-                                        models);
+                                        models,
+                                        updateMinFeatureScore);
                                     request.markProcessed = true;
                                     request.removeFromQueue = true;
                                     request.delayInQueue = false;

@@ -72,6 +72,7 @@ import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import org.merlin.config.defaults.FloatDefault;
 import org.merlin.config.defaults.IntDefault;
 import org.merlin.config.defaults.LongDefault;
 import org.merlin.config.defaults.StringDefault;
@@ -108,6 +109,15 @@ public class MiruCatwalkMain {
 
         @LongDefault(60_000)
         long getQueueFailureDelayInMillis();
+
+        @FloatDefault(0.0001f)
+        float getUpdateMinFeatureScore();
+
+        @FloatDefault(0.001f)
+        float getRepairMinFeatureScore();
+
+        @FloatDefault(0.01f)
+        float getGatherMinFeatureScore();
     }
 
     public void run(String[] args) throws Exception {
@@ -257,7 +267,9 @@ public class MiruCatwalkMain {
             CatwalkModelService catwalkModelService = new CatwalkModelService(catwalkModelQueue,
                 readRepairers,
                 amzaClientProvider,
-                stats);
+                stats,
+                amzaCatwalkConfig.getRepairMinFeatureScore(),
+                amzaCatwalkConfig.getGatherMinFeatureScore());
             CatwalkModelUpdater catwalkModelUpdater = new CatwalkModelUpdater(catwalkModelService,
                 catwalkModelQueue,
                 queueConsumers,
@@ -270,7 +282,8 @@ public class MiruCatwalkMain {
                 embeddedClientProvider,
                 stats,
                 amzaCatwalkConfig.getModelUpdateIntervalInMillis(),
-                amzaCatwalkConfig.getQueueFailureDelayInMillis());
+                amzaCatwalkConfig.getQueueFailureDelayInMillis(),
+                amzaCatwalkConfig.getUpdateMinFeatureScore());
 
             MiruCatwalkUIService miruCatwalkUIService = new MiruCatwalkUIInitializer().initialize(
                 instanceConfig.getClusterName(),
