@@ -51,6 +51,8 @@ public class CatwalkModelService {
     private final ExecutorService readRepairers;
     private final PartitionClientProvider clientProvider;
     private final MiruStats stats;
+    private final float repairMinFeatureScore;
+    private final float gatherMinFeatureScore;
 
     private final long additionalSolverAfterNMillis = 1_000; //TODO expose to conf?
     private final long abandonLeaderSolutionAfterNMillis = 5_000; //TODO expose to conf?
@@ -59,11 +61,15 @@ public class CatwalkModelService {
     public CatwalkModelService(CatwalkModelQueue modelQueue,
         ExecutorService readRepairers,
         PartitionClientProvider clientProvider,
-        MiruStats stats) {
+        MiruStats stats,
+        float repairMinFeatureScore,
+        float gatherMinFeatureScore) {
         this.modelQueue = modelQueue;
         this.readRepairers = readRepairers;
         this.clientProvider = clientProvider;
         this.stats = stats;
+        this.repairMinFeatureScore = repairMinFeatureScore;
+        this.gatherMinFeatureScore = gatherMinFeatureScore;
     }
 
     public Map<String, MergedScores> gatherModel(MiruTenantId tenantId,
@@ -214,6 +220,7 @@ public class CatwalkModelService {
             @SuppressWarnings("unchecked")
             List<FeatureScore>[] featureScores = new List[features.length];
             int scoreCount = 0;
+            int dropCount = 0;
             int existingCount = 0;
             int missingCount = 0;
             for (int i = 0; i < features.length; i++) {
@@ -229,8 +236,9 @@ public class CatwalkModelService {
                         totalNumPartitions[i] += allRange.toPartitionId - allRange.fromPartitionId + 1;
                     }
 
-                    featureScores[i] = mergedScores.mergedScores.featureScores;
+                    featureScores[i] = filterEligibleScores(mergedScores.scores.featureScores, gatherMinFeatureScore);
                     scoreCount += featureScores[i].size();
+                    dropCount += (featureScores[i].size() - mergedScores.scores.featureScores.size());
                     existingCount++;
                     modelCount += featureModels;
                 } else {
@@ -238,8 +246,8 @@ public class CatwalkModelService {
                     missingCount++;
                 }
             }
-            LOG.info("Gathered {} scores for tenantId:{} catwalkId:{} modelId:{} existing:{} missing:{} from {} models",
-                scoreCount, tenantId, catwalkId, modelId, existingCount, missingCount, modelCount);
+            LOG.info("Gathered scores:{} dropped:{} for tenantId:{} catwalkId:{} modelId:{} existing:{} missing:{} from {} models",
+                scoreCount, dropCount, tenantId, catwalkId, modelId, existingCount, missingCount, modelCount);
 
             for (Map.Entry<String, MergedScores> entry : featureNameToMergedScores.entrySet()) {
                 List<FeatureRange> ranges = entry.getValue().ranges;
@@ -279,6 +287,22 @@ public class CatwalkModelService {
         }
     }
 
+    private List<FeatureScore> filterEligibleScores(List<FeatureScore> featureScores, float minFeatureScore) {
+        List<FeatureScore> eligibleScores = Lists.newArrayList();
+        for (FeatureScore featureScore : featureScores) {
+            for (long numerator : featureScore.numerators) {
+                if (numerator > 0) {
+                    float s = (float) numerator / featureScore.denominator;
+                    if (s > minFeatureScore) {
+                        eligibleScores.add(featureScore);
+                        break;
+                    }
+                }
+            }
+        }
+        return eligibleScores;
+    }
+
     public void saveModel(MiruTenantId tenantId,
         String catwalkId,
         String modelId,
@@ -286,20 +310,31 @@ public class CatwalkModelService {
         int fromPartitionId,
         int toPartitionId,
         String[] featureNames,
-        ModelFeatureScores[] models) throws Exception {
+        ModelFeatureScores[] saveModels,
+        float minFeatureScore) throws Exception {
+
+        ModelFeatureScores[] models = new ModelFeatureScores[saveModels.length]; // mutable copy
+        System.arraycopy(saveModels, 0, models, 0, saveModels.length);
 
         int modelCount = 0;
         int totalCount = 0;
-        int featureScores = 0;
-        for (ModelFeatureScores model : models) {
+        int scoreCount = 0;
+        int dropCount = 0;
+        for (int i = 0; i < models.length; i++) {
+            ModelFeatureScores model = models[i];
             Collections.sort(model.featureScores, FEATURE_SCORE_COMPARATOR);
             modelCount += model.modelCount;
             totalCount += model.totalCount;
-            featureScores += model.featureScores.size();
+            List<FeatureScore> featureScores = model.featureScores;
+            if (minFeatureScore > 0f) {
+                featureScores = filterEligibleScores(featureScores, minFeatureScore);
+                models[i] = new ModelFeatureScores(model.partitionIsClosed, model.modelCount, model.totalCount, featureScores, model.timeRange);
+            }
+            scoreCount += featureScores.size();
         }
 
-        LOG.info("Saving model for tenantId:{} catwalkId:{} modelId:{} from:{} to:{} modelCount:{} totalCount:{} featureScores:{}",
-            tenantId, catwalkId, modelId, fromPartitionId, toPartitionId, modelCount, totalCount, featureScores);
+        LOG.info("Saving model for tenantId:{} catwalkId:{} modelId:{} from:{} to:{} modelCount:{} totalCount:{} scored:{} dropped:{}",
+            tenantId, catwalkId, modelId, fromPartitionId, toPartitionId, modelCount, totalCount, scoreCount, dropCount);
 
         PartitionClient client = modelClient(tenantId);
         client.commit(Consistency.leader_quorum, null,
@@ -622,7 +657,8 @@ public class CatwalkModelService {
                         merged.fromPartitionId,
                         merged.toPartitionId,
                         new String[] { featureName },
-                        new ModelFeatureScores[] { modelFeatureScores });
+                        new ModelFeatureScores[] { modelFeatureScores },
+                        repairMinFeatureScore);
                     removeModel(tenantId, catwalkId, modelId, mergedScores.ranges);
                 }
             } catch (Exception x) {
