@@ -236,9 +236,9 @@ public class CatwalkModelService {
                         totalNumPartitions[i] += allRange.toPartitionId - allRange.fromPartitionId + 1;
                     }
 
-                    featureScores[i] = filterEligibleScores(mergedScores.scores.featureScores, gatherMinFeatureScore);
+                    featureScores[i] = filterEligibleScores(mergedScores.mergedScores.featureScores, gatherMinFeatureScore);
                     scoreCount += featureScores[i].size();
-                    dropCount += (mergedScores.scores.featureScores.size() - featureScores[i].size());
+                    dropCount += (mergedScores.mergedScores.featureScores.size() - featureScores[i].size());
                     existingCount++;
                     modelCount += featureModels;
                 } else {
