@@ -238,7 +238,7 @@ public class CatwalkModelService {
 
                     featureScores[i] = filterEligibleScores(mergedScores.scores.featureScores, gatherMinFeatureScore);
                     scoreCount += featureScores[i].size();
-                    dropCount += (featureScores[i].size() - mergedScores.scores.featureScores.size());
+                    dropCount += (mergedScores.scores.featureScores.size() - featureScores[i].size());
                     existingCount++;
                     modelCount += featureModels;
                 } else {
@@ -331,6 +331,7 @@ public class CatwalkModelService {
                 models[i] = new ModelFeatureScores(model.partitionIsClosed, model.modelCount, model.totalCount, featureScores, model.timeRange);
             }
             scoreCount += featureScores.size();
+            dropCount += (model.featureScores.size() - featureScores.size());
         }
 
         LOG.info("Saving model for tenantId:{} catwalkId:{} modelId:{} from:{} to:{} modelCount:{} totalCount:{} scored:{} dropped:{}",
