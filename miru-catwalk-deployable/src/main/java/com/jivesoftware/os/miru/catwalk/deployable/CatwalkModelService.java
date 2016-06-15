@@ -2,8 +2,10 @@ package com.jivesoftware.os.miru.catwalk.deployable;
 
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
+import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.PeekingIterator;
 import com.google.common.collect.Sets;
+import com.google.common.primitives.Longs;
 import com.jivesoftware.os.amza.api.PartitionClient;
 import com.jivesoftware.os.amza.api.PartitionClientProvider;
 import com.jivesoftware.os.amza.api.filer.UIO;
@@ -53,6 +55,8 @@ public class CatwalkModelService {
     private final MiruStats stats;
     private final float repairMinFeatureScore;
     private final float gatherMinFeatureScore;
+    private final int repairMaxFeatureScoresPerFeature;
+    private final int gatherMaxFeatureScoresPerFeature;
 
     private final long additionalSolverAfterNMillis = 1_000; //TODO expose to conf?
     private final long abandonLeaderSolutionAfterNMillis = 5_000; //TODO expose to conf?
@@ -63,13 +67,17 @@ public class CatwalkModelService {
         PartitionClientProvider clientProvider,
         MiruStats stats,
         float repairMinFeatureScore,
-        float gatherMinFeatureScore) {
+        float gatherMinFeatureScore,
+        int repairMaxFeatureScoresPerFeature,
+        int gatherMaxFeatureScoresPerFeature) {
         this.modelQueue = modelQueue;
         this.readRepairers = readRepairers;
         this.clientProvider = clientProvider;
         this.stats = stats;
         this.repairMinFeatureScore = repairMinFeatureScore;
         this.gatherMinFeatureScore = gatherMinFeatureScore;
+        this.repairMaxFeatureScoresPerFeature = repairMaxFeatureScoresPerFeature;
+        this.gatherMaxFeatureScoresPerFeature = gatherMaxFeatureScoresPerFeature;
     }
 
     public Map<String, MergedScores> gatherModel(MiruTenantId tenantId,
@@ -236,7 +244,25 @@ public class CatwalkModelService {
                         totalNumPartitions[i] += allRange.toPartitionId - allRange.fromPartitionId + 1;
                     }
 
-                    featureScores[i] = filterEligibleScores(mergedScores.mergedScores.featureScores, gatherMinFeatureScore);
+                    if (mergedScores.mergedScores.featureScores.size() > gatherMaxFeatureScoresPerFeature) {
+                        MinMaxPriorityQueue<FeatureScore> topFeatures = MinMaxPriorityQueue
+                            .orderedBy(FEATURE_SCORES_PER_FEATURE_COMPARATOR)
+                            .expectedSize(gatherMaxFeatureScoresPerFeature)
+                            .maximumSize(gatherMaxFeatureScoresPerFeature)
+                            .create();
+
+                        if (gatherMinFeatureScore > 0f) {
+                            topFeatures.addAll(filterEligibleScores(mergedScores.mergedScores.featureScores, gatherMinFeatureScore));
+                        } else {
+                            topFeatures.addAll(mergedScores.mergedScores.featureScores);
+                        }
+                        featureScores[i] = Lists.newArrayList(topFeatures);
+                    } else if (gatherMinFeatureScore > 0f) {
+                        featureScores[i] = filterEligibleScores(mergedScores.mergedScores.featureScores, gatherMinFeatureScore);
+                    } else {
+                        featureScores[i] = mergedScores.mergedScores.featureScores;
+                    }
+
                     scoreCount += featureScores[i].size();
                     dropCount += (mergedScores.mergedScores.featureScores.size() - featureScores[i].size());
                     existingCount++;
@@ -311,27 +337,49 @@ public class CatwalkModelService {
         int toPartitionId,
         String[] featureNames,
         ModelFeatureScores[] saveModels,
-        float minFeatureScore) throws Exception {
-
-        ModelFeatureScores[] models = new ModelFeatureScores[saveModels.length]; // mutable copy
-        System.arraycopy(saveModels, 0, models, 0, saveModels.length);
+        float minFeatureScore,
+        int maxFeatureScoresPerFeature) throws Exception {
 
         int modelCount = 0;
         int totalCount = 0;
         int scoreCount = 0;
         int dropCount = 0;
-        for (int i = 0; i < models.length; i++) {
-            ModelFeatureScores model = models[i];
-            Collections.sort(model.featureScores, FEATURE_SCORE_COMPARATOR);
-            modelCount += model.modelCount;
-            totalCount += model.totalCount;
-            List<FeatureScore> featureScores = model.featureScores;
-            if (minFeatureScore > 0f) {
-                featureScores = filterEligibleScores(featureScores, minFeatureScore);
-                models[i] = new ModelFeatureScores(model.partitionIsClosed, model.modelCount, model.totalCount, featureScores, model.timeRange);
+        ModelFeatureScores[] models = new ModelFeatureScores[saveModels.length]; // mutable copy
+        for (int i = 0; i < saveModels.length; i++) {
+            ModelFeatureScores initialModel = saveModels[i];
+
+            List<FeatureScore> featureScores;
+            if (initialModel.featureScores.size() > maxFeatureScoresPerFeature) {
+                MinMaxPriorityQueue<FeatureScore> topFeatures = MinMaxPriorityQueue
+                    .orderedBy(FEATURE_SCORES_PER_FEATURE_COMPARATOR)
+                    .expectedSize(maxFeatureScoresPerFeature)
+                    .maximumSize(maxFeatureScoresPerFeature)
+                    .create();
+
+                if (minFeatureScore > 0f) {
+                    topFeatures.addAll(filterEligibleScores(initialModel.featureScores, minFeatureScore));
+                } else {
+                    topFeatures.addAll(initialModel.featureScores);
+                }
+                featureScores = Lists.newArrayList(topFeatures);
+            } else if (minFeatureScore > 0f) {
+                featureScores = filterEligibleScores(initialModel.featureScores, minFeatureScore);
+            } else {
+                featureScores = initialModel.featureScores;
             }
+
+            Collections.sort(featureScores, FEATURE_SCORE_COMPARATOR);
+
+            models[i] = new ModelFeatureScores(initialModel.partitionIsClosed,
+                initialModel.modelCount,
+                initialModel.totalCount,
+                featureScores,
+                initialModel.timeRange);
+
+            modelCount += initialModel.modelCount;
+            totalCount += initialModel.totalCount;
             scoreCount += featureScores.size();
-            dropCount += (model.featureScores.size() - featureScores.size());
+            dropCount += (initialModel.featureScores.size() - featureScores.size());
         }
 
         LOG.info("Saving model for tenantId:{} catwalkId:{} modelId:{} from:{} to:{} modelCount:{} totalCount:{} scored:{} dropped:{}",
@@ -659,7 +707,8 @@ public class CatwalkModelService {
                         merged.toPartitionId,
                         new String[] { featureName },
                         new ModelFeatureScores[] { modelFeatureScores },
-                        repairMinFeatureScore);
+                        repairMinFeatureScore,
+                        repairMaxFeatureScoresPerFeature);
                     removeModel(tenantId, catwalkId, modelId, mergedScores.ranges);
                 }
             } catch (Exception x) {
@@ -668,6 +717,18 @@ public class CatwalkModelService {
         }
 
     }
+
+    private static final Comparator<FeatureScore> FEATURE_SCORES_PER_FEATURE_COMPARATOR = (o1, o2) -> {
+        long n1 = Longs.max(o1.numerators);
+        long n2 = Longs.max(o2.numerators);
+        float s1 = (float) n1 / o1.denominator;
+        float s2 = (float) n2 / o2.denominator;
+        int c = Float.compare(s2, s1); // descending
+        if (c != 0) {
+            return c;
+        }
+        return Long.compare(o2.denominator, o1.denominator); // descending
+    };
 
     private static final FeatureScoreComparator FEATURE_SCORE_COMPARATOR = new FeatureScoreComparator();
 
