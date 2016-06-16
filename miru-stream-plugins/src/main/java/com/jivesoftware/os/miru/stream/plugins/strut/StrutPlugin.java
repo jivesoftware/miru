@@ -68,7 +68,7 @@ public class StrutPlugin implements MiruPlugin<StrutEndpoints, StrutInjectable> 
 
         HttpResponseMapper responseMapper = new HttpResponseMapper(mapper);
 
-        Cache<String, StrutModel> modelCache = null;
+        Cache<String, byte[]> modelCache = null;
         if (config.getModelCacheEnabled()) {
             modelCache = CacheBuilder
                 .newBuilder()
