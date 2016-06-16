@@ -193,7 +193,7 @@ public interface MiruServiceConfig extends Config {
     @LongDefault(60_000)
     long getLabLeapCacheCleanupIntervalMillis();
 
-    @BooleanDefault(false)
+    @BooleanDefault(true)
     boolean getFsyncOnCommit();
 
     @LongDefault(1024 * 1024 * 1024)

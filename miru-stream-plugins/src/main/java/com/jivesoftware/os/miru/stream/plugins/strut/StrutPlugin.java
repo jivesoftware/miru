@@ -68,11 +68,14 @@ public class StrutPlugin implements MiruPlugin<StrutEndpoints, StrutInjectable> 
 
         HttpResponseMapper responseMapper = new HttpResponseMapper(mapper);
 
-        Cache<String, StrutModel> modelCache = CacheBuilder
-            .newBuilder()
-            .expireAfterWrite(config.getModelCacheExpirationInMillis(), TimeUnit.MILLISECONDS)
-            .maximumSize(config.getModelCacheMaxSize())
-            .build();
+        Cache<String, StrutModel> modelCache = null;
+        if (config.getModelCacheEnabled()) {
+            modelCache = CacheBuilder
+                .newBuilder()
+                .expireAfterWrite(config.getModelCacheExpirationInMillis(), TimeUnit.MILLISECONDS)
+                .maximumSize(config.getModelCacheMaxSize())
+                .build();
+        }
 
         StrutModelCache cache = new StrutModelCache(catwalkHttpClient, mapper, responseMapper, modelCache);
 

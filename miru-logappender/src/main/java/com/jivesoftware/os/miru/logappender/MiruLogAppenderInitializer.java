@@ -49,7 +49,7 @@ public class MiruLogAppenderInitializer {
         @IntDefault(10_000)
         int getNonBlockingDrainCount();
 
-        @BooleanDefault(true)
+        @BooleanDefault(false)
         boolean getEnabled();
     }
 

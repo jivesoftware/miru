@@ -189,7 +189,7 @@ public class MiruCatwalkMain {
                 String.valueOf(instanceConfig.getInstanceName()),
                 instanceConfig.getVersion(),
                 metricSamplerConfig,
-                new RoutingBirdMetricSampleSenderProvider<>(metricConnections, "", miruLogAppenderConfig.getSocketTimeoutInMillis()));
+                new RoutingBirdMetricSampleSenderProvider<>(metricConnections, "", metricSamplerConfig.getSocketTimeoutInMillis()));
             sampler.start();
 
             MiruSoyRendererConfig rendererConfig = deployable.config(MiruSoyRendererConfig.class);
@@ -315,6 +315,7 @@ public class MiruCatwalkMain {
             deployable.addEndpoints(CatwalkModelEndpoints.class);
             deployable.addInjectables(CatwalkModelService.class, catwalkModelService);
             deployable.addInjectables(CatwalkModelUpdater.class, catwalkModelUpdater);
+            deployable.addInjectables(ObjectMapper.class, mapper);
 
             deployable.addEndpoints(MiruCatwalkUIEndpoints.class);
             deployable.addInjectables(MiruCatwalkUIService.class, miruCatwalkUIService);

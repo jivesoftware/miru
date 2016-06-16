@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
+import org.xerial.snappy.Snappy;
 
 /**
  * @author jonathan.colt
@@ -59,25 +60,14 @@ public class StrutModelCache {
         CatwalkQuery catwalkQuery) throws Exception {
 
         String key = tenantId.toString() + "/" + catwalkId + "/" + modelId;
+        if (modelCache == null) {
+            return fetchModel(catwalkQuery, key, partitionId);
+        }
 
         StrutModel model = modelCache.getIfPresent(key);
         if (model == null) {
             try {
-                model = modelCache.get(key, () -> {
-                    String json = requestMapper.writeValueAsString(catwalkQuery);
-                    HttpResponse response = catwalkClient.call("",
-                        robinStrategy,
-                        "strutModelCacheGet",
-                        (c) -> new ClientResponse<>(c.postJson("/miru/catwalk/model/get/" + key + "/" + partitionId, json, null), true));
-
-                    CatwalkModel catwalkModel = responseMapper.extractResultFromResponse(response, CatwalkModel.class, null);
-                    if (catwalkModel == null) {
-                        throw new ModelNotAvailable("Model not available,"
-                            + " status code: " + response.getStatusCode()
-                            + " reason: " + response.getStatusReasonPhrase());
-                    }
-                    return convert(catwalkQuery, catwalkModel);
-                });
+                model = modelCache.get(key, () -> fetchModel(catwalkQuery, key, partitionId));
             } catch (ExecutionException ee) {
                 if (ee.getCause() instanceof ModelNotAvailable) {
                     LOG.info(ee.getCause().getMessage());
@@ -111,6 +101,28 @@ public class StrutModelCache {
         }
         return model;
 
+    }
+
+    private StrutModel fetchModel(CatwalkQuery catwalkQuery, String key, int partitionId) throws Exception {
+        String json = requestMapper.writeValueAsString(catwalkQuery);
+        HttpResponse response = catwalkClient.call("",
+            robinStrategy,
+            "strutModelCacheGet",
+            (c) -> new ClientResponse<>(c.postJson("/miru/catwalk/model/get/" + key + "/" + partitionId, json, null), true));
+
+        CatwalkModel catwalkModel = null;
+        if (responseMapper.isSuccessStatusCode(response.getStatusCode())) {
+            byte[] body = response.getResponseBody();
+            byte[] uncompressed = Snappy.uncompress(body);
+            catwalkModel = responseMapper.extractResultFromResponse(uncompressed, CatwalkModel.class, null);
+        }
+
+        if (catwalkModel == null) {
+            throw new ModelNotAvailable("Model not available,"
+                + " status code: " + response.getStatusCode()
+                + " reason: " + response.getStatusReasonPhrase());
+        }
+        return convert(catwalkQuery, catwalkModel);
     }
 
     private StrutModel convert(CatwalkQuery catwalkQuery, CatwalkModel model) {
