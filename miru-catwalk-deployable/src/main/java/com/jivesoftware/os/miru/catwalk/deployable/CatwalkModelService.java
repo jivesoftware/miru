@@ -92,6 +92,7 @@ public class CatwalkModelService {
 
         Map<String, MergedScores> fieldIdsToFeatureScores = new HashMap<>();
         client.scan(Consistency.leader_quorum,
+            true,
             prefixedKeyRangeStream -> {
                 for (int i = 0; i < features.length; i++) {
                     String featureName = features[i].name;

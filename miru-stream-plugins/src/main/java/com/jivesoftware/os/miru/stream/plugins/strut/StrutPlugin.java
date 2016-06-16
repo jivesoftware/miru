@@ -73,6 +73,7 @@ public class StrutPlugin implements MiruPlugin<StrutEndpoints, StrutInjectable> 
             modelCache = CacheBuilder
                 .newBuilder()
                 .expireAfterWrite(config.getModelCacheExpirationInMillis(), TimeUnit.MILLISECONDS)
+                .softValues()
                 .maximumSize(config.getModelCacheMaxSize())
                 .build();
         }
