@@ -9,6 +9,7 @@ import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkModel;
 import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkQuery;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import java.io.BufferedOutputStream;
 import java.nio.charset.StandardCharsets;
 import javax.inject.Singleton;
 import javax.ws.rs.Consumes;
@@ -19,7 +20,9 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.StreamingOutput;
 import org.xerial.snappy.Snappy;
+import org.xerial.snappy.SnappyOutputStream;
 
 /**
  *
@@ -60,20 +63,28 @@ public class CatwalkModelEndpoints {
             try {
                 catwalkModelUpdater.updateModel(miruTenantId, catwalkId, modelId, partitionId, catwalkQuery);
             } catch (Exception x) {
-                LOG.error("Failed to update model for {} {} {} {}", new Object[]{tenantId, catwalkId, modelId, partitionId}, x);
+                LOG.error("Failed to update model for {} {} {} {}", new Object[] { tenantId, catwalkId, modelId, partitionId }, x);
             }
             CatwalkModel model = catwalkModelService.getModel(miruTenantId, catwalkId, modelId, catwalkQuery);
-            byte[] modelBytes = mapper.writeValueAsBytes(model);
-            byte[] compressed = Snappy.compress(modelBytes);
+            StreamingOutput stream = os -> {
+                os.flush();
+                BufferedOutputStream bos = new BufferedOutputStream(os, 8192); // TODO expose to config
+                SnappyOutputStream sos = new SnappyOutputStream(bos);
+                try {
+                    mapper.writeValue(sos, model);
+                } finally {
+                    sos.flush();
+                }
+            };
             long latency = System.currentTimeMillis() - start;
             stats.ingressed("/miru/catwalk/model/get/success", 1, latency);
             stats.ingressed("/miru/catwalk/model/get/" + tenantId + "/success", 1, latency);
-            return Response.ok(compressed).build();
+            return Response.ok(stream).build();
         } catch (Exception e) {
             long latency = System.currentTimeMillis() - start;
             stats.ingressed("/miru/catwalk/model/get/failure", 1, latency);
             stats.ingressed("/miru/catwalk/model/get/" + tenantId + "/failure", 1, latency);
-            LOG.error("Failed to get model for {} {} {}", new Object[]{tenantId, catwalkId, modelId}, e);
+            LOG.error("Failed to get model for {} {} {}", new Object[] { tenantId, catwalkId, modelId }, e);
             return Response.serverError().entity("Failed to get model").build();
         }
     }
