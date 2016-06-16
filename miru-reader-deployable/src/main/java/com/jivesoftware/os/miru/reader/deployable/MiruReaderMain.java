@@ -65,7 +65,6 @@ import com.jivesoftware.os.miru.plugin.index.MiruBackfillerizerInitializer;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.marshaller.AmzaSipIndexMarshaller;
 import com.jivesoftware.os.miru.plugin.marshaller.RCVSSipIndexMarshaller;
-import com.jivesoftware.os.miru.plugin.partition.MiruPartitionDirector;
 import com.jivesoftware.os.miru.plugin.plugin.MiruEndpointInjectable;
 import com.jivesoftware.os.miru.plugin.plugin.MiruPlugin;
 import com.jivesoftware.os.miru.plugin.query.LuceneBackedQueryParser;
@@ -99,6 +98,7 @@ import com.jivesoftware.os.routing.bird.health.api.HealthChecker;
 import com.jivesoftware.os.routing.bird.health.api.HealthFactory;
 import com.jivesoftware.os.routing.bird.health.checkers.DirectBufferHealthChecker;
 import com.jivesoftware.os.routing.bird.health.checkers.GCLoadHealthChecker;
+import com.jivesoftware.os.routing.bird.health.checkers.GCPauseHealthChecker;
 import com.jivesoftware.os.routing.bird.health.checkers.ServiceStartupHealthCheck;
 import com.jivesoftware.os.routing.bird.health.checkers.SickThreads;
 import com.jivesoftware.os.routing.bird.health.checkers.SickThreadsHealthCheck;
@@ -156,6 +156,7 @@ public class MiruReaderMain {
                 new HasUI.UI("Thread Dump", "manage", "/manage/threadDump"),
                 new HasUI.UI("Health", "manage", "/manage/ui"),
                 new HasUI.UI("Miru-Reader", "main", "/"))));
+            deployable.addHealthCheck(new GCPauseHealthChecker(deployable.config(GCPauseHealthChecker.GCPauseHealthCheckerConfig.class)));
             deployable.addHealthCheck(new GCLoadHealthChecker(deployable.config(GCLoadHealthChecker.GCLoadHealthCheckerConfig.class)));
             deployable.addHealthCheck(new DirectBufferHealthChecker(deployable.config(DirectBufferHealthChecker.DirectBufferHealthCheckerConfig.class)));
             deployable.addHealthCheck(serviceStartupHealthCheck);

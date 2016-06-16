@@ -49,6 +49,7 @@ import com.jivesoftware.os.routing.bird.health.api.HealthCheckRegistry;
 import com.jivesoftware.os.routing.bird.health.api.HealthChecker;
 import com.jivesoftware.os.routing.bird.health.api.HealthFactory;
 import com.jivesoftware.os.routing.bird.health.checkers.GCLoadHealthChecker;
+import com.jivesoftware.os.routing.bird.health.checkers.GCPauseHealthChecker;
 import com.jivesoftware.os.routing.bird.health.checkers.ServiceStartupHealthCheck;
 import com.jivesoftware.os.routing.bird.http.client.HttpDeliveryClientHealthProvider;
 import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelperUtils;
@@ -99,6 +100,7 @@ public class MiruAnomalyMain {
                 new HasUI.UI("Thread Dump", "manage", "/manage/threadDump"),
                 new HasUI.UI("Health", "manage", "/manage/ui"),
                 new HasUI.UI("Anomaly", "main", "/"))));
+            deployable.addHealthCheck(new GCPauseHealthChecker(deployable.config(GCPauseHealthChecker.GCPauseHealthCheckerConfig.class)));
             deployable.addHealthCheck(new GCLoadHealthChecker(deployable.config(GCLoadHealthChecker.GCLoadHealthCheckerConfig.class)));
             deployable.addHealthCheck(serviceStartupHealthCheck);
             deployable.addErrorHealthChecks(deployable.config(ErrorHealthCheckConfig.class));
@@ -125,20 +127,20 @@ public class MiruAnomalyMain {
 
             TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
             TenantAwareHttpClient<String> miruManageClient = tenantRoutingHttpClientInitializer.initialize(deployable
-                    .getTenantRoutingProvider()
-                    .getConnections("miru-manage", "main", 10_000), // TODO config
+                .getTenantRoutingProvider()
+                .getConnections("miru-manage", "main", 10_000), // TODO config
                 clientHealthProvider,
                 10, 10_000); // TODO expose to conf
 
             TenantAwareHttpClient<String> miruWriteClient = tenantRoutingHttpClientInitializer.initialize(deployable
-                    .getTenantRoutingProvider()
-                    .getConnections("miru-writer", "main", 10_000), // TODO config
+                .getTenantRoutingProvider()
+                .getConnections("miru-writer", "main", 10_000), // TODO config
                 clientHealthProvider,
                 10, 10_000);  // TODO expose to conf
 
             TenantAwareHttpClient<String> readerClient = tenantRoutingHttpClientInitializer.initialize(deployable
-                    .getTenantRoutingProvider()
-                    .getConnections("miru-reader", "main", 10_000), // TODO config
+                .getTenantRoutingProvider()
+                .getConnections("miru-reader", "main", 10_000), // TODO config
                 clientHealthProvider,
                 10, 10_000);  // TODO expose to conf
 
@@ -194,8 +196,8 @@ public class MiruAnomalyMain {
             serviceStartupHealthCheck.info("installing ui plugins...", null);
 
             List<AnomalyPlugin> plugins = Lists.newArrayList(new AnomalyPlugin("eye-open", "Status", "/anomaly/status",
-                    AnomalyStatusPluginEndpoints.class,
-                    new AnomalyStatusPluginRegion("soy.anomaly.page.anomalyStatusPluginRegion", renderer, sampleTrawl)),
+                AnomalyStatusPluginEndpoints.class,
+                new AnomalyStatusPluginRegion("soy.anomaly.page.anomalyStatusPluginRegion", renderer, sampleTrawl)),
                 /*new AnomalyPlugin("stats", "Trends", "/anomaly/trends",
                     AnomalyTrendsPluginEndpoints.class,
                     new AnomalyTrendsPluginRegion("soy.anomaly.page.anomalyTrendsPluginRegion", renderer, readerClient, mapper, responseMapper)),*/
