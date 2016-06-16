@@ -16,6 +16,7 @@ import com.jivesoftware.os.routing.bird.http.client.RoundRobinStrategy;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.shared.ClientCall;
 import com.jivesoftware.os.routing.bird.shared.ClientCall.ClientResponse;
+import java.io.ByteArrayInputStream;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -69,14 +70,14 @@ public class StrutModelCache {
         StrutModel model = null;
         byte[] modelBytes = modelCache.getIfPresent(key);
         if (modelBytes != null) {
-            CatwalkModel catwalkModel = requestMapper.readValue(Snappy.uncompress(modelBytes), CatwalkModel.class);
+            CatwalkModel catwalkModel = requestMapper.readValue(new SnappyInputStream(new ByteArrayInputStream(modelBytes)), CatwalkModel.class);
             model = convert(catwalkQuery, catwalkModel);
         }
 
         if (model == null) {
             try {
                 modelBytes = modelCache.get(key, () -> fetchModelBytes(catwalkQuery, key, partitionId));
-                CatwalkModel catwalkModel = requestMapper.readValue(Snappy.uncompress(modelBytes), CatwalkModel.class);
+                CatwalkModel catwalkModel = requestMapper.readValue(new SnappyInputStream(new ByteArrayInputStream(modelBytes)), CatwalkModel.class);
                 model = convert(catwalkQuery, catwalkModel);
             } catch (ExecutionException ee) {
                 if (ee.getCause() instanceof ModelNotAvailable) {
