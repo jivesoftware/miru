@@ -9,8 +9,8 @@ import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkQuery;
 import com.jivesoftware.os.miru.stream.plugins.catwalk.FeatureScore;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.routing.bird.http.client.HttpResponse;
 import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
+import com.jivesoftware.os.routing.bird.http.client.HttpStreamResponse;
 import com.jivesoftware.os.routing.bird.http.client.RoundRobinStrategy;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.shared.ClientCall;
@@ -20,7 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
-import org.xerial.snappy.Snappy;
+import org.xerial.snappy.SnappyInputStream;
 
 /**
  * @author jonathan.colt
@@ -105,16 +105,18 @@ public class StrutModelCache {
 
     private StrutModel fetchModel(CatwalkQuery catwalkQuery, String key, int partitionId) throws Exception {
         String json = requestMapper.writeValueAsString(catwalkQuery);
-        HttpResponse response = catwalkClient.call("",
+        HttpStreamResponse response = catwalkClient.call("",
             robinStrategy,
             "strutModelCacheGet",
-            (c) -> new ClientResponse<>(c.postJson("/miru/catwalk/model/get/" + key + "/" + partitionId, json, null), true));
+            (c) -> new ClientResponse<>(c.streamingPost("/miru/catwalk/model/get/" + key + "/" + partitionId, json, null), true));
 
         CatwalkModel catwalkModel = null;
-        if (responseMapper.isSuccessStatusCode(response.getStatusCode())) {
-            byte[] body = response.getResponseBody();
-            byte[] uncompressed = Snappy.uncompress(body);
-            catwalkModel = responseMapper.extractResultFromResponse(uncompressed, CatwalkModel.class, null);
+        try {
+            if (responseMapper.isSuccessStatusCode(response.getStatusCode())) {
+                catwalkModel = requestMapper.readValue(new SnappyInputStream(response.getInputStream()), CatwalkModel.class);
+            }
+        } finally {
+            response.close();
         }
 
         if (catwalkModel == null) {
@@ -147,7 +149,7 @@ public class StrutModelCache {
             model != null ? model.totalCount : 0,
             model != null ? model.numberOfModels : new int[catwalkQuery.features.length],
             model != null ? model.totalNumPartitions : new int[catwalkQuery.features.length]
-            );
+        );
     }
 
     static class StrutModelKey {
