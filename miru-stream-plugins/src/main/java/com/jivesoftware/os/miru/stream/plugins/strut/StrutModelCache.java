@@ -9,6 +9,7 @@ import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkQuery;
 import com.jivesoftware.os.miru.stream.plugins.catwalk.FeatureScore;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import com.jivesoftware.os.routing.bird.http.client.HttpResponse;
 import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
 import com.jivesoftware.os.routing.bird.http.client.HttpStreamResponse;
 import com.jivesoftware.os.routing.bird.http.client.RoundRobinStrategy;
@@ -20,6 +21,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
+import org.xerial.snappy.Snappy;
 import org.xerial.snappy.SnappyInputStream;
 
 /**
@@ -34,12 +36,12 @@ public class StrutModelCache {
     private final TenantAwareHttpClient<String> catwalkClient;
     private final ObjectMapper requestMapper;
     private final HttpResponseMapper responseMapper;
-    private final Cache<String, StrutModel> modelCache;
+    private final Cache<String, byte[]> modelCache;
 
     public StrutModelCache(TenantAwareHttpClient<String> catwalkClient,
         ObjectMapper requestMapper,
         HttpResponseMapper responseMapper,
-        Cache<String, StrutModel> modelCache) {
+        Cache<String, byte[]> modelCache) {
         this.catwalkClient = catwalkClient;
         this.requestMapper = requestMapper;
         this.responseMapper = responseMapper;
@@ -61,13 +63,21 @@ public class StrutModelCache {
 
         String key = tenantId.toString() + "/" + catwalkId + "/" + modelId;
         if (modelCache == null) {
-            return fetchModel(catwalkQuery, key, partitionId);
+            return convert(catwalkQuery, fetchModel(catwalkQuery, key, partitionId));
         }
 
-        StrutModel model = modelCache.getIfPresent(key);
+        StrutModel model = null;
+        byte[] modelBytes = modelCache.getIfPresent(key);
+        if (modelBytes != null) {
+            CatwalkModel catwalkModel = requestMapper.readValue(Snappy.uncompress(modelBytes), CatwalkModel.class);
+            model = convert(catwalkQuery, catwalkModel);
+        }
+
         if (model == null) {
             try {
-                model = modelCache.get(key, () -> fetchModel(catwalkQuery, key, partitionId));
+                modelBytes = modelCache.get(key, () -> fetchModelBytes(catwalkQuery, key, partitionId));
+                CatwalkModel catwalkModel = requestMapper.readValue(Snappy.uncompress(modelBytes), CatwalkModel.class);
+                model = convert(catwalkQuery, catwalkModel);
             } catch (ExecutionException ee) {
                 if (ee.getCause() instanceof ModelNotAvailable) {
                     LOG.info(ee.getCause().getMessage());
@@ -103,7 +113,22 @@ public class StrutModelCache {
 
     }
 
-    private StrutModel fetchModel(CatwalkQuery catwalkQuery, String key, int partitionId) throws Exception {
+    private byte[] fetchModelBytes(CatwalkQuery catwalkQuery, String key, int partitionId) throws Exception {
+        String json = requestMapper.writeValueAsString(catwalkQuery);
+        HttpResponse response = catwalkClient.call("",
+            robinStrategy,
+            "strutModelCacheGet",
+            (c) -> new ClientResponse<>(c.postJson("/miru/catwalk/model/get/" + key + "/" + partitionId, json, null), true));
+        if (responseMapper.isSuccessStatusCode(response.getStatusCode())) {
+            return response.getResponseBody();
+        } else {
+            throw new ModelNotAvailable("Model not available,"
+                + " status code: " + response.getStatusCode()
+                + " reason: " + response.getStatusReasonPhrase());
+        }
+    }
+
+    private CatwalkModel fetchModel(CatwalkQuery catwalkQuery, String key, int partitionId) throws Exception {
         String json = requestMapper.writeValueAsString(catwalkQuery);
         HttpStreamResponse response = catwalkClient.call("",
             robinStrategy,
@@ -124,7 +149,7 @@ public class StrutModelCache {
                 + " status code: " + response.getStatusCode()
                 + " reason: " + response.getStatusReasonPhrase());
         }
-        return convert(catwalkQuery, catwalkModel);
+        return catwalkModel;
     }
 
     private StrutModel convert(CatwalkQuery catwalkQuery, CatwalkModel model) {

@@ -10,7 +10,7 @@ import org.merlin.config.defaults.LongDefault;
  */
 public interface StrutConfig extends Config {
 
-    @BooleanDefault(false)
+    @BooleanDefault(true)
     boolean getModelCacheEnabled();
 
     @LongDefault(60 * 60 * 1_000L)
