@@ -189,7 +189,7 @@ public class MiruCatwalkMain {
                 String.valueOf(instanceConfig.getInstanceName()),
                 instanceConfig.getVersion(),
                 metricSamplerConfig,
-                new RoutingBirdMetricSampleSenderProvider<>(metricConnections, "", miruLogAppenderConfig.getSocketTimeoutInMillis()));
+                new RoutingBirdMetricSampleSenderProvider<>(metricConnections, "", metricSamplerConfig.getSocketTimeoutInMillis()));
             sampler.start();
 
             MiruSoyRendererConfig rendererConfig = deployable.config(MiruSoyRendererConfig.class);

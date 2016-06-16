@@ -19,13 +19,13 @@ public class MiruMetricSamplerInitializer {
         @IntDefault(60_000)
         int getSocketTimeoutInMillis();
 
-        @IntDefault(5_000)
+        @IntDefault(60_000)
         int getSampleIntervalInMillis();
 
         @IntDefault(100)
         int getMaxBacklog();
 
-        @BooleanDefault(true)
+        @BooleanDefault(false)
         boolean getEnabled();
 
         @BooleanDefault(true)
