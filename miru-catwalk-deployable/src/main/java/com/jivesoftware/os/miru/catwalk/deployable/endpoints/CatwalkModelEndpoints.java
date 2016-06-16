@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.catwalk.deployable.endpoints;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.catwalk.deployable.CatwalkModelService;
@@ -18,6 +19,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import org.xerial.snappy.Snappy;
 
 /**
  *
@@ -31,19 +33,22 @@ public class CatwalkModelEndpoints {
     private final CatwalkModelService catwalkModelService;
     private final CatwalkModelUpdater catwalkModelUpdater;
     private final MiruStats stats;
+    private final ObjectMapper mapper;
 
     public CatwalkModelEndpoints(@Context CatwalkModelService catwalkModelService,
         @Context CatwalkModelUpdater catwalkModelUpdater,
-        @Context MiruStats stats) {
+        @Context MiruStats stats,
+        @Context ObjectMapper mapper) {
         this.catwalkModelService = catwalkModelService;
         this.catwalkModelUpdater = catwalkModelUpdater;
         this.stats = stats;
+        this.mapper = mapper;
     }
 
     @POST
     @Path("/get/{tenantId}/{catwalkId}/{modelId}/{partitionId}")
     @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_OCTET_STREAM)
     public Response getModel(@PathParam("tenantId") String tenantId,
         @PathParam("catwalkId") String catwalkId,
         @PathParam("modelId") String modelId,
@@ -58,10 +63,12 @@ public class CatwalkModelEndpoints {
                 LOG.error("Failed to update model for {} {} {} {}", new Object[]{tenantId, catwalkId, modelId, partitionId}, x);
             }
             CatwalkModel model = catwalkModelService.getModel(miruTenantId, catwalkId, modelId, catwalkQuery);
+            byte[] modelBytes = mapper.writeValueAsBytes(model);
+            byte[] compressed = Snappy.compress(modelBytes);
             long latency = System.currentTimeMillis() - start;
             stats.ingressed("/miru/catwalk/model/get/success", 1, latency);
             stats.ingressed("/miru/catwalk/model/get/" + tenantId + "/success", 1, latency);
-            return Response.ok(model).build();
+            return Response.ok(compressed).build();
         } catch (Exception e) {
             long latency = System.currentTimeMillis() - start;
             stats.ingressed("/miru/catwalk/model/get/failure", 1, latency);

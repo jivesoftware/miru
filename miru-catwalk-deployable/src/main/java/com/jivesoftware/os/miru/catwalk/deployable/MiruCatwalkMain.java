@@ -315,6 +315,7 @@ public class MiruCatwalkMain {
             deployable.addEndpoints(CatwalkModelEndpoints.class);
             deployable.addInjectables(CatwalkModelService.class, catwalkModelService);
             deployable.addInjectables(CatwalkModelUpdater.class, catwalkModelUpdater);
+            deployable.addInjectables(ObjectMapper.class, mapper);
 
             deployable.addEndpoints(MiruCatwalkUIEndpoints.class);
             deployable.addInjectables(MiruCatwalkUIService.class, miruCatwalkUIService);
