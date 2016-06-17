@@ -182,9 +182,6 @@ public class MiruAggregateUtil {
                         int count = FilerIO.bytesInt(value);
                         MiruTermId[] termIds = feature.termIds;
                         Feature f = new Feature(featureId, termIds);
-                        if (features[featureId].contains(f)) {
-                            LOG.error("Cache found multiple counts for name:{} cacheName:{} feature:{}", name, termFeatureCache.name(), f);
-                        }
                         int gatheredCount = features[featureId].count(f);
                         if (gatheredCount > 0) {
                             features[featureId].add(f, count);
