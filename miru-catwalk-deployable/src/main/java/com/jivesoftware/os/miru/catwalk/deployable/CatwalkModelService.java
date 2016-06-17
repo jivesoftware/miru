@@ -713,7 +713,7 @@ public class CatwalkModelService {
                     removeModel(tenantId, catwalkId, modelId, mergedScores.ranges);
                 }
             } catch (Exception x) {
-                LOG.error("Failure while trying to apply read repairs.");
+                LOG.error("Failure while trying to apply read repairs.", x);
             }
         }
 
