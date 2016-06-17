@@ -33,4 +33,10 @@ public interface StrutConfig extends Config {
 
     @LongDefault(60_000)
     long getQueueConsumeIntervalMillis();
+
+    @IntDefault(1_000)
+    int getCatwalkTopNValuesPerFeature();
+
+    @IntDefault(100)
+    int getStrutTopNValuesPerFeature();
 }

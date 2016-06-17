@@ -78,6 +78,7 @@ public class Strut {
         boolean includeFeatures,
         float[] numeratorScalars,
         Strategy numeratorStrategy,
+        int topNValuesPerFeature,
         TimestampedCacheKeyValues termFeatureCache,
         StrutStream<BM> strutStream,
         HotStuff hotStuff,
@@ -141,6 +142,7 @@ public class Strut {
                 termFeatureCache,
                 streamBitmaps -> strutStream.stream(streamBitmaps::stream),
                 featureFieldIds,
+                topNValuesPerFeature,
                 (streamIndex, lastId, answerFieldId, answerTermId, answerScoredLastId, featureId, termIds, count) -> {
                     if (featureId == -1) {
                         boolean stopped = false;

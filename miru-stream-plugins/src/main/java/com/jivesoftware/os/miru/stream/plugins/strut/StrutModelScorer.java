@@ -61,6 +61,7 @@ public class StrutModelScorer {
     private final Strut strut;
     private final MiruAggregateUtil aggregateUtil;
     private final AtomicLong pendingUpdates;
+    private final int topNValuesPerFeature;
     private final long maxHeapPressureInBytes;
 
     private final Map<String, CatwalkDefinition> catwalks = Maps.newConcurrentMap();
@@ -73,13 +74,14 @@ public class StrutModelScorer {
         Strut strut,
         MiruAggregateUtil aggregateUtil,
         AtomicLong pendingUpdates,
-        long maxUpdatesBeforeFlush,
+        int topNValuesPerFeature, long maxHeapPressureInBytes,
         int queueStripeCount) {
         this.miruProvider = miruProvider;
         this.strut = strut;
         this.aggregateUtil = aggregateUtil;
         this.pendingUpdates = pendingUpdates;
-        this.maxHeapPressureInBytes = maxUpdatesBeforeFlush;
+        this.topNValuesPerFeature = topNValuesPerFeature;
+        this.maxHeapPressureInBytes = maxHeapPressureInBytes;
 
         this.queues = new LinkedHashMap[queueStripeCount];
         for (int i = 0; i < queueStripeCount; i++) {
@@ -351,6 +353,7 @@ public class StrutModelScorer {
             includeFeatures,
             numeratorScalars,
             numeratorStrategy,
+            topNValuesPerFeature,
             termFeatureCache,
             (streamBitmaps) -> {
                 LastIdAndTermId[] rescoreMiruTermIds = score.toArray(new LastIdAndTermId[0]);

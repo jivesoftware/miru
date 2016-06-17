@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.plugin.solution;
 import com.google.common.base.Optional;
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Maps;
+import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Multiset;
 import com.google.common.collect.Multiset.Entry;
 import com.google.common.collect.Sets;
@@ -77,6 +78,7 @@ public class MiruAggregateUtil {
         TimestampedCacheKeyValues termFeatureCache,
         ConsumeBitmaps<BM> consumeAnswers,
         int[][] featureFieldIds,
+        int topNValuesPerFeature,
         FeatureStream stream,
         MiruSolutionLog solutionLog,
         StackBuffer stackBuffer) throws Exception {
@@ -94,8 +96,11 @@ public class MiruAggregateUtil {
 
         @SuppressWarnings("unchecked")
         Multiset<Feature>[] features = new Multiset[featureFieldIds.length];
+        @SuppressWarnings("unchecked")
+        MinMaxPriorityQueue<FeatureAndCount>[] featureHeaps = new MinMaxPriorityQueue[featureFieldIds.length];
         for (int i = 0; i < features.length; i++) {
             features[i] = HashMultiset.create();
+            featureHeaps[i] = MinMaxPriorityQueue.maximumSize(topNValuesPerFeature).create();
         }
 
         String cacheName = null;
@@ -120,6 +125,7 @@ public class MiruAggregateUtil {
 
             for (int i = 0; i < features.length; i++) {
                 features[i].clear();
+                featureHeaps[i].clear();
             }
 
             if (termFeatureCache != null) {
@@ -138,6 +144,31 @@ public class MiruAggregateUtil {
                                 LOG.error("Cache found multiple lastScoredIds for name:{} cacheName:{} termId:{}", name, termFeatureCache.name(), answerTermId);
                             }
                             lastScoredId[0] = (int) timestamp;
+                        } else {
+                            LOG.error("Cache was missing a lastScoredId for name:{} cacheName:{} termId:{}", name, termFeatureCache.name(), answerTermId);
+                        }
+                        return false;
+                    });
+
+                    int fromId = lastScoredId[0] + 1;
+                    metrics.minFromId = Math.min(metrics.minFromId, fromId);
+                    metrics.maxFromId = Math.max(metrics.maxFromId, fromId);
+
+                    if (answerScoredLastId >= fromId) {
+                        gatherFeaturesForTerm(name, bitmaps, featureFieldIds, stackBuffer, uniqueFieldIds, getAllTermIds, fieldTerms,
+                            ids, featuresContained, answerBitmaps, features, gathered, fromId, answerScoredLastId, metrics);
+                    }
+
+                    termFeatureCache.rangeScan(cacheId, null, null, (key, value, timestamp) -> {
+                        Feature feature = Feature.unpack(key, stackBuffer);
+                        int featureId = feature.featureId;
+                        if (featureId == -1) {
+                            if (lastScoredId[0] != (int) timestamp) {
+                                discardFeatures[0] = true;
+                                LOG.warn("Found name:{} cacheName:{} termId:{} feature:{} timestamp:{} which is more recent than lastScoredId:{}",
+                                    name, termFeatureCache.name(), answerTermId, feature, timestamp, lastScoredId[0]);
+                                return false;
+                            }
                             return true;
                         }
 
@@ -148,74 +179,63 @@ public class MiruAggregateUtil {
                             return false;
                         }
 
-                        // fromId:0 -> 10
-                        // * j:1 @ 10
-                        // * a:1 @ 10
-                        // * b:3 @ 10
-                        // * c:2 @ 10
-
-                        // fromId:0 -> 15
-                        // * j:1 @ 10
-                        // * a:1 @ 15
-                        // * b:3 @ 15
-                        // * c:3 @ 15
-
-                        // fromId:0 -> 16
-                        // * j:1 @ 16
-                        // * z:1 @ 16
-                        // * a:1 @ 16
-                        // * b:3 @ 16
-                        // * c:3 @ 16
-
-                        // fromId:10 -> 20
-                        //   j:1 @ 10
-                        // * z:1 @ 20
-                        //   a:1 @ 10
-                        //   b:3 @ 10
-                        // * c:4 @ 20
-                        // * d:1 @ 20
-
-                        // fromId:15 -> 25
-                        // > j:1 @ 10
-                        // xxx z:1
-                        // > a:1 @ 15
-                        // > b:3 @ 15
-                        // > c:4 @ 15
-                        // > d:1 @ 15
-
                         int count = FilerIO.bytesInt(value);
                         MiruTermId[] termIds = feature.termIds;
                         Feature f = new Feature(featureId, termIds);
                         if (features[featureId].contains(f)) {
-                            LOG.error("Cache found multiple counts for name:{} cacheName:{} termId:{] feature:{}", name, termFeatureCache.name(), f);
+                            LOG.error("Cache found multiple counts for name:{} cacheName:{} feature:{}", name, termFeatureCache.name(), f);
                         }
-                        features[featureId].add(f, count);
+                        int gatheredCount = features[featureId].count(f);
+                        if (gatheredCount > 0) {
+                            features[featureId].add(f, count);
+                        }
+                        featureHeaps[featureId].add(new FeatureAndCount(f, gatheredCount + count, timestamp));
+                        gathered[featureId].remove(f);
                         metrics.cacheHitCount++;
 
                         return true;
                     });
 
                     if (discardFeatures[0]) {
-                        lastScoredId[0] = -1;
                         for (int i = 0; i < features.length; i++) {
                             features[i].clear();
+                            featureHeaps[i].clear();
+                        }
+
+                        fromId = 0;
+                        gatherFeaturesForTerm(name, bitmaps, featureFieldIds, stackBuffer, uniqueFieldIds, getAllTermIds, fieldTerms,
+                            ids, featuresContained, answerBitmaps, features, null, fromId, answerScoredLastId, metrics);
+
+                        for (int i = 0; i < features.length; i++) {
+                            for (Entry<Feature> entry : features[i].entrySet()) {
+                                Feature feature = entry.getElement();
+                                int count = entry.getCount();
+                                featureHeaps[i].add(new FeatureAndCount(feature, count, answerScoredLastId));
+                            }
+                        }
+                    } else {
+                        for (int i = 0; i < gathered.length; i++) {
+                            for (Feature feature : gathered[i]) {
+                                int count = features[i].count(feature);
+                                featureHeaps[i].add(new FeatureAndCount(feature, count, answerScoredLastId));
+                            }
                         }
                     }
 
-                    int fromId = lastScoredId[0] + 1;
-                    metrics.minFromId = Math.min(metrics.minFromId, fromId);
-                    metrics.maxFromId = Math.max(metrics.maxFromId, fromId);
-                    if (answerScoredLastId >= fromId) {
-
-                        gatherFeaturesForTerm(name, bitmaps, featureFieldIds, stackBuffer, uniqueFieldIds, getAllTermIds, fieldTerms,
-                            ids, featuresContained, answerBitmaps, features, gathered, fromId, answerScoredLastId, metrics);
-
+                    boolean needToSave = false;
+                    for (int i = 0; i < features.length; i++) {
+                        if (!features[i].isEmpty()) {
+                            needToSave = true;
+                            break;
+                        }
+                    }
+                    if (needToSave) {
                         termFeatureCache.put(cacheId, false, false, stream1 -> {
-                            for (int i = 0; i < gathered.length; i++) {
-                                for (Feature feature : gathered[i]) {
+                            for (int i = 0; i < features.length; i++) {
+                                for (Entry<Feature> entry : features[i].entrySet()) {
                                     metrics.cacheSaveCount++;
-                                    int count = features[i].count(feature);
-                                    if (!stream1.stream(feature.pack(stackBuffer), FilerIO.intBytes(count), answerScoredLastId)) {
+                                    Feature feature = entry.getElement();
+                                    if (!stream1.stream(feature.pack(stackBuffer), FilerIO.intBytes(entry.getCount()), answerScoredLastId)) {
                                         return false;
                                     }
                                 }
@@ -235,12 +255,12 @@ public class MiruAggregateUtil {
             metrics.minToId = Math.min(metrics.minToId, answerScoredLastId);
             metrics.maxToId = Math.max(metrics.maxToId, answerScoredLastId);
 
-            for (int i = 0; i < features.length; i++) {
-                for (Entry<Feature> entry : features[i].entrySet()) {
-                    Feature feature = entry.getElement();
+            for (int i = 0; i < featureHeaps.length; i++) {
+                for (FeatureAndCount featureAndCount : featureHeaps[i]) {
+                    Feature feature = featureAndCount.feature;
                     metrics.featureCount++;
                     boolean result = stream.stream(streamIndex, lastId, answerFieldId, answerTermId, answerScoredLastId, feature.featureId, feature.termIds,
-                        entry.getCount());
+                        featureAndCount.count);
                     if (!result) {
                         return false;
                     }
@@ -594,6 +614,27 @@ public class MiruAggregateUtil {
             int featureId,
             MiruTermId[] termIds,
             int count) throws Exception;
+    }
+
+    private static class FeatureAndCount implements Comparable<FeatureAndCount> {
+        public final Feature feature;
+        public final int count;
+        public final long timestamp;
+
+        public FeatureAndCount(Feature feature, int count, long timestamp) {
+            this.feature = feature;
+            this.count = count;
+            this.timestamp = timestamp;
+        }
+
+        @Override
+        public int compareTo(FeatureAndCount o) {
+            int c = Integer.compare(o.count, count); // descending
+            if (c != 0) {
+                return c;
+            }
+            return Long.compare(o.timestamp, timestamp); // descending
+        }
     }
 
     public static class Feature {

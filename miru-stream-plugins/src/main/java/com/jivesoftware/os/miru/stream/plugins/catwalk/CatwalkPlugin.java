@@ -28,7 +28,7 @@ public class CatwalkPlugin implements MiruPlugin<CatwalkEndpoints, CatwalkInject
         StrutConfig config = miruProvider.getConfig(StrutConfig.class);
         return Collections.singletonList(new MiruEndpointInjectable<>(
             CatwalkInjectable.class,
-            new CatwalkInjectable(miruProvider, catwalk, config.getMaxHeapPressureInBytes())
+            new CatwalkInjectable(miruProvider, catwalk, config.getCatwalkTopNValuesPerFeature(), config.getMaxHeapPressureInBytes())
         ));
     }
 

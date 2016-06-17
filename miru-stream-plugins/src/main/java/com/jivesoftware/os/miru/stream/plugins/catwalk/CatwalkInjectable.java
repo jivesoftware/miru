@@ -21,13 +21,16 @@ public class CatwalkInjectable {
 
     private final MiruProvider<? extends Miru> provider;
     private final Catwalk catwalk;
+    private final int topNValuesPerFeature;
     private final long maxHeapPressureInBytes;
 
     public CatwalkInjectable(MiruProvider<? extends Miru> provider,
         Catwalk catwalk,
+        int topNValuesPerFeature,
         long maxHeapPressureInBytes) {
         this.provider = provider;
         this.catwalk = catwalk;
+        this.topNValuesPerFeature = topNValuesPerFeature;
         this.maxHeapPressureInBytes = maxHeapPressureInBytes;
     }
 
@@ -41,6 +44,7 @@ public class CatwalkInjectable {
                     new CatwalkQuestion(catwalk,
                         request,
                         provider.getRemotePartition(CatwalkRemotePartition.class),
+                        topNValuesPerFeature,
                         maxHeapPressureInBytes)),
                 new CatwalkAnswerEvaluator(),
                 new CatwalkAnswerMerger(request.query.desiredNumberOfResults),
@@ -67,6 +71,7 @@ public class CatwalkInjectable {
                     new CatwalkQuestion(catwalk,
                         requestAndReport.request,
                         provider.getRemotePartition(CatwalkRemotePartition.class),
+                        topNValuesPerFeature,
                         maxHeapPressureInBytes)),
                 Optional.fromNullable(requestAndReport.report),
                 CatwalkAnswer.EMPTY_RESULTS,
@@ -91,6 +96,7 @@ public class CatwalkInjectable {
                     new CatwalkQuestion(catwalk,
                         request,
                         provider.getRemotePartition(CatwalkRemotePartition.class),
+                        topNValuesPerFeature,
                         maxHeapPressureInBytes)),
                 new CatwalkAnswerMerger(request.query.desiredNumberOfResults),
                 CatwalkAnswer.EMPTY_RESULTS,
