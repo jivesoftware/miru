@@ -44,6 +44,7 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
     private final Catwalk catwalk;
     private final MiruRequest<CatwalkQuery> request;
     private final MiruRemotePartition<CatwalkQuery, CatwalkAnswer, CatwalkReport> remotePartition;
+    private final int topNValuesPerFeature;
     private final long maxHeapPressureInBytes;
 
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
@@ -52,10 +53,12 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
     public CatwalkQuestion(Catwalk catwalk,
         MiruRequest<CatwalkQuery> request,
         MiruRemotePartition<CatwalkQuery, CatwalkAnswer, CatwalkReport> remotePartition,
+        int topNValuesPerFeature,
         long maxHeapPressureInBytes) {
         this.catwalk = catwalk;
         this.request = request;
         this.remotePartition = remotePartition;
+        this.topNValuesPerFeature = topNValuesPerFeature;
         this.maxHeapPressureInBytes = maxHeapPressureInBytes;
     }
 
@@ -75,7 +78,7 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
             solutionLog.log(MiruSolutionLogLevel.WARN, "No time index intersection. Partition {}: {} doesn't intersect with {}",
                 handle.getCoord().partitionId, context.getTimeIndex(), timeRange);
             return new MiruPartitionResponse<>(
-                catwalk.model("catwalk", bitmaps, context, request, handle.getCoord(), report, null, answerBitmap -> true, null, null, solutionLog),
+                catwalk.model("catwalk", bitmaps, context, request, handle.getCoord(), report, 1, null, answerBitmap -> true, null, null, solutionLog),
                 solutionLog.asList());
         }
 
@@ -169,6 +172,7 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
                 request,
                 handle.getCoord(),
                 report,
+                topNValuesPerFeature,
                 termFeaturesCache,
                 answerBitmap -> {
                     FieldMultiTermTxIndex<BM, IBM> multiTermTxIndex = new FieldMultiTermTxIndex<>("catwalk", primaryFieldIndex, pivotFieldId, -1);

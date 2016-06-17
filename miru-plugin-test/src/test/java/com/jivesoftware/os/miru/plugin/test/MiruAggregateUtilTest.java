@@ -111,6 +111,7 @@ public class MiruAggregateUtilTest {
                     { 0, 2 },
                     { 1, 2 },
                 },
+                100,
                 (streamIndex, lastId, answerFieldId, answerTermId, answerScoredLastId, featureId, termIds, count) -> {
                     log(streamIndex, lastId, answerFieldId, answerTermId, answerScoredLastId, featureId, termIds, count);
                     return true;

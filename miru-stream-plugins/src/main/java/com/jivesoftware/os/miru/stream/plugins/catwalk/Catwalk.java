@@ -56,6 +56,7 @@ public class Catwalk {
         MiruRequest<CatwalkQuery> request,
         MiruPartitionCoord coord,
         Optional<CatwalkReport> report,
+        int topNValuesPerFeature,
         TimestampedCacheKeyValues termFeatureCache,
         ConsumeAnswers<BM, IBM> consumeAnswers,
         IBM[] featureMasks,
@@ -103,6 +104,7 @@ public class Catwalk {
                 });
             },
             featureFieldIds,
+            topNValuesPerFeature,
             (streamIndex, lastId, answerFieldId, answerTermId, answerScoredLastId, featureId, termIds, count) -> {
                 if (featureId >= 0) {
                     FeatureBag featureBag = featureValueSets[featureId].computeIfAbsent(new Feature(featureId, termIds),
