@@ -57,6 +57,7 @@ public class CatwalkModelService {
     private final float gatherMinFeatureScore;
     private final int repairMaxFeatureScoresPerFeature;
     private final int gatherMaxFeatureScoresPerFeature;
+    private final boolean useScanCompression;
 
     private final long additionalSolverAfterNMillis = 1_000; //TODO expose to conf?
     private final long abandonLeaderSolutionAfterNMillis = 5_000; //TODO expose to conf?
@@ -69,7 +70,8 @@ public class CatwalkModelService {
         float repairMinFeatureScore,
         float gatherMinFeatureScore,
         int repairMaxFeatureScoresPerFeature,
-        int gatherMaxFeatureScoresPerFeature) {
+        int gatherMaxFeatureScoresPerFeature,
+        boolean useScanCompression) {
         this.modelQueue = modelQueue;
         this.readRepairers = readRepairers;
         this.clientProvider = clientProvider;
@@ -78,6 +80,7 @@ public class CatwalkModelService {
         this.gatherMinFeatureScore = gatherMinFeatureScore;
         this.repairMaxFeatureScoresPerFeature = repairMaxFeatureScoresPerFeature;
         this.gatherMaxFeatureScoresPerFeature = gatherMaxFeatureScoresPerFeature;
+        this.useScanCompression = useScanCompression;
     }
 
     public Map<String, MergedScores> gatherModel(MiruTenantId tenantId,
@@ -92,7 +95,7 @@ public class CatwalkModelService {
 
         Map<String, MergedScores> fieldIdsToFeatureScores = new HashMap<>();
         client.scan(Consistency.leader_quorum,
-            true,
+            useScanCompression,
             prefixedKeyRangeStream -> {
                 for (int i = 0; i < features.length; i++) {
                     String featureName = features[i].name;

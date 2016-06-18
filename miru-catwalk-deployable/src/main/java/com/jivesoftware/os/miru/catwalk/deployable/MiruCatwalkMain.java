@@ -73,6 +73,7 @@ import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import org.merlin.config.defaults.BooleanDefault;
 import org.merlin.config.defaults.FloatDefault;
 import org.merlin.config.defaults.IntDefault;
 import org.merlin.config.defaults.LongDefault;
@@ -128,6 +129,9 @@ public class MiruCatwalkMain {
 
         @IntDefault(100)
         int getGatherMaxFeatureScoresPerFeature();
+
+        @BooleanDefault(false)
+        boolean getUseScanCompression();
     }
 
     public void run(String[] args) throws Exception {
@@ -282,7 +286,8 @@ public class MiruCatwalkMain {
                 amzaCatwalkConfig.getRepairMinFeatureScore(),
                 amzaCatwalkConfig.getGatherMinFeatureScore(),
                 amzaCatwalkConfig.getRepairMaxFeatureScoresPerFeature(),
-                amzaCatwalkConfig.getGatherMaxFeatureScoresPerFeature());
+                amzaCatwalkConfig.getGatherMaxFeatureScoresPerFeature(),
+                amzaCatwalkConfig.getUseScanCompression());
             CatwalkModelUpdater catwalkModelUpdater = new CatwalkModelUpdater(catwalkModelService,
                 catwalkModelQueue,
                 queueConsumers,
