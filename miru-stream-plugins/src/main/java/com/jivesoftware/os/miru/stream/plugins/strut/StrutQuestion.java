@@ -59,6 +59,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
     private final MiruRequest<StrutQuery> request;
     private final MiruRemotePartition<StrutQuery, StrutAnswer, StrutReport> remotePartition;
     private final int maxTermIdsPerRequest;
+    private final boolean allowImmediateRescore;
 
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
@@ -68,13 +69,15 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         MiruJustInTimeBackfillerizer backfillerizer,
         MiruRequest<StrutQuery> request,
         MiruRemotePartition<StrutQuery, StrutAnswer, StrutReport> remotePartition,
-        int maxTermIdsPerRequest) {
+        int maxTermIdsPerRequest,
+        boolean allowImmediateRescore) {
         this.modelScorer = modelScorer;
         this.strut = strut;
         this.backfillerizer = backfillerizer;
         this.request = request;
         this.remotePartition = remotePartition;
         this.maxTermIdsPerRequest = maxTermIdsPerRequest;
+        this.allowImmediateRescore = allowImmediateRescore;
     }
 
     @Override
@@ -232,7 +235,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             totalTimeFetchingScores += (System.currentTimeMillis() - fetchScoresStart);
         }
 
-        if (maxScore[0] == 0f) {
+        if (maxScore[0] == 0f && allowImmediateRescore) {
             LOG.info("Performing immediate rescore for coord:{} catwalkId:{} modelId:{} pivotFieldId:{}",
                 handle.getCoord(), request.query.catwalkId, request.query.modelId, pivotFieldId);
             LOG.inc("strut>rescore>immediate");
