@@ -41,6 +41,7 @@ public class FullTextInjectable {
                 new FullTextAnswerEvaluator(request.query),
                 new FullTextAnswerMerger(request.query.desiredNumberOfResults),
                 FullTextAnswer.EMPTY_RESULTS,
+                miru.getDefaultExecutor(),
                 request.logLevel);
         } catch (MiruPartitionUnavailableException | InterruptedException e) {
             throw e;

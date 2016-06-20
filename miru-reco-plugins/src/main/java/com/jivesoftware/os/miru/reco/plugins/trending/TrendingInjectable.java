@@ -102,6 +102,7 @@ public class TrendingInjectable {
                 new AnalyticsAnswerEvaluator(),
                 new AnalyticsAnswerMerger(keyedSegments),
                 AnalyticsAnswer.EMPTY_RESULTS,
+                miru.getDefaultExecutor(),
                 request.logLevel);
 
             Map<String, List<Waveform>> keyedWaveforms = (analyticsResponse.answer != null && analyticsResponse.answer.waveforms != null)

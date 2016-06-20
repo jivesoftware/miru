@@ -42,6 +42,7 @@ public class StumptownInjectable {
                 new StumptownAnswerEvaluator(),
                 new StumptownAnswerMerger(request.query.desiredNumberOfResultsPerWaveform),
                 StumptownAnswer.EMPTY_RESULTS,
+                miru.getDefaultExecutor(),
                 request.logLevel);
         } catch (MiruPartitionUnavailableException | InterruptedException e) {
             throw e;

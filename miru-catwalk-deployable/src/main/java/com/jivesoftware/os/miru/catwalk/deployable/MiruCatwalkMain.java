@@ -132,6 +132,15 @@ public class MiruCatwalkMain {
 
         @BooleanDefault(false)
         boolean getUseScanCompression();
+
+        @LongDefault(1_000)
+        long getAdditionalSolverAfterNMillis();
+
+        @LongDefault(10_000)
+        long getAbandonLeaderSolutionAfterNMillis();
+
+        @LongDefault(30_000)
+        long getAbandonSolutionAfterNMillis();
     }
 
     public void run(String[] args) throws Exception {
@@ -287,7 +296,10 @@ public class MiruCatwalkMain {
                 amzaCatwalkConfig.getGatherMinFeatureScore(),
                 amzaCatwalkConfig.getRepairMaxFeatureScoresPerFeature(),
                 amzaCatwalkConfig.getGatherMaxFeatureScoresPerFeature(),
-                amzaCatwalkConfig.getUseScanCompression());
+                amzaCatwalkConfig.getUseScanCompression(),
+                amzaCatwalkConfig.getAdditionalSolverAfterNMillis(),
+                amzaCatwalkConfig.getAbandonLeaderSolutionAfterNMillis(),
+                amzaCatwalkConfig.getAbandonSolutionAfterNMillis());
             CatwalkModelUpdater catwalkModelUpdater = new CatwalkModelUpdater(catwalkModelService,
                 catwalkModelQueue,
                 queueConsumers,

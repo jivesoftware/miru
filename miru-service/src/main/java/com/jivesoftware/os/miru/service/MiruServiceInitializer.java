@@ -264,8 +264,7 @@ public class MiruServiceInitializer {
 
         final MiruClusterPartitionDirector partitionDirector = new MiruClusterPartitionDirector(miruHost, expectedTenants);
 
-        MiruSolver solver = new MiruLowestLatencySolver(solverExecutor,
-            config.getDefaultInitialSolvers(),
+        MiruSolver solver = new MiruLowestLatencySolver(config.getDefaultInitialSolvers(),
             config.getDefaultMaxNumberOfSolvers(),
             config.getDefaultAddAnotherSolverAfterNMillis(),
             config.getDefaultFailAfterNMillis());
@@ -276,6 +275,7 @@ public class MiruServiceInitializer {
             partitionComparison,
             solver,
             schemaProvider,
+            solverExecutor,
             parallelExecutor);
 
         return new MiruLifecyle<MiruService>() {

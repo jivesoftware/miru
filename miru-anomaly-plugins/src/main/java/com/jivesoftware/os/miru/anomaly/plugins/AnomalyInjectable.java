@@ -42,6 +42,7 @@ public class AnomalyInjectable {
                 new AnomalyAnswerEvaluator(),
                 new AnomalyAnswerMerger(),
                 AnomalyAnswer.EMPTY_RESULTS,
+                miru.getDefaultExecutor(),
                 request.logLevel);
         } catch (MiruPartitionUnavailableException | InterruptedException e) {
             throw e;

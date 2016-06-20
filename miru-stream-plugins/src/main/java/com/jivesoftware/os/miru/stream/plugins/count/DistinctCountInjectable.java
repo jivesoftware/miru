@@ -38,6 +38,7 @@ public class DistinctCountInjectable {
                 new DistinctCountAnswerEvaluator(request.query),
                 new DistinctCounterAnswerMerger(),
                 DistinctCountAnswer.EMPTY_RESULTS,
+                miru.getDefaultExecutor(),
                 request.logLevel);
         } catch (MiruPartitionUnavailableException | InterruptedException e) {
             throw e;
@@ -61,6 +62,7 @@ public class DistinctCountInjectable {
                 new DistinctCountAnswerEvaluator(request.query),
                 new DistinctCounterAnswerMerger(),
                 DistinctCountAnswer.EMPTY_RESULTS,
+                miru.getDefaultExecutor(),
                 request.logLevel);
         } catch (MiruPartitionUnavailableException | InterruptedException e) {
             throw e;
@@ -84,6 +86,7 @@ public class DistinctCountInjectable {
                 new DistinctCountAnswerEvaluator(request.query),
                 new DistinctCounterAnswerMerger(),
                 DistinctCountAnswer.EMPTY_RESULTS,
+                miru.getDefaultExecutor(),
                 request.logLevel);
         } catch (MiruPartitionUnavailableException | InterruptedException e) {
             throw e;

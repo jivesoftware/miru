@@ -12,6 +12,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolvableFactory;
+import java.util.concurrent.Executor;
 
 /**
  *
@@ -24,6 +25,7 @@ public interface Miru {
         MiruAnswerEvaluator<A> evaluator,
         MiruAnswerMerger<A> merger,
         A defaultValue,
+        Executor executor,
         MiruSolutionLogLevel logLevel) throws Exception;
 
     <Q, A, P> MiruResponse<A> askAndMergePartition(
@@ -32,6 +34,7 @@ public interface Miru {
         MiruSolvableFactory<Q, A, P> solvableFactory,
         MiruAnswerMerger<A> merger,
         A defaultValue,
+        Executor executor,
         MiruSolutionLogLevel logLevel)
         throws Exception;
 
@@ -44,4 +47,6 @@ public interface Miru {
         MiruSolutionLogLevel logLevel) throws Exception;
 
     Optional<? extends MiruQueryablePartition<?, ?>> getQueryablePartition(MiruPartitionCoord coord) throws Exception;
+
+    Executor getDefaultExecutor();
 }

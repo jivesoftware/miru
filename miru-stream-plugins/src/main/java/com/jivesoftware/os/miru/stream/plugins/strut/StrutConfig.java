@@ -39,4 +39,7 @@ public interface StrutConfig extends Config {
 
     @IntDefault(100)
     int getStrutTopNValuesPerFeature();
+
+    @IntDefault(4)
+    int getCatwalkSolverPoolSize();
 }

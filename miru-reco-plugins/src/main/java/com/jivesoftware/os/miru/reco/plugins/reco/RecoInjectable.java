@@ -65,6 +65,7 @@ public class RecoInjectable {
                     new DistinctsAnswerEvaluator(),
                     new DistinctsAnswerMerger(),
                     DistinctsAnswer.EMPTY_RESULTS,
+                    miru.getDefaultExecutor(),
                     request.logLevel);
 
                 distinctTerms = (distinctsResponse.answer != null && distinctsResponse.answer.results != null)
@@ -80,6 +81,7 @@ public class RecoInjectable {
                 new RecoAnswerEvaluator(request.query),
                 new RecoAnswerMerger(request.query.desiredNumberOfDistincts),
                 RecoAnswer.EMPTY_RESULTS,
+                miru.getDefaultExecutor(),
                 request.logLevel);
         } catch (MiruPartitionUnavailableException | InterruptedException e) {
             throw e;

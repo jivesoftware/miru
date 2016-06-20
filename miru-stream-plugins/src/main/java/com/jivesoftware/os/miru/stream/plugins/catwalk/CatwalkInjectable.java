@@ -13,6 +13,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRequestAndReport;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolvableFactory;
+import java.util.concurrent.Executor;
 
 /**
  *
@@ -21,15 +22,18 @@ public class CatwalkInjectable {
 
     private final MiruProvider<? extends Miru> provider;
     private final Catwalk catwalk;
+    private final Executor catwalkExecutor;
     private final int topNValuesPerFeature;
     private final long maxHeapPressureInBytes;
 
     public CatwalkInjectable(MiruProvider<? extends Miru> provider,
         Catwalk catwalk,
+        Executor catwalkExecutor,
         int topNValuesPerFeature,
         long maxHeapPressureInBytes) {
         this.provider = provider;
         this.catwalk = catwalk;
+        this.catwalkExecutor = catwalkExecutor;
         this.topNValuesPerFeature = topNValuesPerFeature;
         this.maxHeapPressureInBytes = maxHeapPressureInBytes;
     }
@@ -49,6 +53,7 @@ public class CatwalkInjectable {
                 new CatwalkAnswerEvaluator(),
                 new CatwalkAnswerMerger(request.query.desiredNumberOfResults),
                 CatwalkAnswer.EMPTY_RESULTS,
+                miru.getDefaultExecutor(),
                 request.logLevel);
         } catch (MiruPartitionUnavailableException | InterruptedException e) {
             throw e;
@@ -100,6 +105,7 @@ public class CatwalkInjectable {
                         maxHeapPressureInBytes)),
                 new CatwalkAnswerMerger(request.query.desiredNumberOfResults),
                 CatwalkAnswer.EMPTY_RESULTS,
+                catwalkExecutor,
                 request.logLevel);
         } catch (MiruPartitionUnavailableException | InterruptedException e) {
             throw e;

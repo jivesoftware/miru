@@ -10,6 +10,8 @@ import com.jivesoftware.os.miru.stream.plugins.strut.StrutConfig;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 /**
  *
@@ -26,9 +28,10 @@ public class CatwalkPlugin implements MiruPlugin<CatwalkEndpoints, CatwalkInject
 
         Catwalk catwalk = new Catwalk();
         StrutConfig config = miruProvider.getConfig(StrutConfig.class);
+        Executor catwalkExecutor = Executors.newFixedThreadPool(config.getCatwalkSolverPoolSize());
         return Collections.singletonList(new MiruEndpointInjectable<>(
             CatwalkInjectable.class,
-            new CatwalkInjectable(miruProvider, catwalk, config.getCatwalkTopNValuesPerFeature(), config.getMaxHeapPressureInBytes())
+            new CatwalkInjectable(miruProvider, catwalk, catwalkExecutor, config.getCatwalkTopNValuesPerFeature(), config.getMaxHeapPressureInBytes())
         ));
     }
 
