@@ -43,6 +43,7 @@ public class MetricsInjectable {
                 new MetricsAnswerEvaluator(),
                 new MetricsAnswerMerger(request.query.timeRange, request.query.divideTimeRangeIntoNSegments),
                 MetricsAnswer.EMPTY_RESULTS,
+                miru.getDefaultExecutor(),
                 request.logLevel);
         } catch (MiruPartitionUnavailableException | InterruptedException e) {
             throw e;

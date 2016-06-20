@@ -27,19 +27,16 @@ public class MiruLowestLatencySolver implements MiruSolver {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
-    private final Executor executor;
     private final int initialSolvers;
     private final int maxNumberOfSolvers;
     private final long defaultAddAnotherSolverAfterNMillis;
     private final long failAfterNMillis;
 
     public MiruLowestLatencySolver(
-        Executor executor,
         int initialSolvers,
         int maxNumberOfSolvers,
         long defaultAddAnotherSolverAfterNMillis,
         long failAfterNMillis) {
-        this.executor = executor;
         this.initialSolvers = initialSolvers;
         this.maxNumberOfSolvers = maxNumberOfSolvers;
         this.defaultAddAnotherSolverAfterNMillis = defaultAddAnotherSolverAfterNMillis;
@@ -51,6 +48,7 @@ public class MiruLowestLatencySolver implements MiruSolver {
         String queryKey,
         Iterator<MiruSolvable<R>> solvables,
         Optional<Long> suggestedTimeoutInMillis,
+        Executor executor,
         MiruSolutionLog solutionLog)
         throws InterruptedException {
 

@@ -51,6 +51,7 @@ public class AnalyticsInjectable {
                 new AnalyticsAnswerEvaluator(),
                 new AnalyticsAnswerMerger(keyedSegments),
                 AnalyticsAnswer.EMPTY_RESULTS,
+                miru.getDefaultExecutor(),
                 request.logLevel);
         } catch (MiruPartitionUnavailableException | InterruptedException e) {
             throw e;

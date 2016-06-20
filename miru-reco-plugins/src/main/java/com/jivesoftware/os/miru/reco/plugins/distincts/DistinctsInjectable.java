@@ -44,6 +44,7 @@ public class DistinctsInjectable {
                 new DistinctsAnswerEvaluator(),
                 new DistinctsAnswerMerger(),
                 DistinctsAnswer.EMPTY_RESULTS,
+                miru.getDefaultExecutor(),
                 request.logLevel);
         } catch (MiruPartitionUnavailableException | InterruptedException e) {
             throw e;

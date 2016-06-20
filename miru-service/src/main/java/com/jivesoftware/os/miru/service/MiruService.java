@@ -45,6 +45,7 @@ import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
@@ -60,6 +61,7 @@ public class MiruService implements Miru {
     private final MiruSolver solver;
     private final MiruHostedPartitionComparison partitionComparison;
     private final MiruSchemaProvider schemaProvider;
+    private final Executor defaultExecutor;
     private final ExecutorService parallelExecutor;
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
 
@@ -68,6 +70,7 @@ public class MiruService implements Miru {
         MiruHostedPartitionComparison partitionComparison,
         MiruSolver solver,
         MiruSchemaProvider schemaProvider,
+        Executor defaultExecutor,
         ExecutorService parallelExecutor) {
 
         this.localhost = localhost;
@@ -75,6 +78,7 @@ public class MiruService implements Miru {
         this.partitionComparison = partitionComparison;
         this.solver = solver;
         this.schemaProvider = schemaProvider;
+        this.defaultExecutor = defaultExecutor;
         this.parallelExecutor = parallelExecutor;
     }
 
@@ -87,12 +91,18 @@ public class MiruService implements Miru {
     }
 
     @Override
+    public Executor getDefaultExecutor() {
+        return defaultExecutor;
+    }
+
+    @Override
     public <Q, A, P> MiruResponse<A> askAndMerge(
         MiruTenantId tenantId,
         final MiruSolvableFactory<Q, A, P> solvableFactory,
         MiruAnswerEvaluator<A> evaluator,
         MiruAnswerMerger<A> merger,
         A defaultValue,
+        Executor executor,
         MiruSolutionLogLevel logLevel)
         throws Exception {
 
@@ -126,9 +136,9 @@ public class MiruService implements Miru {
                     orderedPartitions.partitionId.getId(), orderedPartitions.tenantId, suggestedTimeoutInMillis.or(-1L));
 
                 if (evaluator.useParallelSolver()) {
-                    expectedSolutions.add(new ParallelExpectedSolution<>(orderedPartitions, solvableFactory, suggestedTimeoutInMillis, solutionLog));
+                    expectedSolutions.add(new ParallelExpectedSolution<>(orderedPartitions, solvableFactory, suggestedTimeoutInMillis, executor, solutionLog));
                 } else {
-                    expectedSolutions.add(new SerialExpectedSolution<>(orderedPartitions, solvableFactory, suggestedTimeoutInMillis, solutionLog));
+                    expectedSolutions.add(new SerialExpectedSolution<>(orderedPartitions, solvableFactory, suggestedTimeoutInMillis, executor, solutionLog));
                 }
             }
 
@@ -189,6 +199,7 @@ public class MiruService implements Miru {
         MiruSolvableFactory<Q, A, P> solvableFactory,
         MiruAnswerMerger<A> merger,
         A defaultValue,
+        Executor executor,
         MiruSolutionLogLevel logLevel)
         throws Exception {
 
@@ -222,6 +233,7 @@ public class MiruService implements Miru {
                 solved = new SerialExpectedSolution<>(orderedPartitions,
                     solvableFactory,
                     suggestedTimeoutInMillis,
+                    executor,
                     solutionLog)
                     .get(Optional.<A>absent());
             }
@@ -366,13 +378,16 @@ public class MiruService implements Miru {
     private class ParallelExpectedSolution<A, BM extends IBM, IBM> implements ExpectedSolution<A> {
 
         private final OrderedPartitions<BM, IBM> orderedPartitions;
+        private final Executor executor;
         private final Future<MiruSolved<A>> future;
         private final long start;
 
         public <Q, P> ParallelExpectedSolution(OrderedPartitions<BM, IBM> orderedPartitions,
             MiruSolvableFactory<Q, A, P> solvableFactory,
             Optional<Long> suggestedTimeoutInMillis,
+            Executor executor,
             MiruSolutionLog solutionLog) {
+            this.executor = executor;
 
             Iterable<MiruSolvable<A>> solvables = Iterables.transform(orderedPartitions.partitions, replica -> {
                 if (replica.isLocal()) {
@@ -387,6 +402,7 @@ public class MiruService implements Miru {
                 solvableFactory.getQueryKey(),
                 solvables.iterator(),
                 suggestedTimeoutInMillis,
+                executor,
                 solutionLog));
         }
 
@@ -416,6 +432,7 @@ public class MiruService implements Miru {
         private final OrderedPartitions<BM, IBM> orderedPartitions;
         private final MiruSolvableFactory<Q, A, P> solvableFactory;
         private final Optional<Long> suggestedTimeoutInMillis;
+        private final Executor executor;
         private final MiruSolutionLog solutionLog;
 
         private long start;
@@ -423,8 +440,10 @@ public class MiruService implements Miru {
         public SerialExpectedSolution(OrderedPartitions<BM, IBM> orderedPartitions,
             MiruSolvableFactory<Q, A, P> solvableFactory,
             Optional<Long> suggestedTimeoutInMillis,
+            Executor executor,
             MiruSolutionLog solutionLog) {
             this.orderedPartitions = orderedPartitions;
+            this.executor = executor;
             this.solvableFactory = solvableFactory;
             this.suggestedTimeoutInMillis = suggestedTimeoutInMillis;
             this.solutionLog = solutionLog;
@@ -449,6 +468,7 @@ public class MiruService implements Miru {
                 solvableFactory.getQueryKey(),
                 solvables.iterator(),
                 suggestedTimeoutInMillis,
+                executor,
                 solutionLog);
         }
 

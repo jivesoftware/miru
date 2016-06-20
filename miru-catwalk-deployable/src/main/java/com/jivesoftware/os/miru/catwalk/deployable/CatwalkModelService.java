@@ -59,9 +59,9 @@ public class CatwalkModelService {
     private final int gatherMaxFeatureScoresPerFeature;
     private final boolean useScanCompression;
 
-    private final long additionalSolverAfterNMillis = 1_000; //TODO expose to conf?
-    private final long abandonLeaderSolutionAfterNMillis = 5_000; //TODO expose to conf?
-    private final long abandonSolutionAfterNMillis = 30_000; //TODO expose to conf?
+    private final long additionalSolverAfterNMillis;
+    private final long abandonLeaderSolutionAfterNMillis;
+    private final long abandonSolutionAfterNMillis;
 
     public CatwalkModelService(CatwalkModelQueue modelQueue,
         ExecutorService readRepairers,
@@ -71,7 +71,10 @@ public class CatwalkModelService {
         float gatherMinFeatureScore,
         int repairMaxFeatureScoresPerFeature,
         int gatherMaxFeatureScoresPerFeature,
-        boolean useScanCompression) {
+        boolean useScanCompression,
+        long additionalSolverAfterNMillis,
+        long abandonLeaderSolutionAfterNMillis,
+        long abandonSolutionAfterNMillis) {
         this.modelQueue = modelQueue;
         this.readRepairers = readRepairers;
         this.clientProvider = clientProvider;
@@ -81,6 +84,9 @@ public class CatwalkModelService {
         this.repairMaxFeatureScoresPerFeature = repairMaxFeatureScoresPerFeature;
         this.gatherMaxFeatureScoresPerFeature = gatherMaxFeatureScoresPerFeature;
         this.useScanCompression = useScanCompression;
+        this.additionalSolverAfterNMillis = additionalSolverAfterNMillis;
+        this.abandonLeaderSolutionAfterNMillis = abandonLeaderSolutionAfterNMillis;
+        this.abandonSolutionAfterNMillis = abandonSolutionAfterNMillis;
     }
 
     public Map<String, MergedScores> gatherModel(MiruTenantId tenantId,
