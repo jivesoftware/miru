@@ -42,4 +42,7 @@ public interface StrutConfig extends Config {
 
     @IntDefault(4)
     int getCatwalkSolverPoolSize();
+
+    @BooleanDefault(false)
+    boolean getAllowImmediateStrutRescore();
 }
