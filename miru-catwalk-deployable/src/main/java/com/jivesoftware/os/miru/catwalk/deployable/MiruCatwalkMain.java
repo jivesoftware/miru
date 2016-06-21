@@ -141,6 +141,12 @@ public class MiruCatwalkMain {
 
         @LongDefault(30_000)
         long getAbandonSolutionAfterNMillis();
+
+        @LongDefault(-1)
+        long getAmzaDebugClientCount();
+
+        @LongDefault(-1)
+        long getAmzaDebugClientCountInterval();
     }
 
     public void run(String[] args) throws Exception {
@@ -255,7 +261,9 @@ public class MiruCatwalkMain {
                 new HttpPartitionHostsProvider(baInterner, amzaClient, mapper),
                 new RingHostHttpClientProvider(amzaClient),
                 Executors.newFixedThreadPool(amzaCatwalkConfig.getAmzaCallerThreadPoolSize()), //TODO expose to conf
-                amzaCatwalkConfig.getAmzaAwaitLeaderElectionForNMillis()); //TODO expose to conf
+                amzaCatwalkConfig.getAmzaAwaitLeaderElectionForNMillis(),
+                amzaCatwalkConfig.getAmzaDebugClientCount(),
+                amzaCatwalkConfig.getAmzaDebugClientCountInterval());
 
             EmbeddedClientProvider embeddedClientProvider = new EmbeddedClientProvider(amzaService);
             /*AmzaClusterRegistry clusterRegistry = new AmzaClusterRegistry(amzaService,
