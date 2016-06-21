@@ -60,7 +60,9 @@ public class MiruStumptownPayloadsAmza implements MiruStumptownPayloadStorage {
             new HttpPartitionHostsProvider(interner, httpClient, mapper),
             new RingHostHttpClientProvider(httpClient),
             Executors.newCachedThreadPool(), //TODO expose to conf?
-            awaitLeaderElectionForNMillis);
+            awaitLeaderElectionForNMillis,
+            -1,
+            -1);
 
         long ttl = TimeUnit.DAYS.toMillis(1);
 

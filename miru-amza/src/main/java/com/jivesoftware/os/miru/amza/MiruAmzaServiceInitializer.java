@@ -211,7 +211,9 @@ public class MiruAmzaServiceInitializer {
             new HttpPartitionHostsProvider(baInterner, httpClient, mapper),
             new RingHostHttpClientProvider(httpClient),
             Executors.newCachedThreadPool(),
-            10_000); //TODO expose to conf
+            10_000, //TODO expose to conf
+            -1,
+            -1);
 
         new AmzaUIInitializer().initialize(clusterName, ringHost, amzaService, clientProvider, amzaStats, timestampProvider, idPacker,
             new AmzaUIInitializer.InjectionCallback() {
