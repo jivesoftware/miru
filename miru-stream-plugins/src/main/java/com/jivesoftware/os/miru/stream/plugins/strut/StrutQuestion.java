@@ -235,7 +235,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             totalTimeFetchingScores += (System.currentTimeMillis() - fetchScoresStart);
         }
 
-        if (maxScore[0] == 0f && allowImmediateRescore) {
+        if (!request.query.usePartitionModelCache || maxScore[0] == 0f && allowImmediateRescore) {
             LOG.info("Performing immediate rescore for coord:{} catwalkId:{} modelId:{} pivotFieldId:{}",
                 handle.getCoord(), request.query.catwalkId, request.query.modelId, pivotFieldId);
             LOG.inc("strut>rescore>immediate");
