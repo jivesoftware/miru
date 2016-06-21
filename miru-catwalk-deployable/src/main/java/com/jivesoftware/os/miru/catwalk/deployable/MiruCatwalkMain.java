@@ -221,10 +221,14 @@ public class MiruCatwalkMain {
 
             TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
 
+            AmzaCatwalkConfig amzaCatwalkConfig = deployable.config(AmzaCatwalkConfig.class);
             TenantAwareHttpClient<String> amzaClient = tenantRoutingHttpClientInitializer.initialize(
                 tenantRoutingProvider.getConnections("amza", "main", 10_000), // TODO config
                 clientHealthProvider,
-                10, 10_000); // TODO expose to conf
+                10,
+                10_000, // TODO expose to conf
+                amzaCatwalkConfig.getAmzaDebugClientCount(),
+                amzaCatwalkConfig.getAmzaDebugClientCountInterval());
 
             TenantAwareHttpClient<String> manageHttpClient = tenantRoutingHttpClientInitializer.initialize(
                 tenantRoutingProvider.getConnections("miru-manage", "main", 10_000), // TODO config
@@ -238,7 +242,6 @@ public class MiruCatwalkMain {
             SickThreads walClientSickThreads = new SickThreads();
             deployable.addHealthCheck(new SickThreadsHealthCheck(deployable.config(WALClientSickThreadsHealthCheckConfig.class), walClientSickThreads));
 
-            AmzaCatwalkConfig amzaCatwalkConfig = deployable.config(AmzaCatwalkConfig.class);
             AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable,
                 instanceConfig.getRoutesHost(),
                 instanceConfig.getRoutesPort(),
