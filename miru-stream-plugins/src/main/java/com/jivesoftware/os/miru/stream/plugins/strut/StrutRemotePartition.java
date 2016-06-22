@@ -71,7 +71,7 @@ public class StrutRemotePartition implements MiruRemotePartition<StrutQuery, Str
                             share,
                             MiruSolutionLogLevel.NONE),
                         String.class,
-                        Optional.absent(),
+                        Optional.<Void>absent(),
                         endPointMetrics,
                         null);
                 } catch (MiruQueryServiceException e) {
