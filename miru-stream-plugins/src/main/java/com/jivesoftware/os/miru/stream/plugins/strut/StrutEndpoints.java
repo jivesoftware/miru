@@ -86,7 +86,8 @@ public class StrutEndpoints {
     public Response strutShare(byte[] rawBytes) {
         StrutShare share;
         try {
-            share = (StrutShare) conf.asObject(rawBytes);
+            MiruRequestAndReport<StrutShare, Void> requestAndReport = (MiruRequestAndReport<StrutShare, Void>) conf.asObject(rawBytes);
+            share = requestAndReport.request.query; // kill me
         } catch (Exception e) {
             log.error("Failed to deserialize request", e);
             return Response.serverError().build();

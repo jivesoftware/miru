@@ -74,7 +74,8 @@ public class StrutModelScorer {
 
     public StrutModelScorer(MiruProvider miruProvider,
         Strut strut,
-        StrutRemotePartition strutRemotePartition, MiruAggregateUtil aggregateUtil,
+        StrutRemotePartition strutRemotePartition,
+        MiruAggregateUtil aggregateUtil,
         AtomicLong pendingUpdates,
         int topNValuesPerFeature,
         long maxHeapPressureInBytes,
