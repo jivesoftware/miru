@@ -9,6 +9,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.shared.ResponseHelper;
+import java.util.Collections;
 import javax.inject.Singleton;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
@@ -95,7 +96,9 @@ public class StrutEndpoints {
 
         try {
             injectable.share(share);
-            return Response.ok("success", MediaType.APPLICATION_OCTET_STREAM).build();
+            MiruPartitionResponse<String> result = new MiruPartitionResponse<>("success", Collections.emptyList());
+            byte[] responseBytes = conf.asByteArray(result);
+            return Response.ok(responseBytes, MediaType.APPLICATION_OCTET_STREAM).build();
         } catch (MiruPartitionUnavailableException e) {
             return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Unavailable " + e.getMessage()).build();
         } catch (Exception e) {
