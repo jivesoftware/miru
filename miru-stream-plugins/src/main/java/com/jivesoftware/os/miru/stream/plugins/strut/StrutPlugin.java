@@ -88,14 +88,21 @@ public class StrutPlugin implements MiruPlugin<StrutEndpoints, StrutInjectable> 
         miruProvider.addHealthCheck(pendingUpdatesHealthCheck);
 
         Strut strut = new Strut(cache);
+        FstRemotePartitionReader remotePartitionReader = new FstRemotePartitionReader(miruProvider.getReaderHttpClient(),
+            miruProvider.getReaderStrategyCache(),
+            false);
+        StrutRemotePartition strutRemotePartition = new StrutRemotePartition(remotePartitionReader);
+
         MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
         StrutModelScorer modelScorer = new StrutModelScorer(miruProvider,
             strut,
+            strutRemotePartition,
             aggregateUtil,
             pendingUpdates,
             config.getStrutTopNValuesPerFeature(),
             config.getMaxHeapPressureInBytes(),
-            config.getQueueStripeCount());
+            config.getQueueStripeCount(),
+            config.getShareScores());
         modelScorer.start(asyncExecutorService, config.getQueueStripeCount(), config.getQueueConsumeIntervalMillis());
 
         return Collections.singletonList(new MiruEndpointInjectable<>(

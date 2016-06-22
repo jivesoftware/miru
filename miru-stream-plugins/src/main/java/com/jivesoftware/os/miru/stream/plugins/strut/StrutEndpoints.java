@@ -78,4 +78,29 @@ public class StrutEndpoints {
             return Response.serverError().build();
         }
     }
+
+    @POST
+    @Path(StrutConstants.SHARE_ENDPOINT)
+    @Consumes(MediaType.APPLICATION_OCTET_STREAM)
+    @Produces(MediaType.APPLICATION_OCTET_STREAM)
+    public Response strutShare(byte[] rawBytes) {
+        StrutShare share;
+        try {
+            share = (StrutShare) conf.asObject(rawBytes);
+        } catch (Exception e) {
+            log.error("Failed to deserialize request", e);
+            return Response.serverError().build();
+        }
+
+        try {
+            injectable.share(share);
+            return Response.ok("success", MediaType.APPLICATION_OCTET_STREAM).build();
+        } catch (MiruPartitionUnavailableException e) {
+            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Unavailable " + e.getMessage()).build();
+        } catch (Exception e) {
+            log.error("Failed to share strut for tenantId:{} partitionId:{} catwalkId:{} modelId:{}",
+                new Object[] { share.tenantId, share.partitionId, share.catwalkQuery != null ? share.catwalkQuery.catwalkId : null, share.modelId }, e);
+            return Response.serverError().build();
+        }
+    }
 }

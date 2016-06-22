@@ -54,6 +54,38 @@ public class FilerPluginCacheProvider implements MiruPluginCacheProvider {
     }
 
     @Override
+    public LastIdCacheKeyValues getLastIdKeyValues(String name,
+        int payloadSize,
+        boolean variablePayloadSize,
+        long maxHeapPressureInBytes) {
+        return new LastIdCacheKeyValues() {
+            @Override
+            public String name() {
+                return name;
+            }
+
+            @Override
+            public boolean get(byte[] cacheId, byte[][] keys, LastIdIndexKeyValueStream stream, StackBuffer stackBuffer) throws Exception {
+                return true;
+            }
+
+            @Override
+            public boolean rangeScan(byte[] cacheId, byte[] fromInclusive, byte[] toExclusive, LastIdKeyValueStream stream) throws Exception {
+                return true;
+            }
+
+            @Override
+            public boolean put(byte[] cacheId,
+                boolean commitOnUpdate,
+                boolean fsyncOnCommit,
+                ConsumeLastIdKeyValueStream consume,
+                StackBuffer stackBuffer) throws Exception {
+                return consume.consume((key, value, timestamp) -> true); // lol
+            }
+        };
+    }
+
+    @Override
     public TimestampedCacheKeyValues getTimestampedKeyValues(String name, int payloadSize, boolean variablePayloadSize, long maxHeapPressureInBytes) {
         return new TimestampedCacheKeyValues() {
             @Override

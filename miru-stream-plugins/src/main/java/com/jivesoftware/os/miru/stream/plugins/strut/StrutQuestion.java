@@ -34,7 +34,6 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.solution.Question;
 import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkQuery;
-import com.jivesoftware.os.miru.stream.plugins.strut.Strut.Scored;
 import com.jivesoftware.os.miru.stream.plugins.strut.StrutModelScorer.LastIdAndTermId;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -42,9 +41,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * @author jonathan
@@ -158,7 +155,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             .maximumSize(request.query.desiredNumberOfResults)
             .create();
 
-        MiruPluginCacheProvider.CacheKeyValues termScoresCache = modelScorer.getTermScoreCache(context, request.query.catwalkId, catwalkQuery);
+        MiruPluginCacheProvider.LastIdCacheKeyValues termScoresCache = modelScorer.getTermScoreCache(context, catwalkQuery);
 
         AtomicInteger modelTotalPartitionCount = new AtomicInteger();
 

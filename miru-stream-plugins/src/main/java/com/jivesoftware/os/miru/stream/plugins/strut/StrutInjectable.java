@@ -1,6 +1,8 @@
 package com.jivesoftware.os.miru.stream.plugins.strut;
 
 import com.google.common.base.Optional;
+import com.jivesoftware.os.miru.api.MiruHost;
+import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -88,7 +90,8 @@ public class StrutInjectable {
             throw e;
         } catch (Exception e) {
             //TODO throw http error codes
-            throw new MiruQueryServiceException("Failed remote strut for partition: " + partitionId.getId(), e);
+            throw new MiruQueryServiceException("Failed remote strut for tenant: " + requestAndReport.request.tenantId +
+                " partition: " + partitionId.getId(), e);
         }
     }
 
@@ -116,8 +119,19 @@ public class StrutInjectable {
             throw e;
         } catch (Exception e) {
             //TODO throw http error codes
-            throw new MiruQueryServiceException("Failed single strut for partition: " + partitionId.getId(), e);
+            throw new MiruQueryServiceException("Failed single strut for tenant: " + request.tenantId + " partition: " + partitionId.getId(), e);
         }
     }
 
+    public void share(StrutShare share) throws MiruQueryServiceException, InterruptedException {
+        try {
+            MiruHost host = provider.getHost();
+            modelScorer.shareIn(new MiruPartitionCoord(share.tenantId, share.partitionId, host), share);
+        } catch (MiruPartitionUnavailableException | InterruptedException e) {
+            throw e;
+        } catch (Exception e) {
+            //TODO throw http error codes
+            throw new MiruQueryServiceException("Failed to share strut for tenant: " + share.tenantId + " partition: " + share.partitionId.getId(), e);
+        }
+    }
 }

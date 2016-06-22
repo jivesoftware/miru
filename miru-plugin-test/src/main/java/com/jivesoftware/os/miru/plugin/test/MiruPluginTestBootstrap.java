@@ -326,6 +326,11 @@ public class MiruPluginTestBootstrap {
             }
 
             @Override
+            public MiruHost getHost() {
+                return miruHost;
+            }
+
+            @Override
             public MiruActivityInternExtern getActivityInternExtern(MiruTenantId tenantId) {
                 return activityInternExtern;
             }
