@@ -5,12 +5,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkQuery;
+import java.io.Serializable;
 import java.util.List;
 
 /**
  *
  */
-public class StrutShare {
+public class StrutShare implements Serializable {
 
     public final MiruTenantId tenantId;
     public final MiruPartitionId partitionId;
