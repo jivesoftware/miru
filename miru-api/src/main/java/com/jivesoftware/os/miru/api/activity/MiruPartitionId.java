@@ -2,11 +2,12 @@ package com.jivesoftware.os.miru.api.activity;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.io.Serializable;
 
 /**
  *
  */
-public class MiruPartitionId implements Comparable<MiruPartitionId> {
+public class MiruPartitionId implements Comparable<MiruPartitionId>, Serializable {
 
     private final int id;
 
