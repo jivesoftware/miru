@@ -47,7 +47,7 @@ public class LabPluginCacheProvider implements MiruPluginCacheProvider {
                 ValueIndex[] cacheIndexes = new ValueIndex[labEnvironments.length];
                 for (int i = 0; i < cacheIndexes.length; i++) {
                     // currently not commitable, as the commit is done immediately at write time
-                    cacheIndexes[i] = labEnvironments[i].open("pluginCache-" + key,
+                    cacheIndexes[i] = labEnvironments[i].open("pluginCache-" + key, // serialization compatible with lastId keyValues
                         4096,
                         maxHeapPressureInBytes,
                         10 * 1024 * 1024,
@@ -69,7 +69,7 @@ public class LabPluginCacheProvider implements MiruPluginCacheProvider {
                 ValueIndex[] cacheIndexes = new ValueIndex[labEnvironments.length];
                 for (int i = 0; i < cacheIndexes.length; i++) {
                     // currently not commitable, as the commit is done immediately at write time
-                    cacheIndexes[i] = labEnvironments[i].open("lastIdCache-" + key,
+                    cacheIndexes[i] = labEnvironments[i].open("pluginCache-" + key, // serialization compatible with plain keyValues
                         4096,
                         maxHeapPressureInBytes,
                         10 * 1024 * 1024,
