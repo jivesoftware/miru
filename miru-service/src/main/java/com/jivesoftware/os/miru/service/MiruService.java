@@ -345,6 +345,16 @@ public class MiruService implements Miru {
         return partitionDirector.getQueryablePartition(coord);
     }
 
+    @Override
+    public OrderedPartitions<?, ?> getOrderedPartitions(String requestName,
+        String queryKey,
+        MiruPartitionCoord coord) throws Exception {
+        return partitionDirector.queryablePartitionInOrder(coord.tenantId,
+            coord.partitionId,
+            requestName,
+            queryKey);
+    }
+
     private Optional<? extends MiruQueryablePartition<?, ?>> getLocalTenantPartition(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         MiruPartitionCoord localPartitionCoord = new MiruPartitionCoord(tenantId, partitionId, localhost);
         return partitionDirector.getQueryablePartition(localPartitionCoord);

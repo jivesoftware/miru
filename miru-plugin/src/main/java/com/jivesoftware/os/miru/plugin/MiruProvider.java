@@ -24,6 +24,8 @@ public interface MiruProvider<T extends Miru> {
 
     T getMiru(MiruTenantId tenantId);
 
+    MiruHost getHost();
+
     MiruActivityInternExtern getActivityInternExtern(MiruTenantId tenantId);
 
     MiruJustInTimeBackfillerizer getBackfillerizer(MiruTenantId tenantId);

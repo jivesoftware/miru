@@ -1,13 +1,19 @@
 package com.jivesoftware.os.miru.stream.plugins.strut;
 
 import com.google.common.base.Optional;
+import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.MiruHost;
+import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
+import com.jivesoftware.os.miru.plugin.partition.MiruQueryablePartition;
+import com.jivesoftware.os.miru.plugin.partition.OrderedPartitions;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
 import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartitionReader;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.mlogger.core.EndPointMetrics;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -43,5 +49,36 @@ public class StrutRemotePartition implements MiruRemotePartition<StrutQuery, Str
             report,
             endPointMetrics,
             StrutAnswer.EMPTY_RESULTS);
+    }
+
+    public void shareRemote(String queryKey,
+        MiruPartitionCoord coord,
+        OrderedPartitions<?, ?> orderedPartitions,
+        StrutShare share) {
+        String endpoint = StrutConstants.STRUT_PREFIX + StrutConstants.SHARE_ENDPOINT;
+        for (MiruQueryablePartition<?, ?> partition : orderedPartitions.partitions) {
+            if (!partition.isLocal()) {
+                MiruPartitionCoord remote = partition.getCoord();
+                try {
+                    LOG.info("Sharing catwalkId:{} modelId:{} count:{} with {}", share.catwalkQuery.catwalkId, share.modelId, share.updates.size(), remote);
+                    remotePartitionReader.read(queryKey,
+                        remote.host,
+                        endpoint,
+                        new MiruRequest<>("strut/share",
+                            coord.tenantId,
+                            MiruActorId.NOT_PROVIDED,
+                            MiruAuthzExpression.NOT_PROVIDED,
+                            share,
+                            MiruSolutionLogLevel.NONE),
+                        String.class,
+                        Optional.absent(),
+                        endPointMetrics,
+                        null);
+                } catch (MiruQueryServiceException e) {
+                    LOG.warn("Failed to share strut updates with {}", new Object[] { remote }, e);
+                }
+            }
+        }
+
     }
 }

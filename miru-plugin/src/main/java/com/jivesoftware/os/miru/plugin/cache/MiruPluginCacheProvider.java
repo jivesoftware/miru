@@ -33,6 +33,35 @@ public interface MiruPluginCacheProvider {
         boolean stream(byte[] key, byte[] value) throws Exception;
     }
 
+    LastIdCacheKeyValues getLastIdKeyValues(String name, int payloadSize, boolean variablePayloadSize, long maxHeapPressureInBytes);
+
+    interface LastIdCacheKeyValues {
+
+        String name();
+
+        boolean get(byte[] cacheId, byte[][] keys, LastIdIndexKeyValueStream stream, StackBuffer stackBuffer) throws Exception;
+
+        boolean rangeScan(byte[] cacheId, byte[] fromInclusive, byte[] toExclusive, LastIdKeyValueStream stream) throws Exception;
+
+        boolean put(byte[] cacheId,
+            boolean commitOnUpdate,
+            boolean fsyncOnCommit,
+            ConsumeLastIdKeyValueStream consume,
+            StackBuffer stackBuffer) throws Exception;
+    }
+
+    interface LastIdIndexKeyValueStream {
+        boolean stream(int index, byte[] key, byte[] value, int lastId) throws Exception;
+    }
+
+    interface LastIdKeyValueStream {
+        boolean stream(byte[] key, byte[] value, int lastId) throws Exception;
+    }
+
+    interface ConsumeLastIdKeyValueStream {
+        boolean consume(LastIdKeyValueStream stream) throws Exception;
+    }
+
     TimestampedCacheKeyValues getTimestampedKeyValues(String name, int payloadSize, boolean variablePayloadSize, long maxHeapPressureInBytes);
 
     interface TimestampedCacheKeyValues {

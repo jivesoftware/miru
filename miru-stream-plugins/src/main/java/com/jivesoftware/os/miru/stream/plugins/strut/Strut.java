@@ -1,7 +1,6 @@
 package com.jivesoftware.os.miru.stream.plugins.strut;
 
 import com.google.common.collect.Lists;
-import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
@@ -275,45 +274,6 @@ public class Strut {
             scaledCounts[i] = (!Float.isNaN(scaled[i]) && scaled[i] > 0f) ? 1 : 0;
         }
         return finalizeScore(scaled, scaledCounts, strategy);
-    }
-
-    static class Scored implements Comparable<Scored> {
-
-        int lastId;
-        MiruTermId term;
-        int scoredToLastId;
-        float scaledScore;
-        float[] scores;
-        List<Hotness>[] features;
-
-        public Scored(int lastId,
-            MiruTermId term,
-            int scoredToLastId,
-            float scaledScore,
-            float[] scores,
-            List<Hotness>[] features) {
-
-            this.lastId = lastId;
-            this.term = term;
-            this.scaledScore = scaledScore;
-            this.scoredToLastId = scoredToLastId;
-            this.scores = scores;
-            this.features = features;
-        }
-
-        @Override
-        public int compareTo(Scored o) {
-            int c = Float.compare(o.scaledScore, scaledScore); // reversed
-            if (c != 0) {
-                return c;
-            }
-            c = Integer.compare(o.lastId, lastId); // reversed
-            if (c != 0) {
-                return c;
-            }
-            return term.compareTo(o.term);
-        }
-
     }
 
     /*public static void main(String[] args) {

@@ -385,6 +385,11 @@ public class MiruReaderMain {
                 }
 
                 @Override
+                public MiruHost getHost() {
+                    return miruHost;
+                }
+
+                @Override
                 public MiruActivityInternExtern getActivityInternExtern(MiruTenantId tenantId) {
                     return internExtern;
                 }

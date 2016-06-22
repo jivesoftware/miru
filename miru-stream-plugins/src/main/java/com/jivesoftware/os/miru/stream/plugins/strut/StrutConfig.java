@@ -45,4 +45,7 @@ public interface StrutConfig extends Config {
 
     @BooleanDefault(false)
     boolean getAllowImmediateStrutRescore();
+
+    @BooleanDefault(true)
+    boolean getShareScores();
 }

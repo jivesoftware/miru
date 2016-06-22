@@ -6,9 +6,11 @@ import com.jivesoftware.os.lab.LABEnvironment;
 import com.jivesoftware.os.lab.LABRawhide;
 import com.jivesoftware.os.lab.api.ValueIndex;
 import com.jivesoftware.os.miru.plugin.cache.LabCacheKeyValues;
+import com.jivesoftware.os.miru.plugin.cache.LabLastIdCacheKeyValues;
 import com.jivesoftware.os.miru.plugin.cache.LabTimestampedCacheKeyValues;
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider;
 import com.jivesoftware.os.miru.plugin.context.KeyValueRawhide;
+import com.jivesoftware.os.miru.plugin.context.LastIdKeyValueRawhide;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.Map;
@@ -24,6 +26,7 @@ public class LabPluginCacheProvider implements MiruPluginCacheProvider {
     private final LABEnvironment[] labEnvironments;
 
     private final Map<String, LabCacheKeyValues> pluginPersistentCache = Maps.newConcurrentMap();
+    private final Map<String, LabLastIdCacheKeyValues> lastIdPluginPersistentCache = Maps.newConcurrentMap();
     private final Map<String, LabTimestampedCacheKeyValues> timestampedPluginPersistentCache = Maps.newConcurrentMap();
     private final Object[] stripedLocks;
 
@@ -53,6 +56,28 @@ public class LabPluginCacheProvider implements MiruPluginCacheProvider {
                         new KeyValueRawhide());
                 }
                 return new LabCacheKeyValues(name, idProvider, cacheIndexes);
+            } catch (Exception x) {
+                throw new RuntimeException("Failed to initialize plugin cache", x);
+            }
+        });
+    }
+
+    @Override
+    public LastIdCacheKeyValues getLastIdKeyValues(String name, int payloadSize, boolean variablePayloadSize, long maxHeapPressureInBytes) {
+        return lastIdPluginPersistentCache.computeIfAbsent(name, (key) -> {
+            try {
+                ValueIndex[] cacheIndexes = new ValueIndex[labEnvironments.length];
+                for (int i = 0; i < cacheIndexes.length; i++) {
+                    // currently not commitable, as the commit is done immediately at write time
+                    cacheIndexes[i] = labEnvironments[i].open("lastIdCache-" + key,
+                        4096,
+                        maxHeapPressureInBytes,
+                        10 * 1024 * 1024,
+                        -1L,
+                        -1L,
+                        new LastIdKeyValueRawhide());
+                }
+                return new LabLastIdCacheKeyValues(name, idProvider, cacheIndexes);
             } catch (Exception x) {
                 throw new RuntimeException("Failed to initialize plugin cache", x);
             }

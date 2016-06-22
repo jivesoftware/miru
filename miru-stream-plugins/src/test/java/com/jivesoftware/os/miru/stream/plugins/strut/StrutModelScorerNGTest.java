@@ -25,11 +25,9 @@ import com.jivesoftware.os.lab.LabHeapPressure;
 import com.jivesoftware.os.lab.api.ValueIndex;
 import com.jivesoftware.os.lab.guts.Leaps;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
-import com.jivesoftware.os.miru.plugin.cache.LabCacheKeyValues;
-import com.jivesoftware.os.miru.plugin.cache.MiruFilerCacheKeyValues;
-import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.CacheKeyValues;
+import com.jivesoftware.os.miru.plugin.cache.LabLastIdCacheKeyValues;
+import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.LastIdCacheKeyValues;
 import com.jivesoftware.os.miru.plugin.context.KeyValueRawhide;
-import com.jivesoftware.os.miru.stream.plugins.strut.Strut.Scored;
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
@@ -43,7 +41,7 @@ import org.testng.annotations.Test;
  */
 public class StrutModelScorerNGTest {
 
-    @Test
+    @Test(enabled = false, description = "No filer cache impl")
     public void testChunk() throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
         ByteBufferFactory byteBufferFactory = new HeapByteBufferFactory();
@@ -82,7 +80,7 @@ public class StrutModelScorerNGTest {
 
         }
 
-        MiruFilerCacheKeyValues cacheKeyValues = new MiruFilerCacheKeyValues("test", cacheStores);
+        LastIdCacheKeyValues cacheKeyValues = null; //new MiruFilerCacheKeyValues("test", cacheStores);
 
         assertScores(modelId, cacheKeyValues, stackBuffer);
 
@@ -106,17 +104,17 @@ public class StrutModelScorerNGTest {
             stores[i] = env.open("cache-" + i + "-" + catwalkId, 4096, 1024 * 1024, 0, 0, 0, new KeyValueRawhide());
         }
 
-        CacheKeyValues cacheKeyValues = new LabCacheKeyValues("test", new OrderIdProviderImpl(new ConstantWriterIdProvider(1)), stores);
+        LastIdCacheKeyValues cacheKeyValues = new LabLastIdCacheKeyValues("test", new OrderIdProviderImpl(new ConstantWriterIdProvider(1)), stores);
 
         assertScores(modelId, cacheKeyValues, new StackBuffer());
 
     }
 
-    private void assertScores(String modelId, CacheKeyValues cacheKeyValues, StackBuffer stackBuffer) throws Exception {
-        MiruTermId[] termIds = new MiruTermId[]{
-            new MiruTermId(new byte[]{(byte) 124}),
-            new MiruTermId(new byte[]{(byte) 124, (byte) 124}),
-            new MiruTermId(new byte[]{(byte) 124, (byte) 124, (byte) 124, (byte) 124})
+    private void assertScores(String modelId, LastIdCacheKeyValues cacheKeyValues, StackBuffer stackBuffer) throws Exception {
+        MiruTermId[] termIds = new MiruTermId[] {
+            new MiruTermId(new byte[] { (byte) 124 }),
+            new MiruTermId(new byte[] { (byte) 124, (byte) 124 }),
+            new MiruTermId(new byte[] { (byte) 124, (byte) 124, (byte) 124, (byte) 124 })
         };
 
         StrutModelScorer.score(modelId, 1, termIds, cacheKeyValues, (int termIndex, float[] scores, int lastId) -> {
@@ -127,7 +125,7 @@ public class StrutModelScorerNGTest {
 
         List<Scored> updates = Lists.newArrayList();
         for (int i = 0; i < 1; i++) {
-            updates.add(new Scored(-1, new MiruTermId(new byte[]{(byte) 97, (byte) (97 + i)}), 10, 0.5f, new float[]{0.5f}, null));
+            updates.add(new Scored(-1, new MiruTermId(new byte[] { (byte) 97, (byte) (97 + i) }), 10, 0.5f, new float[] { 0.5f }, null));
         }
 
         StrutModelScorer.commit(modelId, cacheKeyValues, updates, stackBuffer);
