@@ -72,6 +72,7 @@ public class MiruAggregateUtil {
     }
 
     public <BM extends IBM, IBM> void gatherFeatures(String name,
+        MiruPartitionCoord coord,
         MiruBitmaps<BM, IBM> bitmaps,
         GetAllTermIds getAllTermIds,
         int fieldCount,
@@ -141,11 +142,13 @@ public class MiruAggregateUtil {
                         int featureId = feature.featureId;
                         if (featureId == -1) {
                             if (lastScoredId[0] != -1) {
-                                LOG.error("Cache found multiple lastScoredIds for name:{} cacheName:{} termId:{}", name, termFeatureCache.name(), answerTermId);
+                                LOG.error("Cache found multiple lastScoredIds for name:{} coord:{} cacheName:{} termId:{}",
+                                    name, coord, termFeatureCache.name(), answerTermId);
                             }
                             lastScoredId[0] = (int) timestamp;
                         } else {
-                            LOG.error("Cache was missing a lastScoredId for name:{} cacheName:{} termId:{}", name, termFeatureCache.name(), answerTermId);
+                            LOG.error("Cache was missing a lastScoredId for name:{} coord:{} cacheName:{} termId:{}",
+                                name, coord, termFeatureCache.name(), answerTermId);
                         }
                         return false;
                     });
@@ -165,8 +168,8 @@ public class MiruAggregateUtil {
                         if (featureId == -1) {
                             if (lastScoredId[0] != (int) timestamp) {
                                 discardFeatures[0] = true;
-                                LOG.warn("Found name:{} cacheName:{} termId:{} feature:{} timestamp:{} which is more recent than lastScoredId:{}",
-                                    name, termFeatureCache.name(), answerTermId, feature, timestamp, lastScoredId[0]);
+                                LOG.warn("Found name:{} coord:{} cacheName:{} termId:{} feature:{} timestamp:{} which is more recent than lastScoredId:{}",
+                                    name, coord, termFeatureCache.name(), answerTermId, feature, timestamp, lastScoredId[0]);
                                 return false;
                             }
                             return true;
@@ -174,8 +177,8 @@ public class MiruAggregateUtil {
 
                         if (timestamp > lastScoredId[0]) {
                             discardFeatures[0] = true;
-                            LOG.warn("Found name:{} cacheName:{} termId:{} feature:{} timestamp:{} which is more recent than lastScoredId:{}",
-                                name, termFeatureCache.name(), answerTermId, feature, timestamp, lastScoredId[0]);
+                            LOG.warn("Found name:{} coord:{} cacheName:{} termId:{} feature:{} timestamp:{} which is more recent than lastScoredId:{}",
+                                name, coord, termFeatureCache.name(), answerTermId, feature, timestamp, lastScoredId[0]);
                             return false;
                         }
 
@@ -265,9 +268,9 @@ public class MiruAggregateUtil {
             }
             return stream.stream(streamIndex, lastId, answerFieldId, answerTermId, answerScoredLastId, -1, null, -1);
         });
-        LOG.info("Gathered name:{} features:{} terms:{} elapsed:{}" +
+        LOG.info("Gathered name:{} coord:{} features:{} terms:{} elapsed:{}" +
                 " - cacheName:{} skipped:{} consumed:{} fromId:{}/{} toId:{}/{} cacheHits={} cacheSaves={}",
-            name, metrics.featureCount, metrics.termCount, System.currentTimeMillis() - start,
+            name, coord, metrics.featureCount, metrics.termCount, System.currentTimeMillis() - start,
             cacheName,
             metrics.skippedCount, metrics.consumedCount,
             metrics.minFromId, metrics.maxFromId,

@@ -15,6 +15,10 @@ import com.jivesoftware.os.lab.LABRawhide;
 import com.jivesoftware.os.lab.LabHeapPressure;
 import com.jivesoftware.os.lab.api.ValueIndex;
 import com.jivesoftware.os.lab.guts.Leaps;
+import com.jivesoftware.os.miru.api.MiruHost;
+import com.jivesoftware.os.miru.api.MiruPartitionCoord;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.bitmaps.roaring5.MiruBitmapsRoaring;
 import com.jivesoftware.os.miru.plugin.cache.LabTimestampedCacheKeyValues;
@@ -37,6 +41,7 @@ public class MiruAggregateUtilTest {
 
     @Test
     public void testGatherFeatures() throws Exception {
+        MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("localhost"));
         MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
         MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
         StackBuffer stackBuffer = new StackBuffer();
@@ -101,6 +106,7 @@ public class MiruAggregateUtilTest {
         for (int toId : new int[] { 0, 1, 2, 3, 4, 5 }) {
             System.out.println("-------------------------------- toId: " + toId + " --------------------------------");
             aggregateUtil.gatherFeatures("test",
+                coord,
                 bitmaps,
                 getAllTermIds,
                 fieldCount,

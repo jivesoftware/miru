@@ -135,6 +135,7 @@ public class Strut {
             @SuppressWarnings("unchecked")
             List<MiruTermId[]>[] featuredTermIds = new List[catwalkFeatures.length];
             aggregateUtil.gatherFeatures(name,
+                coord,
                 bitmaps,
                 activityIndex::getAll,
                 schema.fieldCount(),

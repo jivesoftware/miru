@@ -91,6 +91,7 @@ public class Catwalk {
 
         long[] modelCounts = new long[features.length];
         aggregateUtil.gatherFeatures(name,
+            coord,
             bitmaps,
             activityIndex::getAll,
             schema.fieldCount(),
