@@ -97,6 +97,7 @@ public class MiruAmzaServiceInitializer {
         int port,
         String clusterName,
         MiruAmzaServiceConfig config,
+        boolean useAmzaDiscovery,
         RowChanges allRowChanges) throws Exception {
 
         RingMember ringMember = new RingMember(
@@ -189,7 +190,9 @@ public class MiruAmzaServiceInitializer {
         System.out.println("|      Amza Service Online");
         System.out.println("-----------------------------------------------------------------------");
 
-        routingBirdAmzaDiscovery.start();
+        if (useAmzaDiscovery) {
+            routingBirdAmzaDiscovery.start();
+        }
 
         System.out.println("-----------------------------------------------------------------------");
         System.out.println("|     Amza Service is in Routing Bird Discovery mode");

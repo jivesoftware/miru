@@ -78,7 +78,7 @@ public class MiruManageServiceTest {
         acrc.setWorkingDirectories(amzaDataDir.getAbsolutePath());
         Deployable deployable = new Deployable(new String[0]);
         AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable, "routesHost", 1, "connectionHealthPath", 1, "instanceKey",
-            "serviceName", "datacenter", "rack", "localhost", 10000, null, acrc,
+            "serviceName", "datacenter", "rack", "localhost", 10000, null, acrc, false,
             rowsChanged -> {
             });
         MiruClusterRegistry clusterRegistry = new AmzaClusterRegistry(amzaService,

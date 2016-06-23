@@ -34,10 +34,11 @@ import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndexProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.index.MiruTxIndex;
-import com.jivesoftware.os.miru.plugin.partition.TrackError;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.rcvs.marshall.api.UtilLexMarshaller;
+import gnu.trove.iterator.TObjectIntIterator;
+import gnu.trove.map.hash.TObjectIntHashMap;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -744,9 +745,7 @@ public class MiruAggregateUtil {
 
     public <BM extends IBM, IBM, S extends MiruSipCursor<S>> void stream(String name,
         MiruBitmaps<BM, IBM> bitmaps,
-        TrackError trackError,
         MiruRequestContext<BM, IBM, S> requestContext,
-        MiruPartitionCoord coord,
         BM initialAnswer,
         Optional<BM> optionalCounter,
         int pivotFieldId,
@@ -873,11 +872,22 @@ public class MiruAggregateUtil {
         int pivotFieldId,
         int batchSize,
         boolean descending,
+        boolean includeCounts,
         MiruSolutionLog solutionLog,
         LastIdAndTermIdStream lastIdAndTermIdStream,
         StackBuffer stackBuffer) throws Exception {
 
-        gatherActivityLookup(name, bitmaps, requestContext, answer, pivotFieldId, batchSize, descending, solutionLog, lastIdAndTermIdStream, stackBuffer);
+        gatherActivityLookup(name,
+            bitmaps,
+            requestContext,
+            answer,
+            pivotFieldId,
+            batchSize,
+            descending,
+            includeCounts,
+            solutionLog,
+            lastIdAndTermIdStream,
+            stackBuffer);
 
         /*MiruFieldDefinition fieldDefinition = requestContext.getSchema().getFieldDefinition(pivotFieldId);
         if (fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.indexedValueBits)) {
@@ -908,6 +918,7 @@ public class MiruAggregateUtil {
             solutionLog,
             stackBuffer);
     }*/
+
     private <BM extends IBM, IBM, S extends MiruSipCursor<S>> void gatherActivityLookup(String name,
         MiruBitmaps<BM, IBM> bitmaps,
         MiruRequestContext<BM, IBM, S> requestContext,
@@ -915,6 +926,7 @@ public class MiruAggregateUtil {
         int pivotFieldId,
         int batchSize,
         boolean descending,
+        boolean includeCounts,
         MiruSolutionLog solutionLog,
         LastIdAndTermIdStream lastIdAndTermIdStream,
         StackBuffer stackBuffer) throws Exception {
@@ -928,7 +940,7 @@ public class MiruAggregateUtil {
         }
 
         FieldMultiTermTxIndex<BM, IBM> multiTermTxIndex = new FieldMultiTermTxIndex<>(name, primaryFieldIndex, pivotFieldId, -1);
-        Set<MiruTermId> distincts = Sets.newHashSetWithExpectedSize(batchSize);
+        TObjectIntHashMap<MiruTermId> distincts = new TObjectIntHashMap<>(batchSize);
 
         int[] ids = new int[batchSize];
         int gets = 0;
@@ -971,25 +983,38 @@ public class MiruAggregateUtil {
                 MiruTermId[] termIds = all[i];
                 if (termIds != null && termIds.length > 0) {
                     for (MiruTermId termId : termIds) {
-                        if (distincts.add(termId)) {
-                            if (!lastIdAndTermIdStream.stream(ids[i], termId)) {
-                                break done;
-                            }
-                        }
+                        distincts.putIfAbsent(termId, ids[i]);
                     }
                 }
             }
 
-            MiruTermId[] termIds = distincts.toArray(new MiruTermId[distincts.size()]);
-            multiTermTxIndex.setTermIds(termIds);
+            MiruTermId[] termIds = new MiruTermId[distincts.size()];
+            int[] lastIds = new int[distincts.size()];
+            TObjectIntIterator<MiruTermId> iter = distincts.iterator();
+            for (int i = 0; iter.hasNext(); i++) {
+                iter.advance();
+                termIds[i] = iter.key();
+                lastIds[i] = iter.value();
+            }
+
+            long[] counts = includeCounts ? new long[distincts.size()] : null;
 
             start = System.nanoTime();
+            MiruTermId[] consumableTermIds = new MiruTermId[termIds.length];
+            System.arraycopy(termIds, 0, consumableTermIds, 0, termIds.length);
+            multiTermTxIndex.setTermIds(consumableTermIds);
             if (bitmaps.supportsInPlace()) {
-                bitmaps.inPlaceAndNotMultiTx(answer, multiTermTxIndex, stackBuffer);
+                bitmaps.inPlaceAndNotMultiTx(answer, multiTermTxIndex, counts, stackBuffer);
             } else {
-                answer = bitmaps.andNotMultiTx(answer, multiTermTxIndex, stackBuffer);
+                answer = bitmaps.andNotMultiTx(answer, multiTermTxIndex, counts, stackBuffer);
             }
             andNotCost += (System.nanoTime() - start);
+
+            for (int i = 0; i < termIds.length; i++) {
+                if (!lastIdAndTermIdStream.stream(lastIds[i], termIds[i], includeCounts ? counts[i] : -1)) {
+                    break done;
+                }
+            }
         }
         solutionLog.log(MiruSolutionLogLevel.INFO, "gather aggregate gets:{} fetched:{} used:{} getAllCost:{} andNotCost:{}",
             gets, fetched, used, getAllCost, andNotCost);

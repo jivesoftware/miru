@@ -1,7 +1,9 @@
 package com.jivesoftware.os.miru.stream.plugins.catwalk;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
+import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruHost;
@@ -45,6 +47,7 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
     private final MiruRequest<CatwalkQuery> request;
     private final MiruRemotePartition<CatwalkQuery, CatwalkAnswer, CatwalkReport> remotePartition;
     private final int topNValuesPerFeature;
+    private final int topNTermsPerNumerator;
     private final long maxHeapPressureInBytes;
 
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
@@ -54,11 +57,13 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
         MiruRequest<CatwalkQuery> request,
         MiruRemotePartition<CatwalkQuery, CatwalkAnswer, CatwalkReport> remotePartition,
         int topNValuesPerFeature,
+        int topNTermsPerNumerator,
         long maxHeapPressureInBytes) {
         this.catwalk = catwalk;
         this.request = request;
         this.remotePartition = remotePartition;
         this.topNValuesPerFeature = topNValuesPerFeature;
+        this.topNTermsPerNumerator = topNTermsPerNumerator;
         this.maxHeapPressureInBytes = maxHeapPressureInBytes;
     }
 
@@ -87,12 +92,6 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
         List<IBM> ands = new ArrayList<>();
         ands.add(bitmaps.buildIndexMask(lastId, context.getRemovalIndex().getIndex(stackBuffer)));
 
-        @SuppressWarnings("unchecked")
-        Set<MiruTermId>[] numeratorTermSets = new Set[request.query.gatherFilters.length];
-        for (int i = 0; i < numeratorTermSets.length; i++) {
-            numeratorTermSets[i] = Sets.newHashSet();
-        }
-
         if (!MiruAuthzExpression.NOT_PROVIDED.equals(request.authzExpression)) {
             ands.add(context.getAuthzIndex().getCompositeAuthz(request.authzExpression, stackBuffer));
         }
@@ -108,8 +107,9 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
         Set<MiruTermId> termIds = Sets.newHashSet();
         int pivotFieldId = context.getSchema().getFieldId(request.query.gatherField);
 
+        @SuppressWarnings("unchecked")
+        Set<MiruTermId>[] numeratorTermSets = new Set[request.query.gatherFilters.length];
         for (int i = 0; i < numeratorTermSets.length; i++) {
-            int ni = i;
             MiruFilter gatherFilter = request.query.gatherFilters[i];
             List<IBM> gatherAnds;
             if (MiruFilter.NO_FILTER.equals(gatherFilter)) {
@@ -131,11 +131,14 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
             bitmapsDebug.debug(solutionLog, bitmaps, "gatherAnds", gatherAnds);
             BM eligible = bitmaps.and(gatherAnds);
 
-            aggregateUtil.gather("catwalk", bitmaps, context, eligible, pivotFieldId, 100, false, solutionLog, (lastId1, termId) -> {
-                numeratorTermSets[ni].add(termId);
-                termIds.add(termId);
+            MinMaxPriorityQueue<TermIdAndCount> topNTermIds = MinMaxPriorityQueue.maximumSize(topNTermsPerNumerator).create();
+            aggregateUtil.gather("catwalk", bitmaps, context, eligible, pivotFieldId, 100, false, true, solutionLog, (lastId1, termId, count) -> {
+                topNTermIds.add(new TermIdAndCount(termId, count));
                 return true;
             }, stackBuffer);
+
+            numeratorTermSets[i] = Sets.newHashSet(Collections2.transform(topNTermIds, input -> input.termId));
+            termIds.addAll(numeratorTermSets[i]);
         }
 
         CatwalkFeature[] features = request.query.features;
@@ -202,6 +205,25 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
                 numeratorTermSets,
                 solutionLog),
             solutionLog.asList());
+    }
+
+    private static class TermIdAndCount implements Comparable<TermIdAndCount> {
+        public final MiruTermId termId;
+        public final long count;
+
+        public TermIdAndCount(MiruTermId termId, long count) {
+            this.termId = termId;
+            this.count = count;
+        }
+
+        @Override
+        public int compareTo(TermIdAndCount o) {
+            int c = Long.compare(o.count, count); // descending
+            if (c != 0) {
+                return c;
+            }
+            return termId.compareTo(o.termId); // for stability
+        }
     }
 
     @Override

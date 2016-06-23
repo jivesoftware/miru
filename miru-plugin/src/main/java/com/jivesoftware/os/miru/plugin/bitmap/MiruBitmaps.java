@@ -104,9 +104,15 @@ public interface MiruBitmaps<BM extends IBM, IBM> {
 
     void inPlaceAndNot(BM original, MiruInvertedIndex<BM, IBM> not, StackBuffer stackBuffer) throws Exception;
 
-    BM andNotMultiTx(BM original, MiruMultiTxIndex<IBM> multiTermTxIndex, StackBuffer stackBuffer) throws Exception;
+    BM andNotMultiTx(BM original,
+        MiruMultiTxIndex<IBM> multiTermTxIndex,
+        long[] counts,
+        StackBuffer stackBuffer) throws Exception;
 
-    void inPlaceAndNotMultiTx(BM original, MiruMultiTxIndex<IBM> multiTermTxIndex, StackBuffer stackBuffer) throws Exception;
+    void inPlaceAndNotMultiTx(BM original,
+        MiruMultiTxIndex<IBM> multiTermTxIndex,
+        long[] counts,
+        StackBuffer stackBuffer) throws Exception;
 
     void multiTx(MiruMultiTxIndex<IBM> multiTermTxIndex, IndexAlignedBitmapStream<BM> stream, StackBuffer stackBuffer) throws Exception;
 

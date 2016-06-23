@@ -3,6 +3,8 @@ package com.jivesoftware.os.miru.service.partition;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.plugin.partition.TrackError;
+import com.jivesoftware.os.mlogger.core.MetricLogger;
+import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.health.HealthCheck;
 import com.jivesoftware.os.routing.bird.health.HealthCheckResponse;
 import com.jivesoftware.os.routing.bird.health.HealthCheckResponseImpl;
@@ -33,6 +35,8 @@ public class PartitionErrorTracker implements HealthCheck {
         Float getHealthOnError();
     }
 
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
+
     private final PartitionErrorTrackerConfig config;
 
     private final Set<MiruPartitionCoord> errorsBeforeRebuild = Collections.newSetFromMap(new ConcurrentHashMap<>());
@@ -51,6 +55,7 @@ public class PartitionErrorTracker implements HealthCheck {
     }
 
     public void error(MiruPartitionCoord coord, String reason) {
+        LOG.info("Partition error tracker recorded coord:{} reason:{}", coord, reason);
         errorsSinceRebuild.compute(coord, (key, reasons) -> {
             if (reasons == null) {
                 reasons = Sets.newHashSet();

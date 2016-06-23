@@ -7,5 +7,5 @@ import com.jivesoftware.os.miru.api.base.MiruTermId;
  */
 public interface LastIdAndTermIdStream {
 
-    boolean stream(int lastId, MiruTermId termId) throws Exception;
+    boolean stream(int lastId, MiruTermId termId, long count) throws Exception;
 }

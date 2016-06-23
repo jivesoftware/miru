@@ -24,17 +24,20 @@ public class CatwalkInjectable {
     private final Catwalk catwalk;
     private final Executor catwalkExecutor;
     private final int topNValuesPerFeature;
+    private final int topNTermsPerNumerator;
     private final long maxHeapPressureInBytes;
 
     public CatwalkInjectable(MiruProvider<? extends Miru> provider,
         Catwalk catwalk,
         Executor catwalkExecutor,
         int topNValuesPerFeature,
+        int topNTermsPerNumerator,
         long maxHeapPressureInBytes) {
         this.provider = provider;
         this.catwalk = catwalk;
         this.catwalkExecutor = catwalkExecutor;
         this.topNValuesPerFeature = topNValuesPerFeature;
+        this.topNTermsPerNumerator = topNTermsPerNumerator;
         this.maxHeapPressureInBytes = maxHeapPressureInBytes;
     }
 
@@ -49,6 +52,7 @@ public class CatwalkInjectable {
                         request,
                         provider.getRemotePartition(CatwalkRemotePartition.class),
                         topNValuesPerFeature,
+                        topNTermsPerNumerator,
                         maxHeapPressureInBytes)),
                 new CatwalkAnswerEvaluator(),
                 new CatwalkAnswerMerger(request.query.desiredNumberOfResults),
@@ -77,6 +81,7 @@ public class CatwalkInjectable {
                         requestAndReport.request,
                         provider.getRemotePartition(CatwalkRemotePartition.class),
                         topNValuesPerFeature,
+                        topNTermsPerNumerator,
                         maxHeapPressureInBytes)),
                 Optional.fromNullable(requestAndReport.report),
                 CatwalkAnswer.EMPTY_RESULTS,
@@ -102,6 +107,7 @@ public class CatwalkInjectable {
                         request,
                         provider.getRemotePartition(CatwalkRemotePartition.class),
                         topNValuesPerFeature,
+                        topNTermsPerNumerator,
                         maxHeapPressureInBytes)),
                 new CatwalkAnswerMerger(request.query.desiredNumberOfResults),
                 CatwalkAnswer.EMPTY_RESULTS,

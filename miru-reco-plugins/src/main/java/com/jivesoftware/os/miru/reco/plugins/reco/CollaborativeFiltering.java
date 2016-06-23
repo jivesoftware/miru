@@ -88,7 +88,7 @@ public class CollaborativeFiltering {
         // distinctParents: distinct parents <field1> that I've touched
         Set<MiruTermId> distinctParents = Sets.newHashSet();
 
-        aggregateUtil.gather(name, bitmaps, requestContext, myOkActivity, fieldId1, gatherBatchSize, false, solutionLog, (lastId, termId) -> {
+        aggregateUtil.gather(name, bitmaps, requestContext, myOkActivity, fieldId1, gatherBatchSize, false, false, solutionLog, (lastId, termId, count) -> {
             distinctParents.add(termId);
             return true;
         }, stackBuffer);
@@ -120,9 +120,7 @@ public class CollaborativeFiltering {
             .create();
         aggregateUtil.stream(name,
             bitmaps,
-            trackError,
             requestContext,
-            coord,
             otherOkField1Activity,
             Optional.<BM>absent(),
             fieldId2,
@@ -173,8 +171,8 @@ public class CollaborativeFiltering {
         for (int i = 0; i < contributorBitmaps.length; i++) {
             if (contributorBitmaps[i] != null) {
                 Set<MiruTermId> distinctContributorParents = Sets.newHashSet();
-                aggregateUtil.gather(name, bitmaps, requestContext, contributorBitmaps[i], fieldId3, gatherBatchSize, false, solutionLog,
-                    (lastId, termId) -> {
+                aggregateUtil.gather(name, bitmaps, requestContext, contributorBitmaps[i], fieldId3, gatherBatchSize, false, false, solutionLog,
+                    (lastId, termId, count) -> {
                         distinctContributorParents.add(termId);
                         return true;
                     },
