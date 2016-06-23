@@ -71,17 +71,17 @@ public class MiruDeltaInvertedIndex<BM extends IBM, IBM> implements MiruInverted
             : backingIndex.getIndexAndLastId(backingLastIdGreaterThanN, stackBuffer);
         if (index.isPresent()) {
             BitmapAndLastId<BM> got = index.get();
-            if (bitmaps.isEmpty(got.bitmap)) {
+            /*if (bitmaps.isEmpty(got.bitmap)) {
                 trackError.error("Delta backed by empty bitmap," +
                     " andNot:" + (andNot != null ? bitmaps.cardinality(andNot) : -1) +
                     " or:" + (or != null ? bitmaps.cardinality(or) : -1));
-            }
+            }*/
             got = overlay(bitmaps, got, ifEmpty, or, andNot, lastId);
-            if (bitmaps.isEmpty(got.bitmap)) {
+            /*if (bitmaps.isEmpty(got.bitmap)) {
                 trackError.error("Delta merged to empty bitmap," +
                     " andNot:" + (andNot != null ? bitmaps.cardinality(andNot) : -1) +
                     " or:" + (or != null ? bitmaps.cardinality(or) : -1));
-            }
+            }*/
             return Optional.of(got);
         } else if (or != null && (lastId > considerIfLastIdGreaterThanN)) {
             return Optional.of(new BitmapAndLastId<>(bitmaps.copy(or), lastId));

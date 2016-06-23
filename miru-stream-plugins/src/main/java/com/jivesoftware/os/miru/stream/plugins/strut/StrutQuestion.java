@@ -162,7 +162,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         long start = System.currentTimeMillis();
         List<LastIdAndTermId> lastIdAndTermIds = Lists.newArrayList();
         //TODO config batch size
-        aggregateUtil.gather("strut", bitmaps, context, eligible, pivotFieldId, 100, true, solutionLog, (lastId, termId) -> {
+        aggregateUtil.gather("strut", bitmaps, context, eligible, pivotFieldId, 100, true, false, solutionLog, (lastId, termId, count) -> {
             lastIdAndTermIds.add(new LastIdAndTermId(lastId, termId));
             return maxTermIdsPerRequest <= 0 || lastIdAndTermIds.size() < maxTermIdsPerRequest;
         }, stackBuffer);

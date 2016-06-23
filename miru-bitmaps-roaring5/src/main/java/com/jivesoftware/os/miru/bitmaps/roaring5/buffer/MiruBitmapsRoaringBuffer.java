@@ -308,22 +308,30 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
     @Override
     public MutableRoaringBitmap andNotMultiTx(MutableRoaringBitmap original,
         MiruMultiTxIndex<ImmutableRoaringBitmap> multiTermTxIndex,
+        long[] counts,
         StackBuffer stackBuffer) throws Exception {
 
         MutableRoaringBitmap container = copy(original);
-        inPlaceAndNotMultiTx(container, multiTermTxIndex, stackBuffer);
+        inPlaceAndNotMultiTx(container, multiTermTxIndex, counts, stackBuffer);
         return container;
     }
 
     @Override
     public void inPlaceAndNotMultiTx(MutableRoaringBitmap original,
         MiruMultiTxIndex<ImmutableRoaringBitmap> multiTermTxIndex,
+        long[] counts,
         StackBuffer stackBuffer) throws Exception {
+        long[] originalCardinality = counts != null ? new long[] { cardinality(original) } : null;
         multiTermTxIndex.txIndex((index, lastId, bitmap, filer, offset, stackBuffer1) -> {
             if (bitmap != null) {
                 original.andNot(bitmap);
             } else if (filer != null) {
                 original.andNot(bitmapFromFiler(filer, offset, stackBuffer1));
+            }
+            if (counts != null) {
+                long nextCardinality = cardinality(original);
+                counts[index] = originalCardinality[0] - nextCardinality;
+                originalCardinality[0] = nextCardinality;
             }
         }, stackBuffer);
     }

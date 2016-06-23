@@ -255,6 +255,7 @@ public class MiruCatwalkMain {
                 instanceConfig.getMainPort(),
                 null, //"amza-topology-" + instanceConfig.getClusterName(), // Manual service discovery if null
                 amzaCatwalkConfig,
+                true,
                 rowsChanged -> {
                 });
 

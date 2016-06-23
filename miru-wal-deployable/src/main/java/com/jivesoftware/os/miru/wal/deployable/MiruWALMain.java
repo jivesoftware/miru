@@ -222,6 +222,7 @@ public class MiruWALMain {
                 instanceConfig.getMainPort(),
                 null, //"miru-wal-" + instanceConfig.getClusterName(),
                 amzaServiceConfig,
+                true,
                 changes -> {
                 });
 

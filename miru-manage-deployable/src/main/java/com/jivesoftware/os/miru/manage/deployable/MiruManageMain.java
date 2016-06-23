@@ -218,6 +218,7 @@ public class MiruManageMain {
                 instanceConfig.getMainPort(),
                 null, //"amza-topology-" + instanceConfig.getClusterName(), // Manual service discovery if null
                 amzaClusterRegistryConfig,
+                true,
                 rowsChanged -> {
                 });
 

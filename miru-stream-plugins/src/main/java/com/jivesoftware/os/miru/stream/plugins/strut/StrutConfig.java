@@ -37,6 +37,9 @@ public interface StrutConfig extends Config {
     @IntDefault(1_000)
     int getCatwalkTopNValuesPerFeature();
 
+    @IntDefault(1_000)
+    int getCatwalkTopNTermsPerNumerator();
+
     @IntDefault(100)
     int getStrutTopNValuesPerFeature();
 

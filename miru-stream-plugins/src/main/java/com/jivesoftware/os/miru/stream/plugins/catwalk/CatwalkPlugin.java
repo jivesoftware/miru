@@ -31,7 +31,12 @@ public class CatwalkPlugin implements MiruPlugin<CatwalkEndpoints, CatwalkInject
         Executor catwalkExecutor = Executors.newFixedThreadPool(config.getCatwalkSolverPoolSize());
         return Collections.singletonList(new MiruEndpointInjectable<>(
             CatwalkInjectable.class,
-            new CatwalkInjectable(miruProvider, catwalk, catwalkExecutor, config.getCatwalkTopNValuesPerFeature(), config.getMaxHeapPressureInBytes())
+            new CatwalkInjectable(miruProvider,
+                catwalk,
+                catwalkExecutor,
+                config.getCatwalkTopNValuesPerFeature(),
+                config.getCatwalkTopNTermsPerNumerator(),
+                config.getMaxHeapPressureInBytes())
         ));
     }
 
