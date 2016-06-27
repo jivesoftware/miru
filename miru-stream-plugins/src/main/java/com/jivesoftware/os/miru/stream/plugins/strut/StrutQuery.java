@@ -5,9 +5,9 @@ import com.google.common.base.Preconditions;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
-import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkQuery;
 import java.io.Serializable;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  *
@@ -20,9 +20,7 @@ public class StrutQuery implements Serializable {
         MAX
     }
 
-    public final String catwalkId;
-    public final String modelId;
-    public final CatwalkQuery catwalkQuery;
+    public final List<StrutModelScalar> modelScalars;
 
     public final MiruTimeRange timeRange;
     public final String constraintField;
@@ -41,9 +39,7 @@ public class StrutQuery implements Serializable {
     public final int batchSize;
 
     public StrutQuery(
-        @JsonProperty("catwalkId") String catwalkId,
-        @JsonProperty("modelId") String modelId,
-        @JsonProperty("catwalkQuery") CatwalkQuery catwalkQuery,
+        @JsonProperty("modelScalars") List<StrutModelScalar> modelScalars,
         @JsonProperty("timeRange") MiruTimeRange timeRange,
         @JsonProperty("constraintField") String constraintField,
         @JsonProperty("constraintFilter") MiruFilter constraintFilter,
@@ -59,19 +55,24 @@ public class StrutQuery implements Serializable {
         @JsonProperty("unreadOnly") boolean unreadOnly,
         @JsonProperty("batchSize") int batchSize) {
 
-        this.catwalkId = Preconditions.checkNotNull(catwalkId);
-        this.modelId = Preconditions.checkNotNull(modelId);
-        this.catwalkQuery = Preconditions.checkNotNull(catwalkQuery);
+        this.modelScalars = Preconditions.checkNotNull(modelScalars);
+        Preconditions.checkArgument(modelScalars.size() > 0);
+
         this.timeRange = Preconditions.checkNotNull(timeRange);
         this.constraintField = Preconditions.checkNotNull(constraintField);
         this.constraintFilter = Preconditions.checkNotNull(constraintFilter);
         this.numeratorStrategy = Preconditions.checkNotNull(numeratorStrategy);
-        Preconditions.checkArgument(numeratorScalars.length == catwalkQuery.gatherFilters.length,
-            "numeratorScalars must be the same length as catwalkQuery.gatherFilters");
+
+        for (StrutModelScalar modelScalar : modelScalars) {
+            Preconditions.checkArgument(numeratorScalars.length == modelScalar.catwalkQuery.gatherFilters.length,
+                "numeratorScalars must be the same length as catwalkQuery.gatherFilters");
+        }
         this.numeratorScalars = numeratorScalars;
         this.featureStrategy = Preconditions.checkNotNull(featureStrategy);
-        Preconditions.checkArgument(featureScalars.length == catwalkQuery.features.length,
-            "featureScalars must be the same length as catwalkQuery.features");
+        for (StrutModelScalar modelScalar : modelScalars) {
+            Preconditions.checkArgument(featureScalars.length == modelScalar.catwalkQuery.features.length,
+                "featureScalars must be the same length as catwalkQuery.features");
+        }
         this.featureScalars = featureScalars;
         Preconditions.checkArgument(desiredNumberOfResults > 0, "Number of results must be at least 1");
         this.desiredNumberOfResults = desiredNumberOfResults;
@@ -86,9 +87,7 @@ public class StrutQuery implements Serializable {
     @Override
     public String toString() {
         return "StrutQuery{"
-            + "catwalkId='" + catwalkId + '\''
-            + ", modelId='" + modelId + '\''
-            + ", catwalkQuery=" + catwalkQuery
+            + "modelScalars='" + modelScalars + '\''
             + ", timeRange=" + timeRange
             + ", constraintField='" + constraintField + '\''
             + ", constraintFilter=" + constraintFilter

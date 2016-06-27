@@ -26,6 +26,7 @@ import com.jivesoftware.os.miru.stream.plugins.strut.HotOrNot;
 import com.jivesoftware.os.miru.stream.plugins.strut.HotOrNot.Hotness;
 import com.jivesoftware.os.miru.stream.plugins.strut.StrutAnswer;
 import com.jivesoftware.os.miru.stream.plugins.strut.StrutConstants;
+import com.jivesoftware.os.miru.stream.plugins.strut.StrutModelScalar;
 import com.jivesoftware.os.miru.stream.plugins.strut.StrutQuery;
 import com.jivesoftware.os.miru.stream.plugins.strut.StrutQuery.Strategy;
 import com.jivesoftware.os.miru.ui.MiruPageRegion;
@@ -128,7 +129,7 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
             this.toTimeUnit = toTimeUnit;
             this.catwalkId = catwalkId;
             this.modelId = modelId;
-            this.unreadStreamId=unreadStreamId;
+            this.unreadStreamId = unreadStreamId;
             this.unreadOnly = unreadOnly;
             this.scorableField = scorableField;
             this.numeratorFilters = numeratorFilters;
@@ -262,9 +263,13 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                         MiruActorId.NOT_PROVIDED,
                         MiruAuthzExpression.NOT_PROVIDED,
                         new StrutQuery(
-                            input.catwalkId,
-                            input.modelId,
-                            catwalkQuery,
+                            Collections.singletonList(
+                                new StrutModelScalar(input.catwalkId,
+                                    input.modelId,
+                                    catwalkQuery,
+                                    1f
+                                )
+                            ),
                             new MiruTimeRange(fromTime, toTime),
                             input.constraintField,
                             constraintFilter,
@@ -288,7 +293,7 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                             @SuppressWarnings("unchecked")
                             MiruResponse<StrutAnswer> extractResponse = responseMapper.extractResultFromResponse(httpResponse,
                                 MiruResponse.class,
-                                new Class<?>[] { StrutAnswer.class },
+                                new Class<?>[]{StrutAnswer.class},
                                 null);
                             return new ClientResponse<>(extractResponse, true);
                         });

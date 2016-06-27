@@ -33,7 +33,6 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.solution.Question;
-import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkQuery;
 import com.jivesoftware.os.miru.stream.plugins.strut.StrutModelScorer.LastIdAndTermId;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -149,13 +148,20 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
 
         MiruFieldIndex<BM, IBM> primaryIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
 
-        CatwalkQuery catwalkQuery = request.query.catwalkQuery;
         MinMaxPriorityQueue<Scored> scored = MinMaxPriorityQueue
             .expectedSize(request.query.desiredNumberOfResults)
             .maximumSize(request.query.desiredNumberOfResults)
             .create();
 
-        MiruPluginCacheProvider.LastIdCacheKeyValues termScoresCache = modelScorer.getTermScoreCache(context, catwalkQuery);
+        String[] modelIds = new String[request.query.modelScalars.size()];
+        MiruPluginCacheProvider.LastIdCacheKeyValues[] termScoresCaches = new MiruPluginCacheProvider.LastIdCacheKeyValues[request.query.modelScalars.size()];
+        float[] termScoresCacheScalars = new float[request.query.modelScalars.size()];
+        for (int i = 0; i < request.query.modelScalars.size(); i++) {
+            StrutModelScalar modelScalar = request.query.modelScalars.get(i);
+            modelIds[i] = modelScalar.modelId;
+            termScoresCaches[i] = modelScorer.getTermScoreCache(context, modelScalar.catwalkId);
+            termScoresCacheScalars[i] = modelScalar.scalar;
+        }
 
         AtomicInteger modelTotalPartitionCount = new AtomicInteger();
 
@@ -175,7 +181,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         long totalTimeRescores = 0;
 
         List<MiruTermId> asyncRescore = Lists.newArrayList();
-        float[] maxScore = { 0f };
+        float[] maxScore = {0f};
         if (request.query.usePartitionModelCache) {
             long fetchScoresStart = System.currentTimeMillis();
 
@@ -196,10 +202,11 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             totalTimeFetchingLastId += (System.currentTimeMillis() - fetchLastIdsStart);
 
             StrutModelScorer.score(
-                request.query.modelId,
-                catwalkQuery.gatherFilters.length,
+                modelIds,
+                request.query.numeratorScalars.length,
                 miruTermIds,
-                termScoresCache,
+                termScoresCaches,
+                termScoresCacheScalars,
                 (termIndex, scores, scoredToLastId) -> {
                     boolean needsRescore = scoredToLastId < scorableToLastIds[termIndex];
                     if (needsRescore) {
@@ -233,26 +240,31 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         }
 
         if (!request.query.usePartitionModelCache || maxScore[0] == 0f && allowImmediateRescore) {
+            // TODO FIX for now this takes the first ModelScalar
+            StrutModelScalar strutModelScalar = request.query.modelScalars.get(0);
+
             LOG.info("Performing immediate rescore for coord:{} catwalkId:{} modelId:{} pivotFieldId:{}",
-                handle.getCoord(), request.query.catwalkId, request.query.modelId, pivotFieldId);
+                handle.getCoord(), strutModelScalar.catwalkId, strutModelScalar.modelId, pivotFieldId);
             LOG.inc("strut>rescore>immediate");
 
             scored.clear();
             asyncRescore.clear();
 
-            MiruPluginCacheProvider.TimestampedCacheKeyValues termFeaturesCache = modelScorer.getTermFeatureCache(context, request.query.catwalkId);
+            MiruPluginCacheProvider.TimestampedCacheKeyValues termFeaturesCache = modelScorer.getTermFeatureCache(context, strutModelScalar.catwalkId);
 
             BM[] constrainFeature = modelScorer.buildConstrainFeatures(bitmaps,
                 context,
-                catwalkQuery,
+                strutModelScalar.catwalkQuery,
                 activityIndexLastId,
                 stackBuffer,
                 solutionLog);
+            
+
             long rescoreStart = System.currentTimeMillis();
             for (List<LastIdAndTermId> batch : Lists.partition(lastIdAndTermIds, request.query.batchSize)) {
-                List<Scored> rescored = modelScorer.rescore(request.query.catwalkId,
-                    request.query.modelId,
-                    request.query.catwalkQuery,
+                List<Scored> rescored = modelScorer.rescore(strutModelScalar.catwalkId,
+                    strutModelScalar.modelId,
+                    strutModelScalar.catwalkQuery,
                     request.query.featureScalars,
                     request.query.featureStrategy,
                     request.query.includeFeatures,
@@ -262,7 +274,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                     batch,
                     pivotFieldId,
                     constrainFeature,
-                    termScoresCache,
+                    termScoresCaches[0],
                     termFeaturesCache,
                     modelTotalPartitionCount,
                     solutionLog);
@@ -342,12 +354,12 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
 
         solutionLog.log(MiruSolutionLogLevel.INFO,
             "Strut your stuff for {} terms took"
-                + " lastIds {} ms,"
-                + " cached {} ms,"
-                + " rescore {} ms,"
-                + " gather {} ms,"
-                + " timeAndVersion {} ms,"
-                + " total {} ms",
+            + " lastIds {} ms,"
+            + " cached {} ms,"
+            + " rescore {} ms,"
+            + " gather {} ms,"
+            + " timeAndVersion {} ms,"
+            + " total {} ms",
             lastIdAndTermIds.size(),
             totalTimeFetchingLastId,
             totalTimeFetchingScores,
