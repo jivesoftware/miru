@@ -31,14 +31,16 @@ public class MiruStumptownIntakeInitializer {
         int getNumberOfThreadsPerQueue();
     }
 
-    MiruStumptownIntakeService initialize(MiruStumptownIntakeConfig config,
+    MiruStumptownIntakeService initialize(boolean enabled,
+        MiruStumptownIntakeConfig config,
         StumptownSchemaService stumptownSchemaService,
         LogMill logMill,
         ObjectMapper activityMapper,
         TenantAwareHttpClient<String> miruWriters,
         MiruStumptownPayloadStorage payloadStorage) {
 
-        return new MiruStumptownIntakeService(stumptownSchemaService,
+        return new MiruStumptownIntakeService(enabled,
+            stumptownSchemaService,
             logMill,
             config.getMiruIngressEndpoint(),
             activityMapper,

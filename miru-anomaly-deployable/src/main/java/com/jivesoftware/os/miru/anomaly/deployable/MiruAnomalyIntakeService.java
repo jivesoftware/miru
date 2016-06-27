@@ -43,6 +43,7 @@ public class MiruAnomalyIntakeService {
     private static final HealthTimer ingressLatency = HealthFactory.getHealthTimer(IngressLatency.class, TimerHealthChecker.FACTORY);
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
+    private final boolean enabled;
     private final AnomalySchemaService anomalySchemaService;
     private final SampleTrawl logMill;
     private final String miruIngressEndpoint;
@@ -50,11 +51,14 @@ public class MiruAnomalyIntakeService {
     private final TenantAwareHttpClient<String> miruWriterClient;
     private final RoundRobinStrategy roundRobinStrategy = new RoundRobinStrategy();
 
-    public MiruAnomalyIntakeService(AnomalySchemaService anomalySchemaService,
+    public MiruAnomalyIntakeService(boolean enabled,
+        AnomalySchemaService anomalySchemaService,
         SampleTrawl logMill,
         String miruIngressEndpoint,
         ObjectMapper activityMapper,
         TenantAwareHttpClient<String> miruWriterClient) {
+
+        this.enabled = enabled;
         this.anomalySchemaService = anomalySchemaService;
         this.logMill = logMill;
         this.miruIngressEndpoint = miruIngressEndpoint;
@@ -63,19 +67,24 @@ public class MiruAnomalyIntakeService {
     }
 
     void ingressEvents(List<AnomalyMetric> events) throws Exception {
-        List<MiruActivity> activities = Lists.newArrayListWithCapacity(events.size());
-        for (AnomalyMetric logEvent : events) {
-            MiruTenantId tenantId = AnomalySchemaConstants.TENANT_ID;
-            anomalySchemaService.ensureSchema(tenantId, AnomalySchemaConstants.SCHEMA);
-            MiruActivity activity = logMill.trawl(tenantId, logEvent);
-            if (activity != null) {
-                activities.add(activity);
+        if (enabled) {
+            List<MiruActivity> activities = Lists.newArrayListWithCapacity(events.size());
+            for (AnomalyMetric logEvent : events) {
+                MiruTenantId tenantId = AnomalySchemaConstants.TENANT_ID;
+                anomalySchemaService.ensureSchema(tenantId, AnomalySchemaConstants.SCHEMA);
+                MiruActivity activity = logMill.trawl(tenantId, logEvent);
+                if (activity != null) {
+                    activities.add(activity);
+                }
             }
-        }
-        if (!activities.isEmpty()) {
-            ingress(activities);
-            log.inc("ingressed", activities.size());
-            log.info("Ingressed " + activities.size());
+            if (!activities.isEmpty()) {
+                ingress(activities);
+                log.inc("ingressed", activities.size());
+                log.info("Ingressed " + activities.size());
+            }
+        } else {
+            log.inc("ingressed>droppedOnFloor", events.size());
+            log.info("Ingressed dropped on floor" + events.size());
         }
     }
 

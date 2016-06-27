@@ -45,6 +45,7 @@ public class MiruStumptownIntakeService {
     private static final HealthTimer ingressLatency = HealthFactory.getHealthTimer(IngressLatency.class, TimerHealthChecker.FACTORY);
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
+    private final boolean enabled;
     private final StumptownSchemaService stumptownSchemaService;
     private final LogMill logMill;
     private final String miruIngressEndpoint;
@@ -53,12 +54,14 @@ public class MiruStumptownIntakeService {
     private final MiruStumptownPayloadStorage payloads;
     private final RoundRobinStrategy roundRobinStrategy = new RoundRobinStrategy();
 
-    public MiruStumptownIntakeService(StumptownSchemaService stumptownSchemaService,
+    public MiruStumptownIntakeService(boolean enabled,
+        StumptownSchemaService stumptownSchemaService,
         LogMill logMill,
         String miruIngressEndpoint,
         ObjectMapper activityMapper,
         TenantAwareHttpClient<String> miruWriter,
         MiruStumptownPayloadStorage payloads) {
+        this.enabled = enabled;
         this.stumptownSchemaService = stumptownSchemaService;
         this.logMill = logMill;
         this.miruIngressEndpoint = miruIngressEndpoint;
@@ -68,19 +71,24 @@ public class MiruStumptownIntakeService {
     }
 
     void ingressLogEvents(List<MiruLogEvent> logEvents) throws Exception {
-        List<MiruActivity> activities = Lists.newArrayListWithCapacity(logEvents.size());
-        List<MiruStumptownPayloadsHBase.TimeAndPayload<MiruLogEvent>> timedLogEvents = Lists.newArrayListWithCapacity(logEvents.size());
-        for (MiruLogEvent logEvent : logEvents) {
-            MiruTenantId tenantId = StumptownSchemaConstants.TENANT_ID;
-            stumptownSchemaService.ensureSchema(tenantId, StumptownSchemaConstants.SCHEMA);
-            MiruActivity activity = logMill.mill(tenantId, logEvent);
-            activities.add(activity);
-            timedLogEvents.add(new MiruStumptownPayloadsHBase.TimeAndPayload<>(activity.time, logEvent));
+        if (enabled) {
+            List<MiruActivity> activities = Lists.newArrayListWithCapacity(logEvents.size());
+            List<MiruStumptownPayloadsHBase.TimeAndPayload<MiruLogEvent>> timedLogEvents = Lists.newArrayListWithCapacity(logEvents.size());
+            for (MiruLogEvent logEvent : logEvents) {
+                MiruTenantId tenantId = StumptownSchemaConstants.TENANT_ID;
+                stumptownSchemaService.ensureSchema(tenantId, StumptownSchemaConstants.SCHEMA);
+                MiruActivity activity = logMill.mill(tenantId, logEvent);
+                activities.add(activity);
+                timedLogEvents.add(new MiruStumptownPayloadsHBase.TimeAndPayload<>(activity.time, logEvent));
+            }
+            record(timedLogEvents);
+            ingress(activities);
+            log.inc("ingressed", timedLogEvents.size());
+            log.info("Ingressed " + timedLogEvents.size());
+        } else {
+            log.inc("ingressed>droppedOnFloor", logEvents.size());
+            log.info("Ingressed dropped on floor:" + logEvents.size());
         }
-        record(timedLogEvents);
-        ingress(activities);
-        log.inc("ingressed", timedLogEvents.size());
-        log.info("Ingressed " + timedLogEvents.size());
     }
 
     private void ingress(List<MiruActivity> activities) throws JsonProcessingException {

@@ -36,14 +36,11 @@ import com.jivesoftware.os.miru.stumptown.deployable.region.StumptownStatusPlugi
 import com.jivesoftware.os.miru.stumptown.deployable.region.StumptownTrendsPluginRegion;
 import com.jivesoftware.os.miru.stumptown.deployable.storage.MiruStumptownPayloadStorage;
 import com.jivesoftware.os.miru.stumptown.deployable.storage.MiruStumptownPayloadsAmzaIntializer;
-import com.jivesoftware.os.miru.stumptown.deployable.storage.MiruStumptownPayloadsHBaseIntializer;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer.MiruSoyRendererConfig;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.rcvs.api.RowColumnValueStoreInitializer;
-import com.jivesoftware.os.rcvs.api.RowColumnValueStoreProvider;
 import com.jivesoftware.os.routing.bird.deployable.Deployable;
 import com.jivesoftware.os.routing.bird.deployable.ErrorHealthCheckConfig;
 import com.jivesoftware.os.routing.bird.deployable.InstanceConfig;
@@ -124,37 +121,22 @@ public class MiruStumptownMain {
             TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
 
             MiruStumptownPayloadStorage payloads = null;
-            if (stumptownServiceConfig.getPayloadStorageSolution().equals("hbase")) {
-                try {
-                    RowColumnValueStoreProvider rowColumnValueStoreProvider = stumptownServiceConfig.getRowColumnValueStoreProviderClass()
-                        .newInstance();
-                    @SuppressWarnings("unchecked")
-                    RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer = rowColumnValueStoreProvider
-                        .create(deployable.config(rowColumnValueStoreProvider.getConfigurationClass()));
+            try {
+                TenantAwareHttpClient<String> amzaClient = tenantRoutingHttpClientInitializer.initialize(deployable
+                    .getTenantRoutingProvider()
+                    .getConnections("amza", "main", 10_000), // TODO config
+                    clientHealthProvider,
+                    10, 10_000); // TODO expose to conf
+                long awaitLeaderElectionForNMillis = 30_000;
+                payloads = new MiruStumptownPayloadsAmzaIntializer().initialize(instanceConfig.getClusterName(),
+                    amzaClient,
+                    awaitLeaderElectionForNMillis,
+                    mapper);
 
-                    //RowColumnValueStoreInitializer<? extends Exception> rowColumnValueStoreInitializer = new InMemoryRowColumnValueStoreInitializer();
-                    payloads = new MiruStumptownPayloadsHBaseIntializer().initialize(instanceConfig.getClusterName(), rowColumnValueStoreInitializer, mapper);
-                } catch (Exception x) {
-                    serviceStartupHealthCheck.info("Failed to setup connection to RCVS.", x);
-                }
-            } else if (stumptownServiceConfig.getPayloadStorageSolution().equals("amza")) {
-                try {
-                    TenantAwareHttpClient<String> amzaClient = tenantRoutingHttpClientInitializer.initialize(deployable
-                        .getTenantRoutingProvider()
-                        .getConnections("amza", "main", 10_000), // TODO config
-                        clientHealthProvider,
-                        10, 10_000); // TODO expose to conf
-                    long awaitLeaderElectionForNMillis = 30_000;
-                    payloads = new MiruStumptownPayloadsAmzaIntializer().initialize(instanceConfig.getClusterName(),
-                        amzaClient,
-                        awaitLeaderElectionForNMillis,
-                        mapper);
-
-                } catch (Exception x) {
-                    serviceStartupHealthCheck.info("Failed to setup connection to RCVS.", x);
-                }
+            } catch (Exception x) {
+                serviceStartupHealthCheck.info("Failed to setup connection to Amza.", x);
             }
-
+        
             OrderIdProvider orderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName()));
 
             TenantAwareHttpClient<String> miruWriterClient = tenantRoutingHttpClientInitializer.initialize(deployable
@@ -185,7 +167,9 @@ public class MiruStumptownMain {
             MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize(new MiruStats(), "", miruManageClient, mapper);
             StumptownSchemaService stumptownSchemaService = new StumptownSchemaService(clusterClient);
 
-            final MiruStumptownIntakeService inTakeService = new MiruStumptownIntakeInitializer().initialize(intakeConfig,
+            final MiruStumptownIntakeService inTakeService = new MiruStumptownIntakeInitializer().initialize(
+                stumptownServiceConfig.getIngressEnabled(),
+                intakeConfig,
                 stumptownSchemaService,
                 logMill,
                 mapper,
