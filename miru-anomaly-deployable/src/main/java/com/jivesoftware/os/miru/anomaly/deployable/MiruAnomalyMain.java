@@ -151,7 +151,8 @@ public class MiruAnomalyMain {
             MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize(new MiruStats(), "", miruManageClient, mapper);
             AnomalySchemaService anomalySchemaService = new AnomalySchemaService(clusterClient);
 
-            final MiruAnomalyIntakeService inTakeService = new MiruAnomalyIntakeInitializer().initialize(intakeConfig,
+            final MiruAnomalyIntakeService inTakeService = new MiruAnomalyIntakeInitializer().initialize(anomalyServiceConfig.getIngressEnabled(),
+                intakeConfig,
                 anomalySchemaService,
                 sampleTrawl,
                 mapper,

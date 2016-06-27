@@ -30,12 +30,13 @@ public class MiruAnomalyIntakeInitializer {
         int getNumberOfThreadsPerQueue();
     }
 
-    MiruAnomalyIntakeService initialize(MiruAnomalyIntakeConfig config,
+    MiruAnomalyIntakeService initialize(boolean enabled,
+        MiruAnomalyIntakeConfig config,
         AnomalySchemaService anomalySchemaService,
         SampleTrawl logMill,
         ObjectMapper intakeMapper,
         TenantAwareHttpClient<String> miruWriterClient) {
 
-        return new MiruAnomalyIntakeService(anomalySchemaService, logMill, config.getMiruIngressEndpoint(), intakeMapper, miruWriterClient);
+        return new MiruAnomalyIntakeService(enabled, anomalySchemaService, logMill, config.getMiruIngressEndpoint(), intakeMapper, miruWriterClient);
     }
 }
