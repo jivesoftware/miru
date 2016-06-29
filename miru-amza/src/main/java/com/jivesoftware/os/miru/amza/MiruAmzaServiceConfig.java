@@ -59,4 +59,7 @@ public interface MiruAmzaServiceConfig extends Config {
     
     @LongDefault(60_000)
     long getInterruptBlockingReadsIfLingersForNMillis();
+
+    @BooleanDefault(true)
+    boolean getRackDistributionEnabled();
 }

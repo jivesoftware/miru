@@ -127,6 +127,7 @@ public class MiruAmzaServiceInitializer {
         amzaServiceConfig.numberOfTakerThreads = config.getNumberOfTakerThreads();
         amzaServiceConfig.hardFsync = config.getHardFsync();
         amzaServiceConfig.takeSlowThresholdInMillis = config.getTakeSlowThresholdInMillis();
+        amzaServiceConfig.rackDistributionEnabled = config.getRackDistributionEnabled();
 
         MiruAmzaLabConfig amzaLabConfig = deployable.config(MiruAmzaLabConfig.class);
 
