@@ -237,7 +237,7 @@ public class StrutModelScorer {
                 strutQuery.featureScalars,
                 strutQuery.featureStrategy);
 
-            StrutQueueKey key = new StrutQueueKey(coord, modelScalar.catwalkId, modelScalar.catwalkId, pivotFieldId);
+            StrutQueueKey key = new StrutQueueKey(coord, modelScalar.catwalkId, modelScalar.modelId, pivotFieldId);
             int stripe = Math.abs(key.hashCode() % queues.length);
             int[] count = {0};
             synchronized (queues[stripe]) {
