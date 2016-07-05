@@ -48,6 +48,27 @@ public class MiruSchemaNGTest {
     }
 
     @Test
+    public void testUnchanged() throws Exception {
+        MiruSchema a = serdes(new Builder("test", 1)
+            .setFieldDefinitions(new MiruFieldDefinition[] {
+                new MiruFieldDefinition(0, "a", Type.singleTerm, Prefix.NONE),
+                new MiruFieldDefinition(1, "b", Type.singleTerm, Prefix.NONE),
+                new MiruFieldDefinition(2, "c", Type.singleTerm, Prefix.NONE)
+            })
+            .build());
+        MiruSchema b = serdes(new Builder("test", 1)
+            .setFieldDefinitions(new MiruFieldDefinition[] {
+                new MiruFieldDefinition(0, "a", Type.singleTerm, Prefix.NONE),
+                new MiruFieldDefinition(1, "b", Type.singleTerm, Prefix.NONE),
+                new MiruFieldDefinition(2, "c", Type.singleTerm, Prefix.NONE)
+            })
+            .build());
+        assertTrue(MiruSchema.checkEquals(a, b));
+        assertTrue(MiruSchema.deepEquals(a, b));
+        assertTrue(MiruSchema.checkAdditive(a, b));
+    }
+
+    @Test
     public void testRemovedField() throws Exception {
         MiruSchema a = serdes(new Builder("test", 1)
             .setFieldDefinitions(new MiruFieldDefinition[] {
