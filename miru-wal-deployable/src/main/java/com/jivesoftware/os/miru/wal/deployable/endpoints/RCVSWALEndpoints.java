@@ -385,7 +385,7 @@ public class RCVSWALEndpoints {
             long start = System.currentTimeMillis();
             StreamBatch<MiruWALEntry, RCVSSipCursor> sipActivity = walDirector.sipActivity(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
                 MiruPartitionId.of(partitionId), sipAndLastSeen.sipCursor, sipAndLastSeen.lastSeen, batchSize);
-            stats.ingressed("/sip/activity/" + tenantId + "/" + partitionId + "/" + batchSize, 1, System.currentTimeMillis() - start);
+            stats.ingressed("/sip/activity/" + batchSize, 1, System.currentTimeMillis() - start);
             return responseHelper.jsonResponse(sipActivity);
         } catch (MiruWALNotInitializedException x) {
             log.error("WAL not initialized calling sipActivity({},{},{},{})",
