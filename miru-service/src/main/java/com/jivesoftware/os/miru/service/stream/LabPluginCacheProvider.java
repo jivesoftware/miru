@@ -4,6 +4,8 @@ import com.google.common.collect.Maps;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.lab.LABEnvironment;
 import com.jivesoftware.os.lab.LABRawhide;
+import com.jivesoftware.os.lab.api.FormatTransformerProvider;
+import com.jivesoftware.os.lab.api.RawEntryFormat;
 import com.jivesoftware.os.lab.api.ValueIndex;
 import com.jivesoftware.os.miru.plugin.cache.LabCacheKeyValues;
 import com.jivesoftware.os.miru.plugin.cache.LabLastIdCacheKeyValues;
@@ -53,7 +55,9 @@ public class LabPluginCacheProvider implements MiruPluginCacheProvider {
                         10 * 1024 * 1024,
                         -1L,
                         -1L,
-                        new KeyValueRawhide());
+                        FormatTransformerProvider.NO_OP,
+                        new KeyValueRawhide(),
+                        RawEntryFormat.MEMORY);
                 }
                 return new LabCacheKeyValues(name, idProvider, cacheIndexes);
             } catch (Exception x) {
@@ -75,7 +79,9 @@ public class LabPluginCacheProvider implements MiruPluginCacheProvider {
                         10 * 1024 * 1024,
                         -1L,
                         -1L,
-                        new LastIdKeyValueRawhide());
+                        FormatTransformerProvider.NO_OP,
+                        new LastIdKeyValueRawhide(),
+                        RawEntryFormat.MEMORY);
                 }
                 return new LabLastIdCacheKeyValues(name, idProvider, cacheIndexes);
             } catch (Exception x) {
@@ -97,7 +103,9 @@ public class LabPluginCacheProvider implements MiruPluginCacheProvider {
                         10 * 1024 * 1024,
                         -1L,
                         -1L,
-                        new LABRawhide());
+                        FormatTransformerProvider.NO_OP,
+                        new LABRawhide(),
+                        RawEntryFormat.MEMORY);
                 }
                 return new LabTimestampedCacheKeyValues(name, idProvider, cacheIndexes, stripedLocks);
             } catch (Exception x) {

@@ -22,6 +22,8 @@ import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.lab.LABEnvironment;
 import com.jivesoftware.os.lab.LabHeapPressure;
+import com.jivesoftware.os.lab.api.FormatTransformerProvider;
+import com.jivesoftware.os.lab.api.RawEntryFormat;
 import com.jivesoftware.os.lab.api.ValueIndex;
 import com.jivesoftware.os.lab.guts.Leaps;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -101,7 +103,8 @@ public class StrutModelScorerNGTest {
         @SuppressWarnings("unchecked")
         ValueIndex[] stores = new ValueIndex[16];
         for (int i = 0; i < stores.length; i++) {
-            stores[i] = env.open("cache-" + i + "-" + catwalkId, 4096, 1024 * 1024, 0, 0, 0, new KeyValueRawhide());
+            stores[i] = env.open("cache-" + i + "-" + catwalkId, 4096, 1024 * 1024, 0, 0, 0, FormatTransformerProvider.NO_OP, new KeyValueRawhide(),
+                RawEntryFormat.MEMORY);
         }
 
         LastIdCacheKeyValues cacheKeyValues = new LabLastIdCacheKeyValues("test", new OrderIdProviderImpl(new ConstantWriterIdProvider(1)), stores);
