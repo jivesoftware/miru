@@ -1,5 +1,7 @@
 package com.jivesoftware.os.miru.plugin.context;
 
+import com.google.common.primitives.UnsignedBytes;
+import com.jivesoftware.os.lab.api.FormatTransformer;
 import com.jivesoftware.os.lab.api.Rawhide;
 import com.jivesoftware.os.lab.api.ValueStream;
 import com.jivesoftware.os.lab.guts.IndexUtil;
@@ -21,12 +23,24 @@ public class FixedWidthRawhide implements Rawhide {
     }
 
     @Override
-    public byte[] merge(byte[] current, byte[] adding) {
-        return adding;
+    public byte[] merge(FormatTransformer currentReadKeyFormatTransormer,
+        FormatTransformer currentReadValueFormatTransormer,
+        byte[] currentRawEntry,
+        FormatTransformer addingReadKeyFormatTransormer,
+        FormatTransformer addingReadValueFormatTransormer,
+        byte[] addingRawEntry,
+        FormatTransformer mergedReadKeyFormatTransormer,
+        FormatTransformer mergedReadValueFormatTransormer) {
+        return addingRawEntry;
     }
 
     @Override
-    public boolean streamRawEntry(ValueStream stream, int index, byte[] rawEntry, int offset) throws Exception {
+    public boolean streamRawEntry(int index,
+        FormatTransformer readKeyFormatTransormer,
+        FormatTransformer readValueFormatTransormer,
+        byte[] rawEntry,
+        int offset,
+        ValueStream stream) throws Exception {
         if (rawEntry == null) {
             return stream.stream(index, null, -1, false, -1, null);
         }
@@ -43,49 +57,90 @@ public class FixedWidthRawhide implements Rawhide {
     }
 
     @Override
-    public int entryLength(IReadable readable, byte[] lengthBuffer) throws Exception {
+    public int rawEntryLength(IReadable readable, byte[] lengthBuffer) throws Exception {
         return keyLength + payloadLength;
     }
 
     @Override
-    public void writeRawEntry(byte[] rawEntry, int offset, int length, IAppendOnly appendOnly, byte[] lengthBuffer) throws Exception {
+    public void writeRawEntry(FormatTransformer readKeyFormatTransormer,
+        FormatTransformer readValueFormatTransormer,
+        byte[] rawEntry,
+        int offset,
+        int length,
+        FormatTransformer writeKeyFormatTransormer,
+        FormatTransformer writeValueFormatTransormer,
+        IAppendOnly appendOnly,
+        byte[] lengthBuffer) throws Exception {
         appendOnly.append(rawEntry, offset, length);
     }
 
     @Override
-    public byte[] key(byte[] rawEntry, int offset, int length) throws Exception {
+    public byte[] key(FormatTransformer readKeyFormatTransormer,
+        FormatTransformer readValueFormatTransormer,
+        byte[] rawEntry,
+        int offset,
+        int length) {
         byte[] key = new byte[keyLength];
         UIO.readBytes(rawEntry, 0, key);
         return key;
     }
 
     @Override
-    public int keyLength(byte[] rawEntry, int offset) {
-        return keyLength;
-    }
-
-    @Override
-    public int keyOffset(byte[] rawEntry, int offset) {
-        return offset;
-    }
-
-    @Override
-    public int compareKey(byte[] rawEntry, int offset, byte[] compareKey, int compareOffset, int compareLength) {
+    public int compareKey(FormatTransformer readKeyFormatTransormer,
+        FormatTransformer readValueFormatTransormer,
+        byte[] rawEntry,
+        int offset,
+        byte[] compareKey,
+        int compareOffset,
+        int compareLength) {
         return IndexUtil.compare(rawEntry, offset, keyLength, compareKey, compareOffset, compareLength);
     }
 
     @Override
-    public int compareKeyFromEntry(IReadable readable, byte[] compareKey, int compareOffset, int compareLength, byte[] intBuffer) throws Exception {
+    public int compareKeyFromEntry(FormatTransformer readKeyFormatTransormer,
+        FormatTransformer readValueFormatTransormer,
+        IReadable readable,
+        byte[] compareKey,
+        int compareOffset,
+        int compareLength,
+        byte[] intBuffer) throws Exception {
         return IndexUtil.compare(readable, keyLength, compareKey, compareOffset, compareLength);
     }
 
     @Override
-    public long timestamp(byte[] rawEntry, int offset, int length) {
+    public int compare(byte[] key1, byte[] key2) {
+        return UnsignedBytes.lexicographicalComparator().compare(key1, key2);
+    }
+
+    @Override
+    public int compareKey(FormatTransformer aReadKeyFormatTransormer,
+        FormatTransformer aReadValueFormatTransormer,
+        byte[] aRawEntry,
+        FormatTransformer bReadKeyFormatTransormer,
+        FormatTransformer bReadValueFormatTransormer,
+        byte[] bRawEntry) {
+
+        if (aRawEntry == null && bRawEntry == null) {
+            return 0;
+        } else if (aRawEntry == null) {
+            return -bRawEntry.length;
+        } else if (bRawEntry == null) {
+            return aRawEntry.length;
+        } else {
+            return compare(
+                key(aReadKeyFormatTransormer, aReadValueFormatTransormer, aRawEntry, 0, aRawEntry.length),
+                key(bReadKeyFormatTransormer, bReadValueFormatTransormer, bRawEntry, 0, bRawEntry.length)
+            );
+        }
+    }
+
+    @Override
+    public long timestamp(FormatTransformer readKeyFormatTransormer, FormatTransformer readValueFormatTransormer, byte[] rawEntry, int offset, int length) {
         return 0;
     }
 
     @Override
-    public long version(byte[] rawEntry, int offset, int length) {
+    public long version(FormatTransformer readKeyFormatTransormer, FormatTransformer readValueFormatTransormer, byte[] rawEntry, int offset, int length) {
         return 0;
     }
 

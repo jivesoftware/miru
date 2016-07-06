@@ -13,6 +13,8 @@ import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.lab.LABEnvironment;
 import com.jivesoftware.os.lab.LABRawhide;
 import com.jivesoftware.os.lab.LabHeapPressure;
+import com.jivesoftware.os.lab.api.FormatTransformerProvider;
+import com.jivesoftware.os.lab.api.RawEntryFormat;
 import com.jivesoftware.os.lab.api.ValueIndex;
 import com.jivesoftware.os.lab.guts.Leaps;
 import com.jivesoftware.os.miru.api.MiruHost;
@@ -62,7 +64,7 @@ public class MiruAggregateUtilTest {
         LabTimestampedCacheKeyValues cacheKeyValues = new LabTimestampedCacheKeyValues("lab-test",
             orderIdProvider,
             new ValueIndex[] {
-                env.open("primary", 4096, 10 * 1024 * 1024, -1, -1, -1, new LABRawhide())
+                env.open("primary", 4096, 10 * 1024 * 1024, -1, -1, -1, FormatTransformerProvider.NO_OP, new LABRawhide(), RawEntryFormat.MEMORY)
             },
             new Object[] { new Object(), new Object(), new Object(), new Object() });
 

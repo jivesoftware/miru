@@ -25,6 +25,8 @@ import com.jivesoftware.os.filer.keyed.store.TxKeyValueStore;
 import com.jivesoftware.os.filer.keyed.store.TxKeyedFilerStore;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.lab.LABEnvironment;
+import com.jivesoftware.os.lab.api.FormatTransformerProvider;
+import com.jivesoftware.os.lab.api.RawEntryFormat;
 import com.jivesoftware.os.lab.api.ValueIndex;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
@@ -425,14 +427,14 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         // do NOT hash storage, as disk/memory require the same stripe order
         int seed = new HashCodeBuilder().append(coord).toHashCode();
         ValueIndex metaIndex = labEnvironments[Math.abs(seed % labEnvironments.length)].open("meta", 4096, maxHeapPressureInBytes, 10 * 1024 * 1024, -1L, -1L,
-            new KeyValueRawhide());
+            FormatTransformerProvider.NO_OP, new KeyValueRawhide(), RawEntryFormat.MEMORY);
         commitables.add(metaIndex);
 
         ValueIndex monoTimeIndex = labEnvironments[Math.abs((seed + 1) % labEnvironments.length)].open("monoTime", 4096, maxHeapPressureInBytes, 10 * 1024 * 1024,
-            -1L, -1L, new FixedWidthRawhide(12, 0));
+            -1L, -1L, FormatTransformerProvider.NO_OP, new FixedWidthRawhide(12, 0), RawEntryFormat.MEMORY);
         commitables.add(monoTimeIndex);
         ValueIndex rawTimeIndex = labEnvironments[Math.abs((seed + 1) % labEnvironments.length)].open("rawTime", 4096, maxHeapPressureInBytes, 10 * 1024 * 1024,
-            -1L, -1L, new FixedWidthRawhide(8, 4));
+            -1L, -1L, FormatTransformerProvider.NO_OP, new FixedWidthRawhide(8, 4), RawEntryFormat.MEMORY);
         commitables.add(rawTimeIndex);
         MiruTimeIndex timeIndex = new MiruDeltaTimeIndex(new LabTimeIndex(
             idProvider,
@@ -446,7 +448,8 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
 
         ValueIndex[] termStorage = new ValueIndex[labEnvironments.length];
         for (int i = 0; i < termStorage.length; i++) {
-            termStorage[i] = labEnvironments[i].open("termStorage", 4096, maxHeapPressureInBytes, 10 * 1024 * 1024, -1L, -1L, new KeyValueRawhide());
+            termStorage[i] = labEnvironments[i].open("termStorage", 4096, maxHeapPressureInBytes, 10 * 1024 * 1024, -1L, -1L, FormatTransformerProvider.NO_OP,
+                new KeyValueRawhide(), RawEntryFormat.MEMORY);
             commitables.add(termStorage[i]);
         }
         boolean[] hasTermStorage = new boolean[schema.fieldCount()];
@@ -455,7 +458,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         }
 
         ValueIndex timeAndVersionIndex = labEnvironments[Math.abs((seed + 2) % labEnvironments.length)].open("timeAndVersion", 4096, maxHeapPressureInBytes,
-            10 * 1024 * 1024, -1L, -1L, new FixedWidthRawhide(4, 16));
+            10 * 1024 * 1024, -1L, -1L, FormatTransformerProvider.NO_OP, new FixedWidthRawhide(4, 16), RawEntryFormat.MEMORY);
         commitables.add(timeAndVersionIndex);
         MiruActivityIndex activityIndex = new MiruDeltaActivityIndex(
             new LabActivityIndex(
@@ -474,11 +477,14 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         ValueIndex[] termIndex = new ValueIndex[labEnvironments.length];
         ValueIndex[] cardinalityIndex = new ValueIndex[labEnvironments.length];
         for (int i = 0; i < bitmapIndex.length; i++) {
-            bitmapIndex[i] = labEnvironments[i].open("field", 4096, maxHeapPressureInBytes, 10 * 1024 * 1024, -1L, -1L, new KeyValueRawhide());
+            bitmapIndex[i] = labEnvironments[i].open("field", 4096, maxHeapPressureInBytes, 10 * 1024 * 1024, -1L, -1L, FormatTransformerProvider.NO_OP,
+                new KeyValueRawhide(),  RawEntryFormat.MEMORY);
             commitables.add(bitmapIndex[i]);
-            termIndex[i] = labEnvironments[i].open("term", 4096, maxHeapPressureInBytes, 10 * 1024 * 1024, -1L, -1L, new KeyValueRawhide());
+            termIndex[i] = labEnvironments[i].open("term", 4096, maxHeapPressureInBytes, 10 * 1024 * 1024, -1L, -1L, FormatTransformerProvider.NO_OP,
+                new KeyValueRawhide(), RawEntryFormat.MEMORY);
             commitables.add(termIndex[i]);
-            cardinalityIndex[i] = labEnvironments[i].open("cardinality", 4096, maxHeapPressureInBytes, 10 * 1024 * 1024, -1L, -1L, new KeyValueRawhide());
+            cardinalityIndex[i] = labEnvironments[i].open("cardinality", 4096, maxHeapPressureInBytes, 10 * 1024 * 1024, -1L, -1L,
+                FormatTransformerProvider.NO_OP, new KeyValueRawhide(), RawEntryFormat.MEMORY);
             commitables.add(cardinalityIndex[i]);
         }
 
