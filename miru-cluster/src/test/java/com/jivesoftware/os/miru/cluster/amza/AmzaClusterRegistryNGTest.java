@@ -77,8 +77,7 @@ public class AmzaClusterRegistryNGTest {
             3,
             TimeUnit.HOURS.toMillis(1),
             TimeUnit.HOURS.toMillis(1),
-            TimeUnit.DAYS.toMillis(365),
-            1);
+            TimeUnit.DAYS.toMillis(365));
 
         replicaSetDirector = new MiruReplicaSetDirector(new OrderIdProviderImpl(new ConstantWriterIdProvider(1)), registry,
             stream -> {

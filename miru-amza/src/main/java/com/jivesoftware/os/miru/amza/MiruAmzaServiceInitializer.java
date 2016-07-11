@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Optional;
 import com.google.common.base.Strings;
+import com.google.common.collect.Sets;
 import com.jivesoftware.os.amza.api.BAInterner;
 import com.jivesoftware.os.amza.api.partition.PartitionProperties;
 import com.jivesoftware.os.amza.api.partition.VersionedPartitionName;
@@ -62,6 +63,7 @@ import com.jivesoftware.os.routing.bird.shared.TenantRoutingProvider;
 import com.jivesoftware.os.routing.bird.shared.TenantsServiceConnectionDescriptorProvider;
 import java.io.IOException;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -155,6 +157,17 @@ public class MiruAmzaServiceInitializer {
         SickThreads sickThreads = new SickThreads();
         SickPartitions sickPartitions = new SickPartitions();
 
+        String blacklist = config.getBlacklistRingMembers();
+        Set<RingMember> blacklistRingMembers = Sets.newHashSet();
+        for (String b : blacklist != null ? blacklist.split("\\s*,\\s*") : new String[0]) {
+            if (b != null) {
+                b = b.trim();
+                if (!b.isEmpty()) {
+                    blacklistRingMembers.add(new RingMember(b));
+                }
+            }
+        }
+
         AmzaService amzaService = new EmbeddedAmzaServiceInitializer().initialize(amzaServiceConfig,
             baInterner,
             amzaStats,
@@ -162,6 +175,7 @@ public class MiruAmzaServiceInitializer {
             sickPartitions,
             ringMember,
             ringHost,
+            blacklistRingMembers,
             orderIdProvider,
             idPacker,
             partitionPropertyMarshaller,
@@ -183,7 +197,8 @@ public class MiruAmzaServiceInitializer {
         RoutingBirdAmzaDiscovery routingBirdAmzaDiscovery = new RoutingBirdAmzaDiscovery(deployable,
             serviceName,
             amzaService,
-            config.getDiscoveryIntervalMillis());
+            config.getDiscoveryIntervalMillis(),
+            blacklistRingMembers);
 
         amzaService.start(ringMember, ringHost);
 
@@ -346,13 +361,18 @@ public class MiruAmzaServiceInitializer {
         private final String serviceName;
         private final AmzaService amzaService;
         private final long discoveryIntervalMillis;
+        private final Set<RingMember> blacklistRingMembers;
 
-        public RoutingBirdAmzaDiscovery(Deployable deployable, String serviceName, AmzaService amzaService,
-            long discoveryIntervalMillis) {
+        public RoutingBirdAmzaDiscovery(Deployable deployable,
+            String serviceName,
+            AmzaService amzaService,
+            long discoveryIntervalMillis,
+            Set<RingMember> blacklistRingMembers) {
             this.deployable = deployable;
             this.serviceName = serviceName;
             this.amzaService = amzaService;
             this.discoveryIntervalMillis = discoveryIntervalMillis;
+            this.blacklistRingMembers = blacklistRingMembers;
         }
 
         public void start() {
@@ -375,12 +395,13 @@ public class MiruAmzaServiceInitializer {
                     RingMember routingRingMember = new RingMember(
                         Strings.padStart(String.valueOf(routingInstanceDescriptor.instanceName), 5, '0') + "_" + routingInstanceDescriptor.instanceKey);
 
-                    HostPort hostPort = connectionDescriptor.getHostPort();
-                    AmzaRingStoreWriter ringWriter = amzaService.getRingWriter();
-                    ringWriter.register(routingRingMember, new RingHost(routingInstanceDescriptor.datacenter, routingInstanceDescriptor.rack,
-                        hostPort.getHost(), hostPort.getPort()), -1);
-                    ringWriter.addRingMember(AmzaRingReader.SYSTEM_RING, routingRingMember);
-
+                    if (!blacklistRingMembers.contains(routingRingMember)) {
+                        HostPort hostPort = connectionDescriptor.getHostPort();
+                        AmzaRingStoreWriter ringWriter = amzaService.getRingWriter();
+                        ringWriter.register(routingRingMember, new RingHost(routingInstanceDescriptor.datacenter, routingInstanceDescriptor.rack,
+                            hostPort.getHost(), hostPort.getPort()), -1);
+                        ringWriter.addRingMember(AmzaRingReader.SYSTEM_RING, routingRingMember);
+                    }
                 }
             } catch (Exception x) {
                 LOG.warn("Failed while calling routing bird discovery.", x);

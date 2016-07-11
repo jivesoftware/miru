@@ -33,7 +33,7 @@ public class CatwalkModelQueue {
 
     private static final PartitionProperties UPDATE_MODEL_QUEUE = new PartitionProperties(Durability.fsync_async,
         TimeUnit.DAYS.toMillis(30), TimeUnit.DAYS.toMillis(10), TimeUnit.DAYS.toMillis(30), TimeUnit.DAYS.toMillis(10), 0, 0, 0, 0,
-        false, Consistency.quorum, true, true, false, RowType.snappy_primary, "lab", null, -1, -1);
+        false, Consistency.quorum, true, true, false, RowType.snappy_primary, "lab", -1, null, -1, -1);
 
     private final AmzaService amzaService;
     private final EmbeddedClientProvider embeddedClientProvider;

@@ -75,6 +75,7 @@ public class MiruStumptownPayloadsAmza implements MiruStumptownPayloadStorage {
             false,
             RowType.snappy_primary,
             "lab",
+            -1,
             null,
             -1,
             -1);

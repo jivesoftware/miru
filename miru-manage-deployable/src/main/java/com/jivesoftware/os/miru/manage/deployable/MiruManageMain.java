@@ -237,8 +237,7 @@ public class MiruManageMain {
                 registryConfig.getDefaultNumberOfReplicas(),
                 registryConfig.getDefaultTopologyIsStaleAfterMillis(),
                 registryConfig.getDefaultTopologyIsIdleAfterMillis(),
-                registryConfig.getDefaultTopologyDestroyAfterMillis(),
-                amzaClusterRegistryConfig.getTakeFromFactor());
+                registryConfig.getDefaultTopologyDestroyAfterMillis());
             amzaService.watch(PartitionCreator.RING_INDEX.getPartitionName(), clusterRegistry);
 
             MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);

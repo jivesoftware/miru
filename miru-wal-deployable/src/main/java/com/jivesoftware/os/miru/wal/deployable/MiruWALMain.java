@@ -244,6 +244,7 @@ public class MiruWALMain {
                 false,
                 RowType.snappy_primary,
                 "lab",
+                -1,
                 null,
                 -1,
                 -1);
@@ -255,6 +256,7 @@ public class MiruWALMain {
                 false,
                 RowType.snappy_primary,
                 "lab",
+                -1,
                 null,
                 -1,
                 -1);
@@ -266,6 +268,7 @@ public class MiruWALMain {
                 false,
                 RowType.primary,
                 "lab",
+                -1,
                 null,
                 -1,
                 -1);

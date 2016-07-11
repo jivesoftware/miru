@@ -113,7 +113,6 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
     private final long defaultTopologyIsStaleAfterMillis;
     private final long defaultTopologyIsIdleAfterMillis;
     private final long defaultTopologyDestroyAfterMillis;
-    private final int takeFromFactor;
     private final String indexClass;
 
     private final AtomicBoolean ringInitialized = new AtomicBoolean(false);
@@ -126,8 +125,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
         int defaultNumberOfReplicas,
         long defaultTopologyIsStaleAfterMillis,
         long defaultTopologyIsIdleAfterMillis,
-        long defaultTopologyDestroyAfterMillis,
-        int takeFromFactor) throws Exception {
+        long defaultTopologyDestroyAfterMillis) throws Exception {
         this.amzaService = amzaService;
         this.embeddedClientProvider = embeddedClientProvider;
         this.replicateTimeoutMillis = replicateTimeoutMillis;
@@ -136,7 +134,6 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
         this.defaultTopologyIsStaleAfterMillis = defaultTopologyIsStaleAfterMillis;
         this.defaultTopologyIsIdleAfterMillis = defaultTopologyIsIdleAfterMillis;
         this.defaultTopologyDestroyAfterMillis = defaultTopologyDestroyAfterMillis;
-        this.takeFromFactor = takeFromFactor; //TODO use for ring config?
         this.indexClass = "lab"; //TODO config
     }
 
@@ -147,7 +144,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
                 PartitionName partitionName = new PartitionName(false, CLUSTER_REGISTRY_RING_NAME, name.getBytes(Charsets.UTF_8));
                 amzaService.createPartitionIfAbsent(partitionName,
                     new PartitionProperties(Durability.fsync_async, 0, 0, 0, 0, 0, 0, 0, 0, false, consistency, requiresConsistency, true, false,
-                        RowType.primary, indexClass, null, -1, -1));
+                        RowType.primary, indexClass, -1, null, -1, -1));
                 amzaService.awaitOnline(partitionName, 10_000L); //TODO config
                 return embeddedClientProvider.getClient(partitionName);
             } catch (Exception e) {

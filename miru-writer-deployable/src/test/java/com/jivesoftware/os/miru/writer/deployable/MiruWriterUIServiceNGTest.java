@@ -49,6 +49,7 @@ import com.jivesoftware.os.rcvs.inmemory.InMemoryRowColumnValueStoreInitializer;
 import com.jivesoftware.os.routing.bird.health.checkers.SickThreads;
 import java.io.File;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import org.merlin.config.BindInterfaceToConfiguration;
 import org.testng.annotations.BeforeClass;
@@ -139,6 +140,7 @@ public class MiruWriterUIServiceNGTest {
             new SickPartitions(),
             ringMember,
             ringHost,
+            Collections.emptySet(),
             orderIdProvider,
             idPacker,
             regionPropertyMarshaller,

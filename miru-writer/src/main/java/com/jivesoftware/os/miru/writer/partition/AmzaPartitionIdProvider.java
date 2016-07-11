@@ -94,6 +94,7 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
             false,
             RowType.primary,
             indexClass,
+            -1,
             null,
             -1,
             -1));

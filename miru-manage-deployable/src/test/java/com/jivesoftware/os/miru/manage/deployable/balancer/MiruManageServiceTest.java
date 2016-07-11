@@ -88,8 +88,7 @@ public class MiruManageServiceTest {
             3,
             TimeUnit.HOURS.toMillis(1),
             TimeUnit.HOURS.toMillis(1),
-            TimeUnit.DAYS.toMillis(365),
-            1);
+            TimeUnit.DAYS.toMillis(365));
 
         clusterRegistry.registerSchema(tenantId, miruSchema);
 
