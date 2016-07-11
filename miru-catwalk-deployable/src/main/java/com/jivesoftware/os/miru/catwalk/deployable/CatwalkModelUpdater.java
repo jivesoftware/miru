@@ -58,11 +58,11 @@ public class CatwalkModelUpdater {
 
     private static final PartitionProperties PROCESSED_MODEL = new PartitionProperties(Durability.fsync_async,
         TimeUnit.DAYS.toMillis(30), TimeUnit.DAYS.toMillis(10), TimeUnit.DAYS.toMillis(30), TimeUnit.DAYS.toMillis(10), 0, 0, 0, 0,
-        false, Consistency.quorum, true, true, false, RowType.primary, "lab", null, -1, -1);
+        false, Consistency.quorum, true, true, false, RowType.primary, "lab", 0, null, -1, -1);
 
     private static final PartitionProperties CATS_WALKED = new PartitionProperties(Durability.fsync_async,
         TimeUnit.DAYS.toMillis(30), TimeUnit.DAYS.toMillis(10), TimeUnit.DAYS.toMillis(30), TimeUnit.DAYS.toMillis(10), 0, 0, 0, 0,
-        false, Consistency.none, true, true, false, RowType.primary, "lab", null, -1, -1);
+        false, Consistency.none, true, true, false, RowType.primary, "lab", 0, null, -1, -1);
 
     private final CatwalkModelService modelService;
     private final CatwalkModelQueue modelQueue;

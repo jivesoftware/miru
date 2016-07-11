@@ -47,7 +47,7 @@ public class CatwalkModelService {
 
     private static final PartitionProperties MODEL_PROPERTIES = new PartitionProperties(Durability.fsync_async,
         TimeUnit.DAYS.toMillis(30), TimeUnit.DAYS.toMillis(10), TimeUnit.DAYS.toMillis(30), TimeUnit.DAYS.toMillis(10), 0, 0, 0, 0,
-        false, Consistency.leader_quorum, true, true, false, RowType.snappy_primary, "lab", null, -1, -1);
+        false, Consistency.leader_quorum, true, true, false, RowType.snappy_primary, "lab", -1, null, -1, -1);
 
     private final CatwalkModelQueue modelQueue;
     private final ExecutorService readRepairers;

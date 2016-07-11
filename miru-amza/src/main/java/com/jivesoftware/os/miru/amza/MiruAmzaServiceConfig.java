@@ -33,9 +33,6 @@ public interface MiruAmzaServiceConfig extends Config {
     @IntDefault(24)
     int getNumberOfTakerThreads();
 
-    @IntDefault(1)
-    int getTakeFromFactor();
-
     @BooleanDefault(false)
     boolean getHardFsync();
 
@@ -62,4 +59,7 @@ public interface MiruAmzaServiceConfig extends Config {
 
     @BooleanDefault(true)
     boolean getRackDistributionEnabled();
+
+    @StringDefault("")
+    String getBlacklistRingMembers();
 }

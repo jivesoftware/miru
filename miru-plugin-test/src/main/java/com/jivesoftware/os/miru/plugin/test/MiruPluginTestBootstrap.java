@@ -181,8 +181,7 @@ public class MiruPluginTestBootstrap {
             3,
             TimeUnit.HOURS.toMillis(1),
             TimeUnit.HOURS.toMillis(1),
-            TimeUnit.DAYS.toMillis(365),
-            1);
+            TimeUnit.DAYS.toMillis(365));
 
         MiruReplicaSetDirector replicaSetDirector = new MiruReplicaSetDirector(new OrderIdProviderImpl(new ConstantWriterIdProvider(1)), clusterRegistry,
             stream -> stream.descriptor("datacenter", "rack", miruHost), false);

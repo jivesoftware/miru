@@ -58,6 +58,7 @@ import com.jivesoftware.os.routing.bird.health.checkers.SickThreads;
 import com.jivesoftware.os.routing.bird.shared.TenantRoutingProvider;
 import java.io.File;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import org.merlin.config.BindInterfaceToConfiguration;
@@ -149,6 +150,7 @@ public class MiruWALUIServiceNGTest {
             new SickPartitions(),
             ringMember,
             ringHost,
+            Collections.emptySet(),
             orderIdProvider,
             idPacker,
             partitionPropertyMarshaller,
@@ -173,8 +175,7 @@ public class MiruWALUIServiceNGTest {
             3,
             TimeUnit.HOURS.toMillis(1),
             TimeUnit.HOURS.toMillis(1),
-            TimeUnit.DAYS.toMillis(365),
-            1);
+            TimeUnit.DAYS.toMillis(365));
         MiruRegistryClusterClient clusterClient = new MiruRegistryClusterClient(clusterRegistry, new MiruReplicaSetDirector(orderIdProvider, clusterRegistry,
             stream -> {
             }, false));
