@@ -124,6 +124,7 @@ public class MiruAmzaServiceInitializer {
         amzaServiceConfig.workingDirectories = config.getWorkingDirectories().split(",");
         amzaServiceConfig.checkIfCompactionIsNeededIntervalInMillis = config.getCheckIfCompactionIsNeededIntervalInMillis();
         amzaServiceConfig.deltaStripeCompactionIntervalInMillis = config.getDeltaStripeCompactionIntervalInMillis();
+        amzaServiceConfig.deltaMaxValueSizeInIndex = config.getDeltaMaxValueSizeInIndex();
         amzaServiceConfig.corruptionParanoiaFactor = config.getCorruptionParanoiaFactor();
         amzaServiceConfig.maxUpdatesBeforeDeltaStripeCompaction = config.getMaxUpdatesBeforeDeltaStripeCompaction();
         amzaServiceConfig.numberOfTakerThreads = config.getNumberOfTakerThreads();
