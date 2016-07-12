@@ -22,6 +22,9 @@ public interface MiruAmzaServiceConfig extends Config {
     @IntDefault(60_000)
     int getDeltaStripeCompactionIntervalInMillis();
 
+    @IntDefault(8)
+    int getDeltaMaxValueSizeInIndex();
+
     @IntDefault(100)
     int getCorruptionParanoiaFactor();
 
