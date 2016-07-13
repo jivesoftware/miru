@@ -238,18 +238,18 @@ public class MiruAmzaServiceInitializer {
         new AmzaUIInitializer().initialize(clusterName, ringHost, amzaService, clientProvider, amzaStats, timestampProvider, idPacker,
             new AmzaUIInitializer.InjectionCallback() {
 
-            @Override
-            public void addEndpoint(Class clazz) {
-                System.out.println("Adding endpoint=" + clazz);
-                deployable.addEndpoints(clazz);
-            }
+                @Override
+                public void addEndpoint(Class clazz) {
+                    System.out.println("Adding endpoint=" + clazz);
+                    deployable.addEndpoints(clazz);
+                }
 
-            @Override
-            public void addInjectable(Class clazz, Object instance) {
-                System.out.println("Injecting " + clazz + " " + instance);
-                deployable.addInjectables(clazz, instance);
-            }
-        });
+                @Override
+                public void addInjectable(Class clazz, Object instance) {
+                    System.out.println("Injecting " + clazz + " " + instance);
+                    deployable.addInjectables(clazz, instance);
+                }
+            });
 
         deployable.addEndpoints(AmzaReplicationRestEndpoints.class);
         deployable.addInjectables(AmzaRingWriter.class, amzaService.getRingWriter());
@@ -399,8 +399,13 @@ public class MiruAmzaServiceInitializer {
                     if (!blacklistRingMembers.contains(routingRingMember)) {
                         HostPort hostPort = connectionDescriptor.getHostPort();
                         AmzaRingStoreWriter ringWriter = amzaService.getRingWriter();
-                        ringWriter.register(routingRingMember, new RingHost(routingInstanceDescriptor.datacenter, routingInstanceDescriptor.rack,
-                            hostPort.getHost(), hostPort.getPort()), -1);
+                        ringWriter.register(routingRingMember,
+                            new RingHost(routingInstanceDescriptor.datacenter,
+                                routingInstanceDescriptor.rack,
+                                hostPort.getHost(),
+                                hostPort.getPort()),
+                            -1,
+                            false);
                         ringWriter.addRingMember(AmzaRingReader.SYSTEM_RING, routingRingMember);
                     }
                 }
