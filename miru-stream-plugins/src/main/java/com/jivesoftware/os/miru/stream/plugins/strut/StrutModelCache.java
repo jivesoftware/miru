@@ -90,6 +90,7 @@ public class StrutModelCache {
             if (model.model == null) {
                 LOG.info("Discarded null model for tenantId:{} partitionId:{} catwalkId:{} modelId:{}", tenantId, partitionId, catwalkId, modelId);
                 modelCache.invalidate(key);
+                return null;
             } else {
                 boolean empty = true;
                 for (Map<StrutModelKey, ModelScore> featureModel : model.model) {
@@ -101,6 +102,7 @@ public class StrutModelCache {
                 if (empty) {
                     LOG.info("Discarded empty model for tenantId:{} partitionId:{} catwalkId:{} modelId:{}", tenantId, partitionId, catwalkId, modelId);
                     modelCache.invalidate(key);
+                    return null;
                 }
             }
         } else {
