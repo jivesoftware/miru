@@ -116,11 +116,6 @@
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
-            <artifactId>miru-cluster-client</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-stream-plugins</artifactId>
             <version>${project.version}</version>
         </dependency>
