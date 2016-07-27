@@ -18,13 +18,14 @@ import com.jivesoftware.os.amza.client.http.AmzaClientProvider;
 import com.jivesoftware.os.amza.client.http.HttpPartitionClientFactory;
 import com.jivesoftware.os.amza.client.http.HttpPartitionHostsProvider;
 import com.jivesoftware.os.amza.client.http.RingHostHttpClientProvider;
+import com.jivesoftware.os.amza.embed.EmbedAmzaServiceInitializer;
+import com.jivesoftware.os.amza.embed.EmbedAmzaServiceInitializer.Lifecycle;
 import com.jivesoftware.os.amza.lab.pointers.LABPointerIndexConfig;
 import com.jivesoftware.os.amza.lab.pointers.LABPointerIndexWALIndexProvider;
 import com.jivesoftware.os.amza.service.AmzaInstance;
 import com.jivesoftware.os.amza.service.AmzaRingStoreWriter;
 import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.amza.service.AmzaServiceInitializer.AmzaServiceConfig;
-import com.jivesoftware.os.amza.service.EmbeddedAmzaServiceInitializer;
 import com.jivesoftware.os.amza.service.SickPartitions;
 import com.jivesoftware.os.amza.service.replication.TakeFailureListener;
 import com.jivesoftware.os.amza.service.replication.http.HttpAvailableRowsTaker;
@@ -75,17 +76,6 @@ import org.merlin.config.defaults.LongDefault;
  */
 public class MiruAmzaServiceInitializer {
 
-    public interface MiruAmzaLabConfig extends LABPointerIndexConfig {
-
-        @Override
-        @BooleanDefault(true)
-        boolean getUseMemMap();
-
-        @Override
-        @LongDefault(10_485_760L)
-        long getSplitWhenValuesAndKeysTotalExceedsNBytes();
-    }
-
     public AmzaService initialize(Deployable deployable,
         String routesHost,
         int routesPort,
@@ -102,23 +92,11 @@ public class MiruAmzaServiceInitializer {
         boolean useAmzaDiscovery,
         RowChanges allRowChanges) throws Exception {
 
-        RingMember ringMember = new RingMember(
-            Strings.padStart(String.valueOf(instanceId), 5, '0') + "_" + instanceKey);
-        RingHost ringHost = new RingHost(datacenterName, rackName, hostName, port);
-
         SnowflakeIdPacker idPacker = new SnowflakeIdPacker();
         JiveEpochTimestampProvider timestampProvider = new JiveEpochTimestampProvider();
-        TimestampedOrderIdProvider orderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceId),
-            idPacker, timestampProvider);
-
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        mapper.configure(SerializationFeature.INDENT_OUTPUT, false);
 
         AmzaStats amzaStats = new AmzaStats();
         BAInterner baInterner = new BAInterner();
-        RowsTakerFactory rowsTakerFactory = () -> new HttpRowsTaker(amzaStats, baInterner, (int) config.getInterruptBlockingReadsIfLingersForNMillis());
-        AvailableRowsTaker availableRowsTaker = new HttpAvailableRowsTaker(baInterner, (int) config.getInterruptBlockingReadsIfLingersForNMillis());
 
         AmzaServiceConfig amzaServiceConfig = new AmzaServiceConfig();
         amzaServiceConfig.workingDirectories = config.getWorkingDirectories().split(",");
@@ -132,31 +110,7 @@ public class MiruAmzaServiceInitializer {
         amzaServiceConfig.takeSlowThresholdInMillis = config.getTakeSlowThresholdInMillis();
         amzaServiceConfig.rackDistributionEnabled = config.getRackDistributionEnabled();
 
-        MiruAmzaLabConfig amzaLabConfig = deployable.config(MiruAmzaLabConfig.class);
-
-        PartitionPropertyMarshaller partitionPropertyMarshaller = new PartitionPropertyMarshaller() {
-
-            @Override
-            public PartitionProperties fromBytes(byte[] bytes) {
-                try {
-                    return mapper.readValue(bytes, PartitionProperties.class);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-
-            @Override
-            public byte[] toBytes(PartitionProperties partitionProperties) {
-                try {
-                    return mapper.writeValueAsBytes(partitionProperties);
-                } catch (JsonProcessingException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-        };
-
-        SickThreads sickThreads = new SickThreads();
-        SickPartitions sickPartitions = new SickPartitions();
+        LABPointerIndexConfig amzaLabConfig = deployable.config(LABPointerIndexConfig.class);
 
         String blacklist = config.getBlacklistRingMembers();
         Set<RingMember> blacklistRingMembers = Sets.newHashSet();
@@ -169,249 +123,36 @@ public class MiruAmzaServiceInitializer {
             }
         }
 
-        AmzaService amzaService = new EmbeddedAmzaServiceInitializer().initialize(amzaServiceConfig,
-            baInterner,
-            amzaStats,
-            sickThreads,
-            sickPartitions,
-            ringMember,
-            ringHost,
-            blacklistRingMembers,
-            orderIdProvider,
-            idPacker,
-            partitionPropertyMarshaller,
-            (workingIndexDirectories,
-                indexProviderRegistry,
-                ephemeralRowIOProvider,
-                persistentRowIOProvider,
-                numberOfStripes) -> {
-                indexProviderRegistry.register(new LABPointerIndexWALIndexProvider(amzaLabConfig, "lab", numberOfStripes, workingIndexDirectories),
-                    persistentRowIOProvider);
-                indexProviderRegistry.register(new BerkeleyDBWALIndexProvider("berkeleydb", numberOfStripes, workingIndexDirectories),
-                    persistentRowIOProvider);
-            },
-            availableRowsTaker,
-            rowsTakerFactory,
-            Optional.<TakeFailureListener>absent(),
-            allRowChanges);
-
-        RoutingBirdAmzaDiscovery routingBirdAmzaDiscovery = new RoutingBirdAmzaDiscovery(deployable,
+        Lifecycle lifecycle = new EmbedAmzaServiceInitializer().initialize(deployable,
+            routesHost,
+            routesPort,
+            connectionsHealthEndpoint,
+            instanceId,
+            instanceKey,
             serviceName,
-            amzaService,
-            config.getDiscoveryIntervalMillis(),
-            blacklistRingMembers);
+            datacenterName,
+            rackName,
+            hostName,
+            port,
+            clusterName,
+            amzaServiceConfig,
+            amzaLabConfig,
+            amzaStats,
+            baInterner,
+            idPacker,
+            timestampProvider,
+            blacklistRingMembers,
+            true,
+            false,
+            allRowChanges);
+        AmzaService amzaService = lifecycle.amzaService;
 
-        amzaService.start(ringMember, ringHost);
-
-        System.out.println("-----------------------------------------------------------------------");
-        System.out.println("|      Amza Service Online");
-        System.out.println("-----------------------------------------------------------------------");
+        lifecycle.startAmzaService();
 
         if (useAmzaDiscovery) {
-            routingBirdAmzaDiscovery.start();
+            lifecycle.startRoutingBirdAmzaDiscovery();
         }
-
-        System.out.println("-----------------------------------------------------------------------");
-        System.out.println("|     Amza Service is in Routing Bird Discovery mode");
-        System.out.println("-----------------------------------------------------------------------");
-
-        HttpDeliveryClientHealthProvider clientHealthProvider = new HttpDeliveryClientHealthProvider(instanceKey,
-            HttpRequestHelperUtils.buildRequestHelper(routesHost, routesPort),
-            connectionsHealthEndpoint, 5_000, 100);
-
-        TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
-        TenantAwareHttpClient<String> httpClient = tenantRoutingHttpClientInitializer.initialize(
-            deployable.getTenantRoutingProvider().getConnections(serviceName, "main", 10_000), // TODO config
-            clientHealthProvider,
-            10,
-            10_000); // TODO expose to conf
-
-        AmzaClientProvider<HttpClient, HttpClientException> clientProvider = new AmzaClientProvider<>(
-            new HttpPartitionClientFactory(baInterner),
-            new HttpPartitionHostsProvider(baInterner, httpClient, mapper),
-            new RingHostHttpClientProvider(httpClient),
-            Executors.newCachedThreadPool(),
-            10_000, //TODO expose to conf
-            -1,
-            -1);
-
-        new AmzaUIInitializer().initialize(clusterName, ringHost, amzaService, clientProvider, amzaStats, timestampProvider, idPacker,
-            new AmzaUIInitializer.InjectionCallback() {
-
-                @Override
-                public void addEndpoint(Class clazz) {
-                    System.out.println("Adding endpoint=" + clazz);
-                    deployable.addEndpoints(clazz);
-                }
-
-                @Override
-                public void addInjectable(Class clazz, Object instance) {
-                    System.out.println("Injecting " + clazz + " " + instance);
-                    deployable.addInjectables(clazz, instance);
-                }
-            });
-
-        deployable.addEndpoints(AmzaReplicationRestEndpoints.class);
-        deployable.addInjectables(AmzaRingWriter.class, amzaService.getRingWriter());
-        deployable.addInjectables(AmzaRingReader.class, amzaService.getRingReader());
-        deployable.addInjectables(AmzaInstance.class, amzaService);
-        deployable.addInjectables(BAInterner.class, baInterner);
-
-        Resource staticResource = new Resource(null)
-            .addClasspathResource("resources/static/amza")
-            .setContext("/static/amza");
-        deployable.addResource(staticResource);
-
-        deployable.addHealthCheck(() -> {
-            Map<Thread, Throwable> sickThread = sickThreads.getSickThread();
-            if (sickThread.isEmpty()) {
-                return new HealthCheckResponseImpl("sick>threads", 1.0, "Healthy", "No sick threads", "", System.currentTimeMillis());
-            } else {
-                return new HealthCheckResponse() {
-
-                    @Override
-                    public String getName() {
-                        return "sick>thread";
-                    }
-
-                    @Override
-                    public double getHealth() {
-                        return 0;
-                    }
-
-                    @Override
-                    public String getStatus() {
-                        return "There are " + sickThread.size() + " sick threads.";
-                    }
-
-                    @Override
-                    public String getDescription() {
-                        StringBuilder sb = new StringBuilder();
-                        for (Map.Entry<Thread, Throwable> entry : sickThread.entrySet()) {
-                            sb.append("thread:").append(entry.getKey()).append(" cause:").append(entry.getValue());
-                        }
-                        return sb.toString();
-                    }
-
-                    @Override
-                    public String getResolution() {
-                        return "Look at the logs and see if you can resolve the issue.";
-                    }
-
-                    @Override
-                    public long getTimestamp() {
-                        return System.currentTimeMillis();
-                    }
-                };
-            }
-        });
-
-        deployable.addHealthCheck(() -> {
-            Map<VersionedPartitionName, Throwable> sickPartition = sickPartitions.getSickPartitions();
-            if (sickPartition.isEmpty()) {
-                return new HealthCheckResponseImpl("sick>partitions", 1.0, "Healthy", "No sick partitions", "", System.currentTimeMillis());
-            } else {
-                return new HealthCheckResponse() {
-
-                    @Override
-                    public String getName() {
-                        return "sick>partition";
-                    }
-
-                    @Override
-                    public double getHealth() {
-                        return 0;
-                    }
-
-                    @Override
-                    public String getStatus() {
-                        return "There are " + sickPartition.size() + " sick partitions.";
-                    }
-
-                    @Override
-                    public String getDescription() {
-                        StringBuilder sb = new StringBuilder();
-                        for (Map.Entry<VersionedPartitionName, Throwable> entry : sickPartition.entrySet()) {
-                            sb.append("partition:").append(entry.getKey()).append(" cause:").append(entry.getValue());
-                        }
-                        return sb.toString();
-                    }
-
-                    @Override
-                    public String getResolution() {
-                        return "Look at the logs and see if you can resolve the issue.";
-                    }
-
-                    @Override
-                    public long getTimestamp() {
-                        return System.currentTimeMillis();
-                    }
-                };
-            }
-        });
 
         return amzaService;
-    }
-
-    static class RoutingBirdAmzaDiscovery implements Runnable {
-
-        private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
-        private final ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
-
-        private final Deployable deployable;
-        private final String serviceName;
-        private final AmzaService amzaService;
-        private final long discoveryIntervalMillis;
-        private final Set<RingMember> blacklistRingMembers;
-
-        public RoutingBirdAmzaDiscovery(Deployable deployable,
-            String serviceName,
-            AmzaService amzaService,
-            long discoveryIntervalMillis,
-            Set<RingMember> blacklistRingMembers) {
-            this.deployable = deployable;
-            this.serviceName = serviceName;
-            this.amzaService = amzaService;
-            this.discoveryIntervalMillis = discoveryIntervalMillis;
-            this.blacklistRingMembers = blacklistRingMembers;
-        }
-
-        public void start() {
-            scheduledExecutorService.scheduleWithFixedDelay(this, 0, discoveryIntervalMillis, TimeUnit.MILLISECONDS);
-        }
-
-        public void stop() {
-            scheduledExecutorService.shutdownNow();
-        }
-
-        @Override
-        public void run() {
-            try {
-                TenantRoutingProvider tenantRoutingProvider = deployable.getTenantRoutingProvider();
-                TenantsServiceConnectionDescriptorProvider connections = tenantRoutingProvider.getConnections(serviceName, "main", 10_000); // TODO config
-                ConnectionDescriptors selfConnections = connections.getConnections("");
-                for (ConnectionDescriptor connectionDescriptor : selfConnections.getConnectionDescriptors()) {
-
-                    InstanceDescriptor routingInstanceDescriptor = connectionDescriptor.getInstanceDescriptor();
-                    RingMember routingRingMember = new RingMember(
-                        Strings.padStart(String.valueOf(routingInstanceDescriptor.instanceName), 5, '0') + "_" + routingInstanceDescriptor.instanceKey);
-
-                    if (!blacklistRingMembers.contains(routingRingMember)) {
-                        HostPort hostPort = connectionDescriptor.getHostPort();
-                        AmzaRingStoreWriter ringWriter = amzaService.getRingWriter();
-                        ringWriter.register(routingRingMember,
-                            new RingHost(routingInstanceDescriptor.datacenter,
-                                routingInstanceDescriptor.rack,
-                                hostPort.getHost(),
-                                hostPort.getPort()),
-                            -1,
-                            false);
-                        ringWriter.addRingMember(AmzaRingReader.SYSTEM_RING, routingRingMember);
-                    }
-                }
-            } catch (Exception x) {
-                LOG.warn("Failed while calling routing bird discovery.", x);
-            }
-        }
     }
 }
