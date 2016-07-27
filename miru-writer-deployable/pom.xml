@@ -56,10 +56,6 @@
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
         </dependency>
         <dependency>
@@ -115,10 +111,6 @@
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-wal-client</artifactId>
             <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.jivesoftware.os.jive.utils</groupId>
-            <artifactId>ordered-id</artifactId>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.mlogger</groupId>

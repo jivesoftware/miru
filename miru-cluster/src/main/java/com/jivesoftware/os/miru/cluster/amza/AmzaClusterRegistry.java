@@ -225,8 +225,8 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
     public void heartbeat(MiruHost miruHost) throws Exception {
         byte[] key = hostMarshaller.toBytes(miruHost);
 
-        hostsClient().commit(Consistency.none, null, new AmzaPartitionUpdates().set(key, FilerIO.longBytes(System.currentTimeMillis()), -1), 0,
-            TimeUnit.MILLISECONDS);
+        hostsClient().commit(Consistency.none, null, new AmzaPartitionUpdates().set(key, FilerIO.longBytes(System.currentTimeMillis()), -1), 10,
+            TimeUnit.SECONDS);
     }
 
     @Override
