@@ -277,23 +277,10 @@ public class MiruCatwalkMain {
                 amzaCatwalkConfig.getAmzaDebugClientCountInterval());
 
             EmbeddedClientProvider embeddedClientProvider = new EmbeddedClientProvider(amzaService);
-            /*AmzaClusterRegistry clusterRegistry = new AmzaClusterRegistry(amzaService,
-                clientProvider,
-                amzaClusterRegistryConfig.getReplicateTimeoutMillis(),
-                new JacksonJsonObjectTypeMarshaller<>(MiruSchema.class, mapper),
-                registryConfig.getDefaultNumberOfReplicas(),
-                registryConfig.getDefaultTopologyIsStaleAfterMillis(),
-                registryConfig.getDefaultTopologyIsIdleAfterMillis(),
-                registryConfig.getDefaultTopologyDestroyAfterMillis(),
-                amzaClusterRegistryConfig.getTakeFromFactor());
-            amzaService.watch(PartitionCreator.RING_INDEX.getPartitionName(), clusterRegistry);*/
 
             MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
 
             MiruStats stats = new MiruStats();
-
-            MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize(stats, "", manageHttpClient, mapper);
-            MiruSchemaProvider miruSchemaProvider = new ClusterSchemaProvider(clusterClient, 10000); // TODO config
 
             int numProcs = Runtime.getRuntime().availableProcessors();
             ScheduledExecutorService queueConsumers = Executors.newScheduledThreadPool(numProcs, new ThreadFactoryBuilder().setNameFormat("queueConsumers-%d")
