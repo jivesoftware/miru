@@ -333,12 +333,14 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
                 futures.add(mergeExecutor.submit(new MergeRunnable((Mergeable) got.inboxIndex, got.schema)));
                 futures.add(mergeExecutor.submit(new MergeRunnable((Mergeable) got.unreadTrackingIndex, got.schema)));
                 futures.add(mergeExecutor.submit(new MergeRunnable((Mergeable) got.activityIndex, got.schema)));
-                futures.add(mergeExecutor.submit(new MergeRunnable((Mergeable) got.sipIndex, got.schema)));
 
                 try {
                     for (Future<?> future : futures) {
                         future.get();
                     }
+
+                    // merge the sip index only after the other indexes are written, otherwise we risk advancing the sip cursor for a partially failed merge
+                    new MergeRunnable((Mergeable) got.sipIndex, got.schema).run();
 
                     got.commitable.commit();
                 } catch (Exception e) {
