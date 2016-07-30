@@ -185,7 +185,6 @@ public class RoaringInspection {
                                     continue;
                                 }
                                 while (index >= currentBucketEnd[bi]) {
-                                    //System.out.println("Advance2 index:" + index + " >= currentBucketEnd:" + currentBucketEnd);
                                     currentBucket[bi]++;
                                     if (currentBucket[bi] == buckets[bi].length) {
                                         numExhausted++;
@@ -199,32 +198,33 @@ public class RoaringInspection {
                                     buckets[bi][currentBucket[bi]]++;
                                 }
                             }
-
                         }
                     } else if (container instanceof RunContainer) {
                         RunContainer runContainer = (RunContainer) container;
                         for (int i = 0; i < runContainer.nbrruns && numExhausted < bucketLength; i++) {
-                            int maxlength = Util.toIntUnsigned(runContainer.getLength(i));
                             int base = Util.toIntUnsigned(runContainer.getValue(i));
-                            int index = (maxlength + base) | min;
-                            next:
-                            for (int bi = 0; bi < bucketLength; bi++) {
-                                if (!candidate[bi] || bucketContainsPos[bi] || exhausted[bi]) {
-                                    continue;
-                                }
-                                while (index >= currentBucketEnd[bi]) {
-                                    //System.out.println("Advance3 index:" + index + " >= currentBucketEnd:" + currentBucketEnd);
-                                    currentBucket[bi]++;
-                                    if (currentBucket[bi] == buckets[bi].length) {
-                                        numExhausted++;
-                                        exhausted[bi] = true;
-                                        continue next;
+
+                            int startInclusive = base | min;
+                            int endExclusive = startInclusive + 1 + Util.toIntUnsigned(runContainer.getLength(i));
+                            for (int index = startInclusive; index < endExclusive && numExhausted < bucketLength; index++) {
+                                next:
+                                for (int bi = 0; bi < bucketLength; bi++) {
+                                    if (!candidate[bi] || bucketContainsPos[bi] || exhausted[bi]) {
+                                        continue;
                                     }
-                                    currentBucketStart[bi] = indexes[bi][currentBucket[bi]];
-                                    currentBucketEnd[bi] = indexes[bi][currentBucket[bi] + 1];
-                                }
-                                if (index >= currentBucketStart[bi]) {
-                                    buckets[bi][currentBucket[bi]]++;
+                                    while (index >= currentBucketEnd[bi]) {
+                                        currentBucket[bi]++;
+                                        if (currentBucket[bi] == buckets[bi].length) {
+                                            numExhausted++;
+                                            exhausted[bi] = true;
+                                            continue next;
+                                        }
+                                        currentBucketStart[bi] = indexes[bi][currentBucket[bi]];
+                                        currentBucketEnd[bi] = indexes[bi][currentBucket[bi] + 1];
+                                    }
+                                    if (index >= currentBucketStart[bi]) {
+                                        buckets[bi][currentBucket[bi]]++;
+                                    }
                                 }
                             }
                         }
@@ -243,7 +243,6 @@ public class RoaringInspection {
                                     continue;
                                 }
                                 while (index >= currentBucketEnd[bi]) {
-                                    //System.out.println("Advance3 index:" + index + " >= currentBucketEnd:" + currentBucketEnd);
                                     currentBucket[bi]++;
                                     if (currentBucket[bi] == buckets[bi].length) {
                                         numExhausted++;
