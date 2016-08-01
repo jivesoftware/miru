@@ -89,6 +89,7 @@ import com.jivesoftware.os.miru.wal.client.MiruWALClientInitializer.WALClientSic
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.deployable.Deployable;
+import com.jivesoftware.os.routing.bird.deployable.DeployableHealthCheckRegistry;
 import com.jivesoftware.os.routing.bird.deployable.ErrorHealthCheckConfig;
 import com.jivesoftware.os.routing.bird.deployable.InstanceConfig;
 import com.jivesoftware.os.routing.bird.endpoints.base.HasUI;
@@ -138,23 +139,11 @@ public class MiruReaderMain {
         ServiceStartupHealthCheck serviceStartupHealthCheck = new ServiceStartupHealthCheck();
         try {
             final Deployable deployable = new Deployable(args);
-
-            HealthFactory.initialize(
-                deployable::config,
-                new HealthCheckRegistry() {
-                @Override
-                public void register(HealthChecker healthChecker) {
-                    deployable.addHealthCheck(healthChecker);
-                }
-
-                @Override
-                public void unregister(HealthChecker healthChecker) {
-                    throw new UnsupportedOperationException("Not supported yet.");
-                }
-            });
+            HealthFactory.initialize(deployable::config, new DeployableHealthCheckRegistry(deployable));
             deployable.buildStatusReporter(null).start();
             deployable.addManageInjectables(HasUI.class, new HasUI(Arrays.asList(new HasUI.UI("manage", "manage", "/manage/ui"),
                 new HasUI.UI("Reset Errors", "manage", "/manage/resetErrors"),
+                new HasUI.UI("Reset Health", "manage", "/manage/resetHealth"),
                 new HasUI.UI("Tail", "manage", "/manage/tail?lastNLines=1000"),
                 new HasUI.UI("Thread Dump", "manage", "/manage/threadDump"),
                 new HasUI.UI("Health", "manage", "/manage/ui"),
@@ -459,7 +448,8 @@ public class MiruReaderMain {
                 Set<Class<? extends MiruPlugin>> pluginTypes = reflections.getSubTypesOf(MiruPlugin.class);
                 for (Class<? extends MiruPlugin> pluginType : pluginTypes) {
                     LOG.info("Loading plugin {}", pluginType.getSimpleName());
-                    add(miruProvider, deployable, pluginType.newInstance(), pluginRemotesMap);
+                    MiruPlugin<?, ?> plugin = pluginType.newInstance();
+                    add(miruProvider, deployable, plugin, pluginRemotesMap);
                     //TODO give plugin a start/stop lifecycle
                 }
             }

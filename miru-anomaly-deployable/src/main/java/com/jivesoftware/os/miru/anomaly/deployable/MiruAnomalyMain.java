@@ -41,12 +41,10 @@ import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer.MiruSoyRendererCon
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.deployable.Deployable;
+import com.jivesoftware.os.routing.bird.deployable.DeployableHealthCheckRegistry;
 import com.jivesoftware.os.routing.bird.deployable.ErrorHealthCheckConfig;
 import com.jivesoftware.os.routing.bird.deployable.InstanceConfig;
 import com.jivesoftware.os.routing.bird.endpoints.base.HasUI;
-import com.jivesoftware.os.routing.bird.health.api.HealthCheckConfigBinder;
-import com.jivesoftware.os.routing.bird.health.api.HealthCheckRegistry;
-import com.jivesoftware.os.routing.bird.health.api.HealthChecker;
 import com.jivesoftware.os.routing.bird.health.api.HealthFactory;
 import com.jivesoftware.os.routing.bird.health.checkers.FileDescriptorCountHealthChecker;
 import com.jivesoftware.os.routing.bird.health.checkers.GCLoadHealthChecker;
@@ -64,7 +62,6 @@ import com.jivesoftware.os.routing.bird.shared.TenantsServiceConnectionDescripto
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
-import org.merlin.config.Config;
 
 public class MiruAnomalyMain {
 
@@ -78,27 +75,11 @@ public class MiruAnomalyMain {
         ServiceStartupHealthCheck serviceStartupHealthCheck = new ServiceStartupHealthCheck();
         try {
             final Deployable deployable = new Deployable(args);
-            HealthFactory.initialize(new HealthCheckConfigBinder() {
-
-                @Override
-                public <C extends Config> C bindConfig(Class<C> configurationInterfaceClass) {
-                    return deployable.config(configurationInterfaceClass);
-                }
-            }, new HealthCheckRegistry() {
-
-                @Override
-                public void register(HealthChecker healthChecker) {
-                    deployable.addHealthCheck(healthChecker);
-                }
-
-                @Override
-                public void unregister(HealthChecker healthChecker) {
-                    throw new UnsupportedOperationException("Not supported yet.");
-                }
-            });
+            HealthFactory.initialize(deployable::config, new DeployableHealthCheckRegistry(deployable));
             deployable.buildStatusReporter(null).start();
             deployable.addManageInjectables(HasUI.class, new HasUI(Arrays.asList(new HasUI.UI("manage", "manage", "/manage/ui"),
                 new HasUI.UI("Reset Errors", "manage", "/manage/resetErrors"),
+                new HasUI.UI("Reset Health", "manage", "/manage/resetHealth"),
                 new HasUI.UI("Tail", "manage", "/manage/tail?lastNLines=1000"),
                 new HasUI.UI("Thread Dump", "manage", "/manage/threadDump"),
                 new HasUI.UI("Health", "manage", "/manage/ui"),
@@ -134,20 +115,20 @@ public class MiruAnomalyMain {
 
             TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
             TenantAwareHttpClient<String> miruManageClient = tenantRoutingHttpClientInitializer.initialize(deployable
-                .getTenantRoutingProvider()
-                .getConnections("miru-manage", "main", 10_000), // TODO config
+                    .getTenantRoutingProvider()
+                    .getConnections("miru-manage", "main", 10_000), // TODO config
                 clientHealthProvider,
                 10, 10_000); // TODO expose to conf
 
             TenantAwareHttpClient<String> miruWriteClient = tenantRoutingHttpClientInitializer.initialize(deployable
-                .getTenantRoutingProvider()
-                .getConnections("miru-writer", "main", 10_000), // TODO config
+                    .getTenantRoutingProvider()
+                    .getConnections("miru-writer", "main", 10_000), // TODO config
                 clientHealthProvider,
                 10, 10_000);  // TODO expose to conf
 
             TenantAwareHttpClient<String> readerClient = tenantRoutingHttpClientInitializer.initialize(deployable
-                .getTenantRoutingProvider()
-                .getConnections("miru-reader", "main", 10_000), // TODO config
+                    .getTenantRoutingProvider()
+                    .getConnections("miru-reader", "main", 10_000), // TODO config
                 clientHealthProvider,
                 10, 10_000);  // TODO expose to conf
 
@@ -186,7 +167,8 @@ public class MiruAnomalyMain {
                 intakeConfig.getPathToQueues(), intakeConfig.getNumberOfQueues(), intakeConfig.getNumberOfThreadsPerQueue(), deliveryCallback);
 
             MiruLogAppenderInitializer.MiruLogAppenderConfig miruLogAppenderConfig = deployable.config(MiruLogAppenderInitializer.MiruLogAppenderConfig.class);
-            TenantsServiceConnectionDescriptorProvider connections = deployable.getTenantRoutingProvider().getConnections("miru-stumptown", "main", 10_000); // TODO config
+            TenantsServiceConnectionDescriptorProvider connections = deployable.getTenantRoutingProvider().getConnections("miru-stumptown", "main",
+                10_000); // TODO config
             MiruLogAppender miruLogAppender = new MiruLogAppenderInitializer().initialize(null, //TODO datacenter
                 instanceConfig.getClusterName(),
                 instanceConfig.getHost(),
@@ -204,8 +186,8 @@ public class MiruAnomalyMain {
             serviceStartupHealthCheck.info("installing ui plugins...", null);
 
             List<AnomalyPlugin> plugins = Lists.newArrayList(new AnomalyPlugin("eye-open", "Status", "/anomaly/status",
-                AnomalyStatusPluginEndpoints.class,
-                new AnomalyStatusPluginRegion("soy.anomaly.page.anomalyStatusPluginRegion", renderer, sampleTrawl)),
+                    AnomalyStatusPluginEndpoints.class,
+                    new AnomalyStatusPluginRegion("soy.anomaly.page.anomalyStatusPluginRegion", renderer, sampleTrawl)),
                 /*new AnomalyPlugin("stats", "Trends", "/anomaly/trends",
                     AnomalyTrendsPluginEndpoints.class,
                     new AnomalyTrendsPluginRegion("soy.anomaly.page.anomalyTrendsPluginRegion", renderer, readerClient, mapper, responseMapper)),*/
