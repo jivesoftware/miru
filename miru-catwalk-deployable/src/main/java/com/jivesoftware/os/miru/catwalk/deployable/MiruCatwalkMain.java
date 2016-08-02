@@ -47,8 +47,6 @@ import com.jivesoftware.os.routing.bird.deployable.DeployableHealthCheckRegistry
 import com.jivesoftware.os.routing.bird.deployable.ErrorHealthCheckConfig;
 import com.jivesoftware.os.routing.bird.deployable.InstanceConfig;
 import com.jivesoftware.os.routing.bird.endpoints.base.HasUI;
-import com.jivesoftware.os.routing.bird.health.api.HealthCheckRegistry;
-import com.jivesoftware.os.routing.bird.health.api.HealthChecker;
 import com.jivesoftware.os.routing.bird.health.api.HealthFactory;
 import com.jivesoftware.os.routing.bird.health.checkers.FileDescriptorCountHealthChecker;
 import com.jivesoftware.os.routing.bird.health.checkers.GCLoadHealthChecker;
@@ -215,22 +213,26 @@ public class MiruCatwalkMain {
             TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
 
             AmzaCatwalkConfig amzaCatwalkConfig = deployable.config(AmzaCatwalkConfig.class);
-            TenantAwareHttpClient<String> amzaClient = tenantRoutingHttpClientInitializer.initialize(
+            TenantAwareHttpClient<String> amzaClient = tenantRoutingHttpClientInitializer.builder(
                 tenantRoutingProvider.getConnections("amza", "main", 10_000), // TODO config
-                clientHealthProvider,
-                10,
-                10_000, // TODO expose to conf
-                amzaCatwalkConfig.getAmzaDebugClientCount(),
-                amzaCatwalkConfig.getAmzaDebugClientCountInterval());
+                clientHealthProvider)
+                .deadAfterNErrors(10)
+                .checkDeadEveryNMillis(10_000)
+                .debugClient(amzaCatwalkConfig.getAmzaDebugClientCount(), amzaCatwalkConfig.getAmzaDebugClientCountInterval())
+                .build(); // TODO expose to conf
 
-            TenantAwareHttpClient<String> manageHttpClient = tenantRoutingHttpClientInitializer.initialize(
+            TenantAwareHttpClient<String> manageHttpClient = tenantRoutingHttpClientInitializer.builder(
                 tenantRoutingProvider.getConnections("miru-manage", "main", 10_000), // TODO config
-                clientHealthProvider,
-                10, 10_000); // TODO expose to conf
-            TenantAwareHttpClient<String> readerClient = tenantRoutingHttpClientInitializer.initialize(
+                clientHealthProvider)
+                .deadAfterNErrors(10)
+                .checkDeadEveryNMillis(10_000)
+                .build(); // TODO expose to conf
+            TenantAwareHttpClient<String> readerClient = tenantRoutingHttpClientInitializer.builder(
                 tenantRoutingProvider.getConnections("miru-reader", "main", 10_000), // TODO config
-                clientHealthProvider,
-                10, 10_000); // TODO expose to conf
+                clientHealthProvider)
+                .deadAfterNErrors(10)
+                .checkDeadEveryNMillis(10_000)
+                .build(); // TODO expose to conf
 
             SickThreads walClientSickThreads = new SickThreads();
             deployable.addHealthCheck(new SickThreadsHealthCheck(deployable.config(WALClientSickThreadsHealthCheckConfig.class), walClientSickThreads));

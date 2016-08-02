@@ -63,8 +63,6 @@ import com.jivesoftware.os.routing.bird.deployable.DeployableHealthCheckRegistry
 import com.jivesoftware.os.routing.bird.deployable.ErrorHealthCheckConfig;
 import com.jivesoftware.os.routing.bird.deployable.InstanceConfig;
 import com.jivesoftware.os.routing.bird.endpoints.base.HasUI;
-import com.jivesoftware.os.routing.bird.health.api.HealthCheckRegistry;
-import com.jivesoftware.os.routing.bird.health.api.HealthChecker;
 import com.jivesoftware.os.routing.bird.health.api.HealthFactory;
 import com.jivesoftware.os.routing.bird.health.checkers.FileDescriptorCountHealthChecker;
 import com.jivesoftware.os.routing.bird.health.checkers.GCLoadHealthChecker;
@@ -171,16 +169,20 @@ public class MiruManageMain {
                 instanceConfig.getConnectionsHealth(), 5_000, 100);
 
             TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
-            TenantAwareHttpClient<String> walHttpClient = tenantRoutingHttpClientInitializer.initialize(
+            TenantAwareHttpClient<String> walHttpClient = tenantRoutingHttpClientInitializer.builder(
                 tenantRoutingProvider.getConnections("miru-wal", "main", 10_000), // TODO config
-                clientHealthProvider,
-                10, 10_000); // TODO expose to conf
+                clientHealthProvider)
+                .deadAfterNErrors(10)
+                .checkDeadEveryNMillis(10_000)
+                .build(); // TODO expose to conf
             TenantsServiceConnectionDescriptorProvider<String> readerConnectionDescriptorProvider = tenantRoutingProvider
                 .getConnections("miru-reader", "main", 10_000); // TODO config
-            TenantAwareHttpClient<String> readerClient = tenantRoutingHttpClientInitializer.initialize(
+            TenantAwareHttpClient<String> readerClient = tenantRoutingHttpClientInitializer.builder(
                 readerConnectionDescriptorProvider,
-                clientHealthProvider,
-                10, 10_000); // TODO expose to conf
+                clientHealthProvider)
+                .deadAfterNErrors(10)
+                .checkDeadEveryNMillis(10_000)
+                .build(); // TODO expose to conf
             HttpResponseMapper responseMapper = new HttpResponseMapper(mapper);
 
             SickThreads walClientSickThreads = new SickThreads();

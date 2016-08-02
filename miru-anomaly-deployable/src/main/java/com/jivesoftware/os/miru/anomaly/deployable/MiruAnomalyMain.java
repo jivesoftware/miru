@@ -114,23 +114,29 @@ public class MiruAnomalyMain {
                 instanceConfig.getConnectionsHealth(), 5_000, 100);
 
             TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
-            TenantAwareHttpClient<String> miruManageClient = tenantRoutingHttpClientInitializer.initialize(deployable
+            TenantAwareHttpClient<String> miruManageClient = tenantRoutingHttpClientInitializer.builder(deployable
                     .getTenantRoutingProvider()
                     .getConnections("miru-manage", "main", 10_000), // TODO config
-                clientHealthProvider,
-                10, 10_000); // TODO expose to conf
+                clientHealthProvider)
+                .deadAfterNErrors(10)
+                .checkDeadEveryNMillis(10_000)
+                .build(); // TODO expose to conf
 
-            TenantAwareHttpClient<String> miruWriteClient = tenantRoutingHttpClientInitializer.initialize(deployable
+            TenantAwareHttpClient<String> miruWriteClient = tenantRoutingHttpClientInitializer.builder(deployable
                     .getTenantRoutingProvider()
                     .getConnections("miru-writer", "main", 10_000), // TODO config
-                clientHealthProvider,
-                10, 10_000);  // TODO expose to conf
+                clientHealthProvider)
+                .deadAfterNErrors(10)
+                .checkDeadEveryNMillis(10_000)
+                .build(); // TODO expose to conf
 
-            TenantAwareHttpClient<String> readerClient = tenantRoutingHttpClientInitializer.initialize(deployable
+            TenantAwareHttpClient<String> readerClient = tenantRoutingHttpClientInitializer.builder(deployable
                     .getTenantRoutingProvider()
                     .getConnections("miru-reader", "main", 10_000), // TODO config
-                clientHealthProvider,
-                10, 10_000);  // TODO expose to conf
+                clientHealthProvider)
+                .deadAfterNErrors(10)
+                .checkDeadEveryNMillis(10_000)
+                .build(); // TODO expose to conf
 
             HttpResponseMapper responseMapper = new HttpResponseMapper(mapper);
 

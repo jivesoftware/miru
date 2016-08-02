@@ -56,9 +56,6 @@ import com.jivesoftware.os.routing.bird.deployable.DeployableHealthCheckRegistry
 import com.jivesoftware.os.routing.bird.deployable.ErrorHealthCheckConfig;
 import com.jivesoftware.os.routing.bird.deployable.InstanceConfig;
 import com.jivesoftware.os.routing.bird.endpoints.base.HasUI;
-import com.jivesoftware.os.routing.bird.health.api.HealthCheckConfigBinder;
-import com.jivesoftware.os.routing.bird.health.api.HealthCheckRegistry;
-import com.jivesoftware.os.routing.bird.health.api.HealthChecker;
 import com.jivesoftware.os.routing.bird.health.api.HealthFactory;
 import com.jivesoftware.os.routing.bird.health.checkers.FileDescriptorCountHealthChecker;
 import com.jivesoftware.os.routing.bird.health.checkers.GCLoadHealthChecker;
@@ -77,7 +74,6 @@ import com.jivesoftware.os.routing.bird.shared.TenantsServiceConnectionDescripto
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
-import org.merlin.config.Config;
 
 public class MiruToolsMain {
 
@@ -145,10 +141,12 @@ public class MiruToolsMain {
                 HttpRequestHelperUtils.buildRequestHelper(instanceConfig.getRoutesHost(), instanceConfig.getRoutesPort()),
                 instanceConfig.getConnectionsHealth(), 5_000, 100);
             TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
-            TenantAwareHttpClient<String> miruReaderClient = tenantRoutingHttpClientInitializer.initialize(
+            TenantAwareHttpClient<String> miruReaderClient = tenantRoutingHttpClientInitializer.builder(
                 tenantRoutingProvider.getConnections("miru-reader", "main", 10_000), // TODO config
-                clientHealthProvider,
-                10, 10_000); // TODO expose to conf
+                clientHealthProvider)
+                .deadAfterNErrors(10)
+                .checkDeadEveryNMillis(10_000)
+                .build(); // TODO expose to conf
             HttpResponseMapper responseMapper = new HttpResponseMapper(mapper);
 
             MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);

@@ -46,9 +46,6 @@ import com.jivesoftware.os.routing.bird.deployable.DeployableHealthCheckRegistry
 import com.jivesoftware.os.routing.bird.deployable.ErrorHealthCheckConfig;
 import com.jivesoftware.os.routing.bird.deployable.InstanceConfig;
 import com.jivesoftware.os.routing.bird.endpoints.base.HasUI;
-import com.jivesoftware.os.routing.bird.health.api.HealthCheckConfigBinder;
-import com.jivesoftware.os.routing.bird.health.api.HealthCheckRegistry;
-import com.jivesoftware.os.routing.bird.health.api.HealthChecker;
 import com.jivesoftware.os.routing.bird.health.api.HealthFactory;
 import com.jivesoftware.os.routing.bird.health.checkers.FileDescriptorCountHealthChecker;
 import com.jivesoftware.os.routing.bird.health.checkers.GCLoadHealthChecker;
@@ -65,7 +62,6 @@ import com.jivesoftware.os.routing.bird.server.util.Resource;
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
-import org.merlin.config.Config;
 
 public class MiruStumptownMain {
 
@@ -111,11 +107,12 @@ public class MiruStumptownMain {
 
             MiruStumptownPayloadStorage payloads = null;
             try {
-                TenantAwareHttpClient<String> amzaClient = tenantRoutingHttpClientInitializer.initialize(deployable
-                    .getTenantRoutingProvider()
-                    .getConnections("amza", "main", 10_000), // TODO config
-                    clientHealthProvider,
-                    10, 10_000); // TODO expose to conf
+                TenantAwareHttpClient<String> amzaClient = tenantRoutingHttpClientInitializer.builder(
+                    deployable.getTenantRoutingProvider().getConnections("amza", "main", 10_000), // TODO config
+                    clientHealthProvider)
+                    .deadAfterNErrors(10)
+                    .checkDeadEveryNMillis(10_000)
+                    .build(); // TODO expose to conf
                 long awaitLeaderElectionForNMillis = 30_000;
                 payloads = new MiruStumptownPayloadsAmzaIntializer().initialize(instanceConfig.getClusterName(),
                     amzaClient,
@@ -125,26 +122,29 @@ public class MiruStumptownMain {
             } catch (Exception x) {
                 serviceStartupHealthCheck.info("Failed to setup connection to Amza.", x);
             }
-        
+
             OrderIdProvider orderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName()));
 
-            TenantAwareHttpClient<String> miruWriterClient = tenantRoutingHttpClientInitializer.initialize(deployable
-                .getTenantRoutingProvider()
-                .getConnections("miru-writer", "main", 10_000), // TODO config
-                clientHealthProvider,
-                10, 10_000);  // TODO expose to conf
+            TenantAwareHttpClient<String> miruWriterClient = tenantRoutingHttpClientInitializer.builder(
+                deployable.getTenantRoutingProvider().getConnections("miru-writer", "main", 10_000), // TODO config
+                clientHealthProvider)
+                .deadAfterNErrors(10)
+                .checkDeadEveryNMillis(10_000)
+                .build(); // TODO expose to conf
 
-            TenantAwareHttpClient<String> miruManageClient = tenantRoutingHttpClientInitializer.initialize(deployable
-                .getTenantRoutingProvider()
-                .getConnections("miru-manage", "main", 10_000), // TODO config
-                clientHealthProvider,
-                10, 10_000); // TODO expose to conf
+            TenantAwareHttpClient<String> miruManageClient = tenantRoutingHttpClientInitializer.builder(
+                deployable.getTenantRoutingProvider().getConnections("miru-manage", "main", 10_000), // TODO config
+                clientHealthProvider)
+                .deadAfterNErrors(10)
+                .checkDeadEveryNMillis(10_000)
+                .build(); // TODO expose to conf
 
-            TenantAwareHttpClient<String> readerClient = tenantRoutingHttpClientInitializer.initialize(deployable
-                .getTenantRoutingProvider()
-                .getConnections("miru-reader", "main", 10_000), // TODO config
-                clientHealthProvider,
-                10, 10_000); // TODO expose to conf
+            TenantAwareHttpClient<String> readerClient = tenantRoutingHttpClientInitializer.builder(
+                deployable.getTenantRoutingProvider().getConnections("miru-reader", "main", 10_000), // TODO config
+                clientHealthProvider)
+                .deadAfterNErrors(10)
+                .checkDeadEveryNMillis(10_000)
+                .build(); // TODO expose to conf
 
             HttpResponseMapper responseMapper = new HttpResponseMapper(mapper);
 
