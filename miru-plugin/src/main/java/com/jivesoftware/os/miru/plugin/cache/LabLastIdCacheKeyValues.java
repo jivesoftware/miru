@@ -58,7 +58,7 @@ public class LabLastIdCacheKeyValues implements LastIdCacheKeyValues {
             },
             (index, key, timestamp, tombstoned, version, payload) -> {
                 return stream.stream(index, keys[index], tombstoned ? null : payload, (int) timestamp);
-            });
+            }, true);
         return true;
     }
 
@@ -85,7 +85,7 @@ public class LabLastIdCacheKeyValues implements LastIdCacheKeyValues {
                 System.arraycopy(key, cacheId.length + 1, keyBytes, 0, keyBytes.length);
                 return stream.stream(keyBytes, payload, (int) timestamp);
             }
-        });
+        }, true);
     }
 
     @Override
@@ -107,7 +107,7 @@ public class LabLastIdCacheKeyValues implements LastIdCacheKeyValues {
         }, fsyncOnCommit);
 
         if (commitOnUpdate) {
-            indexes[stripe].commit(fsyncOnCommit);
+            indexes[stripe].commit(fsyncOnCommit, true);
         }
 
         return result;
@@ -115,7 +115,7 @@ public class LabLastIdCacheKeyValues implements LastIdCacheKeyValues {
 
     public void commit(boolean fsyncOnCommit) throws Exception {
         for (ValueIndex index : indexes) {
-            index.commit(fsyncOnCommit);
+            index.commit(fsyncOnCommit, true);
         }
     }
 

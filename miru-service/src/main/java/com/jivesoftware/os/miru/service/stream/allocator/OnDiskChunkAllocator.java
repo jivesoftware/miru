@@ -36,6 +36,8 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
     private final LabHeapPressure labHeapPressure;
     private final LRUConcurrentBAHLinkedHash<Leaps> leapCache;
     private final ChunkStoreInitializer chunkStoreInitializer = new ChunkStoreInitializer();
+
+    private final ExecutorService buildLABSchedulerThreadPool = LABEnvironment.buildLABSchedulerThreadPool(12);
     private final ExecutorService buildLABCompactorThreadPool = LABEnvironment.buildLABCompactorThreadPool(12); // TODO config
     private final ExecutorService buildLABDestroyThreadPool = LABEnvironment.buildLABDestroyThreadPool(12); // TODO config
 
@@ -180,7 +182,7 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
         File[] labDirs = getLabDirs(coord);
         LABEnvironment[] environments = new LABEnvironment[labDirs.length];
         for (int i = 0; i < numberOfChunkStores; i++) {
-            environments[i] = new LABEnvironment(buildLABCompactorThreadPool, buildLABDestroyThreadPool, labDirs[i],
+            environments[i] = new LABEnvironment(buildLABSchedulerThreadPool, buildLABCompactorThreadPool, buildLABDestroyThreadPool, labDirs[i],
                 true, labHeapPressure, 4, 16, leapCache);
         }
         return environments;

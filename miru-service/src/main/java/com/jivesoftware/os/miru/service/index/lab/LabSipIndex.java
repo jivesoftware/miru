@@ -41,21 +41,25 @@ public class LabSipIndex<S extends MiruSipCursor<S>> implements MiruSipIndex<S> 
     public Optional<S> getSip(StackBuffer stackBuffer) throws Exception {
         S sip = sipReference.get();
         if (sip == null && !absent.get()) {
-            valueIndex.get(key, (int index, byte[] key1, long timestamp, boolean tombstoned, long version, byte[] payload) -> {
-                if (payload != null && !tombstoned) {
-                    try {
-                        sipReference.set(marshaller.fromFiler(new ByteArrayFiler(payload), stackBuffer));
-                    } catch (Exception e) {
-                        LOG.warn("Failed to deserialize sip, length={}", payload.length);
+            valueIndex.get(
+                (keyStream) -> keyStream.key(0, key, 0, key.length),
+                (int index, byte[] key1, long timestamp, boolean tombstoned, long version, byte[] payload) -> {
+                    if (payload != null && !tombstoned) {
+                        try {
+                            sipReference.set(marshaller.fromFiler(new ByteArrayFiler(payload), stackBuffer));
+                        } catch (Exception e) {
+                            LOG.warn("Failed to deserialize sip, length={}", payload.length);
+                            sipReference.set(null);
+                            absent.set(true);
+                        }
+                    } else {
                         sipReference.set(null);
                         absent.set(true);
                     }
-                } else {
-                    sipReference.set(null);
-                    absent.set(true);
-                }
-                return true;
-            });
+                    return true;
+                },
+                true
+            );
 
             sip = sipReference.get();
         }

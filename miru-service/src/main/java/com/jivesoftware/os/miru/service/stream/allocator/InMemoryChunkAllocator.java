@@ -41,6 +41,7 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
     private final LRUConcurrentBAHLinkedHash<Leaps> leapCache;
     private final boolean useLabIndexes;
 
+    private final ExecutorService buildLABSchedulerThreadPool = LABEnvironment.buildLABSchedulerThreadPool(12);
     private final ExecutorService buildLABCompactorThreadPool = LABEnvironment.buildLABCompactorThreadPool(12);
     private final ExecutorService buildLABDestroyThreadPool = LABEnvironment.buildLABDestroyThreadPool(12);
 
@@ -121,7 +122,8 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
 
         LABEnvironment[] environments = new LABEnvironment[labDirs.length];
         for (int i = 0; i < labDirs.length; i++) {
-            environments[i] = new LABEnvironment(buildLABCompactorThreadPool,
+            environments[i] = new LABEnvironment(buildLABSchedulerThreadPool,
+                buildLABCompactorThreadPool,
                 buildLABDestroyThreadPool,
                 labDirs[i],
                 true, labHeapPressure, 4, 16, leapCache);

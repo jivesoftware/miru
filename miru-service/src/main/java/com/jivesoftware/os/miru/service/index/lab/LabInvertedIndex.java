@@ -7,9 +7,7 @@ import com.google.common.io.ByteStreams;
 import com.jivesoftware.os.filer.io.ByteArrayFiler;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
-import com.jivesoftware.os.filer.io.chunk.ChunkFiler;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
-import com.jivesoftware.os.lab.LABUtils;
 import com.jivesoftware.os.lab.api.ValueIndex;
 import com.jivesoftware.os.lab.api.ValueStream;
 import com.jivesoftware.os.lab.io.api.UIO;
@@ -24,7 +22,6 @@ import java.io.DataInput;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.Future;
 import org.apache.commons.lang.mutable.MutableLong;
 
 /**
@@ -95,13 +92,14 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
 
         @SuppressWarnings("unchecked")
         BitmapAndLastId<BM>[] bitmapAndLastId = new BitmapAndLastId[1];
-        lab.get(indexKeyBytes, (int index, byte[] key, long timestamp, boolean tombstoned, long version, byte[] payload) -> {
-            if (payload != null) {
-                bitmapAndLastId[0] = deser(bitmaps, trackError, payload, considerIfLastIdGreaterThanN);
-                bytes.add(payload.length);
-            }
-            return true;
-        });
+        lab.get((keyStream) -> keyStream.key(0, indexKeyBytes, 0, indexKeyBytes.length),
+            (int index, byte[] key, long timestamp, boolean tombstoned, long version, byte[] payload) -> {
+                if (payload != null) {
+                    bitmapAndLastId[0] = deser(bitmaps, trackError, payload, considerIfLastIdGreaterThanN);
+                    bytes.add(payload.length);
+                }
+                return true;
+            }, true);
 
         if (bitmapAndLastId[0] != null) {
             LOG.inc("get>hit");
@@ -121,25 +119,29 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
         MutableLong bytes = new MutableLong();
         @SuppressWarnings("unchecked")
         R[] result = (R[]) new Object[1];
-        lab.get(indexKeyBytes, (int index, byte[] key, long timestamp, boolean tombstoned, long version, byte[] payload) -> {
-            try {
-                if (payload != null) {
-                    bytes.add(payload.length);
-                    if (payload.length < LAST_ID_LENGTH + 4) {
+        lab.get(
+            (keyStream) -> keyStream.key(0, indexKeyBytes, 0, indexKeyBytes.length),
+            (int index, byte[] key, long timestamp, boolean tombstoned, long version, byte[] payload) -> {
+                try {
+                    if (payload != null) {
+                        bytes.add(payload.length);
+                        if (payload.length < LAST_ID_LENGTH + 4) {
+                            result[0] = tx.tx(null, null, -1, null);
+                            return false;
+                        } else {
+                            result[0] = tx.tx(null, new ByteArrayFiler(payload), LAST_ID_LENGTH, stackBuffer);
+                            return false;
+                        }
+                    } else {
                         result[0] = tx.tx(null, null, -1, null);
                         return false;
-                    } else {
-                        result[0] = tx.tx(null, new ByteArrayFiler(payload), LAST_ID_LENGTH, stackBuffer);
-                        return false;
                     }
-                } else {
-                    result[0] = tx.tx(null, null, -1, null);
-                    return false;
+                } catch (Exception e) {
+                    throw new IOException(e);
                 }
-            } catch (Exception e) {
-                throw new IOException(e);
-            }
-        });
+            },
+            true
+        );
 
         LOG.inc("count>txIndex>total");
         LOG.inc("count>txIndex>" + name + ">total");
@@ -298,13 +300,17 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
             MutableLong bytes = new MutableLong();
             synchronized (mutationLock) {
                 int[] id = {-1};
-                lab.get(indexKeyBytes, (int index, byte[] key, long timestamp, boolean tombstoned, long version, byte[] payload) -> {
-                    if (payload != null) {
-                        bytes.add(payload.length);
-                        id[0] = UIO.bytesInt(payload);
-                    }
-                    return true;
-                });
+                lab.get(
+                    (keyStream) -> keyStream.key(0, indexKeyBytes, 0, indexKeyBytes.length),
+                    (int index, byte[] key, long timestamp, boolean tombstoned, long version, byte[] payload) -> {
+                        if (payload != null) {
+                            bytes.add(payload.length);
+                            id[0] = UIO.bytesInt(payload);
+                        }
+                        return true;
+                    },
+                    true
+                );
                 lastId = id[0];
             }
             LOG.inc("count>lastId>total");

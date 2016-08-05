@@ -60,14 +60,14 @@ public class LabActivityIndex implements MiruActivityIndex {
         int capacity = capacity();
         checkArgument(index >= 0 && index < capacity, "Index parameter is out of bounds. The value %s must be >=0 and <%s", index, capacity);
 
-        long[] values = { -1L, -1L };
-        timeAndVersionIndex.get(UIO.intBytes(index), (index1, key, timestamp, tombstoned, version, payload) -> {
+        long[] values = {-1L, -1L};
+        timeAndVersionIndex.get((streamKeys) -> streamKeys.key(0, UIO.intBytes(index), 0, 4), (index1, key, timestamp, tombstoned, version, payload) -> {
             if (payload != null && !tombstoned) {
                 values[0] = UIO.bytesLong(payload, 0);
                 values[1] = UIO.bytesLong(payload, 8);
             }
             return false;
-        });
+        }, true);
 
         LOG.inc("count>getTimeAndVersion>total");
         LOG.inc("count>getTimeAndVersion>" + name);
@@ -94,7 +94,7 @@ public class LabActivityIndex implements MiruActivityIndex {
                     UIO.bytesLong(payload, 8));
             }
             return true;
-        });
+        }, true);
 
         LOG.inc("count>getTimeAndVersion>total");
         LOG.inc("count>getTimeAndVersion>count", indexes.length);
@@ -108,14 +108,15 @@ public class LabActivityIndex implements MiruActivityIndex {
             return null;
         }
 
-        MiruTermId[][] termIds = { null };
-        getTermIndex(fieldId).get(Bytes.concat(UIO.intBytes(fieldId), UIO.intBytes(index)),
+        MiruTermId[][] termIds = {null};
+        byte[] concatKey = Bytes.concat(UIO.intBytes(fieldId), UIO.intBytes(index));
+        getTermIndex(fieldId).get((streamKeys) -> streamKeys.key(0, concatKey, 0, concatKey.length),
             (index1, key, timestamp, tombstoned, version, payload) -> {
                 if (payload != null && !tombstoned) {
                     termIds[0] = intTermIdsKeyValueMarshaller.bytesValue(null, payload, 0);
                 }
                 return false;
-            });
+            }, true);
         LOG.inc("count>getTerms>total");
         LOG.inc("count>getTerms>" + name);
         return termIds[0];
@@ -141,7 +142,7 @@ public class LabActivityIndex implements MiruActivityIndex {
         MiruTermId[][] termIds = new MiruTermId[length][];
         ValueIndex termIndex = getTermIndex(fieldId);
         byte[] fieldBytes = UIO.intBytes(fieldId);
-        int[] count = { 0 };
+        int[] count = {0};
         termIndex.get(
             keyStream -> {
                 for (int i = 0; i < length; i++) {
@@ -160,7 +161,7 @@ public class LabActivityIndex implements MiruActivityIndex {
                     termIds[ki] = intTermIdsKeyValueMarshaller.bytesValue(null, payload, 0);
                 }
                 return true;
-            });
+            }, true);
 
         LOG.inc("count>getAllTerms>total");
         LOG.inc("count>getAllTerms>count", count[0]);
@@ -274,14 +275,15 @@ public class LabActivityIndex implements MiruActivityIndex {
 
     private int capacity() {
         try {
-            int[] size = { indexSize.get() };
+            int[] size = {indexSize.get()};
             if (size[0] < 0) {
-                metaIndex.get(metaKey, (index, key, timestamp, tombstoned, version, payload) -> {
-                    if (payload != null && !tombstoned) {
-                        size[0] = UIO.bytesInt(payload);
-                    }
-                    return false;
-                });
+                metaIndex.get((streamKeys) -> streamKeys.key(0, metaKey, 0, metaKey.length),
+                    (index, key, timestamp, tombstoned, version, payload) -> {
+                        if (payload != null && !tombstoned) {
+                            size[0] = UIO.bytesInt(payload);
+                        }
+                        return false;
+                    }, true);
                 LOG.inc("capacity>total");
                 LOG.inc("capacity>bytes", 4);
                 indexSize.set(size[0]);

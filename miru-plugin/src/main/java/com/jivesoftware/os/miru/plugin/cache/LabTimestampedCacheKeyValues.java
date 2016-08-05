@@ -37,7 +37,7 @@ public class LabTimestampedCacheKeyValues implements TimestampedCacheKeyValues {
     @Override
     public boolean get(byte[] cacheId, byte[][] keys, TimestampedIndexKeyValueStream stream, StackBuffer stackBuffer) throws Exception {
         int stripe = stripe(cacheId);
-        byte[] prefixBytes = { (byte) cacheId.length };
+        byte[] prefixBytes = {(byte) cacheId.length};
 
         byte[][] keyBytes = new byte[keys.length][];
         for (int i = 0; i < keys.length; i++) {
@@ -60,7 +60,9 @@ public class LabTimestampedCacheKeyValues implements TimestampedCacheKeyValues {
             },
             (index, key, timestamp, tombstoned, version, payload) -> {
                 return stream.stream(index, keys[index], tombstoned ? null : payload, timestamp);
-            });
+            },
+            true
+        );
         return true;
     }
 
@@ -69,7 +71,7 @@ public class LabTimestampedCacheKeyValues implements TimestampedCacheKeyValues {
         Preconditions.checkArgument(cacheId.length <= Byte.MAX_VALUE, "Max cacheId length is " + Byte.MAX_VALUE);
 
         int stripe = stripe(cacheId);
-        byte[] prefixBytes = { (byte) cacheId.length };
+        byte[] prefixBytes = {(byte) cacheId.length};
         byte[] fromKeyBytes = fromInclusive == null ? Bytes.concat(prefixBytes, cacheId) : Bytes.concat(prefixBytes, cacheId, fromInclusive);
         byte[] toKeyBytes;
         if (toExclusive == null) {
@@ -79,15 +81,18 @@ public class LabTimestampedCacheKeyValues implements TimestampedCacheKeyValues {
             toKeyBytes = Bytes.concat(prefixBytes, cacheId, toExclusive);
         }
 
-        return indexes[stripe].rangeScan(fromKeyBytes, toKeyBytes, (index, key, timestamp, tombstoned, version, payload) -> {
-            if (tombstoned) {
-                return true; //TODO reconsider
-            } else {
-                byte[] keyBytes = new byte[key.length - cacheId.length - 1];
-                System.arraycopy(key, cacheId.length + 1, keyBytes, 0, keyBytes.length);
-                return stream.stream(keyBytes, payload, timestamp);
-            }
-        });
+        return indexes[stripe].rangeScan(fromKeyBytes, toKeyBytes,
+            (index, key, timestamp, tombstoned, version, payload) -> {
+                if (tombstoned) {
+                    return true; //TODO reconsider
+                } else {
+                    byte[] keyBytes = new byte[key.length - cacheId.length - 1];
+                    System.arraycopy(key, cacheId.length + 1, keyBytes, 0, keyBytes.length);
+                    return stream.stream(keyBytes, payload, timestamp);
+                }
+            },
+            true
+        );
     }
 
     @Override
@@ -98,7 +103,7 @@ public class LabTimestampedCacheKeyValues implements TimestampedCacheKeyValues {
         StackBuffer stackBuffer) throws Exception {
 
         int stripe = stripe(cacheId);
-        byte[] prefixBytes = { (byte) cacheId.length };
+        byte[] prefixBytes = {(byte) cacheId.length};
 
         long version = idProvider.nextId();
         boolean result = indexes[stripe].append(stream -> {
@@ -109,7 +114,7 @@ public class LabTimestampedCacheKeyValues implements TimestampedCacheKeyValues {
         }, fsyncOnCommit);
 
         if (commitOnUpdate) {
-            indexes[stripe].commit(fsyncOnCommit);
+            indexes[stripe].commit(fsyncOnCommit, true);
         }
 
         return result;
@@ -117,7 +122,7 @@ public class LabTimestampedCacheKeyValues implements TimestampedCacheKeyValues {
 
     public void commit(boolean fsyncOnCommit) throws Exception {
         for (ValueIndex index : indexes) {
-            index.commit(fsyncOnCommit);
+            index.commit(fsyncOnCommit, true);
         }
     }
 

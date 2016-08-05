@@ -28,7 +28,7 @@ public class AmzaWALLookup implements MiruWALLookup {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
-    private static final MiruTenantId FULLY_REPAIRED_TENANT = new MiruTenantId(new byte[] { 0 });
+    private static final MiruTenantId FULLY_REPAIRED_TENANT = new MiruTenantId(new byte[]{0});
 
     private final AmzaWALUtil amzaWALUtil;
     private final long replicateLookupTimeoutMillis;
@@ -82,7 +82,8 @@ public class AmzaWALLookup implements MiruWALLookup {
         EmbeddedClient client = amzaWALUtil.getLookupTenantsClient();
         final List<MiruTenantId> tenantIds = Lists.newArrayList();
         if (client != null) {
-            client.scan(Collections.singletonList(new ScanRange(null, null, null, null)),
+            client.scan(
+                Collections.singletonList(new ScanRange(null, null, null, null)),
                 (prefix, key, value, timestamp, version) -> {
                     if (key != null) {
                         MiruTenantId tenantId = new MiruTenantId(key);
@@ -91,7 +92,9 @@ public class AmzaWALLookup implements MiruWALLookup {
                         }
                     }
                     return true;
-                });
+                },
+                true
+            );
         }
         return tenantIds;
     }
@@ -105,7 +108,8 @@ public class AmzaWALLookup implements MiruWALLookup {
         LOG.inc("allPartitions");
         EmbeddedClient client = amzaWALUtil.getLookupPartitionsClient();
         if (client != null) {
-            client.scan(Collections.singletonList(new ScanRange(null, null, null, null)),
+            client.scan(
+                Collections.singletonList(new ScanRange(null, null, null, null)),
                 (prefix, key, value, timestamp, version) -> {
                     if (key != null) {
                         TenantAndPartition tenantAndPartition = amzaWALUtil.fromPartitionsKey(key);
@@ -114,7 +118,9 @@ public class AmzaWALLookup implements MiruWALLookup {
                         }
                     }
                     return true;
-                });
+                },
+                true
+            );
         }
     }
 
@@ -129,7 +135,8 @@ public class AmzaWALLookup implements MiruWALLookup {
         if (client != null) {
             byte[] fromKey = amzaWALUtil.toPartitionsKey(tenantId, null);
             byte[] toKey = WALKey.prefixUpperExclusive(fromKey);
-            client.scan(Collections.singletonList(new ScanRange(null, fromKey, null, toKey)),
+            client.scan(
+                Collections.singletonList(new ScanRange(null, fromKey, null, toKey)),
                 (prefix, key, value, timestamp, version) -> {
                     if (key != null) {
                         TenantAndPartition tenantAndPartition = amzaWALUtil.fromPartitionsKey(key);
@@ -138,7 +145,9 @@ public class AmzaWALLookup implements MiruWALLookup {
                         }
                     }
                     return true;
-                });
+                },
+                true
+            );
         }
     }
 
@@ -154,14 +163,17 @@ public class AmzaWALLookup implements MiruWALLookup {
             byte[] fromKey = amzaWALUtil.toPartitionsKey(tenantId, null);
             byte[] toKey = WALKey.prefixUpperExclusive(fromKey);
             MiruPartitionId[] partitionId = new MiruPartitionId[1];
-            client.scan(Collections.singletonList(new ScanRange(null, fromKey, null, toKey)),
+            client.scan(
+                Collections.singletonList(new ScanRange(null, fromKey, null, toKey)),
                 (prefix, key, value, timestamp, version) -> {
                     if (key != null) {
                         TenantAndPartition tenantAndPartition = amzaWALUtil.fromPartitionsKey(key);
                         partitionId[0] = tenantAndPartition.partitionId;
                     }
                     return true;
-                });
+                },
+                true
+            );
             return partitionId[0] != null ? partitionId[0] : MiruPartitionId.of(0);
         }
         return null;

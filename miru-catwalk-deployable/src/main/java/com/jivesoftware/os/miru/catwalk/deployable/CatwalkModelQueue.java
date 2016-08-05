@@ -67,14 +67,17 @@ public class CatwalkModelQueue {
     public List<UpdateModelRequest> getBatch(int queueId, int batchSize) throws Exception {
         EmbeddedClient queueClient = queueClient(queueId);
         List<UpdateModelRequest> batch = new ArrayList<>(batchSize);
-        queueClient.scan(Collections.singletonList(ScanRange.ROW_SCAN),
+        queueClient.scan(
+            Collections.singletonList(ScanRange.ROW_SCAN),
             (prefix, key, value, timestamp, version) -> {
                 if (timestamp <= System.currentTimeMillis()) {
                     UpdateModelRequest request = updateModelRequestFromBytes(requestMapper, key, value, timestamp);
                     batch.add(request);
                 }
                 return (batch.size() < batchSize);
-            });
+            },
+            true
+        );
         return batch;
     }
 

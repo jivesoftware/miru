@@ -35,7 +35,7 @@ public class LastIdKeyValueRawhideTest {
             Assert.assertEquals(timestamp, rawTimestamp);
             Assert.assertEquals(payload, rawPayload);
             return true;
-        });
+        }, true);
     }
 
     @Test
