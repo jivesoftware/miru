@@ -95,7 +95,10 @@ public class StrutModelScorerNGTest {
         LabHeapPressure labHeapPressure = new LabHeapPressure(1024 * 1024 * 10, new AtomicLong());
         LRUConcurrentBAHLinkedHash<Leaps> leapCache = LABEnvironment.buildLeapsCache(1_000_000, 8);
 
-        LABEnvironment env = new LABEnvironment(LABEnvironment.buildLABCompactorThreadPool(4), LABEnvironment.buildLABDestroyThreadPool(1), root,
+        LABEnvironment env = new LABEnvironment(LABEnvironment.buildLABSchedulerThreadPool(4),
+            LABEnvironment.buildLABCompactorThreadPool(4),
+            LABEnvironment.buildLABDestroyThreadPool(1),
+            root,
             false, labHeapPressure, 4, 10, leapCache);
         String catwalkId = "catwalkId";
         String modelId = "modelId";

@@ -34,14 +34,18 @@ public class KeyValueRawhide implements Rawhide {
         FormatTransformer readValueFormatTransormer,
         byte[] rawEntry,
         int offset,
-        ValueStream stream) throws Exception {
+        ValueStream stream,
+        boolean hydrateValues) throws Exception {
         if (rawEntry == null) {
             return stream.stream(index, null, -1, false, -1, null);
         }
         int o = offset;
         byte[] key = LABUtils.readByteArray(rawEntry, o);
         o += 4 + (key != null ? key.length : 0);
-        byte[] payload = LABUtils.readByteArray(rawEntry, o);
+        byte[] payload = null;
+        if (hydrateValues) {
+            payload = LABUtils.readByteArray(rawEntry, o);
+        }
         return stream.stream(index, key, 0, false, 0, payload);
     }
 
@@ -55,8 +59,8 @@ public class KeyValueRawhide implements Rawhide {
     }
 
     @Override
-    public int rawEntryLength(IReadable readable, byte[] lengthBuffer) throws Exception {
-        return UIO.readInt(readable, "length", lengthBuffer);
+    public int rawEntryLength(IReadable readable) throws Exception {
+        return readable.readInt();
     }
 
     @Override
@@ -67,9 +71,8 @@ public class KeyValueRawhide implements Rawhide {
         int length,
         FormatTransformer writeKeyFormatTransormer,
         FormatTransformer writeValueFormatTransormer,
-        IAppendOnly appendOnly,
-        byte[] lengthBuffer) throws Exception {
-        UIO.writeByteArray(appendOnly, rawEntry, offset, length, "entry", lengthBuffer);
+        IAppendOnly appendOnly) throws Exception {
+        UIO.writeByteArray(appendOnly, rawEntry, offset, length, "entry");
     }
 
     @Override
@@ -99,10 +102,9 @@ public class KeyValueRawhide implements Rawhide {
         IReadable readable,
         byte[] compareKey,
         int compareOffset,
-        int compareLength,
-        byte[] intBuffer) throws Exception {
+        int compareLength) throws Exception {
         readable.seek(readable.getFilePointer() + 4); // skip the entry length
-        int keyLength = UIO.readInt(readable, "keyLength", intBuffer);
+        int keyLength = readable.readInt();
         return IndexUtil.compare(readable, keyLength, compareKey, compareOffset, compareLength);
     }
 

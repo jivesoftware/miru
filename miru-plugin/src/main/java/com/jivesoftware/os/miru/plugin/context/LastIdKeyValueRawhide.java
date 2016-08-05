@@ -47,7 +47,8 @@ public class LastIdKeyValueRawhide implements Rawhide {
         FormatTransformer readValueFormatTransormer,
         byte[] rawEntry,
         int offset,
-        ValueStream stream) throws Exception {
+        ValueStream stream,
+        boolean hydrateValues) throws Exception {
         if (rawEntry == null) {
             return stream.stream(index, null, -1, false, -1, null);
         }
@@ -55,8 +56,11 @@ public class LastIdKeyValueRawhide implements Rawhide {
         byte[] key = LABUtils.readByteArray(rawEntry, o);
         o += 4 + (key != null ? key.length : 0);
         byte[] payloadAndLastId = LABUtils.readByteArray(rawEntry, o);
-        byte[] payload = new byte[payloadAndLastId.length - 4];
-        System.arraycopy(payloadAndLastId, 0, payload, 0, payload.length);
+        byte[] payload = null;
+        if (hydrateValues) {
+            payload = new byte[payloadAndLastId.length - 4];
+            System.arraycopy(payloadAndLastId, 0, payload, 0, payload.length);
+        }
         int lastId = UIO.bytesInt(payloadAndLastId, payloadAndLastId.length - 4);
         return stream.stream(index, key, lastId, false, 0, payload);
     }
@@ -74,8 +78,8 @@ public class LastIdKeyValueRawhide implements Rawhide {
     }
 
     @Override
-    public int rawEntryLength(IReadable readable, byte[] lengthBuffer) throws Exception {
-        return UIO.readInt(readable, "length", lengthBuffer);
+    public int rawEntryLength(IReadable readable) throws Exception {
+        return UIO.readInt(readable, "length");
     }
 
     @Override
@@ -86,9 +90,8 @@ public class LastIdKeyValueRawhide implements Rawhide {
         int length,
         FormatTransformer writeKeyFormatTransormer,
         FormatTransformer writeValueFormatTransormer,
-        IAppendOnly appendOnly,
-        byte[] lengthBuffer) throws Exception {
-        UIO.writeByteArray(appendOnly, rawEntry, offset, length, "entry", lengthBuffer);
+        IAppendOnly appendOnly) throws Exception {
+        UIO.writeByteArray(appendOnly, rawEntry, offset, length, "entry");
     }
 
     @Override
@@ -118,10 +121,9 @@ public class LastIdKeyValueRawhide implements Rawhide {
         IReadable readable,
         byte[] compareKey,
         int compareOffset,
-        int compareLength,
-        byte[] intBuffer) throws Exception {
+        int compareLength) throws Exception {
         readable.seek(readable.getFilePointer() + 4); // skip the entry length
-        int keyLength = UIO.readInt(readable, "keyLength", intBuffer);
+        int keyLength = UIO.readInt(readable, "keyLength");
         return IndexUtil.compare(readable, keyLength, compareKey, compareOffset, compareLength);
     }
 

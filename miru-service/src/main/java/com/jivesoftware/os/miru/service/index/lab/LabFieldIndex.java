@@ -8,7 +8,6 @@ import com.jivesoftware.os.filer.io.api.KeyRange;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.lab.api.ValueIndex;
-import com.jivesoftware.os.lab.api.ValueStream;
 import com.jivesoftware.os.lab.io.api.UIO;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.MiruInterner;
@@ -100,7 +99,7 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
     @Override
     public void setIfEmpty(int fieldId, MiruTermId termId, int id, long count, StackBuffer stackBuffer) throws Exception {
         if (getIndex("setIfEmpty", fieldId, termId).setIfEmpty(stackBuffer, id)) {
-            mergeCardinalities(fieldId, termId, new int[] { id }, new long[] { count }, stackBuffer);
+            mergeCardinalities(fieldId, termId, new int[]{id}, new long[]{count}, stackBuffer);
         }
     }
 
@@ -124,7 +123,7 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
             getTermIndex(fieldId).rangeScan(from, to, (index, key, timestamp, tombstoned, version, payload) -> {
                 bytes.add(key.length);
                 return termIdStream.stream(termInterner.intern(key, KEY_TERM_OFFSET, key.length - (KEY_TERM_OFFSET)));
-            });
+            }, true);
         } else {
             for (KeyRange range : ranges) {
                 byte[] from = range.getStartInclusiveKey() != null
@@ -136,7 +135,7 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
                 getTermIndex(fieldId).rangeScan(from, to, (index, key, timestamp, tombstoned, version, payload) -> {
                     bytes.add(key.length);
                     return termIdStream.stream(termInterner.intern(key, KEY_TERM_OFFSET, key.length - (KEY_TERM_OFFSET)));
-                });
+                }, true);
             }
         }
 
@@ -213,7 +212,7 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
                     }
                 }
                 return true;
-            });
+            }, true);
 
         LOG.inc("count>multiGet>total");
         LOG.inc("count>multiGet>" + name + ">total");
@@ -245,7 +244,7 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
                     results[index] = UIO.bytesInt(payload);
                 }
                 return true;
-            });
+            }, true);
 
         LOG.inc("count>multiGetLastIds>total");
         LOG.inc("count>multiGetLastIds>" + name + ">total");
@@ -286,7 +285,7 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
                     }
                 }
                 return true;
-            });
+            }, true);
 
         LOG.inc("count>multiTxIndex>total");
         LOG.inc("count>multiTxIndex>" + name + ">total");
@@ -300,14 +299,15 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
     public long getCardinality(int fieldId, MiruTermId termId, int id, StackBuffer stackBuffer) throws Exception {
         if (hasCardinalities[fieldId]) {
             byte[] fieldIdBytes = UIO.intBytes(fieldId);
-            long[] count = { 0 };
-            getCardinalityIndex(fieldId).get(cardinalityIndexKey(fieldIdBytes, id, termId.getBytes()),
+            long[] count = {0};
+            byte[] cardinalityIndexKey = cardinalityIndexKey(fieldIdBytes, id, termId.getBytes());
+            getCardinalityIndex(fieldId).get((streamKeys) -> streamKeys.key(0, cardinalityIndexKey, 0, cardinalityIndexKey.length),
                 (int index, byte[] key, long timestamp, boolean tombstoned, long version, byte[] payload) -> {
                     if (payload != null && !tombstoned) {
                         count[0] = UIO.bytesLong(payload);
                     }
                     return false;
-                });
+                }, true);
             return count[0];
         }
         return -1;
@@ -319,19 +319,26 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
         if (hasCardinalities[fieldId]) {
             byte[] fieldIdBytes = UIO.intBytes(fieldId);
             ValueIndex cardinalityIndex = getCardinalityIndex(fieldId);
-            for (int i = 0; i < ids.length; i++) {
-                if (ids[i] >= 0) {
-                    int index = i;
-                    //TODO multiget
-                    cardinalityIndex.get(cardinalityIndexKey(fieldIdBytes, ids[i], termId.getBytes()),
-                        (int index1, byte[] key, long timestamp, boolean tombstoned, long version, byte[] payload) -> {
-                            if (payload != null && !tombstoned) {
-                                counts[index] = UIO.bytesLong(payload);
+
+            cardinalityIndex.get(
+                (stream) -> {
+                    for (int i = 0; i < ids.length; i++) {
+                        if (ids[i] >= 0) {
+                            byte[] cardinalityIndexKey = cardinalityIndexKey(fieldIdBytes, ids[i], termId.getBytes());
+                            if (!stream.key(i, cardinalityIndexKey, 0, cardinalityIndexKey.length)) {
+                                return false;
                             }
-                            return false;
-                        });
-                }
-            }
+                        }
+                    }
+                    return true;
+                },
+                (int index, byte[] key, long timestamp, boolean tombstoned, long version, byte[] payload) -> {
+                    if (payload != null && !tombstoned) {
+                        counts[index] = UIO.bytesLong(payload);
+                    }
+                    return true;
+                },
+                true);
         } else {
             Arrays.fill(counts, -1);
         }
@@ -382,7 +389,7 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
                     }
                 }
                 return true;
-            });
+            }, true);
 
         long timestamp = System.currentTimeMillis();
         long version = idProvider.nextId();
@@ -430,27 +437,40 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
             long[] merged = new long[counts.length];
             long delta = 0;
             System.arraycopy(counts, 0, merged, 0, counts.length);
-            for (int i = 0; i < ids.length; i++) {
-                int index = i;
-                //TODO multiget
-                cardinalityIndex.get(cardinalityIndexKey(fieldBytes, ids[i], termId.getBytes()),
-                    (int index1, byte[] key, long timestamp, boolean tombstoned, long version, byte[] payload) -> {
-                        if (payload != null && !tombstoned) {
-                            merged[index] += UIO.bytesLong(payload);
+
+            cardinalityIndex.get(
+                keyStream -> {
+                    for (int i = 0; i < ids.length; i++) {
+                        byte[] key = cardinalityIndexKey(fieldBytes, ids[i], termId.getBytes());
+                        if (!keyStream.key(i, key, 0, key.length)) {
+                            return false;
                         }
-                        return false;
-                    });
+                    }
+                    return true;
+                },
+                (int index, byte[] key, long timestamp, boolean tombstoned, long version, byte[] payload) -> {
+                    if (payload != null && !tombstoned) {
+                        merged[index] += UIO.bytesLong(payload);
+                    }
+                    return false;
+                },
+                true);
+
+            for (int i = 0; i < ids.length; i++) {
                 delta += merged[i] - counts[i];
             }
 
-            long[] globalCount = { 0 };
-            cardinalityIndex.get(cardinalityIndexKey(fieldBytes, -1, termId.getBytes()),
+            long[] globalCount = {0};
+            byte[] cardinalityIndexKey = cardinalityIndexKey(fieldBytes, -1, termId.getBytes());
+            cardinalityIndex.get(
+                (keyStream) -> keyStream.key(0, cardinalityIndexKey, 0, cardinalityIndexKey.length),
                 (int index, byte[] key, long timestamp, boolean tombstoned, long version, byte[] payload) -> {
                     if (payload != null && !tombstoned) {
                         globalCount[0] = UIO.bytesLong(payload);
                     }
                     return false;
-                });
+                },
+                true);
             globalCount[0] += delta;
 
             long timestamp = System.currentTimeMillis();

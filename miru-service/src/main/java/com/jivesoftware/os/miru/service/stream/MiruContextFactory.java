@@ -597,7 +597,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             rebuildToken,
             () -> {
                 for (ValueIndex valueIndex : commitables) {
-                    valueIndex.commit(fsyncOnCommit);
+                    valueIndex.commit(fsyncOnCommit, true);
                 }
                 cacheProvider.commit(fsyncOnCommit);
             },

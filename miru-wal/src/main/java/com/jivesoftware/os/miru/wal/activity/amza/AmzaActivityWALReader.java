@@ -110,7 +110,7 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
                     }
                 }
                 return true;
-            });
+            }, true);
         return !begins.isEmpty() && ends.containsAll(begins);
     }
 
@@ -218,7 +218,8 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
             try {
                 byte[] fromKey = columnKeyMarshaller.toLexBytes(new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.END.getSort(), 0));
                 byte[] toKey = columnKeyMarshaller.toLexBytes(new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.BEGIN.getSort(), Long.MAX_VALUE));
-                client.scan(Collections.singletonList(new ScanRange(null, fromKey, null, toKey)),
+                client.scan(
+                    Collections.singletonList(new ScanRange(null, fromKey, null, toKey)),
                     (prefix, key, value, timestamp, version) -> {
                         if (value != null) {
                             MiruPartitionedActivity partitionedActivity = partitionedActivityMarshaller.fromBytes(value);
@@ -230,7 +231,9 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
                             }
                         }
                         return true;
-                    });
+                    },
+                    true
+                );
             } catch (PropertiesNotPresentException | PartitionIsDisposedException e) {
                 // ignored
             } catch (FailedToAchieveQuorumException e) {
@@ -248,7 +251,8 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
             try {
                 byte[] fromKey = columnKeyMarshaller.toBytes(new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.ACTIVITY.getSort(), 0L));
                 byte[] toKey = columnKeyMarshaller.toBytes(new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.END.getSort(), 0L));
-                client.scan(Collections.singletonList(new ScanRange(null, fromKey, null, toKey)),
+                client.scan(
+                    Collections.singletonList(new ScanRange(null, fromKey, null, toKey)),
                     (prefix, key, value, timestamp, version) -> {
                         if (value != null) {
                             MiruPartitionedActivity partitionedActivity = partitionedActivityMarshaller.fromBytes(value);
@@ -258,7 +262,9 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
                             }
                         }
                         return true;
-                    });
+                    },
+                    true
+                );
             } catch (PropertiesNotPresentException | PartitionIsDisposedException e) {
                 // ignored
             } catch (FailedToAchieveQuorumException e) {
@@ -318,7 +324,8 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
         if (client != null) {
             try {
                 byte[] fromKey = columnKeyMarshaller.toBytes(new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.END.getSort(), Long.MIN_VALUE));
-                client.scan(Collections.singletonList(new ScanRange(null, fromKey, null, null)),
+                client.scan(
+                    Collections.singletonList(new ScanRange(null, fromKey, null, null)),
                     (prefix, key, value, timestamp, version) -> {
                         if (value != null) {
                             MiruPartitionedActivity partitionedActivity = partitionedActivityMarshaller.fromBytes(value);
@@ -327,7 +334,9 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
                             }
                         }
                         return true;
-                    });
+                    },
+                    true
+                );
             } catch (PropertiesNotPresentException e) {
                 // ignored
             } catch (PartitionIsDisposedException e) {

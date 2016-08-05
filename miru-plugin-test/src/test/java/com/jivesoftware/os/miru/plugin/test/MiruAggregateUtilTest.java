@@ -52,7 +52,8 @@ public class MiruAggregateUtilTest {
         File root = Files.createTempDir();
         LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
         LabHeapPressure labHeapPressure = new LabHeapPressure(1024 * 1024 * 10, new AtomicLong());
-        LABEnvironment env = new LABEnvironment(LABEnvironment.buildLABCompactorThreadPool(4),
+        LABEnvironment env = new LABEnvironment(LABEnvironment.buildLABSchedulerThreadPool(4),
+            LABEnvironment.buildLABCompactorThreadPool(4),
             LABEnvironment.buildLABDestroyThreadPool(1),
             root,
             false,

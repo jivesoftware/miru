@@ -215,14 +215,17 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
         final AtomicInteger largestPartitionId = new AtomicInteger(0);
         byte[] from = tenantId.getBytes();
         byte[] to = WALKey.prefixUpperExclusive(from);
-        latestPartitionsClient().scan(Collections.singletonList(new ScanRange(null, from, null, to)),
+        latestPartitionsClient().scan(
+            Collections.singletonList(new ScanRange(null, from, null, to)),
             (prefix, key, value, timestamp, version) -> {
                 int partitionId = FilerIO.bytesInt(value);
                 if (largestPartitionId.get() < partitionId) {
                     largestPartitionId.set(partitionId);
                 }
                 return true;
-            });
+            },
+            true
+        );
         return MiruPartitionId.of(largestPartitionId.get());
     }
 

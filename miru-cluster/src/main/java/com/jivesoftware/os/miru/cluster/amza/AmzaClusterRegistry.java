@@ -232,13 +232,16 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
     @Override
     public LinkedHashSet<HostHeartbeat> getAllHosts() throws Exception {
         final LinkedHashSet<HostHeartbeat> heartbeats = new LinkedHashSet<>();
-        hostsClient().scan(Collections.singletonList(new ScanRange(null, null, null, null)),
+        hostsClient().scan(
+            Collections.singletonList(new ScanRange(null, null, null, null)),
             (prefix, key, value, timestamp, version) -> {
                 MiruHost host = hostMarshaller.fromBytes(key);
                 long valueAsTimestamp = FilerIO.bytesLong(value);
                 heartbeats.add(new HostHeartbeat(host, valueAsTimestamp));
                 return true;
-            });
+            },
+            true
+        );
         return heartbeats;
     }
 
@@ -332,7 +335,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
             }
 
             MiruTopologyColumnValue value = new MiruTopologyColumnValue(coordInfo.state, coordInfo.storage, queryTimestamp);
-            LOG.debug("Updating {} to {} at query={}", new Object[] { coord, coordInfo, queryTimestamp });
+            LOG.debug("Updating {} to {} at query={}", new Object[]{coord, coordInfo, queryTimestamp});
 
             byte[] valueBytes = topologyColumnValueMarshaller.toBytes(value);
             updates.set(toTopologyKey(topologyUpdate.coord.tenantId, topologyUpdate.coord.partitionId), valueBytes, -1);
@@ -579,24 +582,30 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
     private Set<MiruTenantId> getTenantsForHostAsSet(MiruHost host) throws Exception {
         final Set<MiruTenantId> tenants = new HashSet<>();
         EmbeddedClient registryClient = registryClient(host);
-        registryClient.scan(Collections.singletonList(new ScanRange(null, null, null, null)),
+        registryClient.scan(
+            Collections.singletonList(new ScanRange(null, null, null, null)),
             (prefix, key, value, timestamp, version) -> {
                 RawTenantAndPartition topologyKey = fromTopologyKey(key);
                 tenants.add(new MiruTenantId(topologyKey.tenantBytes));
                 return true;
-            });
+            },
+            true
+        );
         return tenants;
     }
 
     @Override
     public void removeTenantPartionReplicaSet(final MiruTenantId tenantId, final MiruPartitionId partitionId) throws Exception {
         List<MiruHost> hosts = Lists.newArrayList();
-        hostsClient().scan(Collections.singletonList(new ScanRange(null, null, null, null)),
+        hostsClient().scan(
+            Collections.singletonList(new ScanRange(null, null, null, null)),
             (byte[] prefix, byte[] key, byte[] value, long timestamp, long version) -> {
                 MiruHost host = hostMarshaller.fromBytes(key);
                 hosts.add(host);
                 return true;
-            });
+            },
+            true
+        );
         for (MiruHost host : hosts) {
             EmbeddedClient registryClient = registryClient(host);
             EmbeddedClient topologyInfoClient = topologyInfoClient(host);
@@ -654,18 +663,21 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
         final byte[] to = WALKey.prefixUpperExclusive(from);
         for (HostHeartbeat hostHeartbeat : getAllHosts()) {
             EmbeddedClient registryClient = registryClient(hostHeartbeat.host);
-            registryClient.scan(Collections.singletonList(new ScanRange(null, from, null, to)),
+            registryClient.scan(
+                Collections.singletonList(new ScanRange(null, from, null, to)),
                 (prefix, key, value, timestamp, version) -> {
                     RawTenantAndPartition tenantPartitionKey = fromTopologyKey(key);
                     MiruPartitionId partitionId = MiruPartitionId.of(tenantPartitionKey.partitionId);
                     builder.append("partition: ").append(partitionId.getId())
-                        .append(", host: ").append(hostHeartbeat.host)
-                        .append(", value: ").append(FilerIO.bytesLong(value))
-                        .append(", timestamp: ").append(timestamp)
-                        .append(", version: ").append(version)
-                        .append("\n");
+                    .append(", host: ").append(hostHeartbeat.host)
+                    .append(", value: ").append(FilerIO.bytesLong(value))
+                    .append(", timestamp: ").append(timestamp)
+                    .append(", version: ").append(version)
+                    .append("\n");
                     return true;
-                });
+                },
+                true
+            );
         }
     }
 
@@ -690,7 +702,8 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
         final NavigableMap<MiruPartitionId, MinMaxPriorityQueue<HostAndTimestamp>> partitionIdToLatest = new TreeMap<>();
         for (HostHeartbeat hostHeartbeat : getAllHosts()) {
             EmbeddedClient registryClient = registryClient(hostHeartbeat.host);
-            registryClient.scan(Collections.singletonList(new ScanRange(null, from, null, to)),
+            registryClient.scan(
+                Collections.singletonList(new ScanRange(null, from, null, to)),
                 (prefix, key, value, timestamp, version) -> {
                     RawTenantAndPartition tenantPartitionKey = fromTopologyKey(key);
                     MiruPartitionId partitionId = MiruPartitionId.of(tenantPartitionKey.partitionId);
@@ -698,13 +711,15 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
                     if (latest == null) {
                         // TODO defaultNumberOfReplicas should come from config?
                         latest = MinMaxPriorityQueue.maximumSize(defaultNumberOfReplicas)
-                            .expectedSize(defaultNumberOfReplicas)
-                            .create();
+                        .expectedSize(defaultNumberOfReplicas)
+                        .create();
                         partitionIdToLatest.put(partitionId, latest);
                     }
                     latest.add(new HostAndTimestamp(hostHeartbeat.host, FilerIO.bytesLong(value)));
                     return true;
-                });
+                },
+                true
+            );
         }
         return partitionIdToLatest;
     }
@@ -1010,11 +1025,14 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
     @Override
     public int upgradeSchema(MiruSchema schema, boolean upgradeOnMissing, boolean upgradeOnError) throws Exception {
         Set<MiruTenantId> toTenantIds = Sets.newHashSet();
-        schemasClient().scan(Collections.singletonList(new ScanRange(null, null, null, null)),
+        schemasClient().scan(
+            Collections.singletonList(new ScanRange(null, null, null, null)),
             (prefix, key, value, timestamp, version) -> {
                 toTenantIds.add(fromTenantKey(key));
                 return true;
-            });
+            },
+            true
+        );
 
         byte[] schemaBytes = schemaMarshaller.toBytes(schema);
         AmzaPartitionUpdates updates = new AmzaPartitionUpdates();
@@ -1106,7 +1124,8 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
         byte[] toKey = WALKey.prefixUpperExclusive(fromKey);
         EmbeddedClient ingressClient = ingressClient();
         if (ingressClient != null) {
-            ingressClient.scan(Collections.singletonList(new ScanRange(null, fromKey, null, toKey)),
+            ingressClient.scan(
+                Collections.singletonList(new ScanRange(null, fromKey, null, toKey)),
                 (prefix, key, value, timestamp, version) -> {
                     if (value != null) {
                         MiruPartitionId streamPartitionId = ingressKeyToPartitionId(key);
@@ -1116,7 +1135,9 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
                         }
                     }
                     return false;
-                });
+                },
+                true
+            );
         }
     }
 

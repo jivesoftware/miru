@@ -209,11 +209,14 @@ public class AmzaWALUtil {
         long id = (localNamedCursor != null) ? localNamedCursor.id : 0;
 
         long[] nextId = new long[1];
-        client.scan(Collections.singletonList(new ScanRange(prefix, FilerIO.longBytes(id), prefix, FilerIO.longBytes(Long.MAX_VALUE))),
+        client.scan(
+            Collections.singletonList(new ScanRange(prefix, FilerIO.longBytes(id), prefix, FilerIO.longBytes(Long.MAX_VALUE))),
             (prefix1, key, value, timestamp, version) -> {
                 nextId[0] = FilerIO.bytesLong(key);
                 return scan.stream(prefix1, key, value, timestamp, version);
-            });
+            },
+            true
+        );
         cursorsByName.put(localRingMemberName, new NamedCursor(localRingMemberName, nextId[0]));
         return new AmzaCursor(cursorsByName.values(), null);
     }

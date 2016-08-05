@@ -40,14 +40,18 @@ public class FixedWidthRawhide implements Rawhide {
         FormatTransformer readValueFormatTransormer,
         byte[] rawEntry,
         int offset,
-        ValueStream stream) throws Exception {
+        ValueStream stream,
+        boolean hydrateValues) throws Exception {
         if (rawEntry == null) {
             return stream.stream(index, null, -1, false, -1, null);
         }
         byte[] key = new byte[keyLength];
         UIO.readBytes(rawEntry, 0, key);
-        byte[] payload = new byte[payloadLength];
-        UIO.readBytes(rawEntry, keyLength, payload);
+        byte[] payload = null;
+        if (hydrateValues) {
+            payload = new byte[payloadLength];
+            UIO.readBytes(rawEntry, keyLength, payload);
+        }
         return stream.stream(index, key, 0, false, 0, payload);
     }
 
@@ -57,7 +61,7 @@ public class FixedWidthRawhide implements Rawhide {
     }
 
     @Override
-    public int rawEntryLength(IReadable readable, byte[] lengthBuffer) throws Exception {
+    public int rawEntryLength(IReadable readable) throws Exception {
         return keyLength + payloadLength;
     }
 
@@ -69,8 +73,7 @@ public class FixedWidthRawhide implements Rawhide {
         int length,
         FormatTransformer writeKeyFormatTransormer,
         FormatTransformer writeValueFormatTransormer,
-        IAppendOnly appendOnly,
-        byte[] lengthBuffer) throws Exception {
+        IAppendOnly appendOnly) throws Exception {
         appendOnly.append(rawEntry, offset, length);
     }
 
@@ -102,8 +105,7 @@ public class FixedWidthRawhide implements Rawhide {
         IReadable readable,
         byte[] compareKey,
         int compareOffset,
-        int compareLength,
-        byte[] intBuffer) throws Exception {
+        int compareLength) throws Exception {
         return IndexUtil.compare(readable, keyLength, compareKey, compareOffset, compareLength);
     }
 
