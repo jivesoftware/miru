@@ -373,6 +373,7 @@ public class MiruReaderMain {
             deployable.addEndpoints(MiruWriterEndpoints.class);
             deployable.addEndpoints(MiruReaderEndpoints.class);
             deployable.addInjectables(MiruService.class, miruService);
+            deployable.addInjectables(MiruHost.class, miruHost);
 
             deployable.addInjectables(ObjectMapper.class, mapper);
 

@@ -109,6 +109,11 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
     }
 
     @Override
+    public boolean streamTimeAndVersion(StackBuffer stackBuffer, TimeAndVersionStream stream) throws Exception {
+        throw new UnsupportedOperationException("Hopefully never");
+    }
+
+    @Override
     public MiruTermId[] get(String name, int index, final int fieldId, StackBuffer stackBuffer) throws IOException, InterruptedException {
         if (termLookup[fieldId] == null || index > lastId(stackBuffer)) {
             return null;

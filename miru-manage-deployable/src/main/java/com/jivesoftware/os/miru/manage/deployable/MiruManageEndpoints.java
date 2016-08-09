@@ -149,6 +149,15 @@ public class MiruManageEndpoints {
         return Response.ok(rendered).build();
     }
 
+    @GET
+    @Path("/tenants/diff/{tenantId}/{partitionId}")
+    @Produces(MediaType.TEXT_PLAIN)
+    public Response getTenantsForTenant(@PathParam("tenantId") String tenantId,
+        @PathParam("partitionId") int partitionId) {
+        String rendered = rebalanceDirector.diffTenantPartition(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), MiruPartitionId.of(partitionId));
+        return Response.ok(rendered).build();
+    }
+
     @POST
     @Path("/topology/shift")
     @Produces(MediaType.TEXT_HTML)

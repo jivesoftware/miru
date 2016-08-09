@@ -61,6 +61,7 @@
                                     {if $p.begins != $p.ends}({$p.begins} / {$p.ends})&nbsp;{/if}
                                     (clock: {$p.minClock} to {$p.maxClock})&nbsp;
                                     (orderId: {$p.minOrderId} to {$p.maxOrderId})&nbsp;
+                                    <a href="/miru/manage/tenants/diff/{$tenant}/{$p.partitionId}">Diff</a>&nbsp;
                                 {/if}
                             </td>
                         </tr>
@@ -125,8 +126,8 @@
             <td style="text-transform:uppercase;">{$type}</td>
             <td>{$partition.backingStorage}</td>
             <td>{$partition.lastIngress}</td>
-            <td>{$partition.lastId} ({$partition.lastIdTimeAgo})</td>
             <td>{$partition.lastQuery}</td>
+            <td>{$partition.lastId} ({$partition.lastIdTimeAgo})</td>
             <td>
                 <a href="/miru/manage/hosts/{$partition.host.logicalName|escapeUri}#focus">
                     {$partition.host.logicalName}

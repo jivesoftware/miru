@@ -1,9 +1,17 @@
 package com.jivesoftware.os.miru.service.endpoint;
 
 import com.google.common.base.Charsets;
+import com.google.common.base.Optional;
+import com.google.common.collect.Lists;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
+import com.jivesoftware.os.miru.api.MiruHost;
+import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
+import com.jivesoftware.os.miru.plugin.partition.MiruQueryablePartition;
+import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
 import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -21,6 +29,7 @@ import javax.ws.rs.core.Response;
 
 import static com.jivesoftware.os.miru.api.MiruReader.INSPECT_ENDPOINT;
 import static com.jivesoftware.os.miru.api.MiruReader.QUERY_SERVICE_ENDPOINT_PREFIX;
+import static com.jivesoftware.os.miru.api.MiruReader.TIMESTAMPS_ENDPOINT;
 import static com.jivesoftware.os.miru.api.MiruReader.WARM_ALL_ENDPOINT;
 import static com.jivesoftware.os.miru.api.MiruReader.WARM_ENDPOINT;
 
@@ -30,11 +39,13 @@ public class MiruReaderEndpoints {
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
     private final MiruService miruService;
+    private final MiruHost miruHost;
     private final MiruStats stats;
     private final ResponseHelper responseHelper = ResponseHelper.INSTANCE;
 
-    public MiruReaderEndpoints(@Context MiruService miruService, @Context MiruStats stats) {
+    public MiruReaderEndpoints(@Context MiruService miruService, @Context MiruHost miruHost, @Context MiruStats stats) {
         this.miruService = miruService;
+        this.miruHost = miruHost;
         this.stats = stats;
     }
 
@@ -65,7 +76,7 @@ public class MiruReaderEndpoints {
                 try {
                     miruService.warm(tenantId);
                 } catch (Exception e) {
-                    log.error("Failed to warm tenant {}", new Object[]{tenantId}, e);
+                    log.error("Failed to warm tenant {}", new Object[] { tenantId }, e);
                 }
             }
             stats.ingressed(WARM_ALL_ENDPOINT, tenantIds.size(), System.currentTimeMillis() - start);
@@ -88,6 +99,38 @@ public class MiruReaderEndpoints {
             MiruTenantId tenantId = new MiruTenantId(tenantIdString.getBytes(Charsets.UTF_8));
             String value = miruService.inspect(tenantId, MiruPartitionId.of(partitionId), field, term);
             stats.ingressed(INSPECT_ENDPOINT + "/" + tenantIdString + "/" + partitionId + "/" + field + "/" + term, 1, System.currentTimeMillis() - start);
+            return Response.ok(value).build();
+        } catch (Exception e) {
+            log.error("Failed to inspect.", e);
+            return Response.serverError().build();
+        }
+    }
+
+    @GET
+    @Path(TIMESTAMPS_ENDPOINT + "/{tenantId}/{partitionId}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response timestamps(@PathParam("tenantId") String tenantIdString,
+        @PathParam("partitionId") int partitionIdInt) {
+        try {
+            long start = System.currentTimeMillis();
+            MiruTenantId tenantId = new MiruTenantId(tenantIdString.getBytes(Charsets.UTF_8));
+            MiruPartitionId partitionId = MiruPartitionId.of(partitionIdInt);
+            MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, partitionId, miruHost);
+
+            Optional<? extends MiruQueryablePartition<?, ?>> queryablePartition = miruService.getQueryablePartition(coord);
+            List<String> value = Lists.newArrayList();
+            if (queryablePartition.isPresent()) {
+                StackBuffer stackBuffer = new StackBuffer();
+                try (MiruRequestHandle<?, ?, ?> handle = queryablePartition.get().acquireQueryHandle()) {
+                    MiruActivityIndex activityIndex = handle.getRequestContext().getActivityIndex();
+                    activityIndex.streamTimeAndVersion(stackBuffer, (id, timestamp, version) -> {
+                        value.add(timestamp + ", " + version);
+                        return true;
+                    });
+                }
+            }
+
+            stats.ingressed(TIMESTAMPS_ENDPOINT + "/" + tenantIdString + "/" + partitionId, 1, System.currentTimeMillis() - start);
             return Response.ok(value).build();
         } catch (Exception e) {
             log.error("Failed to inspect.", e);

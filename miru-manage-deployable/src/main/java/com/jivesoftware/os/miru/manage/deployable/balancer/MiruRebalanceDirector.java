@@ -15,6 +15,8 @@ import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruHostProvider;
 import com.jivesoftware.os.miru.api.MiruHostSelectiveStrategy;
 import com.jivesoftware.os.miru.api.MiruPartition;
+import com.jivesoftware.os.miru.api.MiruReader;
+import com.jivesoftware.os.miru.api.MiruReaderEndpointConstants;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.TenantAndPartition;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -23,6 +25,8 @@ import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import com.jivesoftware.os.routing.bird.http.client.ConnectionDescriptorSelectiveStrategy;
+import com.jivesoftware.os.routing.bird.http.client.HttpClientException;
 import com.jivesoftware.os.routing.bird.http.client.HttpResponse;
 import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
@@ -32,12 +36,16 @@ import com.jivesoftware.os.routing.bird.shared.ConnectionDescriptors;
 import com.jivesoftware.os.routing.bird.shared.HostPort;
 import com.jivesoftware.os.routing.bird.shared.InstanceDescriptor;
 import com.jivesoftware.os.routing.bird.shared.TenantsServiceConnectionDescriptorProvider;
+import difflib.Delta;
+import difflib.DiffUtils;
+import difflib.Patch;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -197,6 +205,80 @@ public class MiruRebalanceDirector {
 
     public void debugTenantPartition(MiruTenantId tenantId, MiruPartitionId partitionId, StringBuilder stringBuilder) throws Exception {
         clusterRegistry.debugTenantPartition(tenantId, partitionId, stringBuilder);
+    }
+
+    public String diffTenantPartition(MiruTenantId tenantId, MiruPartitionId partitionId) {
+        ConnectionDescriptors connectionDescriptors = readerConnectionDescriptorsProvider.getConnections("");
+        List<ConnectionDescriptor> descriptors = connectionDescriptors.getConnectionDescriptors();
+        List<List<String>> diffables = Lists.newArrayList();
+        for (ConnectionDescriptor descriptor : descriptors) {
+            HostPort hostPort = descriptor.getHostPort();
+            List<String> diffable = null;
+            try {
+                diffable = readerClient.call("", new ConnectionDescriptorSelectiveStrategy(new HostPort[] { hostPort }), "diffTenantPartition",
+                    httpClient -> {
+                        String endpoint = MiruReader.QUERY_SERVICE_ENDPOINT_PREFIX + MiruReader.TIMESTAMPS_ENDPOINT + "/" + tenantId + "/" + partitionId;
+                        HttpResponse response = httpClient.get(endpoint, null);
+                        if (responseMapper.isSuccessStatusCode(response.getStatusCode())) {
+                            @SuppressWarnings("unchecked")
+                            List<String> result = responseMapper.extractResultFromResponse(response, List.class, new Class[] { String.class }, null);
+                            return new ClientResponse<>(result, true);
+                        } else {
+                            return new ClientResponse<>(null, false);
+                        }
+                    });
+            } catch (HttpClientException e) {
+                LOG.error("Failed to diff {}", new Object[] { descriptor }, e);
+            }
+            diffables.add(diffable);
+        }
+
+        StringBuilder buf = new StringBuilder();
+        /*
+        CHANGED 3, 5 <<<
+        foo bra
+        -----
+        foo bar
+        >>>
+        */
+        for (int i = 0; i < diffables.size(); i++) {
+            for (int j = i + 1; j < diffables.size(); j++) {
+                HostPort hostPortI = descriptors.get(i).getHostPort();
+                HostPort hostPortJ = descriptors.get(j).getHostPort();
+                buf.append("==================================== ")
+                    .append(hostPortI.getHost()).append(':').append(hostPortI.getPort())
+                    .append(" to ")
+                    .append(hostPortJ.getHost()).append(':').append(hostPortJ.getPort())
+                    .append(" ====================================\n");
+                List<String> diffI = diffables.get(i);
+                List<String> diffJ = diffables.get(j);
+                if (diffI == null || diffJ == null) {
+                    buf.append("Nulls ").append(diffI == null).append(' ').append(diffJ == null).append('\n');
+                } else {
+                    Patch patch = DiffUtils.diff(diffI, diffJ);
+                    List<Delta> deltas = patch.getDeltas();
+                    for (Delta delta : deltas) {
+                        buf.append(delta.getType().name())
+                            .append(' ')
+                            .append(delta.getOriginal().getPosition())
+                            .append(", ")
+                            .append(delta.getRevised().getPosition())
+                            .append(" <<<")
+                            .append('\n');
+                        for (String line : (List<String>) delta.getOriginal().getLines()) {
+                            buf.append(line).append('\n');
+                        }
+                        buf.append("-----\n");
+                        for (String line : (List<String>) delta.getRevised().getLines()) {
+                            buf.append(line).append('\n');
+                        }
+                        buf.append(">>>\n");
+                    }
+                }
+                buf.append("\n\n");
+            }
+        }
+        return buf.toString();
     }
 
     private static class Shift {
