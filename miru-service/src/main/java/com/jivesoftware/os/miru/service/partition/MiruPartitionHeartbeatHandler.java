@@ -1,6 +1,6 @@
 package com.jivesoftware.os.miru.service.partition;
 
-import com.google.common.base.Optional;
+import com.google.common.base.Objects;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.MiruHost;
@@ -45,24 +45,36 @@ public class MiruPartitionHeartbeatHandler {
         this.clusterClient = clusterClient;
     }
 
-    public void heartbeat(MiruPartitionCoord coord,
-        Optional<MiruPartitionCoordInfo> info,
-        Optional<Long> queryTimestamp)
+    public void updateInfo(MiruPartitionCoord coord, MiruPartitionCoordInfo info) throws Exception {
+        updateHeartbeat(coord, info, -1);
+    }
+
+    public void updateQueryTimestamp(MiruPartitionCoord coord, long queryTimestamp) throws Exception {
+        updateHeartbeat(coord, null, queryTimestamp);
+    }
+
+    private void updateHeartbeat(MiruPartitionCoord coord,
+        MiruPartitionCoordInfo info,
+        long queryTimestamp)
         throws Exception {
 
         heartbeats.compute(coord, (key, got) -> {
             if (got == null) {
                 return new PartitionInfo(coord.tenantId,
                     coord.partitionId.getId(),
-                    queryTimestamp.or(-1L),
-                    info.orNull());
+                    queryTimestamp,
+                    info);
             } else {
                 return new PartitionInfo(coord.tenantId,
                     coord.partitionId.getId(),
-                    Math.max(queryTimestamp.or(-1L), got.queryTimestamp),
-                    info.isPresent() ? info.get() : got.info);
+                    Math.max(queryTimestamp, got.queryTimestamp),
+                    Objects.firstNonNull(info, got.info));
             }
         });
+    }
+
+    public void updateLastId(MiruPartitionCoord coord, int lastId) throws Exception {
+        clusterClient.updateLastId(coord, lastId);
     }
 
     private void retry(MiruHost host, PartitionInfo partitionInfo) throws Exception {

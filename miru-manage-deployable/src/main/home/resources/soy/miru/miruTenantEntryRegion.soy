@@ -44,6 +44,7 @@
                         <th>Storage</th>
                         <th>Last Ingress</th>
                         <th>Last Query</th>
+                        <th>Last Id</th>
                         <th>Logical name</th>
                         <th>Actions</th>
                     </tr>
@@ -124,6 +125,7 @@
             <td style="text-transform:uppercase;">{$type}</td>
             <td>{$partition.backingStorage}</td>
             <td>{$partition.lastIngress}</td>
+            <td>{$partition.lastId} ({$partition.lastIdTimeAgo})</td>
             <td>{$partition.lastQuery}</td>
             <td>
                 <a href="/miru/manage/hosts/{$partition.host.logicalName|escapeUri}#focus">

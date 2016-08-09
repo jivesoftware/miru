@@ -7,6 +7,7 @@ import com.google.common.collect.Sets;
 import com.jivesoftware.os.miru.api.HostPortProvider;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartition;
+import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
@@ -254,6 +255,11 @@ public class SipTest {
 
         @Override
         public void removeIngress(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+
+        }
+
+        @Override
+        public void updateLastId(MiruPartitionCoord coord, int lastId) throws Exception {
 
         }
 
