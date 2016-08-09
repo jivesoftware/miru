@@ -947,7 +947,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
     protected class SipMigrateIndexRunnable implements Runnable {
 
         private final AtomicBoolean checkedObsolete = new AtomicBoolean(false);
-        private final AtomicBoolean updatedLastId = new AtomicBoolean(false);
+        private final AtomicLong updatedLastId = new AtomicLong(-1);
 
         @Override
         public void run() {
@@ -1045,10 +1045,10 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                 return;
             }
 
-            if (accessor.persistentContext.isPresent() && !updatedLastId.get()) {
+            if (accessor.persistentContext.isPresent() && updatedLastId.get() == -1) {
                 int lastId = accessor.persistentContext.get().activityIndex.lastId(stackBuffer);
                 heartbeatHandler.updateLastId(coord, lastId);
-                updatedLastId.set(true);
+                updatedLastId.set(lastId);
             }
         }
 
@@ -1155,7 +1155,10 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
 
             if (accessor.persistentContext.isPresent()) {
                 int lastId = accessor.persistentContext.get().activityIndex.lastId(stackBuffer);
-                heartbeatHandler.updateLastId(coord, lastId);
+                if (lastId > updatedLastId.get()) {
+                    heartbeatHandler.updateLastId(coord, lastId);
+                    updatedLastId.set(lastId);
+                }
             }
 
             S suggestion = sipTracker.suggest(sipCursor, nextSipCursor);
