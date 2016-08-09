@@ -123,6 +123,11 @@ public class MiruRegistryClusterClient implements MiruClusterClient {
     }
 
     @Override
+    public void updateLastId(MiruPartitionCoord coord, int lastId) throws Exception {
+        clusterRegistry.updateLastId(coord, lastId);
+    }
+
+    @Override
     public List<MiruPartitionStatus> getPartitionStatus(MiruTenantId tenantId, MiruPartitionId largestPartitionId) throws Exception {
         return clusterRegistry.getPartitionStatusForTenant(tenantId, largestPartitionId);
     }

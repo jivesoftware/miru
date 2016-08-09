@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.api.topology;
 
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartition;
+import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -46,6 +47,8 @@ public interface MiruClusterClient {
     void updateIngress(MiruIngressUpdate ingressUpdate) throws Exception;
 
     void removeIngress(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
+
+    void updateLastId(MiruPartitionCoord coord, int lastId) throws Exception;
 
     void destroyPartition(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
 

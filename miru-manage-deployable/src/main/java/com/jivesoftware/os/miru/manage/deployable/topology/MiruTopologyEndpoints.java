@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.manage.deployable.topology;
 
 import com.google.common.base.Charsets;
 import com.jivesoftware.os.miru.api.MiruHost;
+import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
@@ -93,6 +94,34 @@ public class MiruTopologyEndpoints {
         } catch (Exception x) {
             String msg = "Failed to remove ingress";
             LOG.error(msg, x);
+            return ResponseHelper.INSTANCE.errorResponse(msg, x);
+        }
+    }
+
+    @POST
+    @Path("/update/lastId/{tenantId}/{partitionId}/{host}/{lastId}")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response updateIngress(@PathParam("tenantId") String tenantId,
+        @PathParam("partitionId") int partitionId,
+        @PathParam("host") String host,
+        @PathParam("lastId") int lastId) {
+        try {
+            long start = System.currentTimeMillis();
+            MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
+                MiruPartitionId.of(partitionId),
+                new MiruHost(host));
+            registry.updateLastId(coord, lastId);
+            Response r = ResponseHelper.INSTANCE.jsonResponse("ok");
+            stats.ingressed("/update/lastId", 1, System.currentTimeMillis() - start);
+            return r;
+        } catch (Exception x) {
+            String msg = "Failed to update lastId for " + tenantId + " " + partitionId + " " + host + " " + lastId;
+            if (LOG.isDebugEnabled()) {
+                LOG.debug(msg, x);
+            } else {
+                LOG.error(msg);
+            }
             return ResponseHelper.INSTANCE.errorResponse(msg, x);
         }
     }

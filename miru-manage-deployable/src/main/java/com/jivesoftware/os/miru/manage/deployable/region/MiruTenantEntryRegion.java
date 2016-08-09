@@ -1,6 +1,8 @@
 package com.jivesoftware.os.miru.manage.deployable.region;
 
 import com.google.common.collect.Maps;
+import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
+import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.miru.api.MiruPartition;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
@@ -35,6 +37,7 @@ public class MiruTenantEntryRegion implements MiruRegion<MiruTenantId> {
     private final MiruSoyRenderer renderer;
     private final MiruClusterRegistry clusterRegistry;
     private final MiruWALClient<?, ?> miruWALClient;
+    private final SnowflakeIdPacker idPacker = new SnowflakeIdPacker();
 
     public MiruTenantEntryRegion(String template,
         MiruSoyRenderer renderer,
@@ -74,7 +77,16 @@ public class MiruTenantEntryRegion implements MiruRegion<MiruTenantId> {
                     MiruPartitionState state = partition.info.state;
                     String lastIngress = timeAgo(System.currentTimeMillis() - topologyStatus.lastIngressTimestamp);
                     String lastQuery = timeAgo(System.currentTimeMillis() - topologyStatus.lastQueryTimestamp);
-                    PartitionCoordBean partitionCoordBean = new PartitionCoordBean(partition.coord, partition.info.storage, lastIngress, lastQuery);
+                    String lastId = String.valueOf(topologyStatus.lastId);
+                    long lastIdTimestamp = topologyStatus.lastId == -1 ? -1
+                        : idPacker.unpack(topologyStatus.lastIdTimestamp)[0] + JiveEpochTimestampProvider.JIVE_EPOCH;
+                    String lastIdTimeAgo = lastIdTimestamp == -1 ? "-" : timeAgo(System.currentTimeMillis() - lastIdTimestamp);
+                    PartitionCoordBean partitionCoordBean = new PartitionCoordBean(partition.coord,
+                        partition.info.storage,
+                        lastIngress,
+                        lastQuery,
+                        lastId,
+                        lastIdTimeAgo);
                     if (state == MiruPartitionState.online) {
                         partitionBean.getOnline().add(partitionCoordBean);
                     } else if (state == MiruPartitionState.upgrading) {

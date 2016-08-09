@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.cluster.client;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartition;
+import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
@@ -84,6 +85,21 @@ public class MiruHttpClusterClient implements MiruClusterClient {
             HttpResponse response = client.postJson("/miru/topology/remove/ingress/" + tenantId.toString() + "/" + partitionId.toString(), "null", null);
             String r = responseMapper.extractResultFromResponse(response, String.class, null);
             miruStats.egressed("/miru/topology/remove/ingress/" + tenantId.toString() + "/" + partitionId.toString(), 1, System.currentTimeMillis() - start);
+            return new ClientResponse<>(r, true);
+        });
+    }
+
+    @Override
+    public void updateLastId(MiruPartitionCoord coord, int lastId) throws Exception {
+        sendRoundRobin("updateLastId", client -> {
+            long start = System.currentTimeMillis();
+            String endpointPrefix = "/miru/topology/update/lastId" +
+                "/" + coord.tenantId.toString() +
+                "/" + coord.partitionId.toString() +
+                "/" + coord.host.toString();
+            HttpResponse response = client.postJson(endpointPrefix + "/" + lastId, "null", null);
+            String r = responseMapper.extractResultFromResponse(response, String.class, null);
+            miruStats.egressed(endpointPrefix, 1, System.currentTimeMillis() - start);
             return new ClientResponse<>(r, true);
         });
     }
