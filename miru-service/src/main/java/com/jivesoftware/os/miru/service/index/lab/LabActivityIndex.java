@@ -103,6 +103,19 @@ public class LabActivityIndex implements MiruActivityIndex {
     }
 
     @Override
+    public boolean streamTimeAndVersion(StackBuffer stackBuffer, TimeAndVersionStream stream) throws Exception {
+        return timeAndVersionIndex.rowScan((index1, key, timestamp, tombstoned, version, payload) -> {
+            if (payload != null && !tombstoned) {
+                int id = UIO.bytesInt(key);
+                if (!stream.stream(id, UIO.bytesLong(payload, 0), UIO.bytesLong(payload, 8))) {
+                    return false;
+                }
+            }
+            return true;
+        }, true);
+    }
+
+    @Override
     public MiruTermId[] get(String name, int index, final int fieldId, StackBuffer stackBuffer) throws Exception {
         if (!hasTermStorage[fieldId] || index > lastId(stackBuffer)) {
             return null;

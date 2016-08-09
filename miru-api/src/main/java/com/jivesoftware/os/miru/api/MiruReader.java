@@ -11,6 +11,7 @@ public interface MiruReader {
     public static final String WARM_ENDPOINT = "/warm";
     public static final String WARM_ALL_ENDPOINT = "/warmall";
     public static final String INSPECT_ENDPOINT = "/inspect";
+    public static final String TIMESTAMPS_ENDPOINT = "/timestamps";
 
     <P, R> R read(MiruTenantId tenantId, Optional<MiruActorId> actorId, P params, String endpoint, Class<R> resultClass, R defaultResult)
             throws MiruQueryServiceException;

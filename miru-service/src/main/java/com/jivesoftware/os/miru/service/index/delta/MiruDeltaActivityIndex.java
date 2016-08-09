@@ -67,6 +67,25 @@ public class MiruDeltaActivityIndex implements MiruActivityIndex, Mergeable {
     }
 
     @Override
+    public boolean streamTimeAndVersion(StackBuffer stackBuffer, TimeAndVersionStream stream) throws Exception {
+        if (!backingIndex.streamTimeAndVersion(stackBuffer, stream)) {
+            return false;
+        }
+
+        int startId = backingIndex.lastId(stackBuffer) + 1;
+        int endId = lastId.get();
+        for (int i = startId; i <= endId; i++) {
+            MiruActivityAndId<MiruInternalActivity> activityAndId = activities.get(i);
+            if (activityAndId != null && activityAndId.activity != null) {
+                if (!stream.stream(i, activityAndId.activity.time, activityAndId.activity.version)) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    @Override
     public MiruTermId[] get(String name, int index, int fieldId, StackBuffer stackBuffer) throws Exception {
         MiruActivityAndId<MiruInternalActivity> activityAndId = activities.get(index);
         if (activityAndId != null) {

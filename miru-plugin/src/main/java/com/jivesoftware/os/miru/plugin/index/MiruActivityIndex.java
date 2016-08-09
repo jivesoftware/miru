@@ -32,6 +32,19 @@ public interface MiruActivityIndex {
     TimeAndVersion[] getAllTimeAndVersions(String name, int[] indexes, StackBuffer stackBuffer) throws Exception;
 
     /**
+     * Stream all times and versions
+     *
+     * @param stream the stream
+     * @return whether the stream completed
+     */
+    boolean streamTimeAndVersion(StackBuffer stackBuffer, TimeAndVersionStream stream) throws Exception;
+
+    interface TimeAndVersionStream {
+
+        boolean stream(int id, long timestamp, long version) throws Exception;
+    }
+
+    /**
      * Get the terms from the given field for the activity at the requested index.
      *
      * @param index the activity index
