@@ -12,6 +12,7 @@ import com.jivesoftware.os.amza.service.EmbeddedClientProvider;
 import com.jivesoftware.os.filer.chunk.store.transaction.TxCogs;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.jive.utils.collections.bah.LRUConcurrentBAHLinkedHash;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
@@ -29,7 +30,9 @@ import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
 import com.jivesoftware.os.miru.api.MiruStats;
+import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivityFactory;
 import com.jivesoftware.os.miru.api.activity.schema.DefaultMiruSchemaDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
@@ -91,6 +94,8 @@ import com.jivesoftware.os.routing.bird.health.api.HealthCheckRegistry;
 import com.jivesoftware.os.routing.bird.health.api.HealthChecker;
 import com.jivesoftware.os.routing.bird.health.api.HealthFactory;
 import java.io.File;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -576,6 +581,48 @@ public class MiruLocalHostedPartitionTest {
 
         assertEquals(localHostedPartition.getState(), MiruPartitionState.online);
         assertEquals(localHostedPartition.getStorage(), MiruBackingStorage.disk);
+    }
+
+    @Test(dataProvider = "useLabIndexes")
+    public void testRewriteTimestamps(boolean useLabIndexes) throws Exception {
+        init(useLabIndexes);
+
+        MiruLocalHostedPartition<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSCursor, RCVSSipCursor> localHostedPartition =
+            getRoaringLocalHostedPartition();
+
+        setActive(true);
+        waitForRef(bootstrapRunnable).run();
+        waitForRef(rebuildIndexRunnable).run();
+        waitForRef(sipMigrateIndexRunnable).run();
+
+        MiruPartitionedActivityFactory factory = new MiruPartitionedActivityFactory();
+        List<MiruPartitionedActivity> activities = Lists.newArrayList();
+        for (int i = 0; i < 100; i++) {
+            activities.add(factory.activity(1,
+                partitionId,
+                i,
+                new MiruActivity(tenantId,
+                    1_000L + i,
+                    new String[0],
+                    0L,
+                    Collections.emptyMap(),
+                    Collections.emptyMap())));
+        }
+
+        localHostedPartition.index(Lists.newArrayList(activities).iterator());
+
+        StackBuffer stackBuffer = new StackBuffer();
+        try (MiruRequestHandle<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSSipCursor> handle = localHostedPartition.acquireQueryHandle()) {
+            int lastId = handle.getRequestContext().getActivityIndex().lastId(stackBuffer);
+            assertEquals(lastId, 99);
+        }
+
+        localHostedPartition.index(Lists.newArrayList(activities).iterator());
+
+        try (MiruRequestHandle<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSSipCursor> handle = localHostedPartition.acquireQueryHandle()) {
+            int lastId = handle.getRequestContext().getActivityIndex().lastId(stackBuffer);
+            assertEquals(lastId, 99);
+        }
     }
 
     private MiruLocalHostedPartition<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSCursor, RCVSSipCursor> getRoaringLocalHostedPartition()
