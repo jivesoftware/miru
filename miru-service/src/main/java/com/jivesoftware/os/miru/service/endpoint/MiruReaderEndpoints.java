@@ -124,7 +124,9 @@ public class MiruReaderEndpoints {
                 try (MiruRequestHandle<?, ?, ?> handle = queryablePartition.get().acquireQueryHandle()) {
                     MiruActivityIndex activityIndex = handle.getRequestContext().getActivityIndex();
                     activityIndex.streamTimeAndVersion(stackBuffer, (id, timestamp, version) -> {
-                        value.add(timestamp + ", " + version);
+                        int timeId = handle.getRequestContext().getTimeIndex().getExactId(timestamp, stackBuffer);
+                        boolean idsMatch = (id == timeId);
+                        value.add(timestamp + ", " + version + ", " + idsMatch);
                         return true;
                     });
                 }

@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.service.index;
 
+import com.beust.jcommander.internal.Lists;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
@@ -13,6 +14,7 @@ import com.jivesoftware.os.miru.service.IndexTestUtil;
 import com.jivesoftware.os.miru.service.index.delta.MiruDeltaTimeIndex;
 import java.text.DecimalFormat;
 import java.util.Arrays;
+import java.util.List;
 import org.apache.commons.lang3.ArrayUtils;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -66,18 +68,21 @@ public class MiruTimeIndexTest {
     }
 
     @Test(dataProvider = "miruTimeIndexDataProviderWithData")
-    public void testContainsWithPresentIds(MiruTimeIndex miruTimeIndex, int capacity) throws Exception {
+    public void testMultiContains(MiruTimeIndex miruTimeIndex, int capacity) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
+        List<Long> timestamps = Lists.newArrayList();
         for (int i = 0; i < capacity; i++) {
-            assertTrue(miruTimeIndex.contains(Arrays.asList(i * 10L), stackBuffer)[0], "Should be true at " + i);
+            timestamps.add(i * 10L);
+            timestamps.add(i * 10L + 1);
         }
-    }
-
-    @Test(dataProvider = "miruTimeIndexDataProviderWithData")
-    public void testContainsWithAbsentIds(MiruTimeIndex miruTimeIndex, int capacity) throws Exception {
-        StackBuffer stackBuffer = new StackBuffer();
-        for (int i = 0; i < capacity; i++) {
-            assertFalse(miruTimeIndex.contains(Arrays.asList(i * 10 + 1L), stackBuffer)[0], "Should be false at " + i);
+        boolean[] contains = miruTimeIndex.contains(timestamps, stackBuffer);
+        assertEquals(contains.length, timestamps.size());
+        for (int i = 0; i < contains.length; i++) {
+            if (i % 2 == 0) {
+                assertTrue(contains[i], "Should be true at " + i);
+            } else {
+                assertFalse(contains[i], "Should be false at " + i);
+            }
         }
     }
 
