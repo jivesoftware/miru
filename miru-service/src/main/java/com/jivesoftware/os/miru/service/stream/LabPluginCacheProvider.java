@@ -30,16 +30,14 @@ public class LabPluginCacheProvider implements MiruPluginCacheProvider {
     private final Map<String, LabCacheKeyValues> pluginPersistentCache = Maps.newConcurrentMap();
     private final Map<String, LabLastIdCacheKeyValues> lastIdPluginPersistentCache = Maps.newConcurrentMap();
     private final Map<String, LabTimestampedCacheKeyValues> timestampedPluginPersistentCache = Maps.newConcurrentMap();
-    private final Object[] stripedLocks;
+    private final LabPluginCacheProviderLock[] stripedLocks;
 
     public LabPluginCacheProvider(OrderIdProvider idProvider,
-        LABEnvironment[] labEnvironments) {
+        LABEnvironment[] labEnvironments,
+        LabPluginCacheProviderLock[] stripedLocks) {
         this.idProvider = idProvider;
         this.labEnvironments = labEnvironments;
-        this.stripedLocks = new Object[Short.MAX_VALUE]; //TODO hmmm
-        for (int i = 0; i < stripedLocks.length; i++) {
-            stripedLocks[i] = new Object();
-        }
+        this.stripedLocks = stripedLocks;
     }
 
     @Override
@@ -138,5 +136,16 @@ public class LabPluginCacheProvider implements MiruPluginCacheProvider {
         for (LabTimestampedCacheKeyValues cacheKeyValues : timestampedPluginPersistentCache.values()) {
             cacheKeyValues.close(flushUncommited, fsync);
         }
+    }
+
+    public static LabPluginCacheProviderLock[] allocateLocks(int count) {
+        LabPluginCacheProviderLock[] locks = new LabPluginCacheProviderLock[count];
+        for (int i = 0; i < locks.length; i++) {
+            locks[i] = new LabPluginCacheProviderLock();
+        }
+        return locks;
+    }
+
+    public static class LabPluginCacheProviderLock {
     }
 }

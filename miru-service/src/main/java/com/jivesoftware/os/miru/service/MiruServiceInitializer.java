@@ -56,6 +56,7 @@ import com.jivesoftware.os.miru.service.partition.PartitionErrorTracker;
 import com.jivesoftware.os.miru.service.partition.cluster.MiruClusterExpectedTenants;
 import com.jivesoftware.os.miru.service.solver.MiruLowestLatencySolver;
 import com.jivesoftware.os.miru.service.solver.MiruSolver;
+import com.jivesoftware.os.miru.service.stream.LabPluginCacheProvider;
 import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
 import com.jivesoftware.os.miru.service.stream.MiruRebuildDirector;
 import com.jivesoftware.os.miru.service.stream.allocator.InMemoryChunkAllocator;
@@ -188,6 +189,7 @@ public class MiruServiceInitializer {
             persistentCogs,
             transientCogs,
             timeIdIndexes,
+            LabPluginCacheProvider.allocateLocks(Short.MAX_VALUE),
             schemaProvider,
             termComposer,
             internExtern,
