@@ -108,6 +108,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
     private final TxCogs persistentCogs;
     private final TxCogs transientCogs;
     private final TimeIdIndex[] timeIdIndexes;
+    private final LabPluginCacheProvider.LabPluginCacheProviderLock[] labPluginCacheProviderLocks;
     private final MiruSchemaProvider schemaProvider;
     private final MiruTermComposer termComposer;
     private final MiruActivityInternExtern activityInternExtern;
@@ -129,6 +130,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         TxCogs persistentCogs,
         TxCogs transientCogs,
         TimeIdIndex[] timeIdIndexes,
+        LabPluginCacheProvider.LabPluginCacheProviderLock[] labPluginCacheProviderLocks,
         MiruSchemaProvider schemaProvider,
         MiruTermComposer termComposer,
         MiruActivityInternExtern activityInternExtern,
@@ -150,6 +152,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         this.persistentCogs = persistentCogs;
         this.transientCogs = transientCogs;
         this.timeIdIndexes = timeIdIndexes;
+        this.labPluginCacheProviderLocks = labPluginCacheProviderLocks;
         this.schemaProvider = schemaProvider;
         this.termComposer = termComposer;
         this.activityInternExtern = activityInternExtern;
@@ -568,7 +571,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
 
         StripingLocksProvider<MiruStreamId> streamLocks = new StripingLocksProvider<>(64);
 
-        LabPluginCacheProvider cacheProvider = new LabPluginCacheProvider(idProvider, labEnvironments);
+        LabPluginCacheProvider cacheProvider = new LabPluginCacheProvider(idProvider, labEnvironments, labPluginCacheProviderLocks);
 
         MiruContext<BM, IBM, S> context = new MiruContext<>(version,
             getTimeIdIndex(version),

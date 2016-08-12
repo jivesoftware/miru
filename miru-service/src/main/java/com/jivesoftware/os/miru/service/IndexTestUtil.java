@@ -45,6 +45,7 @@ import com.jivesoftware.os.miru.service.index.lab.LabTimeIdIndexInitializer;
 import com.jivesoftware.os.miru.service.locator.MiruResourceLocator;
 import com.jivesoftware.os.miru.service.locator.MiruTempDirectoryResourceLocator;
 import com.jivesoftware.os.miru.service.partition.PartitionErrorTracker;
+import com.jivesoftware.os.miru.service.stream.LabPluginCacheProvider;
 import com.jivesoftware.os.miru.service.stream.MiruContext;
 import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
 import com.jivesoftware.os.miru.service.stream.allocator.InMemoryChunkAllocator;
@@ -132,6 +133,7 @@ public class IndexTestUtil {
             cogs,
             cogs,
             timeIdIndexes,
+            LabPluginCacheProvider.allocateLocks(64),
             schemaProvider,
             termComposer,
             activityInternExtern,

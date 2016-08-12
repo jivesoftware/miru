@@ -67,6 +67,7 @@ import com.jivesoftware.os.miru.service.index.lab.LabTimeIdIndex;
 import com.jivesoftware.os.miru.service.index.lab.LabTimeIdIndexInitializer;
 import com.jivesoftware.os.miru.service.locator.MiruTempDirectoryResourceLocator;
 import com.jivesoftware.os.miru.service.partition.PartitionErrorTracker.PartitionErrorTrackerConfig;
+import com.jivesoftware.os.miru.service.stream.LabPluginCacheProvider;
 import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
 import com.jivesoftware.os.miru.service.stream.MiruIndexAuthz;
 import com.jivesoftware.os.miru.service.stream.MiruIndexBloom;
@@ -263,6 +264,7 @@ public class MiruLocalHostedPartitionTest {
             cogs,
             cogs,
             timeIdIndexes,
+            LabPluginCacheProvider.allocateLocks(64),
             schemaProvider,
             termComposer,
             activityInternExtern,
