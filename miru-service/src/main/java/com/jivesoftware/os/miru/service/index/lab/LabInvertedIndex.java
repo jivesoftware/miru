@@ -39,7 +39,8 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
     private final String name;
     private final int fieldId;
     private final byte[] indexKeyBytes;
-    private final ValueIndex lab;
+    private final ValueIndex bitmapIndex;
+    private final ValueIndex termIndex;
     private final Object mutationLock;
     private volatile int lastId = Integer.MIN_VALUE;
 
@@ -49,7 +50,8 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
         String name,
         int fieldId,
         byte[] indexKeyBytes,
-        ValueIndex lab,
+        ValueIndex bitmapIndex,
+        ValueIndex termIndex,
         Object mutationLock) {
 
         this.idProvider = idProvider;
@@ -58,7 +60,8 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
         this.name = name;
         this.fieldId = fieldId;
         this.indexKeyBytes = Preconditions.checkNotNull(indexKeyBytes);
-        this.lab = Preconditions.checkNotNull(lab);
+        this.bitmapIndex = Preconditions.checkNotNull(bitmapIndex);
+        this.termIndex = termIndex;
         this.mutationLock = mutationLock;
     }
 
@@ -92,7 +95,7 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
 
         @SuppressWarnings("unchecked")
         BitmapAndLastId<BM>[] bitmapAndLastId = new BitmapAndLastId[1];
-        lab.get((keyStream) -> keyStream.key(0, indexKeyBytes, 0, indexKeyBytes.length),
+        bitmapIndex.get((keyStream) -> keyStream.key(0, indexKeyBytes, 0, indexKeyBytes.length),
             (int index, byte[] key, long timestamp, boolean tombstoned, long version, byte[] payload) -> {
                 if (payload != null) {
                     bitmapAndLastId[0] = deser(bitmaps, trackError, payload, considerIfLastIdGreaterThanN);
@@ -119,7 +122,7 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
         MutableLong bytes = new MutableLong();
         @SuppressWarnings("unchecked")
         R[] result = (R[]) new Object[1];
-        lab.get(
+        bitmapIndex.get(
             (keyStream) -> keyStream.key(0, indexKeyBytes, 0, indexKeyBytes.length),
             (int index, byte[] key, long timestamp, boolean tombstoned, long version, byte[] payload) -> {
                 try {
@@ -206,8 +209,20 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
     private void setIndex(IBM index, int setLastId) throws Exception {
         SizeAndBytes sizeAndBytes = getSizeAndBytes(bitmaps, index, setLastId);
 
-        lab.append((ValueStream stream) -> {
-            stream.stream(-1, indexKeyBytes, System.currentTimeMillis(), false, idProvider.nextId(), sizeAndBytes.bytes);
+        long timestamp = System.currentTimeMillis();
+        long version = idProvider.nextId();
+        if (termIndex != null) {
+            termIndex.append(stream -> {
+                if (!stream.stream(-1, indexKeyBytes, timestamp, false, version, null)) {
+                    return false;
+                }
+                return true;
+            }, true);
+        }
+        bitmapIndex.append(stream -> {
+            if (!stream.stream(-1, indexKeyBytes, timestamp, false, version, sizeAndBytes.bytes)) {
+                return false;
+            }
             return true;
         }, true);
 
@@ -217,41 +232,6 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
         LOG.inc("bytes>set>total", sizeAndBytes.bytes.length);
         LOG.inc("bytes>set>" + name + ">total", sizeAndBytes.bytes.length);
         LOG.inc("bytes>set>" + name + ">" + fieldId, sizeAndBytes.bytes.length);
-    }
-
-    @Override
-    public void append(StackBuffer stackBuffer, int... ids) throws Exception {
-        if (ids.length == 0) {
-            return;
-        }
-        synchronized (mutationLock) {
-            BM index = getOrCreateIndex(stackBuffer);
-            BM r = bitmaps.append(index, ids);
-            int appendLastId = ids[ids.length - 1];
-            if (appendLastId > lastId) {
-                lastId = appendLastId;
-            }
-
-            setIndex(r, lastId);
-        }
-
-    }
-
-    @Override
-    public void appendAndExtend(List<Integer> ids, int extendToId, StackBuffer stackBuffer) throws Exception {
-        synchronized (mutationLock) {
-            BM index = getOrCreateIndex(stackBuffer);
-            BM r = bitmaps.extend(index, ids, extendToId + 1);
-
-            if (!ids.isEmpty()) {
-                int appendLastId = ids.get(ids.size() - 1);
-                if (appendLastId > lastId) {
-                    lastId = appendLastId;
-                }
-            }
-
-            setIndex(r, lastId);
-        }
     }
 
     @Override
@@ -300,7 +280,7 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
             MutableLong bytes = new MutableLong();
             synchronized (mutationLock) {
                 int[] id = {-1};
-                lab.get(
+                bitmapIndex.get(
                     (keyStream) -> keyStream.key(0, indexKeyBytes, 0, indexKeyBytes.length),
                     (int index, byte[] key, long timestamp, boolean tombstoned, long version, byte[] payload) -> {
                         if (payload != null) {

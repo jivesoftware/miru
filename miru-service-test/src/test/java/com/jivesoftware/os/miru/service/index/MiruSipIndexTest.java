@@ -9,7 +9,6 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.wal.RCVSSipCursor;
 import com.jivesoftware.os.miru.bitmaps.roaring5.buffer.MiruBitmapsRoaringBuffer;
 import com.jivesoftware.os.miru.plugin.index.MiruSipIndex;
-import com.jivesoftware.os.miru.service.index.delta.MiruDeltaSipIndex;
 import org.apache.commons.lang3.ArrayUtils;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -47,51 +46,24 @@ public class MiruSipIndexTest {
         RCVSSipCursor expected = new RCVSSipCursor((byte) 1, 3L, 4L, true);
 
         MiruSipIndex<RCVSSipCursor> unmergedInMemorySipIndex = buildInMemoryContext(4, useLabIndexes, bitmaps, coord).sipIndex;
-        populateSipIndex(unmergedInMemorySipIndex, initial, expected, false, false);
+        populateSipIndex(unmergedInMemorySipIndex, initial, expected);
 
         MiruSipIndex<RCVSSipCursor> unmergedOnDiskSipIndex = buildOnDiskContext(4, useLabIndexes, bitmaps, coord).sipIndex;
-        populateSipIndex(unmergedOnDiskSipIndex, initial, expected, false, false);
-
-        MiruSipIndex<RCVSSipCursor> mergedInMemorySipIndex = buildInMemoryContext(4, useLabIndexes, bitmaps, coord).sipIndex;
-        populateSipIndex(mergedInMemorySipIndex, initial, expected, false, true);
-
-        MiruSipIndex<RCVSSipCursor> mergedOnDiskSipIndex = buildOnDiskContext(4, useLabIndexes, bitmaps, coord).sipIndex;
-        populateSipIndex(mergedOnDiskSipIndex, initial, expected, false, true);
-
-        MiruSipIndex<RCVSSipCursor> partiallyMergedInMemorySipIndex = buildInMemoryContext(4, useLabIndexes, bitmaps, coord).sipIndex;
-        populateSipIndex(partiallyMergedInMemorySipIndex, initial, expected, true, false);
-
-        MiruSipIndex<RCVSSipCursor> partiallyMergedOnDiskSipIndex = buildOnDiskContext(4, useLabIndexes, bitmaps, coord).sipIndex;
-        populateSipIndex(partiallyMergedOnDiskSipIndex, initial, expected, true, false);
+        populateSipIndex(unmergedOnDiskSipIndex, initial, expected);
 
         return new Object[][] {
             { unmergedInMemorySipIndex, expected },
-            { unmergedOnDiskSipIndex, expected },
-            { mergedInMemorySipIndex, expected },
-            { mergedOnDiskSipIndex, expected },
-            { partiallyMergedInMemorySipIndex, expected },
-            { partiallyMergedOnDiskSipIndex, expected }
+            { unmergedOnDiskSipIndex, expected }
         };
     }
 
     private void populateSipIndex(MiruSipIndex<RCVSSipCursor> sipIndex,
         RCVSSipCursor initial,
-        RCVSSipCursor expected,
-        boolean mergeMiddle,
-        boolean mergeEnd) throws Exception {
+        RCVSSipCursor expected) throws Exception {
 
         StackBuffer stackBuffer = new StackBuffer();
 
         sipIndex.setSip(initial, stackBuffer);
-
-        if (mergeMiddle) {
-            ((MiruDeltaSipIndex<RCVSSipCursor>) sipIndex).merge(null, stackBuffer);
-        }
-
         sipIndex.setSip(expected, stackBuffer);
-
-        if (mergeEnd) {
-            ((MiruDeltaSipIndex<RCVSSipCursor>) sipIndex).merge(null, stackBuffer);
-        }
     }
 }

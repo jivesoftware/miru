@@ -45,7 +45,7 @@ public class LabUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUnreadTr
 
     @Override
     public void append(MiruStreamId streamId, StackBuffer stackBuffer, int... ids) throws Exception {
-        getAppender(streamId).append(stackBuffer, ids);
+        getAppender(streamId).set(stackBuffer, ids);
     }
 
     @Override
@@ -57,6 +57,7 @@ public class LabUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUnreadTr
             -1,
             Bytes.concat(prefix, streamId.getBytes()),
             getStore(streamId),
+            null,
             stripingLocksProvider.lock(streamId, 0));
     }
 

@@ -55,12 +55,6 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
     }
 
     @Override
-    public void append(int fieldId, MiruTermId termId, int[] ids, long[] counts, StackBuffer stackBuffer) throws Exception {
-        getIndex("append", fieldId, termId).append(stackBuffer, ids);
-        mergeCardinalities(fieldId, termId, ids, counts, stackBuffer);
-    }
-
-    @Override
     public void set(int fieldId, MiruTermId termId, int[] ids, long[] counts, StackBuffer stackBuffer) throws Exception {
         getIndex("set", fieldId, termId).set(stackBuffer, ids);
         mergeCardinalities(fieldId, termId, ids, counts, stackBuffer);
@@ -254,53 +248,7 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
         return getCardinality(fieldId, termId, -1, stackBuffer);
     }
 
-    @Override
-    public void multiMerge(int fieldId, MiruTermId[] termIds, IndexAlignedBitmapMerger<BM> merger, StackBuffer stackBuffer) throws Exception {
-        byte[][] termIdBytes = new byte[termIds.length][];
-        for (int i = 0; i < termIds.length; i++) {
-            termIdBytes[i] = termIds[i].getBytes();
-        }
-
-        MutableLong bytesRead = new MutableLong();
-        MutableLong bytesWrite = new MutableLong();
-        int[] indexPowers = new int[32];
-        indexes[fieldId].multiWriteNewReplace(termIdBytes, (monkey, filer, stackBuffer1, lock, index) -> {
-            BitmapAndLastId<BM> backing = null;
-            if (filer != null) {
-                bytesRead.add(filer.length());
-                synchronized (lock) {
-                    filer.seek(0);
-                    backing = MiruFilerInvertedIndex.deser(bitmaps, trackError, filer, -1, stackBuffer1);
-                }
-            }
-            BitmapAndLastId<BM> merged = merger.merge(index, backing);
-            if (merged == null) {
-                return null;
-            }
-            try {
-                MiruFilerInvertedIndex.SizeAndBytes sizeAndBytes = MiruFilerInvertedIndex.getSizeAndBytes(bitmaps, merged.bitmap, merged.lastId);
-                bytesWrite.add(sizeAndBytes.filerSizeInBytes);
-                indexPowers[FilerIO.chunkPower(sizeAndBytes.filerSizeInBytes, 0)]++;
-                return new HintAndTransaction<>(sizeAndBytes.filerSizeInBytes, new MiruFilerInvertedIndex.SetTransaction(sizeAndBytes.bytes));
-            } catch (Exception e) {
-                throw new IOException("Failed to serialize bitmap", e);
-            }
-        }, new Void[termIdBytes.length], stackBuffer);
-        LOG.inc("count>multiMerge>total");
-        LOG.inc("count>multiMerge>" + fieldId);
-        LOG.inc("bytes>multiMergeRead>total", bytesRead.longValue());
-        LOG.inc("bytes>multiMergeRead>" + fieldId, bytesRead.longValue());
-        LOG.inc("bytes>multiMergeWrite>total", bytesWrite.longValue());
-        LOG.inc("bytes>multiMergeWrite>" + fieldId, bytesWrite.longValue());
-        for (int i = 0; i < indexPowers.length; i++) {
-            if (indexPowers[i] > 0) {
-                LOG.inc("count>multiMerge>power>" + i, indexPowers[i]);
-            }
-        }
-    }
-
-    @Override
-    public void mergeCardinalities(int fieldId, MiruTermId termId, int[] ids, long[] counts, StackBuffer stackBuffer) throws Exception {
+    private void mergeCardinalities(int fieldId, MiruTermId termId, int[] ids, long[] counts, StackBuffer stackBuffer) throws Exception {
         if (cardinalities[fieldId] != null && counts != null) {
             cardinalities[fieldId].readWriteAutoGrow(termId.getBytes(), ids.length, (monkey, filer, _stackBuffer, lock) -> {
                 synchronized (lock) {

@@ -23,7 +23,6 @@ public class MiruIndexAuthz<BM extends IBM, IBM> {
     public List<Future<?>> index(final MiruContext<BM, IBM, ?> context,
         MiruTenantId tenantId,
         final List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds,
-        final boolean repair,
         ExecutorService indexExecutor)
         throws Exception {
 
@@ -33,52 +32,10 @@ public class MiruIndexAuthz<BM extends IBM, IBM> {
             for (MiruActivityAndId<MiruInternalActivity> internalActivityAndId : internalActivityAndIds) {
                 MiruInternalActivity activity = internalActivityAndId.activity;
                 if (activity.authz != null) {
-                    if (repair) {
-                        log.inc("count>set", activity.authz.length);
-                        log.inc("count>set", activity.authz.length, tenantId.toString());
-                        for (String authz : activity.authz) {
-                            context.authzIndex.set(authz, stackBuffer, internalActivityAndId.id);
-                        }
-                    } else {
-                        log.inc("count>append", activity.authz.length);
-                        log.inc("count>append", activity.authz.length, tenantId.toString());
-                        for (String authz : activity.authz) {
-                            context.authzIndex.append(authz, stackBuffer, internalActivityAndId.id);
-                        }
-                    }
-                }
-            }
-            return null;
-        }));
-    }
-
-    //TODO move this behavior into index()
-    private List<Future<?>> repair(final MiruContext<BM, IBM, ?> context,
-        final List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds,
-        final List<MiruInternalActivity> existingActivities,
-        ExecutorService indexExecutor)
-        throws Exception {
-
-        return Collections.<Future<?>>singletonList(indexExecutor.submit(() -> {
-            StackBuffer stackBuffer = new StackBuffer();
-            for (int i = 0; i < internalActivityAndIds.size(); i++) {
-                MiruActivityAndId<MiruInternalActivity> internalActivityAndId = internalActivityAndIds.get(i);
-                MiruInternalActivity internalActivity = internalActivityAndId.activity;
-                int id = internalActivityAndId.id;
-                MiruInternalActivity existing = existingActivities.get(i);
-
-                Set<String> existingAuthz = existing != null && existing.authz != null ? Sets.newHashSet(existing.authz) : Sets.<String>newHashSet();
-                Set<String> repairedAuthz = internalActivity.authz != null ? Sets.newHashSet(internalActivity.authz) : Sets.<String>newHashSet();
-
-                for (String authz : existingAuthz) {
-                    if (!repairedAuthz.contains(authz)) {
-                        context.authzIndex.remove(authz, stackBuffer, id);
-                    }
-                }
-
-                for (String authz : repairedAuthz) {
-                    if (!existingAuthz.contains(authz)) {
-                        context.authzIndex.set(authz, stackBuffer, id);
+                    log.inc("count>set", activity.authz.length);
+                    log.inc("count>set", activity.authz.length, tenantId.toString());
+                    for (String authz : activity.authz) {
+                        context.authzIndex.set(authz, stackBuffer, internalActivityAndId.id);
                     }
                 }
             }

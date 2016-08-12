@@ -1,7 +1,6 @@
 package com.jivesoftware.os.miru.service.stream;
 
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
-import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.filer.io.chunk.ChunkStore;
 import com.jivesoftware.os.lab.LABEnvironment;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
@@ -23,9 +22,9 @@ import com.jivesoftware.os.miru.plugin.index.MiruUnreadTrackingIndex;
 import com.jivesoftware.os.miru.service.index.Closeable;
 import com.jivesoftware.os.miru.service.index.Commitable;
 import com.jivesoftware.os.miru.service.index.Removable;
+import com.jivesoftware.os.miru.service.index.TimeIdIndex;
 import com.jivesoftware.os.miru.service.stream.MiruRebuildDirector.Token;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Composes the building blocks of a MiruContext together for convenience.
@@ -35,6 +34,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class MiruContext<BM extends IBM, IBM, S extends MiruSipCursor<S>> implements MiruRequestContext<BM, IBM, S> {
 
+    public final long version;
+    public final TimeIdIndex timeIdIndex;
     public final MiruSchema schema;
     public final MiruTermComposer termComposer;
     public final MiruTimeIndex timeIndex;
@@ -53,15 +54,15 @@ public class MiruContext<BM extends IBM, IBM, S extends MiruSipCursor<S>> implem
     public final MiruBackingStorage storage;
     public final Object writeLock = new Object();
     public final AtomicBoolean corrupt = new AtomicBoolean(false);
-    public final AtomicInteger deltaMinId = new AtomicInteger(-1);
-    public final AtomicInteger lastDeltaMinId = new AtomicInteger(-1);
     public final MiruRebuildDirector.Token rebuildToken;
     public final AtomicBoolean closed = new AtomicBoolean(false);
     public final Commitable commitable;
     public final Closeable closeable;
     public final Removable removable;
 
-    public MiruContext(MiruSchema schema,
+    public MiruContext(long version,
+        TimeIdIndex timeIdIndex,
+        MiruSchema schema,
         MiruTermComposer termComposer,
         MiruTimeIndex timeIndex,
         MiruActivityIndex activityIndex,
@@ -79,7 +80,10 @@ public class MiruContext<BM extends IBM, IBM, S extends MiruSipCursor<S>> implem
         MiruBackingStorage storage,
         Token rebuildToken,
         Commitable commitable,
-        Closeable closeable, Removable removable) {
+        Closeable closeable,
+        Removable removable) {
+        this.version = version;
+        this.timeIdIndex = timeIdIndex;
         this.schema = schema;
         this.termComposer = termComposer;
         this.timeIndex = timeIndex;
@@ -160,22 +164,6 @@ public class MiruContext<BM extends IBM, IBM, S extends MiruSipCursor<S>> implem
     @Override
     public StripingLocksProvider<MiruStreamId> getStreamLocks() {
         return streamLocks;
-    }
-
-    @Override
-    public int getDeltaMinId() {
-        return deltaMinId.get();
-    }
-
-    @Override
-    public int getLastDeltaMinId() {
-        return lastDeltaMinId.get();
-    }
-
-    public int markStartOfDelta(StackBuffer stackBuffer) {
-        int lastId = activityIndex.lastId(stackBuffer);
-        lastDeltaMinId.set(deltaMinId.getAndSet(lastId));
-        return lastId;
     }
 
     @Override

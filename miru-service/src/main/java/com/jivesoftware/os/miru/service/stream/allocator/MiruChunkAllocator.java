@@ -28,5 +28,7 @@ public interface MiruChunkAllocator {
 
     LABEnvironment[] allocateLABEnvironments(MiruPartitionCoord coord) throws Exception;
 
+    LABEnvironment[] allocateLABEnvironments(File[] dirs) throws Exception;
+
     void remove(LABEnvironment[] labEnvironments);
 }

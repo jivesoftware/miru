@@ -2,7 +2,6 @@ package com.jivesoftware.os.miru.service.index.lab;
 
 import com.google.common.primitives.Bytes;
 import com.jivesoftware.os.filer.io.ByteArrayFiler;
-import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.io.api.KeyRange;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
@@ -13,17 +12,14 @@ import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.MiruInterner;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
-import com.jivesoftware.os.miru.plugin.index.IndexAlignedBitmapMerger;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.index.MultiIndexTx;
 import com.jivesoftware.os.miru.plugin.index.TermIdStream;
 import com.jivesoftware.os.miru.plugin.partition.TrackError;
-import com.jivesoftware.os.miru.service.index.lab.LabInvertedIndex.SizeAndBytes;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import org.apache.commons.lang.mutable.MutableLong;
@@ -85,12 +81,6 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
     }
 
     @Override
-    public void append(int fieldId, MiruTermId termId, int[] ids, long[] counts, StackBuffer stackBuffer) throws Exception {
-        getIndex("append", fieldId, termId).append(stackBuffer, ids);
-        mergeCardinalities(fieldId, termId, ids, counts, stackBuffer);
-    }
-
-    @Override
     public void set(int fieldId, MiruTermId termId, int[] ids, long[] counts, StackBuffer stackBuffer) throws Exception {
         getIndex("set", fieldId, termId).set(stackBuffer, ids);
         mergeCardinalities(fieldId, termId, ids, counts, stackBuffer);
@@ -99,7 +89,7 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
     @Override
     public void setIfEmpty(int fieldId, MiruTermId termId, int id, long count, StackBuffer stackBuffer) throws Exception {
         if (getIndex("setIfEmpty", fieldId, termId).setIfEmpty(stackBuffer, id)) {
-            mergeCardinalities(fieldId, termId, new int[]{id}, new long[]{count}, stackBuffer);
+            mergeCardinalities(fieldId, termId, new int[] { id }, new long[] { count }, stackBuffer);
         }
     }
 
@@ -185,6 +175,7 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
             fieldId,
             fieldIndexKey(fieldIdBytes, termId.getBytes()),
             getBitmapIndex(fieldId),
+            getTermIndex(fieldId),
             stripingLocksProvider.lock(termId, 0));
     }
 
@@ -299,7 +290,7 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
     public long getCardinality(int fieldId, MiruTermId termId, int id, StackBuffer stackBuffer) throws Exception {
         if (hasCardinalities[fieldId]) {
             byte[] fieldIdBytes = UIO.intBytes(fieldId);
-            long[] count = {0};
+            long[] count = { 0 };
             byte[] cardinalityIndexKey = cardinalityIndexKey(fieldIdBytes, id, termId.getBytes());
             getCardinalityIndex(fieldId).get((streamKeys) -> streamKeys.key(0, cardinalityIndexKey, 0, cardinalityIndexKey.length),
                 (int index, byte[] key, long timestamp, boolean tombstoned, long version, byte[] payload) -> {
@@ -350,93 +341,14 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
         return getCardinality(fieldId, termId, -1, stackBuffer);
     }
 
-    @Override
-    public void multiMerge(int fieldId, MiruTermId[] termIds, IndexAlignedBitmapMerger<BM> merger, StackBuffer stackBuffer) throws Exception {
-        byte[] fieldIdBytes = UIO.intBytes(fieldId);
-
-        MutableLong bytesRead = new MutableLong();
-        MutableLong bytesWrite = new MutableLong();
-        int[] indexPowers = new int[32];
-
-        SizeAndBytes[] sabs = new SizeAndBytes[termIds.length];
-        ValueIndex fieldIndex = getBitmapIndex(fieldId);
-        fieldIndex.get(
-            keyStream -> {
-                for (int i = 0; i < termIds.length; i++) {
-                    if (termIds[i] != null) {
-                        byte[] key = fieldIndexKey(fieldIdBytes, termIds[i].getBytes());
-                        if (!keyStream.key(i, key, 0, key.length)) {
-                            return false;
-                        }
-                    }
-                }
-                return true;
-            },
-            (index, key, timestamp1, tombstoned, version1, payload) -> {
-                BitmapAndLastId<BM> backing = null;
-                if (payload != null) {
-                    bytesRead.add(payload.length);
-                    backing = LabInvertedIndex.deser(bitmaps, trackError, payload, -1);
-                }
-                BitmapAndLastId<BM> merged = merger.merge(index, backing);
-                if (merged != null) {
-                    try {
-                        SizeAndBytes sizeAndBytes = LabInvertedIndex.getSizeAndBytes(bitmaps, merged.bitmap, merged.lastId);
-                        indexPowers[FilerIO.chunkPower(sizeAndBytes.filerSizeInBytes, 0)]++;
-                        sabs[index] = sizeAndBytes;
-                    } catch (Exception e) {
-                        throw new IOException("Failed to serialize bitmap", e);
-                    }
-                }
-                return true;
-            }, true);
-
-        long timestamp = System.currentTimeMillis();
-        long version = idProvider.nextId();
-        fieldIndex.append(stream -> {
-            for (int i = 0; i < termIds.length; i++) {
-                if (sabs[i] != null) {
-                    bytesWrite.add(sabs[i].bytes.length);
-                    stream.stream(-1, fieldIndexKey(fieldIdBytes, termIds[i].getBytes()), timestamp, false, version, sabs[i].bytes);
-                }
-            }
-            return true;
-        }, false);
-
-        getTermIndex(fieldId).append(valueStream -> {
-            for (int i = 0; i < termIds.length; i++) {
-                if (termIds[i] != null) {
-                    byte[] key = fieldIndexKey(fieldIdBytes, termIds[i].getBytes());
-                    if (!valueStream.stream(-1, key, timestamp, false, version, null)) {
-                        return false;
-                    }
-                }
-            }
-            return true;
-        }, true);
-
-        LOG.inc("count>multiMerge>total");
-        LOG.inc("count>multiMerge>" + fieldId);
-        LOG.inc("bytes>multiMergeRead>total", bytesRead.longValue());
-        LOG.inc("bytes>multiMergeRead>" + fieldId, bytesRead.longValue());
-        LOG.inc("bytes>multiMergeWrite>total", bytesWrite.longValue());
-        LOG.inc("bytes>multiMergeWrite>" + fieldId, bytesWrite.longValue());
-        for (int i = 0; i < indexPowers.length; i++) {
-            if (indexPowers[i] > 0) {
-                LOG.inc("count>multiMerge>power>" + i, indexPowers[i]);
-            }
-        }
-    }
-
-    @Override
-    public void mergeCardinalities(int fieldId, MiruTermId termId, int[] ids, long[] counts, StackBuffer stackBuffer) throws Exception {
+    private void mergeCardinalities(int fieldId, MiruTermId termId, int[] ids, long[] counts, StackBuffer stackBuffer) throws Exception {
         if (hasCardinalities[fieldId] && counts != null) {
             byte[] fieldBytes = UIO.intBytes(fieldId);
             ValueIndex cardinalityIndex = getCardinalityIndex(fieldId);
 
-            long[] merged = new long[counts.length];
+            long[] merge = new long[counts.length];
             long delta = 0;
-            System.arraycopy(counts, 0, merged, 0, counts.length);
+            //System.arraycopy(counts, 0, merged, 0, counts.length);
 
             cardinalityIndex.get(
                 keyStream -> {
@@ -450,17 +362,17 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
                 },
                 (int index, byte[] key, long timestamp, boolean tombstoned, long version, byte[] payload) -> {
                     if (payload != null && !tombstoned) {
-                        merged[index] += UIO.bytesLong(payload);
+                        merge[index] = UIO.bytesLong(payload);
                     }
                     return false;
                 },
                 true);
 
             for (int i = 0; i < ids.length; i++) {
-                delta += merged[i] - counts[i];
+                delta += counts[i] - merge[i];
             }
 
-            long[] globalCount = {0};
+            long[] globalCount = { 0 };
             byte[] cardinalityIndexKey = cardinalityIndexKey(fieldBytes, -1, termId.getBytes());
             cardinalityIndex.get(
                 (keyStream) -> keyStream.key(0, cardinalityIndexKey, 0, cardinalityIndexKey.length),
@@ -478,7 +390,7 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
             cardinalityIndex.append(valueStream -> {
                 for (int i = 0; i < ids.length; i++) {
                     byte[] key = cardinalityIndexKey(fieldBytes, ids[i], termId.getBytes());
-                    if (!valueStream.stream(-1, key, timestamp, false, version, UIO.longBytes(merged[i]))) {
+                    if (!valueStream.stream(-1, key, timestamp, false, version, UIO.longBytes(counts[i]))) {
                         return false;
                     }
                 }

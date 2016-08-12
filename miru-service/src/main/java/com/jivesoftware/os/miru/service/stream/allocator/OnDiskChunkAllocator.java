@@ -58,19 +58,6 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
         this.leapCache = leapCache;
     }
 
-    public static void main(String[] args) {
-
-        int count = 3;
-        for (int hashCode : new int[]{-13, -7, -2, -1, 0, 1, 2, 7, 13}) {
-            for (int shift = 0; shift < count; shift++) {
-                System.out.println("--- " + hashCode + ", " + shift);
-                for (int i = 0; i < count; i++) {
-                    System.out.println("" + offset(hashCode, i, shift, count));
-                }
-            }
-        }
-    }
-
     private static int offset(int hashCode, int index, int shift, int length) {
         long shifted = (hashCode & 0xFFFF) + index + shift;
         long offset = shifted % length;
@@ -179,11 +166,22 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
 
     @Override
     public LABEnvironment[] allocateLABEnvironments(MiruPartitionCoord coord) throws Exception {
-        File[] labDirs = getLabDirs(coord);
+        return allocateLABEnvironments(getLabDirs(coord));
+    }
+
+    @Override
+    public LABEnvironment[] allocateLABEnvironments(File[] labDirs) throws Exception {
         LABEnvironment[] environments = new LABEnvironment[labDirs.length];
-        for (int i = 0; i < numberOfChunkStores; i++) {
-            environments[i] = new LABEnvironment(buildLABSchedulerThreadPool, buildLABCompactorThreadPool, buildLABDestroyThreadPool, labDirs[i],
-                true, labHeapPressure, 4, 16, leapCache);
+        for (int i = 0; i < labDirs.length; i++) {
+            environments[i] = new LABEnvironment(buildLABSchedulerThreadPool,
+                buildLABCompactorThreadPool,
+                buildLABDestroyThreadPool,
+                labDirs[i],
+                true,
+                labHeapPressure,
+                4,
+                16,
+                leapCache);
         }
         return environments;
     }

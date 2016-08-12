@@ -31,7 +31,7 @@ public class MiruFilerInboxIndex<BM extends IBM, IBM> implements MiruInboxIndex<
 
     @Override
     public void append(MiruStreamId streamId, StackBuffer stackBuffer, int... ids) throws Exception {
-        getAppender(streamId).append(stackBuffer, ids);
+        getAppender(streamId).set(stackBuffer, ids);
     }
 
     @Override

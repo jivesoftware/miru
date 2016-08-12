@@ -52,7 +52,7 @@ public interface MiruTimeIndex {
 
     int lastId();
 
-    int[] nextId(StackBuffer stackBuffer, long... timestamps) throws Exception;
+    void nextId(StackBuffer stackBuffer, long[] timestamps, int[] ids, long[] monotonics) throws Exception;
 
     void close();
 

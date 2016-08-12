@@ -2,7 +2,6 @@ package com.jivesoftware.os.miru.service.stream;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
-import com.google.common.base.Optional;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.Lists;
@@ -61,18 +60,10 @@ import com.jivesoftware.os.miru.plugin.index.MiruUnreadTrackingIndex;
 import com.jivesoftware.os.miru.plugin.partition.TrackError;
 import com.jivesoftware.os.miru.service.index.KeyedFilerProvider;
 import com.jivesoftware.os.miru.service.index.MiruFilerProvider;
+import com.jivesoftware.os.miru.service.index.TimeIdIndex;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzCache;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzUtils;
 import com.jivesoftware.os.miru.service.index.auth.VersionedAuthzExpression;
-import com.jivesoftware.os.miru.service.index.delta.MiruDeltaActivityIndex;
-import com.jivesoftware.os.miru.service.index.delta.MiruDeltaAuthzIndex;
-import com.jivesoftware.os.miru.service.index.delta.MiruDeltaFieldIndex;
-import com.jivesoftware.os.miru.service.index.delta.MiruDeltaInboxIndex;
-import com.jivesoftware.os.miru.service.index.delta.MiruDeltaInvertedIndex;
-import com.jivesoftware.os.miru.service.index.delta.MiruDeltaRemovalIndex;
-import com.jivesoftware.os.miru.service.index.delta.MiruDeltaSipIndex;
-import com.jivesoftware.os.miru.service.index.delta.MiruDeltaTimeIndex;
-import com.jivesoftware.os.miru.service.index.delta.MiruDeltaUnreadTrackingIndex;
 import com.jivesoftware.os.miru.service.index.filer.MiruFilerActivityIndex;
 import com.jivesoftware.os.miru.service.index.filer.MiruFilerAuthzIndex;
 import com.jivesoftware.os.miru.service.index.filer.MiruFilerFieldIndex;
@@ -116,6 +107,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
     private final OrderIdProvider idProvider;
     private final TxCogs persistentCogs;
     private final TxCogs transientCogs;
+    private final TimeIdIndex[] timeIdIndexes;
     private final MiruSchemaProvider schemaProvider;
     private final MiruTermComposer termComposer;
     private final MiruActivityInternExtern activityInternExtern;
@@ -136,6 +128,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
     public MiruContextFactory(OrderIdProvider idProvider,
         TxCogs persistentCogs,
         TxCogs transientCogs,
+        TimeIdIndex[] timeIdIndexes,
         MiruSchemaProvider schemaProvider,
         MiruTermComposer termComposer,
         MiruActivityInternExtern activityInternExtern,
@@ -156,6 +149,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         this.idProvider = idProvider;
         this.persistentCogs = persistentCogs;
         this.transientCogs = transientCogs;
+        this.timeIdIndexes = timeIdIndexes;
         this.schemaProvider = schemaProvider;
         this.termComposer = termComposer;
         this.activityInternExtern = activityInternExtern;
@@ -217,6 +211,12 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         MiruBackingStorage storage,
         MiruRebuildDirector.Token rebuildToken) throws Exception {
 
+        long version = getVersion(coord);
+        if (version == -1) {
+            version = idProvider.nextId();
+            saveVersion(coord, version);
+        }
+
         TxCogs cogs = storage == MiruBackingStorage.disk ? persistentCogs : transientCogs;
         int seed = new HashCodeBuilder().append(coord).append(storage).toHashCode();
         TxCog<Integer, MapBackedKeyedFPIndex, ChunkFiler> skyhookCog = cogs.getSkyhookCog(seed);
@@ -226,8 +226,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             TxNamedMapOfFiler.OVERWRITE_GROWER_PROVIDER,
             TxNamedMapOfFiler.REWRITE_GROWER_PROVIDER);
 
-        MiruTimeIndex timeIndex = new MiruDeltaTimeIndex(new MiruFilerTimeIndex(
-            Optional.<MiruFilerTimeIndex.TimeOrderAnomalyStream>absent(),
+        MiruTimeIndex timeIndex = new MiruFilerTimeIndex(
             new KeyedFilerProvider<>(genericFilerStore, MiruContextConstants.GENERIC_FILER_TIME_INDEX_KEY),
             new TxKeyValueStore<>(skyhookCog,
                 cogs.getSkyHookKeySemaphores(),
@@ -235,7 +234,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                 chunkStores,
                 new LongIntKeyValueMarshaller(),
                 keyBytes("timeIndex-timestamps"),
-                8, false, 4, false)));
+                8, false, 4, false));
 
         TxKeyedFilerStore<Long, Void> activityFilerStore = new TxKeyedFilerStore<>(cogs, seed, chunkStores, keyBytes("activityIndex"), false,
             TxNamedMapOfFiler.CHUNK_FILER_CREATOR,
@@ -265,13 +264,12 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             }
         }
 
-        MiruActivityIndex activityIndex = new MiruDeltaActivityIndex(
-            new MiruFilerActivityIndex(
-                new KeyedFilerProvider<>(activityFilerStore, keyBytes("activityIndex-tav")),
-                intTermIdsKeyValueMarshaller,
-                new KeyedFilerProvider<>(activityFilerStore, keyBytes("activityIndex-size")),
-                termLookup,
-                termStorage));
+        MiruActivityIndex activityIndex = new MiruFilerActivityIndex(
+            new KeyedFilerProvider<>(activityFilerStore, keyBytes("activityIndex-tav")),
+            intTermIdsKeyValueMarshaller,
+            new KeyedFilerProvider<>(activityFilerStore, keyBytes("activityIndex-size")),
+            termLookup,
+            termStorage);
 
         TrackError trackError = partitionErrorTracker.track(coord);
 
@@ -309,17 +307,18 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                 }
             }
 
-            fieldIndexes[fieldType.getIndex()] = new MiruDeltaFieldIndex<>(
-                bitmaps,
+            fieldIndexes[fieldType.getIndex()] = new MiruFilerFieldIndex<>(bitmaps,
                 trackError,
-                new MiruFilerFieldIndex<>(bitmaps, trackError, indexes, cardinalities, fieldIndexStripingLocksProvider, termInterner),
-                schema.getFieldDefinitions());
+                indexes,
+                cardinalities,
+                fieldIndexStripingLocksProvider,
+                termInterner);
         }
         MiruFieldIndexProvider<BM, IBM> fieldIndexProvider = new MiruFieldIndexProvider<>(fieldIndexes);
 
-        MiruSipIndex<S> sipIndex = new MiruDeltaSipIndex<>(new MiruFilerSipIndex<>(
+        MiruSipIndex<S> sipIndex = new MiruFilerSipIndex<>(
             new KeyedFilerProvider<>(genericFilerStore, sipMarshaller.getSipIndexKey()),
-            sipMarshaller));
+            sipMarshaller);
 
         MiruAuthzUtils<BM, IBM> authzUtils = new MiruAuthzUtils<>(bitmaps);
 
@@ -329,66 +328,55 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             .build();
         MiruAuthzCache<BM, IBM> miruAuthzCache = new MiruAuthzCache<>(bitmaps, authzCache, activityInternExtern, authzUtils);
 
-        MiruAuthzIndex<BM, IBM> authzIndex = new MiruDeltaAuthzIndex<>(bitmaps,
+        MiruAuthzIndex<BM, IBM> authzIndex = new MiruFilerAuthzIndex<>(
+            bitmaps,
             trackError,
+            new TxKeyedFilerStore<>(cogs, seed, chunkStores, keyBytes("authzIndex"), false,
+                TxNamedMapOfFiler.CHUNK_FILER_CREATOR,
+                TxNamedMapOfFiler.CHUNK_FILER_OPENER,
+                TxNamedMapOfFiler.OVERWRITE_GROWER_PROVIDER,
+                TxNamedMapOfFiler.REWRITE_GROWER_PROVIDER),
             miruAuthzCache,
-            new MiruFilerAuthzIndex<>(
-                bitmaps,
-                trackError,
-                new TxKeyedFilerStore<>(cogs, seed, chunkStores, keyBytes("authzIndex"), false,
-                    TxNamedMapOfFiler.CHUNK_FILER_CREATOR,
-                    TxNamedMapOfFiler.CHUNK_FILER_OPENER,
-                    TxNamedMapOfFiler.OVERWRITE_GROWER_PROVIDER,
-                    TxNamedMapOfFiler.REWRITE_GROWER_PROVIDER),
-                miruAuthzCache,
-                authzStripingLocksProvider));
+            authzStripingLocksProvider);
 
-        MiruRemovalIndex<BM, IBM> removalIndex = new MiruDeltaRemovalIndex<>(
+        MiruRemovalIndex<BM, IBM> removalIndex = new MiruFilerRemovalIndex<>(
             bitmaps,
             trackError,
-            new MiruFilerRemovalIndex<>(
-                bitmaps,
-                trackError,
-                new TxKeyedFilerStore<>(cogs, seed, chunkStores, keyBytes("removalIndex"), false,
-                    TxNamedMapOfFiler.CHUNK_FILER_CREATOR,
-                    TxNamedMapOfFiler.CHUNK_FILER_OPENER,
-                    TxNamedMapOfFiler.OVERWRITE_GROWER_PROVIDER,
-                    TxNamedMapOfFiler.REWRITE_GROWER_PROVIDER),
-                new byte[]{0},
-                new Object()),
-            new MiruDeltaInvertedIndex.Delta<>());
+            new TxKeyedFilerStore<>(cogs, seed, chunkStores, keyBytes("removalIndex"), false,
+                TxNamedMapOfFiler.CHUNK_FILER_CREATOR,
+                TxNamedMapOfFiler.CHUNK_FILER_OPENER,
+                TxNamedMapOfFiler.OVERWRITE_GROWER_PROVIDER,
+                TxNamedMapOfFiler.REWRITE_GROWER_PROVIDER),
+            new byte[] { 0 },
+            new Object());
 
-        MiruUnreadTrackingIndex<BM, IBM> unreadTrackingIndex = new MiruDeltaUnreadTrackingIndex<>(
+        MiruUnreadTrackingIndex<BM, IBM> unreadTrackingIndex = new MiruFilerUnreadTrackingIndex<>(
             bitmaps,
             trackError,
-            new MiruFilerUnreadTrackingIndex<>(
-                bitmaps,
-                trackError,
-                new TxKeyedFilerStore<>(cogs, seed, chunkStores, keyBytes("unreadTrackingIndex"), false,
-                    TxNamedMapOfFiler.CHUNK_FILER_CREATOR,
-                    TxNamedMapOfFiler.CHUNK_FILER_OPENER,
-                    TxNamedMapOfFiler.OVERWRITE_GROWER_PROVIDER,
-                    TxNamedMapOfFiler.REWRITE_GROWER_PROVIDER),
-                streamStripingLocksProvider));
+            new TxKeyedFilerStore<>(cogs, seed, chunkStores, keyBytes("unreadTrackingIndex"), false,
+                TxNamedMapOfFiler.CHUNK_FILER_CREATOR,
+                TxNamedMapOfFiler.CHUNK_FILER_OPENER,
+                TxNamedMapOfFiler.OVERWRITE_GROWER_PROVIDER,
+                TxNamedMapOfFiler.REWRITE_GROWER_PROVIDER),
+            streamStripingLocksProvider);
 
-        MiruInboxIndex<BM, IBM> inboxIndex = new MiruDeltaInboxIndex<>(
+        MiruInboxIndex<BM, IBM> inboxIndex = new MiruFilerInboxIndex<>(
             bitmaps,
             trackError,
-            new MiruFilerInboxIndex<>(
-                bitmaps,
-                trackError,
-                new TxKeyedFilerStore<>(cogs, seed, chunkStores, keyBytes("inboxIndex"), false,
-                    TxNamedMapOfFiler.CHUNK_FILER_CREATOR,
-                    TxNamedMapOfFiler.CHUNK_FILER_OPENER,
-                    TxNamedMapOfFiler.OVERWRITE_GROWER_PROVIDER,
-                    TxNamedMapOfFiler.REWRITE_GROWER_PROVIDER),
-                streamStripingLocksProvider));
+            new TxKeyedFilerStore<>(cogs, seed, chunkStores, keyBytes("inboxIndex"), false,
+                TxNamedMapOfFiler.CHUNK_FILER_CREATOR,
+                TxNamedMapOfFiler.CHUNK_FILER_OPENER,
+                TxNamedMapOfFiler.OVERWRITE_GROWER_PROVIDER,
+                TxNamedMapOfFiler.REWRITE_GROWER_PROVIDER),
+            streamStripingLocksProvider);
 
         StripingLocksProvider<MiruStreamId> streamLocks = new StripingLocksProvider<>(64);
 
         MiruPluginCacheProvider cacheProvider = new FilerPluginCacheProvider(cogs, seed, chunkStores);
 
-        MiruContext<BM, IBM, S> context = new MiruContext<>(schema,
+        MiruContext<BM, IBM, S> context = new MiruContext<>(version,
+            getTimeIdIndex(version),
+            schema,
             termComposer,
             timeIndex,
             activityIndex,
@@ -405,14 +393,30 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             null,
             storage,
             rebuildToken,
-            () -> {
+            (executorService) -> {
             },
             () -> getAllocator(storage).close(chunkStores),
             () -> getAllocator(storage).remove(chunkStores));
 
-        context.markStartOfDelta(new StackBuffer());
-
         return context;
+    }
+
+    private TimeIdIndex getTimeIdIndex(long version) {
+        return timeIdIndexes[Math.abs((int) hash(version) % timeIdIndexes.length)];
+    }
+
+    private final static long randMult = 0x5DEECE66DL;
+    private final static long randAdd = 0xBL;
+    private final static long randMask = (1L << 48) - 1;
+
+    private static long hash(long value) {
+        long x = (value * randMult + randAdd) & randMask;
+        long h = Math.abs(x >>> (16));
+        if (h >= 0) {
+            return h;
+        } else {
+            return Long.MAX_VALUE;
+        }
     }
 
     private <BM extends IBM, IBM> MiruContext<BM, IBM, S> allocateLabIndex(MiruBitmaps<BM, IBM> bitmaps,
@@ -422,27 +426,33 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         MiruBackingStorage storage,
         MiruRebuildDirector.Token rebuildToken) throws Exception {
 
+        long version = getVersion(coord);
+        if (version == -1) {
+            version = idProvider.nextId();
+            saveVersion(coord, version);
+        }
+
         List<ValueIndex> commitables = Lists.newArrayList();
 
         // do NOT hash storage, as disk/memory require the same stripe order
         int seed = new HashCodeBuilder().append(coord).toHashCode();
         ValueIndex metaIndex = labEnvironments[Math.abs(seed % labEnvironments.length)].open("meta", 4096, maxHeapPressureInBytes, 10 * 1024 * 1024, -1L, -1L,
             FormatTransformerProvider.NO_OP, new KeyValueRawhide(), RawEntryFormat.MEMORY);
-        commitables.add(metaIndex);
+        // metaIndex is not part of commitables; it will be committed explicitly
 
-        ValueIndex monoTimeIndex = labEnvironments[Math.abs((seed + 1) % labEnvironments.length)].open("monoTime", 4096, maxHeapPressureInBytes, 10 * 1024 * 1024,
+        ValueIndex monoTimeIndex = labEnvironments[Math.abs((seed + 1) % labEnvironments.length)].open("monoTime", 4096, maxHeapPressureInBytes,
+            10 * 1024 * 1024,
             -1L, -1L, FormatTransformerProvider.NO_OP, new FixedWidthRawhide(12, 0), RawEntryFormat.MEMORY);
         commitables.add(monoTimeIndex);
         ValueIndex rawTimeIndex = labEnvironments[Math.abs((seed + 1) % labEnvironments.length)].open("rawTime", 4096, maxHeapPressureInBytes, 10 * 1024 * 1024,
             -1L, -1L, FormatTransformerProvider.NO_OP, new FixedWidthRawhide(8, 4), RawEntryFormat.MEMORY);
         commitables.add(rawTimeIndex);
-        MiruTimeIndex timeIndex = new MiruDeltaTimeIndex(new LabTimeIndex(
+        MiruTimeIndex timeIndex = new LabTimeIndex(
             idProvider,
-            Optional.<MiruFilerTimeIndex.TimeOrderAnomalyStream>absent(),
             metaIndex,
             keyBytes("timeIndex"),
             monoTimeIndex,
-            rawTimeIndex));
+            rawTimeIndex);
 
         IntTermIdsKeyValueMarshaller intTermIdsKeyValueMarshaller = new IntTermIdsKeyValueMarshaller();
 
@@ -460,15 +470,14 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         ValueIndex timeAndVersionIndex = labEnvironments[Math.abs((seed + 2) % labEnvironments.length)].open("timeAndVersion", 4096, maxHeapPressureInBytes,
             10 * 1024 * 1024, -1L, -1L, FormatTransformerProvider.NO_OP, new FixedWidthRawhide(4, 16), RawEntryFormat.MEMORY);
         commitables.add(timeAndVersionIndex);
-        MiruActivityIndex activityIndex = new MiruDeltaActivityIndex(
-            new LabActivityIndex(
-                idProvider,
-                timeAndVersionIndex,
-                intTermIdsKeyValueMarshaller,
-                metaIndex,
-                keyBytes("lastId"),
-                termStorage,
-                hasTermStorage));
+        MiruActivityIndex activityIndex = new LabActivityIndex(
+            idProvider,
+            timeAndVersionIndex,
+            intTermIdsKeyValueMarshaller,
+            metaIndex,
+            keyBytes("lastId"),
+            termStorage,
+            hasTermStorage);
 
         TrackError trackError = partitionErrorTracker.track(coord);
 
@@ -478,7 +487,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         ValueIndex[] cardinalityIndex = new ValueIndex[labEnvironments.length];
         for (int i = 0; i < bitmapIndex.length; i++) {
             bitmapIndex[i] = labEnvironments[i].open("field", 4096, maxHeapPressureInBytes, 10 * 1024 * 1024, -1L, -1L, FormatTransformerProvider.NO_OP,
-                new KeyValueRawhide(),  RawEntryFormat.MEMORY);
+                new KeyValueRawhide(), RawEntryFormat.MEMORY);
             commitables.add(bitmapIndex[i]);
             termIndex[i] = labEnvironments[i].open("term", 4096, maxHeapPressureInBytes, 10 * 1024 * 1024, -1L, -1L, FormatTransformerProvider.NO_OP,
                 new KeyValueRawhide(), RawEntryFormat.MEMORY);
@@ -496,63 +505,49 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                 hasCardinalities[fieldDefinition.fieldId] = fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.cardinality);
             }
 
-            byte[] prefix = {(byte) fieldType.getIndex()};
-            fieldIndexes[fieldType.getIndex()] = new MiruDeltaFieldIndex<>(
+            byte[] prefix = { (byte) fieldType.getIndex() };
+            fieldIndexes[fieldType.getIndex()] = new LabFieldIndex<>(idProvider,
                 bitmaps,
                 trackError,
-                new LabFieldIndex<>(idProvider,
-                    bitmaps,
-                    trackError,
-                    prefix,
-                    bitmapIndex,
-                    termIndex,
-                    cardinalityIndex,
-                    hasCardinalities,
-                    fieldIndexStripingLocksProvider,
-                    termInterner),
-                schema.getFieldDefinitions());
+                prefix,
+                bitmapIndex,
+                termIndex,
+                cardinalityIndex,
+                hasCardinalities,
+                fieldIndexStripingLocksProvider,
+                termInterner);
         }
         MiruFieldIndexProvider<BM, IBM> fieldIndexProvider = new MiruFieldIndexProvider<>(fieldIndexes);
 
-        MiruSipIndex<S> sipIndex = new MiruDeltaSipIndex<>(new LabSipIndex<>(
+        MiruSipIndex<S> sipIndex = new LabSipIndex<>(
             idProvider,
             metaIndex,
             keyBytes("sip"),
-            sipMarshaller));
+            sipMarshaller);
 
-        MiruRemovalIndex<BM, IBM> removalIndex = new MiruDeltaRemovalIndex<>(
+        MiruRemovalIndex<BM, IBM> removalIndex = new LabRemovalIndex<>(
+            idProvider,
             bitmaps,
             trackError,
-            new LabRemovalIndex<>(
-                idProvider,
-                bitmaps,
-                trackError,
-                metaIndex,
-                keyBytes("removal"),
-                new Object()),
-            new MiruDeltaInvertedIndex.Delta<>());
+            metaIndex,
+            keyBytes("removal"),
+            new Object());
 
-        MiruUnreadTrackingIndex<BM, IBM> unreadTrackingIndex = new MiruDeltaUnreadTrackingIndex<>(
+        MiruUnreadTrackingIndex<BM, IBM> unreadTrackingIndex = new LabUnreadTrackingIndex<>(
+            idProvider,
             bitmaps,
             trackError,
-            new LabUnreadTrackingIndex<>(
-                idProvider,
-                bitmaps,
-                trackError,
-                new byte[]{(byte) -1},
-                bitmapIndex,
-                streamStripingLocksProvider));
+            new byte[] { (byte) -1 },
+            bitmapIndex,
+            streamStripingLocksProvider);
 
-        MiruInboxIndex<BM, IBM> inboxIndex = new MiruDeltaInboxIndex<>(
+        MiruInboxIndex<BM, IBM> inboxIndex = new LabInboxIndex<>(
+            idProvider,
             bitmaps,
             trackError,
-            new LabInboxIndex<>(
-                idProvider,
-                bitmaps,
-                trackError,
-                new byte[]{(byte) -2},
-                bitmapIndex,
-                streamStripingLocksProvider));
+            new byte[] { (byte) -2 },
+            bitmapIndex,
+            streamStripingLocksProvider);
 
         MiruAuthzUtils<BM, IBM> authzUtils = new MiruAuthzUtils<>(bitmaps);
 
@@ -562,23 +557,22 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             .build();
         MiruAuthzCache<BM, IBM> miruAuthzCache = new MiruAuthzCache<>(bitmaps, authzCache, activityInternExtern, authzUtils);
 
-        MiruAuthzIndex<BM, IBM> authzIndex = new MiruDeltaAuthzIndex<>(bitmaps,
+        MiruAuthzIndex<BM, IBM> authzIndex = new LabAuthzIndex<>(
+            idProvider,
+            bitmaps,
             trackError,
+            new byte[] { (byte) -3 },
+            bitmapIndex,
             miruAuthzCache,
-            new LabAuthzIndex<>(
-                idProvider,
-                bitmaps,
-                trackError,
-                new byte[]{(byte) -3},
-                bitmapIndex,
-                miruAuthzCache,
-                authzStripingLocksProvider));
+            authzStripingLocksProvider);
 
         StripingLocksProvider<MiruStreamId> streamLocks = new StripingLocksProvider<>(64);
 
         LabPluginCacheProvider cacheProvider = new LabPluginCacheProvider(idProvider, labEnvironments);
 
-        MiruContext<BM, IBM, S> context = new MiruContext<>(schema,
+        MiruContext<BM, IBM, S> context = new MiruContext<>(version,
+            getTimeIdIndex(version),
+            schema,
             termComposer,
             timeIndex,
             activityIndex,
@@ -595,22 +589,30 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             labEnvironments,
             storage,
             rebuildToken,
-            () -> {
+            (executorService) -> {
                 for (ValueIndex valueIndex : commitables) {
                     valueIndex.commit(fsyncOnCommit, true);
                 }
+
+                // merge the sip index only after the other indexes are written, otherwise we risk advancing the sip cursor for a partially failed merge
+                sipIndex.merge();
+                metaIndex.commit(fsyncOnCommit, true);
+
                 cacheProvider.commit(fsyncOnCommit);
             },
             () -> {
                 for (ValueIndex valueIndex : commitables) {
                     valueIndex.close(true, fsyncOnCommit);
                 }
+
+                // merge the sip index only after the other indexes are written, otherwise we risk advancing the sip cursor for a partially failed merge
+                sipIndex.merge();
+                metaIndex.close(true, fsyncOnCommit);
+
                 cacheProvider.close(true, fsyncOnCommit);
                 getAllocator(storage).close(labEnvironments);
             },
             () -> getAllocator(storage).remove(labEnvironments));
-
-        context.markStartOfDelta(new StackBuffer());
 
         return context;
     }
@@ -671,6 +673,24 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         }
 
         return allocateChunkStore(bitmaps, coord, schema, toChunks, toStorage, null);
+    }
+
+    public long getVersion(MiruPartitionCoord coord) throws IOException {
+        MiruResourcePartitionIdentifier identifier = new MiruPartitionCoordIdentifier(coord);
+        File versionFile = diskResourceLocator.getFilerFile(identifier, "version");
+        if (versionFile.exists()) {
+            return objectMapper.readValue(versionFile, Long.class);
+        }
+        return -1;
+    }
+
+    public void saveVersion(MiruPartitionCoord coord, long version) throws IOException {
+        MiruResourcePartitionIdentifier identifier = new MiruPartitionCoordIdentifier(coord);
+        File versionFile = diskResourceLocator.getFilerFile(identifier, "version");
+        if (versionFile.exists()) {
+            versionFile.delete();
+        }
+        objectMapper.writeValue(versionFile, version);
     }
 
     public void saveSchema(MiruPartitionCoord coord, MiruSchema schema) throws IOException {

@@ -76,13 +76,6 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
     }
 
     @Override
-    public MutableRoaringBitmap append(ImmutableRoaringBitmap bitmap, int... indexes) {
-        MutableRoaringBitmap container = copy(bitmap);
-        appendInPlace(container, indexes);
-        return container;
-    }
-
-    @Override
     public MutableRoaringBitmap set(ImmutableRoaringBitmap bitmap, int... indexes) {
         MutableRoaringBitmap container = copy(bitmap);
         for (int index : indexes) {
@@ -118,15 +111,6 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
     @Override
     public boolean isSet(ImmutableRoaringBitmap bitmap, int i) {
         return bitmap.contains(i);
-    }
-
-    @Override
-    public MutableRoaringBitmap extend(ImmutableRoaringBitmap bitmap, List<Integer> indexes, int extendToIndex) {
-        MutableRoaringBitmap container = copy(bitmap);
-        for (int index : indexes) {
-            container.add(index);
-        }
-        return container;
     }
 
     @Override

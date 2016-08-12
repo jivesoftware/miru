@@ -15,6 +15,6 @@ public class LabRemovalIndex<BM extends IBM, IBM> extends LabInvertedIndex<BM, I
         byte[] keyBytes,
         Object mutationLock) {
 
-        super(idProvider, bitmaps, trackError, "removal", -4, keyBytes, valueIndex, mutationLock);
+        super(idProvider, bitmaps, trackError, "removal", -4, keyBytes, valueIndex, null, mutationLock);
     }
 }

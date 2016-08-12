@@ -18,14 +18,6 @@ public interface MiruInvertedIndex<BM extends IBM, IBM> extends MiruInvertedInde
     void remove(StackBuffer stackBuffer, int... ids) throws Exception;
 
     /**
-     * Sets multiple bits anywhere in the bitmap.
-     *
-     * @param ids the indexes of the bits to set
-     * @throws Exception
-     */
-    void set(StackBuffer stackBuffer, int... ids) throws Exception;
-
-    /**
      * Sets a single bit if the index has never been modified. NOTE: If the index is empty as a result of previous removals,
      * the index remains unchanged. Effectively, the index is modified if and only if {@link #lastId(StackBuffer)} returns -1.
      *

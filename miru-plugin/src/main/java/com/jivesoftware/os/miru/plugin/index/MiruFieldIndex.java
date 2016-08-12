@@ -25,8 +25,6 @@ public interface MiruFieldIndex<BM extends IBM, IBM> {
         StackBuffer stackBuffer,
         MultiIndexTx<IBM> indexTx) throws Exception;
 
-    void append(int fieldId, MiruTermId termId, int[] ids, long[] counts, StackBuffer stackBuffer) throws Exception;
-
     void set(int fieldId, MiruTermId termId, int[] ids, long[] counts, StackBuffer stackBuffer) throws Exception;
 
     void setIfEmpty(int fieldId, MiruTermId termId, int id, long count, StackBuffer stackBuffer) throws Exception;
@@ -41,7 +39,4 @@ public interface MiruFieldIndex<BM extends IBM, IBM> {
 
     long getGlobalCardinality(int fieldId, MiruTermId termId, StackBuffer stackBuffer) throws Exception;
 
-    void multiMerge(int fieldId, MiruTermId[] termIds, IndexAlignedBitmapMerger<BM> merger, StackBuffer stackBuffer) throws Exception;
-
-    void mergeCardinalities(int fieldId, MiruTermId termId, int[] ids, long[] counts, StackBuffer stackBuffer) throws Exception;
 }

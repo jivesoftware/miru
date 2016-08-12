@@ -32,7 +32,7 @@ public class MiruFilerUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUn
 
     @Override
     public void append(MiruStreamId streamId, StackBuffer stackBuffer, int... ids) throws Exception {
-        getAppender(streamId).append(stackBuffer, ids);
+        getAppender(streamId).set(stackBuffer, ids);
     }
 
     @Override

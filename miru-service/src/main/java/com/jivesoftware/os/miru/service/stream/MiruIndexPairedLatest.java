@@ -140,15 +140,9 @@ public class MiruIndexPairedLatest<BM extends IBM, IBM> {
                 invertedIndex.andNotToSourceSize(aggregateBitmaps, stackBuffer);
 
                 ids.reverse(); // we built in reverse order, so flip back to ascending
-                if (repair) {
-                    log.inc("count>set", 1);
-                    log.inc("count>set", 1, tenantId.toString());
-                    pairedLatestFieldIndex.set(pairedLatestWork.fieldId, pairedLatestTerm, ids.toArray(), null, stackBuffer);
-                } else {
-                    log.inc("count>append", 1);
-                    log.inc("count>append", 1, tenantId.toString());
-                    pairedLatestFieldIndex.append(pairedLatestWork.fieldId, pairedLatestTerm, ids.toArray(), null, stackBuffer);
-                }
+                log.inc("count>set", 1);
+                log.inc("count>set", 1, tenantId.toString());
+                pairedLatestFieldIndex.set(pairedLatestWork.fieldId, pairedLatestTerm, ids.toArray(), null, stackBuffer);
 
                 return null;
             }));

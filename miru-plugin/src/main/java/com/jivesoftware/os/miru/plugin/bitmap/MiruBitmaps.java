@@ -42,8 +42,6 @@ public interface MiruBitmaps<BM extends IBM, IBM> {
 
     BM[][] createMultiArrayOf(int size1, int size2);
 
-    BM append(IBM bitmap, int... indexes);
-
     BM set(IBM bitmap, int... indexes);
 
     BM removeRange(BM original, int rangeStartInclusive, int rangeEndExclusive);
@@ -55,8 +53,6 @@ public interface MiruBitmaps<BM extends IBM, IBM> {
     boolean removeIfPresent(BM bitmap, int index);
 
     boolean isSet(IBM bitmap, int index);
-
-    BM extend(IBM bitmap, List<Integer> indexes, int extendToIndex);
 
     void clear(BM bitmap);
 

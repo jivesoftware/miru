@@ -175,9 +175,7 @@ public class MiruWriterMain {
 
             WriterAmzaServiceConfig miruAmzaServiceConfig = deployable.config(WriterAmzaServiceConfig.class);
             AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable,
-                instanceConfig.getRoutesHost(),
-                instanceConfig.getRoutesPort(),
-                instanceConfig.getConnectionsHealth(),
+                clientHealthProvider,
                 instanceConfig.getInstanceName(),
                 instanceConfig.getInstanceKey(),
                 instanceConfig.getServiceName(),

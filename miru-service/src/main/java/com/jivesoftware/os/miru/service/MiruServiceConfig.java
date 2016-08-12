@@ -178,7 +178,7 @@ public interface MiruServiceConfig extends Config {
     @BooleanDefault(true)
     boolean getEnableTermInterning();
 
-    @BooleanDefault(false)
+    @BooleanDefault(true)
     boolean getUseLabIndexes();
 
     @LongDefault(1024 * 1024 * 1024)
@@ -198,4 +198,13 @@ public interface MiruServiceConfig extends Config {
 
     @LongDefault(1024 * 1024 * 1024)
     long getGlobalLabMaxHeapPressureInBytes();
+
+    @IntDefault(4)
+    int getTimeIdKeepNIndexes();
+
+    @IntDefault(100_000_000)
+    int getTimeIdMaxEntriesPerIndex();
+
+    @LongDefault(32 * 1024)
+    long getTimeIdMaxHeapPressureInBytes();
 }

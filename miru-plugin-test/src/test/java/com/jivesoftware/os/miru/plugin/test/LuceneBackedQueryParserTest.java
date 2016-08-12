@@ -218,11 +218,6 @@ public class LuceneBackedQueryParserTest {
         }
 
         @Override
-        public void append(int fieldId, MiruTermId termId, int[] ids, long[] counts, StackBuffer stackBuffer) throws Exception {
-            throw new UnsupportedOperationException("Nope");
-        }
-
-        @Override
         public void set(int fieldId, MiruTermId termId, int[] ids, long[] counts, StackBuffer stackBuffer) throws Exception {
             throw new UnsupportedOperationException("Nope");
         }
@@ -249,16 +244,6 @@ public class LuceneBackedQueryParserTest {
 
         @Override
         public long getGlobalCardinality(int fieldId, MiruTermId termId, StackBuffer stackBuffer) throws Exception {
-            throw new UnsupportedOperationException("Nope");
-        }
-
-        @Override
-        public void multiMerge(int fieldId, MiruTermId[] termIds, IndexAlignedBitmapMerger<RoaringBitmap> merger, StackBuffer stackBuffer) throws Exception {
-            throw new UnsupportedOperationException("Nope");
-        }
-
-        @Override
-        public void mergeCardinalities(int fieldId, MiruTermId termId, int[] ids, long[] counts, StackBuffer stackBuffer) throws Exception {
             throw new UnsupportedOperationException("Nope");
         }
 
@@ -323,14 +308,6 @@ public class LuceneBackedQueryParserTest {
 
             @Override
             public void or(RoaringBitmap mask, StackBuffer stackBuffer) throws Exception {
-            }
-
-            @Override
-            public void append(StackBuffer stackBuffer, int... ids) throws Exception {
-            }
-
-            @Override
-            public void appendAndExtend(List<Integer> ids, int lastId, StackBuffer stackBuffer) throws Exception {
             }
 
             @Override

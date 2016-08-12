@@ -40,6 +40,8 @@ import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.marshaller.RCVSSipIndexMarshaller;
 import com.jivesoftware.os.miru.plugin.schema.SingleSchemaProvider;
+import com.jivesoftware.os.miru.service.index.lab.LabTimeIdIndex;
+import com.jivesoftware.os.miru.service.index.lab.LabTimeIdIndexInitializer;
 import com.jivesoftware.os.miru.service.locator.MiruResourceLocator;
 import com.jivesoftware.os.miru.service.locator.MiruTempDirectoryResourceLocator;
 import com.jivesoftware.os.miru.service.partition.PartitionErrorTracker;
@@ -71,7 +73,7 @@ public class IndexTestUtil {
         .setFieldDefinitions(DefaultMiruSchemaDefinition.FIELDS)
         .build();
 
-    private static MiruContextFactory<RCVSSipCursor> factory(int numberOfChunkStores, boolean useLabIndexes) {
+    private static MiruContextFactory<RCVSSipCursor> factory(int numberOfChunkStores, boolean useLabIndexes) throws Exception {
 
         StripingLocksProvider<MiruTermId> fieldIndexStripingLocksProvider = new StripingLocksProvider<>(1024);
         StripingLocksProvider<MiruStreamId> streamStripingLocksProvider = new StripingLocksProvider<>(1024);
@@ -123,10 +125,13 @@ public class IndexTestUtil {
             labHeapPressure,
             leapCache);
 
+        LabTimeIdIndex[] timeIdIndexes = new LabTimeIdIndexInitializer().initialize(4, 1_000, 1024 * 1024, diskResourceLocator, onDiskChunkAllocator);
+
         OrderIdProvider idProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(1));
         return new MiruContextFactory<>(idProvider,
             cogs,
             cogs,
+            timeIdIndexes,
             schemaProvider,
             termComposer,
             activityInternExtern,

@@ -9,6 +9,7 @@ import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.BloomIndex;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
+import com.jivesoftware.os.miru.service.index.TimeIdIndex;
 import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
 import com.jivesoftware.os.miru.service.stream.MiruIndexAuthz;
 import com.jivesoftware.os.miru.service.stream.MiruIndexBloom;
@@ -91,7 +92,7 @@ public class MiruLocalPartitionFactory<C extends MiruCursor<C, S>, S extends Mir
         MiruPartitionCoord coord,
         long expireAfterMillis) throws Exception {
 
-        return new MiruLocalHostedPartition<BM, IBM, C, S>(miruStats,
+        return new MiruLocalHostedPartition<>(miruStats,
             bitmaps,
             partitionErrorTracker.track(coord),
             coord,

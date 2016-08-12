@@ -8,14 +8,11 @@ import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
-import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
-import com.jivesoftware.os.miru.api.activity.schema.MiruSchema.Builder;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.bitmaps.roaring5.buffer.MiruBitmapsRoaringBuffer;
 import com.jivesoftware.os.miru.plugin.index.MiruAuthzIndex;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzUtils;
-import com.jivesoftware.os.miru.service.index.delta.MiruDeltaAuthzIndex;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.lang3.ArrayUtils;
@@ -73,48 +70,24 @@ public class MiruAuthzIndexTest {
 
         MiruAuthzIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> unmergedLargeMiruHybridAuthzIndex =
             buildInMemoryContext(4, useLabIndexes, bitmaps, coord).authzIndex;
-        Map<String, List<Integer>> unmergedLargeHybridBitsIn = populateAuthzIndex(unmergedLargeMiruHybridAuthzIndex, miruAuthzUtils, 2, false, false);
+        Map<String, List<Integer>> unmergedLargeHybridBitsIn = populateAuthzIndex(unmergedLargeMiruHybridAuthzIndex, miruAuthzUtils, 2);
 
         MiruAuthzIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> unmergedLargeMiruOnDiskAuthzIndex =
             buildOnDiskContext(4, useLabIndexes, bitmaps, coord).authzIndex;
-        Map<String, List<Integer>> unmergedLargeOnDiskBitsIn = populateAuthzIndex(unmergedLargeMiruOnDiskAuthzIndex, miruAuthzUtils, 2, false, false);
-
-        MiruAuthzIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> mergedLargeMiruHybridAuthzIndex =
-            buildInMemoryContext(4, useLabIndexes, bitmaps, coord).authzIndex;
-        Map<String, List<Integer>> mergedLargeHybridBitsIn = populateAuthzIndex(mergedLargeMiruHybridAuthzIndex, miruAuthzUtils, 2, false, true);
-
-        MiruAuthzIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> mergedLargeMiruOnDiskAuthzIndex =
-            buildOnDiskContext(4, useLabIndexes, bitmaps, coord).authzIndex;
-        Map<String, List<Integer>> mergedLargeOnDiskBitsIn = populateAuthzIndex(mergedLargeMiruOnDiskAuthzIndex, miruAuthzUtils, 2, false, true);
-
-        MiruAuthzIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> partiallyMergedLargeMiruHybridAuthzIndex =
-            buildInMemoryContext(4, useLabIndexes, bitmaps, coord).authzIndex;
-        Map<String, List<Integer>> partiallyMergedLargeHybridBitsIn = populateAuthzIndex(partiallyMergedLargeMiruHybridAuthzIndex, miruAuthzUtils, 2,
-            true, false);
-
-        MiruAuthzIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> partiallyMergedLargeMiruOnDiskAuthzIndex =
-            buildOnDiskContext(4, useLabIndexes, bitmaps, coord).authzIndex;
-        Map<String, List<Integer>> partiallyMergedLargeOnDiskBitsIn = populateAuthzIndex(partiallyMergedLargeMiruOnDiskAuthzIndex, miruAuthzUtils, 2,
-            true, false);
+        Map<String, List<Integer>> unmergedLargeOnDiskBitsIn = populateAuthzIndex(unmergedLargeMiruOnDiskAuthzIndex, miruAuthzUtils, 2);
 
         return new Object[][] {
             { unmergedLargeMiruHybridAuthzIndex, miruAuthzUtils, unmergedLargeHybridBitsIn },
-            { unmergedLargeMiruOnDiskAuthzIndex, miruAuthzUtils, unmergedLargeOnDiskBitsIn },
-            { mergedLargeMiruHybridAuthzIndex, miruAuthzUtils, mergedLargeHybridBitsIn },
-            { mergedLargeMiruOnDiskAuthzIndex, miruAuthzUtils, mergedLargeOnDiskBitsIn },
-            { partiallyMergedLargeMiruHybridAuthzIndex, miruAuthzUtils, partiallyMergedLargeHybridBitsIn },
-            { partiallyMergedLargeMiruOnDiskAuthzIndex, miruAuthzUtils, partiallyMergedLargeOnDiskBitsIn }
+            { unmergedLargeMiruOnDiskAuthzIndex, miruAuthzUtils, unmergedLargeOnDiskBitsIn }
         };
     }
 
     private <BM extends IBM, IBM> Map<String, List<Integer>> populateAuthzIndex(MiruAuthzIndex<BM, IBM> authzIndex,
         MiruAuthzUtils<BM, IBM> miruAuthzUtils,
-        int size,
-        boolean mergeMiddle,
-        boolean mergeEnd)
-        throws Exception {
+        int size) throws Exception {
+
         StackBuffer stackBuffer = new StackBuffer();
-        MiruSchema schema = new Builder("test", 1).build();
+        //MiruSchema schema = new Builder("test", 1).build();
         Map<String, List<Integer>> bitsIn = Maps.newHashMap();
 
         for (int i = 1; i <= size; i++) {
@@ -126,13 +99,9 @@ public class MiruAuthzIndexTest {
             String authz = miruAuthzUtils.encode(FilerIO.longBytes((long) i));
 
             for (Integer bit : bits) {
-                authzIndex.append(authz, stackBuffer, bit);
+                authzIndex.set(authz, stackBuffer, bit);
             }
             assertNull(bitsIn.put(authz, bits));
-        }
-
-        if (mergeMiddle) {
-            ((MiruDeltaAuthzIndex<BM, IBM>) authzIndex).merge(schema, stackBuffer);
         }
 
         for (int i = 1; i <= size; i++) {
@@ -143,13 +112,9 @@ public class MiruAuthzIndexTest {
             String authz = miruAuthzUtils.encode(FilerIO.longBytes((long) i));
 
             for (Integer bit : bits) {
-                authzIndex.append(authz, stackBuffer, bit);
+                authzIndex.set(authz, stackBuffer, bit);
             }
             assertTrue(bitsIn.get(authz).addAll(bits));
-        }
-
-        if (mergeEnd) {
-            ((MiruDeltaAuthzIndex<BM, IBM>) authzIndex).merge(schema, stackBuffer);
         }
 
         return bitsIn;

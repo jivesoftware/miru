@@ -15,9 +15,7 @@ import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruInboxIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndexAppender;
 import com.jivesoftware.os.miru.service.IndexTestUtil;
-import com.jivesoftware.os.miru.service.index.delta.MiruDeltaInboxIndex;
 import com.jivesoftware.os.miru.service.stream.MiruContext;
-import java.util.Collections;
 import org.apache.commons.lang3.ArrayUtils;
 import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
 import org.roaringbitmap.buffer.MutableRoaringBitmap;
@@ -72,7 +70,8 @@ public class MiruInboxIndexTest {
     }
 
     @Test(dataProvider = "miruInboxIndexDataProviderWithData")
-    public void testDefaultLastActivityIndexWithNewStreamId(MiruInboxIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> miruInboxIndex, MiruStreamId streamId,
+    public void testDefaultLastActivityIndexWithNewStreamId(MiruInboxIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> miruInboxIndex,
+        MiruStreamId streamId,
         int[] indexedIds) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
         MiruStreamId newStreamId = new MiruStreamId(new byte[] { 1 });
@@ -83,20 +82,6 @@ public class MiruInboxIndexTest {
         miruInboxIndex.append(newStreamId, stackBuffer, nextId);
         lastActivityIndex = miruInboxIndex.getLastActivityIndex(newStreamId, stackBuffer);
         assertEquals(lastActivityIndex, nextId);
-    }
-
-    @Test(dataProvider = "miruInboxIndexDataProviderWithData")
-    public void testLastActivityIndex(MiruInboxIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> miruInboxIndex,
-        MiruStreamId streamId,
-        int[] indexedIds) throws Exception {
-        StackBuffer stackBuffer = new StackBuffer();
-        int expected = miruInboxIndex.getLastActivityIndex(streamId, stackBuffer);
-        assertEquals(expected, indexedIds[indexedIds.length - 1]);
-
-        int nextId = Integer.MAX_VALUE / 3;
-        miruInboxIndex.getAppender(streamId).appendAndExtend(Collections.<Integer>emptyList(), nextId, stackBuffer);
-        int lastActivityIndex = miruInboxIndex.getLastActivityIndex(streamId, stackBuffer);
-        assertEquals(lastActivityIndex, expected);
     }
 
     @DataProvider(name = "miruInboxIndexDataProvider")
@@ -147,10 +132,8 @@ public class MiruInboxIndexTest {
         MiruBitmaps<BM, IBM> bitmaps,
         MiruPartitionCoord coord,
         boolean useLabIndexes) throws Exception {
-        
+
         int[] data = new int[] { 1, 2, 3, 4 };
-        int[] data1_2 = new int[] { 1, 2 };
-        int[] data2_2 = new int[] { 3, 4 };
 
         //TODO unnecessary casts, but the wildcards cause some IDE confusion
         MiruContext<BM, IBM, RCVSSipCursor> unmergedInMemoryContext = IndexTestUtil.buildInMemoryContext(4, useLabIndexes,
@@ -164,41 +147,9 @@ public class MiruInboxIndexTest {
         MiruInboxIndex<BM, IBM> unmergedOnDiskIndex = unmergedOnDiskContext.inboxIndex;
         unmergedOnDiskIndex.append(streamId, stackBuffer, data);
 
-        MiruContext<BM, IBM, RCVSSipCursor> mergedInMemoryContext = IndexTestUtil.buildInMemoryContext(4, useLabIndexes,
-            bitmaps,
-            coord);
-        MiruInboxIndex<BM, IBM> mergedInMemoryIndex = mergedInMemoryContext.inboxIndex;
-        mergedInMemoryIndex.append(streamId, stackBuffer, data);
-        ((MiruDeltaInboxIndex<BM, IBM>) mergedInMemoryIndex).merge(schema, stackBuffer);
-
-        MiruContext<BM, IBM, RCVSSipCursor> mergedOnDiskContext = IndexTestUtil.buildOnDiskContext(4, useLabIndexes,
-            bitmaps, coord);
-        MiruInboxIndex<BM, IBM> mergedOnDiskIndex = mergedOnDiskContext.inboxIndex;
-        mergedOnDiskIndex.append(streamId, stackBuffer, data);
-        ((MiruDeltaInboxIndex<BM, IBM>) mergedOnDiskIndex).merge(schema, stackBuffer);
-
-        MiruContext<BM, IBM, RCVSSipCursor> partiallyMergedInMemoryContext = IndexTestUtil.buildInMemoryContext(4, useLabIndexes,
-            bitmaps, coord);
-        MiruInboxIndex<BM, IBM> partiallyMergedInMemoryIndex = partiallyMergedInMemoryContext.inboxIndex;
-        partiallyMergedInMemoryIndex.append(streamId, stackBuffer, data1_2);
-        ((MiruDeltaInboxIndex<BM, IBM>) partiallyMergedInMemoryIndex).merge(schema, stackBuffer);
-        partiallyMergedInMemoryIndex.append(streamId, stackBuffer, data2_2);
-
-        MiruContext<BM, IBM, RCVSSipCursor> partiallyMergedOnDiskContext = IndexTestUtil.buildOnDiskContext(4, useLabIndexes,
-            bitmaps,
-            coord);
-        MiruInboxIndex<BM, IBM> partiallyMergedOnDiskIndex = partiallyMergedOnDiskContext.inboxIndex;
-        partiallyMergedOnDiskIndex.append(streamId, stackBuffer, data1_2);
-        ((MiruDeltaInboxIndex<BM, IBM>) partiallyMergedOnDiskIndex).merge(schema, stackBuffer);
-        partiallyMergedOnDiskIndex.append(streamId, stackBuffer, data2_2);
-
         return new Object[][] {
             { unmergedInMemoryIndex, streamId, data },
-            { unmergedOnDiskIndex, streamId, data },
-            { mergedInMemoryIndex, streamId, data },
-            { mergedOnDiskIndex, streamId, data },
-            { partiallyMergedInMemoryIndex, streamId, data },
-            { partiallyMergedOnDiskIndex, streamId, data }
+            { unmergedOnDiskIndex, streamId, data }
         };
     }
 }

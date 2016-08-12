@@ -114,20 +114,26 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
 
     @Override
     public LABEnvironment[] allocateLABEnvironments(MiruPartitionCoord coord) throws Exception {
-
         File[] labDirs = getLabDirs(coord);
         for (int i = 0; i < labDirs.length; i++) {
             FileUtils.deleteDirectory(labDirs[i]);
         }
+        return allocateLABEnvironments(labDirs);
+    }
 
+    @Override
+    public LABEnvironment[] allocateLABEnvironments(File[] labDirs) throws Exception {
         LABEnvironment[] environments = new LABEnvironment[labDirs.length];
         for (int i = 0; i < labDirs.length; i++) {
             environments[i] = new LABEnvironment(buildLABSchedulerThreadPool,
                 buildLABCompactorThreadPool,
                 buildLABDestroyThreadPool,
                 labDirs[i],
-                true, labHeapPressure, 4, 16, leapCache);
-
+                true,
+                labHeapPressure,
+                4,
+                16,
+                leapCache);
         }
         return environments;
     }

@@ -61,7 +61,10 @@ import com.jivesoftware.os.miru.plugin.marshaller.RCVSSipIndexMarshaller;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
 import com.jivesoftware.os.miru.plugin.partition.TrackError;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
+import com.jivesoftware.os.miru.amza.NoOpClientHealth;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
+import com.jivesoftware.os.miru.service.index.lab.LabTimeIdIndex;
+import com.jivesoftware.os.miru.service.index.lab.LabTimeIdIndexInitializer;
 import com.jivesoftware.os.miru.service.locator.MiruTempDirectoryResourceLocator;
 import com.jivesoftware.os.miru.service.partition.PartitionErrorTracker.PartitionErrorTrackerConfig;
 import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
@@ -253,10 +256,13 @@ public class MiruLocalHostedPartitionTest {
         TxCogs cogs = new TxCogs(256, 64, null, null, null);
         ObjectMapper mapper = new ObjectMapper();
 
+        LabTimeIdIndex[] timeIdIndexes = new LabTimeIdIndexInitializer().initialize(1, 1_000, 1024 * 1024, resourceLocator, diskContextAllocator);
+
         OrderIdProvider idProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(0));
         contextFactory = new MiruContextFactory<>(idProvider,
             cogs,
             cogs,
+            timeIdIndexes,
             schemaProvider,
             termComposer,
             activityInternExtern,
@@ -298,8 +304,18 @@ public class MiruLocalHostedPartitionTest {
         MiruAmzaServiceConfig acrc = BindInterfaceToConfiguration.bindDefault(MiruAmzaServiceConfig.class);
         acrc.setWorkingDirectories(amzaDataDir.getAbsolutePath());
         Deployable deployable = new Deployable(new String[0]);
-        AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable, "routesHosts", 1, "connectionHealthPath",
-            1, "instanceKey", "serviceName", "datacenter", "rack", "localhost", 10000, null, acrc, false,
+        AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable,
+            connectionDescriptor -> new NoOpClientHealth(),
+            1,
+            "instanceKey",
+            "serviceName",
+            "datacenter",
+            "rack",
+            "localhost",
+            10000,
+            null,
+            acrc,
+            false,
             rowsChanged -> {
             });
 
@@ -349,7 +365,6 @@ public class MiruLocalHostedPartitionTest {
     @DataProvider(name = "useLabIndexes")
     public Object[][] useLabIndexesDataProvider() {
         return new Object[][] {
-            { false },
             { true }
         };
     }
@@ -631,10 +646,32 @@ public class MiruLocalHostedPartitionTest {
         MiruMergeChits persistentMergeChits = new OrderedMergeChits("persistent", numberOfChitsRemaining, 100_000, 10_000);
         MiruMergeChits transientMergeChits = new OrderedMergeChits("transient", numberOfChitsRemaining, 100_000, 10_000);
 
-        return new MiruLocalHostedPartition<>(new MiruStats(), bitmaps, trackError, coord, -1, contextFactory, sipTrackerFactory,
-            walClient, partitionEventHandler, rebuildDirector, scheduledBootstrapService, scheduledRebuildService,
-            scheduledSipMigrateService, rebuildExecutor, sipIndexExecutor, persistentMergeExecutor, transientMergeExecutor, 1, new NoOpMiruIndexRepairs(),
-            indexer, true, 100, 100, persistentMergeChits, transientMergeChits, timings);
+        return new MiruLocalHostedPartition<>(new MiruStats(),
+            bitmaps,
+            trackError,
+            coord,
+            -1,
+            contextFactory,
+            sipTrackerFactory,
+            walClient,
+            partitionEventHandler,
+            rebuildDirector,
+            scheduledBootstrapService,
+            scheduledRebuildService,
+            scheduledSipMigrateService,
+            rebuildExecutor,
+            sipIndexExecutor,
+            persistentMergeExecutor,
+            transientMergeExecutor,
+            1,
+            new NoOpMiruIndexRepairs(),
+            indexer,
+            true,
+            100,
+            100,
+            persistentMergeChits,
+            transientMergeChits,
+            timings);
     }
 
     private void setActive(boolean active) throws Exception {

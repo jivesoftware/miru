@@ -61,7 +61,7 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
-    private boolean appendInPlace(RoaringBitmap bitmap, int... indexes) {
+    private boolean addInPlace(RoaringBitmap bitmap, int... indexes) {
         if (indexes.length == 1) {
             bitmap.add(indexes[0]);
         } else if (indexes.length > 1) {
@@ -71,7 +71,7 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
                     if (rangeStart == rangeEnd - 1) {
                         bitmap.add(indexes[rangeStart]);
                     } else {
-                        bitmap.flip(indexes[rangeStart], indexes[rangeEnd - 1] + 1);
+                        bitmap.add(indexes[rangeStart], indexes[rangeEnd - 1] + 1);
                     }
                     rangeStart = rangeEnd;
                 }
@@ -79,25 +79,16 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
             if (rangeStart == indexes.length - 1) {
                 bitmap.add(indexes[rangeStart]);
             } else {
-                bitmap.flip(indexes[rangeStart], indexes[indexes.length - 1] + 1);
+                bitmap.add(indexes[rangeStart], indexes[indexes.length - 1] + 1);
             }
         }
         return true;
     }
 
     @Override
-    public RoaringBitmap append(RoaringBitmap bitmap, int... indexes) {
-        RoaringBitmap container = copy(bitmap);
-        appendInPlace(container, indexes);
-        return container;
-    }
-
-    @Override
     public RoaringBitmap set(RoaringBitmap bitmap, int... indexes) {
         RoaringBitmap container = copy(bitmap);
-        for (int index : indexes) {
-            container.add(index);
-        }
+        addInPlace(container, indexes);
         return container;
     }
 
@@ -128,15 +119,6 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
     @Override
     public boolean isSet(RoaringBitmap bitmap, int i) {
         return bitmap.contains(i);
-    }
-
-    @Override
-    public RoaringBitmap extend(RoaringBitmap bitmap, List<Integer> indexes, int extendToIndex) {
-        RoaringBitmap container = copy(bitmap);
-        for (int index : indexes) {
-            container.add(index);
-        }
-        return container;
     }
 
     @Override

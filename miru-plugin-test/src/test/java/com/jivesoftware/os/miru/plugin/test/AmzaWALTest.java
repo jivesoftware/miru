@@ -16,6 +16,7 @@ import com.jivesoftware.os.amza.service.EmbeddedClientProvider;
 import com.jivesoftware.os.amza.service.Partition;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceConfig;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceInitializer;
+import com.jivesoftware.os.miru.amza.NoOpClientHealth;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
@@ -93,8 +94,18 @@ public class AmzaWALTest {
         acrc.setWorkingDirectories(amzaDataDir.getAbsolutePath());
         acrc.setMaxUpdatesBeforeDeltaStripeCompaction(100_000);
         Deployable deployable = new Deployable(new String[0]);
-        AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable, "routesHost", 1, "connectionHealthPath", 1, "instanceKey",
-            "serviceName", "datacenter", "rack", "localhost", 10000, null, acrc, false,
+        AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable,
+            connectionDescriptor -> new NoOpClientHealth(),
+            1,
+            "instanceKey",
+            "serviceName",
+            "datacenter",
+            "rack",
+            "localhost",
+            10000,
+            null,
+            acrc,
+            false,
             rowsChanged -> {
             });
         EmbeddedClientProvider amzaClientProvider = new EmbeddedClientProvider(amzaService);

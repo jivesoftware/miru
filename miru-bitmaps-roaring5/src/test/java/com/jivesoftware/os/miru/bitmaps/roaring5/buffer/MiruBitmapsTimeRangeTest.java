@@ -4,15 +4,14 @@ import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
-import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
-import com.jivesoftware.os.miru.api.activity.schema.MiruSchema.Builder;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.wal.RCVSSipCursor;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
 import com.jivesoftware.os.miru.service.IndexTestUtil;
-import com.jivesoftware.os.miru.service.index.delta.MiruDeltaTimeIndex;
 import com.jivesoftware.os.miru.service.stream.MiruContext;
+import java.util.Arrays;
+import org.apache.commons.lang.ArrayUtils;
 import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
 import org.roaringbitmap.buffer.MutableRoaringBitmap;
 import org.testng.annotations.DataProvider;
@@ -95,7 +94,7 @@ public class MiruBitmapsTimeRangeTest {
     @DataProvider(name = "evenTimeIndexDataProvider")
     public Object[][] evenTimeIndexDataProvider() throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
-        MiruSchema schema = new Builder("test", 1).build();
+        //MiruSchema schema = new Builder("test", 1).build();
 
         final int size = (64 * 3) + 1;
         final long[] timestamps = new long[size];
@@ -108,66 +107,20 @@ public class MiruBitmapsTimeRangeTest {
         MiruContext<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSSipCursor> labInMemoryTimeIndex = buildInMemoryTimeIndex(true);
         MiruContext<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSSipCursor> labOnDiskTimeIndex = buildOnDiskTimeIndex(true);
 
-        chunkInMemoryTimeIndex.timeIndex.nextId(stackBuffer, timestamps);
-        chunkOnDiskTimeIndex.timeIndex.nextId(stackBuffer, timestamps);
-        labInMemoryTimeIndex.timeIndex.nextId(stackBuffer, timestamps);
-        labOnDiskTimeIndex.timeIndex.nextId(stackBuffer, timestamps);
-
-        MiruContext<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSSipCursor> chunkInMemoryTimeIndexMerged = buildInMemoryTimeIndex(false);
-        MiruContext<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSSipCursor> chunkOnDiskTimeIndexMerged = buildOnDiskTimeIndex(false);
-        MiruContext<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSSipCursor> labInMemoryTimeIndexMerged = buildInMemoryTimeIndex(true);
-        MiruContext<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSSipCursor> labOnDiskTimeIndexMerged = buildOnDiskTimeIndex(true);
-
-        chunkInMemoryTimeIndexMerged.timeIndex.nextId(stackBuffer, timestamps);
-        chunkOnDiskTimeIndexMerged.timeIndex.nextId(stackBuffer, timestamps);
-        labInMemoryTimeIndexMerged.timeIndex.nextId(stackBuffer, timestamps);
-        labOnDiskTimeIndexMerged.timeIndex.nextId(stackBuffer, timestamps);
-
-        ((MiruDeltaTimeIndex) chunkInMemoryTimeIndexMerged.timeIndex).merge(schema, stackBuffer);
-        ((MiruDeltaTimeIndex) chunkOnDiskTimeIndexMerged.timeIndex).merge(schema, stackBuffer);
-        ((MiruDeltaTimeIndex) labInMemoryTimeIndexMerged.timeIndex).merge(schema, stackBuffer);
-        ((MiruDeltaTimeIndex) labOnDiskTimeIndexMerged.timeIndex).merge(schema, stackBuffer);
-
-        MiruContext<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSSipCursor> chunkInMemoryTimeIndexPartiallyMerged = buildInMemoryTimeIndex(false);
-        MiruContext<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSSipCursor> chunkOnDiskTimeIndexPartiallyMerged = buildOnDiskTimeIndex(false);
-        MiruContext<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSSipCursor> labInMemoryTimeIndexPartiallyMerged = buildInMemoryTimeIndex(true);
-        MiruContext<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSSipCursor> labOnDiskTimeIndexPartiallyMerged = buildOnDiskTimeIndex(true);
-        int i = 0;
-        for (; i < timestamps.length / 2; i++) {
-            chunkInMemoryTimeIndexPartiallyMerged.timeIndex.nextId(stackBuffer, timestamps[i]);
-            chunkOnDiskTimeIndexPartiallyMerged.timeIndex.nextId(stackBuffer, timestamps[i]);
-            labInMemoryTimeIndexPartiallyMerged.timeIndex.nextId(stackBuffer, timestamps[i]);
-            labOnDiskTimeIndexPartiallyMerged.timeIndex.nextId(stackBuffer, timestamps[i]);
-        }
-
-        ((MiruDeltaTimeIndex) chunkInMemoryTimeIndexPartiallyMerged.timeIndex).merge(schema, stackBuffer);
-        chunkInMemoryTimeIndexPartiallyMerged.commitable.commit();
-        ((MiruDeltaTimeIndex) chunkOnDiskTimeIndexPartiallyMerged.timeIndex).merge(schema, stackBuffer);
-        chunkOnDiskTimeIndexPartiallyMerged.commitable.commit();
-        ((MiruDeltaTimeIndex) labInMemoryTimeIndexPartiallyMerged.timeIndex).merge(schema, stackBuffer);
-        labInMemoryTimeIndexPartiallyMerged.commitable.commit();
-        ((MiruDeltaTimeIndex) labOnDiskTimeIndexPartiallyMerged.timeIndex).merge(schema, stackBuffer);
-        labOnDiskTimeIndexPartiallyMerged.commitable.commit();
-        for (; i < timestamps.length; i++) {
-            chunkInMemoryTimeIndexPartiallyMerged.timeIndex.nextId(stackBuffer, timestamps[i]);
-            chunkOnDiskTimeIndexPartiallyMerged.timeIndex.nextId(stackBuffer, timestamps[i]);
-            labInMemoryTimeIndexPartiallyMerged.timeIndex.nextId(stackBuffer, timestamps[i]);
-            labOnDiskTimeIndexPartiallyMerged.timeIndex.nextId(stackBuffer, timestamps[i]);
-        }
+        int[] ids = new int[timestamps.length];
+        long[] monotonics = new long[timestamps.length];
+        Arrays.fill(ids, -1);
+        Arrays.fill(monotonics, -1);
+        chunkInMemoryTimeIndex.timeIndex.nextId(stackBuffer, timestamps, ids.clone(), monotonics.clone());
+        chunkOnDiskTimeIndex.timeIndex.nextId(stackBuffer, timestamps, ids.clone(), monotonics.clone());
+        labInMemoryTimeIndex.timeIndex.nextId(stackBuffer, timestamps, ids.clone(), monotonics.clone());
+        labOnDiskTimeIndex.timeIndex.nextId(stackBuffer, timestamps, ids.clone(), monotonics.clone());
 
         return new Object[][] {
             { new MiruBitmapsRoaringBuffer(), chunkInMemoryTimeIndex },
             { new MiruBitmapsRoaringBuffer(), chunkOnDiskTimeIndex },
-            { new MiruBitmapsRoaringBuffer(), chunkInMemoryTimeIndexMerged },
-            { new MiruBitmapsRoaringBuffer(), chunkOnDiskTimeIndexMerged },
-            { new MiruBitmapsRoaringBuffer(), chunkInMemoryTimeIndexPartiallyMerged },
-            { new MiruBitmapsRoaringBuffer(), chunkOnDiskTimeIndexPartiallyMerged },
             { new MiruBitmapsRoaringBuffer(), labInMemoryTimeIndex },
-            { new MiruBitmapsRoaringBuffer(), labOnDiskTimeIndex },
-            { new MiruBitmapsRoaringBuffer(), labInMemoryTimeIndexMerged },
-            { new MiruBitmapsRoaringBuffer(), labOnDiskTimeIndexMerged },
-            { new MiruBitmapsRoaringBuffer(), labInMemoryTimeIndexPartiallyMerged },
-            { new MiruBitmapsRoaringBuffer(), labOnDiskTimeIndexPartiallyMerged }
+            { new MiruBitmapsRoaringBuffer(), labOnDiskTimeIndex }
         };
     }
 
@@ -181,14 +134,18 @@ public class MiruBitmapsTimeRangeTest {
             timestamps[i] = i;
         }
 
+        int[] ids = new int[timestamps.length];
+        long[] monotonics = new long[timestamps.length];
+        Arrays.fill(ids, -1);
+        Arrays.fill(monotonics, -1);
         MiruContext<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSSipCursor> chunkInMemoryTimeIndex = buildInMemoryTimeIndex(false);
-        chunkInMemoryTimeIndex.timeIndex.nextId(stackBuffer, timestamps);
+        chunkInMemoryTimeIndex.timeIndex.nextId(stackBuffer, timestamps, ids.clone(), monotonics.clone());
         MiruContext<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSSipCursor> chunkOnDiskTimeIndex = buildOnDiskTimeIndex(false);
-        chunkOnDiskTimeIndex.timeIndex.nextId(stackBuffer, timestamps);
+        chunkOnDiskTimeIndex.timeIndex.nextId(stackBuffer, timestamps, ids.clone(), monotonics.clone());
         MiruContext<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSSipCursor> labInMemoryTimeIndex = buildInMemoryTimeIndex(true);
-        labInMemoryTimeIndex.timeIndex.nextId(stackBuffer, timestamps);
+        labInMemoryTimeIndex.timeIndex.nextId(stackBuffer, timestamps, ids.clone(), monotonics.clone());
         MiruContext<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSSipCursor> labOnDiskTimeIndex = buildOnDiskTimeIndex(true);
-        labOnDiskTimeIndex.timeIndex.nextId(stackBuffer, timestamps);
+        labOnDiskTimeIndex.timeIndex.nextId(stackBuffer, timestamps, ids.clone(), monotonics.clone());
 
         return new Object[][] {
             { new MiruBitmapsRoaringBuffer(), chunkInMemoryTimeIndex },
@@ -208,10 +165,14 @@ public class MiruBitmapsTimeRangeTest {
         MiruContext<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSSipCursor> chunkOnDiskTimeIndex = buildOnDiskTimeIndex(false);
         MiruContext<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSSipCursor> labOnDiskTimeIndex = buildOnDiskTimeIndex(true);
 
-        chunkInMemoryTimeIndex.timeIndex.nextId(stackBuffer, timestamps);
-        labInMemoryTimeIndex.timeIndex.nextId(stackBuffer, timestamps);
-        chunkOnDiskTimeIndex.timeIndex.nextId(stackBuffer, timestamps);
-        labOnDiskTimeIndex.timeIndex.nextId(stackBuffer, timestamps);
+        int[] ids = new int[timestamps.length];
+        long[] monotonics = new long[timestamps.length];
+        Arrays.fill(ids, -1);
+        Arrays.fill(monotonics, -1);
+        chunkInMemoryTimeIndex.timeIndex.nextId(stackBuffer, timestamps, ids.clone(), monotonics.clone());
+        labInMemoryTimeIndex.timeIndex.nextId(stackBuffer, timestamps, ids.clone(), monotonics.clone());
+        chunkOnDiskTimeIndex.timeIndex.nextId(stackBuffer, timestamps, ids.clone(), monotonics.clone());
+        labOnDiskTimeIndex.timeIndex.nextId(stackBuffer, timestamps, ids.clone(), monotonics.clone());
 
         return new Object[][] {
             { new MiruBitmapsRoaringBuffer(), chunkInMemoryTimeIndex },

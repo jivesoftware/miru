@@ -61,7 +61,6 @@ public class MiruIndexerTest {
                     DefaultMiruSchemaDefinition.FIELDS[0].name, "0",
                     DefaultMiruSchemaDefinition.FIELDS[1].name, "1")),
                 3))),
-            false,
             MoreExecutors.sameThreadExecutor());
         verifyFieldValues(tenantId, context, 3, 0, stackBuffer);
         verifyFieldValues(tenantId, context, 3, 1, stackBuffer);
@@ -75,7 +74,6 @@ public class MiruIndexerTest {
                     DefaultMiruSchemaDefinition.FIELDS[0].name, "0",
                     DefaultMiruSchemaDefinition.FIELDS[2].name, "2")),
                 4))),
-            false,
             MoreExecutors.sameThreadExecutor());
         verifyFieldValues(tenantId, context, 4, 0, stackBuffer);
         verifyFieldValues(tenantId, context, 4, 2, stackBuffer);
@@ -123,7 +121,7 @@ public class MiruIndexerTest {
             nextId));
 
         // Repair data
-        miruIndexer.index(context, coord, activityAndIds, true, MoreExecutors.sameThreadExecutor());
+        miruIndexer.index(context, coord, activityAndIds, MoreExecutors.sameThreadExecutor());
 
         // First check existing data
         for (MiruActivityAndId<MiruActivity> activityAndId : activityList) {
@@ -215,13 +213,11 @@ public class MiruIndexerTest {
         miruIndexer.index(inMemoryContext,
             coord,
             Lists.newArrayList(immutableActivityList),
-            false,
             MoreExecutors.sameThreadExecutor());
 
         miruIndexer.index(onDiskContext,
             coord,
             Lists.newArrayList(immutableActivityList),
-            false,
             MoreExecutors.sameThreadExecutor());
 
         return new Object[][] {

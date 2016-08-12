@@ -46,11 +46,6 @@ public class MiruFilerAuthzIndex<BM extends IBM, IBM> implements MiruAuthzIndex<
     }
 
     @Override
-    public void append(String authz, StackBuffer stackBuffer, int... ids) throws Exception {
-        getAuthz(authz).append(stackBuffer, ids);
-    }
-
-    @Override
     public void set(String authz, StackBuffer stackBuffer, int... ids) throws Exception {
         getAuthz(authz).set(stackBuffer, ids);
         cache.increment(authz);

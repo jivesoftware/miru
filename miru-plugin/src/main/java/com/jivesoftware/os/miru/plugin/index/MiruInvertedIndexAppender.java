@@ -5,7 +5,12 @@ import java.util.List;
 
 public interface MiruInvertedIndexAppender {
 
-    void append(StackBuffer stackBuffer, int... ids) throws Exception;
+    /**
+     * Sets multiple bits anywhere in the bitmap.
+     *
+     * @param ids the indexes of the bits to set
+     * @throws Exception
+     */
+    void set(StackBuffer stackBuffer, int... ids) throws Exception;
 
-    void appendAndExtend(List<Integer> ids, int lastId, StackBuffer stackBuffer) throws Exception;
 }
