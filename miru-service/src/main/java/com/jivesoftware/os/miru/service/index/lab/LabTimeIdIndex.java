@@ -106,7 +106,7 @@ public class LabTimeIdIndex implements TimeIdIndex {
                                     }
                                     return true;
                                 },
-                                true);
+                                false);
                             if (v.lastId != -1) {
                                 break;
                             }
