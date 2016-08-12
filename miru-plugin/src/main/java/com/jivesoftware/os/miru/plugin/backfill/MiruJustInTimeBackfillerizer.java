@@ -1,7 +1,6 @@
 package com.jivesoftware.os.miru.plugin.backfill;
 
 import com.google.common.base.Optional;
-import com.google.common.collect.Lists;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
@@ -18,8 +17,9 @@ import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import gnu.trove.list.TIntList;
+import gnu.trove.list.array.TIntArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 
@@ -73,11 +73,11 @@ public class MiruJustInTimeBackfillerizer {
                     }
 
                     long oldestBackfilledEventId = Long.MAX_VALUE;
-                    List<Integer> unreadIds = Lists.newLinkedList();
+                    TIntList unreadIds = new TIntArrayList();
                     for (int i = lastActivityIndex + 1; i <= lastId; i++) {
                         unreadIds.add(i);
                     }
-                    unread.appendAndExtend(unreadIds, lastId, stackBuffer);
+                    unread.set(stackBuffer, unreadIds.toArray());
 
                     if (log.isDebugEnabled()) {
                         log.debug("after:\n  host={}\n  streamId={}\n  unread={}\n  last={}",
@@ -146,8 +146,8 @@ public class MiruJustInTimeBackfillerizer {
                     int propId = readStreamIdsPropName.isPresent() ? requestContext.getSchema().getPropertyId(readStreamIdsPropName.get()) : -1;
                     //TODO more efficient way to merge answer into inbox and unread
                     MiruIntIterator intIterator = bitmaps.intIterator(answer);
-                    List<Integer> inboxIds = Lists.newLinkedList();
-                    List<Integer> unreadIds = Lists.newLinkedList();
+                    TIntList inboxIds = new TIntArrayList();
+                    TIntList unreadIds = new TIntArrayList();
                     while (intIterator.hasNext()) {
                         int i = intIterator.next();
                         if (i > lastActivityIndex && i <= lastId) {
@@ -168,8 +168,8 @@ public class MiruJustInTimeBackfillerizer {
                             }
                         }
                     }
-                    inbox.appendAndExtend(inboxIds, lastId, stackBuffer);
-                    unread.appendAndExtend(unreadIds, lastId, stackBuffer);
+                    inbox.set(stackBuffer, inboxIds.toArray());
+                    unread.set(stackBuffer, unreadIds.toArray());
 
                     if (log.isDebugEnabled()) {
                         log.debug("after:\n  host={}\n  streamId={}\n  inbox={}\n  unread={}\n  last={}",

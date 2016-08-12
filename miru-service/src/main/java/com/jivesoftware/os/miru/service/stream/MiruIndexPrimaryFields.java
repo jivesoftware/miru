@@ -98,7 +98,6 @@ public class MiruIndexPrimaryFields<BM extends IBM, IBM> {
     public List<Future<?>> index(final MiruContext<BM, IBM, ?> context,
         MiruTenantId tenantId,
         List<Future<List<PrimaryIndexWork>>> fieldWorkFutures,
-        final boolean repair,
         ExecutorService indexExecutor)
         throws Exception {
 
@@ -115,23 +114,13 @@ public class MiruIndexPrimaryFields<BM extends IBM, IBM> {
                 futures.add(indexExecutor.submit(() -> {
                     StackBuffer stackBuffer = new StackBuffer();
                     if (fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.indexed)) {
-                        if (repair) {
-                            log.inc("count>set", primaryIndexWork.ids.size());
-                            log.inc("count>set", primaryIndexWork.ids.size(), tenantId.toString());
-                            fieldIndex.set(finalFieldId,
-                                primaryIndexWork.fieldValue,
-                                primaryIndexWork.ids.toArray(),
-                                primaryIndexWork.counts != null ? primaryIndexWork.counts.toArray() : null,
-                                stackBuffer);
-                        } else {
-                            log.inc("count>append", primaryIndexWork.ids.size());
-                            log.inc("count>append", primaryIndexWork.ids.size(), tenantId.toString());
-                            fieldIndex.append(finalFieldId,
-                                primaryIndexWork.fieldValue,
-                                primaryIndexWork.ids.toArray(),
-                                primaryIndexWork.counts != null ? primaryIndexWork.counts.toArray() : null,
-                                stackBuffer);
-                        }
+                        log.inc("count>set", primaryIndexWork.ids.size());
+                        log.inc("count>set", primaryIndexWork.ids.size(), tenantId.toString());
+                        fieldIndex.set(finalFieldId,
+                            primaryIndexWork.fieldValue,
+                            primaryIndexWork.ids.toArray(),
+                            primaryIndexWork.counts != null ? primaryIndexWork.counts.toArray() : null,
+                            stackBuffer);
                     } else if (fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.indexedFirst)) {
                         log.inc("count>setIfEmpty", 1);
                         fieldIndex.setIfEmpty(finalFieldId,

@@ -30,7 +30,6 @@ public class MiruIndexLatest<BM extends IBM, IBM> {
 
     public List<Future<?>> index(final MiruContext<BM, IBM, ?> context,
         MiruTenantId tenantId, List<MiruActivityAndId<MiruInternalActivity>> internalActivityAndIds,
-        final boolean repair,
         ExecutorService indexExecutor)
         throws Exception {
 
@@ -61,16 +60,10 @@ public class MiruIndexLatest<BM extends IBM, IBM> {
                             }
                         }
 
-                        if (repair) {
-                            log.inc("count>set", 1);
-                            log.inc("count>set", 1, tenantId.toString());
-                            latestFieldIndex.set(fieldDefinition.fieldId, fieldAggregateTermId, new int[] { internalActivityAndId.id }, null, stackBuffer);
-                        } else {
-                            log.inc("count>append", 1);
-                            log.inc("count>append", 1, tenantId.toString());
-                            latestFieldIndex.append(fieldDefinition.fieldId, fieldAggregateTermId, new int[] { internalActivityAndId.id }, null,
-                                stackBuffer);
-                        }
+                        log.inc("count>set", 1);
+                        log.inc("count>set", 1, tenantId.toString());
+                        latestFieldIndex.set(fieldDefinition.fieldId, fieldAggregateTermId, new int[] { internalActivityAndId.id }, null, stackBuffer);
+
                         return null;
                     }));
                 }

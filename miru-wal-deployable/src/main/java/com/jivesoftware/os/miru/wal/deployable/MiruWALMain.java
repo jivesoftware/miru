@@ -207,10 +207,12 @@ public class MiruWALMain {
 
             MiruStats miruStats = new MiruStats();
 
+            HttpDeliveryClientHealthProvider clientHealthProvider = new HttpDeliveryClientHealthProvider(instanceConfig.getInstanceKey(),
+                HttpRequestHelperUtils.buildRequestHelper(instanceConfig.getRoutesHost(), instanceConfig.getRoutesPort()),
+                instanceConfig.getConnectionsHealth(), 5_000, 100);
+
             AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable,
-                instanceConfig.getRoutesHost(),
-                instanceConfig.getRoutesPort(),
-                instanceConfig.getConnectionsHealth(),
+                clientHealthProvider,
                 instanceConfig.getInstanceName(),
                 instanceConfig.getInstanceKey(),
                 instanceConfig.getServiceName(),
@@ -272,10 +274,6 @@ public class MiruWALMain {
                 amzaServiceConfig.getActivityRoutingTimeoutMillis(),
                 amzaServiceConfig.getReadTrackingRingSize(),
                 amzaServiceConfig.getReadTrackingRoutingTimeoutMillis());
-
-            HttpDeliveryClientHealthProvider clientHealthProvider = new HttpDeliveryClientHealthProvider(instanceConfig.getInstanceKey(),
-                HttpRequestHelperUtils.buildRequestHelper(instanceConfig.getRoutesHost(), instanceConfig.getRoutesPort()),
-                instanceConfig.getConnectionsHealth(), 5_000, 100);
 
             TenantRoutingProvider tenantRoutingProvider = deployable.getTenantRoutingProvider();
             TenantsServiceConnectionDescriptorProvider walConnectionDescriptorProvider = tenantRoutingProvider.getConnections("miru-wal", "main",

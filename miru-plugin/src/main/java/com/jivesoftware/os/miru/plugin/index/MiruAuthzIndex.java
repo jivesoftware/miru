@@ -12,8 +12,6 @@ public interface MiruAuthzIndex<BM extends IBM, IBM> {
 
     IBM getCompositeAuthz(MiruAuthzExpression authzExpression, StackBuffer stackBuffer) throws Exception;
 
-    void append(String authz, StackBuffer stackBuffer, int... ids) throws Exception;
-
     void set(String authz, StackBuffer stackBuffer, int... ids) throws Exception;
 
     void remove(String authz, StackBuffer stackBuffer, int... ids) throws Exception;

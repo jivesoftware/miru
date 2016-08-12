@@ -44,10 +44,6 @@ public interface MiruRequestContext<BM extends IBM, IBM, S extends MiruSipCursor
 
     StripingLocksProvider<MiruStreamId> getStreamLocks();
 
-    int getDeltaMinId();
-
-    int getLastDeltaMinId();
-
     boolean isClosed();
 
     boolean hasChunkStores();

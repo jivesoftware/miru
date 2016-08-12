@@ -12,6 +12,7 @@ import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceConfig;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceInitializer;
+import com.jivesoftware.os.miru.amza.NoOpClientHealth;
 import com.jivesoftware.os.miru.api.HostPortProvider;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
@@ -168,8 +169,18 @@ public class MiruPluginTestBootstrap {
         MiruAmzaServiceConfig acrc = BindInterfaceToConfiguration.bindDefault(MiruAmzaServiceConfig.class);
         acrc.setWorkingDirectories(amzaDataDir.getAbsolutePath());
         Deployable deployable = new Deployable(new String[0]);
-        AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable, "routesHost", 1, "connectionHealthPath", 1, "instanceKey",
-            "serviceName", "datacenter", "rack", "localhost", 10000, null, acrc, false,
+        AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable,
+            connectionDescriptor -> new NoOpClientHealth(),
+            1,
+            "instanceKey",
+            "serviceName",
+            "datacenter",
+            "rack",
+            "localhost",
+            10000,
+            null,
+            acrc,
+            false,
             rowsChanged -> {
             });
 
@@ -384,4 +395,5 @@ public class MiruPluginTestBootstrap {
             }
         };
     }
+
 }

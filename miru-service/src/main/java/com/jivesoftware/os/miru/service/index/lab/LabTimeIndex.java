@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.service.index.lab;
 
-import com.google.common.base.Optional;
 import com.google.common.primitives.Bytes;
 import com.jivesoftware.os.filer.io.ByteArrayFiler;
 import com.jivesoftware.os.filer.io.Filer;
@@ -10,15 +9,11 @@ import com.jivesoftware.os.filer.io.api.KeyValueTransaction;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.lab.api.ValueIndex;
-import com.jivesoftware.os.lab.api.ValueStream;
 import com.jivesoftware.os.lab.io.api.UIO;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import gnu.trove.iterator.TLongIterator;
-import gnu.trove.list.TLongList;
-import gnu.trove.list.array.TLongArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -39,11 +34,9 @@ public class LabTimeIndex implements MiruTimeIndex {
     private final ValueIndex metaIndex;
     private final byte[] metaKey;
     private final ValueIndex monotonicTimestampIndex;
-    private final Optional<TimeOrderAnomalyStream> timeOrderAnomalyStream;
     private final ValueIndex rawTimestampToIndex;
 
     public LabTimeIndex(OrderIdProvider idProvider,
-        Optional<TimeOrderAnomalyStream> timeOrderAnomalyStream,
         ValueIndex metaIndex,
         byte[] metaKey,
         ValueIndex monotonicTimestampIndex,
@@ -54,7 +47,6 @@ public class LabTimeIndex implements MiruTimeIndex {
         this.metaIndex = metaIndex;
         this.metaKey = metaKey;
         this.monotonicTimestampIndex = monotonicTimestampIndex;
-        this.timeOrderAnomalyStream = timeOrderAnomalyStream;
         this.rawTimestampToIndex = rawTimestampToIndex;
 
         init();
@@ -122,68 +114,50 @@ public class LabTimeIndex implements MiruTimeIndex {
     }
 
     @Override
-    public int[] nextId(StackBuffer stackBuffer, long... timestamps) throws Exception {
-        final int[] nextIds = new int[timestamps.length];
-
-        final TLongList monotonicTimestamps = new TLongArrayList(timestamps.length);
-        int firstId = id.get() + 1;
-        int lastId = -1;
+    public void nextId(StackBuffer stackBuffer, long[] timestamps, int[] ids, long[] monotonics) throws Exception {
+        int lastId = id.get();
         for (int i = 0; i < timestamps.length; i++) {
-            long timestamp = timestamps[i];
-            if (timestamp == -1) {
-                nextIds[i] = -1;
-            } else {
-                nextIds[i] = id.incrementAndGet();
-                lastId = nextIds[i];
-
+            if (timestamps[i] != -1) {
                 if (smallestTimestamp == Long.MAX_VALUE) {
-                    smallestTimestamp = timestamp;
+                    smallestTimestamp = timestamps[i];
                 }
-                if (largestTimestamp < timestamp) {
-                    largestTimestamp = timestamp;
+                if (largestTimestamp < timestamps[i]) {
+                    largestTimestamp = timestamps[i];
                 }
-                monotonicTimestamps.add(largestTimestamp);
+            }
+            if (ids[i] > lastId) {
+                lastId = ids[i];
+            }
+        }
+        id.set(lastId);
 
-                if (timestamp < smallestTimestamp) {
-                    if (timeOrderAnomalyStream.isPresent()) {
-                        timeOrderAnomalyStream.get().underflowOfSmallestTimestamp(smallestTimestamp - timestamp);
-                    }
-                } else if (timestamp != largestTimestamp) {
-                    if (timeOrderAnomalyStream.isPresent()) {
-                        timeOrderAnomalyStream.get().underflowOfLargestTimestamp(largestTimestamp - timestamp);
+        timestampsLength = lastId + 1;
+        setMeta(lastId, smallestTimestamp, largestTimestamp, timestampsLength, stackBuffer);
+
+        long currentTime = System.currentTimeMillis();
+        long version = idProvider.nextId();
+        monotonicTimestampIndex.append(stream -> {
+            for (int i = 0; i < ids.length; i++) {
+                if (ids[i] != -1 && monotonics[i] != -1) {
+                    if (!stream.stream(-1, Bytes.concat(UIO.longBytes(monotonics[i]), UIO.intBytes(ids[i])), currentTime, false, version, null)) {
+                        return false;
                     }
                 }
             }
-        }
+            return true;
+        }, true);
 
-        if (!monotonicTimestamps.isEmpty()) {
-            timestampsLength = lastId + 1;
-            setMeta(lastId, smallestTimestamp, largestTimestamp, timestampsLength, stackBuffer);
-
-            long currentTime = System.currentTimeMillis();
-            long version = idProvider.nextId();
-            monotonicTimestampIndex.append((ValueStream stream) -> {
-                int id1 = firstId;
-                TLongIterator iter = monotonicTimestamps.iterator();
-                while (iter.hasNext()) {
-                    stream.stream(-1, Bytes.concat(UIO.longBytes(iter.next()), UIO.intBytes(id1)), currentTime, false, version, null);
-                    id1++;
-                }
-                return true;
-            }, true);
-
-            rawTimestampToIndex.append((ValueStream stream) -> {
-                for (int i = 0; i < nextIds.length; i++) {
-                    if (timestamps[i] != -1) {
-                        stream.stream(-1, UIO.longBytes(timestamps[i]), currentTime, false, version, UIO.intBytes(nextIds[i]));
-                        LOG.inc("nextId>sets");
+        rawTimestampToIndex.append(stream -> {
+            for (int i = 0; i < ids.length; i++) {
+                if (timestamps[i] != -1 && ids[i] != -1) {
+                    if (!stream.stream(-1, UIO.longBytes(timestamps[i]), currentTime, false, version, UIO.intBytes(ids[i]))) {
+                        return false;
                     }
+                    LOG.inc("nextId>sets");
                 }
-                return true;
-            }, true);
-        }
-        return nextIds;
-
+            }
+            return true;
+        }, true);
     }
 
     /*
@@ -199,7 +173,7 @@ public class LabTimeIndex implements MiruTimeIndex {
             return lastId() + 1;
         }
 
-        int[] id = {0};
+        int[] id = { 0 };
         monotonicTimestampIndex.rangeScan(UIO.longBytes(timestamp), null, (index, key, payloadTimestamp, tombstoned, version, payload) -> {
             if (key != null) {
                 id[0] = UIO.bytesInt(key, 8);
@@ -213,7 +187,7 @@ public class LabTimeIndex implements MiruTimeIndex {
 
     @Override
     public int getExactId(long timestamp, StackBuffer stackBuffer) throws Exception {
-        int[] id = {-1};
+        int[] id = { -1 };
         rawTimestampToIndex.get(
             (keyStream) -> keyStream.key(0, UIO.longBytes(timestamp), 0, 8),
             (index, key, payloadTimestamp, tombstoned, version, payload) -> {
@@ -272,7 +246,7 @@ public class LabTimeIndex implements MiruTimeIndex {
             return lastId + 1;
         }
 
-        int[] id = {0};
+        int[] id = { 0 };
         monotonicTimestampIndex.rangeScan(
             UIO.longBytes(timestamp),
             null,
@@ -306,7 +280,7 @@ public class LabTimeIndex implements MiruTimeIndex {
             return lastId;
         }
 
-        int[] id = {-1};
+        int[] id = { -1 };
         monotonicTimestampIndex.rangeScan(
             UIO.longBytes(timestamp),
             null,

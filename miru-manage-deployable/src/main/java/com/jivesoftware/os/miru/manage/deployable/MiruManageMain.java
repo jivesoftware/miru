@@ -205,9 +205,7 @@ public class MiruManageMain {
 
             AmzaClusterRegistryConfig amzaClusterRegistryConfig = deployable.config(AmzaClusterRegistryConfig.class);
             AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable,
-                instanceConfig.getRoutesHost(),
-                instanceConfig.getRoutesPort(),
-                instanceConfig.getConnectionsHealth(),
+                clientHealthProvider,
                 instanceConfig.getInstanceName(),
                 instanceConfig.getInstanceKey(),
                 instanceConfig.getServiceName(),

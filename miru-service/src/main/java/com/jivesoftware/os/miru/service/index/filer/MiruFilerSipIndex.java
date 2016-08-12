@@ -79,4 +79,9 @@ public class MiruFilerSipIndex<S extends MiruSipCursor<S>> implements MiruSipInd
             return false;
         }, stackBuffer);
     }
+
+    @Override
+    public void merge() throws Exception {
+        LOG.warn("Unimplemented merge");
+    }
 }

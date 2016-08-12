@@ -238,9 +238,7 @@ public class MiruCatwalkMain {
             deployable.addHealthCheck(new SickThreadsHealthCheck(deployable.config(WALClientSickThreadsHealthCheckConfig.class), walClientSickThreads));
 
             AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable,
-                instanceConfig.getRoutesHost(),
-                instanceConfig.getRoutesPort(),
-                instanceConfig.getConnectionsHealth(),
+                clientHealthProvider,
                 instanceConfig.getInstanceName(),
                 instanceConfig.getInstanceKey(),
                 instanceConfig.getServiceName(),

@@ -13,8 +13,6 @@ import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.TimeAndVersion;
-import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
-import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.wal.MiruCursor;
 import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
@@ -24,8 +22,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
 import com.jivesoftware.os.miru.plugin.partition.TrackError;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
-import com.jivesoftware.os.miru.service.index.Mergeable;
-import com.jivesoftware.os.miru.service.index.delta.MiruDeltaFieldIndex;
+import com.jivesoftware.os.miru.service.index.TimeIdIndex;
 import com.jivesoftware.os.miru.service.stream.MiruContext;
 import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
 import com.jivesoftware.os.miru.service.stream.MiruIndexer;
@@ -34,14 +31,12 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.mlogger.core.ValueType;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -286,76 +281,31 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         return (context.isPresent() && context.get().sipIndex.setSip(sip, stackBuffer));
     }
 
-    private static class MergeRunnable implements Runnable {
-
-        private final Mergeable mergeable;
-        private final MiruSchema schema;
-
-        public MergeRunnable(Mergeable mergeable, MiruSchema schema) {
-            this.mergeable = mergeable;
-            this.schema = schema;
-        }
-
-        @Override
-        public void run() {
-            try {
-                StackBuffer stackBuffer = new StackBuffer();
-                mergeable.merge(schema, stackBuffer);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        }
-    }
-
-    void merge(ExecutorService mergeExecutor, Optional<MiruContext<BM, IBM, S>> context, MiruMergeChits chits, TrackError trackError) throws Exception {
-        if (context.isPresent()) {
-            final MiruContext<BM, IBM, S> got = context.get();
-            long elapsed;
-            synchronized (got.writeLock) {
-                if (chits.taken(coord) == 0) {
-                    LOG.info("Skipped merge because no chits have been acquired for {}", coord);
-                    chits.refundAll(coord);
-                    LOG.inc("merge>skip>count");
-                    return;
-                }
-                long start = System.currentTimeMillis();
-
-                List<Future<?>> futures = Lists.newArrayList();
-                futures.add(mergeExecutor.submit(new MergeRunnable((Mergeable) got.timeIndex, got.schema)));
-                for (MiruFieldType fieldType : MiruFieldType.values()) {
-                    MiruDeltaFieldIndex<BM, IBM> deltaFieldIndex = (MiruDeltaFieldIndex<BM, IBM>) got.fieldIndexProvider.getFieldIndex(fieldType);
-                    for (Mergeable mergeable : deltaFieldIndex.getMergeables()) {
-                        futures.add(mergeExecutor.submit(new MergeRunnable(mergeable, got.schema)));
-                    }
-                }
-                futures.add(mergeExecutor.submit(new MergeRunnable((Mergeable) got.authzIndex, got.schema)));
-                futures.add(mergeExecutor.submit(new MergeRunnable((Mergeable) got.removalIndex, got.schema)));
-                futures.add(mergeExecutor.submit(new MergeRunnable((Mergeable) got.inboxIndex, got.schema)));
-                futures.add(mergeExecutor.submit(new MergeRunnable((Mergeable) got.unreadTrackingIndex, got.schema)));
-                futures.add(mergeExecutor.submit(new MergeRunnable((Mergeable) got.activityIndex, got.schema)));
-
-                try {
-                    for (Future<?> future : futures) {
-                        future.get();
-                    }
-
-                    // merge the sip index only after the other indexes are written, otherwise we risk advancing the sip cursor for a partially failed merge
-                    new MergeRunnable((Mergeable) got.sipIndex, got.schema).run();
-
-                    got.commitable.commit();
-                } catch (Exception e) {
-                    if (!(e instanceof InterruptedException)) {
-                        trackError.error("Failed to merge: " + e.getMessage());
-                    }
-                    checkCorruption(got, e);
-                    throw e;
-                }
-                timestampOfLastMerge.set(System.currentTimeMillis());
-                elapsed = System.currentTimeMillis() - start;
+    void merge(ExecutorService mergeExecutor, MiruContext<BM, IBM, S> context, MiruMergeChits chits, TrackError trackError) throws Exception {
+        long elapsed;
+        synchronized (context.writeLock) {
+            if (chits.taken(coord) == 0) {
+                LOG.info("Skipped merge because no chits have been acquired for {}", coord);
                 chits.refundAll(coord);
+                LOG.inc("merge>skip>count");
+                return;
             }
-            LOG.inc("merge>time>pow>" + FilerIO.chunkPower(elapsed, 0));
+            long start = System.currentTimeMillis();
+
+            try {
+                context.commitable.commit(mergeExecutor);
+            } catch (Exception e) {
+                if (!(e instanceof InterruptedException)) {
+                    trackError.error("Failed to merge: " + e.getMessage());
+                }
+                checkCorruption(context, e);
+                throw e;
+            }
+            timestampOfLastMerge.set(System.currentTimeMillis());
+            elapsed = System.currentTimeMillis() - start;
+            chits.refundAll(coord);
         }
+        LOG.inc("merge>time>pow>" + FilerIO.chunkPower(elapsed, 0));
     }
 
     void refundChits(MiruMergeChits mergeChits) {
@@ -368,7 +318,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
     }
 
     int indexInternal(
-        Optional<MiruContext<BM, IBM, S>> context,
+        MiruContext<BM, IBM, S> context,
         Iterator<MiruPartitionedActivity> partitionedActivities,
         IndexStrategy strategy,
         boolean recovery,
@@ -379,11 +329,6 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         StackBuffer stackBuffer)
         throws Exception {
 
-        if (!context.isPresent()) {
-            return -1;
-        }
-        MiruContext<BM, IBM, S> got = context.get();
-
         int consumedCount = 0;
         writeSemaphore.acquire();
         try {
@@ -391,7 +336,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
                 return -1;
             }
 
-            synchronized (got.writeLock) {
+            synchronized (context.writeLock) {
                 MiruPartitionedActivity.Type batchType = null;
                 List<MiruPartitionedActivity> batch = Lists.newArrayList();
                 while (partitionedActivities.hasNext()) {
@@ -408,7 +353,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
 
                         if (activityType != batchType) {
                             // this also clears the batch
-                            consumedCount += consumeTypedBatch(got, batchType, batch, strategy, indexExecutor, stackBuffer);
+                            consumedCount += consumeTypedBatch(context, batchType, batch, strategy, indexExecutor, stackBuffer);
                             batchType = activityType;
                         }
 
@@ -420,7 +365,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
 
                 }
 
-                consumedCount += consumeTypedBatch(got, batchType, batch, strategy, indexExecutor, stackBuffer);
+                consumedCount += consumeTypedBatch(context, batchType, batch, strategy, indexExecutor, stackBuffer);
                 if (consumedCount > 0) {
                     indexRepairs.repaired(strategy, coord, consumedCount);
                 } else {
@@ -428,12 +373,12 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
                 }
 
                 LOG.set(ValueType.COUNT, "lastId>partition>" + coord.partitionId,
-                    got.activityIndex.lastId(stackBuffer), coord.tenantId.toString());
+                    context.activityIndex.lastId(stackBuffer), coord.tenantId.toString());
                 LOG.set(ValueType.COUNT, "largestTimestamp>partition>" + coord.partitionId,
-                    got.timeIndex.getLargestTimestamp(), coord.tenantId.toString());
+                    context.timeIndex.getLargestTimestamp(), coord.tenantId.toString());
             }
         } catch (Exception e) {
-            checkCorruption(got, e);
+            checkCorruption(context, e);
             throw e;
         } finally {
             writeSemaphore.release();
@@ -480,7 +425,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
             } else if (batchType == MiruPartitionedActivity.Type.REPAIR) {
                 count = handleRepairType(got, batch, indexExecutor, stackBuffer);
             } else if (batchType == MiruPartitionedActivity.Type.REMOVE) {
-                count = handleRemoveType(got, batch, strategy, stackBuffer);
+                count = handleRemoveType(got, batch, stackBuffer);
             } else {
                 LOG.warn("Attempt to index unsupported type {}", batchType);
             }
@@ -491,12 +436,12 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
             miruStats.ingressed(strategy.name() + ">" + coord.tenantId.toString() + ">" + coord.partitionId.getId() + ">calls", 1,
                 System.currentTimeMillis() - start);
             batch.clear();
-
         }
         return count;
     }
 
     private int handleBoundaryType(List<MiruPartitionedActivity> partitionedActivities) {
+        LOG.inc("index>boundary", partitionedActivities.size());
         return 0;
     }
 
@@ -505,45 +450,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         ExecutorService indexExecutor,
         StackBuffer stackBuffer)
         throws Exception {
-
-        int activityCount = 0;
-        if (!partitionedActivities.isEmpty()) {
-            MiruTimeIndex timeIndex = got.getTimeIndex();
-
-            List<MiruActivityAndId<MiruActivity>> indexables = new ArrayList<>(partitionedActivities.size());
-            List<Long> activityTimes = new ArrayList<>();
-            for (MiruPartitionedActivity partitionedActivity : partitionedActivities) {
-                MiruActivity activity = partitionedActivity.activity.get();
-                activityTimes.add(activity.time);
-            }
-
-            List<MiruActivity> passed = new ArrayList<>();
-            boolean[] contains = timeIndex.contains(activityTimes, stackBuffer);
-            for (int i = 0; i < contains.length; i++) {
-                if (!contains[i]) {
-                    passed.add(partitionedActivities.get(i).activity.get());
-                }
-            }
-
-            if (!passed.isEmpty()) {
-                long[] timestamps = new long[passed.size()];
-                for (int i = 0; i < timestamps.length; i++) {
-                    timestamps[i] = passed.get(i).time;
-                }
-                int[] ids = timeIndex.nextId(stackBuffer, timestamps);
-                for (int i = 0; i < timestamps.length; i++) {
-                    indexables.add(new MiruActivityAndId<>(passed.get(i), ids[i]));
-                }
-            }
-
-            // free for GC before we begin indexing
-            partitionedActivities.clear();
-            if (!indexables.isEmpty()) {
-                activityCount = indexables.size(); // indexer consumes, so count first
-                indexer.index(got, coord, indexables, false, indexExecutor);
-            }
-        }
-        return activityCount;
+        return handleActivities(got, partitionedActivities, indexExecutor, false, true, false, false, stackBuffer);
     }
 
     private int handleRepairType(MiruContext<BM, IBM, S> got,
@@ -551,82 +458,117 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         ExecutorService indexExecutor,
         StackBuffer stackBuffer)
         throws Exception {
+        return handleActivities(got, partitionedActivities, indexExecutor, true, true, false, false, stackBuffer);
+    }
 
-        int count = 0;
+    private int handleRemoveType(MiruContext<BM, IBM, S> got,
+        List<MiruPartitionedActivity> partitionedActivities,
+        StackBuffer stackBuffer)
+        throws Exception {
+        return handleActivities(got, partitionedActivities, null, false, false, true, true, stackBuffer);
+    }
+
+    private int handleActivities(MiruContext<BM, IBM, S> got,
+        List<MiruPartitionedActivity> partitionedActivities,
+        ExecutorService indexExecutor,
+        boolean indexHits,
+        boolean indexMisses,
+        boolean removeHits,
+        boolean removeMisses,
+        StackBuffer stackBuffer)
+        throws Exception {
+
+        int activityCount = 0;
         if (!partitionedActivities.isEmpty()) {
             MiruTimeIndex timeIndex = got.getTimeIndex();
 
-            int activityCount = partitionedActivities.size();
-            List<Long> activityTimes = Lists.newArrayListWithCapacity(activityCount);
-            long[] timestamps = new long[activityCount];
-            for (int i = 0; i < activityCount; i++) {
+            //List<Long> activityTimes = new ArrayList<>();
+            long[] timestamps = new long[partitionedActivities.size()];
+            for (int i = 0; i < partitionedActivities.size(); i++) {
                 MiruActivity activity = partitionedActivities.get(i).activity.get();
-                activityTimes.add(activity.time);
                 timestamps[i] = activity.time;
             }
 
-            boolean[] contains = timeIndex.contains(activityTimes, stackBuffer);
-            for (int i = 0; i < contains.length; i++) {
-                if (contains[i]) {
-                    timestamps[i] = -1;
+            int[] ids = new int[timestamps.length];
+            Arrays.fill(ids, -1);
+            long[] monotonics = new long[timestamps.length];
+            Arrays.fill(monotonics, -1);
+            got.timeIdIndex.lookup(got.version, timestamps, ids, monotonics);
+
+            int hits = 0;
+            int misses = 0;
+            for (int i = 0; i < ids.length; i++) {
+                if (ids[i] == -1) {
+                    misses++;
+                } else {
+                    hits++;
                 }
             }
 
-            int[] ids = timeIndex.nextId(stackBuffer, timestamps);
+            MiruActivity[] hitActivities = new MiruActivity[hits];
+            long[] hitTimestamps = new long[hits];
+            int[] hitIds = new int[hits];
+            long[] hitMonotonics = new long[hits];
 
-            List<MiruActivityAndId<MiruActivity>> indexables = Lists.newArrayListWithCapacity(activityCount);
-            for (int i = 0; i < activityCount; i++) {
-                int id = ids[i];
-                if (id == -1) {
-                    id = timeIndex.getExactId(timestamps[i], stackBuffer);
+            MiruActivity[] missActivities = new MiruActivity[misses];
+            long[] missTimestamps = new long[misses];
+            int[] missIds = new int[misses];
+            long[] missMonotonics = new long[misses];
+
+            for (int i = 0, h = 0, m = 0; i < partitionedActivities.size(); i++) {
+                if (ids[i] == -1) {
+                    missActivities[m] = partitionedActivities.get(i).activity.get();
+                    missTimestamps[m] = timestamps[i];
+                    missIds[m] = -1;
+                    missMonotonics[m] = -1;
+                    m++;
+                } else {
+                    hitActivities[h] = partitionedActivities.get(i).activity.get();
+                    hitTimestamps[h] = timestamps[i];
+                    hitIds[h] = ids[i];
+                    hitMonotonics[h] = monotonics[i];
+                    h++;
                 }
-                if (id >= 0) {
-                    indexables.add(new MiruActivityAndId<>(partitionedActivities.get(i).activity.get(), id));
+            }
+
+            List<MiruActivityAndId<MiruActivity>> indexables = Lists.newArrayListWithCapacity(partitionedActivities.size());
+
+            if ((indexHits || removeHits) && hits > 0) {
+                timeIndex.nextId(stackBuffer, hitTimestamps, hitIds, hitMonotonics);
+
+                for (int i = 0; i < hits; i++) {
+                    if (indexHits) {
+                        indexables.add(new MiruActivityAndId<>(hitActivities[i], hitIds[i]));
+                    } else {
+                        indexer.remove(got, hitActivities[i], hitIds[i]);
+                    }
+                }
+            }
+
+            if ((indexMisses || removeMisses) && misses > 0) {
+                int lastIdHint = got.timeIndex.lastId();
+                long largestTimestampHint = got.timeIndex.getLargestTimestamp();
+                got.timeIdIndex.allocate(got.version, missTimestamps, missIds, missMonotonics, lastIdHint, largestTimestampHint);
+                timeIndex.nextId(stackBuffer, missTimestamps, missIds, missMonotonics);
+
+                for (int i = 0; i < misses; i++) {
+                    if (indexMisses) {
+                        indexables.add(new MiruActivityAndId<>(missActivities[i], missIds[i]));
+                    } else {
+                        indexer.remove(got, missActivities[i], missIds[i]);
+                    }
                 }
             }
 
             // free for GC before we begin indexing
             partitionedActivities.clear();
             if (!indexables.isEmpty()) {
-                count = indexables.size(); // indexer consumes, so count first
+                activityCount = indexables.size(); // indexer consumes, so count first
                 Collections.sort(indexables);
-                indexer.index(got, coord, indexables, true, indexExecutor);
+                indexer.index(got, coord, indexables, indexExecutor);
             }
         }
-        return count;
-    }
-
-    private int handleRemoveType(MiruContext<BM, IBM, S> got,
-        List<MiruPartitionedActivity> partitionedActivities,
-        IndexStrategy strategy,
-        StackBuffer stackBuffer)
-        throws Exception {
-
-        int count = 0;
-        MiruTimeIndex timeIndex = got.getTimeIndex();
-        //TODO batch remove
-        for (MiruPartitionedActivity partitionedActivity : partitionedActivities) {
-            MiruActivity activity = partitionedActivity.activity.get();
-            LOG.debug("Handling removal type for {} with strategy {}", activity, strategy);
-
-            int id;
-            if (strategy != IndexStrategy.rebuild || timeIndex.contains(Arrays.asList(activity.time), stackBuffer)[0]) {
-                id = timeIndex.getExactId(activity.time, stackBuffer);
-                LOG.trace("Removing activity for exact id {}", id);
-            } else {
-                id = timeIndex.nextId(stackBuffer, activity.time)[0];
-                indexer.set(got, Arrays.asList(new MiruActivityAndId<>(activity, id)));
-                LOG.trace("Removing activity for next id {}", id);
-            }
-
-            if (id < 0) {
-                LOG.warn("Attempted to remove an activity that does not belong to this partition: {}", activity);
-            } else {
-                indexer.remove(got, activity, id);
-                count++;
-            }
-        }
-        return count;
+        return activityCount;
     }
 
     MiruRequestHandle<BM, IBM, S> getRequestHandle(TrackError trackError) {
@@ -758,7 +700,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
 
             @Override
             public void merge(ExecutorService mergeExecutor,
-                Optional<MiruContext<BM, IBM, S>> context,
+                MiruContext<BM, IBM, S> context,
                 MiruMergeChits chits,
                 TrackError trackError) throws Exception {
                 MiruPartitionAccessor.this.merge(mergeExecutor, context, chits, trackError);

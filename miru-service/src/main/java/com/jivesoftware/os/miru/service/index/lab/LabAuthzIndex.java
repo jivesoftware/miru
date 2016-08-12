@@ -56,17 +56,13 @@ public class LabAuthzIndex<BM extends IBM, IBM> implements MiruAuthzIndex<BM, IB
             -3,
             Bytes.concat(prefix, MiruAuthzUtils.key(authz)),
             getStore(authz),
+            null,
             stripingLocksProvider.lock(authz, 0));
     }
 
     @Override
     public BM getCompositeAuthz(MiruAuthzExpression authzExpression, StackBuffer stackBuffer) throws Exception {
         return cache.getOrCompose(authzExpression, authz -> getAuthz(authz).getIndex(stackBuffer).orNull());
-    }
-
-    @Override
-    public void append(String authz, StackBuffer stackBuffer, int... ids) throws Exception {
-        getAuthz(authz).append(stackBuffer, ids);
     }
 
     @Override

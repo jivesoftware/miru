@@ -6,15 +6,12 @@ import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
-import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
-import com.jivesoftware.os.miru.api.activity.schema.MiruSchema.Builder;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.bitmaps.roaring5.buffer.MiruBitmapsRoaringBuffer;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
 import com.jivesoftware.os.miru.plugin.index.MiruUnreadTrackingIndex;
-import com.jivesoftware.os.miru.service.index.delta.MiruDeltaUnreadTrackingIndex;
 import java.util.List;
 import org.apache.commons.lang3.ArrayUtils;
 import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
@@ -150,7 +147,7 @@ public class MiruUnreadTrackingIndexTest {
 
     private Object[][] generateUnreadIndexes(MiruTenantId tenantId, int[] data, boolean useLabIndexes) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
-        MiruSchema schema = new Builder("test", 1).build();
+        //MiruSchema schema = new Builder("test", 1).build();
         final MiruStreamId streamId = new MiruStreamId(new byte[] { 2 });
 
         assertTrue(data.length % 2 == 0, "Need an even number of data");
@@ -159,11 +156,6 @@ public class MiruUnreadTrackingIndexTest {
         for (int d : data) {
             expected.add(d);
         }
-
-        int[] data1_2 = new int[data.length / 2];
-        int[] data2_2 = new int[data.length / 2];
-        System.arraycopy(data, 0, data1_2, 0, data.length / 2);
-        System.arraycopy(data, data.length / 2, data2_2, 0, data.length / 2);
 
         MiruBitmapsRoaringBuffer bitmaps = new MiruBitmapsRoaringBuffer();
         MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("logicalName"));
@@ -176,35 +168,9 @@ public class MiruUnreadTrackingIndexTest {
             coord).unreadTrackingIndex;
         unmergedOnDiskIndex.append(streamId, stackBuffer, data);
 
-        MiruUnreadTrackingIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> mergedInMemoryIndex = buildInMemoryContext(4, useLabIndexes, bitmaps,
-            coord).unreadTrackingIndex;
-        mergedInMemoryIndex.append(streamId, stackBuffer, data);
-        ((MiruDeltaUnreadTrackingIndex<MutableRoaringBitmap, ImmutableRoaringBitmap>) mergedInMemoryIndex).merge(schema, stackBuffer);
-
-        MiruUnreadTrackingIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> mergedOnDiskIndex = buildOnDiskContext(4, useLabIndexes, bitmaps,
-            coord).unreadTrackingIndex;
-        mergedOnDiskIndex.append(streamId, stackBuffer, data);
-        ((MiruDeltaUnreadTrackingIndex<MutableRoaringBitmap, ImmutableRoaringBitmap>) mergedOnDiskIndex).merge(schema, stackBuffer);
-
-        MiruUnreadTrackingIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> partiallyMergedInMemoryIndex = buildInMemoryContext(4, useLabIndexes, bitmaps,
-            coord).unreadTrackingIndex;
-        partiallyMergedInMemoryIndex.append(streamId, stackBuffer, data1_2);
-        ((MiruDeltaUnreadTrackingIndex<MutableRoaringBitmap, ImmutableRoaringBitmap>) partiallyMergedInMemoryIndex).merge(schema, stackBuffer);
-        partiallyMergedInMemoryIndex.append(streamId, stackBuffer, data2_2);
-
-        MiruUnreadTrackingIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> partiallyMergedOnDiskIndex = buildOnDiskContext(4, useLabIndexes, bitmaps,
-            coord).unreadTrackingIndex;
-        partiallyMergedOnDiskIndex.append(streamId, stackBuffer, data1_2);
-        ((MiruDeltaUnreadTrackingIndex<MutableRoaringBitmap, ImmutableRoaringBitmap>) partiallyMergedOnDiskIndex).merge(schema, stackBuffer);
-        partiallyMergedOnDiskIndex.append(streamId, stackBuffer, data2_2);
-
         return new Object[][] {
             { bitmaps, unmergedInMemoryIndex, streamId, expected },
-            { bitmaps, unmergedOnDiskIndex, streamId, expected },
-            { bitmaps, mergedInMemoryIndex, streamId, expected },
-            { bitmaps, mergedOnDiskIndex, streamId, expected },
-            { bitmaps, partiallyMergedInMemoryIndex, streamId, expected },
-            { bitmaps, partiallyMergedOnDiskIndex, streamId, expected }
+            { bitmaps, unmergedOnDiskIndex, streamId, expected }
         };
     }
 }

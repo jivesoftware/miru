@@ -36,6 +36,8 @@ import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.index.MiruSipIndexMarshaller;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
+import com.jivesoftware.os.miru.service.index.TimeIdIndex;
+import com.jivesoftware.os.miru.service.index.lab.LabTimeIdIndexInitializer;
 import com.jivesoftware.os.miru.service.locator.MiruResourceLocator;
 import com.jivesoftware.os.miru.service.partition.LargestFirstMergeChits;
 import com.jivesoftware.os.miru.service.partition.MiruClusterPartitionDirector;
@@ -61,7 +63,6 @@ import com.jivesoftware.os.miru.service.stream.allocator.MiruChunkAllocator;
 import com.jivesoftware.os.miru.service.stream.allocator.OnDiskChunkAllocator;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -92,7 +93,7 @@ public class MiruServiceInitializer {
         MiruActivityInternExtern internExtern,
         MiruBitmapsProvider bitmapsProvider,
         PartitionErrorTracker partitionErrorTracker,
-        MiruInterner<MiruTermId> termInterner) throws IOException {
+        MiruInterner<MiruTermId> termInterner) throws Exception {
 
         final ThreadGroup threadGroup = Thread.currentThread().getThreadGroup();
 
@@ -177,16 +178,23 @@ public class MiruServiceInitializer {
 
         OrderIdProvider idProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(1));
 
+        TimeIdIndex[] timeIdIndexes = new LabTimeIdIndexInitializer().initialize(config.getTimeIdKeepNIndexes(),
+            config.getTimeIdMaxEntriesPerIndex(),
+            config.getTimeIdMaxHeapPressureInBytes(),
+            resourceLocator,
+            onDiskChunkAllocator);
+
         MiruContextFactory<S> contextFactory = new MiruContextFactory<>(idProvider,
             persistentCogs,
             transientCogs,
+            timeIdIndexes,
             schemaProvider,
             termComposer,
             internExtern,
             ImmutableMap.<MiruBackingStorage, MiruChunkAllocator>builder()
-            .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
-            .put(MiruBackingStorage.disk, onDiskChunkAllocator)
-            .build(),
+                .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
+                .put(MiruBackingStorage.disk, onDiskChunkAllocator)
+                .build(),
             sipIndexMarshaller,
             resourceLocator,
             config.getPartitionAuthzCacheSize(),

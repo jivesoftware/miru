@@ -44,7 +44,7 @@ public class LabInboxIndex<BM extends IBM, IBM> implements MiruInboxIndex<BM, IB
 
     @Override
     public void append(MiruStreamId streamId, StackBuffer stackBuffer, int... ids) throws Exception {
-        getAppender(streamId).append(stackBuffer, ids);
+        getAppender(streamId).set(stackBuffer, ids);
     }
 
     @Override
@@ -56,6 +56,7 @@ public class LabInboxIndex<BM extends IBM, IBM> implements MiruInboxIndex<BM, IB
             -2,
             Bytes.concat(prefix, streamId.getBytes()),
             getStore(streamId),
+            null,
             stripingLocksProvider.lock(streamId, 0));
     }
 

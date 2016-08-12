@@ -31,6 +31,7 @@ import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSet;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSetDirector;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruSchemaColumnKey;
+import com.jivesoftware.os.miru.amza.NoOpClientHealth;
 import com.jivesoftware.os.rcvs.inmemory.InMemoryRowColumnValueStore;
 import com.jivesoftware.os.routing.bird.deployable.Deployable;
 import java.io.File;
@@ -66,8 +67,18 @@ public class AmzaClusterRegistryNGTest {
         MiruAmzaServiceConfig acrc = BindInterfaceToConfiguration.bindDefault(MiruAmzaServiceConfig.class);
         acrc.setWorkingDirectories(amzaDataDir.getAbsolutePath());
         Deployable deployable = new Deployable(new String[0]);
-        AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable, "routesHost", 1, "connectionHealthPath",
-            1, "instanceKey", "serviceName", "datacenter", "rack", "localhost", 10000, null, acrc, false,
+        AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable,
+            connectionDescriptor -> new NoOpClientHealth(),
+            1,
+            "instanceKey",
+            "serviceName",
+            "datacenter",
+            "rack",
+            "localhost",
+            10000,
+            null,
+            acrc,
+            false,
             rowsChanged -> {
             });
         registry = new AmzaClusterRegistry(amzaService,

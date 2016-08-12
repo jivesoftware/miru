@@ -11,7 +11,6 @@ import com.jivesoftware.os.miru.plugin.index.MiruSipIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruSipIndexMarshaller;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -68,20 +67,9 @@ public class LabSipIndex<S extends MiruSipCursor<S>> implements MiruSipIndex<S> 
 
     @Override
     public boolean setSip(final S sip, StackBuffer stackBuffer) throws Exception {
-        ByteArrayFiler filer = new ByteArrayFiler();
         S existingSip = getSip(stackBuffer).orNull();
         while (existingSip == null || sip.compareTo(existingSip) > 0) {
             if (sipReference.compareAndSet(existingSip, sip)) {
-                try {
-                    marshaller.toFiler(filer, sip, stackBuffer);
-                    valueIndex.append((ValueStream stream) -> {
-                        stream.stream(-1, key, System.currentTimeMillis(), false, idProvider.nextId(), filer.getBytes());
-                        return true;
-                    }, true);
-
-                } catch (Exception e) {
-                    throw new IOException("Failed to serialize sip");
-                }
                 return true;
             } else {
                 existingSip = sipReference.get();
@@ -89,4 +77,18 @@ public class LabSipIndex<S extends MiruSipCursor<S>> implements MiruSipIndex<S> 
         }
         return false;
     }
+
+    @Override
+    public void merge() throws Exception {
+        S sip = sipReference.get();
+        if (sip != null) {
+            ByteArrayFiler filer = new ByteArrayFiler();
+            marshaller.toFiler(filer, sip, new StackBuffer());
+            valueIndex.append(stream -> {
+                stream.stream(-1, key, System.currentTimeMillis(), false, idProvider.nextId(), filer.getBytes());
+                return true;
+            }, true);
+        }
+    }
+
 }

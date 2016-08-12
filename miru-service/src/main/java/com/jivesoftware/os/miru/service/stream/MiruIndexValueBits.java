@@ -113,34 +113,24 @@ public class MiruIndexValueBits<BM extends IBM, IBM> {
                     StackBuffer stackBuffer = new StackBuffer();
                     byte[] bit = new byte[2];
                     ValueIndex.shortBytes((short) valueIndexWork.bit, bit, 0);
-                    if (repair) {
-                        TIntList allIds = valueIndexWork.allIds;
-                        TIntList setIds = valueIndexWork.setIds;
-                        TIntList removeIds = computeDifference(allIds, setIds);
-                        log.inc("count>set", setIds.size());
-                        log.inc("count>remove", removeIds.size());
-                        log.inc("count>set", setIds.size(), tenantId.toString());
-                        log.inc("count>remove", removeIds.size(), tenantId.toString());
-                        if (!setIds.isEmpty()) {
-                            valueBitsIndex.set(finalFieldId,
-                                new MiruTermId(bit),
-                                setIds.toArray(),
-                                null,
-                                stackBuffer);
-                        }
-                        if (!removeIds.isEmpty()) {
-                            valueBitsIndex.remove(finalFieldId,
-                                new MiruTermId(bit),
-                                removeIds.toArray(),
-                                stackBuffer);
-                        }
-                    } else {
-                        log.inc("count>append", valueIndexWork.setIds.size());
-                        log.inc("count>append", valueIndexWork.setIds.size(), tenantId.toString());
-                        valueBitsIndex.append(finalFieldId,
+                    TIntList allIds = valueIndexWork.allIds;
+                    TIntList setIds = valueIndexWork.setIds;
+                    TIntList removeIds = computeDifference(allIds, setIds);
+                    log.inc("count>set", setIds.size());
+                    log.inc("count>remove", removeIds.size());
+                    log.inc("count>set", setIds.size(), tenantId.toString());
+                    log.inc("count>remove", removeIds.size(), tenantId.toString());
+                    if (!setIds.isEmpty()) {
+                        valueBitsIndex.set(finalFieldId,
                             new MiruTermId(bit),
-                            valueIndexWork.setIds.toArray(),
+                            setIds.toArray(),
                             null,
+                            stackBuffer);
+                    }
+                    if (!removeIds.isEmpty()) {
+                        valueBitsIndex.remove(finalFieldId,
+                            new MiruTermId(bit),
+                            removeIds.toArray(),
                             stackBuffer);
                     }
                     return null;

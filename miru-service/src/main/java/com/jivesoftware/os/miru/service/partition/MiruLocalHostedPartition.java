@@ -396,7 +396,10 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
         try {
 
             MiruPartitionAccessor<BM, IBM, C, S> existing = accessorRef.get();
-            existing.merge(persistentMergeExecutor, existing.persistentContext, persistentMergeChits, trackError);
+            Optional<MiruContext<BM, IBM, S>> persistentContext = existing.persistentContext;
+            if (persistentContext.isPresent()) {
+                existing.merge(persistentMergeExecutor, persistentContext.get(), persistentMergeChits, trackError);
+            }
             synchronized (factoryLock) {
                 MiruPartitionAccessor<BM, IBM, C, S> closed = MiruPartitionAccessor.initialize(miruStats,
                     bitmaps,
@@ -493,15 +496,18 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                 mergeChits = transientMergeChits;
             }
 
-            int count = accessor.indexInternal(context,
-                partitionedActivities,
-                MiruPartitionAccessor.IndexStrategy.ingress,
-                false,
-                mergeChits,
-                sameThreadExecutor,
-                sameThreadExecutor,
-                trackError,
-                stackBuffer);
+            int count = 0;
+            if (context.isPresent()) {
+                count = accessor.indexInternal(context.get(),
+                    partitionedActivities,
+                    MiruPartitionAccessor.IndexStrategy.ingress,
+                    false,
+                    mergeChits,
+                    sameThreadExecutor,
+                    sameThreadExecutor,
+                    trackError,
+                    stackBuffer);
+            }
             if (count > 0) {
                 LOG.inc("indexIngress>written", count);
             }
@@ -581,7 +587,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                     MiruContext<BM, IBM, S> toContext;
                     MiruContext<BM, IBM, S> fromContext = accessor.transientContext.get();
                     synchronized (fromContext.writeLock) {
-                        handle.merge(transientMergeExecutor, accessor.transientContext, transientMergeChits, trackError);
+                        handle.merge(transientMergeExecutor, fromContext, transientMergeChits, trackError);
                         handle.closeTransient(contextFactory);
                         toContext = contextFactory.copy(bitmaps, fromContext.schema, coord, fromContext, MiruBackingStorage.disk, stackBuffer);
                         contextFactory.saveSchema(coord, fromContext.schema);
@@ -751,23 +757,26 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                             }
                             if (accessor != null) {
                                 try {
-                                    if (!accessor.transientContext.isPresent()) {
-                                        LOG.error("Attempted rebuild without a transientContext for {}", coord);
-                                    } else if (accessor.transientContext.get().isCorrupt()) {
-                                        if (close()) {
-                                            LOG.warn("Stopped rebuild due to corruption for {}", coord);
+                                    if (accessor.transientContext.isPresent()) {
+                                        MiruContext<BM, IBM, S> got = accessor.transientContext.get();
+                                        if (got.isCorrupt()) {
+                                            if (close()) {
+                                                LOG.warn("Stopped rebuild due to corruption for {}", coord);
+                                            } else {
+                                                LOG.error("Failed to stop rebuild after corruption for {}", coord);
+                                            }
+                                        } else if (rebuild(accessor, stackBuffer)) {
+                                            MiruPartitionAccessor<BM, IBM, C, S> online = accessor.copyToState(MiruPartitionState.online);
+                                            accessor = updatePartition(accessor, online);
+                                            if (accessor != null) {
+                                                accessor.merge(transientMergeExecutor, got, transientMergeChits, trackError);
+                                                trackError.reset();
+                                            }
                                         } else {
-                                            LOG.error("Failed to stop rebuild after corruption for {}", coord);
-                                        }
-                                    } else if (rebuild(accessor, stackBuffer)) {
-                                        MiruPartitionAccessor<BM, IBM, C, S> online = accessor.copyToState(MiruPartitionState.online);
-                                        accessor = updatePartition(accessor, online);
-                                        if (accessor != null) {
-                                            accessor.merge(transientMergeExecutor, accessor.transientContext, transientMergeChits, trackError);
-                                            trackError.reset();
+                                            LOG.error("Rebuild did not finish for {} isAccessor={}", coord, (accessor == accessorRef.get()));
                                         }
                                     } else {
-                                        LOG.error("Rebuild did not finish for {} isAccessor={}", coord, (accessor == accessorRef.get()));
+                                        LOG.error("Attempted rebuild without a transientContext for {}", coord);
                                     }
                                 } catch (Throwable t) {
                                     LOG.error("Rebuild encountered a problem for {}", new Object[] { coord }, t);
@@ -879,15 +888,17 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                     LOG.debug("Indexing batch of size {} (total {}) for {}", count, totalIndexed, coord);
                     LOG.startTimer("rebuild>batchSize-" + partitionRebuildBatchSize);
                     boolean repair = firstRebuild.compareAndSet(true, false);
-                    accessor.indexInternal(accessor.transientContext,
-                        partitionedActivities.iterator(),
-                        MiruPartitionAccessor.IndexStrategy.rebuild,
-                        repair,
-                        transientMergeChits,
-                        rebuildIndexExecutor,
-                        transientMergeExecutor,
-                        trackError,
-                        stackBuffer);
+                    if (accessor.transientContext.isPresent()) {
+                        accessor.indexInternal(accessor.transientContext.get(),
+                            partitionedActivities.iterator(),
+                            MiruPartitionAccessor.IndexStrategy.rebuild,
+                            repair,
+                            transientMergeChits,
+                            rebuildIndexExecutor,
+                            transientMergeExecutor,
+                            trackError,
+                            stackBuffer);
+                    }
                     //accessor.merge(transientMergeExecutor, accessor.transientContext, transientMergeChits, trackError);
                     accessor.setRebuildCursor(nextCursor);
                     if (nextCursor.getSipCursor() != null) {
@@ -1118,10 +1129,10 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                 sippedActivity = walClient.sipActivity(coord.tenantId, coord.partitionId, sipCursor, sipTracker.getSeenThisSip(), partitionSipBatchSize);
             }
 
-            if (!accessor.hasOpenWriters()) {
+            if (!accessor.hasOpenWriters() && accessor.persistentContext.isPresent()) {
                 LOG.info("Forcing merge after sip with no open writers for coord:{} sippedEndOfWAL:{} sippedEndOfStream:{}",
                     coord, sippedEndOfWAL, sippedEndOfStream);
-                accessor.merge(persistentMergeExecutor, accessor.persistentContext, persistentMergeChits, trackError);
+                accessor.merge(persistentMergeExecutor, accessor.persistentContext.get(), persistentMergeChits, trackError);
             }
 
             return new SipResult(sippedEndOfWAL, sippedEndOfStream);
@@ -1142,18 +1153,18 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
             final MiruSipTracker<S> sipTracker, S sipCursor, S nextSipCursor, StackBuffer stackBuffer) throws Exception {
             boolean repair = firstSip.compareAndSet(true, false);
             int initialCount = partitionedActivities.size();
-            int count = accessor.indexInternal(
-                accessor.persistentContext,
-                partitionedActivities.iterator(),
-                MiruPartitionAccessor.IndexStrategy.sip,
-                repair,
-                persistentMergeChits,
-                sipIndexExecutor,
-                persistentMergeExecutor,
-                trackError,
-                stackBuffer);
-
+            int count = 0;
             if (accessor.persistentContext.isPresent()) {
+                count = accessor.indexInternal(
+                    accessor.persistentContext.get(),
+                    partitionedActivities.iterator(),
+                    MiruPartitionAccessor.IndexStrategy.sip,
+                    repair,
+                    persistentMergeChits,
+                    sipIndexExecutor,
+                    persistentMergeExecutor,
+                    trackError,
+                    stackBuffer);
                 int lastId = accessor.persistentContext.get().activityIndex.lastId(stackBuffer);
                 if (lastId > updatedLastId.get()) {
                     heartbeatHandler.updateLastId(coord, lastId);

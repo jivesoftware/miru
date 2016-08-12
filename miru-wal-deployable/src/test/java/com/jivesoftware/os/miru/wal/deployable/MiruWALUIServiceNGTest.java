@@ -28,6 +28,7 @@ import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruRegistryClusterClient;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSetDirector;
 import com.jivesoftware.os.miru.cluster.amza.AmzaClusterRegistry;
+import com.jivesoftware.os.miru.amza.NoOpClientHealth;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer.MiruSoyRendererConfig;
@@ -99,8 +100,18 @@ public class MiruWALUIServiceNGTest {
         MiruAmzaServiceConfig acrc = BindInterfaceToConfiguration.bindDefault(MiruAmzaServiceConfig.class);
         acrc.setWorkingDirectories(amzaDataDir.getAbsolutePath());
         Deployable deployable = new Deployable(new String[0]);
-        AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable, "routesHost", 1, "connectionHealthPath",
-            1, "instanceKey", "serviceName", "datacenter", "rack", "localhost", 10000, null, acrc, false,
+        AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable,
+            connectionDescriptor -> new NoOpClientHealth(),
+            1,
+            "instanceKey",
+            "serviceName",
+            "datacenter",
+            "rack",
+            "localhost",
+            10000,
+            null,
+            acrc,
+            false,
             rowsChanged -> {
             });
 
