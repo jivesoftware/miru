@@ -592,7 +592,6 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                         handle.merge(transientMergeExecutor, fromContext, transientMergeChits, trackError);
                         handle.closeTransient(contextFactory);
                         toContext = contextFactory.copy(bitmaps, fromContext.schema, coord, fromContext, MiruBackingStorage.disk, stackBuffer);
-                        contextFactory.saveSchema(coord, fromContext.schema);
                     }
 
                     Optional<MiruContext<BM, IBM, S>> newPersistentContext = Optional.of(toContext);
