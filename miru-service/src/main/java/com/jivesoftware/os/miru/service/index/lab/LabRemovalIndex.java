@@ -11,10 +11,21 @@ public class LabRemovalIndex<BM extends IBM, IBM> extends LabInvertedIndex<BM, I
     public LabRemovalIndex(OrderIdProvider idProvider,
         MiruBitmaps<BM, IBM> bitmaps,
         TrackError trackError,
+        boolean atomized,
         ValueIndex valueIndex,
         byte[] keyBytes,
         Object mutationLock) {
 
-        super(idProvider, bitmaps, trackError, "removal", -4, keyBytes, valueIndex, null, mutationLock);
+        super(idProvider,
+            bitmaps,
+            trackError,
+            "removal",
+            -4,
+            atomized,
+            keyBytes,
+            valueIndex,
+            null,
+            null,
+            mutationLock);
     }
 }

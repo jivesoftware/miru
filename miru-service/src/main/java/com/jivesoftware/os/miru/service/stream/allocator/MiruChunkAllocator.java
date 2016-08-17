@@ -4,17 +4,18 @@ import com.jivesoftware.os.filer.io.chunk.ChunkStore;
 import com.jivesoftware.os.lab.LABEnvironment;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import java.io.File;
+import java.io.IOException;
 
 /**
  *
  */
 public interface MiruChunkAllocator {
 
-    boolean checkExists(MiruPartitionCoord coord) throws Exception;
+    boolean checkExists(MiruPartitionCoord coord, int labVersion, int[] supportedLabVersions) throws Exception;
 
     boolean hasChunkStores(MiruPartitionCoord coord) throws Exception;
 
-    boolean hasLabIndex(MiruPartitionCoord coord) throws Exception;
+    boolean hasLabIndex(MiruPartitionCoord coord, int version) throws Exception;
 
     ChunkStore[] allocateChunkStores(MiruPartitionCoord coord) throws Exception;
 
@@ -22,13 +23,13 @@ public interface MiruChunkAllocator {
 
     void remove(ChunkStore[] chunkStores);
 
-    void close(LABEnvironment[] labEnvironments);
+    void close(LABEnvironment[] labEnvironments) throws Exception;
 
-    File[] getLabDirs(MiruPartitionCoord coord) throws Exception;
+    File[] getLabDirs(MiruPartitionCoord coord, int version) throws Exception;
 
-    LABEnvironment[] allocateLABEnvironments(MiruPartitionCoord coord) throws Exception;
+    LABEnvironment[] allocateLABEnvironments(MiruPartitionCoord coord, int version) throws Exception;
 
-    LABEnvironment[] allocateLABEnvironments(File[] dirs) throws Exception;
+    LABEnvironment[] allocateLABEnvironments(File[] labDirs) throws Exception;
 
     void remove(LABEnvironment[] labEnvironments);
 }

@@ -35,13 +35,13 @@
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-api</artifactId>
-                    <version>${project.version}</version>
-</dependency>
+            <version>${project.version}</version>
+        </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-plugin</artifactId>
-                    <version>${project.version}</version>
-</dependency>
+            <version>${project.version}</version>
+        </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.filer</groupId>
             <artifactId>io</artifactId>

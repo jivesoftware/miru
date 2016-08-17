@@ -11,7 +11,7 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivityFactory;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.topology.MiruPartitionActiveUpdate;
-import com.jivesoftware.os.miru.bitmaps.roaring5.buffer.MiruBitmapsRoaringBuffer;
+import com.jivesoftware.os.miru.bitmaps.roaring5.MiruBitmapsRoaring;
 import com.jivesoftware.os.miru.plugin.partition.MiruHostedPartition;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
 import com.jivesoftware.os.miru.service.partition.MiruLocalHostedPartition;
@@ -46,7 +46,7 @@ public class MiruTenantTopologyTest {
     private MiruHost localhost;
     private MiruLocalPartitionFactory localPartitionFactory;
     private MiruRemoteQueryablePartitionFactory remotePartitionFactory;
-    private MiruBitmapsRoaringBuffer bitmaps;
+    private MiruBitmapsRoaring bitmaps;
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -67,7 +67,7 @@ public class MiruTenantTopologyTest {
         localhost = new MiruHost("logicalName");
         localPartitionFactory = mock(MiruLocalPartitionFactory.class);
         remotePartitionFactory = mock(MiruRemoteQueryablePartitionFactory.class);
-        bitmaps = new MiruBitmapsRoaringBuffer();
+        bitmaps = new MiruBitmapsRoaring();
         tenantTopology = new MiruTenantTopology<>(config.getEnsurePartitionsIntervalInMillis(), bitmaps, localhost, tenantId, localPartitionFactory);
     }
 

@@ -5,13 +5,16 @@ import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.lab.LABEnvironment;
 import com.jivesoftware.os.lab.LABRawhide;
 import com.jivesoftware.os.lab.api.FormatTransformerProvider;
+import com.jivesoftware.os.lab.api.KeyValueRawhide;
+import com.jivesoftware.os.lab.api.MemoryRawEntryFormat;
+import com.jivesoftware.os.lab.api.NoOpFormatTransformerProvider;
 import com.jivesoftware.os.lab.api.RawEntryFormat;
 import com.jivesoftware.os.lab.api.ValueIndex;
+import com.jivesoftware.os.lab.api.ValueIndexConfig;
 import com.jivesoftware.os.miru.plugin.cache.LabCacheKeyValues;
 import com.jivesoftware.os.miru.plugin.cache.LabLastIdCacheKeyValues;
 import com.jivesoftware.os.miru.plugin.cache.LabTimestampedCacheKeyValues;
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider;
-import com.jivesoftware.os.miru.plugin.context.KeyValueRawhide;
 import com.jivesoftware.os.miru.plugin.context.LastIdKeyValueRawhide;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -47,15 +50,15 @@ public class LabPluginCacheProvider implements MiruPluginCacheProvider {
                 ValueIndex[] cacheIndexes = new ValueIndex[labEnvironments.length];
                 for (int i = 0; i < cacheIndexes.length; i++) {
                     // currently not commitable, as the commit is done immediately at write time
-                    cacheIndexes[i] = labEnvironments[i].open("pluginCache-" + key, // serialization compatible with lastId keyValues
+                    cacheIndexes[i] = labEnvironments[i].open(new ValueIndexConfig("pluginCache-" + key, // serialization compatible with lastId keyValues
                         4096,
                         maxHeapPressureInBytes,
                         10 * 1024 * 1024,
                         -1L,
                         -1L,
-                        FormatTransformerProvider.NO_OP,
-                        new KeyValueRawhide(),
-                        RawEntryFormat.MEMORY);
+                        NoOpFormatTransformerProvider.NAME,
+                        KeyValueRawhide.NAME,
+                        MemoryRawEntryFormat.NAME));
                 }
                 return new LabCacheKeyValues(name, idProvider, cacheIndexes);
             } catch (Exception x) {
@@ -71,15 +74,15 @@ public class LabPluginCacheProvider implements MiruPluginCacheProvider {
                 ValueIndex[] cacheIndexes = new ValueIndex[labEnvironments.length];
                 for (int i = 0; i < cacheIndexes.length; i++) {
                     // currently not commitable, as the commit is done immediately at write time
-                    cacheIndexes[i] = labEnvironments[i].open("pluginCache-" + key, // serialization compatible with plain keyValues
+                    cacheIndexes[i] = labEnvironments[i].open(new ValueIndexConfig("pluginCache-" + key, // serialization compatible with plain keyValues
                         4096,
                         maxHeapPressureInBytes,
                         10 * 1024 * 1024,
                         -1L,
                         -1L,
-                        FormatTransformerProvider.NO_OP,
-                        new LastIdKeyValueRawhide(),
-                        RawEntryFormat.MEMORY);
+                        NoOpFormatTransformerProvider.NAME,
+                        "lastIdKeyValue",
+                        MemoryRawEntryFormat.NAME));
                 }
                 return new LabLastIdCacheKeyValues(name, idProvider, cacheIndexes);
             } catch (Exception x) {
@@ -95,15 +98,15 @@ public class LabPluginCacheProvider implements MiruPluginCacheProvider {
                 ValueIndex[] cacheIndexes = new ValueIndex[labEnvironments.length];
                 for (int i = 0; i < cacheIndexes.length; i++) {
                     // currently not commitable, as the commit is done immediately at write time
-                    cacheIndexes[i] = labEnvironments[i].open("timestampedCache-" + key,
+                    cacheIndexes[i] = labEnvironments[i].open(new ValueIndexConfig("timestampedCache-" + key,
                         4096,
                         maxHeapPressureInBytes,
                         10 * 1024 * 1024,
                         -1L,
                         -1L,
-                        FormatTransformerProvider.NO_OP,
-                        new LABRawhide(),
-                        RawEntryFormat.MEMORY);
+                        NoOpFormatTransformerProvider.NAME,
+                        LABRawhide.NAME,
+                        MemoryRawEntryFormat.NAME));
                 }
                 return new LabTimestampedCacheKeyValues(name, idProvider, cacheIndexes, stripedLocks);
             } catch (Exception x) {
@@ -120,6 +123,13 @@ public class LabPluginCacheProvider implements MiruPluginCacheProvider {
                 LOG.error("Failed to close plugin cache {}", new Object[] { cache.name() }, e);
             }
         }
+        for (LabLastIdCacheKeyValues cache : lastIdPluginPersistentCache.values()) {
+            try {
+                cache.commit(fsyncOnCommit);
+            } catch (Exception e) {
+                LOG.error("Failed to close lastId plugin cache {}", new Object[] { cache.name() }, e);
+            }
+        }
         for (LabTimestampedCacheKeyValues cache : timestampedPluginPersistentCache.values()) {
             try {
                 cache.commit(fsyncOnCommit);
@@ -131,6 +141,9 @@ public class LabPluginCacheProvider implements MiruPluginCacheProvider {
 
     public void close(boolean flushUncommited, boolean fsync) throws Exception {
         for (LabCacheKeyValues cacheKeyValues : pluginPersistentCache.values()) {
+            cacheKeyValues.close(flushUncommited, fsync);
+        }
+        for (LabLastIdCacheKeyValues cacheKeyValues : lastIdPluginPersistentCache.values()) {
             cacheKeyValues.close(flushUncommited, fsync);
         }
         for (LabTimestampedCacheKeyValues cacheKeyValues : timestampedPluginPersistentCache.values()) {

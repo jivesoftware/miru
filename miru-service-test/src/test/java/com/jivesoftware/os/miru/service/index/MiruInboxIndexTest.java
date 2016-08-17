@@ -10,15 +10,14 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruSchema.Builder;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.wal.RCVSSipCursor;
-import com.jivesoftware.os.miru.bitmaps.roaring5.buffer.MiruBitmapsRoaringBuffer;
+import com.jivesoftware.os.miru.bitmaps.roaring5.MiruBitmapsRoaring;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruInboxIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndexAppender;
 import com.jivesoftware.os.miru.service.IndexTestUtil;
 import com.jivesoftware.os.miru.service.stream.MiruContext;
 import org.apache.commons.lang3.ArrayUtils;
-import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
-import org.roaringbitmap.buffer.MutableRoaringBitmap;
+import org.roaringbitmap.RoaringBitmap;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
@@ -30,21 +29,21 @@ import static org.testng.Assert.assertTrue;
 public class MiruInboxIndexTest {
 
     @Test(dataProvider = "miruInboxIndexDataProvider")
-    public void testGetEmptyInboxWithoutCreating(MiruInboxIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> miruInboxIndex, MiruStreamId miruStreamId)
+    public void testGetEmptyInboxWithoutCreating(MiruInboxIndex<RoaringBitmap, RoaringBitmap> miruInboxIndex, MiruStreamId miruStreamId)
         throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
-        Optional<MutableRoaringBitmap> inbox = miruInboxIndex.getInbox(miruStreamId).getIndex(stackBuffer);
+        Optional<RoaringBitmap> inbox = miruInboxIndex.getInbox(miruStreamId).getIndex(stackBuffer);
         assertNotNull(inbox);
         assertFalse(inbox.isPresent());
     }
 
     @Test(dataProvider = "miruInboxIndexDataProvider")
-    public void testGetEmptyInboxAndCreate(MiruInboxIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> miruInboxIndex, MiruStreamId miruStreamId)
+    public void testGetEmptyInboxAndCreate(MiruInboxIndex<RoaringBitmap, RoaringBitmap> miruInboxIndex, MiruStreamId miruStreamId)
         throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
         MiruInvertedIndexAppender inbox = miruInboxIndex.getAppender(miruStreamId);
         assertNotNull(inbox);
-        Optional<MutableRoaringBitmap> inboxIndex = miruInboxIndex.getInbox(miruStreamId).getIndex(stackBuffer);
+        Optional<RoaringBitmap> inboxIndex = miruInboxIndex.getInbox(miruStreamId).getIndex(stackBuffer);
         assertNotNull(inboxIndex);
         assertFalse(inboxIndex.isPresent());
         //assertEquals(inboxIndex.get().sizeInBytes(), 8);
@@ -57,11 +56,11 @@ public class MiruInboxIndexTest {
     }
 
     @Test(dataProvider = "miruInboxIndexDataProviderWithData")
-    public void testIndexedData(MiruInboxIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> miruInboxIndex,
+    public void testIndexedData(MiruInboxIndex<RoaringBitmap, RoaringBitmap> miruInboxIndex,
         MiruStreamId streamId,
         int[] indexedIds) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
-        Optional<MutableRoaringBitmap> inbox = miruInboxIndex.getInbox(streamId).getIndex(stackBuffer);
+        Optional<RoaringBitmap> inbox = miruInboxIndex.getInbox(streamId).getIndex(stackBuffer);
         assertNotNull(inbox);
         assertTrue(inbox.isPresent());
         for (int indexedId : indexedIds) {
@@ -70,7 +69,7 @@ public class MiruInboxIndexTest {
     }
 
     @Test(dataProvider = "miruInboxIndexDataProviderWithData")
-    public void testDefaultLastActivityIndexWithNewStreamId(MiruInboxIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> miruInboxIndex,
+    public void testDefaultLastActivityIndexWithNewStreamId(MiruInboxIndex<RoaringBitmap, RoaringBitmap> miruInboxIndex,
         MiruStreamId streamId,
         int[] indexedIds) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
@@ -89,7 +88,7 @@ public class MiruInboxIndexTest {
         MiruStreamId miruStreamId = new MiruStreamId(new byte[] { 2 });
         MiruTenantId tenantId = new MiruTenantId(new byte[] { 1 });
         MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, MiruPartitionId.of(0), new MiruHost("logicalName"));
-        MiruBitmapsRoaringBuffer bitmaps = new MiruBitmapsRoaringBuffer();
+        MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
         return ArrayUtils.addAll(buildInboxIndexDataProvider(miruStreamId, coord, bitmaps, false),
             buildInboxIndexDataProvider(miruStreamId, coord, bitmaps, true));
     }
@@ -118,7 +117,7 @@ public class MiruInboxIndexTest {
         MiruStreamId streamId = new MiruStreamId(new byte[] { 3 });
 
         // Create in-memory inbox index
-        MiruBitmapsRoaringBuffer bitmaps = new MiruBitmapsRoaringBuffer();
+        MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
         MiruTenantId tenantId = new MiruTenantId(new byte[] { 1 });
         MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, MiruPartitionId.of(0), new MiruHost("logicalName"));
 

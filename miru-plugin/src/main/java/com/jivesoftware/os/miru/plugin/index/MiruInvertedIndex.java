@@ -11,10 +11,6 @@ public interface MiruInvertedIndex<BM extends IBM, IBM> extends MiruInvertedInde
 
     Optional<BM> getIndex(StackBuffer stackBuffer) throws Exception;
 
-    Optional<BitmapAndLastId<BM>> getIndexAndLastId(int considerIfLastIdGreaterThanN, StackBuffer stackBuffer) throws Exception;
-
-    void replaceIndex(IBM index, int setLastId, StackBuffer stackBuffer) throws Exception;
-
     void remove(StackBuffer stackBuffer, int... ids) throws Exception;
 
     /**

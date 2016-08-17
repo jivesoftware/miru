@@ -5,6 +5,7 @@ import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.lab.api.ValueIndex;
+import com.jivesoftware.os.lab.io.api.UIO;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruAuthzIndex;
@@ -20,6 +21,7 @@ public class LabAuthzIndex<BM extends IBM, IBM> implements MiruAuthzIndex<BM, IB
     private final MiruBitmaps<BM, IBM> bitmaps;
     private final TrackError trackError;
     private final byte[] prefix;
+    private final boolean atomized;
     private final ValueIndex[] keyedStores;
     private final MiruAuthzCache<BM, IBM> cache;
     private final StripingLocksProvider<String> stripingLocksProvider;
@@ -28,6 +30,7 @@ public class LabAuthzIndex<BM extends IBM, IBM> implements MiruAuthzIndex<BM, IB
         MiruBitmaps<BM, IBM> bitmaps,
         TrackError trackError,
         byte[] prefix,
+        boolean atomized,
         ValueIndex[] keyedStores,
         MiruAuthzCache<BM, IBM> cache,
         StripingLocksProvider<String> stripingLocksProvider)
@@ -37,6 +40,7 @@ public class LabAuthzIndex<BM extends IBM, IBM> implements MiruAuthzIndex<BM, IB
         this.bitmaps = bitmaps;
         this.trackError = trackError;
         this.prefix = prefix;
+        this.atomized = atomized;
         this.keyedStores = keyedStores;
         this.cache = cache;
         this.stripingLocksProvider = stripingLocksProvider;
@@ -54,10 +58,22 @@ public class LabAuthzIndex<BM extends IBM, IBM> implements MiruAuthzIndex<BM, IB
             trackError,
             "authz",
             -3,
-            Bytes.concat(prefix, MiruAuthzUtils.key(authz)),
+            atomized,
+            bitmapIndexKey(MiruAuthzUtils.key(authz)),
             getStore(authz),
             null,
+            null,
             stripingLocksProvider.lock(authz, 0));
+    }
+
+    private byte[] bitmapIndexKey(byte[] authzBytes) {
+        if (atomized) {
+            byte[] authzLength = new byte[2];
+            UIO.shortBytes((short) (authzBytes.length & 0xFFFF), authzLength, 0);
+            return Bytes.concat(prefix, authzLength, authzBytes);
+        } else {
+            return Bytes.concat(prefix, authzBytes);
+        }
     }
 
     @Override

@@ -3,13 +3,12 @@ package com.jivesoftware.os.miru.service.index;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
-import com.jivesoftware.os.miru.bitmaps.roaring5.buffer.MiruBitmapsRoaringBuffer;
+import com.jivesoftware.os.miru.bitmaps.roaring5.MiruBitmapsRoaring;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzUtils;
 import java.util.List;
 import java.util.Map;
-import org.roaringbitmap.buffer.BufferFastAggregation;
-import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
-import org.roaringbitmap.buffer.MutableRoaringBitmap;
+import org.roaringbitmap.FastAggregation;
+import org.roaringbitmap.RoaringBitmap;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
@@ -21,8 +20,8 @@ import static org.testng.Assert.assertTrue;
  */
 public class MiruAuthzUtilsTest {
 
-    Map<String, ImmutableRoaringBitmap> authzIndexes = Maps.newHashMap();
-    MiruAuthzUtils<MutableRoaringBitmap, ImmutableRoaringBitmap> utils = new MiruAuthzUtils<>(new MiruBitmapsRoaringBuffer());
+    Map<String, RoaringBitmap> authzIndexes = Maps.newHashMap();
+    MiruAuthzUtils<RoaringBitmap, RoaringBitmap> utils = new MiruAuthzUtils<>(new MiruBitmapsRoaring());
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -44,18 +43,18 @@ public class MiruAuthzUtilsTest {
         values.add("seq_1_3_5_7_9_11"); // [1,3,5,7,9,11..]
         MiruAuthzExpression authzExpression = new MiruAuthzExpression(values);
 
-        ImmutableRoaringBitmap result = utils.getCompositeAuthz(authzExpression, authzIndexes::get);
+        RoaringBitmap result = utils.getCompositeAuthz(authzExpression, authzIndexes::get);
 
         // result should be [0,2,4..] | [1,3,5..] = [0,1,2,3..]
-        MutableRoaringBitmap expected = BufferFastAggregation.or(authzIndexes.get("seq_0_2_4_6_8_10"), authzIndexes.get("seq_1_3_5_7_9_11"));
+        RoaringBitmap expected = FastAggregation.or(authzIndexes.get("seq_0_2_4_6_8_10"), authzIndexes.get("seq_1_3_5_7_9_11"));
         assertEquals(result, expected);
     }
 
-    public static ImmutableRoaringBitmap bits(int start, int end, int... pattern) {
+    public static RoaringBitmap bits(int start, int end, int... pattern) {
         assertTrue(start >= 0);
         assertTrue(start < end);
 
-        MutableRoaringBitmap bits = new MutableRoaringBitmap();
+        RoaringBitmap bits = new RoaringBitmap();
         bits.add(start);
         int j = 0;
         int last = start;

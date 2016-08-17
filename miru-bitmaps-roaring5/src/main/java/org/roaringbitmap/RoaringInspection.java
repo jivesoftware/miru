@@ -1,6 +1,9 @@
 package org.roaringbitmap;
 
 import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 import java.util.Arrays;
 
 /**
@@ -29,29 +32,12 @@ public class RoaringInspection {
         return bitmap;
     }
 
-    /*public static void main(String[] args) {
-        Random r = new Random();
-        for (int i = 1; i <= 1_000; i++) {
-            RoaringBitmap bitmap = new RoaringBitmap();
-            for (int j = 0; j < 1_000_000; j++) {
-                if (r.nextInt(i) < 10) {
-                    bitmap.add(j);
-                }
-            }
-
-            RoaringBitmap[] split = split(bitmap);
-            RoaringBitmap joined = join(split);
-
-            System.out.println("test: " + bitmap.getCardinality() + " = " + joined.getCardinality() + " -> " + bitmap.equals(joined));
-        }
-    }*/
-
     public static CardinalityAndLastSetBit<RoaringBitmap> cardinalityAndLastSetBit(RoaringBitmap bitmap) {
         int pos = bitmap.highLowContainer.size() - 1;
         int lastSetBit = -1;
         while (pos >= 0) {
             Container lastContainer = bitmap.highLowContainer.values[pos];
-            lastSetBit = lastSetBit(bitmap, lastContainer, pos);
+            lastSetBit = lastSetBit(bitmap.highLowContainer.getKeyAtIndex(pos), lastContainer);
             if (lastSetBit >= 0) {
                 break;
             }
@@ -62,22 +48,30 @@ public class RoaringInspection {
         return new CardinalityAndLastSetBit<>(bitmap, cardinality, lastSetBit);
     }
 
-    private static int lastSetBit(RoaringBitmap bitmap, Container container, int pos) {
+    private static int lastSetBit(short key, Container container) {
+        int lastSetIndex = lastSetIndex(container);
+        if (lastSetIndex == -1) {
+            return -1;
+        } else {
+            int hs = Util.toIntUnsigned(key) << 16;
+            return lastSetIndex | hs;
+        }
+    }
+
+    private static int lastSetIndex(Container container) {
         if (container instanceof ArrayContainer) {
             ArrayContainer arrayContainer = (ArrayContainer) container;
             int cardinality = arrayContainer.cardinality;
             if (cardinality > 0) {
-                int hs = Util.toIntUnsigned(bitmap.highLowContainer.getKeyAtIndex(pos)) << 16;
                 short last = arrayContainer.content[cardinality - 1];
-                return Util.toIntUnsigned(last) | hs;
+                return Util.toIntUnsigned(last);
             }
         } else if (container instanceof RunContainer) {
             RunContainer runContainer = (RunContainer) container;
             if (runContainer.nbrruns > 0) {
-                int hs = Util.toIntUnsigned(bitmap.highLowContainer.getKeyAtIndex(pos)) << 16;
                 int maxlength = Util.toIntUnsigned(runContainer.getLength(runContainer.nbrruns - 1));
                 int base = Util.toIntUnsigned(runContainer.getValue(runContainer.nbrruns - 1));
-                return (base + maxlength) | hs;
+                return (base + maxlength);
             }
         } else {
             // <-- trailing              leading -->
@@ -88,9 +82,8 @@ public class RoaringInspection {
                 long l = longs[i];
                 int leadingZeros = Long.numberOfLeadingZeros(l);
                 if (leadingZeros < 64) {
-                    int hs = Util.toIntUnsigned(bitmap.highLowContainer.getKeyAtIndex(pos)) << 16;
                     short last = (short) ((i * 64) + 64 - leadingZeros - 1);
-                    return Util.toIntUnsigned(last) | hs;
+                    return Util.toIntUnsigned(last);
                 }
             }
         }
@@ -265,6 +258,154 @@ public class RoaringInspection {
 
     private static int containerMin(RoaringBitmap bitmap, int pos) {
         return Util.toIntUnsigned(bitmap.highLowContainer.getKeyAtIndex(pos)) << 16;
+    }
+
+    public static int key(int position) {
+        return Util.highbits(position);
+    }
+
+    public static int[] keys(RoaringBitmap bitmap) {
+        short[] bitmapKeys = bitmap.highLowContainer.keys;
+        int[] copyKeys = new int[bitmapKeys.length];
+        for (int i = 0; i < bitmapKeys.length; i++) {
+            copyKeys[i] = Util.toIntUnsigned(bitmapKeys[i]);
+        }
+        return copyKeys;
+    }
+
+    public static int[] userialize(RoaringBitmap bitmap, DataOutput[] outContainers) throws IOException {
+        return shortToIntKeys(serialize(bitmap, outContainers));
+    }
+
+    public static boolean[] userializeAtomized(RoaringBitmap index, int[] ukeys, DataOutput[] dataOutputs) throws IOException {
+        RoaringArray array = index.highLowContainer;
+        short[] keys = intToShortKeys(ukeys);
+        boolean[] out = new boolean[keys.length];
+        for (int i = 0; i < keys.length; i++) {
+            if (dataOutputs[i] == null) {
+                continue;
+            }
+            Container container = array.getContainer(keys[i]);
+            if (container != null) {
+                serializeAtomized(container, dataOutputs[i]);
+                out[i] = true;
+            } else {
+                out[i] = false;
+            }
+        }
+        return out;
+    }
+
+    public static short[] serialize(RoaringBitmap bitmap, DataOutput[] outContainers) throws IOException {
+        RoaringArray array = bitmap.highLowContainer;
+
+        short[] keys = new short[outContainers.length];
+        for (int k = 0; k < array.size; ++k) {
+            keys[k] = array.keys[k];
+            serializeAtomized(array.values[k], outContainers[k]);
+        }
+        return keys;
+    }
+
+    private static void serializeAtomized(Container value, DataOutput outContainer) throws IOException {
+        outContainer.writeShort(lastSetIndex(value));
+        outContainer.writeBoolean(value instanceof RunContainer);
+        outContainer.writeShort(Short.reverseBytes((short) (value.getCardinality() - 1)));
+
+        value.writeArray(outContainer);
+    }
+
+    public static long[] serializeSizeInBytes(RoaringBitmap bitmap, int[] ukeys) {
+        RoaringArray array = bitmap.highLowContainer;
+        short[] keys = intToShortKeys(ukeys);
+        long[] sizes = new long[keys.length];
+        for (int i = 0; i < keys.length; i++) {
+            Container container = array.getContainer(keys[i]);
+            sizes[i] = (container == null) ? -1 : container.serializedSizeInBytes();
+        }
+        return sizes;
+    }
+
+    public static int udeserialize(RoaringBitmap bitmap, int[] ukeys, DataInput[] inContainers) throws IOException {
+        return deserialize(bitmap, intToShortKeys(ukeys), inContainers);
+    }
+
+    public static int lastSetBit(int ukey, DataInput inContainer) throws IOException {
+        int last = inContainer.readShort() & 0xFFFF;
+        int hs = ukey << 16;
+        return last | hs;
+    }
+
+    public static int deserialize(RoaringBitmap bitmap, short[] keys, DataInput[] inContainers) throws IOException {
+        RoaringArray array = bitmap.highLowContainer;
+
+        array.clear();
+        array.size = inContainers.length;
+
+        if ((array.keys == null) || (array.keys.length < array.size)) {
+            array.keys = new short[array.size];
+            array.values = new Container[array.size];
+        }
+
+        int lastSetBit = -1;
+        //Reading the containers
+        for (int k = 0; k < array.size; ++k) {
+            DataInput inContainer = inContainers[k];
+            int last = inContainer.readShort() & 0xFFFF;
+            boolean isRun = inContainer.readBoolean();
+            int cardinality = 1 + (0xFFFF & Short.reverseBytes(inContainer.readShort()));
+            boolean isBitmap = cardinality > ArrayContainer.DEFAULT_MAX_SIZE;
+
+            int hs = Util.toIntUnsigned(keys[k]) << 16;
+            lastSetBit = Math.max(lastSetBit, last | hs);
+
+            Container val;
+            if (!isRun && isBitmap) {
+                final long[] bitmapArray = new long[BitmapContainer.MAX_CAPACITY / 64];
+                // little endian
+                for (int l = 0; l < bitmapArray.length; ++l) {
+                    bitmapArray[l] = Long.reverseBytes(inContainer.readLong());
+                }
+                val = new BitmapContainer(bitmapArray, cardinality);
+            } else if (isRun) {
+                // cf RunContainer.writeArray()
+                int nbrruns = Util.toIntUnsigned(Short.reverseBytes(inContainer.readShort()));
+                final short lengthsAndValues[] = new short[2 * nbrruns];
+
+                for (int j = 0; j < 2 * nbrruns; ++j)
+                    lengthsAndValues[j] = Short.reverseBytes(inContainer.readShort());
+                val = new RunContainer(lengthsAndValues, nbrruns);
+            } else {
+                final short[] shortArray = new short[cardinality];
+                for (int l = 0; l < shortArray.length; ++l) {
+                    shortArray[l] = Short.reverseBytes(inContainer.readShort());
+                }
+                val = new ArrayContainer(shortArray);
+            }
+            array.keys[k] = keys[k];
+            array.values[k] = val;
+        }
+        return lastSetBit;
+    }
+
+    public static short[] intToShortKeys(int[] ukeys) {
+        short[] keys = new short[ukeys.length];
+        for (int i = 0; i < keys.length; i++) {
+            keys[i] = Util.lowbits(ukeys[i]);
+        }
+        return keys;
+    }
+
+    public static int[] shortToIntKeys(short[] keys) {
+        int[] ukeys = new int[keys.length];
+        for (int i = 0; i < ukeys.length; i++) {
+            ukeys[i] = Util.toIntUnsigned(keys[i]);
+        }
+        return ukeys;
+    }
+
+    public static int containerCount(RoaringBitmap bitmap) {
+        return bitmap.highLowContainer.size;
     }
 
     private RoaringInspection() {

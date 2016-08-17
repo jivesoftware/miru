@@ -27,7 +27,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.api.query.filter.MiruValue;
-import com.jivesoftware.os.miru.bitmaps.roaring5.buffer.MiruBitmapsRoaringBuffer;
+import com.jivesoftware.os.miru.bitmaps.roaring5.MiruBitmapsRoaring;
 import com.jivesoftware.os.miru.plugin.MiruInterner;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruIndexUtil;
@@ -135,7 +135,7 @@ public class RecoCorrectnessTest {
         partitionedActivities.add(factory.begin(writerId, partitionId, tenant1, 0));
 
         MiruProvider<MiruService> miruProvider = new MiruPluginTestBootstrap().bootstrap(tenant1, partitionId, miruHost,
-            miruSchema, MiruBackingStorage.disk, new MiruBitmapsRoaringBuffer(), partitionedActivities);
+            miruSchema, MiruBackingStorage.disk, new MiruBitmapsRoaring(), partitionedActivities);
 
         this.service = miruProvider.getMiru(tenant1);
 

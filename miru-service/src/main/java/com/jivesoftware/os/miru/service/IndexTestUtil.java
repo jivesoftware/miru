@@ -4,25 +4,28 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Interners;
+import com.google.common.io.Files;
 import com.jivesoftware.os.filer.chunk.store.ChunkStoreInitializer;
 import com.jivesoftware.os.filer.chunk.store.transaction.TxCogs;
 import com.jivesoftware.os.filer.chunk.store.transaction.TxNamedMapOfFiler;
 import com.jivesoftware.os.filer.io.ByteBufferFactory;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
-import com.jivesoftware.os.filer.io.KeyValueMarshaller;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
-import com.jivesoftware.os.filer.io.api.KeyValueStore;
 import com.jivesoftware.os.filer.io.api.KeyedFilerStore;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.filer.io.chunk.ChunkStore;
-import com.jivesoftware.os.filer.keyed.store.TxKeyValueStore;
 import com.jivesoftware.os.filer.keyed.store.TxKeyedFilerStore;
 import com.jivesoftware.os.jive.utils.collections.bah.LRUConcurrentBAHLinkedHash;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.lab.LABEnvironment;
+import com.jivesoftware.os.lab.LABRawhide;
 import com.jivesoftware.os.lab.LabHeapPressure;
+import com.jivesoftware.os.lab.api.MemoryRawEntryFormat;
+import com.jivesoftware.os.lab.api.NoOpFormatTransformerProvider;
+import com.jivesoftware.os.lab.api.ValueIndex;
+import com.jivesoftware.os.lab.api.ValueIndexConfig;
 import com.jivesoftware.os.lab.guts.Leaps;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
@@ -52,7 +55,6 @@ import com.jivesoftware.os.miru.service.stream.allocator.InMemoryChunkAllocator;
 import com.jivesoftware.os.miru.service.stream.allocator.MiruChunkAllocator;
 import com.jivesoftware.os.miru.service.stream.allocator.OnDiskChunkAllocator;
 import java.io.File;
-import java.nio.file.Files;
 import java.util.concurrent.atomic.AtomicLong;
 import org.merlin.config.BindInterfaceToConfiguration;
 
@@ -104,6 +106,9 @@ public class IndexTestUtil {
 
         final MiruResourceLocator diskResourceLocator = new MiruTempDirectoryResourceLocator();
         LabHeapPressure labHeapPressure = new LabHeapPressure(1024 * 1024 * 10, new AtomicLong());
+        long labMaxWALSizeInBytes = 1024 * 1024 * 10;
+        long labMaxEntriesPerWAL = 1000;
+        long labMaxEntrySizeInBytes = 1024 * 1024 * 10;
         LRUConcurrentBAHLinkedHash<Leaps> leapCache = LABEnvironment.buildLeapsCache(1_000_000, 10);
         MiruChunkAllocator inMemoryChunkAllocator = new InMemoryChunkAllocator(
             diskResourceLocator,
@@ -115,6 +120,9 @@ public class IndexTestUtil {
             100,
             1_000,
             labHeapPressure,
+            labMaxWALSizeInBytes,
+            labMaxEntriesPerWAL,
+            labMaxEntrySizeInBytes,
             useLabIndexes,
             leapCache);
 
@@ -124,6 +132,9 @@ public class IndexTestUtil {
             100,
             1_000,
             labHeapPressure,
+            labMaxWALSizeInBytes,
+            labMaxEntriesPerWAL,
+            labMaxEntrySizeInBytes,
             leapCache);
 
         LabTimeIdIndex[] timeIdIndexes = new LabTimeIdIndexInitializer().initialize(4, 1_000, 1024 * 1024, diskResourceLocator, onDiskChunkAllocator);
@@ -138,9 +149,9 @@ public class IndexTestUtil {
             termComposer,
             activityInternExtern,
             ImmutableMap.<MiruBackingStorage, MiruChunkAllocator>builder()
-            .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
-            .put(MiruBackingStorage.disk, onDiskChunkAllocator)
-            .build(),
+                .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
+                .put(MiruBackingStorage.disk, onDiskChunkAllocator)
+                .build(),
             new RCVSSipIndexMarshaller(),
             new MiruTempDirectoryResourceLocator(),
             1024,
@@ -171,12 +182,22 @@ public class IndexTestUtil {
 
     }
 
-    public static <K, V> KeyValueStore<K, V> buildKeyValueStore(String name, ChunkStore[] chunkStores, KeyValueMarshaller<K, V> keyValueMarshaller,
-        int keySize, boolean variableKeySize, int payloadSize, boolean variablePayloadSizes) {
-        return new TxKeyValueStore<>(cogs.getSkyhookCog(0), cogs.getSkyHookKeySemaphores(), 0, chunkStores,
-            keyValueMarshaller,
-            keyBytes(name),
-            keySize, variableKeySize, payloadSize, variablePayloadSizes);
+    public static ValueIndex buildValueIndex(String name) throws Exception {
+        File root = Files.createTempDir();
+        LABEnvironment environment = new LABEnvironment(LABEnvironment.buildLABSchedulerThreadPool(1),
+            LABEnvironment.buildLABCompactorThreadPool(1),
+            LABEnvironment.buildLABDestroyThreadPool(1),
+            "wal",
+            -1,
+            -1,
+            -1,
+            root,
+            new LabHeapPressure(1024 * 1024, new AtomicLong()),
+            4,
+            16,
+            LABEnvironment.buildLeapsCache(1_000, 4));
+        return environment.open(new ValueIndexConfig(name, 64, 1024 * 1024, -1, -1, 10 * 1024 * 1024, NoOpFormatTransformerProvider.NAME, LABRawhide.NAME,
+            MemoryRawEntryFormat.NAME));
     }
 
     public static KeyedFilerStore<Long, Void> buildKeyedFilerStore(String name, ChunkStore[] chunkStores) throws Exception {
@@ -195,23 +216,6 @@ public class IndexTestUtil {
         ChunkStoreInitializer chunkStoreInitializer = new ChunkStoreInitializer();
         for (int i = 0; i < numberOfChunkStores; i++) {
             chunkStores[i] = chunkStoreInitializer.create(byteBufferFactory, segmentSize, new HeapByteBufferFactory(), 500, 5_000, stackBuffer);
-        }
-
-        return chunkStores;
-    }
-
-    public static ChunkStore[] buildFileBackedChunkStores(int numberOfChunkStores)
-        throws Exception {
-        File[] pathsToPartitions = new File[numberOfChunkStores];
-        for (int i = 0; i < numberOfChunkStores; i++) {
-            pathsToPartitions[i] = Files.createTempDirectory("chunks").toFile();
-        }
-        StackBuffer stackBuffer = new StackBuffer();
-        ChunkStore[] chunkStores = new ChunkStore[numberOfChunkStores];
-        ChunkStoreInitializer chunkStoreInitializer = new ChunkStoreInitializer();
-        for (int i = 0; i < numberOfChunkStores; i++) {
-            chunkStores[i] = chunkStoreInitializer.openOrCreate(pathsToPartitions, i, "chunks-" + i, 512, new HeapByteBufferFactory(), 500, 5_000,
-                stackBuffer);
         }
 
         return chunkStores;

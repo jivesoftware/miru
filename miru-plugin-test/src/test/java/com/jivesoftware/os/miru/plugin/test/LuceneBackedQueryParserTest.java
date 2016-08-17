@@ -12,7 +12,6 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.bitmaps.roaring5.MiruBitmapsRoaring;
 import com.jivesoftware.os.miru.plugin.MiruInterner;
 import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
-import com.jivesoftware.os.miru.plugin.index.IndexAlignedBitmapMerger;
 import com.jivesoftware.os.miru.plugin.index.IndexTx;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndexProvider;
@@ -260,20 +259,6 @@ public class LuceneBackedQueryParserTest {
             @Override
             public Optional<RoaringBitmap> getIndex(StackBuffer stackBuffer) throws Exception {
                 return Optional.fromNullable(indexes[fieldId].get(termId));
-            }
-
-            @Override
-            public Optional<BitmapAndLastId<RoaringBitmap>> getIndexAndLastId(int considerIfLastIdGreaterThanN, StackBuffer stackBuffer) throws Exception {
-                RoaringBitmap bitmap = indexes[fieldId].get(termId);
-                if (bitmap != null && !bitmap.isEmpty() && bitmap.getReverseIntIterator().next() > considerIfLastIdGreaterThanN) {
-                    return Optional.of(new BitmapAndLastId<>(bitmap, 0));
-                } else {
-                    return Optional.absent();
-                }
-            }
-
-            @Override
-            public void replaceIndex(RoaringBitmap index, int setLastId, StackBuffer stackBuffer) throws Exception {
             }
 
             @Override

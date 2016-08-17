@@ -5,6 +5,7 @@ import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.lab.api.ValueIndex;
+import com.jivesoftware.os.lab.io.api.UIO;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
@@ -20,6 +21,7 @@ public class LabUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUnreadTr
     private final MiruBitmaps<BM, IBM> bitmaps;
     private final TrackError trackError;
     private final byte[] prefix;
+    private final boolean atomized;
     private final ValueIndex[] stores;
     private final StripingLocksProvider<MiruStreamId> stripingLocksProvider;
 
@@ -27,6 +29,7 @@ public class LabUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUnreadTr
         MiruBitmaps<BM, IBM> bitmaps,
         TrackError trackError,
         byte[] prefix,
+        boolean atomized,
         ValueIndex[] stores,
         StripingLocksProvider<MiruStreamId> stripingLocksProvider)
         throws Exception {
@@ -35,6 +38,7 @@ public class LabUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUnreadTr
         this.bitmaps = bitmaps;
         this.trackError = trackError;
         this.prefix = prefix;
+        this.atomized = atomized;
         this.stores = stores;
         this.stripingLocksProvider = stripingLocksProvider;
     }
@@ -55,10 +59,22 @@ public class LabUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUnreadTr
             trackError,
             "unread",
             -1,
-            Bytes.concat(prefix, streamId.getBytes()),
+            atomized,
+            bitmapIndexKey(streamId.getBytes()),
             getStore(streamId),
             null,
+            null,
             stripingLocksProvider.lock(streamId, 0));
+    }
+
+    private byte[] bitmapIndexKey(byte[] streamIdBytes) {
+        if (atomized) {
+            byte[] streamIdLength = new byte[2];
+            UIO.shortBytes((short) (streamIdBytes.length & 0xFFFF), streamIdLength, 0);
+            return Bytes.concat(prefix, streamIdLength, streamIdBytes);
+        } else {
+            return Bytes.concat(prefix, streamIdBytes);
+        }
     }
 
     @Override

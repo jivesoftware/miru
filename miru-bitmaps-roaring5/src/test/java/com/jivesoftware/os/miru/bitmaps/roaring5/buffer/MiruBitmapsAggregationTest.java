@@ -1,11 +1,11 @@
 package com.jivesoftware.os.miru.bitmaps.roaring5.buffer;
 
 import com.google.common.collect.Lists;
+import com.jivesoftware.os.miru.bitmaps.roaring5.MiruBitmapsRoaring;
 import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
 import gnu.trove.list.array.TIntArrayList;
 import java.util.List;
-import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
-import org.roaringbitmap.buffer.MutableRoaringBitmap;
+import org.roaringbitmap.RoaringBitmap;
 import org.testng.annotations.Test;
 
 import static org.testng.Assert.assertEquals;
@@ -16,14 +16,14 @@ public class MiruBitmapsAggregationTest {
 
     @Test
     public void testOr() throws Exception {
-        MiruBitmapsRoaringBuffer bitmaps = new MiruBitmapsRoaringBuffer();
-        List<ImmutableRoaringBitmap> ors = Lists.newArrayList();
+        MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
+        List<RoaringBitmap> ors = Lists.newArrayList();
         int numBits = 10;
         for (int i = 0; i < numBits; i++) {
-            MutableRoaringBitmap or = bitmaps.createWithBits(i * 137);
+            RoaringBitmap or = bitmaps.createWithBits(i * 137);
             ors.add(or);
         }
-        MutableRoaringBitmap container = bitmaps.or(ors);
+        RoaringBitmap container = bitmaps.or(ors);
         for (int i = 0; i < numBits; i++) {
             assertFalse(bitmaps.isSet(container, i * 137 - 1));
             assertTrue(bitmaps.isSet(container, i * 137));
@@ -33,8 +33,8 @@ public class MiruBitmapsAggregationTest {
 
     @Test
     public void testAnd() throws Exception {
-        MiruBitmapsRoaringBuffer bitmaps = new MiruBitmapsRoaringBuffer();
-        List<ImmutableRoaringBitmap> ands = Lists.newArrayList();
+        MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
+        List<RoaringBitmap> ands = Lists.newArrayList();
         int numBits = 10;
         int andBits = 3;
         for (int i = 0; i < numBits - andBits; i++) {
@@ -44,7 +44,7 @@ public class MiruBitmapsAggregationTest {
             }
             ands.add(bitmaps.createWithBits(bits.toArray()));
         }
-        MutableRoaringBitmap container = bitmaps.and(ands);
+        RoaringBitmap container = bitmaps.and(ands);
         for (int i = 0; i < numBits; i++) {
             if (i < (numBits - andBits)) {
                 assertFalse(bitmaps.isSet(container, i * 137));
@@ -56,7 +56,7 @@ public class MiruBitmapsAggregationTest {
 
     @Test
     public void testAndNot_2() throws Exception {
-        MiruBitmapsRoaringBuffer bitmaps = new MiruBitmapsRoaringBuffer();
+        MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
         int numOriginal = 10;
         int numNot = 3;
         TIntArrayList originalBits = new TIntArrayList();
@@ -67,9 +67,9 @@ public class MiruBitmapsAggregationTest {
                 notBits.add(i * 137);
             }
         }
-        MutableRoaringBitmap original = bitmaps.createWithBits(originalBits.toArray());
-        MutableRoaringBitmap not = bitmaps.createWithBits(notBits.toArray());
-        MutableRoaringBitmap container = bitmaps.andNot(original, not);
+        RoaringBitmap original = bitmaps.createWithBits(originalBits.toArray());
+        RoaringBitmap not = bitmaps.createWithBits(notBits.toArray());
+        RoaringBitmap container = bitmaps.andNot(original, not);
         for (int i = 0; i < numOriginal; i++) {
             if (i < numNot) {
                 assertFalse(bitmaps.isSet(container, i * 137));
@@ -81,20 +81,20 @@ public class MiruBitmapsAggregationTest {
 
     @Test
     public void testAndNot_multi() throws Exception {
-        MiruBitmapsRoaringBuffer bitmaps = new MiruBitmapsRoaringBuffer();
-        List<ImmutableRoaringBitmap> nots = Lists.newArrayList();
+        MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
+        List<RoaringBitmap> nots = Lists.newArrayList();
         int numOriginal = 10;
         int numNot = 3;
         TIntArrayList originalBits = new TIntArrayList();
         for (int i = 0; i < numOriginal; i++) {
             originalBits.add(i * 137);
             if (i < numNot) {
-                MutableRoaringBitmap not = bitmaps.createWithBits(i * 137);
+                RoaringBitmap not = bitmaps.createWithBits(i * 137);
                 nots.add(not);
             }
         }
-        MutableRoaringBitmap original = bitmaps.createWithBits(originalBits.toArray());
-        MutableRoaringBitmap container = bitmaps.andNot(original, nots);
+        RoaringBitmap original = bitmaps.createWithBits(originalBits.toArray());
+        RoaringBitmap container = bitmaps.andNot(original, nots);
         for (int i = 0; i < numOriginal; i++) {
             if (i < numNot) {
                 assertFalse(bitmaps.isSet(container, i * 137));
@@ -106,7 +106,7 @@ public class MiruBitmapsAggregationTest {
 
     @Test
     public void testAndNotWithCardinalityAndLastSetBit() throws Exception {
-        MiruBitmapsRoaringBuffer bitmaps = new MiruBitmapsRoaringBuffer();
+        MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
         int numOriginal = 10;
         int numNot = 3;
         TIntArrayList originalBits = new TIntArrayList();
@@ -117,9 +117,9 @@ public class MiruBitmapsAggregationTest {
                 notBits.add(i * 137);
             }
         }
-        MutableRoaringBitmap original = bitmaps.createWithBits(originalBits.toArray());
-        MutableRoaringBitmap not = bitmaps.createWithBits(notBits.toArray());
-        CardinalityAndLastSetBit<MutableRoaringBitmap> cardinalityAndLastSetBit = bitmaps.andNotWithCardinalityAndLastSetBit(original, not);
+        RoaringBitmap original = bitmaps.createWithBits(originalBits.toArray());
+        RoaringBitmap not = bitmaps.createWithBits(notBits.toArray());
+        CardinalityAndLastSetBit<RoaringBitmap> cardinalityAndLastSetBit = bitmaps.andNotWithCardinalityAndLastSetBit(original, not);
         for (int i = 0; i < numOriginal; i++) {
             if (i < numNot) {
                 assertFalse(bitmaps.isSet(cardinalityAndLastSetBit.bitmap, i * 137));
@@ -133,8 +133,8 @@ public class MiruBitmapsAggregationTest {
 
     @Test
     public void testAndWithCardinalityAndLastSetBit() throws Exception {
-        MiruBitmapsRoaringBuffer bitmaps = new MiruBitmapsRoaringBuffer();
-        List<ImmutableRoaringBitmap> ands = Lists.newArrayList();
+        MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
+        List<RoaringBitmap> ands = Lists.newArrayList();
         int numOriginal = 10;
         int numAnd = 3;
         for (int i = 0; i < numOriginal - numAnd; i++) {
@@ -144,7 +144,7 @@ public class MiruBitmapsAggregationTest {
             }
             ands.add(bitmaps.createWithBits(andBits.toArray()));
         }
-        CardinalityAndLastSetBit<MutableRoaringBitmap> cardinalityAndLastSetBit = bitmaps.andWithCardinalityAndLastSetBit(ands);
+        CardinalityAndLastSetBit<RoaringBitmap> cardinalityAndLastSetBit = bitmaps.andWithCardinalityAndLastSetBit(ands);
         for (int i = 0; i < numOriginal; i++) {
             if (i < (numOriginal - numAnd)) {
                 assertFalse(bitmaps.isSet(cardinalityAndLastSetBit.bitmap, i * 137));

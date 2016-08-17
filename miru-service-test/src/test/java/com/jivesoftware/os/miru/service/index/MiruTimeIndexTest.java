@@ -7,7 +7,7 @@ import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.wal.RCVSSipCursor;
-import com.jivesoftware.os.miru.bitmaps.roaring5.buffer.MiruBitmapsRoaringBuffer;
+import com.jivesoftware.os.miru.bitmaps.roaring5.MiruBitmapsRoaring;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.service.IndexTestUtil;
 import com.jivesoftware.os.miru.service.stream.MiruContext;
@@ -15,8 +15,7 @@ import java.text.DecimalFormat;
 import java.util.Arrays;
 import java.util.List;
 import org.apache.commons.lang3.ArrayUtils;
-import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
-import org.roaringbitmap.buffer.MutableRoaringBitmap;
+import org.roaringbitmap.RoaringBitmap;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
@@ -27,7 +26,7 @@ import static org.testng.Assert.assertTrue;
 
 public class MiruTimeIndexTest {
 
-    private final MiruBitmapsRoaringBuffer bitmaps = new MiruBitmapsRoaringBuffer();
+    private final MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
     private final MiruTenantId tenantId = new MiruTenantId(new byte[] { 1 });
     private final MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, MiruPartitionId.of(0), new MiruHost("logicalName"));
     private final int numberOfChunkStores = 4;
@@ -266,10 +265,10 @@ public class MiruTimeIndexTest {
     @DataProvider(name = "miruTimeIndexDataProviderWithoutData")
     public Object[][] miruTimeIndexDataProviderWithoutData() throws Exception {
         try {
-            MiruContext<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSSipCursor> inMemoryContext =
+            MiruContext<RoaringBitmap, RoaringBitmap, RCVSSipCursor> inMemoryContext =
                 IndexTestUtil.buildInMemoryContext(numberOfChunkStores, true, bitmaps, coord);
 
-            MiruContext<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSSipCursor> onDiskContext =
+            MiruContext<RoaringBitmap, RoaringBitmap, RCVSSipCursor> onDiskContext =
                 IndexTestUtil.buildOnDiskContext(numberOfChunkStores, true, bitmaps, coord);
 
             return new Object[][] {
@@ -307,7 +306,7 @@ public class MiruTimeIndexTest {
         Arrays.fill(ids, -1);
         Arrays.fill(monotonics, -1);
 
-        MiruContext<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSSipCursor> inMemoryContext =
+        MiruContext<RoaringBitmap, RoaringBitmap, RCVSSipCursor> inMemoryContext =
             IndexTestUtil.buildInMemoryContext(numberOfChunkStores, useLabIndexes, bitmaps, coord);
         inMemoryContext.timeIdIndex.allocate(inMemoryContext.version, timestamps, ids, monotonics, -1, -1);
         inMemoryContext.timeIndex.nextId(stackBuffer, timestamps, ids, monotonics);
@@ -315,7 +314,7 @@ public class MiruTimeIndexTest {
         Arrays.fill(ids, -1);
         Arrays.fill(monotonics, -1);
 
-        MiruContext<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSSipCursor> onDiskContext =
+        MiruContext<RoaringBitmap, RoaringBitmap, RCVSSipCursor> onDiskContext =
             IndexTestUtil.buildOnDiskContext(numberOfChunkStores, useLabIndexes, bitmaps, coord);
         onDiskContext.timeIdIndex.allocate(inMemoryContext.version, timestamps, ids, monotonics, -1, -1);
         onDiskContext.timeIndex.nextId(stackBuffer, timestamps, ids, monotonics);
@@ -346,7 +345,7 @@ public class MiruTimeIndexTest {
         Arrays.fill(ids, -1);
         Arrays.fill(monotonics, -1);
 
-        MiruContext<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSSipCursor> inMemoryContext =
+        MiruContext<RoaringBitmap, RoaringBitmap, RCVSSipCursor> inMemoryContext =
             IndexTestUtil.buildInMemoryContext(numberOfChunkStores, useLabIndexes, bitmaps, coord);
         inMemoryContext.timeIdIndex.allocate(inMemoryContext.version, timestamps, ids, monotonics, -1, -1);
         inMemoryContext.timeIndex.nextId(stackBuffer, timestamps, ids, monotonics);
@@ -354,7 +353,7 @@ public class MiruTimeIndexTest {
         Arrays.fill(ids, -1);
         Arrays.fill(monotonics, -1);
 
-        MiruContext<MutableRoaringBitmap, ImmutableRoaringBitmap, RCVSSipCursor> onDiskContext =
+        MiruContext<RoaringBitmap, RoaringBitmap, RCVSSipCursor> onDiskContext =
             IndexTestUtil.buildOnDiskContext(numberOfChunkStores, useLabIndexes, bitmaps, coord);
         onDiskContext.timeIdIndex.allocate(inMemoryContext.version, timestamps, ids, monotonics, -1, -1);
         onDiskContext.timeIndex.nextId(stackBuffer, timestamps, ids, monotonics);

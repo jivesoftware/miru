@@ -1,14 +1,17 @@
 package com.jivesoftware.os.miru.service.index;
 
 import com.google.common.collect.Lists;
-import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
-import com.jivesoftware.os.miru.bitmaps.roaring5.buffer.MiruBitmapsRoaringBuffer;
+import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
+import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
+import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
+import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
+import com.jivesoftware.os.miru.bitmaps.roaring5.MiruBitmapsRoaring;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.partition.TrackError;
 import com.jivesoftware.os.miru.service.IndexTestUtil;
-import com.jivesoftware.os.miru.service.index.filer.MiruFilerInvertedIndex;
+import com.jivesoftware.os.miru.service.index.lab.LabInvertedIndex;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -17,9 +20,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.roaringbitmap.buffer.BufferFastAggregation;
-import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
-import org.roaringbitmap.buffer.MutableRoaringBitmap;
+import org.roaringbitmap.FastAggregation;
+import org.roaringbitmap.RoaringBitmap;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
@@ -34,7 +36,7 @@ public class MiruInvertedIndexTest {
 
     @Test(dataProvider = "miruInvertedIndexDataProviderWithData",
         groups = "slow", enabled = false, description = "Performance test")
-    public void testSetId(MiruInvertedIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> miruInvertedIndex, int appends, int sets) throws Exception {
+    public void testSetId(MiruInvertedIndex<RoaringBitmap, RoaringBitmap> miruInvertedIndex, int appends, int sets) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
         Random r = new Random(1_234);
         int id = 0;
@@ -72,9 +74,9 @@ public class MiruInvertedIndexTest {
     }
 
     @Test(dataProvider = "miruInvertedIndexDataProviderWithData")
-    public void testAppend(MiruInvertedIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> miruInvertedIndex, List<Integer> ids) throws Exception {
+    public void testAppend(MiruInvertedIndex<RoaringBitmap, RoaringBitmap> miruInvertedIndex, List<Integer> ids) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
-        MiruBitmaps<MutableRoaringBitmap, ImmutableRoaringBitmap> bitmaps = new MiruBitmapsRoaringBuffer();
+        MiruBitmaps<RoaringBitmap, RoaringBitmap> bitmaps = new MiruBitmapsRoaring();
 
         int lastId = ids.get(ids.size() - 1);
         miruInvertedIndex.set(stackBuffer, lastId + 1);
@@ -91,9 +93,9 @@ public class MiruInvertedIndexTest {
     }
 
     @Test(dataProvider = "miruInvertedIndexDataProviderWithData")
-    public void testRemove(MiruInvertedIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> miruInvertedIndex, List<Integer> ids) throws Exception {
+    public void testRemove(MiruInvertedIndex<RoaringBitmap, RoaringBitmap> miruInvertedIndex, List<Integer> ids) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
-        ImmutableRoaringBitmap index = miruInvertedIndex.getIndex(stackBuffer).get();
+        RoaringBitmap index = miruInvertedIndex.getIndex(stackBuffer).get();
         assertEquals(index.getCardinality(), ids.size());
 
         for (int id : ids) {
@@ -113,9 +115,9 @@ public class MiruInvertedIndexTest {
     }
 
     @Test(dataProvider = "miruInvertedIndexDataProviderWithData")
-    public void testSet(MiruInvertedIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> miruInvertedIndex, List<Integer> ids) throws Exception {
+    public void testSet(MiruInvertedIndex<RoaringBitmap, RoaringBitmap> miruInvertedIndex, List<Integer> ids) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
-        MiruBitmaps<MutableRoaringBitmap, ImmutableRoaringBitmap> bitmaps = new MiruBitmapsRoaringBuffer();
+        MiruBitmaps<RoaringBitmap, RoaringBitmap> bitmaps = new MiruBitmapsRoaring();
 
         int lastId = ids.get(ids.size() - 1);
 
@@ -130,10 +132,10 @@ public class MiruInvertedIndexTest {
     }
 
     @Test(dataProvider = "miruInvertedIndexDataProviderWithData")
-    public void testSetNonIntermediateBit(MiruInvertedIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> miruInvertedIndex,
+    public void testSetNonIntermediateBit(MiruInvertedIndex<RoaringBitmap, RoaringBitmap> miruInvertedIndex,
         List<Integer> ids) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
-        MiruBitmaps<MutableRoaringBitmap, ImmutableRoaringBitmap> bitmaps = new MiruBitmapsRoaringBuffer();
+        MiruBitmaps<RoaringBitmap, RoaringBitmap> bitmaps = new MiruBitmapsRoaring();
 
         int lastId = ids.get(ids.size() - 1);
 
@@ -148,30 +150,32 @@ public class MiruInvertedIndexTest {
     }
 
     @Test(dataProvider = "miruInvertedIndexDataProviderWithData")
-    public void testAndNot(MiruInvertedIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> miruInvertedIndex, List<Integer> ids) throws Exception {
+    public void testAndNot(MiruInvertedIndex<RoaringBitmap, RoaringBitmap> miruInvertedIndex, List<Integer> ids) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
-        MiruBitmaps<MutableRoaringBitmap, ImmutableRoaringBitmap> bitmaps = new MiruBitmapsRoaringBuffer();
+        MiruBitmaps<RoaringBitmap, RoaringBitmap> bitmaps = new MiruBitmapsRoaring();
 
-        MutableRoaringBitmap bitmap = new MutableRoaringBitmap();
+        RoaringBitmap bitmap = new RoaringBitmap();
         for (int i = 0; i < ids.size() / 2; i++) {
             bitmap.add(ids.get(i));
         }
         miruInvertedIndex.andNot(bitmap, stackBuffer);
 
         for (int i = 0; i < ids.size() / 2; i++) {
-            assertFalse(bitmaps.isSet(miruInvertedIndex.getIndex(stackBuffer).get(), ids.get(i)));
+            RoaringBitmap got = miruInvertedIndex.getIndex(stackBuffer).get();
+            assertFalse(bitmaps.isSet(got, ids.get(i)), "Mismatch at " + i);
         }
         for (int i = ids.size() / 2; i < ids.size(); i++) {
-            assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex(stackBuffer).get(), ids.get(i)));
+            RoaringBitmap got = miruInvertedIndex.getIndex(stackBuffer).get();
+            assertTrue(bitmaps.isSet(got, ids.get(i)), "Mismatch at " + i);
         }
     }
 
     @Test(dataProvider = "miruInvertedIndexDataProviderWithData")
-    public void testAndNotToSourceSize(MiruInvertedIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> miruInvertedIndex, List<Integer> ids) throws Exception {
+    public void testAndNotToSourceSize(MiruInvertedIndex<RoaringBitmap, RoaringBitmap> miruInvertedIndex, List<Integer> ids) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
-        MiruBitmaps<MutableRoaringBitmap, ImmutableRoaringBitmap> bitmaps = new MiruBitmapsRoaringBuffer();
+        MiruBitmaps<RoaringBitmap, RoaringBitmap> bitmaps = new MiruBitmapsRoaring();
 
-        MutableRoaringBitmap bitmap = new MutableRoaringBitmap();
+        RoaringBitmap bitmap = new RoaringBitmap();
         for (int i = 0; i < ids.size() / 2; i++) {
             bitmap.add(ids.get(i));
         }
@@ -186,15 +190,15 @@ public class MiruInvertedIndexTest {
     }
 
     @Test(dataProvider = "miruInvertedIndexDataProviderWithData")
-    public void testOr(MiruInvertedIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> miruInvertedIndex, List<Integer> ids) throws Exception {
+    public void testOr(MiruInvertedIndex<RoaringBitmap, RoaringBitmap> miruInvertedIndex, List<Integer> ids) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
-        MiruBitmaps<MutableRoaringBitmap, ImmutableRoaringBitmap> bitmaps = new MiruBitmapsRoaringBuffer();
+        MiruBitmaps<RoaringBitmap, RoaringBitmap> bitmaps = new MiruBitmapsRoaring();
 
         int lastId = ids.get(ids.size() - 1);
 
         miruInvertedIndex.set(stackBuffer, lastId + 2);
 
-        MutableRoaringBitmap bitmap = new MutableRoaringBitmap();
+        RoaringBitmap bitmap = new RoaringBitmap();
         bitmap.add(lastId + 1);
         bitmap.add(lastId + 3);
         miruInvertedIndex.or(bitmap, stackBuffer);
@@ -208,15 +212,15 @@ public class MiruInvertedIndexTest {
     }
 
     @Test(dataProvider = "miruInvertedIndexDataProviderWithData")
-    public void testOrToSourceSize(MiruInvertedIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> miruInvertedIndex, List<Integer> ids) throws Exception {
+    public void testOrToSourceSize(MiruInvertedIndex<RoaringBitmap, RoaringBitmap> miruInvertedIndex, List<Integer> ids) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
-        MiruBitmaps<MutableRoaringBitmap, ImmutableRoaringBitmap> bitmaps = new MiruBitmapsRoaringBuffer();
+        MiruBitmaps<RoaringBitmap, RoaringBitmap> bitmaps = new MiruBitmapsRoaring();
 
         int lastId = ids.get(ids.size() - 1);
 
         miruInvertedIndex.set(stackBuffer, lastId + 2);
 
-        MutableRoaringBitmap bitmap = new MutableRoaringBitmap();
+        RoaringBitmap bitmap = new RoaringBitmap();
         bitmap.add(lastId + 1);
         bitmap.add(lastId + 3);
         miruInvertedIndex.orToSourceSize(bitmap, stackBuffer);
@@ -233,75 +237,87 @@ public class MiruInvertedIndexTest {
     public void testSetIfEmpty() throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
         //MiruSchema schema = new Builder("test", 1).build();
-        MiruBitmapsRoaringBuffer bitmaps = new MiruBitmapsRoaringBuffer();
+        MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
 
-        MiruInvertedIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> index = buildFilerInvertedIndex(bitmaps);
+        for (boolean atomized : new boolean[] { false, true }) {
+            MiruInvertedIndex<RoaringBitmap, RoaringBitmap> index = buildInvertedIndex(atomized, bitmaps);
 
-        // setIfEmpty index 1
-        index.setIfEmpty(stackBuffer, 1);
-        MutableRoaringBitmap got = index.getIndex(stackBuffer).get();
-        assertEquals(got.getCardinality(), 1);
-        assertTrue(got.contains(1));
+            // setIfEmpty index 1
+            index.setIfEmpty(stackBuffer, 1);
+            RoaringBitmap got = index.getIndex(stackBuffer).get();
+            assertEquals(got.getCardinality(), 1);
+            assertTrue(got.contains(1));
 
-        // setIfEmpty index 2 noops
-        index.setIfEmpty(stackBuffer, 2);
-        got = index.getIndex(stackBuffer).get();
-        assertEquals(got.getCardinality(), 1);
-        assertTrue(got.contains(1));
-        assertFalse(got.contains(2));
+            // setIfEmpty index 2 noops
+            index.setIfEmpty(stackBuffer, 2);
+            got = index.getIndex(stackBuffer).get();
+            assertEquals(got.getCardinality(), 1);
+            assertTrue(got.contains(1));
+            assertFalse(got.contains(2));
 
-        // check index 1 is still set after merge
-        got = index.getIndex(stackBuffer).get();
-        assertEquals(got.getCardinality(), 1);
-        assertTrue(got.contains(1));
+            // check index 1 is still set after merge
+            got = index.getIndex(stackBuffer).get();
+            assertEquals(got.getCardinality(), 1);
+            assertTrue(got.contains(1));
 
-        // setIfEmpty index 3 noops
-        index.setIfEmpty(stackBuffer, 3);
-        got = index.getIndex(stackBuffer).get();
-        assertEquals(got.getCardinality(), 1);
-        assertTrue(got.contains(1));
-        assertFalse(got.contains(3));
+            // setIfEmpty index 3 noops
+            index.setIfEmpty(stackBuffer, 3);
+            got = index.getIndex(stackBuffer).get();
+            assertEquals(got.getCardinality(), 1);
+            assertTrue(got.contains(1));
+            assertFalse(got.contains(3));
 
-        // set index 4
-        index.set(stackBuffer, 4);
-        got = index.getIndex(stackBuffer).get();
-        assertEquals(got.getCardinality(), 2);
-        assertTrue(got.contains(1));
-        assertTrue(got.contains(4));
+            // set index 4
+            index.set(stackBuffer, 4);
+            got = index.getIndex(stackBuffer).get();
+            assertEquals(got.getCardinality(), 2);
+            assertTrue(got.contains(1));
+            assertTrue(got.contains(4));
 
-        // remove index 1, 4
-        index.remove(stackBuffer, 1);
-        index.remove(stackBuffer, 4);
-        got = index.getIndex(stackBuffer).get();
-        assertEquals(got.getCardinality(), 0);
+            // remove index 1, 4
+            index.remove(stackBuffer, 1);
+            index.remove(stackBuffer, 4);
+            if (atomized) {
+                assertFalse(index.getIndex(stackBuffer).isPresent());
+            } else {
+                got = index.getIndex(stackBuffer).get();
+                assertEquals(got.getCardinality(), 0);
+            }
 
-        // setIfEmpty index 5 noops
-        index.setIfEmpty(stackBuffer, 5);
-        got = index.getIndex(stackBuffer).get();
-        assertEquals(got.getCardinality(), 0);
+            // setIfEmpty index 5
+            index.setIfEmpty(stackBuffer, 5);
+            got = index.getIndex(stackBuffer).get();
+            assertEquals(got.getCardinality(), 1);
 
-        // setIfEmpty index 6 noops
-        index.setIfEmpty(stackBuffer, 6);
-        got = index.getIndex(stackBuffer).get();
-        assertEquals(got.getCardinality(), 0);
+            // setIfEmpty index 6 noops
+            index.setIfEmpty(stackBuffer, 6);
+            got = index.getIndex(stackBuffer).get();
+            assertEquals(got.getCardinality(), 1);
+        }
     }
 
     @DataProvider(name = "miruInvertedIndexDataProviderWithData")
     public Object[][] miruInvertedIndexDataProviderWithData() throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
         //MiruSchema schema = new Builder("test", 1).build();
-        MiruBitmapsRoaringBuffer bitmaps = new MiruBitmapsRoaringBuffer();
+        MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
 
-        MiruInvertedIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> mergedIndex = buildFilerInvertedIndex(bitmaps);
+        MiruInvertedIndex<RoaringBitmap, RoaringBitmap> mergedIndex = buildInvertedIndex(false, bitmaps);
         mergedIndex.set(stackBuffer, 1, 2, 3, 4);
 
+        MiruInvertedIndex<RoaringBitmap, RoaringBitmap> atomizedIndex = buildInvertedIndex(true, bitmaps);
+        atomizedIndex.set(stackBuffer, 1, 2, 3, 4);
+
         return new Object[][] {
-            { mergedIndex, Arrays.asList(1, 2, 3, 4) }
+            { mergedIndex, Arrays.asList(1, 2, 3, 4) },
+            { atomizedIndex, Arrays.asList(1, 2, 3, 4) }
         };
     }
 
-    private <BM extends IBM, IBM> MiruFilerInvertedIndex<BM, IBM> buildFilerInvertedIndex(MiruBitmaps<BM, IBM> bitmaps) throws Exception {
-        return new MiruFilerInvertedIndex<>(bitmaps,
+    private <BM extends IBM, IBM> MiruInvertedIndex<BM, IBM> buildInvertedIndex(boolean atomized, MiruBitmaps<BM, IBM> bitmaps) throws Exception {
+        return new LabInvertedIndex<>(
+            new OrderIdProviderImpl(new ConstantWriterIdProvider(1), new SnowflakeIdPacker(), new JiveEpochTimestampProvider()),
+            bitmaps,
             new TrackError() {
                 @Override
                 public void error(String reason) {
@@ -313,19 +329,21 @@ public class MiruInvertedIndexTest {
             },
             "test",
             0,
+            atomized,
             new byte[] { 0 },
-            IndexTestUtil.buildKeyedFilerStore("index",
-                IndexTestUtil.buildByteBufferBackedChunkStores(4, new HeapByteBufferFactory(), 4_096)),
+            IndexTestUtil.buildValueIndex("bitmap"),
+            new byte[] { 0 },
+            IndexTestUtil.buildValueIndex("term"),
             new Object());
     }
 
     @Test(groups = "slow", enabled = false, description = "Concurrency test")
     public void testConcurrency() throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
-        MiruBitmapsRoaringBuffer bitmaps = new MiruBitmapsRoaringBuffer();
+        MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
         ExecutorService executorService = Executors.newFixedThreadPool(8);
 
-        final MiruFilerInvertedIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> invertedIndex = buildFilerInvertedIndex(bitmaps);
+        final MiruInvertedIndex<RoaringBitmap, RoaringBitmap> invertedIndex = buildInvertedIndex(false, bitmaps);
         final AtomicInteger idProvider = new AtomicInteger();
         final AtomicInteger done = new AtomicInteger();
         final int runs = 10_000;
@@ -349,7 +367,7 @@ public class MiruInvertedIndexTest {
                 }
             }
             try {
-                ImmutableRoaringBitmap index = invertedIndex.getIndex(stackBuffer).get();
+                RoaringBitmap index = invertedIndex.getIndex(stackBuffer).get();
                 System.out.println("appender is done, final cardinality=" + index.getCardinality() + " bytes=" + index.getSizeInBytes());
             } catch (Exception e) {
                 e.printStackTrace();
@@ -360,7 +378,7 @@ public class MiruInvertedIndexTest {
 
         for (int i = 0; i < 7; i++) {
             futures.add(executorService.submit(() -> {
-                MutableRoaringBitmap other = new MutableRoaringBitmap();
+                RoaringBitmap other = new RoaringBitmap();
                 int r = 0;
                 for (int i1 = 0; i1 < runs; i1++) {
                     int size = idProvider.get();
@@ -372,8 +390,8 @@ public class MiruInvertedIndexTest {
                     }
 
                     try {
-                        ImmutableRoaringBitmap index = invertedIndex.getIndex(stackBuffer).get();
-                        MutableRoaringBitmap container = BufferFastAggregation.and(index, other);
+                        RoaringBitmap index = invertedIndex.getIndex(stackBuffer).get();
+                        RoaringBitmap container = FastAggregation.and(index, other);
                     } catch (Exception e) {
                         done.incrementAndGet();
                         e.printStackTrace();
@@ -398,7 +416,7 @@ public class MiruInvertedIndexTest {
     @Test(groups = "slow", enabled = false, description = "Performance test")
     public void testInMemoryAppenderSpeed() throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
-        MiruFilerInvertedIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> invertedIndex = buildFilerInvertedIndex(new MiruBitmapsRoaringBuffer());
+        MiruInvertedIndex<RoaringBitmap, RoaringBitmap> invertedIndex = buildInvertedIndex(false, new MiruBitmapsRoaring());
 
         Random r = new Random();
         long t = System.currentTimeMillis();
@@ -409,7 +427,7 @@ public class MiruInvertedIndexTest {
         }
 
         long elapsed = System.currentTimeMillis() - t;
-        ImmutableRoaringBitmap index = invertedIndex.getIndex(stackBuffer).get();
+        RoaringBitmap index = invertedIndex.getIndex(stackBuffer).get();
         System.out.println("cardinality=" + index.getCardinality() + " bytes=" + index.getSizeInBytes() + " elapsed=" + elapsed);
     }
 }

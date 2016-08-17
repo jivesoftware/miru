@@ -8,8 +8,10 @@ import com.jivesoftware.os.filer.io.chunk.ChunkStore;
 import com.jivesoftware.os.jive.utils.collections.bah.LRUConcurrentBAHLinkedHash;
 import com.jivesoftware.os.lab.LABEnvironment;
 import com.jivesoftware.os.lab.LabHeapPressure;
+import com.jivesoftware.os.lab.api.FixedWidthRawhide;
 import com.jivesoftware.os.lab.guts.Leaps;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
+import com.jivesoftware.os.miru.plugin.context.LastIdKeyValueRawhide;
 import com.jivesoftware.os.miru.service.locator.MiruResourceLocator;
 import com.jivesoftware.os.miru.service.locator.MiruResourcePartitionIdentifier;
 import com.jivesoftware.os.miru.service.locator.TransientPartitionCoordIdentifier;
@@ -38,6 +40,9 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
     private final int partitionInitialChunkCacheSize;
     private final int partitionMaxChunkCacheSize;
     private final LabHeapPressure labHeapPressure;
+    private final long labMaxWALSizeInBytes;
+    private final long labMaxEntriesPerWAL;
+    private final long labMaxEntrySizeInBytes;
     private final LRUConcurrentBAHLinkedHash<Leaps> leapCache;
     private final boolean useLabIndexes;
 
@@ -54,6 +59,9 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
         int partitionInitialChunkCacheSize,
         int partitionMaxChunkCacheSize,
         LabHeapPressure labHeapPressure,
+        long labMaxWALSizeInBytes,
+        long labMaxEntriesPerWAL,
+        long labMaxEntrySizeInBytes,
         boolean useLabIndexes,
         LRUConcurrentBAHLinkedHash<Leaps> leapCache) {
         this.resourceLocator = resourceLocator;
@@ -64,6 +72,9 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
         this.partitionDeleteChunkStoreOnClose = partitionDeleteChunkStoreOnClose;
         this.partitionInitialChunkCacheSize = partitionInitialChunkCacheSize;
         this.partitionMaxChunkCacheSize = partitionMaxChunkCacheSize;
+        this.labMaxWALSizeInBytes = labMaxWALSizeInBytes;
+        this.labMaxEntriesPerWAL = labMaxEntriesPerWAL;
+        this.labMaxEntrySizeInBytes = labMaxEntrySizeInBytes;
         this.useLabIndexes = useLabIndexes;
         this.labHeapPressure = labHeapPressure;
         this.leapCache = leapCache;
@@ -87,9 +98,9 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
     }
 
     @Override
-    public File[] getLabDirs(MiruPartitionCoord coord) throws Exception {
+    public File[] getLabDirs(MiruPartitionCoord coord, int version) throws Exception {
         MiruResourcePartitionIdentifier identifier = new TransientPartitionCoordIdentifier(coord);
-        File[] baseDirs = resourceLocator.getChunkDirectories(identifier, "labs-transient");
+        File[] baseDirs = resourceLocator.getChunkDirectories(identifier, "labs-transient", version);
         int hashCode = hash(coord);
         List<File> dirs = Lists.newArrayList();
         for (int i = 0; i < numberOfChunkStores; i++) {
@@ -113,8 +124,8 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
     }
 
     @Override
-    public LABEnvironment[] allocateLABEnvironments(MiruPartitionCoord coord) throws Exception {
-        File[] labDirs = getLabDirs(coord);
+    public LABEnvironment[] allocateLABEnvironments(MiruPartitionCoord coord, int version) throws Exception {
+        File[] labDirs = getLabDirs(coord, version);
         for (int i = 0; i < labDirs.length; i++) {
             FileUtils.deleteDirectory(labDirs[i]);
         }
@@ -125,21 +136,31 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
     public LABEnvironment[] allocateLABEnvironments(File[] labDirs) throws Exception {
         LABEnvironment[] environments = new LABEnvironment[labDirs.length];
         for (int i = 0; i < labDirs.length; i++) {
+            labDirs[i].mkdirs();
             environments[i] = new LABEnvironment(buildLABSchedulerThreadPool,
                 buildLABCompactorThreadPool,
                 buildLABDestroyThreadPool,
+                "wal",
+                labMaxWALSizeInBytes,
+                labMaxEntriesPerWAL,
+                labMaxEntrySizeInBytes,
                 labDirs[i],
-                true,
                 labHeapPressure,
                 4,
                 16,
                 leapCache);
+
+            environments[i].register("lastIdKeyValue", new LastIdKeyValueRawhide());
+            environments[i].register("fixedWidth_12_0", new FixedWidthRawhide(12, 0));
+            environments[i].register("fixedWidth_8_4", new FixedWidthRawhide(8, 4));
+            environments[i].register("fixedWidth_4_16", new FixedWidthRawhide(4, 16));
+            environments[i].open();
         }
         return environments;
     }
 
     @Override
-    public boolean checkExists(MiruPartitionCoord coord) throws Exception {
+    public boolean checkExists(MiruPartitionCoord coord, int labVersion, int[] supportedLabVersions) throws Exception {
         return true;
     }
 
@@ -149,7 +170,7 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
     }
 
     @Override
-    public boolean hasLabIndex(MiruPartitionCoord coord) throws Exception {
+    public boolean hasLabIndex(MiruPartitionCoord coord, int version) throws Exception {
         return useLabIndexes;
     }
 
@@ -171,7 +192,10 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
     }
 
     @Override
-    public void close(LABEnvironment[] labEnvironments) {
+    public void close(LABEnvironment[] labEnvironments) throws Exception {
+        for (LABEnvironment labEnvironment : labEnvironments) {
+            labEnvironment.close();
+        }
     }
 
     @Override
