@@ -39,7 +39,7 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
     private final boolean partitionDeleteChunkStoreOnClose;
     private final int partitionInitialChunkCacheSize;
     private final int partitionMaxChunkCacheSize;
-    private final LabHeapPressure labHeapPressure;
+    private final LabHeapPressure[] labHeapPressures;
     private final long labMaxWALSizeInBytes;
     private final long labMaxEntriesPerWAL;
     private final long labMaxEntrySizeInBytes;
@@ -58,7 +58,7 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
         boolean partitionDeleteChunkStoreOnClose,
         int partitionInitialChunkCacheSize,
         int partitionMaxChunkCacheSize,
-        LabHeapPressure labHeapPressure,
+        LabHeapPressure[] labHeapPressures,
         long labMaxWALSizeInBytes,
         long labMaxEntriesPerWAL,
         long labMaxEntrySizeInBytes,
@@ -76,7 +76,7 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
         this.labMaxEntriesPerWAL = labMaxEntriesPerWAL;
         this.labMaxEntrySizeInBytes = labMaxEntrySizeInBytes;
         this.useLabIndexes = useLabIndexes;
-        this.labHeapPressure = labHeapPressure;
+        this.labHeapPressures = labHeapPressures;
         this.leapCache = leapCache;
     }
 
@@ -145,7 +145,7 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
                 labMaxEntriesPerWAL,
                 labMaxEntrySizeInBytes,
                 labDirs[i],
-                labHeapPressure,
+                labHeapPressures[i % labHeapPressures.length],
                 4,
                 16,
                 leapCache);

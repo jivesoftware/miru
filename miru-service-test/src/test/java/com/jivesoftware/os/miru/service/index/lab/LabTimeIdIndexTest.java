@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.service.index.lab;
 
+import com.google.common.util.concurrent.MoreExecutors;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
 import com.jivesoftware.os.lab.LABEnvironment;
 import com.jivesoftware.os.lab.LabHeapPressure;
@@ -30,7 +31,7 @@ public class LabTimeIdIndexTest {
             true,
             100,
             1_000,
-            new LabHeapPressure(1024 * 1024, new AtomicLong()),
+            new LabHeapPressure[] { new LabHeapPressure(MoreExecutors.sameThreadExecutor(), 1024 * 1024, 1024 * 1024 * 2, new AtomicLong()) },
             10 * 1024 * 1024,
             1000,
             10 * 1024 * 1024,

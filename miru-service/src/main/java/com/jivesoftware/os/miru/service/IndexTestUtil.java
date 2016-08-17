@@ -5,6 +5,7 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Interners;
 import com.google.common.io.Files;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.jivesoftware.os.filer.chunk.store.ChunkStoreInitializer;
 import com.jivesoftware.os.filer.chunk.store.transaction.TxCogs;
 import com.jivesoftware.os.filer.chunk.store.transaction.TxNamedMapOfFiler;
@@ -105,7 +106,10 @@ public class IndexTestUtil {
             termComposer);
 
         final MiruResourceLocator diskResourceLocator = new MiruTempDirectoryResourceLocator();
-        LabHeapPressure labHeapPressure = new LabHeapPressure(1024 * 1024 * 10, new AtomicLong());
+        LabHeapPressure labHeapPressure = new LabHeapPressure(LABEnvironment.buildLABHeapSchedulerThreadPool(1),
+            1024 * 1024 * 10,
+            1024 * 1024 * 20,
+            new AtomicLong());
         long labMaxWALSizeInBytes = 1024 * 1024 * 10;
         long labMaxEntriesPerWAL = 1000;
         long labMaxEntrySizeInBytes = 1024 * 1024 * 10;
@@ -119,7 +123,7 @@ public class IndexTestUtil {
             true,
             100,
             1_000,
-            labHeapPressure,
+            new LabHeapPressure[] { labHeapPressure },
             labMaxWALSizeInBytes,
             labMaxEntriesPerWAL,
             labMaxEntrySizeInBytes,
@@ -131,7 +135,7 @@ public class IndexTestUtil {
             numberOfChunkStores,
             100,
             1_000,
-            labHeapPressure,
+            new LabHeapPressure[] { labHeapPressure },
             labMaxWALSizeInBytes,
             labMaxEntriesPerWAL,
             labMaxEntrySizeInBytes,
@@ -192,7 +196,7 @@ public class IndexTestUtil {
             -1,
             -1,
             root,
-            new LabHeapPressure(1024 * 1024, new AtomicLong()),
+            new LabHeapPressure(MoreExecutors.sameThreadExecutor(), 1024 * 1024, 2 * 1024 * 1024, new AtomicLong()),
             4,
             16,
             LABEnvironment.buildLeapsCache(1_000, 4));

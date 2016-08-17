@@ -7,6 +7,7 @@ import com.google.common.collect.Interners;
 import com.google.common.collect.Lists;
 import com.google.common.hash.Hashing;
 import com.google.common.io.Files;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider;
 import com.jivesoftware.os.filer.chunk.store.transaction.TxCogs;
@@ -227,7 +228,7 @@ public class MiruLocalHostedPartitionTest {
             Interners.<String>newWeakInterner(),
             termComposer);
 
-        LabHeapPressure labHeapPressure = new LabHeapPressure(1024 * 1024 * 10, new AtomicLong());
+        LabHeapPressure labHeapPressure = new LabHeapPressure(MoreExecutors.sameThreadExecutor(), 1024 * 1024 * 10, 1024 * 1024 * 20, new AtomicLong());
         long labMaxWALSizeInBytes = 1024 * 1024 * 10;
         long labMaxEntriesPerWAL = 1000;
         long labMaxEntrySizeInBytes = 1024 * 1024 * 10;
@@ -243,7 +244,7 @@ public class MiruLocalHostedPartitionTest {
             config.getPartitionDeleteChunkStoreOnClose(),
             100,
             1_000,
-            labHeapPressure,
+            new LabHeapPressure[] { labHeapPressure },
             labMaxWALSizeInBytes,
             labMaxEntriesPerWAL,
             labMaxEntrySizeInBytes,
@@ -256,7 +257,7 @@ public class MiruLocalHostedPartitionTest {
             config.getPartitionNumberOfChunkStores(),
             100,
             1_000,
-            labHeapPressure,
+            new LabHeapPressure[] { labHeapPressure },
             labMaxWALSizeInBytes,
             labMaxEntriesPerWAL,
             labMaxEntrySizeInBytes,
