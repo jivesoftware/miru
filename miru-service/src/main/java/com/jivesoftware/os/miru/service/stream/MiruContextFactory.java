@@ -24,12 +24,9 @@ import com.jivesoftware.os.filer.keyed.store.TxKeyValueStore;
 import com.jivesoftware.os.filer.keyed.store.TxKeyedFilerStore;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.lab.LABEnvironment;
-import com.jivesoftware.os.lab.api.FixedWidthRawhide;
-import com.jivesoftware.os.lab.api.FormatTransformerProvider;
 import com.jivesoftware.os.lab.api.KeyValueRawhide;
 import com.jivesoftware.os.lab.api.MemoryRawEntryFormat;
 import com.jivesoftware.os.lab.api.NoOpFormatTransformerProvider;
-import com.jivesoftware.os.lab.api.RawEntryFormat;
 import com.jivesoftware.os.lab.api.ValueIndex;
 import com.jivesoftware.os.lab.api.ValueIndexConfig;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
@@ -233,7 +230,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         MiruBackingStorage storage,
         MiruRebuildDirector.Token rebuildToken) throws Exception {
 
-        long version = getVersion(coord);
+        long version = getVersion(coord, storage);
         if (version == -1) {
             version = idProvider.nextId();
             saveVersion(coord, version);
@@ -451,11 +448,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
 
         boolean atomized = (labVersion >= LAB_ATOMIZED_MIN_VERSION);
 
-        long version = getVersion(coord);
-        if (version == -1) {
-            version = idProvider.nextId();
-            saveVersion(coord, version);
-        }
+        long version = getVersion(coord, storage);
 
         List<ValueIndex> commitables = Lists.newArrayList();
 
@@ -709,6 +702,9 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         MiruBackingStorage toStorage,
         StackBuffer stackBuffer) throws Exception {
 
+        saveSchema(coord, from.schema);
+        saveVersion(coord, from.version);
+
         if (from.chunkStores != null) {
             return copyChunkStore(bitmaps, schema, coord, from, toStorage, stackBuffer);
         } else {
@@ -760,13 +756,20 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         return allocateChunkStore(bitmaps, coord, schema, toChunks, toStorage, null);
     }
 
-    public long getVersion(MiruPartitionCoord coord) throws IOException {
-        MiruResourcePartitionIdentifier identifier = new MiruPartitionCoordIdentifier(coord);
-        File versionFile = diskResourceLocator.getFilerFile(identifier, "version");
-        if (versionFile.exists()) {
-            return objectMapper.readValue(versionFile, Long.class);
+    public long getVersion(MiruPartitionCoord coord, MiruBackingStorage storage) throws IOException {
+        if (storage == MiruBackingStorage.memory) {
+            return idProvider.nextId();
+        } else {
+            MiruResourcePartitionIdentifier identifier = new MiruPartitionCoordIdentifier(coord);
+            File versionFile = diskResourceLocator.getFilerFile(identifier, "version");
+            if (versionFile.exists()) {
+                return objectMapper.readValue(versionFile, Long.class);
+            }
+
+            long version = idProvider.nextId();
+            saveVersion(coord, version);
+            return version;
         }
-        return -1;
     }
 
     public void saveVersion(MiruPartitionCoord coord, long version) throws IOException {
