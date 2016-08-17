@@ -80,42 +80,6 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
         return index;
     }
 
-    @Override
-    public Optional<BitmapAndLastId<BM>> getIndexAndLastId(int considerIfLastIdGreaterThanN, StackBuffer stackBuffer) throws Exception {
-        Optional<BitmapAndLastId<BM>> index;
-        MutableLong bytes = new MutableLong();
-        if (considerIfLastIdGreaterThanN < 0) {
-            index = getIndexInternal((monkey, filer, stackBuffer1, lock) -> {
-                if (filer != null) {
-                    bytes.add(filer.length());
-                    synchronized (lock) {
-                        filer.seek(0);
-                        return deser(bitmaps, trackError, filer, -1, stackBuffer1);
-                    }
-                }
-                return null;
-            }, stackBuffer);
-        } else {
-            index = getIndexInternal((monkey, filer, stackBuffer1, lock) -> {
-                if (filer != null) {
-                    bytes.add(filer.length());
-                    synchronized (lock) {
-                        filer.seek(0);
-                        return deser(bitmaps, trackError, filer, considerIfLastIdGreaterThanN, stackBuffer);
-                    }
-                }
-                return null;
-            }, stackBuffer);
-        }
-        LOG.inc("count>getIndexAndLastId>total");
-        LOG.inc("count>getIndexAndLastId>" + name + ">total");
-        LOG.inc("count>getIndexAndLastId>" + name + ">" + fieldId);
-        LOG.inc("bytes>getIndexAndLastId>total", bytes.longValue());
-        LOG.inc("bytes>getIndexAndLastId>" + name + ">total", bytes.longValue());
-        LOG.inc("bytes>getIndexAndLastId>" + name + ">" + fieldId, bytes.longValue());
-        return index;
-    }
-
     private Optional<BitmapAndLastId<BM>> getIndexInternal(ChunkTransaction<Void, BitmapAndLastId<BM>> chunkTransaction,
         StackBuffer stackBuffer) throws IOException, InterruptedException {
 
@@ -162,14 +126,6 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
         LOG.inc("bytes>txIndex>" + name + ">total", bytes.longValue());
         LOG.inc("bytes>txIndex>" + name + ">" + fieldId, bytes.longValue());
         return result;
-    }
-
-    @Override
-    public void replaceIndex(IBM index, int setLastId, StackBuffer stackBuffer) throws Exception {
-        synchronized (mutationLock) {
-            setIndex(index, setLastId, stackBuffer);
-            lastId = Math.max(setLastId, lastId);
-        }
     }
 
     public static <BM extends IBM, IBM> BitmapAndLastId<BM> deser(MiruBitmaps<BM, IBM> bitmaps,

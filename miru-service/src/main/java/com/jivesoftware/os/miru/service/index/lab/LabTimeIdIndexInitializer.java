@@ -16,8 +16,11 @@ public class LabTimeIdIndexInitializer {
         MiruResourceLocator resourceLocator,
         MiruChunkAllocator chunkAllocator) throws Exception {
 
-        File[] dirs = resourceLocator.getChunkDirectories(() -> new String[] { "timeId" }, "lab");
-        LABEnvironment[] labEnvironments = chunkAllocator.allocateLABEnvironments(dirs);
+        File[] labDirs = resourceLocator.getChunkDirectories(() -> new String[] { "timeId" }, "lab", -1);
+        for (File labDir : labDirs) {
+            labDir.mkdirs();
+        }
+        LABEnvironment[] labEnvironments = chunkAllocator.allocateLABEnvironments(labDirs);
         LabTimeIdIndex[] timeIdIndexes = new LabTimeIdIndex[labEnvironments.length];
         for (int i = 0; i < labEnvironments.length; i++) {
             timeIdIndexes[i] = new LabTimeIdIndex(labEnvironments[i], keepNIndexes, maxEntriesPerIndex, maxHeapPressureInBytes);

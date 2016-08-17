@@ -7,7 +7,7 @@ import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.wal.RCVSSipCursor;
-import com.jivesoftware.os.miru.bitmaps.roaring5.buffer.MiruBitmapsRoaringBuffer;
+import com.jivesoftware.os.miru.bitmaps.roaring5.MiruBitmapsRoaring;
 import com.jivesoftware.os.miru.plugin.index.MiruSipIndex;
 import org.apache.commons.lang3.ArrayUtils;
 import org.testng.annotations.DataProvider;
@@ -30,7 +30,7 @@ public class MiruSipIndexTest {
 
     @DataProvider(name = "miruSipIndexDataProviderWithData")
     public Object[][] miruSipIndexDataProviderWithData() throws Exception {
-        MiruBitmapsRoaringBuffer bitmaps = new MiruBitmapsRoaringBuffer();
+        MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
         MiruTenantId tenantId = new MiruTenantId(new byte[] { 1 });
         MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, MiruPartitionId.of(1), new MiruHost("logicalName"));
 
@@ -38,7 +38,7 @@ public class MiruSipIndexTest {
             buildSipDataProvider(bitmaps, coord, true));
     }
 
-    private Object[][] buildSipDataProvider(MiruBitmapsRoaringBuffer bitmaps,
+    private Object[][] buildSipDataProvider(MiruBitmapsRoaring bitmaps,
         MiruPartitionCoord coord,
         boolean useLabIndexes) throws Exception {
 

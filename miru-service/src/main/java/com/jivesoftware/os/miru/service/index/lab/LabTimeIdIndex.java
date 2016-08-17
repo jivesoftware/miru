@@ -4,10 +4,12 @@ import com.google.common.collect.Maps;
 import com.jivesoftware.os.lab.LABEnvironment;
 import com.jivesoftware.os.lab.LABRawhide;
 import com.jivesoftware.os.lab.api.FormatTransformerProvider;
+import com.jivesoftware.os.lab.api.MemoryRawEntryFormat;
+import com.jivesoftware.os.lab.api.NoOpFormatTransformerProvider;
 import com.jivesoftware.os.lab.api.RawEntryFormat;
 import com.jivesoftware.os.lab.api.ValueIndex;
+import com.jivesoftware.os.lab.api.ValueIndexConfig;
 import com.jivesoftware.os.lab.io.api.UIO;
-import com.jivesoftware.os.miru.plugin.context.KeyValueRawhide;
 import com.jivesoftware.os.miru.service.index.TimeIdIndex;
 import java.util.Collections;
 import java.util.List;
@@ -52,8 +54,8 @@ public class LabTimeIdIndex implements TimeIdIndex {
     }
 
     private ValueIndex open(String name) throws Exception {
-        return environment.open(name, 4096, maxHeapPressureInBytes, 10 * 1024 * 1024, -1L, -1L,
-            FormatTransformerProvider.NO_OP, new LABRawhide(), RawEntryFormat.MEMORY);
+        return environment.open(new ValueIndexConfig(name, 4096, maxHeapPressureInBytes, 10 * 1024 * 1024, -1L, -1L,
+            NoOpFormatTransformerProvider.NAME, LABRawhide.NAME, MemoryRawEntryFormat.NAME));
     }
 
     @Override
@@ -123,7 +125,7 @@ public class LabTimeIdIndex implements TimeIdIndex {
             });
 
             synchronized (cursor) {
-                indexes[0].append(valueStream -> {
+                indexes[0].journaledAppend(valueStream -> {
                     for (int i = 0; i < timestamps.length; i++) {
                         byte[] key = UIO.longsBytes(new long[] { version, timestamps[i] });
                         cursor.lastId++;

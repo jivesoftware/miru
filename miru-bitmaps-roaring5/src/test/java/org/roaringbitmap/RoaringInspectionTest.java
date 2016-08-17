@@ -2,6 +2,14 @@ package org.roaringbitmap;
 
 import com.jivesoftware.os.miru.bitmaps.roaring5.MiruBitmapsRoaring;
 import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInput;
+import java.io.DataInputStream;
+import java.io.DataOutput;
+import java.io.DataOutputStream;
+import java.util.Random;
+import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import static org.testng.Assert.assertEquals;
@@ -197,5 +205,139 @@ public class RoaringInspectionTest {
             assertEquals(cardinalityInBuckets[i][6], 0);
             assertEquals(cardinalityInBuckets[i][7], 1);
         }
+    }
+
+    @Test
+    public void testSerDeser() throws Exception {
+        Random r = new Random();
+        for (int p : new int[] { 1, 10, 100 }) {
+            RoaringBitmap bitmap1 = new RoaringBitmap();
+            for (int i = 0; i < 1_000_000; i++) {
+                if (r.nextInt(p) == 0) {
+                    bitmap1.add(i);
+                }
+            }
+
+            DataOutput[] outContainers = new DataOutputStream[RoaringInspection.containerCount(bitmap1)];
+            ByteArrayOutputStream[] bosContainers = new ByteArrayOutputStream[outContainers.length];
+            for (int i = 0; i < outContainers.length; i++) {
+                bosContainers[i] = new ByteArrayOutputStream();
+                outContainers[i] = new DataOutputStream(bosContainers[i]);
+            }
+
+            bitmap1.runOptimize();
+            CardinalityAndLastSetBit<RoaringBitmap> calsb = RoaringInspection.cardinalityAndLastSetBit(bitmap1);
+            int lsb1 = calsb.lastSetBit;
+            long cardinality1 = calsb.cardinality;
+            short[] keys = RoaringInspection.serialize(bitmap1, outContainers);
+
+            System.out.println("----- " + p + " -----");
+            for (int i = 0; i < bosContainers.length; i++) {
+                System.out.println(bosContainers[i].size());
+            }
+            System.out.println();
+
+            DataInput[] inContainers = new DataInputStream[bosContainers.length];
+            ByteArrayInputStream[] binContainers = new ByteArrayInputStream[inContainers.length];
+            for (int i = 0; i < inContainers.length; i++) {
+                binContainers[i] = new ByteArrayInputStream(bosContainers[i].toByteArray());
+                inContainers[i] = new DataInputStream(binContainers[i]);
+            }
+
+            RoaringBitmap bitmap2 = new RoaringBitmap();
+            int lsb2 = RoaringInspection.deserialize(bitmap2, keys, inContainers);
+            long cardinality2 = bitmap2.getCardinality();
+
+            Assert.assertEquals(bitmap1, bitmap2);
+            Assert.assertEquals(lsb1, lsb2);
+            Assert.assertEquals(cardinality1, cardinality2);
+        }
+    }
+
+    @Test
+    public void testUSerDeser() throws Exception {
+        Random r = new Random();
+        for (int p : new int[] { 1, 10, 100 }) {
+            RoaringBitmap bitmap1 = new RoaringBitmap();
+            for (int i = 0; i < 1_000_000; i++) {
+                if (r.nextInt(p) == 0) {
+                    bitmap1.add(i);
+                }
+            }
+
+            DataOutput[] outContainers = new DataOutputStream[RoaringInspection.containerCount(bitmap1)];
+            ByteArrayOutputStream[] bosContainers = new ByteArrayOutputStream[outContainers.length];
+            for (int i = 0; i < outContainers.length; i++) {
+                bosContainers[i] = new ByteArrayOutputStream();
+                outContainers[i] = new DataOutputStream(bosContainers[i]);
+            }
+
+            bitmap1.runOptimize();
+            CardinalityAndLastSetBit<RoaringBitmap> calsb = RoaringInspection.cardinalityAndLastSetBit(bitmap1);
+            int lsb1 = calsb.lastSetBit;
+            long cardinality1 = calsb.cardinality;
+            int[] ukeys = RoaringInspection.userialize(bitmap1, outContainers);
+
+            System.out.println("----- " + p + " -----");
+            for (int i = 0; i < bosContainers.length; i++) {
+                System.out.println(bosContainers[i].size());
+            }
+            System.out.println();
+
+            DataInput[] inContainers = new DataInputStream[bosContainers.length];
+            ByteArrayInputStream[] binContainers = new ByteArrayInputStream[inContainers.length];
+            for (int i = 0; i < inContainers.length; i++) {
+                binContainers[i] = new ByteArrayInputStream(bosContainers[i].toByteArray());
+                inContainers[i] = new DataInputStream(binContainers[i]);
+            }
+
+            RoaringBitmap bitmap2 = new RoaringBitmap();
+            int lsb2 = RoaringInspection.udeserialize(bitmap2, ukeys, inContainers);
+            long cardinality2 = bitmap2.getCardinality();
+
+            Assert.assertEquals(bitmap1, bitmap2);
+            Assert.assertEquals(lsb1, lsb2);
+            Assert.assertEquals(cardinality1, cardinality2);
+        }
+    }
+
+    @Test
+    public void testLastSetBit() throws Exception {
+        RoaringBitmap bitmap = new RoaringBitmap();
+        for (int i = 0; i < 100; i++) {
+            bitmap.add(i * 65_536 + i);
+        }
+
+        DataOutput[] outContainers = new DataOutputStream[RoaringInspection.containerCount(bitmap)];
+        ByteArrayOutputStream[] bosContainers = new ByteArrayOutputStream[outContainers.length];
+        for (int i = 0; i < outContainers.length; i++) {
+            bosContainers[i] = new ByteArrayOutputStream();
+            outContainers[i] = new DataOutputStream(bosContainers[i]);
+        }
+
+        int[] ukeys = RoaringInspection.userialize(bitmap, outContainers);
+
+        DataInput[] inContainers = new DataInputStream[bosContainers.length];
+        ByteArrayInputStream[] binContainers = new ByteArrayInputStream[inContainers.length];
+        for (int i = 0; i < inContainers.length; i++) {
+            binContainers[i] = new ByteArrayInputStream(bosContainers[i].toByteArray());
+            inContainers[i] = new DataInputStream(binContainers[i]);
+        }
+
+        for (int i = 0; i < ukeys.length; i++) {
+            int lastSetBit = RoaringInspection.lastSetBit(ukeys[i], inContainers[i]);
+            Assert.assertEquals(lastSetBit, 65_536 * i + i);
+        }
+    }
+
+    @Test
+    public void testIntToShortKeys() throws Exception {
+        int[] ukeys = new int[65_536];
+        for (int i = 0; i < ukeys.length; i++) {
+            ukeys[i] = i;
+        }
+        short[] keys = RoaringInspection.intToShortKeys(ukeys);
+        int[] got = RoaringInspection.shortToIntKeys(keys);
+        Assert.assertEquals(got, ukeys);
     }
 }

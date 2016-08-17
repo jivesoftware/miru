@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.plugin.context;
 
+import com.jivesoftware.os.lab.api.KeyValueRawhide;
 import com.jivesoftware.os.lab.io.api.UIO;
 import org.testng.Assert;
 import org.testng.annotations.Test;
@@ -13,7 +14,7 @@ public class LastIdKeyValueRawhideTest {
 
     @Test
     public void testReverseCompatibility() throws Exception {
-        KeyValueRawhide keyValueRawhide = new KeyValueRawhide();
+        KeyValueRawhide keyValueRawhide = KeyValueRawhide.SINGLETON;
         LastIdKeyValueRawhide lastIdKeyValueRawhide = new LastIdKeyValueRawhide();
 
         byte[] rawKey = { 0, 1, 2 };

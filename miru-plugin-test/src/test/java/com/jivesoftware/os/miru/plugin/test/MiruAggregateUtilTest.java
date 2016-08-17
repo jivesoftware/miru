@@ -13,9 +13,10 @@ import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.lab.LABEnvironment;
 import com.jivesoftware.os.lab.LABRawhide;
 import com.jivesoftware.os.lab.LabHeapPressure;
-import com.jivesoftware.os.lab.api.FormatTransformerProvider;
-import com.jivesoftware.os.lab.api.RawEntryFormat;
+import com.jivesoftware.os.lab.api.MemoryRawEntryFormat;
+import com.jivesoftware.os.lab.api.NoOpFormatTransformerProvider;
 import com.jivesoftware.os.lab.api.ValueIndex;
+import com.jivesoftware.os.lab.api.ValueIndexConfig;
 import com.jivesoftware.os.lab.guts.Leaps;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
@@ -55,8 +56,11 @@ public class MiruAggregateUtilTest {
         LABEnvironment env = new LABEnvironment(LABEnvironment.buildLABSchedulerThreadPool(4),
             LABEnvironment.buildLABCompactorThreadPool(4),
             LABEnvironment.buildLABDestroyThreadPool(1),
+            "wal",
+            -1,
+            -1,
+            -1,
             root,
-            false,
             labHeapPressure,
             4,
             10,
@@ -65,7 +69,15 @@ public class MiruAggregateUtilTest {
         LabTimestampedCacheKeyValues cacheKeyValues = new LabTimestampedCacheKeyValues("lab-test",
             orderIdProvider,
             new ValueIndex[] {
-                env.open("primary", 4096, 10 * 1024 * 1024, -1, -1, -1, FormatTransformerProvider.NO_OP, new LABRawhide(), RawEntryFormat.MEMORY)
+                env.open(new ValueIndexConfig("primary",
+                    4096,
+                    10 * 1024 * 1024,
+                    -1,
+                    -1,
+                    -1,
+                    NoOpFormatTransformerProvider.NAME,
+                    LABRawhide.NAME,
+                    MemoryRawEntryFormat.NAME))
             },
             new Object[] { new Object(), new Object(), new Object(), new Object() });
 
@@ -130,7 +142,14 @@ public class MiruAggregateUtilTest {
         }
     }
 
-    private void log(int streamIndex, int lastId, int answerFieldId, MiruTermId answerTermId, int answerScoredLastId, int featureId, MiruTermId[] termIds, int count) {
+    private void log(int streamIndex,
+        int lastId,
+        int answerFieldId,
+        MiruTermId answerTermId,
+        int answerScoredLastId,
+        int featureId,
+        MiruTermId[] termIds,
+        int count) {
         System.out.println(
             "streamIndex:" + streamIndex +
                 ", lastId:" + lastId +

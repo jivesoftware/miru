@@ -22,14 +22,15 @@ import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.lab.LABEnvironment;
 import com.jivesoftware.os.lab.LabHeapPressure;
-import com.jivesoftware.os.lab.api.FormatTransformerProvider;
-import com.jivesoftware.os.lab.api.RawEntryFormat;
+import com.jivesoftware.os.lab.api.KeyValueRawhide;
+import com.jivesoftware.os.lab.api.MemoryRawEntryFormat;
+import com.jivesoftware.os.lab.api.NoOpFormatTransformerProvider;
 import com.jivesoftware.os.lab.api.ValueIndex;
+import com.jivesoftware.os.lab.api.ValueIndexConfig;
 import com.jivesoftware.os.lab.guts.Leaps;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.cache.LabLastIdCacheKeyValues;
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.LastIdCacheKeyValues;
-import com.jivesoftware.os.miru.plugin.context.KeyValueRawhide;
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
@@ -98,16 +99,23 @@ public class StrutModelScorerNGTest {
         LABEnvironment env = new LABEnvironment(LABEnvironment.buildLABSchedulerThreadPool(4),
             LABEnvironment.buildLABCompactorThreadPool(4),
             LABEnvironment.buildLABDestroyThreadPool(1),
+            "wal",
+            -1,
+            -1,
+            -1,
             root,
-            false, labHeapPressure, 4, 10, leapCache);
+            labHeapPressure,
+            4,
+            10,
+            leapCache);
         String catwalkId = "catwalkId";
         String modelId = "modelId";
 
         @SuppressWarnings("unchecked")
         ValueIndex[] stores = new ValueIndex[16];
         for (int i = 0; i < stores.length; i++) {
-            stores[i] = env.open("cache-" + i + "-" + catwalkId, 4096, 1024 * 1024, 0, 0, 0, FormatTransformerProvider.NO_OP, new KeyValueRawhide(),
-                RawEntryFormat.MEMORY);
+            stores[i] = env.open(new ValueIndexConfig("cache-" + i + "-" + catwalkId, 4096, 1024 * 1024, 0, 0, 0, NoOpFormatTransformerProvider.NAME,
+                KeyValueRawhide.NAME, MemoryRawEntryFormat.NAME));
         }
 
         LastIdCacheKeyValues cacheKeyValues = new LabLastIdCacheKeyValues("test", new OrderIdProviderImpl(new ConstantWriterIdProvider(1)), stores);
@@ -117,13 +125,13 @@ public class StrutModelScorerNGTest {
     }
 
     private void assertScores(String modelId, LastIdCacheKeyValues cacheKeyValues, StackBuffer stackBuffer) throws Exception {
-        MiruTermId[] termIds = new MiruTermId[]{
-            new MiruTermId(new byte[]{(byte) 124}),
-            new MiruTermId(new byte[]{(byte) 124, (byte) 124}),
-            new MiruTermId(new byte[]{(byte) 124, (byte) 124, (byte) 124, (byte) 124})
+        MiruTermId[] termIds = new MiruTermId[] {
+            new MiruTermId(new byte[] { (byte) 124 }),
+            new MiruTermId(new byte[] { (byte) 124, (byte) 124 }),
+            new MiruTermId(new byte[] { (byte) 124, (byte) 124, (byte) 124, (byte) 124 })
         };
 
-        StrutModelScorer.score(new String[]{modelId}, 1, termIds, new LastIdCacheKeyValues[]{cacheKeyValues}, new float[]{1},
+        StrutModelScorer.score(new String[] { modelId }, 1, termIds, new LastIdCacheKeyValues[] { cacheKeyValues }, new float[] { 1 },
             (int termIndex, float[] scores, int lastId) -> {
                 System.out.println(termIndex + " " + Arrays.toString(scores) + " " + lastId);
                 return true;
@@ -132,14 +140,14 @@ public class StrutModelScorerNGTest {
 
         List<Scored> updates = Lists.newArrayList();
         for (int i = 0; i < 1; i++) {
-            updates.add(new Scored(-1, new MiruTermId(new byte[]{(byte) 97, (byte) (97 + i)}), 10, 0.5f, new float[]{0.5f}, null));
+            updates.add(new Scored(-1, new MiruTermId(new byte[] { (byte) 97, (byte) (97 + i) }), 10, 0.5f, new float[] { 0.5f }, null));
         }
 
         StrutModelScorer.commit(modelId, cacheKeyValues, updates, stackBuffer);
 
         System.out.println("-----------");
 
-        StrutModelScorer.score(new String[]{modelId}, 1, termIds, new LastIdCacheKeyValues[]{cacheKeyValues}, new float[]{1},
+        StrutModelScorer.score(new String[] { modelId }, 1, termIds, new LastIdCacheKeyValues[] { cacheKeyValues }, new float[] { 1 },
             (int termIndex, float[] scores, int lastId) -> {
                 System.out.println(termIndex + " " + Arrays.toString(scores) + " " + lastId);
                 return true;

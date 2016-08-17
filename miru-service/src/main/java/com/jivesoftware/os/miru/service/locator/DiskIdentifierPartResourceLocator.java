@@ -45,8 +45,9 @@ public class DiskIdentifierPartResourceLocator implements MiruResourceLocator {
     }
 
     @Override
-    public File[] getChunkDirectories(MiruResourcePartitionIdentifier identifier, String name) {
-        return makeSubDirectories(ensurePartitionPaths(identifier), name);
+    public File[] getChunkDirectories(MiruResourcePartitionIdentifier identifier, String name, int version) {
+        String chunkName = (version < 0) ? name : name + "-v" + version;
+        return makeSubDirectories(ensurePartitionPaths(identifier), chunkName);
     }
 
     @Override

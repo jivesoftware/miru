@@ -25,7 +25,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
-import com.jivesoftware.os.miru.bitmaps.roaring5.buffer.MiruBitmapsRoaringBuffer;
+import com.jivesoftware.os.miru.bitmaps.roaring5.MiruBitmapsRoaring;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
@@ -102,7 +102,7 @@ public class MiruStreamServiceNGTest {
             .build();
 
         MiruProvider<MiruService> miruProvider = new MiruPluginTestBootstrap().bootstrap(tenant1, partitionId, miruHost,
-            miruSchema, MiruBackingStorage.disk, new MiruBitmapsRoaringBuffer(), Collections.<MiruPartitionedActivity>emptyList());
+            miruSchema, MiruBackingStorage.disk, new MiruBitmapsRoaring(), Collections.emptyList());
         this.service = miruProvider.getMiru(tenant1);
 
         this.aggregateCountsInjectable = new AggregateCountsInjectable(miruProvider, new AggregateCounts(miruProvider));

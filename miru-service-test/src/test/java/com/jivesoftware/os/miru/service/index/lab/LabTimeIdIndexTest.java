@@ -31,6 +31,9 @@ public class LabTimeIdIndexTest {
             100,
             1_000,
             new LabHeapPressure(1024 * 1024, new AtomicLong()),
+            10 * 1024 * 1024,
+            1000,
+            10 * 1024 * 1024,
             true,
             LABEnvironment.buildLeapsCache(1_000_000, 10));
 

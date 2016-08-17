@@ -18,18 +18,13 @@ import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
-import com.jivesoftware.os.miru.bitmaps.roaring5.buffer.MiruBitmapsRoaringBuffer;
+import com.jivesoftware.os.miru.bitmaps.roaring5.MiruBitmapsRoaring;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.test.MiruPluginTestBootstrap;
-import com.jivesoftware.os.miru.anomaly.plugins.ActivityUtil;
-import com.jivesoftware.os.miru.anomaly.plugins.Anomaly;
-import com.jivesoftware.os.miru.anomaly.plugins.AnomalyAnswer;
-import com.jivesoftware.os.miru.anomaly.plugins.AnomalyInjectable;
-import com.jivesoftware.os.miru.anomaly.plugins.AnomalyQuery;
 import com.jivesoftware.os.miru.service.MiruService;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -69,7 +64,7 @@ public class MiruAnomalyNGTest {
     @BeforeMethod
     public void setUpMethod() throws Exception {
         MiruProvider<MiruService> miruProvider = new MiruPluginTestBootstrap().bootstrap(tenant1, partitionId, miruHost,
-            miruSchema, MiruBackingStorage.disk, new MiruBitmapsRoaringBuffer(), Collections.<MiruPartitionedActivity>emptyList());
+            miruSchema, MiruBackingStorage.disk, new MiruBitmapsRoaring(), Collections.emptyList());
 
         this.service = miruProvider.getMiru(tenant1);
 

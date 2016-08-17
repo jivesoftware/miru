@@ -17,6 +17,7 @@ package com.jivesoftware.os.miru.plugin.bitmap;
 
 import com.google.common.base.Optional;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
+import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.plugin.index.IndexAlignedBitmapStream;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruMultiTxIndex;
@@ -24,6 +25,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTxIndex;
 import java.io.DataInput;
 import java.io.DataOutput;
+import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 
@@ -134,8 +136,7 @@ public interface MiruBitmaps<BM extends IBM, IBM> {
 
     IBM buildIndexMask(int largestIndex, Optional<? extends IBM> andNotMask);
 
-    IBM buildTimeRangeMask(MiruTimeIndex timeIndex, long smallestTimestamp, long largestTimestamp, StackBuffer stackBuffer) throws
-        Exception, InterruptedException;
+    IBM buildTimeRangeMask(MiruTimeIndex timeIndex, long smallestTimestamp, long largestTimestamp, StackBuffer stackBuffer) throws Exception;
 
     MiruIntIterator intIterator(IBM bitmap);
 
@@ -148,4 +149,16 @@ public interface MiruBitmaps<BM extends IBM, IBM> {
     boolean containsAll(IBM container, IBM contained);
 
     boolean containsAny(IBM container, IBM contained);
+
+    int key(int position);
+
+    int[] keys(IBM mask);
+
+    long[] serializeAtomizedSizeInBytes(IBM index, int[] keys);
+
+    void serializeAtomized(IBM index, int[] keys, DataOutput[] dataOutputs) throws IOException;
+
+    BitmapAndLastId<BM> deserializeAtomized(DataInput[] dataInputs, int[] keys) throws IOException;
+
+    int lastIdAtomized(DataInput dataInputs, int key) throws IOException;
 }

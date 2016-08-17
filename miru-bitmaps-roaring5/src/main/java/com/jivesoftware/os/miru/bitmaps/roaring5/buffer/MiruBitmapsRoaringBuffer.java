@@ -25,6 +25,7 @@ import com.jivesoftware.os.filer.io.chunk.ChunkFiler;
 import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
+import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.plugin.index.IndexAlignedBitmapStream;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruMultiTxIndex;
@@ -554,6 +555,36 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
     public boolean containsAny(ImmutableRoaringBitmap container, ImmutableRoaringBitmap contained) {
         MutableRoaringBitmap intersection = ImmutableRoaringBitmap.and(container, contained);
         return !intersection.isEmpty();
+    }
+
+    @Override
+    public int key(int position) {
+        throw new UnsupportedOperationException("Wahhh");
+    }
+
+    @Override
+    public int[] keys(ImmutableRoaringBitmap mask) {
+        throw new UnsupportedOperationException("Wahhh");
+    }
+
+    @Override
+    public long[] serializeAtomizedSizeInBytes(ImmutableRoaringBitmap index, int[] keys) {
+        throw new UnsupportedOperationException("Wahhh");
+    }
+
+    @Override
+    public void serializeAtomized(ImmutableRoaringBitmap index, int[] keys, DataOutput[] dataOutputs) {
+        throw new UnsupportedOperationException("Wahhh");
+    }
+
+    @Override
+    public BitmapAndLastId<MutableRoaringBitmap> deserializeAtomized(DataInput[] dataInputs, int[] keys) throws IOException {
+        throw new UnsupportedOperationException("Wahhh");
+    }
+
+    @Override
+    public int lastIdAtomized(DataInput dataInputs, int key) throws IOException {
+        throw new UnsupportedOperationException("Wahhh");
     }
 
     private MutableRoaringBitmap bitmapFromFiler(Filer filer, int offset, StackBuffer stackBuffer1) throws IOException {

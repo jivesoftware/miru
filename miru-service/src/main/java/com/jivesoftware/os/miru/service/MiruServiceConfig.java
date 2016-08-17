@@ -199,6 +199,18 @@ public interface MiruServiceConfig extends Config {
     @LongDefault(1024 * 1024 * 1024)
     long getGlobalLabMaxHeapPressureInBytes();
 
+    @LongDefault(2L * 1024 * 1024 * 1024)
+    long getRebuildLabMaxHeapPressureInBytes();
+
+    @LongDefault(1024 * 1024 * 1024)
+    long getLabMaxWALSizeInBytes();
+
+    @LongDefault(1_000_000)
+    long getLabMaxEntriesPerWAL();
+
+    @LongDefault(100 * 1024 * 1024)
+    long getLabMaxEntrySizeInBytes();
+
     @IntDefault(4)
     int getTimeIdKeepNIndexes();
 

@@ -10,15 +10,14 @@ import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
-import com.jivesoftware.os.miru.bitmaps.roaring5.buffer.MiruBitmapsRoaringBuffer;
+import com.jivesoftware.os.miru.bitmaps.roaring5.MiruBitmapsRoaring;
 import com.jivesoftware.os.miru.plugin.index.MiruAuthzIndex;
 import com.jivesoftware.os.miru.service.index.auth.MiruAuthzUtils;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.lang3.ArrayUtils;
 import org.roaringbitmap.IntIterator;
-import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
-import org.roaringbitmap.buffer.MutableRoaringBitmap;
+import org.roaringbitmap.RoaringBitmap;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
@@ -31,7 +30,7 @@ import static org.testng.Assert.assertTrue;
 public class MiruAuthzIndexTest {
 
     @Test(dataProvider = "miruAuthzIndexDataProviderWithData")
-    public void storeAndGetAuthz(MiruAuthzIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> miruAuthzIndex,
+    public void storeAndGetAuthz(MiruAuthzIndex<RoaringBitmap, RoaringBitmap> miruAuthzIndex,
         MiruAuthzUtils miruAuthzUtils,
         Map<String, List<Integer>> bitsIn) throws Exception {
 
@@ -40,7 +39,7 @@ public class MiruAuthzIndexTest {
             String authz = entry.getKey();
             MiruAuthzExpression miruAuthzExpression = new MiruAuthzExpression(ImmutableList.of(authz));
 
-            ImmutableRoaringBitmap bitsOut = miruAuthzIndex.getCompositeAuthz(miruAuthzExpression, stackBuffer);
+            RoaringBitmap bitsOut = miruAuthzIndex.getCompositeAuthz(miruAuthzExpression, stackBuffer);
             List<Integer> actual = Lists.newArrayList();
             IntIterator iter = bitsOut.getIntIterator();
             while (iter.hasNext()) {
@@ -53,26 +52,26 @@ public class MiruAuthzIndexTest {
 
     @DataProvider(name = "miruAuthzIndexDataProviderWithData")
     public Object[][] miruAuthzIndexDataProvider() throws Exception {
-        MiruBitmapsRoaringBuffer bitmaps = new MiruBitmapsRoaringBuffer();
+        MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
         MiruTenantId tenantId = new MiruTenantId(new byte[] { 1 });
         MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, MiruPartitionId.of(1), new MiruHost("logicalName"));
-        MiruAuthzUtils<MutableRoaringBitmap, ImmutableRoaringBitmap> miruAuthzUtils = new MiruAuthzUtils<>(bitmaps);
+        MiruAuthzUtils<RoaringBitmap, RoaringBitmap> miruAuthzUtils = new MiruAuthzUtils<>(bitmaps);
 
         // kill me
         return ArrayUtils.addAll(buildAuthzDataProvider(bitmaps, coord, miruAuthzUtils, false),
             buildAuthzDataProvider(bitmaps, coord, miruAuthzUtils, true));
     }
 
-    private Object[][] buildAuthzDataProvider(MiruBitmapsRoaringBuffer bitmaps,
+    private Object[][] buildAuthzDataProvider(MiruBitmapsRoaring bitmaps,
         MiruPartitionCoord coord,
-        MiruAuthzUtils<MutableRoaringBitmap, ImmutableRoaringBitmap> miruAuthzUtils,
+        MiruAuthzUtils<RoaringBitmap, RoaringBitmap> miruAuthzUtils,
         boolean useLabIndexes) throws Exception {
 
-        MiruAuthzIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> unmergedLargeMiruHybridAuthzIndex =
+        MiruAuthzIndex<RoaringBitmap, RoaringBitmap> unmergedLargeMiruHybridAuthzIndex =
             buildInMemoryContext(4, useLabIndexes, bitmaps, coord).authzIndex;
         Map<String, List<Integer>> unmergedLargeHybridBitsIn = populateAuthzIndex(unmergedLargeMiruHybridAuthzIndex, miruAuthzUtils, 2);
 
-        MiruAuthzIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> unmergedLargeMiruOnDiskAuthzIndex =
+        MiruAuthzIndex<RoaringBitmap, RoaringBitmap> unmergedLargeMiruOnDiskAuthzIndex =
             buildOnDiskContext(4, useLabIndexes, bitmaps, coord).authzIndex;
         Map<String, List<Integer>> unmergedLargeOnDiskBitsIn = populateAuthzIndex(unmergedLargeMiruOnDiskAuthzIndex, miruAuthzUtils, 2);
 

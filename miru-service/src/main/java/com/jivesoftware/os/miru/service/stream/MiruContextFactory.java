@@ -24,9 +24,14 @@ import com.jivesoftware.os.filer.keyed.store.TxKeyValueStore;
 import com.jivesoftware.os.filer.keyed.store.TxKeyedFilerStore;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.lab.LABEnvironment;
+import com.jivesoftware.os.lab.api.FixedWidthRawhide;
 import com.jivesoftware.os.lab.api.FormatTransformerProvider;
+import com.jivesoftware.os.lab.api.KeyValueRawhide;
+import com.jivesoftware.os.lab.api.MemoryRawEntryFormat;
+import com.jivesoftware.os.lab.api.NoOpFormatTransformerProvider;
 import com.jivesoftware.os.lab.api.RawEntryFormat;
 import com.jivesoftware.os.lab.api.ValueIndex;
+import com.jivesoftware.os.lab.api.ValueIndexConfig;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
@@ -43,8 +48,6 @@ import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.plugin.MiruInterner;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider;
-import com.jivesoftware.os.miru.plugin.context.FixedWidthRawhide;
-import com.jivesoftware.os.miru.plugin.context.KeyValueRawhide;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.index.MiruAuthzIndex;
@@ -103,6 +106,11 @@ import org.apache.commons.lang.builder.HashCodeBuilder;
 public class MiruContextFactory<S extends MiruSipCursor<S>> {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
+
+    private static final int LAB_VERSION = 2;
+    private static final int[] SUPPORTED_LAB_VERSIONS = { -1 };
+
+    private static final int LAB_ATOMIZED_MIN_VERSION = 2;
 
     private final OrderIdProvider idProvider;
     private final TxCogs persistentCogs;
@@ -198,9 +206,20 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         MiruRebuildDirector.Token rebuildToken) throws Exception {
 
         MiruChunkAllocator allocator = getAllocator(storage);
-        if (useLabIndexes && !allocator.hasChunkStores(coord)) {
-            LABEnvironment[] labEnvironments = allocator.allocateLABEnvironments(coord);
-            return allocateLabIndex(bitmaps, coord, schema, labEnvironments, storage, rebuildToken);
+        // check ideal case first
+        if (useLabIndexes && allocator.hasLabIndex(coord, LAB_VERSION)) {
+            LABEnvironment[] labEnvironments = allocator.allocateLABEnvironments(coord, LAB_VERSION);
+            return allocateLabIndex(LAB_VERSION, bitmaps, coord, schema, labEnvironments, storage, rebuildToken);
+        } else if (useLabIndexes && !allocator.hasChunkStores(coord)) {
+            for (int labVersion : SUPPORTED_LAB_VERSIONS) {
+                if (allocator.hasLabIndex(coord, labVersion)) {
+                    LABEnvironment[] labEnvironments = allocator.allocateLABEnvironments(coord, labVersion);
+                    return allocateLabIndex(labVersion, bitmaps, coord, schema, labEnvironments, storage, rebuildToken);
+                }
+            }
+            // otherwise create with latest version
+            LABEnvironment[] labEnvironments = allocator.allocateLABEnvironments(coord, LAB_VERSION);
+            return allocateLabIndex(LAB_VERSION, bitmaps, coord, schema, labEnvironments, storage, rebuildToken);
         } else {
             ChunkStore[] chunkStores = allocator.allocateChunkStores(coord);
             return allocateChunkStore(bitmaps, coord, schema, chunkStores, storage, rebuildToken);
@@ -422,12 +441,15 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         }
     }
 
-    private <BM extends IBM, IBM> MiruContext<BM, IBM, S> allocateLabIndex(MiruBitmaps<BM, IBM> bitmaps,
+    private <BM extends IBM, IBM> MiruContext<BM, IBM, S> allocateLabIndex(int labVersion,
+        MiruBitmaps<BM, IBM> bitmaps,
         MiruPartitionCoord coord,
         MiruSchema schema,
         LABEnvironment[] labEnvironments,
         MiruBackingStorage storage,
         MiruRebuildDirector.Token rebuildToken) throws Exception {
+
+        boolean atomized = (labVersion >= LAB_ATOMIZED_MIN_VERSION);
 
         long version = getVersion(coord);
         if (version == -1) {
@@ -439,16 +461,36 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
 
         // do NOT hash storage, as disk/memory require the same stripe order
         int seed = new HashCodeBuilder().append(coord).toHashCode();
-        ValueIndex metaIndex = labEnvironments[Math.abs(seed % labEnvironments.length)].open("meta", 4096, maxHeapPressureInBytes, 10 * 1024 * 1024, -1L, -1L,
-            FormatTransformerProvider.NO_OP, new KeyValueRawhide(), RawEntryFormat.MEMORY);
+        ValueIndex metaIndex = labEnvironments[Math.abs(seed % labEnvironments.length)].open(new ValueIndexConfig("meta",
+            4096,
+            maxHeapPressureInBytes,
+            10 * 1024 * 1024,
+            -1L,
+            -1L,
+            NoOpFormatTransformerProvider.NAME,
+            KeyValueRawhide.NAME,
+            MemoryRawEntryFormat.NAME));
         // metaIndex is not part of commitables; it will be committed explicitly
 
-        ValueIndex monoTimeIndex = labEnvironments[Math.abs((seed + 1) % labEnvironments.length)].open("monoTime", 4096, maxHeapPressureInBytes,
+        ValueIndex monoTimeIndex = labEnvironments[Math.abs((seed + 1) % labEnvironments.length)].open(new ValueIndexConfig("monoTime",
+            4096,
+            maxHeapPressureInBytes,
             10 * 1024 * 1024,
-            -1L, -1L, FormatTransformerProvider.NO_OP, new FixedWidthRawhide(12, 0), RawEntryFormat.MEMORY);
+            -1L,
+            -1L,
+            NoOpFormatTransformerProvider.NAME,
+            "fixedWidth_12_0",
+            MemoryRawEntryFormat.NAME));
         commitables.add(monoTimeIndex);
-        ValueIndex rawTimeIndex = labEnvironments[Math.abs((seed + 1) % labEnvironments.length)].open("rawTime", 4096, maxHeapPressureInBytes, 10 * 1024 * 1024,
-            -1L, -1L, FormatTransformerProvider.NO_OP, new FixedWidthRawhide(8, 4), RawEntryFormat.MEMORY);
+        ValueIndex rawTimeIndex = labEnvironments[Math.abs((seed + 1) % labEnvironments.length)].open(new ValueIndexConfig("rawTime",
+            4096,
+            maxHeapPressureInBytes,
+            10 * 1024 * 1024,
+            -1L,
+            -1L,
+            NoOpFormatTransformerProvider.NAME,
+            "fixedWidth_8_4",
+            MemoryRawEntryFormat.NAME));
         commitables.add(rawTimeIndex);
         MiruTimeIndex timeIndex = new LabTimeIndex(
             idProvider,
@@ -461,8 +503,15 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
 
         ValueIndex[] termStorage = new ValueIndex[labEnvironments.length];
         for (int i = 0; i < termStorage.length; i++) {
-            termStorage[i] = labEnvironments[i].open("termStorage", 4096, maxHeapPressureInBytes, 10 * 1024 * 1024, -1L, -1L, FormatTransformerProvider.NO_OP,
-                new KeyValueRawhide(), RawEntryFormat.MEMORY);
+            termStorage[i] = labEnvironments[i].open(new ValueIndexConfig("termStorage",
+                4096,
+                maxHeapPressureInBytes,
+                10 * 1024 * 1024,
+                -1L,
+                -1L,
+                NoOpFormatTransformerProvider.NAME,
+                KeyValueRawhide.NAME,
+                MemoryRawEntryFormat.NAME));
             commitables.add(termStorage[i]);
         }
         boolean[] hasTermStorage = new boolean[schema.fieldCount()];
@@ -470,8 +519,15 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             hasTermStorage[fieldDefinition.fieldId] = fieldDefinition.type.hasFeature(Feature.stored);
         }
 
-        ValueIndex timeAndVersionIndex = labEnvironments[Math.abs((seed + 2) % labEnvironments.length)].open("timeAndVersion", 4096, maxHeapPressureInBytes,
-            10 * 1024 * 1024, -1L, -1L, FormatTransformerProvider.NO_OP, new FixedWidthRawhide(4, 16), RawEntryFormat.MEMORY);
+        ValueIndex timeAndVersionIndex = labEnvironments[Math.abs((seed + 2) % labEnvironments.length)].open(new ValueIndexConfig("timeAndVersion",
+            4096,
+            maxHeapPressureInBytes,
+            10 * 1024 * 1024,
+            -1L,
+            -1L,
+            NoOpFormatTransformerProvider.NAME,
+            "fixedWidth_4_16",
+            MemoryRawEntryFormat.NAME));
         commitables.add(timeAndVersionIndex);
         MiruActivityIndex activityIndex = new LabActivityIndex(
             idProvider,
@@ -489,14 +545,35 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         ValueIndex[] termIndex = new ValueIndex[labEnvironments.length];
         ValueIndex[] cardinalityIndex = new ValueIndex[labEnvironments.length];
         for (int i = 0; i < bitmapIndex.length; i++) {
-            bitmapIndex[i] = labEnvironments[i].open("field", 4096, maxHeapPressureInBytes, 10 * 1024 * 1024, -1L, -1L, FormatTransformerProvider.NO_OP,
-                new KeyValueRawhide(), RawEntryFormat.MEMORY);
+            bitmapIndex[i] = labEnvironments[i].open(new ValueIndexConfig("field",
+                4096,
+                maxHeapPressureInBytes,
+                10 * 1024 * 1024,
+                -1L,
+                -1L,
+                NoOpFormatTransformerProvider.NAME,
+                KeyValueRawhide.NAME,
+                MemoryRawEntryFormat.NAME));
             commitables.add(bitmapIndex[i]);
-            termIndex[i] = labEnvironments[i].open("term", 4096, maxHeapPressureInBytes, 10 * 1024 * 1024, -1L, -1L, FormatTransformerProvider.NO_OP,
-                new KeyValueRawhide(), RawEntryFormat.MEMORY);
+            termIndex[i] = labEnvironments[i].open(new ValueIndexConfig("term",
+                4096,
+                maxHeapPressureInBytes,
+                10 * 1024 * 1024,
+                -1L,
+                -1L,
+                NoOpFormatTransformerProvider.NAME,
+                KeyValueRawhide.NAME,
+                MemoryRawEntryFormat.NAME));
             commitables.add(termIndex[i]);
-            cardinalityIndex[i] = labEnvironments[i].open("cardinality", 4096, maxHeapPressureInBytes, 10 * 1024 * 1024, -1L, -1L,
-                FormatTransformerProvider.NO_OP, new KeyValueRawhide(), RawEntryFormat.MEMORY);
+            cardinalityIndex[i] = labEnvironments[i].open(new ValueIndexConfig("cardinality",
+                4096,
+                maxHeapPressureInBytes,
+                10 * 1024 * 1024,
+                -1L,
+                -1L,
+                NoOpFormatTransformerProvider.NAME,
+                KeyValueRawhide.NAME,
+                MemoryRawEntryFormat.NAME));
             commitables.add(cardinalityIndex[i]);
         }
 
@@ -513,6 +590,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                 bitmaps,
                 trackError,
                 prefix,
+                atomized,
                 bitmapIndex,
                 termIndex,
                 cardinalityIndex,
@@ -532,6 +610,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             idProvider,
             bitmaps,
             trackError,
+            atomized,
             metaIndex,
             keyBytes("removal"),
             new Object());
@@ -541,6 +620,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             bitmaps,
             trackError,
             new byte[] { (byte) -1 },
+            atomized,
             bitmapIndex,
             streamStripingLocksProvider);
 
@@ -549,6 +629,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             bitmaps,
             trackError,
             new byte[] { (byte) -2 },
+            atomized,
             bitmapIndex,
             streamStripingLocksProvider);
 
@@ -565,6 +646,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             bitmaps,
             trackError,
             new byte[] { (byte) -3 },
+            atomized,
             bitmapIndex,
             miruAuthzCache,
             authzStripingLocksProvider);
@@ -641,8 +723,8 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         MiruBackingStorage toStorage,
         StackBuffer stackBuffer) throws Exception {
 
-        File[] fromLabDirs = getAllocator(from.storage).getLabDirs(coord);
-        File[] toLabDirs = getAllocator(toStorage).getLabDirs(coord);
+        File[] fromLabDirs = getAllocator(from.storage).getLabDirs(coord, LAB_VERSION);
+        File[] toLabDirs = getAllocator(toStorage).getLabDirs(coord, LAB_VERSION);
 
         if (fromLabDirs.length != toLabDirs.length) {
             throw new IllegalArgumentException("The number of from env:" + fromLabDirs.length
@@ -655,8 +737,8 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                 Files.move(fromLabDirs[i].toPath(), toLabDirs[i].toPath(), StandardCopyOption.ATOMIC_MOVE);
             }
         }
-        LABEnvironment[] environments = getAllocator(toStorage).allocateLABEnvironments(coord);
-        return allocateLabIndex(bitmaps, coord, schema, environments, toStorage, null);
+        LABEnvironment[] environments = getAllocator(toStorage).allocateLABEnvironments(coord, LAB_VERSION);
+        return allocateLabIndex(LAB_VERSION, bitmaps, coord, schema, environments, toStorage, null);
     }
 
     public <BM extends IBM, IBM> MiruContext<BM, IBM, S> copyChunkStore(MiruBitmaps<BM, IBM> bitmaps,
@@ -730,7 +812,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             }
         }
 
-        return getAllocator(MiruBackingStorage.disk).checkExists(coord);
+        return getAllocator(MiruBackingStorage.disk).checkExists(coord, LAB_VERSION, SUPPORTED_LAB_VERSIONS);
     }
 
     public void markObsolete(MiruPartitionCoord coord) throws Exception {
