@@ -39,6 +39,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.service.index.TimeIdIndex;
 import com.jivesoftware.os.miru.service.index.lab.LabTimeIdIndexInitializer;
 import com.jivesoftware.os.miru.service.locator.MiruResourceLocator;
+import com.jivesoftware.os.miru.service.partition.FreeMergeChits;
 import com.jivesoftware.os.miru.service.partition.LargestFirstMergeChits;
 import com.jivesoftware.os.miru.service.partition.MiruClusterPartitionDirector;
 import com.jivesoftware.os.miru.service.partition.MiruExpectedTenants;
@@ -240,10 +241,7 @@ public class MiruServiceInitializer {
         };
 
         MiruMergeChits persistentMergeChits = new LargestFirstMergeChits("persistent", new AtomicLong(config.getPersistentMergeChitCount()));
-        /*MiruMergeChits persistentMergeChits = new OrderedMergeChits("persistent", new AtomicLong(config.getPersistentMergeChitCount()),
-            config.getPersistentMergeChitCount(), config.getMergeMaxOverage());*/
-        MiruMergeChits transientMergeChits = new OrderedMergeChits("transient", new AtomicLong(config.getTransientMergeChitCount()),
-            config.getTransientMergeChitCount(), config.getMergeMaxOverage());
+        MiruMergeChits transientMergeChits = new FreeMergeChits("transient");
         MiruLocalPartitionFactory<C, S> localPartitionFactory = new MiruLocalPartitionFactory<>(miruStats,
             config,
             contextFactory,

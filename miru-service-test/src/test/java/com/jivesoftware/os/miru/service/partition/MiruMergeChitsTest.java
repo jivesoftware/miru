@@ -17,7 +17,7 @@ import org.testng.annotations.Test;
 public class MiruMergeChitsTest {
 
     @Test(enabled = false, description = "Tests convergence behavior")
-    public void testMerge() throws Exception {
+    public void testOrderedMergeChits() throws Exception {
 
         final AtomicLong numberOfChitsRemaining = new AtomicLong(500_000);
         final MiruMergeChits mergeChits = new OrderedMergeChits("test", numberOfChitsRemaining, 500_000, -1);

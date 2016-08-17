@@ -109,8 +109,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import org.merlin.config.BindInterfaceToConfiguration;
 import org.roaringbitmap.RoaringBitmap;
-import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
-import org.roaringbitmap.buffer.MutableRoaringBitmap;
 import org.testng.Assert;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -655,8 +653,8 @@ public class MiruLocalHostedPartitionTest {
     private MiruLocalHostedPartition<RoaringBitmap, RoaringBitmap, RCVSCursor, RCVSSipCursor> getRoaringLocalHostedPartition()
         throws Exception {
         AtomicLong numberOfChitsRemaining = new AtomicLong(100_000);
-        MiruMergeChits persistentMergeChits = new OrderedMergeChits("persistent", numberOfChitsRemaining, 100_000, 10_000);
-        MiruMergeChits transientMergeChits = new OrderedMergeChits("transient", numberOfChitsRemaining, 100_000, 10_000);
+        MiruMergeChits persistentMergeChits = new LargestFirstMergeChits("persistent", numberOfChitsRemaining);
+        MiruMergeChits transientMergeChits = new FreeMergeChits("transient");
 
         return new MiruLocalHostedPartition<>(new MiruStats(),
             bitmaps,
