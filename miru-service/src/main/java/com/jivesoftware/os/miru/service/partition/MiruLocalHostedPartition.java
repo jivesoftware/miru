@@ -95,7 +95,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
 
     private final AtomicReference<MiruPartitionAccessor<BM, IBM, C, S>> accessorRef = new AtomicReference<>();
     private final Object factoryLock = new Object();
-    private final AtomicBoolean firstRebuild = new AtomicBoolean(true);
+    //private final AtomicBoolean firstRebuild = new AtomicBoolean(true);
     private final AtomicBoolean sipEndOfWAL = new AtomicBoolean(false);
     private final AtomicBoolean firstSip = new AtomicBoolean(true);
     private final CheckPersistent checkPersistent;
@@ -331,7 +331,9 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                     "Be patient. Rebalance. Increase number of concurrent rebuilds.");
             }
 
-            LOG.info("Partition is now {}/{} for {}", update.state, updateStorage, coord);
+            long transientVersion = update.transientContext.isPresent() ? update.transientContext.get().version : -1;
+            long persistentVersion = update.persistentContext.isPresent() ? update.persistentContext.get().version : -1;
+            LOG.info("Partition is now {}/{} for {} transient={} persistent={}", update.state, updateStorage, coord, transientVersion, persistentVersion);
             return update;
         }
     }
@@ -887,7 +889,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
 
                     LOG.debug("Indexing batch of size {} (total {}) for {}", count, totalIndexed, coord);
                     LOG.startTimer("rebuild>batchSize-" + partitionRebuildBatchSize);
-                    boolean repair = firstRebuild.compareAndSet(true, false);
+                    boolean repair = false; //firstRebuild.compareAndSet(true, false);
                     if (accessor.transientContext.isPresent()) {
                         accessor.indexInternal(accessor.transientContext.get(),
                             partitionedActivities.iterator(),
