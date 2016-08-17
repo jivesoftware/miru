@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.stream.plugins.strut;
 
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.jivesoftware.os.filer.chunk.store.ChunkStoreInitializer;
 import com.jivesoftware.os.filer.chunk.store.transaction.KeyToFPCacheFactory;
 import com.jivesoftware.os.filer.chunk.store.transaction.MapCreator;
@@ -93,7 +94,7 @@ public class StrutModelScorerNGTest {
     public void testLab() throws Exception {
 
         File root = Files.createTempDir();
-        LabHeapPressure labHeapPressure = new LabHeapPressure(1024 * 1024 * 10, new AtomicLong());
+        LabHeapPressure labHeapPressure = new LabHeapPressure(MoreExecutors.sameThreadExecutor(), 1024 * 1024 * 10, 1024 * 1024 * 20, new AtomicLong());
         LRUConcurrentBAHLinkedHash<Leaps> leapCache = LABEnvironment.buildLeapsCache(1_000_000, 8);
 
         LABEnvironment env = new LABEnvironment(LABEnvironment.buildLABSchedulerThreadPool(4),

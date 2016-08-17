@@ -140,8 +140,26 @@ public class MiruServiceInitializer {
         StripingLocksProvider<MiruStreamId> streamStripingLocksProvider = new StripingLocksProvider<>(config.getStreamNumberOfLocks());
         StripingLocksProvider<String> authzStripingLocksProvider = new StripingLocksProvider<>(config.getAuthzNumberOfLocks());
 
-        LabHeapPressure inMemoryLabHeapPressure = new LabHeapPressure(config.getRebuildLabMaxHeapPressureInBytes(), new AtomicLong());
-        LabHeapPressure onDiskLabHeapPressure = new LabHeapPressure(config.getGlobalLabMaxHeapPressureInBytes(), new AtomicLong());
+        ExecutorService inMemoryLabHeapScheduler = LABEnvironment.buildLABHeapSchedulerThreadPool(config.getRebuildLabHeapPressureStripes());
+        AtomicLong inMemoryLabHeapCostInBytes = new AtomicLong();
+        LabHeapPressure[] inMemoryLabHeapPressures = new LabHeapPressure[config.getRebuildLabHeapPressureStripes()];
+        for (int i = 0; i < inMemoryLabHeapPressures.length; i++) {
+            inMemoryLabHeapPressures[i] = new LabHeapPressure(inMemoryLabHeapScheduler,
+                config.getRebuildLabMaxHeapPressureInBytes(),
+                config.getRebuildLabBlockOnHeapPressureInBytes(),
+                inMemoryLabHeapCostInBytes);
+        }
+
+        ExecutorService onDiskLabHeapScheduler = LABEnvironment.buildLABHeapSchedulerThreadPool(config.getGlobalLabHeapPressureStripes());
+        AtomicLong onDiskLabHeapCostInBytes = new AtomicLong();
+        LabHeapPressure[] onDiskLabHeapPressures = new LabHeapPressure[config.getGlobalLabHeapPressureStripes()];
+        for (int i = 0; i < onDiskLabHeapPressures.length; i++) {
+            onDiskLabHeapPressures[i] = new LabHeapPressure(onDiskLabHeapScheduler,
+                config.getGlobalLabMaxHeapPressureInBytes(),
+                config.getGlobalLabBlockOnHeapPressureInBytes(),
+                onDiskLabHeapCostInBytes);
+        }
+
         LRUConcurrentBAHLinkedHash<Leaps> leapCache = LABEnvironment.buildLeapsCache((int) config.getLabLeapCacheMaxCapacity(),
             config.getLabLeapCacheConcurrency());
 
@@ -153,7 +171,7 @@ public class MiruServiceInitializer {
             config.getPartitionDeleteChunkStoreOnClose(),
             config.getPartitionInitialChunkCacheSize(),
             config.getPartitionMaxChunkCacheSize(),
-            inMemoryLabHeapPressure,
+            inMemoryLabHeapPressures,
             config.getLabMaxWALSizeInBytes(),
             config.getLabMaxEntriesPerWAL(),
             config.getLabMaxEntrySizeInBytes(),
@@ -165,7 +183,7 @@ public class MiruServiceInitializer {
             config.getPartitionNumberOfChunkStores(),
             config.getPartitionInitialChunkCacheSize(),
             config.getPartitionMaxChunkCacheSize(),
-            onDiskLabHeapPressure,
+            onDiskLabHeapPressures,
             config.getLabMaxWALSizeInBytes(),
             config.getLabMaxEntriesPerWAL(),
             config.getLabMaxEntrySizeInBytes(),

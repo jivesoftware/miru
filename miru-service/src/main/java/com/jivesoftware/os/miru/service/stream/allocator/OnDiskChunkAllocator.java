@@ -35,7 +35,7 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
     private final int numberOfChunkStores;
     private final int partitionInitialChunkCacheSize;
     private final int partitionMaxChunkCacheSize;
-    private final LabHeapPressure labHeapPressure;
+    private final LabHeapPressure[] labHeapPressures;
     private final long labMaxWALSizeInBytes;
     private final long labMaxEntriesPerWAL;
     private final long labMaxEntrySizeInBytes;
@@ -52,7 +52,7 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
         int numberOfChunkStores,
         int partitionInitialChunkCacheSize,
         int partitionMaxChunkCacheSize,
-        LabHeapPressure labHeapPressure,
+        LabHeapPressure[] labHeapPressures,
         long labMaxWALSizeInBytes,
         long labMaxEntriesPerWAL,
         long labMaxEntrySizeInBytes,
@@ -62,7 +62,7 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
         this.numberOfChunkStores = numberOfChunkStores;
         this.partitionInitialChunkCacheSize = partitionInitialChunkCacheSize;
         this.partitionMaxChunkCacheSize = partitionMaxChunkCacheSize;
-        this.labHeapPressure = labHeapPressure;
+        this.labHeapPressures = labHeapPressures;
         this.labMaxWALSizeInBytes = labMaxWALSizeInBytes;
         this.labMaxEntriesPerWAL = labMaxEntriesPerWAL;
         this.labMaxEntrySizeInBytes = labMaxEntrySizeInBytes;
@@ -201,7 +201,7 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
                 labMaxEntriesPerWAL,
                 labMaxEntrySizeInBytes,
                 labDirs[i],
-                labHeapPressure,
+                labHeapPressures[i % labHeapPressures.length],
                 4,
                 16,
                 leapCache);
