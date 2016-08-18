@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
     <artifactId>global-repo-management</artifactId>
-    <version>0.1285</version>
+    <version>0.1286</version>
     <packaging>pom</packaging>
 
     <inceptionYear>2013</inceptionYear>
@@ -19,15 +19,29 @@
         <connection>scm:git:git://github.com/jivesoftware/miru.git</connection>
         <developerConnection>scm:git:git@github.com:jivesoftware/miru.git</developerConnection>
     </scm>
-    <distributionManagement>
-        <repository>
-            <id>modified-thirdparty</id>
-            <name>Jive Internal Repository</name>
-            <url>http://nexus-int.eng.jiveland.com/content/repositories/modified-thirdparty</url>
-        </repository>
-        <snapshotRepository>
-            <id>snapshots</id>
-            <url>http://nexus-int-qa.eng.jiveland.com/content/repositories/snapshots</url>
-        </snapshotRepository>
-    </distributionManagement>
+    <profiles>
+        <profile>
+            <id>default</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <distributionManagement>
+                <repository>
+                    <id>modified-thirdparty</id>
+                    <name>Jive Internal Repository</name>
+                    <url>http://nexus-int.eng.jiveland.com/content/repositories/modified-thirdparty</url>
+                </repository>
+            </distributionManagement>
+        </profile>
+        <profile>
+            <id>upena</id>
+            <distributionManagement>
+                <repository>
+                    <id>upena-repo</id>
+                    <name>Upena Repository</name>
+                    <url>http://localhost:1175/repo</url>
+                </repository>
+            </distributionManagement>
+        </profile>
+    </profiles>
 </project>
