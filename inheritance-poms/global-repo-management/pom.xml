@@ -19,15 +19,29 @@
         <connection>scm:git:git://github.com/jivesoftware/miru.git</connection>
         <developerConnection>scm:git:git@github.com:jivesoftware/miru.git</developerConnection>
     </scm>
-    <distributionManagement>
-        <repository>
-            <id>modified-thirdparty</id>
-            <name>Jive Internal Repository</name>
-            <url>http://nexus-int.eng.jiveland.com/content/repositories/modified-thirdparty</url>
-        </repository>
-        <snapshotRepository>
-            <id>snapshots</id>
-            <url>http://nexus-int-qa.eng.jiveland.com/content/repositories/snapshots</url>
-        </snapshotRepository>
-    </distributionManagement>
+    <profiles>
+        <profile>
+            <id>default</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <distributionManagement>
+                <repository>
+                    <id>modified-thirdparty</id>
+                    <name>Jive Internal Repository</name>
+                    <url>http://nexus-int.eng.jiveland.com/content/repositories/modified-thirdparty</url>
+                </repository>
+            </distributionManagement>
+        </profile>
+        <profile>
+            <id>upena</id>
+            <distributionManagement>
+                <repository>
+                    <id>upena-repo</id>
+                    <name>Upena Repository</name>
+                    <url>http://localhost:1175/repo</url>
+                </repository>
+            </distributionManagement>
+        </profile>
+    </profiles>
 </project>
