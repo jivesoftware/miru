@@ -9,6 +9,8 @@ import com.google.common.collect.Multiset.Entry;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Bytes;
 import com.jivesoftware.os.filer.io.ByteArrayFiler;
+import com.jivesoftware.os.filer.io.ByteBufferBackedFiler;
+import com.jivesoftware.os.filer.io.Filer;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.api.KeyRange;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
@@ -40,6 +42,7 @@ import com.jivesoftware.os.rcvs.marshall.api.UtilLexMarshaller;
 import gnu.trove.iterator.TObjectIntIterator;
 import gnu.trove.map.hash.TObjectIntHashMap;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -139,7 +142,7 @@ public class MiruAggregateUtil {
                     boolean[] discardFeatures = { false };
                     int[] lastScoredId = { -1 };
                     termFeatureCache.rangeScan(cacheId, null, null, (key, value, timestamp) -> {
-                        Feature feature = Feature.unpack(key, stackBuffer);
+                        Feature feature = Feature.unpack(new ByteBufferBackedFiler(key), stackBuffer);
                         int featureId = feature.featureId;
                         if (featureId == -1) {
                             if (lastScoredId[0] != -1) {
@@ -164,7 +167,7 @@ public class MiruAggregateUtil {
                     }
 
                     termFeatureCache.rangeScan(cacheId, null, null, (key, value, timestamp) -> {
-                        Feature feature = Feature.unpack(key, stackBuffer);
+                        Feature feature = Feature.unpack(new ByteBufferBackedFiler(key), stackBuffer);
                         int featureId = feature.featureId;
                         if (featureId == -1) {
                             if (lastScoredId[0] != (int) timestamp) {
@@ -183,7 +186,7 @@ public class MiruAggregateUtil {
                             return false;
                         }
 
-                        int count = FilerIO.bytesInt(value);
+                        int count = value.getInt();
                         MiruTermId[] termIds = feature.termIds;
                         Feature f = new Feature(featureId, termIds);
                         int gatheredCount = features[featureId].count(f);
@@ -666,17 +669,16 @@ public class MiruAggregateUtil {
             return byteArrayFiler.getBytes();
         }
 
-        public static Feature unpack(byte[] bytes, StackBuffer stackBuffer) throws IOException {
-            ByteArrayFiler byteArrayFiler = new ByteArrayFiler(bytes);
+        public static Feature unpack(Filer filer, StackBuffer stackBuffer) throws IOException {
             byte[] lexFeatureId = new byte[4];
-            FilerIO.read(byteArrayFiler, lexFeatureId);
+            FilerIO.read(filer, lexFeatureId);
             int featureId = UtilLexMarshaller.intFromLex(lexFeatureId);
-            int featureTermIdCount = FilerIO.readInt(byteArrayFiler, "featureTermIdCount", stackBuffer);
+            int featureTermIdCount = FilerIO.readInt(filer, "featureTermIdCount", stackBuffer);
             MiruTermId[] featureTermIds = null;
             if (featureTermIdCount != -1) {
                 featureTermIds = new MiruTermId[featureTermIdCount];
                 for (int i = 0; i < featureTermIdCount; i++) {
-                    featureTermIds[i] = new MiruTermId(FilerIO.readByteArray(byteArrayFiler, "featureTermId", stackBuffer));
+                    featureTermIds[i] = new MiruTermId(FilerIO.readByteArray(filer, "featureTermId", stackBuffer));
                 }
             }
             return new Feature(featureId, featureTermIds);

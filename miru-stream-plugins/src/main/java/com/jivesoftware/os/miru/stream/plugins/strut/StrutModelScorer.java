@@ -138,16 +138,16 @@ public class StrutModelScorer {
             LastIdCacheKeyValues termScoreCache = termScoreCaches[c];
             float termScoreCacheScalar = termScoreCacheScalars[c];
             sumOfScalars += termScoreCacheScalar;
-            termScoreCache.get(modelId[c].getBytes(StandardCharsets.UTF_8), keys, (index, key, value, lastId) -> {
-                if (value != null && value.length == (4 * numeratorsCount)) {
+            termScoreCache.get(modelId[c].getBytes(StandardCharsets.UTF_8), keys, (index, value, lastId) -> {
+                if (value != null && value.capacity() == (4 * numeratorsCount)) {
                     int offset = 0;
                     for (int n = 0; n < numeratorsCount; n++) {
-                        scores[index][n] += (FilerIO.bytesFloat(value, offset) * termScoreCacheScalar);
+                        scores[index][n] += (value.getFloat(offset) * termScoreCacheScalar);
                         offset += 4;
                     }
                 } else {
                     if (value != null) {
-                        LOG.warn("Ignored strut model score for cache:{} model:{} with invalid length {}", termScoreCache.name(), modelId, value.length);
+                        LOG.warn("Ignored strut model score for cache:{} model:{} with invalid length {}", termScoreCache.name(), modelId, value.capacity());
                     }
                     Arrays.fill(scores[index], Float.NaN);
                     lastId = -1;
@@ -222,7 +222,7 @@ public class StrutModelScorer {
             LastIdCacheKeyValues termScoreCache = getTermScoreCache(context, share.catwalkQuery.catwalkId);
             commit(share.modelId, termScoreCache, share.updates, new StackBuffer());
         } catch (Exception e) {
-            LOG.warn("Failed to commit shared strut updates for {}", new Object[]{coord}, e);
+            LOG.warn("Failed to commit shared strut updates for {}", new Object[] { coord }, e);
         }
     }
 
@@ -239,7 +239,7 @@ public class StrutModelScorer {
 
             StrutQueueKey key = new StrutQueueKey(coord, modelScalar.catwalkId, modelScalar.modelId, pivotFieldId);
             int stripe = Math.abs(key.hashCode() % queues.length);
-            int[] count = {0};
+            int[] count = { 0 };
             synchronized (queues[stripe]) {
                 queues[stripe].compute(key, (key1, existing) -> {
                     if (existing == null) {
@@ -300,7 +300,7 @@ public class StrutModelScorer {
                             LOG.inc("strut>scorer>failed", count);
                             if (LOG.isDebugEnabled()) {
                                 LOG.debug("Failed to consume catwalkId:{} modelId:{} pivotFieldId:{} termCount:{}",
-                                    new Object[]{key.catwalkId, key.modelId, key.pivotFieldId, count}, e);
+                                    new Object[] { key.catwalkId, key.modelId, key.pivotFieldId, count }, e);
                             } else {
                                 LOG.warn("Failed to consume catwalkId:{} modelId:{} pivotFieldId:{} termCount:{} message:{}",
                                     key.catwalkId, key.modelId, key.pivotFieldId, count, e.getMessage());

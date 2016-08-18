@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.plugin.cache;
 
 import com.jivesoftware.os.filer.io.api.StackBuffer;
+import java.nio.ByteBuffer;
 
 /**
  * @author jonathan.colt
@@ -26,11 +27,11 @@ public interface MiruPluginCacheProvider {
     }
 
     interface IndexKeyValueStream {
-        boolean stream(int index, byte[] key, byte[] value) throws Exception;
+        boolean stream(int index, ByteBuffer value) throws Exception;
     }
 
     interface KeyValueStream {
-        boolean stream(byte[] key, byte[] value) throws Exception;
+        boolean stream(ByteBuffer key, ByteBuffer value) throws Exception;
     }
 
     LastIdCacheKeyValues getLastIdKeyValues(String name, int payloadSize, boolean variablePayloadSize, long maxHeapPressureInBytes);
@@ -51,15 +52,19 @@ public interface MiruPluginCacheProvider {
     }
 
     interface LastIdIndexKeyValueStream {
-        boolean stream(int index, byte[] key, byte[] value, int lastId) throws Exception;
+        boolean stream(int index, ByteBuffer value, int lastId) throws Exception;
     }
 
     interface LastIdKeyValueStream {
+        boolean stream(ByteBuffer key, ByteBuffer value, int lastId) throws Exception;
+    }
+
+    interface AppendLastIdKeyValueStream {
         boolean stream(byte[] key, byte[] value, int lastId) throws Exception;
     }
 
     interface ConsumeLastIdKeyValueStream {
-        boolean consume(LastIdKeyValueStream stream) throws Exception;
+        boolean consume(AppendLastIdKeyValueStream stream) throws Exception;
     }
 
     TimestampedCacheKeyValues getTimestampedKeyValues(String name, int payloadSize, boolean variablePayloadSize, long maxHeapPressureInBytes);
@@ -82,14 +87,18 @@ public interface MiruPluginCacheProvider {
     }
 
     interface TimestampedIndexKeyValueStream {
-        boolean stream(int index, byte[] key, byte[] value, long timestamp) throws Exception;
+        boolean stream(int index, ByteBuffer value, long timestamp) throws Exception;
     }
 
     interface TimestampedKeyValueStream {
+        boolean stream(ByteBuffer key, ByteBuffer value, long timestamp) throws Exception;
+    }
+
+    interface AppendTimestampedKeyValueStream {
         boolean stream(byte[] key, byte[] value, long timestamp) throws Exception;
     }
 
     interface ConsumeTimestampedKeyValueStream {
-        boolean consume(TimestampedKeyValueStream stream) throws Exception;
+        boolean consume(AppendTimestampedKeyValueStream stream) throws Exception;
     }
 }

@@ -13,6 +13,7 @@ import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.KeyValueStr
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
 /**
  *
@@ -63,7 +64,7 @@ public class MiruFilerCacheKeyValues implements CacheKeyValues {
                                 for (int i = 0; i < keyBytes.length; i++) {
                                     if (keyBytes[i] != null) {
                                         byte[] payload = MapStore.INSTANCE.getPayload(filer, monkey, keyBytes[i], _stackBuffer);
-                                        if (!stream.stream(i, keyBytes[i], payload)) {
+                                        if (!stream.stream(i, ByteBuffer.wrap(payload))) {
                                             return null;
                                         }
                                     }
@@ -72,7 +73,7 @@ public class MiruFilerCacheKeyValues implements CacheKeyValues {
                         } else {
                             for (int i = 0; i < keyBytes.length; i++) {
                                 if (keyBytes[i] != null) {
-                                    if (!stream.stream(i, keyBytes[i], null)) {
+                                    if (!stream.stream(i, null)) {
                                         return null;
                                     }
                                 }
