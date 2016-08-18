@@ -10,6 +10,7 @@ import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.LastIdCache
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.LastIdIndexKeyValueStream;
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.LastIdKeyValueStream;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 /**
@@ -57,7 +58,10 @@ public class LabLastIdCacheKeyValues implements LastIdCacheKeyValues {
                 return true;
             },
             (index, key, timestamp, tombstoned, version, payload) -> {
-                return stream.stream(index, keys[index], tombstoned ? null : payload, (int) timestamp);
+                if (payload != null) {
+                    payload.clear();
+                }
+                return stream.stream(index, tombstoned ? null : payload, (int) timestamp);
             }, true);
         return true;
     }
@@ -81,9 +85,13 @@ public class LabLastIdCacheKeyValues implements LastIdCacheKeyValues {
             if (tombstoned) {
                 return true; //TODO reconsider
             } else {
-                byte[] keyBytes = new byte[key.length - cacheId.length - 1];
-                System.arraycopy(key, cacheId.length + 1, keyBytes, 0, keyBytes.length);
-                return stream.stream(keyBytes, payload, (int) timestamp);
+                key.clear();
+                key.position(1 + cacheId.length);
+                ByteBuffer cacheKey = key.slice();
+                if (payload != null) {
+                    payload.clear();
+                }
+                return stream.stream(cacheKey, payload, (int) timestamp);
             }
         }, true);
     }

@@ -9,6 +9,7 @@ import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.CacheKeyVal
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.IndexKeyValueStream;
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.KeyValueStream;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 /**
@@ -34,7 +35,7 @@ public class LabCacheKeyValues implements CacheKeyValues {
     @Override
     public boolean get(byte[] cacheId, byte[][] keys, IndexKeyValueStream stream, StackBuffer stackBuffer) throws Exception {
         int stripe = stripe(cacheId);
-        byte[] prefixBytes = {(byte) cacheId.length};
+        byte[] prefixBytes = { (byte) cacheId.length };
 
         byte[][] keyBytes = new byte[keys.length][];
         for (int i = 0; i < keys.length; i++) {
@@ -56,7 +57,10 @@ public class LabCacheKeyValues implements CacheKeyValues {
                 return true;
             },
             (index, key, timestamp, tombstoned, version, payload) -> {
-                return stream.stream(index, keys[index], tombstoned ? null : payload);
+                if (payload != null) {
+                    payload.clear();
+                }
+                return stream.stream(index, tombstoned ? null : payload);
             },
             true
         );
@@ -68,7 +72,7 @@ public class LabCacheKeyValues implements CacheKeyValues {
         Preconditions.checkArgument(cacheId.length <= Byte.MAX_VALUE, "Max cacheId length is " + Byte.MAX_VALUE);
 
         int stripe = stripe(cacheId);
-        byte[] prefixBytes = {(byte) cacheId.length};
+        byte[] prefixBytes = { (byte) cacheId.length };
         byte[] fromKeyBytes = fromInclusive == null ? Bytes.concat(prefixBytes, cacheId) : Bytes.concat(prefixBytes, cacheId, fromInclusive);
         byte[] toKeyBytes;
         if (toExclusive == null) {
@@ -84,9 +88,13 @@ public class LabCacheKeyValues implements CacheKeyValues {
                 if (tombstoned) {
                     return true; //TODO reconsider
                 } else {
-                    byte[] keyBytes = new byte[key.length - cacheId.length - 1];
-                    System.arraycopy(key, cacheId.length + 1, keyBytes, 0, keyBytes.length);
-                    return stream.stream(keyBytes, payload);
+                    key.clear();
+                    key.position(1 + cacheId.length);
+                    ByteBuffer cacheKey = key.slice();
+                    if (payload != null) {
+                        payload.clear();
+                    }
+                    return stream.stream(cacheKey, payload);
                 }
             },
             true
@@ -102,7 +110,7 @@ public class LabCacheKeyValues implements CacheKeyValues {
         StackBuffer stackBuffer) throws Exception {
 
         int stripe = stripe(cacheId);
-        byte[] prefixBytes = {(byte) cacheId.length};
+        byte[] prefixBytes = { (byte) cacheId.length };
 
         byte[][] keyBytes = new byte[keys.length][];
         for (int i = 0; i < keys.length; i++) {

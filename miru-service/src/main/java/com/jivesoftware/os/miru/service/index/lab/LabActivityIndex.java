@@ -5,6 +5,7 @@ import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.lab.api.ValueIndex;
+import com.jivesoftware.os.lab.guts.IndexUtil;
 import com.jivesoftware.os.lab.io.api.UIO;
 import com.jivesoftware.os.miru.api.activity.TimeAndVersion;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
@@ -63,8 +64,9 @@ public class LabActivityIndex implements MiruActivityIndex {
         long[] values = {-1L, -1L};
         timeAndVersionIndex.get((streamKeys) -> streamKeys.key(0, UIO.intBytes(index), 0, 4), (index1, key, timestamp, tombstoned, version, payload) -> {
             if (payload != null && !tombstoned) {
-                values[0] = UIO.bytesLong(payload, 0);
-                values[1] = UIO.bytesLong(payload, 8);
+                payload.clear();
+                values[0] = payload.getLong(0);
+                values[1] = payload.getLong(8);
             }
             return false;
         }, true);
@@ -89,9 +91,10 @@ public class LabActivityIndex implements MiruActivityIndex {
             return true;
         }, (index1, key, timestamp, tombstoned, version, payload) -> {
             if (payload != null && !tombstoned) {
+                payload.clear();
                 tav[index1] = new TimeAndVersion(
-                    UIO.bytesLong(payload, 0),
-                    UIO.bytesLong(payload, 8));
+                    payload.getLong(0),
+                    payload.getLong(8));
             }
             return true;
         }, true);
@@ -106,8 +109,10 @@ public class LabActivityIndex implements MiruActivityIndex {
     public boolean streamTimeAndVersion(StackBuffer stackBuffer, TimeAndVersionStream stream) throws Exception {
         return timeAndVersionIndex.rowScan((index1, key, timestamp, tombstoned, version, payload) -> {
             if (payload != null && !tombstoned) {
-                int id = UIO.bytesInt(key);
-                if (!stream.stream(id, UIO.bytesLong(payload, 0), UIO.bytesLong(payload, 8))) {
+                key.clear();
+                int id = key.getInt(0);
+                payload.clear();
+                if (!stream.stream(id, payload.getLong(0), payload.getLong(8))) {
                     return false;
                 }
             }
@@ -126,7 +131,9 @@ public class LabActivityIndex implements MiruActivityIndex {
         getTermIndex(fieldId).get((streamKeys) -> streamKeys.key(0, concatKey, 0, concatKey.length),
             (index1, key, timestamp, tombstoned, version, payload) -> {
                 if (payload != null && !tombstoned) {
-                    termIds[0] = intTermIdsKeyValueMarshaller.bytesValue(null, payload, 0);
+                    payload.clear();
+                    byte[] bytes = IndexUtil.toByteArray(payload);
+                    termIds[0] = intTermIdsKeyValueMarshaller.bytesValue(null, bytes, 0);
                 }
                 return false;
             }, true);
@@ -171,7 +178,9 @@ public class LabActivityIndex implements MiruActivityIndex {
             },
             (ki, key, timestamp, tombstoned, version, payload) -> {
                 if (payload != null && !tombstoned) {
-                    termIds[ki] = intTermIdsKeyValueMarshaller.bytesValue(null, payload, 0);
+                    payload.clear();
+                    byte[] bytes = IndexUtil.toByteArray(payload);
+                    termIds[ki] = intTermIdsKeyValueMarshaller.bytesValue(null, bytes, 0);
                 }
                 return true;
             }, true);
@@ -293,7 +302,8 @@ public class LabActivityIndex implements MiruActivityIndex {
                 metaIndex.get((streamKeys) -> streamKeys.key(0, metaKey, 0, metaKey.length),
                     (index, key, timestamp, tombstoned, version, payload) -> {
                         if (payload != null && !tombstoned) {
-                            size[0] = UIO.bytesInt(payload);
+                            payload.clear();
+                            size[0] = payload.getInt(0);
                         }
                         return false;
                     }, true);

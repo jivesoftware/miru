@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.plugin.context;
 
 import com.jivesoftware.os.lab.api.KeyValueRawhide;
 import com.jivesoftware.os.lab.io.api.UIO;
+import java.nio.ByteBuffer;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
@@ -25,16 +26,18 @@ public class LastIdKeyValueRawhideTest {
         UIO.intBytes((int) rawTimestamp, mergedPayload, mergedPayload.length - 4);
         byte[] rawEntry = keyValueRawhide.toRawEntry(rawKey, 0, false, 0L, mergedPayload);
 
-        Assert.assertEquals(lastIdKeyValueRawhide.timestamp(NO_OP, NO_OP, rawEntry, 0, rawEntry.length), rawTimestamp);
+        Assert.assertEquals(lastIdKeyValueRawhide.timestamp(NO_OP, NO_OP, ByteBuffer.wrap(rawEntry)), rawTimestamp);
 
         byte[] lastIdRawEntry = lastIdKeyValueRawhide.toRawEntry(rawKey, rawTimestamp, false, 0L, rawPayload);
         Assert.assertEquals(lastIdRawEntry, rawEntry);
-        Assert.assertEquals(lastIdKeyValueRawhide.timestamp(NO_OP, NO_OP, lastIdRawEntry, 0, lastIdRawEntry.length), rawTimestamp);
+        Assert.assertEquals(lastIdKeyValueRawhide.timestamp(NO_OP, NO_OP, ByteBuffer.wrap(lastIdRawEntry)), rawTimestamp);
 
-        lastIdKeyValueRawhide.streamRawEntry(0, NO_OP, NO_OP, rawEntry, 0, (index, key, timestamp, tombstoned, version, payload) -> {
-            Assert.assertEquals(key, rawKey);
+        lastIdKeyValueRawhide.streamRawEntry(0, NO_OP, NO_OP, ByteBuffer.wrap(rawEntry), (index, key, timestamp, tombstoned, version, payload) -> {
+            key.clear();
+            payload.clear();
+            Assert.assertEquals(key, ByteBuffer.wrap(rawKey));
             Assert.assertEquals(timestamp, rawTimestamp);
-            Assert.assertEquals(payload, rawPayload);
+            Assert.assertEquals(payload, ByteBuffer.wrap(rawPayload));
             return true;
         }, true);
     }

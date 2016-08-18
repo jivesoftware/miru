@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.service.index.lab;
 
 import com.google.common.base.Optional;
 import com.jivesoftware.os.filer.io.ByteArrayFiler;
+import com.jivesoftware.os.filer.io.ByteBufferBackedFiler;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.lab.api.ValueIndex;
@@ -42,12 +43,13 @@ public class LabSipIndex<S extends MiruSipCursor<S>> implements MiruSipIndex<S> 
         if (sip == null && !absent.get()) {
             valueIndex.get(
                 (keyStream) -> keyStream.key(0, key, 0, key.length),
-                (int index, byte[] key1, long timestamp, boolean tombstoned, long version, byte[] payload) -> {
+                (index, key1, timestamp, tombstoned, version, payload) -> {
                     if (payload != null && !tombstoned) {
                         try {
-                            sipReference.set(marshaller.fromFiler(new ByteArrayFiler(payload), stackBuffer));
+                            payload.clear();
+                            sipReference.set(marshaller.fromFiler(new ByteBufferBackedFiler(payload), stackBuffer));
                         } catch (Exception e) {
-                            LOG.warn("Failed to deserialize sip, length={}", payload.length);
+                            LOG.warn("Failed to deserialize sip, length={}", payload.capacity());
                             sipReference.set(null);
                             absent.set(true);
                         }
