@@ -78,7 +78,7 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
     @Override
     public Optional<BM> getIndex(StackBuffer stackBuffer) throws Exception {
         MutableLong bytes = new MutableLong();
-        Optional<BM> index = getIndexInternal(bytes).transform(input -> input.bitmap);
+        Optional<BM> index = getIndexInternal(null, bytes).transform(input -> input.bitmap);
         LOG.inc("count>getIndex>total");
         LOG.inc("count>getIndex>" + name + ">total");
         LOG.inc("count>getIndex>" + name + ">" + fieldId);
@@ -88,23 +88,49 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
         return index;
     }
 
-    private Optional<BitmapAndLastId<BM>> getIndexInternal(MutableLong bytes) throws Exception {
+    private Optional<BitmapAndLastId<BM>> getIndexInternal(int[] keys, MutableLong bytes) throws Exception {
 
         @SuppressWarnings("unchecked")
         BitmapAndLastId<BM> bitmapAndLastId;
         if (atomized) {
-            byte[] from = bitmapKeyBytes;
-            byte[] to = LABUtils.prefixUpperExclusive(bitmapKeyBytes);
             List<LabKeyBytes> labKeyBytes = Lists.newArrayList();
-            bitmapIndex.rangeScan(from, to,
-                (index, key, timestamp, tombstoned, version, payload) -> {
-                    if (payload != null) {
-                        labKeyBytes.add(new LabKeyBytes(deatomize(key), payload));
-                        bytes.add(payload.length);
-                    }
-                    return true;
-                },
-                true);
+            if (keys != null) {
+                bitmapIndex.get(
+                    keyStream -> {
+                        for (int key : keys) {
+                            byte[] keyBytes = atomize(bitmapKeyBytes, key);
+                            if (!keyStream.key(-1, keyBytes, 0, keyBytes.length)) {
+                                return false;
+                            }
+                        }
+                        return true;
+                    },
+                    (index, key, timestamp, tombstoned, version, payload) -> {
+                        if (payload != null) {
+                            labKeyBytes.add(new LabKeyBytes(deatomize(key), payload));
+                            bytes.add(payload.length);
+                        }
+                        return true;
+                    },
+                    true);
+                LOG.inc("atomized>getKeys>calls");
+                LOG.inc("atomized>getKeys>keys", keys.length);
+                LOG.inc("atomized>getKeys>atoms", labKeyBytes.size());
+            } else {
+                byte[] from = bitmapKeyBytes;
+                byte[] to = LABUtils.prefixUpperExclusive(bitmapKeyBytes);
+                bitmapIndex.rangeScan(from, to,
+                    (index, key, timestamp, tombstoned, version, payload) -> {
+                        if (payload != null) {
+                            labKeyBytes.add(new LabKeyBytes(deatomize(key), payload));
+                            bytes.add(payload.length);
+                        }
+                        return true;
+                    },
+                    true);
+                LOG.inc("atomized>getRange>calls");
+                LOG.inc("atomized>getRange>atoms", labKeyBytes.size());
+            }
             Collections.reverse(labKeyBytes);
             bitmapAndLastId = labKeyBytes.isEmpty() ? null : deser(bitmaps, trackError, atomized, labKeyBytes);
         } else {
@@ -239,9 +265,17 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
         return 0xFFFF - v;
     }
 
-    private BM getOrCreateIndex(StackBuffer stackBuffer) throws Exception {
-        Optional<BM> index = getIndex(stackBuffer);
-        return index.isPresent() ? index.get() : bitmaps.create();
+    private BM getOrCreateIndex(int[] keys) throws Exception {
+        MutableLong bytes = new MutableLong();
+        Optional<BitmapAndLastId<BM>> index = getIndexInternal(keys, bytes);
+        BM bitmap = index.isPresent() ? index.get().bitmap : bitmaps.create();
+        LOG.inc("count>getOrCreateIndex>total");
+        LOG.inc("count>getOrCreateIndex>" + name + ">total");
+        LOG.inc("count>getOrCreateIndex>" + name + ">" + fieldId);
+        LOG.inc("bytes>getOrCreateIndex>total", bytes.longValue());
+        LOG.inc("bytes>getOrCreateIndex>" + name + ">total", bytes.longValue());
+        LOG.inc("bytes>getOrCreateIndex>" + name + ">" + fieldId, bytes.longValue());
+        return bitmap;
     }
 
     private static <BM extends IBM, IBM> long serializedSizeInBytes(MiruBitmaps<BM, IBM> bitmaps, IBM index) {
@@ -314,20 +348,29 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
         LOG.inc("bytes>set>total", bytesWritten);
         LOG.inc("bytes>set>" + name + ">total", bytesWritten);
         LOG.inc("bytes>set>" + name + ">" + fieldId, bytesWritten);
+        if (atomized) {
+            LOG.inc("atomized>set>calls");
+            LOG.inc("atomized>set>atoms", keys == null ? 0 : keys.length);
+        }
+    }
+
+    private int[] keysFromIds(int... ids) {
+        TIntSet keySet = new TIntHashSet();
+        for (int id : ids) {
+            keySet.add(bitmaps.key(id));
+        }
+        int[] keys = keySet.toArray();
+        Arrays.sort(keys);
+        return keys;
     }
 
     @Override
     public void remove(StackBuffer stackBuffer, int... ids) throws Exception {
         synchronized (mutationLock) {
-            BM index = getOrCreateIndex(stackBuffer);
+            int[] keys = keysFromIds(ids);
+            BM index = getOrCreateIndex(keys);
             BM r = bitmaps.remove(index, ids);
 
-            TIntSet keySet = new TIntHashSet();
-            for (int id : ids) {
-                keySet.add(bitmaps.key(id));
-            }
-            int[] keys = keySet.toArray();
-            Arrays.sort(keys);
             setIndex(keys, r);
         }
     }
@@ -338,15 +381,10 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
             return;
         }
         synchronized (mutationLock) {
-            BM index = getOrCreateIndex(stackBuffer);
+            int[] keys = keysFromIds(ids);
+            BM index = getOrCreateIndex(keys);
             BM r = bitmaps.set(index, ids);
 
-            TIntSet keySet = new TIntHashSet();
-            for (int id : ids) {
-                keySet.add(bitmaps.key(id));
-            }
-            int[] keys = keySet.toArray();
-            Arrays.sort(keys);
             setIndex(keys, r);
         }
     }
@@ -417,32 +455,34 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
     @Override
     public void andNot(IBM mask, StackBuffer stackBuffer) throws Exception {
         synchronized (mutationLock) {
-            BM index = getOrCreateIndex(stackBuffer);
+            int[] keys = bitmaps.keys(mask);
+            BM index = getOrCreateIndex(keys);
             BM r = bitmaps.andNot(index, mask);
-            setIndex(bitmaps.keys(mask), r);
+            setIndex(keys, r);
         }
     }
 
     @Override
     public void or(IBM mask, StackBuffer stackBuffer) throws Exception {
         synchronized (mutationLock) {
-            BM index = getOrCreateIndex(stackBuffer);
+            int[] keys = bitmaps.keys(mask);
+            BM index = getOrCreateIndex(keys);
             BM r = bitmaps.or(Arrays.asList(index, mask));
-            setIndex(bitmaps.keys(mask), r);
+            setIndex(keys, r);
         }
     }
 
     @Override
     public void andNotToSourceSize(List<IBM> masks, StackBuffer stackBuffer) throws Exception {
         synchronized (mutationLock) {
-            BM index = getOrCreateIndex(stackBuffer);
-            BM andNot = bitmaps.andNotToSourceSize(index, masks);
             TIntSet keySet = new TIntHashSet();
             for (IBM mask : masks) {
                 keySet.addAll(bitmaps.keys(mask));
             }
             int[] keys = keySet.toArray();
             Arrays.sort(keys);
+            BM index = getOrCreateIndex(keys);
+            BM andNot = bitmaps.andNotToSourceSize(index, masks);
             setIndex(keys, andNot);
         }
     }
@@ -450,9 +490,10 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
     @Override
     public void orToSourceSize(IBM mask, StackBuffer stackBuffer) throws Exception {
         synchronized (mutationLock) {
-            BM index = getOrCreateIndex(stackBuffer);
+            int[] keys = bitmaps.keys(mask);
+            BM index = getOrCreateIndex(keys);
             BM or = bitmaps.orToSourceSize(index, mask);
-            setIndex(bitmaps.keys(mask), or);
+            setIndex(keys, or);
         }
     }
 
