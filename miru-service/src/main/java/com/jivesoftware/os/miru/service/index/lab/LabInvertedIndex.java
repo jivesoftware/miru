@@ -328,12 +328,20 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
         long timestamp = System.currentTimeMillis();
         long version = idProvider.nextId();
         if (termIndex != null) {
-            termIndex.append(stream -> {
-                if (!stream.stream(-1, termKeyBytes, timestamp, false, version, null)) {
-                    return false;
-                }
-                return true;
-            }, true);
+            boolean[] exists = { false };
+            termIndex.get(keyStream -> keyStream.key(-1, termKeyBytes, 0, termKeyBytes.length),
+                (index1, key, timestamp1, tombstoned, version1, payload) -> {
+                    exists[0] = timestamp1 > 0 && !tombstoned;
+                    return true;
+                }, false);
+            if (!exists[0]) {
+                termIndex.append(stream -> {
+                    if (!stream.stream(-1, termKeyBytes, timestamp, false, version, null)) {
+                        return false;
+                    }
+                    return true;
+                }, true);
+            }
         }
 
         bitmapIndex.append(stream -> {
