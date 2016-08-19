@@ -107,6 +107,7 @@ public class IndexTestUtil {
 
         final MiruResourceLocator diskResourceLocator = new MiruTempDirectoryResourceLocator();
         LabHeapPressure labHeapPressure = new LabHeapPressure(LABEnvironment.buildLABHeapSchedulerThreadPool(1),
+            "test",
             1024 * 1024 * 10,
             1024 * 1024 * 20,
             new AtomicLong());
@@ -123,7 +124,7 @@ public class IndexTestUtil {
             true,
             100,
             1_000,
-            new LabHeapPressure[] { labHeapPressure },
+            new LabHeapPressure[]{labHeapPressure},
             labMaxWALSizeInBytes,
             labMaxEntriesPerWAL,
             labMaxEntrySizeInBytes,
@@ -135,7 +136,7 @@ public class IndexTestUtil {
             numberOfChunkStores,
             100,
             1_000,
-            new LabHeapPressure[] { labHeapPressure },
+            new LabHeapPressure[]{labHeapPressure},
             labMaxWALSizeInBytes,
             labMaxEntriesPerWAL,
             labMaxEntrySizeInBytes,
@@ -153,9 +154,9 @@ public class IndexTestUtil {
             termComposer,
             activityInternExtern,
             ImmutableMap.<MiruBackingStorage, MiruChunkAllocator>builder()
-                .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
-                .put(MiruBackingStorage.disk, onDiskChunkAllocator)
-                .build(),
+            .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
+            .put(MiruBackingStorage.disk, onDiskChunkAllocator)
+            .build(),
             new RCVSSipIndexMarshaller(),
             new MiruTempDirectoryResourceLocator(),
             1024,
@@ -196,7 +197,9 @@ public class IndexTestUtil {
             -1,
             -1,
             root,
-            new LabHeapPressure(MoreExecutors.sameThreadExecutor(), 1024 * 1024, 2 * 1024 * 1024, new AtomicLong()),
+            new LabHeapPressure(MoreExecutors.sameThreadExecutor(),
+                name,
+                1024 * 1024, 2 * 1024 * 1024, new AtomicLong()),
             4,
             16,
             LABEnvironment.buildLeapsCache(1_000, 4));
