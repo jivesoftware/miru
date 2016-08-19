@@ -94,7 +94,7 @@ public class StrutModelScorerNGTest {
     public void testLab() throws Exception {
 
         File root = Files.createTempDir();
-        LabHeapPressure labHeapPressure = new LabHeapPressure(MoreExecutors.sameThreadExecutor(), 1024 * 1024 * 10, 1024 * 1024 * 20, new AtomicLong());
+        LabHeapPressure labHeapPressure = new LabHeapPressure(MoreExecutors.sameThreadExecutor(), "test", 1024 * 1024 * 10, 1024 * 1024 * 20, new AtomicLong());
         LRUConcurrentBAHLinkedHash<Leaps> leapCache = LABEnvironment.buildLeapsCache(1_000_000, 8);
 
         LABEnvironment env = new LABEnvironment(LABEnvironment.buildLABSchedulerThreadPool(4),

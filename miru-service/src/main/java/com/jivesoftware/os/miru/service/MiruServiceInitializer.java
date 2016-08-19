@@ -52,7 +52,6 @@ import com.jivesoftware.os.miru.service.partition.MiruPartitionHeartbeatHandler;
 import com.jivesoftware.os.miru.service.partition.MiruRemoteQueryablePartitionFactory;
 import com.jivesoftware.os.miru.service.partition.MiruSipTrackerFactory;
 import com.jivesoftware.os.miru.service.partition.MiruTenantTopologyFactory;
-import com.jivesoftware.os.miru.service.partition.OrderedMergeChits;
 import com.jivesoftware.os.miru.service.partition.PartitionErrorTracker;
 import com.jivesoftware.os.miru.service.partition.cluster.MiruClusterExpectedTenants;
 import com.jivesoftware.os.miru.service.solver.MiruLowestLatencySolver;
@@ -145,6 +144,7 @@ public class MiruServiceInitializer {
         LabHeapPressure[] inMemoryLabHeapPressures = new LabHeapPressure[config.getRebuildLabHeapPressureStripes()];
         for (int i = 0; i < inMemoryLabHeapPressures.length; i++) {
             inMemoryLabHeapPressures[i] = new LabHeapPressure(inMemoryLabHeapScheduler,
+                "rebuild-" + i,
                 config.getRebuildLabMaxHeapPressureInBytes(),
                 config.getRebuildLabBlockOnHeapPressureInBytes(),
                 inMemoryLabHeapCostInBytes);
@@ -155,6 +155,7 @@ public class MiruServiceInitializer {
         LabHeapPressure[] onDiskLabHeapPressures = new LabHeapPressure[config.getGlobalLabHeapPressureStripes()];
         for (int i = 0; i < onDiskLabHeapPressures.length; i++) {
             onDiskLabHeapPressures[i] = new LabHeapPressure(onDiskLabHeapScheduler,
+                "global-" + i,
                 config.getGlobalLabMaxHeapPressureInBytes(),
                 config.getGlobalLabBlockOnHeapPressureInBytes(),
                 onDiskLabHeapCostInBytes);
@@ -220,9 +221,9 @@ public class MiruServiceInitializer {
             termComposer,
             internExtern,
             ImmutableMap.<MiruBackingStorage, MiruChunkAllocator>builder()
-                .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
-                .put(MiruBackingStorage.disk, onDiskChunkAllocator)
-                .build(),
+            .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
+            .put(MiruBackingStorage.disk, onDiskChunkAllocator)
+            .build(),
             sipIndexMarshaller,
             resourceLocator,
             config.getPartitionAuthzCacheSize(),
