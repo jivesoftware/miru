@@ -234,4 +234,7 @@ public interface MiruServiceConfig extends Config {
 
     @LongDefault(32 * 1024)
     long getTimeIdMaxHeapPressureInBytes();
+
+    @BooleanDefault(true)
+    boolean getTimeIdFsyncOnAppend();
 }

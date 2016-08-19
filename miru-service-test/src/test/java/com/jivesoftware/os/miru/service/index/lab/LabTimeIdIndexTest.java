@@ -41,7 +41,7 @@ public class LabTimeIdIndexTest {
 
         int keepNIndexes = 4;
         int maxEntriesPerIndex = 10;
-        LabTimeIdIndex[] indexes = new LabTimeIdIndexInitializer().initialize(keepNIndexes, maxEntriesPerIndex, 1024 * 1024, resourceLocator, chunkAllocator);
+        LabTimeIdIndex[] indexes = new LabTimeIdIndexInitializer().initialize(keepNIndexes, maxEntriesPerIndex, 1024 * 1024, false, resourceLocator, chunkAllocator);
 
         assertEquals(indexes.length, numberOfChunkStores);
         LabTimeIdIndex index = indexes[0];

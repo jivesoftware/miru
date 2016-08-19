@@ -13,6 +13,7 @@ public class LabTimeIdIndexInitializer {
     public LabTimeIdIndex[] initialize(int keepNIndexes,
         int maxEntriesPerIndex,
         long maxHeapPressureInBytes,
+        boolean fsyncOnAppend,
         MiruResourceLocator resourceLocator,
         MiruChunkAllocator chunkAllocator) throws Exception {
 
@@ -23,7 +24,7 @@ public class LabTimeIdIndexInitializer {
         LABEnvironment[] labEnvironments = chunkAllocator.allocateLABEnvironments(labDirs);
         LabTimeIdIndex[] timeIdIndexes = new LabTimeIdIndex[labEnvironments.length];
         for (int i = 0; i < labEnvironments.length; i++) {
-            timeIdIndexes[i] = new LabTimeIdIndex(labEnvironments[i], keepNIndexes, maxEntriesPerIndex, maxHeapPressureInBytes);
+            timeIdIndexes[i] = new LabTimeIdIndex(labEnvironments[i], keepNIndexes, maxEntriesPerIndex, maxHeapPressureInBytes, fsyncOnAppend);
         }
         return timeIdIndexes;
     }
