@@ -145,7 +145,7 @@ public class IndexTestUtil {
             labMaxWALOnOpenHeapPressureOverride,
             leapCache);
 
-        LabTimeIdIndex[] timeIdIndexes = new LabTimeIdIndexInitializer().initialize(4, 1_000, 1024 * 1024, diskResourceLocator, onDiskChunkAllocator);
+        LabTimeIdIndex[] timeIdIndexes = new LabTimeIdIndexInitializer().initialize(4, 1_000, 1024 * 1024, false, diskResourceLocator, onDiskChunkAllocator);
 
         OrderIdProvider idProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(1));
         return new MiruContextFactory<>(idProvider,

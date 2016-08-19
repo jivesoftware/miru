@@ -25,15 +25,21 @@ public class LabTimeIdIndex implements TimeIdIndex {
     private final ValueIndex[] indexes;
     private final int maxEntriesPerIndex;
     private final long maxHeapPressureInBytes;
+    private final boolean fsyncOnAppend;
 
     private final ConcurrentMap<Long, Cursor> cursors = Maps.newConcurrentMap();
     private final Semaphore semaphore = new Semaphore(NUM_SEMAPHORES, true);
 
-    public LabTimeIdIndex(LABEnvironment environment, int keepNIndexes, int maxEntriesPerIndex, long maxHeapPressureInBytes) throws Exception {
+    public LabTimeIdIndex(LABEnvironment environment,
+        int keepNIndexes,
+        int maxEntriesPerIndex,
+        long maxHeapPressureInBytes,
+        boolean fsyncOnAppend) throws Exception {
         this.environment = environment;
         this.indexes = new ValueIndex[keepNIndexes];
         this.maxEntriesPerIndex = maxEntriesPerIndex;
         this.maxHeapPressureInBytes = maxHeapPressureInBytes;
+        this.fsyncOnAppend = fsyncOnAppend;
 
         List<String> names = environment.list();
         // sort descending
@@ -137,7 +143,7 @@ public class LabTimeIdIndex implements TimeIdIndex {
                         }
                     }
                     return true;
-                }, true);
+                }, fsyncOnAppend);
             }
 
             count = indexes[0].count();
