@@ -61,6 +61,7 @@ public class MiruAggregateUtilTest {
             -1,
             -1,
             -1,
+            -1,
             root,
             labHeapPressure,
             4,

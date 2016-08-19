@@ -104,6 +104,7 @@ public class StrutModelScorerNGTest {
             -1,
             -1,
             -1,
+            -1,
             root,
             labHeapPressure,
             4,

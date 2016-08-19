@@ -114,6 +114,7 @@ public class IndexTestUtil {
         long labMaxWALSizeInBytes = 1024 * 1024 * 10;
         long labMaxEntriesPerWAL = 1000;
         long labMaxEntrySizeInBytes = 1024 * 1024 * 10;
+        long labMaxWALOnOpenHeapPressureOverride = 1024 * 1024 * 10;
         LRUConcurrentBAHLinkedHash<Leaps> leapCache = LABEnvironment.buildLeapsCache(1_000_000, 10);
         MiruChunkAllocator inMemoryChunkAllocator = new InMemoryChunkAllocator(
             diskResourceLocator,
@@ -128,6 +129,7 @@ public class IndexTestUtil {
             labMaxWALSizeInBytes,
             labMaxEntriesPerWAL,
             labMaxEntrySizeInBytes,
+            labMaxWALOnOpenHeapPressureOverride,
             useLabIndexes,
             leapCache);
 
@@ -140,6 +142,7 @@ public class IndexTestUtil {
             labMaxWALSizeInBytes,
             labMaxEntriesPerWAL,
             labMaxEntrySizeInBytes,
+            labMaxWALOnOpenHeapPressureOverride,
             leapCache);
 
         LabTimeIdIndex[] timeIdIndexes = new LabTimeIdIndexInitializer().initialize(4, 1_000, 1024 * 1024, diskResourceLocator, onDiskChunkAllocator);
@@ -193,6 +196,7 @@ public class IndexTestUtil {
             LABEnvironment.buildLABCompactorThreadPool(1),
             LABEnvironment.buildLABDestroyThreadPool(1),
             "wal",
+            -1,
             -1,
             -1,
             -1,
