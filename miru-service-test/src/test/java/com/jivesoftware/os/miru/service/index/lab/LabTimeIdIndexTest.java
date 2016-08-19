@@ -35,6 +35,7 @@ public class LabTimeIdIndexTest {
             10 * 1024 * 1024,
             1000,
             10 * 1024 * 1024,
+            10 * 1024 * 1024,
             true,
             LABEnvironment.buildLeapsCache(1_000_000, 10));
 

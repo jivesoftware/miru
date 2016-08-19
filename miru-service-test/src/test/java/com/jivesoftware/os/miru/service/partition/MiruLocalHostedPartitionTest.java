@@ -232,6 +232,7 @@ public class MiruLocalHostedPartitionTest {
         long labMaxWALSizeInBytes = 1024 * 1024 * 10;
         long labMaxEntriesPerWAL = 1000;
         long labMaxEntrySizeInBytes = 1024 * 1024 * 10;
+        long labMaxWALOnOpenHeapPressureOverride = 1024 * 1024 * 10;
         LRUConcurrentBAHLinkedHash<Leaps> leapCache = LABEnvironment.buildLeapsCache(1_000_000, 32);
 
         MiruTempDirectoryResourceLocator resourceLocator = new MiruTempDirectoryResourceLocator();
@@ -248,6 +249,7 @@ public class MiruLocalHostedPartitionTest {
             labMaxWALSizeInBytes,
             labMaxEntriesPerWAL,
             labMaxEntrySizeInBytes,
+            labMaxWALOnOpenHeapPressureOverride,
             useLabIndexes,
             leapCache);
 
@@ -261,6 +263,7 @@ public class MiruLocalHostedPartitionTest {
             labMaxWALSizeInBytes,
             labMaxEntriesPerWAL,
             labMaxEntrySizeInBytes,
+            labMaxWALOnOpenHeapPressureOverride,
             leapCache);
 
         TxCogs cogs = new TxCogs(256, 64, null, null, null);

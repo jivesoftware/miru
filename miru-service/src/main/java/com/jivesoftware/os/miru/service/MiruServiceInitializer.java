@@ -176,6 +176,7 @@ public class MiruServiceInitializer {
             config.getLabMaxWALSizeInBytes(),
             config.getLabMaxEntriesPerWAL(),
             config.getLabMaxEntrySizeInBytes(),
+            config.getLabMaxWALOnOpenHeapPressureOverride(),
             config.getUseLabIndexes(),
             leapCache);
 
@@ -188,6 +189,7 @@ public class MiruServiceInitializer {
             config.getLabMaxWALSizeInBytes(),
             config.getLabMaxEntriesPerWAL(),
             config.getLabMaxEntrySizeInBytes(),
+            config.getLabMaxWALOnOpenHeapPressureOverride(),
             leapCache);
 
         TxCogs persistentCogs = new TxCogs(1024, 1024,
