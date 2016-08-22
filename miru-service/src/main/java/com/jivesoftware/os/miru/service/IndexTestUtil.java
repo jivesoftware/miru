@@ -130,6 +130,7 @@ public class IndexTestUtil {
             labMaxEntriesPerWAL,
             labMaxEntrySizeInBytes,
             labMaxWALOnOpenHeapPressureOverride,
+            true,
             useLabIndexes,
             leapCache);
 
@@ -143,6 +144,7 @@ public class IndexTestUtil {
             labMaxEntriesPerWAL,
             labMaxEntrySizeInBytes,
             labMaxWALOnOpenHeapPressureOverride,
+            true,
             leapCache);
 
         LabTimeIdIndex[] timeIdIndexes = new LabTimeIdIndexInitializer().initialize(4, 1_000, 1024 * 1024, false, diskResourceLocator, onDiskChunkAllocator);
@@ -206,7 +208,8 @@ public class IndexTestUtil {
                 1024 * 1024, 2 * 1024 * 1024, new AtomicLong()),
             4,
             16,
-            LABEnvironment.buildLeapsCache(1_000, 4));
+            LABEnvironment.buildLeapsCache(1_000, 4),
+            true);
         return environment.open(new ValueIndexConfig(name, 64, 1024 * 1024, -1, -1, 10 * 1024 * 1024, NoOpFormatTransformerProvider.NAME, LABRawhide.NAME,
             MemoryRawEntryFormat.NAME));
     }

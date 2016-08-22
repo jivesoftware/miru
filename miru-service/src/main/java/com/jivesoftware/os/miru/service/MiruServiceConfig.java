@@ -226,6 +226,9 @@ public interface MiruServiceConfig extends Config {
     @LongDefault(1024 * 1024 * 1024)
     long getLabMaxWALOnOpenHeapPressureOverride();
 
+    @BooleanDefault(false)
+    boolean getLabUseOffHeap();
+
     @IntDefault(4)
     int getTimeIdKeepNIndexes();
 

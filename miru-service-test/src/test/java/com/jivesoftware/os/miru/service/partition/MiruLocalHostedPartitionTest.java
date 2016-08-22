@@ -250,6 +250,7 @@ public class MiruLocalHostedPartitionTest {
             labMaxEntriesPerWAL,
             labMaxEntrySizeInBytes,
             labMaxWALOnOpenHeapPressureOverride,
+            true,
             useLabIndexes,
             leapCache);
 
@@ -264,6 +265,7 @@ public class MiruLocalHostedPartitionTest {
             labMaxEntriesPerWAL,
             labMaxEntrySizeInBytes,
             labMaxWALOnOpenHeapPressureOverride,
+            true,
             leapCache);
 
         TxCogs cogs = new TxCogs(256, 64, null, null, null);

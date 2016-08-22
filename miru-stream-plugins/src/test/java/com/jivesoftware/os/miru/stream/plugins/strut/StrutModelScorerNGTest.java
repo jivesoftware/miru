@@ -109,7 +109,8 @@ public class StrutModelScorerNGTest {
             labHeapPressure,
             4,
             10,
-            leapCache);
+            leapCache,
+            true);
         String catwalkId = "catwalkId";
         String modelId = "modelId";
 
