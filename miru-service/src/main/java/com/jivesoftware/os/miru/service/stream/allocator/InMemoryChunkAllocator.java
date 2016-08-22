@@ -44,6 +44,7 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
     private final long labMaxEntriesPerWAL;
     private final long labMaxEntrySizeInBytes;
     private final long labMaxWALOnOpenHeapPressureOverride;
+    private final boolean labUseOffHeap;
     private final LRUConcurrentBAHLinkedHash<Leaps> leapCache;
     private final boolean useLabIndexes;
 
@@ -64,6 +65,7 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
         long labMaxEntriesPerWAL,
         long labMaxEntrySizeInBytes,
         long labMaxWALOnOpenHeapPressureOverride,
+        boolean labUseOffHeap,
         boolean useLabIndexes,
         LRUConcurrentBAHLinkedHash<Leaps> leapCache) {
         this.resourceLocator = resourceLocator;
@@ -78,6 +80,7 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
         this.labMaxEntriesPerWAL = labMaxEntriesPerWAL;
         this.labMaxEntrySizeInBytes = labMaxEntrySizeInBytes;
         this.labMaxWALOnOpenHeapPressureOverride = labMaxWALOnOpenHeapPressureOverride;
+        this.labUseOffHeap = labUseOffHeap;
         this.useLabIndexes = useLabIndexes;
         this.labHeapPressures = labHeapPressures;
         this.leapCache = leapCache;
@@ -152,7 +155,8 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
                 labHeapPressures[i % labHeapPressures.length],
                 4,
                 16,
-                leapCache);
+                leapCache,
+                labUseOffHeap);
 
             environments[i].register("lastIdKeyValue", new LastIdKeyValueRawhide());
             environments[i].register("fixedWidth_12_0", new FixedWidthRawhide(12, 0));

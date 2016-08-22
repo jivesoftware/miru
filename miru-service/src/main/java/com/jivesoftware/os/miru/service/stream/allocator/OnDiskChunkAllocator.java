@@ -40,6 +40,7 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
     private final long labMaxEntriesPerWAL;
     private final long labMaxEntrySizeInBytes;
     private final long labMaxWALOnOpenHeapPressureOverride;
+    private final boolean labUseOffHeap;
     private final LRUConcurrentBAHLinkedHash<Leaps> leapCache;
     private final ChunkStoreInitializer chunkStoreInitializer = new ChunkStoreInitializer();
 
@@ -58,6 +59,7 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
         long labMaxEntriesPerWAL,
         long labMaxEntrySizeInBytes,
         long labMaxWALOnOpenHeapPressureOverride,
+        boolean labUseOffHeap,
         LRUConcurrentBAHLinkedHash<Leaps> leapCache) {
         this.resourceLocator = resourceLocator;
         this.cacheByteBufferFactory = cacheByteBufferFactory;
@@ -69,6 +71,7 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
         this.labMaxEntriesPerWAL = labMaxEntriesPerWAL;
         this.labMaxEntrySizeInBytes = labMaxEntrySizeInBytes;
         this.labMaxWALOnOpenHeapPressureOverride = labMaxWALOnOpenHeapPressureOverride;
+        this.labUseOffHeap = labUseOffHeap;
         this.leapCache = leapCache;
     }
 
@@ -208,7 +211,8 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
                 labHeapPressures[i % labHeapPressures.length],
                 4,
                 16,
-                leapCache);
+                leapCache,
+                labUseOffHeap);
 
             environments[i].register("lastIdKeyValue", new LastIdKeyValueRawhide());
             environments[i].register("fixedWidth_12_0", new FixedWidthRawhide(12, 0));
