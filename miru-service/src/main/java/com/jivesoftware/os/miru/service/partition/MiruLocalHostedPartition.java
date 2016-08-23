@@ -314,6 +314,10 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
             MiruBackingStorage updateStorage = update.getBackingStorage(checkPersistent);
             MiruPartitionCoordInfo info = new MiruPartitionCoordInfo(update.state, updateStorage);
             heartbeatHandler.updateInfo(coord, info);
+            if (update.persistentContext.isPresent()) {
+                int lastId = update.persistentContext.get().activityIndex.lastId(new StackBuffer());
+                heartbeatHandler.updateLastId(coord, lastId);
+            }
 
             accessorRef.set(update);
 
@@ -1167,7 +1171,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                     trackError,
                     stackBuffer);
                 int lastId = accessor.persistentContext.get().activityIndex.lastId(stackBuffer);
-                if (lastId > updatedLastId.get()) {
+                if (lastId != updatedLastId.get()) {
                     heartbeatHandler.updateLastId(coord, lastId);
                     updatedLastId.set(lastId);
                 }
