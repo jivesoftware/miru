@@ -65,4 +65,7 @@ public interface MiruAmzaServiceConfig extends Config {
 
     @StringDefault("")
     String getBlacklistRingMembers();
+
+    @BooleanDefault(true)
+    boolean getAckWatersVerboseLogTimeouts();
 }
