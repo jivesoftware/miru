@@ -93,6 +93,7 @@ import com.jivesoftware.os.routing.bird.deployable.DeployableHealthCheckRegistry
 import com.jivesoftware.os.routing.bird.deployable.ErrorHealthCheckConfig;
 import com.jivesoftware.os.routing.bird.deployable.InstanceConfig;
 import com.jivesoftware.os.routing.bird.endpoints.base.HasUI;
+import com.jivesoftware.os.routing.bird.endpoints.base.LoadBalancerHealthCheckEndpoints;
 import com.jivesoftware.os.routing.bird.health.HealthCheck;
 import com.jivesoftware.os.routing.bird.health.api.HealthFactory;
 import com.jivesoftware.os.routing.bird.health.checkers.DirectBufferHealthChecker;
@@ -464,7 +465,7 @@ public class MiruReaderMain {
             deployable.addEndpoints(MiruReaderConfigEndpoints.class);
             deployable.addInjectables(TimestampedOrderIdProvider.class, timestampedOrderIdProvider);
             deployable.addResource(sourceTree);
-
+            deployable.addEndpoints(LoadBalancerHealthCheckEndpoints.class);
             deployable.buildServer().start();
             clientHealthProvider.start();
             serviceStartupHealthCheck.success();
