@@ -52,6 +52,7 @@ public class MiruAmzaServiceInitializer {
         amzaServiceConfig.hardFsync = config.getHardFsync();
         amzaServiceConfig.takeSlowThresholdInMillis = config.getTakeSlowThresholdInMillis();
         amzaServiceConfig.rackDistributionEnabled = config.getRackDistributionEnabled();
+        amzaServiceConfig.ackWatersVerboseLogTimeouts = config.getAckWatersVerboseLogTimeouts();
 
         LABPointerIndexConfig amzaLabConfig = deployable.config(LABPointerIndexConfig.class);
 
