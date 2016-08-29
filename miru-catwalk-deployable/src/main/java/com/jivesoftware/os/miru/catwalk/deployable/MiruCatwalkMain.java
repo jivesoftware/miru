@@ -47,6 +47,7 @@ import com.jivesoftware.os.routing.bird.deployable.DeployableHealthCheckRegistry
 import com.jivesoftware.os.routing.bird.deployable.ErrorHealthCheckConfig;
 import com.jivesoftware.os.routing.bird.deployable.InstanceConfig;
 import com.jivesoftware.os.routing.bird.endpoints.base.HasUI;
+import com.jivesoftware.os.routing.bird.endpoints.base.LoadBalancerHealthCheckEndpoints;
 import com.jivesoftware.os.routing.bird.health.api.HealthFactory;
 import com.jivesoftware.os.routing.bird.health.checkers.FileDescriptorCountHealthChecker;
 import com.jivesoftware.os.routing.bird.health.checkers.GCLoadHealthChecker;
@@ -333,6 +334,7 @@ public class MiruCatwalkMain {
             deployable.addInjectables(MiruStats.class, stats);
 
             deployable.addResource(sourceTree);
+            deployable.addEndpoints(LoadBalancerHealthCheckEndpoints.class);
             deployable.buildServer().start();
             clientHealthProvider.start();
             catwalkModelUpdater.start(amzaCatwalkConfig.getNumberOfUpateModelQueues(),
