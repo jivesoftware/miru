@@ -282,7 +282,8 @@ public class MiruReaderMain {
                     .checkDeadEveryNMillis(10_000)
                     .build(); // TODO expose to conf
 
-                realtimeDelivery = new RoutingBirdRealtimeDelivery(realtimeDeliveryHttpClient,
+                realtimeDelivery = new RoutingBirdRealtimeDelivery(miruHost,
+                    realtimeDeliveryHttpClient,
                     new RoundRobinStrategy(),
                     realtimeDeliveryEndpoint,
                     mapper,

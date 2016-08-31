@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.service.realtime;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.realtime.MiruRealtimeDelivery;
@@ -17,16 +18,19 @@ import java.util.List;
  */
 public class RoutingBirdRealtimeDelivery implements MiruRealtimeDelivery {
 
+    private final MiruHost miruHost;
     private final TenantAwareHttpClient<String> deliveryClient;
     private final NextClientStrategy nextClientStrategy;
     private final String deliveryEndpoint;
     private final ObjectMapper objectMapper;
     private final MiruStats miruStats;
 
-    public RoutingBirdRealtimeDelivery(TenantAwareHttpClient<String> deliveryClient,
+    public RoutingBirdRealtimeDelivery(MiruHost miruHost,
+        TenantAwareHttpClient<String> deliveryClient,
         NextClientStrategy nextClientStrategy,
         String deliveryEndpoint,
         ObjectMapper objectMapper, MiruStats miruStats) {
+        this.miruHost = miruHost;
         this.deliveryClient = deliveryClient;
         this.nextClientStrategy = nextClientStrategy;
         this.deliveryEndpoint = deliveryEndpoint;
@@ -41,7 +45,7 @@ public class RoutingBirdRealtimeDelivery implements MiruRealtimeDelivery {
             deliveryClient.call("", nextClientStrategy, "deliverRealtime", httpClient -> {
                 String json = null;
                 try {
-                    json = objectMapper.writeValueAsString(new RealtimeUpdate(coord, activityTimes));
+                    json = objectMapper.writeValueAsString(new RealtimeUpdate(miruHost, coord, activityTimes));
                 } catch (JsonProcessingException e) {
                     throw new MiruRealtimeDeliveryException("Failed to serialize update", e);
                 }
