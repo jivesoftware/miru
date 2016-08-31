@@ -65,12 +65,12 @@ public class MiruActivityInternerTest {
         MiruTermComposer termComposer = new MiruTermComposer(Charsets.UTF_8, this.termInterner);
 
         schema = new MiruSchema.Builder("test", 1)
-            .setFieldDefinitions(new MiruFieldDefinition[]{
-            new MiruFieldDefinition(0, "f", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE)
-        })
-            .setPropertyDefinitions(new MiruPropertyDefinition[]{
-            new MiruPropertyDefinition(0, "p")
-        })
+            .setFieldDefinitions(new MiruFieldDefinition[] {
+                new MiruFieldDefinition(0, "f", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE)
+            })
+            .setPropertyDefinitions(new MiruPropertyDefinition[] {
+                new MiruPropertyDefinition(0, "p")
+            })
             .build();
         interner = new MiruActivityInternExtern(ibaInterner, tenantInterner, stringInterner, termComposer);
         tenantId = new MiruTenantId("testIntern".getBytes());
@@ -83,17 +83,17 @@ public class MiruActivityInternerTest {
 
         List<MiruActivityAndId<MiruInternalActivity>> internalActivity1 = Arrays.<MiruActivityAndId<MiruInternalActivity>>asList(new MiruActivityAndId[1]);
         interner.intern(Arrays.asList(new MiruActivityAndId<>(
-            new MiruActivity.Builder(tenantId, 1, new String[]{"a", "b", "c"}, 0)
-            .putAllFieldValues("f", ImmutableList.of("t1", "t2"))
-            .putAllPropValues("p", ImmutableList.of("v1", "v2"))
-            .build(), 0)), 0, 1, internalActivity1, schema, stackBuffer);
+            new MiruActivity.Builder(tenantId, 1, 0, false, new String[] { "a", "b", "c" })
+                .putAllFieldValues("f", ImmutableList.of("t1", "t2"))
+                .putAllPropValues("p", ImmutableList.of("v1", "v2"))
+                .build(), 0)), 0, 1, internalActivity1, schema, stackBuffer);
 
         List<MiruActivityAndId<MiruInternalActivity>> internalActivity2 = Arrays.<MiruActivityAndId<MiruInternalActivity>>asList(new MiruActivityAndId[1]);
         interner.intern(Arrays.asList(new MiruActivityAndId<>(
-            new MiruActivity.Builder(tenantId, 2, new String[]{"a", "b", "c"}, 0)
-            .putAllFieldValues("f", ImmutableList.of("t1", "t2"))
-            .putAllPropValues("p", ImmutableList.of("v1", "v2"))
-            .build(), 1)), 0, 1, internalActivity2, schema, stackBuffer);
+            new MiruActivity.Builder(tenantId, 2, 0, false, new String[] { "a", "b", "c" })
+                .putAllFieldValues("f", ImmutableList.of("t1", "t2"))
+                .putAllPropValues("p", ImmutableList.of("v1", "v2"))
+                .build(), 1)), 0, 1, internalActivity2, schema, stackBuffer);
 
         MiruInternalActivity activity1 = internalActivity1.get(0).activity;
         MiruInternalActivity activity2 = internalActivity2.get(0).activity;
@@ -118,7 +118,7 @@ public class MiruActivityInternerTest {
         StackBuffer stackBuffer = new StackBuffer();
         List<MiruActivityAndId<MiruInternalActivity>> activity1 = Arrays.<MiruActivityAndId<MiruInternalActivity>>asList(new MiruActivityAndId[1]);
         interner.intern(Arrays.asList(new MiruActivityAndId<>(
-            new MiruActivity.Builder(tenantId, 1, null, 0).build(), 0)), 0, 1, activity1, schema, stackBuffer);
+            new MiruActivity.Builder(tenantId, 1, 0, false, null).build(), 0)), 0, 1, activity1, schema, stackBuffer);
 
         assertNull(activity1.get(0).activity.authz);
     }

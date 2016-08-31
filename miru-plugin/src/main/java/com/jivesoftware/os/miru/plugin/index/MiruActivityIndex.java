@@ -6,7 +6,6 @@
 package com.jivesoftware.os.miru.plugin.index;
 
 import com.jivesoftware.os.filer.io.api.StackBuffer;
-import com.jivesoftware.os.miru.api.activity.TimeAndVersion;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -21,7 +20,7 @@ public interface MiruActivityIndex {
      * @param index the index of the activity
      * @return the time and version at the given index
      */
-    TimeAndVersion getTimeAndVersion(String name, int index, StackBuffer stackBuffer) throws Exception;
+    TimeVersionRealtime getTimeVersionRealtime(String name, int index, StackBuffer stackBuffer) throws Exception;
 
     /**
      * Returns the times and versions that were recorded at the given indexes
@@ -29,7 +28,7 @@ public interface MiruActivityIndex {
      * @param indexes the indexes of the activity
      * @return the times and versions at the given indexes
      */
-    TimeAndVersion[] getAllTimeAndVersions(String name, int[] indexes, StackBuffer stackBuffer) throws Exception;
+    TimeVersionRealtime[] getAllTimeVersionRealtime(String name, int[] indexes, StackBuffer stackBuffer) throws Exception;
 
     /**
      * Stream all times and versions
@@ -37,11 +36,11 @@ public interface MiruActivityIndex {
      * @param stream the stream
      * @return whether the stream completed
      */
-    boolean streamTimeAndVersion(StackBuffer stackBuffer, TimeAndVersionStream stream) throws Exception;
+    boolean streamTimeVersionRealtime(StackBuffer stackBuffer, TimeVersionRealtimeStream stream) throws Exception;
 
-    interface TimeAndVersionStream {
+    interface TimeVersionRealtimeStream {
 
-        boolean stream(int id, long timestamp, long version) throws Exception;
+        boolean stream(int id, long timestamp, long version, boolean realtimeDelivery) throws Exception;
     }
 
     /**

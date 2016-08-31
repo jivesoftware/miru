@@ -221,7 +221,7 @@ public class MiruStreamServiceNGTest {
             List<String> terms = generateDisticts(rand, count, fieldCardinality[index]);
             fieldsValues.put(fieldDefinition.name, terms);
         }
-        MiruActivity activity = new MiruActivity(tenant1, time, new String[0], 0, fieldsValues, Collections.<String, List<String>>emptyMap());
+        MiruActivity activity = new MiruActivity(tenant1, time, 0, false, new String[0], fieldsValues, Collections.emptyMap());
         return partitionedActivityFactory.activity(1, partitionId, 1, activity);
     }
 
@@ -363,7 +363,7 @@ public class MiruStreamServiceNGTest {
         }
         fieldsValues.put("author", Arrays.asList(String.valueOf(author)));
         String[] authz = new String[] { "aaabbbcccddd" };
-        MiruActivity activity = new MiruActivity(tenant1, time, authz, 0, fieldsValues, Collections.<String, List<String>>emptyMap());
+        MiruActivity activity = new MiruActivity(tenant1, time, 0, false, authz, fieldsValues, Collections.emptyMap());
         return partitionedActivityFactory.activity(1, partitionId, 1, activity);
     }
 

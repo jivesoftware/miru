@@ -81,6 +81,16 @@ public class MiruFilerSipIndex<S extends MiruSipCursor<S>> implements MiruSipInd
     }
 
     @Override
+    public int getRealtimeDeliveryId(StackBuffer stackBuffer) throws Exception {
+        return Integer.MAX_VALUE;
+    }
+
+    @Override
+    public boolean setRealtimeDeliveryId(int deliveryId, StackBuffer stackBuffer) throws Exception {
+        return true;
+    }
+
+    @Override
     public void merge() throws Exception {
         LOG.warn("Unimplemented merge");
     }

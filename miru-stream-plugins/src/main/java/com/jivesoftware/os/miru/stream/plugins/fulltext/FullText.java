@@ -7,7 +7,6 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
-import com.jivesoftware.os.miru.api.activity.TimeAndVersion;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -20,6 +19,7 @@ import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
+import com.jivesoftware.os.miru.plugin.index.TimeVersionRealtime;
 import com.jivesoftware.os.miru.plugin.solution.FieldAndTermId;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.stream.plugins.fulltext.FullTextAnswer.ActivityScore;
@@ -179,8 +179,8 @@ public class FullText {
             if (scores[i] > minScore) {
                 RawBitScore bitScore = new RawBitScore(new Promise<>(() -> {
                     //TODO formalize gathering of fields/terms
-                    TimeAndVersion timeAndVersion = requestContext.getActivityIndex().getTimeAndVersion(name, ids[_i], stackBuffer);
-                    MiruInternalActivity internalActivity = new MiruInternalActivity(request.tenantId, timeAndVersion.timestamp, timeAndVersion.version,
+                    TimeVersionRealtime tvr = requestContext.getActivityIndex().getTimeVersionRealtime(name, ids[_i], stackBuffer);
+                    MiruInternalActivity internalActivity = new MiruInternalActivity(request.tenantId, tvr.timestamp, tvr.version, tvr.realtimeDelivery,
                         new String[0], new MiruTermId[0][], new MiruIBA[0][]);
                     return internExtern.extern(internalActivity, schema, stackBuffer);
                 }), ids[i], scores[i]);
@@ -188,8 +188,8 @@ public class FullText {
             } else if (acceptableBelowMin.intValue() > 0) {
                 RawBitScore bitScore = new RawBitScore(new Promise<>(() -> {
                     //TODO formalize gathering of fields/terms
-                    TimeAndVersion timeAndVersion = requestContext.getActivityIndex().getTimeAndVersion(name, ids[_i], stackBuffer);
-                    MiruInternalActivity internalActivity = new MiruInternalActivity(request.tenantId, timeAndVersion.timestamp, timeAndVersion.version,
+                    TimeVersionRealtime tvr = requestContext.getActivityIndex().getTimeVersionRealtime(name, ids[_i], stackBuffer);
+                    MiruInternalActivity internalActivity = new MiruInternalActivity(request.tenantId, tvr.timestamp, tvr.version, tvr.realtimeDelivery,
                         new String[0], new MiruTermId[0][], new MiruIBA[0][]);
                     return internExtern.extern(internalActivity, schema, stackBuffer);
                 }), ids[i], scores[i]);
@@ -218,8 +218,8 @@ public class FullText {
         while (iter.hasNext()) {
             int lastSetBit = iter.next();
             //TODO formalize gathering of fields/terms
-            TimeAndVersion timeAndVersion = requestContext.getActivityIndex().getTimeAndVersion(name, lastSetBit, stackBuffer);
-            MiruInternalActivity internalActivity = new MiruInternalActivity(request.tenantId, timeAndVersion.timestamp, timeAndVersion.version,
+            TimeVersionRealtime tvr = requestContext.getActivityIndex().getTimeVersionRealtime(name, lastSetBit, stackBuffer);
+            MiruInternalActivity internalActivity = new MiruInternalActivity(request.tenantId, tvr.timestamp, tvr.version, tvr.realtimeDelivery,
                 new String[0], new MiruTermId[0][], new MiruIBA[0][]);
             float score = 0f; //TODO ?
             ActivityScore activityScore = new ActivityScore(internExtern.extern(internalActivity, schema, stackBuffer), score);

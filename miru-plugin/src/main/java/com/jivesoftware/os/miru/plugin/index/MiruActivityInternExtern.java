@@ -72,6 +72,7 @@ public class MiruActivityInternExtern {
                     tenantInterner.intern(activity.tenantId.getBytes()),
                     activity.time,
                     activity.version,
+                    activity.realtimeDelivery,
                     internAuthz(activity.authz))
                     .putFieldsValues(internFields(activity.fieldsValues, schema, stackBuffer))
                     .putPropsValues(internProps(activity.propsValues, schema))
@@ -201,8 +202,9 @@ public class MiruActivityInternExtern {
     public MiruActivity extern(MiruInternalActivity activity, MiruSchema schema, StackBuffer stackBuffer) throws IOException {
         return new MiruActivity(activity.tenantId,
             activity.time,
-            activity.authz,
             activity.version,
+            activity.realtimeDelivery,
+            activity.authz,
             externFields(activity.fieldsValues, schema, stackBuffer),
             externProps(activity.propsValues, schema));
     }

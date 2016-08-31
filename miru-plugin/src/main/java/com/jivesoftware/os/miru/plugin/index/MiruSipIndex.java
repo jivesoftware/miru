@@ -19,4 +19,8 @@ public interface MiruSipIndex<S extends MiruSipCursor<S>> {
     boolean setSip(S sip, StackBuffer stackBuffer) throws Exception;
 
     void merge() throws Exception;
+
+    int getRealtimeDeliveryId(StackBuffer stackBuffer) throws Exception;
+
+    boolean setRealtimeDeliveryId(int deliveryId, StackBuffer stackBuffer) throws Exception;
 }

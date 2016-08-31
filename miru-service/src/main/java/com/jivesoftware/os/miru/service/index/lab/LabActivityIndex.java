@@ -7,13 +7,13 @@ import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.lab.api.ValueIndex;
 import com.jivesoftware.os.lab.guts.IndexUtil;
 import com.jivesoftware.os.lab.io.api.UIO;
-import com.jivesoftware.os.miru.api.activity.TimeAndVersion;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityAndId;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
+import com.jivesoftware.os.miru.plugin.index.TimeVersionRealtime;
 import com.jivesoftware.os.miru.service.stream.IntTermIdsKeyValueMarshaller;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -29,7 +29,7 @@ public class LabActivityIndex implements MiruActivityIndex {
 
     private final OrderIdProvider idProvider;
     private final ValueIndex timeAndVersionIndex;
-    private final AtomicInteger indexSize = new AtomicInteger(-1);
+    private final AtomicInteger indexSize = new AtomicInteger(0);
     private final IntTermIdsKeyValueMarshaller intTermIdsKeyValueMarshaller;
     private final ValueIndex metaIndex;
     private final byte[] metaKey;
@@ -57,28 +57,30 @@ public class LabActivityIndex implements MiruActivityIndex {
     }
 
     @Override
-    public TimeAndVersion getTimeAndVersion(String name, int index, StackBuffer stackBuffer) throws Exception {
+    public TimeVersionRealtime getTimeVersionRealtime(String name, int index, StackBuffer stackBuffer) throws Exception {
         int capacity = capacity();
         checkArgument(index >= 0 && index < capacity, "Index parameter is out of bounds. The value %s must be >=0 and <%s", index, capacity);
 
-        long[] values = {-1L, -1L};
+        long[] values = { -1L, -1L };
+        boolean[] realtimeDelivery = { false };
         timeAndVersionIndex.get((streamKeys) -> streamKeys.key(0, UIO.intBytes(index), 0, 4), (index1, key, timestamp, tombstoned, version, payload) -> {
             if (payload != null && !tombstoned) {
                 payload.clear();
                 values[0] = payload.getLong(0);
                 values[1] = payload.getLong(8);
+                realtimeDelivery[0] = payload.capacity() >= 17 && payload.get(16) == 1;
             }
             return false;
         }, true);
 
-        LOG.inc("count>getTimeAndVersion>total");
-        LOG.inc("count>getTimeAndVersion>" + name);
-        return (values[0] != -1L || values[1] != -1L) ? new TimeAndVersion(values[0], values[1]) : null;
+        LOG.inc("count>getTimeVersionRealtime>total");
+        LOG.inc("count>getTimeVersionRealtime>" + name);
+        return (values[0] != -1L || values[1] != -1L) ? new TimeVersionRealtime(values[0], values[1], realtimeDelivery[0]) : null;
     }
 
     @Override
-    public TimeAndVersion[] getAllTimeAndVersions(String name, int[] indexes, StackBuffer stackBuffer) throws Exception {
-        TimeAndVersion[] tav = new TimeAndVersion[indexes.length];
+    public TimeVersionRealtime[] getAllTimeVersionRealtime(String name, int[] indexes, StackBuffer stackBuffer) throws Exception {
+        TimeVersionRealtime[] tav = new TimeVersionRealtime[indexes.length];
         timeAndVersionIndex.get(keyStream -> {
             for (int i = 0; i < indexes.length; i++) {
                 if (indexes[i] != -1) {
@@ -92,27 +94,31 @@ public class LabActivityIndex implements MiruActivityIndex {
         }, (index1, key, timestamp, tombstoned, version, payload) -> {
             if (payload != null && !tombstoned) {
                 payload.clear();
-                tav[index1] = new TimeAndVersion(
+                tav[index1] = new TimeVersionRealtime(
                     payload.getLong(0),
-                    payload.getLong(8));
+                    payload.getLong(8),
+                    payload.capacity() >= 17 && payload.get(16) == 1);
             }
             return true;
         }, true);
 
-        LOG.inc("count>getTimeAndVersion>total");
-        LOG.inc("count>getTimeAndVersion>count", indexes.length);
-        LOG.inc("count>getTimeAndVersion>" + name);
+        LOG.inc("count>getTimeVersionRealtime>total");
+        LOG.inc("count>getTimeVersionRealtime>count", indexes.length);
+        LOG.inc("count>getTimeVersionRealtime>" + name);
         return tav;
     }
 
     @Override
-    public boolean streamTimeAndVersion(StackBuffer stackBuffer, TimeAndVersionStream stream) throws Exception {
+    public boolean streamTimeVersionRealtime(StackBuffer stackBuffer, TimeVersionRealtimeStream stream) throws Exception {
         return timeAndVersionIndex.rowScan((index1, key, timestamp, tombstoned, version, payload) -> {
             if (payload != null && !tombstoned) {
                 key.clear();
                 int id = key.getInt(0);
                 payload.clear();
-                if (!stream.stream(id, payload.getLong(0), payload.getLong(8))) {
+                long streamTimestamp = payload.getLong(0);
+                long streamVersion = payload.getLong(8);
+                boolean streamRealtimeDelivery = payload.capacity() >= 17 && payload.get(16) == 1;
+                if (!stream.stream(id, streamTimestamp, streamVersion, streamRealtimeDelivery)) {
                     return false;
                 }
             }
@@ -126,7 +132,7 @@ public class LabActivityIndex implements MiruActivityIndex {
             return null;
         }
 
-        MiruTermId[][] termIds = {null};
+        MiruTermId[][] termIds = { null };
         byte[] concatKey = Bytes.concat(UIO.intBytes(fieldId), UIO.intBytes(index));
         getTermIndex(fieldId).get((streamKeys) -> streamKeys.key(0, concatKey, 0, concatKey.length),
             (index1, key, timestamp, tombstoned, version, payload) -> {
@@ -162,7 +168,7 @@ public class LabActivityIndex implements MiruActivityIndex {
         MiruTermId[][] termIds = new MiruTermId[length][];
         ValueIndex termIndex = getTermIndex(fieldId);
         byte[] fieldBytes = UIO.intBytes(fieldId);
-        int[] count = {0};
+        int[] count = { 0 };
         termIndex.get(
             keyStream -> {
                 for (int i = 0; i < length; i++) {
@@ -209,7 +215,7 @@ public class LabActivityIndex implements MiruActivityIndex {
     @Override
     public void setAndReady(MiruSchema schema, Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds, StackBuffer stackBuffer) throws Exception {
         if (!activityAndIds.isEmpty()) {
-            int lastIndex = setInternal(schema, "setAndReady", activityAndIds, stackBuffer);
+            int lastIndex = setInternal(schema, "setAndReady", activityAndIds);
             ready(lastIndex, stackBuffer);
         }
     }
@@ -219,14 +225,13 @@ public class LabActivityIndex implements MiruActivityIndex {
         Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds,
         StackBuffer stackBuffer) throws Exception {
         if (!activityAndIds.isEmpty()) {
-            setInternal(schema, "set", activityAndIds, stackBuffer);
+            setInternal(schema, "set", activityAndIds);
         }
     }
 
     private int setInternal(MiruSchema schema,
         String name,
-        Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds,
-        StackBuffer stackBuffer) throws Exception {
+        Collection<MiruActivityAndId<MiruInternalActivity>> activityAndIds) throws Exception {
 
         int lastIndex = -1;
         @SuppressWarnings("unchecked")
@@ -245,9 +250,10 @@ public class LabActivityIndex implements MiruActivityIndex {
         timeAndVersionIndex.append(stream -> {
             for (int j = 0; j < activityAndIdsArray.length; j++) {
                 int index = activityAndIdsArray[j].id;
-                byte[] payload = new byte[16];
+                byte[] payload = new byte[8 + 8 + 1];
                 UIO.longBytes(activityAndIdsArray[j].activity.time, payload, 0);
                 UIO.longBytes(activityAndIdsArray[j].activity.version, payload, 8);
+                payload[8 + 8] = (byte) (activityAndIdsArray[j].activity.realtimeDelivery ? 1 : 0);
                 stream.stream(-1, UIO.intBytes(index), timestamp, false, version, payload);
                 bytesWrite.add(16);
             }
@@ -297,7 +303,7 @@ public class LabActivityIndex implements MiruActivityIndex {
 
     private int capacity() {
         try {
-            int[] size = {indexSize.get()};
+            int[] size = { indexSize.get() };
             if (size[0] < 0) {
                 metaIndex.get((streamKeys) -> streamKeys.key(0, metaKey, 0, metaKey.length),
                     (index, key, timestamp, tombstoned, version, payload) -> {

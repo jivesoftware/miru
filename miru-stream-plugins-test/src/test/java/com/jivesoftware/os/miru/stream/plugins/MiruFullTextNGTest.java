@@ -247,7 +247,7 @@ public class MiruFullTextNGTest {
         fieldsValues.put("obj", Arrays.asList((hash % 4) + " " + doc));
         fieldsValues.put("text", text);
 
-        MiruActivity activity = new MiruActivity(tenantId, time, new String[0], 0, fieldsValues, Collections.<String, List<String>>emptyMap());
+        MiruActivity activity = new MiruActivity(tenantId, time, 0, false, new String[0], fieldsValues, Collections.emptyMap());
         return partitionedActivityFactory.activity(1, partitionId, index, activity);
     }
 

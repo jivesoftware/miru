@@ -6,7 +6,6 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
-import com.jivesoftware.os.miru.api.activity.TimeAndVersion;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition.Feature;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
@@ -22,6 +21,7 @@ import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
+import com.jivesoftware.os.miru.plugin.index.TimeVersionRealtime;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
@@ -298,13 +298,13 @@ public class AggregateCounts {
                             gatherValues[i] = gather;
                         }
                         //TODO much more efficient to accumulate lastSetBits and gather these once at the end
-                        TimeAndVersion activity = requestContext.getActivityIndex().getTimeAndVersion(name, lastSetBit, stackBuffer);
+                        TimeVersionRealtime tvr = requestContext.getActivityIndex().getTimeVersionRealtime(name, lastSetBit, stackBuffer);
 
                         AggregateCount aggregateCount = new AggregateCount(
                             aggregateValue,
                             gatherValues,
                             beforeCount - afterCount,
-                            activity.timestamp,
+                            tvr.timestamp,
                             unread);
                         aggregateCounts.add(aggregateCount);
 

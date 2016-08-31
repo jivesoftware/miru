@@ -43,7 +43,7 @@ public class RCVSActivityWALReaderTest {
 
         for (int i = 0; i < totalActivities; i++) {
             activityWALWriter.write(tenantId, partitionId, Collections.singletonList(partitionedActivityFactory.activity(1, partitionId, i,
-                new MiruActivity.Builder(tenantId, startingTimestamp + i, new String[0], 0).build())));
+                new MiruActivity.Builder(tenantId, startingTimestamp + i, 0, false, new String[0]).build())));
         }
 
         final List<Long> timestamps = Lists.newArrayListWithCapacity(totalActivities);
@@ -80,7 +80,7 @@ public class RCVSActivityWALReaderTest {
         for (int i = 0; i < totalActivities; i++) {
             clockTimestamp.set(startingTimestamp + i);
             activityWALWriter.write(tenantId, partitionId, Collections.singletonList(partitionedActivityFactory.activity(1, partitionId, i,
-                new MiruActivity.Builder(tenantId, startingTimestamp + i, new String[0], 0).build())));
+                new MiruActivity.Builder(tenantId, startingTimestamp + i, 0, false, new String[0]).build())));
         }
 
         final List<Long> timestamps = Lists.newArrayListWithCapacity(totalActivities);
@@ -117,7 +117,7 @@ public class RCVSActivityWALReaderTest {
         clockTimestamp.set(startingTimestamp);
         for (int i = 0; i < totalActivities; i++) {
             activityWALWriter.write(tenantId, partitionId, Collections.singletonList(partitionedActivityFactory.activity(1, partitionId, i,
-                new MiruActivity.Builder(tenantId, startingTimestamp + i, new String[0], 0).build())));
+                new MiruActivity.Builder(tenantId, startingTimestamp + i, 0, false, new String[0]).build())));
         }
 
         final AtomicLong expectedTimestamp = new AtomicLong(startingTimestamp);

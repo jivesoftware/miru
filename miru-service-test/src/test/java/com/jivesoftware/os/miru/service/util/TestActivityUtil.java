@@ -47,7 +47,7 @@ public class TestActivityUtil {
 
     private static MiruActivity mockActivity() {
         String[] authz = { RandomStringUtils.randomAlphanumeric(10) };
-        return new MiruActivity.Builder(new MiruTenantId("tenant1".getBytes(Charsets.UTF_8)), time.incrementAndGet(), authz, 0)
+        return new MiruActivity.Builder(new MiruTenantId("tenant1".getBytes(Charsets.UTF_8)), time.incrementAndGet(), 0, false, authz)
             .putFieldValue("field1", "value1")
             .build();
     }

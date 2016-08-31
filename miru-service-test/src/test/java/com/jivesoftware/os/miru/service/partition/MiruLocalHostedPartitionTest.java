@@ -68,6 +68,7 @@ import com.jivesoftware.os.miru.service.index.lab.LabTimeIdIndex;
 import com.jivesoftware.os.miru.service.index.lab.LabTimeIdIndexInitializer;
 import com.jivesoftware.os.miru.service.locator.MiruTempDirectoryResourceLocator;
 import com.jivesoftware.os.miru.service.partition.PartitionErrorTracker.PartitionErrorTrackerConfig;
+import com.jivesoftware.os.miru.service.realtime.NoOpRealtimeDelivery;
 import com.jivesoftware.os.miru.service.stream.LabPluginCacheProvider;
 import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
 import com.jivesoftware.os.miru.service.stream.MiruIndexAuthz;
@@ -634,8 +635,9 @@ public class MiruLocalHostedPartitionTest {
                 i,
                 new MiruActivity(tenantId,
                     1_000L + i,
-                    new String[0],
                     0L,
+                    false,
+                    new String[0],
                     Collections.emptyMap(),
                     Collections.emptyMap())));
         }
@@ -661,8 +663,9 @@ public class MiruLocalHostedPartitionTest {
         AtomicLong numberOfChitsRemaining = new AtomicLong(100_000);
         MiruMergeChits persistentMergeChits = new LargestFirstMergeChits("persistent", numberOfChitsRemaining);
         MiruMergeChits transientMergeChits = new FreeMergeChits("transient");
+        MiruStats miruStats = new MiruStats();
 
-        return new MiruLocalHostedPartition<>(new MiruStats(),
+        return new MiruLocalHostedPartition<>(miruStats,
             bitmaps,
             trackError,
             coord,
@@ -670,6 +673,7 @@ public class MiruLocalHostedPartitionTest {
             contextFactory,
             sipTrackerFactory,
             walClient,
+            new NoOpRealtimeDelivery(miruStats),
             partitionEventHandler,
             rebuildDirector,
             scheduledBootstrapService,

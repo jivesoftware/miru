@@ -16,6 +16,7 @@ import com.jivesoftware.os.miru.api.activity.TimeAndVersion;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaUnvailableException;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.realtime.MiruRealtimeDelivery;
 import com.jivesoftware.os.miru.api.topology.MiruPartitionActive;
 import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus;
 import com.jivesoftware.os.miru.api.wal.MiruCursor;
@@ -23,6 +24,9 @@ import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.api.wal.MiruWALEntry;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
+import com.jivesoftware.os.miru.plugin.index.MiruSipIndex;
+import com.jivesoftware.os.miru.plugin.index.TimeVersionRealtime;
 import com.jivesoftware.os.miru.plugin.partition.MiruHostedPartition;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
 import com.jivesoftware.os.miru.plugin.partition.MiruQueryablePartition;
@@ -72,6 +76,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
     private final MiruContextFactory<S> contextFactory;
     private final MiruSipTrackerFactory<S> sipTrackerFactory;
     private final MiruWALClient<C, S> walClient;
+    private final MiruRealtimeDelivery realtimeDelivery;
     private final MiruPartitionHeartbeatHandler heartbeatHandler;
     private final MiruRebuildDirector rebuildDirector;
     private final AtomicBoolean removed = new AtomicBoolean(false);
@@ -130,6 +135,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
         MiruContextFactory<S> contextFactory,
         MiruSipTrackerFactory<S> sipTrackerFactory,
         MiruWALClient<C, S> walClient,
+        MiruRealtimeDelivery realtimeDelivery,
         MiruPartitionHeartbeatHandler heartbeatHandler,
         MiruRebuildDirector rebuildDirector,
         ScheduledExecutorService scheduledBootstrapExecutor,
@@ -158,6 +164,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
         this.contextFactory = contextFactory;
         this.sipTrackerFactory = sipTrackerFactory;
         this.walClient = walClient;
+        this.realtimeDelivery = realtimeDelivery;
         this.heartbeatHandler = heartbeatHandler;
         this.rebuildDirector = rebuildDirector;
         this.scheduledRebuildExecutor = scheduledRebuildExecutor;
@@ -722,6 +729,21 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
             } else if (accessor.state != MiruPartitionState.offline) {
                 if (accessor.transientContext.isPresent()) {
                     LOG.info("Partition {} is idle but still has a transient context, closure will be deferred", coord);
+                } else if (accessor.persistentContext.isPresent()) {
+                    int deliveryId = -1;
+                    int lastId = -1;
+                    try (MiruRequestHandle<BM, IBM, S> handle = accessor.getRequestHandle(trackError)) {
+                        StackBuffer stackBuffer = new StackBuffer();
+                        deliveryId = handle.getRequestContext().getSipIndex().getRealtimeDeliveryId(stackBuffer);
+                        lastId = handle.getRequestContext().getActivityIndex().lastId(stackBuffer);
+                    } catch (Throwable t) {
+                        LOG.error("Failed to check realtime delivery id for inactive partition {}", new Object[] { coord }, t);
+                    }
+                    if (deliveryId == lastId) {
+                        close();
+                    } else {
+                        LOG.warn("Partition {} is inactive but realtime deliveryId {} needs to catch up with lastId {}", coord, deliveryId, lastId);
+                    }
                 } else {
                     close();
                 }
@@ -892,12 +914,11 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
 
                     LOG.debug("Indexing batch of size {} (total {}) for {}", count, totalIndexed, coord);
                     LOG.startTimer("rebuild>batchSize-" + partitionRebuildBatchSize);
-                    boolean repair = false; //firstRebuild.compareAndSet(true, false);
                     if (accessor.transientContext.isPresent()) {
                         accessor.indexInternal(accessor.transientContext.get(),
                             partitionedActivities.iterator(),
                             MiruPartitionAccessor.IndexStrategy.rebuild,
-                            repair,
+                            false,
                             transientMergeChits,
                             rebuildIndexExecutor,
                             transientMergeExecutor,
@@ -1025,6 +1046,11 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                         }
                     } catch (Throwable t) {
                         LOG.error("Sip encountered a problem for {}", new Object[] { coord }, t);
+                    }
+                    try {
+                        deliverRealtime("sip", accessor, stackBuffer);
+                    } catch (Throwable t) {
+                        LOG.error("Sip realtime delivery encountered a problem for {}", new Object[] { coord }, t);
                     }
                 }
             } catch (Throwable t) {
@@ -1201,6 +1227,49 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
             return suggestion;
         }
 
+    }
+
+    private void deliverRealtime(String name, MiruPartitionAccessor<BM, IBM, C, S> accessor, StackBuffer stackBuffer) throws Exception {
+        if (!accessor.persistentContext.isPresent()) {
+            return;
+        }
+        int count = 0;
+        try (MiruRequestHandle<BM, IBM, S> handle = accessor.getRequestHandle(trackError)) {
+            MiruSipIndex<S> sipIndex = handle.getRequestContext().getSipIndex();
+            MiruActivityIndex activityIndex = handle.getRequestContext().getActivityIndex();
+            int deliveryId = sipIndex.getRealtimeDeliveryId(stackBuffer);
+            int lastId = activityIndex.lastId(stackBuffer);
+            if (lastId > deliveryId) {
+                List<Long> activityTimes = Lists.newArrayList();
+                for (int id = deliveryId; id <= lastId; id += partitionSipBatchSize) {
+                    int batchSize = Math.min(partitionSipBatchSize, lastId - id + 1);
+                    int[] indexes = new int[batchSize];
+                    for (int i = 0; i < batchSize; i++) {
+                        indexes[i] = id + i;
+                    }
+                    TimeVersionRealtime[] timeVersionRealtimes = activityIndex.getAllTimeVersionRealtime("sipRealtime", indexes, stackBuffer);
+                    for (TimeVersionRealtime tvr : timeVersionRealtimes) {
+                        if (tvr.realtimeDelivery) {
+                            activityTimes.add(tvr.timestamp);
+                            count++;
+                        }
+                    }
+                    if (activityTimes.size() >= partitionSipBatchSize) {
+                        realtimeDelivery.deliver(coord, activityTimes);
+                        activityTimes.clear();
+                        sipIndex.setRealtimeDeliveryId(lastId, stackBuffer);
+                    }
+                }
+
+                if (!activityTimes.isEmpty()) {
+                    realtimeDelivery.deliver(coord, activityTimes);
+                    sipIndex.setRealtimeDeliveryId(lastId, stackBuffer);
+                }
+            }
+        }
+        LOG.inc("deliver>realtime>" + name + ">calls", 1);
+        LOG.inc("deliver>realtime>" + name + ">total", count);
+        LOG.inc("deliver>realtime>" + name + ">power>" + FilerIO.chunkPower(count, 0), 1);
     }
 
     @Override

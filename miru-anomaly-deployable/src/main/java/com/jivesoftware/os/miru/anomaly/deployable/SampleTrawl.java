@@ -66,7 +66,7 @@ public class SampleTrawl {
             }
         }
 
-        return new MiruActivity.Builder(tenantId, idProvider.nextId(), new String[0], 0)
+        return new MiruActivity.Builder(tenantId, idProvider.nextId(), 0, false, new String[0])
             .putFieldValue("datacenter", firstNonNull(Strings.emptyToNull(metric.datacenter), "unknown"))
             .putFieldValue("cluster", firstNonNull(Strings.emptyToNull(metric.cluster), "unknown"))
             .putFieldValue("host", firstNonNull(Strings.emptyToNull(metric.host), "unknown"))

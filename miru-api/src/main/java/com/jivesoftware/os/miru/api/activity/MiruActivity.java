@@ -26,7 +26,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 /**
  * @author jonathan
@@ -36,94 +35,69 @@ public class MiruActivity {
 
     public final MiruTenantId tenantId;
     public final long time; // orderIdProvider, instead os System.currentime, sortable, timerangeable
-    public final String[] authz; // same entitlement foo as in Sensei
     public final long version;
+    public final boolean realtimeDelivery;
+    public final String[] authz; // same entitlement foo as in Sensei
     public final Map<String, List<String>> fieldsValues;
     public final Map<String, List<String>> propsValues;
 
-    public MiruActivity(MiruTenantId tenantId, long time, String[] authz, long version,
-        Map<String, List<String>> fieldsValues, Map<String, List<String>> propsValues) {
+    @JsonCreator
+    public MiruActivity(
+        @JsonProperty("tenantId") MiruTenantId tenantId,
+        @JsonProperty("time") long time,
+        @JsonProperty("version") long version,
+        @JsonProperty("realtimeDelivery") boolean realtimeDelivery,
+        @JsonProperty("authz") String[] authz,
+        @JsonProperty("fieldsValues") Map<String, List<String>> fieldsValues,
+        @JsonProperty("propsValues") Map<String, List<String>> propsValues) {
         this.tenantId = tenantId;
         this.time = time;
-        this.authz = authz;
         this.version = version;
+        this.realtimeDelivery = realtimeDelivery;
+        this.authz = authz;
         this.fieldsValues = fieldsValues;
         this.propsValues = propsValues;
     }
 
-    @JsonCreator
-    public static MiruActivity fromJson(
-        @JsonProperty("tenantId") MiruTenantId tenantId,
-        @JsonProperty("time") long time,
-        @JsonProperty("authz") String[] authz,
-        @JsonProperty("version") long version,
-        @JsonProperty("fieldsValues") Map<String, List<String>> fieldsValues,
-        @JsonProperty("propsValues") Map<String, List<String>> propsValues) {
-        return new MiruActivity(tenantId, time, authz, version, fieldsValues, propsValues);
-    }
-
     @Override
     public int hashCode() {
-        int hash = 3;
-        hash = 19 * hash + Objects.hashCode(this.tenantId);
-        hash = 19 * hash + (int) (this.time ^ (this.time >>> 32));
-        hash = 19 * hash + Arrays.deepHashCode(this.authz);
-        hash = 19 * hash + (int) (this.version ^ (this.version >>> 32));
-        hash = 19 * hash + Objects.hashCode(this.fieldsValues);
-        hash = 19 * hash + Objects.hashCode(this.propsValues);
-        return hash;
+        throw new UnsupportedOperationException("NOPE");
     }
 
     @Override
     public boolean equals(Object obj) {
-        if (obj == null) {
-            return false;
-        }
-        if (getClass() != obj.getClass()) {
-            return false;
-        }
-        final MiruActivity other = (MiruActivity) obj;
-        if (!Objects.equals(this.tenantId, other.tenantId)) {
-            return false;
-        }
-        if (!Arrays.deepEquals(this.authz, other.authz)) {
-            return false;
-        }
-        if (this.version != other.version) {
-            return false;
-        }
-        if (!Objects.equals(this.fieldsValues, other.fieldsValues)) {
-            return false;
-        }
-        return Objects.equals(this.propsValues, other.propsValues);
+        throw new UnsupportedOperationException("NOPE");
     }
 
     @Override
     public String toString() {
-        return "MiruActivity{"
-            + "tenantId=" + tenantId
-            + ", time=" + time
-            + ", authz=" + Arrays.toString(authz)
-            + ", version=" + version
-            + ", fieldsValues=" + fieldsValues
-            + ", propsValues=" + propsValues
-            + '}';
+        return "MiruActivity{" +
+            "tenantId=" + tenantId +
+            ", time=" + time +
+            ", version=" + version +
+            ", realtimeDelivery=" + realtimeDelivery +
+            ", authz=" + Arrays.toString(authz) +
+            ", fieldsValues=" + fieldsValues +
+            ", propsValues=" + propsValues +
+            '}';
     }
 
     public static class Builder {
 
         private final MiruTenantId tenantId;
         private final long time;
-        private final String[] authz;
         private final long version;
+        private final boolean realtimeDelivery;
+        private final String[] authz;
         private final Map<String, List<String>> fieldsValues = Maps.newHashMap();
         private final Map<String, List<String>> propsValues = Maps.newHashMap();
 
-        public Builder(MiruTenantId tenantId, long time, String[] authz, long version) {
+        public Builder(MiruTenantId tenantId, long time, long version, boolean realtimeDelivery, String[] authz) {
             this.tenantId = tenantId;
             this.time = time;
-            this.authz = authz;
             this.version = version;
+            this.realtimeDelivery = realtimeDelivery;
+            this.authz = authz;
         }
 
         public Builder putFieldValue(String field, String value) {
@@ -179,7 +153,7 @@ public class MiruActivity {
         }
 
         public MiruActivity build() {
-            return new MiruActivity(tenantId, time, authz, version, ImmutableMap.copyOf(fieldsValues), ImmutableMap.copyOf(propsValues));
+            return new MiruActivity(tenantId, time, version, realtimeDelivery, authz, ImmutableMap.copyOf(fieldsValues), ImmutableMap.copyOf(propsValues));
         }
 
     }

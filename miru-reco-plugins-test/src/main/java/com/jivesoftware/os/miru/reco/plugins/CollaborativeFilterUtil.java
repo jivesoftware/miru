@@ -34,7 +34,7 @@ public class CollaborativeFilterUtil {
         fieldsValues.put("text", Arrays.asList(
             animals[hash % animals.length], animals[Math.abs((hash * 3) % animals.length)], animals[Math.abs((hash * 7) % animals.length)]));
 
-        MiruActivity activity = new MiruActivity(tenantId, time, new String[0], 0, fieldsValues, Collections.<String, List<String>>emptyMap());
+        MiruActivity activity = new MiruActivity(tenantId, time, 0, false, new String[0], fieldsValues, Collections.emptyMap());
         return partitionedActivityFactory.activity(1, partitionId, index, activity);
     }
 
@@ -53,7 +53,7 @@ public class CollaborativeFilterUtil {
         fieldsValues.put("docType", Arrays.asList(String.valueOf(hash % 4)));
         fieldsValues.put("activityType", Arrays.asList(activityType));
 
-        MiruActivity activity = new MiruActivity(tenantId, time, new String[0], 0, fieldsValues, Collections.<String, List<String>>emptyMap());
+        MiruActivity activity = new MiruActivity(tenantId, time, 0, false, new String[0], fieldsValues, Collections.emptyMap());
         return partitionedActivityFactory.activity(1, partitionId, index, activity);
     }
 }

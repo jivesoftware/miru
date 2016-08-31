@@ -67,7 +67,7 @@ public class RCVSSipTrackerTest {
     private MiruPartitionedActivity buildPartitionedActivity(long clockTimestamp, long activityTimestamp) {
         this.clockTimestamp.set(clockTimestamp);
         return factory.activity(0, partitionId, 0,
-            new MiruActivity(tenantId, activityTimestamp, new String[0], 0, Collections.emptyMap(), Collections.emptyMap()));
+            new MiruActivity(tenantId, activityTimestamp, 0, false, new String[0], Collections.emptyMap(), Collections.emptyMap()));
     }
 
     @Test

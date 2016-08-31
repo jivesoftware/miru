@@ -140,8 +140,9 @@ public class AmzaWALTest {
                     i * batchSize + j,
                     new MiruActivity(tenantId,
                         i * batchSize + j,
-                        new String[0],
                         System.currentTimeMillis(),
+                        false,
+                        new String[0],
                         Maps.newHashMap(),
                         Maps.newHashMap())));
             }

@@ -196,7 +196,7 @@ public class MiruEjjiNGTest {
         fieldsValues.put("stream", Arrays.asList(stream));
         fieldsValues.put("source", Arrays.asList(source));
 
-        MiruActivity activity = new MiruActivity(tenantId, time, new String[0], 0, fieldsValues, Collections.<String, List<String>>emptyMap());
+        MiruActivity activity = new MiruActivity(tenantId, time, 0, false, new String[0], fieldsValues, Collections.emptyMap());
         return partitionedActivityFactory.activity(1, partitionId, index, activity);
     }
 }

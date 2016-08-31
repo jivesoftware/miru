@@ -44,7 +44,7 @@ public class LogMill {
         }
         levelCount.incrementAndGet();
 
-        return new MiruActivity.Builder(tenantId, idProvider.nextId(), new String[0], 0)
+        return new MiruActivity.Builder(tenantId, idProvider.nextId(), 0, false, new String[0])
             .putFieldValue("datacenter", firstNonNull(Strings.emptyToNull(logEvent.datacenter), "unknown"))
             .putFieldValue("cluster", firstNonNull(Strings.emptyToNull(logEvent.cluster), "unknown"))
             .putFieldValue("host", firstNonNull(Strings.emptyToNull(logEvent.host), "unknown"))

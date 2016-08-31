@@ -35,6 +35,7 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaProvider;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
+import com.jivesoftware.os.miru.api.realtime.MiruRealtimeDelivery;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.api.wal.AmzaCursor;
 import com.jivesoftware.os.miru.api.wal.AmzaSipCursor;
@@ -81,6 +82,8 @@ import com.jivesoftware.os.miru.service.locator.MiruResourceLocatorInitializer;
 import com.jivesoftware.os.miru.service.partition.AmzaSipTrackerFactory;
 import com.jivesoftware.os.miru.service.partition.PartitionErrorTracker;
 import com.jivesoftware.os.miru.service.partition.RCVSSipTrackerFactory;
+import com.jivesoftware.os.miru.service.realtime.NoOpRealtimeDelivery;
+import com.jivesoftware.os.miru.service.realtime.RoutingBirdRealtimeDelivery;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer.MiruSoyRendererConfig;
@@ -107,6 +110,7 @@ import com.jivesoftware.os.routing.bird.health.checkers.SickThreadsHealthCheck;
 import com.jivesoftware.os.routing.bird.health.checkers.SystemCpuHealthChecker;
 import com.jivesoftware.os.routing.bird.http.client.HttpDeliveryClientHealthProvider;
 import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelperUtils;
+import com.jivesoftware.os.routing.bird.http.client.RoundRobinStrategy;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.http.client.TenantRoutingHttpClientInitializer;
 import com.jivesoftware.os.routing.bird.server.util.Resource;
@@ -265,6 +269,26 @@ public class MiruReaderMain {
             MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize(miruStats, "", manageHttpClient, mapper);
             MiruSchemaProvider miruSchemaProvider = new ClusterSchemaProvider(clusterClient, 10000); // TODO config
 
+            MiruRealtimeDelivery realtimeDelivery;
+            String realtimeDeliveryService = miruServiceConfig.getRealtimeDeliveryService().trim();
+            String realtimeDeliveryEndpoint = miruServiceConfig.getRealtimeDeliveryEndpoint().trim();
+            if (realtimeDeliveryService.isEmpty() || realtimeDeliveryService.isEmpty()) {
+                realtimeDelivery = new NoOpRealtimeDelivery(miruStats);
+            } else {
+                TenantAwareHttpClient<String> realtimeDeliveryHttpClient = tenantRoutingHttpClientInitializer.builder(
+                    tenantRoutingProvider.getConnections(realtimeDeliveryService, "main", 10_000), // TODO config
+                    clientHealthProvider)
+                    .deadAfterNErrors(10)
+                    .checkDeadEveryNMillis(10_000)
+                    .build(); // TODO expose to conf
+
+                realtimeDelivery = new RoutingBirdRealtimeDelivery(realtimeDeliveryHttpClient,
+                    new RoundRobinStrategy(),
+                    realtimeDeliveryEndpoint,
+                    mapper,
+                    miruStats);
+            }
+
             PartitionErrorTracker.PartitionErrorTrackerConfig partitionErrorTrackerConfig = deployable
                 .config(PartitionErrorTracker.PartitionErrorTrackerConfig.class);
             PartitionErrorTracker partitionErrorTracker = new PartitionErrorTracker(partitionErrorTrackerConfig);
@@ -303,6 +327,7 @@ public class MiruReaderMain {
                     miruHost,
                     miruSchemaProvider,
                     rcvsWALClient,
+                    realtimeDelivery,
                     new RCVSSipTrackerFactory(),
                     new RCVSSipIndexMarshaller(),
                     diskResourceLocator,
@@ -326,6 +351,7 @@ public class MiruReaderMain {
                     miruHost,
                     miruSchemaProvider,
                     amzaWALClient,
+                    realtimeDelivery,
                     new AmzaSipTrackerFactory(),
                     new AmzaSipIndexMarshaller(),
                     diskResourceLocator,

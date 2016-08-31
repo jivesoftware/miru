@@ -60,6 +60,7 @@ import com.jivesoftware.os.miru.service.MiruServiceInitializer;
 import com.jivesoftware.os.miru.service.locator.MiruTempDirectoryResourceLocator;
 import com.jivesoftware.os.miru.service.partition.PartitionErrorTracker;
 import com.jivesoftware.os.miru.service.partition.RCVSSipTrackerFactory;
+import com.jivesoftware.os.miru.service.realtime.NoOpRealtimeDelivery;
 import com.jivesoftware.os.miru.wal.MiruWALDirector;
 import com.jivesoftware.os.miru.wal.RCVSWALInitializer;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
@@ -276,6 +277,7 @@ public class MiruPluginTestBootstrap {
             miruHost,
             new SingleSchemaProvider(miruSchema),
             walClient,
+            new NoOpRealtimeDelivery(miruStats),
             new RCVSSipTrackerFactory(),
             new RCVSSipIndexMarshaller(),
             new MiruTempDirectoryResourceLocator(),
