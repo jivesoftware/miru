@@ -3,7 +3,6 @@ package com.jivesoftware.os.miru.stumptown.plugins;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
-import com.jivesoftware.os.miru.api.activity.TimeAndVersion;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -14,6 +13,7 @@ import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
+import com.jivesoftware.os.miru.plugin.index.TimeVersionRealtime;
 import com.jivesoftware.os.miru.stumptown.plugins.StumptownAnswer.Waveform;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -56,8 +56,8 @@ public class Stumptown {
             int index = iter.next();
             if (i > (cardinality - 1 - desiredNumberOfResults)) {
                 //TODO formalize gathering of fields/terms
-                TimeAndVersion timeAndVersion = requestContext.getActivityIndex().getTimeAndVersion(name, index, stackBuffer);
-                MiruInternalActivity activity = new MiruInternalActivity(tenantId, timeAndVersion.timestamp, timeAndVersion.version, new String[0],
+                TimeVersionRealtime tvr = requestContext.getActivityIndex().getTimeVersionRealtime(name, index, stackBuffer);
+                MiruInternalActivity activity = new MiruInternalActivity(tenantId, tvr.timestamp, tvr.version, tvr.realtimeDelivery, new String[0],
                     new MiruTermId[0][], new MiruIBA[0][]);
                 results.add(internExtern.extern(activity, schema, stackBuffer));
             }

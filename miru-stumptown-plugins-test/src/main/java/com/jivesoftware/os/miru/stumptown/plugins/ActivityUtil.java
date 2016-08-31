@@ -23,7 +23,7 @@ public class ActivityUtil {
         fieldsValues.put("user", Arrays.asList(user));
         fieldsValues.put("doc", Arrays.asList(doc));
 
-        MiruActivity activity = new MiruActivity(tenantId, time, new String[0], 0, fieldsValues, Collections.<String, List<String>>emptyMap());
+        MiruActivity activity = new MiruActivity(tenantId, time, 0, false, new String[0], fieldsValues, Collections.emptyMap());
         return partitionedActivityFactory.activity(1, partitionId, 1, activity);
     }
 

@@ -6,7 +6,7 @@ import com.jivesoftware.os.filer.io.ByteBufferBackedFiler;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.lab.api.ValueIndex;
-import com.jivesoftware.os.lab.api.ValueStream;
+import com.jivesoftware.os.lab.io.api.UIO;
 import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.plugin.index.MiruSipIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruSipIndexMarshaller;
@@ -24,16 +24,22 @@ public class LabSipIndex<S extends MiruSipCursor<S>> implements MiruSipIndex<S> 
 
     private final OrderIdProvider idProvider;
     private final ValueIndex valueIndex;
-    private final byte[] key;
+    private final byte[] sipKey;
+    private final byte[] realtimeDeliveryIdKey;
     private final MiruSipIndexMarshaller<S> marshaller;
 
     private final AtomicReference<S> sipReference = new AtomicReference<>();
     private final AtomicBoolean absent = new AtomicBoolean(false);
 
-    public LabSipIndex(OrderIdProvider idProvider, ValueIndex valueIndex, byte[] key, MiruSipIndexMarshaller<S> marshaller) {
+    public LabSipIndex(OrderIdProvider idProvider,
+        ValueIndex valueIndex,
+        byte[] sipKey,
+        byte[] realtimeDeliveryIdKey,
+        MiruSipIndexMarshaller<S> marshaller) {
         this.idProvider = idProvider;
         this.valueIndex = valueIndex;
-        this.key = key;
+        this.sipKey = sipKey;
+        this.realtimeDeliveryIdKey = realtimeDeliveryIdKey;
         this.marshaller = marshaller;
     }
 
@@ -42,7 +48,7 @@ public class LabSipIndex<S extends MiruSipCursor<S>> implements MiruSipIndex<S> 
         S sip = sipReference.get();
         if (sip == null && !absent.get()) {
             valueIndex.get(
-                (keyStream) -> keyStream.key(0, key, 0, key.length),
+                (keyStream) -> keyStream.key(0, sipKey, 0, sipKey.length),
                 (index, key1, timestamp, tombstoned, version, payload) -> {
                     if (payload != null && !tombstoned) {
                         try {
@@ -81,13 +87,37 @@ public class LabSipIndex<S extends MiruSipCursor<S>> implements MiruSipIndex<S> 
     }
 
     @Override
+    public int getRealtimeDeliveryId(StackBuffer stackBuffer) throws Exception {
+        int[] deliveryId = { -1 };
+        valueIndex.get(
+            (keyStream) -> keyStream.key(0, realtimeDeliveryIdKey, 0, realtimeDeliveryIdKey.length),
+            (index, key1, timestamp, tombstoned, version, payload) -> {
+                if (payload != null && !tombstoned) {
+                    payload.clear();
+                    deliveryId[0] = payload.getInt(0);
+                }
+                return true;
+            },
+            true
+        );
+        return deliveryId[0];
+    }
+
+    @Override
+    public boolean setRealtimeDeliveryId(int deliveryId, StackBuffer stackBuffer) throws Exception {
+        return valueIndex.append(stream -> {
+            return stream.stream(-1, sipKey, System.currentTimeMillis(), false, idProvider.nextId(), UIO.intBytes(deliveryId));
+        }, true);
+    }
+
+    @Override
     public void merge() throws Exception {
         S sip = sipReference.get();
         if (sip != null) {
             ByteArrayFiler filer = new ByteArrayFiler();
             marshaller.toFiler(filer, sip, new StackBuffer());
             valueIndex.append(stream -> {
-                stream.stream(-1, key, System.currentTimeMillis(), false, idProvider.nextId(), filer.getBytes());
+                stream.stream(-1, sipKey, System.currentTimeMillis(), false, idProvider.nextId(), filer.getBytes());
                 return true;
             }, true);
         }

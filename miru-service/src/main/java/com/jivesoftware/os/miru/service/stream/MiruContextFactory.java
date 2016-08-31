@@ -597,6 +597,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             idProvider,
             metaIndex,
             keyBytes("sip"),
+            keyBytes("realtimeDeliveryId"),
             sipMarshaller);
 
         MiruRemovalIndex<BM, IBM> removalIndex = new LabRemovalIndex<>(

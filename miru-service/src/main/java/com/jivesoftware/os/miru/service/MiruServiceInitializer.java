@@ -27,6 +27,7 @@ import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaProvider;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
+import com.jivesoftware.os.miru.api.realtime.MiruRealtimeDelivery;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.api.wal.MiruCursor;
 import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
@@ -87,6 +88,7 @@ public class MiruServiceInitializer {
         MiruHost miruHost,
         MiruSchemaProvider schemaProvider,
         MiruWALClient<C, S> walClient,
+        MiruRealtimeDelivery realtimeDelivery,
         MiruSipTrackerFactory<S> sipTrackerFactory,
         MiruSipIndexMarshaller<S> sipIndexMarshaller,
         MiruResourceLocator resourceLocator,
@@ -271,6 +273,7 @@ public class MiruServiceInitializer {
             contextFactory,
             sipTrackerFactory,
             walClient,
+            realtimeDelivery,
             heartbeatHandler,
             rebuildDirector,
             scheduledBootstrapExecutor,

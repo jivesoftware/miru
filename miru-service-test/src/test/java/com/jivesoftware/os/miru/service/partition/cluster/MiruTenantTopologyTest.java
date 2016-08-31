@@ -139,9 +139,9 @@ public class MiruTenantTopologyTest {
         when(localPartitionFactory.create(same(bitmaps), any(MiruPartitionCoord.class), anyLong())).thenAnswer(answer);
 
         tenantTopology.index(Lists.newArrayList(
-            factory.activity(0, p0, 0, new MiruActivity.Builder(tenantId, 0, new String[] { "authz" }, 1_111).build()),
-            factory.activity(0, p1, 0, new MiruActivity.Builder(tenantId, 1, new String[] { "authz" }, 2_222).build()),
-            factory.activity(0, p2, 0, new MiruActivity.Builder(tenantId, 2, new String[] { "authz" }, 3_333).build())));
+            factory.activity(0, p0, 0, new MiruActivity.Builder(tenantId, 0, 1_111, false, new String[] { "authz" }).build()),
+            factory.activity(0, p1, 0, new MiruActivity.Builder(tenantId, 1, 2_222, false, new String[] { "authz" }).build()),
+            factory.activity(0, p2, 0, new MiruActivity.Builder(tenantId, 2, 3_333, false, new String[] { "authz" }).build())));
 
         verify(localPartitionFactory).create(same(bitmaps), eq(new MiruPartitionCoord(tenantId, p0, localhost)), anyLong());
         verify(localPartitionFactory).create(same(bitmaps), eq(new MiruPartitionCoord(tenantId, p1, localhost)), anyLong());

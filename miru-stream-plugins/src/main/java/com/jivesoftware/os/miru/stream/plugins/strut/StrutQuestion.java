@@ -8,7 +8,6 @@ import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
-import com.jivesoftware.os.miru.api.activity.TimeAndVersion;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -24,6 +23,7 @@ import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
+import com.jivesoftware.os.miru.plugin.index.TimeVersionRealtime;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
@@ -181,7 +181,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         long totalTimeRescores = 0;
 
         List<MiruTermId> asyncRescore = Lists.newArrayList();
-        float[] maxScore = {0f};
+        float[] maxScore = { 0f };
         if (request.query.usePartitionModelCache) {
             long fetchScoresStart = System.currentTimeMillis();
 
@@ -258,7 +258,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 activityIndexLastId,
                 stackBuffer,
                 solutionLog);
-            
+
 
             long rescoreStart = System.currentTimeMillis();
             for (List<LastIdAndTermId> batch : Lists.partition(lastIdAndTermIds, request.query.batchSize)) {
@@ -335,17 +335,17 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         long timeAndVersionStart = System.currentTimeMillis();
         int[] consumeLastIds = new int[scoredLastIds.length];
         System.arraycopy(scoredLastIds, 0, consumeLastIds, 0, scoredLastIds.length);
-        TimeAndVersion[] timeAndVersions = activityIndex.getAllTimeAndVersions("strut", consumeLastIds, stackBuffer);
+        TimeVersionRealtime[] timeVersionRealtimes = activityIndex.getAllTimeVersionRealtime("strut", consumeLastIds, stackBuffer);
         long totalTimeAndVersion = System.currentTimeMillis() - timeAndVersionStart;
 
         for (int j = 0; j < s.length; j++) {
-            if (timeAndVersions[j] != null) {
+            if (timeVersionRealtimes[j] != null) {
                 String[] decomposed = termComposer.decompose(schema, pivotFieldDefinition, stackBuffer, s[j].term);
                 hotOrNots.add(new HotOrNot(new MiruValue(decomposed),
                     gatherScoredValues != null ? gatherScoredValues[j] : null,
                     s[j].scaledScore,
                     s[j].features,
-                    timeAndVersions[j].timestamp,
+                    timeVersionRealtimes[j].timestamp,
                     unreadIndex.isPresent() && bitmaps.isSet(unreadIndex.get(), s[j].lastId)));
             } else {
                 LOG.warn("Failed to get timestamp for {}", scoredLastIds[j]);
@@ -354,12 +354,12 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
 
         solutionLog.log(MiruSolutionLogLevel.INFO,
             "Strut your stuff for {} terms took"
-            + " lastIds {} ms,"
-            + " cached {} ms,"
-            + " rescore {} ms,"
-            + " gather {} ms,"
-            + " timeAndVersion {} ms,"
-            + " total {} ms",
+                + " lastIds {} ms,"
+                + " cached {} ms,"
+                + " rescore {} ms,"
+                + " gather {} ms,"
+                + " timeAndVersion {} ms,"
+                + " total {} ms",
             lastIdAndTermIds.size(),
             totalTimeFetchingLastId,
             totalTimeFetchingScores,

@@ -3,13 +3,13 @@ package com.jivesoftware.os.miru.service.partition;
 import com.google.common.hash.Hashing;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruStats;
+import com.jivesoftware.os.miru.api.realtime.MiruRealtimeDelivery;
 import com.jivesoftware.os.miru.api.wal.MiruCursor;
 import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.BloomIndex;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
-import com.jivesoftware.os.miru.service.index.TimeIdIndex;
 import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
 import com.jivesoftware.os.miru.service.stream.MiruIndexAuthz;
 import com.jivesoftware.os.miru.service.stream.MiruIndexBloom;
@@ -32,6 +32,7 @@ public class MiruLocalPartitionFactory<C extends MiruCursor<C, S>, S extends Mir
     private final MiruContextFactory<S> miruContextFactory;
     private final MiruSipTrackerFactory<S> sipTrackerFactory;
     private final MiruWALClient<C, S> walClient;
+    private final MiruRealtimeDelivery realtimeDelivery;
     private final MiruPartitionHeartbeatHandler partitionEventHandler;
     private final MiruRebuildDirector rebuildDirector;
     private final ScheduledExecutorService scheduledBoostrapExecutor;
@@ -52,6 +53,7 @@ public class MiruLocalPartitionFactory<C extends MiruCursor<C, S>, S extends Mir
         MiruContextFactory<S> miruContextFactory,
         MiruSipTrackerFactory<S> sipTrackerFactory,
         MiruWALClient<C, S> walClient,
+        MiruRealtimeDelivery realtimeDelivery,
         MiruPartitionHeartbeatHandler partitionEventHandler,
         MiruRebuildDirector rebuildDirector,
         ScheduledExecutorService scheduledBoostrapExecutor,
@@ -72,6 +74,7 @@ public class MiruLocalPartitionFactory<C extends MiruCursor<C, S>, S extends Mir
         this.miruContextFactory = miruContextFactory;
         this.sipTrackerFactory = sipTrackerFactory;
         this.walClient = walClient;
+        this.realtimeDelivery = realtimeDelivery;
         this.partitionEventHandler = partitionEventHandler;
         this.rebuildDirector = rebuildDirector;
         this.scheduledBoostrapExecutor = scheduledBoostrapExecutor;
@@ -100,6 +103,7 @@ public class MiruLocalPartitionFactory<C extends MiruCursor<C, S>, S extends Mir
             miruContextFactory,
             sipTrackerFactory,
             walClient,
+            realtimeDelivery,
             partitionEventHandler,
             rebuildDirector,
             scheduledBoostrapExecutor,

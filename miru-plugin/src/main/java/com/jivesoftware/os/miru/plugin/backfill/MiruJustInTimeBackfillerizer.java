@@ -4,7 +4,6 @@ import com.google.common.base.Optional;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
-import com.jivesoftware.os.miru.api.activity.TimeAndVersion;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -13,6 +12,7 @@ import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndexAppender;
+import com.jivesoftware.os.miru.plugin.index.TimeVersionRealtime;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
@@ -151,13 +151,13 @@ public class MiruJustInTimeBackfillerizer {
                     while (intIterator.hasNext()) {
                         int i = intIterator.next();
                         if (i > lastActivityIndex && i <= lastId) {
-                            TimeAndVersion timeAndVersion = requestContext.getActivityIndex().getTimeAndVersion("justInTimeBackfillerizer", i, stackBuffer);
-                            if (timeAndVersion == null) {
+                            TimeVersionRealtime tvr = requestContext.getActivityIndex().getTimeVersionRealtime("justInTimeBackfillerizer", i, stackBuffer);
+                            if (tvr == null) {
                                 log.warn("Missing activity at index {}, timeIndex={}, activityIndex={}",
                                     i, requestContext.getTimeIndex().lastId(), requestContext.getActivityIndex().lastId(stackBuffer));
                                 continue;
                             }
-                            oldestBackfilledEventId = Math.min(oldestBackfilledEventId, timeAndVersion.timestamp);
+                            oldestBackfilledEventId = Math.min(oldestBackfilledEventId, tvr.timestamp);
 
                             inboxIds.add(i);
 

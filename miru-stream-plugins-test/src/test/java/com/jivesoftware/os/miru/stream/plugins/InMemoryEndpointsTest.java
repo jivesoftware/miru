@@ -72,19 +72,19 @@ public class InMemoryEndpointsTest {
         AtomicInteger index = new AtomicInteger(0);
         List<MiruPartitionedActivity> partitionedActivities = Lists.newArrayList(
             activityFactory.activity(1, partitionId, index.incrementAndGet(),
-                new MiruActivity.Builder(tenantId, time.incrementAndGet(), new String[] {}, 0)
+                new MiruActivity.Builder(tenantId, time.incrementAndGet(), 0, false, new String[] {})
                     .putFieldValue(OBJECT_ID.getFieldName(), "value1")
                     .putFieldValue(AUTHOR_ID.getFieldName(), "value2")
                     .build()
             ),
             activityFactory.activity(1, partitionId, index.incrementAndGet(),
-                new MiruActivity.Builder(tenantId, time.incrementAndGet(), new String[] {}, 0)
+                new MiruActivity.Builder(tenantId, time.incrementAndGet(), 0, false, new String[] {})
                     .putFieldValue(OBJECT_ID.getFieldName(), "value1")
                     .putFieldValue(AUTHOR_ID.getFieldName(), "value2")
                     .build()
             ),
             activityFactory.activity(1, partitionId, index.incrementAndGet(),
-                new MiruActivity.Builder(tenantId, time.incrementAndGet(), new String[] {}, 0)
+                new MiruActivity.Builder(tenantId, time.incrementAndGet(), 0, false, new String[] {})
                     .putFieldValue(OBJECT_ID.getFieldName(), "value2")
                     .putFieldValue(AUTHOR_ID.getFieldName(), "value3")
                     .build()

@@ -240,4 +240,10 @@ public interface MiruServiceConfig extends Config {
 
     @BooleanDefault(true)
     boolean getTimeIdFsyncOnAppend();
+
+    @StringDefault("")
+    String getRealtimeDeliveryService();
+
+    @StringDefault("")
+    String getRealtimeDeliveryEndpoint();
 }

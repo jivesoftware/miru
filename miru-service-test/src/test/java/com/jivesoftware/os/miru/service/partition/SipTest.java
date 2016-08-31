@@ -78,7 +78,13 @@ public class SipTest {
                     for (int j = 0; j < Integer.MAX_VALUE; j++) {
                         Map<String, List<String>> fieldsValues = ImmutableMap.of(MiruFieldName.OBJECT_ID.getFieldName(),
                             Collections.singletonList(String.valueOf(j)));
-                        MiruActivity activity = new MiruActivity(tenantId, timestamp.incrementAndGet(), new String[0], 0, fieldsValues, Collections.emptyMap());
+                        MiruActivity activity = new MiruActivity(tenantId,
+                            timestamp.incrementAndGet(),
+                            0,
+                            false,
+                            new String[0],
+                            fieldsValues,
+                            Collections.emptyMap());
                         walDirector.writeActivity(tenantId, partitionId, Collections.singletonList(factory.activity(1, partitionId, j, activity)));
                         Thread.sleep(1);
                     }

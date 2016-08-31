@@ -12,6 +12,7 @@ import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityAndId;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
+import com.jivesoftware.os.miru.plugin.index.TimeVersionRealtime;
 import com.jivesoftware.os.miru.service.index.MiruFilerProvider;
 import com.jivesoftware.os.miru.service.stream.IntTermIdsKeyValueMarshaller;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
@@ -51,7 +52,7 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
     }
 
     @Override
-    public TimeAndVersion getTimeAndVersion(String name, int index, StackBuffer stackBuffer) throws IOException, InterruptedException {
+    public TimeVersionRealtime getTimeVersionRealtime(String name, int index, StackBuffer stackBuffer) throws IOException, InterruptedException {
         int capacity = capacity(stackBuffer);
         checkArgument(index >= 0 && index < capacity, "Index parameter is out of bounds. The value %s must be >=0 and <%s", index, capacity);
 
@@ -72,14 +73,14 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
             },
             stackBuffer);
 
-        LOG.inc("count>getTimeAndVersion>total");
-        LOG.inc("count>getTimeAndVersion>" + name);
-        return (values[0] != -1L || values[1] != -1L) ? new TimeAndVersion(values[0], values[1]) : null;
+        LOG.inc("count>getTimeVersionRealtime>total");
+        LOG.inc("count>getTimeVersionRealtime>" + name);
+        return (values[0] != -1L || values[1] != -1L) ? new TimeVersionRealtime(values[0], values[1], false) : null;
     }
 
     @Override
-    public TimeAndVersion[] getAllTimeAndVersions(String name, int[] indexes, StackBuffer stackBuffer) throws Exception {
-        TimeAndVersion[] tav = new TimeAndVersion[indexes.length];
+    public TimeVersionRealtime[] getAllTimeVersionRealtime(String name, int[] indexes, StackBuffer stackBuffer) throws Exception {
+        TimeVersionRealtime[] tav = new TimeVersionRealtime[indexes.length];
         timeAndVersionFiler.read(null,
             (monkey, filer, stackBuffer1, lock) -> {
                 if (filer != null) {
@@ -90,9 +91,10 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
                                 int offset = index * 16;
                                 if (filer.length() >= offset + 16) {
                                     filer.seek(offset);
-                                    tav[i] = new TimeAndVersion(
+                                    tav[i] = new TimeVersionRealtime(
                                         FilerIO.readLong(filer, "time", stackBuffer1),
-                                        FilerIO.readLong(filer, "version", stackBuffer1));
+                                        FilerIO.readLong(filer, "version", stackBuffer1),
+                                        false);
                                 }
                             }
                         }
@@ -102,14 +104,14 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
             },
             stackBuffer);
 
-        LOG.inc("count>getAllTimeAndVersions>total");
-        LOG.inc("count>getAllTimeAndVersions>count", indexes.length);
-        LOG.inc("count>getAllTimeAndVersions>" + name);
+        LOG.inc("count>getAllTimeVersionRealtime>total");
+        LOG.inc("count>getAllTimeVersionRealtime>count", indexes.length);
+        LOG.inc("count>getAllTimeVersionRealtime>" + name);
         return tav;
     }
 
     @Override
-    public boolean streamTimeAndVersion(StackBuffer stackBuffer, TimeAndVersionStream stream) throws Exception {
+    public boolean streamTimeVersionRealtime(StackBuffer stackBuffer, TimeVersionRealtimeStream stream) throws Exception {
         throw new UnsupportedOperationException("Hopefully never");
     }
 

@@ -76,7 +76,7 @@ public class MiruActivityIndexTest {
 
     private MiruInternalActivity buildLookupActivity(MiruTenantId tenantId, long time, String[] authz, int numberOfFields) throws Exception {
         assertTrue(numberOfFields <= schema.fieldCount());
-        MiruInternalActivity.Builder builder = new MiruInternalActivity.Builder(schema, tenantId, time, 0, authz);
+        MiruInternalActivity.Builder builder = new MiruInternalActivity.Builder(schema, tenantId, time, 0, false, authz);
         StackBuffer stackBuffer = new StackBuffer();
         MiruTermId[][] terms = new MiruTermId[numberOfFields][];
         for (int i = 0; i < numberOfFields; i++) {
@@ -128,19 +128,21 @@ public class MiruActivityIndexTest {
     public void testGetActivity(MiruActivityIndex miruActivityIndex, MiruInternalActivity[] expectedActivities) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
         assertTrue(expectedActivities.length == 3);
-        assertEquals(miruActivityIndex.getTimeAndVersion("test", 0, stackBuffer).timestamp, expectedActivities[0].time);
-        assertEquals(miruActivityIndex.getTimeAndVersion("test", 0, stackBuffer).version, expectedActivities[0].version);
-        assertEquals(miruActivityIndex.getTimeAndVersion("test", 1, stackBuffer).timestamp, expectedActivities[1].time);
-        assertEquals(miruActivityIndex.getTimeAndVersion("test", 1, stackBuffer).version, expectedActivities[1].version);
-        assertEquals(miruActivityIndex.getTimeAndVersion("test", 2, stackBuffer).timestamp, expectedActivities[2].time);
-        assertEquals(miruActivityIndex.getTimeAndVersion("test", 2, stackBuffer).version, expectedActivities[2].version);
+        assertEquals(miruActivityIndex.getTimeVersionRealtime("test", 0, stackBuffer).timestamp, expectedActivities[0].time);
+        assertEquals(miruActivityIndex.getTimeVersionRealtime("test", 0, stackBuffer).version, expectedActivities[0].version);
+        assertEquals(miruActivityIndex.getTimeVersionRealtime("test", 0, stackBuffer).realtimeDelivery, expectedActivities[0].realtimeDelivery);
+        assertEquals(miruActivityIndex.getTimeVersionRealtime("test", 1, stackBuffer).timestamp, expectedActivities[1].time);
+        assertEquals(miruActivityIndex.getTimeVersionRealtime("test", 1, stackBuffer).version, expectedActivities[1].version);
+        assertEquals(miruActivityIndex.getTimeVersionRealtime("test", 1, stackBuffer).realtimeDelivery, expectedActivities[1].realtimeDelivery);
+        assertEquals(miruActivityIndex.getTimeVersionRealtime("test", 2, stackBuffer).timestamp, expectedActivities[2].time);
+        assertEquals(miruActivityIndex.getTimeVersionRealtime("test", 2, stackBuffer).version, expectedActivities[2].version);
+        assertEquals(miruActivityIndex.getTimeVersionRealtime("test", 2, stackBuffer).realtimeDelivery, expectedActivities[2].realtimeDelivery);
     }
 
     @Test(dataProvider = "miruActivityIndexDataProviderWithData", expectedExceptions = IllegalArgumentException.class)
-    public void testGetActivityOverCapacity(MiruActivityIndex miruActivityIndex, MiruInternalActivity[] expectedActivities) throws Exception,
-        InterruptedException {
+    public void testGetActivityOverCapacity(MiruActivityIndex miruActivityIndex, MiruInternalActivity[] expectedActivities) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
-        miruActivityIndex.getTimeAndVersion("test", expectedActivities.length, stackBuffer); // This should throw an exception
+        miruActivityIndex.getTimeVersionRealtime("test", expectedActivities.length, stackBuffer); // This should throw an exception
     }
 
     @DataProvider(name = "miruActivityIndexDataProvider")
@@ -208,7 +210,7 @@ public class MiruActivityIndexTest {
 
     private MiruInternalActivity buildMiruActivity(MiruTenantId tenantId, long time, String[] authz, int numberOfRandomFields) throws Exception {
         assertTrue(numberOfRandomFields <= schema.fieldCount());
-        MiruInternalActivity.Builder builder = new MiruInternalActivity.Builder(schema, tenantId, time, 0, authz);
+        MiruInternalActivity.Builder builder = new MiruInternalActivity.Builder(schema, tenantId, time, 0, false, authz);
         StackBuffer stackBuffer = new StackBuffer();
         MiruTermId[][] terms = new MiruTermId[numberOfRandomFields][];
         for (int i = 0; i < numberOfRandomFields; i++) {

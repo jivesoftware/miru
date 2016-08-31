@@ -226,7 +226,7 @@ public class MiruIndexerTest {
     }
 
     private MiruActivity buildMiruActivity(MiruTenantId tenantId, long time, String[] authz, Map<String, String> fields) {
-        MiruActivity.Builder builder = new MiruActivity.Builder(tenantId, time, authz, 0);
+        MiruActivity.Builder builder = new MiruActivity.Builder(tenantId, time, 0, false, authz);
         for (Map.Entry<String, String> field : fields.entrySet()) {
             builder.putFieldValue(field.getKey(), field.getValue());
         }
