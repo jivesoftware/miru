@@ -206,6 +206,7 @@ public class MiruAnomalyMain {
             System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());
             Resource sourceTree = new Resource(staticResourceDir)
                 .addResourcePath(rendererConfig.getPathToStaticResources())
+                .setDirectoryListingAllowed(false)
                 .setContext("/static");
 
             deployable.addEndpoints(MiruAnomalyIntakeEndpoints.class);

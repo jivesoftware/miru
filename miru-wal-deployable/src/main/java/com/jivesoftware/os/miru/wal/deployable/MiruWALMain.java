@@ -484,6 +484,7 @@ public class MiruWALMain {
             Resource sourceTree = new Resource(staticResourceDir)
                 //.addResourcePath("../../../../../src/main/resources") // fluff?
                 .addResourcePath(rendererConfig.getPathToStaticResources())
+                .setDirectoryListingAllowed(false)
                 .setContext("/static");
 
             MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);

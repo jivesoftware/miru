@@ -383,6 +383,7 @@ public class MiruReaderMain {
             System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());
             Resource sourceTree = new Resource(staticResourceDir)
                 .addResourcePath(rendererConfig.getPathToStaticResources())
+                .setDirectoryListingAllowed(false)
                 .setContext("/static");
 
             MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
