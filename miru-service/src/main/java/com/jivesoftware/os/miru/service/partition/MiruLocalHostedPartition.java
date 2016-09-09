@@ -1251,7 +1251,8 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                     for (int i = 0; i < timeVersionRealtimes.length; i++) {
                         TimeVersionRealtime tvr = timeVersionRealtimes[i];
                         if (tvr == null) {
-                            LOG.warn("Missing realtime info at index {} ({}/{})", indexes[i], i, batchSize);
+                            LOG.warn("Missing realtime info at index:{} batch:{} offset:{} deliveryId:{} lastId:{} gathered:{}",
+                                indexes[i], batchSize, i, deliveryId, lastId, activityTimes.size());
                             continue;
                         }
                         if (tvr.realtimeDelivery) {
@@ -1270,6 +1271,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                     realtimeDelivery.deliver(coord, activityTimes);
                     sipIndex.setRealtimeDeliveryId(lastId, stackBuffer);
                 }
+                LOG.info("Delivered realtime info deliveryId:{} lastId:{} gathered:{}", deliveryId, lastId, activityTimes.size());
             }
         }
         LOG.inc("deliver>realtime>" + name + ">calls", 1);

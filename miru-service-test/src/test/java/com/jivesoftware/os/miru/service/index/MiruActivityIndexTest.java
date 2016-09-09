@@ -18,6 +18,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruActivityAndId;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
+import com.jivesoftware.os.miru.plugin.index.TimeVersionRealtime;
 import com.jivesoftware.os.miru.service.stream.MiruContext;
 import java.util.Arrays;
 import java.util.List;
@@ -88,39 +89,57 @@ public class MiruActivityIndexTest {
     }
 
     @Test(dataProvider = "miruActivityIndexDataProvider")
-    public void testSetActivity(MiruActivityIndex miruActivityIndex, boolean throwsUnsupportedExceptionOnSet) throws Exception {
+    public void testSetActivity(MiruActivityIndex miruActivityIndex) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
         MiruSchema schema = new Builder("test", 1).build();
         MiruInternalActivity miruActivity = buildMiruActivity(new MiruTenantId(RandomStringUtils.randomAlphabetic(10).getBytes()), 1, new String[0], 5);
         try {
             miruActivityIndex.setAndReady(schema, Arrays.asList(new MiruActivityAndId<>(miruActivity, 0)), stackBuffer);
-            if (throwsUnsupportedExceptionOnSet) {
-                fail("This implementation of the MiruActivityIndex should have thrown an UnsupportedOperationException");
-            }
         } catch (UnsupportedOperationException e) {
-            if (!throwsUnsupportedExceptionOnSet) {
-                fail("This implementation of the MiruActivityIndex shouldn't have thrown an UnsupportedOperationException", e);
-            }
+            fail("This implementation of the MiruActivityIndex shouldn't have thrown an UnsupportedOperationException", e);
         }
     }
 
     @Test(dataProvider = "miruActivityIndexDataProvider")
-    public void testSetActivityOutOfBounds(MiruActivityIndex miruActivityIndex, boolean throwsUnsupportedExceptionOnSet) throws Exception {
+    public void testSetActivityOutOfBounds(MiruActivityIndex miruActivityIndex) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
         MiruSchema schema = new Builder("test", 1).build();
         MiruInternalActivity miruActivity = buildMiruActivity(new MiruTenantId(RandomStringUtils.randomAlphabetic(10).getBytes()), 1, new String[0], 5);
         try {
             miruActivityIndex.setAndReady(schema, Arrays.asList(new MiruActivityAndId<>(miruActivity, -1)), stackBuffer);
-            if (throwsUnsupportedExceptionOnSet) {
-                fail("This implementation of the MiruActivityIndex should have thrown an UnsupportedOperationException");
-            }
             fail("Expected an IllegalArgumentException but never got it");
         } catch (UnsupportedOperationException e) {
-            if (!throwsUnsupportedExceptionOnSet) {
-                fail("This implementation of the MiruActivityIndex shouldn't have thrown an UnsupportedOperationException", e);
-            }
+            fail("This implementation of the MiruActivityIndex shouldn't have thrown an UnsupportedOperationException", e);
         } catch (IllegalArgumentException e) {
             // We want to get here, fall through
+        }
+    }
+
+    @Test(dataProvider = "miruActivityIndexDataProvider")
+    public void testTimeVersionRealtime(MiruActivityIndex miruActivityIndex) throws Exception {
+        StackBuffer stackBuffer = new StackBuffer();
+        MiruSchema schema = new Builder("test", 1).build();
+
+        int count = 1_000;
+        List<MiruActivityAndId<MiruInternalActivity>> activityAndIds = Lists.newArrayListWithCapacity(count);
+        int[] ids = new int[count];
+        for (int i = 0; i < count; i++) {
+            MiruInternalActivity miruActivity = buildMiruActivity(new MiruTenantId(RandomStringUtils.randomAlphabetic(10).getBytes()),
+                1000 + i,
+                new String[0],
+                5);
+            ids[i] = i;
+            activityAndIds.add(new MiruActivityAndId<>(miruActivity, i));
+        }
+
+        miruActivityIndex.setAndReady(schema, activityAndIds, stackBuffer);
+
+        TimeVersionRealtime[] tvrs = miruActivityIndex.getAllTimeVersionRealtime("test", ids, stackBuffer);
+        assertNotNull(tvrs);
+        assertEquals(tvrs.length, count);
+        for (int i = 0; i < tvrs.length; i++) {
+            assertNotNull(tvrs[i]);
+            assertEquals(tvrs[i].timestamp, 1000 + i);
         }
     }
 
@@ -153,10 +172,10 @@ public class MiruActivityIndexTest {
         MiruActivityIndex labOnDiskActivityIndex = buildOnDiskActivityIndex(true);
 
         return new Object[][] {
-            { chunkInMemoryActivityIndex, false },
-            { chunkOnDiskActivityIndex, false },
-            { labInMemoryActivityIndex, false },
-            { labOnDiskActivityIndex, false },
+            { chunkInMemoryActivityIndex },
+            { chunkOnDiskActivityIndex },
+            { labInMemoryActivityIndex },
+            { labOnDiskActivityIndex },
         };
     }
 
