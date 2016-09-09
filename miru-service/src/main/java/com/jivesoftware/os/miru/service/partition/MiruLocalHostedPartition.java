@@ -1273,7 +1273,8 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                     realtimeDelivery.deliver(coord, activityTimes);
                     sipIndex.setRealtimeDeliveryId(lastId, stackBuffer);
                 }
-                LOG.info("Delivered realtime info deliveryId:{} lastId:{} gathered:{} sent:{}", deliveryId, lastId, gathered, activityTimes.size());
+                LOG.info("Delivered realtime for coord:{} deliveryId:{} lastId:{} gathered:{} sent:{}",
+                    coord, deliveryId, lastId, gathered, activityTimes.size());
             }
         }
         LOG.inc("deliver>realtime>" + name + ">calls", 1);
