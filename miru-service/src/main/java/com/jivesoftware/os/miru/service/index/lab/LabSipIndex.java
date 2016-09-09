@@ -106,7 +106,7 @@ public class LabSipIndex<S extends MiruSipCursor<S>> implements MiruSipIndex<S> 
     @Override
     public boolean setRealtimeDeliveryId(int deliveryId, StackBuffer stackBuffer) throws Exception {
         return valueIndex.append(stream -> {
-            return stream.stream(-1, sipKey, System.currentTimeMillis(), false, idProvider.nextId(), UIO.intBytes(deliveryId));
+            return stream.stream(-1, realtimeDeliveryIdKey, System.currentTimeMillis(), false, idProvider.nextId(), UIO.intBytes(deliveryId));
         }, true);
     }
 
