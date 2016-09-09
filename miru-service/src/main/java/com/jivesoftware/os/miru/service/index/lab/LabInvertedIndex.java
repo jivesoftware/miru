@@ -12,7 +12,6 @@ import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.lab.LABUtils;
 import com.jivesoftware.os.lab.api.ValueIndex;
-import com.jivesoftware.os.lab.io.api.UIO;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.plugin.index.IndexTx;
@@ -38,6 +37,8 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     public static final int LAST_ID_LENGTH = 4;
+    public static final int DELTA_ATOM = 0xFFFF;
+    public static final byte[] EMPTY_BYTES = new byte[0];
 
     private final OrderIdProvider idProvider;
     private final MiruBitmaps<BM, IBM> bitmaps;
@@ -50,6 +51,8 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
     private final byte[] termKeyBytes;
     private final ValueIndex termIndex;
     private final Object mutationLock;
+    private final long labFieldDeltaMaxCardinality;
+
     private volatile int lastId = Integer.MIN_VALUE;
 
     public LabInvertedIndex(OrderIdProvider idProvider,
@@ -62,7 +65,8 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
         ValueIndex bitmapIndex,
         byte[] termKeyBytes,
         ValueIndex termIndex,
-        Object mutationLock) {
+        Object mutationLock,
+        long labFieldDeltaMaxCardinality) {
 
         this.idProvider = idProvider;
         this.bitmaps = bitmaps;
@@ -75,6 +79,7 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
         this.termKeyBytes = termKeyBytes;
         this.termIndex = termIndex;
         this.mutationLock = mutationLock;
+        this.labFieldDeltaMaxCardinality = labFieldDeltaMaxCardinality;
     }
 
     @Override
@@ -96,6 +101,7 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
         BitmapAndLastId<BM> bitmapAndLastId;
         if (atomized) {
             List<LabKeyBytes> labKeyBytes = Lists.newArrayList();
+            BM[] delta = bitmaps.createArrayOf(1);
             if (keys != null) {
                 bitmapIndex.get(
                     keyStream -> {
@@ -110,7 +116,12 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
                     (index, key, timestamp, tombstoned, version, payload) -> {
                         if (payload != null) {
                             payload.clear();
-                            labKeyBytes.add(new LabKeyBytes(deatomize(key), payload));
+                            int labKey = deatomize(key);
+                            if (labKey == DELTA_ATOM) {
+                                delta[0] = bitmaps.deserialize(new ByteBufferDataInput(payload));
+                            } else {
+                                labKeyBytes.add(new LabKeyBytes(labKey, payload));
+                            }
                             bytes.add(payload.capacity());
                         }
                         return true;
@@ -126,7 +137,14 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
                     (index, key, timestamp, tombstoned, version, payload) -> {
                         if (payload != null) {
                             payload.clear();
-                            labKeyBytes.add(new LabKeyBytes(deatomize(key), payload));
+                            int labKey = deatomize(key);
+                            if (labKey == DELTA_ATOM) {
+                                if (payload.capacity() > 0) {
+                                    delta[0] = bitmaps.deserialize(new ByteBufferDataInput(payload));
+                                }
+                            } else {
+                                labKeyBytes.add(new LabKeyBytes(labKey, payload));
+                            }
                             bytes.add(payload.capacity());
                         }
                         return true;
@@ -136,7 +154,7 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
                 LOG.inc("atomized>getRange>atoms", labKeyBytes.size());
             }
             Collections.reverse(labKeyBytes);
-            bitmapAndLastId = labKeyBytes.isEmpty() ? null : deser(bitmaps, trackError, atomized, labKeyBytes);
+            bitmapAndLastId = deser(bitmaps, trackError, atomized, labKeyBytes, delta[0]);
         } else {
             @SuppressWarnings("unchecked")
             BitmapAndLastId<BM>[] bali = new BitmapAndLastId[1];
@@ -144,7 +162,7 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
                 (index, key, timestamp, tombstoned, version, payload) -> {
                     if (payload != null) {
                         payload.clear();
-                        bali[0] = deser(bitmaps, trackError, atomized, Collections.singletonList(new LabKeyBytes(-1, payload)));
+                        bali[0] = deser(bitmaps, trackError, atomized, Collections.singletonList(new LabKeyBytes(-1, payload)), null);
                         bytes.add(payload.capacity());
                     }
                     return true;
@@ -207,9 +225,12 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
     public static <BM extends IBM, IBM> BitmapAndLastId<BM> deser(MiruBitmaps<BM, IBM> bitmaps,
         TrackError trackError,
         boolean atomized,
-        List<LabKeyBytes> labKeyBytes) throws IOException {
+        List<LabKeyBytes> labKeyBytes,
+        BM delta) throws IOException {
 
-        if (atomized) {
+        if (labKeyBytes.isEmpty()) {
+            return delta != null ? new BitmapAndLastId<>(delta, bitmaps.lastSetBit(delta)) : null;
+        } else if (atomized) {
             DataInput[] dataInputs = new DataInput[labKeyBytes.size()];
             int[] keys = new int[dataInputs.length];
             for (int i = 0; i < dataInputs.length; i++) {
@@ -218,7 +239,15 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
                 dataInputs[i] = new ByteBufferDataInput(kb.byteBuffer);
             }
             try {
-                return bitmaps.deserializeAtomized(dataInputs, keys);
+                BitmapAndLastId<BM> bitmapAndLastId = bitmaps.deserializeAtomized(dataInputs, keys);
+                if (delta != null) {
+                    bitmaps.inPlaceOr(bitmapAndLastId.bitmap, delta);
+                    int lastId = bitmaps.lastSetBit(delta);
+                    if (lastId > bitmapAndLastId.lastId) {
+                        bitmapAndLastId = new BitmapAndLastId<>(bitmapAndLastId.bitmap, lastId);
+                    }
+                }
+                return bitmapAndLastId;
             } catch (Exception e) {
                 trackError.error("Failed to deserialize atomized bitmap, keys=" + labKeyBytes.size());
                 throw new IOException("Failed to deserialize atomized", e);
@@ -322,27 +351,12 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
         return bytes;
     }
 
-    private void setIndex(int[] keys, IBM index) throws Exception {
+    private void setIndex(int[] keys, IBM index, boolean removeDelta) throws Exception {
         byte[][] bytes = keyBytes(keys, index);
 
         long timestamp = System.currentTimeMillis();
         long version = idProvider.nextId();
-        if (termIndex != null) {
-            boolean[] exists = { false };
-            termIndex.get(keyStream -> keyStream.key(-1, termKeyBytes, 0, termKeyBytes.length),
-                (index1, key, timestamp1, tombstoned, version1, payload) -> {
-                    exists[0] = timestamp1 > 0 && !tombstoned;
-                    return true;
-                }, false);
-            if (!exists[0]) {
-                termIndex.append(stream -> {
-                    if (!stream.stream(-1, termKeyBytes, timestamp, false, version, null)) {
-                        return false;
-                    }
-                    return true;
-                }, true);
-            }
-        }
+        ensureTermIndex(timestamp, version);
 
         bitmapIndex.append(stream -> {
             if (atomized) {
@@ -351,12 +365,10 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
                         return false;
                     }
                 }
+                return !removeDelta || stream.stream(-1, atomize(bitmapKeyBytes, DELTA_ATOM), timestamp, false, version, EMPTY_BYTES);
             } else {
-                if (!stream.stream(-1, bitmapKeyBytes, timestamp, false, version, bytes[0])) {
-                    return false;
-                }
+                return stream.stream(-1, bitmapKeyBytes, timestamp, false, version, bytes[0]);
             }
-            return true;
         }, true);
 
         lastId = bitmaps.lastSetBit(index);
@@ -392,11 +404,12 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
     @Override
     public void remove(StackBuffer stackBuffer, int... ids) throws Exception {
         synchronized (mutationLock) {
+            mergeDelta(getDelta());
             int[] keys = keysFromIds(ids);
             BM index = getOrCreateIndex(keys);
             BM r = bitmaps.remove(index, ids);
 
-            setIndex(keys, r);
+            setIndex(keys, r, false);
         }
     }
 
@@ -406,11 +419,15 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
             return;
         }
         synchronized (mutationLock) {
-            int[] keys = keysFromIds(ids);
-            BM index = getOrCreateIndex(keys);
-            BM r = bitmaps.set(index, ids);
+            if (atomized) {
+                addToDelta(ids);
+            } else {
+                int[] keys = keysFromIds(ids);
+                BM index = getOrCreateIndex(keys);
+                BM r = bitmaps.set(index, ids);
 
-            setIndex(keys, r);
+                setIndex(keys, r, false);
+            }
         }
     }
 
@@ -426,6 +443,98 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
         return false;
     }
 
+    private BM getDelta() throws Exception {
+        BM[] delta = bitmaps.createArrayOf(1);
+        bitmapIndex.get(
+            keyStream -> {
+                byte[] keyBytes = atomize(bitmapKeyBytes, DELTA_ATOM);
+                return keyStream.key(-1, keyBytes, 0, keyBytes.length);
+            },
+            (index, key, timestamp, tombstoned, version, payload) -> {
+                if (payload != null && payload.capacity() > 0) {
+                    payload.clear();
+                    delta[0] = bitmaps.deserialize(new ByteBufferDataInput(payload));
+                }
+                return true;
+            },
+            true);
+        return delta[0];
+    }
+
+    private void addToDelta(int[] ids) throws Exception {
+        BM delta = getDelta();
+        if (delta == null) {
+            delta = bitmaps.create();
+        }
+        BM added = bitmaps.set(delta, ids);
+
+        long size = bitmaps.serializedSizeInBytes(added);
+        ByteArrayDataOutput dataOutput = ByteStreams.newDataOutput((int) size);
+        bitmaps.serialize(added, dataOutput);
+        byte[] bytes = dataOutput.toByteArray();
+
+        long timestamp = System.currentTimeMillis();
+        long version = idProvider.nextId();
+
+        ensureTermIndex(timestamp, version);
+        bitmapIndex.append(stream -> stream.stream(-1, atomize(bitmapKeyBytes, DELTA_ATOM), timestamp, false, version, bytes), true);
+
+        lastId = Math.max(lastId, bitmaps.lastSetBit(added));
+
+        if (bitmaps.cardinality(added) > labFieldDeltaMaxCardinality) {
+            mergeDelta(added);
+        }
+        LOG.inc("count>addToDelta>total");
+        LOG.inc("count>addToDelta>" + name + ">total");
+        LOG.inc("count>addToDelta>" + name + ">" + fieldId);
+        LOG.inc("bytes>addToDelta>total", size);
+        LOG.inc("bytes>addToDelta>" + name + ">total", size);
+        LOG.inc("bytes>addToDelta>" + name + ">" + fieldId, size);
+    }
+
+    private void ensureTermIndex(long timestamp, long version) throws Exception {
+        if (termIndex != null) {
+            boolean[] exists = { false };
+            termIndex.get(keyStream -> keyStream.key(-1, termKeyBytes, 0, termKeyBytes.length),
+                (index1, key, timestamp1, tombstoned, version1, payload) -> {
+                    exists[0] = timestamp1 > 0 && !tombstoned;
+                    return true;
+                }, false);
+            if (!exists[0]) {
+                termIndex.append(stream -> {
+                    if (!stream.stream(-1, termKeyBytes, timestamp, false, version, null)) {
+                        return false;
+                    }
+                    return true;
+                }, true);
+            }
+        }
+    }
+
+    private void mergeDelta(BM delta) throws Exception {
+        if (delta != null) {
+            int[] keys = bitmaps.keys(delta);
+            if (keys.length > 0) {
+                MutableLong bytes = new MutableLong();
+                Optional<BitmapAndLastId<BM>> index = getIndexInternal(keys, bytes);
+                if (index.isPresent()) {
+                    BitmapAndLastId<BM> bitmapAndLastId = index.get();
+                    BM merge = bitmapAndLastId.bitmap;
+                    bitmaps.inPlaceOr(merge, delta);
+                    setIndex(keys, merge, true);
+                } else {
+                    setIndex(keys, delta, true);
+                }
+                LOG.inc("count>mergeDelta>total");
+                LOG.inc("count>mergeDelta>" + name + ">total");
+                LOG.inc("count>mergeDelta>" + name + ">" + fieldId);
+                LOG.inc("bytes>mergeDelta>total", bytes.longValue());
+                LOG.inc("bytes>mergeDelta>" + name + ">total", bytes.longValue());
+                LOG.inc("bytes>mergeDelta>" + name + ">" + fieldId, bytes.longValue());
+            }
+        }
+    }
+
     @Override
     public int lastId(StackBuffer stackBuffer) throws Exception {
         if (lastId == Integer.MIN_VALUE) {
@@ -438,16 +547,25 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
                     bitmapIndex.rangeScan(from, to,
                         (index, key, timestamp, tombstoned, version, payload) -> {
                             if (payload != null) {
-                                if (id[0] == -1) {
-                                    payload.clear();
-                                    bytes.add(payload.capacity());
-                                    int labKey = LabInvertedIndex.deatomize(key);
-                                    id[0] = LabInvertedIndex.deserLastId(bitmaps, atomized, labKey, payload);
-                                    if (id[0] != -1) {
+                                payload.clear();
+                                bytes.add(payload.capacity());
+                                int labKey = LabInvertedIndex.deatomize(key);
+                                if (id[0] <= -1) {
+                                    if (labKey == DELTA_ATOM) {
+                                        BM delta = bitmaps.deserialize(new ByteBufferDataInput(payload));
+                                        id[0] = -bitmaps.lastSetBit(delta) - 2;
+                                    } else {
+                                        int atomLastId = LabInvertedIndex.deserLastId(bitmaps, atomized, labKey, payload);
+                                        if (atomLastId != -1) {
+                                            int deltaLastId = -id[0] - 2;
+                                            id[0] = Math.max(deltaLastId, atomLastId);
+                                        }
+                                    }
+                                    if (id[0] > -1) {
                                         return false;
                                     }
                                 } else {
-                                    LOG.warn("Atomized multiGetLastIds failed to halt a range scan");
+                                    LOG.warn("Atomized lastId failed to halt a range scan");
                                 }
                             }
                             return true;
@@ -467,6 +585,9 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
                         true
                     );
                 }
+                if (id[0] < -1) {
+                    id[0] = -id[0] - 2;
+                }
                 lastId = id[0];
             }
             LOG.inc("count>lastId>total");
@@ -482,26 +603,29 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
     @Override
     public void andNot(IBM mask, StackBuffer stackBuffer) throws Exception {
         synchronized (mutationLock) {
+            mergeDelta(getDelta());
             int[] keys = bitmaps.keys(mask);
             BM index = getOrCreateIndex(keys);
             BM r = bitmaps.andNot(index, mask);
-            setIndex(keys, r);
+            setIndex(keys, r, false);
         }
     }
 
     @Override
     public void or(IBM mask, StackBuffer stackBuffer) throws Exception {
         synchronized (mutationLock) {
+            mergeDelta(getDelta());
             int[] keys = bitmaps.keys(mask);
             BM index = getOrCreateIndex(keys);
             BM r = bitmaps.or(Arrays.asList(index, mask));
-            setIndex(keys, r);
+            setIndex(keys, r, false);
         }
     }
 
     @Override
     public void andNotToSourceSize(List<IBM> masks, StackBuffer stackBuffer) throws Exception {
         synchronized (mutationLock) {
+            mergeDelta(getDelta());
             TIntSet keySet = new TIntHashSet();
             for (IBM mask : masks) {
                 keySet.addAll(bitmaps.keys(mask));
@@ -510,17 +634,18 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
             Arrays.sort(keys);
             BM index = getOrCreateIndex(keys);
             BM andNot = bitmaps.andNotToSourceSize(index, masks);
-            setIndex(keys, andNot);
+            setIndex(keys, andNot, false);
         }
     }
 
     @Override
     public void orToSourceSize(IBM mask, StackBuffer stackBuffer) throws Exception {
         synchronized (mutationLock) {
+            mergeDelta(getDelta());
             int[] keys = bitmaps.keys(mask);
             BM index = getOrCreateIndex(keys);
             BM or = bitmaps.orToSourceSize(index, mask);
-            setIndex(keys, or);
+            setIndex(keys, or, false);
         }
     }
 

@@ -322,6 +322,7 @@ public class MiruCatwalkMain {
             Resource sourceTree = new Resource(staticResourceDir)
                 //.addResourcePath("../../../../../src/main/resources") // fluff?
                 .addResourcePath(rendererConfig.getPathToStaticResources())
+                .setDirectoryListingAllowed(false)
                 .setContext("/static");
 
             deployable.addEndpoints(CatwalkModelEndpoints.class);

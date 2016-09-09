@@ -1241,7 +1241,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
             int lastId = activityIndex.lastId(stackBuffer);
             if (lastId > deliveryId) {
                 List<Long> activityTimes = Lists.newArrayList();
-                for (int id = deliveryId; id <= lastId; id += partitionSipBatchSize) {
+                for (int id = deliveryId + 1; id <= lastId; id += partitionSipBatchSize) {
                     int batchSize = Math.min(partitionSipBatchSize, lastId - id + 1);
                     int[] indexes = new int[batchSize];
                     for (int i = 0; i < batchSize; i++) {

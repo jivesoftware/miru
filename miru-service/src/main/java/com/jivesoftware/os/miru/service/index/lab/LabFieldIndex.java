@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.service.index.lab;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Bytes;
 import com.jivesoftware.os.filer.io.ByteBufferBackedFiler;
+import com.jivesoftware.os.filer.io.ByteBufferDataInput;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.io.api.KeyRange;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
@@ -28,6 +29,9 @@ import java.util.Collections;
 import java.util.List;
 import org.apache.commons.lang.mutable.MutableLong;
 
+import static com.jivesoftware.os.miru.service.index.lab.LabInvertedIndex.DELTA_ATOM;
+import static com.jivesoftware.os.miru.service.index.lab.LabInvertedIndex.deatomize;
+
 /**
  * @author jonathan.colt
  */
@@ -49,6 +53,7 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
     // We could lock on both field + termId for improved hash/striping, but we favor just termId to reduce object creation
     private final StripingLocksProvider<MiruTermId> stripingLocksProvider;
     private final MiruInterner<MiruTermId> termInterner;
+    private final long labFieldDeltaMaxCardinality;
 
     public LabFieldIndex(OrderIdProvider idProvider,
         MiruBitmaps<BM, IBM> bitmaps,
@@ -60,7 +65,8 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
         ValueIndex[] cardinalities,
         boolean[] hasCardinalities,
         StripingLocksProvider<MiruTermId> stripingLocksProvider,
-        MiruInterner<MiruTermId> termInterner) throws Exception {
+        MiruInterner<MiruTermId> termInterner,
+        long labFieldDeltaMaxCardinality) throws Exception {
 
         this.idProvider = idProvider;
         this.bitmaps = bitmaps;
@@ -73,6 +79,7 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
         this.hasCardinalities = hasCardinalities;
         this.stripingLocksProvider = stripingLocksProvider;
         this.termInterner = termInterner;
+        this.labFieldDeltaMaxCardinality = labFieldDeltaMaxCardinality;
     }
 
     private ValueIndex getBitmapIndex(int fieldId) {
@@ -199,7 +206,8 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
             getBitmapIndex(fieldId),
             termIndexKey(fieldIdBytes, termId.getBytes()),
             getTermIndex(fieldId),
-            stripingLocksProvider.lock(termId, 0));
+            stripingLocksProvider.lock(termId, 0),
+            labFieldDeltaMaxCardinality);
     }
 
     @Override
@@ -209,24 +217,32 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
         ValueIndex bitmapIndex = getBitmapIndex(fieldId);
         if (atomized) {
             List<LabKeyBytes> labKeyBytes = Lists.newArrayList();
+            BM[] delta = bitmaps.createArrayOf(1);
             for (int i = 0; i < termIds.length; i++) {
                 if (termIds[i] != null) {
                     labKeyBytes.clear();
                     byte[] from = bitmapIndexKey(fieldIdBytes, termIds[i].getBytes());
                     byte[] to = LABUtils.prefixUpperExclusive(from);
+                    delta[0] = null;
                     bitmapIndex.rangeScan(from, to,
                         (index, key, timestamp, tombstoned, version, payload) -> {
                             if (payload != null) {
                                 payload.clear();
                                 bytes.add(payload.capacity());
-                                int labKey = LabInvertedIndex.deatomize(key);
-                                labKeyBytes.add(new LabKeyBytes(labKey, payload));
+                                int labKey = deatomize(key);
+                                if (labKey == DELTA_ATOM) {
+                                    if (payload.capacity() > 0) {
+                                        delta[0] = bitmaps.deserialize(new ByteBufferDataInput(payload));
+                                    }
+                                } else {
+                                    labKeyBytes.add(new LabKeyBytes(labKey, payload));
+                                }
                             }
                             return true;
                         },
                         true);
                     Collections.reverse(labKeyBytes);
-                    results[i] = LabInvertedIndex.deser(bitmaps, trackError, atomized, labKeyBytes);
+                    results[i] = LabInvertedIndex.deser(bitmaps, trackError, atomized, labKeyBytes, delta[0]);
                 }
             }
         } else {
@@ -249,7 +265,8 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
                         BitmapAndLastId<BM> bitmapAndLastId = LabInvertedIndex.deser(bitmaps,
                             trackError,
                             atomized,
-                            Collections.singletonList(new LabKeyBytes(-1, payload)));
+                            Collections.singletonList(new LabKeyBytes(-1, payload)),
+                            null);
                         if (bitmapAndLastId != null) {
                             results[index] = bitmapAndLastId;
                         }
@@ -281,12 +298,23 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
                     bitmapIndex.rangeScan(from, to,
                         (index, key, timestamp, tombstoned, version, payload) -> {
                             if (payload != null) {
-                                if (lastId[0] == -1) {
+                                if (lastId[0] <= -1) {
                                     payload.clear();
                                     bytes.add(payload.capacity());
-                                    int labKey = LabInvertedIndex.deatomize(key);
-                                    lastId[0] = LabInvertedIndex.deserLastId(bitmaps, atomized, labKey, payload);
-                                    if (lastId[0] != -1) {
+                                    int labKey = deatomize(key);
+                                    if (labKey == DELTA_ATOM) {
+                                        if (payload.capacity() > 0) {
+                                            BM delta = bitmaps.deserialize(new ByteBufferDataInput(payload));
+                                            lastId[0] = -bitmaps.lastSetBit(delta) - 2;
+                                        }
+                                    } else {
+                                        int atomLastId = LabInvertedIndex.deserLastId(bitmaps, atomized, labKey, payload);
+                                        if (atomLastId != -1) {
+                                            int deltaLastId = -lastId[0] - 2;
+                                            lastId[0] = Math.max(deltaLastId, atomLastId);
+                                        }
+                                    }
+                                    if (lastId[0] > -1) {
                                         return false;
                                     }
                                 } else {
@@ -345,34 +373,50 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
         if (atomized) {
             int[] lastId = new int[1];
             List<LabKeyBytes> labKeyBytes = Lists.newArrayList();
+            BM[] delta = bitmaps.createArrayOf(1);
             for (int i = 0; i < termIds.length; i++) {
                 if (termIds[i] != null) {
                     labKeyBytes.clear();
                     lastId[0] = -1;
                     byte[] from = bitmapIndexKey(fieldIdBytes, termIds[i].getBytes());
                     byte[] to = LABUtils.prefixUpperExclusive(from);
+                    delta[0] = null;
                     bitmapIndex.rangeScan(from, to,
                         (index, key, timestamp, tombstoned, version, payload) -> {
                             if (payload != null) {
                                 payload.clear();
                                 bytes.add(payload.capacity());
-                                int labKey = LabInvertedIndex.deatomize(key);
-                                if (lastId[0] == -1) {
-                                    lastId[0] = LabInvertedIndex.deserLastId(bitmaps, atomized, labKey, payload);
-                                    if (lastId[0] != -1 && lastId[0] < considerIfLastIdGreaterThanN) {
-                                        return false;
+                                int labKey = deatomize(key);
+                                if (labKey == DELTA_ATOM) {
+                                    if (payload.capacity() > 0) {
+                                        delta[0] = bitmaps.deserialize(new ByteBufferDataInput(payload));
+                                        lastId[0] = -bitmaps.lastSetBit(delta[0]) - 2;
                                     }
+                                } else {
+                                    if (lastId[0] <= -1) {
+                                        int atomLastId = LabInvertedIndex.deserLastId(bitmaps, atomized, labKey, payload);
+                                        if (atomLastId != -1) {
+                                            int deltaLastId = -lastId[0] - 2;
+                                            lastId[0] = Math.max(deltaLastId, atomLastId);
+                                            if (lastId[0] > -1 && lastId[0] < considerIfLastIdGreaterThanN) {
+                                                return false;
+                                            }
+                                        }
+                                    }
+                                    payload.clear();
+                                    labKeyBytes.add(new LabKeyBytes(labKey, payload));
                                 }
-                                payload.clear();
-                                labKeyBytes.add(new LabKeyBytes(labKey, payload));
                             }
                             return true;
                         },
                         true);
 
-                    if (!labKeyBytes.isEmpty() && (considerIfLastIdGreaterThanN < 0 || lastId[0] > considerIfLastIdGreaterThanN)) {
+                    if (lastId[0] < -1) {
+                        lastId[0] = -lastId[0] - 2;
+                    }
+                    if ((delta[0] != null || !labKeyBytes.isEmpty()) && (considerIfLastIdGreaterThanN < 0 || lastId[0] > considerIfLastIdGreaterThanN)) {
                         Collections.reverse(labKeyBytes);
-                        BitmapAndLastId<BM> bitmapAndLastId = LabInvertedIndex.deser(bitmaps, trackError, atomized, labKeyBytes);
+                        BitmapAndLastId<BM> bitmapAndLastId = LabInvertedIndex.deser(bitmaps, trackError, atomized, labKeyBytes, delta[0]);
                         if (bitmapAndLastId != null) {
                             indexTx.tx(i, bitmapAndLastId.lastId, bitmapAndLastId.bitmap, null, -1, stackBuffer);
                         }

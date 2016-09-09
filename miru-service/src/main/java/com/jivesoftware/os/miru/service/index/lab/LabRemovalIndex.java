@@ -14,7 +14,8 @@ public class LabRemovalIndex<BM extends IBM, IBM> extends LabInvertedIndex<BM, I
         boolean atomized,
         ValueIndex valueIndex,
         byte[] keyBytes,
-        Object mutationLock) {
+        Object mutationLock,
+        long labFieldDeltaMaxCardinality) {
 
         super(idProvider,
             bitmaps,
@@ -26,6 +27,7 @@ public class LabRemovalIndex<BM extends IBM, IBM> extends LabInvertedIndex<BM, I
             valueIndex,
             null,
             null,
-            mutationLock);
+            mutationLock,
+            labFieldDeltaMaxCardinality);
     }
 }

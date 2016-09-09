@@ -229,6 +229,9 @@ public interface MiruServiceConfig extends Config {
     @BooleanDefault(false)
     boolean getLabUseOffHeap();
 
+    @LongDefault(1024)
+    long getLabFieldDeltaMaxCardinality();
+
     @IntDefault(4)
     int getTimeIdKeepNIndexes();
 
