@@ -15,7 +15,7 @@ public class IntTermIdsKeyValueMarshaller implements KeyValueMarshaller<Integer,
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private static final int MAX_TERM_ID_COUNT = 65_536;
-    private static final int MAX_VALUE_SIZE = 65_536;
+    private static final int MAX_VALUE_SIZE = 1_024 * 1_024;
 
     @Override
     public byte[] keyBytes(Integer integer) {
