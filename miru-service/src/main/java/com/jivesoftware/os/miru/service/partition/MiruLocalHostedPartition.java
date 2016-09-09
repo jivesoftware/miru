@@ -1242,6 +1242,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
             if (lastId > deliveryId) {
                 List<Long> activityTimes = Lists.newArrayList();
                 int gathered = 0;
+                int missing = 0;
                 for (int id = deliveryId + 1; id <= lastId; id += partitionSipBatchSize) {
                     int batchSize = Math.min(partitionSipBatchSize, lastId - id + 1);
                     int[] indexes = new int[batchSize];
@@ -1252,8 +1253,9 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                     for (int i = 0; i < timeVersionRealtimes.length; i++) {
                         TimeVersionRealtime tvr = timeVersionRealtimes[i];
                         if (tvr == null) {
-                            LOG.warn("Missing realtime info at index:{} batch:{} offset:{} deliveryId:{} lastId:{} gathered:{} sent:{}",
+                            LOG.debug("Missing realtime info at index:{} batch:{} offset:{} deliveryId:{} lastId:{} gathered:{} sent:{}",
                                 indexes[i], batchSize, i, deliveryId, lastId, gathered, activityTimes.size());
+                            missing++;
                             continue;
                         }
                         gathered++;
@@ -1273,8 +1275,8 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                     realtimeDelivery.deliver(coord, activityTimes);
                     sipIndex.setRealtimeDeliveryId(lastId, stackBuffer);
                 }
-                LOG.info("Delivered realtime for coord:{} deliveryId:{} lastId:{} gathered:{} sent:{}",
-                    coord, deliveryId, lastId, gathered, activityTimes.size());
+                LOG.info("Delivered realtime for coord:{} deliveryId:{} lastId:{} gathered:{} missing:{} sent:{}",
+                    coord, deliveryId, lastId, gathered, missing, activityTimes.size());
             }
         }
         LOG.inc("deliver>realtime>" + name + ">calls", 1);
