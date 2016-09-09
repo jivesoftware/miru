@@ -1248,7 +1248,12 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                         indexes[i] = id + i;
                     }
                     TimeVersionRealtime[] timeVersionRealtimes = activityIndex.getAllTimeVersionRealtime("sipRealtime", indexes, stackBuffer);
-                    for (TimeVersionRealtime tvr : timeVersionRealtimes) {
+                    for (int i = 0; i < timeVersionRealtimes.length; i++) {
+                        TimeVersionRealtime tvr = timeVersionRealtimes[i];
+                        if (tvr == null) {
+                            LOG.warn("Missing realtime info at index {} ({}/{})", indexes[i], i, batchSize);
+                            continue;
+                        }
                         if (tvr.realtimeDelivery) {
                             activityTimes.add(tvr.timestamp);
                             count++;
