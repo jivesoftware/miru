@@ -1241,6 +1241,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
             int lastId = activityIndex.lastId(stackBuffer);
             if (lastId > deliveryId) {
                 List<Long> activityTimes = Lists.newArrayList();
+                int gathered = 0;
                 for (int id = deliveryId + 1; id <= lastId; id += partitionSipBatchSize) {
                     int batchSize = Math.min(partitionSipBatchSize, lastId - id + 1);
                     int[] indexes = new int[batchSize];
@@ -1251,10 +1252,11 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                     for (int i = 0; i < timeVersionRealtimes.length; i++) {
                         TimeVersionRealtime tvr = timeVersionRealtimes[i];
                         if (tvr == null) {
-                            LOG.warn("Missing realtime info at index:{} batch:{} offset:{} deliveryId:{} lastId:{} gathered:{}",
-                                indexes[i], batchSize, i, deliveryId, lastId, activityTimes.size());
+                            LOG.warn("Missing realtime info at index:{} batch:{} offset:{} deliveryId:{} lastId:{} gathered:{} sent:{}",
+                                indexes[i], batchSize, i, deliveryId, lastId, gathered, activityTimes.size());
                             continue;
                         }
+                        gathered++;
                         if (tvr.realtimeDelivery) {
                             activityTimes.add(tvr.timestamp);
                             count++;
@@ -1271,7 +1273,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                     realtimeDelivery.deliver(coord, activityTimes);
                     sipIndex.setRealtimeDeliveryId(lastId, stackBuffer);
                 }
-                LOG.info("Delivered realtime info deliveryId:{} lastId:{} gathered:{}", deliveryId, lastId, activityTimes.size());
+                LOG.info("Delivered realtime info deliveryId:{} lastId:{} gathered:{} sent:{}", deliveryId, lastId, gathered, activityTimes.size());
             }
         }
         LOG.inc("deliver>realtime>" + name + ">calls", 1);
