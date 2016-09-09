@@ -25,6 +25,7 @@ public class LabAuthzIndex<BM extends IBM, IBM> implements MiruAuthzIndex<BM, IB
     private final ValueIndex[] keyedStores;
     private final MiruAuthzCache<BM, IBM> cache;
     private final StripingLocksProvider<String> stripingLocksProvider;
+    private final long labFieldDeltaMaxCardinality;
 
     public LabAuthzIndex(OrderIdProvider idProvider,
         MiruBitmaps<BM, IBM> bitmaps,
@@ -33,7 +34,8 @@ public class LabAuthzIndex<BM extends IBM, IBM> implements MiruAuthzIndex<BM, IB
         boolean atomized,
         ValueIndex[] keyedStores,
         MiruAuthzCache<BM, IBM> cache,
-        StripingLocksProvider<String> stripingLocksProvider)
+        StripingLocksProvider<String> stripingLocksProvider,
+        long labFieldDeltaMaxCardinality)
         throws Exception {
 
         this.idProvider = idProvider;
@@ -45,6 +47,7 @@ public class LabAuthzIndex<BM extends IBM, IBM> implements MiruAuthzIndex<BM, IB
         this.cache = cache;
         this.stripingLocksProvider = stripingLocksProvider;
 
+        this.labFieldDeltaMaxCardinality = labFieldDeltaMaxCardinality;
     }
 
     private ValueIndex getStore(String authz) {
@@ -63,7 +66,8 @@ public class LabAuthzIndex<BM extends IBM, IBM> implements MiruAuthzIndex<BM, IB
             getStore(authz),
             null,
             null,
-            stripingLocksProvider.lock(authz, 0));
+            stripingLocksProvider.lock(authz, 0),
+            labFieldDeltaMaxCardinality);
     }
 
     private byte[] bitmapIndexKey(byte[] authzBytes) {

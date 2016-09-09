@@ -334,7 +334,8 @@ public class MiruInvertedIndexTest {
             IndexTestUtil.buildValueIndex("bitmap"),
             new byte[] { 0 },
             IndexTestUtil.buildValueIndex("term"),
-            new Object());
+            new Object(),
+            1024);
     }
 
     @Test(groups = "slow", enabled = false, description = "Concurrency test")

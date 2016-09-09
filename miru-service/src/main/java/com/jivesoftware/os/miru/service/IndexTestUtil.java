@@ -173,7 +173,8 @@ public class IndexTestUtil {
             new ObjectMapper(),
             1024 * 1024 * 10,
             useLabIndexes,
-            false);
+            false,
+            1024);
     }
 
     public static <BM extends IBM, IBM> MiruContext<BM, IBM, RCVSSipCursor> buildInMemoryContext(int numberOfChunkStores,

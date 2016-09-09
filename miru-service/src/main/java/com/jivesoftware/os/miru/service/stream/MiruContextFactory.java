@@ -84,6 +84,7 @@ import com.jivesoftware.os.miru.service.locator.MiruPartitionCoordIdentifier;
 import com.jivesoftware.os.miru.service.locator.MiruResourceLocator;
 import com.jivesoftware.os.miru.service.locator.MiruResourcePartitionIdentifier;
 import com.jivesoftware.os.miru.service.partition.PartitionErrorTracker;
+import com.jivesoftware.os.miru.service.stream.LabPluginCacheProvider.LabPluginCacheProviderLock;
 import com.jivesoftware.os.miru.service.stream.allocator.MiruChunkAllocator;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -130,12 +131,13 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
     private final long maxHeapPressureInBytes;
     private final boolean useLabIndexes;
     private final boolean fsyncOnCommit;
+    private final long labFieldDeltaMaxCardinality;
 
     public MiruContextFactory(OrderIdProvider idProvider,
         TxCogs persistentCogs,
         TxCogs transientCogs,
         TimeIdIndex[] timeIdIndexes,
-        LabPluginCacheProvider.LabPluginCacheProviderLock[] labPluginCacheProviderLocks,
+        LabPluginCacheProviderLock[] labPluginCacheProviderLocks,
         MiruSchemaProvider schemaProvider,
         MiruTermComposer termComposer,
         MiruActivityInternExtern activityInternExtern,
@@ -151,7 +153,8 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         ObjectMapper objectMapper,
         long maxHeapPressureInBytes,
         boolean useLabIndexes,
-        boolean fsyncOnCommit) {
+        boolean fsyncOnCommit,
+        long labFieldDeltaMaxCardinality) {
 
         this.idProvider = idProvider;
         this.persistentCogs = persistentCogs;
@@ -174,6 +177,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         this.maxHeapPressureInBytes = maxHeapPressureInBytes;
         this.useLabIndexes = useLabIndexes;
         this.fsyncOnCommit = fsyncOnCommit;
+        this.labFieldDeltaMaxCardinality = labFieldDeltaMaxCardinality;
     }
 
     public MiruBackingStorage findBackingStorage(MiruPartitionCoord coord) throws Exception {
@@ -589,7 +593,8 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                 cardinalityIndex,
                 hasCardinalities,
                 fieldIndexStripingLocksProvider,
-                termInterner);
+                termInterner,
+                labFieldDeltaMaxCardinality);
         }
         MiruFieldIndexProvider<BM, IBM> fieldIndexProvider = new MiruFieldIndexProvider<>(fieldIndexes);
 
@@ -607,7 +612,8 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             atomized,
             metaIndex,
             keyBytes("removal"),
-            new Object());
+            new Object(),
+            labFieldDeltaMaxCardinality);
 
         MiruUnreadTrackingIndex<BM, IBM> unreadTrackingIndex = new LabUnreadTrackingIndex<>(
             idProvider,
@@ -616,7 +622,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             new byte[] { (byte) -1 },
             atomized,
             bitmapIndex,
-            streamStripingLocksProvider);
+            streamStripingLocksProvider, labFieldDeltaMaxCardinality);
 
         MiruInboxIndex<BM, IBM> inboxIndex = new LabInboxIndex<>(
             idProvider,
@@ -625,7 +631,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             new byte[] { (byte) -2 },
             atomized,
             bitmapIndex,
-            streamStripingLocksProvider);
+            streamStripingLocksProvider, labFieldDeltaMaxCardinality);
 
         MiruAuthzUtils<BM, IBM> authzUtils = new MiruAuthzUtils<>(bitmaps);
 
@@ -643,7 +649,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             atomized,
             bitmapIndex,
             miruAuthzCache,
-            authzStripingLocksProvider);
+            authzStripingLocksProvider, labFieldDeltaMaxCardinality);
 
         StripingLocksProvider<MiruStreamId> streamLocks = new StripingLocksProvider<>(64);
 

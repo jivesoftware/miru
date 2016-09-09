@@ -298,7 +298,8 @@ public class MiruLocalHostedPartitionTest {
             mapper,
             1024 * 1024 * 10,
             true,
-            false);
+            false,
+            1024);
         sipTrackerFactory = new RCVSSipTrackerFactory();
 
         InMemoryRowColumnValueStoreInitializer inMemoryRowColumnValueStoreInitializer = new InMemoryRowColumnValueStoreInitializer();

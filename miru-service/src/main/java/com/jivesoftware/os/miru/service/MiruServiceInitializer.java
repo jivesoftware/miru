@@ -242,7 +242,8 @@ public class MiruServiceInitializer {
             objectMapper,
             config.getLabMaxHeapPressureInBytes(),
             config.getUseLabIndexes(),
-            config.getFsyncOnCommit());
+            config.getFsyncOnCommit(),
+            config.getLabFieldDeltaMaxCardinality());
 
         MiruPartitionHeartbeatHandler heartbeatHandler = new MiruPartitionHeartbeatHandler(clusterClient);
         MiruRebuildDirector rebuildDirector = new MiruRebuildDirector(config.getMaxRebuildActivityCount());

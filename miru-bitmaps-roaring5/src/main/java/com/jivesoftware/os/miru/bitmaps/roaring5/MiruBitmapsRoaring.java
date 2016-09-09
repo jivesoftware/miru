@@ -138,11 +138,7 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
 
     @Override
     public RoaringBitmap[] createArrayOf(int size) {
-        RoaringBitmap[] bitmaps = new RoaringBitmap[size];
-        for (int i = 0; i < size; i++) {
-            bitmaps[i] = new RoaringBitmap();
-        }
-        return bitmaps;
+        return new RoaringBitmap[size];
     }
 
     @Override

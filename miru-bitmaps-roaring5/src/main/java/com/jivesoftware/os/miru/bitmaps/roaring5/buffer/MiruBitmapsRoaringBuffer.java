@@ -141,11 +141,7 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
 
     @Override
     public MutableRoaringBitmap[] createArrayOf(int size) {
-        MutableRoaringBitmap[] bitmaps = new MutableRoaringBitmap[size];
-        for (int i = 0; i < size; i++) {
-            bitmaps[i] = new MutableRoaringBitmap();
-        }
-        return bitmaps;
+        return new MutableRoaringBitmap[size];
     }
 
     @Override
