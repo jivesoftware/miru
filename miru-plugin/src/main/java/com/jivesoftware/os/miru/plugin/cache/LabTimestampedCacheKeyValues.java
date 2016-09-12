@@ -4,6 +4,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.primitives.Bytes;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
+import com.jivesoftware.os.lab.BolBuffer;
 import com.jivesoftware.os.lab.api.ValueIndex;
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.ConsumeTimestampedKeyValueStream;
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.TimestampedCacheKeyValues;
@@ -114,12 +115,14 @@ public class LabTimestampedCacheKeyValues implements TimestampedCacheKeyValues {
         byte[] prefixBytes = { (byte) cacheId.length };
 
         long version = idProvider.nextId();
+        BolBuffer bolBuffer = new BolBuffer();
+        BolBuffer keyBuffer = new BolBuffer();
         boolean result = indexes[stripe].append(stream -> {
             return consume.consume((key, value, timestamp) -> {
                 byte[] keyBytes = Bytes.concat(prefixBytes, cacheId, key);
                 return stream.stream(-1, keyBytes, timestamp, false, version, value);
             });
-        }, fsyncOnCommit);
+        }, fsyncOnCommit, bolBuffer, keyBuffer);
 
         if (commitOnUpdate) {
             indexes[stripe].commit(fsyncOnCommit, true);

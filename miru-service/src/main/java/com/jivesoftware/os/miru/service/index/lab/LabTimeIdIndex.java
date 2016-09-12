@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.service.index.lab;
 
 import com.google.common.collect.Maps;
+import com.jivesoftware.os.lab.BolBuffer;
 import com.jivesoftware.os.lab.LABEnvironment;
 import com.jivesoftware.os.lab.LABRawhide;
 import com.jivesoftware.os.lab.api.MemoryRawEntryFormat;
@@ -143,7 +144,7 @@ public class LabTimeIdIndex implements TimeIdIndex {
                         }
                     }
                     return true;
-                }, fsyncOnAppend);
+                }, fsyncOnAppend, new BolBuffer(), new BolBuffer());
             }
 
             count = indexes[0].count();

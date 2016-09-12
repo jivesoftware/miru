@@ -9,6 +9,7 @@ import com.jivesoftware.os.filer.io.api.KeyValueContext;
 import com.jivesoftware.os.filer.io.api.KeyValueTransaction;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
+import com.jivesoftware.os.lab.BolBuffer;
 import com.jivesoftware.os.lab.api.ValueIndex;
 import com.jivesoftware.os.lab.io.api.UIO;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
@@ -97,7 +98,7 @@ public class LabTimeIndex implements MiruTimeIndex {
 
         long timestamp = System.currentTimeMillis();
         long version = idProvider.nextId();
-        metaIndex.append(stream -> stream.stream(-1, metaKey, timestamp, false, version, metaFiler.getBytes()), true);
+        metaIndex.append(stream -> stream.stream(-1, metaKey, timestamp, false, version, metaFiler.getBytes()), true, new BolBuffer(), new BolBuffer());
     }
 
     @Override
@@ -136,30 +137,32 @@ public class LabTimeIndex implements MiruTimeIndex {
         timestampsLength = lastId + 1;
         setMeta(lastId, smallestTimestamp, largestTimestamp, timestampsLength, stackBuffer);
 
+        BolBuffer entryBuffer = new BolBuffer();
+        BolBuffer keyBuffer = new BolBuffer();
         long currentTime = System.currentTimeMillis();
         long version = idProvider.nextId();
         monotonicTimestampIndex.append(stream -> {
             for (int i = 0; i < ids.length; i++) {
                 if (ids[i] != -1 && monotonics[i] != -1) {
-                    if (!stream.stream(-1, Bytes.concat(UIO.longBytes(monotonics[i]), UIO.intBytes(ids[i])), currentTime, false, version, null)) {
+                    if (!stream.stream(-1, Bytes.concat(UIO.longBytes(monotonics[i]), FilerIO.intBytes(ids[i])), currentTime, false, version, null)) {
                         return false;
                     }
                 }
             }
             return true;
-        }, true);
+        }, true, entryBuffer, keyBuffer);
 
         rawTimestampToIndex.append(stream -> {
             for (int i = 0; i < ids.length; i++) {
                 if (timestamps[i] != -1 && ids[i] != -1) {
-                    if (!stream.stream(-1, UIO.longBytes(timestamps[i]), currentTime, false, version, UIO.intBytes(ids[i]))) {
+                    if (!stream.stream(-1, UIO.longBytes(timestamps[i]), currentTime, false, version, FilerIO.intBytes(ids[i]))) {
                         return false;
                     }
                     LOG.inc("nextId>sets");
                 }
             }
             return true;
-        }, true);
+        }, true, entryBuffer, keyBuffer);
     }
 
     /*

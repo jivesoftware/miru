@@ -4,6 +4,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.primitives.Bytes;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
+import com.jivesoftware.os.lab.BolBuffer;
 import com.jivesoftware.os.lab.api.ValueIndex;
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.ConsumeLastIdKeyValueStream;
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.LastIdCacheKeyValues;
@@ -36,7 +37,7 @@ public class LabLastIdCacheKeyValues implements LastIdCacheKeyValues {
     @Override
     public boolean get(byte[] cacheId, byte[][] keys, LastIdIndexKeyValueStream stream, StackBuffer stackBuffer) throws Exception {
         int stripe = stripe(cacheId);
-        byte[] prefixBytes = { (byte) cacheId.length };
+        byte[] prefixBytes = {(byte) cacheId.length};
 
         byte[][] keyBytes = new byte[keys.length][];
         for (int i = 0; i < keys.length; i++) {
@@ -71,7 +72,7 @@ public class LabLastIdCacheKeyValues implements LastIdCacheKeyValues {
         Preconditions.checkArgument(cacheId.length <= Byte.MAX_VALUE, "Max cacheId length is " + Byte.MAX_VALUE);
 
         int stripe = stripe(cacheId);
-        byte[] prefixBytes = { (byte) cacheId.length };
+        byte[] prefixBytes = {(byte) cacheId.length};
         byte[] fromKeyBytes = fromInclusive == null ? Bytes.concat(prefixBytes, cacheId) : Bytes.concat(prefixBytes, cacheId, fromInclusive);
         byte[] toKeyBytes;
         if (toExclusive == null) {
@@ -104,15 +105,16 @@ public class LabLastIdCacheKeyValues implements LastIdCacheKeyValues {
         StackBuffer stackBuffer) throws Exception {
 
         int stripe = stripe(cacheId);
-        byte[] prefixBytes = { (byte) cacheId.length };
-
+        byte[] prefixBytes = {(byte) cacheId.length};
+        BolBuffer entryBuffer = new BolBuffer();
+        BolBuffer keyBuffer = new BolBuffer();
         long version = idProvider.nextId();
         boolean result = indexes[stripe].append(stream -> {
             return consume.consume((key, value, timestamp) -> {
                 byte[] keyBytes = Bytes.concat(prefixBytes, cacheId, key);
                 return stream.stream(-1, keyBytes, timestamp, false, version, value);
             });
-        }, fsyncOnCommit);
+        }, fsyncOnCommit, entryBuffer, keyBuffer);
 
         if (commitOnUpdate) {
             indexes[stripe].commit(fsyncOnCommit, true);

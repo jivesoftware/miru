@@ -3,10 +3,11 @@ package com.jivesoftware.os.miru.service.index.lab;
 import com.google.common.base.Optional;
 import com.jivesoftware.os.filer.io.ByteArrayFiler;
 import com.jivesoftware.os.filer.io.ByteBufferBackedFiler;
+import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
+import com.jivesoftware.os.lab.BolBuffer;
 import com.jivesoftware.os.lab.api.ValueIndex;
-import com.jivesoftware.os.lab.io.api.UIO;
 import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.plugin.index.MiruSipIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruSipIndexMarshaller;
@@ -106,8 +107,8 @@ public class LabSipIndex<S extends MiruSipCursor<S>> implements MiruSipIndex<S> 
     @Override
     public boolean setRealtimeDeliveryId(int deliveryId, StackBuffer stackBuffer) throws Exception {
         return valueIndex.append(stream -> {
-            return stream.stream(-1, realtimeDeliveryIdKey, System.currentTimeMillis(), false, idProvider.nextId(), UIO.intBytes(deliveryId));
-        }, true);
+            return stream.stream(-1, realtimeDeliveryIdKey, System.currentTimeMillis(), false, idProvider.nextId(), FilerIO.intBytes(deliveryId));
+        }, true, new BolBuffer(), new BolBuffer());
     }
 
     @Override
@@ -119,7 +120,7 @@ public class LabSipIndex<S extends MiruSipCursor<S>> implements MiruSipIndex<S> 
             valueIndex.append(stream -> {
                 stream.stream(-1, sipKey, System.currentTimeMillis(), false, idProvider.nextId(), filer.getBytes());
                 return true;
-            }, true);
+            }, true, new BolBuffer(), new BolBuffer());
         }
     }
 

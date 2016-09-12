@@ -10,6 +10,7 @@ import com.jivesoftware.os.filer.io.ByteBufferDataInput;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
+import com.jivesoftware.os.lab.BolBuffer;
 import com.jivesoftware.os.lab.LABUtils;
 import com.jivesoftware.os.lab.api.ValueIndex;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
@@ -369,7 +370,7 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
             } else {
                 return stream.stream(-1, bitmapKeyBytes, timestamp, false, version, bytes[0]);
             }
-        }, true);
+        }, true, new BolBuffer(), new BolBuffer());
 
         lastId = bitmaps.lastSetBit(index);
 
@@ -477,7 +478,8 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
         long version = idProvider.nextId();
 
         ensureTermIndex(timestamp, version);
-        bitmapIndex.append(stream -> stream.stream(-1, atomize(bitmapKeyBytes, DELTA_ATOM), timestamp, false, version, bytes), true);
+        bitmapIndex.append(stream -> stream.stream(-1, atomize(bitmapKeyBytes, DELTA_ATOM),
+            timestamp, false, version, bytes), true, new BolBuffer(), new BolBuffer());
 
         lastId = Math.max(lastId, bitmaps.lastSetBit(added));
 
@@ -506,7 +508,7 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
                         return false;
                     }
                     return true;
-                }, true);
+                }, true, new BolBuffer(), new BolBuffer());
             }
         }
     }

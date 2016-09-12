@@ -210,7 +210,7 @@ public class IndexTestUtil {
             4,
             16,
             LABEnvironment.buildLeapsCache(1_000, 4),
-            true);
+            false);
         return environment.open(new ValueIndexConfig(name, 64, 1024 * 1024, -1, -1, 10 * 1024 * 1024, NoOpFormatTransformerProvider.NAME, LABRawhide.NAME,
             MemoryRawEntryFormat.NAME));
     }
