@@ -192,7 +192,7 @@ public class MiruIndexerTest {
         MiruIndexer<RoaringBitmap, RoaringBitmap> miruIndexer,
         boolean useLabIndexes) throws Exception {
 
-        MiruContext<RoaringBitmap, RoaringBitmap, ?> inMemoryContext = IndexTestUtil.buildInMemoryContext(4, useLabIndexes, bitmaps, coord);
+        MiruContext<RoaringBitmap, RoaringBitmap, ?> inMemoryContext = IndexTestUtil.buildInMemoryContext(4, useLabIndexes, true, bitmaps, coord);
 
         // Build in-memory index stream object
         MiruActivity miruActivity1 = buildMiruActivity(tenantId, 1, new String[] { "abcde" },
@@ -206,7 +206,7 @@ public class MiruIndexerTest {
             new MiruActivityAndId<>(miruActivity2, 1),
             new MiruActivityAndId<>(miruActivity3, 2));
 
-        MiruContext<RoaringBitmap, RoaringBitmap, ?> onDiskContext = IndexTestUtil.buildOnDiskContext(4, useLabIndexes, bitmaps, coord);
+        MiruContext<RoaringBitmap, RoaringBitmap, ?> onDiskContext = IndexTestUtil.buildOnDiskContext(4, useLabIndexes, true, bitmaps, coord);
 
         // Index initial activities
         miruIndexer.index(inMemoryContext,

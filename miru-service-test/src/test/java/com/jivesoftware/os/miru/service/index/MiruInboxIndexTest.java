@@ -98,10 +98,10 @@ public class MiruInboxIndexTest {
         MiruBitmaps<BM, IBM> bitmaps,
         boolean useLabIndexes) throws Exception {
 
-        MiruContext<BM, IBM, RCVSSipCursor> inMemoryContext = IndexTestUtil.buildInMemoryContext(4, useLabIndexes, bitmaps, coord);
+        MiruContext<BM, IBM, RCVSSipCursor> inMemoryContext = IndexTestUtil.buildInMemoryContext(4, useLabIndexes, true, bitmaps, coord);
         MiruInboxIndex<BM, IBM> inMemoryIndex = inMemoryContext.inboxIndex;
 
-        MiruContext<BM, IBM, ?> onDiskContext = IndexTestUtil.buildOnDiskContext(4, useLabIndexes, bitmaps, coord);
+        MiruContext<BM, IBM, ?> onDiskContext = IndexTestUtil.buildOnDiskContext(4, useLabIndexes, true, bitmaps, coord);
         MiruInboxIndex<BM, IBM> onDiskIndex = onDiskContext.inboxIndex;
 
         return new Object[][] {
@@ -135,14 +135,19 @@ public class MiruInboxIndexTest {
         int[] data = new int[] { 1, 2, 3, 4 };
 
         //TODO unnecessary casts, but the wildcards cause some IDE confusion
-        MiruContext<BM, IBM, RCVSSipCursor> unmergedInMemoryContext = IndexTestUtil.buildInMemoryContext(4, useLabIndexes,
+        MiruContext<BM, IBM, RCVSSipCursor> unmergedInMemoryContext = IndexTestUtil.buildInMemoryContext(4,
+            useLabIndexes,
+            true,
             bitmaps,
             coord);
         MiruInboxIndex<BM, IBM> unmergedInMemoryIndex = unmergedInMemoryContext.inboxIndex;
         unmergedInMemoryIndex.append(streamId, stackBuffer, data);
 
-        MiruContext<BM, IBM, RCVSSipCursor> unmergedOnDiskContext = IndexTestUtil.buildOnDiskContext(4, useLabIndexes,
-            bitmaps, coord);
+        MiruContext<BM, IBM, RCVSSipCursor> unmergedOnDiskContext = IndexTestUtil.buildOnDiskContext(4,
+            useLabIndexes,
+            true,
+            bitmaps,
+            coord);
         MiruInboxIndex<BM, IBM> unmergedOnDiskIndex = unmergedOnDiskContext.inboxIndex;
         unmergedOnDiskIndex.append(streamId, stackBuffer, data);
 

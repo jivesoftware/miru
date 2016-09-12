@@ -109,11 +109,11 @@ public class MiruFieldIndexTest {
     }
 
     private Object[][] buildIndexDataProvider(MiruBitmapsRoaring bitmaps, MiruPartitionCoord coord, boolean useLabIndexes) throws Exception {
-        MiruContext<RoaringBitmap, RoaringBitmap, ?> hybridContext = buildInMemoryContext(4, useLabIndexes, bitmaps, coord);
+        MiruContext<RoaringBitmap, RoaringBitmap, ?> hybridContext = buildInMemoryContext(4, useLabIndexes, true, bitmaps, coord);
         MiruFieldIndex<RoaringBitmap, RoaringBitmap> miruInMemoryFieldIndex = hybridContext.fieldIndexProvider.getFieldIndex(
             MiruFieldType.primary);
 
-        MiruContext<RoaringBitmap, RoaringBitmap, ?> onDiskContext = buildOnDiskContext(4, useLabIndexes, bitmaps, coord);
+        MiruContext<RoaringBitmap, RoaringBitmap, ?> onDiskContext = buildOnDiskContext(4, useLabIndexes, true, bitmaps, coord);
         MiruFieldIndex<RoaringBitmap, RoaringBitmap> miruOnDiskFieldIndex = onDiskContext.fieldIndexProvider.getFieldIndex(
             MiruFieldType.primary);
 
@@ -139,12 +139,12 @@ public class MiruFieldIndexTest {
         MiruPartitionCoord coord,
         boolean useLabIndexes) throws Exception {
 
-        MiruContext<RoaringBitmap, RoaringBitmap, ?> hybridContext = buildInMemoryContext(4, useLabIndexes, bitmaps, coord);
+        MiruContext<RoaringBitmap, RoaringBitmap, ?> hybridContext = buildInMemoryContext(4, useLabIndexes, true, bitmaps, coord);
         MiruFieldIndex<RoaringBitmap, RoaringBitmap> miruHybridFieldIndex = hybridContext.fieldIndexProvider.getFieldIndex(
             MiruFieldType.primary);
         miruHybridFieldIndex.set(0, new MiruTermId("term1".getBytes()), new int[] { 1, 2, 3 }, null, stackBuffer);
 
-        MiruContext<RoaringBitmap, RoaringBitmap, ?> onDiskContext = buildOnDiskContext(4, useLabIndexes, bitmaps, coord);
+        MiruContext<RoaringBitmap, RoaringBitmap, ?> onDiskContext = buildOnDiskContext(4, useLabIndexes, true, bitmaps, coord);
         MiruFieldIndex<RoaringBitmap, RoaringBitmap> miruOnDiskFieldIndex = onDiskContext.fieldIndexProvider.getFieldIndex(
             MiruFieldType.primary);
         miruOnDiskFieldIndex.set(0, new MiruTermId("term1".getBytes()), new int[] { 1, 2, 3 }, null, stackBuffer);

@@ -68,11 +68,11 @@ public class MiruAuthzIndexTest {
         boolean useLabIndexes) throws Exception {
 
         MiruAuthzIndex<RoaringBitmap, RoaringBitmap> unmergedLargeMiruHybridAuthzIndex =
-            buildInMemoryContext(4, useLabIndexes, bitmaps, coord).authzIndex;
+            buildInMemoryContext(4, useLabIndexes, true, bitmaps, coord).authzIndex;
         Map<String, List<Integer>> unmergedLargeHybridBitsIn = populateAuthzIndex(unmergedLargeMiruHybridAuthzIndex, miruAuthzUtils, 2);
 
         MiruAuthzIndex<RoaringBitmap, RoaringBitmap> unmergedLargeMiruOnDiskAuthzIndex =
-            buildOnDiskContext(4, useLabIndexes, bitmaps, coord).authzIndex;
+            buildOnDiskContext(4, useLabIndexes, true, bitmaps, coord).authzIndex;
         Map<String, List<Integer>> unmergedLargeOnDiskBitsIn = populateAuthzIndex(unmergedLargeMiruOnDiskAuthzIndex, miruAuthzUtils, 2);
 
         return new Object[][] {

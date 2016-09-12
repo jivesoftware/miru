@@ -55,7 +55,11 @@ public class MiruActivityIndexTest {
 
         StackBuffer stackBuffer = new StackBuffer();
         MiruTenantId tenantId = new MiruTenantId(RandomStringUtils.randomAlphabetic(10).getBytes());
-        for (MiruActivityIndex activityIndex : Arrays.asList(buildOnDiskActivityIndex(false), buildOnDiskActivityIndex(true))) {
+        List<MiruActivityIndex> indexes = Arrays.asList(
+            buildOnDiskActivityIndex(false, false), // filer
+            buildOnDiskActivityIndex(true, false), // lab
+            buildOnDiskActivityIndex(true, true)); // lab realtime
+        for (MiruActivityIndex activityIndex : indexes) {
             List<MiruActivityAndId<MiruInternalActivity>> activityAndIds = Lists.newArrayList();
             for (int i = 0; i < numberOfActivities; i++) {
                 activityAndIds.add(new MiruActivityAndId<>(buildLookupActivity(tenantId, i, new String[0], numberOfFields), i));
@@ -89,10 +93,10 @@ public class MiruActivityIndexTest {
     }
 
     @Test(dataProvider = "miruActivityIndexDataProvider")
-    public void testSetActivity(MiruActivityIndex miruActivityIndex) throws Exception {
+    public void testSetActivity(MiruActivityIndex miruActivityIndex, boolean hasRealtime) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
         MiruSchema schema = new Builder("test", 1).build();
-        MiruInternalActivity miruActivity = buildMiruActivity(new MiruTenantId(RandomStringUtils.randomAlphabetic(10).getBytes()), 1, new String[0], 5);
+        MiruInternalActivity miruActivity = buildMiruActivity(new MiruTenantId(RandomStringUtils.randomAlphabetic(10).getBytes()), 1, true, new String[0], 5);
         try {
             miruActivityIndex.setAndReady(schema, Arrays.asList(new MiruActivityAndId<>(miruActivity, 0)), stackBuffer);
         } catch (UnsupportedOperationException e) {
@@ -101,10 +105,10 @@ public class MiruActivityIndexTest {
     }
 
     @Test(dataProvider = "miruActivityIndexDataProvider")
-    public void testSetActivityOutOfBounds(MiruActivityIndex miruActivityIndex) throws Exception {
+    public void testSetActivityOutOfBounds(MiruActivityIndex miruActivityIndex, boolean hasRealtime) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
         MiruSchema schema = new Builder("test", 1).build();
-        MiruInternalActivity miruActivity = buildMiruActivity(new MiruTenantId(RandomStringUtils.randomAlphabetic(10).getBytes()), 1, new String[0], 5);
+        MiruInternalActivity miruActivity = buildMiruActivity(new MiruTenantId(RandomStringUtils.randomAlphabetic(10).getBytes()), 1, true, new String[0], 5);
         try {
             miruActivityIndex.setAndReady(schema, Arrays.asList(new MiruActivityAndId<>(miruActivity, -1)), stackBuffer);
             fail("Expected an IllegalArgumentException but never got it");
@@ -116,7 +120,7 @@ public class MiruActivityIndexTest {
     }
 
     @Test(dataProvider = "miruActivityIndexDataProvider")
-    public void testTimeVersionRealtime(MiruActivityIndex miruActivityIndex) throws Exception {
+    public void testTimeVersionRealtime(MiruActivityIndex miruActivityIndex, boolean hasRealtime) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
         MiruSchema schema = new Builder("test", 1).build();
 
@@ -125,7 +129,8 @@ public class MiruActivityIndexTest {
         int[] ids = new int[count];
         for (int i = 0; i < count; i++) {
             MiruInternalActivity miruActivity = buildMiruActivity(new MiruTenantId(RandomStringUtils.randomAlphabetic(10).getBytes()),
-                1000 + i,
+                1000 + i, // timestamp
+                i % 2 == 0, // realtimeDelivery
                 new String[0],
                 5);
             ids[i] = i;
@@ -140,42 +145,47 @@ public class MiruActivityIndexTest {
         for (int i = 0; i < tvrs.length; i++) {
             assertNotNull(tvrs[i]);
             assertEquals(tvrs[i].timestamp, 1000 + i);
+            assertEquals(tvrs[i].realtimeDelivery, hasRealtime && (i % 2 == 0));
         }
     }
 
     @Test(dataProvider = "miruActivityIndexDataProviderWithData")
-    public void testGetActivity(MiruActivityIndex miruActivityIndex, MiruInternalActivity[] expectedActivities) throws Exception {
+    public void testGetActivity(MiruActivityIndex miruActivityIndex, MiruInternalActivity[] expectedActivities, boolean hasRealtime) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
         assertTrue(expectedActivities.length == 3);
         assertEquals(miruActivityIndex.getTimeVersionRealtime("test", 0, stackBuffer).timestamp, expectedActivities[0].time);
         assertEquals(miruActivityIndex.getTimeVersionRealtime("test", 0, stackBuffer).version, expectedActivities[0].version);
-        assertEquals(miruActivityIndex.getTimeVersionRealtime("test", 0, stackBuffer).realtimeDelivery, expectedActivities[0].realtimeDelivery);
+        assertEquals(miruActivityIndex.getTimeVersionRealtime("test", 0, stackBuffer).realtimeDelivery, hasRealtime && expectedActivities[0].realtimeDelivery);
         assertEquals(miruActivityIndex.getTimeVersionRealtime("test", 1, stackBuffer).timestamp, expectedActivities[1].time);
         assertEquals(miruActivityIndex.getTimeVersionRealtime("test", 1, stackBuffer).version, expectedActivities[1].version);
-        assertEquals(miruActivityIndex.getTimeVersionRealtime("test", 1, stackBuffer).realtimeDelivery, expectedActivities[1].realtimeDelivery);
+        assertEquals(miruActivityIndex.getTimeVersionRealtime("test", 1, stackBuffer).realtimeDelivery, hasRealtime && expectedActivities[1].realtimeDelivery);
         assertEquals(miruActivityIndex.getTimeVersionRealtime("test", 2, stackBuffer).timestamp, expectedActivities[2].time);
         assertEquals(miruActivityIndex.getTimeVersionRealtime("test", 2, stackBuffer).version, expectedActivities[2].version);
-        assertEquals(miruActivityIndex.getTimeVersionRealtime("test", 2, stackBuffer).realtimeDelivery, expectedActivities[2].realtimeDelivery);
+        assertEquals(miruActivityIndex.getTimeVersionRealtime("test", 2, stackBuffer).realtimeDelivery, hasRealtime && expectedActivities[2].realtimeDelivery);
     }
 
     @Test(dataProvider = "miruActivityIndexDataProviderWithData", expectedExceptions = IllegalArgumentException.class)
-    public void testGetActivityOverCapacity(MiruActivityIndex miruActivityIndex, MiruInternalActivity[] expectedActivities) throws Exception {
+    public void testGetActivityOverCapacity(MiruActivityIndex miruActivityIndex, MiruInternalActivity[] expectedActivities, boolean hasRealtime) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
         miruActivityIndex.getTimeVersionRealtime("test", expectedActivities.length, stackBuffer); // This should throw an exception
     }
 
     @DataProvider(name = "miruActivityIndexDataProvider")
     public Object[][] miruActivityIndexDataProvider() throws Exception {
-        MiruActivityIndex chunkInMemoryActivityIndex = buildInMemoryActivityIndex(false);
-        MiruActivityIndex chunkOnDiskActivityIndex = buildOnDiskActivityIndex(false);
-        MiruActivityIndex labInMemoryActivityIndex = buildInMemoryActivityIndex(true);
-        MiruActivityIndex labOnDiskActivityIndex = buildOnDiskActivityIndex(true);
+        MiruActivityIndex chunkInMemoryActivityIndex = buildInMemoryActivityIndex(false, false);
+        MiruActivityIndex chunkOnDiskActivityIndex = buildOnDiskActivityIndex(false, false);
+        MiruActivityIndex labInMemoryActivityIndex = buildInMemoryActivityIndex(true, false);
+        MiruActivityIndex labInMemoryActivityIndexRealtime = buildInMemoryActivityIndex(true, true);
+        MiruActivityIndex labOnDiskActivityIndex = buildOnDiskActivityIndex(true, false);
+        MiruActivityIndex labOnDiskActivityIndexRealtime = buildOnDiskActivityIndex(true, true);
 
         return new Object[][] {
-            { chunkInMemoryActivityIndex },
-            { chunkOnDiskActivityIndex },
-            { labInMemoryActivityIndex },
-            { labOnDiskActivityIndex },
+            { chunkInMemoryActivityIndex, false },
+            { chunkOnDiskActivityIndex, false },
+            { labInMemoryActivityIndex, false },
+            { labInMemoryActivityIndexRealtime, true },
+            { labOnDiskActivityIndex, false },
+            { labOnDiskActivityIndexRealtime, true },
         };
     }
 
@@ -184,9 +194,9 @@ public class MiruActivityIndexTest {
         StackBuffer stackBuffer = new StackBuffer();
         MiruSchema schema = new Builder("test", 1).build();
         MiruTenantId tenantId = new MiruTenantId(RandomStringUtils.randomAlphabetic(10).getBytes());
-        MiruInternalActivity miruActivity1 = buildMiruActivity(tenantId, 1, new String[0], 3);
-        MiruInternalActivity miruActivity2 = buildMiruActivity(tenantId, 2, new String[0], 4);
-        MiruInternalActivity miruActivity3 = buildMiruActivity(tenantId, 3, new String[] { "abcde" }, 1);
+        MiruInternalActivity miruActivity1 = buildMiruActivity(tenantId, 1, true, new String[0], 3);
+        MiruInternalActivity miruActivity2 = buildMiruActivity(tenantId, 2, false, new String[0], 4);
+        MiruInternalActivity miruActivity3 = buildMiruActivity(tenantId, 3, true, new String[] { "abcde" }, 1);
         final MiruInternalActivity[] miruActivities = new MiruInternalActivity[] { miruActivity1, miruActivity2, miruActivity3 };
 
         List<MiruActivityAndId<MiruInternalActivity>> activityAndIds = Arrays.asList(
@@ -195,41 +205,51 @@ public class MiruActivityIndexTest {
             new MiruActivityAndId<>(miruActivity3, 2));
 
         // Add activities to in-memory index
-        MiruActivityIndex chunkInMemoryActivityIndex = buildInMemoryActivityIndex(false);
-        MiruActivityIndex labInMemoryActivityIndex = buildInMemoryActivityIndex(true);
+        MiruActivityIndex chunkInMemoryActivityIndex = buildInMemoryActivityIndex(false, false);
+        MiruActivityIndex labInMemoryActivityIndex = buildInMemoryActivityIndex(true, false);
+        MiruActivityIndex labInMemoryActivityIndexRealtime = buildInMemoryActivityIndex(true, true);
         chunkInMemoryActivityIndex.setAndReady(schema, activityAndIds, stackBuffer);
         labInMemoryActivityIndex.setAndReady(schema, activityAndIds, stackBuffer);
+        labInMemoryActivityIndexRealtime.setAndReady(schema, activityAndIds, stackBuffer);
 
-        MiruActivityIndex chunkOnDiskActivityIndex = buildOnDiskActivityIndex(false);
-        MiruActivityIndex labOnDiskActivityIndex = buildOnDiskActivityIndex(true);
+        MiruActivityIndex chunkOnDiskActivityIndex = buildOnDiskActivityIndex(false, false);
+        MiruActivityIndex labOnDiskActivityIndex = buildOnDiskActivityIndex(true, false);
+        MiruActivityIndex labOnDiskActivityIndexRealtime = buildOnDiskActivityIndex(true, true);
         chunkOnDiskActivityIndex.setAndReady(schema, activityAndIds, stackBuffer);
         labOnDiskActivityIndex.setAndReady(schema, activityAndIds, stackBuffer);
+        labOnDiskActivityIndexRealtime.setAndReady(schema, activityAndIds, stackBuffer);
 
         return new Object[][] {
-            { chunkInMemoryActivityIndex, miruActivities },
-            { chunkOnDiskActivityIndex, miruActivities },
-            { labInMemoryActivityIndex, miruActivities },
-            { labOnDiskActivityIndex, miruActivities },
+            { chunkInMemoryActivityIndex, miruActivities, false },
+            { chunkOnDiskActivityIndex, miruActivities, false },
+            { labInMemoryActivityIndex, miruActivities, false },
+            { labOnDiskActivityIndex, miruActivities, false },
+            { labInMemoryActivityIndexRealtime, miruActivities, true },
+            { labOnDiskActivityIndexRealtime, miruActivities, true },
         };
     }
 
-    private MiruActivityIndex buildInMemoryActivityIndex(boolean useLabIndexes) throws Exception {
+    private MiruActivityIndex buildInMemoryActivityIndex(boolean useLabIndexes, boolean hasRealtime) throws Exception {
         MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
         MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("logicalName"));
-        MiruContext<RoaringBitmap, RoaringBitmap, ?> hybridContext = buildInMemoryContext(4, useLabIndexes, bitmaps, coord);
+        MiruContext<RoaringBitmap, RoaringBitmap, ?> hybridContext = buildInMemoryContext(4, useLabIndexes, hasRealtime, bitmaps, coord);
         return hybridContext.activityIndex;
     }
 
-    private MiruActivityIndex buildOnDiskActivityIndex(boolean useLabIndexes) throws Exception {
+    private MiruActivityIndex buildOnDiskActivityIndex(boolean useLabIndexes, boolean hasRealtime) throws Exception {
         MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
         MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("logicalName"));
-        MiruContext<RoaringBitmap, RoaringBitmap, ?> hybridContext = buildOnDiskContext(4, useLabIndexes, bitmaps, coord);
+        MiruContext<RoaringBitmap, RoaringBitmap, ?> hybridContext = buildOnDiskContext(4, useLabIndexes, hasRealtime, bitmaps, coord);
         return hybridContext.activityIndex;
     }
 
-    private MiruInternalActivity buildMiruActivity(MiruTenantId tenantId, long time, String[] authz, int numberOfRandomFields) throws Exception {
+    private MiruInternalActivity buildMiruActivity(MiruTenantId tenantId,
+        long time,
+        boolean realtimeDelivery,
+        String[] authz,
+        int numberOfRandomFields) throws Exception {
         assertTrue(numberOfRandomFields <= schema.fieldCount());
-        MiruInternalActivity.Builder builder = new MiruInternalActivity.Builder(schema, tenantId, time, 0, false, authz);
+        MiruInternalActivity.Builder builder = new MiruInternalActivity.Builder(schema, tenantId, time, 0, realtimeDelivery, authz);
         StackBuffer stackBuffer = new StackBuffer();
         MiruTermId[][] terms = new MiruTermId[numberOfRandomFields][];
         for (int i = 0; i < numberOfRandomFields; i++) {

@@ -193,12 +193,12 @@ public class MiruBitmapsTimeRangeTest {
     private MiruContext<RoaringBitmap, RoaringBitmap, RCVSSipCursor> buildInMemoryTimeIndex(boolean useLabIndexes) throws Exception {
         MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
         MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("logicalName"));
-        return IndexTestUtil.buildInMemoryContext(numberOfChunkStores, useLabIndexes, bitmaps, coord);
+        return IndexTestUtil.buildInMemoryContext(numberOfChunkStores, useLabIndexes, true, bitmaps, coord);
     }
 
     private MiruContext<RoaringBitmap, RoaringBitmap, RCVSSipCursor> buildOnDiskTimeIndex(boolean useLabIndexes) throws Exception {
         MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
         MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()), MiruPartitionId.of(0), new MiruHost("logicalName"));
-        return IndexTestUtil.buildOnDiskContext(numberOfChunkStores, useLabIndexes, bitmaps, coord);
+        return IndexTestUtil.buildOnDiskContext(numberOfChunkStores, useLabIndexes, true, bitmaps, coord);
     }
 }

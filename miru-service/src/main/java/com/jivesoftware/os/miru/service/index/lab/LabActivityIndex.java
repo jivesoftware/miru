@@ -29,6 +29,7 @@ public class LabActivityIndex implements MiruActivityIndex {
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final OrderIdProvider idProvider;
+    private final boolean realtime;
     private final ValueIndex timeAndVersionIndex;
     private final AtomicInteger indexSize = new AtomicInteger(0);
     private final IntTermIdsKeyValueMarshaller intTermIdsKeyValueMarshaller;
@@ -38,6 +39,7 @@ public class LabActivityIndex implements MiruActivityIndex {
     private final boolean[] hasTermStorage;
 
     public LabActivityIndex(OrderIdProvider idProvider,
+        boolean realtime,
         ValueIndex timeAndVersionIndex,
         IntTermIdsKeyValueMarshaller intTermIdsKeyValueMarshaller,
         ValueIndex metaIndex,
@@ -45,6 +47,7 @@ public class LabActivityIndex implements MiruActivityIndex {
         ValueIndex[] termStorage,
         boolean[] hasTermStorage) {
         this.idProvider = idProvider;
+        this.realtime = realtime;
         this.timeAndVersionIndex = timeAndVersionIndex;
         this.intTermIdsKeyValueMarshaller = intTermIdsKeyValueMarshaller;
         this.metaIndex = metaIndex;
@@ -61,15 +64,17 @@ public class LabActivityIndex implements MiruActivityIndex {
     public TimeVersionRealtime getTimeVersionRealtime(String name, int index, StackBuffer stackBuffer) throws Exception {
         int capacity = capacity();
         checkArgument(index >= 0 && index < capacity, "Index parameter is out of bounds. The value %s must be >=0 and <%s", index, capacity);
-        long[] values = {-1L, -1L};
-        boolean[] realtimeDelivery = {false};
+        long[] values = { -1L, -1L };
+        boolean[] realtimeDelivery = { false };
         timeAndVersionIndex.get((streamKeys) -> streamKeys.key(0, FilerIO.intBytes(index), 0, 4),
             (index1, key, timestamp, tombstoned, version, payload) -> {
                 if (payload != null && !tombstoned) {
                     payload.clear();
                     values[0] = payload.getLong(0);
                     values[1] = payload.getLong(8);
-                    realtimeDelivery[0] = payload.capacity() >= 17 && payload.get(16) == 1;
+                    if (realtime) {
+                        realtimeDelivery[0] = payload.capacity() >= 17 && payload.get(16) == 1;
+                    }
                 }
                 return false;
             },
@@ -99,7 +104,7 @@ public class LabActivityIndex implements MiruActivityIndex {
                 tav[index1] = new TimeVersionRealtime(
                     payload.getLong(0),
                     payload.getLong(8),
-                    payload.capacity() >= 17 && payload.get(16) == 1);
+                    realtime && payload.capacity() >= 17 && payload.get(16) == 1);
             }
             return true;
         }, true);
@@ -119,7 +124,7 @@ public class LabActivityIndex implements MiruActivityIndex {
                 payload.clear();
                 long streamTimestamp = payload.getLong(0);
                 long streamVersion = payload.getLong(8);
-                boolean streamRealtimeDelivery = payload.capacity() >= 17 && payload.get(16) == 1;
+                boolean streamRealtimeDelivery = realtime && payload.capacity() >= 17 && payload.get(16) == 1;
                 if (!stream.stream(id, streamTimestamp, streamVersion, streamRealtimeDelivery)) {
                     return false;
                 }
@@ -134,7 +139,7 @@ public class LabActivityIndex implements MiruActivityIndex {
             return null;
         }
 
-        MiruTermId[][] termIds = {null};
+        MiruTermId[][] termIds = { null };
         byte[] concatKey = Bytes.concat(FilerIO.intBytes(fieldId), FilerIO.intBytes(index));
         getTermIndex(fieldId).get((streamKeys) -> streamKeys.key(0, concatKey, 0, concatKey.length),
             (index1, key, timestamp, tombstoned, version, payload) -> {
@@ -170,7 +175,7 @@ public class LabActivityIndex implements MiruActivityIndex {
         MiruTermId[][] termIds = new MiruTermId[length][];
         ValueIndex termIndex = getTermIndex(fieldId);
         byte[] fieldBytes = FilerIO.intBytes(fieldId);
-        int[] count = {0};
+        int[] count = { 0 };
         termIndex.get(
             keyStream -> {
                 for (int i = 0; i < length; i++) {
@@ -254,10 +259,17 @@ public class LabActivityIndex implements MiruActivityIndex {
         timeAndVersionIndex.append(stream -> {
             for (int j = 0; j < activityAndIdsArray.length; j++) {
                 int index = activityAndIdsArray[j].id;
-                byte[] payload = new byte[8 + 8 + 1];
-                UIO.longBytes(activityAndIdsArray[j].activity.time, payload, 0);
-                UIO.longBytes(activityAndIdsArray[j].activity.version, payload, 8);
-                payload[8 + 8] = (byte) (activityAndIdsArray[j].activity.realtimeDelivery ? 1 : 0);
+                byte[] payload;
+                if (realtime) {
+                    payload = new byte[8 + 8 + 1];
+                    UIO.longBytes(activityAndIdsArray[j].activity.time, payload, 0);
+                    UIO.longBytes(activityAndIdsArray[j].activity.version, payload, 8);
+                    payload[8 + 8] = (byte) (activityAndIdsArray[j].activity.realtimeDelivery ? 1 : 0);
+                } else {
+                    payload = new byte[8 + 8];
+                    UIO.longBytes(activityAndIdsArray[j].activity.time, payload, 0);
+                    UIO.longBytes(activityAndIdsArray[j].activity.version, payload, 8);
+                }
                 stream.stream(-1, FilerIO.intBytes(index), timestamp, false, version, payload);
                 bytesWrite.add(16);
             }
@@ -309,7 +321,7 @@ public class LabActivityIndex implements MiruActivityIndex {
 
     private int capacity() {
         try {
-            int[] size = {indexSize.get()};
+            int[] size = { indexSize.get() };
             if (size[0] < 0) {
                 metaIndex.get((streamKeys) -> streamKeys.key(0, metaKey, 0, metaKey.length),
                     (index, key, timestamp, tombstoned, version, payload) -> {

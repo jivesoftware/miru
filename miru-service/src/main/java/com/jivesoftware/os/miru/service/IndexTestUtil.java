@@ -77,7 +77,7 @@ public class IndexTestUtil {
         .setFieldDefinitions(DefaultMiruSchemaDefinition.FIELDS)
         .build();
 
-    private static MiruContextFactory<RCVSSipCursor> factory(int numberOfChunkStores, boolean useLabIndexes) throws Exception {
+    private static MiruContextFactory<RCVSSipCursor> factory(int numberOfChunkStores, boolean useLabIndexes, boolean hasRealtime) throws Exception {
 
         StripingLocksProvider<MiruTermId> fieldIndexStripingLocksProvider = new StripingLocksProvider<>(1024);
         StripingLocksProvider<MiruStreamId> streamStripingLocksProvider = new StripingLocksProvider<>(1024);
@@ -173,23 +173,26 @@ public class IndexTestUtil {
             new ObjectMapper(),
             1024 * 1024 * 10,
             useLabIndexes,
+            hasRealtime,
             false,
             1024);
     }
 
     public static <BM extends IBM, IBM> MiruContext<BM, IBM, RCVSSipCursor> buildInMemoryContext(int numberOfChunkStores,
         boolean useLabIndexes,
+        boolean hasRealtime,
         MiruBitmaps<BM, IBM> bitmaps,
         MiruPartitionCoord coord) throws Exception {
-        return factory(numberOfChunkStores, useLabIndexes).allocate(bitmaps, schema, coord, MiruBackingStorage.memory, null);
+        return factory(numberOfChunkStores, useLabIndexes, hasRealtime).allocate(bitmaps, schema, coord, MiruBackingStorage.memory, null);
 
     }
 
     public static <BM extends IBM, IBM> MiruContext<BM, IBM, RCVSSipCursor> buildOnDiskContext(int numberOfChunkStores,
         boolean useLabIndexes,
+        boolean hasRealtime,
         MiruBitmaps<BM, IBM> bitmaps,
         MiruPartitionCoord coord) throws Exception {
-        return factory(numberOfChunkStores, useLabIndexes).allocate(bitmaps, schema, coord, MiruBackingStorage.disk, null);
+        return factory(numberOfChunkStores, useLabIndexes, hasRealtime).allocate(bitmaps, schema, coord, MiruBackingStorage.disk, null);
 
     }
 
