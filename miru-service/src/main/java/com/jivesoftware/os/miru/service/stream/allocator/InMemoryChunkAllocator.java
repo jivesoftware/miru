@@ -162,6 +162,7 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
             environments[i].register("fixedWidth_12_0", new FixedWidthRawhide(12, 0));
             environments[i].register("fixedWidth_8_4", new FixedWidthRawhide(8, 4));
             environments[i].register("fixedWidth_4_16", new FixedWidthRawhide(4, 16));
+            environments[i].register("fixedWidth_4_17", new FixedWidthRawhide(4, 17));
             environments[i].open();
         }
         return environments;

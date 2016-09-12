@@ -242,6 +242,7 @@ public class MiruServiceInitializer {
             objectMapper,
             config.getLabMaxHeapPressureInBytes(),
             config.getUseLabIndexes(),
+            config.getRealtimeDelivery(),
             config.getFsyncOnCommit(),
             config.getLabFieldDeltaMaxCardinality());
 

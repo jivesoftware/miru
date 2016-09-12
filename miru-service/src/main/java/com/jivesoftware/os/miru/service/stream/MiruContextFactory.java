@@ -105,10 +105,11 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
-    private static final int LAB_VERSION = 2;
-    private static final int[] SUPPORTED_LAB_VERSIONS = { -1 };
+    private static final int LAB_VERSION = 3;
+    private static final int[] SUPPORTED_LAB_VERSIONS = { -1, 2 };
 
     private static final int LAB_ATOMIZED_MIN_VERSION = 2;
+    private static final int LAB_REALTIME_MIN_VERSION = 3;
 
     private final OrderIdProvider idProvider;
     private final TxCogs persistentCogs;
@@ -130,6 +131,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
     private final ObjectMapper objectMapper;
     private final long maxHeapPressureInBytes;
     private final boolean useLabIndexes;
+    private final boolean realtimeDelivery;
     private final boolean fsyncOnCommit;
     private final long labFieldDeltaMaxCardinality;
 
@@ -153,6 +155,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         ObjectMapper objectMapper,
         long maxHeapPressureInBytes,
         boolean useLabIndexes,
+        boolean realtimeDelivery,
         boolean fsyncOnCommit,
         long labFieldDeltaMaxCardinality) {
 
@@ -176,6 +179,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         this.objectMapper = objectMapper;
         this.maxHeapPressureInBytes = maxHeapPressureInBytes;
         this.useLabIndexes = useLabIndexes;
+        this.realtimeDelivery = realtimeDelivery;
         this.fsyncOnCommit = fsyncOnCommit;
         this.labFieldDeltaMaxCardinality = labFieldDeltaMaxCardinality;
     }
@@ -451,6 +455,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         MiruRebuildDirector.Token rebuildToken) throws Exception {
 
         boolean atomized = (labVersion >= LAB_ATOMIZED_MIN_VERSION);
+        boolean realtime = realtimeDelivery && (labVersion >= LAB_REALTIME_MIN_VERSION);
 
         long version = getVersion(coord, storage);
 
@@ -523,11 +528,12 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             -1L,
             -1L,
             NoOpFormatTransformerProvider.NAME,
-            "fixedWidth_4_16",
+            realtime ? "fixedWidth_4_17" : "fixedWidth_4_16",
             MemoryRawEntryFormat.NAME));
         commitables.add(timeAndVersionIndex);
         MiruActivityIndex activityIndex = new LabActivityIndex(
             idProvider,
+            realtime,
             timeAndVersionIndex,
             intTermIdsKeyValueMarshaller,
             metaIndex,

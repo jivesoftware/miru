@@ -249,4 +249,7 @@ public interface MiruServiceConfig extends Config {
 
     @StringDefault("")
     String getRealtimeDeliveryEndpoint();
+
+    @BooleanDefault(true)
+    boolean getRealtimeDelivery();
 }

@@ -1,6 +1,6 @@
 package com.jivesoftware.os.miru.plugin.context;
 
-import com.jivesoftware.os.lab.LABUtils;
+import com.jivesoftware.os.lab.BolBuffer;
 import com.jivesoftware.os.lab.api.FormatTransformer;
 import com.jivesoftware.os.lab.api.Rawhide;
 import com.jivesoftware.os.lab.api.ValueStream;
@@ -17,29 +17,64 @@ import java.util.Comparator;
 public class LastIdKeyValueRawhide implements Rawhide {
 
     @Override
-    public byte[] merge(FormatTransformer currentReadKeyFormatTransormer,
+    public BolBuffer merge(FormatTransformer currentReadKeyFormatTransormer,
         FormatTransformer currentReadValueFormatTransormer,
-        byte[] currentRawEntry,
+        BolBuffer currentRawEntry,
         FormatTransformer addingReadKeyFormatTransormer,
         FormatTransformer addingReadValueFormatTransormer,
-        byte[] addingRawEntry,
+        BolBuffer addingRawEntry,
         FormatTransformer mergedReadKeyFormatTransormer,
         FormatTransformer mergedReadValueFormatTransormer) {
 
-        long currentsTimestamp = (long) UIO.bytesInt(currentRawEntry, currentRawEntry.length - 4);
-        long addingsTimestamp = (long) UIO.bytesInt(addingRawEntry, addingRawEntry.length - 4);
+        long currentsTimestamp = (long) currentRawEntry.getInt(currentRawEntry.length - 4);
+        long addingsTimestamp = (long) addingRawEntry.getInt(addingRawEntry.length - 4);
 
         return (currentsTimestamp > addingsTimestamp) ? currentRawEntry : addingRawEntry;
     }
 
     @Override
-    public long timestamp(FormatTransformer readKeyFormatTransormer, FormatTransformer readValueFormatTransormer, ByteBuffer rawEntry) {
-        rawEntry.clear();
-        return (long) rawEntry.getInt(rawEntry.capacity() - 4);
+    public int mergeCompare(FormatTransformer aReadKeyFormatTransormer, FormatTransformer aReadValueFormatTransormer, ByteBuffer aRawEntry,
+        FormatTransformer bReadKeyFormatTransormer, FormatTransformer bReadValueFormatTransormer, ByteBuffer bRawEntry) {
+
+        int c = compareKey(aReadKeyFormatTransormer, aReadValueFormatTransormer, aRawEntry,
+            bReadKeyFormatTransormer, bReadValueFormatTransormer, bRawEntry);
+        if (c != 0) {
+            return c;
+        }
+
+        if (aRawEntry == null && bRawEntry == null) {
+            return 0;
+        } else if (aRawEntry == null) {
+            bRawEntry.clear();
+            return -bRawEntry.capacity();
+        } else if (bRawEntry == null) {
+            aRawEntry.clear();
+            return aRawEntry.capacity();
+        } else {
+            aRawEntry.clear();
+            bRawEntry.clear();
+
+            long asTimestamp = (long) aRawEntry.getInt(aRawEntry.capacity() - 4);
+            long bsTimestamp = (long) bRawEntry.getInt(bRawEntry.capacity() - 4);
+
+            if (asTimestamp == bsTimestamp) {
+                return 0;
+            }
+            if ((asTimestamp > bsTimestamp)) {
+                return -1;
+            } else {
+                return 1;
+            }
+        }
     }
 
     @Override
-    public long version(FormatTransformer readKeyFormatTransormer, FormatTransformer readValueFormatTransormer, ByteBuffer rawEntry) {
+    public long timestamp(FormatTransformer readKeyFormatTransormer, FormatTransformer readValueFormatTransormer, BolBuffer rawEntry) {
+        return rawEntry.getInt(rawEntry.length - 4);
+    }
+
+    @Override
+    public long version(FormatTransformer readKeyFormatTransormer, FormatTransformer readValueFormatTransormer, BolBuffer rawEntry) {
         return 0;
     }
 
@@ -73,15 +108,22 @@ public class LastIdKeyValueRawhide implements Rawhide {
     }
 
     @Override
-    public byte[] toRawEntry(byte[] key, long timestamp, boolean tombstoned, long version, byte[] payload) throws Exception {
-        byte[] payloadAndLastId = new byte[payload.length + 4];
-        System.arraycopy(payload, 0, payloadAndLastId, 0, payload.length);
-        UIO.intBytes((int) timestamp, payloadAndLastId, payloadAndLastId.length - 4);
-        byte[] rawEntry = new byte[LABUtils.rawArrayLength(key) + LABUtils.rawArrayLength(payloadAndLastId)];
-        int o = 0;
-        o += LABUtils.writeByteArray(key, rawEntry, o);
-        LABUtils.writeByteArray(payloadAndLastId, rawEntry, o);
-        return rawEntry;
+    public BolBuffer toRawEntry(byte[] key, long timestamp, boolean tombstoned, long version, byte[] payload, BolBuffer rawEntryBuffer) throws Exception {
+
+        int keyLength = ((key != null) ? key.length : 0);
+        int payloadLength = ((payload != null) ? payload.length : 0);
+        rawEntryBuffer.allocate(4 + keyLength + 4 + payloadLength + 4);
+
+        UIO.intBytes(keyLength, rawEntryBuffer.bytes, 0);
+        if (keyLength > 0) {
+            UIO.writeBytes(key, rawEntryBuffer.bytes, 4);
+        }
+        UIO.intBytes(payloadLength + 4, rawEntryBuffer.bytes, 4 + keyLength);
+        if (payloadLength > 0) {
+            UIO.writeBytes(payload, rawEntryBuffer.bytes, 4 + keyLength + 4);
+        }
+        UIO.intBytes((int) timestamp, rawEntryBuffer.bytes, 4 + keyLength + 4 + payloadLength);
+        return rawEntryBuffer;
     }
 
     @Override
@@ -92,22 +134,24 @@ public class LastIdKeyValueRawhide implements Rawhide {
     @Override
     public void writeRawEntry(FormatTransformer readKeyFormatTransormer,
         FormatTransformer readValueFormatTransormer,
-        byte[] rawEntry,
-        int offset,
-        int length,
+        BolBuffer rawEntry,
         FormatTransformer writeKeyFormatTransormer,
         FormatTransformer writeValueFormatTransormer,
         IAppendOnly appendOnly) throws Exception {
-        UIO.writeByteArray(appendOnly, rawEntry, offset, length, "entry");
+        UIO.writeByteArray(appendOnly, rawEntry.bytes, rawEntry.offset, rawEntry.length, "entry");
     }
 
     @Override
-    public byte[] key(FormatTransformer readKeyFormatTransormer,
+    public BolBuffer key(FormatTransformer readKeyFormatTransormer,
         FormatTransformer readValueFormatTransormer,
-        byte[] rawEntry,
-        int offset,
-        int length) {
-        return LABUtils.readByteArray(rawEntry, offset);
+        BolBuffer rawEntry,
+        BolBuffer keyBuffer) {
+        int length = rawEntry.getInt(0);
+        if (length < 0) {
+            return null;
+        }
+        rawEntry.sliceInto(4, length, keyBuffer);
+        return keyBuffer;
     }
 
     @Override

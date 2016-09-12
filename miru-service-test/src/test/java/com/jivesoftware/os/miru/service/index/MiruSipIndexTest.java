@@ -45,10 +45,10 @@ public class MiruSipIndexTest {
         RCVSSipCursor initial = new RCVSSipCursor((byte) 0, 1L, 2L, false);
         RCVSSipCursor expected = new RCVSSipCursor((byte) 1, 3L, 4L, true);
 
-        MiruSipIndex<RCVSSipCursor> unmergedInMemorySipIndex = buildInMemoryContext(4, useLabIndexes, bitmaps, coord).sipIndex;
+        MiruSipIndex<RCVSSipCursor> unmergedInMemorySipIndex = buildInMemoryContext(4, useLabIndexes, true, bitmaps, coord).sipIndex;
         populateSipIndex(unmergedInMemorySipIndex, initial, expected);
 
-        MiruSipIndex<RCVSSipCursor> unmergedOnDiskSipIndex = buildOnDiskContext(4, useLabIndexes, bitmaps, coord).sipIndex;
+        MiruSipIndex<RCVSSipCursor> unmergedOnDiskSipIndex = buildOnDiskContext(4, useLabIndexes, true, bitmaps, coord).sipIndex;
         populateSipIndex(unmergedOnDiskSipIndex, initial, expected);
 
         return new Object[][] {

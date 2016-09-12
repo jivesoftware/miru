@@ -4,6 +4,7 @@ import com.google.common.primitives.Bytes;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
+import com.jivesoftware.os.lab.BolBuffer;
 import com.jivesoftware.os.lab.api.ValueIndex;
 import com.jivesoftware.os.lab.guts.IndexUtil;
 import com.jivesoftware.os.lab.io.api.UIO;
@@ -28,6 +29,7 @@ public class LabActivityIndex implements MiruActivityIndex {
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final OrderIdProvider idProvider;
+    private final boolean realtime;
     private final ValueIndex timeAndVersionIndex;
     private final AtomicInteger indexSize = new AtomicInteger(0);
     private final IntTermIdsKeyValueMarshaller intTermIdsKeyValueMarshaller;
@@ -37,6 +39,7 @@ public class LabActivityIndex implements MiruActivityIndex {
     private final boolean[] hasTermStorage;
 
     public LabActivityIndex(OrderIdProvider idProvider,
+        boolean realtime,
         ValueIndex timeAndVersionIndex,
         IntTermIdsKeyValueMarshaller intTermIdsKeyValueMarshaller,
         ValueIndex metaIndex,
@@ -44,6 +47,7 @@ public class LabActivityIndex implements MiruActivityIndex {
         ValueIndex[] termStorage,
         boolean[] hasTermStorage) {
         this.idProvider = idProvider;
+        this.realtime = realtime;
         this.timeAndVersionIndex = timeAndVersionIndex;
         this.intTermIdsKeyValueMarshaller = intTermIdsKeyValueMarshaller;
         this.metaIndex = metaIndex;
@@ -60,18 +64,21 @@ public class LabActivityIndex implements MiruActivityIndex {
     public TimeVersionRealtime getTimeVersionRealtime(String name, int index, StackBuffer stackBuffer) throws Exception {
         int capacity = capacity();
         checkArgument(index >= 0 && index < capacity, "Index parameter is out of bounds. The value %s must be >=0 and <%s", index, capacity);
-
         long[] values = { -1L, -1L };
         boolean[] realtimeDelivery = { false };
-        timeAndVersionIndex.get((streamKeys) -> streamKeys.key(0, UIO.intBytes(index), 0, 4), (index1, key, timestamp, tombstoned, version, payload) -> {
-            if (payload != null && !tombstoned) {
-                payload.clear();
-                values[0] = payload.getLong(0);
-                values[1] = payload.getLong(8);
-                realtimeDelivery[0] = payload.capacity() >= 17 && payload.get(16) == 1;
-            }
-            return false;
-        }, true);
+        timeAndVersionIndex.get((streamKeys) -> streamKeys.key(0, FilerIO.intBytes(index), 0, 4),
+            (index1, key, timestamp, tombstoned, version, payload) -> {
+                if (payload != null && !tombstoned) {
+                    payload.clear();
+                    values[0] = payload.getLong(0);
+                    values[1] = payload.getLong(8);
+                    if (realtime) {
+                        realtimeDelivery[0] = payload.capacity() >= 17 && payload.get(16) == 1;
+                    }
+                }
+                return false;
+            },
+            true);
 
         LOG.inc("count>getTimeVersionRealtime>total");
         LOG.inc("count>getTimeVersionRealtime>" + name);
@@ -84,7 +91,7 @@ public class LabActivityIndex implements MiruActivityIndex {
         timeAndVersionIndex.get(keyStream -> {
             for (int i = 0; i < indexes.length; i++) {
                 if (indexes[i] != -1) {
-                    byte[] key = UIO.intBytes(indexes[i]);
+                    byte[] key = FilerIO.intBytes(indexes[i]);
                     if (!keyStream.key(i, key, 0, metaKey.length)) {
                         return false;
                     }
@@ -97,7 +104,7 @@ public class LabActivityIndex implements MiruActivityIndex {
                 tav[index1] = new TimeVersionRealtime(
                     payload.getLong(0),
                     payload.getLong(8),
-                    payload.capacity() >= 17 && payload.get(16) == 1);
+                    realtime && payload.capacity() >= 17 && payload.get(16) == 1);
             }
             return true;
         }, true);
@@ -117,7 +124,7 @@ public class LabActivityIndex implements MiruActivityIndex {
                 payload.clear();
                 long streamTimestamp = payload.getLong(0);
                 long streamVersion = payload.getLong(8);
-                boolean streamRealtimeDelivery = payload.capacity() >= 17 && payload.get(16) == 1;
+                boolean streamRealtimeDelivery = realtime && payload.capacity() >= 17 && payload.get(16) == 1;
                 if (!stream.stream(id, streamTimestamp, streamVersion, streamRealtimeDelivery)) {
                     return false;
                 }
@@ -133,7 +140,7 @@ public class LabActivityIndex implements MiruActivityIndex {
         }
 
         MiruTermId[][] termIds = { null };
-        byte[] concatKey = Bytes.concat(UIO.intBytes(fieldId), UIO.intBytes(index));
+        byte[] concatKey = Bytes.concat(FilerIO.intBytes(fieldId), FilerIO.intBytes(index));
         getTermIndex(fieldId).get((streamKeys) -> streamKeys.key(0, concatKey, 0, concatKey.length),
             (index1, key, timestamp, tombstoned, version, payload) -> {
                 if (payload != null && !tombstoned) {
@@ -167,14 +174,14 @@ public class LabActivityIndex implements MiruActivityIndex {
 
         MiruTermId[][] termIds = new MiruTermId[length][];
         ValueIndex termIndex = getTermIndex(fieldId);
-        byte[] fieldBytes = UIO.intBytes(fieldId);
+        byte[] fieldBytes = FilerIO.intBytes(fieldId);
         int[] count = { 0 };
         termIndex.get(
             keyStream -> {
                 for (int i = 0; i < length; i++) {
                     int index = indexes[offset + i];
                     if (index >= 0) {
-                        byte[] key = Bytes.concat(fieldBytes, UIO.intBytes(index));
+                        byte[] key = Bytes.concat(fieldBytes, FilerIO.intBytes(index));
                         if (!keyStream.key(i, key, 0, key.length)) {
                             return false;
                         }
@@ -244,38 +251,47 @@ public class LabActivityIndex implements MiruActivityIndex {
             keyBytes[i] = FilerIO.intBytes(activityAndIdsArray[i].id);
         }
 
+        BolBuffer entryBuffer = new BolBuffer();
+        BolBuffer keyBuffer = new BolBuffer();
         long timestamp = System.currentTimeMillis();
         long version = idProvider.nextId();
         MutableLong bytesWrite = new MutableLong();
         timeAndVersionIndex.append(stream -> {
             for (int j = 0; j < activityAndIdsArray.length; j++) {
                 int index = activityAndIdsArray[j].id;
-                byte[] payload = new byte[8 + 8 + 1];
-                UIO.longBytes(activityAndIdsArray[j].activity.time, payload, 0);
-                UIO.longBytes(activityAndIdsArray[j].activity.version, payload, 8);
-                payload[8 + 8] = (byte) (activityAndIdsArray[j].activity.realtimeDelivery ? 1 : 0);
-                stream.stream(-1, UIO.intBytes(index), timestamp, false, version, payload);
+                byte[] payload;
+                if (realtime) {
+                    payload = new byte[8 + 8 + 1];
+                    UIO.longBytes(activityAndIdsArray[j].activity.time, payload, 0);
+                    UIO.longBytes(activityAndIdsArray[j].activity.version, payload, 8);
+                    payload[8 + 8] = (byte) (activityAndIdsArray[j].activity.realtimeDelivery ? 1 : 0);
+                } else {
+                    payload = new byte[8 + 8];
+                    UIO.longBytes(activityAndIdsArray[j].activity.time, payload, 0);
+                    UIO.longBytes(activityAndIdsArray[j].activity.version, payload, 8);
+                }
+                stream.stream(-1, FilerIO.intBytes(index), timestamp, false, version, payload);
                 bytesWrite.add(16);
             }
             return true;
-        }, true);
+        }, true, entryBuffer, keyBuffer);
 
         for (int i = 0; i < schema.fieldCount(); i++) {
             int fieldId = i;
             getTermIndex(fieldId).append(stream -> {
-                byte[] fieldBytes = UIO.intBytes(fieldId);
+                byte[] fieldBytes = FilerIO.intBytes(fieldId);
                 for (int j = 0; j < activityAndIdsArray.length; j++) {
                     MiruTermId[] termIds = activityAndIdsArray[j].activity.fieldsValues[fieldId];
                     if (termIds != null && termIds.length > 0) {
                         int index = activityAndIdsArray[j].id;
-                        byte[] key = Bytes.concat(fieldBytes, UIO.intBytes(index));
+                        byte[] key = Bytes.concat(fieldBytes, FilerIO.intBytes(index));
                         byte[] payload = intTermIdsKeyValueMarshaller.valueBytes(termIds);
                         stream.stream(-1, key, timestamp, false, version, payload);
                         bytesWrite.add(key.length + payload.length);
                     }
                 }
                 return true;
-            }, true);
+            }, true, entryBuffer, keyBuffer);
         }
         LOG.inc("count>set>total");
         LOG.inc("count>set>" + name);
@@ -288,11 +304,13 @@ public class LabActivityIndex implements MiruActivityIndex {
     public void ready(int index, StackBuffer stackBuffer) throws Exception {
         LOG.trace("Check if index {} should extend capacity {}", index, indexSize);
         final int size = index + 1;
+        BolBuffer bolBuffer = new BolBuffer();
+        BolBuffer keyBuffer = new BolBuffer();
         synchronized (indexSize) {
             if (size > indexSize.get()) {
                 long timestamp = System.currentTimeMillis();
                 long version = idProvider.nextId();
-                metaIndex.append(stream -> stream.stream(-1, metaKey, timestamp, false, version, UIO.intBytes(size)), true);
+                metaIndex.append(stream -> stream.stream(-1, metaKey, timestamp, false, version, FilerIO.intBytes(size)), true, bolBuffer, keyBuffer);
                 LOG.inc("ready>total");
                 LOG.inc("ready>bytes", 4);
                 LOG.debug("Capacity extended to {}", size);
