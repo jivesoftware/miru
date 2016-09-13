@@ -123,7 +123,7 @@ public class MiruInvertedIndexTest {
 
         miruInvertedIndex.set(stackBuffer, lastId + 2);
         miruInvertedIndex.set(stackBuffer, lastId + 1);
-        
+
         for (int id : ids) {
             assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex(stackBuffer).get(), id));
         }
@@ -239,7 +239,7 @@ public class MiruInvertedIndexTest {
         //MiruSchema schema = new Builder("test", 1).build();
         MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
 
-        for (boolean atomized : new boolean[]{false, true}) {
+        for (boolean atomized : new boolean[] { false, true }) {
             MiruInvertedIndex<RoaringBitmap, RoaringBitmap> index = buildInvertedIndex(atomized, bitmaps);
 
             // setIfEmpty index 1
@@ -319,23 +319,22 @@ public class MiruInvertedIndexTest {
             new OrderIdProviderImpl(new ConstantWriterIdProvider(1), new SnowflakeIdPacker(), new JiveEpochTimestampProvider()),
             bitmaps,
             new TrackError() {
-            @Override
-            public void error(String reason) {
-            }
+                @Override
+                public void error(String reason) {
+                }
 
-            @Override
-            public void reset() {
-            }
-        },
+                @Override
+                public void reset() {
+                }
+            },
             "test",
             0,
             atomized,
-            new byte[]{0},
+            new byte[] { 0 },
             IndexTestUtil.buildValueIndex("bitmap"),
-            new byte[]{0},
+            new byte[] { 0 },
             IndexTestUtil.buildValueIndex("term"),
-            new Object(),
-            1024);
+            new Object());
     }
 
     @Test(groups = "slow", enabled = false, description = "Concurrency test")

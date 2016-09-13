@@ -24,7 +24,6 @@ public class LabUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUnreadTr
     private final boolean atomized;
     private final ValueIndex[] stores;
     private final StripingLocksProvider<MiruStreamId> stripingLocksProvider;
-    private final long labFieldDeltaMaxCardinality;
 
     public LabUnreadTrackingIndex(OrderIdProvider idProvider,
         MiruBitmaps<BM, IBM> bitmaps,
@@ -32,8 +31,7 @@ public class LabUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUnreadTr
         byte[] prefix,
         boolean atomized,
         ValueIndex[] stores,
-        StripingLocksProvider<MiruStreamId> stripingLocksProvider,
-        long labFieldDeltaMaxCardinality)
+        StripingLocksProvider<MiruStreamId> stripingLocksProvider)
         throws Exception {
 
         this.idProvider = idProvider;
@@ -43,7 +41,6 @@ public class LabUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUnreadTr
         this.atomized = atomized;
         this.stores = stores;
         this.stripingLocksProvider = stripingLocksProvider;
-        this.labFieldDeltaMaxCardinality = labFieldDeltaMaxCardinality;
     }
 
     private ValueIndex getStore(MiruStreamId streamId) {
@@ -67,8 +64,7 @@ public class LabUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUnreadTr
             getStore(streamId),
             null,
             null,
-            stripingLocksProvider.lock(streamId, 0),
-            labFieldDeltaMaxCardinality);
+            stripingLocksProvider.lock(streamId, 0));
     }
 
     private byte[] bitmapIndexKey(byte[] streamIdBytes) {

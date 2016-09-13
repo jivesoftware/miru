@@ -133,7 +133,6 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
     private final boolean useLabIndexes;
     private final boolean realtimeDelivery;
     private final boolean fsyncOnCommit;
-    private final long labFieldDeltaMaxCardinality;
 
     public MiruContextFactory(OrderIdProvider idProvider,
         TxCogs persistentCogs,
@@ -156,8 +155,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         long maxHeapPressureInBytes,
         boolean useLabIndexes,
         boolean realtimeDelivery,
-        boolean fsyncOnCommit,
-        long labFieldDeltaMaxCardinality) {
+        boolean fsyncOnCommit) {
 
         this.idProvider = idProvider;
         this.persistentCogs = persistentCogs;
@@ -181,7 +179,6 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         this.useLabIndexes = useLabIndexes;
         this.realtimeDelivery = realtimeDelivery;
         this.fsyncOnCommit = fsyncOnCommit;
-        this.labFieldDeltaMaxCardinality = labFieldDeltaMaxCardinality;
     }
 
     public MiruBackingStorage findBackingStorage(MiruPartitionCoord coord) throws Exception {
@@ -599,8 +596,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                 cardinalityIndex,
                 hasCardinalities,
                 fieldIndexStripingLocksProvider,
-                termInterner,
-                labFieldDeltaMaxCardinality);
+                termInterner);
         }
         MiruFieldIndexProvider<BM, IBM> fieldIndexProvider = new MiruFieldIndexProvider<>(fieldIndexes);
 
@@ -618,8 +614,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             atomized,
             metaIndex,
             keyBytes("removal"),
-            new Object(),
-            labFieldDeltaMaxCardinality);
+            new Object());
 
         MiruUnreadTrackingIndex<BM, IBM> unreadTrackingIndex = new LabUnreadTrackingIndex<>(
             idProvider,
@@ -628,7 +623,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             new byte[] { (byte) -1 },
             atomized,
             bitmapIndex,
-            streamStripingLocksProvider, labFieldDeltaMaxCardinality);
+            streamStripingLocksProvider);
 
         MiruInboxIndex<BM, IBM> inboxIndex = new LabInboxIndex<>(
             idProvider,
@@ -637,7 +632,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             new byte[] { (byte) -2 },
             atomized,
             bitmapIndex,
-            streamStripingLocksProvider, labFieldDeltaMaxCardinality);
+            streamStripingLocksProvider);
 
         MiruAuthzUtils<BM, IBM> authzUtils = new MiruAuthzUtils<>(bitmaps);
 
@@ -655,7 +650,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             atomized,
             bitmapIndex,
             miruAuthzCache,
-            authzStripingLocksProvider, labFieldDeltaMaxCardinality);
+            authzStripingLocksProvider);
 
         StripingLocksProvider<MiruStreamId> streamLocks = new StripingLocksProvider<>(64);
 

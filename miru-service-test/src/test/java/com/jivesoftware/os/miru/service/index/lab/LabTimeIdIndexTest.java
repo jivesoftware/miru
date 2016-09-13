@@ -4,6 +4,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
 import com.jivesoftware.os.lab.LABEnvironment;
 import com.jivesoftware.os.lab.LabHeapPressure;
+import com.jivesoftware.os.lab.StripingBolBufferLocks;
 import com.jivesoftware.os.miru.service.locator.MiruTempDirectoryResourceLocator;
 import com.jivesoftware.os.miru.service.stream.allocator.InMemoryChunkAllocator;
 import java.util.Arrays;
@@ -31,26 +32,28 @@ public class LabTimeIdIndexTest {
             true,
             100,
             1_000,
-            new LabHeapPressure[] { new LabHeapPressure(MoreExecutors.sameThreadExecutor(), "test", 1024 * 1024, 1024 * 1024 * 2, new AtomicLong()) },
+            new LabHeapPressure[]{new LabHeapPressure(MoreExecutors.sameThreadExecutor(), "test", 1024 * 1024, 1024 * 1024 * 2, new AtomicLong())},
             10 * 1024 * 1024,
             1000,
             10 * 1024 * 1024,
             10 * 1024 * 1024,
             true,
             true,
-            LABEnvironment.buildLeapsCache(1_000_000, 10));
+            LABEnvironment.buildLeapsCache(1_000_000, 10),
+            new StripingBolBufferLocks(2048));
 
         int keepNIndexes = 4;
         int maxEntriesPerIndex = 10;
-        LabTimeIdIndex[] indexes = new LabTimeIdIndexInitializer().initialize(keepNIndexes, maxEntriesPerIndex, 1024 * 1024, false, resourceLocator, chunkAllocator);
+        LabTimeIdIndex[] indexes = new LabTimeIdIndexInitializer().initialize(keepNIndexes, maxEntriesPerIndex, 1024 * 1024, false, resourceLocator,
+            chunkAllocator);
 
         assertEquals(indexes.length, numberOfChunkStores);
         LabTimeIdIndex index = indexes[0];
 
         for (long version : new LongRange(1000, 2000).toArray()) {
-            long[] timestamps = { 1L, 2L, 3L, 4L };
-            int[] ids = { -1, -1, -1, -1 };
-            long[] monotonics = { -1, -1, -1, -1 };
+            long[] timestamps = {1L, 2L, 3L, 4L};
+            int[] ids = {-1, -1, -1, -1};
+            long[] monotonics = {-1, -1, -1, -1};
             index.lookup(version, timestamps, ids, monotonics);
             assertCount(keepNIndexes, maxEntriesPerIndex, index);
             for (int i = 0; i < timestamps.length; i++) {
