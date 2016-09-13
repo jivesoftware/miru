@@ -178,8 +178,7 @@ public class IndexTestUtil {
             1024 * 1024 * 10,
             useLabIndexes,
             hasRealtime,
-            false,
-            1024);
+            false);
     }
 
     public static <BM extends IBM, IBM> MiruContext<BM, IBM, RCVSSipCursor> buildInMemoryContext(int numberOfChunkStores,

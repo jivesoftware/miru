@@ -233,9 +233,9 @@ public class MiruServiceInitializer {
             termComposer,
             internExtern,
             ImmutableMap.<MiruBackingStorage, MiruChunkAllocator>builder()
-            .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
-            .put(MiruBackingStorage.disk, onDiskChunkAllocator)
-            .build(),
+                .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
+                .put(MiruBackingStorage.disk, onDiskChunkAllocator)
+                .build(),
             sipIndexMarshaller,
             resourceLocator,
             config.getPartitionAuthzCacheSize(),
@@ -248,8 +248,7 @@ public class MiruServiceInitializer {
             config.getLabMaxHeapPressureInBytes(),
             config.getUseLabIndexes(),
             config.getRealtimeDelivery(),
-            config.getFsyncOnCommit(),
-            config.getLabFieldDeltaMaxCardinality());
+            config.getFsyncOnCommit());
 
         MiruPartitionHeartbeatHandler heartbeatHandler = new MiruPartitionHeartbeatHandler(clusterClient);
         MiruRebuildDirector rebuildDirector = new MiruRebuildDirector(config.getMaxRebuildActivityCount());

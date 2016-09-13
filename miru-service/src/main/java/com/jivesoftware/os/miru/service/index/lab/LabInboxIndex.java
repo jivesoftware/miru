@@ -23,7 +23,6 @@ public class LabInboxIndex<BM extends IBM, IBM> implements MiruInboxIndex<BM, IB
     private final boolean atomized;
     private final ValueIndex[] stores;
     private final StripingLocksProvider<MiruStreamId> stripingLocksProvider;
-    private final long labFieldDeltaMaxCardinality;
 
     public LabInboxIndex(OrderIdProvider idProvider,
         MiruBitmaps<BM, IBM> bitmaps,
@@ -31,8 +30,7 @@ public class LabInboxIndex<BM extends IBM, IBM> implements MiruInboxIndex<BM, IB
         byte[] prefix,
         boolean atomized,
         ValueIndex[] stores,
-        StripingLocksProvider<MiruStreamId> stripingLocksProvider,
-        long labFieldDeltaMaxCardinality)
+        StripingLocksProvider<MiruStreamId> stripingLocksProvider)
         throws Exception {
 
         this.idProvider = idProvider;
@@ -42,7 +40,6 @@ public class LabInboxIndex<BM extends IBM, IBM> implements MiruInboxIndex<BM, IB
         this.atomized = atomized;
         this.stores = stores;
         this.stripingLocksProvider = stripingLocksProvider;
-        this.labFieldDeltaMaxCardinality = labFieldDeltaMaxCardinality;
     }
 
     private ValueIndex getStore(MiruStreamId streamId) {
@@ -66,8 +63,7 @@ public class LabInboxIndex<BM extends IBM, IBM> implements MiruInboxIndex<BM, IB
             getStore(streamId),
             null,
             null,
-            stripingLocksProvider.lock(streamId, 0),
-            labFieldDeltaMaxCardinality);
+            stripingLocksProvider.lock(streamId, 0));
     }
 
     private byte[] bitmapIndexKey(byte[] streamIdBytes) {
