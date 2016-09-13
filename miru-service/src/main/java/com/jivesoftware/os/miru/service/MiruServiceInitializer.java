@@ -18,6 +18,7 @@ import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.lab.LABEnvironment;
 import com.jivesoftware.os.lab.LabHeapPressure;
+import com.jivesoftware.os.lab.StripingBolBufferLocks;
 import com.jivesoftware.os.lab.guts.Leaps;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
@@ -166,6 +167,8 @@ public class MiruServiceInitializer {
         LRUConcurrentBAHLinkedHash<Leaps> leapCache = LABEnvironment.buildLeapsCache((int) config.getLabLeapCacheMaxCapacity(),
             config.getLabLeapCacheConcurrency());
 
+        StripingBolBufferLocks bolBufferLocks = new StripingBolBufferLocks(2048); // TODO config
+
         MiruChunkAllocator inMemoryChunkAllocator = new InMemoryChunkAllocator(resourceLocator,
             byteBufferFactory,
             byteBufferFactory,
@@ -181,7 +184,8 @@ public class MiruServiceInitializer {
             config.getLabMaxWALOnOpenHeapPressureOverride(),
             config.getLabUseOffHeap(),
             config.getUseLabIndexes(),
-            leapCache);
+            leapCache,
+            bolBufferLocks);
 
         MiruChunkAllocator onDiskChunkAllocator = new OnDiskChunkAllocator(resourceLocator,
             byteBufferFactory,
@@ -194,7 +198,8 @@ public class MiruServiceInitializer {
             config.getLabMaxEntrySizeInBytes(),
             config.getLabMaxWALOnOpenHeapPressureOverride(),
             config.getLabUseOffHeap(),
-            leapCache);
+            leapCache,
+            bolBufferLocks);
 
         TxCogs persistentCogs = new TxCogs(1024, 1024,
             new ConcurrentKeyToFPCacheFactory(),

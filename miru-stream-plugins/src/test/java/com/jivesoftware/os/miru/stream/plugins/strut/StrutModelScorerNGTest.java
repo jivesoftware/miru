@@ -23,6 +23,7 @@ import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.lab.LABEnvironment;
 import com.jivesoftware.os.lab.LabHeapPressure;
+import com.jivesoftware.os.lab.StripingBolBufferLocks;
 import com.jivesoftware.os.lab.api.KeyValueRawhide;
 import com.jivesoftware.os.lab.api.MemoryRawEntryFormat;
 import com.jivesoftware.os.lab.api.NoOpFormatTransformerProvider;
@@ -96,6 +97,7 @@ public class StrutModelScorerNGTest {
         File root = Files.createTempDir();
         LabHeapPressure labHeapPressure = new LabHeapPressure(MoreExecutors.sameThreadExecutor(), "test", 1024 * 1024 * 10, 1024 * 1024 * 20, new AtomicLong());
         LRUConcurrentBAHLinkedHash<Leaps> leapCache = LABEnvironment.buildLeapsCache(1_000_000, 8);
+        StripingBolBufferLocks  bolBufferLocks = new StripingBolBufferLocks(2048); // TODO config
 
         LABEnvironment env = new LABEnvironment(LABEnvironment.buildLABSchedulerThreadPool(4),
             LABEnvironment.buildLABCompactorThreadPool(4),
@@ -110,6 +112,7 @@ public class StrutModelScorerNGTest {
             4,
             10,
             leapCache,
+            bolBufferLocks,
             true);
         String catwalkId = "catwalkId";
         String modelId = "modelId";

@@ -22,6 +22,7 @@ import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.lab.LABEnvironment;
 import com.jivesoftware.os.lab.LabHeapPressure;
+import com.jivesoftware.os.lab.StripingBolBufferLocks;
 import com.jivesoftware.os.lab.guts.Leaps;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceConfig;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceInitializer;
@@ -175,14 +176,14 @@ public class MiruLocalHostedPartitionTest {
         HealthFactory.initialize(
             BindInterfaceToConfiguration::bindDefault,
             new HealthCheckRegistry() {
-                @Override
-                public void register(HealthChecker healthChecker) {
-                }
+            @Override
+            public void register(HealthChecker healthChecker) {
+            }
 
-                @Override
-                public void unregister(HealthChecker healthChecker) {
-                }
-            });
+            @Override
+            public void unregister(HealthChecker healthChecker) {
+            }
+        });
 
         MiruServiceConfig config = mock(MiruServiceConfig.class);
         when(config.getBitsetBufferSize()).thenReturn(32);
@@ -237,6 +238,7 @@ public class MiruLocalHostedPartitionTest {
         LRUConcurrentBAHLinkedHash<Leaps> leapCache = LABEnvironment.buildLeapsCache(1_000_000, 32);
 
         MiruTempDirectoryResourceLocator resourceLocator = new MiruTempDirectoryResourceLocator();
+        StripingBolBufferLocks bolBufferLocks = new StripingBolBufferLocks(2048); // TODO config
         MiruChunkAllocator hybridContextAllocator = new InMemoryChunkAllocator(
             resourceLocator,
             new HeapByteBufferFactory(),
@@ -246,14 +248,15 @@ public class MiruLocalHostedPartitionTest {
             config.getPartitionDeleteChunkStoreOnClose(),
             100,
             1_000,
-            new LabHeapPressure[] { labHeapPressure },
+            new LabHeapPressure[]{labHeapPressure},
             labMaxWALSizeInBytes,
             labMaxEntriesPerWAL,
             labMaxEntrySizeInBytes,
             labMaxWALOnOpenHeapPressureOverride,
             true,
             useLabIndexes,
-            leapCache);
+            leapCache,
+            bolBufferLocks);
 
         MiruChunkAllocator diskContextAllocator = new OnDiskChunkAllocator(
             resourceLocator,
@@ -261,13 +264,14 @@ public class MiruLocalHostedPartitionTest {
             config.getPartitionNumberOfChunkStores(),
             100,
             1_000,
-            new LabHeapPressure[] { labHeapPressure },
+            new LabHeapPressure[]{labHeapPressure},
             labMaxWALSizeInBytes,
             labMaxEntriesPerWAL,
             labMaxEntrySizeInBytes,
             labMaxWALOnOpenHeapPressureOverride,
             true,
-            leapCache);
+            leapCache,
+            bolBufferLocks);
 
         TxCogs cogs = new TxCogs(256, 64, null, null, null);
         ObjectMapper mapper = new ObjectMapper();
@@ -284,9 +288,9 @@ public class MiruLocalHostedPartitionTest {
             termComposer,
             activityInternExtern,
             ImmutableMap.<MiruBackingStorage, MiruChunkAllocator>builder()
-                .put(MiruBackingStorage.memory, hybridContextAllocator)
-                .put(MiruBackingStorage.disk, diskContextAllocator)
-                .build(),
+            .put(MiruBackingStorage.memory, hybridContextAllocator)
+            .put(MiruBackingStorage.disk, diskContextAllocator)
+            .build(),
             new RCVSSipIndexMarshaller(),
             resourceLocator,
             config.getPartitionAuthzCacheSize(),
@@ -383,8 +387,8 @@ public class MiruLocalHostedPartitionTest {
 
     @DataProvider(name = "useLabIndexes")
     public Object[][] useLabIndexesDataProvider() {
-        return new Object[][] {
-            { true }
+        return new Object[][]{
+            {true}
         };
     }
 

@@ -8,6 +8,7 @@ import com.jivesoftware.os.filer.io.chunk.ChunkStore;
 import com.jivesoftware.os.jive.utils.collections.bah.LRUConcurrentBAHLinkedHash;
 import com.jivesoftware.os.lab.LABEnvironment;
 import com.jivesoftware.os.lab.LabHeapPressure;
+import com.jivesoftware.os.lab.StripingBolBufferLocks;
 import com.jivesoftware.os.lab.api.FixedWidthRawhide;
 import com.jivesoftware.os.lab.guts.Leaps;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
@@ -46,6 +47,7 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
     private final long labMaxWALOnOpenHeapPressureOverride;
     private final boolean labUseOffHeap;
     private final LRUConcurrentBAHLinkedHash<Leaps> leapCache;
+    private final StripingBolBufferLocks bolBufferLocks;
     private final boolean useLabIndexes;
 
     private final ExecutorService buildLABSchedulerThreadPool = LABEnvironment.buildLABSchedulerThreadPool(12);
@@ -67,7 +69,8 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
         long labMaxWALOnOpenHeapPressureOverride,
         boolean labUseOffHeap,
         boolean useLabIndexes,
-        LRUConcurrentBAHLinkedHash<Leaps> leapCache) {
+        LRUConcurrentBAHLinkedHash<Leaps> leapCache,
+        StripingBolBufferLocks bolBufferLocks) {
         this.resourceLocator = resourceLocator;
         this.rebuildByteBufferFactory = rebuildByteBufferFactory;
         this.cacheByteBufferFactory = cacheByteBufferFactory;
@@ -84,6 +87,7 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
         this.useLabIndexes = useLabIndexes;
         this.labHeapPressures = labHeapPressures;
         this.leapCache = leapCache;
+        this.bolBufferLocks = bolBufferLocks;
     }
 
     @Override
@@ -156,6 +160,7 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
                 4,
                 16,
                 leapCache,
+                bolBufferLocks,
                 labUseOffHeap);
 
             environments[i].register("lastIdKeyValue", new LastIdKeyValueRawhide());

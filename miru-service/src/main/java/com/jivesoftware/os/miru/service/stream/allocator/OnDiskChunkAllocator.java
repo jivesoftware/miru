@@ -8,6 +8,7 @@ import com.jivesoftware.os.filer.io.chunk.ChunkStore;
 import com.jivesoftware.os.jive.utils.collections.bah.LRUConcurrentBAHLinkedHash;
 import com.jivesoftware.os.lab.LABEnvironment;
 import com.jivesoftware.os.lab.LabHeapPressure;
+import com.jivesoftware.os.lab.StripingBolBufferLocks;
 import com.jivesoftware.os.lab.api.FixedWidthRawhide;
 import com.jivesoftware.os.lab.guts.Leaps;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
@@ -42,6 +43,7 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
     private final long labMaxWALOnOpenHeapPressureOverride;
     private final boolean labUseOffHeap;
     private final LRUConcurrentBAHLinkedHash<Leaps> leapCache;
+    private final  StripingBolBufferLocks bolBufferLocks;
     private final ChunkStoreInitializer chunkStoreInitializer = new ChunkStoreInitializer();
 
     private final ExecutorService buildLABSchedulerThreadPool = LABEnvironment.buildLABSchedulerThreadPool(12);
@@ -60,7 +62,8 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
         long labMaxEntrySizeInBytes,
         long labMaxWALOnOpenHeapPressureOverride,
         boolean labUseOffHeap,
-        LRUConcurrentBAHLinkedHash<Leaps> leapCache) {
+        LRUConcurrentBAHLinkedHash<Leaps> leapCache,
+        StripingBolBufferLocks bolBufferLocks) {
         this.resourceLocator = resourceLocator;
         this.cacheByteBufferFactory = cacheByteBufferFactory;
         this.numberOfChunkStores = numberOfChunkStores;
@@ -73,6 +76,7 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
         this.labMaxWALOnOpenHeapPressureOverride = labMaxWALOnOpenHeapPressureOverride;
         this.labUseOffHeap = labUseOffHeap;
         this.leapCache = leapCache;
+        this.bolBufferLocks = bolBufferLocks;
     }
 
     private static int offset(int hashCode, int index, int shift, int length) {
@@ -212,6 +216,7 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
                 4,
                 16,
                 leapCache,
+                bolBufferLocks,
                 labUseOffHeap);
 
             environments[i].register("lastIdKeyValue", new LastIdKeyValueRawhide());

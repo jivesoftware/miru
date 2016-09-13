@@ -23,6 +23,7 @@ import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.lab.LABEnvironment;
 import com.jivesoftware.os.lab.LABRawhide;
 import com.jivesoftware.os.lab.LabHeapPressure;
+import com.jivesoftware.os.lab.StripingBolBufferLocks;
 import com.jivesoftware.os.lab.api.MemoryRawEntryFormat;
 import com.jivesoftware.os.lab.api.NoOpFormatTransformerProvider;
 import com.jivesoftware.os.lab.api.ValueIndex;
@@ -116,6 +117,7 @@ public class IndexTestUtil {
         long labMaxEntrySizeInBytes = 1024 * 1024 * 10;
         long labMaxWALOnOpenHeapPressureOverride = 1024 * 1024 * 10;
         LRUConcurrentBAHLinkedHash<Leaps> leapCache = LABEnvironment.buildLeapsCache(1_000_000, 10);
+        StripingBolBufferLocks bolBufferLocks = new StripingBolBufferLocks(2048); // TODO config
         MiruChunkAllocator inMemoryChunkAllocator = new InMemoryChunkAllocator(
             diskResourceLocator,
             new HeapByteBufferFactory(),
@@ -132,7 +134,8 @@ public class IndexTestUtil {
             labMaxWALOnOpenHeapPressureOverride,
             true,
             useLabIndexes,
-            leapCache);
+            leapCache,
+            bolBufferLocks);
 
         MiruChunkAllocator onDiskChunkAllocator = new OnDiskChunkAllocator(diskResourceLocator,
             new HeapByteBufferFactory(),
@@ -145,7 +148,8 @@ public class IndexTestUtil {
             labMaxEntrySizeInBytes,
             labMaxWALOnOpenHeapPressureOverride,
             true,
-            leapCache);
+            leapCache,
+            bolBufferLocks);
 
         LabTimeIdIndex[] timeIdIndexes = new LabTimeIdIndexInitializer().initialize(4, 1_000, 1024 * 1024, false, diskResourceLocator, onDiskChunkAllocator);
 
@@ -213,6 +217,7 @@ public class IndexTestUtil {
             4,
             16,
             LABEnvironment.buildLeapsCache(1_000, 4),
+            new StripingBolBufferLocks(2048),
             false);
         return environment.open(new ValueIndexConfig(name, 64, 1024 * 1024, -1, -1, 10 * 1024 * 1024, NoOpFormatTransformerProvider.NAME, LABRawhide.NAME,
             MemoryRawEntryFormat.NAME));
