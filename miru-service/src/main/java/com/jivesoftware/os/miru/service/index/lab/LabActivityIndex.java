@@ -31,7 +31,7 @@ public class LabActivityIndex implements MiruActivityIndex {
     private final OrderIdProvider idProvider;
     private final boolean realtime;
     private final ValueIndex timeAndVersionIndex;
-    private final AtomicInteger indexSize = new AtomicInteger(0);
+    private final AtomicInteger indexSize = new AtomicInteger(Integer.MIN_VALUE);
     private final IntTermIdsKeyValueMarshaller intTermIdsKeyValueMarshaller;
     private final ValueIndex metaIndex;
     private final byte[] metaKey;
@@ -321,20 +321,22 @@ public class LabActivityIndex implements MiruActivityIndex {
 
     private int capacity() {
         try {
-            int[] size = { indexSize.get() };
-            if (size[0] < 0) {
-                metaIndex.get((streamKeys) -> streamKeys.key(0, metaKey, 0, metaKey.length),
-                    (index, key, timestamp, tombstoned, version, payload) -> {
-                        if (payload != null && !tombstoned) {
-                            payload.clear();
-                            size[0] = payload.getInt(0);
-                        }
-                        return false;
-                    }, true);
-                LOG.inc("capacity>total");
-                LOG.inc("capacity>bytes", 4);
-                indexSize.set(size[0]);
+            int got = indexSize.get();
+            if (got != Integer.MIN_VALUE) {
+                return got;
             }
+            int[] size = { 0 };
+            metaIndex.get((streamKeys) -> streamKeys.key(0, metaKey, 0, metaKey.length),
+                (index, key, timestamp, tombstoned, version, payload) -> {
+                    if (payload != null && !tombstoned) {
+                        payload.clear();
+                        size[0] = payload.getInt(0);
+                    }
+                    return false;
+                }, true);
+            LOG.inc("capacity>total");
+            LOG.inc("capacity>bytes", 4);
+            indexSize.set(size[0]);
             return size[0];
         } catch (Exception e) {
             throw new RuntimeException(e);
