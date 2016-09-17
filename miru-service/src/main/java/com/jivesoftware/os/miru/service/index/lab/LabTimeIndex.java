@@ -9,8 +9,8 @@ import com.jivesoftware.os.filer.io.api.KeyValueContext;
 import com.jivesoftware.os.filer.io.api.KeyValueTransaction;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
-import com.jivesoftware.os.lab.BolBuffer;
 import com.jivesoftware.os.lab.api.ValueIndex;
+import com.jivesoftware.os.lab.io.BolBuffer;
 import com.jivesoftware.os.lab.io.api.UIO;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
@@ -61,8 +61,7 @@ public class LabTimeIndex implements MiruTimeIndex {
             (keyStream) -> keyStream.key(0, metaKey, 0, metaKey.length),
             (index, key, timestamp, tombstoned, version, payload) -> {
                 if (payload != null && !tombstoned) {
-                    payload.clear();
-                    Filer filer = new ByteBufferBackedFiler(payload);
+                    Filer filer = new ByteBufferBackedFiler(payload.asByteBuffer());
                     LabTimeIndex.this.id.set(FilerIO.readInt(filer, "lastId", stackBuffer));
                     LabTimeIndex.this.smallestTimestamp = FilerIO.readLong(filer, "smallestTimestamp", stackBuffer);
                     LabTimeIndex.this.largestTimestamp = FilerIO.readLong(filer, "largestTimestamp", stackBuffer);
@@ -181,7 +180,6 @@ public class LabTimeIndex implements MiruTimeIndex {
         int[] id = { 0 };
         monotonicTimestampIndex.rangeScan(UIO.longBytes(timestamp), null, (index, key, payloadTimestamp, tombstoned, version, payload) -> {
             if (key != null) {
-                key.clear();
                 id[0] = key.getInt(8);
             }
             return false;
@@ -198,7 +196,6 @@ public class LabTimeIndex implements MiruTimeIndex {
             (keyStream) -> keyStream.key(0, UIO.longBytes(timestamp), 0, 8),
             (index, key, payloadTimestamp, tombstoned, version, payload) -> {
                 if (payload != null) {
-                    payload.clear();
                     id[0] = payload.getInt(0);
                 }
                 return false;
@@ -259,7 +256,6 @@ public class LabTimeIndex implements MiruTimeIndex {
             null,
             (index, key, payloadTimestamp, tombstoned, version, payload) -> {
                 if (key != null) {
-                    key.clear();
                     if (key.getLong(0) <= timestamp) {
                         id[0] = key.getInt(8) + 1;
                         return true;
@@ -294,7 +290,6 @@ public class LabTimeIndex implements MiruTimeIndex {
             null,
             (index, key, payloadTimestamp, tombstoned, version, payload) -> {
                 if (key != null) {
-                    key.clear();
                     if (key.getLong(0) <= timestamp) {
                         id[0] = key.getInt(8);
                         return true;

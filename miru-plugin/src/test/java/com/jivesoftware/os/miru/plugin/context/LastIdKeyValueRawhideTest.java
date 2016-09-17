@@ -1,9 +1,8 @@
 package com.jivesoftware.os.miru.plugin.context;
 
-import com.jivesoftware.os.lab.BolBuffer;
-import com.jivesoftware.os.lab.api.KeyValueRawhide;
+import com.jivesoftware.os.lab.api.rawhide.KeyValueRawhide;
+import com.jivesoftware.os.lab.io.BolBuffer;
 import com.jivesoftware.os.lab.io.api.UIO;
-import java.nio.ByteBuffer;
 import java.util.Arrays;
 import org.testng.Assert;
 import org.testng.annotations.Test;
@@ -32,19 +31,16 @@ public class LastIdKeyValueRawhideTest {
 
         BolBuffer lastIdRawEntry = lastIdKeyValueRawhide.toRawEntry(rawKey, rawTimestamp, false, 0L, rawPayload, new BolBuffer());
 
-
         Assert.assertEquals(lastIdRawEntry.copy(),
             rawEntry.copy(),
             Arrays.toString(lastIdRawEntry.copy()) + " vs " + Arrays.toString(rawEntry.copy()));
-        
+
         Assert.assertEquals(lastIdKeyValueRawhide.timestamp(NO_OP, NO_OP, lastIdRawEntry), rawTimestamp);
 
-        lastIdKeyValueRawhide.streamRawEntry(0, NO_OP, NO_OP, ByteBuffer.wrap(rawEntry.copy()), (index, key, timestamp, tombstoned, version, payload) -> {
-            key.clear();
-            payload.clear();
-            Assert.assertEquals(key, ByteBuffer.wrap(rawKey));
+        lastIdKeyValueRawhide.streamRawEntry(0, NO_OP, NO_OP, new BolBuffer(rawEntry.copy()), (index, key, timestamp, tombstoned, version, payload) -> {
+            Assert.assertEquals(key.copy(), rawKey);
             Assert.assertEquals(timestamp, rawTimestamp);
-            Assert.assertEquals(payload, ByteBuffer.wrap(rawPayload));
+            Assert.assertEquals(payload.copy(), rawPayload);
             return true;
         }, true);
     }

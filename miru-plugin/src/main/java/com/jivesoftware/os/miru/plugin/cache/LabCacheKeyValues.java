@@ -4,8 +4,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.primitives.Bytes;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
-import com.jivesoftware.os.lab.BolBuffer;
 import com.jivesoftware.os.lab.api.ValueIndex;
+import com.jivesoftware.os.lab.io.BolBuffer;
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.CacheKeyValues;
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.IndexKeyValueStream;
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.KeyValueStream;
@@ -58,10 +58,7 @@ public class LabCacheKeyValues implements CacheKeyValues {
                 return true;
             },
             (index, key, timestamp, tombstoned, version, payload) -> {
-                if (payload != null) {
-                    payload.clear();
-                }
-                return stream.stream(index, tombstoned ? null : payload);
+                return stream.stream(index, tombstoned ? null : payload.asByteBuffer());
             },
             true
         );
@@ -89,13 +86,10 @@ public class LabCacheKeyValues implements CacheKeyValues {
                 if (tombstoned) {
                     return true; //TODO reconsider
                 } else {
-                    key.clear();
-                    key.position(1 + cacheId.length);
-                    ByteBuffer cacheKey = key.slice();
-                    if (payload != null) {
-                        payload.clear();
-                    }
-                    return stream.stream(cacheKey, payload);
+                    ByteBuffer bbkey = key.asByteBuffer();
+                    bbkey.position(1 + cacheId.length);
+                    ByteBuffer cacheKey = bbkey.slice();
+                    return stream.stream(cacheKey, payload == null ? null : payload.asByteBuffer());
                 }
             },
             true

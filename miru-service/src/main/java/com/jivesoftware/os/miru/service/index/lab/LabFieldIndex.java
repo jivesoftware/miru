@@ -8,10 +8,9 @@ import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.io.api.KeyRange;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
-import com.jivesoftware.os.lab.BolBuffer;
 import com.jivesoftware.os.lab.LABUtils;
 import com.jivesoftware.os.lab.api.ValueIndex;
-import com.jivesoftware.os.lab.guts.IndexUtil;
+import com.jivesoftware.os.lab.io.BolBuffer;
 import com.jivesoftware.os.lab.io.api.UIO;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.MiruInterner;
@@ -120,8 +119,7 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
             byte[] from = fieldIndexPrefixLowerInclusive(fieldIdBytes);
             byte[] to = fieldIndexPrefixUpperExclusive(fieldIdBytes);
             getTermIndex(fieldId).rangeScan(from, to, (index, key, timestamp, tombstoned, version, payload) -> {
-                key.clear();
-                byte[] keyBytes = IndexUtil.toByteArray(key);
+                byte[] keyBytes = key.copy();
                 bytes.add(keyBytes.length);
                 return termIdStream.stream(termInterner.intern(keyBytes, KEY_TERM_OFFSET, keyBytes.length - (KEY_TERM_OFFSET)));
             }, true);
@@ -134,8 +132,7 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
                     ? bitmapIndexKey(fieldIdBytes, range.getStopExclusiveKey())
                     : fieldIndexPrefixUpperExclusive(fieldIdBytes);
                 getTermIndex(fieldId).rangeScan(from, to, (index, key, timestamp, tombstoned, version, payload) -> {
-                    key.clear();
-                    byte[] keyBytes = IndexUtil.toByteArray(key);
+                    byte[] keyBytes = key.copy();
                     bytes.add(keyBytes.length);
                     return termIdStream.stream(termInterner.intern(keyBytes, KEY_TERM_OFFSET, keyBytes.length - (KEY_TERM_OFFSET)));
                 }, true);
@@ -219,10 +216,9 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
                     bitmapIndex.rangeScan(from, to,
                         (index, key, timestamp, tombstoned, version, payload) -> {
                             if (payload != null) {
-                                payload.clear();
-                                bytes.add(payload.capacity());
-                                int labKey = LabInvertedIndex.deatomize(key);
-                                labKeyBytes.add(new LabKeyBytes(labKey, payload));
+                                bytes.add(payload.length);
+                                int labKey = LabInvertedIndex.deatomize(key.asByteBuffer());
+                                labKeyBytes.add(new LabKeyBytes(labKey, payload.asByteBuffer()));
                             }
                             return true;
                         },
@@ -246,12 +242,11 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
                 },
                 (index, key, timestamp, tombstoned, version, payload) -> {
                     if (payload != null) {
-                        payload.clear();
-                        bytes.add(payload.capacity());
+                        bytes.add(payload.length);
                         BitmapAndLastId<BM> bitmapAndLastId = LabInvertedIndex.deser(bitmaps,
                             trackError,
                             atomized,
-                            Collections.singletonList(new LabKeyBytes(-1, payload)));
+                            Collections.singletonList(new LabKeyBytes(-1, payload.asByteBuffer())));
                         if (bitmapAndLastId != null) {
                             results[index] = bitmapAndLastId;
                         }
@@ -284,10 +279,9 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
                         (index, key, timestamp, tombstoned, version, payload) -> {
                             if (payload != null) {
                                 if (lastId[0] == -1) {
-                                    payload.clear();
-                                    bytes.add(payload.capacity());
-                                    int labKey = LabInvertedIndex.deatomize(key);
-                                    lastId[0] = LabInvertedIndex.deserLastId(bitmaps, atomized, labKey, payload);
+                                    bytes.add(payload.length);
+                                    int labKey = LabInvertedIndex.deatomize(key.asByteBuffer());
+                                    lastId[0] = LabInvertedIndex.deserLastId(bitmaps, atomized, labKey, payload.asByteBuffer());
                                     if (lastId[0] != -1) {
                                         return false;
                                     }
@@ -316,8 +310,7 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
                 },
                 (index, key, timestamp, tombstoned, version, payload) -> {
                     if (payload != null) {
-                        payload.clear();
-                        bytes.add(payload.capacity());
+                        bytes.add(payload.length);
                         results[index] = payload.getInt(0);
                     }
                     return true;
@@ -356,17 +349,15 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
                     bitmapIndex.rangeScan(from, to,
                         (index, key, timestamp, tombstoned, version, payload) -> {
                             if (payload != null) {
-                                payload.clear();
-                                bytes.add(payload.capacity());
-                                int labKey = LabInvertedIndex.deatomize(key);
+                                bytes.add(payload.length);
+                                int labKey = LabInvertedIndex.deatomize(key.asByteBuffer());
                                 if (lastId[0] == -1) {
-                                    lastId[0] = LabInvertedIndex.deserLastId(bitmaps, atomized, labKey, payload);
+                                    lastId[0] = LabInvertedIndex.deserLastId(bitmaps, atomized, labKey, payload.asByteBuffer());
                                     if (lastId[0] != -1 && lastId[0] < considerIfLastIdGreaterThanN) {
                                         return false;
                                     }
                                 }
-                                payload.clear();
-                                labKeyBytes.add(new LabKeyBytes(labKey, payload));
+                                labKeyBytes.add(new LabKeyBytes(labKey, payload.asByteBuffer()));
                             }
                             return true;
                         },
@@ -396,12 +387,10 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
                 },
                 (index, key, timestamp, tombstoned, version, payload) -> {
                     if (payload != null) {
-                        payload.clear();
-                        bytes.add(payload.capacity());
+                        bytes.add(payload.length);
                         int lastId = payload.getInt(0);
                         if (considerIfLastIdGreaterThanN < 0 || lastId > considerIfLastIdGreaterThanN) {
-                            payload.clear();
-                            indexTx.tx(index, lastId, null, new ByteBufferBackedFiler(payload), LabInvertedIndex.LAST_ID_LENGTH, stackBuffer);
+                            indexTx.tx(index, lastId, null, new ByteBufferBackedFiler(payload.asByteBuffer()), LabInvertedIndex.LAST_ID_LENGTH, stackBuffer);
                         }
                     }
                     return true;
@@ -425,7 +414,6 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
             getCardinalityIndex(fieldId).get((streamKeys) -> streamKeys.key(0, cardinalityIndexKey, 0, cardinalityIndexKey.length),
                 (index, key, timestamp, tombstoned, version, payload) -> {
                     if (payload != null && !tombstoned) {
-                        payload.clear();
                         count[0] = payload.getLong(0);
                     }
                     return false;
@@ -456,7 +444,6 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
                 },
                 (index, key, timestamp, tombstoned, version, payload) -> {
                     if (payload != null && !tombstoned) {
-                        payload.clear();
                         counts[index] = payload.getLong(0);
                     }
                     return true;
@@ -494,7 +481,6 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
                 },
                 (index, key, timestamp, tombstoned, version, payload) -> {
                     if (payload != null && !tombstoned) {
-                        payload.clear();
                         merge[index] = payload.getLong(0);
                     }
                     return false;
@@ -511,7 +497,6 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
                 (keyStream) -> keyStream.key(0, cardinalityIndexKey, 0, cardinalityIndexKey.length),
                 (index, key, timestamp, tombstoned, version, payload) -> {
                     if (payload != null && !tombstoned) {
-                        payload.clear();
                         globalCount[0] = payload.getLong(0);
                     }
                     return false;
