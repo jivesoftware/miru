@@ -1,14 +1,13 @@
 package com.jivesoftware.os.miru.plugin.context;
 
-import com.jivesoftware.os.lab.BolBuffer;
 import com.jivesoftware.os.lab.api.FormatTransformer;
-import com.jivesoftware.os.lab.api.Rawhide;
 import com.jivesoftware.os.lab.api.ValueStream;
+import com.jivesoftware.os.lab.api.rawhide.Rawhide;
 import com.jivesoftware.os.lab.guts.IndexUtil;
+import com.jivesoftware.os.lab.io.BolBuffer;
 import com.jivesoftware.os.lab.io.api.IAppendOnly;
-import com.jivesoftware.os.lab.io.api.IReadable;
+import com.jivesoftware.os.lab.io.api.IPointerReadable;
 import com.jivesoftware.os.lab.io.api.UIO;
-import java.nio.ByteBuffer;
 import java.util.Comparator;
 
 /**
@@ -33,8 +32,8 @@ public class LastIdKeyValueRawhide implements Rawhide {
     }
 
     @Override
-    public int mergeCompare(FormatTransformer aReadKeyFormatTransormer, FormatTransformer aReadValueFormatTransormer, ByteBuffer aRawEntry,
-        FormatTransformer bReadKeyFormatTransormer, FormatTransformer bReadValueFormatTransormer, ByteBuffer bRawEntry) {
+    public int mergeCompare(FormatTransformer aReadKeyFormatTransormer, FormatTransformer aReadValueFormatTransormer, BolBuffer aRawEntry,
+        FormatTransformer bReadKeyFormatTransormer, FormatTransformer bReadValueFormatTransormer, BolBuffer bRawEntry) {
 
         int c = compareKey(aReadKeyFormatTransormer, aReadValueFormatTransormer, aRawEntry,
             bReadKeyFormatTransormer, bReadValueFormatTransormer, bRawEntry);
@@ -45,17 +44,13 @@ public class LastIdKeyValueRawhide implements Rawhide {
         if (aRawEntry == null && bRawEntry == null) {
             return 0;
         } else if (aRawEntry == null) {
-            bRawEntry.clear();
-            return -bRawEntry.capacity();
+            return -bRawEntry.length;
         } else if (bRawEntry == null) {
-            aRawEntry.clear();
-            return aRawEntry.capacity();
+            return aRawEntry.length;
         } else {
-            aRawEntry.clear();
-            bRawEntry.clear();
 
-            long asTimestamp = (long) aRawEntry.getInt(aRawEntry.capacity() - 4);
-            long bsTimestamp = (long) bRawEntry.getInt(bRawEntry.capacity() - 4);
+            long asTimestamp = (long) aRawEntry.getInt(aRawEntry.length - 4);
+            long bsTimestamp = (long) bRawEntry.getInt(bRawEntry.length - 4);
 
             if (asTimestamp == bsTimestamp) {
                 return 0;
@@ -82,27 +77,22 @@ public class LastIdKeyValueRawhide implements Rawhide {
     public boolean streamRawEntry(int index,
         FormatTransformer readKeyFormatTransormer,
         FormatTransformer readValueFormatTransormer,
-        ByteBuffer rawEntry,
+        BolBuffer rawEntry,
         ValueStream stream,
         boolean hydrateValues) throws Exception {
         if (rawEntry == null) {
             return stream.stream(index, null, -1, false, -1, null);
         }
 
-        rawEntry.clear();
-        int keyLength = rawEntry.getInt();
-        rawEntry.limit(4 + keyLength);
-        ByteBuffer key = rawEntry.slice();
+        int keyLength = rawEntry.getInt(0);
+        BolBuffer key = rawEntry.slice(4, keyLength);
 
-        rawEntry.clear();
         int payloadLength = rawEntry.getInt(4 + keyLength);
         int lastId = rawEntry.getInt(4 + keyLength + 4 + payloadLength - 4);
 
-        ByteBuffer payload = null;
+        BolBuffer payload = null;
         if (hydrateValues) {
-            rawEntry.position(4 + keyLength + 4);
-            rawEntry.limit(4 + keyLength + 4 + payloadLength - 4);
-            payload = rawEntry.slice();
+            payload = rawEntry.slice(4 + keyLength + 4, payloadLength - 4);
         }
         return stream.stream(index, key, lastId, false, 0, payload);
     }
@@ -127,8 +117,10 @@ public class LastIdKeyValueRawhide implements Rawhide {
     }
 
     @Override
-    public int rawEntryLength(IReadable readable) throws Exception {
-        return UIO.readInt(readable, "length");
+    public int rawEntryToBuffer(IPointerReadable readable, long offset, BolBuffer entryBuffer) throws Exception {
+        int length = readable.readInt(offset);
+        readable.sliceIntoBuffer(offset + 4, length, entryBuffer);
+        return 4 + length;
     }
 
     @Override
@@ -155,42 +147,29 @@ public class LastIdKeyValueRawhide implements Rawhide {
     }
 
     @Override
-    public ByteBuffer key(FormatTransformer readKeyFormatTransormer,
+    public BolBuffer key(FormatTransformer readKeyFormatTransormer,
         FormatTransformer readValueFormatTransormer,
-        ByteBuffer rawEntry
+        BolBuffer rawEntry
     ) {
-        rawEntry.clear();
-        int keyLength = rawEntry.getInt();
-        rawEntry.limit(4 + keyLength);
-        return rawEntry.slice();
+        return rawEntry.slice(4, rawEntry.getInt(0));
     }
 
     @Override
     public int compareKey(FormatTransformer readKeyFormatTransormer,
         FormatTransformer readValueFormatTransormer,
-        ByteBuffer rawEntry,
-        ByteBuffer compareKey
+        BolBuffer rawEntry,
+        BolBuffer compareKey
     ) {
         return IndexUtil.compare(key(readKeyFormatTransormer, readValueFormatTransormer, rawEntry), compareKey);
     }
 
     @Override
-    public int compareKeyFromEntry(FormatTransformer readKeyFormatTransormer,
-        FormatTransformer readValueFormatTransormer,
-        IReadable readable,
-        ByteBuffer compareKey) throws Exception {
-        readable.seek(readable.getFilePointer() + 4); // skip the entry length
-        int keyLength = readable.readInt();
-        return IndexUtil.compare(readable, keyLength, compareKey);
-    }
-
-    @Override
-    public int compareKeys(ByteBuffer aKey, ByteBuffer bKey) {
+    public int compareKeys(BolBuffer aKey, BolBuffer bKey) {
         return IndexUtil.compare(aKey, bKey);
     }
 
     @Override
-    public Comparator<ByteBuffer> getByteBufferKeyComparator() {
+    public Comparator<BolBuffer> getBolBufferKeyComparator() {
         return IndexUtil::compare;
     }
 
@@ -202,17 +181,17 @@ public class LastIdKeyValueRawhide implements Rawhide {
     @Override
     public int compareKey(FormatTransformer aReadKeyFormatTransormer,
         FormatTransformer aReadValueFormatTransormer,
-        ByteBuffer aRawEntry,
+        BolBuffer aRawEntry,
         FormatTransformer bReadKeyFormatTransormer,
         FormatTransformer bReadValueFormatTransormer,
-        ByteBuffer bRawEntry) {
+        BolBuffer bRawEntry) {
 
         if (aRawEntry == null && bRawEntry == null) {
             return 0;
         } else if (aRawEntry == null) {
-            return -bRawEntry.capacity();
+            return -bRawEntry.length;
         } else if (bRawEntry == null) {
-            return aRawEntry.capacity();
+            return aRawEntry.length;
         } else {
             return IndexUtil.compare(
                 key(aReadKeyFormatTransormer, aReadValueFormatTransormer, aRawEntry),

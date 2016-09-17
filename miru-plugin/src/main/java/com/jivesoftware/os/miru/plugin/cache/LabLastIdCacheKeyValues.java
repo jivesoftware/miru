@@ -4,8 +4,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.primitives.Bytes;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
-import com.jivesoftware.os.lab.BolBuffer;
 import com.jivesoftware.os.lab.api.ValueIndex;
+import com.jivesoftware.os.lab.io.BolBuffer;
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.ConsumeLastIdKeyValueStream;
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.LastIdCacheKeyValues;
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.LastIdIndexKeyValueStream;
@@ -59,10 +59,7 @@ public class LabLastIdCacheKeyValues implements LastIdCacheKeyValues {
                 return true;
             },
             (index, key, timestamp, tombstoned, version, payload) -> {
-                if (payload != null) {
-                    payload.clear();
-                }
-                return stream.stream(index, tombstoned ? null : payload, (int) timestamp);
+                return stream.stream(index, tombstoned ? null : payload == null ? null : payload.asByteBuffer(), (int) timestamp);
             }, true);
         return true;
     }
@@ -86,13 +83,11 @@ public class LabLastIdCacheKeyValues implements LastIdCacheKeyValues {
             if (tombstoned) {
                 return true; //TODO reconsider
             } else {
-                key.clear();
-                key.position(1 + cacheId.length);
-                ByteBuffer cacheKey = key.slice();
-                if (payload != null) {
-                    payload.clear();
-                }
-                return stream.stream(cacheKey, payload, (int) timestamp);
+                ByteBuffer bbKey = key.asByteBuffer();
+                bbKey.clear();
+                bbKey.position(1 + cacheId.length);
+                ByteBuffer cacheKey = bbKey.slice();
+                return stream.stream(cacheKey, payload == null ? null : payload.asByteBuffer(), (int) timestamp);
             }
         }, true);
     }

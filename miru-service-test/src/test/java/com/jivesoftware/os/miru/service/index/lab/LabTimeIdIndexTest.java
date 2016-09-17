@@ -4,7 +4,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
 import com.jivesoftware.os.lab.LABEnvironment;
 import com.jivesoftware.os.lab.LabHeapPressure;
-import com.jivesoftware.os.lab.StripingBolBufferLocks;
+import com.jivesoftware.os.lab.guts.StripingBolBufferLocks;
 import com.jivesoftware.os.miru.service.locator.MiruTempDirectoryResourceLocator;
 import com.jivesoftware.os.miru.service.stream.allocator.InMemoryChunkAllocator;
 import java.util.Arrays;

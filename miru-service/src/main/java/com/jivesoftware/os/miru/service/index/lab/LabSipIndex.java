@@ -6,8 +6,8 @@ import com.jivesoftware.os.filer.io.ByteBufferBackedFiler;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
-import com.jivesoftware.os.lab.BolBuffer;
 import com.jivesoftware.os.lab.api.ValueIndex;
+import com.jivesoftware.os.lab.io.BolBuffer;
 import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.plugin.index.MiruSipIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruSipIndexMarshaller;
@@ -53,10 +53,9 @@ public class LabSipIndex<S extends MiruSipCursor<S>> implements MiruSipIndex<S> 
                 (index, key1, timestamp, tombstoned, version, payload) -> {
                     if (payload != null && !tombstoned) {
                         try {
-                            payload.clear();
-                            sipReference.set(marshaller.fromFiler(new ByteBufferBackedFiler(payload), stackBuffer));
+                            sipReference.set(marshaller.fromFiler(new ByteBufferBackedFiler(payload.asByteBuffer()), stackBuffer));
                         } catch (Exception e) {
-                            LOG.warn("Failed to deserialize sip, length={}", payload.capacity());
+                            LOG.warn("Failed to deserialize sip, length={}", payload.length);
                             sipReference.set(null);
                             absent.set(true);
                         }
@@ -94,7 +93,6 @@ public class LabSipIndex<S extends MiruSipCursor<S>> implements MiruSipIndex<S> 
             (keyStream) -> keyStream.key(0, realtimeDeliveryIdKey, 0, realtimeDeliveryIdKey.length),
             (index, key1, timestamp, tombstoned, version, payload) -> {
                 if (payload != null && !tombstoned) {
-                    payload.clear();
                     deliveryId[0] = payload.getInt(0);
                 }
                 return true;

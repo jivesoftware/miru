@@ -10,9 +10,9 @@ import com.jivesoftware.os.filer.io.ByteBufferDataInput;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
-import com.jivesoftware.os.lab.BolBuffer;
 import com.jivesoftware.os.lab.LABUtils;
 import com.jivesoftware.os.lab.api.ValueIndex;
+import com.jivesoftware.os.lab.io.BolBuffer;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.plugin.index.IndexTx;
@@ -109,9 +109,8 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
                     },
                     (index, key, timestamp, tombstoned, version, payload) -> {
                         if (payload != null) {
-                            payload.clear();
-                            labKeyBytes.add(new LabKeyBytes(deatomize(key), payload));
-                            bytes.add(payload.capacity());
+                            labKeyBytes.add(new LabKeyBytes(deatomize(key.asByteBuffer()), payload.asByteBuffer()));
+                            bytes.add(payload.length);
                         }
                         return true;
                     },
@@ -125,9 +124,8 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
                 bitmapIndex.rangeScan(from, to,
                     (index, key, timestamp, tombstoned, version, payload) -> {
                         if (payload != null) {
-                            payload.clear();
-                            labKeyBytes.add(new LabKeyBytes(deatomize(key), payload));
-                            bytes.add(payload.capacity());
+                            labKeyBytes.add(new LabKeyBytes(deatomize(key.asByteBuffer()), payload.asByteBuffer()));
+                            bytes.add(payload.length);
                         }
                         return true;
                     },
@@ -143,9 +141,8 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
             bitmapIndex.get((keyStream) -> keyStream.key(0, bitmapKeyBytes, 0, bitmapKeyBytes.length),
                 (index, key, timestamp, tombstoned, version, payload) -> {
                     if (payload != null) {
-                        payload.clear();
-                        bali[0] = deser(bitmaps, trackError, atomized, Collections.singletonList(new LabKeyBytes(-1, payload)));
-                        bytes.add(payload.capacity());
+                        bali[0] = deser(bitmaps, trackError, atomized, Collections.singletonList(new LabKeyBytes(-1, payload.asByteBuffer())));
+                        bytes.add(payload.length);
                     }
                     return true;
                 }, true);
@@ -175,13 +172,12 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
             (index, key, timestamp, tombstoned, version, payload) -> {
                 try {
                     if (payload != null) {
-                        bytes.add(payload.capacity());
-                        if (payload.capacity() < LAST_ID_LENGTH + 4) {
+                        bytes.add(payload.length);
+                        if (payload.length < LAST_ID_LENGTH + 4) {
                             result[0] = tx.tx(null, null, -1, null);
                             return false;
                         } else {
-                            payload.clear();
-                            result[0] = tx.tx(null, new ByteBufferBackedFiler(payload), LAST_ID_LENGTH, stackBuffer);
+                            result[0] = tx.tx(null, new ByteBufferBackedFiler(payload.asByteBuffer()), LAST_ID_LENGTH, stackBuffer);
                             return false;
                         }
                     } else {
@@ -447,10 +443,9 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
                         (index, key, timestamp, tombstoned, version, payload) -> {
                             if (payload != null) {
                                 if (id[0] == -1) {
-                                    payload.clear();
-                                    bytes.add(payload.capacity());
-                                    int labKey = LabInvertedIndex.deatomize(key);
-                                    id[0] = LabInvertedIndex.deserLastId(bitmaps, atomized, labKey, payload);
+                                    bytes.add(payload.length);
+                                    int labKey = LabInvertedIndex.deatomize(key.asByteBuffer());
+                                    id[0] = LabInvertedIndex.deserLastId(bitmaps, atomized, labKey, payload.asByteBuffer());
                                     if (id[0] != -1) {
                                         return false;
                                     }
@@ -466,9 +461,8 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
                         (keyStream) -> keyStream.key(0, bitmapKeyBytes, 0, bitmapKeyBytes.length),
                         (index, key, timestamp, tombstoned, version, payload) -> {
                             if (payload != null) {
-                                payload.clear();
-                                bytes.add(payload.capacity());
-                                id[0] = payload.getInt();
+                                bytes.add(payload.length);
+                                id[0] = payload.getInt(0);
                             }
                             return true;
                         },
