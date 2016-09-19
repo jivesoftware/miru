@@ -145,11 +145,7 @@ public class LastIdKeyValueRawhide implements Rawhide {
         FormatTransformer readValueFormatTransormer,
         BolBuffer rawEntry,
         BolBuffer keyBuffer) {
-        int length = rawEntry.getInt(0);
-        if (length < 0) {
-            return null;
-        }
-        return rawEntry.sliceInto(4, length, keyBuffer);
+        return rawEntry.sliceInto(4, rawEntry.getInt(0), keyBuffer);
     }
 
     @Override
