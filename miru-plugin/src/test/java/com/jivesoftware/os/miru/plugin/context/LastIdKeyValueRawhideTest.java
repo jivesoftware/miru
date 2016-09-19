@@ -37,12 +37,17 @@ public class LastIdKeyValueRawhideTest {
 
         Assert.assertEquals(lastIdKeyValueRawhide.timestamp(NO_OP, NO_OP, lastIdRawEntry), rawTimestamp);
 
-        lastIdKeyValueRawhide.streamRawEntry(0, NO_OP, NO_OP, new BolBuffer(rawEntry.copy()), (index, key, timestamp, tombstoned, version, payload) -> {
-            Assert.assertEquals(key.copy(), rawKey);
-            Assert.assertEquals(timestamp, rawTimestamp);
-            Assert.assertEquals(payload.copy(), rawPayload);
-            return true;
-        }, true);
+        lastIdKeyValueRawhide.streamRawEntry(0,
+            NO_OP, NO_OP,
+            new BolBuffer(rawEntry.copy()),
+            new BolBuffer(),
+            new BolBuffer(),
+            (index, key, timestamp, tombstoned, version, payload) -> {
+                Assert.assertEquals(key.copy(), rawKey);
+                Assert.assertEquals(timestamp, rawTimestamp);
+                Assert.assertEquals(payload.copy(), rawPayload);
+                return true;
+            });
     }
 
     @Test

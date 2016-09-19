@@ -32,11 +32,17 @@ public class LastIdKeyValueRawhide implements Rawhide {
     }
 
     @Override
-    public int mergeCompare(FormatTransformer aReadKeyFormatTransormer, FormatTransformer aReadValueFormatTransormer, BolBuffer aRawEntry,
-        FormatTransformer bReadKeyFormatTransormer, FormatTransformer bReadValueFormatTransormer, BolBuffer bRawEntry) {
+    public int mergeCompare(FormatTransformer aReadKeyFormatTransormer,
+        FormatTransformer aReadValueFormatTransormer,
+        BolBuffer aRawEntry,
+        BolBuffer aKeyBuffer,
+        FormatTransformer bReadKeyFormatTransormer,
+        FormatTransformer bReadValueFormatTransormer,
+        BolBuffer bRawEntry,
+        BolBuffer bKeyBuffer) {
 
-        int c = compareKey(aReadKeyFormatTransormer, aReadValueFormatTransormer, aRawEntry,
-            bReadKeyFormatTransormer, bReadValueFormatTransormer, bRawEntry);
+        int c = compareKey(aReadKeyFormatTransormer, aReadValueFormatTransormer, aRawEntry, aKeyBuffer,
+            bReadKeyFormatTransormer, bReadValueFormatTransormer, bRawEntry, bKeyBuffer);
         if (c != 0) {
             return c;
         }
@@ -78,21 +84,22 @@ public class LastIdKeyValueRawhide implements Rawhide {
         FormatTransformer readKeyFormatTransormer,
         FormatTransformer readValueFormatTransormer,
         BolBuffer rawEntry,
-        ValueStream stream,
-        boolean hydrateValues) throws Exception {
+        BolBuffer keyBuffer,
+        BolBuffer valueBuffer,
+        ValueStream stream) throws Exception {
         if (rawEntry == null) {
             return stream.stream(index, null, -1, false, -1, null);
         }
 
         int keyLength = rawEntry.getInt(0);
-        BolBuffer key = rawEntry.slice(4, keyLength);
+        BolBuffer key = rawEntry.sliceInto(4, keyLength, keyBuffer);
 
         int payloadLength = rawEntry.getInt(4 + keyLength);
         int lastId = rawEntry.getInt(4 + keyLength + 4 + payloadLength - 4);
 
         BolBuffer payload = null;
-        if (hydrateValues) {
-            payload = rawEntry.slice(4 + keyLength + 4, payloadLength - 4);
+        if (valueBuffer != null) {
+            payload = rawEntry.sliceInto(4 + keyLength + 4, payloadLength - 4, valueBuffer);
         }
         return stream.stream(index, key, lastId, false, 0, payload);
     }
@@ -142,25 +149,17 @@ public class LastIdKeyValueRawhide implements Rawhide {
         if (length < 0) {
             return null;
         }
-        rawEntry.sliceInto(4, length, keyBuffer);
-        return keyBuffer;
-    }
-
-    @Override
-    public BolBuffer key(FormatTransformer readKeyFormatTransormer,
-        FormatTransformer readValueFormatTransormer,
-        BolBuffer rawEntry
-    ) {
-        return rawEntry.slice(4, rawEntry.getInt(0));
+        return rawEntry.sliceInto(4, length, keyBuffer);
     }
 
     @Override
     public int compareKey(FormatTransformer readKeyFormatTransormer,
         FormatTransformer readValueFormatTransormer,
         BolBuffer rawEntry,
+        BolBuffer keyBuffer,
         BolBuffer compareKey
     ) {
-        return IndexUtil.compare(key(readKeyFormatTransormer, readValueFormatTransormer, rawEntry), compareKey);
+        return IndexUtil.compare(key(readKeyFormatTransormer, readValueFormatTransormer, rawEntry, keyBuffer), compareKey);
     }
 
     @Override
@@ -182,9 +181,11 @@ public class LastIdKeyValueRawhide implements Rawhide {
     public int compareKey(FormatTransformer aReadKeyFormatTransormer,
         FormatTransformer aReadValueFormatTransormer,
         BolBuffer aRawEntry,
+        BolBuffer aKeyBuffer,
         FormatTransformer bReadKeyFormatTransormer,
         FormatTransformer bReadValueFormatTransormer,
-        BolBuffer bRawEntry) {
+        BolBuffer bRawEntry,
+        BolBuffer bKeyBuffer) {
 
         if (aRawEntry == null && bRawEntry == null) {
             return 0;
@@ -194,8 +195,8 @@ public class LastIdKeyValueRawhide implements Rawhide {
             return aRawEntry.length;
         } else {
             return IndexUtil.compare(
-                key(aReadKeyFormatTransormer, aReadValueFormatTransormer, aRawEntry),
-                key(bReadKeyFormatTransormer, bReadValueFormatTransormer, bRawEntry)
+                key(aReadKeyFormatTransormer, aReadValueFormatTransormer, aRawEntry, aKeyBuffer),
+                key(bReadKeyFormatTransormer, bReadValueFormatTransormer, bRawEntry, bKeyBuffer)
             );
         }
     }
