@@ -49,7 +49,15 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
 
     private List<String> packStats(LABStats stats) {
         List<String> list = Lists.newArrayList();
-        list.add("open=" + numberFormat.format(stats.open.longValue()));
+        list.add("open=" + numberFormat.format(stats.open.longValue() - stats.closed.longValue()));
+        list.add("gc=" + numberFormat.format(stats.gc.longValue()));
+        list.add("inuses=" + numberFormat.format(stats.allocationed.longValue()-stats.freed.longValue()) + " bytes");
+        list.add("allocationed=" + numberFormat.format(stats.allocationed.longValue()) + " bytes");
+        list.add("freed=" + numberFormat.format(stats.freed.longValue()) + " bytes");
+        list.add("bytesWrittenToWAL=" + numberFormat.format(stats.bytesWrittenToWAL.longValue()) + " bytes");
+        list.add("bytesWrittenAsIndex=" + numberFormat.format(stats.bytesWrittenAsIndex.longValue()) + " bytes");
+        list.add("bytesWrittenAsSplit=" + numberFormat.format(stats.bytesWrittenAsSplit.longValue()) + " bytes");
+        list.add("bytesWrittenAsMerge=" + numberFormat.format(stats.bytesWrittenAsMerge.longValue()) + " bytes");
         list.add("append=" + numberFormat.format(stats.append.longValue()));
         list.add("journaledAppend=" + numberFormat.format(stats.journaledAppend.longValue()));
         list.add("gets=" + numberFormat.format(stats.gets.longValue()));
@@ -59,14 +67,6 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
         list.add("commit=" + numberFormat.format(stats.commit.longValue()));
         list.add("fsyncedCommit=" + numberFormat.format(stats.fsyncedCommit.longValue()));
         list.add("compacts=" + numberFormat.format(stats.compacts.longValue()));
-        list.add("closed=" + numberFormat.format(stats.closed.longValue()));
-        list.add("allocationed=" + numberFormat.format(stats.allocationed.longValue()) + " bytes");
-        list.add("freed=" + numberFormat.format(stats.freed.longValue()) + " bytes");
-        list.add("gc=" + numberFormat.format(stats.gc.longValue()));
-        list.add("bytesWrittenToWAL=" + numberFormat.format(stats.bytesWrittenToWAL.longValue()) + " bytes");
-        list.add("bytesWrittenAsIndex=" + numberFormat.format(stats.bytesWrittenAsIndex.longValue()) + " bytes");
-        list.add("bytesWrittenAsSplit=" + numberFormat.format(stats.bytesWrittenAsSplit.longValue()) + " bytes");
-        list.add("bytesWrittenAsMerge=" + numberFormat.format(stats.bytesWrittenAsMerge.longValue()) + " bytes");
         return list;
     }
 
