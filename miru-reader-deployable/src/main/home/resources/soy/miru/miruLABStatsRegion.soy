@@ -1,0 +1,36 @@
+{namespace soy.miru.page}
+
+/**
+ * Errors
+ *
+ * @param? rebuild
+ * @param? global
+ */
+{template .labStatsRegion}
+    {if $rebuild}
+        <div class="panel panel-default">
+            <div class="panel-heading">LAB rebuild Stats</div>
+            <div class="panel-body">
+                <ul>
+                    {foreach $r in $rebuild}
+                        <li>{$r}</li>
+                    {/foreach}
+                </ul>
+            </div>
+        </div>
+    {/if}
+
+    {if $global}
+        <div class="panel panel-default">
+            <div class="panel-heading">LAB global Stats</div>
+            <div class="panel-body">
+                <ul>
+                    {foreach $g in $global}
+                        <li>{$g}</li>
+                    {/foreach}
+                </ul>
+            </div>
+        </div>
+    {/if}
+
+{/template}

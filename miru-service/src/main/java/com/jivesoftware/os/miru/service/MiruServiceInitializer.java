@@ -17,6 +17,7 @@ import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.lab.LABEnvironment;
+import com.jivesoftware.os.lab.LABStats;
 import com.jivesoftware.os.lab.LabHeapPressure;
 import com.jivesoftware.os.lab.guts.Leaps;
 import com.jivesoftware.os.lab.guts.StripingBolBufferLocks;
@@ -82,6 +83,8 @@ public class MiruServiceInitializer {
 
     public <C extends MiruCursor<C, S>, S extends MiruSipCursor<S>> MiruLifecyle<MiruService> initialize(final MiruServiceConfig config,
         MiruStats miruStats,
+        LABStats rebuildLABStats,
+        LABStats globalLABStats,
         ScheduledExecutorService scheduledBootstrapExecutor,
         ScheduledExecutorService scheduledRebuildExecutor,
         ScheduledExecutorService scheduledSipMigrateExecutor,
@@ -146,7 +149,8 @@ public class MiruServiceInitializer {
         AtomicLong inMemoryLabHeapCostInBytes = new AtomicLong();
         LabHeapPressure[] inMemoryLabHeapPressures = new LabHeapPressure[config.getRebuildLabHeapPressureStripes()];
         for (int i = 0; i < inMemoryLabHeapPressures.length; i++) {
-            inMemoryLabHeapPressures[i] = new LabHeapPressure(inMemoryLabHeapScheduler,
+            inMemoryLabHeapPressures[i] = new LabHeapPressure(rebuildLABStats,
+                inMemoryLabHeapScheduler,
                 "rebuild-" + i,
                 config.getRebuildLabMaxHeapPressureInBytes(),
                 config.getRebuildLabBlockOnHeapPressureInBytes(),
@@ -157,7 +161,8 @@ public class MiruServiceInitializer {
         AtomicLong onDiskLabHeapCostInBytes = new AtomicLong();
         LabHeapPressure[] onDiskLabHeapPressures = new LabHeapPressure[config.getGlobalLabHeapPressureStripes()];
         for (int i = 0; i < onDiskLabHeapPressures.length; i++) {
-            onDiskLabHeapPressures[i] = new LabHeapPressure(onDiskLabHeapScheduler,
+            onDiskLabHeapPressures[i] = new LabHeapPressure(globalLABStats,
+                onDiskLabHeapScheduler,
                 "global-" + i,
                 config.getGlobalLabMaxHeapPressureInBytes(),
                 config.getGlobalLabBlockOnHeapPressureInBytes(),
@@ -177,6 +182,7 @@ public class MiruServiceInitializer {
             config.getPartitionDeleteChunkStoreOnClose(),
             config.getPartitionInitialChunkCacheSize(),
             config.getPartitionMaxChunkCacheSize(),
+            new LABStats[]{rebuildLABStats},
             inMemoryLabHeapPressures,
             config.getLabMaxWALSizeInBytes(),
             config.getLabMaxEntriesPerWAL(),
@@ -192,6 +198,7 @@ public class MiruServiceInitializer {
             config.getPartitionNumberOfChunkStores(),
             config.getPartitionInitialChunkCacheSize(),
             config.getPartitionMaxChunkCacheSize(),
+            new LABStats[]{globalLABStats},
             onDiskLabHeapPressures,
             config.getLabMaxWALSizeInBytes(),
             config.getLabMaxEntriesPerWAL(),
@@ -233,9 +240,9 @@ public class MiruServiceInitializer {
             termComposer,
             internExtern,
             ImmutableMap.<MiruBackingStorage, MiruChunkAllocator>builder()
-                .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
-                .put(MiruBackingStorage.disk, onDiskChunkAllocator)
-                .build(),
+            .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
+            .put(MiruBackingStorage.disk, onDiskChunkAllocator)
+            .build(),
             sipIndexMarshaller,
             resourceLocator,
             config.getPartitionAuthzCacheSize(),

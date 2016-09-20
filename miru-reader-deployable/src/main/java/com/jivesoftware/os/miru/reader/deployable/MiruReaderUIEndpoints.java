@@ -55,4 +55,12 @@ public class MiruReaderUIEndpoints {
         return Response.ok(rendered).build();
     }
 
+    @GET
+    @Path("/labStats")
+    @Produces(MediaType.TEXT_HTML)
+    public Response getLABStats() {
+        String rendered = service.renderLabStats();
+        return Response.ok(rendered).build();
+    }
+
 }

@@ -21,6 +21,7 @@ import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.lab.LABEnvironment;
+import com.jivesoftware.os.lab.LABStats;
 import com.jivesoftware.os.lab.LabHeapPressure;
 import com.jivesoftware.os.lab.api.MemoryRawEntryFormat;
 import com.jivesoftware.os.lab.api.NoOpFormatTransformerProvider;
@@ -109,7 +110,8 @@ public class IndexTestUtil {
             termComposer);
 
         final MiruResourceLocator diskResourceLocator = new MiruTempDirectoryResourceLocator();
-        LabHeapPressure labHeapPressure = new LabHeapPressure(LABEnvironment.buildLABHeapSchedulerThreadPool(1),
+        LABStats labStats = new LABStats();
+        LabHeapPressure labHeapPressure = new LabHeapPressure(labStats, LABEnvironment.buildLABHeapSchedulerThreadPool(1),
             "test",
             1024 * 1024 * 10,
             1024 * 1024 * 20,
@@ -129,6 +131,7 @@ public class IndexTestUtil {
             true,
             100,
             1_000,
+            new LABStats[]{labStats},
             new LabHeapPressure[]{labHeapPressure},
             labMaxWALSizeInBytes,
             labMaxEntriesPerWAL,
@@ -144,6 +147,7 @@ public class IndexTestUtil {
             numberOfChunkStores,
             100,
             1_000,
+            new LABStats[]{labStats},
             new LabHeapPressure[]{labHeapPressure},
             labMaxWALSizeInBytes,
             labMaxEntriesPerWAL,
@@ -203,7 +207,7 @@ public class IndexTestUtil {
 
     public static ValueIndex buildValueIndex(String name) throws Exception {
         File root = Files.createTempDir();
-        LABEnvironment environment = new LABEnvironment(LABEnvironment.buildLABSchedulerThreadPool(1),
+        LABEnvironment environment = new LABEnvironment(new LABStats(), LABEnvironment.buildLABSchedulerThreadPool(1),
             LABEnvironment.buildLABCompactorThreadPool(1),
             LABEnvironment.buildLABDestroyThreadPool(1),
             "wal",
@@ -212,9 +216,13 @@ public class IndexTestUtil {
             -1,
             -1,
             root,
-            new LabHeapPressure(MoreExecutors.sameThreadExecutor(),
+            new LabHeapPressure(new LABStats(),
+                MoreExecutors.sameThreadExecutor(),
                 name,
-                1024 * 1024, 2 * 1024 * 1024, new AtomicLong()),
+                1024 * 1024,
+                2 * 1024 * 1024,
+                new AtomicLong()
+            ),
             4,
             16,
             LABEnvironment.buildLeapsCache(1_000, 4),

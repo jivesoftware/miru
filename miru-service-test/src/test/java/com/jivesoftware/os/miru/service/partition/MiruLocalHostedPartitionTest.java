@@ -21,6 +21,7 @@ import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.lab.LABEnvironment;
+import com.jivesoftware.os.lab.LABStats;
 import com.jivesoftware.os.lab.LabHeapPressure;
 import com.jivesoftware.os.lab.guts.Leaps;
 import com.jivesoftware.os.lab.guts.StripingBolBufferLocks;
@@ -230,7 +231,9 @@ public class MiruLocalHostedPartitionTest {
             Interners.<String>newWeakInterner(),
             termComposer);
 
-        LabHeapPressure labHeapPressure = new LabHeapPressure(MoreExecutors.sameThreadExecutor(), "test", 1024 * 1024 * 10, 1024 * 1024 * 20, new AtomicLong());
+        LABStats labStats = new LABStats();
+        LabHeapPressure labHeapPressure = new LabHeapPressure(labStats,
+            MoreExecutors.sameThreadExecutor(), "test", 1024 * 1024 * 10, 1024 * 1024 * 20, new AtomicLong());
         long labMaxWALSizeInBytes = 1024 * 1024 * 10;
         long labMaxEntriesPerWAL = 1000;
         long labMaxEntrySizeInBytes = 1024 * 1024 * 10;
@@ -248,6 +251,7 @@ public class MiruLocalHostedPartitionTest {
             config.getPartitionDeleteChunkStoreOnClose(),
             100,
             1_000,
+            new LABStats[]{labStats},
             new LabHeapPressure[]{labHeapPressure},
             labMaxWALSizeInBytes,
             labMaxEntriesPerWAL,
@@ -264,6 +268,7 @@ public class MiruLocalHostedPartitionTest {
             config.getPartitionNumberOfChunkStores(),
             100,
             1_000,
+            new LABStats[]{labStats},
             new LabHeapPressure[]{labHeapPressure},
             labMaxWALSizeInBytes,
             labMaxEntriesPerWAL,

@@ -16,6 +16,7 @@ public class MiruReaderUIService {
     private final MiruAdminRegion adminRegion;
     private final MiruPageRegion<Optional<String>> partitionsRegion;
     private final MiruPageRegion<Void> errorsRegion;
+    private final MiruPageRegion<Void> labStatsRegion;
     private final List<MiruReaderUIPlugin> plugins = Lists.newCopyOnWriteArrayList();
 
     public MiruReaderUIService(
@@ -23,12 +24,14 @@ public class MiruReaderUIService {
         MiruHeaderRegion headerRegion,
         MiruAdminRegion adminRegion,
         MiruPageRegion<Optional<String>> partitionsRegion,
-        MiruPageRegion<Void> errorsRegion) {
+        MiruPageRegion<Void> errorsRegion,
+        MiruPageRegion<Void> labStatsRegion) {
         this.renderer = renderer;
         this.headerRegion = headerRegion;
         this.adminRegion = adminRegion;
         this.partitionsRegion = partitionsRegion;
         this.errorsRegion = errorsRegion;
+        this.labStatsRegion = labStatsRegion;
     }
 
     public void registerPlugin(MiruReaderUIPlugin plugin) {
@@ -53,5 +56,9 @@ public class MiruReaderUIService {
 
     public String renderErrors() {
         return chrome(errorsRegion).render(null);
+    }
+    
+    public String renderLabStats() {
+        return chrome(labStatsRegion).render(null);
     }
 }
