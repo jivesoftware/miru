@@ -26,6 +26,7 @@ import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.jive.utils.ordered.id.TimestampedOrderIdProvider;
+import com.jivesoftware.os.lab.LABStats;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruHostProvider;
 import com.jivesoftware.os.miru.api.MiruHostSelectiveStrategy;
@@ -298,14 +299,14 @@ public class MiruReaderMain {
 
             final ThreadGroup threadGroup = Thread.currentThread().getThreadGroup();
             final ScheduledExecutorService scheduledBootstrapExecutor = Executors.newScheduledThreadPool(miruServiceConfig
-                    .getPartitionScheduledBootstrapThreads(),
+                .getPartitionScheduledBootstrapThreads(),
                 new NamedThreadFactory(threadGroup, "scheduled_bootstrap"));
 
             final ScheduledExecutorService scheduledRebuildExecutor = Executors.newScheduledThreadPool(miruServiceConfig.getPartitionScheduledRebuildThreads(),
                 new NamedThreadFactory(threadGroup, "scheduled_rebuild"));
 
             final ScheduledExecutorService scheduledSipMigrateExecutor = Executors.newScheduledThreadPool(miruServiceConfig
-                    .getPartitionScheduledSipMigrateThreads(),
+                .getPartitionScheduledSipMigrateThreads(),
                 new NamedThreadFactory(threadGroup, "scheduled_sip_migrate"));
 
             SickThreads walClientSickThreads = new SickThreads();
@@ -313,6 +314,9 @@ public class MiruReaderMain {
 
             MiruInboxReadTracker inboxReadTracker;
             MiruLifecyle<MiruService> miruServiceLifecyle;
+            LABStats rebuildLABStats = new LABStats();
+            LABStats globalLABStats = new LABStats();
+
             if (walConfig.getActivityWALType().equals("rcvs") || walConfig.getActivityWALType().equals("rcvs_amza")) {
                 MiruWALClient<RCVSCursor, RCVSSipCursor> rcvsWALClient = new MiruWALClientInitializer().initialize("", walHttpClient, mapper,
                     walClientSickThreads, 10_000,
@@ -321,6 +325,8 @@ public class MiruReaderMain {
                 inboxReadTracker = new RCVSInboxReadTracker(rcvsWALClient);
                 miruServiceLifecyle = new MiruServiceInitializer().initialize(miruServiceConfig,
                     miruStats,
+                    rebuildLABStats,
+                    globalLABStats,
                     scheduledBootstrapExecutor,
                     scheduledRebuildExecutor,
                     scheduledSipMigrateExecutor,
@@ -345,6 +351,8 @@ public class MiruReaderMain {
                 inboxReadTracker = new AmzaInboxReadTracker(amzaWALClient);
                 miruServiceLifecyle = new MiruServiceInitializer().initialize(miruServiceConfig,
                     miruStats,
+                    rebuildLABStats,
+                    globalLABStats,
                     scheduledBootstrapExecutor,
                     scheduledRebuildExecutor,
                     scheduledSipMigrateExecutor,
@@ -393,7 +401,9 @@ public class MiruReaderMain {
                 miruStats,
                 miruService,
                 partitionErrorTracker,
-                tenantRoutingProvider);
+                tenantRoutingProvider,
+                rebuildLABStats,
+                globalLABStats);
 
             deployable.addEndpoints(MiruReaderUIEndpoints.class);
             deployable.addInjectables(MiruReaderUIService.class, uiService);

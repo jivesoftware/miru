@@ -12,6 +12,7 @@ import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.lab.LABEnvironment;
+import com.jivesoftware.os.lab.LABStats;
 import com.jivesoftware.os.lab.LabHeapPressure;
 import com.jivesoftware.os.lab.api.MemoryRawEntryFormat;
 import com.jivesoftware.os.lab.api.NoOpFormatTransformerProvider;
@@ -54,9 +55,12 @@ public class MiruAggregateUtilTest {
 
         File root = Files.createTempDir();
         LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
-        LabHeapPressure labHeapPressure = new LabHeapPressure(MoreExecutors.sameThreadExecutor(), "test", 1024 * 1024 * 10, 1024 * 1024 * 20, new AtomicLong());
+        LABStats labStats = new LABStats();
+        LabHeapPressure labHeapPressure = new LabHeapPressure(labStats,
+            MoreExecutors.sameThreadExecutor(), "test", 1024 * 1024 * 10, 1024 * 1024 * 20, new AtomicLong());
         StripingBolBufferLocks  bolBufferLocks = new StripingBolBufferLocks(2048); // TODO config
-        LABEnvironment env = new LABEnvironment(LABEnvironment.buildLABSchedulerThreadPool(4),
+        LABEnvironment env = new LABEnvironment(labStats,
+            LABEnvironment.buildLABSchedulerThreadPool(4),
             LABEnvironment.buildLABCompactorThreadPool(4),
             LABEnvironment.buildLABDestroyThreadPool(1),
             "wal",

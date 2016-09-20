@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.service.index.lab;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
 import com.jivesoftware.os.lab.LABEnvironment;
+import com.jivesoftware.os.lab.LABStats;
 import com.jivesoftware.os.lab.LabHeapPressure;
 import com.jivesoftware.os.lab.guts.StripingBolBufferLocks;
 import com.jivesoftware.os.miru.service.locator.MiruTempDirectoryResourceLocator;
@@ -24,6 +25,7 @@ public class LabTimeIdIndexTest {
     public void testAllocateAndLookup() throws Exception {
         int numberOfChunkStores = 1;
         MiruTempDirectoryResourceLocator resourceLocator = new MiruTempDirectoryResourceLocator();
+        LABStats labStats = new LABStats();
         InMemoryChunkAllocator chunkAllocator = new InMemoryChunkAllocator(resourceLocator,
             new HeapByteBufferFactory(),
             new HeapByteBufferFactory(),
@@ -32,7 +34,8 @@ public class LabTimeIdIndexTest {
             true,
             100,
             1_000,
-            new LabHeapPressure[]{new LabHeapPressure(MoreExecutors.sameThreadExecutor(), "test", 1024 * 1024, 1024 * 1024 * 2, new AtomicLong())},
+            new LABStats[]{labStats},
+            new LabHeapPressure[]{new LabHeapPressure(labStats, MoreExecutors.sameThreadExecutor(), "test", 1024 * 1024, 1024 * 1024 * 2, new AtomicLong())},
             10 * 1024 * 1024,
             1000,
             10 * 1024 * 1024,

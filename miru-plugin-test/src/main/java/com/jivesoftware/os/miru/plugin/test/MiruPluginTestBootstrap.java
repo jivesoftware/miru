@@ -10,6 +10,7 @@ import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
+import com.jivesoftware.os.lab.LABStats;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceConfig;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceInitializer;
 import com.jivesoftware.os.miru.amza.NoOpClientHealth;
@@ -270,6 +271,8 @@ public class MiruPluginTestBootstrap {
 
         MiruLifecyle<MiruService> miruServiceLifecyle = new MiruServiceInitializer().initialize(config,
             miruStats,
+            new LABStats(),
+            new LABStats(),
             scheduledBootstrapExecutor,
             scheduledRebuildExecutor,
             scheduledSipMigrateExecutor,

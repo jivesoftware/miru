@@ -7,6 +7,7 @@ import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.filer.io.chunk.ChunkStore;
 import com.jivesoftware.os.jive.utils.collections.bah.LRUConcurrentBAHLinkedHash;
 import com.jivesoftware.os.lab.LABEnvironment;
+import com.jivesoftware.os.lab.LABStats;
 import com.jivesoftware.os.lab.LabHeapPressure;
 import com.jivesoftware.os.lab.api.rawhide.FixedWidthRawhide;
 import com.jivesoftware.os.lab.guts.Leaps;
@@ -40,6 +41,7 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
     private final boolean partitionDeleteChunkStoreOnClose;
     private final int partitionInitialChunkCacheSize;
     private final int partitionMaxChunkCacheSize;
+    private final LABStats[] labStats;
     private final LabHeapPressure[] labHeapPressures;
     private final long labMaxWALSizeInBytes;
     private final long labMaxEntriesPerWAL;
@@ -62,6 +64,7 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
         boolean partitionDeleteChunkStoreOnClose,
         int partitionInitialChunkCacheSize,
         int partitionMaxChunkCacheSize,
+        LABStats[] labStats,
         LabHeapPressure[] labHeapPressures,
         long labMaxWALSizeInBytes,
         long labMaxEntriesPerWAL,
@@ -85,6 +88,7 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
         this.labMaxWALOnOpenHeapPressureOverride = labMaxWALOnOpenHeapPressureOverride;
         this.labUseOffHeap = labUseOffHeap;
         this.useLabIndexes = useLabIndexes;
+        this.labStats = labStats;
         this.labHeapPressures = labHeapPressures;
         this.leapCache = leapCache;
         this.bolBufferLocks = bolBufferLocks;
@@ -147,7 +151,8 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
         LABEnvironment[] environments = new LABEnvironment[labDirs.length];
         for (int i = 0; i < labDirs.length; i++) {
             labDirs[i].mkdirs();
-            environments[i] = new LABEnvironment(buildLABSchedulerThreadPool,
+            environments[i] = new LABEnvironment(labStats[i % labStats.length],
+                buildLABSchedulerThreadPool,
                 buildLABCompactorThreadPool,
                 buildLABDestroyThreadPool,
                 "wal",
