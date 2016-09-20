@@ -9,7 +9,7 @@ import java.util.List;
  */
 public interface MiruInvertedIndex<BM extends IBM, IBM> extends MiruInvertedIndexAppender, MiruTxIndex<IBM> {
 
-    Optional<BM> getIndex(StackBuffer stackBuffer) throws Exception;
+    void getIndex(BitmapAndLastId<BM> container, StackBuffer stackBuffer) throws Exception;
 
     void remove(StackBuffer stackBuffer, int... ids) throws Exception;
 

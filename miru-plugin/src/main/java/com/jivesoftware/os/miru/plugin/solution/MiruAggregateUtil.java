@@ -42,7 +42,6 @@ import com.jivesoftware.os.rcvs.marshall.api.UtilLexMarshaller;
 import gnu.trove.iterator.TObjectIntIterator;
 import gnu.trove.map.hash.TObjectIntHashMap;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -1024,25 +1023,20 @@ public class MiruAggregateUtil {
 
     public <BM extends IBM, IBM> BM filter(String name,
         MiruBitmaps<BM, IBM> bitmaps,
-        MiruSchema schema,
-        final MiruTermComposer termComposer,
-        final MiruFieldIndexProvider<BM, IBM> fieldIndexProvider,
+        MiruRequestContext<BM, IBM, ?> context,
         MiruFilter filter,
         MiruSolutionLog solutionLog,
         Map<FieldAndTermId, MutableInt> termCollector,
         int largestIndex,
-        final int considerIfIndexIdGreaterThanN,
+        int considerIfIndexIdGreaterThanN,
         StackBuffer stackBuffer)
         throws Exception {
-        return filterInOut(name, bitmaps, schema, termComposer, fieldIndexProvider, filter, solutionLog, termCollector, true,
-            largestIndex, considerIfIndexIdGreaterThanN, stackBuffer);
+        return filterInOut(name, bitmaps, context, filter, solutionLog, termCollector, true, largestIndex, considerIfIndexIdGreaterThanN, stackBuffer);
     }
 
     private <BM extends IBM, IBM> BM filterInOut(String name,
         MiruBitmaps<BM, IBM> bitmaps,
-        MiruSchema schema,
-        final MiruTermComposer termComposer,
-        final MiruFieldIndexProvider<BM, IBM> fieldIndexProvider,
+        MiruRequestContext<BM, IBM, ?> context,
         MiruFilter filter,
         MiruSolutionLog solutionLog,
         Map<FieldAndTermId, MutableInt> termCollector,
@@ -1052,9 +1046,12 @@ public class MiruAggregateUtil {
         StackBuffer stackBuffer)
         throws Exception {
 
+        MiruSchema schema = context.getSchema();
+        MiruTermComposer termComposer = context.getTermComposer();
+        MiruFieldIndexProvider<BM, IBM> fieldIndexProvider = context.getFieldIndexProvider();
         List<MiruTxIndex<IBM>> filterBitmaps = new ArrayList<>();
         if (filter.inclusiveFilter) {
-            filterBitmaps.add(new SimpleInvertedIndex<>(bitmaps.buildIndexMask(largestIndex, Optional.<IBM>absent())));
+            filterBitmaps.add(new SimpleInvertedIndex<>(bitmaps.buildIndexMask(largestIndex, context.getRemovalIndex(), null, stackBuffer)));
         }
         if (filter.fieldFilters != null) {
             boolean abortIfEmpty = filter.operation == MiruFilterOperation.and;
@@ -1108,7 +1105,7 @@ public class MiruAggregateUtil {
         if (filter.subFilters != null) {
             for (MiruFilter subFilter : filter.subFilters) {
                 boolean subTermIn = (filter.operation == MiruFilterOperation.pButNotQ && !filterBitmaps.isEmpty()) ? !termIn : termIn;
-                BM subStorage = filterInOut(name, bitmaps, schema, termComposer, fieldIndexProvider, subFilter, solutionLog,
+                BM subStorage = filterInOut(name, bitmaps, context, subFilter, solutionLog,
                     termCollector, subTermIn, largestIndex, considerIfLastIdGreaterThanN, stackBuffer);
                 filterBitmaps.add(new SimpleInvertedIndex<>(subStorage));
             }

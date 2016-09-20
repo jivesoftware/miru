@@ -67,12 +67,12 @@ public class AggregateCountsCustomQuestion implements Question<AggregateCountsQu
         }
 
         List<IBM> ands = new ArrayList<>();
+        int lastId = context.getActivityIndex().lastId(stackBuffer);
 
-        BM filtered = aggregateUtil.filter("aggregateCountsCustom", bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(),
-            request.query.streamFilter, solutionLog, null, context.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
+        BM filtered = aggregateUtil.filter("aggregateCountsCustom", bitmaps, context, request.query.streamFilter, solutionLog, null, lastId, -1, stackBuffer);
         ands.add(filtered);
 
-        ands.add(bitmaps.buildIndexMask(context.getActivityIndex().lastId(stackBuffer), context.getRemovalIndex().getIndex(stackBuffer)));
+        ands.add(bitmaps.buildIndexMask(lastId, context.getRemovalIndex(), null, stackBuffer));
 
         if (!MiruAuthzExpression.NOT_PROVIDED.equals(request.authzExpression)) {
             ands.add(context.getAuthzIndex().getCompositeAuthz(request.authzExpression, stackBuffer));

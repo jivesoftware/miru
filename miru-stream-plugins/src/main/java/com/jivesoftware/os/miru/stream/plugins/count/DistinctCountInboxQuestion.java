@@ -13,6 +13,7 @@ import com.jivesoftware.os.miru.plugin.backfill.MiruJustInTimeBackfillerizer;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
+import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
@@ -84,9 +85,12 @@ public class DistinctCountInboxQuestion implements Question<DistinctCountQuery, 
             ands.add(bitmaps.buildTimeRangeMask(context.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp, stackBuffer));
         }
 
-        Optional<BM> inbox = context.getInboxIndex().getInbox(request.query.streamId).getIndex(stackBuffer);
-        if (inbox.isPresent()) {
-            ands.add(inbox.get());
+        BitmapAndLastId<BM> container = new BitmapAndLastId<>();
+        int lastId = context.getActivityIndex().lastId(stackBuffer);
+
+        context.getInboxIndex().getInbox(request.query.streamId).getIndex(container, stackBuffer);
+        if (container.isSet()) {
+            ands.add(container.getBitmap());
         } else {
             // Short-circuit if the user doesn't have an inbox here
             LOG.debug("No user inbox");
@@ -94,21 +98,34 @@ public class DistinctCountInboxQuestion implements Question<DistinctCountQuery, 
                 solutionLog.asList());
         }
 
+        if (unreadOnly) {
+            context.getUnreadTrackingIndex().getUnread(request.query.streamId).getIndex(container, stackBuffer);
+            if (container.isSet()) {
+                ands.add(container.getBitmap());
+            } else {
+                // Short-circuit if the user doesn't have anything unread
+                LOG.debug("No user unread");
+                return new MiruPartitionResponse<>(distinctCount.numberOfDistincts("distinctCountInbox", bitmaps, context, request, report, bitmaps.create()),
+                    solutionLog.asList());
+            }
+        }
+
         if (!MiruFilter.NO_FILTER.equals(request.query.constraintsFilter)) {
-            BM filtered = aggregateUtil.filter("distinctCountInbox", bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(),
-                request.query.constraintsFilter, solutionLog, null, context.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
+            BM filtered = aggregateUtil.filter("distinctCountInbox",
+                bitmaps,
+                context,
+                request.query.constraintsFilter,
+                solutionLog,
+                null,
+                lastId,
+                -1,
+                stackBuffer);
             ands.add(filtered);
         }
         if (!MiruAuthzExpression.NOT_PROVIDED.equals(request.authzExpression)) {
             ands.add(context.getAuthzIndex().getCompositeAuthz(request.authzExpression, stackBuffer));
         }
-        if (unreadOnly) {
-            Optional<BM> unreadIndex = context.getUnreadTrackingIndex().getUnread(request.query.streamId).getIndex(stackBuffer);
-            if (unreadIndex.isPresent()) {
-                ands.add(unreadIndex.get());
-            }
-        }
-        ands.add(bitmaps.buildIndexMask(context.getActivityIndex().lastId(stackBuffer), context.getRemovalIndex().getIndex(stackBuffer)));
+        ands.add(bitmaps.buildIndexMask(lastId, context.getRemovalIndex(), container, stackBuffer));
 
         bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
         BM answer = bitmaps.and(ands);

@@ -11,6 +11,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
+import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndexAppender;
 import com.jivesoftware.os.miru.plugin.index.TimeVersionRealtime;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
@@ -61,14 +62,16 @@ public class MiruJustInTimeBackfillerizer {
                 StackBuffer stackBuffer = new StackBuffer();
                 synchronized (requestContext.getStreamLocks().lock(streamId, 0)) {
                     int lastActivityIndex = requestContext.getUnreadTrackingIndex().getLastActivityIndex(streamId, stackBuffer);
-                    int lastId = Math.min(requestContext.getTimeIndex().lastId(), requestContext.getActivityIndex().lastId(stackBuffer));
+                    int lastId = requestContext.getActivityIndex().lastId(stackBuffer);
 
                     MiruInvertedIndexAppender unread = requestContext.getUnreadTrackingIndex().getAppender(streamId);
                     if (log.isDebugEnabled()) {
+                        BitmapAndLastId<BM> container = new BitmapAndLastId<>();
+                        requestContext.getUnreadTrackingIndex().getUnread(streamId).getIndex(container, stackBuffer);
                         log.debug("before:\n  host={}\n  streamId={}\n  unread={}\n  last={}",
                             localHost,
                             streamId.getBytes(),
-                            requestContext.getUnreadTrackingIndex().getUnread(streamId).getIndex(stackBuffer),
+                            container,
                             lastActivityIndex);
                     }
 
@@ -80,10 +83,12 @@ public class MiruJustInTimeBackfillerizer {
                     unread.set(stackBuffer, unreadIds.toArray());
 
                     if (log.isDebugEnabled()) {
+                        BitmapAndLastId<BM> container = new BitmapAndLastId<>();
+                        requestContext.getUnreadTrackingIndex().getUnread(streamId).getIndex(container, stackBuffer);
                         log.debug("after:\n  host={}\n  streamId={}\n  unread={}\n  last={}",
                             localHost,
                             streamId.getBytes(),
-                            requestContext.getUnreadTrackingIndex().getUnread(streamId).getIndex(stackBuffer),
+                            container,
                             lastActivityIndex);
                     }
 
@@ -124,19 +129,23 @@ public class MiruJustInTimeBackfillerizer {
                 StackBuffer stackBuffer = new StackBuffer();
                 synchronized (requestContext.getStreamLocks().lock(streamId, 0)) {
                     int lastActivityIndex = requestContext.getInboxIndex().getLastActivityIndex(streamId, stackBuffer);
-                    int lastId = Math.min(requestContext.getTimeIndex().lastId(), requestContext.getActivityIndex().lastId(stackBuffer));
-                    BM answer = aggregateUtil.filter("justInTimeBackfillerizer", bitmaps, requestContext.getSchema(), requestContext.getTermComposer(),
-                        requestContext.getFieldIndexProvider(), streamFilter, solutionLog, null, requestContext.getActivityIndex().lastId(stackBuffer),
+                    int lastId = requestContext.getActivityIndex().lastId(stackBuffer);
+                    BM answer = aggregateUtil.filter("justInTimeBackfillerizer", bitmaps, requestContext, streamFilter, solutionLog, null,
+                        lastId,
                         lastActivityIndex, stackBuffer);
 
                     MiruInvertedIndexAppender inbox = requestContext.getInboxIndex().getAppender(streamId);
                     MiruInvertedIndexAppender unread = requestContext.getUnreadTrackingIndex().getAppender(streamId);
                     if (log.isDebugEnabled()) {
+                        BitmapAndLastId<BM> inboxContainer = new BitmapAndLastId<>();
+                        requestContext.getInboxIndex().getInbox(streamId).getIndex(inboxContainer, stackBuffer);
+                        BitmapAndLastId<BM> unreadContainer = new BitmapAndLastId<>();
+                        requestContext.getUnreadTrackingIndex().getUnread(streamId).getIndex(inboxContainer, stackBuffer);
                         log.debug("before:\n  host={}\n  streamId={}\n  inbox={}\n  unread={}\n  last={}",
                             localHost,
                             streamId.getBytes(),
-                            requestContext.getInboxIndex().getInbox(streamId).getIndex(stackBuffer),
-                            requestContext.getUnreadTrackingIndex().getUnread(streamId).getIndex(stackBuffer),
+                            inboxContainer,
+                            unreadContainer,
                             lastActivityIndex);
                     }
 
@@ -154,7 +163,7 @@ public class MiruJustInTimeBackfillerizer {
                             TimeVersionRealtime tvr = requestContext.getActivityIndex().getTimeVersionRealtime("justInTimeBackfillerizer", i, stackBuffer);
                             if (tvr == null) {
                                 log.warn("Missing activity at index {}, timeIndex={}, activityIndex={}",
-                                    i, requestContext.getTimeIndex().lastId(), requestContext.getActivityIndex().lastId(stackBuffer));
+                                    i, requestContext.getTimeIndex().lastId(), lastId);
                                 continue;
                             }
                             oldestBackfilledEventId = Math.min(oldestBackfilledEventId, tvr.timestamp);
@@ -172,11 +181,15 @@ public class MiruJustInTimeBackfillerizer {
                     unread.set(stackBuffer, unreadIds.toArray());
 
                     if (log.isDebugEnabled()) {
+                        BitmapAndLastId<BM> inboxContainer = new BitmapAndLastId<>();
+                        requestContext.getInboxIndex().getInbox(streamId).getIndex(inboxContainer, stackBuffer);
+                        BitmapAndLastId<BM> unreadContainer = new BitmapAndLastId<>();
+                        requestContext.getUnreadTrackingIndex().getUnread(streamId).getIndex(inboxContainer, stackBuffer);
                         log.debug("after:\n  host={}\n  streamId={}\n  inbox={}\n  unread={}\n  last={}",
                             localHost,
                             streamId.getBytes(),
-                            requestContext.getInboxIndex().getInbox(streamId).getIndex(stackBuffer),
-                            requestContext.getUnreadTrackingIndex().getUnread(streamId).getIndex(stackBuffer),
+                            inboxContainer,
+                            unreadContainer,
                             lastActivityIndex);
                     }
 

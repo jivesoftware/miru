@@ -19,6 +19,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
+import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
@@ -87,6 +88,8 @@ public class AnomalyQuestion implements Question<AnomalyQuery, AnomalyAnswer, An
                 solutionLog.asList());
         }
 
+        int lastId = context.getActivityIndex().lastId(stackBuffer);
+
         long start = System.currentTimeMillis();
         ands.add(bitmaps.buildTimeRangeMask(context.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp, stackBuffer));
         solutionLog.log(MiruSolutionLogLevel.INFO, "anomaly timeRangeMask: {} millis.", System.currentTimeMillis() - start);
@@ -96,8 +99,7 @@ public class AnomalyQuestion implements Question<AnomalyQuery, AnomalyAnswer, An
             solutionLog.log(MiruSolutionLogLevel.INFO, "anomaly filter: no constraints.");
         } else {
             start = System.currentTimeMillis();
-            BM filtered = aggregateUtil.filter("anomaly", bitmaps, schema, context.getTermComposer(), context.getFieldIndexProvider(),
-                request.query.constraintsFilter, solutionLog, null, context.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
+            BM filtered = aggregateUtil.filter("anomaly", bitmaps, context, request.query.constraintsFilter, solutionLog, null, lastId, -1, stackBuffer);
             solutionLog.log(MiruSolutionLogLevel.INFO, "anomaly filter: {} millis.", System.currentTimeMillis() - start);
             ands.add(filtered);
         }
@@ -109,7 +111,7 @@ public class AnomalyQuestion implements Question<AnomalyQuery, AnomalyAnswer, An
 
         // 3) Mask out anything that hasn't made it into the activityIndex yet, or that has been removed from the index
         start = System.currentTimeMillis();
-        ands.add(bitmaps.buildIndexMask(context.getActivityIndex().lastId(stackBuffer), context.getRemovalIndex().getIndex(stackBuffer)));
+        ands.add(bitmaps.buildIndexMask(lastId, context.getRemovalIndex(), null, stackBuffer));
         solutionLog.log(MiruSolutionLogLevel.INFO, "anomaly indexMask: {} millis.", System.currentTimeMillis() - start);
 
         // AND it all together to get the final constraints
@@ -188,14 +190,16 @@ public class AnomalyQuestion implements Question<AnomalyQuery, AnomalyAnswer, An
         MiruFieldIndex<BM, IBM> primaryFieldIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
         int powerBitsFieldId = schema.getFieldId(request.query.powerBitsFieldName);
         MiruFieldDefinition powerBitsFieldDefinition = schema.getFieldDefinition(powerBitsFieldId);
-        List<Optional<BM>> powerBitIndexes = new ArrayList<>();
+        List<BitmapAndLastId<BM>> powerBitIndexes = new ArrayList<>();
 
         for (int i = 0; i < 64; i++) {
             powerBitIndexes.add(fetchBits(context, schema, powerBitsFieldDefinition, stackBuffer, String.valueOf(i), primaryFieldIndex, powerBitsFieldId));
         }
 
-        Optional<BM> positive = fetchBits(context, schema, powerBitsFieldDefinition, stackBuffer, String.valueOf("+"), primaryFieldIndex, powerBitsFieldId);
-        Optional<BM> negative = fetchBits(context, schema, powerBitsFieldDefinition, stackBuffer, String.valueOf("-"), primaryFieldIndex, powerBitsFieldId);
+        BitmapAndLastId<BM> positive = fetchBits(context, schema, powerBitsFieldDefinition, stackBuffer, String.valueOf("+"), primaryFieldIndex,
+            powerBitsFieldId);
+        BitmapAndLastId<BM> negative = fetchBits(context, schema, powerBitsFieldDefinition, stackBuffer, String.valueOf("-"), primaryFieldIndex,
+            powerBitsFieldId);
 
         Map<String, AnomalyAnswer.Waveform> waveforms = Maps.newHashMapWithExpectedSize(expand.size());
         start = System.currentTimeMillis();
@@ -203,23 +207,22 @@ public class AnomalyQuestion implements Question<AnomalyQuery, AnomalyAnswer, An
         for (Map.Entry<String, MiruFilter> entry : expand.entrySet()) {
             AnomalyAnswer.Waveform waveform = null;
             if (!bitmaps.isEmpty(constrained)) {
-                BM waveformFiltered = aggregateUtil.filter("anomaly", bitmaps, schema, context.getTermComposer(), context.getFieldIndexProvider(),
-                    entry.getValue(), solutionLog, null, context.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
+                BM waveformFiltered = aggregateUtil.filter("anomaly", bitmaps, context, entry.getValue(), solutionLog, null, lastId, -1, stackBuffer);
 
                 BM rawAnswer = bitmaps.and(Arrays.asList(constrained, waveformFiltered));
                 if (!bitmaps.isEmpty(rawAnswer)) {
                     long[] mergedWaveform = new long[indexes.length - 1];
 
-                    if (positive.isPresent()) {
-                        BM positiveAnswer = bitmaps.and(Arrays.asList(positive.get(), rawAnswer));
+                    if (positive.isSet()) {
+                        BM positiveAnswer = bitmaps.and(Arrays.asList(positive.getBitmap(), rawAnswer));
                         Waveform positiveWaveform = getWaveform(solutionLog, bitmaps, indexes, powerBitIndexes, entry, rawAnswer, positiveAnswer);
                         for (int i = 0; i < mergedWaveform.length; i++) {
                             mergedWaveform[i] += positiveWaveform.waveform[i];
                         }
                     }
 
-                    if (negative.isPresent()) {
-                        BM negativeAnswer = bitmaps.and(Arrays.asList(negative.get(), rawAnswer));
+                    if (negative.isSet()) {
+                        BM negativeAnswer = bitmaps.and(Arrays.asList(negative.getBitmap(), rawAnswer));
                         Waveform negativeWaveform = getWaveform(solutionLog, bitmaps, indexes, powerBitIndexes, entry, rawAnswer, negativeAnswer);
                         for (int i = 0; i < mergedWaveform.length; i++) {
                             mergedWaveform[i] -= negativeWaveform.waveform[i];
@@ -251,16 +254,16 @@ public class AnomalyQuestion implements Question<AnomalyQuery, AnomalyAnswer, An
     private <BM extends IBM, IBM> Waveform getWaveform(MiruSolutionLog solutionLog,
         MiruBitmaps<BM, IBM> bitmaps,
         int[] indexes,
-        List<Optional<BM>> powerBitIndexes,
+        List<BitmapAndLastId<BM>> powerBitIndexes,
         Entry<String, MiruFilter> entry,
         BM rawAnswer,
         BM signedAnswer) throws Exception {
 
         List<BM> answers = Lists.newArrayList();
         for (int i = 0; i < 64; i++) {
-            Optional<BM> powerBitIndex = powerBitIndexes.get(i);
-            if (powerBitIndex.isPresent()) {
-                BM answer = bitmaps.and(Arrays.asList(powerBitIndex.get(), signedAnswer));
+            BitmapAndLastId<BM> powerBitIndex = powerBitIndexes.get(i);
+            if (powerBitIndex.isSet()) {
+                BM answer = bitmaps.and(Arrays.asList(powerBitIndex.getBitmap(), signedAnswer));
                 answers.add(answer);
             } else {
                 answers.add(null);
@@ -282,7 +285,7 @@ public class AnomalyQuestion implements Question<AnomalyQuery, AnomalyAnswer, An
         return waveform;
     }
 
-    private <BM extends IBM, IBM> Optional<BM> fetchBits(
+    private <BM extends IBM, IBM> BitmapAndLastId<BM> fetchBits(
         MiruRequestContext<BM, IBM, ?> context,
         MiruSchema schema,
         MiruFieldDefinition powerBitsFieldDefinition,
@@ -293,7 +296,9 @@ public class AnomalyQuestion implements Question<AnomalyQuery, AnomalyAnswer, An
 
         MiruTermId powerBitTerm = context.getTermComposer().compose(schema, powerBitsFieldDefinition, stackBuffer, bit);
         MiruInvertedIndex<BM, IBM> invertedIndex = primaryFieldIndex.get("anomaly", powerBitsFieldId, powerBitTerm);
-        return invertedIndex.getIndex(stackBuffer);
+        BitmapAndLastId<BM> container = new BitmapAndLastId<>();
+        invertedIndex.getIndex(container, stackBuffer);
+        return container;
     }
 
     @Override

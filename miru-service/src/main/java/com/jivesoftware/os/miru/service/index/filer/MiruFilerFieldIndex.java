@@ -122,9 +122,10 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
         indexes[fieldId].readEach(termIdBytes, null, (monkey, filer, _stackBuffer, lock, index) -> {
             if (filer != null) {
                 bytes.add(filer.length());
-                BitmapAndLastId<BM> bitmapAndLastId = MiruFilerInvertedIndex.deser(bitmaps, trackError, filer, -1, _stackBuffer);
-                if (bitmapAndLastId != null) {
-                    return bitmapAndLastId;
+                BitmapAndLastId<BM> container = new BitmapAndLastId<>();
+                MiruFilerInvertedIndex.deser(bitmaps, trackError, filer, -1, container, _stackBuffer);
+                if (container.isSet()) {
+                    return container;
                 }
             }
             return null;

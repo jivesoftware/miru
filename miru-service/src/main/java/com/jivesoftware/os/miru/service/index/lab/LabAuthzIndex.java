@@ -8,6 +8,7 @@ import com.jivesoftware.os.lab.api.ValueIndex;
 import com.jivesoftware.os.lab.io.api.UIO;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.plugin.index.MiruAuthzIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.partition.TrackError;
@@ -77,7 +78,11 @@ public class LabAuthzIndex<BM extends IBM, IBM> implements MiruAuthzIndex<BM, IB
 
     @Override
     public BM getCompositeAuthz(MiruAuthzExpression authzExpression, StackBuffer stackBuffer) throws Exception {
-        return cache.getOrCompose(authzExpression, authz -> getAuthz(authz).getIndex(stackBuffer).orNull());
+        return cache.getOrCompose(authzExpression, authz -> {
+            BitmapAndLastId<BM> container = new BitmapAndLastId<>();
+            getAuthz(authz).getIndex(container, stackBuffer);
+            return container.getBitmap();
+        });
     }
 
     @Override

@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.service.index.filer;
 
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
@@ -59,43 +58,40 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     }
 
     @Override
-    public Optional<BM> getIndex(StackBuffer stackBuffer) throws Exception {
+    public void getIndex(BitmapAndLastId<BM> container, StackBuffer stackBuffer) throws Exception {
         MutableLong bytes = new MutableLong();
-        Optional<BM> index = getIndexInternal((monkey, filer, stackBuffer1, lock) -> {
-            if (filer != null) {
-                bytes.add(filer.length());
-                synchronized (lock) {
-                    filer.seek(0);
-                    return deser(bitmaps, trackError, filer, -1, stackBuffer1);
+        container.clear();
+        keyedFilerStore.read(indexKeyBytes,
+            null,
+            (monkey, filer, stackBuffer1, lock) -> {
+                if (filer != null) {
+                    bytes.add(filer.length());
+                    synchronized (lock) {
+                        filer.seek(0);
+                        deser(bitmaps, trackError, filer, -1, container, stackBuffer1);
+                        return null;
+                    }
                 }
+                return null;
+            },
+            stackBuffer);
+
+        if (container.isSet()) {
+            LOG.inc("get>hit");
+            if (lastId == Integer.MIN_VALUE) {
+                lastId = container.getLastId();
             }
-            return null;
-        }, stackBuffer).transform(input -> input.bitmap);
+        } else {
+            LOG.inc("get>miss");
+            lastId = -1;
+        }
+
         LOG.inc("count>getIndex>total");
         LOG.inc("count>getIndex>" + name + ">total");
         LOG.inc("count>getIndex>" + name + ">" + fieldId);
         LOG.inc("bytes>getIndex>total", bytes.longValue());
         LOG.inc("bytes>getIndex>" + name + ">total", bytes.longValue());
         LOG.inc("bytes>getIndex>" + name + ">" + fieldId, bytes.longValue());
-        return index;
-    }
-
-    private Optional<BitmapAndLastId<BM>> getIndexInternal(ChunkTransaction<Void, BitmapAndLastId<BM>> chunkTransaction,
-        StackBuffer stackBuffer) throws IOException, InterruptedException {
-
-        BitmapAndLastId<BM> bitmapAndLastId = keyedFilerStore.read(indexKeyBytes, null, chunkTransaction, stackBuffer);
-
-        if (bitmapAndLastId != null) {
-            LOG.inc("get>hit");
-            if (lastId == Integer.MIN_VALUE) {
-                lastId = bitmapAndLastId.lastId;
-            }
-            return Optional.of(bitmapAndLastId);
-        } else {
-            LOG.inc("get>miss");
-            lastId = -1;
-            return Optional.absent();
-        }
     }
 
     @Override
@@ -128,18 +124,20 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
         return result;
     }
 
-    public static <BM extends IBM, IBM> BitmapAndLastId<BM> deser(MiruBitmaps<BM, IBM> bitmaps,
+    public static <BM extends IBM, IBM> void deser(MiruBitmaps<BM, IBM> bitmaps,
         TrackError trackError,
         ChunkFiler filer,
         int considerIfLastIdGreaterThanN,
+        BitmapAndLastId<BM> container,
         StackBuffer stackBuffer) throws IOException {
 
+        container.clear();
         if (filer.length() > LAST_ID_LENGTH + 4) {
             int lastId = filer.readInt();
             if (considerIfLastIdGreaterThanN < 0 || lastId > considerIfLastIdGreaterThanN) {
                 DataInput dataInput = new FilerDataInput(filer, stackBuffer);
                 try {
-                    return new BitmapAndLastId<>(bitmaps.deserialize(dataInput), lastId);
+                    container.set(bitmaps.deserialize(dataInput), lastId);
                 } catch (Exception e) {
                     try {
                         trackError.error("Failed to deserialize a bitmap, length=" + filer.length());
@@ -155,7 +153,6 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
                 }
             }
         }
-        return null;
     }
 
     public static int deserLastId(ChunkFiler filer) throws IOException {
@@ -166,8 +163,9 @@ public class MiruFilerInvertedIndex<BM extends IBM, IBM> implements MiruInverted
     }
 
     private BM getOrCreateIndex(StackBuffer stackBuffer) throws Exception {
-        Optional<BM> index = getIndex(stackBuffer);
-        return index.isPresent() ? index.get() : bitmaps.create();
+        BitmapAndLastId<BM> container = new BitmapAndLastId<>();
+        getIndex(container, stackBuffer);
+        return container.isSet() ? container.getBitmap() : bitmaps.create();
     }
 
     private static <BM extends IBM, IBM> long serializedSizeInBytes(MiruBitmaps<BM, IBM> bitmaps, IBM index) {

@@ -22,6 +22,7 @@ import com.jivesoftware.os.miru.plugin.Miru;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.context.RequestContextCallback;
+import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionDirector;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
 import com.jivesoftware.os.miru.plugin.partition.MiruQueryablePartition;
@@ -307,12 +308,13 @@ public class MiruService implements Miru {
             int fieldId = requestContext.getSchema().getFieldId(fieldName);
             MiruFieldDefinition fieldDefinition = requestContext.getSchema().getFieldDefinition(fieldId);
             StackBuffer stackBuffer = new StackBuffer();
-            Optional<BM> index = requestContext.getFieldIndexProvider()
+            BitmapAndLastId<BM> container = new BitmapAndLastId<>();
+            requestContext.getFieldIndexProvider()
                 .getFieldIndex(MiruFieldType.primary)
                 .get("inspect", fieldId, requestContext.getTermComposer().compose(requestContext.getSchema(), fieldDefinition, stackBuffer, termValue))
-                .getIndex(stackBuffer);
-            if (index.isPresent()) {
-                return bitmapsDebug.toString(handle.getBitmaps(), index.get());
+                .getIndex(container, stackBuffer);
+            if (container.isSet()) {
+                return bitmapsDebug.toString(handle.getBitmaps(), container.getBitmap());
             } else {
                 return "Index not present";
             }

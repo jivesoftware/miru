@@ -1,8 +1,8 @@
 package com.jivesoftware.os.miru.service.index.lab;
 
-import com.google.common.collect.Lists;
 import com.google.common.primitives.Bytes;
 import com.jivesoftware.os.filer.io.ByteBufferBackedFiler;
+import com.jivesoftware.os.filer.io.ByteBufferDataInput;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.io.api.KeyRange;
@@ -24,9 +24,7 @@ import com.jivesoftware.os.miru.plugin.index.TermIdStream;
 import com.jivesoftware.os.miru.plugin.partition.TrackError;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import java.nio.ByteBuffer;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import org.apache.commons.lang.mutable.MutableLong;
 
@@ -208,24 +206,27 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
         MutableLong bytes = new MutableLong();
         ValueIndex bitmapIndex = getBitmapIndex(fieldId);
         if (atomized) {
-            List<LabKeyBytes> labKeyBytes = Lists.newArrayList();
             for (int i = 0; i < termIds.length; i++) {
                 if (termIds[i] != null) {
-                    labKeyBytes.clear();
-                    byte[] from = bitmapIndexKey(fieldIdBytes, termIds[i].getBytes());
-                    byte[] to = LABUtils.prefixUpperExclusive(from);
-                    bitmapIndex.rangeScan(from, to,
-                        (index, key, timestamp, tombstoned, version, payload) -> {
-                            if (payload != null) {
-                                bytes.add(payload.length);
-                                int labKey = LabInvertedIndex.deatomize(key.asByteBuffer());
-                                labKeyBytes.add(new LabKeyBytes(labKey, ByteBuffer.wrap(payload.copy())));
-                            }
-                            return true;
-                        },
-                        true);
-                    Collections.reverse(labKeyBytes);
-                    results[i] = LabInvertedIndex.deser(bitmaps, trackError, atomized, labKeyBytes);
+                    byte[] termBytes = termIds[i].getBytes();
+                    BitmapAndLastId<BM> bitmapAndLastId = new BitmapAndLastId<>();
+                    bitmaps.deserializeAtomized(
+                        bitmapAndLastId,
+                        atomStream -> {
+                            byte[] from = bitmapIndexKey(fieldIdBytes, termBytes);
+                            byte[] to = LABUtils.prefixUpperExclusive(from);
+                            return bitmapIndex.rangeScan(from, to,
+                                (index1, key, timestamp, tombstoned, version, payload) -> {
+                                    if (payload != null) {
+                                        bytes.add(payload.length);
+                                        int labKey = LabInvertedIndex.deatomize(key.asByteBuffer());
+                                        return atomStream.stream(labKey, new ByteBufferDataInput(payload.asByteBuffer()));
+                                    }
+                                    return true;
+                                },
+                                true);
+                        });
+                    results[i] = bitmapAndLastId.isSet() ? bitmapAndLastId : null;
                 }
             }
         } else {
@@ -244,13 +245,12 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
                 (index, key, timestamp, tombstoned, version, payload) -> {
                     if (payload != null) {
                         bytes.add(payload.length);
-                        BitmapAndLastId<BM> bitmapAndLastId = LabInvertedIndex.deser(bitmaps,
+                        BitmapAndLastId<BM> bitmapAndLastId = new BitmapAndLastId<>();
+                        LabInvertedIndex.deserNonAtomized(bitmaps,
                             trackError,
-                            atomized,
-                            Collections.singletonList(new LabKeyBytes(-1, ByteBuffer.wrap(payload.copy()))));
-                        if (bitmapAndLastId != null) {
-                            results[index] = bitmapAndLastId;
-                        }
+                            payload.asByteBuffer(),
+                            bitmapAndLastId);
+                        results[index] = bitmapAndLastId.isSet() ? bitmapAndLastId : null;
                     }
                     return true;
                 },
@@ -340,36 +340,38 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
         ValueIndex bitmapIndex = getBitmapIndex(fieldId);
         if (atomized) {
             int[] lastId = new int[1];
-            List<LabKeyBytes> labKeyBytes = Lists.newArrayList();
+            BitmapAndLastId<BM> container = new BitmapAndLastId<>();
             for (int i = 0; i < termIds.length; i++) {
                 if (termIds[i] != null) {
-                    labKeyBytes.clear();
+                    container.clear();
                     lastId[0] = -1;
-                    byte[] from = bitmapIndexKey(fieldIdBytes, termIds[i].getBytes());
+                    byte[] termBytes = termIds[i].getBytes();
+                    byte[] from = bitmapIndexKey(fieldIdBytes, termBytes);
                     byte[] to = LABUtils.prefixUpperExclusive(from);
-                    bitmapIndex.rangeScan(from, to,
-                        (index, key, timestamp, tombstoned, version, payload) -> {
-                            if (payload != null) {
-                                bytes.add(payload.length);
-                                int labKey = LabInvertedIndex.deatomize(key.asByteBuffer());
-                                if (lastId[0] == -1) {
-                                    lastId[0] = LabInvertedIndex.deserLastId(bitmaps, atomized, labKey, payload.asByteBuffer());
-                                    if (lastId[0] != -1 && lastId[0] < considerIfLastIdGreaterThanN) {
-                                        return false;
-                                    }
-                                }
-                                labKeyBytes.add(new LabKeyBytes(labKey, ByteBuffer.wrap(payload.copy())));
-                            }
-                            return true;
-                        },
-                        true);
 
-                    if (!labKeyBytes.isEmpty() && (considerIfLastIdGreaterThanN < 0 || lastId[0] > considerIfLastIdGreaterThanN)) {
-                        Collections.reverse(labKeyBytes);
-                        BitmapAndLastId<BM> bitmapAndLastId = LabInvertedIndex.deser(bitmaps, trackError, atomized, labKeyBytes);
-                        if (bitmapAndLastId != null) {
-                            indexTx.tx(i, bitmapAndLastId.lastId, bitmapAndLastId.bitmap, null, -1, stackBuffer);
-                        }
+                    bitmaps.deserializeAtomized(
+                        container,
+                        atomStream -> {
+                            return bitmapIndex.rangeScan(from, to,
+                                (index, key, timestamp, tombstoned, version, payload) -> {
+                                    if (payload != null) {
+                                        bytes.add(payload.length);
+                                        int labKey = LabInvertedIndex.deatomize(key.asByteBuffer());
+                                        if (lastId[0] == -1) {
+                                            lastId[0] = LabInvertedIndex.deserLastId(bitmaps, atomized, labKey, payload.asByteBuffer());
+                                            if (lastId[0] != -1 && lastId[0] < considerIfLastIdGreaterThanN) {
+                                                return false;
+                                            }
+                                        }
+                                        return atomStream.stream(labKey, new ByteBufferDataInput(payload.asByteBuffer()));
+                                    }
+                                    return true;
+                                },
+                                true);
+                        });
+
+                    if (container.isSet() && (considerIfLastIdGreaterThanN < 0 || lastId[0] > considerIfLastIdGreaterThanN)) {
+                        indexTx.tx(i, container.getLastId(), container.getBitmap(), null, -1, stackBuffer);
                     }
                 }
             }

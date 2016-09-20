@@ -51,8 +51,8 @@ public class RCVSInboxReadTracker implements MiruInboxReadTracker {
         MiruTenantId tenantId,
         MiruPartitionId partitionId,
         MiruStreamId streamId,
-        final MiruSolutionLog solutionLog,
-        final int lastActivityIndex,
+        MiruSolutionLog solutionLog,
+        int lastActivityIndex,
         long oldestBackfilledEventId,
         StackBuffer stackBuffer) throws Exception {
 

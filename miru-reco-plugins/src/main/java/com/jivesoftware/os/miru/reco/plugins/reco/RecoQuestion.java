@@ -84,10 +84,10 @@ public class RecoQuestion implements Question<RecoQuery, RecoAnswer, RecoReport>
 
         // Start building up list of bitmap operations to run
         List<IBM> okAnds = new ArrayList<>();
+        int lastId = context.getActivityIndex().lastId(stackBuffer);
 
         // 1) Execute the combined filter above on the given stream, add the bitmap
-        BM filtered = aggregateUtil.filter("reco", bitmaps, schema, termComposer, context.getFieldIndexProvider(),
-            request.query.scorableFilter, solutionLog, null, context.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
+        BM filtered = aggregateUtil.filter("reco", bitmaps, context, request.query.scorableFilter, solutionLog, null, lastId, -1, stackBuffer);
         if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
             solutionLog.log(MiruSolutionLogLevel.INFO, "constrained scorable down to {} items.", bitmaps.cardinality(filtered));
             solutionLog.log(MiruSolutionLogLevel.TRACE, "constrained scorable down bitmap {}", filtered);
@@ -105,12 +105,12 @@ public class RecoQuestion implements Question<RecoQuery, RecoAnswer, RecoReport>
         }
 
         // 3) Mask out anything that hasn't made it into the activityIndex yet, or that has been removed from the index
-        IBM buildIndexMask = bitmaps.buildIndexMask(context.getActivityIndex().lastId(stackBuffer), context.getRemovalIndex().getIndex(stackBuffer));
+        IBM indexMask = bitmaps.buildIndexMask(lastId, context.getRemovalIndex(), null, stackBuffer);
         if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
-            solutionLog.log(MiruSolutionLogLevel.INFO, "indexMask contains {} items.", bitmaps.cardinality(buildIndexMask));
-            solutionLog.log(MiruSolutionLogLevel.TRACE, "indexMask bitmap {}", buildIndexMask);
+            solutionLog.log(MiruSolutionLogLevel.INFO, "indexMask contains {} items.", bitmaps.cardinality(indexMask));
+            solutionLog.log(MiruSolutionLogLevel.TRACE, "indexMask bitmap {}", indexMask);
         }
-        okAnds.add(buildIndexMask);
+        okAnds.add(indexMask);
 
         // AND it all together and return the results
         bitmapsDebug.debug(solutionLog, bitmaps, "ands", okAnds);
@@ -121,8 +121,7 @@ public class RecoQuestion implements Question<RecoQuery, RecoAnswer, RecoReport>
             solutionLog.log(MiruSolutionLogLevel.TRACE, "answering bitmap {}", okActivity);
         }
 
-        BM allMyActivity = aggregateUtil.filter("reco", bitmaps, schema, termComposer, context.getFieldIndexProvider(),
-            request.query.constraintsFilter, solutionLog, null, context.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
+        BM allMyActivity = aggregateUtil.filter("reco", bitmaps, context, request.query.constraintsFilter, solutionLog, null, lastId, -1, stackBuffer);
         if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
             solutionLog.log(MiruSolutionLogLevel.INFO, "constrained mine down to {} items.", bitmaps.cardinality(allMyActivity));
             solutionLog.log(MiruSolutionLogLevel.TRACE, "constrained mine down bitmap {}", allMyActivity);

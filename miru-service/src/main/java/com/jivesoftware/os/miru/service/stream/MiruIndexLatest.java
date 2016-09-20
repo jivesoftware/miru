@@ -7,6 +7,7 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
+import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityAndId;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruIndexUtil;
@@ -50,13 +51,15 @@ public class MiruIndexLatest<BM extends IBM, IBM> {
                             fieldDefinition.fieldId, fieldAggregateTermId);
 
                         // ["doc"] -> "d1", "d2", "d3", "d4" -> [0, 1(d1), 0, 0, 1(d2), 0, 0, 1(d3), 0, 0, 1(d4)]
+                        BitmapAndLastId<BM> container = new BitmapAndLastId<>();
                         for (MiruTermId fieldValue : fieldValues) {
                             MiruInvertedIndex<BM, IBM> fieldValueIndex = allFieldIndex.get("indexLatest", fieldDefinition.fieldId, fieldValue);
-                            Optional<BM> optionalIndex = fieldValueIndex.getIndex(stackBuffer);
-                            if (optionalIndex.isPresent()) {
+                            container.clear();
+                            fieldValueIndex.getIndex(container, stackBuffer);
+                            if (container.isSet()) {
                                 log.inc("count>andNot", 1);
                                 log.inc("count>andNot", 1, tenantId.toString());
-                                aggregateIndex.andNotToSourceSize(Collections.singletonList(optionalIndex.get()), stackBuffer);
+                                aggregateIndex.andNotToSourceSize(Collections.singletonList(container.getBitmap()), stackBuffer);
                             }
                         }
 

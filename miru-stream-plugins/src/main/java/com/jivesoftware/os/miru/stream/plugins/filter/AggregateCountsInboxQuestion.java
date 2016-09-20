@@ -13,6 +13,7 @@ import com.jivesoftware.os.miru.plugin.backfill.MiruJustInTimeBackfillerizer;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
+import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
@@ -89,9 +90,12 @@ public class AggregateCountsInboxQuestion implements Question<AggregateCountsQue
                 context.getTimeIndex(), request.query.countTimeRange.smallestTimestamp, request.query.countTimeRange.largestTimestamp, stackBuffer));
         }
 
-        Optional<BM> inbox = context.getInboxIndex().getInbox(request.query.streamId).getIndex(stackBuffer);
-        if (inbox.isPresent()) {
-            ands.add(inbox.get());
+        BitmapAndLastId<BM> container = new BitmapAndLastId<>();
+        int lastId = context.getActivityIndex().lastId(stackBuffer);
+
+        context.getInboxIndex().getInbox(request.query.streamId).getIndex(container, stackBuffer);
+        if (container.isSet()) {
+            ands.add(container.getBitmap());
         } else {
             // Short-circuit if the user doesn't have an inbox here
             LOG.debug("No user inbox");
@@ -101,17 +105,25 @@ public class AggregateCountsInboxQuestion implements Question<AggregateCountsQue
                 solutionLog.asList());
         }
 
+        if (unreadOnly) {
+            context.getUnreadTrackingIndex().getUnread(request.query.streamId).getIndex(container, stackBuffer);
+            if (container.isSet()) {
+                ands.add(container.getBitmap());
+            } else {
+                // Short-circuit if the user doesn't have any unread
+                LOG.debug("No user unread");
+                return new MiruPartitionResponse<>(
+                    aggregateCounts.getAggregateCounts("aggregateCountsInbox", solutionLog, bitmaps, context, request, handle.getCoord(), report,
+                        bitmaps.create(), Optional.of(bitmaps.create())),
+                    solutionLog.asList());
+            }
+        }
+
         if (!MiruAuthzExpression.NOT_PROVIDED.equals(request.authzExpression)) {
             ands.add(context.getAuthzIndex().getCompositeAuthz(request.authzExpression, stackBuffer));
         }
 
-        if (unreadOnly) {
-            Optional<BM> unreadIndex = context.getUnreadTrackingIndex().getUnread(request.query.streamId).getIndex(stackBuffer);
-            if (unreadIndex.isPresent()) {
-                ands.add(unreadIndex.get());
-            }
-        }
-        ands.add(bitmaps.buildIndexMask(context.getActivityIndex().lastId(stackBuffer), context.getRemovalIndex().getIndex(stackBuffer)));
+        ands.add(bitmaps.buildIndexMask(lastId, context.getRemovalIndex(), container, stackBuffer));
 
         bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
         BM answer = bitmaps.and(ands);
@@ -119,9 +131,9 @@ public class AggregateCountsInboxQuestion implements Question<AggregateCountsQue
         counterAnds.add(answer);
         if (!unreadOnly) {
             // if unreadOnly is true, the read-tracking index would already be applied to the answer
-            Optional<BM> unreadIndex = context.getUnreadTrackingIndex().getUnread(request.query.streamId).getIndex(stackBuffer);
-            if (unreadIndex.isPresent()) {
-                counterAnds.add(unreadIndex.get());
+            context.getUnreadTrackingIndex().getUnread(request.query.streamId).getIndex(container, stackBuffer);
+            if (container.isSet()) {
+                counterAnds.add(container.getBitmap());
             }
         }
         bitmapsDebug.debug(solutionLog, bitmaps, "counterAnds", ands);

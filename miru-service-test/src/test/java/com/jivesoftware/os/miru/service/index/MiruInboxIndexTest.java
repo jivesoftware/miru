@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.service.index;
 
-import com.google.common.base.Optional;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
@@ -12,6 +11,7 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.wal.RCVSSipCursor;
 import com.jivesoftware.os.miru.bitmaps.roaring5.MiruBitmapsRoaring;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.plugin.index.MiruInboxIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndexAppender;
 import com.jivesoftware.os.miru.service.IndexTestUtil;
@@ -21,6 +21,7 @@ import org.roaringbitmap.RoaringBitmap;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
+import static com.jivesoftware.os.miru.service.IndexTestUtil.getIndex;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
@@ -32,9 +33,9 @@ public class MiruInboxIndexTest {
     public void testGetEmptyInboxWithoutCreating(MiruInboxIndex<RoaringBitmap, RoaringBitmap> miruInboxIndex, MiruStreamId miruStreamId)
         throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
-        Optional<RoaringBitmap> inbox = miruInboxIndex.getInbox(miruStreamId).getIndex(stackBuffer);
+        BitmapAndLastId<RoaringBitmap> inbox = getIndex(miruInboxIndex.getInbox(miruStreamId), stackBuffer);
         assertNotNull(inbox);
-        assertFalse(inbox.isPresent());
+        assertFalse(inbox.isSet());
     }
 
     @Test(dataProvider = "miruInboxIndexDataProvider")
@@ -43,9 +44,9 @@ public class MiruInboxIndexTest {
         StackBuffer stackBuffer = new StackBuffer();
         MiruInvertedIndexAppender inbox = miruInboxIndex.getAppender(miruStreamId);
         assertNotNull(inbox);
-        Optional<RoaringBitmap> inboxIndex = miruInboxIndex.getInbox(miruStreamId).getIndex(stackBuffer);
+        BitmapAndLastId<RoaringBitmap> inboxIndex = getIndex(miruInboxIndex.getInbox(miruStreamId), stackBuffer);
         assertNotNull(inboxIndex);
-        assertFalse(inboxIndex.isPresent());
+        assertFalse(inboxIndex.isSet());
         //assertEquals(inboxIndex.get().sizeInBytes(), 8);
     }
 
@@ -60,11 +61,11 @@ public class MiruInboxIndexTest {
         MiruStreamId streamId,
         int[] indexedIds) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
-        Optional<RoaringBitmap> inbox = miruInboxIndex.getInbox(streamId).getIndex(stackBuffer);
+        BitmapAndLastId<RoaringBitmap> inbox = getIndex(miruInboxIndex.getInbox(streamId), stackBuffer);
         assertNotNull(inbox);
-        assertTrue(inbox.isPresent());
+        assertTrue(inbox.isSet());
         for (int indexedId : indexedIds) {
-            assertTrue(inbox.get().contains(indexedId));
+            assertTrue(inbox.getBitmap().contains(indexedId));
         }
     }
 

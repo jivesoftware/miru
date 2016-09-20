@@ -90,7 +90,7 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
         int lastId = context.getActivityIndex().lastId(stackBuffer);
 
         List<IBM> ands = new ArrayList<>();
-        ands.add(bitmaps.buildIndexMask(lastId, context.getRemovalIndex().getIndex(stackBuffer)));
+        ands.add(bitmaps.buildIndexMask(lastId, context.getRemovalIndex(), null, stackBuffer));
 
         if (!MiruAuthzExpression.NOT_PROVIDED.equals(request.authzExpression)) {
             ands.add(context.getAuthzIndex().getCompositeAuthz(request.authzExpression, stackBuffer));
@@ -101,8 +101,6 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
             timeRangeMask = bitmaps.buildTimeRangeMask(context.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp, stackBuffer);
             ands.add(timeRangeMask);
         }
-
-        ands.add(bitmaps.buildIndexMask(context.getActivityIndex().lastId(stackBuffer), context.getRemovalIndex().getIndex(stackBuffer)));
 
         Set<MiruTermId> termIds = Sets.newHashSet();
         int pivotFieldId = context.getSchema().getFieldId(request.query.gatherField);
@@ -118,9 +116,7 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
                 gatherAnds = Lists.newArrayList(ands);
                 gatherAnds.add(aggregateUtil.filter("catwalkGather",
                     bitmaps,
-                    context.getSchema(),
-                    context.getTermComposer(),
-                    context.getFieldIndexProvider(),
+                    context,
                     gatherFilter,
                     solutionLog,
                     null,
@@ -148,9 +144,7 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
             if (!MiruFilter.NO_FILTER.equals(features[i].featureFilter)) {
                 BM constrainFeature = aggregateUtil.filter("catwalkFeature",
                     bitmaps,
-                    context.getSchema(),
-                    context.getTermComposer(),
-                    context.getFieldIndexProvider(),
+                    context,
                     features[i].featureFilter,
                     solutionLog,
                     null,
