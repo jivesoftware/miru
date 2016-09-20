@@ -24,6 +24,7 @@ import com.jivesoftware.os.miru.plugin.index.TermIdStream;
 import com.jivesoftware.os.miru.plugin.partition.TrackError;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -218,7 +219,7 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
                             if (payload != null) {
                                 bytes.add(payload.length);
                                 int labKey = LabInvertedIndex.deatomize(key.asByteBuffer());
-                                labKeyBytes.add(new LabKeyBytes(labKey, payload.asByteBuffer()));
+                                labKeyBytes.add(new LabKeyBytes(labKey, ByteBuffer.wrap(payload.copy())));
                             }
                             return true;
                         },
@@ -246,7 +247,7 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
                         BitmapAndLastId<BM> bitmapAndLastId = LabInvertedIndex.deser(bitmaps,
                             trackError,
                             atomized,
-                            Collections.singletonList(new LabKeyBytes(-1, payload.asByteBuffer())));
+                            Collections.singletonList(new LabKeyBytes(-1, ByteBuffer.wrap(payload.copy()))));
                         if (bitmapAndLastId != null) {
                             results[index] = bitmapAndLastId;
                         }
@@ -357,7 +358,7 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
                                         return false;
                                     }
                                 }
-                                labKeyBytes.add(new LabKeyBytes(labKey, payload.asByteBuffer()));
+                                labKeyBytes.add(new LabKeyBytes(labKey, ByteBuffer.wrap(payload.copy())));
                             }
                             return true;
                         },
