@@ -159,7 +159,7 @@ public class LastIdKeyValueRawhide implements Rawhide {
     }
 
     @Override
-    public int compareKeys(BolBuffer aKey, BolBuffer bKey) {
+    public int compare(BolBuffer aKey, BolBuffer bKey) {
         return IndexUtil.compare(aKey, bKey);
     }
 
