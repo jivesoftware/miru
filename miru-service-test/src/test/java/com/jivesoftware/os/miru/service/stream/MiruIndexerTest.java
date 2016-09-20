@@ -14,6 +14,7 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.bitmaps.roaring5.MiruBitmapsRoaring;
+import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.plugin.index.BloomIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityAndId;
 import com.jivesoftware.os.miru.plugin.index.MiruAuthzIndex;
@@ -151,7 +152,9 @@ public class MiruIndexerTest {
                 .getFieldIndex(MiruFieldType.primary)
                 .get("test", fieldId, fieldValue);
             assertNotNull(invertedIndex);
-            RoaringBitmap bitmap = invertedIndex.getIndex(stackBuffer).get();
+            BitmapAndLastId<RoaringBitmap> container = new BitmapAndLastId<>();
+            invertedIndex.getIndex(container, stackBuffer);
+            RoaringBitmap bitmap = container.getBitmap();
             assertNotNull(bitmap);
             assertTrue(bitmap.contains(activityId));
         }

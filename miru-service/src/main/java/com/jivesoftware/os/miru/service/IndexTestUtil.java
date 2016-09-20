@@ -41,7 +41,9 @@ import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.wal.RCVSSipCursor;
 import com.jivesoftware.os.miru.plugin.MiruInterner;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
+import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.marshaller.RCVSSipIndexMarshaller;
 import com.jivesoftware.os.miru.plugin.schema.SingleSchemaProvider;
@@ -241,6 +243,12 @@ public class IndexTestUtil {
         }
 
         return chunkStores;
+    }
+
+    public static <BM extends IBM, IBM> BitmapAndLastId<BM> getIndex(MiruInvertedIndex<BM, IBM> invertedIndex, StackBuffer stackBuffer) throws Exception {
+        BitmapAndLastId<BM> container = new BitmapAndLastId<>();
+        invertedIndex.getIndex(container, stackBuffer);
+        return container;
     }
 
     private static byte[] keyBytes(String key) {

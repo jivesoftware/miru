@@ -103,6 +103,8 @@ public class Analytics {
         // Start building up list of bitmap operations to run
         List<IBM> ands = new ArrayList<>();
 
+        int lastId = context.getActivityIndex().lastId(stackBuffer);
+
         long start = System.currentTimeMillis();
         ands.add(bitmaps.buildTimeRangeMask(timeIndex, timeRange.smallestTimestamp, timeRange.largestTimestamp, stackBuffer));
         solutionLog.log(MiruSolutionLogLevel.INFO, "analytics timeRangeMask: {} millis.", System.currentTimeMillis() - start);
@@ -112,8 +114,7 @@ public class Analytics {
             solutionLog.log(MiruSolutionLogLevel.INFO, "analytics filter: no constraints.");
         } else {
             start = System.currentTimeMillis();
-            BM filtered = aggregateUtil.filter(name, bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(),
-                constraintsFilter, solutionLog, null, context.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
+            BM filtered = aggregateUtil.filter(name, bitmaps, context, constraintsFilter, solutionLog, null, lastId, -1, stackBuffer);
             solutionLog.log(MiruSolutionLogLevel.INFO, "analytics filter: {} millis.", System.currentTimeMillis() - start);
             ands.add(filtered);
         }
@@ -125,7 +126,7 @@ public class Analytics {
 
         // 3) Mask out anything that hasn't made it into the activityIndex yet, or that has been removed from the index
         start = System.currentTimeMillis();
-        ands.add(bitmaps.buildIndexMask(context.getActivityIndex().lastId(stackBuffer), context.getRemovalIndex().getIndex(stackBuffer)));
+        ands.add(bitmaps.buildIndexMask(lastId, context.getRemovalIndex(), null, stackBuffer));
         solutionLog.log(MiruSolutionLogLevel.INFO, "analytics indexMask: {} millis.", System.currentTimeMillis() - start);
 
         // AND it all together to get the final constraints

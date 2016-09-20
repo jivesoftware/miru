@@ -27,6 +27,7 @@ import org.testng.annotations.Test;
 
 import static com.jivesoftware.os.miru.service.IndexTestUtil.buildInMemoryContext;
 import static com.jivesoftware.os.miru.service.IndexTestUtil.buildOnDiskContext;
+import static com.jivesoftware.os.miru.service.IndexTestUtil.getIndex;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
@@ -44,7 +45,7 @@ public class MiruFieldIndexTest {
         StackBuffer stackBuffer = new StackBuffer();
         MiruInvertedIndex<BM, IBM> invertedIndex = miruFieldIndex.get("test", 0, new MiruTermId(FilerIO.intBytes(1)));
         assertNotNull(invertedIndex);
-        assertFalse(invertedIndex.getIndex(stackBuffer).isPresent());
+        assertFalse(getIndex(invertedIndex, stackBuffer).isSet());
     }
 
     @Test(dataProvider = "miruIndexDataProvider")
@@ -55,8 +56,8 @@ public class MiruFieldIndexTest {
         miruFieldIndex.set(0, new MiruTermId(FilerIO.intBytes(2)), new int[] { 3 }, null, stackBuffer);
         MiruInvertedIndex<BM, IBM> invertedIndex = miruFieldIndex.get("test", 0, new MiruTermId(FilerIO.intBytes(2)));
         assertNotNull(invertedIndex);
-        assertTrue(invertedIndex.getIndex(stackBuffer).isPresent());
-        assertTrue(bitmaps.isSet(invertedIndex.getIndex(stackBuffer).get(), 3));
+        assertTrue(getIndex(invertedIndex, stackBuffer).isSet());
+        assertTrue(bitmaps.isSet(getIndex(invertedIndex, stackBuffer).getBitmap(), 3));
     }
 
     @Test(dataProvider = "miruIndexDataProviderWithData")
@@ -70,10 +71,10 @@ public class MiruFieldIndexTest {
 
         MiruInvertedIndex<BM, IBM> invertedIndex = miruFieldIndex.get("test", 0, new MiruTermId(key));
         assertNotNull(invertedIndex);
-        assertTrue(invertedIndex.getIndex(stackBuffer).isPresent());
+        assertTrue(getIndex(invertedIndex, stackBuffer).isSet());
 
         List<Integer> actual = Lists.newArrayList();
-        MiruIntIterator iter = bitmaps.intIterator(invertedIndex.getIndex(stackBuffer).get());
+        MiruIntIterator iter = bitmaps.intIterator(getIndex(invertedIndex, stackBuffer).getBitmap());
         while (iter.hasNext()) {
             actual.add(iter.next());
         }

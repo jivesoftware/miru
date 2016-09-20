@@ -11,6 +11,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
+import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
@@ -57,14 +58,16 @@ public class DistinctCount {
         if (fieldId >= 0) {
             MiruFieldIndex<BM, IBM> fieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
 
+            BitmapAndLastId<BM> container = new BitmapAndLastId<>();
             for (MiruValue aggregateTerm : aggregateTerms) {
                 MiruTermId aggregateTermId = termComposer.compose(schema, fieldDefinition, stackBuffer, aggregateTerm.parts);
-                Optional<BM> optionalTermIndex = fieldIndex.get(name, fieldId, aggregateTermId).getIndex(stackBuffer);
-                if (!optionalTermIndex.isPresent()) {
+                container.clear();
+                fieldIndex.get(name, fieldId, aggregateTermId).getIndex(container, stackBuffer);
+                if (!container.isSet()) {
                     continue;
                 }
 
-                IBM termIndex = optionalTermIndex.get();
+                IBM termIndex = container.getBitmap();
                 answer = bitmaps.andNot(answer, termIndex);
             }
 
@@ -88,10 +91,11 @@ public class DistinctCount {
                     MiruValue aggregateTerm = new MiruValue(termComposer.decompose(schema, fieldDefinition, stackBuffer, aggregateTermId));
 
                     aggregateTerms.add(aggregateTerm);
-                    Optional<BM> optionalTermIndex = fieldIndex.get(name, fieldId, aggregateTermId).getIndex(stackBuffer);
-                    checkState(optionalTermIndex.isPresent(), "Unable to load inverted index for aggregateTermId: " + aggregateTermId);
+                    container.clear();
+                    fieldIndex.get(name, fieldId, aggregateTermId).getIndex(container, stackBuffer);
+                    checkState(container.isSet(), "Unable to load inverted index for aggregateTermId: %s", aggregateTermId);
 
-                    answerCollector = bitmaps.andNotWithCardinalityAndLastSetBit(answer, optionalTermIndex.get());
+                    answerCollector = bitmaps.andNotWithCardinalityAndLastSetBit(answer, container.getBitmap());
                     answer = answerCollector.bitmap;
 
                     collectedDistincts++;

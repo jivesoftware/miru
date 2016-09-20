@@ -76,6 +76,8 @@ public class StumptownQuestion implements Question<StumptownQuery, StumptownAnsw
                 solutionLog.asList());
         }
 
+        int lastId = context.getActivityIndex().lastId(stackBuffer);
+
         long start = System.currentTimeMillis();
         ands.add(bitmaps.buildTimeRangeMask(context.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp, stackBuffer));
         solutionLog.log(MiruSolutionLogLevel.INFO, "stumptown timeRangeMask: {} millis.", System.currentTimeMillis() - start);
@@ -85,8 +87,7 @@ public class StumptownQuestion implements Question<StumptownQuery, StumptownAnsw
             solutionLog.log(MiruSolutionLogLevel.INFO, "stumptown filter: no constraints.");
         } else {
             start = System.currentTimeMillis();
-            BM filtered = aggregateUtil.filter("stumptown", bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(),
-                request.query.constraintsFilter, solutionLog, null, context.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
+            BM filtered = aggregateUtil.filter("stumptown", bitmaps, context, request.query.constraintsFilter, solutionLog, null, lastId, -1, stackBuffer);
             solutionLog.log(MiruSolutionLogLevel.INFO, "stumptown filter: {} millis.", System.currentTimeMillis() - start);
             ands.add(filtered);
         }
@@ -98,7 +99,7 @@ public class StumptownQuestion implements Question<StumptownQuery, StumptownAnsw
 
         // 3) Mask out anything that hasn't made it into the activityIndex yet, or that has been removed from the index
         start = System.currentTimeMillis();
-        ands.add(bitmaps.buildIndexMask(context.getActivityIndex().lastId(stackBuffer), context.getRemovalIndex().getIndex(stackBuffer)));
+        ands.add(bitmaps.buildIndexMask(lastId, context.getRemovalIndex(), null, stackBuffer));
         solutionLog.log(MiruSolutionLogLevel.INFO, "stumptown indexMask: {} millis.", System.currentTimeMillis() - start);
 
         // AND it all together to get the final constraints
@@ -133,8 +134,7 @@ public class StumptownQuestion implements Question<StumptownQuery, StumptownAnsw
         for (Map.Entry<String, MiruFilter> entry : request.query.stumptownFilters.entrySet()) {
             StumptownAnswer.Waveform waveform = null;
             if (!bitmaps.isEmpty(constrained)) {
-                BM waveformFiltered = aggregateUtil.filter("stumptown", bitmaps, context.getSchema(), context.getTermComposer(),
-                    context.getFieldIndexProvider(), entry.getValue(), solutionLog, null, context.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
+                BM waveformFiltered = aggregateUtil.filter("stumptown", bitmaps, context, entry.getValue(), solutionLog, null, lastId, -1, stackBuffer);
                 BM answer = bitmaps.and(Arrays.asList(constrained, waveformFiltered));
                 if (!bitmaps.isEmpty(answer)) {
                     waveform = stumptown.stumptowning("stumptown", bitmaps, context, request.tenantId, answer, request.query.desiredNumberOfResultsPerWaveform,

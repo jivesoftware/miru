@@ -19,6 +19,7 @@ import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
+import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.index.TimeVersionRealtime;
@@ -137,8 +138,8 @@ public class AggregateCounts {
         }
 
         if (!MiruFilter.NO_FILTER.equals(constraint.constraintsFilter)) {
-            BM filtered = aggregateUtil.filter(name, bitmaps, schema, requestContext.getTermComposer(), requestContext.getFieldIndexProvider(),
-                constraint.constraintsFilter, solutionLog, null, requestContext.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
+            int lastId = requestContext.getActivityIndex().lastId(stackBuffer);
+            BM filtered = aggregateUtil.filter(name, bitmaps, requestContext, constraint.constraintsFilter, solutionLog, null, lastId, -1, stackBuffer);
 
             if (bitmaps.supportsInPlace()) {
                 bitmaps.inPlaceAnd(answer, filtered);
@@ -166,12 +167,14 @@ public class AggregateCounts {
         log.debug("fieldId={}", fieldId);
 
         List<AggregateCount> aggregateCounts = new ArrayList<>();
+        BitmapAndLastId<BM> container = new BitmapAndLastId<>();
         if (fieldId >= 0) {
             IBM unreadIndex = null;
             if (!MiruStreamId.NULL.equals(streamId)) {
-                Optional<BM> unread = requestContext.getUnreadTrackingIndex().getUnread(streamId).getIndex(stackBuffer);
-                if (unread.isPresent()) {
-                    unreadIndex = unread.get();
+                container.clear();
+                requestContext.getUnreadTrackingIndex().getUnread(streamId).getIndex(container, stackBuffer);
+                if (container.isSet()) {
+                    unreadIndex = container.getBitmap();
                 }
             }
 
@@ -179,12 +182,13 @@ public class AggregateCounts {
             CardinalityAndLastSetBit<BM> answerCollector = null;
             for (MiruValue aggregateTerm : aggregated) {
                 MiruTermId aggregateTermId = termComposer.compose(schema, fieldDefinition, stackBuffer, aggregateTerm.parts);
-                Optional<BM> optionalTermIndex = fieldIndex.get(name, fieldId, aggregateTermId).getIndex(stackBuffer);
-                if (!optionalTermIndex.isPresent()) {
+                container.clear();
+                fieldIndex.get(name, fieldId, aggregateTermId).getIndex(container, stackBuffer);
+                if (!container.isSet()) {
                     continue;
                 }
 
-                IBM termIndex = optionalTermIndex.get();
+                IBM termIndex = container.getBitmap();
 
                 if (bitmaps.supportsInPlace()) {
                     answerCollector = bitmaps.inPlaceAndNotWithCardinalityAndLastSetBit(answer, termIndex);
@@ -247,10 +251,11 @@ public class AggregateCounts {
                     MiruValue aggregateValue = new MiruValue(termComposer.decompose(schema, fieldDefinition, stackBuffer, aggregateTermId));
                     aggregated.add(aggregateValue);
 
-                    Optional<BM> optionalTermIndex = fieldIndex.get(name, fieldId, aggregateTermId).getIndex(stackBuffer);
-                    checkState(optionalTermIndex.isPresent(), "Unable to load inverted index for aggregateTermId: " + aggregateTermId);
+                    container.clear();
+                    fieldIndex.get(name, fieldId, aggregateTermId).getIndex(container, stackBuffer);
+                    checkState(container.isSet(), "Unable to load inverted index for aggregateTermId: %s", aggregateTermId);
 
-                    IBM termIndex = optionalTermIndex.get();
+                    IBM termIndex = container.getBitmap();
 
                     if (bitmaps.supportsInPlace()) {
                         answerCollector = bitmaps.inPlaceAndNotWithCardinalityAndLastSetBit(answer, termIndex);

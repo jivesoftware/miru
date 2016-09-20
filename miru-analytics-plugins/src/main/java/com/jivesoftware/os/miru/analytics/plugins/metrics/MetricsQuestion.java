@@ -16,6 +16,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
+import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
@@ -83,6 +84,8 @@ public class MetricsQuestion implements Question<MetricsQuery, MetricsAnswer, Me
             return new MiruPartitionResponse<>(new MetricsAnswer(waveforms, resultsExhausted), solutionLog.asList());
         }
 
+        int lastId = context.getActivityIndex().lastId(stackBuffer);
+
         long start = System.currentTimeMillis();
         ands.add(bitmaps.buildTimeRangeMask(context.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp, stackBuffer));
         solutionLog.log(MiruSolutionLogLevel.INFO, "metrics timeRangeMask: {} millis.", System.currentTimeMillis() - start);
@@ -92,8 +95,7 @@ public class MetricsQuestion implements Question<MetricsQuery, MetricsAnswer, Me
             solutionLog.log(MiruSolutionLogLevel.INFO, "metrics filter: no constraints.");
         } else {
             start = System.currentTimeMillis();
-            BM filtered = aggregateUtil.filter("metrics", bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(),
-                request.query.constraintsFilter, solutionLog, null, context.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
+            BM filtered = aggregateUtil.filter("metrics", bitmaps, context, request.query.constraintsFilter, solutionLog, null, lastId, -1, stackBuffer);
             solutionLog.log(MiruSolutionLogLevel.INFO, "metrics filter: {} millis.", System.currentTimeMillis() - start);
             ands.add(filtered);
         }
@@ -105,7 +107,7 @@ public class MetricsQuestion implements Question<MetricsQuery, MetricsAnswer, Me
 
         // 3) Mask out anything that hasn't made it into the activityIndex yet, or that has been removed from the index
         start = System.currentTimeMillis();
-        ands.add(bitmaps.buildIndexMask(context.getActivityIndex().lastId(stackBuffer), context.getRemovalIndex().getIndex(stackBuffer)));
+        ands.add(bitmaps.buildIndexMask(lastId, context.getRemovalIndex(), null, stackBuffer));
         solutionLog.log(MiruSolutionLogLevel.INFO, "metrics indexMask: {} millis.", System.currentTimeMillis() - start);
 
         // AND it all together to get the final constraints
@@ -138,11 +140,13 @@ public class MetricsQuestion implements Question<MetricsQuery, MetricsAnswer, Me
         MiruFieldIndex<BM, IBM> primaryFieldIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
         int powerBitsFieldId = context.getSchema().getFieldId(request.query.powerBitsFieldName);
         MiruFieldDefinition powerBitsFieldDefinition = context.getSchema().getFieldDefinition(powerBitsFieldId);
-        List<Optional<BM>> powerBitIndexes = new ArrayList<>();
+        List<BitmapAndLastId<BM>> powerBitIndexes = new ArrayList<>();
         for (int i = 0; i < 64; i++) {
             MiruTermId powerBitTerm = context.getTermComposer().compose(schema, powerBitsFieldDefinition, stackBuffer, String.valueOf(i));
             MiruInvertedIndex<BM, IBM> invertedIndex = primaryFieldIndex.get("metrics", powerBitsFieldId, powerBitTerm);
-            powerBitIndexes.add(invertedIndex.getIndex(stackBuffer));
+            BitmapAndLastId<BM> powerBitContainer = new BitmapAndLastId<>();
+            invertedIndex.getIndex(powerBitContainer, stackBuffer);
+            powerBitIndexes.add(powerBitContainer);
         }
 
         List<Waveform> waveforms = Lists.newArrayListWithCapacity(request.query.filters.size());
@@ -150,16 +154,15 @@ public class MetricsQuestion implements Question<MetricsQuery, MetricsAnswer, Me
         for (Map.Entry<String, MiruFilter> entry : request.query.filters.entrySet()) {
             Waveform waveform = null;
             if (!bitmaps.isEmpty(constrained)) {
-                BM waveformFiltered = aggregateUtil.filter("metrics", bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(),
-                    entry.getValue(), solutionLog, null, context.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
+                BM waveformFiltered = aggregateUtil.filter("metrics", bitmaps, context, entry.getValue(), solutionLog, null, lastId, -1, stackBuffer);
 
                 BM rawAnswer = bitmaps.and(Arrays.asList(constrained, waveformFiltered));
                 if (!bitmaps.isEmpty(rawAnswer)) {
                     List<BM> answers = Lists.newArrayList();
                     for (int i = 0; i < 64; i++) {
-                        Optional<BM> powerBitIndex = powerBitIndexes.get(i);
-                        if (powerBitIndex.isPresent()) {
-                            BM answer = bitmaps.and(Arrays.asList(powerBitIndex.get(), rawAnswer));
+                        BitmapAndLastId<BM> powerBitIndex = powerBitIndexes.get(i);
+                        if (powerBitIndex.isSet()) {
+                            BM answer = bitmaps.and(Arrays.asList(powerBitIndex.getBitmap(), rawAnswer));
                             answers.add(answer);
                         } else {
                             answers.add(null);

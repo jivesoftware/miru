@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.service.index;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruHost;
@@ -11,6 +10,7 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.bitmaps.roaring5.MiruBitmapsRoaring;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
+import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.plugin.index.MiruUnreadTrackingIndex;
 import java.util.List;
 import org.apache.commons.lang3.ArrayUtils;
@@ -20,6 +20,7 @@ import org.testng.annotations.Test;
 
 import static com.jivesoftware.os.miru.service.IndexTestUtil.buildInMemoryContext;
 import static com.jivesoftware.os.miru.service.IndexTestUtil.buildOnDiskContext;
+import static com.jivesoftware.os.miru.service.IndexTestUtil.getIndex;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
@@ -34,12 +35,12 @@ public class MiruUnreadTrackingIndexTest {
         List<Integer> expected)
         throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
-        Optional<RoaringBitmap> unread = miruUnreadTrackingIndex.getUnread(streamId).getIndex(stackBuffer);
+        BitmapAndLastId<RoaringBitmap> unread = getIndex(miruUnreadTrackingIndex.getUnread(streamId), stackBuffer);
         assertNotNull(unread);
-        assertTrue(unread.isPresent());
+        assertTrue(unread.isSet());
 
         List<Integer> actual = Lists.newArrayList();
-        MiruIntIterator iter = bitmaps.intIterator(unread.get());
+        MiruIntIterator iter = bitmaps.intIterator(unread.getBitmap());
         while (iter.hasNext()) {
             actual.add(iter.next());
         }
@@ -53,18 +54,18 @@ public class MiruUnreadTrackingIndexTest {
         List<Integer> expected)
         throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
-        Optional<RoaringBitmap> unreadIndex = miruUnreadTrackingIndex.getUnread(streamId).getIndex(stackBuffer);
+        BitmapAndLastId<RoaringBitmap> unreadIndex = getIndex(miruUnreadTrackingIndex.getUnread(streamId), stackBuffer);
         assertNotNull(unreadIndex);
-        assertFalse(unreadIndex.isPresent());
+        assertFalse(unreadIndex.isSet());
 
         miruUnreadTrackingIndex.append(streamId, stackBuffer, 1);
         miruUnreadTrackingIndex.append(streamId, stackBuffer, 3);
         miruUnreadTrackingIndex.append(streamId, stackBuffer, 5);
 
-        unreadIndex = miruUnreadTrackingIndex.getUnread(streamId).getIndex(stackBuffer);
+        unreadIndex = getIndex(miruUnreadTrackingIndex.getUnread(streamId), stackBuffer);
         assertNotNull(unreadIndex);
-        assertTrue(unreadIndex.isPresent());
-        RoaringBitmap unreadBitmap = unreadIndex.get();
+        assertTrue(unreadIndex.isSet());
+        RoaringBitmap unreadBitmap = unreadIndex.getBitmap();
         assertTrue(unreadBitmap.contains(1));
         assertFalse(unreadBitmap.contains(2));
         assertTrue(unreadBitmap.contains(3));
@@ -79,8 +80,8 @@ public class MiruUnreadTrackingIndexTest {
         List<Integer> expected)
         throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
-        Optional<RoaringBitmap> unread = miruUnreadTrackingIndex.getUnread(streamId).getIndex(stackBuffer);
-        assertFalse(unread.isPresent());
+        BitmapAndLastId<RoaringBitmap> unread = getIndex(miruUnreadTrackingIndex.getUnread(streamId), stackBuffer);
+        assertFalse(unread.isSet());
 
         miruUnreadTrackingIndex.append(streamId, stackBuffer, 1);
         miruUnreadTrackingIndex.append(streamId, stackBuffer, 3);
@@ -90,21 +91,21 @@ public class MiruUnreadTrackingIndexTest {
         readMask.add(2);
         miruUnreadTrackingIndex.applyRead(streamId, readMask, stackBuffer);
 
-        unread = miruUnreadTrackingIndex.getUnread(streamId).getIndex(stackBuffer);
-        assertTrue(unread.isPresent());
-        assertEquals(unread.get().getCardinality(), 1);
-        assertTrue(unread.get().contains(3));
+        unread = getIndex(miruUnreadTrackingIndex.getUnread(streamId), stackBuffer);
+        assertTrue(unread.isSet());
+        assertEquals(unread.getBitmap().getCardinality(), 1);
+        assertTrue(unread.getBitmap().contains(3));
 
         RoaringBitmap unreadMask = new RoaringBitmap();
         unreadMask.add(1);
         unreadMask.add(3);
         miruUnreadTrackingIndex.applyUnread(streamId, unreadMask, stackBuffer);
 
-        unread = miruUnreadTrackingIndex.getUnread(streamId).getIndex(stackBuffer);
-        assertTrue(unread.isPresent());
-        assertEquals(unread.get().getCardinality(), 2);
-        assertTrue(unread.get().contains(1));
-        assertTrue(unread.get().contains(3));
+        unread = getIndex(miruUnreadTrackingIndex.getUnread(streamId), stackBuffer);
+        assertTrue(unread.isSet());
+        assertEquals(unread.getBitmap().getCardinality(), 2);
+        assertTrue(unread.getBitmap().contains(1));
+        assertTrue(unread.getBitmap().contains(3));
     }
 
     @Test(dataProvider = "miruUnreadTrackingIndexDataProviderWithData")
@@ -116,7 +117,7 @@ public class MiruUnreadTrackingIndexTest {
         StackBuffer stackBuffer = new StackBuffer();
         assertTrue(expected.size() > 2, "Test requires at least 2 data");
 
-        RoaringBitmap unread = miruUnreadTrackingIndex.getUnread(streamId).getIndex(stackBuffer).get();
+        RoaringBitmap unread = getIndex(miruUnreadTrackingIndex.getUnread(streamId), stackBuffer).getBitmap();
         assertEquals(unread.getCardinality(), expected.size());
 
         RoaringBitmap readMask = new RoaringBitmap();
@@ -125,7 +126,7 @@ public class MiruUnreadTrackingIndexTest {
         readMask.add(expected.get(expected.size() - 1) + 1);
         miruUnreadTrackingIndex.applyRead(streamId, readMask, stackBuffer);
 
-        unread = miruUnreadTrackingIndex.getUnread(streamId).getIndex(stackBuffer).get();
+        unread = getIndex(miruUnreadTrackingIndex.getUnread(streamId), stackBuffer).getBitmap();
         assertEquals(unread.getCardinality(), expected.size() - 2);
         for (int i = 2; i < expected.size(); i++) {
             assertTrue(unread.contains(expected.get(i)));

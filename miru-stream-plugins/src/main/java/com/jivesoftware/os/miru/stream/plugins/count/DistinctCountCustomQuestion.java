@@ -52,7 +52,7 @@ public class DistinctCountCustomQuestion implements Question<DistinctCountQuery,
 
         StackBuffer stackBuffer = new StackBuffer();
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
-        MiruRequestContext<BM, IBM, ?> stream = handle.getRequestContext();
+        MiruRequestContext<BM, IBM, ?> context = handle.getRequestContext();
         MiruBitmaps<BM, IBM> bitmaps = handle.getBitmaps();
 
         // First grab the stream filter (required)
@@ -66,31 +66,31 @@ public class DistinctCountCustomQuestion implements Question<DistinctCountQuery,
 
         // Start building up list of bitmap operations to run
         List<IBM> ands = new ArrayList<>();
+        int lastId = context.getActivityIndex().lastId(stackBuffer);
 
         // 1) Execute the combined filter above on the given stream, add the bitmap
-        BM filtered = aggregateUtil.filter("distinctCountCustom", bitmaps, stream.getSchema(), stream.getTermComposer(), stream.getFieldIndexProvider(),
-            combinedFilter, solutionLog, null, stream.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
+        BM filtered = aggregateUtil.filter("distinctCountCustom", bitmaps, context, combinedFilter, solutionLog, null, lastId, -1, stackBuffer);
         ands.add(filtered);
 
         // 2) Add in the authz check if we have it
         if (!MiruAuthzExpression.NOT_PROVIDED.equals(request.authzExpression)) {
-            ands.add(stream.getAuthzIndex().getCompositeAuthz(request.authzExpression, stackBuffer));
+            ands.add(context.getAuthzIndex().getCompositeAuthz(request.authzExpression, stackBuffer));
         }
 
         // 3) Add in a time-range mask if we have it
         if (!MiruTimeRange.ALL_TIME.equals(request.query.timeRange)) {
             MiruTimeRange timeRange = request.query.timeRange;
-            ands.add(bitmaps.buildTimeRangeMask(stream.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp, stackBuffer));
+            ands.add(bitmaps.buildTimeRangeMask(context.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp, stackBuffer));
         }
 
         // 4) Mask out anything that hasn't made it into the activityIndex yet, or that has been removed from the index
-        ands.add(bitmaps.buildIndexMask(stream.getActivityIndex().lastId(stackBuffer), stream.getRemovalIndex().getIndex(stackBuffer)));
+        ands.add(bitmaps.buildIndexMask(lastId, context.getRemovalIndex(), null, stackBuffer));
 
         // AND it all together and return the results
         bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
         BM answer = bitmaps.and(ands);
 
-        return new MiruPartitionResponse<>(distinctCount.numberOfDistincts("distinctCountCustom", bitmaps, stream, request, report, answer),
+        return new MiruPartitionResponse<>(distinctCount.numberOfDistincts("distinctCountCustom", bitmaps, context, request, report, answer),
             solutionLog.asList());
     }
 

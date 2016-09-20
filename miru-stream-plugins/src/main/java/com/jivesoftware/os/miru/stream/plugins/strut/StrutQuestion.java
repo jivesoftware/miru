@@ -20,6 +20,7 @@ import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
+import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
@@ -97,14 +98,13 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         int activityIndexLastId = context.getActivityIndex().lastId(stackBuffer);
 
         List<IBM> ands = new ArrayList<>();
-        ands.add(bitmaps.buildIndexMask(activityIndexLastId, context.getRemovalIndex().getIndex(stackBuffer)));
         MiruSchema schema = context.getSchema();
         MiruTermComposer termComposer = context.getTermComposer();
 
         if (!MiruFilter.NO_FILTER.equals(request.query.constraintFilter)) {
             BM constrained = aggregateUtil.filter("strutGather",
-                bitmaps, schema, termComposer,
-                context.getFieldIndexProvider(),
+                bitmaps,
+                context,
                 request.query.constraintFilter,
                 solutionLog,
                 null,
@@ -113,6 +113,8 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 stackBuffer);
             ands.add(constrained);
         }
+
+        BitmapAndLastId<BM> container = new BitmapAndLastId<>();
 
         Optional<BM> unreadIndex = Optional.absent();
         if (request.query.unreadStreamId != null) {
@@ -125,9 +127,10 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                     request.query.unreadStreamId);
             }
 
-            unreadIndex = context.getUnreadTrackingIndex().getUnread(request.query.unreadStreamId).getIndex(stackBuffer);
-            if (unreadIndex.isPresent() && request.query.unreadOnly) {
-                ands.add(unreadIndex.get());
+            context.getUnreadTrackingIndex().getUnread(request.query.unreadStreamId).getIndex(container, stackBuffer);
+            unreadIndex = Optional.fromNullable(container.getBitmap());
+            if (container.isSet() && request.query.unreadOnly) {
+                ands.add(container.getBitmap());
             }
         }
 
@@ -139,7 +142,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             ands.add(bitmaps.buildTimeRangeMask(context.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp, stackBuffer));
         }
 
-        ands.add(bitmaps.buildIndexMask(activityIndexLastId, context.getRemovalIndex().getIndex(stackBuffer)));
+        ands.add(bitmaps.buildIndexMask(activityIndexLastId, context.getRemovalIndex(), container, stackBuffer));
 
         bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
         BM eligible = bitmaps.and(ands);
@@ -258,7 +261,6 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 activityIndexLastId,
                 stackBuffer,
                 solutionLog);
-
 
             long rescoreStart = System.currentTimeMillis();
             for (List<LastIdAndTermId> batch : Lists.partition(lastIdAndTermIds, request.query.batchSize)) {

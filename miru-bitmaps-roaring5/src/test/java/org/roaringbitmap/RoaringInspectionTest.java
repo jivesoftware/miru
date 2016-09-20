@@ -2,6 +2,7 @@ package org.roaringbitmap;
 
 import com.jivesoftware.os.miru.bitmaps.roaring5.MiruBitmapsRoaring;
 import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
+import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
@@ -244,8 +245,15 @@ public class RoaringInspectionTest {
                 inContainers[i] = new DataInputStream(binContainers[i]);
             }
 
-            RoaringBitmap bitmap2 = new RoaringBitmap();
-            int lsb2 = RoaringInspection.deserialize(bitmap2, keys, inContainers);
+            BitmapAndLastId<RoaringBitmap> container = new BitmapAndLastId<>();
+            RoaringInspection.udeserialize(container, atomStream -> {
+                for (int i = 0; i < keys.length; i++) {
+                    atomStream.stream(RoaringInspection.shortToIntKey(keys[i]), inContainers[i]);
+                }
+                return true;
+            });
+            RoaringBitmap bitmap2 = container.getBitmap();
+            int lsb2 = container.getLastId();
             long cardinality2 = bitmap2.getCardinality();
 
             Assert.assertEquals(bitmap1, bitmap2);
@@ -291,8 +299,15 @@ public class RoaringInspectionTest {
                 inContainers[i] = new DataInputStream(binContainers[i]);
             }
 
-            RoaringBitmap bitmap2 = new RoaringBitmap();
-            int lsb2 = RoaringInspection.udeserialize(bitmap2, ukeys, inContainers);
+            BitmapAndLastId<RoaringBitmap> container = new BitmapAndLastId<>();
+            RoaringInspection.udeserialize(container, atomStream -> {
+                for (int i = 0; i < ukeys.length; i++) {
+                    atomStream.stream(ukeys[i], inContainers[i]);
+                }
+                return true;
+            });
+            RoaringBitmap bitmap2 = container.getBitmap();
+            int lsb2 = container.getLastId();
             long cardinality2 = bitmap2.getCardinality();
 
             Assert.assertEquals(bitmap1, bitmap2);

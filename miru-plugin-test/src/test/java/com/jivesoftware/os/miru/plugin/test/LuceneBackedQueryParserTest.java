@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.plugin.test;
 
-import com.google.common.base.Optional;
 import com.google.common.primitives.UnsignedBytes;
 import com.jivesoftware.os.filer.io.api.KeyRange;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
@@ -11,6 +10,7 @@ import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.bitmaps.roaring5.MiruBitmapsRoaring;
 import com.jivesoftware.os.miru.plugin.MiruInterner;
+import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.plugin.index.IndexTx;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
@@ -61,15 +61,17 @@ public class LuceneBackedQueryParserTest {
 
     private TestFieldIndex fieldIndex;
     private MiruFieldIndexProvider<RoaringBitmap, RoaringBitmap> fieldIndexProvider;
+    private TestContext<RoaringBitmap, RoaringBitmap> context;
 
     @BeforeMethod
     public void setUp() throws Exception {
-        fieldIndex = new TestFieldIndex(2);
+        fieldIndex = new TestFieldIndex(2, bitmaps);
         @SuppressWarnings("unchecked")
         MiruFieldIndex<RoaringBitmap, RoaringBitmap>[] indexes =
             (MiruFieldIndex<RoaringBitmap, RoaringBitmap>[]) new MiruFieldIndex[MiruFieldType.values().length];
         indexes[0] = fieldIndex;
         fieldIndexProvider = new MiruFieldIndexProvider<>(indexes);
+        context = new TestContext<>(schema, termComposer, fieldIndexProvider);
     }
 
     @Test
@@ -91,9 +93,8 @@ public class LuceneBackedQueryParserTest {
         // ((0, 2, 4, 6, 8) AND (2, 3, 6, 7)) OR ((0, 2, 4, 6, 8) NOT (2, 3, 6, 7))
         // (2, 6) OR (0, 4, 8)
         // (0, 2, 4, 6, 8)
-        RoaringBitmap storage = aggregateUtil.filter("test", bitmaps, schema, termComposer, fieldIndexProvider, filter,
-            new MiruSolutionLog(MiruSolutionLogLevel.NONE),
-            null, 9, -1, stackBuffer);
+        MiruSolutionLog solutionLog = new MiruSolutionLog(MiruSolutionLogLevel.NONE);
+        RoaringBitmap storage = aggregateUtil.filter("test", bitmaps, context, filter, solutionLog, null, 9, -1, stackBuffer);
         Assert.assertEquals(storage.getCardinality(), 5);
         assertTrue(storage.contains(0));
         assertTrue(storage.contains(2));
@@ -121,9 +122,8 @@ public class LuceneBackedQueryParserTest {
         // ((0, 2, 4, 6, 8) AND (2, 3, 6, 7)) OR ((0, 2, 4, 6, 8) NOT (2, 3, 6, 7))
         // (2, 6) OR (0, 4, 8)
         // (0, 2, 4, 6, 8)
-        RoaringBitmap storage = aggregateUtil.filter("test", bitmaps, schema, termComposer, fieldIndexProvider, filter,
-            new MiruSolutionLog(MiruSolutionLogLevel.NONE),
-            null, 9, -1, stackBuffer);
+        MiruSolutionLog solutionLog = new MiruSolutionLog(MiruSolutionLogLevel.NONE);
+        RoaringBitmap storage = aggregateUtil.filter("test", bitmaps, context, filter, solutionLog, null, 9, -1, stackBuffer);
         Assert.assertEquals(storage.getCardinality(), 5);
         assertTrue(storage.contains(0));
         assertTrue(storage.contains(2));
@@ -139,9 +139,11 @@ public class LuceneBackedQueryParserTest {
     private static class TestFieldIndex implements MiruFieldIndex<RoaringBitmap, RoaringBitmap> {
 
         private final NavigableMap<MiruTermId, RoaringBitmap>[] indexes;
+        private final MiruBitmaps<RoaringBitmap, RoaringBitmap> bitmaps;
 
-        public TestFieldIndex(int numFields) {
+        public TestFieldIndex(int numFields, MiruBitmaps<RoaringBitmap, RoaringBitmap> bitmaps) {
             indexes = new NavigableMap[numFields];
+            this.bitmaps = bitmaps;
             for (int i = 0; i < numFields; i++) {
                 Comparator<byte[]> comparator = UnsignedBytes.lexicographicalComparator();
                 indexes[i] = new ConcurrentSkipListMap<>((o1, o2) -> {
@@ -156,7 +158,7 @@ public class LuceneBackedQueryParserTest {
 
         @Override
         public MiruInvertedIndex<RoaringBitmap, RoaringBitmap> get(String name, int fieldId, MiruTermId termId) throws Exception {
-            return new TestInvertedIndex(fieldId, termId);
+            return new TestInvertedIndex(fieldId, termId, bitmaps);
         }
 
         @Override
@@ -250,15 +252,18 @@ public class LuceneBackedQueryParserTest {
 
             private final int fieldId;
             private final MiruTermId termId;
+            private final MiruBitmaps<RoaringBitmap, RoaringBitmap> bitmaps;
 
-            public TestInvertedIndex(int fieldId, MiruTermId termId) {
+            public TestInvertedIndex(int fieldId, MiruTermId termId, MiruBitmaps<RoaringBitmap, RoaringBitmap> bitmaps) {
                 this.fieldId = fieldId;
                 this.termId = termId;
+                this.bitmaps = bitmaps;
             }
 
             @Override
-            public Optional<RoaringBitmap> getIndex(StackBuffer stackBuffer) throws Exception {
-                return Optional.fromNullable(indexes[fieldId].get(termId));
+            public void getIndex(BitmapAndLastId<RoaringBitmap> container, StackBuffer stackBuffer) throws Exception {
+                RoaringBitmap bitmap = indexes[fieldId].get(termId);
+                container.set(bitmap, bitmaps.lastSetBit(bitmap));
             }
 
             @Override

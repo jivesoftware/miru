@@ -2,7 +2,6 @@ package com.jivesoftware.os.miru.service.index.lab;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
 import com.jivesoftware.os.filer.io.ByteBufferBackedFiler;
@@ -26,7 +25,6 @@ import java.io.DataInput;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import org.apache.commons.lang.mutable.MutableLong;
 
@@ -78,87 +76,89 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
     }
 
     @Override
-    public Optional<BM> getIndex(StackBuffer stackBuffer) throws Exception {
+    public void getIndex(BitmapAndLastId<BM> container, StackBuffer stackBuffer) throws Exception {
         MutableLong bytes = new MutableLong();
-        Optional<BM> index = getIndexInternal(null, bytes).transform(input -> input.bitmap);
+        getIndexInternal(null, container, bytes);
         LOG.inc("count>getIndex>total");
         LOG.inc("count>getIndex>" + name + ">total");
         LOG.inc("count>getIndex>" + name + ">" + fieldId);
         LOG.inc("bytes>getIndex>total", bytes.longValue());
         LOG.inc("bytes>getIndex>" + name + ">total", bytes.longValue());
         LOG.inc("bytes>getIndex>" + name + ">" + fieldId, bytes.longValue());
-        return index;
     }
 
-    private Optional<BitmapAndLastId<BM>> getIndexInternal(int[] keys, MutableLong bytes) throws Exception {
-
-        @SuppressWarnings("unchecked")
-        BitmapAndLastId<BM> bitmapAndLastId;
+    private void getIndexInternal(int[] keys, BitmapAndLastId<BM> container, MutableLong bytes) throws Exception {
+        container.clear();
         if (atomized) {
-            List<LabKeyBytes> labKeyBytes = Lists.newArrayList();
-            if (keys != null) {
-                bitmapIndex.get(
-                    keyStream -> {
-                        for (int key : keys) {
-                            byte[] keyBytes = atomize(bitmapKeyBytes, key);
-                            if (!keyStream.key(-1, keyBytes, 0, keyBytes.length)) {
-                                return false;
-                            }
-                        }
-                        return true;
-                    },
-                    (index, key, timestamp, tombstoned, version, payload) -> {
-                        if (payload != null) {
-                            labKeyBytes.add(new LabKeyBytes(deatomize(key.asByteBuffer()), ByteBuffer.wrap(payload.copy())));
-                            bytes.add(payload.length);
-                        }
-                        return true;
-                    },
-                    true);
-                LOG.inc("atomized>getKeys>calls");
-                LOG.inc("atomized>getKeys>keys", keys.length);
-                LOG.inc("atomized>getKeys>atoms", labKeyBytes.size());
-            } else {
-                byte[] from = bitmapKeyBytes;
-                byte[] to = LABUtils.prefixUpperExclusive(bitmapKeyBytes);
-                bitmapIndex.rangeScan(from, to,
-                    (index, key, timestamp, tombstoned, version, payload) -> {
-                        if (payload != null) {
-                            labKeyBytes.add(new LabKeyBytes(deatomize(key.asByteBuffer()), ByteBuffer.wrap(payload.copy())));
-                            bytes.add(payload.length);
-                        }
-                        return true;
-                    },
-                    true);
-                LOG.inc("atomized>getRange>calls");
-                LOG.inc("atomized>getRange>atoms", labKeyBytes.size());
-            }
-            Collections.reverse(labKeyBytes);
-            bitmapAndLastId = labKeyBytes.isEmpty() ? null : deser(bitmaps, trackError, atomized, labKeyBytes);
+            bitmaps.deserializeAtomized(
+                container,
+                atomStream -> {
+                    if (keys != null) {
+                        int[] atoms = { 0 };
+                        bitmapIndex.get(
+                            keyStream -> {
+                                for (int key : keys) {
+                                    byte[] keyBytes = atomize(bitmapKeyBytes, key);
+                                    if (!keyStream.key(-1, keyBytes, 0, keyBytes.length)) {
+                                        return false;
+                                    }
+                                }
+                                return true;
+                            },
+                            (index, key, timestamp, tombstoned, version, payload) -> {
+                                if (payload != null) {
+                                    int labKey = deatomize(key.asByteBuffer());
+                                    DataInput dataInput = new ByteBufferDataInput(payload.asByteBuffer());
+                                    bytes.add(payload.length);
+                                    atoms[0]++;
+                                    return atomStream.stream(labKey, dataInput);
+                                }
+                                return true;
+                            },
+                            true);
+                        LOG.inc("atomized>getKeys>calls");
+                        LOG.inc("atomized>getKeys>keys", keys.length);
+                        LOG.inc("atomized>getKeys>atoms", atoms[0]);
+                    } else {
+                        byte[] from = bitmapKeyBytes;
+                        byte[] to = LABUtils.prefixUpperExclusive(bitmapKeyBytes);
+                        int[] atoms = { 0 };
+                        bitmapIndex.rangeScan(from, to,
+                            (index, key, timestamp, tombstoned, version, payload) -> {
+                                if (payload != null) {
+                                    int labKey = deatomize(key.asByteBuffer());
+                                    ByteBufferDataInput dataInput = new ByteBufferDataInput(payload.asByteBuffer());
+                                    bytes.add(payload.length);
+                                    atoms[0]++;
+                                    return atomStream.stream(labKey, dataInput);
+                                }
+                                return true;
+                            },
+                            true);
+                        LOG.inc("atomized>getRange>calls");
+                        LOG.inc("atomized>getRange>atoms", atoms[0]);
+                    }
+                    return true;
+                });
         } else {
-            @SuppressWarnings("unchecked")
-            BitmapAndLastId<BM>[] bali = new BitmapAndLastId[1];
             bitmapIndex.get((keyStream) -> keyStream.key(0, bitmapKeyBytes, 0, bitmapKeyBytes.length),
                 (index, key, timestamp, tombstoned, version, payload) -> {
                     if (payload != null) {
-                        bali[0] = deser(bitmaps, trackError, atomized, Collections.singletonList(new LabKeyBytes(-1, ByteBuffer.wrap(payload.copy()))));
+                        deserNonAtomized(bitmaps, trackError, payload.asByteBuffer(), container);
                         bytes.add(payload.length);
                     }
                     return true;
                 }, true);
-            bitmapAndLastId = bali[0];
         }
 
-        if (bitmapAndLastId != null) {
+        if (container.isSet()) {
             LOG.inc("get>hit");
             if (lastId == Integer.MIN_VALUE) {
-                lastId = bitmapAndLastId.lastId;
+                lastId = container.getLastId();
             }
-            return Optional.of(bitmapAndLastId);
         } else {
             LOG.inc("get>miss");
             lastId = -1;
-            return Optional.absent();
         }
     }
 
@@ -200,40 +200,23 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
         return result[0];
     }
 
-    public static <BM extends IBM, IBM> BitmapAndLastId<BM> deser(MiruBitmaps<BM, IBM> bitmaps,
+    public static <BM extends IBM, IBM> void deserNonAtomized(MiruBitmaps<BM, IBM> bitmaps,
         TrackError trackError,
-        boolean atomized,
-        List<LabKeyBytes> labKeyBytes) throws IOException {
+        ByteBuffer byteBuffer,
+        BitmapAndLastId<BM> container) throws IOException {
 
-        if (atomized) {
-            DataInput[] dataInputs = new DataInput[labKeyBytes.size()];
-            int[] keys = new int[dataInputs.length];
-            for (int i = 0; i < dataInputs.length; i++) {
-                LabKeyBytes kb = labKeyBytes.get(i);
-                keys[i] = kb.key;
-                dataInputs[i] = new ByteBufferDataInput(kb.byteBuffer);
-            }
+        container.clear();
+        if (byteBuffer.capacity() > LAST_ID_LENGTH + 4) {
+            int lastId = byteBuffer.getInt();
+            byteBuffer.position(LAST_ID_LENGTH);
+            DataInput dataInput = new ByteBufferDataInput(byteBuffer);
             try {
-                return bitmaps.deserializeAtomized(dataInputs, keys);
+                container.set(bitmaps.deserialize(dataInput), lastId);
             } catch (Exception e) {
-                trackError.error("Failed to deserialize atomized bitmap, keys=" + labKeyBytes.size());
-                throw new IOException("Failed to deserialize atomized", e);
-            }
-        } else {
-            ByteBuffer byteBuffer = labKeyBytes.get(0).byteBuffer;
-            if (byteBuffer.capacity() > LAST_ID_LENGTH + 4) {
-                int lastId = byteBuffer.getInt();
-                byteBuffer.position(LAST_ID_LENGTH);
-                DataInput dataInput = new ByteBufferDataInput(byteBuffer);
-                try {
-                    return new BitmapAndLastId<>(bitmaps.deserialize(dataInput), lastId);
-                } catch (Exception e) {
-                    trackError.error("Failed to deserialize a bitmap, length=" + byteBuffer.capacity());
-                    throw new IOException("Failed to deserialize", e);
-                }
+                trackError.error("Failed to deserialize a bitmap, length=" + byteBuffer.capacity());
+                throw new IOException("Failed to deserialize", e);
             }
         }
-        return null;
     }
 
     public static <BM extends IBM, IBM> int deserLastId(MiruBitmaps<BM, IBM> bitmaps,
@@ -280,8 +263,9 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
 
     private BM getOrCreateIndex(int[] keys) throws Exception {
         MutableLong bytes = new MutableLong();
-        Optional<BitmapAndLastId<BM>> index = getIndexInternal(keys, bytes);
-        BM bitmap = index.isPresent() ? index.get().bitmap : bitmaps.create();
+        BitmapAndLastId<BM> index = new BitmapAndLastId<>();
+        getIndexInternal(keys, index, bytes);
+        BM bitmap = index.isSet() ? index.getBitmap() : bitmaps.create();
         LOG.inc("count>getOrCreateIndex>total");
         LOG.inc("count>getOrCreateIndex>" + name + ">total");
         LOG.inc("count>getOrCreateIndex>" + name + ">" + fieldId);

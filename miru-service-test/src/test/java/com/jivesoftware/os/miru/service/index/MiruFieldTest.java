@@ -13,6 +13,7 @@ import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.bitmaps.roaring5.MiruBitmapsRoaring;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.service.IndexTestUtil;
 import com.jivesoftware.os.miru.service.stream.MiruContext;
@@ -39,10 +40,11 @@ public class MiruFieldTest {
         List<Integer> ids) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
         for (int id : ids) {
-            Optional<BM> optional = fieldIndex.get("test", fieldId, new MiruTermId(FilerIO.intBytes(id))).getIndex(stackBuffer);
-            assertTrue(optional.isPresent());
-            assertEquals(bitmaps.cardinality(optional.get()), 1);
-            assertTrue(bitmaps.isSet(optional.get(), id));
+            BitmapAndLastId<BM> container = new BitmapAndLastId<>();
+            fieldIndex.get("test", fieldId, new MiruTermId(FilerIO.intBytes(id))).getIndex(container, stackBuffer);
+            assertTrue(container.isSet());
+            assertEquals(bitmaps.cardinality(container.getBitmap()), 1);
+            assertTrue(bitmaps.isSet(container.getBitmap(), id));
         }
     }
 

@@ -17,6 +17,7 @@ package com.jivesoftware.os.miru.plugin.bitmap;
 
 import com.google.common.base.Optional;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
+import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.plugin.index.IndexAlignedBitmapStream;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
@@ -134,7 +135,7 @@ public interface MiruBitmaps<BM extends IBM, IBM> {
 
     BM andNotToSourceSize(IBM source, List<IBM> masks);
 
-    IBM buildIndexMask(int largestIndex, Optional<? extends IBM> andNotMask);
+    IBM buildIndexMask(int largestIndex, MiruInvertedIndex<BM, IBM> removalIndex, BitmapAndLastId<BM> container, StackBuffer stackBuffer) throws Exception;
 
     IBM buildTimeRangeMask(MiruTimeIndex timeIndex, long smallestTimestamp, long largestTimestamp, StackBuffer stackBuffer) throws Exception;
 
@@ -158,7 +159,15 @@ public interface MiruBitmaps<BM extends IBM, IBM> {
 
     void serializeAtomized(IBM index, int[] keys, DataOutput[] dataOutputs) throws IOException;
 
-    BitmapAndLastId<BM> deserializeAtomized(DataInput[] dataInputs, int[] keys) throws IOException;
+    boolean deserializeAtomized(BitmapAndLastId<BM> container, StreamAtoms streamAtoms) throws IOException;
+
+    interface StreamAtoms {
+        boolean stream(AtomStream atomStream) throws Exception;
+    }
+
+    interface AtomStream {
+        boolean stream(int key, DataInput dataInput) throws IOException;
+    }
 
     int lastIdAtomized(DataInput dataInputs, int key) throws IOException;
 }

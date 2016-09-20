@@ -7,7 +7,6 @@ import com.google.common.collect.Sets;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
-import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
@@ -18,7 +17,6 @@ import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.LastIdCache
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.TimestampedCacheKeyValues;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
-import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.partition.MiruQueryablePartition;
 import com.jivesoftware.os.miru.plugin.partition.OrderedPartitions;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
@@ -479,18 +477,13 @@ public class StrutModelScorer {
         StackBuffer stackBuffer,
         MiruSolutionLog solutionLog) throws Exception {
 
-        MiruSchema schema = context.getSchema();
-        MiruTermComposer termComposer = context.getTermComposer();
-
         CatwalkQuery.CatwalkFeature[] features = catwalkQuery.features;
         BM[] constrainFeature = bitmaps.createArrayOf(features.length);
         for (int i = 0; i < features.length; i++) {
             if (catwalkQuery.features[i] != null && !MiruFilter.NO_FILTER.equals(catwalkQuery.features[i].featureFilter)) {
                 BM constrained = aggregateUtil.filter("strutCatwalk",
                     bitmaps,
-                    schema,
-                    termComposer,
-                    context.getFieldIndexProvider(),
+                    context,
                     catwalkQuery.features[i].featureFilter,
                     solutionLog,
                     null,

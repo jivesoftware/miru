@@ -9,6 +9,7 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
+import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityAndId;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruIndexUtil;
@@ -124,13 +125,15 @@ public class MiruIndexPairedLatest<BM extends IBM, IBM> {
 
                 List<IBM> aggregateBitmaps = Lists.newArrayListWithCapacity(idAndTerms.size());
                 TIntList ids = new TIntArrayList(idAndTerms.size());
+                BitmapAndLastId<BM> container = new BitmapAndLastId<>();
                 for (IdAndTerm idAndTerm : idAndTerms) {
                     MiruTermId aggregateFieldValue = idAndTerm.term;
                     MiruInvertedIndex<BM, IBM> aggregateInvertedIndex = allFieldIndex.getOrCreateInvertedIndex("indexPairedLatest",
                         pairedLatestWork.aggregateFieldId, aggregateFieldValue);
-                    Optional<BM> aggregateBitmap = aggregateInvertedIndex.getIndex(stackBuffer);
-                    if (aggregateBitmap.isPresent()) {
-                        aggregateBitmaps.add(aggregateBitmap.get());
+                    container.clear();
+                    aggregateInvertedIndex.getIndex(container, stackBuffer);
+                    if (container.isSet()) {
+                        aggregateBitmaps.add(container.getBitmap());
                         ids.add(idAndTerm.id);
                     }
                 }

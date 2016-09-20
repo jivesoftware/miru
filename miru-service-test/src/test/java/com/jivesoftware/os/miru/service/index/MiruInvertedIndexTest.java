@@ -8,6 +8,7 @@ import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.miru.bitmaps.roaring5.MiruBitmapsRoaring;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;
 import com.jivesoftware.os.miru.plugin.partition.TrackError;
 import com.jivesoftware.os.miru.service.IndexTestUtil;
@@ -25,6 +26,7 @@ import org.roaringbitmap.RoaringBitmap;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
+import static com.jivesoftware.os.miru.service.IndexTestUtil.getIndex;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
@@ -51,7 +53,7 @@ public class MiruInvertedIndexTest {
         }
 
         System.out.println("max id " + id);
-        System.out.println("bitmap size " + miruInvertedIndex.getIndex(stackBuffer).get().getSizeInBytes());
+        System.out.println("bitmap size " + getIndex(miruInvertedIndex, stackBuffer).getBitmap().getSizeInBytes());
         //Thread.sleep(2000);
 
         long timestamp = System.currentTimeMillis();
@@ -66,7 +68,7 @@ public class MiruInvertedIndexTest {
             if (i % 1_000 == 0) {
                 //System.out.println("set " + i);
                 System.out.println(String.format("set 1000, elapsed = %s, max id = %s, bitmap size = %s",
-                    (System.currentTimeMillis() - subTimestamp), id, miruInvertedIndex.getIndex(stackBuffer).get().getSizeInBytes()));
+                    (System.currentTimeMillis() - subTimestamp), id, getIndex(miruInvertedIndex, stackBuffer).getBitmap().getSizeInBytes()));
                 subTimestamp = System.currentTimeMillis();
             }
         }
@@ -83,19 +85,19 @@ public class MiruInvertedIndexTest {
         miruInvertedIndex.set(stackBuffer, lastId + 3);
 
         for (int id : ids) {
-            assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex(stackBuffer).get(), id));
+            assertTrue(bitmaps.isSet(getIndex(miruInvertedIndex, stackBuffer).getBitmap(), id));
         }
 
-        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex(stackBuffer).get(), lastId + 1));
-        assertFalse(bitmaps.isSet(miruInvertedIndex.getIndex(stackBuffer).get(), lastId + 2));
-        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex(stackBuffer).get(), lastId + 3));
-        assertFalse(bitmaps.isSet(miruInvertedIndex.getIndex(stackBuffer).get(), lastId + 4));
+        assertTrue(bitmaps.isSet(getIndex(miruInvertedIndex, stackBuffer).getBitmap(), lastId + 1));
+        assertFalse(bitmaps.isSet(getIndex(miruInvertedIndex, stackBuffer).getBitmap(), lastId + 2));
+        assertTrue(bitmaps.isSet(getIndex(miruInvertedIndex, stackBuffer).getBitmap(), lastId + 3));
+        assertFalse(bitmaps.isSet(getIndex(miruInvertedIndex, stackBuffer).getBitmap(), lastId + 4));
     }
 
     @Test(dataProvider = "miruInvertedIndexDataProviderWithData")
     public void testRemove(MiruInvertedIndex<RoaringBitmap, RoaringBitmap> miruInvertedIndex, List<Integer> ids) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
-        RoaringBitmap index = miruInvertedIndex.getIndex(stackBuffer).get();
+        RoaringBitmap index = getIndex(miruInvertedIndex, stackBuffer).getBitmap();
         assertEquals(index.getCardinality(), ids.size());
 
         for (int id : ids) {
@@ -107,7 +109,7 @@ public class MiruInvertedIndexTest {
         }
         ids = ids.subList(ids.size() / 2, ids.size());
 
-        index = miruInvertedIndex.getIndex(stackBuffer).get();
+        index = getIndex(miruInvertedIndex, stackBuffer).getBitmap();
         assertEquals(index.getCardinality(), ids.size());
         for (int id : ids) {
             assertTrue(index.contains(id));
@@ -125,10 +127,10 @@ public class MiruInvertedIndexTest {
         miruInvertedIndex.set(stackBuffer, lastId + 1);
 
         for (int id : ids) {
-            assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex(stackBuffer).get(), id));
+            assertTrue(bitmaps.isSet(getIndex(miruInvertedIndex, stackBuffer).getBitmap(), id));
         }
-        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex(stackBuffer).get(), lastId + 1));
-        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex(stackBuffer).get(), lastId + 2));
+        assertTrue(bitmaps.isSet(getIndex(miruInvertedIndex, stackBuffer).getBitmap(), lastId + 1));
+        assertTrue(bitmaps.isSet(getIndex(miruInvertedIndex, stackBuffer).getBitmap(), lastId + 2));
     }
 
     @Test(dataProvider = "miruInvertedIndexDataProviderWithData")
@@ -143,10 +145,10 @@ public class MiruInvertedIndexTest {
         miruInvertedIndex.set(stackBuffer, lastId + 2);
 
         for (int id : ids) {
-            assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex(stackBuffer).get(), id));
+            assertTrue(bitmaps.isSet(getIndex(miruInvertedIndex, stackBuffer).getBitmap(), id));
         }
-        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex(stackBuffer).get(), lastId + 1));
-        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex(stackBuffer).get(), lastId + 2));
+        assertTrue(bitmaps.isSet(getIndex(miruInvertedIndex, stackBuffer).getBitmap(), lastId + 1));
+        assertTrue(bitmaps.isSet(getIndex(miruInvertedIndex, stackBuffer).getBitmap(), lastId + 2));
     }
 
     @Test(dataProvider = "miruInvertedIndexDataProviderWithData")
@@ -161,11 +163,11 @@ public class MiruInvertedIndexTest {
         miruInvertedIndex.andNot(bitmap, stackBuffer);
 
         for (int i = 0; i < ids.size() / 2; i++) {
-            RoaringBitmap got = miruInvertedIndex.getIndex(stackBuffer).get();
+            RoaringBitmap got = getIndex(miruInvertedIndex, stackBuffer).getBitmap();
             assertFalse(bitmaps.isSet(got, ids.get(i)), "Mismatch at " + i);
         }
         for (int i = ids.size() / 2; i < ids.size(); i++) {
-            RoaringBitmap got = miruInvertedIndex.getIndex(stackBuffer).get();
+            RoaringBitmap got = getIndex(miruInvertedIndex, stackBuffer).getBitmap();
             assertTrue(bitmaps.isSet(got, ids.get(i)), "Mismatch at " + i);
         }
     }
@@ -182,10 +184,10 @@ public class MiruInvertedIndexTest {
         miruInvertedIndex.andNotToSourceSize(Collections.singletonList(bitmap), stackBuffer);
 
         for (int i = 0; i < ids.size() / 2; i++) {
-            assertFalse(bitmaps.isSet(miruInvertedIndex.getIndex(stackBuffer).get(), ids.get(i)));
+            assertFalse(bitmaps.isSet(getIndex(miruInvertedIndex, stackBuffer).getBitmap(), ids.get(i)));
         }
         for (int i = ids.size() / 2; i < ids.size(); i++) {
-            assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex(stackBuffer).get(), ids.get(i)));
+            assertTrue(bitmaps.isSet(getIndex(miruInvertedIndex, stackBuffer).getBitmap(), ids.get(i)));
         }
     }
 
@@ -204,11 +206,11 @@ public class MiruInvertedIndexTest {
         miruInvertedIndex.or(bitmap, stackBuffer);
 
         for (int id : ids) {
-            assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex(stackBuffer).get(), id));
+            assertTrue(bitmaps.isSet(getIndex(miruInvertedIndex, stackBuffer).getBitmap(), id));
         }
-        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex(stackBuffer).get(), lastId + 1));
-        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex(stackBuffer).get(), lastId + 2));
-        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex(stackBuffer).get(), lastId + 3));
+        assertTrue(bitmaps.isSet(getIndex(miruInvertedIndex, stackBuffer).getBitmap(), lastId + 1));
+        assertTrue(bitmaps.isSet(getIndex(miruInvertedIndex, stackBuffer).getBitmap(), lastId + 2));
+        assertTrue(bitmaps.isSet(getIndex(miruInvertedIndex, stackBuffer).getBitmap(), lastId + 3));
     }
 
     @Test(dataProvider = "miruInvertedIndexDataProviderWithData")
@@ -226,11 +228,11 @@ public class MiruInvertedIndexTest {
         miruInvertedIndex.orToSourceSize(bitmap, stackBuffer);
 
         for (int id : ids) {
-            assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex(stackBuffer).get(), id));
+            assertTrue(bitmaps.isSet(getIndex(miruInvertedIndex, stackBuffer).getBitmap(), id));
         }
-        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex(stackBuffer).get(), lastId + 1));
-        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex(stackBuffer).get(), lastId + 2));
-        assertTrue(bitmaps.isSet(miruInvertedIndex.getIndex(stackBuffer).get(), lastId + 3)); // roaring ignores source size requirement
+        assertTrue(bitmaps.isSet(getIndex(miruInvertedIndex, stackBuffer).getBitmap(), lastId + 1));
+        assertTrue(bitmaps.isSet(getIndex(miruInvertedIndex, stackBuffer).getBitmap(), lastId + 2));
+        assertTrue(bitmaps.isSet(getIndex(miruInvertedIndex, stackBuffer).getBitmap(), lastId + 3)); // roaring ignores source size requirement
     }
 
     @Test
@@ -244,32 +246,32 @@ public class MiruInvertedIndexTest {
 
             // setIfEmpty index 1
             index.setIfEmpty(stackBuffer, 1);
-            RoaringBitmap got = index.getIndex(stackBuffer).get();
+            RoaringBitmap got = getIndex(index, stackBuffer).getBitmap();
             assertEquals(got.getCardinality(), 1);
             assertTrue(got.contains(1));
 
             // setIfEmpty index 2 noops
             index.setIfEmpty(stackBuffer, 2);
-            got = index.getIndex(stackBuffer).get();
+            got = getIndex(index, stackBuffer).getBitmap();
             assertEquals(got.getCardinality(), 1);
             assertTrue(got.contains(1));
             assertFalse(got.contains(2));
 
             // check index 1 is still set after merge
-            got = index.getIndex(stackBuffer).get();
+            got = getIndex(index, stackBuffer).getBitmap();
             assertEquals(got.getCardinality(), 1);
             assertTrue(got.contains(1));
 
             // setIfEmpty index 3 noops
             index.setIfEmpty(stackBuffer, 3);
-            got = index.getIndex(stackBuffer).get();
+            got = getIndex(index, stackBuffer).getBitmap();
             assertEquals(got.getCardinality(), 1);
             assertTrue(got.contains(1));
             assertFalse(got.contains(3));
 
             // set index 4
             index.set(stackBuffer, 4);
-            got = index.getIndex(stackBuffer).get();
+            got = getIndex(index, stackBuffer).getBitmap();
             assertEquals(got.getCardinality(), 2);
             assertTrue(got.contains(1));
             assertTrue(got.contains(4));
@@ -278,20 +280,20 @@ public class MiruInvertedIndexTest {
             index.remove(stackBuffer, 1);
             index.remove(stackBuffer, 4);
             if (atomized) {
-                assertFalse(index.getIndex(stackBuffer).isPresent());
+                assertFalse(getIndex(index, stackBuffer).isSet());
             } else {
-                got = index.getIndex(stackBuffer).get();
+                got = getIndex(index, stackBuffer).getBitmap();
                 assertEquals(got.getCardinality(), 0);
             }
 
             // setIfEmpty index 5
             index.setIfEmpty(stackBuffer, 5);
-            got = index.getIndex(stackBuffer).get();
+            got = getIndex(index, stackBuffer).getBitmap();
             assertEquals(got.getCardinality(), 1);
 
             // setIfEmpty index 6 noops
             index.setIfEmpty(stackBuffer, 6);
-            got = index.getIndex(stackBuffer).get();
+            got = getIndex(index, stackBuffer).getBitmap();
             assertEquals(got.getCardinality(), 1);
         }
     }
@@ -367,7 +369,7 @@ public class MiruInvertedIndexTest {
                 }
             }
             try {
-                RoaringBitmap index = invertedIndex.getIndex(stackBuffer).get();
+                RoaringBitmap index = getIndex(invertedIndex, stackBuffer).getBitmap();
                 System.out.println("appender is done, final cardinality=" + index.getCardinality() + " bytes=" + index.getSizeInBytes());
             } catch (Exception e) {
                 e.printStackTrace();
@@ -390,7 +392,7 @@ public class MiruInvertedIndexTest {
                     }
 
                     try {
-                        RoaringBitmap index = invertedIndex.getIndex(stackBuffer).get();
+                        RoaringBitmap index = getIndex(invertedIndex, stackBuffer).getBitmap();
                         RoaringBitmap container = FastAggregation.and(index, other);
                     } catch (Exception e) {
                         done.incrementAndGet();
@@ -427,7 +429,7 @@ public class MiruInvertedIndexTest {
         }
 
         long elapsed = System.currentTimeMillis() - t;
-        RoaringBitmap index = invertedIndex.getIndex(stackBuffer).get();
+        RoaringBitmap index = getIndex(invertedIndex, stackBuffer).getBitmap();
         System.out.println("cardinality=" + index.getCardinality() + " bytes=" + index.getSizeInBytes() + " elapsed=" + elapsed);
     }
 }

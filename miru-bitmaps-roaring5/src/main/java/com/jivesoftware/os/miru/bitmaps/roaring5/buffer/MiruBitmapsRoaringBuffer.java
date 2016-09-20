@@ -15,7 +15,6 @@
  */
 package com.jivesoftware.os.miru.bitmaps.roaring5.buffer;
 
-import com.google.common.base.Optional;
 import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
 import com.jivesoftware.os.filer.io.Filer;
@@ -457,22 +456,35 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
     }
 
     @Override
-    public MutableRoaringBitmap buildIndexMask(int largestIndex, Optional<? extends ImmutableRoaringBitmap> andNotMask) {
+    public ImmutableRoaringBitmap buildIndexMask(int largestIndex,
+        MiruInvertedIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> removalIndex,
+        BitmapAndLastId<MutableRoaringBitmap> container,
+        StackBuffer stackBuffer) throws Exception {
+
         MutableRoaringBitmap mask = new MutableRoaringBitmap();
         if (largestIndex < 0) {
             return mask;
         }
 
         mask.flip(0, largestIndex + 1);
-        if (andNotMask.isPresent()) {
-            mask.andNot(andNotMask.get());
+        if (removalIndex != null) {
+            if (container == null) {
+                container = new BitmapAndLastId<>();
+            }
+            removalIndex.getIndex(container, stackBuffer);
+            if (container.isSet()) {
+                mask.andNot(container.getBitmap());
+            }
         }
         return mask;
     }
 
     @Override
-    public MutableRoaringBitmap buildTimeRangeMask(MiruTimeIndex timeIndex, long smallestTimestamp, long largestTimestamp, StackBuffer stackBuffer) throws
-        Exception, InterruptedException {
+    public MutableRoaringBitmap buildTimeRangeMask(MiruTimeIndex timeIndex,
+        long smallestTimestamp,
+        long largestTimestamp,
+        StackBuffer stackBuffer) throws Exception {
+
         int smallestInclusiveId = timeIndex.smallestExclusiveTimestampIndex(smallestTimestamp, stackBuffer);
         int largestExclusiveId = timeIndex.largestInclusiveTimestampIndex(largestTimestamp, stackBuffer) + 1;
 
@@ -574,7 +586,7 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
     }
 
     @Override
-    public BitmapAndLastId<MutableRoaringBitmap> deserializeAtomized(DataInput[] dataInputs, int[] keys) throws IOException {
+    public boolean deserializeAtomized(BitmapAndLastId<MutableRoaringBitmap> container, StreamAtoms streamAtoms) throws IOException {
         throw new UnsupportedOperationException("Wahhh");
     }
 

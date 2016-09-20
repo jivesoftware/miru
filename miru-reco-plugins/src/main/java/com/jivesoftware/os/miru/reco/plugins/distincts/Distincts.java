@@ -107,9 +107,10 @@ public class Distincts {
                     prefixesAsBytes = new byte[0][];
                 }
 
+
                 List<IBM> ands = Lists.newArrayList();
-                BM constrained = aggregateUtil.filter(name, bitmaps, schema, termComposer, requestContext.getFieldIndexProvider(),
-                    query.constraintsFilter, solutionLog, null, requestContext.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
+                int lastId = requestContext.getActivityIndex().lastId(stackBuffer);
+                BM constrained = aggregateUtil.filter(name, bitmaps, requestContext, query.constraintsFilter, solutionLog, null, lastId, -1, stackBuffer);
                 ands.add(constrained);
 
                 if (!MiruTimeRange.ALL_TIME.equals(query.timeRange)) {
@@ -127,7 +128,7 @@ public class Distincts {
 
                 start = System.currentTimeMillis();
                 //TODO expose batch size to query?
-                aggregateUtil.gather(name, bitmaps, requestContext, result, fieldId, gatherBatchSize, false, false, solutionLog, (lastId, termId, count) -> {
+                aggregateUtil.gather(name, bitmaps, requestContext, result, fieldId, gatherBatchSize, false, false, solutionLog, (lastId1, termId, count) -> {
                     if (prefixesAsBytes.length > 0) {
                         byte[] termBytes = termId.getBytes();
                         for (byte[] prefixAsBytes : prefixesAsBytes) {

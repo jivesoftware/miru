@@ -15,7 +15,6 @@
  */
 package com.jivesoftware.os.miru.bitmaps.roaring5;
 
-import com.google.common.base.Optional;
 import com.jivesoftware.os.filer.io.ByteBufferDataInput;
 import com.jivesoftware.os.filer.io.Filer;
 import com.jivesoftware.os.filer.io.FilerDataInput;
@@ -277,9 +276,10 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
 
     @Override
     public void inPlaceAndNot(RoaringBitmap original, MiruInvertedIndex<RoaringBitmap, RoaringBitmap> not, StackBuffer stackBuffer) throws Exception {
-        Optional<RoaringBitmap> index = not.getIndex(stackBuffer);
-        if (index.isPresent()) {
-            original.andNot(index.get());
+        BitmapAndLastId<RoaringBitmap> index = new BitmapAndLastId<>();
+        not.getIndex(index, stackBuffer);
+        if (index.isSet()) {
+            original.andNot(index.getBitmap());
         }
     }
 
@@ -456,22 +456,35 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
     }
 
     @Override
-    public RoaringBitmap buildIndexMask(int largestIndex, Optional<? extends RoaringBitmap> andNotMask) {
+    public RoaringBitmap buildIndexMask(int largestIndex,
+        MiruInvertedIndex<RoaringBitmap, RoaringBitmap> removalIndex,
+        BitmapAndLastId<RoaringBitmap> container,
+        StackBuffer stackBuffer) throws Exception {
+
         RoaringBitmap mask = new RoaringBitmap();
         if (largestIndex < 0) {
             return mask;
         }
 
         mask.flip(0, largestIndex + 1);
-        if (andNotMask.isPresent()) {
-            mask.andNot(andNotMask.get());
+        if (removalIndex != null) {
+            if (container == null) {
+                container = new BitmapAndLastId<>();
+            }
+            removalIndex.getIndex(container, stackBuffer);
+            if (container.isSet()) {
+                mask.andNot(container.getBitmap());
+            }
         }
         return mask;
     }
 
     @Override
-    public RoaringBitmap buildTimeRangeMask(MiruTimeIndex timeIndex, long smallestTimestamp, long largestTimestamp, StackBuffer stackBuffer) throws
-        Exception, InterruptedException {
+    public RoaringBitmap buildTimeRangeMask(MiruTimeIndex timeIndex,
+        long smallestTimestamp,
+        long largestTimestamp,
+        StackBuffer stackBuffer) throws Exception {
+
         int smallestInclusiveId = timeIndex.smallestExclusiveTimestampIndex(smallestTimestamp, stackBuffer);
         int largestExclusiveId = timeIndex.largestInclusiveTimestampIndex(largestTimestamp, stackBuffer) + 1;
 
@@ -573,10 +586,8 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
     }
 
     @Override
-    public BitmapAndLastId<RoaringBitmap> deserializeAtomized(DataInput[] dataInputs, int[] keys) throws IOException {
-        RoaringBitmap bitmap = new RoaringBitmap();
-        int lastSetBit = RoaringInspection.udeserialize(bitmap, keys, dataInputs);
-        return new BitmapAndLastId<>(bitmap, lastSetBit);
+    public boolean deserializeAtomized(BitmapAndLastId<RoaringBitmap> container, StreamAtoms streamAtoms) throws IOException {
+        return RoaringInspection.udeserialize(container, streamAtoms);
     }
 
     @Override

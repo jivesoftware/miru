@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.plugin.backfill;
 
-import com.google.common.base.Optional;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
@@ -29,12 +28,12 @@ public class MiruReadTracker {
         StackBuffer stackBuffer)
         throws Exception {
 
-        IBM indexMask = bitmaps.buildIndexMask(lastActivityIndex, Optional.<IBM>absent());
+        IBM indexMask = bitmaps.buildIndexMask(lastActivityIndex, null, null, stackBuffer);
 
         synchronized (context.getStreamLocks().lock(streamId, 0)) {
             IBM timeMask = bitmaps.buildTimeRangeMask(context.getTimeIndex(), 0L, lastActivityTimestamp, stackBuffer);
-            BM filtered = aggregateUtil.filter("readTrackerRead", bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(),
-                filter, solutionLog, null, context.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
+            int lastId = context.getActivityIndex().lastId(stackBuffer);
+            BM filtered = aggregateUtil.filter("readTrackerRead", bitmaps, context, filter, solutionLog, null, lastId, -1, stackBuffer);
 
             BM result = bitmaps.and(Arrays.asList(filtered, indexMask, timeMask));
             context.getUnreadTrackingIndex().applyRead(streamId, result, stackBuffer);
@@ -51,12 +50,12 @@ public class MiruReadTracker {
         StackBuffer stackBuffer)
         throws Exception {
 
-        IBM indexMask = bitmaps.buildIndexMask(lastActivityIndex, Optional.<IBM>absent());
+        IBM indexMask = bitmaps.buildIndexMask(lastActivityIndex, null, null, stackBuffer);
 
         synchronized (context.getStreamLocks().lock(streamId, 0)) {
             IBM timeMask = bitmaps.buildTimeRangeMask(context.getTimeIndex(), 0L, lastActivityTimestamp, stackBuffer);
-            BM filtered = aggregateUtil.filter("readTrackUnread", bitmaps, context.getSchema(), context.getTermComposer(), context.getFieldIndexProvider(),
-                filter, solutionLog, null, context.getActivityIndex().lastId(stackBuffer), -1, stackBuffer);
+            int lastId = context.getActivityIndex().lastId(stackBuffer);
+            BM filtered = aggregateUtil.filter("readTrackUnread", bitmaps, context, filter, solutionLog, null, lastId, -1, stackBuffer);
 
             BM result = bitmaps.and(Arrays.asList(filtered, indexMask, timeMask));
             context.getUnreadTrackingIndex().applyUnread(streamId, result, stackBuffer);
