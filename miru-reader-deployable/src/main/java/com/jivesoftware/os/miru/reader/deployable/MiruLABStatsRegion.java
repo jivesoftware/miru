@@ -118,7 +118,13 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
             if (i > 0) {
                 total += ", ";
             }
-            total += labels[i] + "=" + numberFormat.format(waveforms[i].total());
+            Color c = colors[i];
+            int r = c.getRed();
+            int g = c.getGreen();
+            int b = c.getBlue();
+            String colorDiv = "<div style=\"display:inline-block; width:10px; height:10px; background:rgb(" + r + "," + g + "," + b + ");\"></div>";
+
+            total += colorDiv + labels[i] + "=" + numberFormat.format(waveforms[i].total());
         }
 
         Map<String, Object> map = new HashMap<>();
