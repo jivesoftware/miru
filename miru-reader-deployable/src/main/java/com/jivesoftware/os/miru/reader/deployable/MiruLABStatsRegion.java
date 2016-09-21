@@ -108,20 +108,19 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
         long mostRecentTimestamp = waveforms[0].mostRecentTimestamp();
         long duration = waveforms[0].duration();
         long start = now - (mostRecentTimestamp - duration);
-        for (int i = 0; i < labels.length; i++) {
+        int s = 1;
+        for (double m : waveforms[0].metric()) {
+            ls.add("\"" + s + "\"");//humanReadableUptime(start));
+            s++;
+        }
 
+        for (int i = 0; i < labels.length; i++) {
             List<String> values = Lists.newArrayList();
             double[] metric = waveforms[i].metric();
-            long step = duration / metric.length;
-            int s = 1;
             for (double m : metric) {
                 values.add("\"" + String.valueOf(m) + "\"");
-                ls.add("\"" + s + "\"");//humanReadableUptime(start));
-                start += step;
-                s++;
             }
             ws.add(waveform(labels[i], colors[i], 0.25f, values));
-
             if (i > 0) {
                 total += ", ";
             }
