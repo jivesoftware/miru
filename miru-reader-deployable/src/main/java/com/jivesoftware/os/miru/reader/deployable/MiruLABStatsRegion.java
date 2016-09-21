@@ -88,7 +88,7 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
         Color.pink,
         Color.cyan,
         Color.red,
-        Color.yellow,
+        new Color(215, 120, 40), // brown
         Color.gray
     };
 
