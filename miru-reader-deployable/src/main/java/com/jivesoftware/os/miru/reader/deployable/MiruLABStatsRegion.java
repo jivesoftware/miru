@@ -108,10 +108,12 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
             List<String> values = Lists.newArrayList();
             double[] metric = waveforms[i].metric();
             long step = duration / metric.length;
+            int s = 1;
             for (double m : metric) {
                 values.add("\"" + String.valueOf(m) + "\"");
-                //ls.add(humanReadableUptime(start));
+                ls.add("\"" + s + "\"");//humanReadableUptime(start));
                 start += step;
+                s++;
             }
             ws.add(waveform(labels[i], colors[i], 0.75f, values));
 
@@ -126,7 +128,7 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
         map.put("total", total);
         //map.put("lines", lines);
         //map.put("error", error);
-        //map.put("width", String.valueOf(labels.size() * 32));
+        map.put("width", String.valueOf(ls.size() * 32));
         map.put("id", title);
         map.put("graphType", "Line");
         map.put("waveform", ImmutableMap.of("labels", ls, "datasets", ws));
