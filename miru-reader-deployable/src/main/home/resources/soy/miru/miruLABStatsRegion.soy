@@ -11,7 +11,7 @@
         <div class="panel panel-default" style="background-color: rgba(255, 255, 255, 0.9);">
             {foreach $r in $rebuild}
                 <div class="panel-heading">LAB rebuild {$r.title}  ({$r.total})</div>
-                <div class="lab-scroll-wave" style="width:100%; height:325px; overflow-x:scroll; overflow-y:hidden;">
+                <div class="lab-scroll-wave" style="width:100%; height:225px; overflow-x:scroll; overflow-y:hidden;">
                     <div style="width:{$r.width}px; height:200px;">
                         <canvas class="lab-wave" id="values" height="200" width="{$r.width}"
                             data-lab-wave-id="{$r.id}" data-lab-wave-type="{$r.graphType}">
@@ -29,7 +29,7 @@
         <div class="panel panel-default" style="background-color: rgba(255, 255, 255, 0.9);">
             {foreach $r in $global}
                 <div class="panel-heading">LAB global {$r.title} ({$r.total})</div>
-                <div class="lab-scroll-wave" style="width:100%; height:325px; overflow-x:scroll; overflow-y:hidden;">
+                <div class="lab-scroll-wave" style="width:100%; height:225px; overflow-x:scroll; overflow-y:hidden;">
                     <div style="width:{$r.width}px; height:200px;">
                         <canvas class="lab-wave" id="values" height="200" width="{$r.width}"
                             data-lab-wave-id="{$r.id}" data-lab-wave-type="{$r.graphType}">
