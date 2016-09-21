@@ -128,7 +128,7 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
         map.put("total", total);
         //map.put("lines", lines);
         //map.put("error", error);
-        map.put("width", String.valueOf(ls.size() * 32));
+        map.put("width", String.valueOf(ls.size() * 5));
         map.put("id", title);
         map.put("graphType", "Line");
         map.put("waveform", ImmutableMap.of("labels", ls, "datasets", ws));
