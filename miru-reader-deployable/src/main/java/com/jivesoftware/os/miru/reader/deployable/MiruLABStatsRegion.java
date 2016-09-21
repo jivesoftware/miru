@@ -65,39 +65,31 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
     private List<Map<String, Object>> packStats(String prefix, LABStats stats) {
 
         List<Map<String, Object>> list = Lists.newArrayList();
-        list.add(wavformGroup(prefix + "labs", new String[]{"open", "closed"},
-            new LABSparseCircularMetricBuffer[]{stats.mOpen, stats.mClosed}));
 
-        list.add(wavformGroup(prefix + "memory", new String[]{"allocationed", "freed", "slack"},
-            new LABSparseCircularMetricBuffer[]{stats.mAllocationed, stats.mFreed, stats.mSlack}));
+        list.add(wavformGroup(prefix + "lsm", new String[]{"open", "closed", "commit", "fsyncedCommit", "merging", "merged", "splitting", "split"},
+            new LABSparseCircularMetricBuffer[]{stats.mOpen, stats.mClosed, stats.mCommit, stats.mFsyncedCommit, stats.mMerging, stats.mMerged, stats.mSplitings,
+                stats.mSplits}));
 
-        list.add(wavformGroup(prefix + "appends", new String[]{"append", "journaledAppend"},
-            new LABSparseCircularMetricBuffer[]{stats.mAppend, stats.mJournaledAppend}));
+        list.add(wavformGroup(prefix + "mem", new String[]{"allocationed", "freed", "slack", "bytesWrittenToWAL", "bytesWrittenAsIndex",
+            "bytesWrittenAsMerge", "bytesWrittenAsSplit"},
+            new LABSparseCircularMetricBuffer[]{stats.mAllocationed, stats.mFreed, stats.mSlack, stats.mBytesWrittenToWAL, stats.mBytesWrittenAsIndex,
+                stats.mBytesWrittenAsMerge, stats.mBytesWrittenAsSplit}));
 
-        list.add(wavformGroup(prefix + "writes", new String[]{"bytesWrittenToWAL", "bytesWrittenAsIndex", "bytesWrittenAsSplit", "bytesWrittenAsMerge"},
-            new LABSparseCircularMetricBuffer[]{stats.mBytesWrittenToWAL, stats.mBytesWrittenAsIndex, stats.mBytesWrittenAsSplit, stats.mBytesWrittenAsMerge}));
+        list.add(wavformGroup(prefix + "rw", new String[]{"append", "journaledAppend", "gets", "rangeScan", "multiRangeScan", "rowScan"},
+            new LABSparseCircularMetricBuffer[]{stats.mAppend, stats.mJournaledAppend, stats.mGets, stats.mRangeScan, stats.mMultiRangeScan, stats.mRowScan}));
 
-        list.add(wavformGroup(prefix + "reads", new String[]{"gets", "rangeScan", "multiRangeScan", "rowScan"},
-            new LABSparseCircularMetricBuffer[]{stats.mGets, stats.mRangeScan, stats.mMultiRangeScan, stats.mRowScan}));
-
-        list.add(wavformGroup(prefix + "commits", new String[]{"commit", "fsyncedCommit"},
-            new LABSparseCircularMetricBuffer[]{stats.mCommit, stats.mFsyncedCommit}));
-
-        list.add(wavformGroup(prefix + "merge", new String[]{"merging", "merged"},
-            new LABSparseCircularMetricBuffer[]{stats.mMerging, stats.mMerged}));
-
-        list.add(wavformGroup(prefix + "splt", new String[]{"splitting", "split"},
-            new LABSparseCircularMetricBuffer[]{stats.mSplitings, stats.mSplits}));
         return list;
     }
 
     private Color[] colors = new Color[]{
-        Color.green,
         Color.blue,
-        Color.magenta,
+        Color.green,
         Color.orange,
         Color.pink,
-        Color.yellow
+        Color.cyan,
+        Color.red,
+        Color.yellow,
+        Color.gray
     };
 
     private Map<String, Object> wavformGroup(String title, String[] labels, LABSparseCircularMetricBuffer[] waveforms) {
