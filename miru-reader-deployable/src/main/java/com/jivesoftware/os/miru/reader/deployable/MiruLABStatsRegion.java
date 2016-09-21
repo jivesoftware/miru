@@ -52,8 +52,8 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
         Map<String, Object> data = Maps.newHashMap();
 
         try {
-            data.put("rebuild", packStats(rebuild));
-            data.put("global", packStats(global));
+            data.put("rebuild", packStats("rebuild-", rebuild));
+            data.put("global", packStats("global-", global));
 
         } catch (Exception e) {
             LOG.error("Failed to render partitions region", e);
@@ -62,37 +62,42 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
         return renderer.render(template, data);
     }
 
-    private List<Map<String, Object>> packStats(LABStats stats) {
+    private List<Map<String, Object>> packStats(String prefix, LABStats stats) {
 
         List<Map<String, Object>> list = Lists.newArrayList();
-        list.add(wavformGroup("labs", new String[]{"open", "closed"},
+        list.add(wavformGroup(prefix + "labs", new String[]{"open", "closed"},
             new LABSparseCircularMetricBuffer[]{stats.mOpen, stats.mClosed}));
 
-        list.add(wavformGroup("memory", new String[]{"allocationed", "freed", "slack"},
+        list.add(wavformGroup(prefix + "memory", new String[]{"allocationed", "freed", "slack"},
             new LABSparseCircularMetricBuffer[]{stats.mAllocationed, stats.mFreed, stats.mSlack}));
 
-        list.add(wavformGroup("appends", new String[]{"append", "journaledAppend"},
+        list.add(wavformGroup(prefix + "appends", new String[]{"append", "journaledAppend"},
             new LABSparseCircularMetricBuffer[]{stats.mAppend, stats.mJournaledAppend}));
 
-        list.add(wavformGroup("writes", new String[]{"bytesWrittenToWAL", "bytesWrittenAsIndex", "bytesWrittenAsSplit", "bytesWrittenAsMerge"},
+        list.add(wavformGroup(prefix + "writes", new String[]{"bytesWrittenToWAL", "bytesWrittenAsIndex", "bytesWrittenAsSplit", "bytesWrittenAsMerge"},
             new LABSparseCircularMetricBuffer[]{stats.mBytesWrittenToWAL, stats.mBytesWrittenAsIndex, stats.mBytesWrittenAsSplit, stats.mBytesWrittenAsMerge}));
 
-        list.add(wavformGroup("reads", new String[]{"gets", "rangeScan", "multiRangeScan", "rowScan"},
+        list.add(wavformGroup(prefix + "reads", new String[]{"gets", "rangeScan", "multiRangeScan", "rowScan"},
             new LABSparseCircularMetricBuffer[]{stats.mGets, stats.mRangeScan, stats.mMultiRangeScan, stats.mRowScan}));
 
-        list.add(wavformGroup("commits", new String[]{"commit", "fsyncedCommit"},
+        list.add(wavformGroup(prefix + "commits", new String[]{"commit", "fsyncedCommit"},
             new LABSparseCircularMetricBuffer[]{stats.mCommit, stats.mFsyncedCommit}));
 
-        list.add(wavformGroup("merge", new String[]{"merging", "merged"},
+        list.add(wavformGroup(prefix + "merge", new String[]{"merging", "merged"},
             new LABSparseCircularMetricBuffer[]{stats.mMerging, stats.mMerged}));
 
-        list.add(wavformGroup("splt", new String[]{"splitting", "split"},
+        list.add(wavformGroup(prefix + "splt", new String[]{"splitting", "split"},
             new LABSparseCircularMetricBuffer[]{stats.mSplitings, stats.mSplits}));
         return list;
     }
 
     private Color[] colors = new Color[]{
-        Color.green, Color.blue, Color.yellow, Color.magenta, Color.orange, Color.pink
+        Color.green,
+        Color.blue,
+        Color.magenta,
+        Color.orange,
+        Color.pink,
+        Color.yellow
     };
 
     private Map<String, Object> wavformGroup(String title, String[] labels, LABSparseCircularMetricBuffer[] waveforms) {
@@ -115,7 +120,7 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
                 start += step;
                 s++;
             }
-            ws.add(waveform(labels[i], colors[i], 0.75f, values));
+            ws.add(waveform(labels[i], colors[i], 0.25f, values));
 
             if (i > 0) {
                 total += ", ";
@@ -128,7 +133,7 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
         map.put("total", total);
         //map.put("lines", lines);
         //map.put("error", error);
-        map.put("width", String.valueOf(ls.size() * 5));
+        map.put("width", String.valueOf(ls.size() * 10));
         map.put("id", title);
         map.put("graphType", "Line");
         map.put("waveform", ImmutableMap.of("labels", ls, "datasets", ws));
