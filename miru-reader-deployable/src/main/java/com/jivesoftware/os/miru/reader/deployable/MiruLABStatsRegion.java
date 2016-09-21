@@ -37,17 +37,14 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
         this.rebuild = rebuild;
         this.global = global;
 
-        Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    rebuild.refresh();
-                    global.refresh();
-                } catch (Exception x) {
-                    LOG.warn("Refresh labstats failed", x);
-                }
+        Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(() -> {
+            try {
+                rebuild.refresh();
+                global.refresh();
+            } catch (Exception x) {
+                LOG.warn("Refresh labstats failed", x);
             }
-        }, 1, 1, TimeUnit.SECONDS);
+        }, 0, 1, TimeUnit.SECONDS);
     }
 
     @Override
@@ -99,24 +96,38 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
     };
 
     private Map<String, Object> wavformGroup(String title, String[] labels, LABSparseCircularMetricBuffer[] waveforms) {
+        String total = "";
         List<String> ls = new ArrayList<>();
         List<Map<String, Object>> ws = new ArrayList<>();
+        long now = System.currentTimeMillis();
+        long mostRecentTimestamp = waveforms[0].mostRecentTimestamp();
+        long duration = waveforms[0].duration();
+        long start = now - (mostRecentTimestamp - duration);
         for (int i = 0; i < labels.length; i++) {
-            ls.add(labels[i]);
+
             List<String> values = Lists.newArrayList();
-            for (double m : waveforms[i].metric()) {
+            double[] metric = waveforms[i].metric();
+            long step = duration / metric.length;
+            for (double m : metric) {
                 values.add(String.valueOf(m));
+                ls.add(humanReadableUptime(start));
+                start += step;
             }
             ws.add(waveform(labels[i], colors[i], 0.75f, values));
+
+            if (i > 0) {
+                total += ", ";
+            }
+            total += labels[i] + "=" + waveforms[i].total();
         }
-        
 
         Map<String, Object> map = new HashMap<>();
         map.put("title", title);
+        map.put("total", total);
         //map.put("lines", lines);
         //map.put("error", error);
         //map.put("width", String.valueOf(labels.size() * 32));
-        map.put("id", "lab" + title);
+        map.put("id", title);
         map.put("graphType", "Line");
         map.put("waveform", ImmutableMap.of("labels", ls, "datasets", ws));
         return map;
@@ -133,6 +144,37 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
         waveform.put("pointHighlightStroke", "\"rgba(" + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + ",1)\"");
         waveform.put("data", values);
         return waveform;
+    }
+
+    public static String humanReadableUptime(long millis) {
+        if (millis < 0) {
+            return String.valueOf(millis);
+        }
+
+        long hours = TimeUnit.MILLISECONDS.toHours(millis);
+        millis -= TimeUnit.HOURS.toMillis(hours);
+        long minutes = TimeUnit.MILLISECONDS.toMinutes(millis);
+        millis -= TimeUnit.MINUTES.toMillis(minutes);
+        long seconds = TimeUnit.MILLISECONDS.toSeconds(millis);
+        millis -= TimeUnit.SECONDS.toMillis(seconds);
+
+        StringBuilder sb = new StringBuilder(64);
+        if (hours < 10) {
+            sb.append('0');
+        }
+        sb.append(hours);
+        sb.append(":");
+        if (minutes < 10) {
+            sb.append('0');
+        }
+        sb.append(minutes);
+        sb.append(":");
+        if (seconds < 10) {
+            sb.append('0');
+        }
+        sb.append(seconds);
+
+        return (sb.toString());
     }
 
     @Override

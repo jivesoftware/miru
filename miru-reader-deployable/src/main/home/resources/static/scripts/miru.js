@@ -77,7 +77,7 @@ miru.lab = {
         var ctx = which.getContext("2d");
         var id = $canvas.data('labWaveId');
         if (!miru.lab.waves[id]) {
-            var type = "Line"; //$canvas.data('sarWaveType');
+            var type = $canvas.data('labWaveType');
             var data = miru.lab.data[id];
             miru.lab.waves[id] = (new Chart(ctx))[type](data, {
                 multiTooltipTemplate: "<%= datasetLabel %> - <%= value %>",
