@@ -70,10 +70,12 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
             new LABSparseCircularMetricBuffer[]{stats.mOpen, stats.mClosed, stats.mCommit, stats.mFsyncedCommit, stats.mMerging, stats.mMerged, stats.mSplitings,
                 stats.mSplits}));
 
-        list.add(wavformGroup(prefix + "mem", new String[]{"allocationed", "freed", "slack", "bytesWrittenToWAL", "bytesWrittenAsIndex",
+        list.add(wavformGroup(prefix + "mem", new String[]{"slabbed", "allocationed", "released", "freed"},
+            new LABSparseCircularMetricBuffer[]{stats.mSlabbed, stats.mAllocationed, stats.mReleased, stats.mFreed}));
+
+        list.add(wavformGroup(prefix + "disk", new String[]{"bytesWrittenToWAL", "bytesWrittenAsIndex",
             "bytesWrittenAsMerge", "bytesWrittenAsSplit"},
-            new LABSparseCircularMetricBuffer[]{stats.mAllocationed, stats.mFreed, stats.mSlack, stats.mBytesWrittenToWAL, stats.mBytesWrittenAsIndex,
-                stats.mBytesWrittenAsMerge, stats.mBytesWrittenAsSplit}));
+            new LABSparseCircularMetricBuffer[]{stats.mBytesWrittenToWAL, stats.mBytesWrittenAsIndex, stats.mBytesWrittenAsMerge, stats.mBytesWrittenAsSplit}));
 
         list.add(wavformGroup(prefix + "rw", new String[]{"append", "journaledAppend", "gets", "rangeScan", "multiRangeScan", "rowScan"},
             new LABSparseCircularMetricBuffer[]{stats.mAppend, stats.mJournaledAppend, stats.mGets, stats.mRangeScan, stats.mMultiRangeScan, stats.mRowScan}));
@@ -84,12 +86,12 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
     private Color[] colors = new Color[]{
         Color.blue,
         Color.green,
-        Color.orange,
-        Color.pink,
-        Color.cyan,
         Color.red,
-        Color.yellow,
-        Color.gray
+        Color.orange,
+        new Color(215, 120, 40), // brown
+        Color.gray,
+        Color.pink,
+        Color.cyan
     };
 
     private Map<String, Object> wavformGroup(String title, String[] labels, LABSparseCircularMetricBuffer[] waveforms) {
