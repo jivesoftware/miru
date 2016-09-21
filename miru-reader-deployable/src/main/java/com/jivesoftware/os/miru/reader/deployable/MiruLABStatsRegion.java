@@ -109,8 +109,8 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
             double[] metric = waveforms[i].metric();
             long step = duration / metric.length;
             for (double m : metric) {
-                values.add(String.valueOf(m));
-                ls.add(humanReadableUptime(start));
+                values.add("\"" + String.valueOf(m) + "\"");
+                //ls.add(humanReadableUptime(start));
                 start += step;
             }
             ws.add(waveform(labels[i], colors[i], 0.75f, values));
@@ -118,7 +118,7 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
             if (i > 0) {
                 total += ", ";
             }
-            total += labels[i] + "=" + waveforms[i].total();
+            total += labels[i] + "=" + numberFormat.format(waveforms[i].total());
         }
 
         Map<String, Object> map = new HashMap<>();
