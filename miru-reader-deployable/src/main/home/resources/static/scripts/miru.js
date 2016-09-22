@@ -84,6 +84,7 @@ miru.lab = {
                 scaleLineColor: "rgba(128,128,128,0.5)",
                 tooltipFillColor: "rgba(0,0,0,1)",
                 pointDot: false,
+                stepped: true,
                 pointDotRadius: 0,
                 tension: 0.01,
                 bezierCurve: true,
