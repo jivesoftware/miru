@@ -66,8 +66,11 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
 
         List<Map<String, Object>> list = Lists.newArrayList();
 
-        list.add(wavformGroup(prefix + "lsm", new String[]{"open", "closed", "commit", "fsyncedCommit", "merging", "merged", "splitting", "split"},
-            new LABSparseCircularMetricBuffer[]{stats.mOpen, stats.mClosed, stats.mCommit, stats.mFsyncedCommit, stats.mMerging, stats.mMerged, stats.mSplitings,
+        list.add(wavformGroup(prefix + "gc", new String[]{"gc", "pressureCommit", "commit", "fsyncedCommit", "gcCommit"},
+            new LABSparseCircularMetricBuffer[]{stats.mGC, stats.mPressureCommit, stats.mCommit, stats.mFsyncedCommit, stats.mGCCommit}));
+
+        list.add(wavformGroup(prefix + "lsm", new String[]{"open", "closed", "merging", "merged", "splitting", "split"},
+            new LABSparseCircularMetricBuffer[]{stats.mOpen, stats.mClosed, stats.mMerging, stats.mMerged, stats.mSplitings,
                 stats.mSplits}));
 
         list.add(wavformGroup(prefix + "mem", new String[]{"slabbed", "allocationed", "released", "freed"},
