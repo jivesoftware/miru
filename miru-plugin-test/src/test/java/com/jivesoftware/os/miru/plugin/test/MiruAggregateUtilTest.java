@@ -58,7 +58,7 @@ public class MiruAggregateUtilTest {
         LABStats labStats = new LABStats();
         LabHeapPressure labHeapPressure = new LabHeapPressure(labStats,
             MoreExecutors.sameThreadExecutor(), "test", 1024 * 1024 * 10, 1024 * 1024 * 20, new AtomicLong());
-        StripingBolBufferLocks  bolBufferLocks = new StripingBolBufferLocks(2048); // TODO config
+        StripingBolBufferLocks bolBufferLocks = new StripingBolBufferLocks(2048); // TODO config
         LABEnvironment env = new LABEnvironment(labStats,
             LABEnvironment.buildLABSchedulerThreadPool(4),
             LABEnvironment.buildLABCompactorThreadPool(4),
@@ -78,7 +78,7 @@ public class MiruAggregateUtilTest {
 
         LabTimestampedCacheKeyValues cacheKeyValues = new LabTimestampedCacheKeyValues("lab-test",
             orderIdProvider,
-            new ValueIndex[] {
+            new ValueIndex[]{
                 env.open(new ValueIndexConfig("primary",
                     4096,
                     10 * 1024 * 1024,
@@ -87,9 +87,10 @@ public class MiruAggregateUtilTest {
                     -1,
                     NoOpFormatTransformerProvider.NAME,
                     LABRawhide.NAME,
-                    MemoryRawEntryFormat.NAME))
+                    MemoryRawEntryFormat.NAME,
+                    20))
             },
-            new Object[] { new Object(), new Object(), new Object(), new Object() });
+            new Object[]{new Object(), new Object(), new Object(), new Object()});
 
         int fieldCount = 3;
         List<Map<Integer, String>> activityFieldTerms = Lists.newArrayList(
@@ -117,7 +118,7 @@ public class MiruAggregateUtilTest {
             for (int i = 0; i < count; i++) {
                 int index = ids[offset + i];
                 String term = activityFieldTerms.get(index).get(fieldId);
-                termIds[i] = term == null ? new MiruTermId[0] : new MiruTermId[] { new MiruTermId(term.getBytes()) };
+                termIds[i] = term == null ? new MiruTermId[0] : new MiruTermId[]{new MiruTermId(term.getBytes())};
             }
             return termIds;
         };
@@ -125,10 +126,9 @@ public class MiruAggregateUtilTest {
         RoaringBitmap[] answers = {
             RoaringBitmap.bitmapOf(0, 1, 2, 3, 4, 5),
             RoaringBitmap.bitmapOf(0, 1, 2, 3, 4, 5),
-            RoaringBitmap.bitmapOf(0, 1, 2, 3, 4, 5),
-        };
+            RoaringBitmap.bitmapOf(0, 1, 2, 3, 4, 5),};
 
-        for (int toId : new int[] { 0, 1, 2, 3, 4, 5 }) {
+        for (int toId : new int[]{0, 1, 2, 3, 4, 5}) {
             System.out.println("-------------------------------- toId: " + toId + " --------------------------------");
             aggregateUtil.gatherFeatures("test",
                 coord,
@@ -137,11 +137,10 @@ public class MiruAggregateUtilTest {
                 fieldCount,
                 cacheKeyValues,
                 streamBitmaps -> streamBitmaps.stream(-1, -1, 0, new MiruTermId("parent1".getBytes()), toId, answers),
-                new int[][] {
-                    { 0, 1 },
-                    { 0, 2 },
-                    { 1, 2 },
-                },
+                new int[][]{
+                    {0, 1},
+                    {0, 2},
+                    {1, 2},},
                 100,
                 (streamIndex, lastId, answerFieldId, answerTermId, answerScoredLastId, featureId, termIds, count) -> {
                     log(streamIndex, lastId, answerFieldId, answerTermId, answerScoredLastId, featureId, termIds, count);
@@ -161,13 +160,13 @@ public class MiruAggregateUtilTest {
         MiruTermId[] termIds,
         int count) {
         System.out.println(
-            "streamIndex:" + streamIndex +
-                ", lastId:" + lastId +
-                ", answerFieldId:" + answerFieldId +
-                ", answerTermId:" + answerTermId +
-                ", answerScoredLastId:" + answerScoredLastId +
-                ", featureId:" + featureId +
-                ", termIds:" + Arrays.toString(termIds) +
-                ", count1:" + count);
+            "streamIndex:" + streamIndex
+            + ", lastId:" + lastId
+            + ", answerFieldId:" + answerFieldId
+            + ", answerTermId:" + answerTermId
+            + ", answerScoredLastId:" + answerScoredLastId
+            + ", featureId:" + featureId
+            + ", termIds:" + Arrays.toString(termIds)
+            + ", count1:" + count);
     }
 }

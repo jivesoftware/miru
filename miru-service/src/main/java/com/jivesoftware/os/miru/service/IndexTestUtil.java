@@ -229,7 +229,7 @@ public class IndexTestUtil {
             new StripingBolBufferLocks(2048),
             false);
         return environment.open(new ValueIndexConfig(name, 64, 1024 * 1024, -1, -1, 10 * 1024 * 1024, NoOpFormatTransformerProvider.NAME, LABRawhide.NAME,
-            MemoryRawEntryFormat.NAME));
+            MemoryRawEntryFormat.NAME, 20));
     }
 
     public static KeyedFilerStore<Long, Void> buildKeyedFilerStore(String name, ChunkStore[] chunkStores) throws Exception {

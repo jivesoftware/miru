@@ -9,6 +9,7 @@ import com.jivesoftware.os.lab.api.ValueIndex;
 import com.jivesoftware.os.lab.api.ValueIndexConfig;
 import com.jivesoftware.os.lab.api.rawhide.KeyValueRawhide;
 import com.jivesoftware.os.lab.api.rawhide.LABRawhide;
+import com.jivesoftware.os.lab.io.api.UIO;
 import com.jivesoftware.os.miru.plugin.cache.LabCacheKeyValues;
 import com.jivesoftware.os.miru.plugin.cache.LabLastIdCacheKeyValues;
 import com.jivesoftware.os.miru.plugin.cache.LabTimestampedCacheKeyValues;
@@ -55,7 +56,8 @@ public class LabPluginCacheProvider implements MiruPluginCacheProvider {
                         -1L,
                         NoOpFormatTransformerProvider.NAME,
                         KeyValueRawhide.NAME,
-                        MemoryRawEntryFormat.NAME));
+                        MemoryRawEntryFormat.NAME,
+                        UIO.chunkPower(payloadSize * 1024, 4)));
                 }
                 return new LabCacheKeyValues(name, idProvider, cacheIndexes);
             } catch (Exception x) {
@@ -79,7 +81,8 @@ public class LabPluginCacheProvider implements MiruPluginCacheProvider {
                         -1L,
                         NoOpFormatTransformerProvider.NAME,
                         "lastIdKeyValue",
-                        MemoryRawEntryFormat.NAME));
+                        MemoryRawEntryFormat.NAME,
+                        UIO.chunkPower(payloadSize * 1024, 4)));
                 }
                 return new LabLastIdCacheKeyValues(name, idProvider, cacheIndexes);
             } catch (Exception x) {
@@ -103,7 +106,8 @@ public class LabPluginCacheProvider implements MiruPluginCacheProvider {
                         -1L,
                         NoOpFormatTransformerProvider.NAME,
                         LABRawhide.NAME,
-                        MemoryRawEntryFormat.NAME));
+                        MemoryRawEntryFormat.NAME,
+                        UIO.chunkPower(payloadSize * 1024, 4)));
                 }
                 return new LabTimestampedCacheKeyValues(name, idProvider, cacheIndexes, stripedLocks);
             } catch (Exception x) {
@@ -117,21 +121,21 @@ public class LabPluginCacheProvider implements MiruPluginCacheProvider {
             try {
                 cache.commit(fsyncOnCommit);
             } catch (Exception e) {
-                LOG.error("Failed to close plugin cache {}", new Object[] { cache.name() }, e);
+                LOG.error("Failed to close plugin cache {}", new Object[]{cache.name()}, e);
             }
         }
         for (LabLastIdCacheKeyValues cache : lastIdPluginPersistentCache.values()) {
             try {
                 cache.commit(fsyncOnCommit);
             } catch (Exception e) {
-                LOG.error("Failed to close lastId plugin cache {}", new Object[] { cache.name() }, e);
+                LOG.error("Failed to close lastId plugin cache {}", new Object[]{cache.name()}, e);
             }
         }
         for (LabTimestampedCacheKeyValues cache : timestampedPluginPersistentCache.values()) {
             try {
                 cache.commit(fsyncOnCommit);
             } catch (Exception e) {
-                LOG.error("Failed to close timestamped plugin cache {}", new Object[] { cache.name() }, e);
+                LOG.error("Failed to close timestamped plugin cache {}", new Object[]{cache.name()}, e);
             }
         }
     }

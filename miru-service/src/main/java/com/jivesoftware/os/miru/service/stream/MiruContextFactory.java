@@ -106,7 +106,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
     private static final int LAB_VERSION = 3;
-    private static final int[] SUPPORTED_LAB_VERSIONS = { -1, 2 };
+    private static final int[] SUPPORTED_LAB_VERSIONS = {-1, 2};
 
     private static final int LAB_ATOMIZED_MIN_VERSION = 2;
     private static final int LAB_REALTIME_MIN_VERSION = 3;
@@ -371,7 +371,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                 TxNamedMapOfFiler.CHUNK_FILER_OPENER,
                 TxNamedMapOfFiler.OVERWRITE_GROWER_PROVIDER,
                 TxNamedMapOfFiler.REWRITE_GROWER_PROVIDER),
-            new byte[] { 0 },
+            new byte[]{0},
             new Object());
 
         MiruUnreadTrackingIndex<BM, IBM> unreadTrackingIndex = new MiruFilerUnreadTrackingIndex<>(
@@ -468,7 +468,8 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             -1L,
             NoOpFormatTransformerProvider.NAME,
             KeyValueRawhide.NAME,
-            MemoryRawEntryFormat.NAME));
+            MemoryRawEntryFormat.NAME,
+            20));
         // metaIndex is not part of commitables; it will be committed explicitly
 
         ValueIndex monoTimeIndex = labEnvironments[Math.abs((seed + 1) % labEnvironments.length)].open(new ValueIndexConfig("monoTime",
@@ -479,7 +480,8 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             -1L,
             NoOpFormatTransformerProvider.NAME,
             "fixedWidth_12_0",
-            MemoryRawEntryFormat.NAME));
+            MemoryRawEntryFormat.NAME,
+            20));
         commitables.add(monoTimeIndex);
         ValueIndex rawTimeIndex = labEnvironments[Math.abs((seed + 1) % labEnvironments.length)].open(new ValueIndexConfig("rawTime",
             4096,
@@ -489,7 +491,8 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             -1L,
             NoOpFormatTransformerProvider.NAME,
             "fixedWidth_8_4",
-            MemoryRawEntryFormat.NAME));
+            MemoryRawEntryFormat.NAME,
+            20));
         commitables.add(rawTimeIndex);
         MiruTimeIndex timeIndex = new LabTimeIndex(
             idProvider,
@@ -510,7 +513,8 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                 -1L,
                 NoOpFormatTransformerProvider.NAME,
                 KeyValueRawhide.NAME,
-                MemoryRawEntryFormat.NAME));
+                MemoryRawEntryFormat.NAME,
+                20));
             commitables.add(termStorage[i]);
         }
         boolean[] hasTermStorage = new boolean[schema.fieldCount()];
@@ -526,7 +530,8 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             -1L,
             NoOpFormatTransformerProvider.NAME,
             realtime ? "fixedWidth_4_17" : "fixedWidth_4_16",
-            MemoryRawEntryFormat.NAME));
+            MemoryRawEntryFormat.NAME,
+            20));
         commitables.add(timeAndVersionIndex);
         MiruActivityIndex activityIndex = new LabActivityIndex(
             idProvider,
@@ -553,7 +558,8 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                 -1L,
                 NoOpFormatTransformerProvider.NAME,
                 KeyValueRawhide.NAME,
-                MemoryRawEntryFormat.NAME));
+                MemoryRawEntryFormat.NAME,
+                20));
             commitables.add(bitmapIndex[i]);
             termIndex[i] = labEnvironments[i].open(new ValueIndexConfig("term",
                 4096,
@@ -563,7 +569,8 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                 -1L,
                 NoOpFormatTransformerProvider.NAME,
                 KeyValueRawhide.NAME,
-                MemoryRawEntryFormat.NAME));
+                MemoryRawEntryFormat.NAME,
+                20));
             commitables.add(termIndex[i]);
             cardinalityIndex[i] = labEnvironments[i].open(new ValueIndexConfig("cardinality",
                 4096,
@@ -573,7 +580,8 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                 -1L,
                 NoOpFormatTransformerProvider.NAME,
                 KeyValueRawhide.NAME,
-                MemoryRawEntryFormat.NAME));
+                MemoryRawEntryFormat.NAME,
+                20));
             commitables.add(cardinalityIndex[i]);
         }
 
@@ -585,7 +593,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                 hasCardinalities[fieldDefinition.fieldId] = fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.cardinality);
             }
 
-            byte[] prefix = { (byte) fieldType.getIndex() };
+            byte[] prefix = {(byte) fieldType.getIndex()};
             fieldIndexes[fieldType.getIndex()] = new LabFieldIndex<>(idProvider,
                 bitmaps,
                 trackError,
@@ -620,7 +628,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             idProvider,
             bitmaps,
             trackError,
-            new byte[] { (byte) -1 },
+            new byte[]{(byte) -1},
             atomized,
             bitmapIndex,
             streamStripingLocksProvider);
@@ -629,7 +637,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             idProvider,
             bitmaps,
             trackError,
-            new byte[] { (byte) -2 },
+            new byte[]{(byte) -2},
             atomized,
             bitmapIndex,
             streamStripingLocksProvider);
@@ -646,7 +654,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             idProvider,
             bitmaps,
             trackError,
-            new byte[] { (byte) -3 },
+            new byte[]{(byte) -3},
             atomized,
             bitmapIndex,
             miruAuthzCache,
