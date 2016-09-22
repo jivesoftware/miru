@@ -124,7 +124,7 @@ public class StrutModelScorerNGTest {
         ValueIndex[] stores = new ValueIndex[16];
         for (int i = 0; i < stores.length; i++) {
             stores[i] = env.open(new ValueIndexConfig("cache-" + i + "-" + catwalkId, 4096, 1024 * 1024, 0, 0, 0, NoOpFormatTransformerProvider.NAME,
-                KeyValueRawhide.NAME, MemoryRawEntryFormat.NAME));
+                KeyValueRawhide.NAME, MemoryRawEntryFormat.NAME, 20));
         }
 
         LastIdCacheKeyValues cacheKeyValues = new LabLastIdCacheKeyValues("test", new OrderIdProviderImpl(new ConstantWriterIdProvider(1)), stores);

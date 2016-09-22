@@ -60,7 +60,7 @@ public class LabTimeIdIndex implements TimeIdIndex {
 
     private ValueIndex open(String name) throws Exception {
         return environment.open(new ValueIndexConfig(name, 4096, maxHeapPressureInBytes, 10 * 1024 * 1024, -1L, -1L,
-            NoOpFormatTransformerProvider.NAME, LABRawhide.NAME, MemoryRawEntryFormat.NAME));
+            NoOpFormatTransformerProvider.NAME, LABRawhide.NAME, MemoryRawEntryFormat.NAME, 20));
     }
 
     @Override
