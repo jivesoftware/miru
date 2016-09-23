@@ -83,8 +83,12 @@ miru.lab = {
                 type: 'line',
                 data: data,
                 options: {
-                    legend: {
-                        display: true
+                    position: "right",
+                    gridLines: {
+                        color: "rgba(128,128,128,1)"
+                    },
+                    scaleLabel: {
+                        fontColor: "rgba(200,200,200,1)"
                     },
                     scales: {
                         yAxes: [{
