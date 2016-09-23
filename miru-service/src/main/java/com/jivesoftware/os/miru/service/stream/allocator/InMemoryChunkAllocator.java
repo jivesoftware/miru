@@ -166,7 +166,8 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
                 16,
                 leapCache,
                 bolBufferLocks,
-                labUseOffHeap);
+                labUseOffHeap,
+                false);
 
             environments[i].register("lastIdKeyValue", new LastIdKeyValueRawhide());
             environments[i].register("fixedWidth_12_0", new FixedWidthRawhide(12, 0));
