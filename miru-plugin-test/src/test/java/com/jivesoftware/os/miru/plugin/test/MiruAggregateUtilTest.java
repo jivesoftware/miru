@@ -74,7 +74,8 @@ public class MiruAggregateUtilTest {
             10,
             leapsCache,
             bolBufferLocks,
-            true);
+            true,
+            false);
 
         LabTimestampedCacheKeyValues cacheKeyValues = new LabTimestampedCacheKeyValues("lab-test",
             orderIdProvider,
