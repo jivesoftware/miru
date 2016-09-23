@@ -36,7 +36,7 @@ public class LabTimeIdIndexTest {
             1_000,
             new LABStats[]{labStats},
             new LabHeapPressure[]{new LabHeapPressure(labStats, MoreExecutors.sameThreadExecutor(), "test", 1024 * 1024, 1024 * 1024 * 2, new AtomicLong(),
-                    LabHeapPressure.FreeHeapStrategy.oldestFirst)},
+                    LabHeapPressure.FreeHeapStrategy.mostBytesFirst)},
             10 * 1024 * 1024,
             1000,
             10 * 1024 * 1024,
