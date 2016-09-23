@@ -157,7 +157,7 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
         waveform.put("borderDashOffset", 0.0);
         waveform.put("borderJoinStyle", "'miter'");
         waveform.put("pointBorderColor", c);
-        waveform.put("pointBackgroundColor", "#fff");
+        waveform.put("pointBackgroundColor", "\"#fff\"");
         waveform.put("pointBorderWidth", 1);
         waveform.put("pointHoverRadius", 5);
         waveform.put("pointHoverBackgroundColor", c);
