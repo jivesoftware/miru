@@ -115,7 +115,7 @@ public class IndexTestUtil {
             "test",
             1024 * 1024 * 10,
             1024 * 1024 * 20,
-            new AtomicLong(), LabHeapPressure.FreeHeapStrategy.oldestFirst);
+            new AtomicLong(), LabHeapPressure.FreeHeapStrategy.mostBytesFirst);
         long labMaxWALSizeInBytes = 1024 * 1024 * 10;
         long labMaxEntriesPerWAL = 1000;
         long labMaxEntrySizeInBytes = 1024 * 1024 * 10;
@@ -222,7 +222,7 @@ public class IndexTestUtil {
                 1024 * 1024,
                 2 * 1024 * 1024,
                 new AtomicLong(),
-                LabHeapPressure.FreeHeapStrategy.oldestFirst
+                LabHeapPressure.FreeHeapStrategy.mostBytesFirst
             ),
             4,
             16,

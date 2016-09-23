@@ -233,7 +233,7 @@ public class MiruLocalHostedPartitionTest {
 
         LABStats labStats = new LABStats();
         LabHeapPressure labHeapPressure = new LabHeapPressure(labStats,
-            MoreExecutors.sameThreadExecutor(), "test", 1024 * 1024 * 10, 1024 * 1024 * 20, new AtomicLong(), LabHeapPressure.FreeHeapStrategy.oldestFirst);
+            MoreExecutors.sameThreadExecutor(), "test", 1024 * 1024 * 10, 1024 * 1024 * 20, new AtomicLong(), LabHeapPressure.FreeHeapStrategy.mostBytesFirst);
         long labMaxWALSizeInBytes = 1024 * 1024 * 10;
         long labMaxEntriesPerWAL = 1000;
         long labMaxEntrySizeInBytes = 1024 * 1024 * 10;
