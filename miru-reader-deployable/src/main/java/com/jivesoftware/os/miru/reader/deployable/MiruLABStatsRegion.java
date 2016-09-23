@@ -67,21 +67,25 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
         List<Map<String, Object>> list = Lists.newArrayList();
 
         list.add(wavformGroup(prefix + "gc", new String[]{"gc", "pressureCommit", "commit", "fsyncedCommit", "gcCommit"},
-            new LABSparseCircularMetricBuffer[]{stats.mGC, stats.mPressureCommit, stats.mCommit, stats.mFsyncedCommit, stats.mGCCommit}));
+            new LABSparseCircularMetricBuffer[]{stats.mGC, stats.mPressureCommit, stats.mCommit, stats.mFsyncedCommit, stats.mGCCommit},
+            new boolean[]{false, false, false, false, false}));
 
         list.add(wavformGroup(prefix + "lsm", new String[]{"open", "closed", "merging", "merged", "splitting", "split"},
-            new LABSparseCircularMetricBuffer[]{stats.mOpen, stats.mClosed, stats.mMerging, stats.mMerged, stats.mSplitings,
-                stats.mSplits}));
+            new LABSparseCircularMetricBuffer[]{stats.mOpen, stats.mClosed, stats.mMerging, stats.mMerged, stats.mSplitings, stats.mSplits},
+            new boolean[]{false, false, false, false, false}));
 
-        list.add(wavformGroup(prefix + "mem", new String[]{"slabbed", "allocationed", "released", "freed"},
-            new LABSparseCircularMetricBuffer[]{stats.mSlabbed, stats.mAllocationed, stats.mReleased, stats.mFreed}));
+        list.add(wavformGroup(prefix + "mem", new String[]{"released", "allocationed", "slabbed", "freed"},
+            new LABSparseCircularMetricBuffer[]{stats.mReleased, stats.mAllocationed, stats.mSlabbed, stats.mFreed},
+            new boolean[]{true, true, true, true}));
 
         list.add(wavformGroup(prefix + "disk", new String[]{"bytesWrittenToWAL", "bytesWrittenAsIndex",
             "bytesWrittenAsMerge", "bytesWrittenAsSplit"},
-            new LABSparseCircularMetricBuffer[]{stats.mBytesWrittenToWAL, stats.mBytesWrittenAsIndex, stats.mBytesWrittenAsMerge, stats.mBytesWrittenAsSplit}));
+            new LABSparseCircularMetricBuffer[]{stats.mBytesWrittenToWAL, stats.mBytesWrittenAsIndex, stats.mBytesWrittenAsMerge, stats.mBytesWrittenAsSplit},
+            new boolean[]{false, false, false, false, false}));
 
         list.add(wavformGroup(prefix + "rw", new String[]{"append", "journaledAppend", "gets", "rangeScan", "multiRangeScan", "rowScan"},
-            new LABSparseCircularMetricBuffer[]{stats.mAppend, stats.mJournaledAppend, stats.mGets, stats.mRangeScan, stats.mMultiRangeScan, stats.mRowScan}));
+            new LABSparseCircularMetricBuffer[]{stats.mAppend, stats.mJournaledAppend, stats.mGets, stats.mRangeScan, stats.mMultiRangeScan, stats.mRowScan},
+            new boolean[]{false, false, false, false, false, false}));
 
         return list;
     }
@@ -97,7 +101,7 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
         Color.cyan
     };
 
-    private Map<String, Object> wavformGroup(String title, String[] labels, LABSparseCircularMetricBuffer[] waveforms) {
+    private Map<String, Object> wavformGroup(String title, String[] labels, LABSparseCircularMetricBuffer[] waveforms, boolean[] fill) {
         String total = "";
         List<String> ls = new ArrayList<>();
         List<Map<String, Object>> ws = new ArrayList<>();
@@ -117,7 +121,7 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
             for (double m : metric) {
                 values.add("\"" + String.valueOf(m) + "\"");
             }
-            ws.add(waveform(labels[i], colors[i], 0.8f, values));
+            ws.add(waveform(labels[i], colors[i], 0.8f, values, fill[i]));
             if (i > 0) {
                 total += ", ";
             }
@@ -142,13 +146,13 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
         return map;
     }
 
-    public Map<String, Object> waveform(String label, Color color, float alpha, List<String> values) {
+    public Map<String, Object> waveform(String label, Color color, float alpha, List<String> values, boolean fill) {
         Map<String, Object> waveform = new HashMap<>();
         waveform.put("label", "\"" + label + "\"");
         //waveform.put("steppedLine", "true");
 
         String c = "\"rgba(" + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + "," + String.valueOf(alpha) + ")\"";
-        waveform.put("fill", false);
+        waveform.put("fill", fill);
         waveform.put("steppedLine", true);
         waveform.put("lineTension", "0.1");
         waveform.put("backgroundColor", c);
