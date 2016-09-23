@@ -11,8 +11,8 @@
             {foreach $r in $global}
                 <div class="panel-heading">LAB global {$r.title} ({$r.total|noAutoescape})</div>
                 <div class="lab-scroll-wave" style="width:100%; height:275px;">
-                    <div style="width:{$r.width}px; height:250px; background-color:black;">
-                        <canvas class="lab-wave" id="values" height="250" width="{$r.width}"
+                    <div style="width:{$r.width}px; height:250px; background-color:black; resize: horizontal;">
+                        <canvas class="lab-wave" id="values"
                             data-lab-wave-id="{$r.id}" data-lab-wave-type="{$r.graphType}">
                         </canvas>
                         <script>
@@ -29,8 +29,8 @@
             {foreach $r in $rebuild}
                 <div class="panel-heading">LAB rebuild {$r.title}  ({$r.total|noAutoescape})</div>
                 <div class="lab-scroll-wave" style="width:100%; height:275px;">
-                    <div style="width:{$r.width}px; height:250px; background-color:black;">
-                        <canvas class="lab-wave" id="values" height="250" width="{$r.width}"
+                    <div style="width:{$r.width}px; height:250px; background-color:black; resize: horizontal;">
+                        <canvas class="lab-wave" id="values"
                             data-lab-wave-id="{$r.id}" data-lab-wave-type="{$r.graphType}">
                         </canvas>
                         <script>

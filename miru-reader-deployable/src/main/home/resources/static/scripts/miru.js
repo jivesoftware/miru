@@ -83,7 +83,7 @@ miru.lab = {
                 type: 'line',
                 data: data,
                 options: {
-                    
+                    maintainAspectRatio: false,
                     responsive: true,
                     gridLines: {
                         color: "rgba(128,128,128,1)"
