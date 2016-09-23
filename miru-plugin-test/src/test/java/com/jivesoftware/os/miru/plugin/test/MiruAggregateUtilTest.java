@@ -57,7 +57,7 @@ public class MiruAggregateUtilTest {
         LRUConcurrentBAHLinkedHash<Leaps> leapsCache = LABEnvironment.buildLeapsCache(100, 8);
         LABStats labStats = new LABStats();
         LabHeapPressure labHeapPressure = new LabHeapPressure(labStats,
-            MoreExecutors.sameThreadExecutor(), "test", 1024 * 1024 * 10, 1024 * 1024 * 20, new AtomicLong());
+            MoreExecutors.sameThreadExecutor(), "test", 1024 * 1024 * 10, 1024 * 1024 * 20, new AtomicLong(), LabHeapPressure.FreeHeapStrategy.oldestFirst);
         StripingBolBufferLocks bolBufferLocks = new StripingBolBufferLocks(2048); // TODO config
         LABEnvironment env = new LABEnvironment(labStats,
             LABEnvironment.buildLABSchedulerThreadPool(4),
