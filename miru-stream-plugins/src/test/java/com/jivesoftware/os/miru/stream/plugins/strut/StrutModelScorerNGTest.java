@@ -97,9 +97,10 @@ public class StrutModelScorerNGTest {
 
         File root = Files.createTempDir();
         LABStats labStats = new LABStats();
-        LabHeapPressure labHeapPressure = new LabHeapPressure(labStats, MoreExecutors.sameThreadExecutor(), "test", 1024 * 1024 * 10, 1024 * 1024 * 20, new AtomicLong());
+        LabHeapPressure labHeapPressure = new LabHeapPressure(labStats, MoreExecutors.sameThreadExecutor(), "test", 1024 * 1024 * 10, 1024 * 1024 * 20,
+            new AtomicLong());
         LRUConcurrentBAHLinkedHash<Leaps> leapCache = LABEnvironment.buildLeapsCache(1_000_000, 8);
-        StripingBolBufferLocks  bolBufferLocks = new StripingBolBufferLocks(2048); // TODO config
+        StripingBolBufferLocks bolBufferLocks = new StripingBolBufferLocks(2048); // TODO config
 
         LABEnvironment env = new LABEnvironment(labStats,
             LABEnvironment.buildLABSchedulerThreadPool(4),
@@ -116,7 +117,8 @@ public class StrutModelScorerNGTest {
             10,
             leapCache,
             bolBufferLocks,
-            true);
+            true,
+            false);
         String catwalkId = "catwalkId";
         String modelId = "modelId";
 
@@ -134,13 +136,13 @@ public class StrutModelScorerNGTest {
     }
 
     private void assertScores(String modelId, LastIdCacheKeyValues cacheKeyValues, StackBuffer stackBuffer) throws Exception {
-        MiruTermId[] termIds = new MiruTermId[] {
-            new MiruTermId(new byte[] { (byte) 124 }),
-            new MiruTermId(new byte[] { (byte) 124, (byte) 124 }),
-            new MiruTermId(new byte[] { (byte) 124, (byte) 124, (byte) 124, (byte) 124 })
+        MiruTermId[] termIds = new MiruTermId[]{
+            new MiruTermId(new byte[]{(byte) 124}),
+            new MiruTermId(new byte[]{(byte) 124, (byte) 124}),
+            new MiruTermId(new byte[]{(byte) 124, (byte) 124, (byte) 124, (byte) 124})
         };
 
-        StrutModelScorer.score(new String[] { modelId }, 1, termIds, new LastIdCacheKeyValues[] { cacheKeyValues }, new float[] { 1 },
+        StrutModelScorer.score(new String[]{modelId}, 1, termIds, new LastIdCacheKeyValues[]{cacheKeyValues}, new float[]{1},
             (int termIndex, float[] scores, int lastId) -> {
                 System.out.println(termIndex + " " + Arrays.toString(scores) + " " + lastId);
                 return true;
@@ -149,14 +151,14 @@ public class StrutModelScorerNGTest {
 
         List<Scored> updates = Lists.newArrayList();
         for (int i = 0; i < 1; i++) {
-            updates.add(new Scored(-1, new MiruTermId(new byte[] { (byte) 97, (byte) (97 + i) }), 10, 0.5f, new float[] { 0.5f }, null));
+            updates.add(new Scored(-1, new MiruTermId(new byte[]{(byte) 97, (byte) (97 + i)}), 10, 0.5f, new float[]{0.5f}, null));
         }
 
         StrutModelScorer.commit(modelId, cacheKeyValues, updates, stackBuffer);
 
         System.out.println("-----------");
 
-        StrutModelScorer.score(new String[] { modelId }, 1, termIds, new LastIdCacheKeyValues[] { cacheKeyValues }, new float[] { 1 },
+        StrutModelScorer.score(new String[]{modelId}, 1, termIds, new LastIdCacheKeyValues[]{cacheKeyValues}, new float[]{1},
             (int termIndex, float[] scores, int lastId) -> {
                 System.out.println(termIndex + " " + Arrays.toString(scores) + " " + lastId);
                 return true;
