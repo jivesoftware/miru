@@ -117,7 +117,7 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
             for (double m : metric) {
                 values.add("\"" + String.valueOf(m) + "\"");
             }
-            ws.add(waveform(labels[i], colors[i], 0.25f, values));
+            ws.add(waveform(labels[i], colors[i], 0.8f, values));
             if (i > 0) {
                 total += ", ";
             }
