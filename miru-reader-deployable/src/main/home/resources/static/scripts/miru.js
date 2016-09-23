@@ -83,7 +83,8 @@ miru.lab = {
                 type: 'line',
                 data: data,
                 options: {
-                    position: "right",
+                    
+                    responsive: true,
                     gridLines: {
                         color: "rgba(128,128,128,1)"
                     },
@@ -92,15 +93,33 @@ miru.lab = {
                     },
                     scales: {
                         yAxes: [{
+                            position: "right",
                             ticks: {
                                 beginAtZero:true
                             }
                         }]
+                    },
+                    legendCallback: function(chart) {
+                        //console.log(chart.data);
+                        var text = [];
+                        text.push('<ul>');
+                        for (var i=0; i<chart.data.datasets[0].data.length; i++) {
+                            text.push('<li>');
+                            text.push('<span style="background-color:' + chart.data.datasets[0].backgroundColor[i] + '">' + chart.data.datasets[0].data[i] + '</span>');
+                            if (chart.data.labels[i]) {
+                                text.push(chart.data.labels[i]);
+                            }
+                            text.push('</li>');
+                        }
+                        text.push('</ul>');
+                        return text.join("");
                     }
                 }
             });
         }
+        miru.lab.waves[id].generateLegend();
         miru.lab.waves[id].update();
+
     },
     init: function () {
 
