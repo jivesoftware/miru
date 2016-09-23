@@ -315,8 +315,7 @@ miru.realwave = {
                     scaleBeginAtZero: true,
                     tooltipFillColor: "rgba(0,0,0,1)",
                     pointDot: false,
-                    bezierCurve: true,
-                    bezierCurveTension: 0.4,
+                    steppedLine: true,
                     datasetFill: false,
                     responsive: true,
                     animation: false
