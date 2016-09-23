@@ -211,6 +211,9 @@ public interface MiruServiceConfig extends Config {
     @LongDefault(4L * 1024 * 1024 * 1024)
     long getRebuildLabBlockOnHeapPressureInBytes();
 
+    @StringDefault("oldestFirst")
+    String getLabFreeHeapStrategy();
+    
     @IntDefault(3)
     int getRebuildLabHeapPressureStripes();
 

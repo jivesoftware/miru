@@ -98,7 +98,7 @@ public class StrutModelScorerNGTest {
         File root = Files.createTempDir();
         LABStats labStats = new LABStats();
         LabHeapPressure labHeapPressure = new LabHeapPressure(labStats, MoreExecutors.sameThreadExecutor(), "test", 1024 * 1024 * 10, 1024 * 1024 * 20,
-            new AtomicLong());
+            new AtomicLong(), LabHeapPressure.FreeHeapStrategy.oldestFirst);
         LRUConcurrentBAHLinkedHash<Leaps> leapCache = LABEnvironment.buildLeapsCache(1_000_000, 8);
         StripingBolBufferLocks bolBufferLocks = new StripingBolBufferLocks(2048); // TODO config
 

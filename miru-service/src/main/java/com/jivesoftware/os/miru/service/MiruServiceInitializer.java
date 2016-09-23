@@ -154,7 +154,9 @@ public class MiruServiceInitializer {
                 "rebuild-" + i,
                 config.getRebuildLabMaxHeapPressureInBytes(),
                 config.getRebuildLabBlockOnHeapPressureInBytes(),
-                inMemoryLabHeapCostInBytes);
+                inMemoryLabHeapCostInBytes,
+                LabHeapPressure.FreeHeapStrategy.valueOf(config.getLabFreeHeapStrategy())
+            );
         }
 
         ExecutorService onDiskLabHeapScheduler = LABEnvironment.buildLABHeapSchedulerThreadPool(config.getGlobalLabHeapPressureStripes());
@@ -166,7 +168,9 @@ public class MiruServiceInitializer {
                 "global-" + i,
                 config.getGlobalLabMaxHeapPressureInBytes(),
                 config.getGlobalLabBlockOnHeapPressureInBytes(),
-                onDiskLabHeapCostInBytes);
+                onDiskLabHeapCostInBytes,
+                LabHeapPressure.FreeHeapStrategy.valueOf(config.getLabFreeHeapStrategy())
+            );
         }
 
         LRUConcurrentBAHLinkedHash<Leaps> leapCache = LABEnvironment.buildLeapsCache((int) config.getLabLeapCacheMaxCapacity(),
