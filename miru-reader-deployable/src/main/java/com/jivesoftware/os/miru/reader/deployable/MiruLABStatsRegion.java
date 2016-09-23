@@ -145,9 +145,28 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
     public Map<String, Object> waveform(String label, Color color, float alpha, List<String> values) {
         Map<String, Object> waveform = new HashMap<>();
         waveform.put("label", "\"" + label + "\"");
-        waveform.put("fill", "false");
-        waveform.put("steppedLine", "true");
-        waveform.put("backgroundColor", "\"rgba(" + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + "," + String.valueOf(alpha) + ")\"");
+        //waveform.put("steppedLine", "true");
+
+        String c = "\"rgba(" + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + "," + String.valueOf(alpha) + ")\"";
+        waveform.put("fill", false);
+        waveform.put("lineTension", "0.1");
+        waveform.put("backgroundColor", c);
+        waveform.put("borderColor", c);
+        waveform.put("borderCapStyle", "'butt'");
+        waveform.put("borderDash", "[]");
+        waveform.put("borderDashOffset", 0.0);
+        waveform.put("borderJoinStyle", "'miter'");
+        waveform.put("pointBorderColor", c);
+        waveform.put("pointBackgroundColor", "#fff");
+        waveform.put("pointBorderWidth", 1);
+        waveform.put("pointHoverRadius", 5);
+        waveform.put("pointHoverBackgroundColor", c);
+        waveform.put("pointHoverBorderColor", c);
+        waveform.put("pointHoverBorderWidth", 2);
+        waveform.put("pointRadius", 1);
+        waveform.put("pointHitRadius", 10);
+        waveform.put("spanGaps", false);
+
         waveform.put("data", values);
         return waveform;
     }
