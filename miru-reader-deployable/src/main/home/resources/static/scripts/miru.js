@@ -79,18 +79,29 @@ miru.lab = {
         if (!miru.lab.waves[id]) {
             var type = $canvas.data('labWaveType');
             var data = miru.lab.data[id];
-            miru.lab.waves[id] = (new Chart(ctx))[type](data, {
-                multiTooltipTemplate: "<%= datasetLabel %> - <%= value %>",
-                scaleLineColor: "rgba(128,128,128,0.5)",
-                tooltipFillColor: "rgba(0,0,0,1)",
-                pointDot: false,
-                steppedLine: true,
-                pointDotRadius: 0,
-                datasetFill: false,
-                responsive: true,
-                animation: false,
-                legendTemplate: "<ul class=\"<%=name.toLowerCase()%>-legend\"><% for (var i=0; i<datasets.length; i++){%><li><span style=\"background-color:<%=datasets[i].strokeColor%>\"></span><%if(datasets[i].label){%><%=datasets[i].label%><%}%></li><%}%></ul>"
+            
+            miru.lab.waves[id] = new Chart(ctx, {
+                type: type,
+                data: data,
+                options: {
+                    legend: {
+                        display: true
+                    }
+                }
             });
+
+//            miru.lab.waves[id] = (new Chart(ctx))[type](data, {
+//                multiTooltipTemplate: "<%= datasetLabel %> - <%= value %>",
+//                scaleLineColor: "rgba(128,128,128,0.5)",
+//                tooltipFillColor: "rgba(0,0,0,1)",
+//                pointDot: false,
+//                steppedLine: true,
+//                pointDotRadius: 0,
+//                datasetFill: false,
+//                responsive: true,
+//                animation: false,
+//                legendTemplate: "<ul class=\"<%=name.toLowerCase()%>-legend\"><% for (var i=0; i<datasets.length; i++){%><li><span style=\"background-color:<%=datasets[i].strokeColor%>\"></span><%if(datasets[i].label){%><%=datasets[i].label%><%}%></li><%}%></ul>"
+//            });
 
             miru.lab.waves[id].generateLegend();
         }
