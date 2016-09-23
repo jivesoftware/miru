@@ -97,6 +97,15 @@ miru.lab = {
                             ticks: {
                                 beginAtZero:true
                             }
+                        }],
+                        xAxes: [{
+                            type: 'time',
+                            time: {
+                                displayFormats: {
+                                     unit: 'second',
+                                     unitStepSize: 10
+                                }
+                            }
                         }]
                     },
                     legendCallback: function(chart) {
