@@ -117,7 +117,7 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
             for (double m : metric) {
                 values.add("\"" + String.valueOf(m) + "\"");
             }
-            ws.add(waveform(labels[i], colors[i], 0.25f, values));
+            ws.add(waveform(labels[i], colors[i], 0.8f, values));
             if (i > 0) {
                 total += ", ";
             }
@@ -149,6 +149,7 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
 
         String c = "\"rgba(" + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + "," + String.valueOf(alpha) + ")\"";
         waveform.put("fill", false);
+        waveform.put("steppedLine", true);
         waveform.put("lineTension", "0.1");
         waveform.put("backgroundColor", c);
         waveform.put("borderColor", c);
