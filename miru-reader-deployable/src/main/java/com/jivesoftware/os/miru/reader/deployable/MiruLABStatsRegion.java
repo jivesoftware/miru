@@ -59,7 +59,7 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
             public String render(Void input) {
                 Map<String, Object> data = Maps.newHashMap();
                 String f = filter;
-                if (f != null && f.equals("*")) {
+                if (f != null && f.equals("ALL")) {
                     f = null;
                 }
 
