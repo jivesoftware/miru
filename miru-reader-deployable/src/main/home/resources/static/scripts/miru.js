@@ -80,7 +80,7 @@ miru.lab = {
             var data = miru.lab.data[id];
             
             miru.lab.waves[id] = new Chart(ctx, {
-                type: 'line',
+                type: $canvas.data('labWaveType'),
                 data: data,
                 options: {
                     maintainAspectRatio: false,
