@@ -78,7 +78,7 @@ miru.lab = {
         var id = $canvas.data('labWaveId');
         if (!miru.lab.waves[id]) {
             var data = miru.lab.data[id];
-            
+
             miru.lab.waves[id] = new Chart(ctx, {
                 type: $canvas.data('labWaveType'),
                 data: data,
@@ -87,6 +87,11 @@ miru.lab = {
                     responsive: true,
                     legend: {
                         display: false
+                    },
+                    tooltips: {
+                        enabled: true,
+                        mode: 'label',
+                        backgroundColor: 'rgba(100,100,100,0.8)'
                     },
                     gridLines: {
                         display: true,
@@ -97,11 +102,11 @@ miru.lab = {
                     },
                     scales: {
                         yAxes: [{
-                            position: "right",
-                            ticks: {
-                                beginAtZero:true
-                            }
-                        }]
+                                position: "right",
+                                ticks: {
+                                    beginAtZero: true
+                                }
+                            }]
                     }//,
 //                    legendCallback: function(chart) {
 //                        //console.log(chart.data);
@@ -134,7 +139,7 @@ miru.lab = {
 };
 
 $(document).ready(function () {
-     if ($('.lab-wave').length) {
+    if ($('.lab-wave').length) {
         miru.lab.init();
     }
 
