@@ -66,27 +66,80 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
 
         List<Map<String, Object>> list = Lists.newArrayList();
 
-        list.add(wavformGroup(prefix + "gc", new String[]{"gc", "pressureCommit", "commit", "fsyncedCommit", "gcCommit"},
+        list.add(wavformGroup(prefix + "gc", colors, new String[]{"gc", "pressureCommit", "commit", "fsyncedCommit", "gcCommit"},
             new LABSparseCircularMetricBuffer[]{stats.mGC, stats.mPressureCommit, stats.mCommit, stats.mFsyncedCommit, stats.mGCCommit},
             new boolean[]{false, false, false, false, false}));
 
-        list.add(wavformGroup(prefix + "lsm", new String[]{"open", "closed", "merging", "merged", "splitting", "split"},
+        list.add(wavformGroup(prefix + "lsm", colors, new String[]{"open", "closed", "merging", "merged", "splitting", "split"},
             new LABSparseCircularMetricBuffer[]{stats.mOpen, stats.mClosed, stats.mMerging, stats.mMerged, stats.mSplitings, stats.mSplits},
             new boolean[]{false, false, false, false, false, false}));
 
-        list.add(wavformGroup(prefix + "mem", new String[]{"released", "allocationed", "slabbed", "freed"},
+        list.add(wavformGroup(prefix + "mem", colors, new String[]{"released", "allocationed", "slabbed", "freed"},
             new LABSparseCircularMetricBuffer[]{stats.mReleased, stats.mAllocationed, stats.mSlabbed, stats.mFreed},
             new boolean[]{false, false, false, false}));
 
-        list.add(wavformGroup(prefix + "disk", new String[]{"bytesWrittenToWAL", "bytesWrittenAsIndex", "bytesWrittenAsMerge", "bytesWrittenAsSplit"},
+        list.add(wavformGroup(prefix + "disk", colors, new String[]{"bytesWrittenToWAL", "bytesWrittenAsIndex", "bytesWrittenAsMerge", "bytesWrittenAsSplit"},
             new LABSparseCircularMetricBuffer[]{stats.mBytesWrittenToWAL, stats.mBytesWrittenAsIndex, stats.mBytesWrittenAsMerge, stats.mBytesWrittenAsSplit},
             new boolean[]{false, false, false, false, false}));
 
-        list.add(wavformGroup(prefix + "rw", new String[]{"append", "journaledAppend", "gets", "rangeScan", "multiRangeScan", "rowScan"},
+        String[] labels = new String[32 + 1];
+        LABSparseCircularMetricBuffer[] waveforms = new LABSparseCircularMetricBuffer[32 + 1];
+        boolean[] fill = new boolean[32 + 1];
+
+        labels[0] = "total";
+        waveforms[0] = stats.mEntriesWritten;
+        for (int i = 1; i < fill.length; i++) {
+            labels[i] = "2^" + (i - 1);
+            waveforms[i] = stats.mEntriesWrittenBatchPower[i - 1];
+        }
+
+        list.add(wavformGroup(prefix + "tally", colors, labels, waveforms, fill));
+
+        list.add(wavformGroup(prefix + "rw", histoColors, new String[]{"append", "journaledAppend", "gets", "rangeScan", "multiRangeScan", "rowScan"},
             new LABSparseCircularMetricBuffer[]{stats.mAppend, stats.mJournaledAppend, stats.mGets, stats.mRangeScan, stats.mMultiRangeScan, stats.mRowScan},
             new boolean[]{false, false, false, false, false, false}));
 
         return list;
+    }
+
+    private Color[] histoColors = new Color[]{
+        Color.green,
+        gray(255),
+        gray(250),
+        gray(245),
+        gray(240),
+        gray(235),
+        gray(230),
+        gray(225),
+        gray(220),
+        gray(215),
+        gray(210),
+        gray(205),
+        gray(200),
+        gray(195),
+        gray(190),
+        gray(185),
+        gray(180),
+        gray(175),
+        gray(170),
+        gray(165),
+        gray(160),
+        gray(155),
+        gray(150),
+        gray(145),
+        gray(140),
+        gray(135),
+        gray(130),
+        gray(125),
+        gray(120),
+        gray(115),
+        gray(110),
+        gray(105),
+        gray(100)
+    };
+
+    private Color gray(int g) {
+        return new Color(g, g, g);
     }
 
     private Color[] colors = new Color[]{
@@ -100,7 +153,7 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
         Color.cyan
     };
 
-    private Map<String, Object> wavformGroup(String title, String[] labels, LABSparseCircularMetricBuffer[] waveforms, boolean[] fill) {
+    private Map<String, Object> wavformGroup(String title, Color[] colors, String[] labels, LABSparseCircularMetricBuffer[] waveforms, boolean[] fill) {
         String total = "";
         List<String> ls = new ArrayList<>();
         List<Map<String, Object>> ws = new ArrayList<>();
