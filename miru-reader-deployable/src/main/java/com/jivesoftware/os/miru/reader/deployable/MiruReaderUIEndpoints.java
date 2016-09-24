@@ -56,10 +56,10 @@ public class MiruReaderUIEndpoints {
     }
 
     @GET
-    @Path("/labStats")
+    @Path("/labStats/{group}/{filter}")
     @Produces(MediaType.TEXT_HTML)
-    public Response getLABStats() {
-        String rendered = service.renderLabStats();
+    public Response getLABStats(@PathParam("group") String group, @PathParam("filter") String filter) {
+        String rendered = service.renderLabStats(group, filter);
         return Response.ok(rendered).build();
     }
 

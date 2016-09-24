@@ -53,8 +53,9 @@ public class MiruReaderUIService {
     public String renderErrors() {
         return chrome(errorsRegion).render(null);
     }
-    
-    public String renderLabStats() {
-        return chrome(labStatsRegion).render(null);
+
+    public String renderLabStats(String group, String filter) {
+        return chrome(labStatsRegion.stats(group, filter)).render(null);
     }
+
 }
