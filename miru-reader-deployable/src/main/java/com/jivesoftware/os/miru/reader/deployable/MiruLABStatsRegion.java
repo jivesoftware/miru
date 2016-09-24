@@ -58,13 +58,19 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
             @Override
             public String render(Void input) {
                 Map<String, Object> data = Maps.newHashMap();
+                String f = filter;
+                if (f != null && f.equals("*")) {
+                    f = null;
+                }
+
+                LOG.info("Rendering {} {}", group, filter);
 
                 try {
                     if (group.equals("global")) {
-                        data.put("stats", packStats("global-", global, group, filter));
+                        data.put("stats", packStats(group + "-", global, group, f));
                     }
                     if (group.equals("rebuild")) {
-                        data.put("stats", packStats("rebuild-", rebuild, group, filter));
+                        data.put("stats", packStats(group + "-", rebuild, group, f));
                     }
 
                 } catch (Exception e) {
@@ -99,15 +105,15 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
             new LABSparseCircularMetricBuffer[]{stats.mGC, stats.mPressureCommit, stats.mCommit, stats.mFsyncedCommit, stats.mGCCommit},
             new boolean[]{false, false, false, false, false}));
 
-        list.addAll(wavformGroup(group,filter, prefix + "lsm", defaultColors, new String[]{"open", "closed", "merging", "merged", "splitting", "split"},
+        list.addAll(wavformGroup(group, filter, prefix + "lsm", defaultColors, new String[]{"open", "closed", "merging", "merged", "splitting", "split"},
             new LABSparseCircularMetricBuffer[]{stats.mOpen, stats.mClosed, stats.mMerging, stats.mMerged, stats.mSplitings, stats.mSplits},
             new boolean[]{false, false, false, false, false, false}));
 
-        list.addAll(wavformGroup(group,filter, prefix + "mem", defaultColors, new String[]{"released", "allocationed", "slabbed", "freed"},
+        list.addAll(wavformGroup(group, filter, prefix + "mem", defaultColors, new String[]{"released", "allocationed", "slabbed", "freed"},
             new LABSparseCircularMetricBuffer[]{stats.mReleased, stats.mAllocationed, stats.mSlabbed, stats.mFreed},
             new boolean[]{false, false, false, false}));
 
-        list.addAll(wavformGroup(group,filter, prefix + "disk", defaultColors, new String[]{"bytesWrittenToWAL", "bytesWrittenAsIndex", "bytesWrittenAsMerge",
+        list.addAll(wavformGroup(group, filter, prefix + "disk", defaultColors, new String[]{"bytesWrittenToWAL", "bytesWrittenAsIndex", "bytesWrittenAsMerge",
             "bytesWrittenAsSplit"},
             new LABSparseCircularMetricBuffer[]{stats.mBytesWrittenToWAL, stats.mBytesWrittenAsIndex, stats.mBytesWrittenAsMerge, stats.mBytesWrittenAsSplit},
             new boolean[]{false, false, false, false, false}));
