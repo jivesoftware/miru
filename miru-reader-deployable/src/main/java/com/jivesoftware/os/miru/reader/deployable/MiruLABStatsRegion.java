@@ -156,8 +156,6 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
 
     private List<Map<String, Object>> wavformGroup(String title, Color[] colors, String[] waveName, LABSparseCircularMetricBuffer[] waveforms, boolean[] fill) {
 
-        
-
         String total = "";
         List<String> ls = new ArrayList<>();
         List<Map<String, Object>> ws = new ArrayList<>();
@@ -173,7 +171,7 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
             for (double m : metric) {
                 values.add("\"" + String.valueOf(m) + "\"");
             }
-            ws.add(waveform(waveName[i], colors[i], 0.8f, values, fill[i]));
+            ws.add(waveform(waveName[i], colors[i], 1f, values, fill[i]));
             if (i > 0) {
                 total += ", ";
             }
@@ -188,22 +186,23 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
 
         List<Map<String, Object>> listOfwaveformGroups = Lists.newArrayList();
 
-//        List<Map<String, Object>> ows = new ArrayList<>();
-//        List<String> ovalues = Lists.newArrayList();
-//        for (int i = 0; i < waveforms.length; i++) {
-//           ovalues.add("\"" + String.valueOf(waveforms[i].total()) + "\"");
-//        }
-//        ows.add(waveform("overview", Color.gray, 0.8f, ovalues, true));
-//
-//
-//        Map<String, Object> overViewMap = new HashMap<>();
-//        overViewMap.put("title", title + "-overview");
-//        overViewMap.put("total", title + "-overview");
-//        overViewMap.put("width", String.valueOf(ls.size() * 10));
-//        overViewMap.put("id", title + "-overview");
-//        overViewMap.put("graphType", "Line");
-//        overViewMap.put("waveform", ImmutableMap.of("labels", Arrays.asList(waveName), "datasets", ows));
-//        listOfwaveformGroups.add(overViewMap);
+        List<Map<String, Object>> ows = new ArrayList<>();
+        List<String> ols = new ArrayList<>();
+        List<String> ovalues = Lists.newArrayList();
+        for (int i = 0; i < waveforms.length; i++) {
+            ovalues.add("\"" + String.valueOf(waveforms[i].total()) + "\"");
+            ols.add("\"" + waveName[i] + "\"");
+        }
+        ows.add(waveform(title + "-overview", Color.gray, 1f, ovalues, true));
+
+        Map<String, Object> overViewMap = new HashMap<>();
+        overViewMap.put("title", title + "-overview");
+        overViewMap.put("total", title + "-overview");
+        overViewMap.put("width", String.valueOf(ls.size() * 10));
+        overViewMap.put("id", title + "-overview");
+        overViewMap.put("graphType", "Line");
+        overViewMap.put("waveform", ImmutableMap.of("labels", ols, "datasets", ows));
+        listOfwaveformGroups.add(overViewMap);
 
         Map<String, Object> map = new HashMap<>();
         map.put("title", title);
