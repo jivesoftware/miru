@@ -67,10 +67,10 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
 
                 try {
                     if (group.equals("global")) {
-                        data.put("stats", packStats(group + "-", global, group, f));
+                        data.put("stats", packStats("", global, group, f));
                     }
                     if (group.equals("rebuild")) {
-                        data.put("stats", packStats(group + "-", rebuild, group, f));
+                        data.put("stats", packStats("", rebuild, group, f));
                     }
 
                 } catch (Exception e) {
@@ -237,6 +237,8 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
         ows.add(waveform(title + "-overview", Color.gray, 1f, ovalues, true, false));
 
         Map<String, Object> overViewMap = new HashMap<>();
+        overViewMap.put("group", group);
+        overViewMap.put("filter", title);
         overViewMap.put("title", title + "-overview");
         overViewMap.put("total", "");
         overViewMap.put("width", String.valueOf(ls.size() * 10));
