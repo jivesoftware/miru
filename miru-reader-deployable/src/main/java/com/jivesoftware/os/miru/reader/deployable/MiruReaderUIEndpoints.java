@@ -1,6 +1,8 @@
 package com.jivesoftware.os.miru.reader.deployable;
 
 import com.google.common.base.Optional;
+import com.jivesoftware.os.mlogger.core.MetricLogger;
+import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import javax.inject.Singleton;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -16,6 +18,8 @@ import javax.ws.rs.core.Response;
 @Singleton
 @Path("/")
 public class MiruReaderUIEndpoints {
+
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final MiruReaderUIService service;
 
@@ -59,8 +63,13 @@ public class MiruReaderUIEndpoints {
     @Path("/labStats/{group}/{filter}")
     @Produces(MediaType.TEXT_HTML)
     public Response getLABStats(@PathParam("group") String group, @PathParam("filter") String filter) {
-        String rendered = service.renderLabStats(group, filter);
-        return Response.ok(rendered).build();
+        try {
+            String rendered = service.renderLabStats(group, filter);
+            return Response.ok(rendered).build();
+        } catch (Exception x) {
+            LOG.error("labStats: {} {}", new Object[]{group, filter}, x);
+            return Response.serverError().build();
+        }
     }
 
 }
