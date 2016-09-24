@@ -98,27 +98,35 @@
                 </ul>
             {/if}
         </div>
-	</div>
+        <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+             <ul class="nav navbar-nav">
+                <li>
+                    <a class="list-group-item" href="/partitions">
+                        <span class="glyphicon glyphicon-duplicate"></span>{sp}
+                        Partitions
+                    </a>
+                </li>
+                <li>
+                    <a class="list-group-item" href="/errors">
+                        <span class="glyphicon glyphicon-alert"></span>{sp}
+                        Errors
+                    </a>
+                </li>
+                <li>
+                    <span class="glyphicon glyphicon-signal"></span>{sp}<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">LAB Stats <span class="caret"></span></a>
+                    <ul class="dropdown-menu">
+                        <li><a class="list-group-item" href="/labStats/global">Global</a></li>
+                        <li><a class="list-group-item" href="/labStats/rebuild">Rebuild</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
 {/template}
 
 /**
  *
  */
 {template .nav}
-    <div style="margin-bottom:20px;">
-        <a class="list-group-item" href="/partitions">
-            <span class="glyphicon glyphicon-duplicate"></span>{sp}
-            Partitions
-        </a>
-        <a class="list-group-item" href="/errors">
-            <span class="glyphicon glyphicon-alert"></span>{sp}
-            Errors
-        </a>
-        <a class="list-group-item" href="/labStats">
-            <span class="glyphicon glyphicon-signal"></span>{sp}
-            LAB Stats
-        </a>
-    </div>
 {/template}
 
 /**

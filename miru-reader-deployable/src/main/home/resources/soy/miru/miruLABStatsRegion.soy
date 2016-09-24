@@ -2,34 +2,15 @@
 
 /**
  *
- * @param? rebuild
- * @param? global
+ * @param? stats
  */
 {template .labStatsRegion}
     {if $global}
         <div class="panel panel-default" style="background-color: rgba(255, 255, 255, 0.9);">
-            {foreach $r in $global}
-                <div class="panel-heading">LAB global {$r.title} ({$r.total|noAutoescape})</div>
-                <div class="lab-scroll-wave" style="width:100%; height:275px;">
-                    <div style="width:100%; height:100%; background-color:black; resize: horizontal;">
-                        <canvas class="lab-wave" id="values"
-                            data-lab-wave-id="{$r.id}" data-lab-wave-type="{$r.graphType}">
-                        </canvas>
-                        <script>
-                            miru.lab.data['{$r.id}'] = {$r.waveform|noAutoescape};
-                        </script>
-                    </div>
-                </div>
-            {/foreach}
-        </div>
-    {/if}
-
-    {if $rebuild}
-        <div class="panel panel-default" style="background-color: rgba(255, 255, 255, 0.9);">
-            {foreach $r in $rebuild}
-                <div class="panel-heading">LAB rebuild {$r.title}  ({$r.total|noAutoescape})</div>
-                <div class="lab-scroll-wave" style="width:100%; height:275px;">
-                    <div style="width:100%; height:100%; background-color:black; resize: horizontal;">
+            {foreach $r in $stats}
+                <div class="panel-heading">LAB global {$r.title} ({$r.total|noAutoescape}) <a class="list-group-item" href="/labStats/{$r.group}/{$r.filter}"><span class="glyphicon glyphicon-fullscreen"></span></a></div>
+                <div style="width:100%; height:{$r.height}px; resize: horizontal;">
+                    <div style="width:100%; height:100%; background-color:black;">
                         <canvas class="lab-wave" id="values"
                             data-lab-wave-id="{$r.id}" data-lab-wave-type="{$r.graphType}">
                         </canvas>
