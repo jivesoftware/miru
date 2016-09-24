@@ -12,6 +12,7 @@ import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.awt.Color;
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -66,19 +67,19 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
 
         List<Map<String, Object>> list = Lists.newArrayList();
 
-        list.add(wavformGroup(prefix + "gc", defaultColors, new String[]{"gc", "pressureCommit", "commit", "fsyncedCommit", "gcCommit"},
+        list.addAll(wavformGroup(prefix + "gc", defaultColors, new String[]{"gc", "pressureCommit", "commit", "fsyncedCommit", "gcCommit"},
             new LABSparseCircularMetricBuffer[]{stats.mGC, stats.mPressureCommit, stats.mCommit, stats.mFsyncedCommit, stats.mGCCommit},
             new boolean[]{false, false, false, false, false}));
 
-        list.add(wavformGroup(prefix + "lsm", defaultColors, new String[]{"open", "closed", "merging", "merged", "splitting", "split"},
+        list.addAll(wavformGroup(prefix + "lsm", defaultColors, new String[]{"open", "closed", "merging", "merged", "splitting", "split"},
             new LABSparseCircularMetricBuffer[]{stats.mOpen, stats.mClosed, stats.mMerging, stats.mMerged, stats.mSplitings, stats.mSplits},
             new boolean[]{false, false, false, false, false, false}));
 
-        list.add(wavformGroup(prefix + "mem", defaultColors, new String[]{"released", "allocationed", "slabbed", "freed"},
+        list.addAll(wavformGroup(prefix + "mem", defaultColors, new String[]{"released", "allocationed", "slabbed", "freed"},
             new LABSparseCircularMetricBuffer[]{stats.mReleased, stats.mAllocationed, stats.mSlabbed, stats.mFreed},
             new boolean[]{false, false, false, false}));
 
-        list.add(wavformGroup(prefix + "disk", defaultColors, new String[]{"bytesWrittenToWAL", "bytesWrittenAsIndex", "bytesWrittenAsMerge",
+        list.addAll(wavformGroup(prefix + "disk", defaultColors, new String[]{"bytesWrittenToWAL", "bytesWrittenAsIndex", "bytesWrittenAsMerge",
             "bytesWrittenAsSplit"},
             new LABSparseCircularMetricBuffer[]{stats.mBytesWrittenToWAL, stats.mBytesWrittenAsIndex, stats.mBytesWrittenAsMerge, stats.mBytesWrittenAsSplit},
             new boolean[]{false, false, false, false, false}));
@@ -94,9 +95,9 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
             waveforms[i] = stats.mEntriesWrittenBatchPower[i - 1];
         }
 
-        list.add(wavformGroup(prefix + "tally", histoColors, labels, waveforms, fill));
+        list.addAll(wavformGroup(prefix + "tally", histoColors, labels, waveforms, fill));
 
-        list.add(wavformGroup(prefix + "rw", defaultColors, new String[]{"append", "journaledAppend", "gets", "rangeScan", "multiRangeScan", "rowScan"},
+        list.addAll(wavformGroup(prefix + "rw", defaultColors, new String[]{"append", "journaledAppend", "gets", "rangeScan", "multiRangeScan", "rowScan"},
             new LABSparseCircularMetricBuffer[]{stats.mAppend, stats.mJournaledAppend, stats.mGets, stats.mRangeScan, stats.mMultiRangeScan, stats.mRowScan},
             new boolean[]{false, false, false, false, false, false}));
 
@@ -154,27 +155,26 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
         Color.cyan
     };
 
-    private Map<String, Object> wavformGroup(String title, Color[] colors, String[] labels, LABSparseCircularMetricBuffer[] waveforms, boolean[] fill) {
+    private List<Map<String, Object>> wavformGroup(String title, Color[] colors, String[] waveName, LABSparseCircularMetricBuffer[] waveforms, boolean[] fill) {
+
+        
+
         String total = "";
         List<String> ls = new ArrayList<>();
         List<Map<String, Object>> ws = new ArrayList<>();
-        long now = System.currentTimeMillis();
-        long mostRecentTimestamp = waveforms[0].mostRecentTimestamp();
-        long duration = waveforms[0].duration();
-        long start = now - (mostRecentTimestamp - duration);
         int s = 1;
         for (double m : waveforms[0].metric()) {
-            ls.add("\"" + s + "\"");//humanReadableUptime(start));
+            ls.add("\"" + s + "\"");
             s++;
         }
 
-        for (int i = 0; i < labels.length; i++) {
+        for (int i = 0; i < waveName.length; i++) {
             List<String> values = Lists.newArrayList();
             double[] metric = waveforms[i].metric();
             for (double m : metric) {
                 values.add("\"" + String.valueOf(m) + "\"");
             }
-            ws.add(waveform(labels[i], colors[i], 0.8f, values, fill[i]));
+            ws.add(waveform(waveName[i], colors[i], 0.8f, values, fill[i]));
             if (i > 0) {
                 total += ", ";
             }
@@ -184,19 +184,37 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
             int b = c.getBlue();
             String colorDiv = "<div style=\"display:inline-block; width:10px; height:10px; background:rgb(" + r + "," + g + "," + b + ");\"></div>";
 
-            total += colorDiv + labels[i] + "=" + numberFormat.format(waveforms[i].total());
+            total += colorDiv + waveName[i] + "=" + numberFormat.format(waveforms[i].total());
         }
+
+        List<Map<String, Object>> maps = Lists.newArrayList();
+
+        List<Map<String, Object>> ows = new ArrayList<>();
+        List<String> ovalues = Lists.newArrayList();
+        for (int i = 0; i < waveforms.length; i++) {
+           ovalues.add("\"" + String.valueOf(waveforms[i].total()) + "\"");
+        }
+        ows.add(waveform("overview", Color.gray, 0.8f, ovalues, true));
+
+        
+        Map<String, Object> overViewMap = new HashMap<>();
+        overViewMap.put("title", title + "-overview");
+        overViewMap.put("total", title + "-overview");
+        overViewMap.put("width", String.valueOf(ls.size() * 10));
+        overViewMap.put("id", title + "-overview");
+        overViewMap.put("graphType", "Line");
+        overViewMap.put("waveform", ImmutableMap.of("labels", Arrays.asList(waveName), "datasets", ows));
+        maps.add(overViewMap);
 
         Map<String, Object> map = new HashMap<>();
         map.put("title", title);
         map.put("total", total);
-        //map.put("lines", lines);
-        //map.put("error", error);
         map.put("width", String.valueOf(ls.size() * 10));
         map.put("id", title);
         map.put("graphType", "Line");
         map.put("waveform", ImmutableMap.of("labels", ls, "datasets", ws));
-        return map;
+        maps.add(map);
+        return maps;
     }
 
     public Map<String, Object> waveform(String label, Color color, float alpha, List<String> values, boolean fill) {
