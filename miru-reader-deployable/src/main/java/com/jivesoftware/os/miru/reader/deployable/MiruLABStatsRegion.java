@@ -241,6 +241,7 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
         overViewMap.put("filter", title);
         overViewMap.put("title", title + "-overview");
         overViewMap.put("total", "");
+        overViewMap.put("height", String.valueOf(150));
         overViewMap.put("width", String.valueOf(ls.size() * 10));
         overViewMap.put("id", title + "-overview");
         overViewMap.put("graphType", "Line");
