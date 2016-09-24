@@ -171,7 +171,7 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
             for (double m : metric) {
                 values.add("\"" + String.valueOf(m) + "\"");
             }
-            ws.add(waveform(waveName[i], colors[i], 1f, values, fill[i]));
+            ws.add(waveform(waveName[i], colors[i], 1f, values, fill[i], true));
             if (i > 0) {
                 total += ", ";
             }
@@ -193,11 +193,11 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
             ovalues.add("\"" + String.valueOf(waveforms[i].total()) + "\"");
             ols.add("\"" + waveName[i] + "\"");
         }
-        ows.add(waveform(title + "-overview", Color.gray, 1f, ovalues, true));
+        ows.add(waveform(title + "-overview", Color.gray, 1f, ovalues, true, false));
 
         Map<String, Object> overViewMap = new HashMap<>();
         overViewMap.put("title", title + "-overview");
-        overViewMap.put("total", title + "-overview");
+        overViewMap.put("total", "");
         overViewMap.put("width", String.valueOf(ls.size() * 10));
         overViewMap.put("id", title + "-overview");
         overViewMap.put("graphType", "Line");
@@ -215,14 +215,14 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
         return listOfwaveformGroups;
     }
 
-    public Map<String, Object> waveform(String label, Color color, float alpha, List<String> values, boolean fill) {
+    public Map<String, Object> waveform(String label, Color color, float alpha, List<String> values, boolean fill, boolean stepped) {
         Map<String, Object> waveform = new HashMap<>();
         waveform.put("label", "\"" + label + "\"");
         //waveform.put("steppedLine", "true");
 
         String c = "\"rgba(" + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + "," + String.valueOf(alpha) + ")\"";
         waveform.put("fill", fill);
-        waveform.put("steppedLine", true);
+        waveform.put("steppedLine", stepped);
         waveform.put("lineTension", "0.1");
         waveform.put("backgroundColor", c);
         waveform.put("borderColor", c);

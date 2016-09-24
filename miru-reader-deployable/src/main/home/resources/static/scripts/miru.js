@@ -85,6 +85,9 @@ miru.lab = {
                 options: {
                     maintainAspectRatio: false,
                     responsive: true,
+                    legend: {
+                        display: false
+                    },
                     gridLines: {
                         color: "rgba(128,128,128,1)"
                     },
