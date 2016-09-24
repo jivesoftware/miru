@@ -4,7 +4,6 @@
  * @param title
  * @param header
  * @param region
- * @param plugins
  */
 {template .chromeRegion}
 <!DOCTYPE HTML>
@@ -22,18 +21,7 @@
 	</head>
 	<body>
         {$header|noAutoescape}
-        <div class="container">
-            <div class="row">
-                <div class="col-md-2">
-                    {call .nav}
-                        {param plugins: $plugins /}
-                    {/call}
-                </div>
-                <div class="col-md-10">
-                    {$region|noAutoescape}
-                </div>
-            </div>
-        </div>
+        {$region|noAutoescape}
         {call .footer}
         {/call}
 	</body>
