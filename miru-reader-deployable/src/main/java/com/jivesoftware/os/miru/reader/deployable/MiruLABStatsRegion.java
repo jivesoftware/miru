@@ -253,7 +253,12 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
         map.put("filter", title);
         map.put("title", title);
         map.put("total", total);
-        map.put("height", String.valueOf(1000 / waveName.length));
+
+        if (filter != null && filter.length() > 0) {
+            map.put("height", String.valueOf(800));
+        } else {
+            map.put("height", String.valueOf(1000 / waveName.length));
+        }
         map.put("width", String.valueOf(ls.size() * 10));
         map.put("id", title);
         map.put("graphType", "Line");
