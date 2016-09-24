@@ -259,11 +259,11 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
         if (filter != null && filter.length() > 0) {
             map.put("height", String.valueOf(800));
         } else {
-            map.put("height", String.valueOf(1000 / waveName.length));
+            map.put("height", String.valueOf(300));
         }
         map.put("width", String.valueOf(ls.size() * 10));
         map.put("id", title);
-        map.put("graphType", "Line");
+        map.put("graphType", "line");
         map.put("waveform", ImmutableMap.of("labels", ls, "datasets", ws));
         listOfwaveformGroups.add(map);
         return listOfwaveformGroups;
@@ -272,13 +272,12 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
     public Map<String, Object> waveform(String label, Color[] color, float alpha, List<String> values, boolean fill, boolean stepped) {
         Map<String, Object> waveform = new HashMap<>();
         waveform.put("label", "\"" + label + "\"");
-        //waveform.put("steppedLine", "true");
-
+        
         Object c = "\"rgba(" + color[0].getRed() + "," + color[0].getGreen() + "," + color[0].getBlue() + "," + String.valueOf(alpha) + ")\"";
-        if (color.length > 0) {
+        if (color.length > 1) {
             List<String> colorStrings = Lists.newArrayList();
             for (int i = 0; i < color.length; i++) {
-                colorStrings.add("\"rgba(" + color[0].getRed() + "," + color[0].getGreen() + "," + color[0].getBlue() + "," + String.valueOf(alpha) + ")\"");
+                colorStrings.add("\"rgba(" + color[i].getRed() + "," + color[i].getGreen() + "," + color[i].getBlue() + "," + String.valueOf(alpha) + ")\"");
             }
             c = colorStrings;
         }

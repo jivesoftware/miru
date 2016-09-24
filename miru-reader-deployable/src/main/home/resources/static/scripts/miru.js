@@ -89,6 +89,7 @@ miru.lab = {
                         display: false
                     },
                     gridLines: {
+                        display: true,
                         color: "rgba(128,128,128,1)"
                     },
                     scaleLabel: {
