@@ -212,7 +212,7 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
             for (double m : metric) {
                 values.add("\"" + String.valueOf(m) + "\"");
             }
-            ws.add(waveform(waveName[i], colors[i], 1f, values, fill[i], false));
+            ws.add(waveform(waveName[i], new Color[]{colors[i]}, 1f, values, fill[i], false));
             if (i > 0) {
                 total += ", ";
             }
@@ -230,11 +230,13 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
         List<Map<String, Object>> ows = new ArrayList<>();
         List<String> ols = new ArrayList<>();
         List<String> ovalues = Lists.newArrayList();
+        Color[] ocolors = new Color[waveforms.length];
         for (int i = 0; i < waveforms.length; i++) {
             ovalues.add("\"" + String.valueOf(waveforms[i].total()) + "\"");
             ols.add("\"" + waveName[i] + "\"");
+            ocolors[i] = colors[i];
         }
-        ows.add(waveform(title + "-overview", Color.gray, 1f, ovalues, true, false));
+        ows.add(waveform(title + "-overview", ocolors, 1f, ovalues, true, false));
 
         Map<String, Object> overViewMap = new HashMap<>();
         overViewMap.put("group", group);
@@ -244,7 +246,7 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
         overViewMap.put("height", String.valueOf(150));
         overViewMap.put("width", String.valueOf(ls.size() * 10));
         overViewMap.put("id", title + "-overview");
-        overViewMap.put("graphType", "Line");
+        overViewMap.put("graphType", "bar");
         overViewMap.put("waveform", ImmutableMap.of("labels", ols, "datasets", ows));
         listOfwaveformGroups.add(overViewMap);
 
@@ -267,12 +269,20 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
         return listOfwaveformGroups;
     }
 
-    public Map<String, Object> waveform(String label, Color color, float alpha, List<String> values, boolean fill, boolean stepped) {
+    public Map<String, Object> waveform(String label, Color[] color, float alpha, List<String> values, boolean fill, boolean stepped) {
         Map<String, Object> waveform = new HashMap<>();
         waveform.put("label", "\"" + label + "\"");
         //waveform.put("steppedLine", "true");
 
-        String c = "\"rgba(" + color.getRed() + "," + color.getGreen() + "," + color.getBlue() + "," + String.valueOf(alpha) + ")\"";
+        Object c = "\"rgba(" + color[0].getRed() + "," + color[0].getGreen() + "," + color[0].getBlue() + "," + String.valueOf(alpha) + ")\"";
+        if (color.length > 0) {
+            List<String> colorStrings = Lists.newArrayList();
+            for (int i = 0; i < color.length; i++) {
+                colorStrings.add("\"rgba(" + color[0].getRed() + "," + color[0].getGreen() + "," + color[0].getBlue() + "," + String.valueOf(alpha) + ")\"");
+            }
+            c = colorStrings;
+        }
+
         waveform.put("fill", fill);
         waveform.put("steppedLine", stepped);
         waveform.put("lineTension", "0.1");
