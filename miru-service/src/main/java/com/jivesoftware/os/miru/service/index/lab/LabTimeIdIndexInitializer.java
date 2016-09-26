@@ -21,7 +21,7 @@ public class LabTimeIdIndexInitializer {
         for (File labDir : labDirs) {
             labDir.mkdirs();
         }
-        LABEnvironment[] labEnvironments = chunkAllocator.allocateLABEnvironments(labDirs);
+        LABEnvironment[] labEnvironments = chunkAllocator.allocateTimeIdLABEnvironments(labDirs);
         LabTimeIdIndex[] timeIdIndexes = new LabTimeIdIndex[labEnvironments.length];
         for (int i = 0; i < labEnvironments.length; i++) {
             timeIdIndexes[i] = new LabTimeIdIndex(labEnvironments[i], keepNIndexes, maxEntriesPerIndex, maxHeapPressureInBytes, fsyncOnAppend);
