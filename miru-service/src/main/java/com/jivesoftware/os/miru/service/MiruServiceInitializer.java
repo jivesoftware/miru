@@ -174,12 +174,14 @@ public class MiruServiceInitializer {
             );
         }
 
+        ExecutorService timeIdLabHeapScheduler = LABEnvironment.buildLABHeapSchedulerThreadPool(config.getTimeIdLabHeapPressureStripes());
+        AtomicLong timeIdLabHeapCostInBytes = new AtomicLong();
         LabHeapPressure timeIdLabHeapPressure = new LabHeapPressure(globalLABStats,
-            onDiskLabHeapScheduler,
+            timeIdLabHeapScheduler,
             "timeId",
             config.getTimeIdLabMaxHeapPressureInBytes(),
             config.getTimeIdLabBlockOnHeapPressureInBytes(),
-            onDiskLabHeapCostInBytes,
+            timeIdLabHeapCostInBytes,
             FreeHeapStrategy.valueOf(config.getLabFreeHeapStrategy()));
 
         LRUConcurrentBAHLinkedHash<Leaps> leapCache = LABEnvironment.buildLeapsCache((int) config.getLabLeapCacheMaxCapacity(),

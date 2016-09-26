@@ -247,6 +247,9 @@ public interface MiruServiceConfig extends Config {
     @LongDefault(200L * 1024 * 1024)
     long getTimeIdLabBlockOnHeapPressureInBytes();
 
+    @IntDefault(3)
+    int getTimeIdLabHeapPressureStripes();
+
     @BooleanDefault(true)
     boolean getTimeIdFsyncOnAppend();
 
