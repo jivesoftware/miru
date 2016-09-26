@@ -258,7 +258,8 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
                 16,
                 leapCache,
                 bolBufferLocks,
-                labUseOffHeap);
+                labUseOffHeap,
+                false);
             environments[i].open();
         }
         return environments;
