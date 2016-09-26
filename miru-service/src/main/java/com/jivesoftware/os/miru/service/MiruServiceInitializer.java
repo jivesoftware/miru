@@ -173,6 +173,13 @@ public class MiruServiceInitializer {
             );
         }
 
+        LabHeapPressure timeIdLabHeapPressure = new LabHeapPressure(globalLABStats,
+            onDiskLabHeapScheduler,
+            "timeId",
+            config.getTimeIdLabMaxHeapPressureInBytes(),
+            config.getTimeIdLabBlockOnHeapPressureInBytes(),
+            onDiskLabHeapCostInBytes);
+
         LRUConcurrentBAHLinkedHash<Leaps> leapCache = LABEnvironment.buildLeapsCache((int) config.getLabLeapCacheMaxCapacity(),
             config.getLabLeapCacheConcurrency());
 
@@ -204,6 +211,7 @@ public class MiruServiceInitializer {
             config.getPartitionMaxChunkCacheSize(),
             new LABStats[]{globalLABStats},
             onDiskLabHeapPressures,
+            timeIdLabHeapPressure,
             config.getLabMaxWALSizeInBytes(),
             config.getLabMaxEntriesPerWAL(),
             config.getLabMaxEntrySizeInBytes(),

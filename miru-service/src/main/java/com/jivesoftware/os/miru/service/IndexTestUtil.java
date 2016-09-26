@@ -149,6 +149,7 @@ public class IndexTestUtil {
             1_000,
             new LABStats[]{labStats},
             new LabHeapPressure[]{labHeapPressure},
+            labHeapPressure,
             labMaxWALSizeInBytes,
             labMaxEntriesPerWAL,
             labMaxEntrySizeInBytes,
