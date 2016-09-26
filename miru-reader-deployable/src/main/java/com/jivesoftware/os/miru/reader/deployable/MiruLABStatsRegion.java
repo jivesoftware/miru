@@ -109,33 +109,35 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
             new LABSparseCircularMetricBuffer[]{stats.mOpen, stats.mClosed, stats.mMerging, stats.mMerged, stats.mSplitings, stats.mSplits},
             new boolean[]{false, false, false, false, false, false}));
 
-        list.addAll(wavformGroup(group, filter, prefix + "mem", defaultColors, new String[]{"released", "allocationed", "slabbed", "freed"},
-            new LABSparseCircularMetricBuffer[]{stats.mReleased, stats.mAllocationed, stats.mSlabbed, stats.mFreed},
-            new boolean[]{false, false, false, false}));
-
         list.addAll(wavformGroup(group, filter, prefix + "disk", defaultColors, new String[]{"bytesWrittenToWAL", "bytesWrittenAsIndex", "bytesWrittenAsMerge",
             "bytesWrittenAsSplit"},
             new LABSparseCircularMetricBuffer[]{stats.mBytesWrittenToWAL, stats.mBytesWrittenAsIndex, stats.mBytesWrittenAsMerge, stats.mBytesWrittenAsSplit},
             new boolean[]{false, false, false, false, false}));
-
-        String[] labels = new String[32 + 1];
-        LABSparseCircularMetricBuffer[] waveforms = new LABSparseCircularMetricBuffer[32 + 1];
-        boolean[] fill = new boolean[32 + 1];
-
-        labels[32] = "total";
-        waveforms[32] = stats.mEntriesWritten;
-        for (int i = 0; i < 32; i++) {
-            labels[i] = "2^" + (i);
-            waveforms[i] = stats.mEntriesWrittenBatchPower[i];
-        }
-
-        list.addAll(wavformGroup(group, filter, prefix + "tally", histoColors, labels, waveforms, fill));
 
         list.addAll(wavformGroup(group, filter, prefix + "rw", defaultColors, new String[]{"append", "journaledAppend", "gets", "rangeScan", "multiRangeScan",
             "rowScan"},
             new LABSparseCircularMetricBuffer[]{stats.mAppend, stats.mJournaledAppend, stats.mGets, stats.mRangeScan, stats.mMultiRangeScan, stats.mRowScan},
             new boolean[]{false, false, false, false, false, false}));
 
+        list.addAll(wavformGroup(group, filter, prefix + "mem", defaultColors, new String[]{"released", "allocationed", "slabbed", "freed"},
+            new LABSparseCircularMetricBuffer[]{stats.mReleased, stats.mAllocationed, stats.mSlabbed, stats.mFreed},
+            new boolean[]{false, false, false, false}));
+
+        for (Map.Entry<String, LABStats.Written> entry : stats.writtenBrokenDownByName.entrySet()) {
+            String[] labels = new String[32 + 1];
+            LABSparseCircularMetricBuffer[] waveforms = new LABSparseCircularMetricBuffer[32 + 1];
+            boolean[] fill = new boolean[32 + 1];
+
+            labels[32] = "total";
+            waveforms[32] = entry.getValue().mEntriesWritten;
+            for (int i = 0; i < 32; i++) {
+                labels[i] = "2^" + (i);
+                waveforms[i] = entry.getValue().mEntriesWrittenBatchPower[i];
+            }
+
+            list.addAll(wavformGroup(group, filter, prefix + "tally-" + entry.getKey(), histoColors, labels, waveforms, fill));
+
+        }
         return list;
     }
 
@@ -272,7 +274,7 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
     public Map<String, Object> waveform(String label, Color[] color, float alpha, List<String> values, boolean fill, boolean stepped) {
         Map<String, Object> waveform = new HashMap<>();
         waveform.put("label", "\"" + label + "\"");
-        
+
         Object c = "\"rgba(" + color[0].getRed() + "," + color[0].getGreen() + "," + color[0].getBlue() + "," + String.valueOf(alpha) + ")\"";
         if (color.length > 1) {
             List<String> colorStrings = Lists.newArrayList();
