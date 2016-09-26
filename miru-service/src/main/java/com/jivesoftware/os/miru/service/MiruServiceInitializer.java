@@ -19,6 +19,7 @@ import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.lab.LABEnvironment;
 import com.jivesoftware.os.lab.LABStats;
 import com.jivesoftware.os.lab.LabHeapPressure;
+import com.jivesoftware.os.lab.LabHeapPressure.FreeHeapStrategy;
 import com.jivesoftware.os.lab.guts.Leaps;
 import com.jivesoftware.os.lab.guts.StripingBolBufferLocks;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
@@ -155,7 +156,7 @@ public class MiruServiceInitializer {
                 config.getRebuildLabMaxHeapPressureInBytes(),
                 config.getRebuildLabBlockOnHeapPressureInBytes(),
                 inMemoryLabHeapCostInBytes,
-                LabHeapPressure.FreeHeapStrategy.valueOf(config.getLabFreeHeapStrategy())
+                FreeHeapStrategy.valueOf(config.getLabFreeHeapStrategy())
             );
         }
 
@@ -169,7 +170,7 @@ public class MiruServiceInitializer {
                 config.getGlobalLabMaxHeapPressureInBytes(),
                 config.getGlobalLabBlockOnHeapPressureInBytes(),
                 onDiskLabHeapCostInBytes,
-                LabHeapPressure.FreeHeapStrategy.valueOf(config.getLabFreeHeapStrategy())
+                FreeHeapStrategy.valueOf(config.getLabFreeHeapStrategy())
             );
         }
 
@@ -178,7 +179,8 @@ public class MiruServiceInitializer {
             "timeId",
             config.getTimeIdLabMaxHeapPressureInBytes(),
             config.getTimeIdLabBlockOnHeapPressureInBytes(),
-            onDiskLabHeapCostInBytes);
+            onDiskLabHeapCostInBytes,
+            FreeHeapStrategy.valueOf(config.getLabFreeHeapStrategy()));
 
         LRUConcurrentBAHLinkedHash<Leaps> leapCache = LABEnvironment.buildLeapsCache((int) config.getLabLeapCacheMaxCapacity(),
             config.getLabLeapCacheConcurrency());
@@ -193,7 +195,7 @@ public class MiruServiceInitializer {
             config.getPartitionDeleteChunkStoreOnClose(),
             config.getPartitionInitialChunkCacheSize(),
             config.getPartitionMaxChunkCacheSize(),
-            new LABStats[]{rebuildLABStats},
+            new LABStats[] { rebuildLABStats },
             inMemoryLabHeapPressures,
             config.getLabMaxWALSizeInBytes(),
             config.getLabMaxEntriesPerWAL(),
@@ -209,7 +211,7 @@ public class MiruServiceInitializer {
             config.getPartitionNumberOfChunkStores(),
             config.getPartitionInitialChunkCacheSize(),
             config.getPartitionMaxChunkCacheSize(),
-            new LABStats[]{globalLABStats},
+            new LABStats[] { globalLABStats },
             onDiskLabHeapPressures,
             timeIdLabHeapPressure,
             config.getLabMaxWALSizeInBytes(),
@@ -252,9 +254,9 @@ public class MiruServiceInitializer {
             termComposer,
             internExtern,
             ImmutableMap.<MiruBackingStorage, MiruChunkAllocator>builder()
-            .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
-            .put(MiruBackingStorage.disk, onDiskChunkAllocator)
-            .build(),
+                .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
+                .put(MiruBackingStorage.disk, onDiskChunkAllocator)
+                .build(),
             sipIndexMarshaller,
             resourceLocator,
             config.getPartitionAuthzCacheSize(),
