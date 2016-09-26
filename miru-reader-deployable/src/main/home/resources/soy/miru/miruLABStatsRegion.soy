@@ -8,10 +8,11 @@
     {if $stats}
         <div class="panel panel-default" style="background-color: rgba(255, 255, 255, 0.9);">
             {foreach $r in $stats}
-                <div class="panel-heading">LAB {$r.title} ({$r.total|noAutoescape})
-                    <a href="/labStats/{$r.group}/{$r.filter}">
+                <div class="panel-heading">
+                    <a href="/labStats/{$r.group}/{$r.filter}" class="button button-default">
                         <span class="glyphicon glyphicon-fullscreen"></span>
                     </a>
+                    LAB {$r.title} ({$r.total|noAutoescape})
                 </div>
                 <div style="width:100%; height:{$r.height}px; resize: both;">
                     <div style="width:100%; height:100%; background-color:black;">
