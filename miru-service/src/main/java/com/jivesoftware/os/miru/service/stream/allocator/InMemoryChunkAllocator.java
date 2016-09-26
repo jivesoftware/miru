@@ -180,6 +180,11 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
     }
 
     @Override
+    public LABEnvironment[] allocateTimeIdLABEnvironments(File[] labDirs) throws Exception {
+        throw new UnsupportedOperationException("Use disk chunk allocator");
+    }
+
+    @Override
     public boolean checkExists(MiruPartitionCoord coord, int labVersion, int[] supportedLabVersions) throws Exception {
         return true;
     }

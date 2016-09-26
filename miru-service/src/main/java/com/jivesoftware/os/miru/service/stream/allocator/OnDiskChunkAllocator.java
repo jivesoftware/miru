@@ -39,6 +39,7 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
     private final int partitionMaxChunkCacheSize;
     private final LABStats[] labStats;
     private final LabHeapPressure[] labHeapPressures;
+    private final LabHeapPressure timeIdLabHeapPressure;
     private final long labMaxWALSizeInBytes;
     private final long labMaxEntriesPerWAL;
     private final long labMaxEntrySizeInBytes;
@@ -60,6 +61,7 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
         int partitionMaxChunkCacheSize,
         LABStats[] labStats,
         LabHeapPressure[] labHeapPressures,
+        LabHeapPressure timeIdLabHeapPressure,
         long labMaxWALSizeInBytes,
         long labMaxEntriesPerWAL,
         long labMaxEntrySizeInBytes,
@@ -74,6 +76,7 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
         this.partitionMaxChunkCacheSize = partitionMaxChunkCacheSize;
         this.labStats = labStats;
         this.labHeapPressures = labHeapPressures;
+        this.timeIdLabHeapPressure = timeIdLabHeapPressure;
         this.labMaxWALSizeInBytes = labMaxWALSizeInBytes;
         this.labMaxEntriesPerWAL = labMaxEntriesPerWAL;
         this.labMaxEntrySizeInBytes = labMaxEntrySizeInBytes;
@@ -230,6 +233,32 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
             environments[i].register("fixedWidth_8_4", new FixedWidthRawhide(8, 4));
             environments[i].register("fixedWidth_4_16", new FixedWidthRawhide(4, 16));
             environments[i].register("fixedWidth_4_17", new FixedWidthRawhide(4, 17));
+            environments[i].open();
+        }
+        return environments;
+    }
+
+    @Override
+    public LABEnvironment[] allocateTimeIdLABEnvironments(File[] labDirs) throws Exception {
+        LABEnvironment[] environments = new LABEnvironment[labDirs.length];
+        for (int i = 0; i < labDirs.length; i++) {
+            labDirs[i].mkdirs();
+            environments[i] = new LABEnvironment(labStats[i % labStats.length],
+                buildLABSchedulerThreadPool,
+                buildLABCompactorThreadPool,
+                buildLABDestroyThreadPool,
+                "wal",
+                labMaxWALSizeInBytes,
+                labMaxEntriesPerWAL,
+                labMaxEntrySizeInBytes,
+                labMaxWALOnOpenHeapPressureOverride,
+                labDirs[i],
+                timeIdLabHeapPressure,
+                4,
+                16,
+                leapCache,
+                bolBufferLocks,
+                labUseOffHeap);
             environments[i].open();
         }
         return environments;
