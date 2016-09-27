@@ -109,7 +109,7 @@ public class LabTimeIdIndex implements TimeIdIndex {
                                 (index1, key, timestamp1, tombstoned, version1, payload) -> {
                                     if (timestamp1 >= 0 && !tombstoned) {
                                         v.lastId = (int) timestamp1;
-                                        v.largestTimestamp = version1;
+                                        v.lastTimestamp = version1;
                                     }
                                     return true;
                                 },
@@ -121,7 +121,7 @@ public class LabTimeIdIndex implements TimeIdIndex {
                     }
                     if (v.lastId == -1) {
                         v.lastId = lastIdHint;
-                        v.largestTimestamp = largestTimestampHint;
+                        v.lastTimestamp = largestTimestampHint;
                     }
                     return v;
                 } catch (Exception e) {
@@ -134,9 +134,9 @@ public class LabTimeIdIndex implements TimeIdIndex {
                     for (int i = 0; i < timestamps.length; i++) {
                         byte[] key = UIO.longsBytes(new long[] { version, timestamps[i] });
                         cursor.lastId++;
-                        cursor.largestTimestamp = Math.max(cursor.largestTimestamp, timestamps[i]);
+                        cursor.lastTimestamp = Math.max(cursor.lastTimestamp + 1, timestamps[i]);
                         ids[i] = cursor.lastId;
-                        monotonics[i] = cursor.largestTimestamp;
+                        monotonics[i] = cursor.lastTimestamp;
                         boolean result = valueStream.stream(i, key, ids[i], false, monotonics[i], null);
                         result &= valueStream.stream(i, UIO.longBytes(version), ids[i], false, monotonics[i], null);
                         if (!result) {
@@ -190,6 +190,6 @@ public class LabTimeIdIndex implements TimeIdIndex {
 
     private static class Cursor {
         private int lastId = -1;
-        private long largestTimestamp = -1;
+        private long lastTimestamp = -1;
     }
 }

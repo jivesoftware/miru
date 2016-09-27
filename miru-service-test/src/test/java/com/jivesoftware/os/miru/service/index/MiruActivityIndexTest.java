@@ -62,7 +62,7 @@ public class MiruActivityIndexTest {
         for (MiruActivityIndex activityIndex : indexes) {
             List<MiruActivityAndId<MiruInternalActivity>> activityAndIds = Lists.newArrayList();
             for (int i = 0; i < numberOfActivities; i++) {
-                activityAndIds.add(new MiruActivityAndId<>(buildLookupActivity(tenantId, i, new String[0], numberOfFields), i));
+                activityAndIds.add(new MiruActivityAndId<>(buildLookupActivity(tenantId, i, new String[0], numberOfFields), i, i));
             }
             activityIndex.setAndReady(schema, activityAndIds, stackBuffer);
 
@@ -98,7 +98,7 @@ public class MiruActivityIndexTest {
         MiruSchema schema = new Builder("test", 1).build();
         MiruInternalActivity miruActivity = buildMiruActivity(new MiruTenantId(RandomStringUtils.randomAlphabetic(10).getBytes()), 1, true, new String[0], 5);
         try {
-            miruActivityIndex.setAndReady(schema, Arrays.asList(new MiruActivityAndId<>(miruActivity, 0)), stackBuffer);
+            miruActivityIndex.setAndReady(schema, Arrays.asList(new MiruActivityAndId<>(miruActivity, 0, 1L)), stackBuffer);
         } catch (UnsupportedOperationException e) {
             fail("This implementation of the MiruActivityIndex shouldn't have thrown an UnsupportedOperationException", e);
         }
@@ -110,7 +110,7 @@ public class MiruActivityIndexTest {
         MiruSchema schema = new Builder("test", 1).build();
         MiruInternalActivity miruActivity = buildMiruActivity(new MiruTenantId(RandomStringUtils.randomAlphabetic(10).getBytes()), 1, true, new String[0], 5);
         try {
-            miruActivityIndex.setAndReady(schema, Arrays.asList(new MiruActivityAndId<>(miruActivity, -1)), stackBuffer);
+            miruActivityIndex.setAndReady(schema, Arrays.asList(new MiruActivityAndId<>(miruActivity, -1, 1L)), stackBuffer);
             fail("Expected an IllegalArgumentException but never got it");
         } catch (UnsupportedOperationException e) {
             fail("This implementation of the MiruActivityIndex shouldn't have thrown an UnsupportedOperationException", e);
@@ -134,7 +134,7 @@ public class MiruActivityIndexTest {
                 new String[0],
                 5);
             ids[i] = i;
-            activityAndIds.add(new MiruActivityAndId<>(miruActivity, i));
+            activityAndIds.add(new MiruActivityAndId<>(miruActivity, i, i));
         }
 
         miruActivityIndex.setAndReady(schema, activityAndIds, stackBuffer);
@@ -200,9 +200,9 @@ public class MiruActivityIndexTest {
         final MiruInternalActivity[] miruActivities = new MiruInternalActivity[] { miruActivity1, miruActivity2, miruActivity3 };
 
         List<MiruActivityAndId<MiruInternalActivity>> activityAndIds = Arrays.asList(
-            new MiruActivityAndId<>(miruActivity1, 0),
-            new MiruActivityAndId<>(miruActivity2, 1),
-            new MiruActivityAndId<>(miruActivity3, 2));
+            new MiruActivityAndId<>(miruActivity1, 0, 1L),
+            new MiruActivityAndId<>(miruActivity2, 1, 2L),
+            new MiruActivityAndId<>(miruActivity3, 2, 3L));
 
         // Add activities to in-memory index
         MiruActivityIndex chunkInMemoryActivityIndex = buildInMemoryActivityIndex(false, false);

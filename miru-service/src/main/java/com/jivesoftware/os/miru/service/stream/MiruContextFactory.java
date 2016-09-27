@@ -105,11 +105,12 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
-    private static final int LAB_VERSION = 3;
-    private static final int[] SUPPORTED_LAB_VERSIONS = {-1, 2};
+    private static final int LAB_VERSION = 4;
+    private static final int[] SUPPORTED_LAB_VERSIONS = {-1, 2, 3};
 
     private static final int LAB_ATOMIZED_MIN_VERSION = 2;
     private static final int LAB_REALTIME_MIN_VERSION = 3;
+    private static final int LAB_MONOTIME_MIN_VERSION = 4;
 
     private final OrderIdProvider idProvider;
     private final TxCogs persistentCogs;
@@ -453,6 +454,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
 
         boolean atomized = (labVersion >= LAB_ATOMIZED_MIN_VERSION);
         boolean realtime = realtimeDelivery && (labVersion >= LAB_REALTIME_MIN_VERSION);
+        boolean monotime = (labVersion >= LAB_MONOTIME_MIN_VERSION);
 
         long version = getVersion(coord, storage);
 
@@ -529,12 +531,13 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             -1L,
             -1L,
             NoOpFormatTransformerProvider.NAME,
-            realtime ? "fixedWidth_4_17" : "fixedWidth_4_16",
+            monotime && realtime ? "fixedWidth_4_25" : realtime ? "fixedWidth_4_17" : "fixedWidth_4_16",
             MemoryRawEntryFormat.NAME,
             20));
         commitables.add(timeAndVersionIndex);
         MiruActivityIndex activityIndex = new LabActivityIndex(
             idProvider,
+            monotime,
             realtime,
             timeAndVersionIndex,
             intTermIdsKeyValueMarshaller,

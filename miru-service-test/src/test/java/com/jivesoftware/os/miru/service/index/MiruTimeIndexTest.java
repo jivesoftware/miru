@@ -89,27 +89,29 @@ public class MiruTimeIndexTest {
     @Test(dataProvider = "miruTimeIndexDataProviderWithRangeData")
     public void testLargestInclusiveTimestampIndex(MiruTimeIndex miruTimeIndex) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
-        // { 1, 1, 1, 3, 3, 3, 5, 5, 5 }
+        // { 1, 1, 1, 5, 5, 5, 9, 9,  9 }
+        // { 1, 2, 3, 5, 6, 7, 9, 10, 11 }
         assertEquals(miruTimeIndex.largestInclusiveTimestampIndex(0, stackBuffer), -1);
-        assertEquals(miruTimeIndex.largestInclusiveTimestampIndex(1, stackBuffer), 2);
-        assertEquals(miruTimeIndex.largestInclusiveTimestampIndex(2, stackBuffer), 2);
-        assertEquals(miruTimeIndex.largestInclusiveTimestampIndex(3, stackBuffer), 5);
-        assertEquals(miruTimeIndex.largestInclusiveTimestampIndex(4, stackBuffer), 5);
-        assertEquals(miruTimeIndex.largestInclusiveTimestampIndex(5, stackBuffer), 8);
-        assertEquals(miruTimeIndex.largestInclusiveTimestampIndex(6, stackBuffer), 8);
+        assertEquals(miruTimeIndex.largestInclusiveTimestampIndex(1, stackBuffer), 0);
+        assertEquals(miruTimeIndex.largestInclusiveTimestampIndex(2, stackBuffer), 1);
+        assertEquals(miruTimeIndex.largestInclusiveTimestampIndex(5, stackBuffer), 3);
+        assertEquals(miruTimeIndex.largestInclusiveTimestampIndex(6, stackBuffer), 4);
+        assertEquals(miruTimeIndex.largestInclusiveTimestampIndex(9, stackBuffer), 6);
+        assertEquals(miruTimeIndex.largestInclusiveTimestampIndex(10, stackBuffer), 7);
     }
 
     @Test(dataProvider = "miruTimeIndexDataProviderWithRangeData")
     public void testSmallestExclusiveTimestampIndex(MiruTimeIndex miruTimeIndex) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
-        // { 1, 1, 1, 3, 3, 3, 5, 5, 5 }
+        // { 1, 1, 1, 5, 5, 5, 9, 9,  9 }
+        // { 1, 2, 3, 5, 6, 7, 9, 10, 11 }
         assertEquals(miruTimeIndex.smallestExclusiveTimestampIndex(0, stackBuffer), 0);
-        assertEquals(miruTimeIndex.smallestExclusiveTimestampIndex(1, stackBuffer), 3);
-        assertEquals(miruTimeIndex.smallestExclusiveTimestampIndex(2, stackBuffer), 3);
-        assertEquals(miruTimeIndex.smallestExclusiveTimestampIndex(3, stackBuffer), 6);
-        assertEquals(miruTimeIndex.smallestExclusiveTimestampIndex(4, stackBuffer), 6);
-        assertEquals(miruTimeIndex.smallestExclusiveTimestampIndex(5, stackBuffer), 9);
-        assertEquals(miruTimeIndex.smallestExclusiveTimestampIndex(6, stackBuffer), 9);
+        assertEquals(miruTimeIndex.smallestExclusiveTimestampIndex(1, stackBuffer), 1);
+        assertEquals(miruTimeIndex.smallestExclusiveTimestampIndex(2, stackBuffer), 2);
+        assertEquals(miruTimeIndex.smallestExclusiveTimestampIndex(5, stackBuffer), 4);
+        assertEquals(miruTimeIndex.smallestExclusiveTimestampIndex(6, stackBuffer), 5);
+        assertEquals(miruTimeIndex.smallestExclusiveTimestampIndex(9, stackBuffer), 7);
+        assertEquals(miruTimeIndex.smallestExclusiveTimestampIndex(10, stackBuffer), 8);
     }
 
     @Test(dataProvider = "miruTimeIndexDataProviderWithoutData")
@@ -161,13 +163,23 @@ public class MiruTimeIndexTest {
             assertEquals(ids[i], 4 + i);
         }
 
+        // { 10, 20, 30, 40 } + { 35, 45 }
+        // { 10, 20, 30, 40, 41, 45 }
         assertEquals(miruTimeIndex.getSmallestTimestamp(), 10L);
         assertEquals(miruTimeIndex.getLargestTimestamp(), 45L);
+        assertEquals(miruTimeIndex.smallestExclusiveTimestampIndex(5L, stackBuffer), 0);
         assertEquals(miruTimeIndex.smallestExclusiveTimestampIndex(10L, stackBuffer), 1);
         assertEquals(miruTimeIndex.smallestExclusiveTimestampIndex(12L, stackBuffer), 1);
-        assertEquals(miruTimeIndex.smallestExclusiveTimestampIndex(40L, stackBuffer), 5);
+        assertEquals(miruTimeIndex.smallestExclusiveTimestampIndex(40L, stackBuffer), 4);
+        assertEquals(miruTimeIndex.smallestExclusiveTimestampIndex(41L, stackBuffer), 5);
+        assertEquals(miruTimeIndex.smallestExclusiveTimestampIndex(44L, stackBuffer), 5);
+        assertEquals(miruTimeIndex.smallestExclusiveTimestampIndex(45L, stackBuffer), 6);
         assertEquals(miruTimeIndex.largestInclusiveTimestampIndex(5L, stackBuffer), -1);
-        assertEquals(miruTimeIndex.largestInclusiveTimestampIndex(42L, stackBuffer), 4);
+        assertEquals(miruTimeIndex.largestInclusiveTimestampIndex(10L, stackBuffer), 0);
+        assertEquals(miruTimeIndex.largestInclusiveTimestampIndex(12L, stackBuffer), 0);
+        assertEquals(miruTimeIndex.largestInclusiveTimestampIndex(40L, stackBuffer), 3);
+        assertEquals(miruTimeIndex.largestInclusiveTimestampIndex(41L, stackBuffer), 4);
+        assertEquals(miruTimeIndex.largestInclusiveTimestampIndex(44L, stackBuffer), 4);
         assertEquals(miruTimeIndex.largestInclusiveTimestampIndex(45L, stackBuffer), 5);
     }
 
@@ -338,7 +350,7 @@ public class MiruTimeIndexTest {
     }
 
     private Object[][] buildTimeIndexDataProviderWithRangeData(StackBuffer stackBuffer, boolean useLabIndexes) throws Exception {
-        long[] timestamps = { 1, 1, 1, 3, 3, 3, 5, 5, 5 };
+        long[] timestamps = { 1, 1, 1, 5, 5, 5, 9, 9, 9 };
 
         int[] ids = new int[timestamps.length];
         long[] monotonics = new long[timestamps.length];

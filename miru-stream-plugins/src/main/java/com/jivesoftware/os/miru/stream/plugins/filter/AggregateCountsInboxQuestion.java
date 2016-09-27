@@ -162,7 +162,7 @@ public class AggregateCountsInboxQuestion implements Question<AggregateCountsQue
             for (Map.Entry<String, AggregateCountsAnswerConstraint> entry : currentAnswer.constraints.entrySet()) {
                 AggregateCountsAnswerConstraint value = entry.getValue();
                 constraintReport.put(entry.getKey(),
-                    new AggregateCountsReportConstraint(value.aggregateTerms, value.skippedDistincts, value.collectedDistincts));
+                    new AggregateCountsReportConstraint(value.aggregateTerms, value.uncollectedTerms, value.skippedDistincts, value.collectedDistincts));
             }
 
             report = Optional.of(new AggregateCountsReport(constraintReport));

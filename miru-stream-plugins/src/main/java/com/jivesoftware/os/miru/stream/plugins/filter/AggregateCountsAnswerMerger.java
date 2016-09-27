@@ -67,6 +67,7 @@ public class AggregateCountsAnswerMerger implements MiruAnswerMerger<AggregateCo
                 AggregateCountsAnswerConstraint mergedAnswerConstraint = new AggregateCountsAnswerConstraint(
                     mergedResults,
                     currentConstraint.aggregateTerms,
+                    currentConstraint.uncollectedTerms,
                     currentConstraint.skippedDistincts,
                     currentConstraint.collectedDistincts);
 

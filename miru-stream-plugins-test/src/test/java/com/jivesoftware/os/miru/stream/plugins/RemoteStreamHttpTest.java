@@ -63,6 +63,7 @@ public class RemoteStreamHttpTest {
                 MiruStreamId.NULL,
                 MiruTimeRange.ALL_TIME,
                 MiruTimeRange.ALL_TIME,
+                MiruTimeRange.ALL_TIME,
                 new MiruFilter(MiruFilterOperation.or,
                     false,
                     Collections.singletonList(MiruFieldFilter.ofTerms(MiruFieldType.primary, "activityType", 0)),

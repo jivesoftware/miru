@@ -26,6 +26,7 @@ import com.jivesoftware.os.miru.plugin.index.TimeVersionRealtime;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
+import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
@@ -79,6 +80,7 @@ public class AggregateCounts {
                     requestContext,
                     coord,
                     request.query.streamId,
+                    request.query.collectTimeRange,
                     entry.getValue(),
                     lastReportConstraint,
                     answer,
@@ -97,6 +99,7 @@ public class AggregateCounts {
         MiruRequestContext<BM, IBM, ?> requestContext,
         MiruPartitionCoord coord,
         MiruStreamId streamId,
+        MiruTimeRange collectTimeRange,
         AggregateCountsQueryConstraint constraint,
         Optional<AggregateCountsReportConstraint> lastReport,
         BM answer,
@@ -129,12 +132,15 @@ public class AggregateCounts {
         int collectedDistincts = 0;
         int skippedDistincts = 0;
         Set<MiruValue> aggregated;
+        Set<MiruValue> uncollected;
         if (lastReport.isPresent()) {
             collectedDistincts = lastReport.get().collectedDistincts;
             skippedDistincts = lastReport.get().skippedDistincts;
             aggregated = Sets.newHashSet(lastReport.get().aggregateTerms);
+            uncollected = Sets.newHashSet(lastReport.get().uncollectedTerms);
         } else {
             aggregated = Sets.newHashSet();
+            uncollected = Sets.newHashSet();
         }
 
         if (!MiruFilter.NO_FILTER.equals(constraint.constraintsFilter)) {
@@ -223,6 +229,30 @@ public class AggregateCounts {
                 aggregateCounts.add(new AggregateCount(aggregateTerm, null, beforeCount - afterCount, -1L, unread));
                 beforeCount = afterCount;
             }
+            for (MiruValue uncollectedTerm : uncollected) {
+                MiruTermId uncollectedTermId = termComposer.compose(schema, fieldDefinition, stackBuffer, uncollectedTerm.parts);
+                container.clear();
+                fieldIndex.get(name, fieldId, uncollectedTermId).getIndex(container, stackBuffer);
+                if (!container.isSet()) {
+                    continue;
+                }
+
+                IBM termIndex = container.getBitmap();
+
+                if (bitmaps.supportsInPlace()) {
+                    bitmaps.inPlaceAndNot(answer, termIndex);
+                } else {
+                    answer = bitmaps.andNot(answer, termIndex);
+                }
+
+                if (counter.isPresent()) {
+                    if (bitmaps.supportsInPlace()) {
+                        bitmaps.inPlaceAndNot(counter.get(), termIndex);
+                    } else {
+                        counter = Optional.of(bitmaps.andNot(counter.get(), termIndex));
+                    }
+                }
+            }
 
             while (true) {
                 int lastSetBit = answerCollector == null ? bitmaps.lastSetBit(answer) : answerCollector.lastSetBit;
@@ -249,7 +279,14 @@ public class AggregateCounts {
                 } else {
                     MiruTermId aggregateTermId = fieldValues[0]; // Kinda lame but for now we don't see a need for multi field aggregation.
                     MiruValue aggregateValue = new MiruValue(termComposer.decompose(schema, fieldDefinition, stackBuffer, aggregateTermId));
-                    aggregated.add(aggregateValue);
+
+                    TimeVersionRealtime tvr = requestContext.getActivityIndex().getTimeVersionRealtime(name, lastSetBit, stackBuffer);
+                    boolean collected = contains(collectTimeRange, tvr.monoTimestamp);
+                    if (collected) {
+                        aggregated.add(aggregateValue);
+                    } else {
+                        uncollected.add(aggregateValue);
+                    }
 
                     container.clear();
                     fieldIndex.get(name, fieldId, aggregateTermId).getIndex(container, stackBuffer);
@@ -278,52 +315,57 @@ public class AggregateCounts {
                         afterCount = answerCollector.cardinality;
                     }
 
-                    collectedDistincts++;
-                    if (collectedDistincts > constraint.startFromDistinctN) {
-                        boolean unread = false;
-                        if (unreadIndex != null) {
-                            //TODO much more efficient to add a bitmaps.intersects() to test for first bit in common
-                            CardinalityAndLastSetBit<BM> storage = bitmaps.andWithCardinalityAndLastSetBit(Arrays.asList(unreadIndex, termIndex));
-                            if (storage.cardinality > 0) {
-                                unread = true;
+                    if (collected) {
+                        collectedDistincts++;
+                        if (collectedDistincts > constraint.startFromDistinctN) {
+                            boolean unread = false;
+                            if (unreadIndex != null) {
+                                //TODO much more efficient to add a bitmaps.intersects() to test for first bit in common
+                                CardinalityAndLastSetBit<BM> storage = bitmaps.andWithCardinalityAndLastSetBit(Arrays.asList(unreadIndex, termIndex));
+                                if (storage.cardinality > 0) {
+                                    unread = true;
+                                }
                             }
-                        }
 
-                        //TODO much more efficient to accumulate lastSetBits and gather these once at the end
-                        MiruValue[][] gatherValues = new MiruValue[gatherFieldIds.length][];
-                        for (int i = 0; i < gatherFieldIds.length; i++) {
-                            MiruTermId[] termIds = requestContext.getActivityIndex().get(name, lastSetBit, gatherFieldIds[i], stackBuffer);
-                            MiruValue[] gather = new MiruValue[termIds.length];
-                            for (int j = 0; j < gather.length; j++) {
-                                gather[j] = new MiruValue(termComposer.decompose(schema,
-                                    schema.getFieldDefinition(gatherFieldIds[i]),
-                                    stackBuffer,
-                                    termIds[j]));
+                            //TODO much more efficient to accumulate lastSetBits and gather these once at the end
+                            MiruValue[][] gatherValues = new MiruValue[gatherFieldIds.length][];
+                            for (int i = 0; i < gatherFieldIds.length; i++) {
+                                MiruTermId[] termIds = requestContext.getActivityIndex().get(name, lastSetBit, gatherFieldIds[i], stackBuffer);
+                                MiruValue[] gather = new MiruValue[termIds.length];
+                                for (int j = 0; j < gather.length; j++) {
+                                    gather[j] = new MiruValue(termComposer.decompose(schema,
+                                        schema.getFieldDefinition(gatherFieldIds[i]),
+                                        stackBuffer,
+                                        termIds[j]));
+                                }
+                                gatherValues[i] = gather;
                             }
-                            gatherValues[i] = gather;
-                        }
-                        //TODO much more efficient to accumulate lastSetBits and gather these once at the end
-                        TimeVersionRealtime tvr = requestContext.getActivityIndex().getTimeVersionRealtime(name, lastSetBit, stackBuffer);
+                            //TODO much more efficient to accumulate lastSetBits and gather these once at the end
 
-                        AggregateCount aggregateCount = new AggregateCount(
-                            aggregateValue,
-                            gatherValues,
-                            beforeCount - afterCount,
-                            tvr.timestamp,
-                            unread);
-                        aggregateCounts.add(aggregateCount);
+                            AggregateCount aggregateCount = new AggregateCount(
+                                aggregateValue,
+                                gatherValues,
+                                beforeCount - afterCount,
+                                tvr.timestamp,
+                                unread);
+                            aggregateCounts.add(aggregateCount);
 
-                        if (aggregateCounts.size() >= constraint.desiredNumberOfDistincts) {
-                            break;
+                            if (aggregateCounts.size() >= constraint.desiredNumberOfDistincts) {
+                                break;
+                            }
+                        } else {
+                            skippedDistincts++;
                         }
-                    } else {
-                        skippedDistincts++;
                     }
                     beforeCount = afterCount;
                 }
             }
         }
-        return new AggregateCountsAnswerConstraint(aggregateCounts, aggregated, skippedDistincts, collectedDistincts);
+        return new AggregateCountsAnswerConstraint(aggregateCounts, aggregated, uncollected, skippedDistincts, collectedDistincts);
+    }
+
+    private static boolean contains(MiruTimeRange timeRange, long timestamp) {
+        return timeRange.smallestTimestamp <= timestamp && timeRange.largestTimestamp >= timestamp;
     }
 
 }

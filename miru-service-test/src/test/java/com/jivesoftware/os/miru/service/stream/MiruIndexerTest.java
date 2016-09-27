@@ -60,7 +60,8 @@ public class MiruIndexerTest {
                 buildMiruActivity(tenantId, 4, new String[] { "pqrst" }, ImmutableMap.of(
                     DefaultMiruSchemaDefinition.FIELDS[0].name, "0",
                     DefaultMiruSchemaDefinition.FIELDS[1].name, "1")),
-                3))),
+                3,
+                4L))),
             MoreExecutors.sameThreadExecutor());
         verifyFieldValues(tenantId, context, 3, 0, stackBuffer);
         verifyFieldValues(tenantId, context, 3, 1, stackBuffer);
@@ -73,7 +74,8 @@ public class MiruIndexerTest {
                 buildMiruActivity(tenantId, 5, new String[] { "uvwxy" }, ImmutableMap.of(
                     DefaultMiruSchemaDefinition.FIELDS[0].name, "0",
                     DefaultMiruSchemaDefinition.FIELDS[2].name, "2")),
-                4))),
+                4,
+                5L))),
             MoreExecutors.sameThreadExecutor());
         verifyFieldValues(tenantId, context, 4, 0, stackBuffer);
         verifyFieldValues(tenantId, context, 4, 2, stackBuffer);
@@ -107,7 +109,8 @@ public class MiruIndexerTest {
                         .put(DefaultMiruSchemaDefinition.FIELDS[0].name, "0")
                         .put(DefaultMiruSchemaDefinition.FIELDS[1].name, "1")
                         .build()),
-                id));
+                id,
+                activity.time));
         }
 
         int nextId = activityList.size();
@@ -118,7 +121,8 @@ public class MiruIndexerTest {
                 ImmutableMap.of(
                     DefaultMiruSchemaDefinition.FIELDS[0].name, "0",
                     DefaultMiruSchemaDefinition.FIELDS[1].name, "1")),
-            nextId));
+            nextId,
+            nextId + 1));
 
         // Repair data
         miruIndexer.index(context, coord, activityAndIds, MoreExecutors.sameThreadExecutor());
@@ -205,9 +209,9 @@ public class MiruIndexerTest {
         MiruActivity miruActivity3 = buildMiruActivity(tenantId, 3, new String[] { "abcde" },
             ImmutableMap.of(DefaultMiruSchemaDefinition.FIELDS[0].name, "0"));
         List<MiruActivityAndId<MiruActivity>> immutableActivityList = Arrays.asList(
-            new MiruActivityAndId<>(miruActivity1, 0),
-            new MiruActivityAndId<>(miruActivity2, 1),
-            new MiruActivityAndId<>(miruActivity3, 2));
+            new MiruActivityAndId<>(miruActivity1, 0, miruActivity1.time),
+            new MiruActivityAndId<>(miruActivity2, 1, miruActivity2.time),
+            new MiruActivityAndId<>(miruActivity3, 2, miruActivity3.time));
 
         MiruContext<RoaringBitmap, RoaringBitmap, ?> onDiskContext = IndexTestUtil.buildOnDiskContext(4, useLabIndexes, true, bitmaps, coord);
 

@@ -40,7 +40,7 @@ public interface MiruActivityIndex {
 
     interface TimeVersionRealtimeStream {
 
-        boolean stream(int id, long timestamp, long version, boolean realtimeDelivery) throws Exception;
+        boolean stream(int id, long timestamp, long version, long monoTimestamp, boolean realtimeDelivery) throws Exception;
     }
 
     /**

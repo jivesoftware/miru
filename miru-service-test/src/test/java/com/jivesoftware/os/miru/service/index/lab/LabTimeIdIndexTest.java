@@ -5,9 +5,11 @@ import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
 import com.jivesoftware.os.lab.LABEnvironment;
 import com.jivesoftware.os.lab.LABStats;
 import com.jivesoftware.os.lab.LabHeapPressure;
+import com.jivesoftware.os.lab.LabHeapPressure.FreeHeapStrategy;
 import com.jivesoftware.os.lab.guts.StripingBolBufferLocks;
 import com.jivesoftware.os.miru.service.locator.MiruTempDirectoryResourceLocator;
 import com.jivesoftware.os.miru.service.stream.allocator.InMemoryChunkAllocator;
+import com.jivesoftware.os.miru.service.stream.allocator.OnDiskChunkAllocator;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.lang.math.LongRange;
@@ -26,22 +28,22 @@ public class LabTimeIdIndexTest {
         int numberOfChunkStores = 1;
         MiruTempDirectoryResourceLocator resourceLocator = new MiruTempDirectoryResourceLocator();
         LABStats labStats = new LABStats();
-        InMemoryChunkAllocator chunkAllocator = new InMemoryChunkAllocator(resourceLocator,
+
+        LabHeapPressure labHeapPressure = new LabHeapPressure(labStats, MoreExecutors.sameThreadExecutor(), "test", 1024 * 1024, 1024 * 1024 * 2,
+            new AtomicLong(),
+            FreeHeapStrategy.mostBytesFirst);
+        OnDiskChunkAllocator chunkAllocator = new OnDiskChunkAllocator(new MiruTempDirectoryResourceLocator(),
             new HeapByteBufferFactory(),
-            new HeapByteBufferFactory(),
-            4_096,
             numberOfChunkStores,
-            true,
             100,
             1_000,
-            new LABStats[]{labStats},
-            new LabHeapPressure[]{new LabHeapPressure(labStats, MoreExecutors.sameThreadExecutor(), "test", 1024 * 1024, 1024 * 1024 * 2, new AtomicLong(),
-                    LabHeapPressure.FreeHeapStrategy.mostBytesFirst)},
+            new LABStats[] { labStats },
+            new LabHeapPressure[] { labHeapPressure },
+            labHeapPressure,
             10 * 1024 * 1024,
             1000,
             10 * 1024 * 1024,
             10 * 1024 * 1024,
-            true,
             true,
             LABEnvironment.buildLeapsCache(1_000_000, 10),
             new StripingBolBufferLocks(2048));
@@ -55,9 +57,9 @@ public class LabTimeIdIndexTest {
         LabTimeIdIndex index = indexes[0];
 
         for (long version : new LongRange(1000, 2000).toArray()) {
-            long[] timestamps = {1L, 2L, 3L, 4L};
-            int[] ids = {-1, -1, -1, -1};
-            long[] monotonics = {-1, -1, -1, -1};
+            long[] timestamps = { 1L, 2L, 3L, 4L };
+            int[] ids = { -1, -1, -1, -1 };
+            long[] monotonics = { -1, -1, -1, -1 };
             index.lookup(version, timestamps, ids, monotonics);
             assertCount(keepNIndexes, maxEntriesPerIndex, index);
             for (int i = 0; i < timestamps.length; i++) {

@@ -58,10 +58,10 @@ public class AggregateCountsCustomQuestion implements Question<AggregateCountsQu
         MiruRequestContext<BM, IBM, ?> context = handle.getRequestContext();
         MiruBitmaps<BM, IBM> bitmaps = handle.getBitmaps();
 
-        MiruTimeRange timeRange = request.query.answerTimeRange;
-        if (!context.getTimeIndex().intersects(timeRange)) {
+        MiruTimeRange answerTimeRange = request.query.answerTimeRange;
+        if (!context.getTimeIndex().intersects(answerTimeRange)) {
             solutionLog.log(MiruSolutionLogLevel.WARN, "No time index intersection. Partition {}: {} doesn't intersect with {}",
-                handle.getCoord().partitionId, context.getTimeIndex(), timeRange);
+                handle.getCoord().partitionId, context.getTimeIndex(), answerTimeRange);
             return new MiruPartitionResponse<>(aggregateCounts.getAggregateCounts("aggregateCountsCustom", solutionLog,
                 bitmaps, context, request, handle.getCoord(), report, bitmaps.create(), Optional.absent()), solutionLog.asList());
         }
@@ -79,7 +79,7 @@ public class AggregateCountsCustomQuestion implements Question<AggregateCountsQu
         }
 
         if (!MiruTimeRange.ALL_TIME.equals(request.query.answerTimeRange)) {
-            ands.add(bitmaps.buildTimeRangeMask(context.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp, stackBuffer));
+            ands.add(bitmaps.buildTimeRangeMask(context.getTimeIndex(), answerTimeRange.smallestTimestamp, answerTimeRange.largestTimestamp, stackBuffer));
         }
 
         bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
@@ -112,7 +112,7 @@ public class AggregateCountsCustomQuestion implements Question<AggregateCountsQu
             for (Map.Entry<String, AggregateCountsAnswerConstraint> entry : currentAnswer.constraints.entrySet()) {
                 AggregateCountsAnswerConstraint value = entry.getValue();
                 constraintReport.put(entry.getKey(),
-                    new AggregateCountsReportConstraint(value.aggregateTerms, value.skippedDistincts, value.collectedDistincts));
+                    new AggregateCountsReportConstraint(value.aggregateTerms, value.uncollectedTerms, value.skippedDistincts, value.collectedDistincts));
             }
 
             report = Optional.of(new AggregateCountsReport(constraintReport));
