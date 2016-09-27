@@ -96,6 +96,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.builder.HashCodeBuilder;
 
 /**
@@ -105,12 +106,13 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
-    private static final int LAB_VERSION = 4;
-    private static final int[] SUPPORTED_LAB_VERSIONS = {-1, 2, 3};
+    private static final int LAB_VERSION = 5;
+    private static final int[] SUPPORTED_LAB_VERSIONS = {-1, 2, 3, 4};
 
     private static final int LAB_ATOMIZED_MIN_VERSION = 2;
     private static final int LAB_REALTIME_MIN_VERSION = 3;
     private static final int LAB_MONOTIME_MIN_VERSION = 4;
+    private static final int LAB_SMALL_FOOTPRINT_MIN_VERSION = 5;
 
     private final OrderIdProvider idProvider;
     private final TxCogs persistentCogs;
@@ -455,6 +457,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         boolean atomized = (labVersion >= LAB_ATOMIZED_MIN_VERSION);
         boolean realtime = realtimeDelivery && (labVersion >= LAB_REALTIME_MIN_VERSION);
         boolean monotime = (labVersion >= LAB_MONOTIME_MIN_VERSION);
+        boolean smallFootprint = (labVersion >= LAB_SMALL_FOOTPRINT_MIN_VERSION);
 
         long version = getVersion(coord, storage);
 
@@ -505,9 +508,10 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
 
         IntTermIdsKeyValueMarshaller intTermIdsKeyValueMarshaller = new IntTermIdsKeyValueMarshaller();
 
-        ValueIndex[] termStorage = new ValueIndex[labEnvironments.length];
+        ValueIndex[] termStorage = new ValueIndex[smallFootprint ? 1 : labEnvironments.length];
         for (int i = 0; i < termStorage.length; i++) {
-            termStorage[i] = labEnvironments[i].open(new ValueIndexConfig("termStorage",
+            int ei = smallFootprint ? Math.abs((seed + 2 + i) % labEnvironments.length) : i;
+            termStorage[i] = labEnvironments[ei].open(new ValueIndexConfig("termStorage",
                 4096,
                 maxHeapPressureInBytes,
                 10 * 1024 * 1024,
@@ -548,12 +552,9 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
 
         TrackError trackError = partitionErrorTracker.track(coord);
 
-        @SuppressWarnings("unchecked")
-        ValueIndex[] bitmapIndex = new ValueIndex[labEnvironments.length];
-        ValueIndex[] termIndex = new ValueIndex[labEnvironments.length];
-        ValueIndex[] cardinalityIndex = new ValueIndex[labEnvironments.length];
-        for (int i = 0; i < bitmapIndex.length; i++) {
-            bitmapIndex[i] = labEnvironments[i].open(new ValueIndexConfig("field",
+        ValueIndex[] bitmapIndex, termIndex, cardinalityIndex;
+        if (smallFootprint) {
+            ValueIndex sharedFieldIndex = labEnvironments[Math.abs(seed % labEnvironments.length)].open(new ValueIndexConfig("sharedField",
                 4096,
                 maxHeapPressureInBytes,
                 10 * 1024 * 1024,
@@ -563,29 +564,50 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                 KeyValueRawhide.NAME,
                 MemoryRawEntryFormat.NAME,
                 20));
-            commitables.add(bitmapIndex[i]);
-            termIndex[i] = labEnvironments[i].open(new ValueIndexConfig("term",
-                4096,
-                maxHeapPressureInBytes,
-                10 * 1024 * 1024,
-                -1L,
-                -1L,
-                NoOpFormatTransformerProvider.NAME,
-                KeyValueRawhide.NAME,
-                MemoryRawEntryFormat.NAME,
-                20));
-            commitables.add(termIndex[i]);
-            cardinalityIndex[i] = labEnvironments[i].open(new ValueIndexConfig("cardinality",
-                4096,
-                maxHeapPressureInBytes,
-                10 * 1024 * 1024,
-                -1L,
-                -1L,
-                NoOpFormatTransformerProvider.NAME,
-                KeyValueRawhide.NAME,
-                MemoryRawEntryFormat.NAME,
-                20));
-            commitables.add(cardinalityIndex[i]);
+            commitables.add(sharedFieldIndex);
+
+            bitmapIndex = new ValueIndex[] { sharedFieldIndex };
+            termIndex = new ValueIndex[] { sharedFieldIndex };
+            cardinalityIndex = new ValueIndex[] { sharedFieldIndex };
+        } else {
+            bitmapIndex = new ValueIndex[labEnvironments.length];
+            termIndex = new ValueIndex[labEnvironments.length];
+            cardinalityIndex = new ValueIndex[labEnvironments.length];
+            for (int i = 0; i < bitmapIndex.length; i++) {
+                bitmapIndex[i] = labEnvironments[i].open(new ValueIndexConfig("field",
+                    4096,
+                    maxHeapPressureInBytes,
+                    10 * 1024 * 1024,
+                    -1L,
+                    -1L,
+                    NoOpFormatTransformerProvider.NAME,
+                    KeyValueRawhide.NAME,
+                    MemoryRawEntryFormat.NAME,
+                    20));
+                commitables.add(bitmapIndex[i]);
+                termIndex[i] = labEnvironments[i].open(new ValueIndexConfig("term",
+                    4096,
+                    maxHeapPressureInBytes,
+                    10 * 1024 * 1024,
+                    -1L,
+                    -1L,
+                    NoOpFormatTransformerProvider.NAME,
+                    KeyValueRawhide.NAME,
+                    MemoryRawEntryFormat.NAME,
+                    20));
+                commitables.add(termIndex[i]);
+                cardinalityIndex[i] = labEnvironments[i].open(new ValueIndexConfig("cardinality",
+                    4096,
+                    maxHeapPressureInBytes,
+                    10 * 1024 * 1024,
+                    -1L,
+                    -1L,
+                    NoOpFormatTransformerProvider.NAME,
+                    KeyValueRawhide.NAME,
+                    MemoryRawEntryFormat.NAME,
+                    20));
+                commitables.add(cardinalityIndex[i]);
+            }
         }
 
         @SuppressWarnings("unchecked")
@@ -596,14 +618,26 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                 hasCardinalities[fieldDefinition.fieldId] = fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.cardinality);
             }
 
-            byte[] prefix = {(byte) fieldType.getIndex()};
+            byte[] bitmapPrefix, termPrefix, cardinalityPrefix;
+            if (smallFootprint) {
+                bitmapPrefix = new byte[] { 0, (byte) fieldType.getIndex() };
+                termPrefix = new byte[] { 1, (byte) fieldType.getIndex() };
+                cardinalityPrefix = new byte[] { 2, (byte) fieldType.getIndex() };
+            } else {
+                byte[] prefix = { (byte) fieldType.getIndex() };
+                bitmapPrefix = prefix;
+                termPrefix = prefix;
+                cardinalityPrefix = prefix;
+            }
             fieldIndexes[fieldType.getIndex()] = new LabFieldIndex<>(idProvider,
                 bitmaps,
                 trackError,
-                prefix,
                 atomized,
+                bitmapPrefix,
                 bitmapIndex,
+                termPrefix,
                 termIndex,
+                cardinalityPrefix,
                 cardinalityIndex,
                 hasCardinalities,
                 fieldIndexStripingLocksProvider,

@@ -35,15 +35,16 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
-    private static final int KEY_TERM_OFFSET = 1 + 4; // prefix byte plus fieldId bytes
-
     private final OrderIdProvider idProvider;
     private final MiruBitmaps<BM, IBM> bitmaps;
     private final TrackError trackError;
-    private final byte[] prefix;
     private final boolean atomized;
+    private final byte[] bitmapPrefix;
     private final ValueIndex[] bitmapIndexes;
+    private final byte[] termPrefix;
     private final ValueIndex[] termIndexes;
+    private final int termKeyOffset;
+    private final byte[] cardinalityPrefix;
     private final ValueIndex[] cardinalities;
     private final boolean[] hasCardinalities;
     // We could lock on both field + termId for improved hash/striping, but we favor just termId to reduce object creation
@@ -53,10 +54,12 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
     public LabFieldIndex(OrderIdProvider idProvider,
         MiruBitmaps<BM, IBM> bitmaps,
         TrackError trackError,
-        byte[] prefix,
         boolean atomized,
+        byte[] bitmapPrefix,
         ValueIndex[] bitmapIndexes,
+        byte[] termPrefix,
         ValueIndex[] termIndexes,
+        byte[] cardinalityPrefix,
         ValueIndex[] cardinalities,
         boolean[] hasCardinalities,
         StripingLocksProvider<MiruTermId> stripingLocksProvider,
@@ -65,10 +68,13 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
         this.idProvider = idProvider;
         this.bitmaps = bitmaps;
         this.trackError = trackError;
-        this.prefix = prefix;
         this.atomized = atomized;
+        this.bitmapPrefix = bitmapPrefix;
         this.bitmapIndexes = bitmapIndexes;
+        this.termPrefix = termPrefix;
         this.termIndexes = termIndexes;
+        this.termKeyOffset = termPrefix.length + 4;
+        this.cardinalityPrefix = cardinalityPrefix;
         this.cardinalities = cardinalities;
         this.hasCardinalities = hasCardinalities;
         this.stripingLocksProvider = stripingLocksProvider;
@@ -115,25 +121,25 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
         MutableLong bytes = new MutableLong();
         byte[] fieldIdBytes = FilerIO.intBytes(fieldId);
         if (ranges == null) {
-            byte[] from = fieldIndexPrefixLowerInclusive(fieldIdBytes);
-            byte[] to = fieldIndexPrefixUpperExclusive(fieldIdBytes);
+            byte[] from = termIndexPrefixLowerInclusive(fieldIdBytes);
+            byte[] to = termIndexPrefixUpperExclusive(fieldIdBytes);
             getTermIndex(fieldId).rangeScan(from, to, (index, key, timestamp, tombstoned, version, payload) -> {
                 byte[] keyBytes = key.copy();
                 bytes.add(keyBytes.length);
-                return termIdStream.stream(termInterner.intern(keyBytes, KEY_TERM_OFFSET, keyBytes.length - (KEY_TERM_OFFSET)));
+                return termIdStream.stream(termInterner.intern(keyBytes, termKeyOffset, keyBytes.length - termKeyOffset));
             }, true);
         } else {
             for (KeyRange range : ranges) {
                 byte[] from = range.getStartInclusiveKey() != null
                     ? bitmapIndexKey(fieldIdBytes, range.getStartInclusiveKey())
-                    : fieldIndexPrefixLowerInclusive(fieldIdBytes);
+                    : termIndexPrefixLowerInclusive(fieldIdBytes);
                 byte[] to = range.getStopExclusiveKey() != null
                     ? bitmapIndexKey(fieldIdBytes, range.getStopExclusiveKey())
-                    : fieldIndexPrefixUpperExclusive(fieldIdBytes);
+                    : termIndexPrefixUpperExclusive(fieldIdBytes);
                 getTermIndex(fieldId).rangeScan(from, to, (index, key, timestamp, tombstoned, version, payload) -> {
                     byte[] keyBytes = key.copy();
                     bytes.add(keyBytes.length);
-                    return termIdStream.stream(termInterner.intern(keyBytes, KEY_TERM_OFFSET, keyBytes.length - (KEY_TERM_OFFSET)));
+                    return termIdStream.stream(termInterner.intern(keyBytes, termKeyOffset, keyBytes.length - termKeyOffset));
                 }, true);
             }
         }
@@ -156,32 +162,32 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
         return getIndex(name, fieldId, term);
     }
 
-    private byte[] fieldIndexPrefixLowerInclusive(byte[] fieldIdBytes) {
-        return Bytes.concat(prefix, fieldIdBytes);
-    }
-
-    private byte[] fieldIndexPrefixUpperExclusive(byte[] fieldIdBytes) {
-        byte[] bytes = fieldIndexPrefixLowerInclusive(fieldIdBytes);
-        MiruTermComposer.makeUpperExclusive(bytes);
-        return bytes;
-    }
-
     private byte[] bitmapIndexKey(byte[] fieldIdBytes, byte[] termIdBytes) {
         if (atomized) {
             byte[] termLength = new byte[2];
             UIO.shortBytes((short) (termIdBytes.length & 0xFFFF), termLength, 0);
-            return Bytes.concat(prefix, fieldIdBytes, termLength, termIdBytes);
+            return Bytes.concat(bitmapPrefix, fieldIdBytes, termLength, termIdBytes);
         } else {
-            return Bytes.concat(prefix, fieldIdBytes, termIdBytes);
+            return Bytes.concat(bitmapPrefix, fieldIdBytes, termIdBytes);
         }
     }
 
     private byte[] termIndexKey(byte[] fieldIdBytes, byte[] termIdBytes) {
-        return Bytes.concat(prefix, fieldIdBytes, termIdBytes);
+        return Bytes.concat(termPrefix, fieldIdBytes, termIdBytes);
+    }
+
+    private byte[] termIndexPrefixLowerInclusive(byte[] fieldIdBytes) {
+        return Bytes.concat(termPrefix, fieldIdBytes);
+    }
+
+    private byte[] termIndexPrefixUpperExclusive(byte[] fieldIdBytes) {
+        byte[] bytes = termIndexPrefixLowerInclusive(fieldIdBytes);
+        MiruTermComposer.makeUpperExclusive(bytes);
+        return bytes;
     }
 
     private byte[] cardinalityIndexKey(byte[] fieldIdBytes, int id, byte[] termIdBytes) {
-        return Bytes.concat(prefix, fieldIdBytes, FilerIO.intBytes(id), termIdBytes);
+        return Bytes.concat(cardinalityPrefix, fieldIdBytes, FilerIO.intBytes(id), termIdBytes);
     }
 
     private MiruInvertedIndex<BM, IBM> getIndex(String name, int fieldId, MiruTermId termId) throws Exception {
