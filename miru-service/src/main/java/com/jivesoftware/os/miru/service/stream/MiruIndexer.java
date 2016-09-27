@@ -144,10 +144,12 @@ public class MiruIndexer<BM extends IBM, IBM> {
             log.debug("Declined to remove old activity at {}\n- have: {}\n- offered: {}", id, existing, activity);
         } else {
             log.debug("Removing activity at {}\n- was: {}\n- now: {}", id, existing, activity);
-            @SuppressWarnings("unchecked")
-            List<MiruActivityAndId<MiruInternalActivity>> internalActivity = Arrays.<MiruActivityAndId<MiruInternalActivity>>asList(
-                new MiruActivityAndId[1]);
-            context.activityInternExtern.intern(Collections.singletonList(new MiruActivityAndId<>(activity, id)), 0, 1, internalActivity, context.schema,
+            List<MiruActivityAndId<MiruInternalActivity>> internalActivity = Arrays.asList(new MiruActivityAndId[1]);
+            context.activityInternExtern.intern(Collections.singletonList(new MiruActivityAndId<>(activity, id, existing.monoTimestamp)),
+                0,
+                1,
+                internalActivity,
+                context.schema,
                 stackBuffer);
 
             //TODO apply field changes?

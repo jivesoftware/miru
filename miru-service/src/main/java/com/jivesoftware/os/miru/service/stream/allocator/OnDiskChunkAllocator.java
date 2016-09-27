@@ -233,6 +233,7 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
             environments[i].register("fixedWidth_8_4", new FixedWidthRawhide(8, 4));
             environments[i].register("fixedWidth_4_16", new FixedWidthRawhide(4, 16));
             environments[i].register("fixedWidth_4_17", new FixedWidthRawhide(4, 17));
+            environments[i].register("fixedWidth_4_25", new FixedWidthRawhide(4, 25));
             environments[i].open();
         }
         return environments;

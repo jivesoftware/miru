@@ -13,6 +13,7 @@ import java.util.Map;
 public class AggregateCountsQuery {
 
     public final MiruStreamId streamId;
+    public final MiruTimeRange collectTimeRange;
     public final MiruTimeRange answerTimeRange;
     public final MiruTimeRange countTimeRange;
     public final MiruFilter streamFilter;
@@ -21,11 +22,13 @@ public class AggregateCountsQuery {
 
     public AggregateCountsQuery(
         @JsonProperty("streamId") MiruStreamId streamId,
+        @JsonProperty("collectTimeRange") MiruTimeRange collectTimeRange,
         @JsonProperty("answerTimeRange") MiruTimeRange answerTimeRange,
         @JsonProperty("countTimeRange") MiruTimeRange countTimeRange,
         @JsonProperty("streamFilter") MiruFilter streamFilter,
         @JsonProperty("constraints") Map<String, AggregateCountsQueryConstraint> constraints) {
         this.streamId = Preconditions.checkNotNull(streamId);
+        this.collectTimeRange = Preconditions.checkNotNull(collectTimeRange);
         this.answerTimeRange = Preconditions.checkNotNull(answerTimeRange);
         this.countTimeRange = Preconditions.checkNotNull(countTimeRange);
         this.streamFilter = Preconditions.checkNotNull(streamFilter);
@@ -37,6 +40,7 @@ public class AggregateCountsQuery {
     public String toString() {
         return "AggregateCountsQuery{"
             + "streamId=" + streamId
+            + ", collectTimeRange=" + collectTimeRange
             + ", answerTimeRange=" + answerTimeRange
             + ", countTimeRange=" + countTimeRange
             + ", streamFilter=" + streamFilter

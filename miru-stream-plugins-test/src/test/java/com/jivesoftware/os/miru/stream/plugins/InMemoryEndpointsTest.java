@@ -111,6 +111,7 @@ public class InMemoryEndpointsTest {
                 MiruStreamId.NULL,
                 MiruTimeRange.ALL_TIME,
                 MiruTimeRange.ALL_TIME,
+                MiruTimeRange.ALL_TIME,
                 new MiruFilter(MiruFilterOperation.or,
                     false,
                     Collections.singletonList(MiruFieldFilter.ofTerms(MiruFieldType.primary, OBJECT_ID.getFieldName(), "value2")),
@@ -134,6 +135,7 @@ public class InMemoryEndpointsTest {
             MiruAuthzExpression.NOT_PROVIDED,
             new AggregateCountsQuery(
                 MiruStreamId.NULL,
+                MiruTimeRange.ALL_TIME,
                 MiruTimeRange.ALL_TIME,
                 MiruTimeRange.ALL_TIME,
                 new MiruFilter(MiruFilterOperation.or,

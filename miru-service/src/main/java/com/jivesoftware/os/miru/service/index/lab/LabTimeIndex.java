@@ -121,10 +121,10 @@ public class LabTimeIndex implements MiruTimeIndex {
         for (int i = 0; i < timestamps.length; i++) {
             if (timestamps[i] != -1) {
                 if (smallestTimestamp == Long.MAX_VALUE) {
-                    smallestTimestamp = timestamps[i];
+                    smallestTimestamp = monotonics[i];
                 }
-                if (largestTimestamp < timestamps[i]) {
-                    largestTimestamp = timestamps[i];
+                if (largestTimestamp < monotonics[i]) {
+                    largestTimestamp = monotonics[i];
                 }
             }
             if (ids[i] > lastId) {

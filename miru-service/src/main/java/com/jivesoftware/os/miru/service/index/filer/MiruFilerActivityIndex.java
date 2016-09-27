@@ -5,7 +5,6 @@ import com.jivesoftware.os.filer.io.api.KeyValueContext;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.filer.io.chunk.ChunkFiler;
 import com.jivesoftware.os.filer.keyed.store.TxKeyValueStore;
-import com.jivesoftware.os.miru.api.activity.TimeAndVersion;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -75,7 +74,7 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
 
         LOG.inc("count>getTimeVersionRealtime>total");
         LOG.inc("count>getTimeVersionRealtime>" + name);
-        return (values[0] != -1L || values[1] != -1L) ? new TimeVersionRealtime(values[0], values[1], false) : null;
+        return (values[0] != -1L || values[1] != -1L) ? new TimeVersionRealtime(values[0], values[1], -1L, false) : null;
     }
 
     @Override
@@ -94,6 +93,7 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
                                     tav[i] = new TimeVersionRealtime(
                                         FilerIO.readLong(filer, "time", stackBuffer1),
                                         FilerIO.readLong(filer, "version", stackBuffer1),
+                                        -1L,
                                         false);
                                 }
                             }

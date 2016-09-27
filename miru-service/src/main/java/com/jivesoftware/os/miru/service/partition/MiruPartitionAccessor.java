@@ -22,7 +22,6 @@ import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
 import com.jivesoftware.os.miru.plugin.partition.TrackError;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
-import com.jivesoftware.os.miru.service.index.TimeIdIndex;
 import com.jivesoftware.os.miru.service.stream.MiruContext;
 import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
 import com.jivesoftware.os.miru.service.stream.MiruIndexer;
@@ -538,7 +537,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
 
                 for (int i = 0; i < hits; i++) {
                     if (indexHits) {
-                        indexables.add(new MiruActivityAndId<>(hitActivities[i], hitIds[i]));
+                        indexables.add(new MiruActivityAndId<>(hitActivities[i], hitIds[i], hitMonotonics[i]));
                     } else {
                         indexer.remove(got, hitActivities[i], hitIds[i]);
                     }
@@ -553,7 +552,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
 
                 for (int i = 0; i < misses; i++) {
                     if (indexMisses) {
-                        indexables.add(new MiruActivityAndId<>(missActivities[i], missIds[i]));
+                        indexables.add(new MiruActivityAndId<>(missActivities[i], missIds[i], missMonotonics[i]));
                     } else {
                         indexer.remove(got, missActivities[i], missIds[i]);
                     }

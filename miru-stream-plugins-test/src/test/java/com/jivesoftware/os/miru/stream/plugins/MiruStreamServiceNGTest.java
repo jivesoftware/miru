@@ -167,6 +167,7 @@ public class MiruStreamServiceNGTest {
                     MiruAuthzExpression.NOT_PROVIDED,
                     new AggregateCountsQuery(
                         streamId,
+                        MiruTimeRange.ALL_TIME,
                         new MiruTimeRange(0, capacity),
                         new MiruTimeRange(0, capacity),
                         filter,
@@ -275,6 +276,7 @@ public class MiruStreamServiceNGTest {
                 MiruActorId.NOT_PROVIDED,
                 MiruAuthzExpression.NOT_PROVIDED, new AggregateCountsQuery(
                 streamId,
+                MiruTimeRange.ALL_TIME,
                 new MiruTimeRange(0, 1_000),
                 new MiruTimeRange(0, 1_000),
                 filter,
@@ -317,6 +319,7 @@ public class MiruStreamServiceNGTest {
                 MiruActorId.NOT_PROVIDED,
                 MiruAuthzExpression.NOT_PROVIDED, new AggregateCountsQuery(
                 streamId,
+                MiruTimeRange.ALL_TIME,
                 new MiruTimeRange(0, 1_000),
                 new MiruTimeRange(0, 1_000),
                 filter,

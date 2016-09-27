@@ -12,15 +12,18 @@ import java.util.Set;
 public class AggregateCountsReportConstraint {
 
     public final Set<MiruValue> aggregateTerms;
+    public final Set<MiruValue> uncollectedTerms;
     public final int skippedDistincts;
     public final int collectedDistincts;
 
     @JsonCreator
     public AggregateCountsReportConstraint(
         @JsonProperty("aggregateTerms") Set<MiruValue> aggregateTerms,
+        @JsonProperty("uncollectedTerms") Set<MiruValue> uncollectedTerms,
         @JsonProperty("skippedDistincts") int skippedDistincts,
         @JsonProperty("collectedDistincts") int collectedDistincts) {
         this.aggregateTerms = aggregateTerms;
+        this.uncollectedTerms = uncollectedTerms;
         this.skippedDistincts = skippedDistincts;
         this.collectedDistincts = collectedDistincts;
     }
@@ -29,6 +32,7 @@ public class AggregateCountsReportConstraint {
     public String toString() {
         return "AggregateCountsReportConstraint{" +
             "aggregateTerms=" + aggregateTerms +
+            ", uncollectedTerms=" + uncollectedTerms +
             ", skippedDistincts=" + skippedDistincts +
             ", collectedDistincts=" + collectedDistincts +
             '}';

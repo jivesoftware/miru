@@ -13,6 +13,7 @@ public class AggregateCountsAnswerConstraint {
 
     public final List<AggregateCount> results;
     public final Set<MiruValue> aggregateTerms;
+    public final Set<MiruValue> uncollectedTerms;
     public final int skippedDistincts;
     public final int collectedDistincts;
 
@@ -20,10 +21,12 @@ public class AggregateCountsAnswerConstraint {
     public AggregateCountsAnswerConstraint(
         @JsonProperty("results") List<AggregateCount> results,
         @JsonProperty("aggregateTerms") Set<MiruValue> aggregateTerms,
+        @JsonProperty("uncollectedTerms") Set<MiruValue> uncollectedTerms,
         @JsonProperty("skippedDistincts") int skippedDistincts,
         @JsonProperty("collectedDistincts") int collectedDistincts) {
         this.results = results;
         this.aggregateTerms = aggregateTerms;
+        this.uncollectedTerms = uncollectedTerms;
         this.skippedDistincts = skippedDistincts;
         this.collectedDistincts = collectedDistincts;
     }

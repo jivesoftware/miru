@@ -123,10 +123,10 @@ public class MiruReaderEndpoints {
                 StackBuffer stackBuffer = new StackBuffer();
                 try (MiruRequestHandle<?, ?, ?> handle = queryablePartition.get().acquireQueryHandle()) {
                     MiruActivityIndex activityIndex = handle.getRequestContext().getActivityIndex();
-                    activityIndex.streamTimeVersionRealtime(stackBuffer, (id, timestamp, version, realtimeDelivery) -> {
+                    activityIndex.streamTimeVersionRealtime(stackBuffer, (id, timestamp, version, monoTimestamp, realtimeDelivery) -> {
                         int timeId = handle.getRequestContext().getTimeIndex().getExactId(timestamp, stackBuffer);
                         boolean idsMatch = (id == timeId);
-                        value.add(timestamp + ", " + version + ", " + realtimeDelivery + ", " + idsMatch);
+                        value.add(timestamp + ", " + version + ", " + monoTimestamp + ", " + realtimeDelivery + ", " + idsMatch);
                         return true;
                     });
                 }

@@ -77,7 +77,8 @@ public class MiruActivityInternExtern {
                     .putFieldsValues(internFields(activity.fieldsValues, schema, stackBuffer))
                     .putPropsValues(internProps(activity.propsValues, schema))
                     .build(),
-                activiyAndId.id));
+                activiyAndId.id,
+                activiyAndId.monoTimestamp));
         }
     }
 

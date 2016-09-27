@@ -155,6 +155,7 @@ public class AggregateCountsPluginRegion implements MiruPageRegion<Optional<Aggr
                             MiruAuthzExpression.NOT_PROVIDED,
                             new AggregateCountsQuery(
                                 streamId,
+                                MiruTimeRange.ALL_TIME,
                                 timeRange,
                                 MiruTimeRange.ALL_TIME,
                                 streamFilter,
