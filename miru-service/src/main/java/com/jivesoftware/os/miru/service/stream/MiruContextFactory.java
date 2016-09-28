@@ -96,7 +96,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.builder.HashCodeBuilder;
 
 /**
@@ -488,6 +487,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             MemoryRawEntryFormat.NAME,
             20));
         commitables.add(monoTimeIndex);
+
         ValueIndex rawTimeIndex = labEnvironments[Math.abs((seed + 1) % labEnvironments.length)].open(new ValueIndexConfig("rawTime",
             4096,
             maxHeapPressureInBytes,
@@ -499,6 +499,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             MemoryRawEntryFormat.NAME,
             20));
         commitables.add(rawTimeIndex);
+
         MiruTimeIndex timeIndex = new LabTimeIndex(
             idProvider,
             metaIndex,
@@ -539,6 +540,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             MemoryRawEntryFormat.NAME,
             20));
         commitables.add(timeAndVersionIndex);
+
         MiruActivityIndex activityIndex = new LabActivityIndex(
             idProvider,
             monotime,
@@ -557,7 +559,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             ValueIndex sharedFieldIndex = labEnvironments[Math.abs(seed % labEnvironments.length)].open(new ValueIndexConfig("sharedField",
                 4096,
                 maxHeapPressureInBytes,
-                10 * 1024 * 1024,
+                100 * 1024 * 1024,
                 -1L,
                 -1L,
                 NoOpFormatTransformerProvider.NAME,
@@ -585,6 +587,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                     MemoryRawEntryFormat.NAME,
                     20));
                 commitables.add(bitmapIndex[i]);
+
                 termIndex[i] = labEnvironments[i].open(new ValueIndexConfig("term",
                     4096,
                     maxHeapPressureInBytes,
@@ -596,6 +599,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                     MemoryRawEntryFormat.NAME,
                     20));
                 commitables.add(termIndex[i]);
+
                 cardinalityIndex[i] = labEnvironments[i].open(new ValueIndexConfig("cardinality",
                     4096,
                     maxHeapPressureInBytes,

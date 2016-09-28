@@ -51,7 +51,7 @@ public class LabPluginCacheProvider implements MiruPluginCacheProvider {
                     cacheIndexes[i] = labEnvironments[i].open(new ValueIndexConfig("pluginCache-" + key, // serialization compatible with lastId keyValues
                         4096,
                         maxHeapPressureInBytes,
-                        10 * 1024 * 1024,
+                        100 * 1024 * 1024,
                         -1L,
                         -1L,
                         NoOpFormatTransformerProvider.NAME,

@@ -105,9 +105,10 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
             new LABSparseCircularMetricBuffer[]{stats.mGC, stats.mPressureCommit, stats.mCommit, stats.mFsyncedCommit, stats.mGCCommit},
             new boolean[]{false, false, false, false, false}));
 
-        list.addAll(wavformGroup(group, filter, prefix + "lsm", defaultColors, new String[]{"open", "closed", "merging", "merged", "splitting", "split"},
-            new LABSparseCircularMetricBuffer[]{stats.mOpen, stats.mClosed, stats.mMerging, stats.mMerged, stats.mSplitings, stats.mSplits},
-            new boolean[]{false, false, false, false, false, false}));
+        list.addAll(
+            wavformGroup(group, filter, prefix + "lsm", defaultColors, new String[]{"open", "closed", "debt", "merging", "merged", "splitting", "split"},
+                new LABSparseCircularMetricBuffer[]{stats.mOpen, stats.mClosed, stats.mDebt, stats.mMerging, stats.mMerged, stats.mSplitings, stats.mSplits},
+                new boolean[]{false, false, false, false, false, false}));
 
         list.addAll(wavformGroup(group, filter, prefix + "disk", defaultColors, new String[]{"bytesWrittenToWAL", "bytesWrittenAsIndex", "bytesWrittenAsMerge",
             "bytesWrittenAsSplit"},
