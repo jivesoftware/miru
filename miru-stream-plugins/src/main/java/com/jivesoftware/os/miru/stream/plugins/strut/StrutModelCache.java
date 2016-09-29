@@ -16,13 +16,13 @@ import com.jivesoftware.os.routing.bird.http.client.RoundRobinStrategy;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.shared.ClientCall;
 import com.jivesoftware.os.routing.bird.shared.ClientCall.ClientResponse;
+import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
-import org.xerial.snappy.Snappy;
 import org.xerial.snappy.SnappyInputStream;
 
 /**
@@ -70,14 +70,16 @@ public class StrutModelCache {
         StrutModel model = null;
         byte[] modelBytes = modelCache.getIfPresent(key);
         if (modelBytes != null) {
-            CatwalkModel catwalkModel = requestMapper.readValue(new SnappyInputStream(new ByteArrayInputStream(modelBytes)), CatwalkModel.class);
+            SnappyInputStream in = new SnappyInputStream(new BufferedInputStream(new ByteArrayInputStream(modelBytes), 8192));
+            CatwalkModel catwalkModel = requestMapper.readValue(in, CatwalkModel.class);
             model = convert(catwalkQuery, catwalkModel);
         }
 
         if (model == null) {
             try {
                 modelBytes = modelCache.get(key, () -> fetchModelBytes(catwalkQuery, key, partitionId));
-                CatwalkModel catwalkModel = requestMapper.readValue(new SnappyInputStream(new ByteArrayInputStream(modelBytes)), CatwalkModel.class);
+                SnappyInputStream in = new SnappyInputStream(new BufferedInputStream(new ByteArrayInputStream(modelBytes), 8192));
+                CatwalkModel catwalkModel = requestMapper.readValue(in, CatwalkModel.class);
                 model = convert(catwalkQuery, catwalkModel);
             } catch (ExecutionException ee) {
                 if (ee.getCause() instanceof ModelNotAvailable) {
@@ -141,7 +143,8 @@ public class StrutModelCache {
         CatwalkModel catwalkModel = null;
         try {
             if (responseMapper.isSuccessStatusCode(response.getStatusCode())) {
-                catwalkModel = requestMapper.readValue(new SnappyInputStream(response.getInputStream()), CatwalkModel.class);
+                SnappyInputStream in = new SnappyInputStream(new BufferedInputStream(response.getInputStream(), 8192));
+                catwalkModel = requestMapper.readValue(in, CatwalkModel.class);
             }
         } finally {
             response.close();
