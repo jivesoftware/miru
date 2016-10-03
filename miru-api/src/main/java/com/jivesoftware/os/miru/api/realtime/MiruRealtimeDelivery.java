@@ -8,5 +8,5 @@ import java.util.List;
  */
 public interface MiruRealtimeDelivery {
 
-    void deliver(MiruPartitionCoord coord, List<Long> activityTimes) throws Exception;
+    int deliver(MiruPartitionCoord coord, List<Long> activityTimes) throws Exception;
 }

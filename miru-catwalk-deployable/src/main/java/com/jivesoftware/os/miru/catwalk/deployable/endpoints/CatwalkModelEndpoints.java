@@ -68,12 +68,11 @@ public class CatwalkModelEndpoints {
             CatwalkModel model = catwalkModelService.getModel(miruTenantId, catwalkId, modelId, catwalkQuery);
             StreamingOutput stream = os -> {
                 os.flush();
-                BufferedOutputStream bos = new BufferedOutputStream(os, 8192); // TODO expose to config
-                SnappyOutputStream sos = new SnappyOutputStream(bos);
+                BufferedOutputStream bos = new BufferedOutputStream(new SnappyOutputStream(os), 8192); // TODO expose to config
                 try {
-                    mapper.writeValue(sos, model);
+                    mapper.writeValue(bos, model);
                 } finally {
-                    sos.flush();
+                    bos.flush();
                 }
             };
             long latency = System.currentTimeMillis() - start;

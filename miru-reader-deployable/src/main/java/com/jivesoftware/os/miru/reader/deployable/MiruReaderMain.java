@@ -270,6 +270,9 @@ public class MiruReaderMain {
             MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize(miruStats, "", manageHttpClient, mapper);
             MiruSchemaProvider miruSchemaProvider = new ClusterSchemaProvider(clusterClient, 10000); // TODO config
 
+            TimestampedOrderIdProvider timestampedOrderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(0), new SnowflakeIdPacker(),
+                new JiveEpochTimestampProvider());
+
             MiruRealtimeDelivery realtimeDelivery;
             String realtimeDeliveryService = miruServiceConfig.getRealtimeDeliveryService().trim();
             String realtimeDeliveryEndpoint = miruServiceConfig.getRealtimeDeliveryEndpoint().trim();
@@ -288,7 +291,9 @@ public class MiruReaderMain {
                     new RoundRobinStrategy(),
                     realtimeDeliveryEndpoint,
                     mapper,
-                    miruStats);
+                    miruStats,
+                    timestampedOrderIdProvider,
+                    miruServiceConfig.getDropRealtimeDeliveryOlderThanNMillis());
             }
 
             PartitionErrorTracker.PartitionErrorTrackerConfig partitionErrorTrackerConfig = deployable
@@ -381,9 +386,6 @@ public class MiruReaderMain {
 
             miruServiceLifecyle.start();
             MiruService miruService = miruServiceLifecyle.getService();
-
-            TimestampedOrderIdProvider timestampedOrderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(0), new SnowflakeIdPacker(),
-                new JiveEpochTimestampProvider());
 
             MiruSoyRendererConfig rendererConfig = deployable.config(MiruSoyRendererConfig.class);
 

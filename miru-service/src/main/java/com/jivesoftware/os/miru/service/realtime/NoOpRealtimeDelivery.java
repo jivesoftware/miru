@@ -17,7 +17,8 @@ public class NoOpRealtimeDelivery implements MiruRealtimeDelivery {
     }
 
     @Override
-    public void deliver(MiruPartitionCoord coord, List<Long> activityTimes) throws Exception {
+    public int deliver(MiruPartitionCoord coord, List<Long> activityTimes) throws Exception {
         miruStats.egressed("realtime>delivery>noop", activityTimes.size(), 0);
+        return 0;
     }
 }
