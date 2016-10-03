@@ -261,4 +261,7 @@ public interface MiruServiceConfig extends Config {
 
     @BooleanDefault(true)
     boolean getRealtimeDelivery();
+
+    @LongDefault(30 * 60 * 1_000L)
+    long getDropRealtimeDeliveryOlderThanNMillis();
 }

@@ -1243,6 +1243,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                 List<Long> activityTimes = Lists.newArrayList();
                 int gathered = 0;
                 int missing = 0;
+                int realtimeSent = 0;
                 for (int id = deliveryId + 1; id <= lastId; id += partitionSipBatchSize) {
                     int batchSize = Math.min(partitionSipBatchSize, lastId - id + 1);
                     int[] indexes = new int[batchSize];
@@ -1265,19 +1266,19 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                         }
                     }
                     if (activityTimes.size() >= partitionSipBatchSize) {
-                        realtimeDelivery.deliver(coord, activityTimes);
+                        realtimeSent += realtimeDelivery.deliver(coord, activityTimes);
                         activityTimes.clear();
                         sipIndex.setRealtimeDeliveryId(lastId, stackBuffer);
                     }
                 }
 
                 if (!activityTimes.isEmpty()) {
-                    realtimeDelivery.deliver(coord, activityTimes);
+                    realtimeSent += realtimeDelivery.deliver(coord, activityTimes);
                 }
                 if (lastId > deliveryId) {
                     sipIndex.setRealtimeDeliveryId(lastId, stackBuffer);
-                    LOG.info("Delivered realtime for coord:{} deliveryId:{} lastId:{} gathered:{} missing:{} sent:{}",
-                        coord, deliveryId, lastId, gathered, missing, activityTimes.size());
+                    LOG.info("Delivered realtime for coord:{} deliveryId:{} lastId:{} gathered:{} missing:{} offered:{} sent:{}",
+                        coord, deliveryId, lastId, gathered, missing, activityTimes.size(), realtimeSent);
                 }
             }
         }
