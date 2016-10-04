@@ -39,7 +39,7 @@ public class LastIdKeyValueRawhide implements Rawhide {
         FormatTransformer bReadKeyFormatTransormer,
         FormatTransformer bReadValueFormatTransormer,
         BolBuffer bRawEntry,
-        BolBuffer bKeyBuffer) {
+        BolBuffer bKeyBuffer) throws Exception {
 
         int c = compareKey(aReadKeyFormatTransormer, aReadValueFormatTransormer, aRawEntry, aKeyBuffer,
             bReadKeyFormatTransormer, bReadValueFormatTransormer, bRawEntry, bKeyBuffer);
@@ -133,11 +133,12 @@ public class LastIdKeyValueRawhide implements Rawhide {
     @Override
     public void writeRawEntry(FormatTransformer readKeyFormatTransormer,
         FormatTransformer readValueFormatTransormer,
-        BolBuffer rawEntry,
+        BolBuffer rawEntryBuffer,
         FormatTransformer writeKeyFormatTransormer,
         FormatTransformer writeValueFormatTransormer,
         IAppendOnly appendOnly) throws Exception {
-        UIO.writeByteArray(appendOnly, rawEntry.bytes, rawEntry.offset, rawEntry.length, "entry");
+        appendOnly.appendInt(rawEntryBuffer.length);
+        appendOnly.append(rawEntryBuffer);
     }
 
     @Override
@@ -146,73 +147,6 @@ public class LastIdKeyValueRawhide implements Rawhide {
         BolBuffer rawEntry,
         BolBuffer keyBuffer) {
         return rawEntry.sliceInto(4, rawEntry.getInt(0), keyBuffer);
-    }
-
-    @Override
-    public int compareKey(FormatTransformer readKeyFormatTransormer,
-        FormatTransformer readValueFormatTransormer,
-        BolBuffer rawEntry,
-        BolBuffer keyBuffer,
-        BolBuffer compareKey
-    ) {
-        return IndexUtil.compare(key(readKeyFormatTransormer, readValueFormatTransormer, rawEntry, keyBuffer), compareKey);
-    }
-
-    @Override
-    public int compare(BolBuffer aKey, BolBuffer bKey) {
-        return IndexUtil.compare(aKey, bKey);
-    }
-
-    @Override
-    public Comparator<BolBuffer> getBolBufferKeyComparator() {
-        return IndexUtil::compare;
-    }
-
-    @Override
-    public Comparator<byte[]> getKeyComparator() {
-        return (byte[] o1, byte[] o2) -> IndexUtil.compare(o1, 0, o1.length, o2, 0, o2.length);
-    }
-
-    @Override
-    public int compareKey(FormatTransformer aReadKeyFormatTransormer,
-        FormatTransformer aReadValueFormatTransormer,
-        BolBuffer aRawEntry,
-        BolBuffer aKeyBuffer,
-        FormatTransformer bReadKeyFormatTransormer,
-        FormatTransformer bReadValueFormatTransormer,
-        BolBuffer bRawEntry,
-        BolBuffer bKeyBuffer) {
-
-        if (aRawEntry == null && bRawEntry == null) {
-            return 0;
-        } else if (aRawEntry == null) {
-            return -bRawEntry.length;
-        } else if (bRawEntry == null) {
-            return aRawEntry.length;
-        } else {
-            return IndexUtil.compare(
-                key(aReadKeyFormatTransormer, aReadValueFormatTransormer, aRawEntry, aKeyBuffer),
-                key(bReadKeyFormatTransormer, bReadValueFormatTransormer, bRawEntry, bKeyBuffer)
-            );
-        }
-    }
-
-    @Override
-    public boolean mightContain(long timestamp, long timestampVersion, long newerThanTimestamp, long newerThanTimestampVersion) {
-        return compareTimestampVersion(timestamp, timestampVersion, newerThanTimestamp, newerThanTimestampVersion) >= 0;
-    }
-
-    @Override
-    public boolean isNewerThan(long timestamp, long timestampVersion, long newerThanTimestamp, long newerThanTimestampVersion) {
-        return compareTimestampVersion(timestamp, timestampVersion, newerThanTimestamp, newerThanTimestampVersion) > 0;
-    }
-
-    private static int compareTimestampVersion(long timestamp, long timestampVersion, long otherTimestamp, long otherTimestampVersion) {
-        int c = Long.compare(timestamp, otherTimestamp);
-        if (c != 0) {
-            return c;
-        }
-        return Long.compare(timestampVersion, otherTimestampVersion);
     }
 
 }
