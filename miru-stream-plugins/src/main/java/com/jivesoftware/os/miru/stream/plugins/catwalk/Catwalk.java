@@ -165,15 +165,21 @@ public class Catwalk {
                             request.query.catwalkId, i, Arrays.toString(fieldIds),
                             Arrays.toString(termIds), featureBag.answers);
                         if (verboseLogging) {
+                            List<IBM> verboseAnds = Lists.newArrayList();
                             for (int k = 0; k < fieldIds.length; k++) {
                                 BitmapAndLastId<BM> container = new BitmapAndLastId<>();
                                 primaryIndex.get(name, fieldIds[k], termIds[k]).getIndex(container, stackBuffer);
+                                BM termBitmap = container.getBitmap();
+                                verboseAnds.add(termBitmap);
                                 LOG.info("Used field:{} term:{} cardinality:{} bitmap:{}",
-                                    fieldIds[k], termIds[k], bitmaps.cardinality(container.getBitmap()), container.getBitmap());
+                                    fieldIds[k], termIds[k], bitmaps.cardinality(termBitmap), termBitmap);
                             }
                             if (featureMasks != null && featureMasks[i] != null) {
+                                verboseAnds.add(featureMasks[i]);
                                 LOG.info("Masked cardinality:{} bitmap:{}", bitmaps.cardinality(featureMasks[i]), featureMasks[i]);
                             }
+                            BM verboseResult = bitmaps.and(verboseAnds);
+                            LOG.info("Combined result cardinality:{} bitmap:{}", bitmaps.cardinality(verboseResult), verboseResult);
                         }
                     } else {
                         valid++;
