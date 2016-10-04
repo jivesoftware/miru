@@ -26,8 +26,8 @@ public class CatwalkPlugin implements MiruPlugin<CatwalkEndpoints, CatwalkInject
     @Override
     public Collection<MiruEndpointInjectable<CatwalkInjectable>> getInjectables(MiruProvider<? extends Miru> miruProvider) {
 
-        Catwalk catwalk = new Catwalk();
         StrutConfig config = miruProvider.getConfig(StrutConfig.class);
+        Catwalk catwalk = new Catwalk(config.getVerboseLogging());
         Executor catwalkExecutor = Executors.newFixedThreadPool(config.getCatwalkSolverPoolSize());
         return Collections.singletonList(new MiruEndpointInjectable<>(
             CatwalkInjectable.class,
