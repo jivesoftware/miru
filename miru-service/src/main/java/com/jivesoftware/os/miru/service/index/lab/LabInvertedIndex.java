@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.service.index.lab;
 
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
@@ -116,9 +115,9 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
                                 return true;
                             },
                             true);
-                        LOG.inc("atomized>getKeys>calls");
-                        LOG.inc("atomized>getKeys>keys", keys.length);
-                        LOG.inc("atomized>getKeys>atoms", atoms[0]);
+                        LOG.inc("getIndexInternal>atomized>getKeys>calls");
+                        LOG.inc("getIndexInternal>atomized>getKeys>keys", keys.length);
+                        LOG.inc("getIndexInternal>atomized>getKeys>atoms", atoms[0]);
                     } else {
                         byte[] from = bitmapKeyBytes;
                         byte[] to = LABUtils.prefixUpperExclusive(bitmapKeyBytes);
@@ -135,8 +134,8 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
                                 return true;
                             },
                             true);
-                        LOG.inc("atomized>getRange>calls");
-                        LOG.inc("atomized>getRange>atoms", atoms[0]);
+                        LOG.inc("getIndexInternal>atomized>getRange>calls");
+                        LOG.inc("getIndexInternal>atomized>getRange>atoms", atoms[0]);
                     }
                     return true;
                 });
@@ -165,31 +164,59 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
     @Override
     public <R> R txIndex(IndexTx<R, IBM> tx, StackBuffer stackBuffer) throws Exception {
         MutableLong bytes = new MutableLong();
-        @SuppressWarnings("unchecked")
-        R[] result = (R[]) new Object[1];
-        bitmapIndex.get(
-            (keyStream) -> keyStream.key(0, bitmapKeyBytes, 0, bitmapKeyBytes.length),
-            (index, key, timestamp, tombstoned, version, payload) -> {
-                try {
-                    if (payload != null) {
-                        bytes.add(payload.length);
-                        if (payload.length < LAST_ID_LENGTH + 4) {
-                            result[0] = tx.tx(null, null, -1, null);
-                            return false;
+        R result;
+        if (atomized) {
+            BitmapAndLastId<BM> container = new BitmapAndLastId<>();
+            bitmaps.deserializeAtomized(
+                container,
+                atomStream -> {
+                    byte[] from = bitmapKeyBytes;
+                    byte[] to = LABUtils.prefixUpperExclusive(bitmapKeyBytes);
+                    int[] atoms = { 0 };
+                    bitmapIndex.rangeScan(from, to,
+                        (index, key, timestamp, tombstoned, version, payload) -> {
+                            if (payload != null) {
+                                int labKey = deatomize(key.asByteBuffer());
+                                ByteBufferDataInput dataInput = new ByteBufferDataInput(payload.asByteBuffer());
+                                bytes.add(payload.length);
+                                atoms[0]++;
+                                return atomStream.stream(labKey, dataInput);
+                            }
+                            return true;
+                        },
+                        true);
+                    LOG.inc("txIndex>atomized>getRange>calls");
+                    LOG.inc("txIndex>atomized>getRange>atoms", atoms[0]);
+                    return true;
+                });
+            result = tx.tx(container.getBitmap(), null, -1, stackBuffer);
+        } else {
+            @SuppressWarnings("unchecked")
+            R[] resultHolder = (R[]) new Object[1];
+            bitmapIndex.get(
+                (keyStream) -> keyStream.key(0, bitmapKeyBytes, 0, bitmapKeyBytes.length),
+                (index, key, timestamp, tombstoned, version, payload) -> {
+                    try {
+                        if (payload != null) {
+                            bytes.add(payload.length);
+                            if (payload.length < LAST_ID_LENGTH + 4) {
+                                resultHolder[0] = tx.tx(null, null, -1, null);
+                                return false;
+                            } else {
+                                resultHolder[0] = tx.tx(null, new ByteBufferBackedFiler(payload.asByteBuffer()), LAST_ID_LENGTH, stackBuffer);
+                                return false;
+                            }
                         } else {
-                            result[0] = tx.tx(null, new ByteBufferBackedFiler(payload.asByteBuffer()), LAST_ID_LENGTH, stackBuffer);
+                            resultHolder[0] = tx.tx(null, null, -1, null);
                             return false;
                         }
-                    } else {
-                        result[0] = tx.tx(null, null, -1, null);
-                        return false;
+                    } catch (Exception e) {
+                        throw new IOException(e);
                     }
-                } catch (Exception e) {
-                    throw new IOException(e);
-                }
-            },
-            true
-        );
+                },
+                true);
+            result = resultHolder[0];
+        }
 
         LOG.inc("count>txIndex>total");
         LOG.inc("count>txIndex>" + name + ">total");
@@ -197,7 +224,7 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
         LOG.inc("bytes>txIndex>total", bytes.longValue());
         LOG.inc("bytes>txIndex>" + name + ">total", bytes.longValue());
         LOG.inc("bytes>txIndex>" + name + ">" + fieldId, bytes.longValue());
-        return result[0];
+        return result;
     }
 
     public static <BM extends IBM, IBM> void deserNonAtomized(MiruBitmaps<BM, IBM> bitmaps,
