@@ -13,6 +13,7 @@ import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.TimestampedCacheKeyValues;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
+import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTxIndex;
@@ -38,7 +39,13 @@ public class Catwalk {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
+    private final boolean verboseLogging;
+
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
+
+    public Catwalk(boolean verboseLogging) {
+        this.verboseLogging = verboseLogging;
+    }
 
     public interface ConsumeAnswers<BM extends IBM, IBM> {
 
@@ -126,6 +133,8 @@ public class Catwalk {
 
         @SuppressWarnings("unchecked")
         List<FeatureScore>[] featureScoreResults = new List[features.length];
+        int valid = 0;
+        int invalid = 0;
 
         for (int i = 0; i < featureValueSets.length; i++) {
             Map<Feature, FeatureBag> valueSet = featureValueSets[i];
@@ -148,12 +157,26 @@ public class Catwalk {
                 long denominator = bitmaps.cardinality(bitmap);
                 for (int j = 0; j < featureBag.numerators.length; j++) {
                     if (featureBag.numerators[j] > denominator) {
+                        invalid++;
                         LOG.warn("Catwalk computed numerators[{}]:{} denominator:{}" +
-                                " for tenantId:{} partitionId:{} catwalkId:{} featureId:{} fieldIds:{} terms:{}" +
+                                " for name:{} tenantId:{} partitionId:{} catwalkId:{} featureId:{} fieldIds:{} terms:{}" +
                                 " from answers:{}",
-                            j, Arrays.toString(featureBag.numerators), denominator, coord.tenantId, coord.partitionId,
+                            j, Arrays.toString(featureBag.numerators), denominator, name, coord.tenantId, coord.partitionId,
                             request.query.catwalkId, i, Arrays.toString(fieldIds),
                             Arrays.toString(termIds), featureBag.answers);
+                        if (verboseLogging) {
+                            for (int k = 0; k < fieldIds.length; k++) {
+                                BitmapAndLastId<BM> container = new BitmapAndLastId<>();
+                                primaryIndex.get(name, fieldIds[k], termIds[k]).getIndex(container, stackBuffer);
+                                LOG.info("Used field:{} term:{} cardinality:{} bitmap:{}",
+                                    fieldIds[k], termIds[k], bitmaps.cardinality(container.getBitmap()), container.getBitmap());
+                            }
+                            if (featureMasks != null && featureMasks[i] != null) {
+                                LOG.info("Masked cardinality:{} bitmap:{}", bitmaps.cardinality(featureMasks[i]), featureMasks[i]);
+                            }
+                        }
+                    } else {
+                        valid++;
                     }
                 }
                 featureScoreResults[i].add(new FeatureScore(termIds, featureBag.numerators, denominator, 1));
@@ -161,6 +184,10 @@ public class Catwalk {
         }
 
         solutionLog.log(MiruSolutionLogLevel.INFO, "Gather cardinalities took {} ms", System.currentTimeMillis() - start);
+        if (verboseLogging) {
+            LOG.info("Catwalk gathered valid:{} invalid:{} for name:{} tenantId:{} partitionId:{} catwalkId:{}",
+                valid, invalid, name, coord.tenantId, coord.partitionId, request.query.catwalkId);
+        }
 
         boolean resultsExhausted = request.query.timeRange.smallestTimestamp > requestContext.getTimeIndex().getLargestTimestamp();
         boolean resultsClosed = requestContext.isClosed();

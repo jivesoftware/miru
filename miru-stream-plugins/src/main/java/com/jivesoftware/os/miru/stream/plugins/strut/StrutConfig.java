@@ -51,4 +51,7 @@ public interface StrutConfig extends Config {
 
     @BooleanDefault(true)
     boolean getShareScores();
+
+    @BooleanDefault(false)
+    boolean getVerboseLogging();
 }
