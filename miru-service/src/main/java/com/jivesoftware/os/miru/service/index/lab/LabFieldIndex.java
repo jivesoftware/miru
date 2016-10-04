@@ -131,10 +131,10 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
         } else {
             for (KeyRange range : ranges) {
                 byte[] from = range.getStartInclusiveKey() != null
-                    ? bitmapIndexKey(fieldIdBytes, range.getStartInclusiveKey())
+                    ? termIndexKey(fieldIdBytes, range.getStartInclusiveKey())
                     : termIndexPrefixLowerInclusive(fieldIdBytes);
                 byte[] to = range.getStopExclusiveKey() != null
-                    ? bitmapIndexKey(fieldIdBytes, range.getStopExclusiveKey())
+                    ? termIndexKey(fieldIdBytes, range.getStopExclusiveKey())
                     : termIndexPrefixUpperExclusive(fieldIdBytes);
                 getTermIndex(fieldId).rangeScan(from, to, (index, key, timestamp, tombstoned, version, payload) -> {
                     byte[] keyBytes = key.copy();

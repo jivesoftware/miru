@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.service.index;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.filer.io.FilerIO;
+import com.jivesoftware.os.filer.io.api.KeyRange;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
@@ -92,6 +93,26 @@ public class MiruFieldIndexTest {
 
         Set<MiruTermId> found = Sets.newHashSet();
         miruFieldIndex.streamTermIdsForField("test", 0, null, termId -> {
+            found.add(termId);
+            return true;
+        }, stackBuffer);
+
+        assertEquals(found.size(), 1);
+        assertTrue(found.contains(new MiruTermId(key)));
+    }
+
+    @Test(dataProvider = "miruIndexDataProviderWithData")
+    public <BM extends IBM, IBM> void testStreamTermIdsWithRanges(MiruBitmaps<BM, IBM> bitmaps,
+        MiruFieldIndex<BM, IBM> miruFieldIndex,
+        List<Integer> expected,
+        MiruBackingStorage miruBackingStorage)
+        throws Exception {
+        StackBuffer stackBuffer = new StackBuffer();
+        byte[] key = "term1".getBytes();
+        byte[] stopKey = "term2".getBytes();
+
+        Set<MiruTermId> found = Sets.newHashSet();
+        miruFieldIndex.streamTermIdsForField("test", 0, Arrays.asList(new KeyRange(key, stopKey)), termId -> {
             found.add(termId);
             return true;
         }, stackBuffer);
