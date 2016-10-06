@@ -212,6 +212,7 @@ public class IndexTestUtil {
             LABEnvironment.buildLABCompactorThreadPool(1),
             LABEnvironment.buildLABDestroyThreadPool(1),
             "wal",
+            "labMeta",
             -1,
             -1,
             -1,

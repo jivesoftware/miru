@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.service.stream;
 
-import com.google.common.collect.Lists;
 import com.google.common.io.Files;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
@@ -12,18 +11,13 @@ import com.jivesoftware.os.lab.LABEnvironment;
 import com.jivesoftware.os.lab.LABStats;
 import com.jivesoftware.os.lab.LabHeapPressure;
 import com.jivesoftware.os.lab.LabHeapPressure.FreeHeapStrategy;
-import com.jivesoftware.os.lab.api.rawhide.FixedWidthRawhide;
 import com.jivesoftware.os.lab.guts.StripingBolBufferLocks;
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.LastIdCacheKeyValues;
 import com.jivesoftware.os.miru.plugin.context.LastIdKeyValueRawhide;
 import com.jivesoftware.os.miru.service.stream.LabPluginCacheProvider.LabPluginCacheProviderLock;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 import java.util.Random;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
 import org.testng.annotations.Test;
 
@@ -31,6 +25,7 @@ import org.testng.annotations.Test;
  *
  */
 public class LabPluginCacheProviderNGTest {
+
     @Test
     public void testEverything() throws Exception {
         OrderIdProviderImpl orderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(1), new SnowflakeIdPacker(),
@@ -41,28 +36,29 @@ public class LabPluginCacheProviderNGTest {
         System.out.println(root);
         LABEnvironment[] labEnvironments = {
             new LABEnvironment(labStats,
-                LABEnvironment.buildLABSchedulerThreadPool(2),
-                LABEnvironment.buildLABCompactorThreadPool(2),
-                LABEnvironment.buildLABDestroyThreadPool(2),
-                "test",
-                1024 * 1024 * 10L,
-                1000L,
-                1024 * 1024 * 10L,
-                -1L,
-                root,
-                new LabHeapPressure(labStats,
-                    LABEnvironment.buildLABHeapSchedulerThreadPool(2),
-                    "test-lhp",
-                    1024 * 1024 * 10L,
-                    1024 * 1024 * 20L,
-                    new AtomicLong(),
-                    FreeHeapStrategy.mostBytesFirst),
-                2,
-                2,
-                LABEnvironment.buildLeapsCache(1000, 8),
-                new StripingBolBufferLocks(24),
-                true,
-                false)
+            LABEnvironment.buildLABSchedulerThreadPool(2),
+            LABEnvironment.buildLABCompactorThreadPool(2),
+            LABEnvironment.buildLABDestroyThreadPool(2),
+            "test",
+            "labMeta",
+            1024 * 1024 * 10L,
+            1000L,
+            1024 * 1024 * 10L,
+            -1L,
+            root,
+            new LabHeapPressure(labStats,
+            LABEnvironment.buildLABHeapSchedulerThreadPool(2),
+            "test-lhp",
+            1024 * 1024 * 10L,
+            1024 * 1024 * 20L,
+            new AtomicLong(),
+            FreeHeapStrategy.mostBytesFirst),
+            2,
+            2,
+            LABEnvironment.buildLeapsCache(1000, 8),
+            new StripingBolBufferLocks(24),
+            true,
+            false)
         };
 
         int numCommits = 7;
