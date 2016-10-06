@@ -34,32 +34,27 @@ public class LabPluginCacheProviderNGTest {
         LABStats labStats = new LABStats(60, 0L, 100L);
         File root = Files.createTempDir().getAbsoluteFile();
         System.out.println(root);
-        LABEnvironment[] labEnvironments = {
-            new LABEnvironment(labStats,
+        LABEnvironment labEnvironment = new LABEnvironment(labStats,
             LABEnvironment.buildLABSchedulerThreadPool(2),
             LABEnvironment.buildLABCompactorThreadPool(2),
             LABEnvironment.buildLABDestroyThreadPool(2),
-            "test",
-            "labMeta",
-            1024 * 1024 * 10L,
-            1000L,
-            1024 * 1024 * 10L,
-            -1L,
+            null,
             root,
             new LabHeapPressure(labStats,
-            LABEnvironment.buildLABHeapSchedulerThreadPool(2),
-            "test-lhp",
-            1024 * 1024 * 10L,
-            1024 * 1024 * 20L,
-            new AtomicLong(),
-            FreeHeapStrategy.mostBytesFirst),
+                LABEnvironment.buildLABHeapSchedulerThreadPool(2),
+                "test-lhp",
+                1024 * 1024 * 10L,
+                1024 * 1024 * 20L,
+                new AtomicLong(),
+                FreeHeapStrategy.mostBytesFirst),
             2,
             2,
             LABEnvironment.buildLeapsCache(1000, 8),
             new StripingBolBufferLocks(24),
             true,
-            false)
-        };
+            false
+        );
+        LABEnvironment[] labEnvironments = {labEnvironment};
 
         int numCommits = 7;
         int numDistincts = 1024;

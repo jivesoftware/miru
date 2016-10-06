@@ -9,6 +9,7 @@ import com.jivesoftware.os.jive.utils.collections.bah.LRUConcurrentBAHLinkedHash
 import com.jivesoftware.os.lab.LABEnvironment;
 import com.jivesoftware.os.lab.LABStats;
 import com.jivesoftware.os.lab.LabHeapPressure;
+import com.jivesoftware.os.lab.LalWALConfig;
 import com.jivesoftware.os.lab.api.rawhide.FixedWidthRawhide;
 import com.jivesoftware.os.lab.guts.Leaps;
 import com.jivesoftware.os.lab.guts.StripingBolBufferLocks;
@@ -214,12 +215,7 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
                 buildLABSchedulerThreadPool,
                 buildLABCompactorThreadPool,
                 buildLABDestroyThreadPool,
-                "wal",
-                "labMeta",
-                labMaxWALSizeInBytes,
-                labMaxEntriesPerWAL,
-                labMaxEntrySizeInBytes,
-                labMaxWALOnOpenHeapPressureOverride,
+                null,
                 labDirs[i],
                 labHeapPressures[i % labHeapPressures.length],
                 4,
@@ -249,12 +245,12 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
                 buildLABSchedulerThreadPool,
                 buildLABCompactorThreadPool,
                 buildLABDestroyThreadPool,
-                "wal",
-                "labMeta",
-                labMaxWALSizeInBytes,
-                labMaxEntriesPerWAL,
-                labMaxEntrySizeInBytes,
-                labMaxWALOnOpenHeapPressureOverride,
+                new LalWALConfig("wal",
+                    "labMeta",
+                    labMaxWALSizeInBytes,
+                    labMaxEntriesPerWAL,
+                    labMaxEntrySizeInBytes,
+                    labMaxWALOnOpenHeapPressureOverride),
                 labDirs[i],
                 timeIdLabHeapPressure,
                 4,
