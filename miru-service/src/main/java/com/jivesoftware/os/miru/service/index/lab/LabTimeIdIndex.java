@@ -50,7 +50,7 @@ public class LabTimeIdIndex implements TimeIdIndex {
             if (i < keepNIndexes) {
                 indexes[i] = open(name);
             } else {
-                environment.remove(name);
+                environment.remove(name, true);
             }
         }
         if (indexes[0] == null) {
@@ -130,7 +130,7 @@ public class LabTimeIdIndex implements TimeIdIndex {
             });
 
             synchronized (cursor) {
-                indexes[0].journaledAppend(valueStream -> {
+                indexes[0].append(valueStream -> {
                     for (int i = 0; i < timestamps.length; i++) {
                         byte[] key = UIO.longsBytes(new long[] { version, timestamps[i] });
                         cursor.lastId++;
