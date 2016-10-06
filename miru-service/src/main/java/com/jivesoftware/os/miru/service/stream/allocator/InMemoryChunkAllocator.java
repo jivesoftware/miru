@@ -156,6 +156,7 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
                 buildLABCompactorThreadPool,
                 buildLABDestroyThreadPool,
                 "wal",
+                "labMeta",
                 labMaxWALSizeInBytes,
                 labMaxEntriesPerWAL,
                 labMaxEntrySizeInBytes,

@@ -107,6 +107,7 @@ public class StrutModelScorerNGTest {
             LABEnvironment.buildLABCompactorThreadPool(4),
             LABEnvironment.buildLABDestroyThreadPool(1),
             "wal",
+            "labMeta",
             -1,
             -1,
             -1,
