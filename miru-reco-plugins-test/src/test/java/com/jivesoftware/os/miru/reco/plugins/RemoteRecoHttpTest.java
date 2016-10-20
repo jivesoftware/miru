@@ -91,14 +91,14 @@ public class RemoteRecoHttpTest {
         //MiruTenantId tenantId = new MiruTenantId(tenant.getBytes(Charsets.UTF_8));
 
         HttpClientFactory httpClientFactory = new HttpClientFactoryProvider()
-            .createHttpClientFactory(Collections.<HttpClientConfiguration>emptyList());
+            .createHttpClientFactory(Collections.<HttpClientConfiguration>emptyList(), false);
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new GuavaModule());
 
         final HttpRequestHelper[] requestHelpers = new HttpRequestHelper[REMOTE_HOSTS.length];
         for (int i = 0; i < REMOTE_HOSTS.length; i++) {
             String remoteHost = REMOTE_HOSTS[i];
-            requestHelpers[i] = new HttpRequestHelper(httpClientFactory.createClient(remoteHost, REMOTE_PORT), objectMapper);
+            requestHelpers[i] = new HttpRequestHelper(httpClientFactory.createClient(null, remoteHost, REMOTE_PORT), objectMapper);
         }
 
         final MiruFilter constraintsFilter = new MiruFilter(MiruFilterOperation.and,
@@ -172,14 +172,14 @@ public class RemoteRecoHttpTest {
         MiruTenantId tenantId = new MiruTenantId(tenant.getBytes(Charsets.UTF_8));
 
         HttpClientFactory httpClientFactory = new HttpClientFactoryProvider()
-            .createHttpClientFactory(Collections.<HttpClientConfiguration>emptyList());
+            .createHttpClientFactory(Collections.<HttpClientConfiguration>emptyList(), false);
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new GuavaModule());
 
         final HttpRequestHelper[] requestHelpers = new HttpRequestHelper[REMOTE_HOSTS.length];
         for (int i = 0; i < REMOTE_HOSTS.length; i++) {
             String remoteHost = REMOTE_HOSTS[i];
-            requestHelpers[i] = new HttpRequestHelper(httpClientFactory.createClient(remoteHost, REMOTE_PORT), objectMapper);
+            requestHelpers[i] = new HttpRequestHelper(httpClientFactory.createClient(null, remoteHost, REMOTE_PORT), objectMapper);
         }
 
         ExecutorService executorService = Executors.newFixedThreadPool(16);
