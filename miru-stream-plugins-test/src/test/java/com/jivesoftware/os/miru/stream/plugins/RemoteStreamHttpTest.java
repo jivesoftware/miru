@@ -43,10 +43,10 @@ public class RemoteStreamHttpTest {
         MiruTenantId tenantId = new MiruTenantId(tenant.getBytes(Charsets.UTF_8));
 
         HttpClientFactory httpClientFactory = new HttpClientFactoryProvider()
-            .createHttpClientFactory(Collections.<HttpClientConfiguration>emptyList());
+            .createHttpClientFactory(Collections.<HttpClientConfiguration>emptyList(), false);
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new GuavaModule());
-        HttpRequestHelper requestHelper = new HttpRequestHelper(httpClientFactory.createClient(REMOTE_HOST, REMOTE_PORT), objectMapper);
+        HttpRequestHelper requestHelper = new HttpRequestHelper(httpClientFactory.createClient(null, REMOTE_HOST, REMOTE_PORT), objectMapper);
 
         int queries = 100;
         for (int i = 0; i < queries; i++) {
