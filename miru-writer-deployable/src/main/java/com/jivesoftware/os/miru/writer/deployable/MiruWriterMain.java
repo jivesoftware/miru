@@ -92,6 +92,9 @@ public class MiruWriterMain {
         String getWorkingDirectories();
 
         @LongDefault(60_000L)
+        long getReplicateLatestPartitionTimeoutMillis();
+
+        @LongDefault(60_000L)
         long getReplicateCursorTimeoutMillis();
     }
 
@@ -220,6 +223,7 @@ public class MiruWriterMain {
             EmbeddedClientProvider clientProvider = new EmbeddedClientProvider(amzaService);
             AmzaPartitionIdProvider amzaPartitionIdProvider = new AmzaPartitionIdProvider(amzaService,
                 clientProvider,
+                miruAmzaServiceConfig.getReplicateLatestPartitionTimeoutMillis(),
                 miruAmzaServiceConfig.getReplicateCursorTimeoutMillis(),
                 indexClass,
                 clientConfig.getTotalCapacity(),
