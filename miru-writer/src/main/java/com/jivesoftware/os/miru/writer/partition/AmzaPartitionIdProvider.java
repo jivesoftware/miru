@@ -43,6 +43,7 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
     private final AmzaService amzaService;
     private final EmbeddedClientProvider clientProvider;
     private final long replicateLatestPartitionTimeoutMillis;
+    private final long replicateCursorTimeoutMillis;
     private final String indexClass;
     private final int capacity;
     private final MiruWALClient<?, ?> walClient;
@@ -51,6 +52,7 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
     public AmzaPartitionIdProvider(AmzaService amzaService,
         EmbeddedClientProvider clientProvider,
         long replicateLatestPartitionTimeoutMillis,
+        long replicateCursorTimeoutMillis,
         String indexClass,
         int capacity,
         MiruWALClient<?, ?> walClient)
@@ -58,6 +60,7 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
         this.amzaService = amzaService;
         this.clientProvider = clientProvider;
         this.replicateLatestPartitionTimeoutMillis = replicateLatestPartitionTimeoutMillis;
+        this.replicateCursorTimeoutMillis = replicateCursorTimeoutMillis;
         this.indexClass = indexClass;
         this.capacity = capacity;
         this.walClient = walClient;
@@ -141,7 +144,7 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
         cursorsClient().commit(Consistency.none,
             null,
             new AmzaPartitionUpdates().set(cursorKey, FilerIO.intBytes(cursor.last()), -1),
-            0,
+            replicateCursorTimeoutMillis,
             TimeUnit.MILLISECONDS);
     }
 
@@ -164,7 +167,7 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
         byte[] cursorKey = key(tenantId, writerId, cursor.getPartitionId());
         cursorsClient().commit(Consistency.none, null,
             new AmzaPartitionUpdates().set(cursorKey, FilerIO.intBytes(cursor.last()), -1),
-            0,
+            replicateCursorTimeoutMillis,
             TimeUnit.MILLISECONDS);
         return cursor;
     }
@@ -197,7 +200,11 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
         byte[] got = cursors.getValue(Consistency.none, null, cursorKey);
         if (got == null) {
             WriterCursor cursor = walClient.getCursorForWriterId(tenantId, partitionId, writerId);
-            cursors.commit(Consistency.none, null, new AmzaPartitionUpdates().set(cursorKey, FilerIO.intBytes(cursor.index), -1), 0, TimeUnit.MILLISECONDS);
+            cursors.commit(Consistency.none,
+                null,
+                new AmzaPartitionUpdates().set(cursorKey, FilerIO.intBytes(cursor.index), -1),
+                replicateCursorTimeoutMillis,
+                TimeUnit.MILLISECONDS);
             return cursor.index;
         } else {
             return FilerIO.bytesInt(got);
