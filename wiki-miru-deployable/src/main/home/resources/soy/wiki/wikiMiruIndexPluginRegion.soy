@@ -51,7 +51,7 @@
                         <th>Actions</th>
                     </tr>
                 </thead>
-                    {foreach $i in $indexer}
+                    {foreach $i in $indexers}
                         <form id="edit-host" class="j-form" data-active-class="btn-default" method="get" name="editHost">
                             <tr>
                                 <td>
@@ -73,7 +73,7 @@
                                     {$i.elapse}
                                 </td>
                                 <td>
-                                    <input type="hidden" name="indexerId" value="{$s.indexerId}">
+                                    <input type="hidden" name="indexerId" value="{$i.indexerId}">
                                     <button title="Stop" type="submit" name="action" value="stop" class="btn btn-default"><span class="glyphicon glyphicon-stop ladda-button"  data-spinner-color="#222" data-style="expand-right">&nbspStop</span></button>
                                     <button onclick="return confirm('Are you sure you want to delete?')" title="Remove" type="submit" name="action" value="remove" class="btn btn-default"><span class="glyphicon glyphicon-trash">&nbspRemove</span></button>
                                 <td>
