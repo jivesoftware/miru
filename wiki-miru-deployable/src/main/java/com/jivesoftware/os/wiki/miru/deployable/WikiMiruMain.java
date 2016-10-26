@@ -157,11 +157,11 @@ public class WikiMiruMain {
 
             MiruSoyRendererConfig rendererConfig = deployable.config(MiruSoyRendererConfig.class);
             MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
-            WikiMiruService queryService = new WikiMiruQueryInitializer().initialize(renderer);
+            WikiMiruService wikiMiruService = new WikiMiruQueryInitializer().initialize(renderer);
 
             List<MiruManagePlugin> plugins = Lists.newArrayList(new MiruManagePlugin("eye-open", "Index", "/wiki/index",
                     WikiMiruIndexPluginEndpoints.class,
-                    new WikiMiruIndexPluginRegion("soy.wikimiru.page.wikiMiruIndexerPlugin", renderer, indexService)),
+                    new WikiMiruIndexPluginRegion("soy.wikimiru.page.wikiMiruIndexPlugin", renderer, indexService)),
                 new MiruManagePlugin("search", "Query", "/wiki/query",
                     WikiQueryPluginEndpoints.class,
                     new WikiQueryPluginRegion("soy.wikimiru.page.wikiMiruQueryPlugin",
@@ -177,10 +177,10 @@ public class WikiMiruMain {
             deployable.addInjectables(ObjectMapper.class, mapper);
 
             deployable.addEndpoints(WikiMiruEndpoints.class);
-            deployable.addInjectables(WikiMiruService.class, queryService);
+            deployable.addInjectables(WikiMiruService.class, wikiMiruService);
 
             for (MiruManagePlugin plugin : plugins) {
-                queryService.registerPlugin(plugin);
+                wikiMiruService.registerPlugin(plugin);
                 deployable.addEndpoints(plugin.endpointsClass);
                 deployable.addInjectables(plugin.region.getClass(), plugin.region);
             }
