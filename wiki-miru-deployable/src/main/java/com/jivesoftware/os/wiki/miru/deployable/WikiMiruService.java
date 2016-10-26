@@ -40,7 +40,7 @@ public class WikiMiruService {
     }
 
     private <I, R extends MiruPageRegion<I>> WikiMiruChromeRegion<I, R> chrome(R region) {
-        return new WikiMiruChromeRegion<>("soy.wiki.chrome.chromeRegion", renderer, headerRegion, plugins, region);
+        return new WikiMiruChromeRegion<>("soy.wikimiru.chrome.chromeRegion", renderer, headerRegion, plugins, region);
     }
 
     public <I> String renderPlugin(MiruPageRegion<I> pluginRegion, I input) {
