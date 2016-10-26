@@ -2,7 +2,6 @@ package com.jivesoftware.os.wiki.miru.deployable.endpoints;
 
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.routing.bird.shared.ResponseHelper;
 import com.jivesoftware.os.wiki.miru.deployable.WikiMiruService;
 import com.jivesoftware.os.wiki.miru.deployable.region.WikiQueryPluginRegion;
 import com.jivesoftware.os.wiki.miru.deployable.region.WikiQueryPluginRegion.WikiMiruPluginRegionInput;
@@ -28,8 +27,6 @@ public class WikiQueryPluginEndpoints {
     private final WikiMiruService wikiMiruService;
     private final WikiQueryPluginRegion pluginRegion;
 
-    private final ResponseHelper responseHelper = ResponseHelper.INSTANCE;
-
     public WikiQueryPluginEndpoints(@Context WikiMiruService wikiMiruService, @Context WikiQueryPluginRegion pluginRegion) {
         this.wikiMiruService = wikiMiruService;
         this.pluginRegion = pluginRegion;
@@ -41,8 +38,14 @@ public class WikiQueryPluginEndpoints {
     public Response query(
         @QueryParam("subject") @DefaultValue("") String subject,
         @QueryParam("body") @DefaultValue("") String body) {
-        String rendered = wikiMiruService.renderPlugin(pluginRegion, new WikiMiruPluginRegionInput(subject, body));
-        return Response.ok(rendered).build();
+
+        try {
+            String rendered = wikiMiruService.renderPlugin(pluginRegion, new WikiMiruPluginRegionInput(subject, body));
+            return Response.ok(rendered).build();
+        } catch (Exception x) {
+            LOG.error("Failed to generating query ui.", x);
+            return Response.serverError().build();
+        }
     }
 
 }
