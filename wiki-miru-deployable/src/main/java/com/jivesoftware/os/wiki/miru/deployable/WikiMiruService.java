@@ -3,10 +3,10 @@ package com.jivesoftware.os.wiki.miru.deployable;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.miru.ui.MiruPageRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
-import com.jivesoftware.os.wiki.miru.deployable.region.WikiMiruHeaderRegion;
 import com.jivesoftware.os.wiki.miru.deployable.region.MiruHomeRegion.HomeInput;
 import com.jivesoftware.os.wiki.miru.deployable.region.MiruManagePlugin;
 import com.jivesoftware.os.wiki.miru.deployable.region.WikiMiruChromeRegion;
+import com.jivesoftware.os.wiki.miru.deployable.region.WikiMiruHeaderRegion;
 import java.util.List;
 
 /**
@@ -31,8 +31,8 @@ public class WikiMiruService {
 
     }
 
-    public String render(String intakeURL) {
-        return chrome(homeRegion).render(new HomeInput(intakeURL));
+    public String render() {
+        return chrome(homeRegion).render(new HomeInput());
     }
 
     public void registerPlugin(MiruManagePlugin plugin) {

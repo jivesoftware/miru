@@ -176,7 +176,7 @@ public class WikiMiruMain {
 
             deployable.addInjectables(ObjectMapper.class, mapper);
 
-            deployable.addEndpoints(WikiMiruQueryEndpoints.class);
+            deployable.addEndpoints(WikiMiruEndpoints.class);
             deployable.addInjectables(WikiMiruService.class, queryService);
 
             for (MiruManagePlugin plugin : plugins) {
