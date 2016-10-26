@@ -47,5 +47,6 @@
         <module>miru-anomaly-plugins-test</module>
         <module>miru-metric-sampler</module>
         <module>miru-wal-client</module>
+        <module>wiki-miru-deployable</module>
   </modules>
 </project>
