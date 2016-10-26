@@ -161,10 +161,10 @@ public class WikiMiruMain {
 
             List<MiruManagePlugin> plugins = Lists.newArrayList(new MiruManagePlugin("eye-open", "Index", "/wiki/index",
                     WikiMiruIndexPluginEndpoints.class,
-                    new WikiMiruIndexPluginRegion("soy.wikimiru.page.wikiMiruIndexPluginRegion", renderer, indexService)),
+                    new WikiMiruIndexPluginRegion("soy.wikimiru.page.wikiMiruIndexerPlugin", renderer, indexService)),
                 new MiruManagePlugin("search", "Query", "/wiki/query",
                     WikiQueryPluginEndpoints.class,
-                    new WikiQueryPluginRegion("soy.wikimiru.page.wikiMiruQueryPluginRegion",
+                    new WikiQueryPluginRegion("soy.wikimiru.page.wikiMiruQueryPlugin",
                         renderer, readerClient, mapper, responseMapper, payloads)));
 
             File staticResourceDir = new File(System.getProperty("user.dir"));
