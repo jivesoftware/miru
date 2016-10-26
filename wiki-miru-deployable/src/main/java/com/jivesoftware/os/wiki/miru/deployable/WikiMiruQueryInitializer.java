@@ -10,8 +10,8 @@ public class WikiMiruQueryInitializer {
 
         return new WikiMiruService(
             renderer,
-            new WikiMiruHeaderRegion("soy.wiki.chrome.headerRegion", renderer),
-            new MiruHomeRegion("soy.wiki.page.home", renderer)
+            new WikiMiruHeaderRegion("soy.wikimiru.chrome.headerRegion", renderer),
+            new MiruHomeRegion("soy.wikimiru.page.home", renderer)
         );
     }
 
