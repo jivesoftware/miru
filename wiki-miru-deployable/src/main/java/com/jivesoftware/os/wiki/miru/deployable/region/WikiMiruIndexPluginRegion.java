@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
 
 /**
  *
@@ -57,6 +58,15 @@ public class WikiMiruIndexPluginRegion implements MiruPageRegion<WikiMiruIndexPl
             if (input.action.equals("start")) {
                 WikiMiruIndexService.Indexer i = indexService.index(input.tenantId, input.wikiDumpFile);
                 indexers.put(i.indexerId, i);
+                Executors.newSingleThreadExecutor().submit(() -> {
+                    try {
+                        i.start();
+                        return null;
+                    } catch (Exception x) {
+                        LOG.error("Wiki oops", x);
+                        return null;
+                    }
+                });
             }
 
             if (input.action.equals("stop")) {
