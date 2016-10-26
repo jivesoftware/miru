@@ -14,11 +14,11 @@ import javax.ws.rs.core.UriInfo;
  */
 @Singleton
 @Path("/")
-public class WikiMiruQueryEndpoints {
+public class WikiMiruEndpoints {
 
     private final WikiMiruService wikiMiruService;
 
-    public WikiMiruQueryEndpoints(@Context WikiMiruService wikiMiruService) {
+    public WikiMiruEndpoints(@Context WikiMiruService wikiMiruService) {
         this.wikiMiruService = wikiMiruService;
     }
 
@@ -26,7 +26,7 @@ public class WikiMiruQueryEndpoints {
     @Path("/")
     @Produces(MediaType.TEXT_HTML)
     public Response get(@Context UriInfo uriInfo) {
-        String rendered = wikiMiruService.render(uriInfo.getAbsolutePath() + "miru/wiki/intake");
+        String rendered = wikiMiruService.render();
         return Response.ok(rendered).build();
     }
 

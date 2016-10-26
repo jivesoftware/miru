@@ -1,9 +1,9 @@
 package com.jivesoftware.os.wiki.miru.deployable.region;
 
 import com.google.common.collect.Maps;
-import com.jivesoftware.os.wiki.miru.deployable.region.MiruHomeRegion.HomeInput;
 import com.jivesoftware.os.miru.ui.MiruPageRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
+import com.jivesoftware.os.wiki.miru.deployable.region.MiruHomeRegion.HomeInput;
 import java.util.Map;
 
 /**
@@ -21,17 +21,14 @@ public class MiruHomeRegion implements MiruPageRegion<HomeInput> {
 
     public static class HomeInput {
 
-        final String intakeURL;
-
-        public HomeInput(String intakeURL) {
-            this.intakeURL = intakeURL;
+        
+        public HomeInput() {
         }
     }
 
     @Override
     public String render(HomeInput input) {
         Map<String, Object> data = Maps.newHashMap();
-        data.put("intakeURL", input.intakeURL);
         return renderer.render(template, data);
     }
 
