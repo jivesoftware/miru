@@ -1,0 +1,54 @@
+{namespace soy.wikimiru.page}
+
+/**
+ * WikMiru Query plugin page
+ * 
+ * @param? subject
+ * @param? body
+ * @param? results
+ */
+{template .wikiMiruQueryPluginRegion}
+    <div class="panel panel-default">
+        <div class="panel-heading">Query</div>
+        <div class="panel-body">
+            <form id="wiki-query-filters" class="form-inline  j-form" data-active-class="btn-default" method="get" name="requestPickerForm">
+                <table>
+                    <tr>
+                        <td  style="font-weight:bold; vertical-align:top;">
+                            Message
+                        </td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
+                                class="form-control" placeholder="Subject" value="{$subject?:''}"
+                                name="subject" id="subjectPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td  style="font-weight:bold; vertical-align:top;">
+                            Body
+                        </td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
+                                class="form-control" placeholder="Body" value="{$body?:''}"
+                                name="body" id="bodyPicker" data-original-title="" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="2">
+                             <input class="form-control btn btn-primary" type="submit" value="Refresh"/>
+                        </td>
+                    </tr>
+                </table>
+            </form>
+        </div>
+        <div class="panel-heading">Result</div>
+        <div class="panel-body">
+            <ul>
+                {foreach $r in $r}
+                    <li>{$r|noAutoEscape}</li>
+                {/foreach}
+            </ul>
+        </div>
+    </div>
+{/template}
+

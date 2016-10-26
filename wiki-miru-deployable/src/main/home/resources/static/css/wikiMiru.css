@@ -1,0 +1,68 @@
+/*
+ * Don't add custom CSS unless you absolutely have to...  usually in response to shared JavaScript components
+ * which rely on jive.css...
+ */
+
+/* Tenant/user picker: eliminate list item numbering */
+li.j-listitem {
+    list-style: none;
+}
+
+/* theme */
+body {
+    background-image: url(/static/img/bkg.jpg);
+}
+
+/* Used by event stream */
+div.pad {
+    padding: 3px;
+}
+
+/* Used by event stream and view inspection to allow for links in JSON dumps */
+div.pre-ish {
+    font-family:courier, "courier new", monospace;
+    font-size:1em;
+    background-color: #f5f5f5;
+    color:#000;
+    white-space: pre-wrap;
+    border-radius: 4px;
+}
+
+div.container {
+    width: 100% !important;
+}
+
+.side-by-side > div {
+  display: inline-block;
+  vertical-align: top;
+  margin-right: 1em;
+}
+
+form#stump-query-filters .stump-query-advanced { display: none; }
+form#stump-query-filters.stump-query-show-advanced tr.stump-query-advanced { display: table-row; }
+form#stump-query-filters.stump-query-show-advanced td.stump-query-advanced { display: table-cell; }
+
+table#stump-rt-events td, table#stump-rt-events th { display: none; }
+table#stump-rt-events.stump-show-datacenter .stump-event-datacenter { display: table-cell; }
+table#stump-rt-events.stump-show-cluster .stump-event-cluster { display: table-cell; }
+table#stump-rt-events.stump-show-host .stump-event-host { display: table-cell; }
+table#stump-rt-events.stump-show-service .stump-event-service { display: table-cell; }
+table#stump-rt-events.stump-show-instance .stump-event-instance { display: table-cell; }
+table#stump-rt-events.stump-show-version .stump-event-version { display: table-cell; }
+table#stump-rt-events.stump-show-time .stump-event-time { display: table-cell; }
+table#stump-rt-events.stump-show-thread .stump-event-thread { display: table-cell; }
+table#stump-rt-events.stump-show-level .stump-event-level { display: table-cell; }
+table#stump-rt-events.stump-show-message .stump-event-message { display: table-cell; }
+
+/*
+<th class="stump-event-datacenter">Datacenter</th>
+<th class="stump-event-cluster">Cluster</th>
+<th class="stump-event-host">Host</th>
+<th class="stump-event-service">Service</th>
+<th class="stump-event-instance">Instance</th>
+<th class="stump-event-version">Version</th>
+<th class="stump-event-time">Time</th>
+<th class="stump-event-thread">Thread</th>
+<th class="stump-event-level">Level</th>
+<th class="stump-event-message">Message</th>
+*/
