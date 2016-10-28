@@ -16,7 +16,7 @@ import javax.ws.rs.core.Response;
  *
  */
 @Singleton
-@Path("/")
+@Path("/ui")
 public class MiruReaderUIEndpoints {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
