@@ -29,6 +29,7 @@ import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer.MiruSoyRendererConfig;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import com.jivesoftware.os.routing.bird.deployable.AuthValidationFilter;
 import com.jivesoftware.os.routing.bird.deployable.Deployable;
 import com.jivesoftware.os.routing.bird.deployable.DeployableHealthCheckRegistry;
 import com.jivesoftware.os.routing.bird.deployable.ErrorHealthCheckConfig;
@@ -80,7 +81,7 @@ public class WikiMiruMain {
                 new HasUI.UI("Tail", "manage", "/manage/tail?lastNLines=1000"),
                 new HasUI.UI("Thread Dump", "manage", "/manage/threadDump"),
                 new HasUI.UI("Health", "manage", "/manage/ui"),
-                new HasUI.UI("Wiki", "main", "/"))));
+                new HasUI.UI("Wiki", "main", "/ui"))));
             deployable.addHealthCheck(new GCPauseHealthChecker(deployable.config(GCPauseHealthChecker.GCPauseHealthCheckerConfig.class)));
             deployable.addHealthCheck(new GCLoadHealthChecker(deployable.config(GCLoadHealthChecker.GCLoadHealthCheckerConfig.class)));
             deployable.addHealthCheck(new SystemCpuHealthChecker(deployable.config(SystemCpuHealthChecker.SystemCpuHealthCheckerConfig.class)));
@@ -99,7 +100,7 @@ public class WikiMiruMain {
             HttpDeliveryClientHealthProvider clientHealthProvider = new HttpDeliveryClientHealthProvider(instanceConfig.getInstanceKey(),
                 HttpRequestHelperUtils.buildRequestHelper(false, false, null, instanceConfig.getRoutesHost(), instanceConfig.getRoutesPort()),
                 instanceConfig.getConnectionsHealth(), 5_000, 100);
-            TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
+            TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = deployable.getTenantRoutingHttpClientInitializer();
 
             WikiMiruPayloadStorage payloads = null;
             try {
@@ -159,10 +160,10 @@ public class WikiMiruMain {
             MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
             WikiMiruService wikiMiruService = new WikiMiruQueryInitializer().initialize(renderer);
 
-            List<MiruManagePlugin> plugins = Lists.newArrayList(new MiruManagePlugin("eye-open", "Index", "/wiki/index",
+            List<MiruManagePlugin> plugins = Lists.newArrayList(new MiruManagePlugin("eye-open", "Index", "/ui/index",
                     WikiMiruIndexPluginEndpoints.class,
                     new WikiMiruIndexPluginRegion("soy.wikimiru.page.wikiMiruIndexPlugin", renderer, indexService)),
-                new MiruManagePlugin("search", "Query", "/wiki/query",
+                new MiruManagePlugin("search", "Query", "/ui/query",
                     WikiQueryPluginEndpoints.class,
                     new WikiQueryPluginRegion("soy.wikimiru.page.wikiMiruQueryPlugin",
                         renderer, readerClient, mapper, responseMapper, payloads)));
@@ -172,7 +173,17 @@ public class WikiMiruMain {
             Resource sourceTree = new Resource(staticResourceDir)
                 .addResourcePath(rendererConfig.getPathToStaticResources())
                 .setDirectoryListingAllowed(false)
-                .setContext("/static");
+                .setContext("/ui/static");
+
+            AuthValidationFilter authValidationFilter = new AuthValidationFilter(deployable);
+            if (instanceConfig.getMainServiceAuthEnabled()) {
+                authValidationFilter.addSessionAuth("/ui/*", "/miru/*");
+                authValidationFilter.addRouteOAuth("/miru/*");
+            } else {
+                authValidationFilter.addSessionAuth("/ui/*");
+                authValidationFilter.addNoAuth("/miru/*");
+            }
+            deployable.addContainerRequestFilter(authValidationFilter);
 
             deployable.addInjectables(ObjectMapper.class, mapper);
 

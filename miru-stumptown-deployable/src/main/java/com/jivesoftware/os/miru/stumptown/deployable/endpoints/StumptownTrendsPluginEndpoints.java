@@ -18,7 +18,7 @@ import javax.ws.rs.core.Response;
  *
  */
 @Singleton
-@Path("/stumptown/trends")
+@Path("/ui/trends")
 public class StumptownTrendsPluginEndpoints {
 
     private final MiruStumptownService miruStumptownService;

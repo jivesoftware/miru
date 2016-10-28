@@ -12,12 +12,12 @@
 	    <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>{$title}</title>
         {call .styles /}
-        <script src="/static/scripts/jquery-2.1.0.min.js"></script>
-        <script src="/static/scripts/Chart.js"></script>
-        <script src="/static/scripts/Chart.StackedBar.js"></script>
-        <script src="/static/scripts/legend.js"></script>
-        <script src="/static/scripts/wikiMiru.js"></script>
-        <link href="/static/img/favicon.ico" rel="shortcut icon" type="image/x-icon"/>
+        <script src="/ui/static/scripts/jquery-2.1.0.min.js"></script>
+        <script src="/ui/static/scripts/Chart.js"></script>
+        <script src="/ui/static/scripts/Chart.StackedBar.js"></script>
+        <script src="/ui/static/scripts/legend.js"></script>
+        <script src="/ui/static/scripts/wikiMiru.js"></script>
+        <link href="/ui/static/img/favicon.ico" rel="shortcut icon" type="image/x-icon"/>
 	</head>
 	<body>
         {$header|noAutoescape}
@@ -34,18 +34,18 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 
     <!-- jquery-ui -->
-    <link rel="stylesheet" href="/static/css/jquery-ui/ui-lightness/jquery-ui-1.10.4.custom.min.css">
+    <link rel="stylesheet" href="/ui/static/css/jquery-ui/ui-lightness/jquery-ui-1.10.4.custom.min.css">
 
     <!-- Vanilla bootstrap -->
-    <link rel="stylesheet" type="text/css" href="/static/vendor/bootstrap-3.3.2/css/bootstrap.min.css">
-	<link rel="stylesheet" type="text/css" media="screen" href="/static/vendor/bootstrap-3.3.2/css/bootstrap-theme.min.css">
+    <link rel="stylesheet" type="text/css" href="/ui/static/vendor/bootstrap-3.3.2/css/bootstrap.min.css">
+	<link rel="stylesheet" type="text/css" media="screen" href="/ui/static/vendor/bootstrap-3.3.2/css/bootstrap-theme.min.css">
 
     <!-- bootstrap-multiselect -->
-    <link rel="stylesheet" href="/static/vendor/bootstrap-multiselect/css/bootstrap-multiselect.css">
-    <link rel="stylesheet" href="/static/vendor/bootstrap-multiselect/css/prettify.css">
+    <link rel="stylesheet" href="/ui/static/vendor/bootstrap-multiselect/css/bootstrap-multiselect.css">
+    <link rel="stylesheet" href="/ui/static/vendor/bootstrap-multiselect/css/prettify.css">
 
     // HEY ENGINEERS, add CSS here for now:
-    <link rel="stylesheet" href="/static/css/wikiMiru.css">
+    <link rel="stylesheet" href="/ui/static/css/wikiMiru.css">
 
     // following CC is for IE8 and lower. No harm in leaving it here.
     // It's no overhead to other browsers and would automatically give unsupported IE8 a fighting chance to view content
@@ -62,7 +62,7 @@
 	    <div class="navbar-header">
              <ul class="nav navbar-nav navbar-right">
                 <li role="presentation" class="active"><a class="navbar-brand" href="/">
-                    <span><img src="/static/img/icon.png" style="width: 32px; height: 32px;" alt="Fun with Wikis"/>
+                    <span><img src="/ui/static/img/icon.png" style="width: 32px; height: 32px;" alt="Fun with Wikis"/>
                 </a></li>
                 {foreach $plugin in $plugins}
                     <li role="presentation"><a href="{$plugin.path}">
@@ -81,7 +81,7 @@
  */
 {template .favicon}
     <!-- favicon -->
-    //<link rel="icon" type="image/png" href="/static/img/favicon.png">
+    //<link rel="icon" type="image/png" href="/ui/static/img/favicon.png">
 {/template}
 
 /**

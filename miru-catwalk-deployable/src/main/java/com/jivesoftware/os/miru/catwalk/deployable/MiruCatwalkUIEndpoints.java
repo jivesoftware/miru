@@ -16,7 +16,7 @@ import javax.ws.rs.core.Response;
  *
  */
 @Singleton
-@Path("/miru/catwalk")
+@Path("/ui")
 public class MiruCatwalkUIEndpoints {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();

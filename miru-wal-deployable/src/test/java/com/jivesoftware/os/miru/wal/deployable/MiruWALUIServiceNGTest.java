@@ -152,7 +152,7 @@ public class MiruWALUIServiceNGTest {
     public void testRenderActivityWALWithTenant() throws Exception {
         String rendered = service.renderActivityWALWithTenant(tenantId);
         assertTrue(rendered.contains(tenantId.toString()));
-        assertTrue(rendered.contains("/miru/wal/activity/" + tenantId + "/" + partitionId + "/rcvs#focus"));
+        assertTrue(rendered.contains("/ui/activity/" + tenantId + "/" + partitionId + "/rcvs#focus"));
     }
 
 }

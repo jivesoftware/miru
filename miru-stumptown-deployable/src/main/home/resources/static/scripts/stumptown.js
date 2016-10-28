@@ -120,7 +120,7 @@ stump.realtime = {
     poll: function () {
         $.ajax({
             type: "POST",
-            url: "/stumptown/query/poll",
+            url: "/ui/query/poll",
             data: {
                 cluster: stump.realtime.input.cluster,
                 host: stump.realtime.input.host,

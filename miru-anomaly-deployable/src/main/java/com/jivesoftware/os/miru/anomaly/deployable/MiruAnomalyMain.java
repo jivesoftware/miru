@@ -40,6 +40,7 @@ import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer.MiruSoyRendererConfig;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import com.jivesoftware.os.routing.bird.deployable.AuthValidationFilter;
 import com.jivesoftware.os.routing.bird.deployable.Deployable;
 import com.jivesoftware.os.routing.bird.deployable.DeployableHealthCheckRegistry;
 import com.jivesoftware.os.routing.bird.deployable.ErrorHealthCheckConfig;
@@ -114,7 +115,7 @@ public class MiruAnomalyMain {
                 HttpRequestHelperUtils.buildRequestHelper(false, false, null, instanceConfig.getRoutesHost(), instanceConfig.getRoutesPort()),
                 instanceConfig.getConnectionsHealth(), 5_000, 100);
 
-            TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
+            TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = deployable.getTenantRoutingHttpClientInitializer();
             TenantAwareHttpClient<String> miruManageClient = tenantRoutingHttpClientInitializer.builder(deployable
                     .getTenantRoutingProvider()
                     .getConnections("miru-manage", "main", 10_000), // TODO config
@@ -192,13 +193,13 @@ public class MiruAnomalyMain {
 
             serviceStartupHealthCheck.info("installing ui plugins...", null);
 
-            List<AnomalyPlugin> plugins = Lists.newArrayList(new AnomalyPlugin("eye-open", "Status", "/anomaly/status",
+            List<AnomalyPlugin> plugins = Lists.newArrayList(new AnomalyPlugin("eye-open", "Status", "/ui/anomaly/status",
                     AnomalyStatusPluginEndpoints.class,
                     new AnomalyStatusPluginRegion("soy.anomaly.page.anomalyStatusPluginRegion", renderer, sampleTrawl)),
-                /*new AnomalyPlugin("stats", "Trends", "/anomaly/trends",
+                /*new AnomalyPlugin("stats", "Trends", "/ui/anomaly/trends",
                     AnomalyTrendsPluginEndpoints.class,
                     new AnomalyTrendsPluginRegion("soy.anomaly.page.anomalyTrendsPluginRegion", renderer, readerClient, mapper, responseMapper)),*/
-                new AnomalyPlugin("search", "Query", "/anomaly/query",
+                new AnomalyPlugin("search", "Query", "/ui/anomaly/query",
                     AnomalyQueryPluginEndpoints.class,
                     new AnomalyQueryPluginRegion("soy.anomaly.page.anomalyQueryPluginRegion", renderer, readerClient, mapper, responseMapper)));
 
@@ -207,7 +208,17 @@ public class MiruAnomalyMain {
             Resource sourceTree = new Resource(staticResourceDir)
                 .addResourcePath(rendererConfig.getPathToStaticResources())
                 .setDirectoryListingAllowed(false)
-                .setContext("/static");
+                .setContext("/ui/static");
+
+            AuthValidationFilter authValidationFilter = new AuthValidationFilter(deployable);
+            if (instanceConfig.getMainServiceAuthEnabled()) {
+                authValidationFilter.addSessionAuth("/ui/*", "/miru/*");
+                authValidationFilter.addRouteOAuth("/miru/*");
+            } else {
+                authValidationFilter.addSessionAuth("/ui/*");
+                authValidationFilter.addNoAuth("/miru/*");
+            }
+            deployable.addContainerRequestFilter(authValidationFilter);
 
             deployable.addEndpoints(MiruAnomalyIntakeEndpoints.class);
             deployable.addInjectables(IngressGuaranteedDeliveryQueueProvider.class, ingressGuaranteedDeliveryQueueProvider);

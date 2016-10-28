@@ -42,15 +42,16 @@ import com.jivesoftware.os.miru.tools.deployable.region.FullTextPluginRegion;
 import com.jivesoftware.os.miru.tools.deployable.region.MiruToolsPlugin;
 import com.jivesoftware.os.miru.tools.deployable.region.RealwaveFramePluginRegion;
 import com.jivesoftware.os.miru.tools.deployable.region.RealwavePluginRegion;
-import com.jivesoftware.os.miru.tools.deployable.region.RecoPluginEndpoints;
+import com.jivesoftware.os.miru.tools.deployable.endpoints.RecoPluginEndpoints;
 import com.jivesoftware.os.miru.tools.deployable.region.RecoPluginRegion;
 import com.jivesoftware.os.miru.tools.deployable.region.StrutPluginRegion;
-import com.jivesoftware.os.miru.tools.deployable.region.TrendingPluginEndpoints;
+import com.jivesoftware.os.miru.tools.deployable.endpoints.TrendingPluginEndpoints;
 import com.jivesoftware.os.miru.tools.deployable.region.TrendingPluginRegion;
 import com.jivesoftware.os.miru.ui.MiruRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer.MiruSoyRendererConfig;
+import com.jivesoftware.os.routing.bird.deployable.AuthValidationFilter;
 import com.jivesoftware.os.routing.bird.deployable.Deployable;
 import com.jivesoftware.os.routing.bird.deployable.DeployableHealthCheckRegistry;
 import com.jivesoftware.os.routing.bird.deployable.ErrorHealthCheckConfig;
@@ -93,7 +94,7 @@ public class MiruToolsMain {
                 new HasUI.UI("Tail", "manage", "/manage/tail?lastNLines=1000"),
                 new HasUI.UI("Thread Dump", "manage", "/manage/threadDump"),
                 new HasUI.UI("Health", "manage", "/manage/ui"),
-                new HasUI.UI("Miru-Tools", "main", "/"))));
+                new HasUI.UI("Miru-Tools", "main", "/ui"))));
             deployable.buildStatusReporter(null).start();
             deployable.addHealthCheck(new GCPauseHealthChecker(deployable.config(GCPauseHealthChecker.GCPauseHealthCheckerConfig.class)));
             deployable.addHealthCheck(new GCLoadHealthChecker(deployable.config(GCLoadHealthChecker.GCLoadHealthCheckerConfig.class)));
@@ -141,7 +142,7 @@ public class MiruToolsMain {
             HttpDeliveryClientHealthProvider clientHealthProvider = new HttpDeliveryClientHealthProvider(instanceConfig.getInstanceKey(),
                 HttpRequestHelperUtils.buildRequestHelper(false, false, null, instanceConfig.getRoutesHost(), instanceConfig.getRoutesPort()),
                 instanceConfig.getConnectionsHealth(), 5_000, 100);
-            TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
+            TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = deployable.getTenantRoutingHttpClientInitializer();
             TenantAwareHttpClient<String> miruReaderClient = tenantRoutingHttpClientInitializer.builder(
                 tenantRoutingProvider.getConnections("miru-reader", "main", 10_000), // TODO config
                 clientHealthProvider)
@@ -159,40 +160,40 @@ public class MiruToolsMain {
 
             List<MiruToolsPlugin> plugins = Lists.newArrayList(
                 new MiruToolsPlugin("road", "Aggregate Counts",
-                    "/miru/tools/aggregate",
+                    "/ui/tools/aggregate",
                     AggregateCountsPluginEndpoints.class,
                     new AggregateCountsPluginRegion("soy.miru.page.aggregateCountsPluginRegion", renderer, miruReaderClient, mapper, responseMapper)),
                 new MiruToolsPlugin("stats", "Analytics",
-                    "/miru/tools/analytics",
+                    "/ui/tools/analytics",
                     AnalyticsPluginEndpoints.class,
                     new AnalyticsPluginRegion("soy.miru.page.analyticsPluginRegion", renderer, miruReaderClient, mapper, responseMapper)),
                 new MiruToolsPlugin("education", "Catwalk",
-                    "/miru/tools/catwalk",
+                    "/ui/tools/catwalk",
                     CatwalkPluginEndpoints.class,
                     new CatwalkPluginRegion("soy.miru.page.catwalkPluginRegion", renderer, miruReaderClient, mapper, responseMapper)),
                 new MiruToolsPlugin("fire", "Strut your Stuff",
-                    "/miru/tools/strut",
+                    "/ui/tools/strut",
                     StrutPluginEndpoints.class,
                     new StrutPluginRegion("soy.miru.page.strutPluginRegion", renderer, miruReaderClient, mapper, responseMapper)),
                 new MiruToolsPlugin("asterisk", "Distincts",
-                    "/miru/tools/distincts",
+                    "/ui/tools/distincts",
                     DistinctsPluginEndpoints.class,
                     new DistinctsPluginRegion("soy.miru.page.distinctsPluginRegion", renderer, miruReaderClient, mapper, responseMapper)),
                 new MiruToolsPlugin("search", "Full Text",
-                    "/miru/tools/fulltext",
+                    "/ui/tools/fulltext",
                     FullTextPluginEndpoints.class,
                     new FullTextPluginRegion("soy.miru.page.fullTextPluginRegion", renderer, miruReaderClient, mapper, responseMapper)),
                 new MiruToolsPlugin("flash", "Realwave",
-                    "/miru/tools/realwave",
+                    "/ui/tools/realwave",
                     RealwavePluginEndpoints.class,
                     new RealwavePluginRegion("soy.miru.page.realwavePluginRegion", renderer, miruReaderClient, mapper, responseMapper),
                     new RealwaveFramePluginRegion("soy.miru.page.realwaveFramePluginRegion", renderer)),
                 new MiruToolsPlugin("thumbs-up", "Reco",
-                    "/miru/tools/reco",
+                    "/ui/tools/reco",
                     RecoPluginEndpoints.class,
                     new RecoPluginRegion("soy.miru.page.recoPluginRegion", renderer, miruReaderClient, mapper, responseMapper)),
                 new MiruToolsPlugin("list", "Trending",
-                    "/miru/tools/trending",
+                    "/ui/tools/trending",
                     TrendingPluginEndpoints.class,
                     new TrendingPluginRegion("soy.miru.page.trendingPluginRegion", renderer, miruReaderClient, mapper, responseMapper)));
 
@@ -201,7 +202,17 @@ public class MiruToolsMain {
             Resource sourceTree = new Resource(staticResourceDir)
                 .addResourcePath(rendererConfig.getPathToStaticResources())
                 .setDirectoryListingAllowed(false)
-                .setContext("/static");
+                .setContext("/ui/static");
+
+            AuthValidationFilter authValidationFilter = new AuthValidationFilter(deployable);
+            if (instanceConfig.getMainServiceAuthEnabled()) {
+                authValidationFilter.addSessionAuth("/ui/*", "/miru/*");
+                authValidationFilter.addRouteOAuth("/miru/*");
+            } else {
+                authValidationFilter.addSessionAuth("/ui/*");
+                authValidationFilter.addNoAuth("/miru/*");
+            }
+            deployable.addContainerRequestFilter(authValidationFilter);
 
             deployable.addEndpoints(MiruToolsEndpoints.class);
             deployable.addInjectables(MiruToolsService.class, miruToolsService);

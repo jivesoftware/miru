@@ -143,7 +143,7 @@ public class MiruManageServiceTest {
         String rendered = miruManageService.renderHostsWithFocus(hosts.get(0));
         for (int i = 0; i < hosts.size(); i++) {
             MiruHost host = hosts.get(i);
-            assertTrue(rendered.contains("/miru/manage/hosts/" + host.getLogicalName() + "#focus"));
+            assertTrue(rendered.contains("/ui/hosts/" + host.getLogicalName() + "#focus"));
             if (i == 0) {
                 assertTrue(rendered.contains("Expected Tenants for " + host.getLogicalName()));
             } else {
@@ -157,7 +157,7 @@ public class MiruManageServiceTest {
         String rendered = miruManageService.renderTenantsWithFocus(tenantId);
         assertTrue(rendered.contains(tenantId.toString()));
         for (MiruHost host : hosts) {
-            assertTrue(rendered.contains("/miru/manage/hosts/" + host.getLogicalName() + "#focus"));
+            assertTrue(rendered.contains("/ui/hosts/" + host.getLogicalName() + "#focus"));
         }
     }
 

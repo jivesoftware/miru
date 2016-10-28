@@ -45,9 +45,9 @@
                             <td>{$result.field}</td>
                             <td>
                                 {if $service}
-                                    <a href="/anomaly/query?fromAgo={$fromHoursAgo}&amp;fromTimeUnit=HOURS&amp;toAgo=0&amp;toTimeUnit=HOURS&amp;">{$result.value}</a>
+                                    <a href="/ui/anomaly/query?fromAgo={$fromHoursAgo}&amp;fromTimeUnit=HOURS&amp;toAgo=0&amp;toTimeUnit=HOURS&amp;">{$result.value}</a>
                                 {else}
-                                    <a href="/anomaly/query?fromAgo={$fromHoursAgo}&amp;fromTimeUnit=HOURS&amp;toAgo=0&amp;toTimeUnit=HOURS&amp;">{$result.value}</a>
+                                    <a href="/ui/anomaly/query?fromAgo={$fromHoursAgo}&amp;fromTimeUnit=HOURS&amp;toAgo=0&amp;toTimeUnit=HOURS&amp;">{$result.value}</a>
                                 {/if}
                             </td>
                         </tr>

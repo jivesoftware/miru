@@ -18,7 +18,7 @@ import javax.ws.rs.core.Response;
  *
  */
 @Singleton
-@Path("/miru/tools/distincts")
+@Path("/ui/tools/distincts")
 public class DistinctsPluginEndpoints {
 
     private final MiruToolsService toolsService;

@@ -15,7 +15,7 @@ import javax.ws.rs.core.UriInfo;
  *
  */
 @Singleton
-@Path("/")
+@Path("/ui")
 public class MiruQueryAnomalyEndpoints {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();

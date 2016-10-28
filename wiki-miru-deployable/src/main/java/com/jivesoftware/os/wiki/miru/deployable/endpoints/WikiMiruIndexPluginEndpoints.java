@@ -19,7 +19,7 @@ import javax.ws.rs.core.Response;
  *
  */
 @Singleton
-@Path("/wiki/index")
+@Path("/ui/index")
 public class WikiMiruIndexPluginEndpoints {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();

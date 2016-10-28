@@ -18,7 +18,7 @@ import javax.ws.rs.core.Response;
  *
  */
 @Singleton
-@Path("/anomaly/status")
+@Path("/ui/anomaly/status")
 public class AnomalyStatusPluginEndpoints {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();

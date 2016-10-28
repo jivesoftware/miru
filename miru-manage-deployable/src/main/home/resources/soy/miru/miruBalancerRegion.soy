@@ -16,14 +16,14 @@
                         <td>Ensures optimal rack distribution for each partition replica set. <strong>WARNING: This is not yet rack aware!</strong></td>
                     </tr>
                     <tr>
-                        <td><input type="button" value="Export" onclick="window.location.assign('/miru/manage/balancer/export/false')" /></td>
+                        <td><input type="button" value="Export" onclick="window.location.assign('/ui/balancer/export/false')" /></td>
                         <td>Download topology using configured host identifier.</td>
                     </tr>
                     <tr>
-                        <td><input type="button" value="Export Instance" onclick="window.location.assign('/miru/manage/balancer/export/true')" /></td>
+                        <td><input type="button" value="Export Instance" onclick="window.location.assign('/ui/balancer/export/true')" /></td>
                         <td>Download topology using instance derived host identifier.</td>
                     </tr>
-                    <form method="post" action="/miru/manage/balancer/import/false" enctype="multipart/form-data">
+                    <form method="post" action="/ui/balancer/import/false" enctype="multipart/form-data">
                     <tr>
                         <td><input type="submit" value="Import" /></td>
                         <td>
@@ -32,7 +32,7 @@
                         </td>
                     </tr>
                     </form>
-                    <form method="post" action="/miru/manage/balancer/import/true" enctype="multipart/form-data">
+                    <form method="post" action="/ui/balancer/import/true" enctype="multipart/form-data">
                     <tr>
                         <td><input type="submit" value="Import Instance" /></td>
                         <td>

@@ -1,9 +1,10 @@
-package com.jivesoftware.os.miru.tools.deployable.region;
+package com.jivesoftware.os.miru.tools.deployable.endpoints;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.miru.tools.deployable.MiruToolsService;
+import com.jivesoftware.os.miru.tools.deployable.region.TrendingPluginRegion;
 import com.jivesoftware.os.miru.tools.deployable.region.TrendingPluginRegion.TrendingPluginRegionInput;
 import java.util.List;
 import javax.inject.Singleton;
@@ -20,7 +21,7 @@ import javax.ws.rs.core.Response;
  *
  */
 @Singleton
-@Path("/miru/tools/trending")
+@Path("/ui/tools/trending")
 public class TrendingPluginEndpoints {
 
     private final MiruToolsService toolsService;

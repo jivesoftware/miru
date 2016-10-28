@@ -25,7 +25,7 @@ import javax.ws.rs.core.Response;
  *
  */
 @Singleton
-@Path("/miru/wal")
+@Path("/ui")
 public class MiruWALEndpoints {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();

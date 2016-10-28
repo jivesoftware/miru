@@ -35,7 +35,7 @@ import org.glassfish.jersey.media.multipart.FormDataParam;
  *
  */
 @Singleton
-@Path("/miru/manage")
+@Path("/ui")
 public class MiruManageEndpoints {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();

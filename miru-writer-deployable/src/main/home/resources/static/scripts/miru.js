@@ -7,101 +7,8 @@ miru.resetButton = function ($button, value) {
     $button.removeAttr('disabled');
 };
 
-miru.activitywal = {
-    sanitize: function (ele, tenantId, partitionId) {
-        var $button = $(ele);
-        $button.attr('disabled', 'disabled');
-        var value = $button.val();
-        $.ajax({
-            type: "POST",
-            url: "/miru/writer/wal/sanitize/" + tenantId + "/" + partitionId,
-            data: {},
-            //contentType: "application/json",
-            success: function () {
-                $button.val('Success');
-                setTimeout(function () {
-                    miru.resetButton($button, value);
-                }, 2000);
-            },
-            error: function () {
-                $button.val('Failure');
-                setTimeout(function () {
-                    miru.resetButton($button, value);
-                }, 2000);
-            }
-        });
-    }
-};
-
-miru.repair = {
-    repairBoundaries: function (ele) {
-        var $button = $(ele);
-        $button.attr('disabled', 'disabled');
-        var value = $button.val();
-        $.ajax({
-            type: "POST",
-            url: "/miru/writer/repair/repairBoundaries",
-            data: {},
-            //contentType: "application/json",
-            success: function () {
-                $button.val('Success');
-                setTimeout(function () {
-                    miru.resetButton($button, value);
-                }, 2000);
-            },
-            error: function () {
-                $button.val('Failure');
-                setTimeout(function () {
-                    miru.resetButton($button, value);
-                }, 2000);
-            }
-        });
-    },
-    repairRanges: function (ele) {
-        var $button = $(ele);
-        $button.attr('disabled', 'disabled');
-        var value = $button.val();
-        $.ajax({
-            type: "POST",
-            url: "/miru/writer/repair/repairRanges",
-            data: {},
-            //contentType: "application/json",
-            success: function () {
-                $button.val('Success');
-                setTimeout(function () {
-                    miru.resetButton($button, value);
-                }, 2000);
-            },
-            error: function () {
-                $button.val('Failure');
-                setTimeout(function () {
-                    miru.resetButton($button, value);
-                }, 2000);
-            }
-        });
-    },
-    removePartition: function (ele, tenantId, partitionId) {
-        var $button = $(ele);
-        $button.attr('disabled', 'disabled');
-        var value = $button.val();
-        $.ajax({
-            type: "POST",
-            url: "/miru/writer/repair/removePartition/" + tenantId + "/" + partitionId,
-            data: {},
-            //contentType: "application/json",
-            success: function () {
-                $button.val('Success');
-                setTimeout(function () {
-                    miru.resetButton($button, value);
-                }, 2000);
-            },
-            error: function () {
-                $button.val('Failure');
-                setTimeout(function () {
-                    miru.resetButton($button, value);
-                }, 2000);
-            }
-        });
+miru.writer = {
+    init: function () {
     }
 };
 
@@ -114,8 +21,8 @@ $(document).ready(function () {
     miru.onWindowFocus = [];
     miru.onWindowBlur = [];
 
-    if ($('#rw-waveform').length) {
-        miru.realwave.init();
+    if ($('#writer').length) {
+        miru.writer.init();
     }
 
     $(function () {
