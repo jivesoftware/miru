@@ -13,7 +13,7 @@ import javax.ws.rs.core.Response;
  *
  */
 @Singleton
-@Path("/")
+@Path("/ui")
 public class MiruToolsEndpoints {
 
     private final MiruToolsService toolsService;

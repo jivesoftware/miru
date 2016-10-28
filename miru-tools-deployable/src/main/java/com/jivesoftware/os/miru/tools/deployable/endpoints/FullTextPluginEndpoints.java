@@ -19,7 +19,7 @@ import javax.ws.rs.core.Response;
  *
  */
 @Singleton
-@Path("/miru/tools/fulltext")
+@Path("/ui/tools/fulltext")
 public class FullTextPluginEndpoints {
 
     private final MiruToolsService toolsService;

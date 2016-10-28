@@ -15,7 +15,7 @@ miru.activitywal = {
         var value = $button.val();
         $.ajax({
             type: "POST",
-            url: "/miru/wal/sanitize/" + tenantId + "/" + partitionId,
+            url: "/ui/sanitize/" + tenantId + "/" + partitionId,
             data: {},
             //contentType: "application/json",
             success: function () {
@@ -42,7 +42,7 @@ miru.repair = {
         var value = $button.val();
         $.ajax({
             type: "POST",
-            url: "/miru/wal/repair/repairBoundaries",
+            url: "/ui/repair/repairBoundaries",
             data: {},
             //contentType: "application/json",
             success: function () {
@@ -66,7 +66,7 @@ miru.repair = {
         var value = $button.val();
         $.ajax({
             type: "POST",
-            url: "/miru/wal/repair/repairRanges/" + (fast ? "true" : "false"),
+            url: "/ui/repair/repairRanges/" + (fast ? "true" : "false"),
             data: {},
             //contentType: "application/json",
             success: function () {
@@ -90,7 +90,7 @@ miru.repair = {
         var value = $button.val();
         $.ajax({
             type: "POST",
-            url: "/miru/wal/repair/removePartition/" + tenantId + "/" + partitionId,
+            url: "/ui/repair/removePartition/" + tenantId + "/" + partitionId,
             data: {},
             //contentType: "application/json",
             success: function () {
@@ -117,7 +117,7 @@ miru.cleanup = {
         var value = $button.val();
         $.ajax({
             type: "POST",
-            url: "/miru/wal/cleanup/destroyed",
+            url: "/ui/cleanup/destroyed",
             data: {},
             //contentType: "application/json",
             success: function () {
@@ -141,7 +141,7 @@ miru.cleanup = {
         var value = $button.val();
         $.ajax({
             type: "POST",
-            url: "/miru/wal/repair/removePartition/" + tenantId + "/" + partitionId,
+            url: "/ui/repair/removePartition/" + tenantId + "/" + partitionId,
             data: {},
             //contentType: "application/json",
             success: function () {

@@ -20,7 +20,7 @@ import javax.ws.rs.core.Response;
  *
  */
 @Singleton
-@Path("/miru/tools/catwalk")
+@Path("/ui/tools/catwalk")
 public class CatwalkPluginEndpoints {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();

@@ -25,7 +25,7 @@ import javax.ws.rs.core.Response;
  *
  */
 @Singleton
-@Path("/miru/tools/realwave")
+@Path("/ui/tools/realwave")
 public class RealwavePluginEndpoints {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();

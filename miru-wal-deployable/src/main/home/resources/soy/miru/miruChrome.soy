@@ -14,13 +14,13 @@
 	    <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>{$title}</title>
         {call .styles /}
-        <script src="/static/scripts/jquery-2.1.0.min.js"></script>
-        <script src="/static/scripts/Chart.js"></script>
-        <script src="/static/scripts/Chart.StackedBar.js"></script>
-        <script src="/static/scripts/legend.js"></script>
-        <script src="/static/scripts/miru.js"></script>
-        <script src="/static/vendor/bootstrap-3.3.2/js/bootstrap.js"></script>
-        <link href="/static/img/favicon.ico" rel="shortcut icon" type="image/x-icon"/>
+        <script src="/ui/static/scripts/jquery-2.1.0.min.js"></script>
+        <script src="/ui/static/scripts/Chart.js"></script>
+        <script src="/ui/static/scripts/Chart.StackedBar.js"></script>
+        <script src="/ui/static/scripts/legend.js"></script>
+        <script src="/ui/static/scripts/miru.js"></script>
+        <script src="/ui/static/vendor/bootstrap-3.3.2/js/bootstrap.js"></script>
+        <link href="/ui/static/img/favicon.ico" rel="shortcut icon" type="image/x-icon"/>
 	</head>
 	<body>
         {$header|noAutoescape}
@@ -51,19 +51,19 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 
     <!-- jquery-ui -->
-    <link rel="stylesheet" href="/static/css/jquery-ui/ui-lightness/jquery-ui-1.10.4.custom.min.css">
+    <link rel="stylesheet" href="/ui/static/css/jquery-ui/ui-lightness/jquery-ui-1.10.4.custom.min.css">
 
     <!-- Vanilla bootstrap -->
-    <link rel="stylesheet" type="text/css" href="/static/vendor/bootstrap-3.3.2/css/bootstrap.min.css">
-	<link rel="stylesheet" type="text/css" media="screen" href="/static/vendor/bootstrap-3.3.2/css/bootstrap-theme.min.css">
+    <link rel="stylesheet" type="text/css" href="/ui/static/vendor/bootstrap-3.3.2/css/bootstrap.min.css">
+	<link rel="stylesheet" type="text/css" media="screen" href="/ui/static/vendor/bootstrap-3.3.2/css/bootstrap-theme.min.css">
 
     <!-- bootstrap-multiselect -->
-    <link rel="stylesheet" href="/static/vendor/bootstrap-multiselect/css/bootstrap-multiselect.css">
-    <link rel="stylesheet" href="/static/vendor/bootstrap-multiselect/css/prettify.css">
-    <link rel="stylesheet" href="/static/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/ui/static/vendor/bootstrap-multiselect/css/bootstrap-multiselect.css">
+    <link rel="stylesheet" href="/ui/static/vendor/bootstrap-multiselect/css/prettify.css">
+    <link rel="stylesheet" href="/ui/static/css/font-awesome.min.css">
 
     // HEY ENGINEERS, add CSS here for now:
-    <link rel="stylesheet" href="/static/css/miru.css">
+    <link rel="stylesheet" href="/ui/static/css/miru.css">
 
     // following CC is for IE8 and lower. No harm in leaving it here.
     // It's no overhead to other browsers and would automatically give unsupported IE8 a fighting chance to view content
@@ -81,8 +81,8 @@
 {template .headerRegion}
 	<div class="navbar navbar-default" role="navigation">
 	    <div class="navbar-header">
-            <a class="navbar-brand" href="/miru/manage">
-                <span><img src="/static/img/icon.png" alt="Fun with bits" style="margin-top:-11px; vertical-align:top;" width="100" height="50">{$cluster}-Manage&nbsp;{$instance}/{$total}</span>
+            <a class="navbar-brand" href="/ui">
+                <span><img src="/ui/static/img/icon.png" alt="Fun with bits" style="margin-top:-11px; vertical-align:top;" width="100" height="50">{$cluster}-WAL&nbsp;{$instance}/{$total}</span>
             </a>
 	    </div>
         <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
@@ -109,19 +109,19 @@
  */
 {template .nav}
     <div style="margin-bottom:20px;">
-        <a class="list-group-item" href="/miru/wal/activity">
+        <a class="list-group-item" href="/ui/activity">
             <span class="glyphicon glyphicon-bookmark"></span>{sp}
             Activity WAL
         </a>
-        <a class="list-group-item" href="/miru/wal/read">
+        <a class="list-group-item" href="/ui/read">
             <span class="glyphicon glyphicon-bookmark"></span>{sp}
             Read WAL
         </a>
-        <a class="list-group-item" href="/miru/wal/repair">
+        <a class="list-group-item" href="/ui/repair">
             <span class="glyphicon glyphicon-wrench"></span>{sp}
             Repair
         </a>
-        <a class="list-group-item" href="/miru/wal/cleanup">
+        <a class="list-group-item" href="/ui/cleanup">
             <span class="glyphicon glyphicon-erase"></span>{sp}
             Cleanup
         </a>
@@ -133,7 +133,7 @@
  */
 {template .favicon}
     <!-- favicon -->
-    //<link rel="icon" type="image/png" href="/static/img/favicon.png">
+    //<link rel="icon" type="image/png" href="/ui/static/img/favicon.png">
 {/template}
 
 /**

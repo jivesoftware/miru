@@ -17,7 +17,7 @@ import javax.ws.rs.core.Response;
  *
  */
 @Singleton
-@Path("/miru/tools/aggregate")
+@Path("/ui/tools/aggregate")
 public class AggregateCountsPluginEndpoints {
 
     private final MiruToolsService toolsService;

@@ -18,7 +18,7 @@ import javax.ws.rs.core.Response;
  *
  */
 @Singleton
-@Path("/miru/tools/analytics")
+@Path("/ui/tools/analytics")
 public class AnalyticsPluginEndpoints {
 
     private final MiruToolsService toolsService;

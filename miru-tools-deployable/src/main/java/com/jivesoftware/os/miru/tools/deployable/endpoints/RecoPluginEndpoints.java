@@ -1,9 +1,10 @@
-package com.jivesoftware.os.miru.tools.deployable.region;
+package com.jivesoftware.os.miru.tools.deployable.endpoints;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.miru.tools.deployable.MiruToolsService;
+import com.jivesoftware.os.miru.tools.deployable.region.RecoPluginRegion;
 import com.jivesoftware.os.miru.tools.deployable.region.RecoPluginRegion.RecoPluginRegionInput;
 import java.util.List;
 import javax.inject.Singleton;
@@ -20,7 +21,7 @@ import javax.ws.rs.core.Response;
  *
  */
 @Singleton
-@Path("/miru/tools/reco")
+@Path("/ui/tools/reco")
 public class RecoPluginEndpoints {
 
     private final MiruToolsService toolsService;

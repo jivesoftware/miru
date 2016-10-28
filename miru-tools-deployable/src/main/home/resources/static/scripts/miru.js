@@ -79,7 +79,7 @@ miru.realwave = {
     poll: function () {
         $.ajax({
             type: "POST",
-            url: "/miru/tools/realwave/poll",
+            url: "/ui/tools/realwave/poll",
             data: {
                 tenantId: miru.realwave.input.tenantId,
                 startTimestamp: miru.realwave.input.startTimestamp,

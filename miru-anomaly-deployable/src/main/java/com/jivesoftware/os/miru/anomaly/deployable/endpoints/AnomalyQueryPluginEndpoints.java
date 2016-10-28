@@ -20,7 +20,7 @@ import javax.ws.rs.core.Response;
  *
  */
 @Singleton
-@Path("/anomaly/query")
+@Path("/ui/anomaly/query")
 public class AnomalyQueryPluginEndpoints {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();

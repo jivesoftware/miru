@@ -72,6 +72,7 @@ import com.jivesoftware.os.miru.wal.readtracking.rcvs.RCVSReadTrackingWALReader;
 import com.jivesoftware.os.miru.wal.readtracking.rcvs.RCVSReadTrackingWALWriter;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStoreInitializer;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStoreProvider;
+import com.jivesoftware.os.routing.bird.deployable.AuthValidationFilter;
 import com.jivesoftware.os.routing.bird.deployable.Deployable;
 import com.jivesoftware.os.routing.bird.deployable.DeployableHealthCheckRegistry;
 import com.jivesoftware.os.routing.bird.deployable.ErrorHealthCheckConfig;
@@ -140,7 +141,7 @@ public class MiruWALMain {
                 new HasUI.UI("Tail", "manage", "/manage/tail?lastNLines=1000"),
                 new HasUI.UI("Thread Dump", "manage", "/manage/threadDump"),
                 new HasUI.UI("Health", "manage", "/manage/ui"),
-                new HasUI.UI("Miru-WAL", "main", "/miru/wal"),
+                new HasUI.UI("Miru-WAL", "main", "/ui"),
                 new HasUI.UI("Miru-WAL-Amza", "main", "/amza"))));
 
             deployable.buildStatusReporter(null).start();
@@ -281,7 +282,7 @@ public class MiruWALMain {
                 10_000); // TODO config
             HostPortProvider hostPortProvider = new RoutingBirdHostPortProvider(walConnectionDescriptorProvider, "");
 
-            TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
+            TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = deployable.getTenantRoutingHttpClientInitializer();
             TenantAwareHttpClient<String> manageHttpClient = tenantRoutingHttpClientInitializer.builder(
                 tenantRoutingProvider.getConnections("miru-manage", "main", 10_000), // TODO config
                 clientHealthProvider)
@@ -485,7 +486,7 @@ public class MiruWALMain {
                 //.addResourcePath("../../../../../src/main/resources") // fluff?
                 .addResourcePath(rendererConfig.getPathToStaticResources())
                 .setDirectoryListingAllowed(false)
-                .setContext("/static");
+                .setContext("/ui/static");
 
             MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
 
@@ -500,6 +501,17 @@ public class MiruWALMain {
                     amzaWALDirector,
                     activityWALReader,
                     miruStats);
+
+            AuthValidationFilter authValidationFilter = new AuthValidationFilter(deployable)
+                .addNoAuth("/amza/*"); //TODO delegate to amza
+            if (instanceConfig.getMainServiceAuthEnabled()) {
+                authValidationFilter.addSessionAuth("/ui/*", "/miru/*");
+                authValidationFilter.addRouteOAuth("/miru/*");
+            } else {
+                authValidationFilter.addSessionAuth("/ui/*");
+                authValidationFilter.addNoAuth("/miru/*");
+            }
+            deployable.addContainerRequestFilter(authValidationFilter);
 
             deployable.addEndpoints(MiruWALEndpoints.class);
             deployable.addInjectables(MiruWALUIService.class, miruWALUIService);

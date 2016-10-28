@@ -147,14 +147,14 @@
                                 <td>{$service}</td>
                                 <td>{$result.name}</td>
                             {else}
-                                <td><a href="#" onclick="document.location.href='/stumptown/trends?aggregateAroundField=instance&amp;service={$result.name}'; return false;">{$result.name}</a></td>
+                                <td><a href="#" onclick="document.location.href='/ui/trends?aggregateAroundField=instance&amp;service={$result.name}'; return false;">{$result.name}</a></td>
                             {/if}
                             <td>{$result.rank}</td>
                             <td>
                                 {if $service}
-                                    <a href="/stumptown/query?service={$service}&amp;instance={$result.name}&amp;fromAgo={$fromAgo}&amp;fromTimeUnit={$fromTimeUnit}&amp;toAgo={$toAgo}&amp;toTimeUnit={$toTimeUnit}&amp;logLevels={$logLevelList}">Query</a>
+                                    <a href="/ui/query?service={$service}&amp;instance={$result.name}&amp;fromAgo={$fromAgo}&amp;fromTimeUnit={$fromTimeUnit}&amp;toAgo={$toAgo}&amp;toTimeUnit={$toTimeUnit}&amp;logLevels={$logLevelList}">Query</a>
                                 {else}
-                                    <a href="/stumptown/query?service={$result.name}&amp;fromAgo={$fromAgo}&amp;fromTimeUnit={$fromTimeUnit}&amp;toAgo={$toAgo}&amp;toTimeUnit={$toTimeUnit}&amp;logLevels={$logLevelList}">Query</a>
+                                    <a href="/ui/query?service={$result.name}&amp;fromAgo={$fromAgo}&amp;fromTimeUnit={$fromTimeUnit}&amp;toAgo={$toAgo}&amp;toTimeUnit={$toTimeUnit}&amp;logLevels={$logLevelList}">Query</a>
                                 {/if}
                             </td>
                             <td><img alt="waveform" src="{$result.waveform}"></td>

@@ -49,6 +49,7 @@ import com.jivesoftware.os.miru.wal.client.MiruWALClientInitializer.WALClientSic
 import com.jivesoftware.os.miru.writer.deployable.base.MiruActivityIngress;
 import com.jivesoftware.os.miru.writer.deployable.endpoints.MiruIngressEndpoints;
 import com.jivesoftware.os.miru.writer.partition.AmzaPartitionIdProvider;
+import com.jivesoftware.os.routing.bird.deployable.AuthValidationFilter;
 import com.jivesoftware.os.routing.bird.deployable.Deployable;
 import com.jivesoftware.os.routing.bird.deployable.DeployableHealthCheckRegistry;
 import com.jivesoftware.os.routing.bird.deployable.ErrorHealthCheckConfig;
@@ -109,7 +110,7 @@ public class MiruWriterMain {
                 new HasUI.UI("Tail", "manage", "/manage/tail?lastNLines=1000"),
                 new HasUI.UI("Thread Dump", "manage", "/manage/threadDump"),
                 new HasUI.UI("Health", "manage", "/manage/ui"),
-                new HasUI.UI("Miru-Writer", "main", "/miru/writer"),
+                new HasUI.UI("Miru-Writer", "main", "/ui"),
                 new HasUI.UI("Miru-Writer-Amza", "main", "/amza"))));
 
             deployable.buildStatusReporter(null).start();
@@ -160,7 +161,7 @@ public class MiruWriterMain {
                 HttpRequestHelperUtils.buildRequestHelper(false, false, null, instanceConfig.getRoutesHost(), instanceConfig.getRoutesPort()),
                 instanceConfig.getConnectionsHealth(), 5_000, 100);
 
-            TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
+            TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = deployable.getTenantRoutingHttpClientInitializer();
             TenantAwareHttpClient<String> manageHttpClient = tenantRoutingHttpClientInitializer.builder(
                 tenantRoutingProvider.getConnections("miru-manage", "main", 10_000), // TODO config
                 clientHealthProvider)
@@ -249,12 +250,23 @@ public class MiruWriterMain {
                 //.addResourcePath("../../../../../src/main/resources") // fluff?
                 .addResourcePath(rendererConfig.getPathToStaticResources())
                 .setDirectoryListingAllowed(false)
-                .setContext("/static");
+                .setContext("/ui/static");
 
             MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
 
             MiruWriterUIService miruWriterUIService = new MiruWriterUIServiceInitializer()
                 .initialize(instanceConfig.getClusterName(), instanceConfig.getInstanceName(), renderer, miruStats, tenantRoutingProvider);
+
+            AuthValidationFilter authValidationFilter = new AuthValidationFilter(deployable)
+                .addNoAuth("/amza/*"); //TODO delegate to amza
+            if (instanceConfig.getMainServiceAuthEnabled()) {
+                authValidationFilter.addSessionAuth("/ui/*", "/miru/*");
+                authValidationFilter.addRouteOAuth("/miru/*");
+            } else {
+                authValidationFilter.addSessionAuth("/ui/*");
+                authValidationFilter.addNoAuth("/miru/*");
+            }
+            deployable.addContainerRequestFilter(authValidationFilter);
 
             deployable.addEndpoints(MiruWriterEndpoints.class);
             deployable.addInjectables(MiruWriterUIService.class, miruWriterUIService);

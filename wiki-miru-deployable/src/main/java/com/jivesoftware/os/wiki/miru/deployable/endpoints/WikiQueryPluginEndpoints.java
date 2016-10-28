@@ -19,7 +19,7 @@ import javax.ws.rs.core.Response;
  *
  */
 @Singleton
-@Path("/wiki/query")
+@Path("/ui/query")
 public class WikiQueryPluginEndpoints {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();

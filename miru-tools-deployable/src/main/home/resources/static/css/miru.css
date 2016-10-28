@@ -10,7 +10,7 @@ li.j-listitem {
 
 /* theme */
 body {
-    background-image: url(/static/img/bkg.jpg);
+    background-image: url(/ui/static/img/bkg.jpg);
 }
 
 /* Used by event stream */

@@ -41,6 +41,7 @@ import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer.MiruSoyRendererConfig;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import com.jivesoftware.os.routing.bird.deployable.AuthValidationFilter;
 import com.jivesoftware.os.routing.bird.deployable.Deployable;
 import com.jivesoftware.os.routing.bird.deployable.DeployableHealthCheckRegistry;
 import com.jivesoftware.os.routing.bird.deployable.ErrorHealthCheckConfig;
@@ -85,7 +86,7 @@ public class MiruStumptownMain {
                 new HasUI.UI("Tail", "manage", "/manage/tail?lastNLines=1000"),
                 new HasUI.UI("Thread Dump", "manage", "/manage/threadDump"),
                 new HasUI.UI("Health", "manage", "/manage/ui"),
-                new HasUI.UI("Stumptown", "main", "/"))));
+                new HasUI.UI("Stumptown", "main", "/ui"))));
             deployable.addHealthCheck(new GCPauseHealthChecker(deployable.config(GCPauseHealthChecker.GCPauseHealthCheckerConfig.class)));
             deployable.addHealthCheck(new GCLoadHealthChecker(deployable.config(GCLoadHealthChecker.GCLoadHealthCheckerConfig.class)));
             deployable.addHealthCheck(new SystemCpuHealthChecker(deployable.config(SystemCpuHealthChecker.SystemCpuHealthCheckerConfig.class)));
@@ -104,7 +105,7 @@ public class MiruStumptownMain {
             HttpDeliveryClientHealthProvider clientHealthProvider = new HttpDeliveryClientHealthProvider(instanceConfig.getInstanceKey(),
                 HttpRequestHelperUtils.buildRequestHelper(false, false, null, instanceConfig.getRoutesHost(), instanceConfig.getRoutesPort()),
                 instanceConfig.getConnectionsHealth(), 5_000, 100);
-            TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = new TenantRoutingHttpClientInitializer<>();
+            TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = deployable.getTenantRoutingHttpClientInitializer();
 
             MiruStumptownPayloadStorage payloads = null;
             try {
@@ -208,13 +209,13 @@ public class MiruStumptownMain {
             MiruStumptownService queryService = new MiruQueryStumptownInitializer().initialize(renderer);
 
             List<MiruManagePlugin> plugins = Lists.newArrayList(
-                new MiruManagePlugin("eye-open", "Status", "/stumptown/status",
+                new MiruManagePlugin("eye-open", "Status", "/ui/status",
                     StumptownStatusPluginEndpoints.class,
                     new StumptownStatusPluginRegion("soy.stumptown.page.stumptownStatusPluginRegion", renderer, logMill)),
-                new MiruManagePlugin("stats", "Trends", "/stumptown/trends",
+                new MiruManagePlugin("stats", "Trends", "/ui/trends",
                     StumptownTrendsPluginEndpoints.class,
                     new StumptownTrendsPluginRegion("soy.stumptown.page.stumptownTrendsPluginRegion", renderer, readerClient, mapper, responseMapper)),
-                new MiruManagePlugin("search", "Query", "/stumptown/query",
+                new MiruManagePlugin("search", "Query", "/ui/query",
                     StumptownQueryPluginEndpoints.class,
                     new StumptownQueryPluginRegion("soy.stumptown.page.stumptownQueryPluginRegion",
                         "soy.stumptown.page.stumptownQueryLogEvent",
@@ -226,7 +227,17 @@ public class MiruStumptownMain {
             Resource sourceTree = new Resource(staticResourceDir)
                 .addResourcePath(rendererConfig.getPathToStaticResources())
                 .setDirectoryListingAllowed(false)
-                .setContext("/static");
+                .setContext("/ui/static");
+
+            AuthValidationFilter authValidationFilter = new AuthValidationFilter(deployable);
+            if (instanceConfig.getMainServiceAuthEnabled()) {
+                authValidationFilter.addSessionAuth("/ui/*", "/miru/*");
+                authValidationFilter.addRouteOAuth("/miru/*");
+            } else {
+                authValidationFilter.addSessionAuth("/ui/*");
+                authValidationFilter.addNoAuth("/miru/*");
+            }
+            deployable.addContainerRequestFilter(authValidationFilter);
 
             deployable.addEndpoints(MiruStumptownIntakeEndpoints.class);
             deployable.addInjectables(IngressGuaranteedDeliveryQueueProvider.class, ingressGuaranteedDeliveryQueueProvider);

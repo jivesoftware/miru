@@ -32,7 +32,7 @@
             <label for="tenantPicker">Select Tenant</label>
             <form id="tenantPickerForm" class="j-form" data-active-class="btn-default" data-input-el="#tenantPicker" data-form-el="#tenantPickerForm"
                 data-jive-ui="jive/ui/typeahead/tenant_typeahead" method="post" name="tenantPickerForm" action="#"
-                onsubmit="location.href='/miru/wal/repair/'+document.getElementById('tenantPicker').value+'#focus'; return false">
+                onsubmit="location.href='/ui/repair/'+document.getElementById('tenantPicker').value+'#focus'; return false">
                 <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
                     class="j-tenant-autocomplete j-autocomplete-input j-ui-elem" placeholder="Tenant" value="{$tenant?:''}"
                     name="tenantId" id="tenantPicker" data-original-title="" title=""> Enter * (asterisk) to search all partitions for problems

@@ -56,7 +56,7 @@ public class MiruReaderConfigEndpoints {
             } else {
                 response = Response.status(Response.Status.NOT_FOUND).build();
             }
-            stats.ingressed("DELETE:" + "/rebuild/prioritize/" + tenantId + "/" + partitionId, 1, System.currentTimeMillis() - start);
+            stats.ingressed("POST:/rebuild/prioritize/" + tenantId + "/" + partitionId, 1, System.currentTimeMillis() - start);
             return response;
         } catch (Throwable t) {
             log.error("Failed to prioritize rebuild for tenant {} partition {}", new Object[] { tenantId, partitionId }, t);

@@ -27,7 +27,7 @@ import javax.ws.rs.core.Response;
  *
  */
 @Singleton
-@Path("/stumptown/query")
+@Path("/ui/query")
 public class StumptownQueryPluginEndpoints {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();

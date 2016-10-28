@@ -13,7 +13,7 @@ import javax.ws.rs.core.UriInfo;
  *
  */
 @Singleton
-@Path("/")
+@Path("/ui")
 public class MiruQueryStumptownEndpoints {
 
     private final MiruStumptownService miruQueryStumptownService;
@@ -26,7 +26,7 @@ public class MiruQueryStumptownEndpoints {
     @Path("/")
     @Produces(MediaType.TEXT_HTML)
     public Response get(@Context UriInfo uriInfo) {
-        String rendered = miruQueryStumptownService.render(uriInfo.getAbsolutePath() + "miru/stumptown/intake");
+        String rendered = miruQueryStumptownService.render("/miru/stumptown/intake");
         return Response.ok(rendered).build();
     }
 
