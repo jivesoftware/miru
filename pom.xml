@@ -48,5 +48,6 @@
         <module>miru-metric-sampler</module>
         <module>miru-wal-client</module>
         <module>wiki-miru-deployable</module>
+        <module>miru-bot-deployable</module>
   </modules>
 </project>
