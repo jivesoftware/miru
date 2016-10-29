@@ -408,7 +408,8 @@ public class MiruReaderMain {
                 rebuildLABStats,
                 globalLABStats);
 
-            AuthValidationFilter authValidationFilter = new AuthValidationFilter(deployable);
+            AuthValidationFilter authValidationFilter = new AuthValidationFilter(deployable)
+                .dryRun(instanceConfig.getMainServiceAuthDryRun());
             if (instanceConfig.getMainServiceAuthEnabled()) {
                 authValidationFilter.addSessionAuth("/ui/*", "/miru/*", "/plugin/*");
                 authValidationFilter.addRouteOAuth("/miru/*", "/plugin/*");
