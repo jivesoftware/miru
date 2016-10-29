@@ -177,11 +177,11 @@ public class WikiMiruMain {
 
             AuthValidationFilter authValidationFilter = new AuthValidationFilter(deployable);
             if (instanceConfig.getMainServiceAuthEnabled()) {
-                authValidationFilter.addSessionAuth("/ui/*", "/miru/*");
                 authValidationFilter.addRouteOAuth("/miru/*");
+                authValidationFilter.addSessionAuth("/ui/*", "/miru/*");
             } else {
-                authValidationFilter.addSessionAuth("/ui/*");
                 authValidationFilter.addNoAuth("/miru/*");
+                authValidationFilter.addSessionAuth("/ui/*");
             }
             deployable.addContainerRequestFilter(authValidationFilter);
 
