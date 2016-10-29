@@ -505,11 +505,11 @@ public class MiruWALMain {
             AuthValidationFilter authValidationFilter = new AuthValidationFilter(deployable)
                 .addNoAuth("/amza/*"); //TODO delegate to amza
             if (instanceConfig.getMainServiceAuthEnabled()) {
-                authValidationFilter.addSessionAuth("/ui/*", "/miru/*");
                 authValidationFilter.addRouteOAuth("/miru/*");
+                authValidationFilter.addSessionAuth("/ui/*", "/miru/*");
             } else {
-                authValidationFilter.addSessionAuth("/ui/*");
                 authValidationFilter.addNoAuth("/miru/*");
+                authValidationFilter.addSessionAuth("/ui/*");
             }
             deployable.addContainerRequestFilter(authValidationFilter);
 
