@@ -8,6 +8,9 @@ import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.cluster.client.MiruClusterClientInitializer;
 import com.jivesoftware.os.miru.bot.deployable.MiruBotUniquesInitializer.MiruBotUniquesConfig;
+import com.jivesoftware.os.miru.logappender.MiruLogAppender;
+import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
+import com.jivesoftware.os.miru.logappender.RoutingBirdLogSenderProvider;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.deployable.Deployable;
@@ -120,6 +123,26 @@ public class MiruBotMain {
                     .deadAfterNErrors(miruBotConfig.getDeadAfterNErrors())
                     .checkDeadEveryNMillis(miruBotConfig.getCheckDeadEveryNMillis())
                     .build();
+
+            MiruLogAppenderInitializer.MiruLogAppenderConfig miruLogAppenderConfig =
+                    deployable.config(MiruLogAppenderInitializer.MiruLogAppenderConfig.class);
+            @SuppressWarnings("unchecked")
+            MiruLogAppender miruLogAppender = new MiruLogAppenderInitializer().initialize(
+                    instanceConfig.getDatacenter(),
+                    instanceConfig.getClusterName(),
+                    instanceConfig.getHost(),
+                    instanceConfig.getServiceName(),
+                    String.valueOf(instanceConfig.getInstanceName()),
+                    instanceConfig.getVersion(),
+                    miruLogAppenderConfig,
+                    new RoutingBirdLogSenderProvider<>(
+                            deployable.getTenantRoutingProvider().getConnections(
+                                    "miru-stumptown",
+                                    "main",
+                                    miruBotConfig.getRefreshConnectionsAfterNMillis()),
+                            "",
+                            miruLogAppenderConfig.getSocketTimeoutInMillis()));
+            miruLogAppender.install();
 
             ObjectMapper objectMapper = new ObjectMapper();
             HttpResponseMapper httpResponseMapper = new HttpResponseMapper(objectMapper);
