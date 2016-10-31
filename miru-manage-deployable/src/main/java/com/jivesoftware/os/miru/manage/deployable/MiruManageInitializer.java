@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
-import com.jivesoftware.os.miru.manage.deployable.region.MiruAdminRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruBalancerRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruHeaderRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruHostEntryRegion;
@@ -13,6 +12,7 @@ import com.jivesoftware.os.miru.manage.deployable.region.MiruHostsRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruSchemaRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruTenantEntryRegion;
 import com.jivesoftware.os.miru.manage.deployable.region.MiruTenantsRegion;
+import com.jivesoftware.os.miru.ui.MiruAdminRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.routing.bird.shared.TenantRoutingProvider;
 

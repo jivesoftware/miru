@@ -1,10 +1,7 @@
-package com.jivesoftware.os.miru.writer.deployable.region;
+package com.jivesoftware.os.miru.ui;
 
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.MiruStats;
-import com.jivesoftware.os.miru.api.MiruStats.Stat;
-import com.jivesoftware.os.miru.ui.MiruPageRegion;
-import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.LoggerSummary;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -33,13 +30,13 @@ public class MiruAdminRegion implements MiruPageRegion<Void> {
 
         Map<String, Object> data = Maps.newHashMap();
 
-        data.put("errors", String.valueOf(LoggerSummary.INSTANCE.errors + LoggerSummary.INSTANCE_EXTERNAL_INTERACTIONS.errors));
+        data.put("errors", String.valueOf(LoggerSummary.INSTANCE.errors.longValue() + LoggerSummary.INSTANCE_EXTERNAL_INTERACTIONS.errors.longValue()));
         data.put("recentErrors", recentLogs(LoggerSummary.INSTANCE.lastNErrors.get(), LoggerSummary.INSTANCE_EXTERNAL_INTERACTIONS.lastNErrors.get()));
 
-        data.put("warns", String.valueOf(LoggerSummary.INSTANCE.warns + LoggerSummary.INSTANCE_EXTERNAL_INTERACTIONS.warns));
+        data.put("warns", String.valueOf(LoggerSummary.INSTANCE.warns.longValue() + LoggerSummary.INSTANCE_EXTERNAL_INTERACTIONS.warns.longValue()));
         data.put("recentWarns", recentLogs(LoggerSummary.INSTANCE.lastNWarns.get(), LoggerSummary.INSTANCE_EXTERNAL_INTERACTIONS.lastNWarns.get()));
 
-        data.put("infos", String.valueOf(LoggerSummary.INSTANCE.infos + LoggerSummary.INSTANCE_EXTERNAL_INTERACTIONS.infos));
+        data.put("infos", String.valueOf(LoggerSummary.INSTANCE.infos.longValue() + LoggerSummary.INSTANCE_EXTERNAL_INTERACTIONS.infos.longValue()));
         data.put("recentInfos", recentLogs(LoggerSummary.INSTANCE.lastNInfos.get(), LoggerSummary.INSTANCE_EXTERNAL_INTERACTIONS.lastNInfos.get()));
 
         ingressed(data);
@@ -70,8 +67,8 @@ public class MiruAdminRegion implements MiruPageRegion<Void> {
 
     private void ingressed(Map<String, Object> data) {
         List<Map<String, String>> rows = new ArrayList<>();
-        Map<String, Stat> map = stats.ingressedMap();
-        List<Map.Entry<String, Stat>> sortedEntries = new ArrayList<>(map.entrySet());
+        Map<String, MiruStats.Stat> map = stats.ingressedMap();
+        List<Map.Entry<String, MiruStats.Stat>> sortedEntries = new ArrayList<>(map.entrySet());
 
         Collections.sort(sortedEntries,
             (o1, o2) -> Long.compare(o2.getValue().count.longValue(), o1.getValue().count.longValue()));
@@ -79,11 +76,11 @@ public class MiruAdminRegion implements MiruPageRegion<Void> {
         long grandTotal = 0;
         long mostRecentUpdateTimestamp = 0;
         long worstLatency = 0;
-        for (Map.Entry<String, Stat> e : sortedEntries) {
+        for (Map.Entry<String, MiruStats.Stat> e : sortedEntries) {
             Map<String, String> status = new HashMap<>();
             String key = e.getKey();
             status.put("context", key);
-            Stat value = e.getValue();
+            MiruStats.Stat value = e.getValue();
             status.put("count", String.valueOf(value.count.get()));
             status.put("recency", humanReadableUptime(System.currentTimeMillis() - value.timestamp.get()));
             status.put("latency", humanReadableLatency(value.latency.get()));
@@ -105,8 +102,8 @@ public class MiruAdminRegion implements MiruPageRegion<Void> {
 
     private void egressed(Map<String, Object> data) {
         List<Map<String, String>> rows = new ArrayList<>();
-        Map<String, Stat> map = stats.egressedMap();
-        List<Map.Entry<String, Stat>> sortedEntries = new ArrayList<>(map.entrySet());
+        Map<String, MiruStats.Stat> map = stats.egressedMap();
+        List<Map.Entry<String, MiruStats.Stat>> sortedEntries = new ArrayList<>(map.entrySet());
 
         Collections.sort(sortedEntries,
             (o1, o2) -> Long.compare(o2.getValue().count.longValue(), o1.getValue().count.longValue()));
@@ -114,11 +111,11 @@ public class MiruAdminRegion implements MiruPageRegion<Void> {
         long grandTotal = 0;
         long mostRecentUpdateTimestamp = 0;
         long worstLatency = 0;
-        for (Map.Entry<String, Stat> e : sortedEntries) {
+        for (Map.Entry<String, MiruStats.Stat> e : sortedEntries) {
             Map<String, String> status = new HashMap<>();
             String key = e.getKey();
             status.put("context", key);
-            Stat value = e.getValue();
+            MiruStats.Stat value = e.getValue();
             status.put("count", String.valueOf(value.count.get()));
             status.put("recency", humanReadableUptime(System.currentTimeMillis() - value.timestamp.get()));
             status.put("latency", humanReadableLatency(value.latency.get()));

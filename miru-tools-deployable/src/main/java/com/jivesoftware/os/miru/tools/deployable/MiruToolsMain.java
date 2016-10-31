@@ -19,6 +19,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.collect.Lists;
+import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.logappender.MiruLogAppender;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
 import com.jivesoftware.os.miru.logappender.RoutingBirdLogSenderProvider;
@@ -33,7 +34,9 @@ import com.jivesoftware.os.miru.tools.deployable.endpoints.DistinctsPluginEndpoi
 import com.jivesoftware.os.miru.tools.deployable.endpoints.FullTextPluginEndpoints;
 import com.jivesoftware.os.miru.tools.deployable.endpoints.MiruToolsEndpoints;
 import com.jivesoftware.os.miru.tools.deployable.endpoints.RealwavePluginEndpoints;
+import com.jivesoftware.os.miru.tools.deployable.endpoints.RecoPluginEndpoints;
 import com.jivesoftware.os.miru.tools.deployable.endpoints.StrutPluginEndpoints;
+import com.jivesoftware.os.miru.tools.deployable.endpoints.TrendingPluginEndpoints;
 import com.jivesoftware.os.miru.tools.deployable.region.AggregateCountsPluginRegion;
 import com.jivesoftware.os.miru.tools.deployable.region.AnalyticsPluginRegion;
 import com.jivesoftware.os.miru.tools.deployable.region.CatwalkPluginRegion;
@@ -42,10 +45,8 @@ import com.jivesoftware.os.miru.tools.deployable.region.FullTextPluginRegion;
 import com.jivesoftware.os.miru.tools.deployable.region.MiruToolsPlugin;
 import com.jivesoftware.os.miru.tools.deployable.region.RealwaveFramePluginRegion;
 import com.jivesoftware.os.miru.tools.deployable.region.RealwavePluginRegion;
-import com.jivesoftware.os.miru.tools.deployable.endpoints.RecoPluginEndpoints;
 import com.jivesoftware.os.miru.tools.deployable.region.RecoPluginRegion;
 import com.jivesoftware.os.miru.tools.deployable.region.StrutPluginRegion;
-import com.jivesoftware.os.miru.tools.deployable.endpoints.TrendingPluginEndpoints;
 import com.jivesoftware.os.miru.tools.deployable.region.TrendingPluginRegion;
 import com.jivesoftware.os.miru.ui.MiruRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
@@ -95,7 +96,6 @@ public class MiruToolsMain {
                 new HasUI.UI("Thread Dump", "manage", "/manage/threadDump"),
                 new HasUI.UI("Health", "manage", "/manage/ui"),
                 new HasUI.UI("Miru-Tools", "main", "/ui"))));
-            deployable.buildStatusReporter(null).start();
             deployable.addHealthCheck(new GCPauseHealthChecker(deployable.config(GCPauseHealthChecker.GCPauseHealthCheckerConfig.class)));
             deployable.addHealthCheck(new GCLoadHealthChecker(deployable.config(GCLoadHealthChecker.GCLoadHealthCheckerConfig.class)));
             deployable.addHealthCheck(new SystemCpuHealthChecker(deployable.config(SystemCpuHealthChecker.SystemCpuHealthCheckerConfig.class)));
@@ -153,7 +153,10 @@ public class MiruToolsMain {
 
             MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
 
-            MiruToolsService miruToolsService = new MiruToolsInitializer().initialize(instanceConfig.getClusterName(),
+            
+            MiruStats miruStats = new MiruStats();
+            MiruToolsService miruToolsService = new MiruToolsInitializer().initialize(miruStats,
+                instanceConfig.getClusterName(),
                 instanceConfig.getInstanceName(),
                 renderer,
                 tenantRoutingProvider);

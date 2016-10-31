@@ -113,7 +113,6 @@ public class MiruWriterMain {
                 new HasUI.UI("Miru-Writer", "main", "/ui"),
                 new HasUI.UI("Miru-Writer-Amza", "main", "/amza"))));
 
-            deployable.buildStatusReporter(null).start();
             deployable.addHealthCheck(new GCPauseHealthChecker(deployable.config(GCPauseHealthChecker.GCPauseHealthCheckerConfig.class)));
             deployable.addHealthCheck(new GCLoadHealthChecker(deployable.config(GCLoadHealthChecker.GCLoadHealthCheckerConfig.class)));
             deployable.addHealthCheck(new SystemCpuHealthChecker(deployable.config(SystemCpuHealthChecker.SystemCpuHealthCheckerConfig.class)));
