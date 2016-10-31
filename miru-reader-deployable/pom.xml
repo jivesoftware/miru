@@ -5,7 +5,7 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-build-management</artifactId>
-        <version>0.1467</version>
+        <version>0.1468</version>
         <relativePath>../inheritance-poms/global-build-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru</groupId>
@@ -21,6 +21,10 @@
             <type>tar.gz</type>
             <classifier>bin</classifier>
             <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>javax.ws.rs</groupId>
+            <artifactId>javax.ws.rs-api</artifactId>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.leaps-n-bounds</groupId>
@@ -45,10 +49,6 @@
         <dependency>
             <groupId>com.jivesoftware.os.routing.bird</groupId>
             <artifactId>deployable</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.jivesoftware.os.routing.bird</groupId>
-            <artifactId>deployable-reporter-service</artifactId>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.routing.bird</groupId>
@@ -147,10 +147,6 @@
             <artifactId>miru-anomaly-plugins</artifactId>
             <version>${project.version}</version>
             <scope>runtime</scope>
-        </dependency>
-        <dependency>
-            <groupId>javax.ws.rs</groupId>
-            <artifactId>javax.ws.rs-api</artifactId>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>

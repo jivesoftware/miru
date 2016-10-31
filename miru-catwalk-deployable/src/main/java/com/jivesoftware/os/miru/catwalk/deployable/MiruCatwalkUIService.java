@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.catwalk.deployable;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.miru.catwalk.deployable.region.MiruCatwalkPlugin;
 import com.jivesoftware.os.miru.catwalk.deployable.region.MiruChromeRegion;

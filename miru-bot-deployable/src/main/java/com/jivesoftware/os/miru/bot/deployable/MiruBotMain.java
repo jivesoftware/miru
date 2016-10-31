@@ -6,8 +6,10 @@ import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
-import com.jivesoftware.os.miru.cluster.client.MiruClusterClientInitializer;
+import com.jivesoftware.os.miru.bot.deployable.MiruBotDistinctsInitializer.MiruBotDistinctsConfig;
+import com.jivesoftware.os.miru.bot.deployable.MiruBotHealthCheck.MiruBotHealthCheckConfig;
 import com.jivesoftware.os.miru.bot.deployable.MiruBotUniquesInitializer.MiruBotUniquesConfig;
+import com.jivesoftware.os.miru.cluster.client.MiruClusterClientInitializer;
 import com.jivesoftware.os.miru.logappender.MiruLogAppender;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
 import com.jivesoftware.os.miru.logappender.RoutingBirdLogSenderProvider;
@@ -31,9 +33,6 @@ import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelperUtils;
 import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.http.client.TenantRoutingHttpClientInitializer;
-import com.jivesoftware.os.miru.bot.deployable.MiruBotDistinctsInitializer.MiruBotDistinctsConfig;
-import com.jivesoftware.os.miru.bot.deployable.MiruBotHealthCheck.MiruBotHealthCheckConfig;
-
 import java.util.Arrays;
 
 public class MiruBotMain {
@@ -51,7 +50,6 @@ public class MiruBotMain {
             final Deployable deployable = new Deployable(args);
             HealthFactory.initialize(deployable::config, new DeployableHealthCheckRegistry(deployable));
             InstanceConfig instanceConfig = deployable.config(InstanceConfig.class);
-            deployable.buildStatusReporter(null).start();
             deployable.addManageInjectables(HasUI.class, new HasUI(Arrays.asList(new HasUI.UI("manage", "manage", "/manage/ui"),
                     new HasUI.UI("Reset Errors", "manage", "/manage/resetErrors"),
                     new HasUI.UI("Reset Health", "manage", "/manage/resetHealth"),

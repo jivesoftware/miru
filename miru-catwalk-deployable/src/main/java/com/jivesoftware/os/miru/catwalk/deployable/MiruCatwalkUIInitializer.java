@@ -1,10 +1,9 @@
 package com.jivesoftware.os.miru.catwalk.deployable;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jivesoftware.os.miru.api.MiruStats;
-import com.jivesoftware.os.miru.catwalk.deployable.region.MiruAdminRegion;
 import com.jivesoftware.os.miru.catwalk.deployable.region.MiruHeaderRegion;
 import com.jivesoftware.os.miru.catwalk.deployable.region.MiruInspectRegion;
+import com.jivesoftware.os.miru.ui.MiruAdminRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.routing.bird.shared.TenantRoutingProvider;
 

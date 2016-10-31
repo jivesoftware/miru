@@ -5,16 +5,16 @@ import com.jivesoftware.os.miru.api.wal.AmzaCursor;
 import com.jivesoftware.os.miru.api.wal.AmzaSipCursor;
 import com.jivesoftware.os.miru.api.wal.RCVSCursor;
 import com.jivesoftware.os.miru.api.wal.RCVSSipCursor;
+import com.jivesoftware.os.miru.ui.MiruAdminRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.miru.wal.AmzaWALUtil;
 import com.jivesoftware.os.miru.wal.MiruWALDirector;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
-import com.jivesoftware.os.miru.wal.deployable.region.MiruAdminRegion;
+import com.jivesoftware.os.miru.wal.deployable.region.MiruActivityWALRegion;
 import com.jivesoftware.os.miru.wal.deployable.region.MiruCleanupRegion;
 import com.jivesoftware.os.miru.wal.deployable.region.MiruHeaderRegion;
 import com.jivesoftware.os.miru.wal.deployable.region.MiruReadWALRegion;
 import com.jivesoftware.os.miru.wal.deployable.region.MiruRepairRegion;
-import com.jivesoftware.os.miru.wal.deployable.region.MiruActivityWALRegion;
 import com.jivesoftware.os.routing.bird.shared.TenantRoutingProvider;
 
 public class MiruWALUIServiceInitializer {

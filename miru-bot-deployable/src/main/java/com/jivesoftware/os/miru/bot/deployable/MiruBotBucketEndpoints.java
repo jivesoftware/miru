@@ -5,6 +5,7 @@ import com.google.common.collect.Lists;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.shared.ResponseHelper;
+import io.swagger.annotations.Api;
 import javax.inject.Singleton;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
@@ -14,8 +15,8 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.util.List;
 
+@Api(value="MiruBotBucket")
 @Singleton
 @Path("/bot")
 public class MiruBotBucketEndpoints {
