@@ -6,7 +6,7 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-build-management</artifactId>
-        <version>0.1468</version>
+        <version>0.1469</version>
         <relativePath>../inheritance-poms/global-build-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru</groupId>
@@ -110,6 +110,11 @@
             <groupId>com.jivesoftware.os.miru</groupId>
             <artifactId>miru-logappender</artifactId>
             <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.swagger</groupId>
+            <artifactId>swagger-annotations</artifactId>
+            <version>1.5.8</version>
         </dependency>
     </dependencies>
 </project>
