@@ -244,7 +244,7 @@ public class MiruSyncMain {
                     walClientSickThreads, 10_000,
                     "/miru/wal/rcvs", RCVSCursor.class, RCVSSipCursor.class);
                 if (syncConfig.getSyncSenderEnabled()) {
-                    syncSender = new MiruSyncSenderInitializer().initialize(syncConfig,
+                    syncSender = (MiruSyncSender) new MiruSyncSenderInitializer().initialize(syncConfig,
                         amzaClientAquariumProvider,
                         rcvsWALClient,
                         syncClient,
@@ -255,14 +255,14 @@ public class MiruSyncMain {
                         RCVSCursor.class);
                 }
                 if (syncConfig.getSyncReceiverEnabled()) {
-                    syncReceiver = new MiruSyncReceiver<>(rcvsWALClient);
+                    syncReceiver = (MiruSyncReceiver) new MiruSyncReceiver<>(rcvsWALClient);
                 }
             } else if (walConfig.getActivityWALType().equals("amza") || walConfig.getActivityWALType().equals("amza_rcvs")) {
                 MiruWALClient<AmzaCursor, AmzaSipCursor> amzaWALClient = new MiruWALClientInitializer().initialize("", walHttpClient, mapper,
                     walClientSickThreads, 10_000,
                     "/miru/wal/amza", AmzaCursor.class, AmzaSipCursor.class);
                 if (syncConfig.getSyncSenderEnabled()) {
-                    syncSender = new MiruSyncSenderInitializer().initialize(syncConfig,
+                    syncSender = (MiruSyncSender) new MiruSyncSenderInitializer().initialize(syncConfig,
                         amzaClientAquariumProvider,
                         amzaWALClient,
                         syncClient,
@@ -273,7 +273,7 @@ public class MiruSyncMain {
                         AmzaCursor.class);
                 }
                 if (syncConfig.getSyncReceiverEnabled()) {
-                    syncReceiver = new MiruSyncReceiver<>(amzaWALClient);
+                    syncReceiver = (MiruSyncReceiver) new MiruSyncReceiver<>(amzaWALClient);
                 }
             } else {
                 throw new IllegalStateException("Invalid activity WAL type: " + walConfig.getActivityWALType());
