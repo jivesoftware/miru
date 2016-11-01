@@ -1,0 +1,38 @@
+{namespace soy.miru.page}
+
+/**
+ * Status page
+ *
+ * @param? progress
+ */
+{template .statusFocusRegion}
+    <div class="panel panel-default">
+        <div class="panel-heading">Progress</div>
+        <div class="panel-body">
+            {if $progress}
+                <table class="table table-condensed">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Partition</th>
+                            <th>Cursor</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {foreach $type in keys($progress)}
+                            <tr>
+                                <td>{$type}</td>
+                                <td>{$progress[$type].partition}</td>
+                                <td>{$progress[$type].cursor}</td>
+                            </tr>
+                        {ifempty}
+                            <tr>
+                                <td colspan="3">No progress found</td>
+                            </tr>
+                        {/foreach}
+                    </tbody>
+                </table>
+            {/if}
+        </div>
+    </div>
+{/template}
