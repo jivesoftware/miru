@@ -31,6 +31,7 @@
         <module>miru-writer-deployable</module>
         <module>miru-manage-deployable</module>
         <module>miru-tools-deployable</module>
+        <module>miru-sync-deployable</module>
         <module>miru-plugin-test</module>
         <module>miru-stream-plugins</module>
         <module>miru-stream-plugins-test</module>

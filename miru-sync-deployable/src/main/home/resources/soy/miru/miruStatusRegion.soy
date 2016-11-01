@@ -1,0 +1,27 @@
+{namespace soy.miru.page}
+
+/**
+ * Status page
+ *
+ * @param? tenant
+ * @param? statusFocusRegion
+ */
+{template .tenantsRegion}
+    <div class="panel panel-default">
+        <div class="panel-heading">Tenant</div>
+        <div class="panel-body">
+            <label for="tenantPicker">Select Tenant</label>
+            <form id="tenantPickerForm" class="j-form" data-active-class="btn-default" data-input-el="#tenantPicker" data-form-el="#tenantPickerForm"
+                data-jive-ui="jive/ui/typeahead/tenant_typeahead" method="post" name="tenantPickerForm" action="#"
+                //TODO wire this up correctly
+                onsubmit="location.href='/ui/status/'+document.getElementById('tenantPicker').value+'#focus'; return false">
+                <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                    class="j-tenant-autocomplete j-autocomplete-input j-ui-elem" placeholder="Tenant" value="{$tenant?:''}"
+                    name="tenantId" id="tenantPicker" data-original-title="" title="">
+            </form>
+        </div>
+    </div>
+    {if $statusFocusRegion}
+        {$statusFocusRegion|noAutoescape}
+    {/if}
+{/template}

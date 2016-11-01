@@ -1,0 +1,86 @@
+/*
+ * Don't add custom CSS unless you absolutely have to...  usually in response to shared JavaScript components
+ * which rely on jive.css...
+ */
+
+/* Tenant/user picker: eliminate list item numbering */
+li.j-listitem {
+    list-style: none;
+}
+
+/* theme */
+body {
+    background-image: url(/ui/static/img/bkg.jpg);
+}
+
+/* Used by event stream */
+div.pad {
+    padding: 3px;
+}
+
+/* Used by event stream and view inspection to allow for links in JSON dumps */
+div.pre-ish {
+    font-family:courier, "courier new", monospace;
+    font-size:1em;
+    background-color: #f5f5f5;
+    color:#000;
+    white-space: pre-wrap;
+    border-radius: 4px;
+}
+
+div.container {
+    width: 100% !important;
+}
+
+table.balancer {
+    border-collapse: separate;
+    border-spacing: 2px;
+}
+
+table.balancer > tbody > tr > td {
+    word-break: break-all;
+    word-wrap: break-word;
+    padding: 2px;
+}
+
+td.balancer-label {
+    vertical-align: top;
+}
+
+td.balancer-offline {
+    background-color: #808080;
+    color: white;
+}
+
+td.balancer-bootstrap {
+    background-color: #00f;
+    color: white;
+}
+
+td.balancer-rebuilding {
+    background-color: #f0f;
+    color: black;
+}
+
+td.balancer-online {
+    background-color: #0f0;
+    color: black;
+}
+
+img.balancer-visual {
+    margin-bottom: -2px;
+    display: block;
+}
+
+a.activity-wal-partition {
+    background-color: #eee;
+    padding: 8px;
+    border-radius: 8px;
+    margin-right: 8px;
+    line-height: 46px;
+    white-space: nowrap;
+}
+
+.popover{
+    max-width: 100%; // Max Width of the popover (depending on the container!)
+}

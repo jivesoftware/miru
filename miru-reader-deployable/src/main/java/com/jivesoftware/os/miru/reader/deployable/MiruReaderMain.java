@@ -303,15 +303,15 @@ public class MiruReaderMain {
             deployable.addHealthCheck(partitionErrorTracker);
 
             final ThreadGroup threadGroup = Thread.currentThread().getThreadGroup();
-            final ScheduledExecutorService scheduledBootstrapExecutor = Executors.newScheduledThreadPool(miruServiceConfig
-                .getPartitionScheduledBootstrapThreads(),
+            final ScheduledExecutorService scheduledBootstrapExecutor = Executors.newScheduledThreadPool(
+                miruServiceConfig.getPartitionScheduledBootstrapThreads(),
                 new NamedThreadFactory(threadGroup, "scheduled_bootstrap"));
 
             final ScheduledExecutorService scheduledRebuildExecutor = Executors.newScheduledThreadPool(miruServiceConfig.getPartitionScheduledRebuildThreads(),
                 new NamedThreadFactory(threadGroup, "scheduled_rebuild"));
 
-            final ScheduledExecutorService scheduledSipMigrateExecutor = Executors.newScheduledThreadPool(miruServiceConfig
-                .getPartitionScheduledSipMigrateThreads(),
+            final ScheduledExecutorService scheduledSipMigrateExecutor = Executors.newScheduledThreadPool(
+                miruServiceConfig.getPartitionScheduledSipMigrateThreads(),
                 new NamedThreadFactory(threadGroup, "scheduled_sip_migrate"));
 
             SickThreads walClientSickThreads = new SickThreads();
