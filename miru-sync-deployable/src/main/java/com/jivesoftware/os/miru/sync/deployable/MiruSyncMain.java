@@ -231,8 +231,6 @@ public class MiruSyncMain {
                 1_000L, //TODO config
                 10_000L);//TODO config
 
-            MiruSyncClient syncClient = new HttpSyncClientInitializer().initialize(syncConfig, mapper);
-
             SickThreads walClientSickThreads = new SickThreads();
             deployable.addHealthCheck(new SickThreadsHealthCheck(deployable.config(WALClientSickThreadsHealthCheckConfig.class), walClientSickThreads));
 
@@ -247,7 +245,6 @@ public class MiruSyncMain {
                     syncSender = (MiruSyncSender) new MiruSyncSenderInitializer().initialize(syncConfig,
                         amzaClientAquariumProvider,
                         rcvsWALClient,
-                        syncClient,
                         amzaClientProvider,
                         mapper,
                         whitelistTenantIds,
@@ -265,7 +262,6 @@ public class MiruSyncMain {
                     syncSender = (MiruSyncSender) new MiruSyncSenderInitializer().initialize(syncConfig,
                         amzaClientAquariumProvider,
                         amzaWALClient,
-                        syncClient,
                         amzaClientProvider,
                         mapper,
                         whitelistTenantIds,
