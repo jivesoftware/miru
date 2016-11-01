@@ -8,7 +8,6 @@ import com.jivesoftware.os.miru.api.sync.MiruSyncClient;
 import com.jivesoftware.os.miru.api.wal.MiruCursor;
 import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
-import com.jivesoftware.os.miru.api.wal.RCVSCursor;
 import java.util.List;
 import java.util.concurrent.Executors;
 
@@ -20,12 +19,14 @@ public class MiruSyncSenderInitializer {
     <C extends MiruCursor<C, S>, S extends MiruSipCursor<S>> MiruSyncSender<C, S> initialize(MiruSyncConfig syncConfig,
         AmzaClientAquariumProvider amzaClientAquariumProvider,
         MiruWALClient<C, S> walClient,
-        MiruSyncClient syncClient,
         PartitionClientProvider amzaClientProvider,
         ObjectMapper mapper,
         List<MiruTenantId> whitelistTenantIds,
         C defaultCursor,
         Class<C> cursorClass) {
+
+        MiruSyncClient syncClient = new HttpSyncClientInitializer().initialize(syncConfig, mapper);
+
         return new MiruSyncSender<>(amzaClientAquariumProvider,
             syncConfig.getSyncRingStripes(),
             Executors.newCachedThreadPool(),
