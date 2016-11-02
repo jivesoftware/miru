@@ -52,6 +52,7 @@ import com.jivesoftware.os.miru.writer.partition.AmzaPartitionIdProvider;
 import com.jivesoftware.os.routing.bird.deployable.AuthValidationFilter;
 import com.jivesoftware.os.routing.bird.deployable.Deployable;
 import com.jivesoftware.os.routing.bird.deployable.DeployableHealthCheckRegistry;
+import com.jivesoftware.os.routing.bird.deployable.DeployableMainAuthHealthCheckConfig;
 import com.jivesoftware.os.routing.bird.deployable.ErrorHealthCheckConfig;
 import com.jivesoftware.os.routing.bird.deployable.InstanceConfig;
 import com.jivesoftware.os.routing.bird.endpoints.base.HasUI;
@@ -61,6 +62,7 @@ import com.jivesoftware.os.routing.bird.health.checkers.FileDescriptorCountHealt
 import com.jivesoftware.os.routing.bird.health.checkers.GCLoadHealthChecker;
 import com.jivesoftware.os.routing.bird.health.checkers.GCPauseHealthChecker;
 import com.jivesoftware.os.routing.bird.health.checkers.LoadAverageHealthChecker;
+import com.jivesoftware.os.routing.bird.health.checkers.PercentileHealthChecker;
 import com.jivesoftware.os.routing.bird.health.checkers.ServiceStartupHealthCheck;
 import com.jivesoftware.os.routing.bird.health.checkers.SickThreads;
 import com.jivesoftware.os.routing.bird.health.checkers.SickThreadsHealthCheck;
@@ -256,7 +258,10 @@ public class MiruWriterMain {
             MiruWriterUIService miruWriterUIService = new MiruWriterUIServiceInitializer()
                 .initialize(instanceConfig.getClusterName(), instanceConfig.getInstanceName(), renderer, miruStats, tenantRoutingProvider);
 
-            AuthValidationFilter authValidationFilter = new AuthValidationFilter(deployable)
+            DeployableMainAuthHealthCheckConfig dmahcc = deployable.config(DeployableMainAuthHealthCheckConfig.class);
+            PercentileHealthChecker authFilterHealthCheck = new PercentileHealthChecker(dmahcc);
+            deployable.addHealthCheck(authFilterHealthCheck);
+            AuthValidationFilter authValidationFilter = new AuthValidationFilter(authFilterHealthCheck, deployable)
                 .addNoAuth("/amza/*"); //TODO delegate to amza
             if (instanceConfig.getMainServiceAuthEnabled()) {
                 authValidationFilter.addRouteOAuth("/miru/*");
