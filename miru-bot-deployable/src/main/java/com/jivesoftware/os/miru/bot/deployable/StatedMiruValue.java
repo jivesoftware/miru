@@ -14,7 +14,7 @@ class StatedMiruValue {
         READ_SUCCESS
     }
 
-    static final Random RAND = new Random();
+    private static final Random RAND = new Random();
 
     MiruValue value;
     State state;

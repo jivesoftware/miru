@@ -5,10 +5,11 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.mlogger.core.AtomicCounter;
-import com.jivesoftware.os.miru.bot.deployable.MiruBotDistinctsInitializer.MiruBotDistinctsConfig;
 import com.jivesoftware.os.miru.bot.deployable.StatedMiruValue.State;
+import com.jivesoftware.os.miru.bot.deployable.MiruBotBucketSnapshot.MiruBotBucketSnapshotFields;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 
@@ -26,24 +27,33 @@ class MiruBotBucket {
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private Map<String, Set<StatedMiruValue>> statedMiruValues = Maps.newConcurrentMap();
+
+    private MiruTenantId miruTenantId;
     private MiruSchema miruSchema;
 
     private final Random RAND = new Random();
     private AtomicCounter totalActivitiesGenerated = new AtomicCounter();
 
-    private final MiruBotDistinctsConfig miruBotDistinctsConfig;
+    private final int numberOfFields;
+    private final int valueSizeFactor;
+    private final int birthRateFactor;
 
-    MiruBotBucket(MiruBotDistinctsConfig miruBotDistinctsConfig) {
-        this.miruBotDistinctsConfig = miruBotDistinctsConfig;
+    MiruBotBucket(int numberOfFields,
+                  int valueSizeFactor,
+                  int birthRateFactor) {
+        this.numberOfFields = numberOfFields;
+        this.valueSizeFactor = valueSizeFactor;
+        this.birthRateFactor = birthRateFactor;
     }
 
-    MiruSchema genSchema() {
-        LOG.info("Generate a miru schema for {} fields.", miruBotDistinctsConfig.getNumberOfFields());
+    MiruSchema genSchema(MiruTenantId miruTenantId) {
+        this.miruTenantId = miruTenantId;
+        LOG.info("Generate a miru schema {} for {} fields.", this.miruTenantId, numberOfFields);
 
         MiruFieldDefinition[] miruFieldDefinitions =
-                new MiruFieldDefinition[miruBotDistinctsConfig.getNumberOfFields()];
+                new MiruFieldDefinition[numberOfFields];
 
-        for (int i = 0; i < miruBotDistinctsConfig.getNumberOfFields(); i++) {
+        for (int i = 0; i < numberOfFields; i++) {
             String name = "field" + i;
             miruFieldDefinitions[i] = new MiruFieldDefinition(
                     i,
@@ -53,9 +63,9 @@ class MiruBotBucket {
             LOG.debug("Generated field definition: {}", name);
         }
 
-        String name = "mirubot-" + miruBotDistinctsConfig.getNumberOfFields() + "-singleTerm";
-        LOG.info("Generated schema: {}", name);
-        miruSchema = new MiruSchema.Builder(name, 0)
+        String schemaName = "mirubot-" + numberOfFields + "-singleTerm";
+        LOG.info("Generated schema: {}", schemaName);
+        miruSchema = new MiruSchema.Builder(schemaName, 0)
                 .setFieldDefinitions(miruFieldDefinitions)
                 .build();
 
@@ -97,11 +107,11 @@ class MiruBotBucket {
     }
 
     StatedMiruValue birthNewFieldValue(MiruFieldDefinition miruFieldDefinition) {
-        StatedMiruValue statedMiruValue = StatedMiruValue.birth(miruBotDistinctsConfig.getValueSizeFactor());
+        StatedMiruValue statedMiruValue = StatedMiruValue.birth(valueSizeFactor);
         LOG.info("Birthed field: {}:{}", miruFieldDefinition.name, statedMiruValue.value.last());
 
         Set<StatedMiruValue> values = statedMiruValues.computeIfAbsent(
-                miruFieldDefinition.name, (key) -> Sets.newHashSet());
+                miruFieldDefinition.name, (k) -> Sets.newHashSet());
         values.add(statedMiruValue);
 
         return statedMiruValue;
@@ -121,7 +131,7 @@ class MiruBotBucket {
         }
 
         totalActivitiesGenerated.inc();
-        if (totalActivitiesGenerated.getCount() % miruBotDistinctsConfig.getBirthRateFactor() == 0) {
+        if (totalActivitiesGenerated.getCount() % birthRateFactor == 0) {
             birthNewFieldValue();
         }
         LOG.debug("Total generated activities: {}", totalActivitiesGenerated.getCount());
@@ -186,8 +196,8 @@ class MiruBotBucket {
         return res.toString();
     }
 
-    int getFieldsValuesCount() {
-        int res = 0;
+    long getFieldsValuesCount() {
+        long res = 0;
 
         for (Entry<String, Set<StatedMiruValue>> values : statedMiruValues.entrySet()) {
             res += values.getValue().size();
@@ -196,8 +206,8 @@ class MiruBotBucket {
         return res;
     }
 
-    int getFieldsValuesCount(State state) {
-        int res = 0;
+    long getFieldsValuesCount(State state) {
+        long res = 0;
 
         for (Entry<String, Set<StatedMiruValue>> values : statedMiruValues.entrySet()) {
             for (StatedMiruValue statedMiruValue : values.getValue()) {
@@ -208,6 +218,20 @@ class MiruBotBucket {
         }
 
         return res;
+    }
+
+    MiruBotBucketSnapshot genSnapshot() {
+        return new MiruBotBucketSnapshot(
+                miruSchema.getName(),
+                miruTenantId.toString(),
+                totalActivitiesGenerated.getCount(),
+                getFieldsValuesCount(),
+                new MiruBotBucketSnapshotFields(
+                        getFieldsValuesCount(State.UNKNOWN),
+                        getFieldsValuesCount(State.WRITTEN),
+                        getFieldsValuesCount(State.READ_FAIL),
+                        getFieldsValuesCount(State.READ_SUCCESS)),
+                getFieldsValues(State.READ_FAIL));
     }
 
 }
