@@ -42,7 +42,6 @@ import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer.MiruSoyRendererConfig;
 import com.jivesoftware.os.miru.wal.client.MiruWALClientInitializer.WALClientSickThreadsHealthCheckConfig;
-import com.jivesoftware.os.routing.bird.deployable.AuthValidationFilter;
 import com.jivesoftware.os.routing.bird.deployable.Deployable;
 import com.jivesoftware.os.routing.bird.deployable.DeployableHealthCheckRegistry;
 import com.jivesoftware.os.routing.bird.deployable.DeployableMainAuthHealthCheckConfig;
@@ -249,6 +248,7 @@ public class MiruCatwalkMain {
                 instanceConfig.getRack(),
                 instanceConfig.getHost(),
                 instanceConfig.getMainPort(),
+                instanceConfig.getMainServiceAuthEnabled(),
                 null, //"amza-topology-" + instanceConfig.getClusterName(), // Manual service discovery if null
                 amzaCatwalkConfig,
                 true,
@@ -327,19 +327,13 @@ public class MiruCatwalkMain {
                 .setDirectoryListingAllowed(false)
                 .setContext("/ui/static");
 
-            DeployableMainAuthHealthCheckConfig dmahcc = deployable.config(DeployableMainAuthHealthCheckConfig.class);
-            PercentileHealthChecker authFilterHealthCheck = new PercentileHealthChecker(dmahcc);
-            deployable.addHealthCheck(authFilterHealthCheck);
-            AuthValidationFilter authValidationFilter = new AuthValidationFilter(authFilterHealthCheck, deployable)
-                .addNoAuth("/amza/*"); //TODO delegate to amza
             if (instanceConfig.getMainServiceAuthEnabled()) {
-                authValidationFilter.addRouteOAuth("/miru/*");
-                authValidationFilter.addSessionAuth("/ui/*", "/miru/*");
+                deployable.addRouteOAuth("/miru/*");
+                deployable.addSessionAuth("/ui/*", "/miru/*");
             } else {
-                authValidationFilter.addNoAuth("/miru/*");
-                authValidationFilter.addSessionAuth("/ui/*");
+                deployable.addNoAuth("/miru/*");
+                deployable.addSessionAuth("/ui/*");
             }
-            deployable.addContainerRequestFilter(authValidationFilter);
 
             deployable.addEndpoints(CatwalkModelEndpoints.class);
             deployable.addInjectables(CatwalkModelService.class, catwalkModelService);

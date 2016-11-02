@@ -40,10 +40,8 @@ import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer.MiruSoyRendererConfig;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.routing.bird.deployable.AuthValidationFilter;
 import com.jivesoftware.os.routing.bird.deployable.Deployable;
 import com.jivesoftware.os.routing.bird.deployable.DeployableHealthCheckRegistry;
-import com.jivesoftware.os.routing.bird.deployable.DeployableMainAuthHealthCheckConfig;
 import com.jivesoftware.os.routing.bird.deployable.ErrorHealthCheckConfig;
 import com.jivesoftware.os.routing.bird.deployable.InstanceConfig;
 import com.jivesoftware.os.routing.bird.endpoints.base.HasUI;
@@ -53,7 +51,6 @@ import com.jivesoftware.os.routing.bird.health.checkers.FileDescriptorCountHealt
 import com.jivesoftware.os.routing.bird.health.checkers.GCLoadHealthChecker;
 import com.jivesoftware.os.routing.bird.health.checkers.GCPauseHealthChecker;
 import com.jivesoftware.os.routing.bird.health.checkers.LoadAverageHealthChecker;
-import com.jivesoftware.os.routing.bird.health.checkers.PercentileHealthChecker;
 import com.jivesoftware.os.routing.bird.health.checkers.ServiceStartupHealthCheck;
 import com.jivesoftware.os.routing.bird.health.checkers.SystemCpuHealthChecker;
 import com.jivesoftware.os.routing.bird.http.client.HttpDeliveryClientHealthProvider;
@@ -211,18 +208,13 @@ public class MiruAnomalyMain {
                 .setDirectoryListingAllowed(false)
                 .setContext("/ui/static");
 
-            DeployableMainAuthHealthCheckConfig dmahcc = deployable.config(DeployableMainAuthHealthCheckConfig.class);
-            PercentileHealthChecker authFilterHealthCheck = new PercentileHealthChecker(dmahcc);
-            deployable.addHealthCheck(authFilterHealthCheck);
-            AuthValidationFilter authValidationFilter = new AuthValidationFilter(authFilterHealthCheck, deployable);
             if (instanceConfig.getMainServiceAuthEnabled()) {
-                authValidationFilter.addRouteOAuth("/miru/*");
-                authValidationFilter.addSessionAuth("/ui/*", "/miru/*");
+                deployable.addRouteOAuth("/miru/*");
+                deployable.addSessionAuth("/ui/*", "/miru/*");
             } else {
-                authValidationFilter.addNoAuth("/miru/*");
-                authValidationFilter.addSessionAuth("/ui/*");
+                deployable.addNoAuth("/miru/*");
+                deployable.addSessionAuth("/ui/*");
             }
-            deployable.addContainerRequestFilter(authValidationFilter);
 
             deployable.addEndpoints(MiruAnomalyIntakeEndpoints.class);
             deployable.addInjectables(IngressGuaranteedDeliveryQueueProvider.class, ingressGuaranteedDeliveryQueueProvider);

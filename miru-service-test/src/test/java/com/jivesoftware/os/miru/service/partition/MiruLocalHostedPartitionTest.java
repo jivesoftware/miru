@@ -341,6 +341,7 @@ public class MiruLocalHostedPartitionTest {
             "rack",
             "localhost",
             10000,
+            false,
             null,
             acrc,
             false,
