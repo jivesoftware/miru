@@ -76,6 +76,7 @@ public class AmzaClusterRegistryNGTest {
             "rack",
             "localhost",
             10000,
+            false,
             null,
             acrc,
             false,

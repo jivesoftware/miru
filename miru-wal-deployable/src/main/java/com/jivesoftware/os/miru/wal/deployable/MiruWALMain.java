@@ -72,10 +72,8 @@ import com.jivesoftware.os.miru.wal.readtracking.rcvs.RCVSReadTrackingWALReader;
 import com.jivesoftware.os.miru.wal.readtracking.rcvs.RCVSReadTrackingWALWriter;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStoreInitializer;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStoreProvider;
-import com.jivesoftware.os.routing.bird.deployable.AuthValidationFilter;
 import com.jivesoftware.os.routing.bird.deployable.Deployable;
 import com.jivesoftware.os.routing.bird.deployable.DeployableHealthCheckRegistry;
-import com.jivesoftware.os.routing.bird.deployable.DeployableMainAuthHealthCheckConfig;
 import com.jivesoftware.os.routing.bird.deployable.ErrorHealthCheckConfig;
 import com.jivesoftware.os.routing.bird.deployable.InstanceConfig;
 import com.jivesoftware.os.routing.bird.endpoints.base.HasUI;
@@ -88,7 +86,6 @@ import com.jivesoftware.os.routing.bird.health.checkers.FileDescriptorCountHealt
 import com.jivesoftware.os.routing.bird.health.checkers.GCLoadHealthChecker;
 import com.jivesoftware.os.routing.bird.health.checkers.GCPauseHealthChecker;
 import com.jivesoftware.os.routing.bird.health.checkers.LoadAverageHealthChecker;
-import com.jivesoftware.os.routing.bird.health.checkers.PercentileHealthChecker;
 import com.jivesoftware.os.routing.bird.health.checkers.ServiceStartupHealthCheck;
 import com.jivesoftware.os.routing.bird.health.checkers.SystemCpuHealthChecker;
 import com.jivesoftware.os.routing.bird.http.client.HttpDeliveryClientHealthProvider;
@@ -223,6 +220,7 @@ public class MiruWALMain {
                 instanceConfig.getRack(),
                 instanceConfig.getHost(),
                 instanceConfig.getMainPort(),
+                instanceConfig.getMainServiceAuthEnabled(),
                 null, //"miru-wal-" + instanceConfig.getClusterName(),
                 amzaServiceConfig,
                 true,
@@ -503,19 +501,13 @@ public class MiruWALMain {
                     activityWALReader,
                     miruStats);
 
-            DeployableMainAuthHealthCheckConfig dmahcc = deployable.config(DeployableMainAuthHealthCheckConfig.class);
-            PercentileHealthChecker authFilterHealthCheck = new PercentileHealthChecker(dmahcc);
-            deployable.addHealthCheck(authFilterHealthCheck);
-            AuthValidationFilter authValidationFilter = new AuthValidationFilter(authFilterHealthCheck, deployable)
-                .addNoAuth("/amza/*"); //TODO delegate to amza
             if (instanceConfig.getMainServiceAuthEnabled()) {
-                authValidationFilter.addRouteOAuth("/miru/*");
-                authValidationFilter.addSessionAuth("/ui/*", "/miru/*");
+                deployable.addRouteOAuth("/miru/*");
+                deployable.addSessionAuth("/ui/*", "/miru/*");
             } else {
-                authValidationFilter.addNoAuth("/miru/*");
-                authValidationFilter.addSessionAuth("/ui/*");
+                deployable.addNoAuth("/miru/*");
+                deployable.addSessionAuth("/ui/*");
             }
-            deployable.addContainerRequestFilter(authValidationFilter);
 
             deployable.addEndpoints(MiruWALEndpoints.class);
             deployable.addInjectables(MiruWALUIService.class, miruWALUIService);

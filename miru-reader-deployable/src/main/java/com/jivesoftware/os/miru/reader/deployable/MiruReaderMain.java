@@ -92,10 +92,8 @@ import com.jivesoftware.os.miru.wal.client.MiruWALClientInitializer;
 import com.jivesoftware.os.miru.wal.client.MiruWALClientInitializer.WALClientSickThreadsHealthCheckConfig;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.routing.bird.deployable.AuthValidationFilter;
 import com.jivesoftware.os.routing.bird.deployable.Deployable;
 import com.jivesoftware.os.routing.bird.deployable.DeployableHealthCheckRegistry;
-import com.jivesoftware.os.routing.bird.deployable.DeployableMainAuthHealthCheckConfig;
 import com.jivesoftware.os.routing.bird.deployable.ErrorHealthCheckConfig;
 import com.jivesoftware.os.routing.bird.deployable.InstanceConfig;
 import com.jivesoftware.os.routing.bird.endpoints.base.HasUI;
@@ -107,7 +105,6 @@ import com.jivesoftware.os.routing.bird.health.checkers.FileDescriptorCountHealt
 import com.jivesoftware.os.routing.bird.health.checkers.GCLoadHealthChecker;
 import com.jivesoftware.os.routing.bird.health.checkers.GCPauseHealthChecker;
 import com.jivesoftware.os.routing.bird.health.checkers.LoadAverageHealthChecker;
-import com.jivesoftware.os.routing.bird.health.checkers.PercentileHealthChecker;
 import com.jivesoftware.os.routing.bird.health.checkers.ServiceStartupHealthCheck;
 import com.jivesoftware.os.routing.bird.health.checkers.SickThreads;
 import com.jivesoftware.os.routing.bird.health.checkers.SickThreadsHealthCheck;
@@ -409,18 +406,13 @@ public class MiruReaderMain {
                 rebuildLABStats,
                 globalLABStats);
 
-            DeployableMainAuthHealthCheckConfig dmahcc = deployable.config(DeployableMainAuthHealthCheckConfig.class);
-            PercentileHealthChecker authFilterHealthCheck = new PercentileHealthChecker(dmahcc);
-            deployable.addHealthCheck(authFilterHealthCheck);
-            AuthValidationFilter authValidationFilter = new AuthValidationFilter(authFilterHealthCheck, deployable);
             if (instanceConfig.getMainServiceAuthEnabled()) {
-                authValidationFilter.addRouteOAuth("/miru/*", "/plugin/*");
-                authValidationFilter.addSessionAuth("/ui/*", "/miru/*", "/plugin/*");
+                deployable.addRouteOAuth("/miru/*", "/plugin/*");
+                deployable.addSessionAuth("/ui/*", "/miru/*", "/plugin/*");
             } else {
-                authValidationFilter.addNoAuth("/miru/*", "/plugin/*");
-                authValidationFilter.addSessionAuth("/ui/*");
+                deployable.addNoAuth("/miru/*", "/plugin/*");
+                deployable.addSessionAuth("/ui/*");
             }
-            deployable.addContainerRequestFilter(authValidationFilter);
 
             deployable.addEndpoints(MiruReaderUIEndpoints.class);
             deployable.addInjectables(MiruReaderUIService.class, uiService);

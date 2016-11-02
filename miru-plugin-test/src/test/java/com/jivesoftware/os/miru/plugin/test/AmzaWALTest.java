@@ -103,6 +103,7 @@ public class AmzaWALTest {
             "rack",
             "localhost",
             10000,
+            false,
             null,
             acrc,
             false,
