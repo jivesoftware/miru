@@ -84,10 +84,12 @@ class MiruBotDistinctsService implements MiruBotHealthPercent {
     }
 
     public double getHealthPercentage() {
+        if (miruBotDistinctsWorker == null) return 1.0;
         return miruBotDistinctsWorker.getHealthPercentage();
     }
 
     public String getHealthDescription() {
+        if (miruBotDistinctsWorker == null) return "";
         return miruBotDistinctsWorker.getHealthDescription();
     }
 
