@@ -7,11 +7,11 @@ import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.bot.deployable.MiruBotDistinctsInitializer.MiruBotDistinctsConfig;
-import com.jivesoftware.os.miru.bot.deployable.MiruBotHealthCheck.MiruBotHealthCheckConfig;
 import com.jivesoftware.os.miru.bot.deployable.MiruBotUniquesInitializer.MiruBotUniquesConfig;
+import com.jivesoftware.os.miru.bot.deployable.MiruBotHealthCheck.MiruBotHealthCheckConfig;
 import com.jivesoftware.os.miru.cluster.client.MiruClusterClientInitializer;
-import com.jivesoftware.os.miru.logappender.MiruLogAppender;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
+import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer.MiruLogAppenderConfig;
 import com.jivesoftware.os.miru.logappender.RoutingBirdLogSenderProvider;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -30,7 +30,6 @@ import com.jivesoftware.os.routing.bird.health.checkers.ServiceStartupHealthChec
 import com.jivesoftware.os.routing.bird.health.checkers.SystemCpuHealthChecker;
 import com.jivesoftware.os.routing.bird.http.client.HttpDeliveryClientHealthProvider;
 import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelperUtils;
-import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.http.client.TenantRoutingHttpClientInitializer;
 import java.util.Arrays;
@@ -122,10 +121,17 @@ public class MiruBotMain {
                     .checkDeadEveryNMillis(miruBotConfig.getCheckDeadEveryNMillis())
                     .build();
 
-            MiruLogAppenderInitializer.MiruLogAppenderConfig miruLogAppenderConfig =
-                    deployable.config(MiruLogAppenderInitializer.MiruLogAppenderConfig.class);
+            MiruLogAppenderConfig miruLogAppenderConfig =
+                    deployable.config(MiruLogAppenderConfig.class);
             @SuppressWarnings("unchecked")
-            MiruLogAppender miruLogAppender = new MiruLogAppenderInitializer().initialize(
+            RoutingBirdLogSenderProvider routingBirdLogSenderProvider = new RoutingBirdLogSenderProvider<>(
+                    deployable.getTenantRoutingProvider().getConnections(
+                            "miru-stumptown",
+                            "main",
+                            miruBotConfig.getRefreshConnectionsAfterNMillis()),
+                    "",
+                    miruLogAppenderConfig.getSocketTimeoutInMillis());
+            new MiruLogAppenderInitializer().initialize(
                     instanceConfig.getDatacenter(),
                     instanceConfig.getClusterName(),
                     instanceConfig.getHost(),
@@ -133,23 +139,13 @@ public class MiruBotMain {
                     String.valueOf(instanceConfig.getInstanceName()),
                     instanceConfig.getVersion(),
                     miruLogAppenderConfig,
-                    new RoutingBirdLogSenderProvider<>(
-                            deployable.getTenantRoutingProvider().getConnections(
-                                    "miru-stumptown",
-                                    "main",
-                                    miruBotConfig.getRefreshConnectionsAfterNMillis()),
-                            "",
-                            miruLogAppenderConfig.getSocketTimeoutInMillis()));
-            miruLogAppender.install();
-
-            ObjectMapper objectMapper = new ObjectMapper();
-            HttpResponseMapper httpResponseMapper = new HttpResponseMapper(objectMapper);
+                    routingBirdLogSenderProvider).install();
 
             MiruBotDistinctsConfig miruBotDistinctsConfig = deployable.config(MiruBotDistinctsConfig.class);
             MiruBotUniquesConfig miruBotUniquesConfig = deployable.config(MiruBotUniquesConfig.class);
 
             MiruClusterClient miruClusterClient = new MiruClusterClientInitializer().initialize(
-                    new MiruStats(), "", miruManageClient, objectMapper);
+                    new MiruStats(), "", miruManageClient, new ObjectMapper());
 
             MiruBotSchemaService miruBotSchemaService = new MiruBotSchemaService(miruClusterClient);
 
@@ -159,28 +155,23 @@ public class MiruBotMain {
             MiruBotDistinctsService miruBotDistinctsService = new MiruBotDistinctsInitializer().initialize(
                     miruBotConfig,
                     miruBotDistinctsConfig,
-                    objectMapper,
-                    httpResponseMapper,
                     orderIdProvider,
                     miruBotSchemaService,
                     miruReaderClient,
                     miruWriterClient);
-            miruBotHealthCheck.addServiceHealth(miruBotDistinctsService);
+            miruBotHealthCheck.addMiruBotHealthPercenter(miruBotDistinctsService);
             miruBotDistinctsService.start();
 
             MiruBotUniquesService miruBotUniquesService = new MiruBotUniquesInitializer().initialize(
                     miruBotConfig,
                     miruBotUniquesConfig,
-                    objectMapper,
-                    httpResponseMapper,
                     orderIdProvider,
                     miruBotSchemaService,
                     miruReaderClient,
                     miruWriterClient);
-            miruBotHealthCheck.addServiceHealth(miruBotUniquesService);
+            miruBotHealthCheck.addMiruBotHealthPercenter(miruBotUniquesService);
             miruBotUniquesService.start();
 
-            deployable.addInjectables(ObjectMapper.class, objectMapper);
             deployable.addInjectables(MiruBotDistinctsService.class, miruBotDistinctsService);
             deployable.addInjectables(MiruBotUniquesService.class, miruBotUniquesService);
             deployable.addEndpoints(MiruBotBucketEndpoints.class);
