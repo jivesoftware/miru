@@ -6,6 +6,7 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.miru.bot.deployable.MiruBotUniquesInitializer.MiruBotUniquesConfig;
+
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -83,10 +84,12 @@ class MiruBotUniquesService implements MiruBotHealthPercent {
     }
 
     public double getHealthPercentage() {
+        if (miruBotUniquesWorker == null) return 1.0;
         return miruBotUniquesWorker.getHealthPercentage();
     }
 
     public String getHealthDescription() {
+        if (miruBotUniquesWorker == null) return "";
         return miruBotUniquesWorker.getHealthDescription();
     }
 
