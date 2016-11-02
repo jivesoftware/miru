@@ -11,8 +11,6 @@ import java.util.List;
 
 class MiruBotHealthCheck implements HealthCheck {
 
-    private List<MiruBotHealthPercent> miruBotHealthPercents = Lists.newArrayList();
-
     interface MiruBotHealthCheckConfig extends HealthCheckConfig {
 
         @Override
@@ -27,27 +25,42 @@ class MiruBotHealthCheck implements HealthCheck {
 
     private final MiruBotHealthCheckConfig config;
 
+    private List<MiruBotHealthPercent> miruBotHealthPercentList = Lists.newArrayList();
+
     MiruBotHealthCheck(MiruBotHealthCheckConfig config) {
         this.config = config;
     }
 
-    public HealthCheckResponse checkHealth() throws Exception {
-        StringBuilder description = new StringBuilder();
-        double total = 0.0;
-        for (MiruBotHealthPercent miruBotHealthPercent : miruBotHealthPercents) {
-            double percent = miruBotHealthPercent.getHealthPercentage();
-            String desc = miruBotHealthPercent.getHealthDescription();
+    void addMiruBotHealthPercenter(MiruBotHealthPercent miruBotHealthPercent) {
+        miruBotHealthPercentList.add(miruBotHealthPercent);
+    }
 
-            if (percent > 0.0) total += percent;
-            if (!desc.isEmpty()) {
-                if (description.length() > 0) description.append("; ");
-                description.append(desc);
+    public HealthCheckResponse checkHealth() throws Exception {
+        final double PERFECT_HEALTH = 1.0;
+        double[] healthPercentage = new double[]{PERFECT_HEALTH};
+
+        StringBuilder healthDescription = new StringBuilder();
+        for (MiruBotHealthPercent miruBotHealthPercent : miruBotHealthPercentList) {
+            double health = miruBotHealthPercent.getHealthPercentage();
+            if (health < PERFECT_HEALTH) {
+                healthPercentage[0] = Math.min(healthPercentage[0], health);
+
+                String description = miruBotHealthPercent.getHealthDescription();
+                if (!description.isEmpty()) {
+                    if (healthDescription.length() > 0) healthDescription.append("; ");
+                    healthDescription.append(description);
+                }
             }
         }
-        double health = total / miruBotHealthPercents.size();
 
-        if (health == 1.0) {
-            return new HealthCheckResponseImpl(config.getName(), 1.0, "Healthy", config.getDescription(), "", System.currentTimeMillis());
+        if (healthPercentage[0] == PERFECT_HEALTH) {
+            return new HealthCheckResponseImpl(
+                    config.getName(),
+                    PERFECT_HEALTH,
+                    "Healthy",
+                    config.getDescription(),
+                    "",
+                    System.currentTimeMillis());
         } else {
             return new HealthCheckResponse() {
                 @Override
@@ -57,7 +70,7 @@ class MiruBotHealthCheck implements HealthCheck {
 
                 @Override
                 public double getHealth() {
-                    return health;
+                    return healthPercentage[0];
                 }
 
                 @Override
@@ -67,12 +80,12 @@ class MiruBotHealthCheck implements HealthCheck {
 
                 @Override
                 public String getDescription() {
-                    return "Invalid distinct values read from miru by mirubot.";
+                    return "Invalid values read from miru by mirubot.";
                 }
 
                 @Override
                 public String getResolution() {
-                    return "Investigate invalid values: " + description.toString();
+                    return "Investigate invalid values: " + healthDescription.toString();
                 }
 
                 @Override
@@ -81,10 +94,6 @@ class MiruBotHealthCheck implements HealthCheck {
                 }
             };
         }
-    }
-
-    void addServiceHealth(MiruBotHealthPercent miruBotHealthPercent) {
-        miruBotHealthPercents.add(miruBotHealthPercent);
     }
 
 }
