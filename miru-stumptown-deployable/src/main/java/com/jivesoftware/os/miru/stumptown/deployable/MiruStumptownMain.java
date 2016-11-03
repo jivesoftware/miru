@@ -153,11 +153,11 @@ public class MiruStumptownMain {
 
             MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize(new MiruStats(), "", miruManageClient, mapper);
             StumptownSchemaService stumptownSchemaService = new StumptownSchemaService(clusterClient);
-            stumptownSchemaService.ensureSchema(StumptownSchemaConstants.TENANT_ID, StumptownSchemaConstants.SCHEMA);
 
             final MiruStumptownIntakeService inTakeService = new MiruStumptownIntakeInitializer().initialize(
                 stumptownServiceConfig.getIngressEnabled(),
                 intakeConfig,
+                stumptownSchemaService,
                 logMill,
                 mapper,
                 miruWriterClient,
@@ -219,7 +219,7 @@ public class MiruStumptownMain {
                         renderer, readerClient, mapper, responseMapper, payloads)));
 
             File staticResourceDir = new File(System.getProperty("user.dir"));
-            System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());
+            LOG.info("Static resources rooted at " + staticResourceDir.getAbsolutePath());
             Resource sourceTree = new Resource(staticResourceDir)
                 .addResourcePath(rendererConfig.getPathToStaticResources())
                 .setDirectoryListingAllowed(false)
