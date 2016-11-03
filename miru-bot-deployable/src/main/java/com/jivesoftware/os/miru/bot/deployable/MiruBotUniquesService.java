@@ -42,6 +42,11 @@ class MiruBotUniquesService implements MiruBotHealthPercent {
     }
 
     void start() throws Exception {
+        if (!miruBotUniquesConfig.getEnabled()) {
+            LOG.warn("Not starting uniques service; not enabled.");
+            return;
+        }
+
         LOG.info("Enabled: {}", miruBotUniquesConfig.getEnabled());
         LOG.info("Read time range factor: {}ms", miruBotUniquesConfig.getReadTimeRangeFactorMs());
         LOG.info("Write hesitation factor: {}ms", miruBotUniquesConfig.getWriteHesitationFactorMs());
@@ -55,11 +60,6 @@ class MiruBotUniquesService implements MiruBotHealthPercent {
         LOG.info("Bot bucket seed: {}", miruBotUniquesConfig.getBotBucketSeed());
         LOG.info("Write read pause: {}ms", miruBotUniquesConfig.getWriteReadPauseMs());
         LOG.info("Runtime: {}ms", miruBotUniquesConfig.getRuntimeMs());
-
-        if (!miruBotUniquesConfig.getEnabled()) {
-            LOG.warn("Not starting uniques service; not enabled.");
-            return;
-        }
 
         miruBotUniquesWorker = createWithConfig(miruBotUniquesConfig);
         processor.submit(miruBotUniquesWorker);

@@ -42,6 +42,11 @@ class MiruBotDistinctsService implements MiruBotHealthPercent {
     }
 
     void start() {
+        if (!miruBotDistinctsConfig.getEnabled()) {
+            LOG.warn("Not starting distincts service; not enabled.");
+            return;
+        }
+
         LOG.info("Enabled: {}", miruBotDistinctsConfig.getEnabled());
         LOG.info("Read time range factor: {}ms", miruBotDistinctsConfig.getReadTimeRangeFactorMs());
         LOG.info("Write hesitation factor: {}ms", miruBotDistinctsConfig.getWriteHesitationFactorMs());
@@ -55,11 +60,6 @@ class MiruBotDistinctsService implements MiruBotHealthPercent {
         LOG.info("Bot bucket seed: {}", miruBotDistinctsConfig.getBotBucketSeed());
         LOG.info("Write read pause: {}ms", miruBotDistinctsConfig.getWriteReadPauseMs());
         LOG.info("Runtime: {}ms", miruBotDistinctsConfig.getRuntimeMs());
-
-        if (!miruBotDistinctsConfig.getEnabled()) {
-            LOG.warn("Not starting distincts service; not enabled.");
-            return;
-        }
 
         miruBotDistinctsWorker = createWithConfig(miruBotDistinctsConfig);
         processor.submit(miruBotDistinctsWorker);
