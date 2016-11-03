@@ -287,6 +287,7 @@ public class StumptownQueryPluginRegion implements MiruPageRegion<Optional<Stump
             Map<String, StumptownAnswer.Waveform> waveforms = response.answer.waveforms;
             if (waveforms == null) {
                 waveforms = Collections.emptyMap();
+                log.warn("Empty waveform answer from stumptown");
             }
 
             Map<String, Object> waveformData = Maps.newHashMap();

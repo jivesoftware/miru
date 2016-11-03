@@ -68,9 +68,9 @@ public class RecoInjectable {
                     miru.getDefaultExecutor(),
                     request.logLevel);
 
-                distinctTerms = (distinctsResponse.answer != null && distinctsResponse.answer.results != null)
-                    ? distinctsResponse.answer.results
-                    : Collections.<MiruValue>emptyList();
+                if (distinctsResponse.answer != null && distinctsResponse.answer.results != null) {
+                    distinctTerms = distinctsResponse.answer.results;
+                }
             }
 
             return miru.askAndMerge(tenantId,

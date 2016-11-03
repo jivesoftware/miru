@@ -151,15 +151,13 @@ public class MiruStumptownMain {
             LogMill logMill = new LogMill(orderIdProvider);
             MiruStumptownIntakeConfig intakeConfig = deployable.config(MiruStumptownIntakeConfig.class);
 
-            // TODO add fall back to config
-            //MiruClusterClientConfig clusterClientConfig = deployable.config(MiruClusterClientConfig.class);
             MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize(new MiruStats(), "", miruManageClient, mapper);
             StumptownSchemaService stumptownSchemaService = new StumptownSchemaService(clusterClient);
+            stumptownSchemaService.ensureSchema(StumptownSchemaConstants.TENANT_ID, StumptownSchemaConstants.SCHEMA);
 
             final MiruStumptownIntakeService inTakeService = new MiruStumptownIntakeInitializer().initialize(
                 stumptownServiceConfig.getIngressEnabled(),
                 intakeConfig,
-                stumptownSchemaService,
                 logMill,
                 mapper,
                 miruWriterClient,
