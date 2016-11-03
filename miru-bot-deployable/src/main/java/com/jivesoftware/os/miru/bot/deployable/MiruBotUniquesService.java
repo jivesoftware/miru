@@ -80,17 +80,15 @@ class MiruBotUniquesService implements MiruBotHealthPercent {
     }
 
     MiruBotBucketSnapshot genMiruBotBucketSnapshot() {
-        return miruBotUniquesWorker.genMiruBotBucketSnapshot();
+        return miruBotUniquesWorker == null ? null : miruBotUniquesWorker.genMiruBotBucketSnapshot();
     }
 
     public double getHealthPercentage() {
-        if (miruBotUniquesWorker == null) return 1.0;
-        return miruBotUniquesWorker.getHealthPercentage();
+        return miruBotUniquesWorker == null ? 1.0 : miruBotUniquesWorker.getHealthPercentage();
     }
 
     public String getHealthDescription() {
-        if (miruBotUniquesWorker == null) return "";
-        return miruBotUniquesWorker.getHealthDescription();
+        return miruBotUniquesWorker == null ? "" : miruBotUniquesWorker.getHealthDescription();
     }
 
 }

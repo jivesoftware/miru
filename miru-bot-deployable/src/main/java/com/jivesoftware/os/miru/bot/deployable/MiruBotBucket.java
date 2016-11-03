@@ -141,23 +141,18 @@ class MiruBotBucket {
             Set<StatedMiruValue> values = statedMiruValues.computeIfAbsent(
                     miruFieldDefinition.name, (key) -> Sets.newHashSet());
 
+            LOG.debug("Create list of non-failed reads");
             Iterator<StatedMiruValue> iter =
                     values.stream().filter(smv -> smv.state != State.READ_FAIL).iterator();
-            int count = 0;
-            while (iter.hasNext()) {
-                iter.next();
-                count++;
-            }
+            List<StatedMiruValue> statedMiruValueList = Lists.newArrayList();
+            iter.forEachRemaining(statedMiruValueList::add);
 
+            LOG.debug("Select random value, or birth as necessary");
             StatedMiruValue statedMiruValue;
-            if (count == 0) {
+            if (statedMiruValueList.size() == 0) {
                 statedMiruValue = birthNewFieldValue(miruFieldDefinition);
             } else {
-                iter = values.stream().filter(smv -> smv.state != State.READ_FAIL).iterator();
-                statedMiruValue = iter.next();
-                for (int i = 1; i <= RAND.nextInt(count); i++) {
-                    statedMiruValue = iter.next();
-                }
+                statedMiruValue = (StatedMiruValue) statedMiruValueList.toArray()[RAND.nextInt(statedMiruValueList.size())];
             }
 
             res.put(miruFieldDefinition.name, statedMiruValue);
