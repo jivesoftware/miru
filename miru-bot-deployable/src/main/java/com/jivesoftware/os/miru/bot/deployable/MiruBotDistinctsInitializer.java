@@ -29,11 +29,11 @@ class MiruBotDistinctsInitializer {
         //@IntDefault(5_000)
         //int getRetryWaitMs();
 
-        @IntDefault(2_500)
+        @IntDefault(500)
         int getBirthRateFactor();
         void setBirthRateFactor(int value);
 
-        @IntDefault(5_000)
+        @IntDefault(1_000)
         int getReadFrequency();
         void setReadFrequency(int value);
 
