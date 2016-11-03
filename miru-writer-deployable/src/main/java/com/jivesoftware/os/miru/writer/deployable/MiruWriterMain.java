@@ -103,14 +103,8 @@ public class MiruWriterMain {
         try {
             final Deployable deployable = new Deployable(args);
             HealthFactory.initialize(deployable::config, new DeployableHealthCheckRegistry(deployable));
-            deployable.addManageInjectables(HasUI.class, new HasUI(Arrays.asList(
-                new HasUI.UI("Reset Errors", "manage", "/manage/resetErrors"),
-                new HasUI.UI("Reset Health", "manage", "/manage/resetHealth"),
-                new HasUI.UI("Tail", "manage", "/manage/tail?lastNLines=1000"),
-                new HasUI.UI("Thread Dump", "manage", "/manage/threadDump"),
-                new HasUI.UI("Health", "manage", "/manage/ui"),
-                new HasUI.UI("Miru-Writer", "main", "/ui"),
-                new HasUI.UI("Miru-Writer-Amza", "main", "/amza"))));
+            deployable.addManageInjectables(HasUI.class, new HasUI(Arrays.asList(new HasUI.UI("Miru-Writer", "main", "/ui"),
+                new HasUI.UI("Miru-Writer-Amza", "main", "/amza/ui"))));
 
             deployable.addHealthCheck(new GCPauseHealthChecker(deployable.config(GCPauseHealthChecker.GCPauseHealthCheckerConfig.class)));
             deployable.addHealthCheck(new GCLoadHealthChecker(deployable.config(GCLoadHealthChecker.GCLoadHealthCheckerConfig.class)));
