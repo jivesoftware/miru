@@ -23,6 +23,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.solution.Waveform;
 import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsQuery;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingAnswer;
+import com.jivesoftware.os.miru.reco.plugins.trending.TrendingAnswerScoreSet;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingConstants;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery;
 import com.jivesoftware.os.miru.reco.plugins.trending.TrendingQuery.Strategy;
@@ -193,25 +194,35 @@ public class StumptownTrendsPluginRegion implements MiruPageRegion<Optional<Stum
                 if (response != null && response.answer != null) {
                     data.put("elapse", String.valueOf(response.totalElapsed));
 
-                    List<Waveform> answerWaveforms = response.answer.waveforms.get("stumptown");
-                    Map<MiruValue, Waveform> waveforms = Maps.uniqueIndex(answerWaveforms, Waveform::getId);
-                    List<Trendy> results = response.answer.scoreSets.get("stumptown").results.get(strategy.name());
+                    List<Trendy> results = null;
+                    TrendingAnswerScoreSet answerScoreSets = response.answer.scoreSets.get("stumptown");
+                    if (answerScoreSets != null) {
+                        results = answerScoreSets.results.get(strategy.name());
+                    }
                     if (results == null) {
                         results = Collections.emptyList();
+                        log.warn("Empty score sets result from {}", strategy.name());
                     }
+
                     data.put("elapse", String.valueOf(response.totalElapsed));
-                    //data.put("waveform", waveform == null ? "" : waveform.toString());
 
                     final MinMaxDouble mmd = new MinMaxDouble();
                     mmd.value(0);
                     Map<String, long[]> pngWaveforms = Maps.newHashMap();
-                    for (Trendy t : results) {
-                        long[] waveform = new long[input.buckets];
-                        waveforms.get(t.distinctValue).mergeWaveform(waveform);
-                        for (long w : waveform) {
-                            mmd.value(w);
+
+                    List<Waveform> answerWaveforms = response.answer.waveforms.get("stumptown");
+                    if (answerWaveforms == null) {
+                        log.warn("Empty waveform answer from stumptown");
+                    } else {
+                        Map<MiruValue, Waveform> waveforms = Maps.uniqueIndex(answerWaveforms, Waveform::getId);
+                        for (Trendy t : results) {
+                            long[] waveform = new long[input.buckets];
+                            waveforms.get(t.distinctValue).mergeWaveform(waveform);
+                            for (long w : waveform) {
+                                mmd.value(w);
+                            }
+                            pngWaveforms.put(t.distinctValue.last(), waveform);
                         }
-                        pngWaveforms.put(t.distinctValue.last(), waveform);
                     }
 
                     data.put("results", Lists.transform(results, trendy -> ImmutableMap.of(

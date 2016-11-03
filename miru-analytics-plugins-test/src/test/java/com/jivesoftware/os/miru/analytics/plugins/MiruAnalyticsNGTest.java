@@ -27,11 +27,12 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.test.MiruPluginTestBootstrap;
 import com.jivesoftware.os.miru.service.MiruService;
-import java.util.Arrays;
+
 import java.util.Collections;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
@@ -40,30 +41,32 @@ import org.testng.annotations.Test;
  */
 public class MiruAnalyticsNGTest {
 
-    MiruSchema miruSchema = new MiruSchema.Builder("test", 1)
-        .setFieldDefinitions(new MiruFieldDefinition[] {
-            new MiruFieldDefinition(0, "user", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
-            new MiruFieldDefinition(1, "doc", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE)
-        })
-        .setPairedLatest(ImmutableMap.of(
-            "user", Arrays.asList("doc"),
-            "doc", Arrays.asList("user")))
-        .setBloom(ImmutableMap.of(
-            "doc", Arrays.asList("user")))
-        .build();
+    private MiruTenantId tenant1 = new MiruTenantId("tenant1".getBytes());
+    private MiruPartitionId partitionId = MiruPartitionId.of(1);
 
-    MiruTenantId tenant1 = new MiruTenantId("tenant1".getBytes());
-    MiruPartitionId partitionId = MiruPartitionId.of(1);
-    MiruHost miruHost = new MiruHost("logicalName");
-    ActivityUtil util = new ActivityUtil();
-
-    MiruService service;
-    AnalyticsInjectable injectable;
+    private MiruService service;
+    private AnalyticsInjectable injectable;
 
     @BeforeMethod
     public void setUpMethod() throws Exception {
-        MiruProvider<MiruService> miruProvider = new MiruPluginTestBootstrap().bootstrap(tenant1, partitionId, miruHost,
-            miruSchema, MiruBackingStorage.disk, new MiruBitmapsRoaring(), Collections.emptyList());
+        MiruProvider<MiruService> miruProvider = new MiruPluginTestBootstrap().bootstrap(
+                tenant1,
+                partitionId,
+                new MiruHost("logicalName"),
+                new MiruSchema.Builder("test", 1)
+                        .setFieldDefinitions(new MiruFieldDefinition[]{
+                                new MiruFieldDefinition(0, "user", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
+                                new MiruFieldDefinition(1, "doc", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE)
+                        })
+                        .setPairedLatest(ImmutableMap.of(
+                                "user", Collections.singletonList("doc"),
+                                "doc", Collections.singletonList("user")))
+                        .setBloom(ImmutableMap.of(
+                                "doc", Collections.singletonList("user")))
+                        .build(),
+                MiruBackingStorage.disk,
+                new MiruBitmapsRoaring(),
+                Collections.emptyList());
 
         this.service = miruProvider.getMiru(tenant1);
 
@@ -72,8 +75,6 @@ public class MiruAnalyticsNGTest {
 
     @Test(enabled = true)
     public void basicTest() throws Exception {
-
-        Random rand = new Random(1_234);
         SnowflakeIdPacker snowflakeIdPacker = new SnowflakeIdPacker();
         int numberOfUsers = 10;
         int numberOfDocument = 1000;
@@ -99,7 +100,7 @@ public class MiruAnalyticsNGTest {
             for (int d = 0; d < numberOfViewsPerUser; d++) {
                 int docId = userRand.nextInt(numberOfDocument);
                 long activityTime = time.addAndGet(intervalPerActivity);
-                service.writeToIndex(Collections.singletonList(util.viewActivity(tenant1, partitionId, activityTime, user, String.valueOf(docId))));
+                service.writeToIndex(Collections.singletonList(new ActivityUtil().viewActivity(tenant1, partitionId, activityTime, user, String.valueOf(docId))));
                 if (++count % 10_000 == 0) {
                     System.out.println("Finished " + count + " in " + (System.currentTimeMillis() - start) + " ms");
                 }
@@ -115,28 +116,27 @@ public class MiruAnalyticsNGTest {
         for (int i = 0; i < numberOfUsers; i++) {
             String user = "bob" + i;
             MiruFieldFilter miruFieldFilter = MiruFieldFilter.ofTerms(MiruFieldType.primary, "user", user);
-            MiruFilter filter = new MiruFilter(MiruFilterOperation.or, false, Arrays.asList(miruFieldFilter), null);
+            MiruFilter filter = new MiruFilter(MiruFilterOperation.or, false, Collections.singletonList(miruFieldFilter), null);
 
             long s = System.currentTimeMillis();
-            MiruRequest<AnalyticsQuery> request = new MiruRequest<>("test",
-                tenant1,
-                new MiruActorId(new byte[] { 1 }),
-                MiruAuthzExpression.NOT_PROVIDED,
-                new AnalyticsQuery(
-                    Collections.singletonList(new AnalyticsQueryScoreSet(
-                        "test", timeRange,
-                        8)),
-                    MiruFilter.NO_FILTER,
-                    ImmutableMap.<String, MiruFilter>builder()
-                        .put(user, filter)
-                        .build()),
-                MiruSolutionLogLevel.INFO);
-            MiruResponse<AnalyticsAnswer> result = injectable.score(request);
+            MiruResponse<AnalyticsAnswer> result = injectable.score(new MiruRequest<>("test",
+                    tenant1,
+                    MiruActorId.NOT_PROVIDED,
+                    MiruAuthzExpression.NOT_PROVIDED,
+                    new AnalyticsQuery(
+                            Collections.singletonList(new AnalyticsQueryScoreSet(
+                                    "test",
+                                    timeRange,
+                                    8)),
+                            MiruFilter.NO_FILTER,
+                            ImmutableMap.<String, MiruFilter>builder()
+                                    .put(user, filter)
+                                    .build()),
+                    MiruSolutionLogLevel.INFO));
 
-            System.out.println("result:" + result);
-            System.out.println("Took:" + (System.currentTimeMillis() - s));
+            System.out.println("result: " + result);
+            System.out.println("took: " + (System.currentTimeMillis() - s));
         }
-
     }
 
 }
