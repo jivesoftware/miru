@@ -49,12 +49,7 @@ public class MiruBotMain {
             final Deployable deployable = new Deployable(args);
             HealthFactory.initialize(deployable::config, new DeployableHealthCheckRegistry(deployable));
             InstanceConfig instanceConfig = deployable.config(InstanceConfig.class);
-            deployable.addManageInjectables(HasUI.class, new HasUI(Arrays.asList(new HasUI.UI("manage", "manage", "/manage/ui"),
-                    new HasUI.UI("Reset Errors", "manage", "/manage/resetErrors"),
-                    new HasUI.UI("Reset Health", "manage", "/manage/resetHealth"),
-                    new HasUI.UI("Tail", "manage", "/manage/tail?lastNLines=1000"),
-                    new HasUI.UI("Thread Dump", "manage", "/manage/threadDump"),
-                    new HasUI.UI("Health", "manage", "/manage/ui"))));
+            deployable.addManageInjectables(HasUI.class, new HasUI(Arrays.asList()));
 
             MiruBotHealthCheck miruBotHealthCheck =
                     new MiruBotHealthCheck(deployable.config(MiruBotHealthCheckConfig.class));

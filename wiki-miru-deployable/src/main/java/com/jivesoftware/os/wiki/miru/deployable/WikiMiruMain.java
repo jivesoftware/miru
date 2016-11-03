@@ -73,13 +73,7 @@ public class WikiMiruMain {
             final Deployable deployable = new Deployable(args);
             HealthFactory.initialize(deployable::config, new DeployableHealthCheckRegistry(deployable));
             InstanceConfig instanceConfig = deployable.config(InstanceConfig.class);
-            deployable.addManageInjectables(HasUI.class, new HasUI(Arrays.asList(new HasUI.UI("manage", "manage", "/manage/ui"),
-                new HasUI.UI("Reset Errors", "manage", "/manage/resetErrors"),
-                new HasUI.UI("Reset Health", "manage", "/manage/resetHealth"),
-                new HasUI.UI("Tail", "manage", "/manage/tail?lastNLines=1000"),
-                new HasUI.UI("Thread Dump", "manage", "/manage/threadDump"),
-                new HasUI.UI("Health", "manage", "/manage/ui"),
-                new HasUI.UI("Wiki", "main", "/ui"))));
+            deployable.addManageInjectables(HasUI.class, new HasUI(Arrays.asList(new HasUI.UI("Wiki", "main", "/ui"))));
             deployable.addHealthCheck(new GCPauseHealthChecker(deployable.config(GCPauseHealthChecker.GCPauseHealthCheckerConfig.class)));
             deployable.addHealthCheck(new GCLoadHealthChecker(deployable.config(GCLoadHealthChecker.GCLoadHealthCheckerConfig.class)));
             deployable.addHealthCheck(new SystemCpuHealthChecker(deployable.config(SystemCpuHealthChecker.SystemCpuHealthCheckerConfig.class)));
