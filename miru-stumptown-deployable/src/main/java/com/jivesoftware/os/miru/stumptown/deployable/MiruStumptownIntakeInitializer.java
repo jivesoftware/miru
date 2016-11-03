@@ -16,7 +16,7 @@ public class MiruStumptownIntakeInitializer {
     public interface MiruStumptownIntakeConfig extends Config {
 
         @StringDefault(MiruWriterEndpointConstants.INGRESS_PREFIX + MiruWriterEndpointConstants.ADD)
-        public String getMiruIngressEndpoint();
+        String getMiruIngressEndpoint();
 
         @StringDefault("var/queues")
         String getPathToQueues();
@@ -33,12 +33,14 @@ public class MiruStumptownIntakeInitializer {
 
     MiruStumptownIntakeService initialize(boolean enabled,
         MiruStumptownIntakeConfig config,
+        StumptownSchemaService stumptownSchemaService,
         LogMill logMill,
         ObjectMapper activityMapper,
         TenantAwareHttpClient<String> miruWriters,
         MiruStumptownPayloadStorage payloadStorage) {
 
         return new MiruStumptownIntakeService(enabled,
+            stumptownSchemaService,
             logMill,
             config.getMiruIngressEndpoint(),
             activityMapper,

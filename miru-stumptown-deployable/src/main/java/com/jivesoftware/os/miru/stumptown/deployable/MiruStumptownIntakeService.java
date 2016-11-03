@@ -45,6 +45,7 @@ public class MiruStumptownIntakeService {
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
     private final boolean enabled;
+    private final StumptownSchemaService stumptownSchemaService;
     private final LogMill logMill;
     private final String miruIngressEndpoint;
     private final ObjectMapper activityMapper;
@@ -53,12 +54,14 @@ public class MiruStumptownIntakeService {
     private final RoundRobinStrategy roundRobinStrategy = new RoundRobinStrategy();
 
     public MiruStumptownIntakeService(boolean enabled,
+        StumptownSchemaService stumptownSchemaService,
         LogMill logMill,
         String miruIngressEndpoint,
         ObjectMapper activityMapper,
         TenantAwareHttpClient<String> miruWriter,
         MiruStumptownPayloadStorage payloads) {
         this.enabled = enabled;
+        this.stumptownSchemaService = stumptownSchemaService;
         this.logMill = logMill;
         this.miruIngressEndpoint = miruIngressEndpoint;
         this.activityMapper = activityMapper;
@@ -68,6 +71,8 @@ public class MiruStumptownIntakeService {
 
     void ingressLogEvents(List<MiruLogEvent> logEvents) throws Exception {
         if (enabled) {
+            stumptownSchemaService.ensureSchema(StumptownSchemaConstants.TENANT_ID, StumptownSchemaConstants.SCHEMA);
+
             List<MiruActivity> activities = Lists.newArrayListWithCapacity(logEvents.size());
             List<MiruStumptownPayloadsAmza.TimeAndPayload<MiruLogEvent>> timedLogEvents = Lists.newArrayListWithCapacity(logEvents.size());
 
