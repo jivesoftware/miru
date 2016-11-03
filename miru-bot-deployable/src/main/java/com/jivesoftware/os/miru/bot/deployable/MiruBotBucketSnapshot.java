@@ -5,19 +5,19 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 class MiruBotBucketSnapshot {
 
-    String schemaName;
-    String tenantId;
-    long totalActivitiesGenerated;
-    long fieldsValuesCount;
-    MiruBotBucketSnapshotFields fieldsValuesCountStatus;
-    String fieldsValuesFailed;
+    public String schemaName;
+    public String tenantId;
+    public long totalActivitiesGenerated;
+    public long fieldsValuesCount;
+    public MiruBotBucketSnapshotFields fieldsValuesCountStatus;
+    public String fieldsValuesFailed;
 
     static class MiruBotBucketSnapshotFields {
 
-        long unknown;
-        long written;
-        long read_fail;
-        long read_success;
+        public long unknown;
+        public long written;
+        public long read_fail;
+        public long read_success;
 
         @JsonCreator
         MiruBotBucketSnapshotFields(

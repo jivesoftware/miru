@@ -39,12 +39,17 @@ public class MiruBotBucketEndpoints {
         this.miruBotUniquesService = miruBotUniquesService;
     }
 
+    private Response safeSnapshot(MiruBotBucketSnapshot miruBotBucketSnapshot) {
+        if (miruBotBucketSnapshot == null) return Response.ok("").build();
+        return responseHelper.jsonResponse(miruBotBucketSnapshot);
+    }
+
     @GET
     @Path("/distincts")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getDistinctsBuckets() throws Exception {
         try {
-            return responseHelper.jsonResponse(miruBotDistinctsService.genMiruBotBucketSnapshot());
+            return safeSnapshot(miruBotDistinctsService.genMiruBotBucketSnapshot());
         } catch (Throwable t) {
             LOG.error("Error getting bot buckets", t);
             return Response.serverError().build();
@@ -56,7 +61,7 @@ public class MiruBotBucketEndpoints {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getUniquesBuckets() throws Exception {
         try {
-            return responseHelper.jsonResponse(miruBotUniquesService.genMiruBotBucketSnapshot());
+            return safeSnapshot(miruBotUniquesService.genMiruBotBucketSnapshot());
         } catch (Throwable t) {
             LOG.error("Error getting bot buckets", t);
             return Response.serverError().build();
