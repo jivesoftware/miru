@@ -43,4 +43,13 @@ public interface MiruSyncConfig extends Config {
 
     @LongDefault(60_000)
     long getAmzaAwaitLeaderElectionForNMillis();
+
+    @StringDefault("")
+    String getSyncSenderOAuthConsumerKey();
+
+    @StringDefault("")
+    String getSyncSenderOAuthConsumerSecret();
+
+    @StringDefault("")
+    String getSyncSenderOAuthConsumerMethod();
 }

@@ -10,7 +10,11 @@ import com.jivesoftware.os.routing.bird.http.client.HttpClientFactory;
 import com.jivesoftware.os.routing.bird.http.client.HttpClientFactoryProvider;
 import com.jivesoftware.os.routing.bird.http.client.HttpClientSSLConfig;
 import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelper;
+import com.jivesoftware.os.routing.bird.http.client.OAuthSigner;
 import java.util.List;
+import oauth.signpost.commonshttp.CommonsHttpOAuthConsumer;
+import oauth.signpost.signature.HmacSha1MessageSigner;
+import org.apache.commons.lang.StringUtils;
 
 /**
  *
@@ -18,6 +22,18 @@ import java.util.List;
 public class HttpSyncClientInitializer {
 
     public MiruSyncClient initialize(MiruSyncConfig config, ObjectMapper mapper) {
+        String consumerKey = StringUtils.trimToNull(config.getSyncSenderOAuthConsumerKey());
+        String consumerSecret = StringUtils.trimToNull(config.getSyncSenderOAuthConsumerSecret());
+        String consumerMethod = StringUtils.trimToNull(config.getSyncSenderOAuthConsumerMethod());
+        if (consumerKey == null || consumerSecret == null || consumerMethod == null) {
+            throw new IllegalStateException("OAuth consumer has not been configured");
+        }
+
+        consumerMethod = consumerMethod.toLowerCase();
+        if (!consumerMethod.equals("hmac") && !consumerMethod.equals("rsa")) {
+            throw new IllegalStateException("OAuth consumer method must be one of HMAC or RSA");
+        }
+
         String schemeHostPort = config.getSyncSenderSchemeHostPort();
 
         String[] parts = schemeHostPort.split(":");
@@ -39,7 +55,13 @@ public class HttpSyncClientInitializer {
         }
         HttpClientFactory clientFactory = new HttpClientFactoryProvider().createHttpClientFactory(configs, false);
 
-        HttpClient httpClient = clientFactory.createClient(null, host, port);
+        OAuthSigner authSigner = (request) -> {
+            CommonsHttpOAuthConsumer oAuthConsumer = new CommonsHttpOAuthConsumer(consumerKey, consumerSecret);
+            oAuthConsumer.setMessageSigner(new HmacSha1MessageSigner());
+            oAuthConsumer.setTokenWithSecret(consumerKey, consumerSecret);
+            return oAuthConsumer.sign(request);
+        };
+        HttpClient httpClient = clientFactory.createClient(authSigner, host, port);
 
         return new HttpSyncClient(new HttpRequestHelper(httpClient, mapper), "/api/sync/v1/write/activities", "/api/sync/v1/write/reads");
     }
