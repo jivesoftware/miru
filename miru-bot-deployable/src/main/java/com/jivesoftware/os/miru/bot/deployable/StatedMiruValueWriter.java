@@ -19,6 +19,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.function.Predicate;
 
 class StatedMiruValueWriter {
 
@@ -94,8 +95,10 @@ class StatedMiruValueWriter {
     }
 
     int writeAll(MiruBotBucket miruBotBucket,
-                 MiruTenantId miruTenantId) throws Exception {
+                 MiruTenantId miruTenantId,
+                 Predicate<StatedMiruValue> predicate) throws Exception {
         int res = 0;
+
         while (res < config.getReadFrequency()) {
             List<Map<String, StatedMiruValue>> fieldsValues = Lists.newArrayList();
 
@@ -105,7 +108,7 @@ class StatedMiruValueWriter {
             }
 
             for (int j = 0; j < activityCount; j++) {
-                fieldsValues.add(miruBotBucket.genWriteMiruActivity());
+                fieldsValues.add(miruBotBucket.genWriteMiruActivity(predicate));
                 res++;
             }
 

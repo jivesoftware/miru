@@ -101,7 +101,10 @@ class MiruBotDistinctsWorker implements Runnable {
             }
 
             while (running.get()) {
-                int count = statedMiruValueWriter.writeAll(miruBotBucket, miruTenantId);
+                int count = statedMiruValueWriter.writeAll(
+                        miruBotBucket,
+                        miruTenantId,
+                        smv -> smv.state != StatedMiruValue.State.READ_FAIL);
                 LOG.info("Wrote {} activities.", count);
 
                 LOG.info("Sleep {}ms between writes and reads", miruBotDistinctsConfig.getWriteReadPauseMs());
@@ -151,7 +154,7 @@ class MiruBotDistinctsWorker implements Runnable {
                                         distinctValuesForField.size());
                             }
 
-                            distinctValuesForField.forEach((smv) -> smv.state = StatedMiruValue.State.READ_FAIL);
+                            distinctValuesForField.forEach(smv -> smv.state = StatedMiruValue.State.READ_FAIL);
                             miruDistinctsAnswer.results.forEach((mv) -> {
                                 Optional<StatedMiruValue> statedMiruValue = distinctValuesForField
                                         .stream()

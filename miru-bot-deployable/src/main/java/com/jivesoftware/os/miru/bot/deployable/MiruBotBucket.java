@@ -19,6 +19,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
+import java.util.function.Predicate;
 
 import static com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition.Type.singleTerm;
 
@@ -125,7 +126,8 @@ class MiruBotBucket {
         values.add(new StatedMiruValue(miruValue, state));
     }
 
-    Map<String, StatedMiruValue> genWriteMiruActivity() throws Exception {
+    Map<String, StatedMiruValue> genWriteMiruActivity(
+            Predicate<StatedMiruValue> predicate) throws Exception {
         if (miruSchema == null) {
             throw new Exception("Schema must be generated before generating a miru activity.");
         }
@@ -141,21 +143,21 @@ class MiruBotBucket {
             Set<StatedMiruValue> values = statedMiruValues.computeIfAbsent(
                     miruFieldDefinition.name, (key) -> Sets.newHashSet());
 
-            LOG.debug("Create list of non-failed reads");
+            LOG.debug("Create list of potential values based on given predicate");
             Iterator<StatedMiruValue> iter =
-                    values.stream().filter(smv -> smv.state != State.READ_FAIL).iterator();
+                    values.stream().filter(predicate).iterator();
             List<StatedMiruValue> statedMiruValueList = Lists.newArrayList();
             iter.forEachRemaining(statedMiruValueList::add);
 
-            LOG.debug("Select random value, or birth as necessary");
-            StatedMiruValue statedMiruValue;
+            LOG.debug("Select random value from list of potentials, if any");
             if (statedMiruValueList.size() == 0) {
-                statedMiruValue = birthNewFieldValue(miruFieldDefinition);
+                LOG.debug("No miru values selected during generation");
             } else {
-                statedMiruValue = (StatedMiruValue) statedMiruValueList.toArray()[RAND.nextInt(statedMiruValueList.size())];
+                StatedMiruValue statedMiruValue =
+                        (StatedMiruValue) statedMiruValueList.toArray()[RAND.nextInt(statedMiruValueList.size())];
+                LOG.debug("Select miru value {}", statedMiruValue);
+                res.put(miruFieldDefinition.name, statedMiruValue);
             }
-
-            res.put(miruFieldDefinition.name, statedMiruValue);
         }
 
         return res;
