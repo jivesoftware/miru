@@ -120,6 +120,11 @@
             </dependency>
             <dependency>
                 <groupId>com.jivesoftware.os.routing.bird</groupId>
+                <artifactId>routing-bird-server-oauth</artifactId>
+                <version>${routing-bird-version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.jivesoftware.os.routing.bird</groupId>
                 <artifactId>deployable-scripts</artifactId>
                 <version>${routing-bird-version}</version>
                 <type>tar.gz</type>
@@ -374,6 +379,11 @@
                 <version>3.1</version>
             </dependency>
             <dependency>
+                <groupId>org.apache.httpcomponents</groupId>
+                <artifactId>httpclient</artifactId>
+                <version>4.4.1</version>
+            </dependency>
+            <dependency>
                 <groupId>commons-lang</groupId>
                 <artifactId>commons-lang</artifactId>
                 <version>2.6</version>
@@ -392,6 +402,11 @@
                 <groupId>oauth.signpost</groupId>
                 <artifactId>signpost-commonshttp4</artifactId>
                 <version>1.2.1.2</version>
+            </dependency>
+            <dependency>
+                <groupId>org.glassfish.jersey.security</groupId>
+                <artifactId>oauth1-signature</artifactId>
+                <version>2.22</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
