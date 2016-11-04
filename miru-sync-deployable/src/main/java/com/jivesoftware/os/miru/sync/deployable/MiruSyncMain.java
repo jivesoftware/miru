@@ -48,6 +48,8 @@ import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer.MiruMetricSamplerConfig;
 import com.jivesoftware.os.miru.metric.sampler.RoutingBirdMetricSampleSenderProvider;
 import com.jivesoftware.os.miru.sync.deployable.endpoints.MiruSyncApiEndpoints;
+import com.jivesoftware.os.miru.sync.deployable.oauth.MiruSyncOAuthValidatorInitializer;
+import com.jivesoftware.os.miru.sync.deployable.oauth.MiruSyncOAuthValidatorInitializer.MiruSyncOAuthValidatorConfig;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer.MiruSoyRendererConfig;
@@ -75,6 +77,7 @@ import com.jivesoftware.os.routing.bird.http.client.HttpDeliveryClientHealthProv
 import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelperUtils;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.http.client.TenantRoutingHttpClientInitializer;
+import com.jivesoftware.os.routing.bird.server.oauth.validator.AuthValidator;
 import com.jivesoftware.os.routing.bird.server.util.Resource;
 import com.jivesoftware.os.routing.bird.shared.ConnectionDescriptor;
 import com.jivesoftware.os.routing.bird.shared.ConnectionDescriptors;
@@ -85,6 +88,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Executors;
+import org.glassfish.jersey.oauth1.signature.OAuth1Request;
+import org.glassfish.jersey.oauth1.signature.OAuth1Signature;
 
 public class MiruSyncMain {
 
@@ -293,7 +298,11 @@ public class MiruSyncMain {
                 tenantRoutingProvider,
                 mapper);
 
+            AuthValidator<OAuth1Signature, OAuth1Request> syncOAuthValidator = new MiruSyncOAuthValidatorInitializer()
+                .initialize(deployable.config(MiruSyncOAuthValidatorConfig.class));
+
             if (instanceConfig.getMainServiceAuthEnabled()) {
+                deployable.addCustomOAuth(syncOAuthValidator, "/api/*");
                 deployable.addRouteOAuth("/miru/*", "/api/*");
                 deployable.addSessionAuth("/ui/*", "/miru/*", "/api/*");
             } else {
