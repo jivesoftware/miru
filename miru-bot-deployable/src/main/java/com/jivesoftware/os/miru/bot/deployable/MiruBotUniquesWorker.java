@@ -99,7 +99,10 @@ class MiruBotUniquesWorker implements Runnable {
             }
 
             while (running.get()) {
-                int count = statedMiruValueWriter.writeAll(miruBotBucket, miruTenantId);
+                int count = statedMiruValueWriter.writeAll(
+                        miruBotBucket,
+                        miruTenantId,
+                        smv -> smv.state != StatedMiruValue.State.READ_FAIL);
                 LOG.info("Wrote {} activities.", count);
 
                 LOG.info("Sleep {}ms between writes and reads", miruBotUniquesConfig.getWriteReadPauseMs());
@@ -126,7 +129,7 @@ class MiruBotUniquesWorker implements Runnable {
                             miruTimeRange,
                             miruFieldDefinition);
 
-                    uniqueValuesForField.forEach((smv) -> smv.state = StatedMiruValue.State.READ_FAIL);
+                    uniqueValuesForField.forEach(smv -> smv.state = StatedMiruValue.State.READ_FAIL);
 
                     if (miruUniquesAnswer == null) {
                         LOG.error("No uniques answer (null) found for {}", miruTenantId);
