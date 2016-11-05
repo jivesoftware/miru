@@ -34,6 +34,6 @@ public class MiruStatusRegion implements MiruPageRegion<MiruTenantId> {
 
     @Override
     public String getTitle() {
-        return "Tenants";
+        return "Status";
     }
 }
