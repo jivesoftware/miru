@@ -298,10 +298,10 @@ public class MiruSyncMain {
                 tenantRoutingProvider,
                 mapper);
 
-            MiruSyncOAuthValidatorConfig oAuthValidatorConfig = deployable.config(MiruSyncOAuthValidatorConfig.class);
 
             if (instanceConfig.getMainServiceAuthEnabled()) {
-                if (oAuthValidatorConfig.getOauthValidatorIsEnabled()) {
+                if (syncConfig.getSyncReceiverEnabled()) {
+                    MiruSyncOAuthValidatorConfig oAuthValidatorConfig = deployable.config(MiruSyncOAuthValidatorConfig.class);
                     AuthValidator<OAuth1Signature, OAuth1Request> syncOAuthValidator = new MiruSyncOAuthValidatorInitializer()
                         .initialize(oAuthValidatorConfig);
                     deployable.addCustomOAuth(syncOAuthValidator, "/api/*");
