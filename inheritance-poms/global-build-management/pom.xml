@@ -4,12 +4,12 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-repo-management</artifactId>
-        <version>0.1489</version>
+        <version>0.1490</version>
         <relativePath>../global-repo-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
     <artifactId>global-build-management</artifactId>
-    <version>0.1489</version>
+    <version>0.1490</version>
     <packaging>pom</packaging>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -134,7 +134,7 @@
             <dependency>
                 <groupId>com.jivesoftware.os.miru</groupId>
                 <artifactId>miru-reco</artifactId>
-                <version>0.1489</version>
+                <version>0.1490</version>
             </dependency>
             <dependency>
                 <groupId>commons-cli</groupId>
@@ -406,7 +406,7 @@
             <dependency>
                 <groupId>org.glassfish.jersey.security</groupId>
                 <artifactId>oauth1-signature</artifactId>
-                <version>2.22</version>
+                <version>${jersey-version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
