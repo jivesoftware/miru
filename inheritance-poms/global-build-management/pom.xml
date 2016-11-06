@@ -13,14 +13,14 @@
     <packaging>pom</packaging>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <mlogger-version>0.21</mlogger-version>
+        <mlogger-version>0.23</mlogger-version>
         <jive-utils-version>0.108</jive-utils-version>
         <rcvs-version>0.26</rcvs-version>
-        <filer-version>0.96</filer-version>
-        <lab-version>0.185</lab-version>
-        <amza-version>0.628</amza-version>
-        <aquarium-version>0.27</aquarium-version>
-        <routing-bird-version>0.158</routing-bird-version>
+        <filer-version>0.98</filer-version>
+        <lab-version>0.186</lab-version>
+        <amza-version>0.633</amza-version>
+        <aquarium-version>0.29</aquarium-version>
+        <routing-bird-version>0.159</routing-bird-version>
         <jackson-version>2.5.3</jackson-version>
         <jersey-version>2.13</jersey-version>
         <jetty-version>9.1.1.v20140108</jetty-version>
