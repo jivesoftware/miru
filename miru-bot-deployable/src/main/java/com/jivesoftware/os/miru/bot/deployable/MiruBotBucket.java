@@ -166,7 +166,7 @@ class MiruBotBucket {
     List<StatedMiruValue> getActivitiesForField(MiruFieldDefinition miruFieldDefinition) {
         List<StatedMiruValue> res = Lists.newArrayList();
 
-        statedMiruValues.get(miruFieldDefinition.name).forEach((smv) -> {
+        statedMiruValues.get(miruFieldDefinition.name).forEach(smv -> {
             if (smv.state != State.UNKNOWN) {
                 res.add(smv);
             }

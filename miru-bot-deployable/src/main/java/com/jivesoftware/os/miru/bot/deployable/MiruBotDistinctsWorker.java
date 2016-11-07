@@ -104,7 +104,7 @@ class MiruBotDistinctsWorker implements Runnable {
                 int count = statedMiruValueWriter.writeAll(
                         miruBotBucket,
                         miruTenantId,
-                        smv -> smv.state != StatedMiruValue.State.READ_FAIL);
+                        smv -> smv.state != State.READ_FAIL);
                 LOG.info("Wrote {} activities.", count);
 
                 LOG.info("Sleep {}ms between writes and reads", miruBotDistinctsConfig.getWriteReadPauseMs());
@@ -135,10 +135,10 @@ class MiruBotDistinctsWorker implements Runnable {
 
                     if (miruDistinctsAnswer == null) {
                         LOG.error("No distincts answer (null) found for {}", miruTenantId);
-                        distinctValuesForField.forEach((smv) -> smv.state = StatedMiruValue.State.READ_FAIL);
+                        distinctValuesForField.forEach(smv -> smv.state = State.READ_FAIL);
                     } else if (miruDistinctsAnswer.collectedDistincts == 0) {
                         LOG.error("No distincts answer (collectedDistincts=0) found for {}", miruTenantId);
-                        distinctValuesForField.forEach((smv) -> smv.state = StatedMiruValue.State.READ_FAIL);
+                        distinctValuesForField.forEach(smv -> smv.state = State.READ_FAIL);
                     } else {
                         LOG.debug("{} distinct miru values for {}.",
                                 miruDistinctsAnswer.collectedDistincts, miruFieldDefinition.name);
@@ -154,7 +154,7 @@ class MiruBotDistinctsWorker implements Runnable {
                                         distinctValuesForField.size());
                             }
 
-                            distinctValuesForField.forEach(smv -> smv.state = StatedMiruValue.State.READ_FAIL);
+                            distinctValuesForField.forEach(smv -> smv.state = State.READ_FAIL);
                             miruDistinctsAnswer.results.forEach((mv) -> {
                                 Optional<StatedMiruValue> statedMiruValue = distinctValuesForField
                                         .stream()
@@ -162,11 +162,11 @@ class MiruBotDistinctsWorker implements Runnable {
                                         .findFirst();
                                 if (statedMiruValue.isPresent()) {
                                     LOG.debug("Found matching value from miru to mirubot. {}:{}", miruFieldDefinition.name, mv.last());
-                                    statedMiruValue.get().state = StatedMiruValue.State.READ_SUCCESS;
+                                    statedMiruValue.get().state = State.READ_SUCCESS;
                                     distinctValuesForField.remove(statedMiruValue.get());
                                 } else {
                                     LOG.warn("Did not find matching mirubot value for miru value. {}:{}", miruFieldDefinition.name, mv.last());
-                                    miruBotBucket.addFieldValue(miruFieldDefinition, mv, StatedMiruValue.State.READ_FAIL);
+                                    miruBotBucket.addFieldValue(miruFieldDefinition, mv, State.READ_FAIL);
                                 }
                             });
 
@@ -268,7 +268,7 @@ class MiruBotDistinctsWorker implements Runnable {
     }
 
     String getHealthDescription() {
-        String fail = miruBotBucket.getFieldsValues(StatedMiruValue.State.READ_FAIL);
+        String fail = miruBotBucket.getFieldsValues(State.READ_FAIL);
         if (fail.isEmpty()) return "";
         return "Distincts read failures: " + fail;
     }
