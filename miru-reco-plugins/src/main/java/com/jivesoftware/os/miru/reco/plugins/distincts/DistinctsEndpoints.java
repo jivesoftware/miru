@@ -56,9 +56,14 @@ public class DistinctsEndpoints {
 
             if (response.answer != null) {
                 int numResults = response.answer.results != null ? response.answer.results.size() : -1;
-                log.info("gatherDistincts: {} / {} in {} ms", numResults, response.answer.collectedDistincts, System.currentTimeMillis() - t);
+                log.info("gatherDistincts {}:{} / {} in {}ms for tenant {}",
+                        request.query.gatherDistinctsForField,
+                        numResults,
+                        response.answer.collectedDistincts,
+                        System.currentTimeMillis() - t,
+                        request.tenantId);
             } else {
-                log.warn("gatherDistincts: no answer for tenant: {}", request.tenantId);
+                log.warn("gatherDistincts: no answer for tenant {}", request.tenantId);
             }
             return responseHelper.jsonResponse(response);
         } catch (MiruPartitionUnavailableException | InterruptedException e) {
