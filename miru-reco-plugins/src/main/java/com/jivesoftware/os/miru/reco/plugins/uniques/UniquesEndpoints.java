@@ -40,8 +40,16 @@ public class UniquesEndpoints {
             long t = System.currentTimeMillis();
             MiruResponse<UniquesAnswer> response = injectable.gatherUniques(request);
 
-            log.info("gatherUniques: " + response.answer.uniques
-                + " in " + (System.currentTimeMillis() - t) + " ms");
+            if (response.answer != null) {
+                log.info("gatherUniques {}:{} in {}ms for tenant {}",
+                        request.query.gatherUniquesForField,
+                        response.answer.uniques,
+                        System.currentTimeMillis() - t,
+                        request.tenantId);
+            } else {
+                log.warn("gatherUniques: no answer for tenant {}", request.tenantId);
+            }
+
             return responseHelper.jsonResponse(response);
         } catch (MiruPartitionUnavailableException | InterruptedException e) {
             return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Unavailable " + e.getMessage()).build();
