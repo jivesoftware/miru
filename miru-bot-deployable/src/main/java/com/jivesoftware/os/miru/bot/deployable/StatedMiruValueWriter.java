@@ -14,6 +14,7 @@ import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.shared.ClientCall;
 import com.jivesoftware.os.routing.bird.shared.NextClientStrategy;
 import com.jivesoftware.os.miru.bot.deployable.MiruBotDistinctsInitializer.MiruBotDistinctsConfig;
+import com.jivesoftware.os.miru.bot.deployable.StatedMiruValue.State;
 
 import java.util.Collections;
 import java.util.List;
@@ -89,7 +90,7 @@ class StatedMiruValueWriter {
 
         for (Map<String, StatedMiruValue> fieldValue : fieldsStatedValues) {
             for (Map.Entry<String, StatedMiruValue> value : fieldValue.entrySet()) {
-                value.getValue().state = StatedMiruValue.State.WRITTEN;
+                value.getValue().state = State.WRITTEN;
             }
         }
     }

@@ -102,7 +102,7 @@ class MiruBotUniquesWorker implements Runnable {
                 int count = statedMiruValueWriter.writeAll(
                         miruBotBucket,
                         miruTenantId,
-                        smv -> smv.state != StatedMiruValue.State.READ_FAIL);
+                        smv -> smv.state != State.READ_FAIL);
                 LOG.info("Wrote {} activities.", count);
 
                 LOG.info("Sleep {}ms between writes and reads", miruBotUniquesConfig.getWriteReadPauseMs());
@@ -129,7 +129,7 @@ class MiruBotUniquesWorker implements Runnable {
                             miruTimeRange,
                             miruFieldDefinition);
 
-                    uniqueValuesForField.forEach(smv -> smv.state = StatedMiruValue.State.READ_FAIL);
+                    uniqueValuesForField.forEach(smv -> smv.state = State.READ_FAIL);
 
                     if (miruUniquesAnswer == null) {
                         LOG.error("No uniques answer (null) found for {}", miruTenantId);
@@ -143,7 +143,7 @@ class MiruBotUniquesWorker implements Runnable {
 
                         if (miruUniquesAnswer.uniques == uniqueValuesForField.size()) {
                             LOG.debug("Unique activities in miru matches mirubot.");
-                            uniqueValuesForField.forEach((smv) -> smv.state = StatedMiruValue.State.READ_SUCCESS);
+                            uniqueValuesForField.forEach(smv -> smv.state = State.READ_SUCCESS);
                         } else {
                             LOG.debug("Unique activities in mirubot {}", uniqueValuesForField);
                             LOG.warn("Unique activities in miru {} does not match mirubot {}",
