@@ -11,7 +11,10 @@ miru.statusFocus = {
     init: function () {
     },
 
-    reset: function(tenant) {
+    reset: function(ele, tenant) {
+        var $button = $(ele);
+        $button.attr('disabled', 'disabled');
+        var value = $button.val();
         $.ajax({
             type: "POST",
             url: "/miru/sync/reset/" + tenant,

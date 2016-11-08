@@ -33,7 +33,7 @@
                             {if isLast($type)}
                                 <tr>
                                     <td colspan="3">
-                                        <input class="btn btn-default" type="button" value="focus" onclick="miru.statusFocus.reset('{$tenant}'); return false"/>
+                                        <input class="btn btn-default" type="button" value="Reset" onclick="miru.statusFocus.reset(this, '{$tenant}'); return false"/>
                                     </td>
                                 </tr>
                             {/if}
