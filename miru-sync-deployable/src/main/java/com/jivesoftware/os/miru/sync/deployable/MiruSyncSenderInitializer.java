@@ -23,9 +23,9 @@ public class MiruSyncSenderInitializer {
         ObjectMapper mapper,
         List<MiruTenantId> whitelistTenantIds,
         C defaultCursor,
-        Class<C> cursorClass) {
+        Class<C> cursorClass) throws Exception {
 
-        MiruSyncClient syncClient = new HttpSyncClientInitializer().initialize(syncConfig, mapper);
+        MiruSyncClient syncClient = new HttpSyncClientInitializer().initialize(syncConfig);
 
         return new MiruSyncSender<>(amzaClientAquariumProvider,
             syncConfig.getSyncRingStripes(),
