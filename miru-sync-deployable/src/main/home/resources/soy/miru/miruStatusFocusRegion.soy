@@ -26,7 +26,7 @@
                         {foreach $type in keys($progress)}
                             <tr>
                                 <td>{$type}</td>
-                                <td>{$progress[$type].partition}</td>
+                                <td>{$progress[$type].partitionId}</td>
                                 <td>{$progress[$type].cursor}</td>
                             </tr>
                         {ifempty}
