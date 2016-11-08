@@ -100,10 +100,10 @@ class MiruBotUniquesWorker implements Runnable {
                 if (seedCount > 0) {
                     List<Map<String, StatedMiruValue>> miruSeededActivities = miruBotBucket.seed(seedCount);
                     statedMiruValueWriter.write(miruTenantId, miruSeededActivities);
+                    LOG.info("Wrote {} seeded uniques activities.", seedCount);
 
                     totalCount.inc(seedCount);
                     seedCount = 0;
-                    LOG.info("Wrote {} seeded activities.", seedCount);
                 }
 
                 while (running.get()) {
@@ -121,11 +121,11 @@ class MiruBotUniquesWorker implements Runnable {
                     SnowflakeIdPacker snowflakeIdPacker = new SnowflakeIdPacker();
                     long packCurrentTime = snowflakeIdPacker.pack(
                             new JiveEpochTimestampProvider().getTimestamp(), 0, 0);
-                    long randTimeRange = RAND.nextInt(miruBotUniquesConfig.getReadTimeRangeFactor());
                     long packFromTime = packCurrentTime - snowflakeIdPacker.pack(
-                            randTimeRange, 0, 0);
+                            miruBotUniquesConfig.getReadTimeRange(), 0, 0);
                     MiruTimeRange miruTimeRange = new MiruTimeRange(packFromTime, packCurrentTime);
-                    LOG.debug("Read from {}ms in the past until now.", randTimeRange);
+                    LOG.debug("Read from {}ms in the past until now.",
+                            miruBotUniquesConfig.getReadTimeRange());
                     LOG.debug("Read time range: {}", miruTimeRange);
 
                     LOG.debug("Query miru uniques for each field in the schema.");

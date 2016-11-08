@@ -9,7 +9,7 @@ import org.merlin.config.BindInterfaceToConfiguration;
 
 class MiruBotBucketRequest {
 
-    private final int readTimeRangeFactor;
+    private final int readTimeRange;
     private final int writeHesitationFactor;
     private final int valueSizeFactor;
     private final long failureRetryWaitMs;
@@ -24,7 +24,7 @@ class MiruBotBucketRequest {
 
     @JsonCreator
     public MiruBotBucketRequest(
-            @JsonProperty("readTimeRangeFactor") int readTimeRangeFactor,
+            @JsonProperty("readTimeRange") int readTimeRange,
             @JsonProperty("writeHesitationFactor") int writeHesitationFactor,
             @JsonProperty("valueSizeFactor") int valueSizeFactor,
             @JsonProperty("failureRetryWaitMs") long failureRetryWaitMs,
@@ -36,7 +36,7 @@ class MiruBotBucketRequest {
             @JsonProperty("botBucketSeed") int botBucketSeed,
             @JsonProperty("writeReadPauseMs") long writeReadPauseMs,
             @JsonProperty("runtimeMs") long runtimeMs) {
-        this.readTimeRangeFactor = readTimeRangeFactor;
+        this.readTimeRange = readTimeRange;
         this.writeHesitationFactor = writeHesitationFactor;
         this.valueSizeFactor = valueSizeFactor;
         this.failureRetryWaitMs = failureRetryWaitMs;
@@ -50,65 +50,72 @@ class MiruBotBucketRequest {
         this.runtimeMs = runtimeMs;
     }
 
-    static MiruBotDistinctsConfig genDistinctsConfig(MiruBotBucketRequest miruBotBucketRequest) {
-        MiruBotDistinctsConfig res =
-                BindInterfaceToConfiguration.bindDefault(MiruBotDistinctsConfig.class);
-
+    static void genConfig(
+            MiruBotBucketRequest miruBotBucketRequest,
+            MiruBotDistinctsConfig config) {
         if (miruBotBucketRequest != null) {
-            if (miruBotBucketRequest.readTimeRangeFactor > 0) {
-                res.setReadTimeRangeFactor(miruBotBucketRequest.readTimeRangeFactor);
+            if (miruBotBucketRequest.readTimeRange > 0) {
+                config.setReadTimeRange(miruBotBucketRequest.readTimeRange);
             }
 
             if (miruBotBucketRequest.writeHesitationFactor > 0) {
-                res.setWriteHesitationFactor(miruBotBucketRequest.writeHesitationFactor);
+                config.setWriteHesitationFactor(miruBotBucketRequest.writeHesitationFactor);
             }
 
             if (miruBotBucketRequest.valueSizeFactor > 0) {
-                res.setValueSizeFactor(miruBotBucketRequest.valueSizeFactor);
+                config.setValueSizeFactor(miruBotBucketRequest.valueSizeFactor);
             }
 
             if (miruBotBucketRequest.birthRateFactor > 0) {
-                res.setBirthRateFactor(miruBotBucketRequest.birthRateFactor);
+                config.setBirthRateFactor(miruBotBucketRequest.birthRateFactor);
             }
 
-            if (miruBotBucketRequest.failureRetryWaitMs> 0) {
-                res.setFailureRetryWaitMs(miruBotBucketRequest.failureRetryWaitMs);
+            if (miruBotBucketRequest.failureRetryWaitMs > 0) {
+                config.setFailureRetryWaitMs(miruBotBucketRequest.failureRetryWaitMs);
             }
 
             if (miruBotBucketRequest.readFrequency > 0) {
-                res.setReadFrequency(miruBotBucketRequest.readFrequency);
+                config.setReadFrequency(miruBotBucketRequest.readFrequency);
             }
 
             if (miruBotBucketRequest.batchWriteCountFactor > 0) {
-                res.setBatchWriteCountFactor(miruBotBucketRequest.batchWriteCountFactor);
+                config.setBatchWriteCountFactor(miruBotBucketRequest.batchWriteCountFactor);
             }
 
             if (miruBotBucketRequest.batchWriteFrequency > 0) {
-                res.setBatchWriteFrequency(miruBotBucketRequest.batchWriteFrequency);
+                config.setBatchWriteFrequency(miruBotBucketRequest.batchWriteFrequency);
             }
 
             if (miruBotBucketRequest.numberOfFields > 0) {
-                res.setNumberOfFields(miruBotBucketRequest.numberOfFields);
+                config.setNumberOfFields(miruBotBucketRequest.numberOfFields);
             }
 
             if (miruBotBucketRequest.botBucketSeed > 0) {
-                res.setBotBucketSeed(miruBotBucketRequest.botBucketSeed);
+                config.setBotBucketSeed(miruBotBucketRequest.botBucketSeed);
             }
 
             if (miruBotBucketRequest.writeReadPauseMs > 0L) {
-                res.setWriteReadPauseMs(miruBotBucketRequest.writeReadPauseMs);
+                config.setWriteReadPauseMs(miruBotBucketRequest.writeReadPauseMs);
             }
 
             if (miruBotBucketRequest.runtimeMs > 0L) {
-                res.setRuntimeMs(miruBotBucketRequest.runtimeMs);
+                config.setRuntimeMs(miruBotBucketRequest.runtimeMs);
             }
         }
+    }
 
+    static MiruBotDistinctsConfig genDistinctsConfig(MiruBotBucketRequest request) {
+        MiruBotDistinctsConfig res =
+                BindInterfaceToConfiguration.bindDefault(MiruBotDistinctsConfig.class);
+        genConfig(request, res);
         return res;
     }
 
-    static MiruBotUniquesConfig genUniquesConfig(MiruBotBucketRequest miruBotBucketRequest) {
-        return (MiruBotUniquesConfig) genDistinctsConfig(miruBotBucketRequest);
+    static MiruBotUniquesConfig genUniquesConfig(MiruBotBucketRequest request) {
+        MiruBotUniquesConfig res =
+                BindInterfaceToConfiguration.bindDefault(MiruBotUniquesConfig.class);
+        genConfig(request, res);
+        return res;
     }
 
-    }
+}

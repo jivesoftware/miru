@@ -48,18 +48,6 @@ class MiruBotDistinctsService implements MiruBotHealthPercent {
         }
 
         LOG.info("Enabled: {}", miruBotDistinctsConfig.getEnabled());
-        LOG.info("Read time range factor: {}", miruBotDistinctsConfig.getReadTimeRangeFactor());
-        LOG.info("Write hesitation factor: {}", miruBotDistinctsConfig.getWriteHesitationFactor());
-        LOG.info("Value size factor: {}", miruBotDistinctsConfig.getValueSizeFactor());
-        LOG.info("Failure retry wait: {}", miruBotDistinctsConfig.getFailureRetryWaitMs());
-        LOG.info("Birth rate factor: {}", miruBotDistinctsConfig.getBirthRateFactor());
-        LOG.info("Read frequency: {}", miruBotDistinctsConfig.getReadFrequency());
-        LOG.info("Batch write count factor: {}", miruBotDistinctsConfig.getBatchWriteCountFactor());
-        LOG.info("Batch write frequency: {}", miruBotDistinctsConfig.getBatchWriteFrequency());
-        LOG.info("Number of fields: {}", miruBotDistinctsConfig.getNumberOfFields());
-        LOG.info("Bot bucket seed: {}", miruBotDistinctsConfig.getBotBucketSeed());
-        LOG.info("Write read pause: {}ms", miruBotDistinctsConfig.getWriteReadPauseMs());
-        LOG.info("Runtime: {}ms", miruBotDistinctsConfig.getRuntimeMs());
 
         miruBotDistinctsWorker = createWithConfig(miruBotDistinctsConfig);
         processor.submit(miruBotDistinctsWorker);
@@ -73,6 +61,19 @@ class MiruBotDistinctsService implements MiruBotHealthPercent {
     }
 
     MiruBotDistinctsWorker createWithConfig(MiruBotDistinctsConfig miruBotDistinctsConfig) {
+        LOG.info("Read time range: {}", miruBotDistinctsConfig.getReadTimeRange());
+        LOG.info("Write hesitation factor: {}", miruBotDistinctsConfig.getWriteHesitationFactor());
+        LOG.info("Value size factor: {}", miruBotDistinctsConfig.getValueSizeFactor());
+        LOG.info("Failure retry wait: {}", miruBotDistinctsConfig.getFailureRetryWaitMs());
+        LOG.info("Birth rate factor: {}", miruBotDistinctsConfig.getBirthRateFactor());
+        LOG.info("Read frequency: {}", miruBotDistinctsConfig.getReadFrequency());
+        LOG.info("Batch write count factor: {}", miruBotDistinctsConfig.getBatchWriteCountFactor());
+        LOG.info("Batch write frequency: {}", miruBotDistinctsConfig.getBatchWriteFrequency());
+        LOG.info("Number of fields: {}", miruBotDistinctsConfig.getNumberOfFields());
+        LOG.info("Bot bucket seed: {}", miruBotDistinctsConfig.getBotBucketSeed());
+        LOG.info("Write read pause: {}ms", miruBotDistinctsConfig.getWriteReadPauseMs());
+        LOG.info("Runtime: {}ms", miruBotDistinctsConfig.getRuntimeMs());
+
         return new MiruBotDistinctsWorker(
                 miruIngressEndpoint,
                 miruBotDistinctsConfig,
