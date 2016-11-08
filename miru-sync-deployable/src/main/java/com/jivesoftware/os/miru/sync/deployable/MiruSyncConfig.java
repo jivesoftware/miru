@@ -52,4 +52,7 @@ public interface MiruSyncConfig extends Config {
 
     @StringDefault("")
     String getSyncSenderOAuthConsumerMethod();
+
+    @BooleanDefault(false)
+    boolean getSyncSenderAllowSelfSignedCerts();
 }
