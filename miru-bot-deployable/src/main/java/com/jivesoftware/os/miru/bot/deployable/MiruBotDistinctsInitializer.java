@@ -26,7 +26,7 @@ class MiruBotDistinctsInitializer {
         int getValueSizeFactor();
         void setValueSizeFactor(int value);
 
-        @LongDefault(30_000L)
+        @LongDefault(20_000L)
         long getFailureRetryWaitMs();
         void setFailureRetryWaitMs(long value);
 
@@ -54,7 +54,7 @@ class MiruBotDistinctsInitializer {
         int getBotBucketSeed();
         void setBotBucketSeed(int value);
 
-        @LongDefault(5_000L)
+        @LongDefault(10_000L)
         long getWriteReadPauseMs();
         void setWriteReadPauseMs(long value);
 
