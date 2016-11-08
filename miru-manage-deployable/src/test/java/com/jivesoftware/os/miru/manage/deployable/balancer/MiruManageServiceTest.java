@@ -110,7 +110,7 @@ public class MiruManageServiceTest {
 
         Mockito.when(miruWALClient.getActivityWALStatusForTenant(Mockito.<MiruTenantId>any(), Mockito.any(MiruPartitionId.class)))
             .thenReturn(new MiruActivityWALStatus(partitionId,
-                Collections.singletonList(new MiruActivityWALStatus.WriterCount(1, 10)),
+                Collections.singletonList(new MiruActivityWALStatus.WriterCount(1, 10, System.currentTimeMillis())),
                 Collections.singletonList(0),
                 Collections.singletonList(0)));
 

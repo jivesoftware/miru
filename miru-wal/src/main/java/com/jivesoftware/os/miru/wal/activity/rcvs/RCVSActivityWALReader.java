@@ -263,10 +263,12 @@ public class RCVSActivityWALReader implements MiruActivityWALReader<RCVSCursor, 
         activityWAL.getValues(tenantId,
             new MiruActivityWALRow(partitionId.getId()),
             new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.END.getSort(), 0),
-            null, 1_000, false, null, null, partitionedActivity -> {
+            null, 1_000, false, null, null,
+            partitionedActivity -> {
                 if (partitionedActivity != null) {
                     if (partitionedActivity.type == MiruPartitionedActivity.Type.BEGIN) {
-                        counts.put(partitionedActivity.writerId, new WriterCount(partitionedActivity.writerId, partitionedActivity.index));
+                        counts.put(partitionedActivity.writerId,
+                            new WriterCount(partitionedActivity.writerId, partitionedActivity.index, partitionedActivity.clockTimestamp));
                         begins.add(partitionedActivity.writerId);
                     } else if (partitionedActivity.type == MiruPartitionedActivity.Type.END) {
                         ends.add(partitionedActivity.writerId);

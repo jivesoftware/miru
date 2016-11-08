@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.sync.deployable;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.jivesoftware.os.amza.api.PartitionClient;
 import com.jivesoftware.os.amza.api.PartitionClientProvider;
 import com.jivesoftware.os.amza.api.filer.UIO;
@@ -17,9 +18,11 @@ import com.jivesoftware.os.aquarium.State;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivityFactory;
+import com.jivesoftware.os.miru.api.activity.TenantAndPartition;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.sync.MiruSyncClient;
 import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus;
+import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus.WriterCount;
 import com.jivesoftware.os.miru.api.wal.MiruCursor;
 import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
@@ -32,6 +35,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -66,6 +70,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
     private final List<MiruTenantId> whitelist;
     private final int batchSize;
     private final long forwardSyncDelayMillis;
+    private final long reverseSyncMaxAgeMillis;
     private final C defaultCursor;
     private final Class<C> cursorClass;
 
@@ -87,6 +92,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         List<MiruTenantId> whitelist,
         int batchSize,
         long forwardSyncDelayMillis,
+        long reverseSyncMaxAgeMillis,
         C defaultCursor,
         Class<C> cursorClass) {
         this.amzaClientAquariumProvider = amzaClientAquariumProvider;
@@ -101,6 +107,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         this.whitelist = whitelist;
         this.batchSize = batchSize;
         this.forwardSyncDelayMillis = forwardSyncDelayMillis;
+        this.reverseSyncMaxAgeMillis = reverseSyncMaxAgeMillis;
         this.defaultCursor = defaultCursor;
         this.cursorClass = cursorClass;
     }
@@ -114,7 +121,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                         try {
                             for (int j = 0; j < syncRingStripes; j++) {
                                 if (threadIndex(j) == index) {
-                                    syncIndex(j);
+                                    syncStripe(j);
                                 }
                             }
                             Thread.sleep(syncIntervalMillis);
@@ -248,7 +255,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         return new PartitionName(false, name, name);
     }
 
-    private void syncIndex(int stripe) throws Exception {
+    private void syncStripe(int stripe) throws Exception {
         if (!isElected(stripe)) {
             return;
         }
@@ -285,6 +292,8 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         LOG.info("Synced stripe:{} tenants:{} activities:{}", stripe, tenantCount, activityCount);
     }
 
+    private final Set<TenantAndPartition> maxAgeSet = Collections.newSetFromMap(Maps.newConcurrentMap());
+
     private int syncTenant(MiruTenantId tenantId, int stripe, ProgressType type) throws Exception {
         TenantProgress progress = getTenantProgress(tenantId, stripe);
         if (!isElected(stripe)) {
@@ -301,24 +310,38 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
             return 0;
         }
         if (type == reverse) {
-            if (status.ends.containsAll(status.begins)) {
-                return syncTenantPartition(tenantId, stripe, partitionId, type);
+            long maxClockTimestamp = -1;
+            for (WriterCount count : status.counts) {
+                maxClockTimestamp = Math.max(maxClockTimestamp, count.clockTimestamp);
+            }
+
+            if (reverseSyncMaxAgeMillis != -1 && (maxClockTimestamp == -1 || maxClockTimestamp < System.currentTimeMillis() - reverseSyncMaxAgeMillis)) {
+                if (maxAgeSet.add(new TenantAndPartition(tenantId, partitionId))) {
+                    LOG.info("Reverse sync reached max age for tenant:{} partition:{} clock:{}", tenantId, partitionId, maxClockTimestamp);
+                }
+                return 0;
+            } else if (status.ends.containsAll(status.begins)) {
+                return syncTenantPartition(tenantId, stripe, partitionId, type, status);
             } else {
                 LOG.error("Reverse sync encountered open tenant:{} partition:{}", tenantId, partitionId);
                 return 0;
             }
         } else {
-            return syncTenantPartition(tenantId, stripe, partitionId, type);
+            return syncTenantPartition(tenantId, stripe, partitionId, type, status);
         }
     }
 
-    private int syncTenantPartition(MiruTenantId tenantId, int stripe, MiruPartitionId partitionId, ProgressType type) throws Exception {
+    private int syncTenantPartition(MiruTenantId tenantId,
+        int stripe,
+        MiruPartitionId partitionId,
+        ProgressType type,
+        MiruActivityWALStatus status) throws Exception {
+
         C cursor = getTenantPartitionCursor(tenantId, partitionId);
         if (!isElected(stripe)) {
             return 0;
         }
 
-        MiruActivityWALStatus status = fromWALClient.getActivityWALStatusForTenant(tenantId, partitionId);
         boolean closed = status.ends.containsAll(status.begins);
         int numWriters = Math.max(status.begins.size(), 1);
         int lastIndex = -1;

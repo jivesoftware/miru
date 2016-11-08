@@ -38,6 +38,9 @@ public interface MiruSyncConfig extends Config {
     @LongDefault(60_000)
     long getForwardSyncDelayMillis();
 
+    @LongDefault(1_000L * 60 * 60 * 24 * 90) // 90 days
+    long getReverseSyncMaxAgeMillis();
+
     @IntDefault(16)
     int getAmzaCallerThreadPoolSize();
 
