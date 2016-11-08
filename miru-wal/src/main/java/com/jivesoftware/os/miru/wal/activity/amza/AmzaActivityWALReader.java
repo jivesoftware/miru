@@ -224,7 +224,8 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
                         if (value != null) {
                             MiruPartitionedActivity partitionedActivity = partitionedActivityMarshaller.fromBytes(value);
                             if (partitionedActivity.type == MiruPartitionedActivity.Type.BEGIN) {
-                                counts.put(partitionedActivity.writerId, new WriterCount(partitionedActivity.writerId, partitionedActivity.index));
+                                counts.put(partitionedActivity.writerId,
+                                    new WriterCount(partitionedActivity.writerId, partitionedActivity.index, partitionedActivity.clockTimestamp));
                                 begins.add(partitionedActivity.writerId);
                             } else if (partitionedActivity.type == MiruPartitionedActivity.Type.END) {
                                 ends.add(partitionedActivity.writerId);

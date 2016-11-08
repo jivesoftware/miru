@@ -6,6 +6,7 @@ import com.google.common.collect.Maps;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.mlogger.core.AtomicCounter;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.http.client.HttpResponse;
@@ -95,22 +96,22 @@ class StatedMiruValueWriter {
         }
     }
 
-    int writeAll(MiruBotBucket miruBotBucket,
-                 MiruTenantId miruTenantId,
-                 Predicate<StatedMiruValue> predicate) throws Exception {
-        int res = 0;
+    AtomicCounter writeAll(MiruBotBucket miruBotBucket,
+                           MiruTenantId miruTenantId,
+                           Predicate<StatedMiruValue> predicate) throws Exception {
+        AtomicCounter res = new AtomicCounter();
 
-        while (res < config.getReadFrequency()) {
+        while (res.getCount() < config.getReadFrequency()) {
             List<Map<String, StatedMiruValue>> fieldsValues = Lists.newArrayList();
 
             int activityCount = 1;
-            if ((res + 1) % config.getBatchWriteFrequency() == 0) {
+            if ((res.getCount() + 1) % config.getBatchWriteFrequency() == 0) {
                 activityCount += RAND.nextInt(config.getBatchWriteCountFactor());
             }
 
             for (int j = 0; j < activityCount; j++) {
                 fieldsValues.add(miruBotBucket.genWriteMiruActivity(predicate));
-                res++;
+                res.inc();
             }
 
             write(miruTenantId, fieldsValues);

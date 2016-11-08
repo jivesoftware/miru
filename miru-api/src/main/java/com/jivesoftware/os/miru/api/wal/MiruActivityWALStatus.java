@@ -27,13 +27,15 @@ public class MiruActivityWALStatus {
 
         public int writerId;
         public int count;
+        public long clockTimestamp;
 
         public WriterCount() {
         }
 
-        public WriterCount(int writerId, int count) {
+        public WriterCount(int writerId, int count, long clockTimestamp) {
             this.writerId = writerId;
             this.count = count;
+            this.clockTimestamp = clockTimestamp;
         }
     }
 }

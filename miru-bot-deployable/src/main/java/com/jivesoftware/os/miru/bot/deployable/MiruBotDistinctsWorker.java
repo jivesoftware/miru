@@ -18,6 +18,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsAnswer;
 import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsConstants;
 import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsQuery;
+import com.jivesoftware.os.mlogger.core.AtomicCounter;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.http.client.HttpResponse;
@@ -83,6 +84,7 @@ class MiruBotDistinctsWorker implements Runnable {
                 miruBotDistinctsConfig.getBirthRateFactor());
 
         int seedCount = miruBotDistinctsConfig.getBotBucketSeed();
+        AtomicCounter totalCount = new AtomicCounter();
 
         while (running.get()) {
             try {
@@ -100,16 +102,19 @@ class MiruBotDistinctsWorker implements Runnable {
                     List<Map<String, StatedMiruValue>> miruSeededActivities = miruBotBucket.seed(seedCount);
                     statedMiruValueWriter.write(miruTenantId, miruSeededActivities);
 
+                    totalCount.inc(seedCount);
                     seedCount = 0;
                     LOG.info("Wrote {} seeded activities.", miruSeededActivities.size());
                 }
 
                 while (running.get()) {
-                    int count = statedMiruValueWriter.writeAll(
+                    AtomicCounter count = statedMiruValueWriter.writeAll(
                             miruBotBucket,
                             miruTenantId,
                             smv -> smv.state != State.READ_FAIL);
-                    LOG.info("Wrote {} activities.", count);
+                    totalCount.inc(count.getCount());
+                    LOG.info("Wrote {} of {} activities",
+                            count.getCount(), totalCount.getCount());
 
                     LOG.info("Sleep {}ms between writes and reads", miruBotDistinctsConfig.getWriteReadPauseMs());
                     Thread.sleep(miruBotDistinctsConfig.getWriteReadPauseMs());

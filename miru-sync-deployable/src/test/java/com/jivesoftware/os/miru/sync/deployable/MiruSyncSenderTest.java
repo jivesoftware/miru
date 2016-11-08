@@ -26,6 +26,7 @@ import com.jivesoftware.os.miru.api.activity.TimeAndVersion;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.sync.MiruSyncClient;
+import com.jivesoftware.os.miru.api.topology.NamedCursor;
 import com.jivesoftware.os.miru.api.wal.AmzaCursor;
 import com.jivesoftware.os.miru.api.wal.AmzaSipCursor;
 import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus;
@@ -83,17 +84,29 @@ public class MiruSyncSenderTest {
         AtomicInteger largestPartitionId = new AtomicInteger(10);
         int initialId = largestPartitionId.get();
 
-        int[] reverseSynced = new int[1];
-        int[] forwardSynced = new int[1];
+        int[] reverseSyncedActivity = new int[1];
+        int[] reverseSyncedBoundary = new int[1];
+        int[] forwardSyncedActivity = new int[1];
+        int[] forwardSyncedBoundary = new int[1];
         MiruSyncClient syncClient = new MiruSyncClient() {
             @Override
             public void writeActivity(MiruTenantId tenantId,
                 MiruPartitionId partitionId,
                 List<MiruPartitionedActivity> partitionedActivities) throws Exception {
-                if (partitionId.getId() < initialId) {
-                    reverseSynced[0] += partitionedActivities.size();
-                } else {
-                    forwardSynced[0] += partitionedActivities.size();
+                for (MiruPartitionedActivity partitionedActivity : partitionedActivities) {
+                    if (partitionId.getId() < initialId) {
+                        if (partitionedActivity.type.isActivityType()) {
+                            reverseSyncedActivity[0]++;
+                        } else if (partitionedActivity.type.isBoundaryType()) {
+                            reverseSyncedBoundary[0]++;
+                        }
+                    } else {
+                        if (partitionedActivity.type.isActivityType()) {
+                            forwardSyncedActivity[0]++;
+                        } else if (partitionedActivity.type.isBoundaryType()) {
+                            forwardSyncedBoundary[0]++;
+                        }
+                    }
                 }
             }
 
@@ -116,23 +129,28 @@ public class MiruSyncSenderTest {
             null,
             1_000,
             0,
+            -1,
             null,
             AmzaCursor.class);
 
         amzaClientAquariumProvider.start();
         syncService.start();
 
-        long failAfter = System.currentTimeMillis() + 1000_000L;
+        long failAfter = System.currentTimeMillis() + 60_000L;
         int[] progressIds = awaitProgress(tenantId, syncService, reverse, -1, failAfter);
 
         Assert.assertEquals(progressIds[initial.index], initialId);
         Assert.assertEquals(progressIds[reverse.index], -1);
         Assert.assertEquals(progressIds[forward.index], initialId);
-        Assert.assertEquals(reverseSynced[0], largestPartitionId.get(),
+        Assert.assertEquals(reverseSyncedActivity[0], largestPartitionId.get(),
             "Should reverse sync 1 activity each for partitions less than " + largestPartitionId.get());
-        Assert.assertEquals(forwardSynced[0], 0, "Should not forward sync any activity yet");
+        Assert.assertEquals(reverseSyncedBoundary[0], 2 * largestPartitionId.get(),
+            "Should reverse sync 1 boundary each for partitions less than " + largestPartitionId.get());
+        Assert.assertEquals(forwardSyncedActivity[0], 0, "Should not forward sync any activity yet");
+        Assert.assertEquals(forwardSyncedBoundary[0], 0, "Should not forward sync any boundary yet");
 
-        reverseSynced[0] = 0;
+        reverseSyncedActivity[0] = 0;
+        reverseSyncedBoundary[0] = 0;
         largestPartitionId.addAndGet(10);
 
         progressIds = awaitProgress(tenantId, syncService, forward, largestPartitionId.get(), failAfter);
@@ -140,9 +158,12 @@ public class MiruSyncSenderTest {
         Assert.assertEquals(progressIds[initial.index], initialId);
         Assert.assertEquals(progressIds[reverse.index], -1);
         Assert.assertEquals(progressIds[forward.index], largestPartitionId.get());
-        Assert.assertEquals(reverseSynced[0], 0, "Should not reverse sync any additional activity yet");
-        Assert.assertEquals(forwardSynced[0], largestPartitionId.get() - initialId,
-            "Should forward sync 1 activity each for partition from " + initialId + " to " + largestPartitionId.get());
+        Assert.assertEquals(reverseSyncedActivity[0], 0, "Should not reverse sync any additional activity yet");
+        Assert.assertEquals(reverseSyncedBoundary[0], 0, "Should not reverse sync any additional boundary yet");
+        Assert.assertEquals(forwardSyncedActivity[0], largestPartitionId.get() - initialId,
+            "Should forward sync 1 activity each for partitions from " + initialId + " to " + largestPartitionId.get());
+        Assert.assertEquals(forwardSyncedActivity[0], largestPartitionId.get() - initialId,
+            "Should forward sync 1 boundary each for partitions from " + initialId + " to " + largestPartitionId.get());
     }
 
     private int[] awaitProgress(MiruTenantId tenantId,
@@ -192,6 +213,8 @@ public class MiruSyncSenderTest {
         private final AtomicInteger largestPartitionId;
 
         private final MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory(System::currentTimeMillis);
+        private final NamedCursor continueCursor = new NamedCursor("test", 1L);
+        private final NamedCursor stopCursor = new NamedCursor("test", 2L);
 
         private TestWALClient(MiruTenantId testTenantId, AtomicInteger largestPartitionId) {
             this.testTenantId = testTenantId;
@@ -221,17 +244,23 @@ public class MiruSyncSenderTest {
             MiruPartitionId partitionId,
             AmzaCursor cursor,
             int batchSize) throws Exception {
-            List<MiruWALEntry> entries = partitionId.getId() == largestPartitionId.get() ? Collections.emptyList() :
-                Collections.singletonList(
+            List<MiruWALEntry> entries;
+            NamedCursor namedCursor = (cursor == null || cursor.cursors == null || cursor.cursors.isEmpty()) ? null : cursor.cursors.get(0);
+            if (partitionId.getId() == largestPartitionId.get() || namedCursor != null && namedCursor.compareTo(stopCursor) == 0) {
+                entries = Collections.emptyList();
+            } else {
+                entries = Collections.singletonList(
                     new MiruWALEntry(1L,
                         2L,
                         partitionedActivityFactory.activity(1,
                             partitionId,
                             0,
                             new MiruActivity(tenantId, 1L, 2L, false, null, Collections.emptyMap(), Collections.emptyMap()))));
+            }
             return new StreamBatch<>(
                 entries,
-                new AmzaCursor(Collections.emptyList(), new AmzaSipCursor(Collections.emptyList(), true)),
+                new AmzaCursor(Collections.singletonList(entries.isEmpty() ? continueCursor : stopCursor),
+                    new AmzaSipCursor(Collections.emptyList(), true)),
                 true,
                 Collections.emptySet());
         }

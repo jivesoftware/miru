@@ -39,6 +39,7 @@ public class MiruSyncSenderInitializer {
             whitelistTenantIds,
             syncConfig.getSyncBatchSize(),
             syncConfig.getForwardSyncDelayMillis(),
+            syncConfig.getReverseSyncMaxAgeMillis(),
             defaultCursor,
             cursorClass);
     }
