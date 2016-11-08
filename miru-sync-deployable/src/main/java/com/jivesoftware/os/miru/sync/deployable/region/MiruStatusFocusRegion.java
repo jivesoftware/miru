@@ -40,6 +40,7 @@ public class MiruStatusFocusRegion implements MiruRegion<MiruTenantId> {
     public String render(MiruTenantId tenantId) {
         Map<String, Object> data = Maps.newHashMap();
 
+        data.put("tenant", tenantId.toString());
         try {
             Map<String, Object> progress = Maps.newHashMap();
             if (syncSender != null) {

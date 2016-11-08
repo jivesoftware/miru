@@ -106,29 +106,26 @@ public class RCVSActivityWALReader implements MiruActivityWALReader<RCVSCursor, 
                 byte sort = v.getColumn().getSort();
                 long collisionId = v.getColumn().getCollisionId();
                 MiruPartitionedActivity partitionedActivity = v.getValue();
-                if (streamMiruActivityWAL.stream(collisionId, partitionedActivity, v.getTimestamp())) {
-                    if (partitionedActivity.type.isActivityType()) {
-                        lastActivity = partitionedActivity;
-                    }
-                    // add 1 to exclude last result
-                    if (collisionId == Long.MAX_VALUE) {
-                        if (sort == Byte.MAX_VALUE) {
-                            nextSort = sort;
-                            nextTimestamp = collisionId;
-                            endOfStream = true;
-                            streaming = false;
-                        } else {
-                            nextSort = (byte) (sort + 1);
-                            nextTimestamp = Long.MIN_VALUE;
-                        }
-                    } else {
+                if (partitionedActivity.type.isActivityType()) {
+                    lastActivity = partitionedActivity;
+                }
+                // add 1 to exclude last result
+                if (collisionId == Long.MAX_VALUE) {
+                    if (sort == Byte.MAX_VALUE) {
                         nextSort = sort;
-                        nextTimestamp = collisionId + 1;
+                        nextTimestamp = collisionId;
+                        endOfStream = true;
+                        streaming = false;
+                    } else {
+                        nextSort = (byte) (sort + 1);
+                        nextTimestamp = Long.MIN_VALUE;
                     }
                 } else {
-                    streaming = false;
                     nextSort = sort;
-                    nextTimestamp = collisionId;
+                    nextTimestamp = collisionId + 1;
+                }
+                if (!streamMiruActivityWAL.stream(collisionId, partitionedActivity, v.getTimestamp())) {
+                    streaming = false;
                     break;
                 }
             }

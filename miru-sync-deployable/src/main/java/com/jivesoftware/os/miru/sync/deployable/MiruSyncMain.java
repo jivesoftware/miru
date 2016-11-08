@@ -48,6 +48,7 @@ import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer.MiruMetricSamplerConfig;
 import com.jivesoftware.os.miru.metric.sampler.RoutingBirdMetricSampleSenderProvider;
 import com.jivesoftware.os.miru.sync.deployable.endpoints.MiruSyncApiEndpoints;
+import com.jivesoftware.os.miru.sync.deployable.endpoints.MiruSyncEndpoints;
 import com.jivesoftware.os.miru.sync.deployable.oauth.MiruSyncOAuthValidatorInitializer;
 import com.jivesoftware.os.miru.sync.deployable.oauth.MiruSyncOAuthValidatorInitializer.MiruSyncOAuthValidatorConfig;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
@@ -312,6 +313,11 @@ public class MiruSyncMain {
             } else {
                 deployable.addNoAuth("/miru/*", "/api/*");
                 deployable.addSessionAuth("/ui/*");
+            }
+
+            deployable.addEndpoints(MiruSyncEndpoints.class);
+            if (syncSender != null) {
+                deployable.addInjectables(MiruSyncSender.class, syncSender);
             }
 
             deployable.addEndpoints(MiruSyncUIEndpoints.class);

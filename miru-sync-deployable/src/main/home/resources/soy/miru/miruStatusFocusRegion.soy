@@ -3,11 +3,12 @@
 /**
  * Status focus page
  *
+ * @param tenant
  * @param? error
  * @param? progress
  */
 {template .statusFocusRegion}
-    <div class="panel panel-default">
+    <div id="status-focus" class="panel panel-default">
         <div class="panel-heading">Progress</div>
         <div class="panel-body">
             {if $error}
@@ -29,6 +30,13 @@
                                 <td>{$progress[$type].partitionId}</td>
                                 <td>{$progress[$type].cursor}</td>
                             </tr>
+                            {if isLast($type)}
+                                <tr>
+                                    <td colspan="3">
+                                        <input class="btn btn-default" type="button" value="focus" onclick="miru.statusFocus.reset('{$tenant}'); return false"/>
+                                    </td>
+                                </tr>
+                            {/if}
                         {ifempty}
                             <tr>
                                 <td colspan="3">No progress found</td>

@@ -7,8 +7,26 @@ miru.resetButton = function ($button, value) {
     $button.removeAttr('disabled');
 };
 
-miru.sync = {
+miru.statusFocus = {
     init: function () {
+    },
+
+    reset: function(tenant) {
+        $.ajax({
+            type: "POST",
+            url: "/miru/sync/reset/" + tenant,
+            data: {},
+            //contentType: "application/json",
+            success: function () {
+                window.location.reload(true);
+            },
+            error: function () {
+                $button.val('Failure');
+                setTimeout(function () {
+                    miru.resetButton($button, value);
+                }, 2000);
+            }
+        });
     }
 };
 
@@ -21,8 +39,8 @@ $(document).ready(function () {
     miru.onWindowFocus = [];
     miru.onWindowBlur = [];
 
-    if ($('#sync').length) {
-        miru.sync.init();
+    if ($('#status-focus').length) {
+        miru.statusFocus.init();
     }
 
     $(function () {
