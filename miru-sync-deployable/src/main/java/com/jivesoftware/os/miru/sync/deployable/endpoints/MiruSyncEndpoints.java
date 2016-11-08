@@ -66,7 +66,7 @@ public class MiruSyncEndpoints {
 
     @POST
     @Path("/reset/{tenantId}")
-    @Produces(MediaType.TEXT_HTML)
+    @Produces(MediaType.APPLICATION_JSON)
     public Response postReset(@PathParam("tenantId") String tenantId) {
         try {
             if (syncSender != null) {
