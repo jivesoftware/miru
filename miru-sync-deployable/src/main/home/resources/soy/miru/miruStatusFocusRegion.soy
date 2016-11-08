@@ -1,14 +1,18 @@
 {namespace soy.miru.page}
 
 /**
- * Status page
+ * Status focus page
  *
+ * @param? error
  * @param? progress
  */
 {template .statusFocusRegion}
     <div class="panel panel-default">
         <div class="panel-heading">Progress</div>
         <div class="panel-body">
+            {if $error}
+                <div class="alert alert-warning" role="alert">{$error}</div>
+            {/if}
             {if $progress}
                 <table class="table table-condensed">
                     <thead>
