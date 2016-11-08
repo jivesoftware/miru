@@ -48,10 +48,10 @@ class MiruBotUniquesService implements MiruBotHealthPercent {
         }
 
         LOG.info("Enabled: {}", miruBotUniquesConfig.getEnabled());
-        LOG.info("Read time range factor: {}ms", miruBotUniquesConfig.getReadTimeRangeFactorMs());
-        LOG.info("Write hesitation factor: {}ms", miruBotUniquesConfig.getWriteHesitationFactorMs());
+        LOG.info("Read time range factor: {}", miruBotUniquesConfig.getReadTimeRangeFactor());
+        LOG.info("Write hesitation factor: {}", miruBotUniquesConfig.getWriteHesitationFactor());
         LOG.info("Value size factor: {}", miruBotUniquesConfig.getValueSizeFactor());
-        //LOG.info("Retry wait: {}", miruBotUniquesConfig.getRetryWaitMs());
+        LOG.info("Failure retry wait: {}ms", miruBotUniquesConfig.getFailureRetryWaitMs());
         LOG.info("Birth rate factor: {}", miruBotUniquesConfig.getBirthRateFactor());
         LOG.info("Read frequency: {}", miruBotUniquesConfig.getReadFrequency());
         LOG.info("Batch write count factor: {}", miruBotUniquesConfig.getBatchWriteCountFactor());
@@ -66,6 +66,9 @@ class MiruBotUniquesService implements MiruBotHealthPercent {
     }
 
     public void stop() throws InterruptedException {
+        miruBotUniquesWorker.setRunning(false);
+        Thread.sleep(miruBotUniquesConfig.getWriteReadPauseMs() +
+                miruBotUniquesConfig.getFailureRetryWaitMs());
         processor.shutdownNow();
     }
 

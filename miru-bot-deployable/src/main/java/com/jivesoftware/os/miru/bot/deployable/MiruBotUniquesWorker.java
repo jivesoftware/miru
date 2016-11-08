@@ -46,10 +46,10 @@ class MiruBotUniquesWorker implements Runnable {
     private final TenantAwareHttpClient<String> miruReaderClient;
     private final TenantAwareHttpClient<String> miruWriterClient;
 
-    private MiruBotBucket miruBotBucket;
     private final NextClientStrategy nextClientStrategy = new RoundRobinStrategy();
     private final Random RAND = new Random();
 
+    private MiruBotBucket miruBotBucket;
     private AtomicBoolean running = new AtomicBoolean(false);
     private ObjectMapper objectMapper = new ObjectMapper();
     private HttpResponseMapper httpResponseMapper = new HttpResponseMapper(objectMapper);
@@ -69,100 +69,117 @@ class MiruBotUniquesWorker implements Runnable {
     }
 
     public void run() {
-        try {
-            long start = System.currentTimeMillis();
-            running.set(true);
+        long start = System.currentTimeMillis();
+        running.set(true);
 
-            MiruTenantId miruTenantId = new MiruTenantId(
-                    ("mirubot-uniques-" + UUID.randomUUID().toString()).getBytes(Charsets.UTF_8));
+        MiruTenantId miruTenantId = new MiruTenantId(
+                ("mirubot-uniques-" + UUID.randomUUID().toString()).getBytes(Charsets.UTF_8));
+        LOG.info("Miru Tenant Id: {}", miruTenantId.toString());
 
-            StatedMiruValueWriter statedMiruValueWriter =
-                    new StatedMiruValueWriter(
-                            miruIngressEndpoint,
-                            miruBotUniquesConfig,
-                            miruWriterClient,
-                            orderIdProvider);
+        miruBotBucket = new MiruBotBucket(
+                miruBotUniquesConfig.getNumberOfFields(),
+                miruBotUniquesConfig.getValueSizeFactor(),
+                miruBotUniquesConfig.getBirthRateFactor());
 
-            miruBotBucket = new MiruBotBucket(
-                    miruBotUniquesConfig.getNumberOfFields(),
-                    miruBotUniquesConfig.getValueSizeFactor(),
-                    miruBotUniquesConfig.getBirthRateFactor());
+        int seedCount = miruBotUniquesConfig.getBotBucketSeed();
 
-            MiruSchema miruSchema = miruBotBucket.genSchema(miruTenantId);
-            miruBotSchemaService.ensureSchema(miruTenantId, miruSchema);
+        while (running.get()) {
+            try {
+                MiruSchema miruSchema = miruBotBucket.genSchema(miruTenantId);
+                miruBotSchemaService.ensureSchema(miruTenantId, miruSchema);
 
-            if (miruBotUniquesConfig.getBotBucketSeed() > 0) {
-                List<Map<String, StatedMiruValue>> miruSeededActivities =
-                        miruBotBucket.seed(miruBotUniquesConfig.getBotBucketSeed());
-                statedMiruValueWriter.write(miruTenantId, miruSeededActivities);
-                LOG.info("Wrote {} seeded activities.", miruSeededActivities.size());
-            }
+                StatedMiruValueWriter statedMiruValueWriter =
+                        new StatedMiruValueWriter(
+                                miruIngressEndpoint,
+                                miruBotUniquesConfig,
+                                miruWriterClient,
+                                orderIdProvider);
 
-            while (running.get()) {
-                int count = statedMiruValueWriter.writeAll(
-                        miruBotBucket,
-                        miruTenantId,
-                        smv -> smv.state != State.READ_FAIL);
-                LOG.info("Wrote {} activities.", count);
+                if (seedCount > 0) {
+                    List<Map<String, StatedMiruValue>> miruSeededActivities = miruBotBucket.seed(seedCount);
+                    statedMiruValueWriter.write(miruTenantId, miruSeededActivities);
 
-                LOG.info("Sleep {}ms between writes and reads", miruBotUniquesConfig.getWriteReadPauseMs());
-                Thread.sleep(miruBotUniquesConfig.getWriteReadPauseMs());
+                    seedCount = 0;
+                    LOG.info("Wrote {} seeded activities.", seedCount);
+                }
 
-                SnowflakeIdPacker snowflakeIdPacker = new SnowflakeIdPacker();
-                long packCurrentTime = snowflakeIdPacker.pack(
-                        new JiveEpochTimestampProvider().getTimestamp(), 0, 0);
-                long randTimeRange = RAND.nextInt(miruBotUniquesConfig.getReadTimeRangeFactorMs());
-                long packFromTime = packCurrentTime - snowflakeIdPacker.pack(
-                        randTimeRange, 0, 0);
-                MiruTimeRange miruTimeRange = new MiruTimeRange(packFromTime, packCurrentTime);
-                LOG.debug("Read from {}ms in the past until now.", randTimeRange);
-                LOG.debug("Read time range: {}", miruTimeRange);
-
-                LOG.debug("Query miru uniques for each field in the schema.");
-                for (MiruFieldDefinition miruFieldDefinition : miruSchema.getFieldDefinitions()) {
-                    List<StatedMiruValue> uniqueValuesForField = miruBotBucket.getActivitiesForField(miruFieldDefinition);
-                    LOG.debug("{} unique mirubot values for {}.",
-                            uniqueValuesForField.size(), miruFieldDefinition.name);
-
-                    UniquesAnswer miruUniquesAnswer = miruReadUniquesAnswer(
+                while (running.get()) {
+                    int count = statedMiruValueWriter.writeAll(
+                            miruBotBucket,
                             miruTenantId,
-                            miruTimeRange,
-                            miruFieldDefinition);
+                            smv -> smv.state != State.READ_FAIL);
+                    LOG.info("Wrote {} activities.", count);
 
-                    uniqueValuesForField.forEach(smv -> smv.state = State.READ_FAIL);
+                    LOG.info("Sleep {}ms between writes and reads", miruBotUniquesConfig.getWriteReadPauseMs());
+                    Thread.sleep(miruBotUniquesConfig.getWriteReadPauseMs());
 
-                    if (miruUniquesAnswer == null) {
-                        LOG.error("No uniques answer (null) found for {}", miruTenantId);
-                    } else if (miruUniquesAnswer.uniques == 0L) {
-                        LOG.error("No uniques answer (uniques=0) found for {}", miruTenantId);
-                    } else {
-                        LOG.debug("{} unique miru values for {}.",
-                                miruUniquesAnswer.uniques, miruFieldDefinition.name);
-                        LOG.info("Number of {} miru uniques {}; mirubot {}",
-                                miruFieldDefinition.name, miruUniquesAnswer.uniques, uniqueValuesForField.size());
+                    SnowflakeIdPacker snowflakeIdPacker = new SnowflakeIdPacker();
+                    long packCurrentTime = snowflakeIdPacker.pack(
+                            new JiveEpochTimestampProvider().getTimestamp(), 0, 0);
+                    long randTimeRange = RAND.nextInt(miruBotUniquesConfig.getReadTimeRangeFactor());
+                    long packFromTime = packCurrentTime - snowflakeIdPacker.pack(
+                            randTimeRange, 0, 0);
+                    MiruTimeRange miruTimeRange = new MiruTimeRange(packFromTime, packCurrentTime);
+                    LOG.debug("Read from {}ms in the past until now.", randTimeRange);
+                    LOG.debug("Read time range: {}", miruTimeRange);
 
-                        if (miruUniquesAnswer.uniques == uniqueValuesForField.size()) {
-                            LOG.debug("Unique activities in miru matches mirubot.");
-                            uniqueValuesForField.forEach(smv -> smv.state = State.READ_SUCCESS);
+                    LOG.debug("Query miru uniques for each field in the schema.");
+                    for (MiruFieldDefinition miruFieldDefinition : miruSchema.getFieldDefinitions()) {
+                        List<StatedMiruValue> uniqueValuesForField = miruBotBucket.getActivitiesForField(miruFieldDefinition);
+                        LOG.debug("{} unique mirubot values for {}.",
+                                uniqueValuesForField.size(), miruFieldDefinition.name);
+
+                        UniquesAnswer miruUniquesAnswer = miruReadUniquesAnswer(
+                                miruTenantId,
+                                miruTimeRange,
+                                miruFieldDefinition);
+
+                        uniqueValuesForField.forEach(smv -> smv.state = State.READ_FAIL);
+
+                        if (miruUniquesAnswer == null) {
+                            LOG.error("No uniques answer (null) found for {}", miruTenantId);
+                        } else if (miruUniquesAnswer.uniques == 0L) {
+                            LOG.error("No uniques answer (uniques=0) found for {}", miruTenantId);
                         } else {
-                            LOG.debug("Unique activities in mirubot {}", uniqueValuesForField);
-                            LOG.warn("Unique activities in miru {} does not match mirubot {}",
-                                    miruUniquesAnswer.uniques,
-                                    uniqueValuesForField.size());
+                            LOG.debug("{} unique miru values for {}.",
+                                    miruUniquesAnswer.uniques, miruFieldDefinition.name);
+                            LOG.info("Number of {} miru uniques {}; mirubot {}",
+                                    miruFieldDefinition.name, miruUniquesAnswer.uniques, uniqueValuesForField.size());
+
+                            if (miruUniquesAnswer.uniques == uniqueValuesForField.size()) {
+                                LOG.debug("Unique activities in miru matches mirubot.");
+                                uniqueValuesForField.forEach(smv -> smv.state = State.READ_SUCCESS);
+                            } else {
+                                LOG.debug("Unique activities in mirubot {}", uniqueValuesForField);
+                                LOG.warn("Unique activities in miru {} does not match mirubot {}",
+                                        miruUniquesAnswer.uniques,
+                                        uniqueValuesForField.size());
+                            }
                         }
                     }
-                }
 
-                long elapsed = System.currentTimeMillis() - start;
-                LOG.debug("Elapsed time {}ms", elapsed);
-                if (elapsed > miruBotUniquesConfig.getRuntimeMs()) {
-                    LOG.info("Completed after {}ms ({})", elapsed, miruBotUniquesConfig.getRuntimeMs());
+                    long elapsed = System.currentTimeMillis() - start;
+                    LOG.debug("Elapsed time {}ms", elapsed);
+                    if (elapsed > miruBotUniquesConfig.getRuntimeMs()) {
+                        LOG.info("Completed after {}ms ({})", elapsed, miruBotUniquesConfig.getRuntimeMs());
+                        running.set(false);
+                    }
+                }
+            } catch (Exception e) {
+                LOG.error("Error occurred running uniques service. {}", e.getLocalizedMessage());
+
+                try {
+                    if (miruBotUniquesConfig.getFailureRetryWaitMs() > 0) {
+                        LOG.error("Sleeping {}ms before retrying.", miruBotUniquesConfig.getFailureRetryWaitMs());
+                        Thread.sleep(miruBotUniquesConfig.getFailureRetryWaitMs());
+                    }
+                } catch (InterruptedException ie) {
+                    LOG.error("Interrupted while sleeping on retry in uniques service. {}", ie.getLocalizedMessage());
+
                     running.set(false);
+                    LOG.error("Stopping uniques service");
                 }
             }
-        } catch (Exception e) {
-            LOG.error("Error occurred running uniques service. {}", e.getLocalizedMessage());
-            running.set(false);
         }
     }
 
@@ -216,6 +233,10 @@ class MiruBotUniquesWorker implements Runnable {
 
         LOG.debug("Read answer uniques {}", uniquesResponse.answer.uniques);
         return uniquesResponse.answer;
+    }
+
+    void setRunning(boolean r) {
+        running.set(r);
     }
 
     MiruBotBucketSnapshot genMiruBotBucketSnapshot() {

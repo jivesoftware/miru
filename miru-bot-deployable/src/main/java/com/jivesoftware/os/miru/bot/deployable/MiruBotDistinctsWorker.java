@@ -47,10 +47,10 @@ class MiruBotDistinctsWorker implements Runnable {
     private final TenantAwareHttpClient<String> miruReaderClient;
     private final TenantAwareHttpClient<String> miruWriterClient;
 
-    private MiruBotBucket miruBotBucket;
     private final NextClientStrategy nextClientStrategy = new RoundRobinStrategy();
     private final Random RAND = new Random();
 
+    private MiruBotBucket miruBotBucket;
     private AtomicBoolean running = new AtomicBoolean(false);
     private ObjectMapper objectMapper = new ObjectMapper();
     private HttpResponseMapper httpResponseMapper = new HttpResponseMapper(objectMapper);
@@ -70,127 +70,143 @@ class MiruBotDistinctsWorker implements Runnable {
     }
 
     public void run() {
-        try {
-            long start = System.currentTimeMillis();
-            running.set(true);
+        long start = System.currentTimeMillis();
+        running.set(true);
 
-            MiruTenantId miruTenantId = new MiruTenantId(
-                    ("mirubot-distincts-" + UUID.randomUUID().toString()).getBytes(Charsets.UTF_8));
-            LOG.info("Miru Tenant Id: {}", miruTenantId.toString());
+        MiruTenantId miruTenantId = new MiruTenantId(
+                ("mirubot-distincts-" + UUID.randomUUID().toString()).getBytes(Charsets.UTF_8));
+        LOG.info("Miru Tenant Id: {}", miruTenantId.toString());
 
-            StatedMiruValueWriter statedMiruValueWriter =
-                    new StatedMiruValueWriter(
-                            miruIngressEndpoint,
-                            miruBotDistinctsConfig,
-                            miruWriterClient,
-                            orderIdProvider);
+        miruBotBucket = new MiruBotBucket(
+                miruBotDistinctsConfig.getNumberOfFields(),
+                miruBotDistinctsConfig.getValueSizeFactor(),
+                miruBotDistinctsConfig.getBirthRateFactor());
 
-            miruBotBucket = new MiruBotBucket(
-                    miruBotDistinctsConfig.getNumberOfFields(),
-                    miruBotDistinctsConfig.getValueSizeFactor(),
-                    miruBotDistinctsConfig.getBirthRateFactor());
+        int seedCount = miruBotDistinctsConfig.getBotBucketSeed();
 
-            MiruSchema miruSchema = miruBotBucket.genSchema(miruTenantId);
-            miruBotSchemaService.ensureSchema(miruTenantId, miruSchema);
+        while (running.get()) {
+            try {
+                MiruSchema miruSchema = miruBotBucket.genSchema(miruTenantId);
+                miruBotSchemaService.ensureSchema(miruTenantId, miruSchema);
 
-            if (miruBotDistinctsConfig.getBotBucketSeed() > 0) {
-                List<Map<String, StatedMiruValue>> miruSeededActivities =
-                        miruBotBucket.seed(miruBotDistinctsConfig.getBotBucketSeed());
-                statedMiruValueWriter.write(miruTenantId, miruSeededActivities);
-                LOG.info("Wrote {} seeded activities.", miruSeededActivities.size());
-            }
+                StatedMiruValueWriter statedMiruValueWriter =
+                        new StatedMiruValueWriter(
+                                miruIngressEndpoint,
+                                miruBotDistinctsConfig,
+                                miruWriterClient,
+                                orderIdProvider);
 
-            while (running.get()) {
-                int count = statedMiruValueWriter.writeAll(
-                        miruBotBucket,
-                        miruTenantId,
-                        smv -> smv.state != State.READ_FAIL);
-                LOG.info("Wrote {} activities.", count);
+                if (seedCount > 0) {
+                    List<Map<String, StatedMiruValue>> miruSeededActivities = miruBotBucket.seed(seedCount);
+                    statedMiruValueWriter.write(miruTenantId, miruSeededActivities);
 
-                LOG.info("Sleep {}ms between writes and reads", miruBotDistinctsConfig.getWriteReadPauseMs());
-                Thread.sleep(miruBotDistinctsConfig.getWriteReadPauseMs());
+                    seedCount = 0;
+                    LOG.info("Wrote {} seeded activities.", miruSeededActivities.size());
+                }
 
-                SnowflakeIdPacker snowflakeIdPacker = new SnowflakeIdPacker();
-                long packCurrentTime = snowflakeIdPacker.pack(
-                        new JiveEpochTimestampProvider().getTimestamp(), 0, 0);
-                long randTimeRange = RAND.nextInt(miruBotDistinctsConfig.getReadTimeRangeFactorMs());
-                long packFromTime = packCurrentTime - snowflakeIdPacker.pack(
-                        randTimeRange, 0, 0);
-                MiruTimeRange miruTimeRange = new MiruTimeRange(packFromTime, packCurrentTime);
-                LOG.debug("Read from {}ms in the past until now.", randTimeRange);
-                LOG.debug("Read time range: {}", miruTimeRange);
-
-                LOG.debug("Query miru distincts for each field in the schema.");
-                for (MiruFieldDefinition miruFieldDefinition : miruSchema.getFieldDefinitions()) {
-                    List<StatedMiruValue> distinctValuesForField =
-                            miruBotBucket.getActivitiesForField(miruFieldDefinition);
-                    LOG.debug("{} distinct mirubot values for {}.",
-                            distinctValuesForField.size(), miruFieldDefinition.name);
-                    LOG.debug("{}", distinctValuesForField);
-
-                    DistinctsAnswer miruDistinctsAnswer = miruReadDistinctsAnswer(
+                while (running.get()) {
+                    int count = statedMiruValueWriter.writeAll(
+                            miruBotBucket,
                             miruTenantId,
-                            miruTimeRange,
-                            miruFieldDefinition);
+                            smv -> smv.state != State.READ_FAIL);
+                    LOG.info("Wrote {} activities.", count);
 
-                    if (miruDistinctsAnswer == null) {
-                        LOG.error("No distincts answer (null) found for {}", miruTenantId);
-                        distinctValuesForField.forEach(smv -> smv.state = State.READ_FAIL);
-                    } else if (miruDistinctsAnswer.collectedDistincts == 0) {
-                        LOG.error("No distincts answer (collectedDistincts=0) found for {}", miruTenantId);
-                        distinctValuesForField.forEach(smv -> smv.state = State.READ_FAIL);
-                    } else {
-                        LOG.debug("{} distinct miru values for {}.",
-                                miruDistinctsAnswer.collectedDistincts, miruFieldDefinition.name);
-                        LOG.debug("{}", miruDistinctsAnswer.results);
+                    LOG.info("Sleep {}ms between writes and reads", miruBotDistinctsConfig.getWriteReadPauseMs());
+                    Thread.sleep(miruBotDistinctsConfig.getWriteReadPauseMs());
 
-                        LOG.info("Number of {} miru distincts {}; mirubot {}",
-                                miruFieldDefinition.name, miruDistinctsAnswer.collectedDistincts, distinctValuesForField.size());
+                    SnowflakeIdPacker snowflakeIdPacker = new SnowflakeIdPacker();
+                    long packCurrentTime = snowflakeIdPacker.pack(
+                            new JiveEpochTimestampProvider().getTimestamp(), 0, 0);
+                    long randTimeRange = RAND.nextInt(miruBotDistinctsConfig.getReadTimeRangeFactor());
+                    long packFromTime = packCurrentTime - snowflakeIdPacker.pack(
+                            randTimeRange, 0, 0);
+                    MiruTimeRange miruTimeRange = new MiruTimeRange(packFromTime, packCurrentTime);
+                    LOG.debug("Read from {}ms in the past until now.", randTimeRange);
+                    LOG.debug("Read time range: {}", miruTimeRange);
 
-                        if (miruDistinctsAnswer.collectedDistincts == miruDistinctsAnswer.results.size()) {
-                            if (distinctValuesForField.size() != miruDistinctsAnswer.results.size()) {
-                                LOG.warn("Number of distinct activities from miru {} not equal to mirubot {}",
-                                        miruDistinctsAnswer.results.size(),
-                                        distinctValuesForField.size());
-                            }
+                    LOG.debug("Query miru distincts for each field in the schema.");
+                    for (MiruFieldDefinition miruFieldDefinition : miruSchema.getFieldDefinitions()) {
+                        List<StatedMiruValue> distinctValuesForField =
+                                miruBotBucket.getActivitiesForField(miruFieldDefinition);
+                        LOG.debug("{} distinct mirubot values for {}.",
+                                distinctValuesForField.size(), miruFieldDefinition.name);
+                        LOG.debug("{}", distinctValuesForField);
 
+                        DistinctsAnswer miruDistinctsAnswer = miruReadDistinctsAnswer(
+                                miruTenantId,
+                                miruTimeRange,
+                                miruFieldDefinition);
+
+                        if (miruDistinctsAnswer == null) {
+                            LOG.error("No distincts answer (null) found for {}", miruTenantId);
                             distinctValuesForField.forEach(smv -> smv.state = State.READ_FAIL);
-                            miruDistinctsAnswer.results.forEach((mv) -> {
-                                Optional<StatedMiruValue> statedMiruValue = distinctValuesForField
-                                        .stream()
-                                        .filter(smv -> mv.equals(smv.value))
-                                        .findFirst();
-                                if (statedMiruValue.isPresent()) {
-                                    LOG.debug("Found matching value from miru to mirubot. {}:{}", miruFieldDefinition.name, mv.last());
-                                    statedMiruValue.get().state = State.READ_SUCCESS;
-                                    distinctValuesForField.remove(statedMiruValue.get());
-                                } else {
-                                    LOG.warn("Did not find matching mirubot value for miru value. {}:{}", miruFieldDefinition.name, mv.last());
-                                    miruBotBucket.addFieldValue(miruFieldDefinition, mv, State.READ_FAIL);
-                                }
-                            });
-
-                            if (distinctValuesForField.size() == 0) {
-                                LOG.debug("Distinct activities in miru matches mirubot.");
-                            } else {
-                                LOG.warn("Distinct activities in miru does not match mirubot. {}", distinctValuesForField);
-                            }
+                        } else if (miruDistinctsAnswer.collectedDistincts == 0) {
+                            LOG.error("No distincts answer (collectedDistincts=0) found for {}", miruTenantId);
+                            distinctValuesForField.forEach(smv -> smv.state = State.READ_FAIL);
                         } else {
-                            throw new RuntimeException("Distincts answer collectedDistincts not equal to results list size.");
+                            LOG.debug("{} distinct miru values for {}.",
+                                    miruDistinctsAnswer.collectedDistincts, miruFieldDefinition.name);
+                            LOG.debug("{}", miruDistinctsAnswer.results);
+
+                            LOG.info("Number of {} miru distincts {}; mirubot {}",
+                                    miruFieldDefinition.name, miruDistinctsAnswer.collectedDistincts, distinctValuesForField.size());
+
+                            if (miruDistinctsAnswer.collectedDistincts == miruDistinctsAnswer.results.size()) {
+                                if (distinctValuesForField.size() != miruDistinctsAnswer.results.size()) {
+                                    LOG.warn("Number of distinct activities from miru {} not equal to mirubot {}",
+                                            miruDistinctsAnswer.results.size(),
+                                            distinctValuesForField.size());
+                                }
+
+                                distinctValuesForField.forEach(smv -> smv.state = State.READ_FAIL);
+                                miruDistinctsAnswer.results.forEach((mv) -> {
+                                    Optional<StatedMiruValue> statedMiruValue = distinctValuesForField
+                                            .stream()
+                                            .filter(smv -> mv.equals(smv.value))
+                                            .findFirst();
+                                    if (statedMiruValue.isPresent()) {
+                                        LOG.debug("Found matching value from miru to mirubot. {}:{}", miruFieldDefinition.name, mv.last());
+                                        statedMiruValue.get().state = State.READ_SUCCESS;
+                                        distinctValuesForField.remove(statedMiruValue.get());
+                                    } else {
+                                        LOG.warn("Did not find matching mirubot value for miru value. {}:{}", miruFieldDefinition.name, mv.last());
+                                        miruBotBucket.addFieldValue(miruFieldDefinition, mv, State.READ_FAIL);
+                                    }
+                                });
+
+                                if (distinctValuesForField.size() == 0) {
+                                    LOG.debug("Distinct activities in miru matches mirubot.");
+                                } else {
+                                    LOG.warn("Distinct activities in miru does not match mirubot. {}", distinctValuesForField);
+                                }
+                            } else {
+                                throw new RuntimeException("Distincts answer collectedDistincts not equal to results list size.");
+                            }
                         }
                     }
-                }
 
-                long elapsed = System.currentTimeMillis() - start;
-                LOG.debug("Elapsed time {}ms", elapsed);
-                if (elapsed > miruBotDistinctsConfig.getRuntimeMs()) {
-                    LOG.info("Completed after {}ms ({})", elapsed, miruBotDistinctsConfig.getRuntimeMs());
+                    long elapsed = System.currentTimeMillis() - start;
+                    LOG.debug("Elapsed time {}ms", elapsed);
+                    if (elapsed > miruBotDistinctsConfig.getRuntimeMs()) {
+                        LOG.info("Completed after {}ms ({})", elapsed, miruBotDistinctsConfig.getRuntimeMs());
+                        running.set(false);
+                    }
+                }
+            } catch (Exception e) {
+                LOG.error("Error occurred running distincts service. {}", e.getLocalizedMessage());
+
+                try {
+                    if (miruBotDistinctsConfig.getFailureRetryWaitMs() > 0) {
+                        LOG.error("Sleeping {}ms before retrying.", miruBotDistinctsConfig.getFailureRetryWaitMs());
+                        Thread.sleep(miruBotDistinctsConfig.getFailureRetryWaitMs());
+                    }
+                } catch (InterruptedException ie) {
+                    LOG.error("Interrupted while sleeping on retry in distincts service. {}", ie.getLocalizedMessage());
+
                     running.set(false);
+                    LOG.error("Stopping distincts service");
                 }
             }
-        } catch (Exception e) {
-            LOG.error("Error occurred running distincts service. {}", e.getLocalizedMessage());
-            running.set(false);
         }
     }
 
@@ -247,6 +263,10 @@ class MiruBotDistinctsWorker implements Runnable {
         return distinctsResponse.answer;
     }
 
+    public void setRunning(boolean r) {
+        this.running.set(r);
+    }
+
     MiruBotBucketSnapshot genMiruBotBucketSnapshot() {
         return miruBotBucket.genSnapshot();
     }
@@ -272,5 +292,4 @@ class MiruBotDistinctsWorker implements Runnable {
         if (fail.isEmpty()) return "";
         return "Distincts read failures: " + fail;
     }
-
 }

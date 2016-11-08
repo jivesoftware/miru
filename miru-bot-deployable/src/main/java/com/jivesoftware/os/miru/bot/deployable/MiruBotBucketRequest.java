@@ -9,9 +9,10 @@ import org.merlin.config.BindInterfaceToConfiguration;
 
 class MiruBotBucketRequest {
 
-    private final int readTimeRangeFactorMs;
-    private final int writeHesitationFactorMs;
+    private final int readTimeRangeFactor;
+    private final int writeHesitationFactor;
     private final int valueSizeFactor;
+    private final long failureRetryWaitMs;
     private final int birthRateFactor;
     private final int readFrequency;
     private final int batchWriteCountFactor;
@@ -23,20 +24,22 @@ class MiruBotBucketRequest {
 
     @JsonCreator
     public MiruBotBucketRequest(
-            @JsonProperty("readTimeRangeFactorMs") int readTimeRangeFactorMs,
-            @JsonProperty("writeHesitationFactorMs") int writeHesitationFactorMs,
+            @JsonProperty("readTimeRangeFactor") int readTimeRangeFactor,
+            @JsonProperty("writeHesitationFactor") int writeHesitationFactor,
             @JsonProperty("valueSizeFactor") int valueSizeFactor,
+            @JsonProperty("failureRetryWaitMs") long failureRetryWaitMs,
             @JsonProperty("birthRateFactor") int birthRateFactor,
             @JsonProperty("readFrequency") int readFrequency,
             @JsonProperty("batchWriteCountFactor") int batchWriteCountFactor,
             @JsonProperty("batchWriteFrequency") int batchWriteFrequency,
             @JsonProperty("numberOfFields") int numberOfFields,
             @JsonProperty("botBucketSeed") int botBucketSeed,
-            @JsonProperty("writeReadPauseMs") int writeReadPauseMs,
-            @JsonProperty("runtimeMs") int runtimeMs) {
-        this.readTimeRangeFactorMs = readTimeRangeFactorMs;
-        this.writeHesitationFactorMs = writeHesitationFactorMs;
+            @JsonProperty("writeReadPauseMs") long writeReadPauseMs,
+            @JsonProperty("runtimeMs") long runtimeMs) {
+        this.readTimeRangeFactor = readTimeRangeFactor;
+        this.writeHesitationFactor = writeHesitationFactor;
         this.valueSizeFactor = valueSizeFactor;
+        this.failureRetryWaitMs = failureRetryWaitMs;
         this.birthRateFactor = birthRateFactor;
         this.readFrequency = readFrequency;
         this.batchWriteCountFactor = batchWriteCountFactor;
@@ -52,12 +55,12 @@ class MiruBotBucketRequest {
                 BindInterfaceToConfiguration.bindDefault(MiruBotDistinctsConfig.class);
 
         if (miruBotBucketRequest != null) {
-            if (miruBotBucketRequest.readTimeRangeFactorMs > 0) {
-                res.setReadTimeRangeFactorMs(miruBotBucketRequest.readTimeRangeFactorMs);
+            if (miruBotBucketRequest.readTimeRangeFactor > 0) {
+                res.setReadTimeRangeFactor(miruBotBucketRequest.readTimeRangeFactor);
             }
 
-            if (miruBotBucketRequest.writeHesitationFactorMs > 0) {
-                res.setWriteHesitationFactorMs(miruBotBucketRequest.writeHesitationFactorMs);
+            if (miruBotBucketRequest.writeHesitationFactor > 0) {
+                res.setWriteHesitationFactor(miruBotBucketRequest.writeHesitationFactor);
             }
 
             if (miruBotBucketRequest.valueSizeFactor > 0) {
@@ -66,6 +69,10 @@ class MiruBotBucketRequest {
 
             if (miruBotBucketRequest.birthRateFactor > 0) {
                 res.setBirthRateFactor(miruBotBucketRequest.birthRateFactor);
+            }
+
+            if (miruBotBucketRequest.failureRetryWaitMs> 0) {
+                res.setFailureRetryWaitMs(miruBotBucketRequest.failureRetryWaitMs);
             }
 
             if (miruBotBucketRequest.readFrequency > 0) {

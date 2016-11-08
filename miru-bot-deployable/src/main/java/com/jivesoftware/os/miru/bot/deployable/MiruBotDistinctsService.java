@@ -48,10 +48,10 @@ class MiruBotDistinctsService implements MiruBotHealthPercent {
         }
 
         LOG.info("Enabled: {}", miruBotDistinctsConfig.getEnabled());
-        LOG.info("Read time range factor: {}ms", miruBotDistinctsConfig.getReadTimeRangeFactorMs());
-        LOG.info("Write hesitation factor: {}ms", miruBotDistinctsConfig.getWriteHesitationFactorMs());
+        LOG.info("Read time range factor: {}", miruBotDistinctsConfig.getReadTimeRangeFactor());
+        LOG.info("Write hesitation factor: {}", miruBotDistinctsConfig.getWriteHesitationFactor());
         LOG.info("Value size factor: {}", miruBotDistinctsConfig.getValueSizeFactor());
-        //LOG.info("Retry wait: {}", miruBotDistinctsConfig.getRetryWaitMs());
+        LOG.info("Failure retry wait: {}", miruBotDistinctsConfig.getFailureRetryWaitMs());
         LOG.info("Birth rate factor: {}", miruBotDistinctsConfig.getBirthRateFactor());
         LOG.info("Read frequency: {}", miruBotDistinctsConfig.getReadFrequency());
         LOG.info("Batch write count factor: {}", miruBotDistinctsConfig.getBatchWriteCountFactor());
@@ -66,6 +66,9 @@ class MiruBotDistinctsService implements MiruBotHealthPercent {
     }
 
     public void stop() throws InterruptedException {
+        miruBotDistinctsWorker.setRunning(false);
+        Thread.sleep(miruBotDistinctsConfig.getWriteReadPauseMs() +
+                miruBotDistinctsConfig.getFailureRetryWaitMs());
         processor.shutdownNow();
     }
 
