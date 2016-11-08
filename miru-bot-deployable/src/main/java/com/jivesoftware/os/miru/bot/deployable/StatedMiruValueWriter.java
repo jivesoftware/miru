@@ -116,8 +116,8 @@ class StatedMiruValueWriter {
             write(miruTenantId, fieldsValues);
             LOG.debug("Wrote {} activity batch.", fieldsValues.size());
 
-            if (config.getWriteHesitationFactorMs() > 0) {
-                Thread.sleep(RAND.nextInt(config.getWriteHesitationFactorMs()));
+            if (config.getWriteHesitationFactor() > 0) {
+                Thread.sleep(RAND.nextInt(config.getWriteHesitationFactor()));
             }
         }
 

@@ -15,19 +15,20 @@ class MiruBotDistinctsInitializer {
         boolean getEnabled();
 
         @IntDefault(10800000)
-        int getReadTimeRangeFactorMs();
-        void setReadTimeRangeFactorMs(int value);
+        int getReadTimeRangeFactor();
+        void setReadTimeRangeFactor(int value);
 
         @IntDefault(10)
-        int getWriteHesitationFactorMs();
-        void setWriteHesitationFactorMs(int value);
+        int getWriteHesitationFactor();
+        void setWriteHesitationFactor(int value);
 
         @IntDefault(10)
         int getValueSizeFactor();
         void setValueSizeFactor(int value);
 
-        //@IntDefault(5_000)
-        //int getRetryWaitMs();
+        @LongDefault(30_000L)
+        long getFailureRetryWaitMs();
+        void setFailureRetryWaitMs(long value);
 
         @IntDefault(500)
         int getBirthRateFactor();
