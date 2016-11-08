@@ -108,12 +108,13 @@ class MiruBotDistinctsWorker implements Runnable {
                 }
 
                 while (running.get()) {
-                    int count = statedMiruValueWriter.writeAll(
+                    AtomicCounter count = statedMiruValueWriter.writeAll(
                             miruBotBucket,
                             miruTenantId,
                             smv -> smv.state != State.READ_FAIL);
-                    totalCount.inc(count);
-                    LOG.info("Wrote {} of {} activities", count, totalCount.getCount());
+                    totalCount.inc(count.getCount());
+                    LOG.info("Wrote {} of {} activities",
+                            count.getCount(), totalCount.getCount());
 
                     LOG.info("Sleep {}ms between writes and reads", miruBotDistinctsConfig.getWriteReadPauseMs());
                     Thread.sleep(miruBotDistinctsConfig.getWriteReadPauseMs());
