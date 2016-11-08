@@ -26,7 +26,7 @@ public class MiruStatusRegion implements MiruPageRegion<MiruTenantId> {
     public String render(MiruTenantId tenantId) {
         Map<String, Object> data = Maps.newHashMap();
         if (tenantId != null) {
-            data.put("tenant", new String(tenantId.getBytes(), Charsets.UTF_8));
+            data.put("tenant", tenantId.toString());
             data.put("statusFocusRegion", statusFocusRegion.render(tenantId));
         }
         return renderer.render(template, data);

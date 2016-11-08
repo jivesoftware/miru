@@ -10,6 +10,7 @@ import com.jivesoftware.os.amza.api.partition.Durability;
 import com.jivesoftware.os.amza.api.partition.PartitionName;
 import com.jivesoftware.os.amza.api.partition.PartitionProperties;
 import com.jivesoftware.os.amza.api.stream.RowType;
+import com.jivesoftware.os.amza.api.wal.WALKey;
 import com.jivesoftware.os.amza.client.aquarium.AmzaClientAquariumProvider;
 import com.jivesoftware.os.aquarium.LivelyEndState;
 import com.jivesoftware.os.aquarium.State;
@@ -168,6 +169,52 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
             Optional.empty());
     }
 
+    public boolean resetProgress(MiruTenantId tenantId) throws Exception {
+        PartitionClient cursorClient = cursorClient(tenantId);
+        byte[] fromKey = cursorKey(tenantId, null);
+        byte[] toKey = WALKey.prefixUpperExclusive(fromKey);
+        List<byte[]> cursorKeys = Lists.newArrayList();
+        cursorClient.scan(Consistency.leader_quorum, false,
+            prefixedKeyRangeStream -> prefixedKeyRangeStream.stream(null, fromKey, null, toKey),
+            (prefix, key, value, timestamp, version) -> {
+                if (value != null) {
+                    cursorKeys.add(key);
+                }
+                return true;
+            },
+            additionalSolverAfterNMillis,
+            abandonLeaderSolutionAfterNMillis,
+            abandonSolutionAfterNMillis,
+            Optional.empty());
+        if (!cursorKeys.isEmpty()) {
+            cursorClient.commit(Consistency.leader_quorum, null,
+                commitKeyValueStream -> {
+                    for (byte[] cursorKey : cursorKeys) {
+                        commitKeyValueStream.commit(cursorKey, null, -1, true);
+                    }
+                    return true;
+                },
+                additionalSolverAfterNMillis,
+                abandonSolutionAfterNMillis,
+                Optional.empty());
+        }
+
+        PartitionClient progressClient = progressClient(tenantId);
+        progressClient.commit(Consistency.leader_quorum, null,
+            commitKeyValueStream -> {
+                commitKeyValueStream.commit(progressKey(tenantId, initial), null, -1, true);
+                commitKeyValueStream.commit(progressKey(tenantId, reverse), null, -1, true);
+                commitKeyValueStream.commit(progressKey(tenantId, forward), null, -1, true);
+                return true;
+            },
+            additionalSolverAfterNMillis,
+            abandonSolutionAfterNMillis,
+            Optional.empty());
+
+        LOG.info("Reset progress for tenant:{} cursors:{}", tenantId, cursorKeys.size());
+        return true;
+    }
+
     private boolean isElected(int syncStripe) throws Exception {
         LivelyEndState livelyEndState = livelyEndState(syncStripe);
         return livelyEndState != null && livelyEndState.isOnline() && livelyEndState.getCurrentState() == State.leader;
@@ -190,12 +237,12 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         return new PartitionName(false, name, name);
     }
 
-    private PartitionClient cursorClient(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
-        return partitionClientProvider.getPartition(cursorName(tenantId, partitionId), 3, CURSOR_PROPERTIES);
+    private PartitionClient cursorClient(MiruTenantId tenantId) throws Exception {
+        return partitionClientProvider.getPartition(cursorName(tenantId), 3, CURSOR_PROPERTIES);
     }
 
-    private PartitionName cursorName(MiruTenantId tenantId, MiruPartitionId partitionId) {
-        byte[] name = ("sync-cursor-" + tenantId + "-" + partitionId.getId()).getBytes(StandardCharsets.UTF_8);
+    private PartitionName cursorName(MiruTenantId tenantId) {
+        byte[] name = ("sync-cursor-" + tenantId).getBytes(StandardCharsets.UTF_8);
         return new PartitionName(false, name, name);
     }
 
@@ -367,7 +414,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
     }
 
     public C getTenantPartitionCursor(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
-        PartitionClient cursorClient = cursorClient(tenantId, partitionId);
+        PartitionClient cursorClient = cursorClient(tenantId);
         byte[] cursorKey = cursorKey(tenantId, partitionId);
         Object[] result = new Object[1];
         cursorClient.get(Consistency.leader_quorum, null,
@@ -386,7 +433,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
     }
 
     private void saveTenantPartitionCursor(MiruTenantId tenantId, MiruPartitionId partitionId, C cursor) throws Exception {
-        PartitionClient cursorClient = cursorClient(tenantId, partitionId);
+        PartitionClient cursorClient = cursorClient(tenantId);
         byte[] cursorKey = cursorKey(tenantId, partitionId);
         byte[] value = mapper.writeValueAsBytes(cursor);
         cursorClient.commit(Consistency.leader_quorum, null,
@@ -410,12 +457,20 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
     }
 
     private byte[] cursorKey(MiruTenantId tenantId, MiruPartitionId partitionId) {
-        byte[] tenantBytes = tenantId.getBytes();
-        byte[] key = new byte[2 + tenantBytes.length + 4];
-        UIO.unsignedShortBytes(tenantBytes.length, key, 0);
-        UIO.writeBytes(tenantBytes, key, 2);
-        UIO.intBytes(partitionId.getId(), key, 2 + tenantBytes.length);
-        return key;
+        if (partitionId == null) {
+            byte[] tenantBytes = tenantId.getBytes();
+            byte[] key = new byte[2 + tenantBytes.length];
+            UIO.unsignedShortBytes(tenantBytes.length, key, 0);
+            UIO.writeBytes(tenantBytes, key, 2);
+            return key;
+        } else {
+            byte[] tenantBytes = tenantId.getBytes();
+            byte[] key = new byte[2 + tenantBytes.length + 4];
+            UIO.unsignedShortBytes(tenantBytes.length, key, 0);
+            UIO.writeBytes(tenantBytes, key, 2);
+            UIO.intBytes(partitionId.getId(), key, 2 + tenantBytes.length);
+            return key;
+        }
     }
 
     public enum ProgressType {
