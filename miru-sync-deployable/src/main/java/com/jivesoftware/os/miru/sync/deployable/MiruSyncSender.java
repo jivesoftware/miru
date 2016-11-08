@@ -251,7 +251,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
             return;
         }
 
-        LOG.info("Syncing stripe:{} reverse:{}", stripe, reverse);
+        LOG.info("Syncing stripe:{}", stripe);
         int tenantCount = 0;
         int activityCount = 0;
         List<MiruTenantId> tenantIds = whitelist != null ? whitelist : fromWALClient.getAllTenantIds();
@@ -280,7 +280,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                 activityCount += synced;
             }
         }
-        LOG.info("Synced index:{} tenants:{} activities:{}", stripe, tenantCount, activityCount);
+        LOG.info("Synced stripe:{} tenants:{} activities:{}", stripe, tenantCount, activityCount);
     }
 
     private int syncTenant(MiruTenantId tenantId, int stripe, ProgressType type) throws Exception {
@@ -325,10 +325,14 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
             if (!isElected(stripe)) {
                 return synced;
             }
+            int activityTypes = 0;
             if (batch.activities != null && !batch.activities.isEmpty()) {
                 List<MiruPartitionedActivity> activities = Lists.newArrayListWithCapacity(batch.activities.size());
                 long pauseOnClockTimestamp = type == forward ? System.currentTimeMillis() + forwardSyncDelayMillis : Long.MAX_VALUE;
                 for (MiruWALEntry activity : batch.activities) {
+                    if (activity.activity.type.isActivityType()) {
+                        activityTypes++;
+                    }
                     if (activity.activity.clockTimestamp > pauseOnClockTimestamp) {
                         LOG.warn("Paused sync for tenant:{} partition:{} for clock:{} age:{}",
                             tenantId, partitionId, activity.activity.clockTimestamp, System.currentTimeMillis() - activity.activity.clockTimestamp);
@@ -342,7 +346,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
             }
             saveTenantPartitionCursor(tenantId, partitionId, batch.cursor);
             cursor = batch.cursor;
-            if (batch.endOfWAL) {
+            if (activityTypes == 0) {
                 break;
             }
         }
