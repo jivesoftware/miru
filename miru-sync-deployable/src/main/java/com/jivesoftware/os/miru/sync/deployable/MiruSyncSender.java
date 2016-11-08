@@ -16,6 +16,7 @@ import com.jivesoftware.os.aquarium.LivelyEndState;
 import com.jivesoftware.os.aquarium.State;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivityFactory;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.sync.MiruSyncClient;
 import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus;
@@ -28,6 +29,7 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
@@ -318,6 +320,10 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
 
         MiruActivityWALStatus status = fromWALClient.getActivityWALStatusForTenant(tenantId, partitionId);
         boolean closed = status.ends.containsAll(status.begins);
+        int numWriters = Math.max(status.begins.size(), 1);
+        int lastIndex = -1;
+
+        MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory(System::currentTimeMillis);
 
         int synced = 0;
         while (true) {
@@ -330,19 +336,29 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                 List<MiruPartitionedActivity> activities = Lists.newArrayListWithCapacity(batch.activities.size());
                 long pauseOnClockTimestamp = type == forward ? System.currentTimeMillis() + forwardSyncDelayMillis : Long.MAX_VALUE;
                 for (MiruWALEntry activity : batch.activities) {
-                    if (activity.activity.type.isActivityType()) {
+                    if (activity.activity.type.isActivityType() && activity.activity.activity.isPresent()) {
                         activityTypes++;
-                    }
-                    if (activity.activity.clockTimestamp > pauseOnClockTimestamp) {
-                        LOG.warn("Paused sync for tenant:{} partition:{} for clock:{} age:{}",
-                            tenantId, partitionId, activity.activity.clockTimestamp, System.currentTimeMillis() - activity.activity.clockTimestamp);
-                        break;
-                    } else {
-                        activities.add(activity.activity);
+                        if (activity.activity.clockTimestamp > pauseOnClockTimestamp) {
+                            LOG.warn("Paused sync for tenant:{} partition:{} for clock:{} age:{}",
+                                tenantId, partitionId, activity.activity.clockTimestamp, System.currentTimeMillis() - activity.activity.clockTimestamp);
+                            break;
+                        } else {
+                            // rough estimate of index depth
+                            lastIndex = Math.max(lastIndex, numWriters * activity.activity.index);
+                            // assign to fake writerId
+                            activities.add(partitionedActivityFactory.activity(-1,
+                                partitionId,
+                                activity.activity.index,
+                                activity.activity.activity.get()));
+                        }
                     }
                 }
-                toSyncClient.writeActivity(tenantId, partitionId, activities);
-                synced += activities.size();
+                if (!activities.isEmpty()) {
+                    // mimic writer by injecting begin activity with fake writerId
+                    activities.add(partitionedActivityFactory.begin(-1, partitionId, tenantId, lastIndex));
+                    toSyncClient.writeActivity(tenantId, partitionId, activities);
+                    synced += activities.size();
+                }
             }
             saveTenantPartitionCursor(tenantId, partitionId, batch.cursor);
             cursor = batch.cursor;
@@ -353,6 +369,9 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
 
         // if it closed while syncing, we'll catch it next time
         if (closed) {
+            // close our fake writerId
+            toSyncClient.writeActivity(tenantId, partitionId, Collections.singletonList(
+                partitionedActivityFactory.end(-1, partitionId, tenantId, lastIndex)));
             advanceTenantProgress(tenantId, partitionId, type);
         }
         return synced;
