@@ -14,9 +14,9 @@ class MiruBotDistinctsInitializer {
         @BooleanDefault(false)
         boolean getEnabled();
 
-        @IntDefault(10800000)
-        int getReadTimeRangeFactor();
-        void setReadTimeRangeFactor(int value);
+        @IntDefault(86400000)
+        int getReadTimeRange();
+        void setReadTimeRange(int value);
 
         @IntDefault(10)
         int getWriteHesitationFactor();
