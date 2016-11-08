@@ -273,6 +273,7 @@ public class MiruSyncMain {
                 throw new IllegalStateException("Invalid activity WAL type: " + walConfig.getActivityWALType());
             }
 
+            amzaClientAquariumProvider.start();
             if (syncSender != null) {
                 syncSender.start();
             }

@@ -263,7 +263,7 @@ class MiruBotDistinctsWorker implements Runnable {
         return distinctsResponse.answer;
     }
 
-    public void setRunning(boolean r) {
+    void setRunning(boolean r) {
         this.running.set(r);
     }
 
@@ -292,4 +292,5 @@ class MiruBotDistinctsWorker implements Runnable {
         if (fail.isEmpty()) return "";
         return "Distincts read failures: " + fail;
     }
+
 }
