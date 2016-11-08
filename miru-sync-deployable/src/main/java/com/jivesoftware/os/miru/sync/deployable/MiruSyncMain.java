@@ -300,7 +300,7 @@ public class MiruSyncMain {
                 tenantRoutingProvider,
                 mapper);
 
-
+            deployable.addNoAuth("/health/check");
             if (instanceConfig.getMainServiceAuthEnabled()) {
                 if (syncConfig.getSyncReceiverEnabled()) {
                     MiruSyncOAuthValidatorConfig oAuthValidatorConfig = deployable.config(MiruSyncOAuthValidatorConfig.class);
