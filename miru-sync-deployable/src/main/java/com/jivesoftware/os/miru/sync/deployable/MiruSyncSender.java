@@ -308,7 +308,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
     }
 
     private void advanceTenantProgress(MiruTenantId tenantId, MiruPartitionId partitionId, ProgressType type) throws Exception {
-        MiruPartitionId advanced = type == reverse ? partitionId.prev() : partitionId.next();
+        MiruPartitionId advanced = (type == reverse) ? partitionId.prev() : partitionId.next();
         PartitionClient partitionClient = progressClient(tenantId);
         byte[] progressKey = progressKey(tenantId, type);
         byte[] value = UIO.intBytes(advanced == null ? -1 : advanced.getId());
@@ -332,10 +332,10 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
 
         if (progressId[initial.index] == Integer.MIN_VALUE) {
             MiruPartitionId largestPartitionId = fromWALClient.getLargestPartitionId(tenantId);
-            MiruPartitionId prevPartitionId = largestPartitionId.prev();
-            progressId[initial.index] = largestPartitionId.getId();
-            progressId[reverse.index] = prevPartitionId.getId();
-            progressId[forward.index] = largestPartitionId.getId();
+            MiruPartitionId prevPartitionId = largestPartitionId == null ? null : largestPartitionId.prev();
+            progressId[initial.index] = largestPartitionId == null ? 0 : largestPartitionId.getId();
+            progressId[reverse.index] = prevPartitionId == null ? -1 : prevPartitionId.getId();
+            progressId[forward.index] = largestPartitionId == null ? 0 : largestPartitionId.getId();
 
             if (!isElected(stripe)) {
                 throw new IllegalStateException("Lost leadership while initializing progress for tenant:" + tenantId + " stripe:" + stripe);
