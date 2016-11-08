@@ -20,6 +20,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.reco.plugins.uniques.UniquesAnswer;
 import com.jivesoftware.os.miru.reco.plugins.uniques.UniquesConstants;
 import com.jivesoftware.os.miru.reco.plugins.uniques.UniquesQuery;
+import com.jivesoftware.os.mlogger.core.AtomicCounter;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.http.client.HttpResponse;
@@ -82,6 +83,7 @@ class MiruBotUniquesWorker implements Runnable {
                 miruBotUniquesConfig.getBirthRateFactor());
 
         int seedCount = miruBotUniquesConfig.getBotBucketSeed();
+        AtomicCounter totalCount = new AtomicCounter();
 
         while (running.get()) {
             try {
@@ -99,6 +101,7 @@ class MiruBotUniquesWorker implements Runnable {
                     List<Map<String, StatedMiruValue>> miruSeededActivities = miruBotBucket.seed(seedCount);
                     statedMiruValueWriter.write(miruTenantId, miruSeededActivities);
 
+                    totalCount.inc(seedCount);
                     seedCount = 0;
                     LOG.info("Wrote {} seeded activities.", seedCount);
                 }
@@ -108,7 +111,8 @@ class MiruBotUniquesWorker implements Runnable {
                             miruBotBucket,
                             miruTenantId,
                             smv -> smv.state != State.READ_FAIL);
-                    LOG.info("Wrote {} activities.", count);
+                    totalCount.inc(count);
+                    LOG.info("Wrote {} of {} activities", count, totalCount.getCount());
 
                     LOG.info("Sleep {}ms between writes and reads", miruBotUniquesConfig.getWriteReadPauseMs());
                     Thread.sleep(miruBotUniquesConfig.getWriteReadPauseMs());
