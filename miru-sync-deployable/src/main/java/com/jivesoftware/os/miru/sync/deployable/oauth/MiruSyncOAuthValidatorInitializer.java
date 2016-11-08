@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.sync.deployable.oauth;
 
-import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.routing.bird.server.oauth.AuthValidationException;
 import com.jivesoftware.os.routing.bird.server.oauth.OAuthSecretManager;
@@ -31,11 +30,12 @@ public class MiruSyncOAuthValidatorInitializer {
         @BooleanDefault(true)
         boolean getOauthValidatorIsDryRun();
 
-        // Load balancer rejiggering is enabled by default ...
         @BooleanDefault(true)
-        boolean getOauthValidatorLoadBalancerRejiggeringIdEnabled();
+        boolean getOauthValidatorLoadBalancerRejiggeringEnabled();
 
-        // Will reject requests more than five seconds old ...
+        @BooleanDefault(true)
+        boolean getOauthValidatorLoadBalancerPortRejiggeringEnabled();
+
         @LongDefault(60 * 1000)
         long getOauthValidatorRequestTimestampAgeLimitMillis();
 
@@ -78,7 +78,8 @@ public class MiruSyncOAuthValidatorInitializer {
             TimeUnit.DAYS.toMillis(1),
             authSecretManager,
             config.getOauthValidatorRequestTimestampAgeLimitMillis(),
-            config.getOauthValidatorLoadBalancerRejiggeringIdEnabled());
+            config.getOauthValidatorLoadBalancerRejiggeringEnabled(),
+            config.getOauthValidatorLoadBalancerPortRejiggeringEnabled());
 
         if (config.getOauthValidatorIsDryRun()) {
             oAuthValidator = new DryRunOAuthValidator(oAuthValidator);
