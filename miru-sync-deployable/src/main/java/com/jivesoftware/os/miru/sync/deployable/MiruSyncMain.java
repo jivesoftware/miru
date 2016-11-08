@@ -316,6 +316,7 @@ public class MiruSyncMain {
 
             deployable.addEndpoints(MiruSyncUIEndpoints.class);
             deployable.addInjectables(MiruSyncUIService.class, miruSyncUIService);
+            deployable.addInjectables(MiruStats.class, miruStats);
 
             if (syncConfig.getSyncReceiverEnabled()) {
                 deployable.addEndpoints(MiruSyncApiEndpoints.class);
