@@ -289,10 +289,13 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
             if (!isElected(stripe)) {
                 break;
             }
-            ensureSchema(tenantId);
             int tenantStripe = Math.abs(tenantId.hashCode() % syncRingStripes);
             if (tenantStripe == stripe) {
                 tenantCount++;
+                ensureSchema(tenantId);
+                if (!isElected(stripe)) {
+                    break;
+                }
 
                 int synced = syncTenant(tenantId, stripe, forward);
                 if (synced > 0) {
