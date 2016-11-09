@@ -44,7 +44,7 @@ public class MiruStatusFocusRegion implements MiruRegion<MiruTenantId> {
         try {
             Map<String, Object> progress = Maps.newHashMap();
             if (syncSender != null) {
-                syncSender.streamProgress(tenantId, (toTenantId, type, partitionId) -> {
+                syncSender.streamProgress(tenantId, null, (toTenantId, type, partitionId) -> {
                     MiruCursor<?, ?> cursor = syncSender.getTenantPartitionCursor(tenantId, toTenantId, MiruPartitionId.of(partitionId));
                     progress.put(type.name(), ImmutableMap.of(
                         "toTenantId", toTenantId.toString(),
