@@ -62,7 +62,7 @@ public class WikiMiruIndexPluginRegion implements MiruPageRegion<WikiMiruIndexPl
                     try {
                         i.start();
                         return null;
-                    } catch (Exception x) {
+                    } catch (Throwable x) {
                         i.message = "failed: "+x.getMessage();
                         LOG.error("Wiki oops", x);
                         return null;

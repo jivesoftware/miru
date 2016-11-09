@@ -13,9 +13,9 @@ public class WikiSchemaConstants {
     }
 
     public static final MiruSchema SCHEMA = new MiruSchema.Builder("wiki", 2).setFieldDefinitions(new MiruFieldDefinition[]{
-        new MiruFieldDefinition(1, "id", MiruFieldDefinition.Type.singleTerm, Prefix.WILDCARD),
-        new MiruFieldDefinition(2, "subject", MiruFieldDefinition.Type.multiTerm, Prefix.WILDCARD),
-        new MiruFieldDefinition(3, "body", MiruFieldDefinition.Type.multiTerm, Prefix.WILDCARD)
+        new MiruFieldDefinition(0, "id", MiruFieldDefinition.Type.singleTerm, Prefix.WILDCARD),
+        new MiruFieldDefinition(1, "subject", MiruFieldDefinition.Type.multiTerm, Prefix.WILDCARD),
+        new MiruFieldDefinition(2, "body", MiruFieldDefinition.Type.multiTerm, Prefix.WILDCARD)
     }).build();
 
 }
