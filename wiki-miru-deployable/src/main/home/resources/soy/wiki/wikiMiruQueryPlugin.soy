@@ -6,6 +6,8 @@
  * @param? tenantId
  * @param? query
  * @param? elapse
+ * @param? getElapse
+ * @param? highlightElapse
  * @param? count
  * @param? results
  * @param? summary
@@ -47,13 +49,21 @@
         <div class="panel-heading">Result</div>
         <div class="panel-body">
             {if $elapse}
-               <span>{$elapse} {$count}</span>
+               <div>Query: {$elapse} {$count}</div>
             {/if}
-            <ul>
-                {foreach $r in $results}
-                    <li><span>{$r.score} {$r.activity}</span></li>
-                {/foreach}
-            </ul>
+            {if $getElapse}
+               <div>Get: {$getElapse}</div>
+            {/if}
+            {if $highlightElapse}
+               <div>Highlight: {$highlightElapse}</div>
+            {/if}
+            {if $results}
+                <ul>
+                    {foreach $r in $results}
+                        <li><span>{$r.subject} - {$r.body}</span></li>
+                    {/foreach}
+                </ul>
+            {/if}
 
             {if $summary}
                 <pre>{$summary}</pre>

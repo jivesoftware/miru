@@ -6,7 +6,7 @@ import org.merlin.config.defaults.LongDefault;
 
 public interface MiruClientConfig extends Config {
 
-    @IntDefault(5_000_000)
+    @IntDefault(1_000_000)
     Integer getTotalCapacity();
 
     @IntDefault(24)
