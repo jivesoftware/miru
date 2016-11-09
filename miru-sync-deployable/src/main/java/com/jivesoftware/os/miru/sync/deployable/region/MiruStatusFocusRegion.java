@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.sync.deployable.region;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -11,6 +12,7 @@ import com.jivesoftware.os.miru.ui.MiruRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -42,12 +44,13 @@ public class MiruStatusFocusRegion implements MiruRegion<MiruTenantId> {
 
         data.put("tenant", tenantId.toString());
         try {
-            Map<String, Object> progress = Maps.newHashMap();
+            List<Map<String, Object>> progress = Lists.newArrayList();
             if (syncSender != null) {
                 syncSender.streamProgress(tenantId, null, (toTenantId, type, partitionId) -> {
                     MiruCursor<?, ?> cursor = syncSender.getTenantPartitionCursor(tenantId, toTenantId, MiruPartitionId.of(partitionId));
-                    progress.put(type.name(), ImmutableMap.of(
+                    progress.add(ImmutableMap.of(
                         "toTenantId", toTenantId.toString(),
+                        "type", type.name(),
                         "partitionId", String.valueOf(partitionId),
                         "cursor", mapper.writeValueAsString(cursor)));
                     return true;
