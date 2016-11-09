@@ -15,6 +15,7 @@ import com.jivesoftware.os.amza.api.wal.WALKey;
 import com.jivesoftware.os.amza.client.aquarium.AmzaClientAquariumProvider;
 import com.jivesoftware.os.aquarium.LivelyEndState;
 import com.jivesoftware.os.aquarium.State;
+import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivityFactory;
@@ -23,7 +24,6 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaProvider;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.sync.MiruSyncClient;
-import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus;
 import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus.WriterCount;
 import com.jivesoftware.os.miru.api.wal.MiruCursor;
@@ -37,6 +37,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
@@ -71,7 +73,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
     private final MiruSyncClient toSyncClient;
     private final PartitionClientProvider partitionClientProvider;
     private final ObjectMapper mapper;
-    private final List<MiruTenantId> whitelist;
+    private final Map<MiruTenantId, MiruTenantId> whitelist;
     private final int batchSize;
     private final long forwardSyncDelayMillis;
     private final long reverseSyncMaxAgeMillis;
@@ -97,7 +99,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         MiruSyncClient toSyncClient,
         PartitionClientProvider partitionClientProvider,
         ObjectMapper mapper,
-        List<MiruTenantId> whitelist,
+        Map<MiruTenantId, MiruTenantId> whitelist,
         int batchSize,
         long forwardSyncDelayMillis,
         long reverseSyncMaxAgeMillis,
@@ -157,34 +159,24 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         }
     }
 
-    public void ensureSchema(MiruTenantId tenantId) throws Exception {
-        if (!registeredSchemas.contains(tenantId)) {
-            MiruSchema schema = schemaProvider.getSchema(tenantId);
-
-            LOG.info("Submitting schema for tenant:{}", tenantId);
-            toSyncClient.registerSchema(tenantId, schema);
-            registeredSchemas.add(tenantId);
-        }
-    }
-
     public interface ProgressStream {
-        boolean stream(ProgressType type, int partitionId) throws Exception;
+        boolean stream(MiruTenantId toTenantId, ProgressType type, int partitionId) throws Exception;
     }
 
     public void streamProgress(MiruTenantId tenantId, ProgressStream stream) throws Exception {
-        PartitionClient progressClient = progressClient(tenantId);
-        progressClient.get(Consistency.leader_quorum, null,
-            unprefixedWALKeyStream -> {
-                unprefixedWALKeyStream.stream(progressKey(tenantId, initial));
-                unprefixedWALKeyStream.stream(progressKey(tenantId, reverse));
-                unprefixedWALKeyStream.stream(progressKey(tenantId, forward));
-                return true;
+        PartitionClient progressClient = progressClient();
+        byte[] fromKey = progressKey(tenantId, null, null);
+        byte[] toKey = WALKey.prefixUpperExclusive(fromKey);
+        progressClient.scan(Consistency.leader_quorum, true,
+            prefixedKeyRangeStream -> {
+                return prefixedKeyRangeStream.stream(null, fromKey, null, toKey);
             },
             (prefix, key, value, timestamp, version) -> {
                 if (value != null) {
+                    MiruTenantId toTenantId = progressToTenantId(key);
                     ProgressType type = progressType(key);
                     if (type != null) {
-                        return stream.stream(type, UIO.bytesInt(value));
+                        return stream.stream(toTenantId, type, UIO.bytesInt(value));
                     } else {
                         LOG.warn("Encountered unknown progress type for key:{}", Arrays.toString(key));
                     }
@@ -200,12 +192,12 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
     public boolean resetProgress(MiruTenantId tenantId) throws Exception {
         registeredSchemas.remove(tenantId);
 
-        PartitionClient cursorClient = cursorClient(tenantId);
-        byte[] fromKey = cursorKey(tenantId, null);
-        byte[] toKey = WALKey.prefixUpperExclusive(fromKey);
+        PartitionClient cursorClient = cursorClient();
+        byte[] fromCursorKey = cursorKey(tenantId, null, null);
+        byte[] toCursorKey = WALKey.prefixUpperExclusive(fromCursorKey);
         List<byte[]> cursorKeys = Lists.newArrayList();
         cursorClient.scan(Consistency.leader_quorum, false,
-            prefixedKeyRangeStream -> prefixedKeyRangeStream.stream(null, fromKey, null, toKey),
+            prefixedKeyRangeStream -> prefixedKeyRangeStream.stream(null, fromCursorKey, null, toCursorKey),
             (prefix, key, value, timestamp, version) -> {
                 if (value != null) {
                     cursorKeys.add(key);
@@ -229,19 +221,36 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                 Optional.empty());
         }
 
-        PartitionClient progressClient = progressClient(tenantId);
-        progressClient.commit(Consistency.leader_quorum, null,
-            commitKeyValueStream -> {
-                commitKeyValueStream.commit(progressKey(tenantId, initial), null, -1, true);
-                commitKeyValueStream.commit(progressKey(tenantId, reverse), null, -1, true);
-                commitKeyValueStream.commit(progressKey(tenantId, forward), null, -1, true);
+        PartitionClient progressClient = progressClient();
+        byte[] fromProgressKey = progressKey(tenantId, null, null);
+        byte[] toProgressKey = WALKey.prefixUpperExclusive(fromProgressKey);
+        List<byte[]> progressKeys = Lists.newArrayList();
+        progressClient.scan(Consistency.leader_quorum, false,
+            prefixedKeyRangeStream -> prefixedKeyRangeStream.stream(null, fromProgressKey, null, toProgressKey),
+            (prefix, key, value, timestamp, version) -> {
+                if (value != null) {
+                    progressKeys.add(key);
+                }
                 return true;
             },
             additionalSolverAfterNMillis,
+            abandonLeaderSolutionAfterNMillis,
             abandonSolutionAfterNMillis,
             Optional.empty());
+        if (!progressKeys.isEmpty()) {
+            progressClient.commit(Consistency.leader_quorum, null,
+                commitKeyValueStream -> {
+                    for (byte[] progressKey : progressKeys) {
+                        commitKeyValueStream.commit(progressKey, null, -1, true);
+                    }
+                    return true;
+                },
+                additionalSolverAfterNMillis,
+                abandonSolutionAfterNMillis,
+                Optional.empty());
+        }
 
-        LOG.info("Reset progress for tenant:{} cursors:{}", tenantId, cursorKeys.size());
+        LOG.info("Reset progress for tenant:{} cursors:{} progress:{}", tenantId, cursorKeys.size(), progressKeys.size());
         return true;
     }
 
@@ -258,21 +267,21 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         return syncStripe % syncThreadCount;
     }
 
-    private PartitionClient progressClient(MiruTenantId tenantId) throws Exception {
-        return partitionClientProvider.getPartition(progressName(tenantId), 3, PROGRESS_PROPERTIES);
+    private PartitionClient progressClient() throws Exception {
+        return partitionClientProvider.getPartition(progressName(), 3, PROGRESS_PROPERTIES);
     }
 
-    private PartitionName progressName(MiruTenantId tenantId) {
-        byte[] name = ("sync-progress-" + tenantId).getBytes(StandardCharsets.UTF_8);
+    private PartitionName progressName() {
+        byte[] name = ("sync-progress").getBytes(StandardCharsets.UTF_8);
         return new PartitionName(false, name, name);
     }
 
-    private PartitionClient cursorClient(MiruTenantId tenantId) throws Exception {
-        return partitionClientProvider.getPartition(cursorName(tenantId), 3, CURSOR_PROPERTIES);
+    private PartitionClient cursorClient() throws Exception {
+        return partitionClientProvider.getPartition(cursorName(), 3, CURSOR_PROPERTIES);
     }
 
-    private PartitionName cursorName(MiruTenantId tenantId) {
-        byte[] name = ("sync-cursor-" + tenantId).getBytes(StandardCharsets.UTF_8);
+    private PartitionName cursorName() {
+        byte[] name = ("sync-cursor").getBytes(StandardCharsets.UTF_8);
         return new PartitionName(false, name, name);
     }
 
@@ -284,22 +293,33 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         LOG.info("Syncing stripe:{}", stripe);
         int tenantCount = 0;
         int activityCount = 0;
-        List<MiruTenantId> tenantIds = whitelist != null ? whitelist : fromWALClient.getAllTenantIds();
-        for (MiruTenantId tenantId : tenantIds) {
+        Map<MiruTenantId, MiruTenantId> tenantIds;
+        if (whitelist != null) {
+            tenantIds = whitelist;
+        } else {
+            tenantIds = Maps.newHashMap();
+            List<MiruTenantId> allTenantIds = fromWALClient.getAllTenantIds();
+            for (MiruTenantId tenantId : allTenantIds) {
+                tenantIds.put(tenantId, tenantId);
+            }
+        }
+        for (Entry<MiruTenantId, MiruTenantId> entry : tenantIds.entrySet()) {
             if (!isElected(stripe)) {
                 break;
             }
-            int tenantStripe = Math.abs(tenantId.hashCode() % syncRingStripes);
+            MiruTenantId fromTenantId = entry.getKey();
+            MiruTenantId toTenantId = entry.getKey();
+            int tenantStripe = Math.abs(fromTenantId.hashCode() % syncRingStripes);
             if (tenantStripe == stripe) {
                 tenantCount++;
-                ensureSchema(tenantId);
+                ensureSchema(fromTenantId, toTenantId);
                 if (!isElected(stripe)) {
                     break;
                 }
 
-                int synced = syncTenant(tenantId, stripe, forward);
+                int synced = syncTenant(fromTenantId, toTenantId, stripe, forward);
                 if (synced > 0) {
-                    LOG.info("Synced stripe:{} tenantId:{} activities:{} type:{}", stripe, tenantId, synced, forward);
+                    LOG.info("Synced stripe:{} tenantId:{} activities:{} type:{}", stripe, fromTenantId, synced, forward);
                 }
                 activityCount += synced;
 
@@ -307,9 +327,9 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                     continue;
                 }
 
-                synced = syncTenant(tenantId, stripe, reverse);
+                synced = syncTenant(fromTenantId, toTenantId, stripe, reverse);
                 if (synced > 0) {
-                    LOG.info("Synced stripe:{} tenantId:{} activities:{} type:{}", stripe, tenantId, synced, reverse);
+                    LOG.info("Synced stripe:{} tenantId:{} activities:{} type:{}", stripe, fromTenantId, synced, reverse);
                 }
                 activityCount += synced;
             }
@@ -317,8 +337,18 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         LOG.info("Synced stripe:{} tenants:{} activities:{}", stripe, tenantCount, activityCount);
     }
 
-    private int syncTenant(MiruTenantId tenantId, int stripe, ProgressType type) throws Exception {
-        TenantProgress progress = getTenantProgress(tenantId, stripe);
+    private void ensureSchema(MiruTenantId fromTenantId, MiruTenantId toTenantId) throws Exception {
+        if (!registeredSchemas.contains(fromTenantId)) {
+            MiruSchema schema = schemaProvider.getSchema(fromTenantId);
+
+            LOG.info("Submitting schema fromTenantId:{} toTenantId:{}", fromTenantId, toTenantId);
+            toSyncClient.registerSchema(toTenantId, schema);
+            registeredSchemas.add(fromTenantId);
+        }
+    }
+
+    private int syncTenant(MiruTenantId fromTenantId, MiruTenantId toTenantId, int stripe, ProgressType type) throws Exception {
+        TenantProgress progress = getTenantProgress(fromTenantId, toTenantId, stripe);
         if (!isElected(stripe)) {
             return 0;
         }
@@ -328,7 +358,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         }
 
         MiruPartitionId partitionId = type == reverse ? progress.reversePartitionId : progress.forwardPartitionId;
-        MiruActivityWALStatus status = fromWALClient.getActivityWALStatusForTenant(tenantId, partitionId);
+        MiruActivityWALStatus status = fromWALClient.getActivityWALStatusForTenant(fromTenantId, partitionId);
         if (!isElected(stripe)) {
             return 0;
         }
@@ -339,41 +369,48 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
             }
 
             if (reverseSyncMaxAgeMillis != -1 && (maxClockTimestamp == -1 || maxClockTimestamp < System.currentTimeMillis() - reverseSyncMaxAgeMillis)) {
-                if (maxAgeSet.add(new TenantAndPartition(tenantId, partitionId))) {
-                    LOG.info("Reverse sync reached max age for tenant:{} partition:{} clock:{}", tenantId, partitionId, maxClockTimestamp);
+                if (maxAgeSet.add(new TenantAndPartition(fromTenantId, partitionId))) {
+                    LOG.info("Reverse sync reached max age for tenant:{} partition:{} clock:{}", fromTenantId, partitionId, maxClockTimestamp);
                 }
                 return 0;
             } else if (status.ends.containsAll(status.begins)) {
-                return syncTenantPartition(tenantId, stripe, partitionId, type, status);
+                return syncTenantPartition(fromTenantId, toTenantId, stripe, partitionId, type, status);
             } else {
-                LOG.error("Reverse sync encountered open tenant:{} partition:{}", tenantId, partitionId);
+                LOG.error("Reverse sync encountered open tenant:{} partition:{}", fromTenantId, partitionId);
                 return 0;
             }
         } else {
-            return syncTenantPartition(tenantId, stripe, partitionId, type, status);
+            return syncTenantPartition(fromTenantId, toTenantId, stripe, partitionId, type, status);
         }
     }
 
-    private int syncTenantPartition(MiruTenantId tenantId,
+    private int syncTenantPartition(MiruTenantId fromTenantId,
+        MiruTenantId toTenantId,
         int stripe,
         MiruPartitionId partitionId,
         ProgressType type,
         MiruActivityWALStatus status) throws Exception {
 
-        C cursor = getTenantPartitionCursor(tenantId, partitionId);
+        C cursor = getTenantPartitionCursor(fromTenantId, toTenantId, partitionId);
         if (!isElected(stripe)) {
             return 0;
         }
 
-        boolean closed = status.ends.containsAll(status.begins);
-        int numWriters = Math.max(status.begins.size(), 1);
+        // ignore our own writerId when determining if a partition is closed
+        List<Integer> begins = Lists.newArrayList(status.begins);
+        List<Integer> ends = Lists.newArrayList(status.ends);
+        begins.remove(new Integer(-1));
+        ends.remove(new Integer(-1));
+
+        boolean closed = ends.containsAll(begins);
+        int numWriters = Math.max(begins.size(), 1);
         int lastIndex = -1;
 
         MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory(System::currentTimeMillis);
 
         int synced = 0;
         while (true) {
-            StreamBatch<MiruWALEntry, C> batch = fromWALClient.getActivity(tenantId, partitionId, cursor, batchSize);
+            StreamBatch<MiruWALEntry, C> batch = fromWALClient.getActivity(fromTenantId, partitionId, cursor, batchSize);
             if (!isElected(stripe)) {
                 return synced;
             }
@@ -381,32 +418,35 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
             if (batch.activities != null && !batch.activities.isEmpty()) {
                 List<MiruPartitionedActivity> activities = Lists.newArrayListWithCapacity(batch.activities.size());
                 long pauseOnClockTimestamp = type == forward ? System.currentTimeMillis() + forwardSyncDelayMillis : Long.MAX_VALUE;
-                for (MiruWALEntry activity : batch.activities) {
-                    if (activity.activity.type.isActivityType() && activity.activity.activity.isPresent()) {
+                for (MiruWALEntry entry : batch.activities) {
+                    if (entry.activity.type.isActivityType() && entry.activity.activity.isPresent()) {
                         activityTypes++;
-                        if (activity.activity.clockTimestamp > pauseOnClockTimestamp) {
-                            LOG.warn("Paused sync for tenant:{} partition:{} for clock:{} age:{}",
-                                tenantId, partitionId, activity.activity.clockTimestamp, System.currentTimeMillis() - activity.activity.clockTimestamp);
+                        if (entry.activity.clockTimestamp > pauseOnClockTimestamp) {
+                            LOG.warn("Paused sync fromTenantId:{} toTenantId:{} partition:{} for clock:{} age:{}",
+                                fromTenantId, toTenantId, partitionId, entry.activity.clockTimestamp,
+                                System.currentTimeMillis() - entry.activity.clockTimestamp);
                             break;
                         } else {
                             // rough estimate of index depth
-                            lastIndex = Math.max(lastIndex, numWriters * activity.activity.index);
-                            // assign to fake writerId
+                            lastIndex = Math.max(lastIndex, numWriters * entry.activity.index);
+                            // copy to new tenantId if necessary, and assign to fake writerId
+                            MiruActivity fromActivity = entry.activity.activity.get();
+                            MiruActivity toActivity = fromTenantId.equals(toTenantId) ? fromActivity : fromActivity.copyToTenantId(toTenantId);
                             activities.add(partitionedActivityFactory.activity(-1,
                                 partitionId,
-                                activity.activity.index,
-                                activity.activity.activity.get()));
+                                lastIndex,
+                                toActivity));
                         }
                     }
                 }
                 if (!activities.isEmpty()) {
                     // mimic writer by injecting begin activity with fake writerId
-                    activities.add(partitionedActivityFactory.begin(-1, partitionId, tenantId, lastIndex));
-                    toSyncClient.writeActivity(tenantId, partitionId, activities);
+                    activities.add(partitionedActivityFactory.begin(-1, partitionId, toTenantId, lastIndex));
+                    toSyncClient.writeActivity(toTenantId, partitionId, activities);
                     synced += activities.size();
                 }
             }
-            saveTenantPartitionCursor(tenantId, partitionId, batch.cursor);
+            saveTenantPartitionCursor(fromTenantId, toTenantId, partitionId, batch.cursor);
             cursor = batch.cursor;
             if (activityTypes == 0) {
                 break;
@@ -416,63 +456,63 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         // if it closed while syncing, we'll catch it next time
         if (closed) {
             // close our fake writerId
-            toSyncClient.writeActivity(tenantId, partitionId, Collections.singletonList(
-                partitionedActivityFactory.end(-1, partitionId, tenantId, lastIndex)));
-            advanceTenantProgress(tenantId, partitionId, type);
+            toSyncClient.writeActivity(fromTenantId, partitionId, Collections.singletonList(
+                partitionedActivityFactory.end(-1, partitionId, fromTenantId, lastIndex)));
+            advanceTenantProgress(fromTenantId, toTenantId, partitionId, type);
         }
         return synced;
     }
 
-    private void advanceTenantProgress(MiruTenantId tenantId, MiruPartitionId partitionId, ProgressType type) throws Exception {
+    private void advanceTenantProgress(MiruTenantId fromTenantId, MiruTenantId toTenantId, MiruPartitionId partitionId, ProgressType type) throws Exception {
         MiruPartitionId advanced = (type == reverse) ? partitionId.prev() : partitionId.next();
-        PartitionClient partitionClient = progressClient(tenantId);
-        byte[] progressKey = progressKey(tenantId, type);
+        PartitionClient partitionClient = progressClient();
+        byte[] progressKey = progressKey(fromTenantId, toTenantId, type);
         byte[] value = UIO.intBytes(advanced == null ? -1 : advanced.getId());
         partitionClient.commit(Consistency.leader_quorum, null,
             commitKeyValueStream -> commitKeyValueStream.commit(progressKey, value, -1, false),
             additionalSolverAfterNMillis,
             abandonSolutionAfterNMillis,
             Optional.empty());
-        LOG.info("Tenant progress for tenant:{} type:{} advanced from:{} to:{}", tenantId, type, partitionId, advanced);
+        LOG.info("Tenant progress for tenant:{} type:{} advanced from:{} to:{}", fromTenantId, type, partitionId, advanced);
     }
 
     /**
      * @return null if finished, empty if not started, else the last synced partition
      */
-    private TenantProgress getTenantProgress(MiruTenantId tenantId, int stripe) throws Exception {
+    private TenantProgress getTenantProgress(MiruTenantId fromTenantId, MiruTenantId toTenantId, int stripe) throws Exception {
         int[] progressId = { Integer.MIN_VALUE, Integer.MIN_VALUE, Integer.MIN_VALUE };
-        streamProgress(tenantId, (type, partitionId) -> {
+        streamProgress(fromTenantId, (toTenantId1, type, partitionId) -> {
             progressId[type.index] = partitionId;
             return true;
         });
 
         if (progressId[initial.index] == Integer.MIN_VALUE) {
-            MiruPartitionId largestPartitionId = fromWALClient.getLargestPartitionId(tenantId);
+            MiruPartitionId largestPartitionId = fromWALClient.getLargestPartitionId(fromTenantId);
             MiruPartitionId prevPartitionId = largestPartitionId == null ? null : largestPartitionId.prev();
             progressId[initial.index] = largestPartitionId == null ? 0 : largestPartitionId.getId();
             progressId[reverse.index] = prevPartitionId == null ? -1 : prevPartitionId.getId();
             progressId[forward.index] = largestPartitionId == null ? 0 : largestPartitionId.getId();
 
             if (!isElected(stripe)) {
-                throw new IllegalStateException("Lost leadership while initializing progress for tenant:" + tenantId + " stripe:" + stripe);
+                throw new IllegalStateException("Lost leadership while initializing progress for tenant:" + fromTenantId + " stripe:" + stripe);
             }
 
-            PartitionClient progressClient = progressClient(tenantId);
+            PartitionClient progressClient = progressClient();
             progressClient.commit(Consistency.leader_quorum, null,
                 commitKeyValueStream -> {
-                    commitKeyValueStream.commit(progressKey(tenantId, initial), UIO.intBytes(progressId[initial.index]), -1, false);
-                    commitKeyValueStream.commit(progressKey(tenantId, reverse), UIO.intBytes(progressId[reverse.index]), -1, false);
-                    commitKeyValueStream.commit(progressKey(tenantId, forward), UIO.intBytes(progressId[forward.index]), -1, false);
+                    commitKeyValueStream.commit(progressKey(fromTenantId, toTenantId, initial), UIO.intBytes(progressId[initial.index]), -1, false);
+                    commitKeyValueStream.commit(progressKey(fromTenantId, toTenantId, reverse), UIO.intBytes(progressId[reverse.index]), -1, false);
+                    commitKeyValueStream.commit(progressKey(fromTenantId, toTenantId, forward), UIO.intBytes(progressId[forward.index]), -1, false);
                     return true;
                 },
                 additionalSolverAfterNMillis,
                 abandonSolutionAfterNMillis,
                 Optional.empty());
             LOG.info("Initialized progress for tenant:{} initial:{} reverse:{} forward:{}",
-                tenantId, progressId[initial.index], progressId[reverse.index], progressId[forward.index]);
+                fromTenantId, progressId[initial.index], progressId[reverse.index], progressId[forward.index]);
         } else {
             LOG.info("Found progress for tenant:{} initial:{} reverse:{} forward:{}",
-                tenantId, progressId[initial.index], progressId[reverse.index], progressId[forward.index]);
+                fromTenantId, progressId[initial.index], progressId[reverse.index], progressId[forward.index]);
         }
 
         MiruPartitionId initialPartitionId = progressId[initial.index] == -1 ? null : MiruPartitionId.of(progressId[initial.index]);
@@ -482,9 +522,9 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         return new TenantProgress(initialPartitionId, reversePartitionId, forwardPartitionId);
     }
 
-    public C getTenantPartitionCursor(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
-        PartitionClient cursorClient = cursorClient(tenantId);
-        byte[] cursorKey = cursorKey(tenantId, partitionId);
+    public C getTenantPartitionCursor(MiruTenantId fromTenantId, MiruTenantId toTenantId, MiruPartitionId partitionId) throws Exception {
+        PartitionClient cursorClient = cursorClient();
+        byte[] cursorKey = cursorKey(fromTenantId, toTenantId, partitionId);
         Object[] result = new Object[1];
         cursorClient.get(Consistency.leader_quorum, null,
             unprefixedWALKeyStream -> unprefixedWALKeyStream.stream(cursorKey),
@@ -501,9 +541,9 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         return result[0] != null ? (C) result[0] : defaultCursor;
     }
 
-    private void saveTenantPartitionCursor(MiruTenantId tenantId, MiruPartitionId partitionId, C cursor) throws Exception {
-        PartitionClient cursorClient = cursorClient(tenantId);
-        byte[] cursorKey = cursorKey(tenantId, partitionId);
+    private void saveTenantPartitionCursor(MiruTenantId fromTenantId, MiruTenantId toTenantId, MiruPartitionId partitionId, C cursor) throws Exception {
+        PartitionClient cursorClient = cursorClient();
+        byte[] cursorKey = cursorKey(fromTenantId, toTenantId, partitionId);
         byte[] value = mapper.writeValueAsBytes(cursor);
         cursorClient.commit(Consistency.leader_quorum, null,
             commitKeyValueStream -> commitKeyValueStream.commit(cursorKey, value, -1, false),
@@ -512,32 +552,72 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
             Optional.empty());
     }
 
+    private MiruTenantId progressToTenantId(byte[] key) {
+        int fromTenantLength = UIO.bytesUnsignedShort(key, 0);
+        int toTenantLength = UIO.bytesUnsignedShort(key, 2 + fromTenantLength);
+        byte[] toTenantBytes = new byte[toTenantLength];
+        UIO.readBytes(key, 2 + fromTenantLength + 2, toTenantBytes);
+        return new MiruTenantId(toTenantBytes);
+    }
+
     private ProgressType progressType(byte[] key) {
         return ProgressType.fromIndex(key[key.length - 1]);
     }
 
-    private byte[] progressKey(MiruTenantId tenantId, ProgressType type) {
-        byte[] tenantBytes = tenantId.getBytes();
-        byte[] key = new byte[2 + tenantBytes.length + 1];
-        UIO.unsignedShortBytes(tenantBytes.length, key, 0);
-        UIO.writeBytes(tenantBytes, key, 2);
-        key[2 + tenantBytes.length] = type.index;
-        return key;
-    }
-
-    private byte[] cursorKey(MiruTenantId tenantId, MiruPartitionId partitionId) {
-        if (partitionId == null) {
-            byte[] tenantBytes = tenantId.getBytes();
+    private byte[] progressKey(MiruTenantId fromTenantId, MiruTenantId toTenantId, ProgressType type) {
+        if (toTenantId == null) {
+            byte[] tenantBytes = fromTenantId.getBytes();
             byte[] key = new byte[2 + tenantBytes.length];
             UIO.unsignedShortBytes(tenantBytes.length, key, 0);
             UIO.writeBytes(tenantBytes, key, 2);
             return key;
+        } else if (type == null) {
+            byte[] fromTenantBytes = fromTenantId.getBytes();
+            byte[] toTenantBytes = toTenantId.getBytes();
+            byte[] key = new byte[2 + fromTenantBytes.length + 2 + toTenantBytes.length];
+            UIO.unsignedShortBytes(fromTenantBytes.length, key, 0);
+            UIO.writeBytes(fromTenantBytes, key, 2);
+            UIO.unsignedShortBytes(toTenantBytes.length, key, 2 + fromTenantBytes.length);
+            UIO.writeBytes(toTenantBytes, key, 2 + fromTenantBytes.length + 2);
+            return key;
         } else {
-            byte[] tenantBytes = tenantId.getBytes();
-            byte[] key = new byte[2 + tenantBytes.length + 4];
+            byte[] fromTenantBytes = fromTenantId.getBytes();
+            byte[] toTenantBytes = toTenantId.getBytes();
+            byte[] key = new byte[2 + fromTenantBytes.length + 2 + toTenantBytes.length + 1];
+            UIO.unsignedShortBytes(fromTenantBytes.length, key, 0);
+            UIO.writeBytes(fromTenantBytes, key, 2);
+            UIO.unsignedShortBytes(toTenantBytes.length, key, 2 + fromTenantBytes.length);
+            UIO.writeBytes(toTenantBytes, key, 2 + fromTenantBytes.length + 2);
+            key[2 + fromTenantBytes.length + 2 + toTenantBytes.length] = type.index;
+            return key;
+        }
+    }
+
+    private byte[] cursorKey(MiruTenantId fromTenantId, MiruTenantId toTenantId, MiruPartitionId partitionId) {
+        if (toTenantId == null) {
+            byte[] tenantBytes = fromTenantId.getBytes();
+            byte[] key = new byte[2 + tenantBytes.length];
             UIO.unsignedShortBytes(tenantBytes.length, key, 0);
             UIO.writeBytes(tenantBytes, key, 2);
-            UIO.intBytes(partitionId.getId(), key, 2 + tenantBytes.length);
+            return key;
+        } else if (partitionId == null) {
+            byte[] fromTenantBytes = fromTenantId.getBytes();
+            byte[] toTenantBytes = toTenantId.getBytes();
+            byte[] key = new byte[2 + fromTenantBytes.length + 2 + toTenantBytes.length];
+            UIO.unsignedShortBytes(fromTenantBytes.length, key, 0);
+            UIO.writeBytes(fromTenantBytes, key, 2);
+            UIO.unsignedShortBytes(toTenantBytes.length, key, 2 + fromTenantBytes.length);
+            UIO.writeBytes(toTenantBytes, key, 2 + fromTenantBytes.length + 2);
+            return key;
+        } else {
+            byte[] fromTenantBytes = fromTenantId.getBytes();
+            byte[] toTenantBytes = toTenantId.getBytes();
+            byte[] key = new byte[2 + fromTenantBytes.length + 2 + toTenantBytes.length + 4];
+            UIO.unsignedShortBytes(fromTenantBytes.length, key, 0);
+            UIO.writeBytes(fromTenantBytes, key, 2);
+            UIO.unsignedShortBytes(toTenantBytes.length, key, 2 + fromTenantBytes.length);
+            UIO.writeBytes(toTenantBytes, key, 2 + fromTenantBytes.length + 2);
+            UIO.intBytes(partitionId.getId(), key, 2 + fromTenantBytes.length + 2 + toTenantBytes.length);
             return key;
         }
     }

@@ -186,12 +186,16 @@ public class MiruSyncSenderTest {
         long failAfter) throws Exception {
         int[] progressIds = { Integer.MIN_VALUE, Integer.MIN_VALUE, Integer.MIN_VALUE };
         while (true) {
-            syncService.streamProgress(tenantId, (type, partitionId) -> {
+            syncService.streamProgress(tenantId, (toTenantId, type, partitionId) -> {
+                Assert.assertEquals(toTenantId, tenantId);
                 progressIds[type.index] = partitionId;
                 return true;
             });
-            if (progressIds[awaitType.index] == awaitValue || System.currentTimeMillis() > failAfter) {
+            if (progressIds[awaitType.index] == awaitValue) {
                 break;
+            }
+            if (System.currentTimeMillis() > failAfter) {
+                Assert.fail("Timed out awaiting progress");
             }
             Thread.sleep(100L);
         }

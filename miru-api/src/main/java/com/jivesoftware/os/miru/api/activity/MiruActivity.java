@@ -59,6 +59,10 @@ public class MiruActivity {
         this.propsValues = propsValues;
     }
 
+    public MiruActivity copyToTenantId(MiruTenantId toTenantId) {
+        return new MiruActivity(toTenantId, time, version, realtimeDelivery, authz, fieldsValues, propsValues);
+    }
+
     @Override
     public int hashCode() {
         throw new UnsupportedOperationException("NOPE");
