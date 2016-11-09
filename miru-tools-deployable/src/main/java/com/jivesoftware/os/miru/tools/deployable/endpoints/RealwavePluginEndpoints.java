@@ -45,7 +45,6 @@ public class RealwavePluginEndpoints {
     }
 
     @GET
-    @Path("/")
     @Produces(MediaType.TEXT_HTML)
     public Response getRealwave(@QueryParam("tenantId") @DefaultValue("") String tenantId,
         @QueryParam("lookbackSeconds") @DefaultValue("300") int lookbackSeconds,
