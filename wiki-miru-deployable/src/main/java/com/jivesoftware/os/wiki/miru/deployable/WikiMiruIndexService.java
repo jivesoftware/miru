@@ -1,5 +1,7 @@
 package com.jivesoftware.os.wiki.miru.deployable;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
@@ -143,15 +145,15 @@ public class WikiMiruIndexService {
         }
     }
 
-    public class Wiki {
-        public String id = "";
-        public String subject = "";
-        public String body = "";
+    public static class Wiki {
+        public final String id;
+        public final String subject;
+        public final String body;
 
-        public Wiki() {
-        }
-
-        public Wiki(String id, String subject, String body) {
+        @JsonCreator
+        public Wiki(@JsonProperty("id") String id,
+            @JsonProperty("subject") String subject,
+            @JsonProperty("body") String body) {
             this.id = id;
             this.subject = subject;
             this.body = body;
