@@ -29,7 +29,6 @@ public class AggregateCountsPluginEndpoints {
     }
 
     @GET
-    @Path("/")
     @Produces(MediaType.TEXT_HTML)
     public Response getAggregates(@QueryParam("tenantId") @DefaultValue("") String tenantId,
         @QueryParam("forUser") @DefaultValue("") String forUser,

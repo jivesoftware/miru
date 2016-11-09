@@ -29,9 +29,7 @@ public class AnalyticsPluginEndpoints {
         this.analyticsPluginRegion = analyticsPluginRegion;
     }
 
-
     @GET
-    @Path("/")
     @Produces(MediaType.TEXT_HTML)
     public Response getAnalytics(@QueryParam("tenantId") @DefaultValue("") String tenantId,
         @QueryParam("fromTimeAgo") @DefaultValue("720") long fromTimeAgo,

@@ -33,7 +33,6 @@ public class TrendingPluginEndpoints {
     }
 
     @GET
-    @Path("/")
     @Produces(MediaType.TEXT_HTML)
     public Response getTrending(@QueryParam("tenantId") @DefaultValue("") String tenantId,
         @QueryParam("fromHoursAgo") @DefaultValue("72") int fromHoursAgo,

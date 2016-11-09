@@ -29,9 +29,7 @@ public class DistinctsPluginEndpoints {
         this.distinctsPluginRegion = distinctsPluginRegion;
     }
 
-
     @GET
-    @Path("/")
     @Produces(MediaType.TEXT_HTML)
     public Response getDistincts(@QueryParam("tenantId") @DefaultValue("") String tenantId,
         @QueryParam("fromHoursAgo") @DefaultValue("720") int fromHoursAgo,
