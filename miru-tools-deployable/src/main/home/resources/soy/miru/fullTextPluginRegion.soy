@@ -12,6 +12,7 @@
  * @param? queryString
  * @param? strategy
  * @param? filters
+ * @param? gatherTermsForFields
  * @param? maxCount
  * @param? count
  * @param? results
@@ -107,6 +108,16 @@
                                 name="filters" id="filtersPicker" data-original-title="" title="">
                             &nbsp;
                             <em>(e.g. activityType:0|1|2, authors:3 3765)</em>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Gather Fields</td>
+                        <td>
+                            <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                class="j-gatherTermsForFields-autocomplete j-autocomplete-input j-ui-elem" placeholder="Gather Fields" value="{$gatherTermsForFields?:''}"
+                                name="gatherTermsForFields" id="gatherTermsForFieldsPicker" data-original-title="" title="">
+                            &nbsp;
+                            <em>(e.g. authors,subject,body)</em>
                         </td>
                     </tr>
                     <tr>

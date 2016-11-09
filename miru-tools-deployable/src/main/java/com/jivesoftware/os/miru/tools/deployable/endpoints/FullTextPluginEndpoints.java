@@ -40,6 +40,7 @@ public class FullTextPluginEndpoints {
         @QueryParam("queryString") @DefaultValue("") String queryString,
         @QueryParam("strategy") @DefaultValue("TIME") String strategy,
         @QueryParam("filters") @DefaultValue("") String filters,
+        @QueryParam("gatherTermsForFields") @DefaultValue("") String gatherTermsForFields,
         @QueryParam("maxCount") @DefaultValue("1000") int maxCount,
         @QueryParam("logLevel") @DefaultValue("NONE") String logLevel) {
 
@@ -53,6 +54,7 @@ public class FullTextPluginEndpoints {
                 queryString,
                 FullTextQuery.Strategy.valueOf(strategy),
                 filters,
+                gatherTermsForFields,
                 maxCount,
                 logLevel)));
         return Response.ok(rendered).build();

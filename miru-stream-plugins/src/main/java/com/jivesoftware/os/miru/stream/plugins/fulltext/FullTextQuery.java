@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
+import java.util.Arrays;
 
 /**
  *
@@ -21,6 +22,7 @@ public class FullTextQuery {
     public final MiruFilter constraintsFilter;
     public final Strategy strategy;
     public final int desiredNumberOfResults;
+    public final String[] gatherTermsForFields;
 
     public FullTextQuery(
         @JsonProperty("timeRange") MiruTimeRange timeRange,
@@ -29,7 +31,8 @@ public class FullTextQuery {
         @JsonProperty("query") String query,
         @JsonProperty("constraintsFilter") MiruFilter constraintsFilter,
         @JsonProperty("strategy") Strategy strategy,
-        @JsonProperty("desiredNumberOfResults") int desiredNumberOfResults) {
+        @JsonProperty("desiredNumberOfResults") int desiredNumberOfResults,
+        @JsonProperty("gatherTermsForFields") String[] gatherTermsForFields) {
         this.timeRange = Preconditions.checkNotNull(timeRange);
         this.defaultField = Preconditions.checkNotNull(defaultField);
         this.locale = locale;
@@ -38,6 +41,7 @@ public class FullTextQuery {
         this.strategy = Preconditions.checkNotNull(strategy);
         Preconditions.checkArgument(desiredNumberOfResults > 0, "Number of results must be at least 1");
         this.desiredNumberOfResults = desiredNumberOfResults;
+        this.gatherTermsForFields = gatherTermsForFields;
     }
 
     @Override
@@ -50,6 +54,7 @@ public class FullTextQuery {
             ", constraintsFilter=" + constraintsFilter +
             ", strategy=" + strategy +
             ", desiredNumberOfResults=" + desiredNumberOfResults +
+            ", gatherTermsForFields=" + Arrays.toString(gatherTermsForFields) +
             '}';
     }
 }

@@ -3,8 +3,11 @@ package com.jivesoftware.os.miru.stream.plugins.fulltext;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
-import com.jivesoftware.os.miru.api.activity.MiruActivity;
+import com.jivesoftware.os.miru.api.query.filter.MiruValue;
+import java.util.Arrays;
 import java.util.List;
+
+import static com.jivesoftware.os.miru.api.wal.MiruWALClient.RoutingGroupType.activity;
 
 /** @author jonathan */
 public class FullTextAnswer {
@@ -57,14 +60,17 @@ public class FullTextAnswer {
 
     public static class ActivityScore implements Comparable<ActivityScore> {
 
-        public final MiruActivity activity;
+        public final MiruValue[][] values;
+        public final long timestamp;
         public final float score;
 
         @JsonCreator
         public ActivityScore(
-            @JsonProperty("activity") MiruActivity activity,
+            @JsonProperty("values") MiruValue[][] values,
+            @JsonProperty("timestamp") long timestamp,
             @JsonProperty("score") float score) {
-            this.activity = activity;
+            this.values = values;
+            this.timestamp = timestamp;
             this.score = score;
         }
 
@@ -76,13 +82,14 @@ public class FullTextAnswer {
                 return c;
             }
             // higher timestamps first
-            return -Long.compare(activity.time, o.activity.time);
+            return -Long.compare(timestamp, o.timestamp);
         }
 
         @Override
         public String toString() {
             return "ActivityScore{" +
-                "activity=" + activity +
+                "values=" + Arrays.deepToString(values) +
+                ", timestamp=" + timestamp +
                 ", score=" + score +
                 '}';
         }
@@ -98,16 +105,20 @@ public class FullTextAnswer {
 
             ActivityScore that = (ActivityScore) o;
 
+            if (timestamp != that.timestamp) {
+                return false;
+            }
             if (Float.compare(that.score, score) != 0) {
                 return false;
             }
-            return !(activity != null ? !activity.equals(that.activity) : that.activity != null);
+            return Arrays.deepEquals(values, that.values);
 
         }
 
         @Override
         public int hashCode() {
-            int result = activity != null ? activity.hashCode() : 0;
+            int result = Arrays.deepHashCode(values);
+            result = 31 * result + (int) (timestamp ^ (timestamp >>> 32));
             result = 31 * result + (score != +0.0f ? Float.floatToIntBits(score) : 0);
             return result;
         }
