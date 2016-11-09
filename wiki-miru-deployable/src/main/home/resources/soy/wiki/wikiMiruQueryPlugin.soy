@@ -3,9 +3,12 @@
 /**
  * WikMiru Query plugin page
  * 
- * @param? subject
- * @param? body
+ * @param? tenantId
+ * @param? query
+ * @param? elapse
+ * @param? count
  * @param? results
+ * @param? summary
  */
 {template .wikiMiruQueryPlugin}
     <div class="panel panel-default">
@@ -19,8 +22,8 @@
                         </td>
                         <td>
                             <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
-                                class="form-control" placeholder="Subject" value="{$subject?:''}"
-                                name="subject" id="subjectPicker" data-original-title="" title="">
+                                class="form-control" placeholder="tenantId" value="{$tenantId?:''}"
+                                name="tenantId" id="tenantIdPicker" data-original-title="" title="">
                         </td>
                     </tr>
                     <tr>
@@ -29,8 +32,8 @@
                         </td>
                         <td>
                             <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
-                                class="form-control" placeholder="Body" value="{$body?:''}"
-                                name="body" id="bodyPicker" data-original-title="" title="">
+                                class="form-control" placeholder="query" value="{$query?:''}"
+                                name="query" id="queryPicker" data-original-title="" title="">
                         </td>
                     </tr>
                     <tr>
@@ -43,11 +46,18 @@
         </div>
         <div class="panel-heading">Result</div>
         <div class="panel-body">
+            {if $elapse}
+               <span>{$elapse} {$count}</span>
+            {/if}
             <ul>
                 {foreach $r in $results}
-                    <li>{$r}</li>
+                    <li><span>{$r.score} {$r.activity}</span></li>
                 {/foreach}
             </ul>
+
+            {if $summary}
+                <pre>{$summary}</pre>
+            {/if}
         </div>
     </div>
 {/template}

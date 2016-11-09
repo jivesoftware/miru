@@ -8,7 +8,7 @@ import com.google.common.collect.Sets;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.logappender.MiruLogEvent;
+import com.jivesoftware.os.miru.plugin.query.TermTokenizer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.http.client.HttpResponse;
@@ -16,11 +16,16 @@ import com.jivesoftware.os.routing.bird.http.client.RoundRobinStrategy;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.shared.ClientCall;
 import com.jivesoftware.os.wiki.miru.deployable.storage.WikiMiruPayloadStorage;
+import com.jivesoftware.os.wiki.miru.deployable.storage.WikiMiruPayloadStorage.KeyAndPayload;
 import info.bliki.wiki.dump.Siteinfo;
 import info.bliki.wiki.dump.WikiArticle;
 import info.bliki.wiki.dump.WikiXMLParser;
+import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.en.EnglishAnalyzer;
+import org.apache.lucene.analysis.util.CharArraySet;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -88,25 +93,30 @@ public class WikiMiruIndexService {
                 wikiSchemaService.ensureSchema(miruTenantId, WikiSchemaConstants.SCHEMA);
 
                 List<MiruActivity> activities = Lists.newArrayList();
-                List<WikiMiruPayloadStorage.TimeAndPayload<MiruLogEvent>> pages = Lists.newArrayList();
+                List<KeyAndPayload<Wiki>> pages = Lists.newArrayList();
+
 
                 WikiXMLParser wxp = new WikiXMLParser(pathToWikiDumpFile, (WikiArticle page, Siteinfo stnf) -> {
                     if (page.isMain()) {
-                        LOG.info(page.getTitle());
+                        LOG.info(indexed + "):" + page.getTitle());
                         MiruActivity ma = new MiruActivity.Builder(miruTenantId, idProvider.nextId(), 0, false, new String[0])
                             .putFieldValue("id", page.getId())
                             .putAllFieldValues("subject", tokenize(page.getTitle()))
                             .putAllFieldValues("body", tokenize(page.getText()))
                             .build();
                         activities.add(ma);
+
+                        Wiki wiki = new Wiki(page.getId(), page.getTitle(), page.getText());
+                        pages.add(new KeyAndPayload<>(page.getId(), wiki));
+
                         if (activities.size() > 1000) {
                             try {
                                 LOG.info("Indexing batch of {}", activities.size());
                                 record(miruTenantId, pages);
                                 ingress(activities);
                                 indexed.addAndGet(activities.size());
-                                activities.clear();
                                 pages.clear();
+                                activities.clear();
                             } catch (Exception x) {
                                 LOG.error("ouch", x);
                             }
@@ -120,8 +130,10 @@ public class WikiMiruIndexService {
                 wxp.parse();
                 LOG.info("Completed indexing run for {} using '{}'", tenantId, pathToWikiDumpFile);
                 if (!activities.isEmpty()) {
+                    record(miruTenantId, pages);
                     ingress(activities);
                     indexed.addAndGet(activities.size());
+                    pages.clear();
                     activities.clear();
                 }
             } finally {
@@ -131,13 +143,39 @@ public class WikiMiruIndexService {
         }
     }
 
+    public class Wiki {
+        public String id = "";
+        public String subject = "";
+        public String body = "";
+
+        public Wiki() {
+        }
+
+        public Wiki(String id, String subject, String body) {
+            this.id = id;
+            this.subject = subject;
+            this.body = body;
+        }
+    }
+
+    private final List<String> stopwords = Arrays.asList("the",
+        "of", "to", "and", "a", "in", "is", "it", "its", "you", "that", "he", "was", "for", "on", "are", "with", "as", "I", "his", "they", "be", "at",
+        "one", "than", "have", "this", "from", "or", "had", "by", "hot", "word", "but", "what", "some", "we", "can", "out", "other", "were", "all",
+        "there", "when", "up", "use", "your", "how", "said", "an", "each", "she", "which", "do", "their", "time", "if", "will", "way", "about", "any",
+        "many", "then", "them", "would", "like", "so", "these", "her", "long", "make", "thing", "see", "him", "two", "has", "our", "not", "doesn't",
+        "per");
+
     private Set<String> tokenize(String raw) {
         if (raw == null) {
             return Collections.emptySet();
         }
-        String[] split = raw.toLowerCase().split("[^a-zA-Z0-9']+");
+
+        Analyzer analyzer = new EnglishAnalyzer(new CharArraySet(stopwords, true));
+        TermTokenizer termTokenizer = new TermTokenizer();
+        List<String> tokens = termTokenizer.tokenize(analyzer, raw.toLowerCase());
+
         HashSet<String> set = Sets.newHashSet();
-        for (String s : split) {
+        for (String s : tokens) {
             if (!Strings.isNullOrEmpty(s)) {
                 set.add(s);
             }
@@ -145,8 +183,8 @@ public class WikiMiruIndexService {
         return set;
     }
 
-    private void record(MiruTenantId miruTenantId, List<WikiMiruPayloadStorage.TimeAndPayload<MiruLogEvent>> timedLogEvents) throws Exception {
-        //payloads.multiPut(miruTenantId, timedLogEvents);
+    private void record(MiruTenantId miruTenantId, List<KeyAndPayload<Wiki>> timedMiruActivities) throws Exception {
+        payloads.multiPut(miruTenantId, timedMiruActivities);
     }
 
     private void ingress(List<MiruActivity> activities) throws JsonProcessingException {

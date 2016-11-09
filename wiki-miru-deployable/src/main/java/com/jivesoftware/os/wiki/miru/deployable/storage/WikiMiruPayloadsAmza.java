@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.amza.api.BAInterner;
 import com.jivesoftware.os.amza.api.PartitionClient;
-import com.jivesoftware.os.amza.api.filer.UIO;
 import com.jivesoftware.os.amza.api.partition.Consistency;
 import com.jivesoftware.os.amza.api.partition.Durability;
 import com.jivesoftware.os.amza.api.partition.PartitionName;
@@ -21,6 +20,7 @@ import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.http.client.HttpClient;
 import com.jivesoftware.os.routing.bird.http.client.HttpClientException;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
+
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Collections;
@@ -38,8 +38,7 @@ public class WikiMiruPayloadsAmza implements WikiMiruPayloadStorage {
     private final ObjectMapper mapper;
     private final AmzaClientProvider<HttpClient, HttpClientException> clientProvider;
 
-    private final PartitionName payload;
-
+    private final String nameSpace;
     private final PartitionProperties partitionProperties;
     private final long additionalSolverAfterNMillis = 1_000; //TODO expose to conf?
     private final long abandonLeaderSolutionAfterNMillis = 5_000; //TODO expose to conf?
@@ -50,10 +49,9 @@ public class WikiMiruPayloadsAmza implements WikiMiruPayloadStorage {
         TenantAwareHttpClient<String> httpClient,
         long awaitLeaderElectionForNMillis) {
 
+        this.nameSpace = nameSpace;
         this.mapper = mapper;
         BAInterner interner = new BAInterner();
-
-        payload = new PartitionName(false, "p".getBytes(StandardCharsets.UTF_8), (nameSpace + "-wiki").getBytes(StandardCharsets.UTF_8));
 
         this.clientProvider = new AmzaClientProvider<>(
             new HttpPartitionClientFactory(interner),
@@ -81,15 +79,20 @@ public class WikiMiruPayloadsAmza implements WikiMiruPayloadStorage {
             -1);
     }
 
-    @Override
-    public <T> void multiPut(MiruTenantId tenantId, List<TimeAndPayload<T>> timesAndPayloads) throws Exception {
+    private PartitionName getPartitionName(MiruTenantId tenantId) {
+        byte[] pname = (nameSpace + "-" + tenantId.toString() + "-wiki").getBytes(StandardCharsets.UTF_8);
+        return new PartitionName(false, pname,pname );
+    }
 
-        PartitionClient partition = clientProvider.getPartition(payload, 3, partitionProperties);
+    @Override
+    public <T> void multiPut(MiruTenantId tenantId, List<KeyAndPayload<T>> timesAndPayloads) throws Exception {
+
+        PartitionClient partition = clientProvider.getPartition(getPartitionName(tenantId), 3, partitionProperties);
         long now = System.currentTimeMillis();
         partition.commit(Consistency.leader_quorum,
             tenantId.getBytes(), (stream) -> {
-                for (TimeAndPayload<T> timeAndPayload : timesAndPayloads) {
-                    stream.commit(UIO.longBytes(timeAndPayload.activityTime), mapper.writeValueAsBytes(timeAndPayload.payload), now, false);
+                for (KeyAndPayload<T> keyAndPayload : timesAndPayloads) {
+                    stream.commit(keyAndPayload.key.getBytes(StandardCharsets.UTF_8), mapper.writeValueAsBytes(keyAndPayload.payload), now, false);
                 }
                 return true;
             },
@@ -98,13 +101,13 @@ public class WikiMiruPayloadsAmza implements WikiMiruPayloadStorage {
     }
 
     @Override
-    public <T> T get(MiruTenantId tenantId, long activityTime, Class<T> payloadClass) throws Exception {
+    public <T> T get(MiruTenantId tenantId, String k, Class<T> payloadClass) throws Exception {
 
-        PartitionClient partition = clientProvider.getPartition(payload, 3, partitionProperties);
+        PartitionClient partition = clientProvider.getPartition(getPartitionName(tenantId), 3, partitionProperties);
         T[] t = (T[]) new Object[1];
         partition.get(Consistency.leader_quorum,
             tenantId.getBytes(),
-            keyStream -> keyStream.stream(UIO.longBytes(activityTime)),
+            keyStream -> keyStream.stream(k.getBytes(StandardCharsets.UTF_8)),
             (prefix, key, value, timestamp, version) -> {
                 if (value != null) {
                     t[0] = mapper.readValue(value, payloadClass);
@@ -115,16 +118,16 @@ public class WikiMiruPayloadsAmza implements WikiMiruPayloadStorage {
     }
 
     @Override
-    public <T> List<T> multiGet(MiruTenantId tenantId, Collection<Long> activityTimes, final Class<T> payloadClass) throws Exception {
-        if (activityTimes.isEmpty()) {
+    public <T> List<T> multiGet(MiruTenantId tenantId, Collection<String> keys, final Class<T> payloadClass) throws Exception {
+        if (keys.isEmpty()) {
             return Collections.emptyList();
         }
         List<T> payloads = Lists.newArrayList();
-        PartitionClient partition = clientProvider.getPartition(payload, 3, partitionProperties);
+        PartitionClient partition = clientProvider.getPartition(getPartitionName(tenantId), 3, partitionProperties);
         partition.get(Consistency.leader_quorum,
             tenantId.getBytes(), (UnprefixedWALKeyStream keyStream) -> {
-                for (Long activityTime : activityTimes) {
-                    if (!keyStream.stream(UIO.longBytes(activityTime))) {
+                for (String key : keys) {
+                    if (!keyStream.stream(key.getBytes(StandardCharsets.UTF_8))) {
                         return false;
                     }
                 }
