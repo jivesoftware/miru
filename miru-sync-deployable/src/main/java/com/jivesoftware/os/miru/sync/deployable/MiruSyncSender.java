@@ -308,7 +308,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                 break;
             }
             MiruTenantId fromTenantId = entry.getKey();
-            MiruTenantId toTenantId = entry.getKey();
+            MiruTenantId toTenantId = entry.getValue();
             int tenantStripe = Math.abs(fromTenantId.hashCode() % syncRingStripes);
             if (tenantStripe == stripe) {
                 tenantCount++;
