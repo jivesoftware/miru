@@ -25,23 +25,23 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {foreach $type in keys($progress)}
+                        {foreach $p in $progress}
                             <tr>
-                                <td>{$progress[$type].toTenantId}</td>
-                                <td>{$type}</td>
-                                <td>{$progress[$type].partitionId}</td>
-                                <td>{$progress[$type].cursor}</td>
+                                <td>{$p.toTenantId}</td>
+                                <td>{$p.type}</td>
+                                <td>{$p.partitionId}</td>
+                                <td>{$p.cursor}</td>
                             </tr>
-                            {if isLast($type)}
+                            {if isLast($p)}
                                 <tr>
-                                    <td colspan="3">
+                                    <td colspan="4">
                                         <input class="btn btn-default" type="button" value="Reset" onclick="if (confirm('Are you sure you want to reset progress?')) miru.statusFocus.reset(this, '{$tenant}'); return false"/>
                                     </td>
                                 </tr>
                             {/if}
                         {ifempty}
                             <tr>
-                                <td colspan="3">No progress found</td>
+                                <td colspan="4">No progress found</td>
                             </tr>
                         {/foreach}
                     </tbody>
