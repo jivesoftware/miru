@@ -186,7 +186,7 @@ public class MiruSyncSenderTest {
         long failAfter) throws Exception {
         int[] progressIds = { Integer.MIN_VALUE, Integer.MIN_VALUE, Integer.MIN_VALUE };
         while (true) {
-            syncService.streamProgress(tenantId, (toTenantId, type, partitionId) -> {
+            syncService.streamProgress(tenantId, tenantId, (toTenantId, type, partitionId) -> {
                 Assert.assertEquals(toTenantId, tenantId);
                 progressIds[type.index] = partitionId;
                 return true;
