@@ -20,6 +20,7 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivityFactory;
 import com.jivesoftware.os.miru.api.activity.TenantAndPartition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaProvider;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.sync.MiruSyncClient;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
@@ -65,7 +66,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
     private final ExecutorService executorService;
     private final int syncThreadCount;
     private final long syncIntervalMillis;
-    private final MiruClusterClient clusterClient;
+    private final MiruSchemaProvider schemaProvider;
     private final MiruWALClient<C, S> fromWALClient;
     private final MiruSyncClient toSyncClient;
     private final PartitionClientProvider partitionClientProvider;
@@ -91,7 +92,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         ExecutorService executorService,
         int syncThreadCount,
         long syncIntervalMillis,
-        MiruClusterClient clusterClient,
+        MiruSchemaProvider schemaProvider,
         MiruWALClient<C, S> fromWALClient,
         MiruSyncClient toSyncClient,
         PartitionClientProvider partitionClientProvider,
@@ -107,7 +108,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         this.executorService = executorService;
         this.syncThreadCount = syncThreadCount;
         this.syncIntervalMillis = syncIntervalMillis;
-        this.clusterClient = clusterClient;
+        this.schemaProvider = schemaProvider;
         this.fromWALClient = fromWALClient;
         this.toSyncClient = toSyncClient;
         this.partitionClientProvider = partitionClientProvider;
@@ -158,7 +159,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
 
     public void ensureSchema(MiruTenantId tenantId) throws Exception {
         if (!registeredSchemas.contains(tenantId)) {
-            MiruSchema schema = clusterClient.getSchema(tenantId);
+            MiruSchema schema = schemaProvider.getSchema(tenantId);
 
             LOG.info("Submitting schema for tenant:{}", tenantId);
             toSyncClient.registerSchema(tenantId, schema);

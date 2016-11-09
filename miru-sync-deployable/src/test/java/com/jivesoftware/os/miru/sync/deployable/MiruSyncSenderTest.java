@@ -23,6 +23,9 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivityFactory;
 import com.jivesoftware.os.miru.api.activity.TimeAndVersion;
+import com.jivesoftware.os.miru.api.activity.schema.DefaultMiruSchemaDefinition;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaProvider;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.sync.MiruSyncClient;
@@ -114,7 +117,16 @@ public class MiruSyncSenderTest {
             public void writeReadTracking(MiruTenantId tenantId, MiruStreamId streamId, List<MiruPartitionedActivity> partitionedActivities) throws Exception {
                 // nope
             }
+
+            @Override
+            public void registerSchema(MiruTenantId tenantId, MiruSchema schema) throws Exception {
+            }
         };
+
+        MiruSchema schema = new MiruSchema.Builder("test", 1)
+            .setFieldDefinitions(DefaultMiruSchemaDefinition.FIELDS)
+            .build();
+        MiruSchemaProvider schemaProvider = miruTenantId -> schema;
 
         TestWALClient testWALClient = new TestWALClient(tenantId, largestPartitionId);
         MiruSyncSender<AmzaCursor, AmzaSipCursor> syncService = new MiruSyncSender<>(amzaClientAquariumProvider,
@@ -122,7 +134,8 @@ public class MiruSyncSenderTest {
             Executors.newSingleThreadExecutor(),
             1,
             100L,
-            clusterClient, testWALClient,
+            schemaProvider,
+            testWALClient,
             syncClient,
             partitionClientProvider,
             new ObjectMapper(),

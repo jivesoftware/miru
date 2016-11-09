@@ -9,6 +9,7 @@ import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.api.wal.MiruCursor;
 import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
+import com.jivesoftware.os.miru.cluster.client.ClusterSchemaProvider;
 import java.util.List;
 import java.util.concurrent.Executors;
 
@@ -27,6 +28,7 @@ public class MiruSyncSenderInitializer {
         C defaultCursor,
         Class<C> cursorClass) throws Exception {
 
+        ClusterSchemaProvider schemaProvider = new ClusterSchemaProvider(clusterClient, 10_000);
         MiruSyncClient syncClient = new HttpSyncClientInitializer().initialize(syncConfig);
 
         return new MiruSyncSender<>(amzaClientAquariumProvider,
@@ -34,7 +36,7 @@ public class MiruSyncSenderInitializer {
             Executors.newCachedThreadPool(),
             syncConfig.getSyncThreadCount(),
             syncConfig.getSyncIntervalMillis(),
-            clusterClient,
+            schemaProvider,
             walClient,
             syncClient,
             amzaClientProvider,
