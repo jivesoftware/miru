@@ -1,24 +1,25 @@
 package com.jivesoftware.os.miru.stream.plugins.fulltext;
 
 import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
-import com.jivesoftware.os.miru.api.activity.MiruActivity;
+import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition.Feature;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
-import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
+import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
-import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
+import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.index.TimeVersionRealtime;
 import com.jivesoftware.os.miru.plugin.solution.FieldAndTermId;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
@@ -61,11 +62,24 @@ public class FullText {
         log.debug("Get full text for answer={} request={}", answer, request);
         //System.out.println("Number of matches: " + bitmaps.cardinality(answer));
 
+        MiruSchema schema = requestContext.getSchema();
+        int[] gatherFieldIds;
+        if (request.query.gatherTermsForFields != null && request.query.gatherTermsForFields.length > 0) {
+            gatherFieldIds = new int[request.query.gatherTermsForFields.length];
+            for (int i = 0; i < gatherFieldIds.length; i++) {
+                gatherFieldIds[i] = schema.getFieldId(request.query.gatherTermsForFields[i]);
+                Preconditions.checkArgument(schema.getFieldDefinition(gatherFieldIds[i]).type.hasFeature(Feature.stored),
+                    "You can only gather stored fields");
+            }
+        } else {
+            gatherFieldIds = new int[0];
+        }
+
         List<ActivityScore> activityScores;
         if (request.query.strategy == FullTextQuery.Strategy.TF_IDF) {
-            activityScores = collectTfIdf(name, bitmaps, requestContext, request, lastReport, answer, termCollector, stackBuffer);
+            activityScores = collectTfIdf(name, bitmaps, requestContext, request, lastReport, answer, termCollector, gatherFieldIds, stackBuffer);
         } else if (request.query.strategy == FullTextQuery.Strategy.TIME) {
-            activityScores = collectTime(name, bitmaps, requestContext, request, lastReport, answer, stackBuffer);
+            activityScores = collectTime(name, bitmaps, requestContext, request, lastReport, answer, gatherFieldIds, stackBuffer);
         } else {
             activityScores = Collections.emptyList();
         }
@@ -85,6 +99,7 @@ public class FullText {
         Optional<FullTextReport> lastReport,
         BM answer,
         Map<FieldAndTermId, MutableInt> termCollector,
+        int[] gatherFieldIds,
         StackBuffer stackBuffer) throws Exception {
 
         MiruActivityInternExtern internExtern = miruProvider.getActivityInternExtern(request.tenantId);
@@ -123,7 +138,7 @@ public class FullText {
 
             if (i == batchSize) {
                 batchTfIdf(name, requestContext, request, internExtern, primaryFieldIndex, termMultipliers, scored, minScore, acceptableBelowMin, ids,
-                    stackBuffer);
+                    gatherFieldIds, stackBuffer);
                 i = 0;
             }
         }
@@ -132,12 +147,13 @@ public class FullText {
             int[] remainder = new int[i];
             System.arraycopy(ids, 0, remainder, 0, i);
             batchTfIdf(name, requestContext, request, internExtern, primaryFieldIndex, termMultipliers, scored, minScore, acceptableBelowMin, remainder,
-                stackBuffer);
+                gatherFieldIds, stackBuffer);
         }
 
         Iterables.addAll(activityScores, Iterables.transform(scored, (RawBitScore input) -> {
             try {
-                return new ActivityScore(input.activity.get(), input.score);
+                TimestampedValues timestampedValues = input.values.get();
+                return new ActivityScore(timestampedValues.values, timestampedValues.timestamp, input.score);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
@@ -157,6 +173,7 @@ public class FullText {
         float minScore,
         MutableInt acceptableBelowMin,
         int[] ids,
+        int[] gatherFieldIds,
         StackBuffer stackBuffer) throws Exception {
 
         MiruSchema schema = requestContext.getSchema();
@@ -180,18 +197,14 @@ public class FullText {
                 RawBitScore bitScore = new RawBitScore(new Promise<>(() -> {
                     //TODO formalize gathering of fields/terms
                     TimeVersionRealtime tvr = requestContext.getActivityIndex().getTimeVersionRealtime(name, ids[_i], stackBuffer);
-                    MiruInternalActivity internalActivity = new MiruInternalActivity(request.tenantId, tvr.timestamp, tvr.version, tvr.realtimeDelivery,
-                        new String[0], new MiruTermId[0][], new MiruIBA[0][]);
-                    return internExtern.extern(internalActivity, schema, stackBuffer);
+                    return new TimestampedValues(tvr.timestamp, gatherValues(name, requestContext, ids[_i], gatherFieldIds, stackBuffer));
                 }), ids[i], scores[i]);
                 scored.add(bitScore);
             } else if (acceptableBelowMin.intValue() > 0) {
                 RawBitScore bitScore = new RawBitScore(new Promise<>(() -> {
                     //TODO formalize gathering of fields/terms
                     TimeVersionRealtime tvr = requestContext.getActivityIndex().getTimeVersionRealtime(name, ids[_i], stackBuffer);
-                    MiruInternalActivity internalActivity = new MiruInternalActivity(request.tenantId, tvr.timestamp, tvr.version, tvr.realtimeDelivery,
-                        new String[0], new MiruTermId[0][], new MiruIBA[0][]);
-                    return internExtern.extern(internalActivity, schema, stackBuffer);
+                    return new TimestampedValues(tvr.timestamp, gatherValues(name, requestContext, ids[_i], gatherFieldIds, stackBuffer));
                 }), ids[i], scores[i]);
                 scored.add(bitScore);
                 acceptableBelowMin.decrement();
@@ -205,10 +218,8 @@ public class FullText {
         MiruRequest<FullTextQuery> request,
         Optional<FullTextReport> lastReport,
         BM answer,
+        int[] gatherFieldIds,
         StackBuffer stackBuffer) throws Exception {
-
-        MiruActivityInternExtern internExtern = miruProvider.getActivityInternExtern(request.tenantId);
-        MiruSchema schema = requestContext.getSchema();
 
         int desiredNumberOfResults = request.query.desiredNumberOfResults;
         int collectedResults = lastReport.isPresent() ? lastReport.get().scoredActivities : 0;
@@ -219,10 +230,9 @@ public class FullText {
             int lastSetBit = iter.next();
             //TODO formalize gathering of fields/terms
             TimeVersionRealtime tvr = requestContext.getActivityIndex().getTimeVersionRealtime(name, lastSetBit, stackBuffer);
-            MiruInternalActivity internalActivity = new MiruInternalActivity(request.tenantId, tvr.timestamp, tvr.version, tvr.realtimeDelivery,
-                new String[0], new MiruTermId[0][], new MiruIBA[0][]);
+            MiruValue[][] values = gatherValues(name, requestContext, lastSetBit, gatherFieldIds, stackBuffer);
             float score = 0f; //TODO ?
-            ActivityScore activityScore = new ActivityScore(internExtern.extern(internalActivity, schema, stackBuffer), score);
+            ActivityScore activityScore = new ActivityScore(values, tvr.timestamp, score);
             activityScores.add(activityScore);
             collectedResults++;
             if (collectedResults >= desiredNumberOfResults) {
@@ -233,14 +243,41 @@ public class FullText {
         return activityScores;
     }
 
+    private <BM extends IBM, IBM> MiruValue[][] gatherValues(String name,
+        MiruRequestContext<BM, IBM, ?> requestContext,
+        int index,
+        int[] gatherFieldIds,
+        StackBuffer stackBuffer) throws Exception {
+
+        MiruTermComposer termComposer = requestContext.getTermComposer();
+        MiruSchema schema = requestContext.getSchema();
+
+        //TODO much more efficient to accumulate indexes and gather these once at the end
+        MiruValue[][] gatherValues = new MiruValue[gatherFieldIds.length][];
+        for (int i = 0; i < gatherFieldIds.length; i++) {
+            MiruTermId[] termIds = requestContext.getActivityIndex().get(name, index, gatherFieldIds[i], stackBuffer);
+            MiruValue[] gather = new MiruValue[termIds.length];
+            for (int j = 0; j < gather.length; j++) {
+                gather[j] = new MiruValue(termComposer.decompose(schema,
+                    schema.getFieldDefinition(gatherFieldIds[i]),
+                    stackBuffer,
+                    termIds[j]));
+            }
+            gatherValues[i] = gather;
+        }
+        //TODO much more efficient to accumulate indexes and gather these once at the end
+
+        return gatherValues;
+    }
+
     private static class RawBitScore implements Comparable<RawBitScore> {
 
-        private final Promise<MiruActivity> activity;
+        private final Promise<TimestampedValues> values;
         private final int id;
         private final float score;
 
-        public RawBitScore(Promise<MiruActivity> activity, int id, float score) {
-            this.activity = activity;
+        public RawBitScore(Promise<TimestampedValues> values, int id, float score) {
+            this.values = values;
             this.id = id;
             this.score = score;
         }
@@ -254,6 +291,16 @@ public class FullText {
             }
             // higher id first
             return -Integer.compare(id, o.id);
+        }
+    }
+
+    private static final class TimestampedValues {
+        private final long timestamp;
+        private final MiruValue[][] values;
+
+        public TimestampedValues(long timestamp, MiruValue[][] values) {
+            this.timestamp = timestamp;
+            this.values = values;
         }
     }
 

@@ -31,6 +31,7 @@ import com.jivesoftware.os.wiki.miru.deployable.region.WikiQueryPluginRegion.Wik
 import com.jivesoftware.os.wiki.miru.deployable.storage.WikiMiruPayloadStorage;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -90,8 +91,6 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
 
             MiruResponse<FullTextAnswer> response = null;
             if (!input.tenantId.trim().isEmpty()) {
-                StringBuilder sb = new StringBuilder();
-
 
                 MiruTenantId tenantId = new MiruTenantId(input.tenantId.trim().getBytes(Charsets.UTF_8));
                 String endpoint = FullTextConstants.FULLTEXT_PREFIX + FullTextConstants.CUSTOM_QUERY_ENDPOINT;
@@ -108,7 +107,8 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
                             input.query,
                             MiruFilter.NO_FILTER,
                             Strategy.TIME,
-                            100),
+                            100,
+                            new String[] { "id" }),
                         MiruSolutionLogLevel.NONE)
                 );
 
@@ -139,7 +139,7 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
                 List<Map<String, Object>> results = new ArrayList<>();
                 for (FullTextAnswer.ActivityScore score : scores) {
                     Map<String, Object> result = new HashMap<>();
-                    result.put("activity", score.activity.toString());
+                    result.put("activity", Arrays.deepToString(score.values));
                     result.put("score", String.valueOf(score.score));
                     results.add(result);
                 }

@@ -201,7 +201,7 @@ public class MiruFullTextNGTest {
                 tenant1,
                 MiruActorId.NOT_PROVIDED,
                 MiruAuthzExpression.NOT_PROVIDED,
-                new FullTextQuery(timeRange, "text", "en", queryAnd(rand, numberOfTermsPerQuery), MiruFilter.NO_FILTER, strategy, 100),
+                new FullTextQuery(timeRange, "text", "en", queryAnd(rand, numberOfTermsPerQuery), MiruFilter.NO_FILTER, strategy, 100, new String[0]),
                 MiruSolutionLogLevel.INFO);
             MiruResponse<FullTextAnswer> fullTextResult = injectable.filterCustomStream(request);
 

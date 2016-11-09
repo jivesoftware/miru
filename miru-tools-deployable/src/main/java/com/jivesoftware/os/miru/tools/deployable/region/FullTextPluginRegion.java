@@ -20,6 +20,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.stream.plugins.fulltext.FullTextAnswer;
 import com.jivesoftware.os.miru.stream.plugins.fulltext.FullTextConstants;
 import com.jivesoftware.os.miru.stream.plugins.fulltext.FullTextQuery;
+import com.jivesoftware.os.miru.stream.plugins.fulltext.FullTextQuery.Strategy;
 import com.jivesoftware.os.miru.ui.MiruPageRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
@@ -30,6 +31,7 @@ import com.jivesoftware.os.routing.bird.http.client.RoundRobinStrategy;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.shared.ClientCall.ClientResponse;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -72,6 +74,7 @@ public class FullTextPluginRegion implements MiruPageRegion<Optional<FullTextPlu
         final String queryString;
         final FullTextQuery.Strategy strategy;
         final String filters;
+        final String gatherTermsForFields;
         final int maxCount;
         final String logLevel;
 
@@ -81,8 +84,9 @@ public class FullTextPluginRegion implements MiruPageRegion<Optional<FullTextPlu
             String defaultField,
             String locale,
             String queryString,
-            FullTextQuery.Strategy strategy,
+            Strategy strategy,
             String filters,
+            String gatherTermsForFields,
             int maxCount,
             String logLevel) {
             this.tenant = tenant;
@@ -93,6 +97,7 @@ public class FullTextPluginRegion implements MiruPageRegion<Optional<FullTextPlu
             this.queryString = queryString;
             this.strategy = strategy;
             this.filters = filters;
+            this.gatherTermsForFields = gatherTermsForFields;
             this.maxCount = maxCount;
             this.logLevel = logLevel;
         }
@@ -117,6 +122,7 @@ public class FullTextPluginRegion implements MiruPageRegion<Optional<FullTextPlu
                 data.put("strategy", input.strategy.name());
                 data.put("maxCount", input.maxCount);
                 data.put("filters", input.filters);
+                data.put("gatherTermsForFields", input.gatherTermsForFields);
 
                 SnowflakeIdPacker snowflakeIdPacker = new SnowflakeIdPacker();
                 long jiveCurrentTime = new JiveEpochTimestampProvider().getTimestamp();
@@ -129,6 +135,7 @@ public class FullTextPluginRegion implements MiruPageRegion<Optional<FullTextPlu
                 MiruResponse<FullTextAnswer> response = null;
                 if (!input.tenant.trim().isEmpty()) {
                     MiruTenantId tenantId = new MiruTenantId(input.tenant.trim().getBytes(Charsets.UTF_8));
+                    String[] gatherTermsForFieldSplit = (input.gatherTermsForFields.isEmpty()) ? null : input.gatherTermsForFields.split("\\s*,\\s*");
                     String endpoint = FullTextConstants.FULLTEXT_PREFIX + FullTextConstants.CUSTOM_QUERY_ENDPOINT;
                     String request = requestMapper.writeValueAsString(new MiruRequest<>("toolsFullText",
                         tenantId,
@@ -141,7 +148,8 @@ public class FullTextPluginRegion implements MiruPageRegion<Optional<FullTextPlu
                             input.queryString,
                             constraintsFilter,
                             input.strategy,
-                            input.maxCount),
+                            input.maxCount,
+                            gatherTermsForFieldSplit),
                         MiruSolutionLogLevel.valueOf(input.logLevel)));
                     MiruResponse<FullTextAnswer> fullTextResponse = readerClient.call("",
                         new RoundRobinStrategy(),
@@ -169,7 +177,7 @@ public class FullTextPluginRegion implements MiruPageRegion<Optional<FullTextPlu
                     List<Map<String, Object>> results = new ArrayList<>();
                     for (FullTextAnswer.ActivityScore score : scores) {
                         Map<String, Object> result = new HashMap<>();
-                        result.put("activity", score.activity.toString());
+                        result.put("activity", Arrays.deepToString(score.values));
                         result.put("score", String.valueOf(score.score));
                         results.add(result);
                     }
