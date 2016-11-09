@@ -18,6 +18,7 @@
                 <table class="table table-condensed">
                     <thead>
                         <tr>
+                            <th>To</th>
                             <th>Type</th>
                             <th>Partition</th>
                             <th>Cursor</th>
@@ -26,6 +27,7 @@
                     <tbody>
                         {foreach $type in keys($progress)}
                             <tr>
+                                <td>{$progress[$type].toTenantId}</td>
                                 <td>{$type}</td>
                                 <td>{$progress[$type].partitionId}</td>
                                 <td>{$progress[$type].cursor}</td>

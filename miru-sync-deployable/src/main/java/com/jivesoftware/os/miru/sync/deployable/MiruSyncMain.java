@@ -18,7 +18,9 @@ package com.jivesoftware.os.miru.sync.deployable;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
-import com.google.common.collect.Lists;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMap.Builder;
+import com.google.common.collect.Maps;
 import com.jivesoftware.os.amza.api.BAInterner;
 import com.jivesoftware.os.amza.client.aquarium.AmzaClientAquariumProvider;
 import com.jivesoftware.os.amza.client.http.AmzaClientProvider;
@@ -89,7 +91,7 @@ import com.jivesoftware.os.routing.bird.shared.TenantsServiceConnectionDescripto
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
-import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executors;
 import org.glassfish.jersey.oauth1.signature.OAuth1Request;
 import org.glassfish.jersey.oauth1.signature.OAuth1Signature;
@@ -151,17 +153,26 @@ public class MiruSyncMain {
             MiruSyncConfig syncConfig = deployable.config(MiruSyncConfig.class);
 
             String syncWhitelist = syncConfig.getSyncSenderWhitelist().trim();
-            List<MiruTenantId> whitelistTenantIds;
+            Map<MiruTenantId, MiruTenantId> whitelistTenantIds;
             if (syncWhitelist.equals("*")) {
                 whitelistTenantIds = null;
             } else {
                 String[] splitWhitelist = syncWhitelist.split("\\s*,\\s*");
-                whitelistTenantIds = Lists.newArrayListWithCapacity(splitWhitelist.length);
+                Builder<MiruTenantId, MiruTenantId> builder = ImmutableMap.builder();
                 for (String s : splitWhitelist) {
                     if (!s.isEmpty()) {
-                        whitelistTenantIds.add(new MiruTenantId(s.getBytes(StandardCharsets.UTF_8)));
+                        if (s.contains(":")) {
+                            String[] parts = s.split(":");
+                            MiruTenantId fromTenantId = new MiruTenantId(parts[0].trim().getBytes(StandardCharsets.UTF_8));
+                            MiruTenantId toTenantId = new MiruTenantId(parts[1].trim().getBytes(StandardCharsets.UTF_8));
+                            builder.put(fromTenantId, toTenantId);
+                        } else {
+                            MiruTenantId tenantId = new MiruTenantId(s.trim().getBytes(StandardCharsets.UTF_8));
+                            builder.put(tenantId, tenantId);
+                        }
                     }
                 }
+                whitelistTenantIds = builder.build();
             }
 
             HttpDeliveryClientHealthProvider clientHealthProvider = new HttpDeliveryClientHealthProvider(instanceConfig.getInstanceKey(),

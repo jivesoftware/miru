@@ -10,7 +10,7 @@ import com.jivesoftware.os.miru.api.wal.MiruCursor;
 import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.cluster.client.ClusterSchemaProvider;
-import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executors;
 
 /**
@@ -24,7 +24,7 @@ public class MiruSyncSenderInitializer {
         MiruWALClient<C, S> walClient,
         PartitionClientProvider amzaClientProvider,
         ObjectMapper mapper,
-        List<MiruTenantId> whitelistTenantIds,
+        Map<MiruTenantId, MiruTenantId> whitelistTenantIds,
         C defaultCursor,
         Class<C> cursorClass) throws Exception {
 
