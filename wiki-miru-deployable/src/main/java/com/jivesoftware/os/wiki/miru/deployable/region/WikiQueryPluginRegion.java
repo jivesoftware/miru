@@ -84,6 +84,7 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
         Map<String, Object> data = Maps.newHashMap();
         try {
 
+            data.put("tenantId", input.tenantId);
             data.put("query", input.query);
 
 
