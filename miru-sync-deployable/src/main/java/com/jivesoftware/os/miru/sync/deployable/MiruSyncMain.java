@@ -34,12 +34,14 @@ import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.jive.utils.ordered.id.TimestampedOrderIdProvider;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.api.wal.AmzaCursor;
 import com.jivesoftware.os.miru.api.wal.AmzaSipCursor;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.api.wal.MiruWALConfig;
 import com.jivesoftware.os.miru.api.wal.RCVSCursor;
 import com.jivesoftware.os.miru.api.wal.RCVSSipCursor;
+import com.jivesoftware.os.miru.cluster.client.MiruClusterClientInitializer;
 import com.jivesoftware.os.miru.logappender.MiruLogAppender;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
 import com.jivesoftware.os.miru.logappender.RoutingBirdLogSenderProvider;
@@ -170,8 +172,16 @@ public class MiruSyncMain {
                 .getConnections(instanceConfig.getServiceName(), "main", 10_000); // TODO config
 
             TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = deployable.getTenantRoutingHttpClientInitializer();
+
             TenantAwareHttpClient<String> walHttpClient = tenantRoutingHttpClientInitializer.builder(
                 tenantRoutingProvider.getConnections("miru-wal", "main", 10_000), // TODO config
+                clientHealthProvider)
+                .deadAfterNErrors(10)
+                .checkDeadEveryNMillis(10_000)
+                .build(); // TODO expose to conf
+
+            TenantAwareHttpClient<String> manageHttpClient = tenantRoutingHttpClientInitializer.builder(
+                tenantRoutingProvider.getConnections("miru-manage", "main", 10_000), // TODO config
                 clientHealthProvider)
                 .deadAfterNErrors(10)
                 .checkDeadEveryNMillis(10_000)
@@ -233,6 +243,9 @@ public class MiruSyncMain {
             SickThreads walClientSickThreads = new SickThreads();
             deployable.addHealthCheck(new SickThreadsHealthCheck(deployable.config(WALClientSickThreadsHealthCheckConfig.class), walClientSickThreads));
 
+            MiruStats miruStats = new MiruStats();
+            MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize(miruStats, "", manageHttpClient, mapper);
+
             MiruWALConfig walConfig = deployable.config(MiruWALConfig.class);
             MiruSyncSender<?, ?> syncSender = null;
             MiruSyncReceiver<?, ?> syncReceiver = null;
@@ -243,6 +256,7 @@ public class MiruSyncMain {
                 if (syncConfig.getSyncSenderEnabled()) {
                     syncSender = (MiruSyncSender) new MiruSyncSenderInitializer().initialize(syncConfig,
                         amzaClientAquariumProvider,
+                        clusterClient,
                         rcvsWALClient,
                         amzaClientProvider,
                         mapper,
@@ -251,7 +265,7 @@ public class MiruSyncMain {
                         RCVSCursor.class);
                 }
                 if (syncConfig.getSyncReceiverEnabled()) {
-                    syncReceiver = (MiruSyncReceiver) new MiruSyncReceiver<>(rcvsWALClient);
+                    syncReceiver = (MiruSyncReceiver) new MiruSyncReceiver<>(rcvsWALClient, clusterClient);
                 }
             } else if (walConfig.getActivityWALType().equals("amza") || walConfig.getActivityWALType().equals("amza_rcvs")) {
                 MiruWALClient<AmzaCursor, AmzaSipCursor> amzaWALClient = new MiruWALClientInitializer().initialize("", walHttpClient, mapper,
@@ -260,6 +274,7 @@ public class MiruSyncMain {
                 if (syncConfig.getSyncSenderEnabled()) {
                     syncSender = (MiruSyncSender) new MiruSyncSenderInitializer().initialize(syncConfig,
                         amzaClientAquariumProvider,
+                        clusterClient,
                         amzaWALClient,
                         amzaClientProvider,
                         mapper,
@@ -268,7 +283,7 @@ public class MiruSyncMain {
                         AmzaCursor.class);
                 }
                 if (syncConfig.getSyncReceiverEnabled()) {
-                    syncReceiver = (MiruSyncReceiver) new MiruSyncReceiver<>(amzaWALClient);
+                    syncReceiver = (MiruSyncReceiver) new MiruSyncReceiver<>(amzaWALClient, clusterClient);
                 }
             } else {
                 throw new IllegalStateException("Invalid activity WAL type: " + walConfig.getActivityWALType());
@@ -291,7 +306,6 @@ public class MiruSyncMain {
 
             MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
 
-            MiruStats miruStats = new MiruStats();
             MiruSyncUIService miruSyncUIService = new MiruSyncUIServiceInitializer().initialize(instanceConfig.getClusterName(),
                 instanceConfig.getInstanceName(),
                 renderer,

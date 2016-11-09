@@ -19,6 +19,7 @@ import com.google.common.base.Charsets;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.sync.deployable.MiruSyncReceiver;
@@ -91,6 +92,24 @@ public class MiruSyncApiEndpoints {
         } catch (Exception x) {
             LOG.error("Failed calling writeReadTracking({},{},count:{})",
                 new Object[] { tenantId, streamId, partitionedActivities != null ? partitionedActivities.size() : null }, x);
+            return responseHelper.errorResponse("Server error", x);
+        }
+    }
+
+    @POST
+    @Path("/register/schema/{tenantId}")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response registerSchema(@PathParam("tenantId") String tenantId,
+        MiruSchema schema) throws Exception {
+        try {
+            long start = System.currentTimeMillis();
+            syncReceiver.registerSchema(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), schema);
+            miruStats.ingressed("/register/schema/" + tenantId, 1, System.currentTimeMillis() - start);
+            return responseHelper.jsonResponse("ok");
+        } catch (Exception x) {
+            LOG.error("Failed calling registerSchema({})",
+                new Object[] { tenantId }, x);
             return responseHelper.errorResponse("Server error", x);
         }
     }

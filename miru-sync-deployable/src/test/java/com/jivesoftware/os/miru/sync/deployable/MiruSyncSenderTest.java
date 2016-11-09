@@ -122,7 +122,7 @@ public class MiruSyncSenderTest {
             Executors.newSingleThreadExecutor(),
             1,
             100L,
-            testWALClient,
+            clusterClient, testWALClient,
             syncClient,
             partitionClientProvider,
             new ObjectMapper(),

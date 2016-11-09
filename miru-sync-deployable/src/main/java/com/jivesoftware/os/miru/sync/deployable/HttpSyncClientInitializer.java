@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.sync.deployable;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jivesoftware.os.miru.api.sync.MiruSyncClient;
 import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelper;
 import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelperUtils;
@@ -46,8 +45,12 @@ public class HttpSyncClientInitializer {
             config.getSyncSenderAllowSelfSignedCerts(),
             authSigner,
             host,
-            port);
+            port,
+            config.getSyncSenderSocketTimeout());
 
-        return new HttpSyncClient(requestHelper, "/api/sync/v1/write/activities", "/api/sync/v1/write/reads");
+        return new HttpSyncClient(requestHelper,
+            "/api/sync/v1/write/activities",
+            "/api/sync/v1/write/reads",
+            "/api/sync/v1/register/schema");
     }
 }

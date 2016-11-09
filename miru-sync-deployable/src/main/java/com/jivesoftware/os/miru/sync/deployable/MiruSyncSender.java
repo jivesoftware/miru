@@ -19,8 +19,10 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivityFactory;
 import com.jivesoftware.os.miru.api.activity.TenantAndPartition;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.sync.MiruSyncClient;
+import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus;
 import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus.WriterCount;
 import com.jivesoftware.os.miru.api.wal.MiruCursor;
@@ -63,6 +65,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
     private final ExecutorService executorService;
     private final int syncThreadCount;
     private final long syncIntervalMillis;
+    private final MiruClusterClient clusterClient;
     private final MiruWALClient<C, S> fromWALClient;
     private final MiruSyncClient toSyncClient;
     private final PartitionClientProvider partitionClientProvider;
@@ -74,6 +77,9 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
     private final C defaultCursor;
     private final Class<C> cursorClass;
 
+
+    private final Set<TenantAndPartition> maxAgeSet = Collections.newSetFromMap(Maps.newConcurrentMap());
+    private final Set<MiruTenantId> registeredSchemas = Collections.newSetFromMap(Maps.<MiruTenantId, Boolean>newConcurrentMap());
     private final AtomicBoolean running = new AtomicBoolean(false);
 
     private final long additionalSolverAfterNMillis = 10_000; //TODO expose to conf?
@@ -85,6 +91,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         ExecutorService executorService,
         int syncThreadCount,
         long syncIntervalMillis,
+        MiruClusterClient clusterClient,
         MiruWALClient<C, S> fromWALClient,
         MiruSyncClient toSyncClient,
         PartitionClientProvider partitionClientProvider,
@@ -100,6 +107,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         this.executorService = executorService;
         this.syncThreadCount = syncThreadCount;
         this.syncIntervalMillis = syncIntervalMillis;
+        this.clusterClient = clusterClient;
         this.fromWALClient = fromWALClient;
         this.toSyncClient = toSyncClient;
         this.partitionClientProvider = partitionClientProvider;
@@ -148,6 +156,16 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         }
     }
 
+    public void ensureSchema(MiruTenantId tenantId) throws Exception {
+        if (!registeredSchemas.contains(tenantId)) {
+            MiruSchema schema = clusterClient.getSchema(tenantId);
+
+            LOG.info("Submitting schema for tenant:{}", tenantId);
+            toSyncClient.registerSchema(tenantId, schema);
+            registeredSchemas.add(tenantId);
+        }
+    }
+
     public interface ProgressStream {
         boolean stream(ProgressType type, int partitionId) throws Exception;
     }
@@ -179,6 +197,8 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
     }
 
     public boolean resetProgress(MiruTenantId tenantId) throws Exception {
+        registeredSchemas.remove(tenantId);
+
         PartitionClient cursorClient = cursorClient(tenantId);
         byte[] fromKey = cursorKey(tenantId, null);
         byte[] toKey = WALKey.prefixUpperExclusive(fromKey);
@@ -268,13 +288,14 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
             if (!isElected(stripe)) {
                 break;
             }
+            ensureSchema(tenantId);
             int tenantStripe = Math.abs(tenantId.hashCode() % syncRingStripes);
             if (tenantStripe == stripe) {
                 tenantCount++;
 
                 int synced = syncTenant(tenantId, stripe, forward);
                 if (synced > 0) {
-                    LOG.info("Synced tenantId:{} activities:{} type:{}", tenantId, synced, reverse);
+                    LOG.info("Synced stripe:{} tenantId:{} activities:{} type:{}", stripe, tenantId, synced, forward);
                 }
                 activityCount += synced;
 
@@ -284,15 +305,13 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
 
                 synced = syncTenant(tenantId, stripe, reverse);
                 if (synced > 0) {
-                    LOG.info("Synced tenantId:{} activities:{} type:{}", tenantId, synced, reverse);
+                    LOG.info("Synced stripe:{} tenantId:{} activities:{} type:{}", stripe, tenantId, synced, reverse);
                 }
                 activityCount += synced;
             }
         }
         LOG.info("Synced stripe:{} tenants:{} activities:{}", stripe, tenantCount, activityCount);
     }
-
-    private final Set<TenantAndPartition> maxAgeSet = Collections.newSetFromMap(Maps.newConcurrentMap());
 
     private int syncTenant(MiruTenantId tenantId, int stripe, ProgressType type) throws Exception {
         TenantProgress progress = getTenantProgress(tenantId, stripe);
