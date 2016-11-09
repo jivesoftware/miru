@@ -63,6 +63,7 @@ public class WikiMiruIndexPluginRegion implements MiruPageRegion<WikiMiruIndexPl
                         i.start();
                         return null;
                     } catch (Exception x) {
+                        i.message = "failed: "+x.getMessage();
                         LOG.error("Wiki oops", x);
                         return null;
                     }
@@ -86,6 +87,7 @@ public class WikiMiruIndexPluginRegion implements MiruPageRegion<WikiMiruIndexPl
             List<Map<String, String>> rows = new ArrayList<>();
             for (WikiMiruIndexService.Indexer i : indexers.values()) {
                 Map<String, String> m = new HashMap<>();
+                m.put("message", i.message);
                 m.put("indexerId", i.indexerId);
                 m.put("running", i.running.toString());
                 m.put("indexed", i.indexed.toString());

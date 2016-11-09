@@ -19,6 +19,7 @@ import com.jivesoftware.os.wiki.miru.deployable.storage.WikiMiruPayloadStorage;
 import info.bliki.wiki.dump.Siteinfo;
 import info.bliki.wiki.dump.WikiArticle;
 import info.bliki.wiki.dump.WikiXMLParser;
+
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.HashSet;
@@ -71,6 +72,7 @@ public class WikiMiruIndexService {
         public final AtomicLong indexed = new AtomicLong();
         public final AtomicBoolean running = new AtomicBoolean(true);
         public final long startTimestampMillis = System.currentTimeMillis();
+        public String message = "";
 
         public Indexer(String indexerId, String tenantId, String pathToWikiDumpFile) {
             this.indexerId = indexerId;
@@ -80,6 +82,7 @@ public class WikiMiruIndexService {
 
         public void start() throws Exception {
             try {
+                message = "starting";
                 MiruTenantId miruTenantId = new MiruTenantId(tenantId.getBytes(StandardCharsets.UTF_8));
 
                 wikiSchemaService.ensureSchema(miruTenantId, WikiSchemaConstants.SCHEMA);
@@ -89,7 +92,7 @@ public class WikiMiruIndexService {
 
                 WikiXMLParser wxp = new WikiXMLParser(pathToWikiDumpFile, (WikiArticle page, Siteinfo stnf) -> {
                     if (page.isMain()) {
-                        System.out.println(page.getTitle());
+                        LOG.info(page.getTitle());
                         MiruActivity ma = new MiruActivity.Builder(miruTenantId, idProvider.nextId(), 0, false, new String[0])
                             .putFieldValue("id", page.getId())
                             .putAllFieldValues("subject", tokenize(page.getTitle()))
@@ -98,6 +101,7 @@ public class WikiMiruIndexService {
                         activities.add(ma);
                         if (activities.size() > 1000) {
                             try {
+                                LOG.info("Indexing batch of {}", activities.size());
                                 record(miruTenantId, pages);
                                 ingress(activities);
                                 indexed.addAndGet(activities.size());
@@ -112,13 +116,16 @@ public class WikiMiruIndexService {
                         throw new RuntimeException("Indexing Canceled");
                     }
                 });
+                LOG.info("Begin indexing run for {} using '{}'", tenantId, pathToWikiDumpFile);
                 wxp.parse();
+                LOG.info("Completed indexing run for {} using '{}'", tenantId, pathToWikiDumpFile);
                 if (!activities.isEmpty()) {
                     ingress(activities);
                     indexed.addAndGet(activities.size());
                     activities.clear();
                 }
             } finally {
+                message = "done";
                 running.set(false);
             }
         }

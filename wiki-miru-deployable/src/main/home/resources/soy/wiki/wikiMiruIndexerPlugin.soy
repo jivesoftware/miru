@@ -45,6 +45,7 @@
                 <thead >
                     <tr>
                         <th>IndexerId</th>
+                        <th>Status</th>
                         <th>Running</th>
                         <th>Indexed</th>
                         <th>TenantId</th>
@@ -60,7 +61,10 @@
                                     {$i.indexerId}
                                 </td>
                                 <td>
-                                    {$i.running}
+                                    <span>{$i.message}</span>
+                                </td>
+                                <td>
+                                    <span>{$i.running}</span>
                                 </td>
                                 <td>
                                     {$i.indexed}
