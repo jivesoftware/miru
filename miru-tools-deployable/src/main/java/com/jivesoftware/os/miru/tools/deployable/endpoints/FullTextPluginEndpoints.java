@@ -31,7 +31,6 @@ public class FullTextPluginEndpoints {
     }
 
     @GET
-    @Path("/")
     @Produces(MediaType.TEXT_HTML)
     public Response getFullText(@QueryParam("tenantId") @DefaultValue("") String tenantId,
         @QueryParam("fromHoursAgo") @DefaultValue("720") int fromHoursAgo,

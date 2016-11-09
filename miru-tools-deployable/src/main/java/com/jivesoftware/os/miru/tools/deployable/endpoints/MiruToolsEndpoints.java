@@ -23,7 +23,6 @@ public class MiruToolsEndpoints {
     }
 
     @GET
-    @Path("/")
     @Produces(MediaType.TEXT_HTML)
     public Response get() {
         String rendered = toolsService.render();

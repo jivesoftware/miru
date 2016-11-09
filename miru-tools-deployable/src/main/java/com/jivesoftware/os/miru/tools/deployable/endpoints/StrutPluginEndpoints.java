@@ -35,7 +35,6 @@ public class StrutPluginEndpoints {
     }
 
     @GET
-    @Path("/")
     @Produces(MediaType.TEXT_HTML)
     public Response getCatwalkModel(@QueryParam("tenantId") @DefaultValue("") String tenantId,
         @QueryParam("fromTimeAgo") @DefaultValue("720") long fromTimeAgo,

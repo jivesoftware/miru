@@ -37,6 +37,7 @@ import com.jivesoftware.os.miru.tools.deployable.endpoints.RealwavePluginEndpoin
 import com.jivesoftware.os.miru.tools.deployable.endpoints.RecoPluginEndpoints;
 import com.jivesoftware.os.miru.tools.deployable.endpoints.StrutPluginEndpoints;
 import com.jivesoftware.os.miru.tools.deployable.endpoints.TrendingPluginEndpoints;
+import com.jivesoftware.os.miru.tools.deployable.endpoints.UniquesPluginEndpoints;
 import com.jivesoftware.os.miru.tools.deployable.region.AggregateCountsPluginRegion;
 import com.jivesoftware.os.miru.tools.deployable.region.AnalyticsPluginRegion;
 import com.jivesoftware.os.miru.tools.deployable.region.CatwalkPluginRegion;
@@ -48,6 +49,7 @@ import com.jivesoftware.os.miru.tools.deployable.region.RealwavePluginRegion;
 import com.jivesoftware.os.miru.tools.deployable.region.RecoPluginRegion;
 import com.jivesoftware.os.miru.tools.deployable.region.StrutPluginRegion;
 import com.jivesoftware.os.miru.tools.deployable.region.TrendingPluginRegion;
+import com.jivesoftware.os.miru.tools.deployable.region.UniquesPluginRegion;
 import com.jivesoftware.os.miru.ui.MiruRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer;
@@ -147,9 +149,8 @@ public class MiruToolsMain {
 
             MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
 
-
-            MiruStats miruStats = new MiruStats();
-            MiruToolsService miruToolsService = new MiruToolsInitializer().initialize(miruStats,
+            MiruToolsService miruToolsService = new MiruToolsInitializer().initialize(
+                new MiruStats(),
                 instanceConfig.getClusterName(),
                 instanceConfig.getInstanceName(),
                 renderer,
@@ -176,6 +177,10 @@ public class MiruToolsMain {
                     "/ui/tools/distincts",
                     DistinctsPluginEndpoints.class,
                     new DistinctsPluginRegion("soy.miru.page.distinctsPluginRegion", renderer, miruReaderClient, mapper, responseMapper)),
+                new MiruToolsPlugin("zoom-in", "Uniques",
+                    "/ui/tools/uniques",
+                    UniquesPluginEndpoints.class,
+                    new UniquesPluginRegion("soy.miru.page.uniquesPluginRegion", renderer, miruReaderClient, mapper, responseMapper)),
                 new MiruToolsPlugin("search", "Full Text",
                     "/ui/tools/fulltext",
                     FullTextPluginEndpoints.class,
