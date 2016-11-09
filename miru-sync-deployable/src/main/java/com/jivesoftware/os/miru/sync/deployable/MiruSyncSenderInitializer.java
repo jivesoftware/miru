@@ -5,6 +5,7 @@ import com.jivesoftware.os.amza.api.PartitionClientProvider;
 import com.jivesoftware.os.amza.client.aquarium.AmzaClientAquariumProvider;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.sync.MiruSyncClient;
+import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.api.wal.MiruCursor;
 import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
@@ -18,6 +19,7 @@ public class MiruSyncSenderInitializer {
 
     <C extends MiruCursor<C, S>, S extends MiruSipCursor<S>> MiruSyncSender<C, S> initialize(MiruSyncConfig syncConfig,
         AmzaClientAquariumProvider amzaClientAquariumProvider,
+        MiruClusterClient clusterClient,
         MiruWALClient<C, S> walClient,
         PartitionClientProvider amzaClientProvider,
         ObjectMapper mapper,
@@ -32,6 +34,7 @@ public class MiruSyncSenderInitializer {
             Executors.newCachedThreadPool(),
             syncConfig.getSyncThreadCount(),
             syncConfig.getSyncIntervalMillis(),
+            clusterClient,
             walClient,
             syncClient,
             amzaClientProvider,

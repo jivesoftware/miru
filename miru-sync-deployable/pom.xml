@@ -108,14 +108,19 @@
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
-            <artifactId>miru-wal</artifactId>
+            <artifactId>miru-wal-client</artifactId>
             <version>${project.version}</version>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
-            <artifactId>miru-wal-client</artifactId>
+            <artifactId>miru-cluster-client</artifactId>
             <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.miru</groupId>
+            <artifactId>miru-wal</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.aquarium</groupId>
