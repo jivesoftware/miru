@@ -1,17 +1,37 @@
 package com.jivesoftware.os.wiki.miru.deployable.region;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.google.common.base.Charsets;
+import com.google.common.base.Joiner;
 import com.google.common.collect.Maps;
+import com.jivesoftware.os.miru.api.MiruActorId;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
+import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.query.LuceneBackedQueryParser;
+import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
+import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
+import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
+import com.jivesoftware.os.miru.stream.plugins.fulltext.FullTextAnswer;
+import com.jivesoftware.os.miru.stream.plugins.fulltext.FullTextConstants;
+import com.jivesoftware.os.miru.stream.plugins.fulltext.FullTextQuery;
+import com.jivesoftware.os.miru.stream.plugins.fulltext.FullTextQuery.Strategy;
 import com.jivesoftware.os.miru.ui.MiruPageRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import com.jivesoftware.os.routing.bird.http.client.HttpResponse;
 import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
+import com.jivesoftware.os.routing.bird.http.client.RoundRobinStrategy;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
+import com.jivesoftware.os.routing.bird.shared.ClientCall.ClientResponse;
 import com.jivesoftware.os.wiki.miru.deployable.region.WikiQueryPluginRegion.WikiMiruPluginRegionInput;
 import com.jivesoftware.os.wiki.miru.deployable.storage.WikiMiruPayloadStorage;
+
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -50,12 +70,12 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
 
     public static class WikiMiruPluginRegionInput {
 
-        final String subject;
-        final String body;
+        final String tenantId;
+        final String query;
 
-        public WikiMiruPluginRegionInput(String subject, String body) {
-            this.subject = subject;
-            this.body = body;
+        public WikiMiruPluginRegionInput(String tenantId, String query) {
+            this.tenantId = tenantId;
+            this.query = query;
         }
     }
 
@@ -64,13 +84,71 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
         Map<String, Object> data = Maps.newHashMap();
         try {
 
-            data.put("subject", input.subject);
-            data.put("body", input.body);
+            data.put("query", input.query);
 
-            List<String> results = new ArrayList<>();
-            results.add("todo");
 
-            data.put("results", results);
+            MiruResponse<FullTextAnswer> response = null;
+            if (!input.tenantId.trim().isEmpty()) {
+                StringBuilder sb = new StringBuilder();
+
+
+                MiruTenantId tenantId = new MiruTenantId(input.tenantId.trim().getBytes(Charsets.UTF_8));
+                String endpoint = FullTextConstants.FULLTEXT_PREFIX + FullTextConstants.CUSTOM_QUERY_ENDPOINT;
+                String request = requestMapper.writeValueAsString(
+                    new MiruRequest<>(
+                        "wiki-miru",
+                        tenantId,
+                        MiruActorId.NOT_PROVIDED,
+                        MiruAuthzExpression.NOT_PROVIDED,
+                        new FullTextQuery(
+                            MiruTimeRange.ALL_TIME,
+                            "subject",
+                            "en",
+                            input.query,
+                            MiruFilter.NO_FILTER,
+                            Strategy.TIME,
+                            100),
+                        MiruSolutionLogLevel.NONE)
+                );
+
+
+                MiruResponse<FullTextAnswer> fullTextResponse = readerClient.call("",
+                    new RoundRobinStrategy(),
+                    "wikiQueryPluginRegion",
+                    httpClient -> {
+                        HttpResponse httpResponse = httpClient.postJson(endpoint, request, null);
+                        @SuppressWarnings("unchecked")
+                        MiruResponse<FullTextAnswer> extractResponse = responseMapper.extractResultFromResponse(httpResponse,
+                            MiruResponse.class,
+                            new Class[]{FullTextAnswer.class},
+                            null);
+                        return new ClientResponse<>(extractResponse, true);
+                    });
+                if (fullTextResponse != null && fullTextResponse.answer != null) {
+                    response = fullTextResponse;
+                } else {
+                    LOG.warn("Empty full text response from {}", tenantId);
+                }
+            }
+
+            if (response != null && response.answer != null) {
+                data.put("elapse", String.valueOf(response.totalElapsed));
+                data.put("count", response.answer.results.size());
+                List<FullTextAnswer.ActivityScore> scores = response.answer.results.subList(0, Math.min(1_000, response.answer.results.size()));
+                List<Map<String, Object>> results = new ArrayList<>();
+                for (FullTextAnswer.ActivityScore score : scores) {
+                    Map<String, Object> result = new HashMap<>();
+                    result.put("activity", score.activity.toString());
+                    result.put("score", String.valueOf(score.score));
+                    results.add(result);
+                }
+                data.put("results", results);
+
+                ObjectMapper mapper = new ObjectMapper();
+                mapper.enable(SerializationFeature.INDENT_OUTPUT);
+                data.put("summary", Joiner.on("\n").join(response.log) + "\n\n" + mapper.writeValueAsString(response.solutions));
+            }
+
 
         } catch (Exception e) {
             LOG.error("Unable to retrieve data", e);

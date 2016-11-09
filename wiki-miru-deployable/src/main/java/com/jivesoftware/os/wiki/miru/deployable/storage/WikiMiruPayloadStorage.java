@@ -10,19 +10,19 @@ import java.util.List;
  */
 public interface WikiMiruPayloadStorage {
 
-    <T> T get(MiruTenantId tenantId, long activityTime, Class<T> payloadClass) throws Exception;
+    <T> T get(MiruTenantId tenantId, String key, Class<T> payloadClass) throws Exception;
 
-    <T> List<T> multiGet(MiruTenantId tenantId, Collection<Long> activityTimes, final Class<T> payloadClass) throws Exception;
+    <T> List<T> multiGet(MiruTenantId tenantId, Collection<String> keys, final Class<T> payloadClass) throws Exception;
 
-    <T> void multiPut(MiruTenantId tenantId, List<TimeAndPayload<T>> timesAndPayloads) throws Exception;
+    <T> void multiPut(MiruTenantId tenantId, List<KeyAndPayload<T>> timesAndPayloads) throws Exception;
 
-    public static class TimeAndPayload<T> {
+    public static class KeyAndPayload<T> {
 
-        public final long activityTime;
+        public final String key;
         public final T payload;
 
-        public TimeAndPayload(long activityTime, T payload) {
-            this.activityTime = activityTime;
+        public KeyAndPayload(String key, T payload) {
+            this.key = key;
             this.payload = payload;
         }
     }
