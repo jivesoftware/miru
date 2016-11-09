@@ -6,21 +6,34 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.api.query.filter.MiruValue;
+import com.jivesoftware.os.mlogger.core.MetricLogger;
+import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.index.Term;
+import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.PrefixQuery;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.TermQuery;
+import org.apache.lucene.search.highlight.Highlighter;
+import org.apache.lucene.search.highlight.InvalidTokenOffsetsException;
+import org.apache.lucene.search.highlight.QueryTermScorer;
+import org.apache.lucene.search.highlight.SimpleFragmenter;
+import org.apache.lucene.search.highlight.SimpleHTMLFormatter;
+import org.apache.lucene.search.highlight.TokenSources;
 
 /**
  * Due to its reliance on the Lucene {@link QueryParser}, this class is NOT thread-safe.
  */
 public class LuceneBackedQueryParser implements MiruQueryParser {
+
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final String defaultField;
     private final TermAnalyzers termAnalyzers = new TermAnalyzers();
@@ -34,6 +47,29 @@ public class LuceneBackedQueryParser implements MiruQueryParser {
         Analyzer analyzer = termAnalyzers.findAnalyzer(locale);
         QueryParser parser = new QueryParser(defaultField, analyzer);
         return makeFilter(parser.parse(queryString));
+    }
+
+    @Override
+    public String highlight(String locale, String query, String content) {
+        Analyzer analyzer = termAnalyzers.findAnalyzer(locale);
+        QueryParser parser = new QueryParser(defaultField, analyzer);
+
+        String summary = null;
+        try {
+            Highlighter hg = new Highlighter(new SimpleHTMLFormatter(), new QueryTermScorer(parser.parse(query)));
+            hg.setTextFragmenter(new SimpleFragmenter(20));
+            hg.setMaxDocCharsToAnalyze(600);
+
+            TokenStream tokens = TokenSources.getTokenStream(defaultField, content, analyzer);
+            summary = hg.getBestFragments(tokens, content, 20, "...");
+        } catch (InvalidTokenOffsetsException | IOException | ParseException ex) {
+            LOG.error("Failed to highlight", ex);
+        }
+
+        if (summary == null) {
+            summary = "";
+        }
+        return summary;
     }
 
     private MiruFilter makeFilter(Query query) {

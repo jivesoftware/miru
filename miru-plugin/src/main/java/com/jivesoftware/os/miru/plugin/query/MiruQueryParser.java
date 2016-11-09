@@ -8,4 +8,6 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 public interface MiruQueryParser {
 
     MiruFilter parse(String locale, String query) throws Exception;
+
+    String highlight(String locale, String query, String content);
 }
