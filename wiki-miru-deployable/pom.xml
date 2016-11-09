@@ -128,5 +128,10 @@
             <version>3.0.19</version>
             <type>jar</type>
         </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.miru</groupId>
+            <artifactId>miru-stream-plugins</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 </project>
