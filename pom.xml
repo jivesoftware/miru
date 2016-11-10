@@ -3,12 +3,12 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.jivesoftware.miru</groupId>
     <artifactId>miru</artifactId>
-    <version>0.1532</version>
+    <version>0.1533-SNAPSHOT</version>
     <packaging>pom</packaging>
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-repo-management</artifactId>
-        <version>0.1532</version>
+        <version>0.1533-SNAPSHOT</version>
         <relativePath>inheritance-poms/global-repo-management/pom.xml</relativePath>
     </parent>
     <modules>
