@@ -77,26 +77,6 @@ public class MiruSyncApiEndpoints {
     }
 
     @POST
-    @Path("/write/reads/{tenantId}/{streamId}")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response writeReadTracking(@PathParam("tenantId") String tenantId,
-        @PathParam("streamId") String streamId,
-        List<MiruPartitionedActivity> partitionedActivities) throws Exception {
-        try {
-            long start = System.currentTimeMillis();
-            syncReceiver.writeReadTracking(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), new MiruStreamId(streamId.getBytes(Charsets.UTF_8)),
-                partitionedActivities);
-            miruStats.ingressed("/write/reads/" + tenantId, 1, System.currentTimeMillis() - start);
-            return responseHelper.jsonResponse("ok");
-        } catch (Exception x) {
-            LOG.error("Failed calling writeReadTracking({},{},count:{})",
-                new Object[] { tenantId, streamId, partitionedActivities != null ? partitionedActivities.size() : null }, x);
-            return responseHelper.errorResponse("Server error", x);
-        }
-    }
-
-    @POST
     @Path("/register/schema/{tenantId}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)

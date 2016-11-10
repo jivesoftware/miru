@@ -305,20 +305,22 @@ public class LabActivityIndex implements MiruActivityIndex {
 
         for (int i = 0; i < schema.fieldCount(); i++) {
             int fieldId = i;
-            getTermIndex(fieldId).append(stream -> {
-                byte[] fieldBytes = FilerIO.intBytes(fieldId);
-                for (int j = 0; j < activityAndIdsArray.length; j++) {
-                    MiruTermId[] termIds = activityAndIdsArray[j].activity.fieldsValues[fieldId];
-                    if (termIds != null && termIds.length > 0) {
-                        int index = activityAndIdsArray[j].id;
-                        byte[] key = Bytes.concat(fieldBytes, FilerIO.intBytes(index));
-                        byte[] payload = intTermIdsKeyValueMarshaller.valueBytes(termIds);
-                        stream.stream(-1, key, timestamp, false, version, payload);
-                        bytesWrite.add(key.length + payload.length);
+            if (hasTermStorage[fieldId]) {
+                getTermIndex(fieldId).append(stream -> {
+                    byte[] fieldBytes = FilerIO.intBytes(fieldId);
+                    for (int j = 0; j < activityAndIdsArray.length; j++) {
+                        MiruTermId[] termIds = activityAndIdsArray[j].activity.fieldsValues[fieldId];
+                        if (termIds != null && termIds.length > 0) {
+                            int index = activityAndIdsArray[j].id;
+                            byte[] key = Bytes.concat(fieldBytes, FilerIO.intBytes(index));
+                            byte[] payload = intTermIdsKeyValueMarshaller.valueBytes(termIds);
+                            stream.stream(-1, key, timestamp, false, version, payload);
+                            bytesWrite.add(key.length + payload.length);
+                        }
                     }
-                }
-                return true;
-            }, true, entryBuffer, keyBuffer);
+                    return true;
+                }, true, entryBuffer, keyBuffer);
+            }
         }
         LOG.inc("count>set>total");
         LOG.inc("count>set>" + name);

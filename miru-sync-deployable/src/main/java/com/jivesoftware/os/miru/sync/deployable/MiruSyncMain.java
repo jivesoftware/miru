@@ -20,7 +20,6 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
-import com.google.common.collect.Maps;
 import com.jivesoftware.os.amza.api.BAInterner;
 import com.jivesoftware.os.amza.client.aquarium.AmzaClientAquariumProvider;
 import com.jivesoftware.os.amza.client.http.AmzaClientProvider;
@@ -257,6 +256,8 @@ public class MiruSyncMain {
             MiruStats miruStats = new MiruStats();
             MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize(miruStats, "", manageHttpClient, mapper);
 
+            ActivityReadEventConverter activityReadEventConverter = syncConfig.getSyncReceiverActivityReadEventConverterClass().newInstance();
+
             MiruWALConfig walConfig = deployable.config(MiruWALConfig.class);
             MiruSyncSender<?, ?> syncSender = null;
             MiruSyncReceiver<?, ?> syncReceiver = null;
@@ -276,7 +277,7 @@ public class MiruSyncMain {
                         RCVSCursor.class);
                 }
                 if (syncConfig.getSyncReceiverEnabled()) {
-                    syncReceiver = (MiruSyncReceiver) new MiruSyncReceiver<>(rcvsWALClient, clusterClient);
+                    syncReceiver = (MiruSyncReceiver) new MiruSyncReceiver<>(rcvsWALClient, clusterClient, activityReadEventConverter);
                 }
             } else if (walConfig.getActivityWALType().equals("amza") || walConfig.getActivityWALType().equals("amza_rcvs")) {
                 MiruWALClient<AmzaCursor, AmzaSipCursor> amzaWALClient = new MiruWALClientInitializer().initialize("", walHttpClient, mapper,
@@ -294,7 +295,7 @@ public class MiruSyncMain {
                         AmzaCursor.class);
                 }
                 if (syncConfig.getSyncReceiverEnabled()) {
-                    syncReceiver = (MiruSyncReceiver) new MiruSyncReceiver<>(amzaWALClient, clusterClient);
+                    syncReceiver = (MiruSyncReceiver) new MiruSyncReceiver<>(amzaWALClient, clusterClient, activityReadEventConverter);
                 }
             } else {
                 throw new IllegalStateException("Invalid activity WAL type: " + walConfig.getActivityWALType());

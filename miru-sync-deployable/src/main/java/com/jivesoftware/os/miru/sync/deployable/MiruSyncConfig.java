@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.sync.deployable;
 
 import org.merlin.config.Config;
 import org.merlin.config.defaults.BooleanDefault;
+import org.merlin.config.defaults.ClassDefault;
 import org.merlin.config.defaults.IntDefault;
 import org.merlin.config.defaults.LongDefault;
 import org.merlin.config.defaults.StringDefault;
@@ -58,4 +59,7 @@ public interface MiruSyncConfig extends Config {
 
     @BooleanDefault(false)
     boolean getSyncSenderAllowSelfSignedCerts();
+
+    @ClassDefault(NoOpActivityReadEventConverter.class)
+    Class<? extends ActivityReadEventConverter> getSyncReceiverActivityReadEventConverterClass();
 }

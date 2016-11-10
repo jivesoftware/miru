@@ -114,11 +114,6 @@ public class MiruSyncSenderTest {
             }
 
             @Override
-            public void writeReadTracking(MiruTenantId tenantId, MiruStreamId streamId, List<MiruPartitionedActivity> partitionedActivities) throws Exception {
-                // nope
-            }
-
-            @Override
             public void registerSchema(MiruTenantId tenantId, MiruSchema schema) throws Exception {
             }
         };
