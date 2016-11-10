@@ -34,7 +34,7 @@ public class WikiWikiPluginEndpoints {
     }
 
     @GET
-    @Path("/{tenantId}/wikiId}")
+    @Path("/{tenantId}/{wikiId}")
     @Produces(MediaType.TEXT_HTML)
     public Response wiki(
         @PathParam("tenantId") @DefaultValue("") String tenantId,
