@@ -32,18 +32,12 @@ import com.jivesoftware.os.routing.bird.shared.ClientCall.ClientResponse;
 import com.jivesoftware.os.wiki.miru.deployable.WikiMiruIndexService.Wiki;
 import com.jivesoftware.os.wiki.miru.deployable.region.WikiQueryPluginRegion.WikiMiruPluginRegionInput;
 import com.jivesoftware.os.wiki.miru.deployable.storage.WikiMiruPayloadStorage;
-import java.io.IOException;
+import info.bliki.wiki.filter.PlainTextConverter;
+import info.bliki.wiki.model.WikiModel;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.apache.lucene.search.highlight.Highlighter;
-import org.apache.lucene.search.highlight.InvalidTokenOffsetsException;
-import org.apache.lucene.search.highlight.QueryTermScorer;
-import org.apache.lucene.search.highlight.SimpleFragmenter;
-import org.apache.lucene.search.highlight.TokenSources;
-
-import static java.awt.SystemColor.text;
 
 /**
  *
@@ -152,10 +146,13 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
 
                     start = System.currentTimeMillis();
                     for (Wiki wiki : wikis) {
+                        WikiModel wikiModel = new WikiModel("https://en.wikipedia.org/wiki/${image}", "https://en.wikipedia.org/wiki/${title}");
+                        String plainBody = wikiModel.render(new PlainTextConverter(), wiki.body);
+
                         Map<String, Object> result = new HashMap<>();
                         result.put("id", wiki.id);
                         result.put("subject", wiki.subject); //subjectQueryParser.highlight(locale, input.query, wiki.subject)
-                        result.put("body", bodyQueryParser.highlight(locale, input.query, wiki.body));
+                        result.put("body", bodyQueryParser.highlight(locale, input.query, plainBody));
                         results.add(result);
                     }
                     elapsed = System.currentTimeMillis() - start;
