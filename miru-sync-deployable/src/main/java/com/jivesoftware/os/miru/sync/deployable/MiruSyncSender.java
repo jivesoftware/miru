@@ -43,6 +43,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static com.jivesoftware.os.miru.sync.deployable.MiruSyncSender.ProgressType.forward;
 import static com.jivesoftware.os.miru.sync.deployable.MiruSyncSender.ProgressType.initial;
@@ -406,7 +407,8 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         int numWriters = Math.max(begins.size(), 1);
         int lastIndex = -1;
 
-        MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory(System::currentTimeMillis);
+        AtomicLong clockTimestamp = new AtomicLong(-1);
+        MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory(clockTimestamp::get);
 
         int synced = 0;
         while (true) {
@@ -432,6 +434,8 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                             // copy to new tenantId if necessary, and assign to fake writerId
                             MiruActivity fromActivity = entry.activity.activity.get();
                             MiruActivity toActivity = fromTenantId.equals(toTenantId) ? fromActivity : fromActivity.copyToTenantId(toTenantId);
+                            // forge clock timestamp
+                            clockTimestamp.set(entry.activity.clockTimestamp);
                             activities.add(partitionedActivityFactory.activity(-1,
                                 partitionId,
                                 lastIndex,
@@ -455,6 +459,11 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
 
         // if it closed while syncing, we'll catch it next time
         if (closed) {
+            if (clockTimestamp.get() == -1) {
+                // no sync timestamp to share, must use current time
+                clockTimestamp.set(System.currentTimeMillis());
+            }
+
             // close our fake writerId
             toSyncClient.writeActivity(fromTenantId, partitionId, Collections.singletonList(
                 partitionedActivityFactory.end(-1, partitionId, fromTenantId, lastIndex)));

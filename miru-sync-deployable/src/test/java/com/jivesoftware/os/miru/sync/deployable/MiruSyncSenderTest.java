@@ -46,6 +46,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
@@ -224,7 +225,8 @@ public class MiruSyncSenderTest {
         private final MiruTenantId testTenantId;
         private final AtomicInteger largestPartitionId;
 
-        private final MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory(System::currentTimeMillis);
+        private final AtomicLong timestamper = new AtomicLong(1_000);
+        private final MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory(timestamper::incrementAndGet);
         private final NamedCursor continueCursor = new NamedCursor("test", 1L);
         private final NamedCursor stopCursor = new NamedCursor("test", 2L);
 
