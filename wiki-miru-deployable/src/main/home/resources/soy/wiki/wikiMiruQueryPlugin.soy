@@ -16,35 +16,19 @@
     <div class="panel panel-default">
         <div class="panel-heading">Query</div>
         <div class="panel-body">
-            <form id="wiki-query-filters" class="form-inline  j-form" data-active-class="btn-default" method="get" name="requestPickerForm">
-                <table>
-                    <tr>
-                        <td  style="font-weight:bold; vertical-align:top;">
-                            Message
-                        </td>
-                        <td>
-                            <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
-                                class="form-control" placeholder="tenantId" value="{$tenantId?:''}"
-                                name="tenantId" id="tenantIdPicker" data-original-title="" title="">
-                        </td>
-                    </tr>
-                    <tr>
-                        <td  style="font-weight:bold; vertical-align:top;">
-                            Body
-                        </td>
-                        <td>
-                            <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
-                                class="form-control" placeholder="query" value="{$query?:''}"
-                                name="query" id="queryPicker" data-original-title="" title="">
-                        </td>
-                    </tr>
-                    <tr>
-                        <td colspan="2">
-                             <input class="form-control btn btn-primary" type="submit" value="Refresh"/>
-                        </td>
-                    </tr>
-                </table>
-            </form>
+            <div class="row">
+                <div class="col-lg-1 col-centered">
+                    <form id="wiki-query" class="form-search" data-active-class="btn-default" method="get">
+                        <div class="input-group">
+                            <input type="text" class="form-control" placeholder="tenantId" value="{$tenantId?:''}" name="tenantId" id="tenantIdPicker">
+                            <input type="text" class="form-control" placeholder="query" value="{$query?:''}" name="query" id="queryPicker">
+                            <div class="input-group-btn">
+                                <button type="submit" class="btn"><span class="glyphicon glyphicon-find"></span></button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
         <div class="panel-heading">Result</div>
         <div class="panel-body">
@@ -60,7 +44,7 @@
             {if $results}
                 {foreach $r in $results}
                     <div style="border-bottom:1px solid #eee;">
-                        <h4><a href="#">{$r.subject}</a></h4>
+                        <h4><a href="/ui/wiki/{$tenantId}/{$r.id}">{$r.subject}</a></h4>
                         <p>{$r.body|noAutoescape}</p>
                     </div>
                 {/foreach}

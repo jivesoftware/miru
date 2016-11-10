@@ -31,7 +31,7 @@ import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.shared.ClientCall.ClientResponse;
 import com.jivesoftware.os.wiki.miru.deployable.WikiMiruIndexService.Wiki;
 import com.jivesoftware.os.wiki.miru.deployable.region.WikiQueryPluginRegion.WikiMiruPluginRegionInput;
-import com.jivesoftware.os.wiki.miru.deployable.storage.WikiMiruPayloadStorage;
+import com.jivesoftware.os.wiki.miru.deployable.storage.WikiMiruPayloadsAmza;
 import info.bliki.wiki.filter.PlainTextConverter;
 import info.bliki.wiki.model.WikiModel;
 import java.util.ArrayList;
@@ -52,7 +52,7 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
     private final TenantAwareHttpClient<String> readerClient;
     private final ObjectMapper requestMapper;
     private final HttpResponseMapper responseMapper;
-    private final WikiMiruPayloadStorage payloads;
+    private final WikiMiruPayloadsAmza payloads;
 
     private final LuceneBackedQueryParser subjectQueryParser = new LuceneBackedQueryParser("subject");
     private final LuceneBackedQueryParser bodyQueryParser = new LuceneBackedQueryParser("body");
@@ -62,7 +62,7 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
         TenantAwareHttpClient<String> readerClient,
         ObjectMapper requestMapper,
         HttpResponseMapper responseMapper,
-        WikiMiruPayloadStorage payloads) {
+        WikiMiruPayloadsAmza payloads) {
 
         this.template = template;
         this.renderer = renderer;

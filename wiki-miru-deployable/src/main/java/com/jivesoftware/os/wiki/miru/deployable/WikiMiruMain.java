@@ -51,11 +51,13 @@ import com.jivesoftware.os.routing.bird.http.client.TenantRoutingHttpClientIniti
 import com.jivesoftware.os.routing.bird.server.util.Resource;
 import com.jivesoftware.os.wiki.miru.deployable.endpoints.WikiMiruIndexPluginEndpoints;
 import com.jivesoftware.os.wiki.miru.deployable.endpoints.WikiQueryPluginEndpoints;
+import com.jivesoftware.os.wiki.miru.deployable.endpoints.WikiWikiPluginEndpoints;
 import com.jivesoftware.os.wiki.miru.deployable.region.MiruManagePlugin;
 import com.jivesoftware.os.wiki.miru.deployable.region.WikiMiruIndexPluginRegion;
 import com.jivesoftware.os.wiki.miru.deployable.region.WikiQueryPluginRegion;
-import com.jivesoftware.os.wiki.miru.deployable.storage.WikiMiruPayloadStorage;
-import com.jivesoftware.os.wiki.miru.deployable.storage.WikiMiruPayloadsAmzaIntializer;
+import com.jivesoftware.os.wiki.miru.deployable.region.WikiWikiPluginRegion;
+import com.jivesoftware.os.wiki.miru.deployable.storage.WikiMiruGramsAmza;
+import com.jivesoftware.os.wiki.miru.deployable.storage.WikiMiruPayloadsAmza;
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
@@ -95,23 +97,24 @@ public class WikiMiruMain {
                 instanceConfig.getConnectionsHealth(), 5_000, 100);
             TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = deployable.getTenantRoutingHttpClientInitializer();
 
-            WikiMiruPayloadStorage payloads = null;
-            try {
-                TenantAwareHttpClient<String> amzaClient = tenantRoutingHttpClientInitializer.builder(
-                    deployable.getTenantRoutingProvider().getConnections("amza", "main", 10_000), // TODO config
-                    clientHealthProvider)
-                    .deadAfterNErrors(10)
-                    .checkDeadEveryNMillis(10_000)
-                    .build(); // TODO expose to conf
-                long awaitLeaderElectionForNMillis = 30_000;
-                payloads = new WikiMiruPayloadsAmzaIntializer().initialize(instanceConfig.getClusterName(),
-                    amzaClient,
-                    awaitLeaderElectionForNMillis,
-                    mapper);
+            TenantAwareHttpClient<String> amzaClient = tenantRoutingHttpClientInitializer.builder(
+                deployable.getTenantRoutingProvider().getConnections("amza", "main", 10_000), // TODO config
+                clientHealthProvider)
+                .deadAfterNErrors(10)
+                .checkDeadEveryNMillis(10_000)
+                .build(); // TODO expose to conf
+            long awaitLeaderElectionForNMillis = 30_000;
 
-            } catch (Exception x) {
-                serviceStartupHealthCheck.info("Failed to setup connection to Amza.", x);
-            }
+            WikiMiruPayloadsAmza payloads = new WikiMiruPayloadsAmza(instanceConfig.getClusterName(),
+                mapper,
+                amzaClient,
+                awaitLeaderElectionForNMillis);
+
+            WikiMiruGramsAmza grams = new WikiMiruGramsAmza(instanceConfig.getClusterName(),
+                mapper,
+                amzaClient,
+                awaitLeaderElectionForNMillis);
+
 
             OrderIdProvider orderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName()));
 
@@ -147,19 +150,21 @@ public class WikiMiruMain {
                 wikiMiruServiceConfig.getMiruIngressEndpoint(),
                 mapper,
                 miruWriterClient,
-                payloads);
+                payloads,
+                grams);
 
             MiruSoyRendererConfig rendererConfig = deployable.config(MiruSoyRendererConfig.class);
             MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
             WikiMiruService wikiMiruService = new WikiMiruQueryInitializer().initialize(renderer);
 
-            List<MiruManagePlugin> plugins = Lists.newArrayList(new MiruManagePlugin("eye-open", "Index", "/ui/index",
-                    WikiMiruIndexPluginEndpoints.class,
-                    new WikiMiruIndexPluginRegion("soy.wikimiru.page.wikiMiruIndexPlugin", renderer, indexService)),
-                new MiruManagePlugin("search", "Query", "/ui/query",
-                    WikiQueryPluginEndpoints.class,
-                    new WikiQueryPluginRegion("soy.wikimiru.page.wikiMiruQueryPlugin",
-                        renderer, readerClient, mapper, responseMapper, payloads)));
+            List<MiruManagePlugin> plugins = Lists.newArrayList();
+            plugins.add(new MiruManagePlugin("eye-open", "Index", "/ui/index",
+                WikiMiruIndexPluginEndpoints.class,
+                new WikiMiruIndexPluginRegion("soy.wikimiru.page.wikiMiruIndexPlugin", renderer, indexService)));
+            plugins.add(new MiruManagePlugin("search", "Query", "/ui/query",
+                WikiQueryPluginEndpoints.class,
+                new WikiQueryPluginRegion("soy.wikimiru.page.wikiMiruQueryPlugin",
+                    renderer, readerClient, mapper, responseMapper, payloads)));
 
             File staticResourceDir = new File(System.getProperty("user.dir"));
             System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());
@@ -186,6 +191,15 @@ public class WikiMiruMain {
                 deployable.addEndpoints(plugin.endpointsClass);
                 deployable.addInjectables(plugin.region.getClass(), plugin.region);
             }
+
+            MiruManagePlugin wiki = new MiruManagePlugin("file", "wiki", "/ui/wiki",
+                WikiWikiPluginEndpoints.class,
+                new WikiWikiPluginRegion("soy.wikimiru.page.wikiMiruWikiPlugin",
+                    renderer, readerClient, mapper, responseMapper, payloads));
+
+            deployable.addEndpoints(wiki.endpointsClass);
+            deployable.addInjectables(wiki.region.getClass(), wiki.region);
+
 
             deployable.addResource(sourceTree);
             deployable.addEndpoints(LoadBalancerHealthCheckEndpoints.class);

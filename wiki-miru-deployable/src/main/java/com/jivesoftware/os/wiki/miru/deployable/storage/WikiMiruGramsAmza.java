@@ -1,9 +1,11 @@
 package com.jivesoftware.os.wiki.miru.deployable.storage;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.Lists;
+import com.google.common.collect.Multiset;
+import com.google.common.primitives.Bytes;
 import com.jivesoftware.os.amza.api.BAInterner;
 import com.jivesoftware.os.amza.api.PartitionClient;
+import com.jivesoftware.os.amza.api.filer.UIO;
 import com.jivesoftware.os.amza.api.partition.Consistency;
 import com.jivesoftware.os.amza.api.partition.Durability;
 import com.jivesoftware.os.amza.api.partition.PartitionName;
@@ -19,18 +21,15 @@ import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.http.client.HttpClient;
 import com.jivesoftware.os.routing.bird.http.client.HttpClientException;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
-
 import java.nio.charset.StandardCharsets;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /**
  *
  */
-public class WikiMiruPayloadsAmza {
+public class WikiMiruGramsAmza {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
@@ -43,7 +42,7 @@ public class WikiMiruPayloadsAmza {
     private final long abandonLeaderSolutionAfterNMillis = 5_000; //TODO expose to conf?
     private final long abandonSolutionAfterNMillis = 30_000; //TODO expose to conf?
 
-    public WikiMiruPayloadsAmza(String nameSpace,
+    public WikiMiruGramsAmza(String nameSpace,
         ObjectMapper mapper,
         TenantAwareHttpClient<String> httpClient,
         long awaitLeaderElectionForNMillis) {
@@ -61,8 +60,10 @@ public class WikiMiruPayloadsAmza {
             -1,
             -1);
 
+        long tombstoneTimestampAgeInMillis = TimeUnit.HOURS.toMillis(1);
+
         partitionProperties = new PartitionProperties(Durability.fsync_async,
-            -1, -1, -1, -1, -1, -1, -1, -1,
+            tombstoneTimestampAgeInMillis,tombstoneTimestampAgeInMillis/2, tombstoneTimestampAgeInMillis, tombstoneTimestampAgeInMillis/2, -1, -1, -1, -1,
             false,
             Consistency.leader_quorum,
             true,
@@ -77,19 +78,21 @@ public class WikiMiruPayloadsAmza {
     }
 
     private PartitionName getPartitionName(MiruTenantId tenantId) {
-        byte[] pname = (nameSpace + "-" + tenantId.toString() + "-wiki").getBytes(StandardCharsets.UTF_8);
+        byte[] pname = (nameSpace + "-" + tenantId.toString() + "-grams").getBytes(StandardCharsets.UTF_8);
         return new PartitionName(false, pname, pname);
     }
 
-    public <T> void multiPut(MiruTenantId tenantId, List<KeyAndPayload<T>> timesAndPayloads) throws Exception {
+    public <T> void multiPut(MiruTenantId tenantId, Multiset<String> grams) throws Exception {
 
         PartitionClient partition = clientProvider.getPartition(getPartitionName(tenantId), 3, partitionProperties);
         long now = System.currentTimeMillis();
         partition.commit(Consistency.leader_quorum,
             null,
             (stream) -> {
-                for (KeyAndPayload<T> keyAndPayload : timesAndPayloads) {
-                    stream.commit(keyAndPayload.key.getBytes(StandardCharsets.UTF_8), mapper.writeValueAsBytes(keyAndPayload.payload), now, false);
+                for (String gram : grams) {
+                    byte[] gramBytes = gram.getBytes(StandardCharsets.UTF_8);
+                    byte[] key = Bytes.concat(UIO.intBytes(gramBytes.length), gramBytes, UIO.longBytes(System.currentTimeMillis()));
+                    stream.commit(key, UIO.intBytes(grams.count(gram)), now, false);
                 }
                 return true;
             },
@@ -97,7 +100,7 @@ public class WikiMiruPayloadsAmza {
 
     }
 
-    public <T> T get(MiruTenantId tenantId, String k, Class<T> payloadClass) throws Exception {
+    /*public <T> T get(MiruTenantId tenantId, String k, Class<T> payloadClass) throws Exception {
 
         PartitionClient partition = clientProvider.getPartition(getPartitionName(tenantId), 3, partitionProperties);
         T[] t = (T[]) new Object[1];
@@ -137,6 +140,6 @@ public class WikiMiruPayloadsAmza {
             }, additionalSolverAfterNMillis, abandonLeaderSolutionAfterNMillis, abandonSolutionAfterNMillis, Optional.empty());
 
         return payloads;
-    }
+    }*/
 
 }
