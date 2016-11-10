@@ -58,11 +58,12 @@
                <div>Highlight: {$highlightElapse}</div>
             {/if}
             {if $results}
-                <ul>
-                    {foreach $r in $results}
-                        <li><span>{$r.subject} - {$r.body}</span></li>
-                    {/foreach}
-                </ul>
+                {foreach $r in $results}
+                    <div style="border-bottom:1px solid #eee;">
+                        <h4><a href="#">{$r.subject}</a></h4>
+                        <p>{$r.body|noAutoescape}</p>
+                    </div>
+                {/foreach}
             {/if}
 
             {if $summary}
