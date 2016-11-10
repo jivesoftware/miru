@@ -79,7 +79,7 @@ public class RCVSWALEndpoints {
             long start = System.currentTimeMillis();
             HostPort[] routingGroup = walDirector.getTenantPartitionRoutingGroup(routingGroupType, new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
                 MiruPartitionId.of(partitionId));
-            stats.ingressed("/routing/tenantPartition/" + routingGroupType.name() + "/" + tenantId + "/" + partitionId, 1, System.currentTimeMillis() - start);
+            stats.ingressed("/routing/tenantPartition/" + routingGroupType.name() + "/" + tenantId, 1, System.currentTimeMillis() - start);
             return responseHelper.jsonResponse(routingGroup);
         } catch (Exception x) {
             log.error("Failed calling getTenantPartitionRoutingGroup({},{},{})", new Object[] { routingGroupType, tenantId, partitionId }, x);
@@ -97,7 +97,7 @@ public class RCVSWALEndpoints {
             long start = System.currentTimeMillis();
             HostPort[] routingGroup = walDirector.getTenantStreamRoutingGroup(routingGroupType, new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
                 new MiruStreamId(streamId.getBytes(Charsets.UTF_8)));
-            stats.ingressed("/routing/tenantStream/" + routingGroupType.name() + "/" + tenantId + "/" + streamId, 1, System.currentTimeMillis() - start);
+            stats.ingressed("/routing/tenantStream/" + routingGroupType.name() + "/" + tenantId, 1, System.currentTimeMillis() - start);
             return responseHelper.jsonResponse(routingGroup);
         } catch (Exception x) {
             log.error("Failed calling getTenantStreamRoutingGroup({},{},{})", new Object[] { routingGroupType, tenantId, streamId }, x);
