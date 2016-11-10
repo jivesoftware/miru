@@ -22,7 +22,5 @@ public interface MiruSyncClient {
 
     void writeActivity(MiruTenantId tenantId, MiruPartitionId partitionId, List<MiruPartitionedActivity> partitionedActivities) throws Exception;
 
-    void writeReadTracking(MiruTenantId tenantId, MiruStreamId streamId, List<MiruPartitionedActivity> partitionedActivities) throws Exception;
-
     void registerSchema(MiruTenantId tenantId, MiruSchema schema) throws Exception;
 }

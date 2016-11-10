@@ -36,15 +36,6 @@ public class HttpSyncClient implements MiruSyncClient {
     }
 
     @Override
-    public void writeReadTracking(MiruTenantId tenantId, MiruStreamId streamId, List<MiruPartitionedActivity> partitionedActivities) throws Exception {
-        String endpoint = readTrackingPath + '/' + tenantId.toString() + '/' + streamId.toString();
-        String result = httpRequestHelper.executeRequest(partitionedActivities, endpoint, String.class, null);
-        if (result == null) {
-            throw new SyncClientException("Empty response from sync receiver");
-        }
-    }
-
-    @Override
     public void registerSchema(MiruTenantId tenantId, MiruSchema schema) throws Exception {
         String endpoint = registerSchemaPath + '/' + tenantId.toString();
         String result = httpRequestHelper.executeRequest(schema, endpoint, String.class, null);
