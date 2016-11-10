@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.sync.deployable;
 
+import com.jivesoftware.os.miru.api.sync.ActivityReadEventConverter;
 import org.merlin.config.Config;
 import org.merlin.config.defaults.BooleanDefault;
 import org.merlin.config.defaults.ClassDefault;

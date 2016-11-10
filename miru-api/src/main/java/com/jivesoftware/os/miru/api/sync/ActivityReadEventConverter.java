@@ -1,4 +1,4 @@
-package com.jivesoftware.os.miru.sync.deployable;
+package com.jivesoftware.os.miru.api.sync;
 
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
