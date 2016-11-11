@@ -56,7 +56,7 @@ public class LuceneBackedQueryParser implements MiruQueryParser {
 
         String summary = null;
         try {
-            SimpleHTMLFormatter formatter = new SimpleHTMLFormatter();
+            SimpleHTMLFormatter formatter = new SimpleHTMLFormatter(pre, post);
             Highlighter hg = new Highlighter(formatter, new QueryTermScorer(parser.parse(query)));
             hg.setMaxDocCharsToAnalyze(preview);
             hg.setTextFragmenter(new SimpleFragmenter(100));
