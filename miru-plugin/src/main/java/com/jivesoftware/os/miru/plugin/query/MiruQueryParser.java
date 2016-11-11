@@ -9,7 +9,5 @@ public interface MiruQueryParser {
 
     MiruFilter parse(String locale, String query) throws Exception;
 
-    String highlight(String locale, String query, String content);
-
     String highlight(String locale, String query, String content, String pre, String post, int preview);
 }
