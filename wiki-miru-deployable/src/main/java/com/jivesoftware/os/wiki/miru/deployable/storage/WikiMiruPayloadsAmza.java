@@ -64,7 +64,7 @@ public class WikiMiruPayloadsAmza {
         partitionProperties = new PartitionProperties(Durability.fsync_async,
             -1, -1, -1, -1, -1, -1, -1, -1,
             false,
-            Consistency.quorum,
+            Consistency.none,
             true,
             true,
             false,
@@ -85,7 +85,7 @@ public class WikiMiruPayloadsAmza {
 
         PartitionClient partition = clientProvider.getPartition(getPartitionName(tenantId), 3, partitionProperties);
         long now = System.currentTimeMillis();
-        partition.commit(Consistency.leader_quorum,
+        partition.commit(Consistency.quorum,
             null,
             (stream) -> {
                 for (KeyAndPayload<T> keyAndPayload : timesAndPayloads) {
