@@ -28,6 +28,7 @@ import info.bliki.wiki.dump.WikiArticle;
 import info.bliki.wiki.dump.WikiXMLParser;
 import info.bliki.wiki.filter.PlainTextConverter;
 import info.bliki.wiki.model.WikiModel;
+import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -106,9 +107,15 @@ public class WikiMiruIndexService {
                 List<KeyAndPayload<Wiki>> pages = Lists.newArrayList();
                 Multiset<String> grams = HashMultiset.create();
 
-                WikiXMLParser wxp = new WikiXMLParser(pathToWikiDumpFile, (WikiArticle page, Siteinfo stnf) -> {
+
+                //https://upload.wikimedia.org/wikipedia/commons/thumb/7/75/Spangenberg_-_Schule_des_Aristoteles.jpg/260px-Spangenberg_-_Schule_des_Aristoteles.jpg
+                //https://en.wikipedia.org/wiki/260px-Spangenberg_-_Schule_des_Aristoteles.jpg
+
+
+                WikiXMLParser wxp = new WikiXMLParser(new File(pathToWikiDumpFile), (WikiArticle page, Siteinfo stnf) -> {
                     if (page.isMain()) {
-                        LOG.info(indexed + "):" + page.getTitle());
+                        String base = stnf.getBase();
+                        LOG.info(indexed + "):" + page.getTitle()+" "+base);
 
                         WikiModel wikiModel = new WikiModel("https://en.wikipedia.org/wiki/${image}", "https://en.wikipedia.org/wiki/${title}");
                         String plainBody = wikiModel.render(new PlainTextConverter(), page.getText());
