@@ -14,7 +14,6 @@
  */
 {template .wikiMiruQueryPlugin}
     <div class="panel panel-default">
-        <div class="panel-heading">Query</div>
         <div class="panel-body">
             <div class="row">
                 <div class="col-lg-1 col-centered">
@@ -30,17 +29,8 @@
                     </form>
                 </div>
             </div>
-        </div>
-        <div class="panel-heading">Result</div>
-        <div class="panel-body">
             {if $elapse}
-               <div>Query: {$elapse} {$count}</div>
-            {/if}
-            {if $getElapse}
-               <div>Get: {$getElapse}</div>
-            {/if}
-            {if $highlightElapse}
-               <div>Highlight: {$highlightElapse}</div>
+               <small >Query: {$elapse} Fetch: {$getElapse} Highlight: {$highlightElapse} Found: {$count}</small>
             {/if}
             {if $results}
                 {foreach $r in $results}
