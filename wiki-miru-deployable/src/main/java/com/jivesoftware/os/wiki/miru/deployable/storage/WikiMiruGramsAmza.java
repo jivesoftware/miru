@@ -82,7 +82,7 @@ public class WikiMiruGramsAmza {
         return new PartitionName(false, pname, pname);
     }
 
-    public <T> void multiPut(MiruTenantId tenantId, Multiset<String> grams) throws Exception {
+    public void multiPut(MiruTenantId tenantId, Multiset<String> grams) throws Exception {
 
         PartitionClient partition = clientProvider.getPartition(getPartitionName(tenantId), 3, partitionProperties);
         long now = System.currentTimeMillis();
