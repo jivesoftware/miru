@@ -112,9 +112,9 @@ public class WikiMiruIndexService {
 
                 wikiSchemaService.ensureSchema(miruTenantId, WikiSchemaConstants.SCHEMA);
 
-                AtomicReference<List<MiruActivity>> activities = new AtomicReference<>(Lists.newArrayList());
-                AtomicReference<List<KeyAndPayload<Wiki>>> pages = new AtomicReference<>(Lists.newArrayList());
-                AtomicReference<List<MiruActivity>> grams = new AtomicReference<>(Lists.newArrayList());
+                AtomicReference<List<MiruActivity>> activities = new AtomicReference<>(Collections.synchronizedList(Lists.newArrayList()));
+                AtomicReference<List<KeyAndPayload<Wiki>>> pages = new AtomicReference<>(Collections.synchronizedList(Lists.newArrayList()));
+                AtomicReference<List<MiruActivity>> grams = new AtomicReference<>(Collections.synchronizedList(Lists.newArrayList()));
 
 
                 List<Future<Void>> futures = Lists.newArrayList();
@@ -143,9 +143,9 @@ public class WikiMiruIndexService {
                             try {
                                 LOG.info("Indexing batch of {}", activities.get().size());
 
-                                List<MiruActivity> batchOfActivities = activities.getAndSet(Lists.newArrayList());
-                                List<KeyAndPayload<Wiki>> batchOfPages = pages.getAndSet(Lists.newArrayList());
-                                List<MiruActivity> batchOfGrams = grams.getAndSet(Lists.newArrayList());
+                                List<MiruActivity> batchOfActivities = activities.getAndSet(Collections.synchronizedList(Lists.newArrayList()));
+                                List<KeyAndPayload<Wiki>> batchOfPages = pages.getAndSet(Collections.synchronizedList(Lists.newArrayList()));
+                                List<MiruActivity> batchOfGrams = grams.getAndSet(Collections.synchronizedList(Lists.newArrayList()));
 
                                 futures.add(tokenizers.submit(new FlushActivities(indexed, batchOfActivities)));
                                 futures.add(tokenizers.submit(new FlushPages(miruTenantId, batchOfPages)));
@@ -164,9 +164,9 @@ public class WikiMiruIndexService {
                 LOG.info("Completed indexing run for {} using '{}'", tenantId, pathToWikiDumpFile);
                 if (running.get() && !activities.get().isEmpty()) {
 
-                    List<MiruActivity> batchOfActivities = activities.getAndSet(Lists.newArrayList());
-                    List<KeyAndPayload<Wiki>> batchOfPages = pages.getAndSet(Lists.newArrayList());
-                    List<MiruActivity> batchOfGrams = grams.getAndSet(Lists.newArrayList());
+                    List<MiruActivity> batchOfActivities = activities.getAndSet(Collections.synchronizedList(Lists.newArrayList()));
+                    List<KeyAndPayload<Wiki>> batchOfPages = pages.getAndSet(Collections.synchronizedList(Lists.newArrayList()));
+                    List<MiruActivity> batchOfGrams = grams.getAndSet(Collections.synchronizedList(Lists.newArrayList()));
 
                     new FlushActivities(indexed, batchOfActivities).call();
                     new FlushPages(miruTenantId, batchOfPages).call();
@@ -234,8 +234,8 @@ public class WikiMiruIndexService {
 
             MiruActivity ma = new MiruActivity.Builder(miruTenantId, idProvider.nextId(), 0, false, new String[0])
                 .putFieldValue("id", page.getId())
-                .putAllFieldValues("subject", tokenize(page.getTitle(), grams.get()))
-                .putAllFieldValues("body", tokenize(plainBody, grams.get()))
+                .putAllFieldValues("subject", tokenize(termTokenizer, analyzer, page.getTitle(), grams.get()))
+                .putAllFieldValues("body", tokenize(termTokenizer, analyzer,plainBody, grams.get()))
                 .build();
             activities.get().add(ma);
 
@@ -245,7 +245,7 @@ public class WikiMiruIndexService {
             return null;
         }
 
-        private Set<String> tokenize(String plainText, List<MiruActivity> grams) {
+        private Set<String> tokenize(TermTokenizer termTokenizer, Analyzer analyzer, String plainText, List<MiruActivity> grams) {
             if (plainText == null) {
                 return Collections.emptySet();
             }
@@ -355,7 +355,7 @@ public class WikiMiruIndexService {
                 try {
                     long start = System.currentTimeMillis();
                     payloads.multiPut(miruTenantId, pages);
-                    LOG.info("Flushed {} paget to Amza in {} millis", pages.size(), (System.currentTimeMillis() - start));
+                    LOG.info("Flushed {} pages to Amza in {} millis", pages.size(), (System.currentTimeMillis() - start));
                     break;
                 } catch (Exception x) {
                     LOG.warn("Failed to grams ", x);
