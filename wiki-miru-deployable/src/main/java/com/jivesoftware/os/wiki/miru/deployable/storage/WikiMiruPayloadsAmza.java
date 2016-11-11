@@ -64,7 +64,7 @@ public class WikiMiruPayloadsAmza {
         partitionProperties = new PartitionProperties(Durability.fsync_async,
             -1, -1, -1, -1, -1, -1, -1, -1,
             false,
-            Consistency.leader_quorum,
+            Consistency.quorum,
             true,
             true,
             false,
@@ -101,7 +101,7 @@ public class WikiMiruPayloadsAmza {
 
         PartitionClient partition = clientProvider.getPartition(getPartitionName(tenantId), 3, partitionProperties);
         T[] t = (T[]) new Object[1];
-        partition.get(Consistency.leader_quorum,
+        partition.get(Consistency.none,
             null,
             keyStream -> keyStream.stream(k.getBytes(StandardCharsets.UTF_8)),
             (prefix, key, value, timestamp, version) -> {
@@ -119,7 +119,7 @@ public class WikiMiruPayloadsAmza {
         }
         List<T> payloads = Lists.newArrayList();
         PartitionClient partition = clientProvider.getPartition(getPartitionName(tenantId), 3, partitionProperties);
-        partition.get(Consistency.leader_quorum,
+        partition.get(Consistency.none,
             null,
             (keyStream) -> {
                 for (String key : keys) {

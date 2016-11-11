@@ -66,7 +66,7 @@ public class LuceneBackedQueryParser implements MiruQueryParser {
         }
 
         if (summary == null) {
-            summary = "";
+            summary = content.substring(0, Math.min(500, content.length())) + "...";
         }
         return summary;
     }

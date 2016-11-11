@@ -42,7 +42,6 @@ import java.util.Map;
 /**
  *
  */
-// soy.stumptown.page.stumptownQueryPluginRegion
 public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegionInput> {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
