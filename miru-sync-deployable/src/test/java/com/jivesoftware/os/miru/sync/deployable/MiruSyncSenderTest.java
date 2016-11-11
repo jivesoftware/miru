@@ -209,6 +209,11 @@ public class MiruSyncSenderTest {
         }
 
         @Override
+        public PartitionProperties getProperties(PartitionName partitionName) throws Exception {
+            return null;
+        }
+
+        @Override
         public PartitionClient getPartition(PartitionName partitionName) throws Exception {
             return clients.computeIfAbsent(partitionName,
                 partitionName1 -> new InMemoryPartitionClient(new ConcurrentSkipListMap<>(KeyUtil.lexicographicalComparator()), orderIdProvider));
