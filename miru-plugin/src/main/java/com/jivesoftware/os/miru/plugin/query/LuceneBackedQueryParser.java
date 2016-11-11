@@ -50,13 +50,15 @@ public class LuceneBackedQueryParser implements MiruQueryParser {
     }
 
     @Override
-    public String highlight(String locale, String query, String content) {
+    public String highlight(String locale, String query, String content, String pre, String post, int preview) {
         Analyzer analyzer = termAnalyzers.findAnalyzer(locale);
         QueryParser parser = new QueryParser(defaultField, analyzer);
 
         String summary = null;
         try {
-            Highlighter hg = new Highlighter(new SimpleHTMLFormatter(), new QueryTermScorer(parser.parse(query)));
+            SimpleHTMLFormatter formatter = new SimpleHTMLFormatter();
+            Highlighter hg = new Highlighter(formatter, new QueryTermScorer(parser.parse(query)));
+            hg.setMaxDocCharsToAnalyze(preview);
             hg.setTextFragmenter(new SimpleFragmenter(100));
 
             TokenStream tokens = TokenSources.getTokenStream(defaultField, content, analyzer);
@@ -66,7 +68,7 @@ public class LuceneBackedQueryParser implements MiruQueryParser {
         }
 
         if (summary == null) {
-            summary = content.substring(0, Math.min(500, content.length())) + "...";
+            summary = content.substring(0, Math.min(preview, content.length())) + "...";
         }
         return summary;
     }

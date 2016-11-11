@@ -154,7 +154,7 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
                         Map<String, Object> result = new HashMap<>();
                         result.put("id", wiki.id);
                         result.put("subject", wiki.subject); //subjectQueryParser.highlight(locale, input.query, wiki.subject)
-                        result.put("body", bodyQueryParser.highlight(locale, input.query, plainBody));
+                        result.put("body", bodyQueryParser.highlight(locale, input.query, plainBody, "<mark>", "</mark>", 500));
                         results.add(result);
                     }
                     elapsed = System.currentTimeMillis() - start;

@@ -119,10 +119,13 @@ public class WikiMiruIndexService {
                 List<Future<Void>> futures = Lists.newArrayList();
 
                 WikiXMLParser wxp = new WikiXMLParser(new File(pathToWikiDumpFile), (WikiArticle page, Siteinfo stnf) -> {
+                    if (running.get() == false) {
+                        throw new RuntimeException("Indexing Canceled");
+                    }
                     if (page.isMain()) {
 
                         futures.add(tokenizers.submit(new WikiTokenizer(miruTenantId, idProvider, page, stnf, activities, pages, grams)));
-                        if (futures.size() > 100) {
+                        if (futures.size() > batchSize) {
                             long start = System.currentTimeMillis();
                             for (Future<Void> future : futures) {
                                 try {
