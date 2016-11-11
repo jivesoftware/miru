@@ -1,8 +1,11 @@
 package com.jivesoftware.os.miru.sync.deployable;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Multimaps;
+import com.google.common.collect.SetMultimap;
 import com.jivesoftware.os.amza.api.PartitionClient;
 import com.jivesoftware.os.amza.api.PartitionClientProvider;
 import com.jivesoftware.os.amza.api.filer.UIO;
@@ -81,9 +84,8 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
     private final C defaultCursor;
     private final Class<C> cursorClass;
 
-
     private final Set<TenantAndPartition> maxAgeSet = Collections.newSetFromMap(Maps.newConcurrentMap());
-    private final Set<MiruTenantId> registeredSchemas = Collections.newSetFromMap(Maps.<MiruTenantId, Boolean>newConcurrentMap());
+    private final SetMultimap<MiruTenantId, MiruTenantId> registeredSchemas = Multimaps.synchronizedSetMultimap(HashMultimap.create());
     private final AtomicBoolean running = new AtomicBoolean(false);
 
     private final long additionalSolverAfterNMillis = 10_000; //TODO expose to conf?
@@ -191,7 +193,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
     }
 
     public boolean resetProgress(MiruTenantId tenantId) throws Exception {
-        registeredSchemas.remove(tenantId);
+        registeredSchemas.removeAll(tenantId);
 
         PartitionClient cursorClient = cursorClient();
         byte[] fromCursorKey = cursorKey(tenantId, null, null);
@@ -339,12 +341,12 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
     }
 
     private void ensureSchema(MiruTenantId fromTenantId, MiruTenantId toTenantId) throws Exception {
-        if (!registeredSchemas.contains(fromTenantId)) {
+        if (!registeredSchemas.containsEntry(fromTenantId, toTenantId)) {
             MiruSchema schema = schemaProvider.getSchema(fromTenantId);
 
             LOG.info("Submitting schema fromTenantId:{} toTenantId:{}", fromTenantId, toTenantId);
             toSyncClient.registerSchema(toTenantId, schema);
-            registeredSchemas.add(fromTenantId);
+            registeredSchemas.put(fromTenantId, toTenantId);
         }
     }
 
