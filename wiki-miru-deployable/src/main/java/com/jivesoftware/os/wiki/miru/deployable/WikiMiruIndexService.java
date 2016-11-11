@@ -76,9 +76,9 @@ public class WikiMiruIndexService {
         this.wikiMiruGramsAmza = wikiMiruGramsAmza;
     }
 
-    public Indexer index(String tenantId, String pathToWikiDumpFile) throws Exception {
+    public Indexer index(String tenantId, String pathToWikiDumpFile,int batchSize) throws Exception {
 
-        return new Indexer(String.valueOf(idProvider.nextId()), tenantId, pathToWikiDumpFile);
+        return new Indexer(String.valueOf(idProvider.nextId()), tenantId, pathToWikiDumpFile, batchSize);
 
     }
 
@@ -87,16 +87,18 @@ public class WikiMiruIndexService {
         public final String indexerId;
         public final String tenantId;
         public final String pathToWikiDumpFile;
+        private final int batchSize;
         public final AtomicLong indexed = new AtomicLong();
         public final AtomicBoolean running = new AtomicBoolean(true);
         public final long startTimestampMillis = System.currentTimeMillis();
         public String message = "";
 
 
-        public Indexer(String indexerId, String tenantId, String pathToWikiDumpFile) throws NoSuchAlgorithmException {
+        public Indexer(String indexerId, String tenantId, String pathToWikiDumpFile, int batchSize) throws NoSuchAlgorithmException {
             this.indexerId = indexerId;
             this.tenantId = tenantId;
             this.pathToWikiDumpFile = pathToWikiDumpFile;
+            this.batchSize = batchSize;
 
         }
 
@@ -120,7 +122,7 @@ public class WikiMiruIndexService {
                     if (page.isMain()) {
 
                         futures.add(tokenizers.submit(new WikiTokenizer(miruTenantId, idProvider, page, stnf, activities, pages, grams)));
-                        if (futures.size() > 1000) {
+                        if (futures.size() > 100) {
                             long start = System.currentTimeMillis();
                             for (Future<Void> future : futures) {
                                 try {
@@ -154,7 +156,7 @@ public class WikiMiruIndexService {
                 LOG.info("Begin indexing run for {} using '{}'", tenantId, pathToWikiDumpFile);
                 wxp.parse();
                 LOG.info("Completed indexing run for {} using '{}'", tenantId, pathToWikiDumpFile);
-                if (!activities.get().isEmpty()) {
+                if (running.get() && !activities.get().isEmpty()) {
 
                     List<MiruActivity> batchOfActivities = activities.getAndSet(Lists.newArrayList());
                     List<KeyAndPayload<Wiki>> batchOfPages = pages.getAndSet(Lists.newArrayList());

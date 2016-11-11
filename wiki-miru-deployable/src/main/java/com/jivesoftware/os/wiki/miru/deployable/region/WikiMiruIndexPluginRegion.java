@@ -39,12 +39,14 @@ public class WikiMiruIndexPluginRegion implements MiruPageRegion<WikiMiruIndexPl
         final String indexerId;
         final String tenantId;
         final String wikiDumpFile;
+        final int batchSize;
         final String action;
 
-        public WikiMiruIndexPluginRegionInput(String indexerId, String tenantId, String wikiDumpFile, String action) {
+        public WikiMiruIndexPluginRegionInput(String indexerId, String tenantId, String wikiDumpFile, int batchSize, String action) {
             this.indexerId = indexerId;
             this.tenantId = tenantId;
             this.wikiDumpFile = wikiDumpFile;
+            this.batchSize = batchSize;
             this.action = action;
         }
 
@@ -56,7 +58,7 @@ public class WikiMiruIndexPluginRegion implements MiruPageRegion<WikiMiruIndexPl
         try {
 
             if (input.action.equals("start")) {
-                WikiMiruIndexService.Indexer i = indexService.index(input.tenantId, input.wikiDumpFile);
+                WikiMiruIndexService.Indexer i = indexService.index(input.tenantId, input.wikiDumpFile, input.batchSize);
                 indexers.put(i.indexerId, i);
                 Executors.newSingleThreadExecutor().submit(() -> {
                     try {

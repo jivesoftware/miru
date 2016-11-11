@@ -39,11 +39,12 @@ public class WikiMiruIndexPluginEndpoints {
         @QueryParam("indexerId") @DefaultValue("") String indexerId,
         @QueryParam("tenantId") @DefaultValue("") String tenantId,
         @QueryParam("wikiDumpFile") @DefaultValue("") String wikiDumpFile,
+        @QueryParam("batchSize") @DefaultValue("1000") int batchSize,
         @QueryParam("action") @DefaultValue("status") String action) {
 
         try {
 
-            String rendered = wikiMiruService.renderPlugin(pluginRegion, new WikiMiruIndexPluginRegionInput(indexerId, tenantId, wikiDumpFile, action));
+            String rendered = wikiMiruService.renderPlugin(pluginRegion, new WikiMiruIndexPluginRegionInput(indexerId, tenantId, wikiDumpFile, batchSize, action));
             return Response.ok(rendered).build();
 
         } catch (Exception x) {
