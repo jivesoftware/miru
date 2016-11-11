@@ -103,7 +103,7 @@ public class WikiMiruIndexService {
 
         public void start() throws Exception {
             try {
-                ExecutorService tokenizers = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+                ExecutorService tokenizers = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2);
                 message = "starting";
                 MiruTenantId miruTenantId = new MiruTenantId(tenantId.getBytes(StandardCharsets.UTF_8));
 
@@ -138,7 +138,7 @@ public class WikiMiruIndexService {
                                 List<KeyAndPayload<Wiki>> batchOfPages = pages.getAndSet(Lists.newArrayList());
                                 List<MiruActivity> batchOfGrams = grams.getAndSet(Lists.newArrayList());
 
-                                futures.add(tokenizers.submit(new FlushActivities(batchOfActivities)));
+                                futures.add(tokenizers.submit(new FlushActivities(indexed, batchOfActivities)));
                                 futures.add(tokenizers.submit(new FlushPages(miruTenantId, batchOfPages)));
 
                             } catch (Exception x) {
@@ -159,7 +159,7 @@ public class WikiMiruIndexService {
                     List<KeyAndPayload<Wiki>> batchOfPages = pages.getAndSet(Lists.newArrayList());
                     List<MiruActivity> batchOfGrams = grams.getAndSet(Lists.newArrayList());
 
-                    new FlushActivities(batchOfActivities).call();
+                    new FlushActivities(indexed, batchOfActivities).call();
                     new FlushPages(miruTenantId, batchOfPages).call();
                 }
             } finally {
@@ -276,9 +276,11 @@ public class WikiMiruIndexService {
 
     private class FlushActivities implements Callable<Void> {
 
+        private final AtomicLong indexed;
         private final List<MiruActivity> activities;
 
-        private FlushActivities(List<MiruActivity> activities) {
+        private FlushActivities(AtomicLong indexed, List<MiruActivity> activities) {
+            this.indexed= indexed;
             this.activities = activities;
         }
 
@@ -287,7 +289,9 @@ public class WikiMiruIndexService {
         public Void call() throws Exception {
             while (true) {
                 try {
+                    long start = System.currentTimeMillis();
                     ingress(activities);
+                    LOG.info("Flushed {} activities to Miru in {} millis", activities.size(), (System.currentTimeMillis() - start));
                     break;
                 } catch (Exception x) {
                     LOG.warn("Failed to record", x);
@@ -341,7 +345,9 @@ public class WikiMiruIndexService {
 
             while (true) {
                 try {
+                    long start = System.currentTimeMillis();
                     payloads.multiPut(miruTenantId, pages);
+                    LOG.info("Flushed {} paget to Amza in {} millis", pages.size(), (System.currentTimeMillis() - start));
                     break;
                 } catch (Exception x) {
                     LOG.warn("Failed to grams ", x);
