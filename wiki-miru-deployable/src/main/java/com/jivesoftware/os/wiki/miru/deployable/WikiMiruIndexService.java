@@ -4,11 +4,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
-import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Multiset;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
@@ -30,14 +27,19 @@ import info.bliki.wiki.filter.PlainTextConverter;
 import info.bliki.wiki.model.WikiModel;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.en.EnglishAnalyzer;
 import org.apache.lucene.analysis.util.CharArraySet;
@@ -90,50 +92,55 @@ public class WikiMiruIndexService {
         public final long startTimestampMillis = System.currentTimeMillis();
         public String message = "";
 
-        public Indexer(String indexerId, String tenantId, String pathToWikiDumpFile) {
+
+        public Indexer(String indexerId, String tenantId, String pathToWikiDumpFile) throws NoSuchAlgorithmException {
             this.indexerId = indexerId;
             this.tenantId = tenantId;
             this.pathToWikiDumpFile = pathToWikiDumpFile;
+
         }
+
 
         public void start() throws Exception {
             try {
+                ExecutorService tokenizers = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
                 message = "starting";
                 MiruTenantId miruTenantId = new MiruTenantId(tenantId.getBytes(StandardCharsets.UTF_8));
 
                 wikiSchemaService.ensureSchema(miruTenantId, WikiSchemaConstants.SCHEMA);
 
-                List<MiruActivity> activities = Lists.newArrayList();
-                List<KeyAndPayload<Wiki>> pages = Lists.newArrayList();
-                Multiset<String> grams = HashMultiset.create();
+                AtomicReference<List<MiruActivity>> activities = new AtomicReference<>(Lists.newArrayList());
+                AtomicReference<List<KeyAndPayload<Wiki>>> pages = new AtomicReference<>(Lists.newArrayList());
+                AtomicReference<List<MiruActivity>> grams = new AtomicReference<>(Lists.newArrayList());
 
 
-                //https://upload.wikimedia.org/wikipedia/commons/thumb/7/75/Spangenberg_-_Schule_des_Aristoteles.jpg/260px-Spangenberg_-_Schule_des_Aristoteles.jpg
-                //https://en.wikipedia.org/wiki/260px-Spangenberg_-_Schule_des_Aristoteles.jpg
-
+                List<Future<Void>> futures = Lists.newArrayList();
 
                 WikiXMLParser wxp = new WikiXMLParser(new File(pathToWikiDumpFile), (WikiArticle page, Siteinfo stnf) -> {
                     if (page.isMain()) {
-                        String base = stnf.getBase();
-                        LOG.info(indexed + "):" + page.getTitle()+" "+base);
 
-                        WikiModel wikiModel = new WikiModel("https://en.wikipedia.org/wiki/${image}", "https://en.wikipedia.org/wiki/${title}");
-                        String plainBody = wikiModel.render(new PlainTextConverter(), page.getText());
+                        futures.add(tokenizers.submit(new WikiTokenizer(miruTenantId, idProvider, page, stnf, activities, pages, grams)));
+                        if (futures.size() > 1000) {
+                            for (Future<Void> future : futures) {
+                                try {
+                                    future.get();
+                                } catch (Exception e) {
+                                    throw new RuntimeException(e);
+                                }
+                            }
 
-                        MiruActivity ma = new MiruActivity.Builder(miruTenantId, idProvider.nextId(), 0, false, new String[0])
-                            .putFieldValue("id", page.getId())
-                            .putAllFieldValues("subject", tokenize(page.getTitle(), grams))
-                            .putAllFieldValues("body", tokenize(plainBody, grams))
-                            .build();
-                        activities.add(ma);
+                            futures.clear();
 
-                        Wiki wiki = new Wiki(page.getId(), page.getTitle(), page.getText());
-                        pages.add(new KeyAndPayload<>(page.getId(), wiki));
-
-                        if (activities.size() > 1000) {
                             try {
-                                LOG.info("Indexing batch of {}", activities.size());
-                                flush(miruTenantId, activities, pages, grams);
+                                LOG.info("Indexing batch of {}", activities.get().size());
+
+                                List<MiruActivity> batchOfActivities = activities.getAndSet(Lists.newArrayList());
+                                List<KeyAndPayload<Wiki>> batchOfPages = pages.getAndSet(Lists.newArrayList());
+                                List<MiruActivity> batchOfGrams = grams.getAndSet(Lists.newArrayList());
+
+                                futures.add(tokenizers.submit(new FlushActivities(batchOfActivities)));
+                                futures.add(tokenizers.submit(new FlushPages(miruTenantId, batchOfPages)));
+
                             } catch (Exception x) {
                                 LOG.error("ouch", x);
                             }
@@ -146,30 +153,195 @@ public class WikiMiruIndexService {
                 LOG.info("Begin indexing run for {} using '{}'", tenantId, pathToWikiDumpFile);
                 wxp.parse();
                 LOG.info("Completed indexing run for {} using '{}'", tenantId, pathToWikiDumpFile);
-                if (!activities.isEmpty()) {
-                    flush(miruTenantId, activities, pages, grams);
+                if (!activities.get().isEmpty()) {
+
+                    List<MiruActivity> batchOfActivities = activities.getAndSet(Lists.newArrayList());
+                    List<KeyAndPayload<Wiki>> batchOfPages = pages.getAndSet(Lists.newArrayList());
+                    List<MiruActivity> batchOfGrams = grams.getAndSet(Lists.newArrayList());
+
+                    new FlushActivities(batchOfActivities).call();
+                    new FlushPages(miruTenantId, batchOfPages).call();
                 }
             } finally {
                 message = "done";
                 running.set(false);
             }
         }
+    }
 
-        private void flush(MiruTenantId miruTenantId, List<MiruActivity> activities, List<KeyAndPayload<Wiki>> pages, Multiset<String> grams) throws Exception {
+    private class WikiTokenizer implements Callable<Void> {
+        private final WikiModel wikiModel;
+        private final PlainTextConverter converter;
+        private final Analyzer analyzer;
+        private final TermTokenizer termTokenizer;
 
+        private final MiruTenantId miruTenantId;
+        private final OrderIdProvider idProvider;
+        private final WikiArticle page;
+        private final Siteinfo stnf;
+
+        private final AtomicReference<List<MiruActivity>> activities;
+        private final AtomicReference<List<KeyAndPayload<Wiki>>> pages;
+        private final AtomicReference<List<MiruActivity>> grams;
+
+        private final List<String> stopwords = Arrays.asList("the",
+            "of", "to", "and", "a", "in", "is", "it", "its", "you", "that", "he", "was", "for", "on", "are", "with", "as", "I", "his", "they", "be", "at",
+            "one", "than", "have", "this", "from", "or", "had", "by", "hot", "word", "but", "what", "some", "we", "can", "out", "other", "were", "all",
+            "there", "when", "up", "use", "your", "how", "said", "an", "each", "she", "which", "do", "their", "time", "if", "will", "way", "about", "any",
+            "many", "then", "them", "would", "like", "so", "these", "her", "long", "make", "thing", "see", "him", "two", "has", "our", "not", "doesn't",
+            "per");
+
+
+        private WikiTokenizer(
+            MiruTenantId miruTenantId,
+            OrderIdProvider idProvider,
+            WikiArticle page,
+            Siteinfo stnf,
+            AtomicReference<List<MiruActivity>> activities,
+            AtomicReference<List<KeyAndPayload<Wiki>>> pages,
+            AtomicReference<List<MiruActivity>> grams) {
+
+            this.wikiModel = new WikiModel("https://en.wikipedia.org/wiki/${image}", "https://en.wikipedia.org/wiki/${title}");
+            this.converter = new PlainTextConverter();
+
+            this.analyzer = new EnglishAnalyzer(new CharArraySet(stopwords, true));
+            this.termTokenizer = new TermTokenizer();
+
+            this.miruTenantId = miruTenantId;
+            this.idProvider = idProvider;
+
+
+            this.page = page;
+            this.stnf = stnf;
+            this.activities = activities;
+            this.pages = pages;
+            this.grams = grams;
+        }
+
+
+        @Override
+        public Void call() throws Exception {
+
+            String plainBody = wikiModel.render(converter, page.getText());
+
+            MiruActivity ma = new MiruActivity.Builder(miruTenantId, idProvider.nextId(), 0, false, new String[0])
+                .putFieldValue("id", page.getId())
+                .putAllFieldValues("subject", tokenize(page.getTitle(), grams.get()))
+                .putAllFieldValues("body", tokenize(plainBody, grams.get()))
+                .build();
+            activities.get().add(ma);
+
+            Wiki wiki = new Wiki(page.getId(), page.getTitle(), page.getText());
+            pages.get().add(new KeyAndPayload<>(page.getId(), wiki));
+
+            return null;
+        }
+
+        private Set<String> tokenize(String plainText, List<MiruActivity> grams) {
+            if (plainText == null) {
+                return Collections.emptySet();
+            }
+
+
+            List<String> tokens = termTokenizer.tokenize(analyzer, plainText);
+            int l = tokens.size();
+
+            /*int maxGram = 5;
+            for (int i = 0; i < Math.min(1, l - maxGram); i++) {
+                for (int j = 1; i + j < l && j < maxGram; j++) {
+                    List<String> parts = new ArrayList<>(tokens.subList(i, i + j));
+                    Collections.sort(parts);
+
+
+                    MiruActivity gram = new MiruActivity.Builder(miruTenantId, idProvider.nextId(), 0, false, new String[0])
+                    .putFieldValue("id", page.getId())
+                    .putAllFieldValues("gram", gram)
+                    .putAllFieldValues("body", tokenize(plainBody, grams))
+                    .build();
+
+                    grams.add(gram);
+                }
+            }*/
+
+            HashSet<String> set = Sets.newHashSet();
+            for (String s : tokens) {
+                if (!Strings.isNullOrEmpty(s)) {
+                    set.add(s);
+                }
+            }
+            return set;
+        }
+    }
+
+
+    private class FlushActivities implements Callable<Void> {
+
+        private final List<MiruActivity> activities;
+
+        private FlushActivities(List<MiruActivity> activities) {
+            this.activities = activities;
+        }
+
+
+        @Override
+        public Void call() throws Exception {
             while (true) {
                 try {
-                    record(miruTenantId, pages);
+                    ingress(activities);
                     break;
                 } catch (Exception x) {
                     LOG.warn("Failed to record", x);
                     Thread.currentThread().sleep(10_000);
                 }
             }
+            return null;
+        }
+
+        private void ingress(List<MiruActivity> activities) throws JsonProcessingException {
+            try {
+
+                String jsonActivities = activityMapper.writeValueAsString(activities);
+                while (true) {
+                    try {
+                        // TODO expose "" tenant to config?
+                        HttpResponse response = miruWriter.call("", roundRobinStrategy, "ingress",
+                            client -> new ClientCall.ClientResponse<>(client.postJson(miruIngressEndpoint, jsonActivities, null), true));
+                        if (response.getStatusCode() < 200 || response.getStatusCode() >= 300) {
+                            throw new RuntimeException("Failed to post " + activities.size() + " to " + miruIngressEndpoint);
+                        }
+                        LOG.inc("ingressed");
+                        break;
+                    } catch (Exception x) {
+                        try {
+                            LOG.error("Failed to forward ingress. Will retry shortly....", x);
+                            Thread.sleep(5000);
+                        } catch (InterruptedException ex) {
+                            Thread.interrupted();
+                            return;
+                        }
+                    }
+                }
+            } finally {
+                indexed.addAndGet(activities.size());
+            }
+        }
+    }
+
+    private class FlushPages implements Callable<Void> {
+        private final MiruTenantId miruTenantId;
+        private final List<KeyAndPayload<Wiki>> pages;
+
+        private FlushPages(MiruTenantId miruTenantId, List<KeyAndPayload<Wiki>> pages) {
+            this.miruTenantId = miruTenantId;
+            this.pages = pages;
+        }
+
+        @Override
+        public Void call() throws Exception {
 
             while (true) {
                 try {
-                    record(miruTenantId, grams);
+                    payloads.multiPut(miruTenantId, pages);
                     break;
                 } catch (Exception x) {
                     LOG.warn("Failed to grams ", x);
@@ -177,22 +349,7 @@ public class WikiMiruIndexService {
                 }
             }
 
-            while (true) {
-                try {
-                    ingress(activities);
-                    break;
-                } catch (Exception x) {
-                    LOG.warn("Failed to ingress ", x);
-                    Thread.currentThread().sleep(10_000);
-                }
-            }
-
-
-            indexed.addAndGet(activities.size());
-            grams.clear();
-            pages.clear();
-            activities.clear();
-
+            return null;
         }
     }
 
@@ -212,79 +369,5 @@ public class WikiMiruIndexService {
         }
     }
 
-    private final List<String> stopwords = Arrays.asList("the",
-        "of", "to", "and", "a", "in", "is", "it", "its", "you", "that", "he", "was", "for", "on", "are", "with", "as", "I", "his", "they", "be", "at",
-        "one", "than", "have", "this", "from", "or", "had", "by", "hot", "word", "but", "what", "some", "we", "can", "out", "other", "were", "all",
-        "there", "when", "up", "use", "your", "how", "said", "an", "each", "she", "which", "do", "their", "time", "if", "will", "way", "about", "any",
-        "many", "then", "them", "would", "like", "so", "these", "her", "long", "make", "thing", "see", "him", "two", "has", "our", "not", "doesn't",
-        "per");
-
-    private Set<String> tokenize(String plainText, Multiset<String> grams) {
-        if (plainText == null) {
-            return Collections.emptySet();
-        }
-
-        Analyzer analyzer = new EnglishAnalyzer(new CharArraySet(stopwords, true));
-        TermTokenizer termTokenizer = new TermTokenizer();
-
-
-        List<String> tokens = termTokenizer.tokenize(analyzer, plainText.toLowerCase());
-        int l = tokens.size();
-
-        int maxGram = 5;
-        for (int i = 0; i < Math.min(1, l - maxGram); i++) {
-            for (int j = 1; i + j < l && j < maxGram; j++) {
-                List<String> gram = new ArrayList<>(tokens.subList(i, i + j));
-                Collections.sort(gram);
-                grams.add(Joiner.on(" ").join(gram));
-            }
-        }
-
-        HashSet<String> set = Sets.newHashSet();
-        for (String s : tokens) {
-            if (!Strings.isNullOrEmpty(s)) {
-                set.add(s);
-            }
-        }
-        return set;
-    }
-
-    private void record(MiruTenantId miruTenantId, List<KeyAndPayload<Wiki>> timedMiruActivities) throws Exception {
-        payloads.multiPut(miruTenantId, timedMiruActivities);
-    }
-
-    private void record(MiruTenantId miruTenantId, Multiset<String> grams) throws Exception {
-        wikiMiruGramsAmza.multiPut(miruTenantId, grams);
-    }
-
-
-    private void ingress(List<MiruActivity> activities) throws JsonProcessingException {
-        try {
-
-            String jsonActivities = activityMapper.writeValueAsString(activities);
-            while (true) {
-                try {
-                    // TODO expose "" tenant to config?
-                    HttpResponse response = miruWriter.call("", roundRobinStrategy, "ingress",
-                        client -> new ClientCall.ClientResponse<>(client.postJson(miruIngressEndpoint, jsonActivities, null), true));
-                    if (response.getStatusCode() < 200 || response.getStatusCode() >= 300) {
-                        throw new RuntimeException("Failed to post " + activities.size() + " to " + miruIngressEndpoint);
-                    }
-                    LOG.inc("ingressed");
-                    break;
-                } catch (Exception x) {
-                    try {
-                        LOG.error("Failed to forward ingress. Will retry shortly....", x);
-                        Thread.sleep(5000);
-                    } catch (InterruptedException ex) {
-                        Thread.interrupted();
-                        return;
-                    }
-                }
-            }
-        } finally {
-            indexed.addAndGet(activities.size());
-        }
-    }
 
 }

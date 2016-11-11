@@ -92,7 +92,7 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
             data.put("query", input.query);
 
 
-            String query = rewrite(input.query);
+            String query = rewrite(input.query.toLowerCase());
 
 
             if (!input.tenantId.trim().isEmpty()) {

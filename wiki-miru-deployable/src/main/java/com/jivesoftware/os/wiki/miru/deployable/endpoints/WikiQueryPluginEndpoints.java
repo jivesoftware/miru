@@ -1,14 +1,17 @@
 package com.jivesoftware.os.wiki.miru.deployable.endpoints;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.wiki.miru.deployable.WikiMiruService;
 import com.jivesoftware.os.wiki.miru.deployable.region.WikiQueryPluginRegion;
 import com.jivesoftware.os.wiki.miru.deployable.region.WikiQueryPluginRegion.WikiMiruPluginRegionInput;
+import java.util.Arrays;
 import javax.inject.Singleton;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
@@ -47,4 +50,22 @@ public class WikiQueryPluginEndpoints {
             return Response.serverError().build();
         }
     }
+
+    @GET
+    @Path("/typeahead/{tenantId}/{query}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response typeahead(
+        @PathParam("tenantId") @DefaultValue("") String tenantId,
+        @PathParam("query") @DefaultValue("") String query) {
+
+        try {
+            LOG.info("typeahead" + query);
+
+            return Response.ok(new ObjectMapper().writeValueAsString(Arrays.asList("foo", "bar", "bazz"))).build();
+        } catch (Exception x) {
+            LOG.error("Failed to generating query ui.", x);
+            return Response.serverError().build();
+        }
+    }
+
 }

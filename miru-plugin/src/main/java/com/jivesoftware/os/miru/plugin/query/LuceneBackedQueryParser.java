@@ -57,11 +57,10 @@ public class LuceneBackedQueryParser implements MiruQueryParser {
         String summary = null;
         try {
             Highlighter hg = new Highlighter(new SimpleHTMLFormatter(), new QueryTermScorer(parser.parse(query)));
-            hg.setTextFragmenter(new SimpleFragmenter(20));
-            hg.setMaxDocCharsToAnalyze(600);
+            hg.setTextFragmenter(new SimpleFragmenter(100));
 
             TokenStream tokens = TokenSources.getTokenStream(defaultField, content, analyzer);
-            summary = hg.getBestFragments(tokens, content, 20, "...");
+            summary = hg.getBestFragments(tokens, content, 4, "...");
         } catch (InvalidTokenOffsetsException | IOException | ParseException ex) {
             LOG.error("Failed to highlight", ex);
         }

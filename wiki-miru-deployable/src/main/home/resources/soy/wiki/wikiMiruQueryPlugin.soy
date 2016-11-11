@@ -21,9 +21,9 @@
                     <form id="wiki-query" data-active-class="btn-default" method="get">
 
                         <div class="input-group" style="width: 800px;">
-                            <input type="text" class="form-control" placeholder="tenantId" value="{$tenantId?:''}" name="tenantId" id="tenantIdPicker" style="margin-left:-1px">
+                            <input id="typeahead-tenantId" type="text" class="form-control" placeholder="tenantId" value="{$tenantId?:''}" name="tenantId" style="margin-left:-1px">
                             <span class="input-group-btn" style="width:0px;"></span>
-                            <input type="text" class="form-control" placeholder="query" value="{$query?:''}" name="query" id="queryPicker" style="margin-left:-2px">
+                            <input class="form-control typeahead" autocomplete="off" data-provide="typeahead" type="text" class="form-control" placeholder="query" value="{$query?:''}" name="query" style="margin-left:-2px">
                             <div class="input-group-btn"><button type="submit" class="btn"><span class="glyphicon glyphicon-search"></span></button></div>
                         </div>
 
