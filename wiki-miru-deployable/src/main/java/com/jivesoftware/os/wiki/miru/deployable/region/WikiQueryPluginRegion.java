@@ -92,6 +92,9 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
             data.put("query", input.query);
 
 
+            String query = rewrite(input.query);
+
+
             if (!input.tenantId.trim().isEmpty()) {
 
                 MiruTenantId tenantId = new MiruTenantId(input.tenantId.trim().getBytes(Charsets.UTF_8));
@@ -107,7 +110,7 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
                             MiruTimeRange.ALL_TIME,
                             "subject",
                             locale,
-                            input.query,
+                            query,
                             MiruFilter.NO_FILTER,
                             Strategy.TIME,
                             100,
@@ -172,6 +175,17 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
             LOG.error("Unable to retrieve data", e);
         }
         return renderer.render(template, data);
+    }
+
+    private String rewrite(String query) {
+        String[] part = query.split("\\s+");
+        if (part.length > 0 && !part[part.length - 1].endsWith("*")) {
+            part[part.length - 1] += "*";
+        }
+        for (int i = 0; i < part.length; i++) {
+            part[i] = "( subject:" + part[i] + " OR body:" + part[i] + ")";
+        }
+        return Joiner.on(" AND ").join(part);
     }
 
     @Override

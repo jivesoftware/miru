@@ -29,6 +29,7 @@ import info.bliki.wiki.dump.WikiXMLParser;
 import info.bliki.wiki.filter.PlainTextConverter;
 import info.bliki.wiki.model.WikiModel;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -161,10 +162,10 @@ public class WikiMiruIndexService {
 
             while (true) {
                 try {
-                    record(grams);
+                    record(miruTenantId, grams);
                     break;
                 } catch (Exception x) {
-                    LOG.warn("Failed to ingress ", x);
+                    LOG.warn("Failed to grams ", x);
                     Thread.currentThread().sleep(10_000);
                 }
             }
@@ -226,7 +227,8 @@ public class WikiMiruIndexService {
         int maxGram = 5;
         for (int i = 0; i < Math.min(1, l - maxGram); i++) {
             for (int j = 1; i + j < l && j < maxGram; j++) {
-                List<String> gram = tokens.subList(i, i + j);
+                List<String> gram = new ArrayList<>(tokens.subList(i, i + j));
+                Collections.sort(gram);
                 grams.add(Joiner.on(" ").join(gram));
             }
         }
@@ -244,9 +246,8 @@ public class WikiMiruIndexService {
         payloads.multiPut(miruTenantId, timedMiruActivities);
     }
 
-    private void record(Multiset<String> grams) {
-        // TODO
-
+    private void record(MiruTenantId miruTenantId, Multiset<String> grams) throws Exception {
+        wikiMiruGramsAmza.multiPut(miruTenantId, grams);
     }
 
 
