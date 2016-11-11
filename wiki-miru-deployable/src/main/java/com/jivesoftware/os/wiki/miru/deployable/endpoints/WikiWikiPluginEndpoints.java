@@ -38,7 +38,7 @@ public class WikiWikiPluginEndpoints {
     @Produces(MediaType.TEXT_HTML)
     public Response wiki(
         @PathParam("tenantId") @DefaultValue("") String tenantId,
-        @QueryParam("wikiId") @DefaultValue("") String wikiId) {
+        @PathParam("wikiId") @DefaultValue("") String wikiId) {
 
         try {
             String rendered = wikiMiruService.renderPlugin(pluginRegion, new WikiWikiPluginRegionInput(tenantId, wikiId));
