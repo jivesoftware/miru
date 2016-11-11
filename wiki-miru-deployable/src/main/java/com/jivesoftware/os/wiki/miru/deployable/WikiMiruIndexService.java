@@ -26,6 +26,7 @@ import info.bliki.wiki.dump.WikiXMLParser;
 import info.bliki.wiki.filter.PlainTextConverter;
 import info.bliki.wiki.model.WikiModel;
 import java.io.File;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
@@ -119,8 +120,10 @@ public class WikiMiruIndexService {
                 List<Future<Void>> futures = Lists.newArrayList();
 
                 WikiXMLParser wxp = new WikiXMLParser(new File(pathToWikiDumpFile), (WikiArticle page, Siteinfo stnf) -> {
+                    LOG.info("parsed...");
+
                     if (running.get() == false) {
-                        throw new RuntimeException("Indexing Canceled");
+                        throw new IOException("Indexing Canceled");
                     }
                     if (page.isMain()) {
 
@@ -153,7 +156,7 @@ public class WikiMiruIndexService {
                         }
                     }
                     if (running.get() == false) {
-                        throw new RuntimeException("Indexing Canceled");
+                        throw new IOException("Indexing Canceled");
                     }
                 });
                 LOG.info("Begin indexing run for {} using '{}'", tenantId, pathToWikiDumpFile);
@@ -179,10 +182,6 @@ public class WikiMiruIndexService {
     }
 
     private class WikiTokenizer implements Callable<Void> {
-        private final WikiModel wikiModel;
-        private final PlainTextConverter converter;
-        private final Analyzer analyzer;
-        private final TermTokenizer termTokenizer;
 
         private final MiruTenantId miruTenantId;
         private final OrderIdProvider idProvider;
@@ -210,16 +209,10 @@ public class WikiMiruIndexService {
             AtomicReference<List<KeyAndPayload<Wiki>>> pages,
             AtomicReference<List<MiruActivity>> grams) {
 
-            this.wikiModel = new WikiModel("https://en.wikipedia.org/wiki/${image}", "https://en.wikipedia.org/wiki/${title}");
-            this.converter = new PlainTextConverter();
 
-            this.analyzer = new EnglishAnalyzer(new CharArraySet(stopwords, true));
-            this.termTokenizer = new TermTokenizer();
 
             this.miruTenantId = miruTenantId;
             this.idProvider = idProvider;
-
-
             this.page = page;
             this.stnf = stnf;
             this.activities = activities;
@@ -230,6 +223,12 @@ public class WikiMiruIndexService {
 
         @Override
         public Void call() throws Exception {
+
+            WikiModel wikiModel = new WikiModel("https://en.wikipedia.org/wiki/${image}", "https://en.wikipedia.org/wiki/${title}");
+            PlainTextConverter converter = new PlainTextConverter();
+
+            Analyzer analyzer = new EnglishAnalyzer(new CharArraySet(stopwords, true));
+            TermTokenizer termTokenizer = new TermTokenizer();
 
             String plainBody = wikiModel.render(converter, page.getText());
 
