@@ -12,12 +12,7 @@
 	    <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>{$title}</title>
         {call .styles /}
-        <script src="/ui/static/scripts/jquery-2.1.0.min.js"></script>
-        <script src="/ui/static/scripts/Chart.js"></script>
-        <script src="/ui/static/scripts/Chart.StackedBar.js"></script>
-        <script src="/ui/static/scripts/legend.js"></script>
-        <script src="/ui/static/scripts/wikiMiru.js"></script>
-        <link href="/ui/static/img/favicon.ico" rel="shortcut icon" type="image/x-icon"/>
+
 	</head>
 	<body>
         {$header|noAutoescape}
@@ -44,8 +39,19 @@
     <link rel="stylesheet" href="/ui/static/vendor/bootstrap-multiselect/css/bootstrap-multiselect.css">
     <link rel="stylesheet" href="/ui/static/vendor/bootstrap-multiselect/css/prettify.css">
 
+    <link rel="stylesheet" type="text/css" media="screen" href="/ui/static/vendor/bootstrap-3.3.2/css/bootstrap-theme.min.css">
+    <script src="/ui/static/scripts/jquery-2.1.0.min.js"></script>
+    <script type="text/javascript" src="/ui/static/vendor/bootstrap-3.3.2/js/bootstrap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-3-typeahead/4.0.1/bootstrap3-typeahead.min.js"></script>
+
+
     // HEY ENGINEERS, add CSS here for now:
     <link rel="stylesheet" href="/ui/static/css/wikiMiru.css">
+    <script src="/ui/static/scripts/Chart.js"></script>
+    <script src="/ui/static/scripts/Chart.StackedBar.js"></script>
+    <script src="/ui/static/scripts/legend.js"></script>
+    <script src="/ui/static/scripts/wikiMiru.js"></script>
+    <link href="/ui/static/img/favicon.ico" rel="shortcut icon" type="image/x-icon"/>
 
     // following CC is for IE8 and lower. No harm in leaving it here.
     // It's no overhead to other browsers and would automatically give unsupported IE8 a fighting chance to view content
