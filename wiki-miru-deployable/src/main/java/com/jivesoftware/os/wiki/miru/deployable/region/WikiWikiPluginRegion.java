@@ -12,6 +12,8 @@ import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.wiki.miru.deployable.WikiMiruIndexService.Wiki;
 import com.jivesoftware.os.wiki.miru.deployable.region.WikiWikiPluginRegion.WikiWikiPluginRegionInput;
 import com.jivesoftware.os.wiki.miru.deployable.storage.WikiMiruPayloadsAmza;
+import info.bliki.wiki.filter.HTMLConverter;
+import info.bliki.wiki.model.WikiModel;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
@@ -61,9 +63,19 @@ public class WikiWikiPluginRegion implements MiruPageRegion<WikiWikiPluginRegion
             data.put("wikiId", input.wikiId);
 
             Wiki wiki = payloads.get(new MiruTenantId(input.tenantId.getBytes(StandardCharsets.UTF_8)), input.wikiId, Wiki.class);
-            data.put("id", wiki == null ? "" : wiki.id);
-            data.put("subject", wiki == null ? "" :wiki.subject);
-            data.put("body", wiki == null ? "" :wiki.body);
+            if (wiki != null) {
+                data.put("id", wiki.id);
+                data.put("subject", wiki.subject);
+
+                WikiModel wikiModel = new WikiModel("https://en.wikipedia.org/wiki/${image}", "https://en.wikipedia.org/wiki/${title}");
+                String htmlBody = wikiModel.render(new HTMLConverter(), wiki.body);
+
+                data.put("body", htmlBody);
+            } else {
+                data.put("id", input.wikiId);
+                data.put("subject", "NOT FOUND");
+                data.put("body", "NOT FOUND");
+            }
 
         } catch (Exception e) {
             LOG.error("Unable to retrieve data", e);
