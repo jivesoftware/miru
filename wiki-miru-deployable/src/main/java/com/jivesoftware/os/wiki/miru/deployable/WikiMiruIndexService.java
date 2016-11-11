@@ -102,8 +102,8 @@ public class WikiMiruIndexService {
 
 
         public void start() throws Exception {
+            ExecutorService tokenizers = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2);
             try {
-                ExecutorService tokenizers = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2);
                 message = "starting";
                 MiruTenantId miruTenantId = new MiruTenantId(tenantId.getBytes(StandardCharsets.UTF_8));
 
@@ -121,6 +121,7 @@ public class WikiMiruIndexService {
 
                         futures.add(tokenizers.submit(new WikiTokenizer(miruTenantId, idProvider, page, stnf, activities, pages, grams)));
                         if (futures.size() > 1000) {
+                            long start = System.currentTimeMillis();
                             for (Future<Void> future : futures) {
                                 try {
                                     future.get();
@@ -128,7 +129,7 @@ public class WikiMiruIndexService {
                                     throw new RuntimeException(e);
                                 }
                             }
-
+                            LOG.info("Waited {} millis for {} tokenizers to complete.", (System.currentTimeMillis() - start), futures.size());
                             futures.clear();
 
                             try {
@@ -165,6 +166,9 @@ public class WikiMiruIndexService {
             } finally {
                 message = "done";
                 running.set(false);
+                if (tokenizers != null) {
+                    tokenizers.shutdownNow();
+                }
             }
         }
     }
@@ -280,7 +284,7 @@ public class WikiMiruIndexService {
         private final List<MiruActivity> activities;
 
         private FlushActivities(AtomicLong indexed, List<MiruActivity> activities) {
-            this.indexed= indexed;
+            this.indexed = indexed;
             this.activities = activities;
         }
 
