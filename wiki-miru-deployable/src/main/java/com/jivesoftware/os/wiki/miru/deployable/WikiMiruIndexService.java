@@ -120,8 +120,7 @@ public class WikiMiruIndexService {
                 List<Future<Void>> futures = Lists.newArrayList();
 
                 WikiXMLParser wxp = new WikiXMLParser(new File(pathToWikiDumpFile), (WikiArticle page, Siteinfo stnf) -> {
-                    LOG.info("parsed...");
-
+                    
                     if (running.get() == false) {
                         throw new IOException("Indexing Canceled");
                     }
@@ -181,6 +180,9 @@ public class WikiMiruIndexService {
         }
     }
 
+    private final ThreadLocal<WikiModel> wikiModelThreadLocal = ThreadLocal.withInitial(
+        () -> new WikiModel("https://en.wikipedia.org/wiki/${image}", "https://en.wikipedia.org/wiki/${title}"));
+
     private class WikiTokenizer implements Callable<Void> {
 
         private final MiruTenantId miruTenantId;
@@ -224,13 +226,12 @@ public class WikiMiruIndexService {
         @Override
         public Void call() throws Exception {
 
-            WikiModel wikiModel = new WikiModel("https://en.wikipedia.org/wiki/${image}", "https://en.wikipedia.org/wiki/${title}");
             PlainTextConverter converter = new PlainTextConverter();
 
             Analyzer analyzer = new EnglishAnalyzer(new CharArraySet(stopwords, true));
             TermTokenizer termTokenizer = new TermTokenizer();
 
-            String plainBody = wikiModel.render(converter, page.getText());
+            String plainBody = wikiModelThreadLocal.get().render(converter, page.getText());
 
             MiruActivity ma = new MiruActivity.Builder(miruTenantId, idProvider.nextId(), 0, false, new String[0])
                 .putFieldValue("id", page.getId())
