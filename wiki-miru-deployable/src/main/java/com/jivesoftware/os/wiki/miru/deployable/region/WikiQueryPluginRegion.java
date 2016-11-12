@@ -82,6 +82,9 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
         }
     }
 
+    private final ThreadLocal<WikiModel> wikiModelThreadLocal = ThreadLocal.withInitial(
+        () -> new WikiModel("https://en.wikipedia.org/wiki/${image}", "https://en.wikipedia.org/wiki/${title}"));
+
     @Override
     public String render(WikiMiruPluginRegionInput input) {
         Map<String, Object> data = Maps.newHashMap();
@@ -148,12 +151,11 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
 
                     start = System.currentTimeMillis();
                     for (Wiki wiki : wikis) {
-                        WikiModel wikiModel = new WikiModel("https://en.wikipedia.org/wiki/${image}", "https://en.wikipedia.org/wiki/${title}");
-                        String plainBody = wikiModel.render(new PlainTextConverter(), wiki.body);
+                        String plainBody = wikiModelThreadLocal.get().render(new PlainTextConverter(), wiki.body);
 
                         Map<String, Object> result = new HashMap<>();
                         result.put("id", wiki.id);
-                        result.put("subject", wiki.subject); //subjectQueryParser.highlight(locale, input.query, wiki.subject)
+                        result.put("subject", wiki.subject);
                         result.put("body", bodyQueryParser.highlight(locale, input.query, plainBody, "<span style=\"background-color: #FFFF00\">", "</span>", 500));
                         results.add(result);
                     }
