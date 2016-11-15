@@ -151,7 +151,6 @@ public class StumptownQueryPluginEndpoints {
     public Response typeahead(
         @PathParam("fieldName") @DefaultValue("") String fieldName,
         @QueryParam("contains") @DefaultValue("") String contains) {
-
         try {
             List<Map<String, String>> data = pluginRegion.typeahead(fieldName, contains);
             return Response.ok(new ObjectMapper().writeValueAsString(data)).build();
