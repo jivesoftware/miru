@@ -38,6 +38,28 @@ div.container {
   margin-right: 1em;
 }
 
+div.wiki-hs-selector {
+    display: none;
+    z-index: 2000;
+    position: absolute;
+    background-color: #fff;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+div.wiki-hs-choice {
+    border-radius: 2px;
+    background-color: #999;
+    color: #fff;
+    padding: 2px;
+}
+
+input.wiki-hs-field-broken {
+    border-color: red;
+    border-style: solid;
+}
+
 form#stump-query-filters .stump-query-advanced { display: none; }
 form#stump-query-filters.stump-query-show-advanced tr.stump-query-advanced { display: table-row; }
 form#stump-query-filters.stump-query-show-advanced td.stump-query-advanced { display: table-cell; }

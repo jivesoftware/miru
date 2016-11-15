@@ -255,19 +255,10 @@ public class WikiMiruIndexService {
             List<String> tokens = termTokenizer.tokenize(analyzer, plainText);
             int l = tokens.size();
 
-            /*int maxGram = 5;
+           /* int maxGram = 5;
             for (int i = 0; i < Math.min(1, l - maxGram); i++) {
                 for (int j = 1; i + j < l && j < maxGram; j++) {
                     List<String> parts = new ArrayList<>(tokens.subList(i, i + j));
-                    Collections.sort(parts);
-
-
-                    MiruActivity gram = new MiruActivity.Builder(miruTenantId, idProvider.nextId(), 0, false, new String[0])
-                    .putFieldValue("id", page.getId())
-                    .putAllFieldValues("gram", gram)
-                    .putAllFieldValues("body", tokenize(plainBody, grams))
-                    .build();
-
                     grams.add(gram);
                 }
             }*/
