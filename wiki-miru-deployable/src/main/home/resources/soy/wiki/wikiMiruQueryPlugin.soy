@@ -10,7 +10,6 @@
  * @param? highlightElapse
  * @param? count
  * @param? results
- * @param? summary
  */
 {template .wikiMiruQueryPlugin}
     <div class="panel panel-default">
@@ -20,9 +19,9 @@
                     <form id="wiki-query" data-active-class="btn-default" method="get">
 
                         <div class="input-group" style="width: 800px;">
-                            <input data-typeahead-url="/ui/query/abc/xyz" type="text" class="typeahead-field form-control" placeholder="tenantId" value="{$tenantId?:''}" name="tenantId" style="margin-left:-1px">
+                            <input data-typeahead-url="/ui/query/typeahead/abc/xyz" type="text" class="typeahead-field form-control" placeholder="tenantId" value="{$tenantId?:''}" name="tenantId" style="margin-left:-1px">
                                 <span class="input-group-btn" style="width:0px;"></span>
-                            <input data-typeahead-url="/ui/query/abc/xyz" class="typeahead-field form-control" type="text" class="form-control" placeholder="query" value="{$query?:''}" name="query" style="margin-left:-2px">
+                            <input data-typeahead-url="/ui/query/typeahead/abc/xyz" class="typeahead-field form-control" type="text" class="form-control" placeholder="query" value="{$query?:''}" name="query" style="margin-left:-2px">
                             <div class="input-group-btn"><button type="submit" class="btn"><span class="glyphicon glyphicon-search"></span></button></div>
                         </div>
 
@@ -41,9 +40,6 @@
                 {/foreach}
             {/if}
 
-            {if $summary}
-                <pre>{$summary}</pre>
-            {/if}
         </div>
     </div>
 {/template}
