@@ -2,6 +2,153 @@ window.$ = window.jQuery;
 
 window.stump = {};
 
+/*
+<div>
+    <input form="filter-form" type="text" autocomplete="off" name="cluster" id="clusterPicker"
+        class="typeahead-field form-control" data-typeahead-url="/ui/lookup">
+    <input form="filter-form" type="hidden" name="clusterKey" value="{$filters.clusterKey?:''}" />
+</div>
+
+*/
+stump.hs = {
+    installed: null,
+    queuedUninstall: null,
+    init: function () {
+        $('input[type=text].typeahead-field').each(function (i, input) {
+            var $inputName = $(input);
+            var $inputKey = $(input);
+            var endpoint = $inputName.data('typeaheadUrl');
+
+            $inputName.focus(function () {
+                stump.hs.install($inputKey, $inputName, function (key, name) {
+                    $inputKey.val(key);
+                    $inputName.val(name);
+                });
+                stump.hs.lookup(endpoint, $inputName.val());
+            });
+            $inputName.on('input', function () {
+                $inputKey.val('');
+                stump.hs.lookup(endpoint, $inputName.val());
+            });
+            $inputName.blur(function () {
+                stump.hs.queuedUninstall = setTimeout(function () {
+                    stump.hs.uninstall($inputName);
+                }, 200);
+            });
+        });
+    },
+    install: function ($inputKey, $inputName, callback) {
+        stump.hs.cancelUninstall();
+        stump.hs.uninstall();
+        var $selector = stump.hs.makeSelector();
+        $('body').append($selector);
+        stump.hs.installed = {
+            selector: $selector,
+            inputKey: $inputKey,
+            inputName: $inputName,
+            callback: callback,
+            ready: false
+        };
+        $inputName.removeClass('stump-hs-field-broken');
+        var offset = $inputName.offset();
+        var height = $inputName.height();
+        $selector.show();
+        $selector.offset({
+            left: offset.left,
+            top: offset.top + height + 10
+        });
+    },
+    uninstall: function ($inputName) {
+        if (!stump.hs.installed || $inputName && stump.hs.installed.inputName != $inputName) {
+            return;
+        }
+
+        $inputName = $inputName || stump.hs.installed.inputName;
+        var $inputKey = stump.hs.installed.inputKey;
+        var name = $inputName.val();
+        var found = false;
+        var $selector = stump.hs.installed.selector;
+        $selector.find('a').each(function (i) {
+            var $a = $(this);
+            if ($a.data('stumpName') == name) {
+                var key = $a.data('stumpKey');
+                $inputKey.val(key);
+                found = true;
+                return false;
+            }
+        });
+        if (!found) {
+            $inputName.addClass('stump-hs-field-broken');
+            stump.hs.installed.inputKey.val('');
+        }
+
+        $selector.remove();
+        stump.hs.installed = null;
+    },
+    makeSelector: function () {
+        var $selector = $('<div>').addClass("stump-hs-selector");
+        $selector.focus(function () {
+            if (selector == stump.hs.installed.selector) {
+                stump.hs.cancelUninstall();
+            }
+        });
+        $selector.blur(function () {
+            stump.hs.uninstall();
+        });
+        return $selector;
+    },
+    cancelUninstall: function () {
+        if (stump.hs.queuedUninstall) {
+            clearTimeout(stump.hs.queuedUninstall);
+        }
+    },
+    picked: function (key, name) {
+        if (stump.hs.installed) {
+            stump.hs.installed.callback(key, name);
+            stump.hs.uninstall();
+        }
+    },
+    lookup: function (endpoint, contains) {
+
+        var $selector = stump.hs.installed.selector;
+        $.ajax(endpoint, {
+            data: {
+                'contains': contains
+            }
+        }).done(function (data) {
+            if (!stump.hs.installed || stump.hs.installed.selector != $selector) {
+                // selector changed during the query
+                return;
+            }
+            if (data.length) {
+                $selector.empty();
+                for (var i = 0; i < data.length; i++) {
+                    $selector.append(
+                            "<a href='#'" +
+                            " class='stump-hs-choice'" +
+                            " data-stump-key='" + data[i].key + "'" +
+                            " data-stump-name='" + data[i].name + "'>" + data[i].name + "</a><br/>");
+                }
+                stump.hs.link($selector);
+                stump.hs.installed.ready = true;
+            } else {
+                $selector.html("<em>No matches</em>");
+            }
+        });
+    },
+    link: function ($selector) {
+        $selector.find('a').each(function (i) {
+            var $a = $(this);
+            var key = $a.data('stumpKey');
+            var name = $a.data('stumpName');
+            $a.click(function () {
+                stump.hs.picked(key, name);
+                return false;
+            });
+        });
+    }
+};
+
 stump.query = {
     advanced: function (ele) {
         var $e = $(ele);
@@ -282,6 +429,10 @@ $(document).ready(function () {
     stump.windowFocused = true;
     stump.onWindowFocus = [];
     stump.onWindowBlur = [];
+
+    if ($('.typeahead-field').length) {
+            stump.hs.init();
+        }
 
     $('#live').change(function () {
         if ($(this).is(":checked")) {

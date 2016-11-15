@@ -14,12 +14,16 @@ import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
+import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import com.jivesoftware.os.miru.logappender.MiruLogEvent;
 import com.jivesoftware.os.miru.plugin.query.LuceneBackedQueryParser;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
+import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsAnswer;
+import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsConstants;
+import com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsQuery;
 import com.jivesoftware.os.miru.stumptown.deployable.StumptownSchemaConstants;
 import com.jivesoftware.os.miru.stumptown.deployable.storage.MiruStumptownPayloadStorage;
 import com.jivesoftware.os.miru.stumptown.plugins.StumptownAnswer;
@@ -35,6 +39,7 @@ import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
 import com.jivesoftware.os.routing.bird.http.client.RoundRobinStrategy;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.shared.ClientCall.ClientResponse;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
@@ -202,6 +207,61 @@ public class StumptownQueryPluginRegion implements MiruPageRegion<Optional<Stump
         }
         return renderer.render(template, data);
     }
+
+
+    public List<Map<String, String>> typeahead(String fieldName, String contains) throws Exception {
+
+        MiruResponse<DistinctsAnswer> response = null;
+        MiruTenantId tenantId = StumptownSchemaConstants.TENANT_ID;
+        String endpoint = DistinctsConstants.DISTINCTS_PREFIX + DistinctsConstants.CUSTOM_QUERY_ENDPOINT;
+        String request = requestMapper.writeValueAsString(new MiruRequest<>("stump>typeahead",
+            tenantId,
+            MiruActorId.NOT_PROVIDED,
+            MiruAuthzExpression.NOT_PROVIDED,
+            new DistinctsQuery(
+                MiruTimeRange.ALL_TIME,
+                fieldName,
+                null,
+                MiruFilter.NO_FILTER,
+                Arrays.asList(new MiruValue(contains))),
+            MiruSolutionLogLevel.NONE));
+
+        MiruResponse<DistinctsAnswer> distinctsResponse = readerClient.call("",
+            new RoundRobinStrategy(),
+            "typeahead>" + fieldName,
+            httpClient -> {
+                HttpResponse httpResponse = httpClient.postJson(endpoint, request, null);
+                @SuppressWarnings("unchecked")
+                MiruResponse<DistinctsAnswer> extractResponse = responseMapper.extractResultFromResponse(httpResponse,
+                    MiruResponse.class,
+                    new Class[] { DistinctsAnswer.class },
+                    null);
+                return new ClientResponse<>(extractResponse, true);
+            });
+        if (distinctsResponse != null && distinctsResponse.answer != null) {
+            response = distinctsResponse;
+        } else {
+            log.warn("Empty distincts response from {}", tenantId);
+        }
+
+
+        List<Map<String, String>> data = new ArrayList<>();
+
+        if (response != null && response.answer != null) {
+            int count = 0;
+            for (MiruValue result : response.answer.results) {
+                String v = result.last();
+                data.add(ImmutableMap.of("key", v, "name", v));
+                if (count > 10) {
+                    data.add(ImmutableMap.of("key", "...", "name", "..."));
+                    break;
+                }
+                count++;
+            }
+        }
+        return data;
+    }
+
 
     public Map<String, Object> poll(StumptownPluginRegionInput input) throws Exception {
         Map<String, Object> data = Maps.newHashMap();
