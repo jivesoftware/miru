@@ -64,12 +64,10 @@ public class WikiQueryPluginEndpoints {
         try {
             // TODO something real :)
             List<Map<String, String>> data = new ArrayList<>();
-            int k = 0;
             for (String name : new String[] { "foo", "bar", "bazz", "zoo" }) {
                 if (contains == null || contains.isEmpty() || name.contains(contains)) {
-                    data.add(ImmutableMap.of("key", String.valueOf(k), "name", "foo"));
+                    data.add(ImmutableMap.of("key", name, "name", name));
                 }
-                k++;
             }
 
             return Response.ok(new ObjectMapper().writeValueAsString(data)).build();
