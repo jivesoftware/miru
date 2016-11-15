@@ -55,21 +55,28 @@ public class WikiQueryPluginEndpoints {
     }
 
     @GET
-    @Path("/typeahead/{tenantId}/{query}")
+    @Path("/typeahead/{tenantId}")
     @Produces(MediaType.APPLICATION_JSON)
     public Response typeahead(
         @PathParam("tenantId") @DefaultValue("") String tenantId,
-        @PathParam("query") @DefaultValue("") String query) {
+        @QueryParam("contains") @DefaultValue("") String contains) {
 
         try {
-            LOG.info("typeahead" + query);
-            List<Map<String,String>> data = new ArrayList<>();
-            data.add(ImmutableMap.of("key","1", "name", "foo"));
-            data.add(ImmutableMap.of("key","2", "name", "bar"));
-            data.add(ImmutableMap.of("key","3", "name", "bazz"));
+            // TODO something real :)
+            List<Map<String, String>> data = new ArrayList<>();
+            int k = 0;
+            for (String name : new String[] { "foo", "bar", "bazz", "zoo" }) {
+                if (contains == null || contains.isEmpty() || name.contains(contains)) {
+                    data.add(ImmutableMap.of("key", String.valueOf(k), "name", "foo"));
+                }
+                k++;
+            }
 
             return Response.ok(new ObjectMapper().writeValueAsString(data)).build();
-        } catch (Exception x) {
+        } catch (
+            Exception x)
+
+        {
             LOG.error("Failed to generating query ui.", x);
             return Response.serverError().build();
         }

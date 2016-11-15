@@ -17,20 +17,21 @@ wiki.hs = {
     init: function () {
         $('input[type=text].typeahead-field').each(function (i, input) {
             var $inputName = $(input);
-            var $inputKey = $(input).next('input[type=hidden]');
+            var $inputKey = $(input);
             var endpoint = $inputName.data('typeaheadUrl');
-            var ab = $inputName.data('typeaheadArgs');
+            var tenant = $($inputName.data('typeaheadTenantId')).val();
+            endpoint = endpoint+tenant;
 
             $inputName.focus(function () {
                 wiki.hs.install($inputKey, $inputName, function (key, name) {
                     $inputKey.val(key);
                     $inputName.val(name);
                 });
-                wiki.hs.lookup(endpoint, ab, $inputName.val());
+                wiki.hs.lookup(endpoint, $inputName.val());
             });
             $inputName.on('input', function () {
                 $inputKey.val('');
-                wiki.hs.lookup(endpoint, ab, $inputName.val());
+                wiki.hs.lookup(endpoint, $inputName.val());
             });
             $inputName.blur(function () {
                 wiki.hs.queuedUninstall = setTimeout(function () {
@@ -72,8 +73,8 @@ wiki.hs = {
         var $selector = wiki.hs.installed.selector;
         $selector.find('a').each(function (i) {
             var $a = $(this);
-            if ($a.data('upenaName') == name) {
-                var key = $a.data('upenaKey');
+            if ($a.data('wikiName') == name) {
+                var key = $a.data('wikiKey');
                 $inputKey.val(key);
                 found = true;
                 return false;
@@ -110,50 +111,39 @@ wiki.hs = {
             wiki.hs.uninstall();
         }
     },
-    lookup: function (endpoint, ab, contains) {
-
-
-        var host = "#" + ab + "RemoteHostPicker";
-        var port = "#" + ab + "RemotePortPicker";
-
-        console.log(host + " " + port);
-
-        console.log($(host).attr('value') + " " + $(port).attr('value'));
+    lookup: function (endpoint, contains) {
 
         var $selector = wiki.hs.installed.selector;
         $.ajax(endpoint, {
             data: {
-                'contains': contains,
-                'remoteHost': $(host).attr('value'),
-                'remotePort': $(port).attr('value')
+                'contains': contains
             }
-        })
-                .done(function (data) {
-                    if (!wiki.hs.installed || wiki.hs.installed.selector != $selector) {
-                        // selector changed during the query
-                        return;
-                    }
-                    if (data.length) {
-                        $selector.empty();
-                        for (var i = 0; i < data.length; i++) {
-                            $selector.append(
-                                    "<a href='#'" +
-                                    " class='wiki-hs-choice'" +
-                                    " data-wiki-key='" + data[i].key + "'" +
-                                    " data-wiki-name='" + data[i].name + "'>" + data[i].name + "</a><br/>");
-                        }
-                        wiki.hs.link($selector);
-                        wiki.hs.installed.ready = true;
-                    } else {
-                        $selector.html("<em>No matches</em>");
-                    }
-                });
+        }).done(function (data) {
+            if (!wiki.hs.installed || wiki.hs.installed.selector != $selector) {
+                // selector changed during the query
+                return;
+            }
+            if (data.length) {
+                $selector.empty();
+                for (var i = 0; i < data.length; i++) {
+                    $selector.append(
+                            "<a href='#'" +
+                            " class='wiki-hs-choice'" +
+                            " data-wiki-key='" + data[i].key + "'" +
+                            " data-wiki-name='" + data[i].name + "'>" + data[i].name + "</a><br/>");
+                }
+                wiki.hs.link($selector);
+                wiki.hs.installed.ready = true;
+            } else {
+                $selector.html("<em>No matches</em>");
+            }
+        });
     },
     link: function ($selector) {
         $selector.find('a').each(function (i) {
             var $a = $(this);
-            var key = $a.data('upenaKey');
-            var name = $a.data('upenaName');
+            var key = $a.data('wikiKey');
+            var name = $a.data('wikiName');
             $a.click(function () {
                 wiki.hs.picked(key, name);
                 return false;
