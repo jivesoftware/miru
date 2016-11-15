@@ -212,6 +212,12 @@ public class StumptownQueryPluginRegion implements MiruPageRegion<Optional<Stump
     public List<Map<String, String>> typeahead(String fieldName, String contains) throws Exception {
 
         MiruTimeRange timeRange = new MiruTimeRange(Long.MIN_VALUE, Long.MAX_VALUE);
+        List<MiruValue> prefixes = null;
+        if (contains != null && !contains.isEmpty()) {
+            prefixes = Arrays.asList(new MiruValue(contains));
+        }
+
+
         MiruResponse<DistinctsAnswer> response = null;
         MiruTenantId tenantId = StumptownSchemaConstants.TENANT_ID;
         String endpoint = DistinctsConstants.DISTINCTS_PREFIX + DistinctsConstants.CUSTOM_QUERY_ENDPOINT;
@@ -224,7 +230,7 @@ public class StumptownQueryPluginRegion implements MiruPageRegion<Optional<Stump
                 fieldName,
                 null,
                 MiruFilter.NO_FILTER,
-                Arrays.asList(new MiruValue(contains))),
+                prefixes),
             MiruSolutionLogLevel.NONE));
 
         MiruResponse<DistinctsAnswer> distinctsResponse = readerClient.call("",
