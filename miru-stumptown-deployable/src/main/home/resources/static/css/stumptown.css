@@ -55,3 +55,27 @@ table#stump-rt-events.stump-show-time .stump-event-time { display: table-cell; }
 table#stump-rt-events.stump-show-thread .stump-event-thread { display: table-cell; }
 table#stump-rt-events.stump-show-level .stump-event-level { display: table-cell; }
 table#stump-rt-events.stump-show-message .stump-event-message { display: table-cell; }
+
+
+
+div.stump-hs-selector {
+    display: none;
+    z-index: 2000;
+    position: absolute;
+    background-color: #fff;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+div.stump-hs-choice {
+    border-radius: 2px;
+    background-color: #999;
+    color: #fff;
+    padding: 2px;
+}
+
+input.stump-hs-field-broken {
+    border-color: red;
+    border-style: solid;
+}
