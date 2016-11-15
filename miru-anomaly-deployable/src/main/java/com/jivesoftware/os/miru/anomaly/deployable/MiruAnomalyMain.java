@@ -78,7 +78,7 @@ public class MiruAnomalyMain {
         try {
             final Deployable deployable = new Deployable(args);
             HealthFactory.initialize(deployable::config, new DeployableHealthCheckRegistry(deployable));
-            deployable.addManageInjectables(HasUI.class, new HasUI(Arrays.asList(new UI("Anomaly", "main", "/"))));
+            deployable.addManageInjectables(HasUI.class, new HasUI(Arrays.asList(new UI("Anomaly", "main", "/ui"))));
             deployable.addHealthCheck(new GCPauseHealthChecker(deployable.config(GCPauseHealthChecker.GCPauseHealthCheckerConfig.class)));
             deployable.addHealthCheck(new GCLoadHealthChecker(deployable.config(GCLoadHealthChecker.GCLoadHealthCheckerConfig.class)));
             deployable.addHealthCheck(new SystemCpuHealthChecker(deployable.config(SystemCpuHealthChecker.SystemCpuHealthCheckerConfig.class)));
