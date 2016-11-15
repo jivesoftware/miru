@@ -3,14 +3,12 @@ package com.jivesoftware.os.miru.stumptown.deployable.endpoints;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableMap;
 import com.jivesoftware.os.miru.stumptown.deployable.MiruStumptownService;
 import com.jivesoftware.os.miru.stumptown.deployable.region.StumptownQueryPluginRegion;
 import com.jivesoftware.os.miru.stumptown.deployable.region.StumptownQueryPluginRegion.StumptownPluginRegionInput;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.shared.ResponseHelper;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import javax.inject.Singleton;
@@ -155,22 +153,9 @@ public class StumptownQueryPluginEndpoints {
         @QueryParam("contains") @DefaultValue("") String contains) {
 
         try {
-           /* // TODO something real :)
-            List<Map<String, String>> data = new ArrayList<>();
-            for (String name : new String[] { "foo", "bar", "bazz", "zoo" }) {
-                if (contains == null || contains.isEmpty() || name.contains(contains)) {
-                    data.add(ImmutableMap.of("key", name, "name", name));
-                }
-            }*/
-
             List<Map<String, String>> data = pluginRegion.typeahead(fieldName, contains);
-
-
             return Response.ok(new ObjectMapper().writeValueAsString(data)).build();
-        } catch (
-            Exception x)
-
-        {
+        } catch (Exception x) {
             LOG.error("Failed to generating query ui.", x);
             return Response.serverError().build();
         }
