@@ -11,6 +11,8 @@ li.j-listitem {
 /* theme */
 body {
     background-image: url(/ui/static/img/bkg.jpg);
+    font-family: "Lucida Console", Monaco, monospace;
+    word-wrap: break-word;
 }
 
 /* Used by event stream */
@@ -53,16 +55,3 @@ table#stump-rt-events.stump-show-time .stump-event-time { display: table-cell; }
 table#stump-rt-events.stump-show-thread .stump-event-thread { display: table-cell; }
 table#stump-rt-events.stump-show-level .stump-event-level { display: table-cell; }
 table#stump-rt-events.stump-show-message .stump-event-message { display: table-cell; }
-
-/*
-<th class="stump-event-datacenter">Datacenter</th>
-<th class="stump-event-cluster">Cluster</th>
-<th class="stump-event-host">Host</th>
-<th class="stump-event-service">Service</th>
-<th class="stump-event-instance">Instance</th>
-<th class="stump-event-version">Version</th>
-<th class="stump-event-time">Time</th>
-<th class="stump-event-thread">Thread</th>
-<th class="stump-event-level">Level</th>
-<th class="stump-event-message">Message</th>
-*/
