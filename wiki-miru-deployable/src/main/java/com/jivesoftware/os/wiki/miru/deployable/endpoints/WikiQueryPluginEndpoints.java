@@ -6,7 +6,9 @@ import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.wiki.miru.deployable.WikiMiruService;
 import com.jivesoftware.os.wiki.miru.deployable.region.WikiQueryPluginRegion;
 import com.jivesoftware.os.wiki.miru.deployable.region.WikiQueryPluginRegion.WikiMiruPluginRegionInput;
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import javax.inject.Singleton;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
@@ -17,6 +19,7 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import jersey.repackaged.com.google.common.collect.ImmutableMap;
 
 /**
  *
@@ -60,8 +63,12 @@ public class WikiQueryPluginEndpoints {
 
         try {
             LOG.info("typeahead" + query);
+            List<Map<String,String>> data = new ArrayList<>();
+            data.add(ImmutableMap.of("key","1", "name", "foo"));
+            data.add(ImmutableMap.of("key","2", "name", "bar"));
+            data.add(ImmutableMap.of("key","3", "name", "bazz"));
 
-            return Response.ok(new ObjectMapper().writeValueAsString(Arrays.asList("foo", "bar", "bazz"))).build();
+            return Response.ok(new ObjectMapper().writeValueAsString(data)).build();
         } catch (Exception x) {
             LOG.error("Failed to generating query ui.", x);
             return Response.serverError().build();
