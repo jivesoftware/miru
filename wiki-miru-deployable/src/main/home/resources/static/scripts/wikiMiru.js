@@ -168,7 +168,7 @@ $(document).ready(function () {
     wiki.onWindowFocus = [];
     wiki.onWindowBlur = [];
 
-    if ($('.wiki-hs-field').length) {
+    if ($('.typeahead-field').length) {
         wiki.hs.init();
     }
 
