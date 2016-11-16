@@ -352,7 +352,8 @@ stump.realtime = {
                     bezierCurveTension: 0.4,
                     datasetFill: false,
                     responsive: true,
-                    animation: false
+                    animation: false,
+                    maintainAspectRatio : false
                 });
                 $('#stump-rt-legend').html(stump.realtime.chart.generateLegend());
             }
