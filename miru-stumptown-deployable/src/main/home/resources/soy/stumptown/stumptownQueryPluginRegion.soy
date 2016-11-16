@@ -45,7 +45,7 @@
                         </td><td>
                             <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
                                 class="form-control" placeholder="To Time Ago" value="{$toAgo?:''}"
-                                name="toAgo" id="toTimePicker" data-original-title="" title="">
+                                name="toAgo" id="toAgoPicker" data-original-title="" title="">
                             <select style="width:120px; padding-left:10px;"
                                 class="form-control" placeholder="ToTimeUnit"
                                 name="toTimeUnit" id="toTimeUnitPicker" data-original-title="" title="">
@@ -62,7 +62,7 @@
                         </td><td>
                             <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
                              class="form-control" placeholder="From Time Ago" value="{$fromAgo?:''}"
-                             name="fromAgo" id="fromTimePicker" data-original-title="" title="">
+                             name="fromAgo" id="fromAgoPicker" data-original-title="" title="">
                             <select style="width:120px; padding-left:10px;"
                                 class="form-control" placeholder="FromTimeUnit"
                                 name="fromTimeUnit" id="fromTimeUnitPicker" data-original-title="" title="">
@@ -315,6 +315,11 @@
                             </div>
                         </td><td>
                             <div class="checkbox">
+                                <label style="font-weight:normal;"><input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="logger" />
+                                Logger &nbsp;</label>
+                            </div>
+                        </td><td>
+                            <div class="checkbox">
                                 <label style="font-weight:normal;"><input type="checkbox" class="stump-toggle stump-toggle-on" onchange="stump.query.toggle(this);" data-name="method" />
                                 Method &nbsp;</label>
                             </div>
@@ -370,6 +375,7 @@
                             <th class="stump-event-time">Time</th>
                             <th class="stump-event-thread">Thread</th>
                             <th class="stump-event-level">Level</th>
+                            <th class="stump-event-logger">Logger</th>
                             <th class="stump-event-method">Method</th>
                             <th class="stump-event-line">Line</th>
                             <th class="stump-event-message" width="99%">Message</th>
@@ -395,10 +401,11 @@
         <td class="stump-event-time" style="white-space: nowrap;">{$event.timestamp}</td>
         <td class="stump-event-thread">{$event.threadName}</td>
         <td class="stump-event-level">{$event.level}</td>
+        <td class="stump-event-logger">{$event.loggerName}</td>
         <td class="stump-event-method">{$event.method}</td>
         <td class="stump-event-line">{$event.line}</td>
         <td class="stump-event-message">
-            {$event.loggerName} - {$event.message}
+            {$event.message}
             {if $event.thrownStackTrace}
                 <br/>
                 {foreach $line in $event.thrownStackTrace}

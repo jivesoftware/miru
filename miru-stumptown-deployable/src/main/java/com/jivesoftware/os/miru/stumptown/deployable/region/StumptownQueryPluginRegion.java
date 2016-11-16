@@ -209,7 +209,21 @@ public class StumptownQueryPluginRegion implements MiruPageRegion<Optional<Stump
     }
 
 
-    public List<Map<String, String>> typeahead(String fieldName, String contains) throws Exception {
+    public List<Map<String, String>> typeahead(String name,
+        String cluster,
+        String host,
+        String service,
+        String instance,
+        String version,
+        int fromAgo,
+        int toAgo,
+        String fromTimeUnit,
+        String toTimeUnit,
+        String thread,
+        String logger,
+        String method,
+        String fieldName,
+        String contains) throws Exception {
 
         MiruTimeRange timeRange = new MiruTimeRange(Long.MIN_VALUE, Long.MAX_VALUE);
         List<MiruValue> prefixes = null;
@@ -217,6 +231,26 @@ public class StumptownQueryPluginRegion implements MiruPageRegion<Optional<Stump
             prefixes = Arrays.asList(new MiruValue(contains));
         }
 
+        List<MiruFieldFilter> fieldFilters = Lists.newArrayList();
+        List<MiruFieldFilter> notFieldFilters = Lists.newArrayList();
+        addFilter(name, "cluster",  cluster, fieldFilters, notFieldFilters);
+        addFilter(name, "host",  host, fieldFilters, notFieldFilters);
+        addFilter(name, "service",  service, fieldFilters, notFieldFilters);
+        addFilter(name, "instance",  instance, fieldFilters, notFieldFilters);
+        addFilter(name, "version",  version, fieldFilters, notFieldFilters);
+        addFilter(name, "thread",  thread, fieldFilters, notFieldFilters);
+        addFilter(name, "methodName",  method, fieldFilters, notFieldFilters);
+        //addFilter(name, "lineNumber",  line, fieldFilters, notFieldFilters);
+        addFilter(name, "logger",  logger, fieldFilters, notFieldFilters);
+        //addFilter(name, "level",  level, fieldFilters, notFieldFilters);
+        //addFilter(name, "exceptionClass",  exceptionClass, fieldFilters, notFieldFilters);
+
+        List<MiruFilter> filters = Lists.newArrayList();
+        filters.add(new MiruFilter(MiruFilterOperation.and, false, fieldFilters, null));
+
+        if (!notFieldFilters.isEmpty()) {
+            filters.add(new MiruFilter(MiruFilterOperation.or, false, notFieldFilters, null));
+        }
 
         MiruResponse<DistinctsAnswer> response = null;
         MiruTenantId tenantId = StumptownSchemaConstants.TENANT_ID;
@@ -229,7 +263,10 @@ public class StumptownQueryPluginRegion implements MiruPageRegion<Optional<Stump
                 timeRange,
                 fieldName,
                 null,
-                MiruFilter.NO_FILTER,
+                new MiruFilter(MiruFilterOperation.pButNotQ,
+                    false,
+                    null,
+                    filters),
                 prefixes),
             MiruSolutionLogLevel.NONE));
 
@@ -267,6 +304,12 @@ public class StumptownQueryPluginRegion implements MiruPageRegion<Optional<Stump
             }
         }
         return data;
+    }
+
+    private void addFilter(String typeaheadField,String  field, String value, List<MiruFieldFilter> fieldFilters, List<MiruFieldFilter> notFieldFilters) {
+        if (typeaheadField == null || !typeaheadField.equals(field)) {
+            QueryUtils.addFieldFilter(fieldFilters, notFieldFilters, field, value);
+        }
     }
 
 
