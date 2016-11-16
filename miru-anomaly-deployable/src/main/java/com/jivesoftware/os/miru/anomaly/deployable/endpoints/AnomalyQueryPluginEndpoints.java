@@ -1,15 +1,19 @@
 package com.jivesoftware.os.miru.anomaly.deployable.endpoints;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.jivesoftware.os.miru.anomaly.deployable.MiruAnomalyService;
 import com.jivesoftware.os.miru.anomaly.deployable.region.AnomalyQueryPluginRegion;
 import com.jivesoftware.os.miru.anomaly.deployable.region.AnomalyQueryPluginRegion.AnomalyPluginRegionInput;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import java.util.List;
+import java.util.Map;
 import javax.inject.Singleton;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
@@ -83,6 +87,21 @@ public class AnomalyQueryPluginEndpoints {
             return Response.ok(rendered).build();
         } catch (Throwable t) {
             LOG.error("Failed query", t);
+            return Response.serverError().build();
+        }
+    }
+
+    @GET
+    @Path("/typeahead/{fieldName}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response typeahead(
+        @PathParam("fieldName") @DefaultValue("") String fieldName,
+        @QueryParam("contains") @DefaultValue("") String contains) {
+        try {
+            List<Map<String, String>> data = pluginRegion.typeahead(fieldName, contains);
+            return Response.ok(new ObjectMapper().writeValueAsString(data)).build();
+        } catch (Exception x) {
+            LOG.error("Failed to generating query ui.", x);
             return Response.serverError().build();
         }
     }

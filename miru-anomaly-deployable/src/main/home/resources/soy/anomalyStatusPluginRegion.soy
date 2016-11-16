@@ -18,21 +18,31 @@
                                 <th>Host</th>
                                 <th>Service</th>
                                 <th>Instance</th>
-                                <th>Version</th>
                             </tr>
                         </thead>
                         <tbody>
                             {foreach $status in $serviceStatus}
                                 <tr>
                                     <td>
-                                        <input type="button" value="{$status.ingressed}"
+                                        <input class="btn btn-default form-control"  type="button" value="{$status.ingressed}"
                                             onclick="document.location.href='query?cluster={$status.cluster}&amp;host={$status.host}&amp;service={$status.service}&amp;instance={$status.instance}';" />
                                     </td>
-                                    <td>{$status.cluster}</td>
-                                    <td>{$status.host}</td>
-                                    <td>{$status.service}</td>
-                                    <td>{$status.instance}</td>
-                                    <td>{$status.version}</td>
+                                    <td>
+                                        <input class="btn btn-default form-control"  type="button" value="{$status.cluster}"
+                                            onclick="document.location.href='query?cluster={$status.cluster}';" />
+                                    </td>
+                                    <td>
+                                        <input class="btn btn-default form-control"  type="button" value="{$status.host}"
+                                            onclick="document.location.href='query?cluster={$status.host}';" />
+                                    </td>
+                                    <td>
+                                        <input class="btn btn-default form-control"  type="button" value="{$status.service}"
+                                            onclick="document.location.href='query?service={$status.service}';" />
+                                    </td>
+                                    <td>
+                                        <input class="btn btn-default form-control"  type="button" value="{$status.instance}"
+                                            onclick="document.location.href='query?instance={$status.instance}';" />
+                                    </td>
                                 </tr>
                             {/foreach}
                         </tbody>

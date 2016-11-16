@@ -235,7 +235,7 @@ public class StumptownQueryPluginRegion implements MiruPageRegion<Optional<Stump
 
         MiruResponse<DistinctsAnswer> distinctsResponse = readerClient.call("",
             new RoundRobinStrategy(),
-            "typeahead>" + fieldName,
+            "stump>typeahead>" + fieldName,
             httpClient -> {
                 HttpResponse httpResponse = httpClient.postJson(endpoint, request, null);
                 @SuppressWarnings("unchecked")
