@@ -114,20 +114,20 @@ stump.hs = {
         $.ajax(endpoint, {
             data: {
                 'contains': contains,
-                'fromAgo': $(#fromAgoPicker).val(),
-                'toAgo': $(#toAgoPicker).val(),
-                'fromTimeUnit': $(#fromTimeUnitPicker).val(),
-                'toTimeUnit': $(#toTimeUnitPicker).val(),
+                'fromAgo': $('#fromAgoPicker').val(),
+                'toAgo': $('#toAgoPicker').val(),
+                'fromTimeUnit': $('#fromTimeUnitPicker').val(),
+                'toTimeUnit': $('#toTimeUnitPicker').val(),
 
-                'cluster': $(#clusterPicker).val(),
-                'host': $(#hostPicker).val(),
-                'service': $(#servicePicker).val(),
-                'instance': $(#instancePicker).val(),
-                'version': $(#versionPicker).val(),
-                'method': $(#methodPicker).val(),
-                'line': $(#linePicker).val(),
-                'thread': $(#threadPicker).val(),
-                'logger': $(#loggerPicker).val()
+                'cluster': $('#clusterPicker').val(),
+                'host': $('#hostPicker').val(),
+                'service': $('#servicePicker').val(),
+                'instance': $('#instancePicker').val(),
+                'version': $('#versionPicker').val(),
+                'method': $('#methodPicker').val(),
+                'line': $('#linePicker').val(),
+                'thread': $('#threadPicker').val(),
+                'logger': $('#loggerPicker').val()
             }
         }).done(function (data) {
             if (!stump.hs.installed || stump.hs.installed.selector != $selector) {
