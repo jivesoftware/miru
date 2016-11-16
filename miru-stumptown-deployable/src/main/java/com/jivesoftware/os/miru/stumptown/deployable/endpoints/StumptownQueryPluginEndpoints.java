@@ -150,9 +150,23 @@ public class StumptownQueryPluginEndpoints {
     @Produces(MediaType.APPLICATION_JSON)
     public Response typeahead(
         @PathParam("fieldName") @DefaultValue("") String fieldName,
+        @QueryParam("cluster") @DefaultValue("dev") String cluster,
+        @QueryParam("host") @DefaultValue("") String host,
+        @QueryParam("service") @DefaultValue("") String service,
+        @QueryParam("instance") @DefaultValue("") String instance,
+        @QueryParam("version") @DefaultValue("") String version,
+        @QueryParam("fromAgo") @DefaultValue("8") int fromAgo,
+        @QueryParam("toAgo") @DefaultValue("0") int toAgo,
+        @QueryParam("fromTimeUnit") @DefaultValue("MINUTES") String fromTimeUnit,
+        @QueryParam("toTimeUnit") @DefaultValue("MINUTES") String toTimeUnit,
+        @QueryParam("thread") @DefaultValue("") String thread,
+        @QueryParam("logger") @DefaultValue("") String logger,
+        @QueryParam("method") @DefaultValue("") String method,
+        @QueryParam("line") @DefaultValue("") String line,
         @QueryParam("contains") @DefaultValue("") String contains) {
         try {
-            List<Map<String, String>> data = pluginRegion.typeahead(fieldName, contains);
+            List<Map<String, String>> data = pluginRegion.typeahead(fieldName, cluster, host, service, instance, version, fromAgo, toAgo, fromTimeUnit,
+                toTimeUnit, thread, logger, method, line, contains);
             return Response.ok(new ObjectMapper().writeValueAsString(data)).build();
         } catch (Exception x) {
             LOG.error("Failed to generating query ui.", x);
