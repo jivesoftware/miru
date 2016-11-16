@@ -236,6 +236,13 @@ anomaly.query = {
 };
 
 $(document).ready(function () {
+
+
+    if ($('.typeahead-field').length) {
+        anomaly.hs.init();
+    }
+
+
     if ($('#anomaly-query').length) {
         anomaly.query.init();
     }
