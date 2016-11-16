@@ -30,7 +30,7 @@ wiki.hs = {
                 wiki.hs.lookup(endpoint, $inputName.val());
             });
             $inputName.on('input', function () {
-                $inputKey.val('');
+                //$inputKey.val('');
                 wiki.hs.lookup(endpoint, $inputName.val());
             });
             $inputName.blur(function () {

@@ -27,7 +27,7 @@ anomaly.hs = {
                 anomaly.hs.lookup(endpoint, $inputName.val());
             });
             $inputName.on('input', function () {
-                $inputKey.val('');
+                //$inputKey.val('');
                 anomaly.hs.lookup(endpoint, $inputName.val());
             });
             $inputName.blur(function () {
