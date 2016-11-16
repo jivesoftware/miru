@@ -138,7 +138,7 @@
                             Tenant
                         </td>
                         <td>
-                            <input type="text" role="combobox" style="width:120px; padding-left:10px;"
+                            <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
                                 data-typeahead-url="/ui/anomaly/query/typeahead/tenant" class="typeahead-field form-control" placeholder="Thread" value="{$tenant?:''}"
                                 name="tenant" id="tenantPicker" data-original-title="" title="">
                         </td>
@@ -168,9 +168,8 @@
                             Type
                         </td>
                         <td>
-                            <select style="width:120px; padding-left:10px;"
-                                class="j-type-autocomplete j-autocomplete-input j-ui-elem" placeholder="type"
-                                name="type" id="typePicker" data-original-title="" title="">
+                            <select class="form-control" style="width:120px; padding-left:10px;" placeholder="type"
+                                name="type" id="typePicker" title="">
                                 <option value="VALUE" {if $type == 'VALUE'}selected="selected"{/if}>Value</option>
                                 <option value="counter" {if $type == 'counter'}selected="selected"{/if}>Counter</option>
                                 <option value="atomicCounter" {if $type == 'atomicCounter'}selected="selected"{/if}>Atomic Counter</option>
@@ -184,9 +183,9 @@
                             Expand on
                         </td>
                         <td>
-                            <select style="width:120px; padding-left:10px;"
-                                class="j-expansionField-autocomplete j-autocomplete-input j-ui-elem" placeholder="expansionField"
-                                name="expansionField" id="expansionFieldPicker" data-original-title="" title="">
+                            <select class="form-control" style="width:120px; padding-left:10px;"
+                                placeholder="expansionField"
+                                name="expansionField" id="expansionFieldPicker"  title="">
                                 <option value="metric" {if $expansionField == 'metric'}selected="selected"{/if}>Metric</option>
                                 <option value="tags" {if $expansionField == 'tags'}selected="selected"{/if}>Tags</option>
                                 <option value="cluster" {if $expansionField == 'cluster'}selected="selected"{/if}>Cluster</option>
@@ -197,12 +196,17 @@
                                 <option value="sampler" {if $expansionField == 'sampler'}selected="selected"{/if}>Sampler</option>
                                 <option value="tenant" {if $expansionField == 'tenant'}selected="tenant"{/if}>Tenant</option>
                             </select>
-                            &nbsp;limited to terms&nbsp;
-                            <input type="text" autocomplete="off" role="combobox" style="width:280px;"
-                                class="j-expansionValue-autocomplete j-autocomplete-input j-ui-elem" placeholder="Wildcard" value="{$expansionValue?:''}"
-                                name="expansionValue" id="expansionValuePicker" data-original-title="" title="">
                         </td>
                     </tr>
+                    <tr>
+                        <td style="font-weight:bold; vertical-align:top;">
+                            limited to terms
+                        </td>
+                        <td>
+                             <input type="text" autocomplete="off" style="width:120px; padding-left:10px;"
+                              class="form-control" placeholder="Wildcard" value="{$expansionValue?:''}"
+                                    name="expansionValue" id="expansionValuePicker"  title="">
+                        </td>
                     <tr>
                         <td style="font-weight:bold; vertical-align:top;">
                             Buckets
@@ -220,7 +224,7 @@
                         </td>
                         <td>
                             <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
-                                class="j-buckets-autocomplete j-autocomplete-input j-ui-elem" placeholder="Max Wavforms" value="{$maxWaveforms?:''}"
+                                class="form-control"  placeholder="Max Wavforms" value="{$maxWaveforms?:''}"
                                 name="maxWaveforms" id="maxWaveformsPicker" data-original-title="" title="">
                         </td>
                     </tr>
