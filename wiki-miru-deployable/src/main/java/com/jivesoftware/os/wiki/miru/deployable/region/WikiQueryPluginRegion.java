@@ -29,13 +29,15 @@ import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
 import com.jivesoftware.os.routing.bird.http.client.RoundRobinStrategy;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.shared.ClientCall.ClientResponse;
-import com.jivesoftware.os.wiki.miru.deployable.WikiMiruIndexService.Wiki;
+import com.jivesoftware.os.wiki.miru.deployable.WikiMiruIndexService.Content;
 import com.jivesoftware.os.wiki.miru.deployable.region.WikiQueryPluginRegion.WikiMiruPluginRegionInput;
 import com.jivesoftware.os.wiki.miru.deployable.storage.WikiMiruPayloadsAmza;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  *
@@ -111,7 +113,7 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
                             MiruFilter.NO_FILTER,
                             Strategy.TIME,
                             100,
-                            new String[] { "id" }),
+                            new String[] { "userGuid", "folderGuid", "guid", "type" }),
                         MiruSolutionLogLevel.NONE)
                 );
 
@@ -133,33 +135,133 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
                     data.put("elapse", String.valueOf(response.totalElapsed));
                     data.put("count", response.answer.results.size());
                     List<ActivityScore> scores = response.answer.results.subList(0, Math.min(1_000, response.answer.results.size()));
-                    List<Map<String, Object>> results = new ArrayList<>();
-                    List<String> keys = Lists.newArrayList();
+                    List<String> contentKeys = Lists.newArrayList();
+
+                    Set<String> uniqueFolders = new HashSet<>();
+                    Set<String> uniqueUsers = new HashSet<>();
+
+                    Map<String,Integer> foldersIndex = new HashMap<>();
+                    Map<String,Integer> usersIndex = new HashMap<>();
+
+                    List<String> folderKeys = Lists.newArrayList();
+                    List<String> userKeys = Lists.newArrayList();
+
+                    int folderIndex= 0;
+                    int userIndex= 0;
+
                     for (ActivityScore score : scores) {
-                        keys.add(score.values[0][0].last()+"-slug");
+                        if (score.values[3][0].last().equals("content")) {
+                            contentKeys.add(score.values[2][0].last() + "-slug");
+                        } else {
+                            contentKeys.add(score.values[2][0].last());
+                        }
+                        if (score.values[0] != null && score.values[0].length > 0) {
+
+                            String userGuid = score.values[0][0].last();
+                            if (uniqueUsers.add(userGuid)) {
+                                userKeys.add(userGuid);
+                                usersIndex.put(userGuid,userIndex);
+                                userIndex++;
+                            }
+                        }
+
+                        if (score.values[1] != null && score.values[1].length > 0) {
+                            String folderGuid = score.values[1][0].last();
+                            if (uniqueFolders.add(folderGuid)) {
+                                folderKeys.add(folderGuid);
+                                foldersIndex.put(folderGuid,folderIndex);
+                                folderIndex++;
+                            }
+                        }
                     }
 
                     long start = System.currentTimeMillis();
-                    List<Wiki> wikis = payloads.multiGet(tenantId, keys, Wiki.class);
+                    List<Content> usersContent = payloads.multiGet(tenantId, userKeys, Content.class);
                     long elapsed = System.currentTimeMillis() - start;
-                    data.put("getElapse", String.valueOf(elapsed));
+                    data.put("getUsersElapse", String.valueOf(elapsed));
 
                     start = System.currentTimeMillis();
-                    for (int i = 0; i < keys.size(); i++) {
-                        Wiki wiki = wikis.get(i);
-                        if (wiki != null) {
+                    List<Content> foldersContent = payloads.multiGet(tenantId, folderKeys, Content.class);
+                    elapsed = System.currentTimeMillis() - start;
+                    data.put("getFoldersElapse", String.valueOf(elapsed));
+
+                    start = System.currentTimeMillis();
+                    List<Content> contents = payloads.multiGet(tenantId, contentKeys, Content.class);
+                    elapsed = System.currentTimeMillis() - start;
+                    data.put("getContentElapse", String.valueOf(elapsed));
+
+                    List<Map<String, Object>> results = new ArrayList<>();
+
+                    start = System.currentTimeMillis();
+                    int i = 0;
+                    for (ActivityScore score : scores) {
+                        Content content = contents.get(i);
+                        if (content != null) {
 
                             Map<String, Object> result = new HashMap<>();
-                            result.put("id", keys.get(i));
-                            result.put("subject", wiki.subject);
+                            result.put("type", score.values[3][0].last());
+
+                            if (score.values[0] != null && score.values[0].length > 0) {
+
+                                String userGuid = score.values[0][0].last();
+                                Content userContent = usersContent.get(usersIndex.get(userGuid));
+                                if (userContent != null) {
+                                    result.put("userGuid", userGuid);
+                                    result.put("user", userContent.subject);
+                                }
+                            }
+
+                            if (score.values[1] != null && score.values[1].length > 0) {
+                                String folderGuid = score.values[1][0].last();
+                                Content folderContent = foldersContent.get(foldersIndex.get(folderGuid));
+                                if (folderContent != null) {
+                                    result.put("folderGuid", folderGuid);
+                                    result.put("folder", folderContent.subject);
+                                }
+                            }
+
+
+                            result.put("guid", score.values[2][0].last());
+                            result.put("subject", content.subject);
                             result.put("body",
-                                bodyQueryParser.highlight(locale, input.query, wiki.body, "<span style=\"background-color: #FFFF00\">", "</span>", 1000));
+                                bodyQueryParser.highlight(locale, input.query, content.body, "<span style=\"background-color: #FFFF00\">", "</span>", 1000));
                             results.add(result);
                         }
+                        i++;
                     }
                     elapsed = System.currentTimeMillis() - start;
                     data.put("highlightElapse", String.valueOf(elapsed));
                     data.put("results", results);
+
+                    List<Map<String, Object>> users = new ArrayList<>();
+                    i = 0;
+                    for (String userKey : userKeys) {
+                        Content content = usersContent.get(i);
+                        Map<String, Object> result = new HashMap<>();
+                        result.put("guid", userKey);
+                        result.put("subject", content.subject);
+                        result.put("body",
+                            bodyQueryParser.highlight(locale, input.query, content.body, "<span style=\"background-color: #FFFF00\">", "</span>", 1000));
+                        results.add(result);
+                        i++;
+                    }
+                    data.put("users", users);
+
+                    List<Map<String, Object>> folders = new ArrayList<>();
+                    i = 0;
+                    for (String folderKey : folderKeys) {
+                        Content content = foldersContent.get(i);
+
+                        Map<String, Object> result = new HashMap<>();
+                        result.put("guid", folderKey);
+                        result.put("subject", content.subject);
+                        result.put("body",
+                            bodyQueryParser.highlight(locale, input.query, content.body, "<span style=\"background-color: #FFFF00\">", "</span>", 1000));
+                        results.add(result);
+                        i++;
+                    }
+                    data.put("folders", users);
+
 
                     ObjectMapper mapper = new ObjectMapper();
                     mapper.enable(SerializationFeature.INDENT_OUTPUT);

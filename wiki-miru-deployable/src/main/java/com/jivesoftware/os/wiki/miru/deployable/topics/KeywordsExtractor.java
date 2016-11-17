@@ -1,20 +1,23 @@
 package com.jivesoftware.os.wiki.miru.deployable.topics;
 
 import com.google.common.base.Joiner;
+import com.google.common.collect.HashMultiset;
 import com.google.common.collect.MinMaxPriorityQueue;
+import com.google.common.collect.Multiset;
 import com.jivesoftware.os.miru.plugin.query.TermTokenizer;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.en.EnglishAnalyzer;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 
 /**
  * <p>
@@ -23,14 +26,38 @@ import org.apache.lucene.analysis.en.EnglishAnalyzer;
 public class KeywordsExtractor {
 
     public static void main(String[] args) throws IOException {
-        String text = "";
 
-        Topic[] topics = KeywordsExtractor.getKeywordsList(text, 10);
+
+        String text = "cat cat cat cat cat cat cat frog mouse frog mouse frog mouse frog mouse frog mouse";
+
+        Topic[] topics = KeywordsExtractor.getKeywordsList(text, 20, 20);
 
         for (Topic topic : topics) {
             System.out.println(topic.toString());
         }
 
+        String image = findImage(Joiner.on("+").join(topics[0].topic), null);
+        System.out.println(image);
+
+    }
+
+    public static String findImage(String question, String ua) {
+        ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.71 Safari/537.36";
+        String finRes = "";
+
+        try {
+            String googleUrl = "https://www.google.com/search?tbm=isch&q=" + question.replace(",", "");
+            Document doc1 = Jsoup.connect(googleUrl).userAgent(ua).timeout(10 * 1000).get();
+            Element media = doc1.select("[data-src]").first();
+            String finUrl = media.attr("abs:data-src");
+
+            finRes = finUrl.replace("&quot", "");
+
+        } catch (Exception e) {
+            System.out.println(e);
+        }
+
+        return finRes;
     }
 
     /**
@@ -40,54 +67,45 @@ public class KeywordsExtractor {
      * @return List<CardKeyword>, which contains keywords cards
      * @throws IOException
      */
-    public static Topic[] getKeywordsList(String fullText, int topN) throws IOException {
-
-        Analyzer nonSteming = new NonStemingEnglishAnalyzer(EnStopwords.ENGLISH_STOP_WORDS_SET);
+    public static Topic[] getKeywordsList(String fullText, int maxPhraseLength, int topN) throws IOException {
 
         Analyzer analyzer = new EnglishAnalyzer(EnStopwords.ENGLISH_STOP_WORDS_SET);
+        Analyzer nonSteming = new NonStemingEnglishAnalyzer(EnStopwords.ENGLISH_STOP_WORDS_SET);
 
         TermTokenizer termTokenizer = new TermTokenizer();
         List<String> tokens = termTokenizer.tokenize(nonSteming, fullText);
+        List<String> stemmedTokens = termTokenizer.tokenize(analyzer, fullText);
 
-        List<CardKeyword> cardKeywords = new LinkedList<>();
-
-        //CharTermAttribute token = tokenStream.getAttribute(CharTermAttribute.class);
-
+        Map<String, Keyword> keywords = new HashMap<>();
         List<String> terms = new ArrayList<>();
         List<String> stems = new ArrayList<>();
 
+        int z = 0;
         for (String term : tokens) {
 
-            List<String> stem = termTokenizer.tokenize(analyzer, term);
-            if (stem != null && stem.size() == 1) {
+            String s = stemmedTokens.get(z);
+            Keyword keyword = keywords.computeIfAbsent(s, s1 -> {
+                return new Keyword(term);
+            });
+            keyword.add(term);
 
-                String s = stem.get(0);
-                terms.add(term);
-                stems.add(s);
+            terms.add(term);
+            stems.add(s);
 
-                CardKeyword cardKeyword = find(cardKeywords, new CardKeyword(s.replaceAll("-0", "-")));
-                // treat the dashed words back, let look them pretty
-                cardKeyword.add(term.replaceAll("-0", "-"));
-            }
+            z++;
         }
 
         MinMaxPriorityQueue<Topic> topics = MinMaxPriorityQueue.maximumSize(topN).expectedSize(topN).create();
 
-        Map<String, Integer> stemFrequency = new HashMap<>();
-        for (CardKeyword cardKeyword : cardKeywords) {
-            System.out.println(cardKeyword);
-            stemFrequency.put(cardKeyword.getStem(), cardKeyword.getFrequency());
-        }
-
         String[] empty = new String[0];
 
         Set<String> uniq = new HashSet<>();
-        int m = 4;
+        int m = maxPhraseLength;
         for (int t = 0; t < terms.size(); t++) {
 
             int score = 1;
             for (int i = t, l = 0; i < terms.size() && l < m; i++, l++) {
-                score += stemFrequency.get(stems.get(i));
+                score += keywords.get(stems.get(i)).frequency;
                 Set<String> j = new HashSet<>();
                 List<String> ts = new ArrayList<>();
                 int k = 0;
@@ -107,7 +125,6 @@ public class KeywordsExtractor {
         // reverse sort by frequency
         Topic[] finalTopics = topics.toArray(new Topic[0]);
         Arrays.sort(finalTopics);
-
         return finalTopics;
 
     }
@@ -133,25 +150,36 @@ public class KeywordsExtractor {
     }
 
 
+    static class Keyword implements Comparable<Keyword> {
 
-    /**
-     * Find sample in collection
-     *
-     * @param collection
-     * @param sample
-     * @param <T>
-     * @return <T> T, which contains the found object within collection if exists, otherwise the initially searched object
-     */
-    private static <T> T find(Collection<T> collection, T sample) {
+        final String stem;
 
-        for (T element : collection) {
-            if (element.equals(sample)) {
-                return element;
-            }
+        final Multiset<String> terms = HashMultiset.create();
+
+        int frequency;
+
+        Keyword(String stem) {
+            this.stem = stem;
         }
 
-        collection.add(sample);
+        public void add(String term) {
+            this.terms.add(term);
+            this.frequency++;
+        }
 
-        return sample;
+        @Override
+        public int compareTo(Keyword keyword) {
+            return Integer.compare(keyword.frequency, this.frequency);
+        }
+
+
+        @Override
+        public String toString() {
+            return "CardKeyword{" +
+                "stem='" + stem + '\'' +
+                ", terms=" + terms +
+                ", frequency=" + frequency +
+                '}';
+        }
     }
 }

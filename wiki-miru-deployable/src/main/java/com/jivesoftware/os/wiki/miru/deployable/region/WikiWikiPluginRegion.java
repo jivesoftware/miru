@@ -9,7 +9,7 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
-import com.jivesoftware.os.wiki.miru.deployable.WikiMiruIndexService.Wiki;
+import com.jivesoftware.os.wiki.miru.deployable.WikiMiruIndexService.Content;
 import com.jivesoftware.os.wiki.miru.deployable.region.WikiWikiPluginRegion.WikiWikiPluginRegionInput;
 import com.jivesoftware.os.wiki.miru.deployable.storage.WikiMiruPayloadsAmza;
 import info.bliki.wiki.filter.HTMLConverter;
@@ -62,21 +62,21 @@ public class WikiWikiPluginRegion implements MiruPageRegion<WikiWikiPluginRegion
             data.put("tenantId", input.tenantId);
             data.put("wikiId", input.wikiId);
 
-            Wiki wiki = payloads.get(new MiruTenantId(input.tenantId.getBytes(StandardCharsets.UTF_8)), input.wikiId, Wiki.class);
-            if (wiki != null) {
+            Content content = payloads.get(new MiruTenantId(input.tenantId.getBytes(StandardCharsets.UTF_8)), input.wikiId, Content.class);
+            if (content != null) {
 
                 data.put("id", input.wikiId);
-                data.put("subject", wiki.subject);
+                data.put("subject", content.subject);
 
                 WikiModel wikiModel = new WikiModel("https://en.wikipedia.org/wiki/${image}", "https://en.wikipedia.org/wiki/${title}");
-                String htmlBody = wikiModel.render(new HTMLConverter(), wiki.body);
+                String htmlBody = wikiModel.render(new HTMLConverter(), content.body);
 
                 data.put("body", htmlBody);
 
 
-                Wiki wikiTopics = payloads.get(new MiruTenantId(input.tenantId.getBytes(StandardCharsets.UTF_8)), input.wikiId + "-topics", Wiki.class);
-                if (wikiTopics != null) {
-                    data.put("topics", wikiTopics.body);
+                Content contentTopics = payloads.get(new MiruTenantId(input.tenantId.getBytes(StandardCharsets.UTF_8)), input.wikiId + "-topics", Content.class);
+                if (contentTopics != null) {
+                    data.put("topics", contentTopics.body);
                 }
 
 

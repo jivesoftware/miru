@@ -6,10 +6,14 @@
  * @param? tenantId
  * @param? query
  * @param? elapse
- * @param? getElapse
+ * @param? getUsersElapse
+ * @param? getFoldersElapse
+ * @param? getContentElapse
  * @param? highlightElapse
  * @param? count
  * @param? results
+ * @param? users
+ * @param? folders
  */
 {template .wikiMiruQueryPlugin}
     <div class="panel panel-default">
@@ -29,16 +33,43 @@
                 </div>
             </div>
             {if $elapse}
-               <small >Query: {$elapse} Fetch: {$getElapse} Highlight: {$highlightElapse} Found: {$count}</small>
+               <small >Query: {$elapse} Fetch: Users({$getUsersElapse}) Folders({$getFoldersElapse}) Content({$getContentElapse}) Highlight: {$highlightElapse} Found: {$count}</small>
             {/if}
-            {if $results}
-                {foreach $r in $results}
-                    <div style="border-bottom:1px solid #eee;">
-                        <h4><a href="/ui/wiki/{$tenantId}/{$r.id}">{$r.subject}</a></h4>
-                        <p>{$r.body|noAutoescape}</p>
-                    </div>
-                {/foreach}
-            {/if}
+
+            <div class="container-fluid">
+            	<div class="row-fluid">
+                    {if $results}
+                        <div class="span7">
+                            {foreach $r in $results}
+                                <div style="border-bottom:1px solid #eee;">
+                                    <h4><a href="/ui/wiki/{$tenantId}/{$r.id}">{$r.subject}</a></h4>
+                                    <p>{$r.body|noAutoescape}</p>
+                                </div>
+                            {/foreach}
+                        </div>
+                    {/if}
+                    {if $folders}
+                        <div class="span2">
+                            {foreach $f in $folders}
+                                <div style="border-bottom:1px solid #eee;">
+                                    <h4><span class="glyphicon glyphicon-folder-open" aria-hidden="true"></span><a href="/ui/wiki/{$tenantId}/{$f.id}">{$f.subject}</a></h4>
+                                    <p>{$f.body|noAutoescape}</p>
+                                </div>
+                            {/foreach}
+                        </div>
+                    {/if}
+                    {if $users}
+                         <div class="span2">
+                            {foreach $u in $users}
+                                <div style="border-bottom:1px solid #eee;">
+                                    <h4><span class="glyphicon glyphicon-user" aria-hidden="true"></span><a href="/ui/wiki/{$tenantId}/{$u.id}">{$u.subject}</a></h4>
+                                    <p>{$u.body|noAutoescape}</p>
+                                </div>
+                            {/foreach}
+                        </div>
+                    {/if}
+                </div>
+            </div>
         </div>
     </div>
 {/template}
