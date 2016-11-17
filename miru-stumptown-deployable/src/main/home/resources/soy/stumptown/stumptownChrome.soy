@@ -12,12 +12,7 @@
 	    <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>{$title}</title>
         {call .styles /}
-        <script src="/ui/static/scripts/jquery-2.1.0.min.js"></script>
-        <script src="/ui/static/scripts/Chart.js"></script>
-        <script src="/ui/static/scripts/Chart.StackedBar.js"></script>
-        <script src="/ui/static/scripts/legend.js"></script>
-        <script src="/ui/static/scripts/stumptown.js"></script>
-        <link href="/ui/static/img/favicon.ico" rel="shortcut icon" type="image/x-icon"/>
+
 	</head>
 	<body>
         {$header|noAutoescape}
@@ -54,11 +49,12 @@
     // HEY ENGINEERS, add CSS here for now:
     <link rel="stylesheet" href="/ui/static/css/stumptown.css">
 
-    // following CC is for IE8 and lower. No harm in leaving it here.
-    // It's no overhead to other browsers and would automatically give unsupported IE8 a fighting chance to view content
-    <!--[if lt IE 9]>
-    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
-    <![endif]-->
+    <script src="/ui/static/scripts/jquery-2.1.0.min.js"></script>
+    <script src="/ui/static/scripts/Chart.js"></script>
+    <script src="/ui/static/scripts/Chart.StackedBar.js"></script>
+    <script src="/ui/static/scripts/legend.js"></script>
+    <script src="/ui/static/scripts/stumptown.js"></script>
+    <link href="/ui/static/img/favicon.ico" rel="shortcut icon" type="image/x-icon"/>
 {/template}
 
 /**
