@@ -25,6 +25,7 @@ import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.cluster.client.MiruClusterClientInitializer;
+import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer.MiruLogAppenderConfig;
 import com.jivesoftware.os.miru.logappender.MiruLogEvent;
 import com.jivesoftware.os.miru.stumptown.deployable.MiruStumptownIntakeInitializer.MiruStumptownIntakeConfig;
 import com.jivesoftware.os.miru.stumptown.deployable.endpoints.StumptownQueryPluginEndpoints;
@@ -90,56 +91,63 @@ public class MiruStumptownMain {
             deployable.addErrorHealthChecks(deployable.config(ErrorHealthCheckConfig.class));
             deployable.buildManageServer().start();
 
-            MiruStumptownServiceConfig stumptownServiceConfig = deployable.config(MiruStumptownServiceConfig.class);
+            MiruStumptownConfig miruStumptownConfig = deployable.config(MiruStumptownConfig.class);
+            MiruLogAppenderConfig miruLogAppenderConfig = deployable.config(MiruLogAppenderConfig.class);
+            MiruStumptownServiceConfig miruStumptownServiceConfig = deployable.config(MiruStumptownServiceConfig.class);
 
             ObjectMapper mapper = new ObjectMapper();
             mapper.registerModule(new GuavaModule());
 
-            HttpDeliveryClientHealthProvider clientHealthProvider = new HttpDeliveryClientHealthProvider(instanceConfig.getInstanceKey(),
-                HttpRequestHelperUtils.buildRequestHelper(false, false, null, instanceConfig.getRoutesHost(), instanceConfig.getRoutesPort()),
-                instanceConfig.getConnectionsHealth(), 5_000, 100);
+            HttpDeliveryClientHealthProvider clientHealthProvider = new HttpDeliveryClientHealthProvider(
+                    instanceConfig.getInstanceKey(),
+                    HttpRequestHelperUtils.buildRequestHelper(false, false, null, instanceConfig.getRoutesHost(), instanceConfig.getRoutesPort()),
+                    instanceConfig.getConnectionsHealth(),
+                    miruStumptownConfig.getHealthIntervalNMillis(),
+                    miruStumptownConfig.getHealthSampleWindow());
             TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = deployable.getTenantRoutingHttpClientInitializer();
 
             MiruStumptownPayloadStorage payloads = null;
             try {
+                @SuppressWarnings("unchecked")
                 TenantAwareHttpClient<String> amzaClient = tenantRoutingHttpClientInitializer.builder(
-                    deployable.getTenantRoutingProvider().getConnections("amza", "main", 10_000), // TODO config
+                    deployable.getTenantRoutingProvider().getConnections("amza", "main", miruStumptownConfig.getRefreshConnectionsAfterNMillis()),
                     clientHealthProvider)
-                    .deadAfterNErrors(10)
-                    .checkDeadEveryNMillis(10_000)
-                    .build(); // TODO expose to conf
-                long awaitLeaderElectionForNMillis = 30_000;
+                    .deadAfterNErrors(miruStumptownConfig.getDeadAfterNErrors())
+                    .checkDeadEveryNMillis(miruStumptownConfig.getCheckDeadEveryNMillis())
+                    .build();
                 payloads = new MiruStumptownPayloadsAmzaIntializer().initialize(instanceConfig.getClusterName(),
                     amzaClient,
-                    awaitLeaderElectionForNMillis,
+                    miruStumptownConfig.getAwaitLeaderElectionForNMillis(),
                     mapper);
-
             } catch (Exception x) {
                 serviceStartupHealthCheck.info("Failed to setup connection to Amza.", x);
             }
 
             OrderIdProvider orderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(instanceConfig.getInstanceName()));
 
+            @SuppressWarnings("unchecked")
             TenantAwareHttpClient<String> miruWriterClient = tenantRoutingHttpClientInitializer.builder(
-                deployable.getTenantRoutingProvider().getConnections("miru-writer", "main", 10_000), // TODO config
+                deployable.getTenantRoutingProvider().getConnections("miru-writer", "main", miruStumptownConfig.getRefreshConnectionsAfterNMillis()),
                 clientHealthProvider)
-                .deadAfterNErrors(10)
-                .checkDeadEveryNMillis(10_000)
-                .build(); // TODO expose to conf
+                .deadAfterNErrors(miruStumptownConfig.getDeadAfterNErrors())
+                .checkDeadEveryNMillis(miruStumptownConfig.getCheckDeadEveryNMillis())
+                .build();
 
+            @SuppressWarnings("unchecked")
             TenantAwareHttpClient<String> miruManageClient = tenantRoutingHttpClientInitializer.builder(
-                deployable.getTenantRoutingProvider().getConnections("miru-manage", "main", 10_000), // TODO config
+                deployable.getTenantRoutingProvider().getConnections("miru-manage", "main", miruStumptownConfig.getRefreshConnectionsAfterNMillis()),
                 clientHealthProvider)
-                .deadAfterNErrors(10)
-                .checkDeadEveryNMillis(10_000)
-                .build(); // TODO expose to conf
+                .deadAfterNErrors(miruStumptownConfig.getDeadAfterNErrors())
+                .checkDeadEveryNMillis(miruStumptownConfig.getCheckDeadEveryNMillis())
+                .build();
 
+            @SuppressWarnings("unchecked")
             TenantAwareHttpClient<String> readerClient = tenantRoutingHttpClientInitializer.builder(
-                deployable.getTenantRoutingProvider().getConnections("miru-reader", "main", 10_000), // TODO config
+                deployable.getTenantRoutingProvider().getConnections("miru-reader", "main", miruStumptownConfig.getRefreshConnectionsAfterNMillis()),
                 clientHealthProvider)
-                .deadAfterNErrors(10)
-                .checkDeadEveryNMillis(10_000)
-                .build(); // TODO expose to conf
+                .deadAfterNErrors(miruStumptownConfig.getDeadAfterNErrors())
+                .checkDeadEveryNMillis(miruStumptownConfig.getCheckDeadEveryNMillis())
+                .build();
 
             HttpResponseMapper responseMapper = new HttpResponseMapper(mapper);
 
@@ -150,7 +158,7 @@ public class MiruStumptownMain {
             StumptownSchemaService stumptownSchemaService = new StumptownSchemaService(clusterClient);
 
             final MiruStumptownIntakeService inTakeService = new MiruStumptownIntakeInitializer().initialize(
-                stumptownServiceConfig.getIngressEnabled(),
+                miruStumptownServiceConfig.getIngressEnabled(),
                 intakeConfig,
                 stumptownSchemaService,
                 logMill,
@@ -178,7 +186,8 @@ public class MiruStumptownMain {
             IngressGuaranteedDeliveryQueueProvider ingressGuaranteedDeliveryQueueProvider = new IngressGuaranteedDeliveryQueueProvider(
                 intakeConfig.getPathToQueues(), intakeConfig.getNumberOfQueues(), intakeConfig.getNumberOfThreadsPerQueue(), deliveryCallback);
 
-            new MiruStumptownInternalLogAppender("unknownDatacenter",
+            new MiruStumptownInternalLogAppender(
+                instanceConfig.getDatacenter(),
                 instanceConfig.getClusterName(),
                 instanceConfig.getHost(),
                 instanceConfig.getServiceName(),
@@ -187,13 +196,13 @@ public class MiruStumptownMain {
                 inTakeService,
                 10_000,
                 1_000,
-                false,
-                1_000,
-                1_000,
-                5_000,
-                1_000,
-                1_000,
-                10_000).install();
+                miruLogAppenderConfig.getQueueIsBlocking(),
+                miruLogAppenderConfig.getIfSuccessPauseMillis(),
+                miruLogAppenderConfig.getIfEmptyPauseMillis(),
+                miruLogAppenderConfig.getIfErrorPauseMillis(),
+                miruLogAppenderConfig.getCycleReceiverAfterAppendCount(),
+                miruLogAppenderConfig.getNonBlockingDrainThreshold(),
+                miruLogAppenderConfig.getNonBlockingDrainCount()).install();
 
             MiruSoyRendererConfig rendererConfig = deployable.config(MiruSoyRendererConfig.class);
             MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
