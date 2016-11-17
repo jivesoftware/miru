@@ -80,7 +80,7 @@ public class MiruStumptownMain {
             final Deployable deployable = new Deployable(args);
             HealthFactory.initialize(deployable::config, new DeployableHealthCheckRegistry(deployable));
             InstanceConfig instanceConfig = deployable.config(InstanceConfig.class);
-            deployable.addManageInjectables(HasUI.class, new HasUI(Arrays.asList(new UI("Stumptown", "main", "/ui"))));
+            deployable.addManageInjectables(HasUI.class, new HasUI(Arrays.asList(new UI("Stumptown", "main", "/ui/query"))));
             deployable.addHealthCheck(new GCPauseHealthChecker(deployable.config(GCPauseHealthChecker.GCPauseHealthCheckerConfig.class)));
             deployable.addHealthCheck(new GCLoadHealthChecker(deployable.config(GCLoadHealthChecker.GCLoadHealthCheckerConfig.class)));
             deployable.addHealthCheck(new SystemCpuHealthChecker(deployable.config(SystemCpuHealthChecker.SystemCpuHealthCheckerConfig.class)));
