@@ -66,7 +66,7 @@ public class WikiWikiPluginRegion implements MiruPageRegion<WikiWikiPluginRegion
             if (content != null) {
 
                 data.put("id", input.wikiId);
-                data.put("subject", content.subject);
+                data.put("title", content.title);
 
                 WikiModel wikiModel = new WikiModel("https://en.wikipedia.org/wiki/${image}", "https://en.wikipedia.org/wiki/${title}");
                 String htmlBody = wikiModel.render(new HTMLConverter(), content.body);
@@ -82,7 +82,7 @@ public class WikiWikiPluginRegion implements MiruPageRegion<WikiWikiPluginRegion
 
             } else {
                 data.put("id", input.wikiId);
-                data.put("subject", "NOT FOUND");
+                data.put("title", "NOT FOUND");
                 data.put("body", "NOT FOUND");
             }
 

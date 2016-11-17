@@ -53,7 +53,7 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
     private final HttpResponseMapper responseMapper;
     private final WikiMiruPayloadsAmza payloads;
 
-    private final LuceneBackedQueryParser subjectQueryParser = new LuceneBackedQueryParser("subject");
+    private final LuceneBackedQueryParser titleQueryParser = new LuceneBackedQueryParser("title");
     private final LuceneBackedQueryParser bodyQueryParser = new LuceneBackedQueryParser("body");
 
     public WikiQueryPluginRegion(String template,
@@ -107,7 +107,7 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
                         MiruAuthzExpression.NOT_PROVIDED,
                         new FullTextQuery(
                             MiruTimeRange.ALL_TIME,
-                            "subject",
+                            "title",
                             locale,
                             query,
                             MiruFilter.NO_FILTER,
@@ -207,7 +207,7 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
                                 Content userContent = usersContent.get(usersIndex.get(userGuid));
                                 if (userContent != null) {
                                     result.put("userGuid", userGuid);
-                                    result.put("user", userContent.subject);
+                                    result.put("user", userContent.title);
                                 }
                             }
 
@@ -216,13 +216,13 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
                                 Content folderContent = foldersContent.get(foldersIndex.get(folderGuid));
                                 if (folderContent != null) {
                                     result.put("folderGuid", folderGuid);
-                                    result.put("folder", folderContent.subject);
+                                    result.put("folder", folderContent.title);
                                 }
                             }
 
 
                             result.put("guid", score.values[2][0].last());
-                            result.put("subject", content.subject);
+                            result.put("title", content.title);
                             result.put("body",
                                 bodyQueryParser.highlight(locale, input.query, content.body, "<span style=\"background-color: #FFFF00\">", "</span>", 1000));
                             results.add(result);
@@ -239,7 +239,7 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
                         Content content = usersContent.get(i);
                         Map<String, Object> result = new HashMap<>();
                         result.put("guid", userKey);
-                        result.put("subject", content.subject);
+                        result.put("title", content.title);
                         result.put("body",
                             bodyQueryParser.highlight(locale, input.query, content.body, "<span style=\"background-color: #FFFF00\">", "</span>", 1000));
                         results.add(result);
@@ -254,7 +254,7 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
 
                         Map<String, Object> result = new HashMap<>();
                         result.put("guid", folderKey);
-                        result.put("subject", content.subject);
+                        result.put("title", content.title);
                         result.put("body",
                             bodyQueryParser.highlight(locale, input.query, content.body, "<span style=\"background-color: #FFFF00\">", "</span>", 1000));
                         results.add(result);
@@ -284,7 +284,7 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
             part[part.length - 1] += "*";
         }
         for (int i = 0; i < part.length; i++) {
-            part[i] = "( subject:" + part[i] + " OR body:" + part[i] + ")";
+            part[i] = "( title:" + part[i] + " OR body:" + part[i] + ")";
         }
         return Joiner.on(" AND ").join(part);
     }
