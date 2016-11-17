@@ -164,14 +164,6 @@ stump.hs = {
 };
 
 stump.query = {
-    advanced: function (ele) {
-        var $e = $(ele);
-        if ($e.prop('checked')) {
-            $('#stump-query-filters').addClass('stump-query-show-advanced');
-        } else {
-            $('#stump-query-filters').removeClass('stump-query-show-advanced');
-        }
-    },
     toggle: function (ele) {
         var $e = $(ele);
         if ($e.prop('checked')) {
