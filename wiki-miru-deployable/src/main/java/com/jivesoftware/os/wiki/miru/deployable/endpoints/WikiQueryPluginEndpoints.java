@@ -71,10 +71,7 @@ public class WikiQueryPluginEndpoints {
             }
 
             return Response.ok(new ObjectMapper().writeValueAsString(data)).build();
-        } catch (
-            Exception x)
-
-        {
+        } catch (Exception x) {
             LOG.error("Failed to generating query ui.", x);
             return Response.serverError().build();
         }

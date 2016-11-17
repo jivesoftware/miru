@@ -64,13 +64,22 @@ public class WikiWikiPluginRegion implements MiruPageRegion<WikiWikiPluginRegion
 
             Wiki wiki = payloads.get(new MiruTenantId(input.tenantId.getBytes(StandardCharsets.UTF_8)), input.wikiId, Wiki.class);
             if (wiki != null) {
-                data.put("id", wiki.id);
+
+                data.put("id", input.wikiId);
                 data.put("subject", wiki.subject);
 
                 WikiModel wikiModel = new WikiModel("https://en.wikipedia.org/wiki/${image}", "https://en.wikipedia.org/wiki/${title}");
                 String htmlBody = wikiModel.render(new HTMLConverter(), wiki.body);
 
                 data.put("body", htmlBody);
+
+
+                Wiki wikiTopics = payloads.get(new MiruTenantId(input.tenantId.getBytes(StandardCharsets.UTF_8)), input.wikiId + "-topics", Wiki.class);
+                if (wikiTopics != null) {
+                    data.put("topics", wikiTopics.body);
+                }
+
+
             } else {
                 data.put("id", input.wikiId);
                 data.put("subject", "NOT FOUND");

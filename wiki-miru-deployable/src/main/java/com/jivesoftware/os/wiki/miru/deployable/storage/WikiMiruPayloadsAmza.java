@@ -132,6 +132,8 @@ public class WikiMiruPayloadsAmza {
             (prefix, key, value, timestamp, version) -> {
                 if (value != null) {
                     payloads.add(mapper.readValue(value, payloadClass));
+                } else {
+                    payloads.add(null);
                 }
                 return true;
             }, additionalSolverAfterNMillis, abandonLeaderSolutionAfterNMillis, abandonSolutionAfterNMillis, Optional.empty());

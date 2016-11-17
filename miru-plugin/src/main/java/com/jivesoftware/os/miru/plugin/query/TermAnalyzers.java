@@ -1,29 +1,18 @@
 package com.jivesoftware.os.miru.plugin.query;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import java.io.Reader;
-import java.text.NumberFormat;
-import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.Analyzer.TokenStreamComponents;
-import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.ar.ArabicAnalyzer;
 import org.apache.lucene.analysis.bg.BulgarianAnalyzer;
 import org.apache.lucene.analysis.br.BrazilianAnalyzer;
 import org.apache.lucene.analysis.ca.CatalanAnalyzer;
 import org.apache.lucene.analysis.ckb.SoraniAnalyzer;
-import org.apache.lucene.analysis.core.LowerCaseFilter;
-import org.apache.lucene.analysis.core.StopFilter;
 import org.apache.lucene.analysis.cz.CzechAnalyzer;
 import org.apache.lucene.analysis.da.DanishAnalyzer;
 import org.apache.lucene.analysis.de.GermanAnalyzer;
 import org.apache.lucene.analysis.el.GreekAnalyzer;
 import org.apache.lucene.analysis.en.EnglishAnalyzer;
-import org.apache.lucene.analysis.en.EnglishPossessiveFilter;
 import org.apache.lucene.analysis.es.SpanishAnalyzer;
 import org.apache.lucene.analysis.eu.BasqueAnalyzer;
 import org.apache.lucene.analysis.fa.PersianAnalyzer;
@@ -41,17 +30,10 @@ import org.apache.lucene.analysis.no.NorwegianAnalyzer;
 import org.apache.lucene.analysis.pt.PortugueseAnalyzer;
 import org.apache.lucene.analysis.ro.RomanianAnalyzer;
 import org.apache.lucene.analysis.ru.RussianAnalyzer;
-import org.apache.lucene.analysis.snowball.SnowballAnalyzer;
-import org.apache.lucene.analysis.snowball.SnowballFilter;
-import org.apache.lucene.analysis.standard.ClassicTokenizer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
-import org.apache.lucene.analysis.standard.StandardFilter;
 import org.apache.lucene.analysis.sv.SwedishAnalyzer;
 import org.apache.lucene.analysis.th.ThaiAnalyzer;
 import org.apache.lucene.analysis.tr.TurkishAnalyzer;
-import org.apache.lucene.analysis.tr.TurkishLowerCaseFilter;
-import org.apache.lucene.analysis.util.CharArraySet;
-import org.apache.lucene.util.Version;
 
 /**
  *
