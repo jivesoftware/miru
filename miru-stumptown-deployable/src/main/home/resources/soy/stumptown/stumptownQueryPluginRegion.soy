@@ -43,10 +43,10 @@
                         <td  style="font-weight:bold; vertical-align:top;">
                             From
                         </td><td>
-                            <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
+                            <input type="text" autocomplete="off" role="combobox"
                                 class="form-control" placeholder="To Time Ago" value="{$toAgo?:''}"
                                 name="toAgo" id="toAgoPicker" data-original-title="" title="">
-                            <select style="width:120px; padding-left:10px;"
+                            <select
                                 class="form-control" placeholder="ToTimeUnit"
                                 name="toTimeUnit" id="toTimeUnitPicker" data-original-title="" title="">
                                 <option value="DAYS" {if $toTimeUnit == 'DAYS'}selected="selected"{/if}>DAYS</option>
@@ -60,10 +60,10 @@
                         <td  style="font-weight:bold; vertical-align:top;">
                             To
                         </td><td>
-                            <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
+                            <input type="text" autocomplete="off" role="combobox"
                              class="form-control" placeholder="From Time Ago" value="{$fromAgo?:''}"
                              name="fromAgo" id="fromAgoPicker" data-original-title="" title="">
-                            <select style="width:120px; padding-left:10px;"
+                            <select
                                 class="form-control" placeholder="FromTimeUnit"
                                 name="fromTimeUnit" id="fromTimeUnitPicker" data-original-title="" title="">
                                 <option value="DAYS" {if $fromTimeUnit == 'DAYS'}selected="selected"{/if}>DAYS</option>
@@ -78,7 +78,7 @@
                             Cluster
                         </td>
                         <td>
-                            <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
+                            <input type="text" autocomplete="off" role="combobox"
                                 data-typeahead-url="/ui/query/typeahead/cluster" class="typeahead-field form-control" placeholder="Cluster" value="{$cluster?:''}"
                                 name="cluster" id="clusterPicker" data-original-title="" title="">
                         </td>
@@ -88,8 +88,8 @@
                             Host
                         </td>
                         <td>
-                            <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
-                                data-typeahead-url="/ui/query/typeahead/host" class="typeahead-field class="form-control" placeholder="Host" value="{$host?:''}"
+                            <input type="text" autocomplete="off" role="combobox"
+                                data-typeahead-url="/ui/query/typeahead/host" class="typeahead-field form-control" placeholder="Host" value="{$host?:''}"
                                 name="host" id="hostPicker" data-original-title="" title="">
                         </td>
                     </tr>
@@ -98,8 +98,8 @@
                             Service
                         </td>
                         <td>
-                            <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
-                                data-typeahead-url="/ui/query/typeahead/service" class="typeahead-field class="form-control" placeholder="Service" value="{$service?:''}"
+                            <input type="text" autocomplete="off" role="combobox"
+                                data-typeahead-url="/ui/query/typeahead/service" class="typeahead-field form-control" placeholder="Service" value="{$service?:''}"
                                 name="service" id="servicePicker" data-original-title="" title="">
                         </td>
                     </tr>
@@ -108,7 +108,7 @@
                             Instance
                         </td>
                         <td>
-                            <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
+                            <input type="text" autocomplete="off" role="combobox"
                                 data-typeahead-url="/ui/query/typeahead/instance" class="typeahead-field form-control" placeholder="Instance" value="{$instance?:''}"
                                 name="instance" id="instancePicker" data-original-title="" title="">
                         </td>
@@ -118,7 +118,7 @@
                             Version
                         </td>
                         <td>
-                            <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
+                            <input type="text" autocomplete="off" role="combobox"
                                 data-typeahead-url="/ui/query/typeahead/version" class="typeahead-field form-control" placeholder="Version" value="{$version?:''}"
                                 name="version" id="versionPicker" data-original-title="" title="">
                         </td>
@@ -128,7 +128,7 @@
                             Method
                         </td>
                         <td>
-                            <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
+                            <input type="text" autocomplete="off" role="combobox"
                                data-typeahead-url="/ui/query/typeahead/method" class="typeahead-field form-control" placeholder="Method" value="{$method?:''}"
                                 name="method" id="methodPicker" data-original-title="" title="">
                         </td>
@@ -138,7 +138,7 @@
                             Line
                         </td>
                         <td>
-                            <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
+                            <input type="text" autocomplete="off" role="combobox"
                                 class="form-control" placeholder="Line" value="{$line?:''}"
                                 name="line" id="linePicker" data-original-title="" title="">
                         </td>
@@ -148,7 +148,7 @@
                             Message
                         </td>
                         <td>
-                            <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
+                            <input type="text" autocomplete="off" role="combobox"
                                 class="form-control" placeholder="Message" value="{$message?:''}"
                                 name="message" id="messagePicker" data-original-title="" title="">
                         </td>
@@ -158,7 +158,7 @@
                             Thread
                         </td>
                         <td>
-                            <input type="text" role="combobox" style="width:120px; padding-left:10px;"
+                            <input type="text" role="combobox"
                                 data-typeahead-url="/ui/query/typeahead/thread" class="typeahead-field form-control" placeholder="Thread" value="{$thread?:''}"
                                 name="thread" id="threadPicker" data-original-title="" title="">
                         </td>
@@ -168,7 +168,7 @@
                             Logger
                         </td>
                         <td>
-                            <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
+                            <input type="text" autocomplete="off" role="combobox"
                                 data-typeahead-url="/ui/query/typeahead/logger" class="typeahead-field form-control" placeholder="Logger" value="{$logger?:''}"
                                 name="logger" id="loggerPicker" data-original-title="" title="">
                         </td>
@@ -205,7 +205,7 @@
                             Exception Class
                         </td>
                         <td>
-                            <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
+                            <input type="text" autocomplete="off" role="combobox"
                                 data-typeahead-url="/ui/query/typeahead/exceptionClass" class="typeahead-field form-control" placeholder="Thrown Stack Trace" value="{$exceptionClass?:''}"
                                 name="exceptionClass" id="exceptionClassPicker" data-original-title="" title="">
                         </td>
@@ -215,7 +215,7 @@
                             Thrown
                         </td>
                         <td>
-                            <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
+                            <input type="text" autocomplete="off" role="combobox"
                                 class="form-control" placeholder="Thrown Stack Trace" value="{$thrown?:''}"
                                 name="thrown" id="thrownPicker" data-original-title="" title="">
                         </td>
@@ -225,7 +225,7 @@
                             Buckets
                         </td>
                         <td>
-                            <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
+                            <input type="text" autocomplete="off" role="combobox"
                                 class="form-control" placeholder="Buckets" value="{$buckets?:''}"
                                 name="buckets" id="bucketsPicker" data-original-title="" title="">
                         </td>
@@ -235,7 +235,7 @@
                             Count
                         </td>
                         <td>
-                            <input type="text" autocomplete="off" role="combobox" style="width:120px; padding-left:10px;"
+                            <input type="text" autocomplete="off" role="combobox"
                                 class="form-control" placeholder="Message Count" value="{$messageCount?:''}"
                                 name="messageCount" id="messageCountPicker" data-original-title="" title="">
                         </td>
@@ -245,7 +245,7 @@
                             Graph Type
                         </td>
                         <td>
-                            <select style="width:120px; padding-left:10px;" class="form-control"
+                            <select class="form-control"
                                 placeholder="Graph Type" name="graphType" id="graphTypePicker">
                                 <option value="Line" {if $graphType == 'Line'}selected="selected"{/if}>Line</option>
                                 <option value="Radar" {if $graphType == 'Radar'}selected="selected"{/if}>Radar</option>
