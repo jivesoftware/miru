@@ -244,7 +244,7 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
                         result.put("title", content.title);
                         result.put("body",
                             bodyQueryParser.highlight(locale, input.query, content.body, "<span style=\"background-color: #FFFF00\">", "</span>", 1000));
-                        results.add(result);
+                        users.add(result);
                         i++;
                     }
                     data.put("users", users);
@@ -259,10 +259,10 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
                         result.put("title", content.title);
                         result.put("body",
                             bodyQueryParser.highlight(locale, input.query, content.body, "<span style=\"background-color: #FFFF00\">", "</span>", 1000));
-                        results.add(result);
+                        folders.add(result);
                         i++;
                     }
-                    data.put("folders", users);
+                    data.put("folders", folders);
 
 
                     ObjectMapper mapper = new ObjectMapper();
