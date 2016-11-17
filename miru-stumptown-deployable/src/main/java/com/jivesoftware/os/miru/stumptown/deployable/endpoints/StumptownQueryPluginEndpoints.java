@@ -45,7 +45,6 @@ public class StumptownQueryPluginEndpoints {
     }
 
     @GET
-    @Path("/")
     @Produces(MediaType.TEXT_HTML)
     public Response query(
         @QueryParam("cluster") @DefaultValue("") String cluster,

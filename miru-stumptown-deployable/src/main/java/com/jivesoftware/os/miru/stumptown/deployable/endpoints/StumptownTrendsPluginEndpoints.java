@@ -30,7 +30,6 @@ public class StumptownTrendsPluginEndpoints {
     }
 
     @GET
-    @Path("/")
     @Produces(MediaType.TEXT_HTML)
     public Response getTrends(@QueryParam("logLevels") @DefaultValue("ERROR") String logLevels,
         @QueryParam("fromAgo") @DefaultValue("8") int fromAgo,

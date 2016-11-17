@@ -28,7 +28,6 @@ public class StumptownStatusPluginEndpoints {
     }
 
     @GET
-    @Path("/")
     @Produces(MediaType.TEXT_HTML)
     public Response query() {
         String rendered = stumptownService.renderPlugin(pluginRegion,
