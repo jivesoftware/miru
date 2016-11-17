@@ -42,7 +42,7 @@
                         <div class="span7">
                             {foreach $r in $results}
                                 <div style="border-bottom:1px solid #eee;">
-                                    <h4><a href="/ui/wiki/{$tenantId}/{$r.id}">{$r.title}</a></h4>
+                                    <h4><a href="/ui/wiki/{$tenantId}/{$r.guid}">{$r.title}</a></h4>
                                     <p>{$r.body|noAutoescape}</p>
                                 </div>
                             {/foreach}
@@ -52,7 +52,7 @@
                         <div class="span2">
                             {foreach $f in $folders}
                                 <div style="border-bottom:1px solid #eee;">
-                                    <h4><span class="glyphicon glyphicon-folder-open" aria-hidden="true"></span><a href="/ui/wiki/{$tenantId}/{$f.id}">{$f.title}</a></h4>
+                                    <h4><span class="glyphicon glyphicon-folder-open" aria-hidden="true"></span><a href="/ui/wiki/{$tenantId}/{$f.guid}">{$f.title}</a></h4>
                                     <p>{$f.body|noAutoescape}</p>
                                 </div>
                             {/foreach}
@@ -62,7 +62,7 @@
                          <div class="span2">
                             {foreach $u in $users}
                                 <div style="border-bottom:1px solid #eee;">
-                                    <h4><span class="glyphicon glyphicon-user" aria-hidden="true"></span><a href="/ui/wiki/{$tenantId}/{$u.id}">{$u.title}</a></h4>
+                                    <h4><span class="glyphicon glyphicon-user" aria-hidden="true"></span><a href="/ui/wiki/{$tenantId}/{$u.guid}">{$u.title}</a></h4>
                                     <p>{$u.body|noAutoescape}</p>
                                 </div>
                             {/foreach}

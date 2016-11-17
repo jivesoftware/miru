@@ -46,11 +46,11 @@ public class WikiWikiPluginRegion implements MiruPageRegion<WikiWikiPluginRegion
     public static class WikiWikiPluginRegionInput {
 
         final String tenantId;
-        final String wikiId;
+        final String guid;
 
-        public WikiWikiPluginRegionInput(String tenantId, String wikiId) {
+        public WikiWikiPluginRegionInput(String tenantId, String guid) {
             this.tenantId = tenantId;
-            this.wikiId = wikiId;
+            this.guid = guid;
         }
     }
 
@@ -60,12 +60,12 @@ public class WikiWikiPluginRegion implements MiruPageRegion<WikiWikiPluginRegion
         try {
 
             data.put("tenantId", input.tenantId);
-            data.put("wikiId", input.wikiId);
+            data.put("guid", input.guid);
 
-            Content content = payloads.get(new MiruTenantId(input.tenantId.getBytes(StandardCharsets.UTF_8)), input.wikiId, Content.class);
+            Content content = payloads.get(new MiruTenantId(input.tenantId.getBytes(StandardCharsets.UTF_8)), input.guid, Content.class);
             if (content != null) {
 
-                data.put("id", input.wikiId);
+                data.put("guid", input.guid);
                 data.put("title", content.title);
 
                 WikiModel wikiModel = new WikiModel("https://en.wikipedia.org/wiki/${image}", "https://en.wikipedia.org/wiki/${title}");
@@ -74,14 +74,14 @@ public class WikiWikiPluginRegion implements MiruPageRegion<WikiWikiPluginRegion
                 data.put("body", htmlBody);
 
 
-                Content contentTopics = payloads.get(new MiruTenantId(input.tenantId.getBytes(StandardCharsets.UTF_8)), input.wikiId + "-topics", Content.class);
+                Content contentTopics = payloads.get(new MiruTenantId(input.tenantId.getBytes(StandardCharsets.UTF_8)), input.guid + "-topics", Content.class);
                 if (contentTopics != null) {
                     data.put("topics", contentTopics.body);
                 }
 
 
             } else {
-                data.put("id", input.wikiId);
+                data.put("guid", input.guid);
                 data.put("title", "NOT FOUND");
                 data.put("body", "NOT FOUND");
             }

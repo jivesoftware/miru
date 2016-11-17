@@ -33,14 +33,14 @@ public class WikiWikiPluginEndpoints {
     }
 
     @GET
-    @Path("/{tenantId}/{wikiId}")
+    @Path("/{tenantId}/{guid}")
     @Produces(MediaType.TEXT_HTML)
     public Response wiki(
         @PathParam("tenantId") @DefaultValue("") String tenantId,
-        @PathParam("wikiId") @DefaultValue("") String wikiId) {
+        @PathParam("guid") @DefaultValue("") String guid) {
 
         try {
-            String rendered = wikiMiruService.renderPlugin(pluginRegion, new WikiWikiPluginRegionInput(tenantId, wikiId));
+            String rendered = wikiMiruService.renderPlugin(pluginRegion, new WikiWikiPluginRegionInput(tenantId, guid));
             return Response.ok(rendered).build();
         } catch (Exception x) {
             LOG.error("Failed to generating query ui.", x);

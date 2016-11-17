@@ -132,6 +132,8 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
                     });
 
                 if (response != null && response.answer != null) {
+                    LOG.info("Found:{} for {}:{}", response.answer.results.size(), input.tenantId, query);
+
                     data.put("elapse", String.valueOf(response.totalElapsed));
                     data.put("count", response.answer.results.size());
                     List<ActivityScore> scores = response.answer.results.subList(0, Math.min(1_000, response.answer.results.size()));
@@ -140,14 +142,14 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
                     Set<String> uniqueFolders = new HashSet<>();
                     Set<String> uniqueUsers = new HashSet<>();
 
-                    Map<String,Integer> foldersIndex = new HashMap<>();
-                    Map<String,Integer> usersIndex = new HashMap<>();
+                    Map<String, Integer> foldersIndex = new HashMap<>();
+                    Map<String, Integer> usersIndex = new HashMap<>();
 
                     List<String> folderKeys = Lists.newArrayList();
                     List<String> userKeys = Lists.newArrayList();
 
-                    int folderIndex= 0;
-                    int userIndex= 0;
+                    int folderIndex = 0;
+                    int userIndex = 0;
 
                     for (ActivityScore score : scores) {
                         if (score.values[3][0].last().equals("content")) {
@@ -160,7 +162,7 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
                             String userGuid = score.values[0][0].last();
                             if (uniqueUsers.add(userGuid)) {
                                 userKeys.add(userGuid);
-                                usersIndex.put(userGuid,userIndex);
+                                usersIndex.put(userGuid, userIndex);
                                 userIndex++;
                             }
                         }
@@ -169,7 +171,7 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
                             String folderGuid = score.values[1][0].last();
                             if (uniqueFolders.add(folderGuid)) {
                                 folderKeys.add(folderGuid);
-                                foldersIndex.put(folderGuid,folderIndex);
+                                foldersIndex.put(folderGuid, folderIndex);
                                 folderIndex++;
                             }
                         }
