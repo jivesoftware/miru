@@ -476,13 +476,13 @@ public class WikiMiruIndexService {
 
 
     public static class Content {
-        public final String subject;
+        public final String title;
         public final String body;
 
         @JsonCreator
-        public Content(@JsonProperty("subject") String subject,
+        public Content(@JsonProperty("title") String title,
             @JsonProperty("body") String body) {
-            this.subject = subject;
+            this.title = title;
             this.body = body;
         }
     }

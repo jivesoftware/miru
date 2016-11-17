@@ -3,13 +3,13 @@
 /**
  * WikMiru Query plugin page
  * 
- * @param? subject
+ * @param? title
  * @param? body
  * @param? topics
   */
 {template .wikiMiruWikiPlugin}
     <div class="panel panel-default">
-        <div class="panel-heading">{$subject}</div>
+        <div class="panel-heading">{$title}</div>
         <div class="panel-body">
             {if $topics}<div class="well">{$topics}</div>{/if}
             {$body|noAutoescape}
