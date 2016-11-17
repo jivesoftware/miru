@@ -256,14 +256,16 @@ public class FullText {
         MiruValue[][] gatherValues = new MiruValue[gatherFieldIds.length][];
         for (int i = 0; i < gatherFieldIds.length; i++) {
             MiruTermId[] termIds = requestContext.getActivityIndex().get(name, index, gatherFieldIds[i], stackBuffer);
-            MiruValue[] gather = new MiruValue[termIds.length];
-            for (int j = 0; j < gather.length; j++) {
-                gather[j] = new MiruValue(termComposer.decompose(schema,
-                    schema.getFieldDefinition(gatherFieldIds[i]),
-                    stackBuffer,
-                    termIds[j]));
+            if (termIds != null) {
+                MiruValue[] gather = new MiruValue[termIds.length];
+                for (int j = 0; j < gather.length; j++) {
+                    gather[j] = new MiruValue(termComposer.decompose(schema,
+                        schema.getFieldDefinition(gatherFieldIds[i]),
+                        stackBuffer,
+                        termIds[j]));
+                }
+                gatherValues[i] = gather;
             }
-            gatherValues[i] = gather;
         }
         //TODO much more efficient to accumulate indexes and gather these once at the end
 
