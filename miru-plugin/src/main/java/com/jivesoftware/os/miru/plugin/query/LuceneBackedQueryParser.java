@@ -67,7 +67,7 @@ public class LuceneBackedQueryParser implements MiruQueryParser {
             LOG.error("Failed to highlight", ex);
         }
 
-        if (summary == null) {
+        if (summary == null || summary.trim().isEmpty()) {
             summary = content.substring(0, Math.min(preview, content.length())) + "...";
         }
         return summary;
