@@ -122,8 +122,6 @@ public class WikiMiruIndexService {
 
                 AtomicReference<List<MiruActivity>> activities = new AtomicReference<>(Collections.synchronizedList(Lists.newArrayList()));
                 AtomicReference<List<KeyAndPayload<Content>>> pages = new AtomicReference<>(Collections.synchronizedList(Lists.newArrayList()));
-                AtomicReference<List<KeyAndPayload<Content>>> folders = new AtomicReference<>(Collections.synchronizedList(Lists.newArrayList()));
-                AtomicReference<List<KeyAndPayload<Content>>> users = new AtomicReference<>(Collections.synchronizedList(Lists.newArrayList()));
                 AtomicReference<List<MiruActivity>> grams = new AtomicReference<>(Collections.synchronizedList(Lists.newArrayList()));
 
 
@@ -136,7 +134,7 @@ public class WikiMiruIndexService {
                     }
                     if (page.isMain()) {
 
-                        futures.add(tokenizers.submit(new WikiTokenizer(miruTenantId, idProvider, page, stnf, activities, pages, folders, users, grams)));
+                        futures.add(tokenizers.submit(new WikiTokenizer(miruTenantId, idProvider, page, stnf, activities, pages, grams)));
                         if (futures.size() > batchSize) {
                             long start = System.currentTimeMillis();
                             for (Future<Void> future : futures) {
@@ -154,17 +152,9 @@ public class WikiMiruIndexService {
 
                                 List<MiruActivity> batchOfActivities = activities.getAndSet(Collections.synchronizedList(Lists.newArrayList()));
                                 List<KeyAndPayload<Content>> batchOfPages = pages.getAndSet(Collections.synchronizedList(Lists.newArrayList()));
-                                List<KeyAndPayload<Content>> batchOfFolders = folders.getAndSet(Collections.synchronizedList(Lists.newArrayList()));
-                                List<KeyAndPayload<Content>> batchOfUsers = users.getAndSet(Collections.synchronizedList(Lists.newArrayList()));
                                 List<MiruActivity> batchOfGrams = grams.getAndSet(Collections.synchronizedList(Lists.newArrayList()));
 
                                 futures.add(tokenizers.submit(new FlushActivities(indexed, batchOfActivities)));
-                                if (!batchOfFolders.isEmpty()) {
-                                    futures.add(tokenizers.submit(new FlushPages(miruTenantId, batchOfFolders)));
-                                }
-                                if (!batchOfUsers.isEmpty()) {
-                                    futures.add(tokenizers.submit(new FlushPages(miruTenantId, batchOfUsers)));
-                                }
                                 futures.add(tokenizers.submit(new FlushPages(miruTenantId, batchOfPages)));
 
                             } catch (Exception x) {
@@ -183,19 +173,11 @@ public class WikiMiruIndexService {
 
                     List<MiruActivity> batchOfActivities = activities.getAndSet(Collections.synchronizedList(Lists.newArrayList()));
                     List<KeyAndPayload<Content>> batchOfPages = pages.getAndSet(Collections.synchronizedList(Lists.newArrayList()));
-                    List<KeyAndPayload<Content>> batchOfFolders = folders.getAndSet(Collections.synchronizedList(Lists.newArrayList()));
-                    List<KeyAndPayload<Content>> batchOfUsers = users.getAndSet(Collections.synchronizedList(Lists.newArrayList()));
                     List<MiruActivity> batchOfGrams = grams.getAndSet(Collections.synchronizedList(Lists.newArrayList()));
 
                     new FlushActivities(indexed, batchOfActivities).call();
 
                     futures.add(tokenizers.submit(new FlushActivities(indexed, batchOfActivities)));
-                    if (!batchOfFolders.isEmpty()) {
-                        new FlushPages(miruTenantId, batchOfFolders).call();
-                    }
-                    if (!batchOfUsers.isEmpty()) {
-                        new FlushPages(miruTenantId, batchOfUsers).call();
-                    }
                     new FlushPages(miruTenantId, batchOfPages).call();
                 }
             } finally {
@@ -224,8 +206,6 @@ public class WikiMiruIndexService {
         private final Siteinfo stnf;
 
         private final AtomicReference<List<MiruActivity>> activities;
-        private final AtomicReference<List<KeyAndPayload<Content>>> folders;
-        private final AtomicReference<List<KeyAndPayload<Content>>> users;
         private final AtomicReference<List<KeyAndPayload<Content>>> pages;
         private final AtomicReference<List<MiruActivity>> grams;
 
@@ -236,8 +216,6 @@ public class WikiMiruIndexService {
             Siteinfo stnf,
             AtomicReference<List<MiruActivity>> activities,
             AtomicReference<List<KeyAndPayload<Content>>> pages,
-            AtomicReference<List<KeyAndPayload<Content>>> folders,
-            AtomicReference<List<KeyAndPayload<Content>>> users,
             AtomicReference<List<MiruActivity>> grams) {
 
 
@@ -247,8 +225,6 @@ public class WikiMiruIndexService {
             this.stnf = stnf;
             this.activities = activities;
             this.pages = pages;
-            this.users = users;
-            this.folders = folders;
             this.grams = grams;
         }
 
@@ -283,9 +259,10 @@ public class WikiMiruIndexService {
                 folderName = "untitled";
             }
 
-            long folderGuid = Hashing.sha256().hashString(folderName).asLong();
+            long folderHash = Hashing.sha256().hashString(folderName).asLong();
+            String folderGuid = "folder|"+folderHash;
 
-            Random random = new Random(folderGuid);
+            Random random = new Random(folderHash);
             String firstName = (random.nextDouble() > 0.5) ? FemaleFirstName.list[random.nextInt(FemaleFirstName.list.length)] : MaleFirstNames.list[random.nextInt(MaleFirstNames.list.length)];
             String lastName = LastNames.list[random.nextInt(LastNames.list.length)];
             firstName = firstName.toLowerCase();
@@ -293,23 +270,25 @@ public class WikiMiruIndexService {
 
 
             String userName =  firstName.substring(0, 1).toUpperCase() + firstName.substring(1)+" "+lastName.substring(0, 1).toUpperCase() + lastName.substring(1);
-            long userGuid = Hashing.sha256().hashString(userName).asLong();
+            long userHash = Hashing.sha256().hashString(userName).asLong();
+            String userGuid = "user|"+userHash;
 
-            if (userHashcodes.add(userGuid)) {
+            if (userHashcodes.add(userHash)) {
+
                 StringBuilder about = new StringBuilder();
                 about.append("Likes:\n");
                 for (int i = 0; i < 3 + random.nextInt(10); i++) {
                     about.append(ActivityNames.list[random.nextInt(ActivityNames.list.length)]).append("\n");
                 }
 
-                users.get().add(new KeyAndPayload<>(String.valueOf(userGuid), new Content(userName, about.toString())));
+                pages.get().add(new KeyAndPayload<>(String.valueOf(userGuid), new Content(userName, about.toString())));
 
                 MiruActivity ma = new MiruActivity.Builder(miruTenantId, idProvider.nextId(), 0, false, new String[0])
                     .putFieldValue("locale", "en")
                     //.publicFieldValue("timestampInMDYHMS") // TODO
                     //.putFieldValue("userGuid", "") // TODO
                     //.putFieldValue("folderGuid", String.valueOf(folderGuid))
-                    .putFieldValue("guid", "user-"+String.valueOf(userGuid))
+                    .putFieldValue("guid", userGuid)
                     .putFieldValue("verb", "import")
                     .putFieldValue("type", "user")
                     .putAllFieldValues("title", tokenize(termTokenizer, analyzer, userName, grams.get()))
@@ -322,15 +301,16 @@ public class WikiMiruIndexService {
             }
 
 
-            if (folderHashcodes.add(folderGuid)) {
-                folders.get().add(new KeyAndPayload<>(String.valueOf(folderGuid), new Content(folderName, folderName)));
+            if (folderHashcodes.add(folderHash)) {
+
+                pages.get().add(new KeyAndPayload<>(String.valueOf(folderGuid), new Content(folderName, folderName)));
 
                 MiruActivity ma = new MiruActivity.Builder(miruTenantId, idProvider.nextId(), 0, false, new String[0])
                     .putFieldValue("locale", "en")
                     //.publicFieldValue("timestampInMDYHMS") // TODO
-                    .putFieldValue("userGuid", String.valueOf(userGuid))
+                    .putFieldValue("userGuid", userGuid)
                     //.putFieldValue("folderGuid", String.valueOf(folderGuid))
-                    .putFieldValue("guid", "folder-"+String.valueOf(folderGuid))
+                    .putFieldValue("guid", folderGuid)
                     .putFieldValue("verb", "import")
                     .putFieldValue("type", "folder")
                     .putAllFieldValues("title", tokenize(termTokenizer, analyzer, folderName, grams.get()))
@@ -342,13 +322,15 @@ public class WikiMiruIndexService {
                 activities.get().add(ma);
             }
 
+            String contentGuid = "content|"+page.getId();
+
 
             MiruActivity ma = new MiruActivity.Builder(miruTenantId, idProvider.nextId(), 0, false, new String[0])
                 .putFieldValue("locale", "en")
                 //.publicFieldValue("timestampInMDYHMS") // TODO
-                //.putFieldValue("userGuid", "") // TODO
-                .putFieldValue("folderGuid", String.valueOf(folderGuid))
-                .putFieldValue("guid", "content-"+page.getId())
+                .putFieldValue("userGuid", userGuid)
+                .putFieldValue("folderGuid", folderGuid)
+                .putFieldValue("guid", contentGuid)
                 .putFieldValue("verb", "import")
                 .putFieldValue("type", "content")
                 .putAllFieldValues("title", tokenize(termTokenizer, analyzer, page.getTitle(), grams.get()))
@@ -360,15 +342,15 @@ public class WikiMiruIndexService {
             activities.get().add(ma);
 
             Content content = new Content(page.getTitle(), page.getText());
-            pages.get().add(new KeyAndPayload<>(page.getId(), content));
+            pages.get().add(new KeyAndPayload<>(contentGuid, content));
 
             String trimmed = plainBody.trim();
             String slug = trimmed.substring(0, Math.min(trimmed.length(), 1000));  // TODO config
             content = new Content(page.getTitle(), slug);
-            pages.get().add(new KeyAndPayload<>(page.getId() + "-slug", content));
+            pages.get().add(new KeyAndPayload<>(contentGuid + "-slug", content));
 
             if (topicsBody.length() > 0) {
-                pages.get().add(new KeyAndPayload<>(page.getId() + "-topics", new Content("topics", topicsBody.toString())));
+                pages.get().add(new KeyAndPayload<>(contentGuid + "-topics", new Content("topics", topicsBody.toString())));
             }
             return null;
         }
