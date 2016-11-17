@@ -50,10 +50,12 @@ import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.http.client.TenantRoutingHttpClientInitializer;
 import com.jivesoftware.os.routing.bird.server.util.Resource;
 import com.jivesoftware.os.wiki.miru.deployable.endpoints.WikiMiruIndexPluginEndpoints;
+import com.jivesoftware.os.wiki.miru.deployable.endpoints.WikiMiruStressPluginEndpoints;
 import com.jivesoftware.os.wiki.miru.deployable.endpoints.WikiQueryPluginEndpoints;
 import com.jivesoftware.os.wiki.miru.deployable.endpoints.WikiWikiPluginEndpoints;
 import com.jivesoftware.os.wiki.miru.deployable.region.MiruManagePlugin;
 import com.jivesoftware.os.wiki.miru.deployable.region.WikiMiruIndexPluginRegion;
+import com.jivesoftware.os.wiki.miru.deployable.region.WikiMiruStressPluginRegion;
 import com.jivesoftware.os.wiki.miru.deployable.region.WikiQueryPluginRegion;
 import com.jivesoftware.os.wiki.miru.deployable.region.WikiWikiPluginRegion;
 import com.jivesoftware.os.wiki.miru.deployable.storage.WikiMiruGramsAmza;
@@ -76,7 +78,7 @@ public class WikiMiruMain {
             final Deployable deployable = new Deployable(args);
             HealthFactory.initialize(deployable::config, new DeployableHealthCheckRegistry(deployable));
             InstanceConfig instanceConfig = deployable.config(InstanceConfig.class);
-            deployable.addManageInjectables(HasUI.class, new HasUI(Arrays.asList(new UI("Wiki", "main", "/ui"))));
+            deployable.addManageInjectables(HasUI.class, new HasUI(Arrays.asList(new UI("Wiki", "main", "/ui/query"))));
             deployable.addHealthCheck(new GCPauseHealthChecker(deployable.config(GCPauseHealthChecker.GCPauseHealthCheckerConfig.class)));
             deployable.addHealthCheck(new GCLoadHealthChecker(deployable.config(GCLoadHealthChecker.GCLoadHealthCheckerConfig.class)));
             deployable.addHealthCheck(new SystemCpuHealthChecker(deployable.config(SystemCpuHealthChecker.SystemCpuHealthCheckerConfig.class)));
@@ -153,18 +155,32 @@ public class WikiMiruMain {
                 payloads,
                 grams);
 
+            WikiMiruStressService stressService = new WikiMiruStressService(orderIdProvider,
+                wikiSchemaService,
+                wikiMiruServiceConfig.getMiruIngressEndpoint(),
+                mapper,
+                miruWriterClient,
+                payloads,
+                grams);
+
             MiruSoyRendererConfig rendererConfig = deployable.config(MiruSoyRendererConfig.class);
             MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
             WikiMiruService wikiMiruService = new WikiMiruQueryInitializer().initialize(renderer);
 
             List<MiruManagePlugin> plugins = Lists.newArrayList();
-            plugins.add(new MiruManagePlugin("eye-open", "Index", "/ui/index",
-                WikiMiruIndexPluginEndpoints.class,
-                new WikiMiruIndexPluginRegion("soy.wikimiru.page.wikiMiruIndexPlugin", renderer, indexService)));
             plugins.add(new MiruManagePlugin("search", "Query", "/ui/query",
                 WikiQueryPluginEndpoints.class,
                 new WikiQueryPluginRegion("soy.wikimiru.page.wikiMiruQueryPlugin",
                     renderer, readerClient, mapper, responseMapper, payloads)));
+
+            plugins.add(new MiruManagePlugin("eye-open", "Index", "/ui/index",
+                WikiMiruIndexPluginEndpoints.class,
+                new WikiMiruIndexPluginRegion("soy.wikimiru.page.wikiMiruIndexPlugin", renderer, indexService)));
+
+            plugins.add(new MiruManagePlugin("fire", "Stress", "/ui/stress",
+                WikiMiruStressPluginEndpoints.class,
+                new WikiMiruStressPluginRegion("soy.wikimiru.page.wikiMiruStressPlugin", renderer, stressService)));
+
 
             File staticResourceDir = new File(System.getProperty("user.dir"));
             System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());

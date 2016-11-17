@@ -32,8 +32,6 @@ import com.jivesoftware.os.routing.bird.shared.ClientCall.ClientResponse;
 import com.jivesoftware.os.wiki.miru.deployable.WikiMiruIndexService.Wiki;
 import com.jivesoftware.os.wiki.miru.deployable.region.WikiQueryPluginRegion.WikiMiruPluginRegionInput;
 import com.jivesoftware.os.wiki.miru.deployable.storage.WikiMiruPayloadsAmza;
-import info.bliki.wiki.filter.PlainTextConverter;
-import info.bliki.wiki.model.WikiModel;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -81,9 +79,6 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
             this.query = query;
         }
     }
-
-    private final ThreadLocal<WikiModel> wikiModelThreadLocal = ThreadLocal.withInitial(
-        () -> new WikiModel("https://en.wikipedia.org/wiki/${image}", "https://en.wikipedia.org/wiki/${title}"));
 
     @Override
     public String render(WikiMiruPluginRegionInput input) {
@@ -141,7 +136,7 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
                     List<Map<String, Object>> results = new ArrayList<>();
                     List<String> keys = Lists.newArrayList();
                     for (ActivityScore score : scores) {
-                        keys.add(score.values[0][0].last());
+                        keys.add(score.values[0][0].last()+"-slug");
                     }
 
                     long start = System.currentTimeMillis();
@@ -150,14 +145,17 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
                     data.put("getElapse", String.valueOf(elapsed));
 
                     start = System.currentTimeMillis();
-                    for (Wiki wiki : wikis) {
-                        String plainBody = wikiModelThreadLocal.get().render(new PlainTextConverter(), wiki.body);
+                    for (int i = 0; i < keys.size(); i++) {
+                        Wiki wiki = wikis.get(i);
+                        if (wiki != null) {
 
-                        Map<String, Object> result = new HashMap<>();
-                        result.put("id", wiki.id);
-                        result.put("subject", wiki.subject);
-                        result.put("body", bodyQueryParser.highlight(locale, input.query, plainBody, "<span style=\"background-color: #FFFF00\">", "</span>", 500));
-                        results.add(result);
+                            Map<String, Object> result = new HashMap<>();
+                            result.put("id", keys.get(i));
+                            result.put("subject", wiki.subject);
+                            result.put("body",
+                                bodyQueryParser.highlight(locale, input.query, wiki.body, "<span style=\"background-color: #FFFF00\">", "</span>", 1000));
+                            results.add(result);
+                        }
                     }
                     elapsed = System.currentTimeMillis() - start;
                     data.put("highlightElapse", String.valueOf(elapsed));
