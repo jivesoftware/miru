@@ -362,7 +362,8 @@ public class WikiMiruIndexService {
             Content content = new Content(page.getTitle(), page.getText());
             pages.get().add(new KeyAndPayload<>(page.getId(), content));
 
-            String slug = plainBody.trim().substring(0, Math.min(plainBody.length(), 1000));  // TODO config
+            String trimmed = plainBody.trim();
+            String slug = trimmed.substring(0, Math.min(trimmed.length(), 1000));  // TODO config
             content = new Content(page.getTitle(), slug);
             pages.get().add(new KeyAndPayload<>(page.getId() + "-slug", content));
 
