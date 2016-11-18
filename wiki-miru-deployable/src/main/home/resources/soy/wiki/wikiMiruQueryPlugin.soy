@@ -64,13 +64,12 @@
                             {foreach $f in $folders}
                                 <div class="direct-item">
                                     {if $f.folderUrl}
-                                        <img width="263" height="180" src="{$f.folderUrl}" class="direct-thumb" alt="">
+                                        <img width="263" height="180" src="{$f.folderUrl}" class="direct-thumb" alt="" style="border-radius: 1%;border: 5px solid rgba(0,0,30,0.8);">
                                     {else}
-                                        <img width="263" height="180" src="/ui/static/img/no-folder-image.jpg" class="direct-thumb" alt="">
+                                        <img width="263" height="180" src="/ui/static/img/no-folder-image.jpg" class="direct-thumb" alt="" style="border-radius: 1%;border: 5px solid rgba(0,0,30,0.8);">
                                     {/if}
                                     <div class="wrap-direct-meta">
-                                      <span class="direct-category"></span>
-                                      <h3><a href="/ui/wiki/{$tenantId}/{$f.guid}"> {$f.title}</a></h3>
+                                      <h4><a color="white" href="/ui/wiki/{$tenantId}/{$f.guid}"> {$f.title}</a></h4>
                                         <span class="label-bottom"></span>
                                         <p class="direct-field">{if $f.body}<p>{$f.body|noAutoescape}{/if}</p>
                                     </div>
@@ -89,10 +88,10 @@
                                         {else}
                                             <img src="/ui/static/img/no-user-image.jpg" alt="{$u.title}" />
                                         {/if}
-
                                     </div>
                                     <div>
-                                        <p><h4><a color="white" href="/ui/wiki/{$tenantId}/{$u.guid}"> {$u.title} </a></h4><br>
+                                        <p><h4><a color="white" href="/ui/wiki/{$tenantId}/{$u.guid}"> {$u.title} </a></h4>
+                                          <span class="label-bottom"></span>
                                           {if $u.body}<p>{$u.body|noAutoescape}{/if}</p>
                                         //<p><button type="button" class="btn btn-default">Contact</button></p>
                                     </div>
