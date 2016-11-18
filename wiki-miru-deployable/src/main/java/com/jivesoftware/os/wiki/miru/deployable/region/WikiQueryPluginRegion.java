@@ -270,6 +270,12 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
                     for (String key : keys) {
                         Content content = contents.get(i);
                         Map<String, Object> result = new HashMap<>();
+
+                        Random rand = new Random(key.hashCode());
+
+                        String folderUrl = "https://unsplash.it/200/300?image="+rand.nextInt(1000);
+
+                        result.put("folderUrl", folderUrl);
                         result.put("guid", key);
                         result.put("title", content.title);
                         result.put("body",
