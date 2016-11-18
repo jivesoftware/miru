@@ -617,7 +617,7 @@ public class AnomalyQueryPluginRegion implements MiruPageRegion<Optional<Anomaly
             int b = c.getBlue();
             String colorDiv = "<div style=\"display:inline-block; width:10px; height:10px; background:rgb(" + r + "," + g + "," + b + ");\"></div>";
 
-            total += colorDiv + waveName[i] + "=" + numberFormat.format(waveforms[i]);
+            total += colorDiv + waveName[i] + "=" + numberFormat.format(totals[i]);
         }
 
         List<Map<String, Object>> listOfwaveformGroups = Lists.newArrayList();
