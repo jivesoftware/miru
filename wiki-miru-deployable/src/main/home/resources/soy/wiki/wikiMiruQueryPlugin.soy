@@ -50,11 +50,11 @@
                                     <h4><a href="/ui/wiki/{$tenantId}/{$r.guid}">{$r.title}</a></h4>
                                     <h8 style="color:gray; padding-left: 20px;">
                                         <i>
-                                            {if r.userGuid}
+                                            {if $r.userGuid}
                                                 <a color="darkgray"  href="/ui/wiki/wiki23/{$r.userGuid}">{$r.user}</a>
                                             {/if}
                                             <span> in </span>
-                                            {if r.folderGuid}
+                                            {if $r.folderGuid}
                                                 <a color="darkgray" href="/ui/wiki/wiki23/{$r.folder}">{$r.folderGuid}</a>
                                             {/if}
                                         </i>
