@@ -99,8 +99,8 @@ table#stump-rt-events.stump-show-message .stump-event-message { display: table-c
   	-moz-box-shadow: 0 2px 5px rgba(1,1,1,.1);
   	box-shadow: 0 2px 5px rgba(1,1,1,.1);
   	overflow: hidden;
-  	padding-bottom: 30px;
-  	margin-bottom: 20px;
+    padding: 15px;
+    margin-bottom: 10px;
 }
 
 
@@ -205,7 +205,7 @@ table#stump-rt-events.stump-show-message .stump-event-message { display: table-c
 	height: 61px;
 	line-height: 56px;
 	text-align: center;
-	background: url(/ui/static/img/ping.png) no-repeat;
+	background: url(/ui/static/img/pin.png) no-repeat;
 	margin: -28px 0px 10px;
 }
 .direct-category i{
