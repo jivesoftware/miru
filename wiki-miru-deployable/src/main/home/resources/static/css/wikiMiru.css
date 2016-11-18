@@ -102,9 +102,11 @@ table#stump-rt-events.stump-show-message .stump-event-message { display: table-c
   color: rgb(136, 172, 217);
 }
 
+
 .user-card .user-header-bg {
   /* This stretches the canvas across the entire hero unit */
   position: absolute;
+  background-color: white;
   top: 0;
   left: 0;
   width: 100%;
@@ -126,4 +128,86 @@ table#stump-rt-events.stump-show-message .stump-event-message { display: table-c
   -moz-border-radius: 50%;
   border-radius: 50%;
   border: 5px solid rgba(0,0,30,0.8);
+}
+
+.direct-rate {
+	margin-right: 5px;
+	font-size: 16px;
+}
+
+.wrap-direct-meta .direct-rate{
+	padding-left: 0px;
+}
+
+.direct-item{
+	-webkit-border-radius: 12px;
+	-moz-border-radius: 12px;
+	border-radius: 12px;
+	background-color: #fff;
+	-webkit-box-shadow: 0 2px 5px rgba(1,1,1,.1);
+	-moz-box-shadow: 0 2px 5px rgba(1,1,1,.1);
+	box-shadow: 0 2px 5px rgba(1,1,1,.1);
+	overflow: hidden;
+	text-align: center;
+	padding-bottom: 30px;
+	margin-bottom: 20px;
+}
+.direct-item-premium{
+	background: #fffac1;
+}
+.direct-item:hover{
+	-webkit-box-shadow: 0 0px 20px rgba(1,1,1,.2);
+	-moz-box-shadow: 0 0px 20px rgba(1,1,1,.2);
+	box-shadow: 0 0px 20px rgba(1,1,1,.2);
+}
+.direct-item h3{
+	margin-top: 0px !important;
+	padding: 0px 20px;
+}
+.direct-item h3 a{
+	color: #08304a;
+	font-size: 16px;
+}
+.direct-item h3 a:hover{
+	color: #30cc72;
+}
+.direct-thumb{
+	height: 188px;
+	border-bottom: 1px solid #bfc8cb;
+	padding: 0px;
+	-webkit-border-radius: 0px;
+	-moz-border-radius: 0px;
+	-ms-border-radius: 0px;
+	-o-border-radius: 0px;
+	border-radius: 0px;
+	display: inline;
+	margin-bottom: 0px;
+}
+.direct-category{
+	display: inline-block;
+	width: 49px;
+	height: 61px;
+	line-height: 56px;
+	text-align: center;
+	background: url(../img/pin.png) no-repeat;
+	margin: -28px 0px 10px;
+}
+.direct-category i{
+	color: #FFFFFF;
+}
+.label-bottom{
+	width: 30px;
+	height: 4px;
+	-webkit-border-radius: 2px;
+	-moz-border-radius: 2px;
+	border-radius: 2px;
+	background-color: #30cc72;
+	display: block;
+	margin: 5px auto 15px;
+}
+.direct-field{
+	font-size: 14px;
+	color: #859baa;
+	line-height: 24px;
+	padding: 0px 20px;
 }
