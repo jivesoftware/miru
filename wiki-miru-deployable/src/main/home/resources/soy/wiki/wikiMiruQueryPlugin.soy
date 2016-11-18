@@ -72,14 +72,20 @@
                     </form>
                 </div>
             </div>
-            {if $elapse}
-               <small >Query: {$elapse} Fetch: Content({$getContentElapse}) Highlight: {$highlightElapse} Found: {$count}</small>
-            {/if}
+
 
             <div class="container-fluid">
+
             	<div class="row-fluid">
-                    {if $results}
+            	    {if $results}
                         <div class="col-md-8">
+                             <small>
+                                 {if $elapse} Miru: {$elapse}{/if}
+                                 {if $getContentElapse}  Fetch: Content({$getContentElapse}){/if}
+                                 {if $highlightElapse} Highlight: {$highlightElapse}{/if}
+                                 {if $count} Found: {$count}{/if}
+                             </small>
+
                             {foreach $r in $results}
                                 <div class="content-card panel-body">
                                     <h4><a href="/ui/wiki/{$tenantId}/{$r.guid}">{$r.title}</a></h4>
