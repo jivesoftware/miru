@@ -260,7 +260,7 @@
                             <div style="width:100%; height:{$r.height}px; resize: both;">
                                 <div style="width:100%; height:100%; background-color:black;">
                                     <canvas class="anomaly-wave" id="values"
-                                        data-anomaly-wave-id="{$values.id}" data-anomaly-wave-type="{$r.graphType}">
+                                        data-anomaly-wave-id="{$r.id}" data-anomaly-wave-type="{$r.graphType}">
                                     </canvas>
                                     <script>
                                         anomaly.anomaly.data['{$r.id}'] = {$r.waveform|noAutoescape};
