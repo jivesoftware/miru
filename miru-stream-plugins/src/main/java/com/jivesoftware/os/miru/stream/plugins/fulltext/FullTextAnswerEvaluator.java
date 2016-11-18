@@ -26,7 +26,7 @@ public class FullTextAnswerEvaluator implements MiruAnswerEvaluator<FullTextAnsw
             return true;
         }
         solutionLog.log(MiruSolutionLogLevel.INFO, "Evaluate {} >= {}", answer.results.size(), query.desiredNumberOfResults);
-        return answer.results.size() >= query.desiredNumberOfResults;
+        return false;  //answer.results.size() >= query.desiredNumberOfResults;
     }
 
     @Override
