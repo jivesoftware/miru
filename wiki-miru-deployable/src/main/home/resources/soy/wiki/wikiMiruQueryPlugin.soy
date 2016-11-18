@@ -41,7 +41,7 @@
                     {if $results}
                         <div class="col-md-8">
                             {foreach $r in $results}
-                                <div style="border-bottom:1px solid #eee;">
+                                <div class="content-card">
                                     <h4><a href="/ui/wiki/{$tenantId}/{$r.guid}">{$r.title}</a></h4>
                                     <h8 style="color:gray; padding-left: 20px;">
                                         <i>
@@ -62,7 +62,7 @@
                     {if $folders}
                         <div class="col-md-2">
                             {foreach $f in $folders}
-                                <div class="direct-item ">
+                                <div class="direct-item">
                                     {if $f.folderUrl}
                                         <img width="263" height="180" src="{$f.folderUrl}" class="direct-thumb" alt="">
                                     {else}
@@ -91,7 +91,7 @@
                                         {/if}
 
                                     </div>
-                                    <div class="user-content">
+                                    <div>
                                         <p><h4><a color="white" href="/ui/wiki/{$tenantId}/{$u.guid}"> {$u.title} </a></h4><br>
                                           {if $u.body}<p>{$u.body|noAutoescape}{/if}</p>
                                         //<p><button type="button" class="btn btn-default">Contact</button></p>
