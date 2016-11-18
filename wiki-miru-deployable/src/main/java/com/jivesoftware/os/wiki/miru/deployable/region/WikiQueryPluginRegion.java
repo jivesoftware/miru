@@ -8,8 +8,11 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
+import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
+import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
 import com.jivesoftware.os.miru.plugin.query.LuceneBackedQueryParser;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
@@ -33,6 +36,7 @@ import com.jivesoftware.os.wiki.miru.deployable.WikiMiruIndexService.Content;
 import com.jivesoftware.os.wiki.miru.deployable.region.WikiQueryPluginRegion.WikiMiruPluginRegionInput;
 import com.jivesoftware.os.wiki.miru.deployable.storage.WikiMiruPayloadsAmza;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -97,39 +101,16 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
             if (!input.tenantId.trim().isEmpty()) {
 
                 MiruTenantId tenantId = new MiruTenantId(input.tenantId.trim().getBytes(Charsets.UTF_8));
-                String endpoint = FullTextConstants.FULLTEXT_PREFIX + FullTextConstants.CUSTOM_QUERY_ENDPOINT;
-                String locale = "en";
-                String request = requestMapper.writeValueAsString(
-                    new MiruRequest<>(
-                        "wiki-miru",
-                        tenantId,
-                        MiruActorId.NOT_PROVIDED,
-                        MiruAuthzExpression.NOT_PROVIDED,
-                        new FullTextQuery(
-                            MiruTimeRange.ALL_TIME,
-                            "title",
-                            locale,
-                            query,
-                            MiruFilter.NO_FILTER,
-                            Strategy.TIME,
-                            100,
-                            new String[] { "userGuid", "folderGuid", "guid", "type" }),
-                        MiruSolutionLogLevel.NONE)
-                );
 
+                MiruFilter usersFilter = new MiruFilter(MiruFilterOperation.and, false, Arrays.asList(MiruFieldFilter.of(MiruFieldType.primary, "type",
+                    Arrays.asList("user"))), null);
 
-                MiruResponse<FullTextAnswer> response = readerClient.call("",
-                    new RoundRobinStrategy(),
-                    "wikiQueryPluginRegion",
-                    httpClient -> {
-                        HttpResponse httpResponse = httpClient.postJson(endpoint, request, null);
-                        @SuppressWarnings("unchecked")
-                        MiruResponse<FullTextAnswer> extractResponse = responseMapper.extractResultFromResponse(httpResponse,
-                            MiruResponse.class,
-                            new Class[] { FullTextAnswer.class },
-                            null);
-                        return new ClientResponse<>(extractResponse, true);
-                    });
+                MiruFilter foldersFilter = new MiruFilter(MiruFilterOperation.and, false, Arrays.asList(MiruFieldFilter.of(MiruFieldType.primary, "type",
+                    Arrays.asList("folder"))), null);
+
+                MiruResponse<FullTextAnswer> response = query(tenantId, MiruFilter.NO_FILTER, query);
+                MiruResponse<FullTextAnswer> users = query(tenantId, usersFilter, query);
+                MiruResponse<FullTextAnswer> folders = query(tenantId, foldersFilter, query);
 
                 if (response != null && response.answer != null) {
                     LOG.info("Found:{} for {}:{}", response.answer.results.size(), input.tenantId, query);
@@ -226,7 +207,7 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
                             result.put("guid", score.values[2][0].last());
                             result.put("title", content.title);
                             result.put("body",
-                                bodyQueryParser.highlight(locale, input.query, content.body, "<span style=\"background-color: #FFFF00\">", "</span>", 1000));
+                                bodyQueryParser.highlight("en", input.query, content.body, "<span style=\"background-color: #FFFF00\">", "</span>", 1000));
                             results.add(result);
                         }
                         i++;
@@ -235,41 +216,59 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
                     data.put("highlightElapse", String.valueOf(elapsed));
                     data.put("results", results);
 
-                    List<Map<String, Object>> users = new ArrayList<>();
-                    i = 0;
-                    for (String userKey : userKeys) {
-                        Content content = usersContent.get(i);
-                        Map<String, Object> result = new HashMap<>();
-                        result.put("guid", userKey);
-                        result.put("title", content.title);
-                        result.put("body",
-                            bodyQueryParser.highlight(locale, input.query, content.body, "<span style=\"background-color: #FFFF00\">", "</span>", 1000));
-                        users.add(result);
-                        i++;
-                    }
-                    data.put("users", users);
-
-                    List<Map<String, Object>> folders = new ArrayList<>();
-                    i = 0;
-                    for (String folderKey : folderKeys) {
-                        Content content = foldersContent.get(i);
-
-                        Map<String, Object> result = new HashMap<>();
-                        result.put("guid", folderKey);
-                        result.put("title", content.title);
-                        result.put("body",
-                            bodyQueryParser.highlight(locale, input.query, content.body, "<span style=\"background-color: #FFFF00\">", "</span>", 1000));
-                        folders.add(result);
-                        i++;
-                    }
-                    data.put("folders", folders);
-
-
                     ObjectMapper mapper = new ObjectMapper();
                     mapper.enable(SerializationFeature.INDENT_OUTPUT);
                     data.put("summary", Joiner.on("\n").join(response.log) + "\n\n" + mapper.writeValueAsString(response.solutions));
                 } else {
                     LOG.warn("Empty full text response from {}", tenantId);
+                }
+
+
+                if (users != null && users.answer != null) {
+                    List<String> keys = Lists.newArrayList();
+                    for (ActivityScore score : users.answer.results) {
+                        keys.add(score.values[2][0].last());
+                    }
+
+                    List<Content> contents = payloads.multiGet(tenantId, keys, Content.class);
+
+                    List<Map<String, Object>> results = new ArrayList<>();
+                    int i = 0;
+                    for (String key : keys) {
+                        Content content = contents.get(i);
+                        Map<String, Object> result = new HashMap<>();
+                        result.put("guid", key);
+                        result.put("title", content.title);
+                        result.put("body",
+                            bodyQueryParser.highlight("en", input.query, content.body, "<span style=\"background-color: #FFFF00\">", "</span>", 1000));
+                        results.add(result);
+                        i++;
+                    }
+                    data.put("users", results);
+                }
+
+
+                if (folders != null && folders.answer != null) {
+                    List<String> keys = Lists.newArrayList();
+                    for (ActivityScore score : folders.answer.results) {
+                        keys.add(score.values[2][0].last());
+                    }
+
+                    List<Content> contents = payloads.multiGet(tenantId, keys, Content.class);
+
+                    List<Map<String, Object>> results = new ArrayList<>();
+                    int i = 0;
+                    for (String key : keys) {
+                        Content content = contents.get(i);
+                        Map<String, Object> result = new HashMap<>();
+                        result.put("guid", key);
+                        result.put("title", content.title);
+                        result.put("body",
+                            bodyQueryParser.highlight("en", input.query, content.body, "<span style=\"background-color: #FFFF00\">", "</span>", 1000));
+                        results.add(result);
+                        i++;
+                    }
+                    data.put("folders", results);
                 }
             }
 
@@ -289,6 +288,45 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
             part[i] = "( title:" + part[i] + " OR body:" + part[i] + ")";
         }
         return Joiner.on(" AND ").join(part);
+    }
+
+    private MiruResponse<FullTextAnswer> query(MiruTenantId tenantId, MiruFilter filter, String query) throws Exception {
+
+        String endpoint = FullTextConstants.FULLTEXT_PREFIX + FullTextConstants.CUSTOM_QUERY_ENDPOINT;
+        String locale = "en";
+
+        String request = requestMapper.writeValueAsString(
+            new MiruRequest<>(
+                "wiki-miru",
+                tenantId,
+                MiruActorId.NOT_PROVIDED,
+                MiruAuthzExpression.NOT_PROVIDED,
+                new FullTextQuery(
+                    MiruTimeRange.ALL_TIME,
+                    "title",
+                    locale,
+                    query,
+                    filter,
+                    Strategy.TIME,
+                    100,
+                    new String[] { "userGuid", "folderGuid", "guid", "type" }),
+                MiruSolutionLogLevel.NONE)
+        );
+
+
+        MiruResponse<FullTextAnswer> response = readerClient.call("",
+            new RoundRobinStrategy(),
+            "wikiQueryPluginRegion",
+            httpClient -> {
+                HttpResponse httpResponse = httpClient.postJson(endpoint, request, null);
+                @SuppressWarnings("unchecked")
+                MiruResponse<FullTextAnswer> extractResponse = responseMapper.extractResultFromResponse(httpResponse,
+                    MiruResponse.class,
+                    new Class[] { FullTextAnswer.class },
+                    null);
+                return new ClientResponse<>(extractResponse, true);
+            });
+        return response;
     }
 
     @Override

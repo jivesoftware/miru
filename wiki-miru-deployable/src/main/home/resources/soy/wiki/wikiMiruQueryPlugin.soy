@@ -39,31 +39,47 @@
             <div class="container-fluid">
             	<div class="row-fluid">
                     {if $results}
-                        <div class="span7">
+                        <div class="col-md-8">
                             {foreach $r in $results}
+
+                            <div style="border-bottom:1px solid #eee;">
+                              <h4><a href="/ui/wiki/wiki23/content|63744">Hawker Typhoon</a></h4>
+
+
                                 <div style="border-bottom:1px solid #eee;">
                                     <h4><a href="/ui/wiki/{$tenantId}/{$r.guid}">{$r.title}</a></h4>
-                                    <p>{$r.body|noAutoescape}</p>
+                                    <h8 style="color:gray; padding-left: 20px;">
+                                        <i>
+                                            {if r.userGuid}
+                                                <a color="darkgray"  href="/ui/wiki/wiki23/{$r.userGuid}">{$r.user}</a>
+                                            {/if}
+                                            <span> in </span>
+                                            {if r.folderGuid}
+                                                <a color="darkgray" href="/ui/wiki/wiki23/{$r.folder}">{$r.folderGuid}</a>
+                                            {/if}
+                                        </i>
+                                    </h8>
+                                    {if $r.body}<p style="padding-left: 40px; text-indent: 30px;">{$r.body|noAutoescape}</p>{/if}
                                 </div>
                             {/foreach}
                         </div>
                     {/if}
                     {if $folders}
-                        <div class="span2">
+                        <div class="col-md-2">
                             {foreach $f in $folders}
                                 <div style="border-bottom:1px solid #eee;">
-                                    <h4><span class="glyphicon glyphicon-folder-open" aria-hidden="true"></span><a href="/ui/wiki/{$tenantId}/{$f.guid}">{$f.title}</a></h4>
-                                    <p>{$f.body|noAutoescape}</p>
+                                    <h4><span class="glyphicon glyphicon-folder-open" aria-hidden="true"></span><a href="/ui/wiki/{$tenantId}/{$f.guid}"> {$f.title}</a></h4>
+                                    {if $f.body}<p>{$f.body|noAutoescape}</p>{/if}
                                 </div>
                             {/foreach}
                         </div>
                     {/if}
                     {if $users}
-                         <div class="span2">
+                         <div class="col-md-2">
                             {foreach $u in $users}
                                 <div style="border-bottom:1px solid #eee;">
-                                    <h4><span class="glyphicon glyphicon-user" aria-hidden="true"></span><a href="/ui/wiki/{$tenantId}/{$u.guid}">{$u.title}</a></h4>
-                                    <p>{$u.body|noAutoescape}</p>
+                                    <h4><span class="glyphicon glyphicon-user" aria-hidden="true"></span><a href="/ui/wiki/{$tenantId}/{$u.guid}"> {$u.title} </a></h4>
+                                    {if $u.body}<p>{$u.body|noAutoescape}</p>{/if}
                                 </div>
                             {/foreach}
                         </div>
