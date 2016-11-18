@@ -100,7 +100,7 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
             data.put("query", input.query);
 
 
-            String query = rewrite(input.query.toLowerCase());
+            String query = input.query.isEmpty() ? "" : rewrite(input.query.toLowerCase());
 
 
             if (!input.tenantId.trim().isEmpty()) {
@@ -284,7 +284,7 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
                     result.put("body",
                         bodyQueryParser.highlight("en", input.query, content.body, "<span style=\"background-color: #FFFF00\">", "</span>", 1000));
 
-                    data.put("folderGuids", result);
+                    data.put("queryFolders", result);
                 }
 
 

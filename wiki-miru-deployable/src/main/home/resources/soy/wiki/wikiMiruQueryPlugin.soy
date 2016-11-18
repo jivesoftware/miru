@@ -63,6 +63,8 @@
                     <form id="wiki-query" data-active-class="btn-default" method="get">
 
                         <div class="input-group" style="width: 800px;">
+                            <input type="hidden" name="userGuids" value="{$queryUsers?$queryUsers.guid:''}">
+                            <input type="hidden" name="folderGuids" value="{$queryFolders?$queryFolders.guid:''}">
                             <input id="tenantId" type="text" class="form-control" placeholder="tenantId" value="{$tenantId?:''}" name="tenantId" style="margin-left:-1px">
                                 <span class="input-group-btn" style="width:0px;"></span>
                             <input data-typeahead-tenantId="#tenantId" = data-typeahead-url="/ui/query/typeahead/"  autocomplete="off" class="typeahead-field form-control" type="text" class="form-control" placeholder="query" value="{$query?:''}" name="query" style="margin-left:-2px">
@@ -104,6 +106,12 @@
 
                                     <div class="panel-default-overlay-up">
                                         <div>
+                                            {if $r.userGuid}
+                                                <a href="/ui/query?tenantId={$tenantId?:''}&query={$query?:''}&userGuids={$r.userGuid}&folderGuids={$queryFolders?$queryFolders.guid:''}" class="btn btn-default btn-sm">More By {$r.user}</a>
+                                            {/if}
+                                            {if $r.folderGuid}
+                                                <a href="/ui/query?tenantId={$tenantId?:''}&query={$query?:''}&userGuids={$queryUsers?$queryUsers.guid:''}&folderGuids={$r.folderGuid}" class="btn btn-default btn-sm">More In {$r.folder}</a>
+                                            {/if}
                                             <a href="#" class="btn btn-default btn-sm">Comment</a>
                                             <a href="#" class="btn btn-default btn-sm">Like</a>
                                             <a href="#" class="btn btn-default btn-sm">Helpful</a>
