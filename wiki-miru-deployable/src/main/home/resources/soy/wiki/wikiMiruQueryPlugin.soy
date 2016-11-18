@@ -16,8 +16,8 @@
  * @param? folders
  */
 {template .wikiMiruQueryPlugin}
-    <div class="panel panel-default">
-        <div class="panel-body">
+    <div class="">
+        <div class="">
             <div class="row">
                 <div class="col-lg-1 col-centered">
                     <form id="wiki-query" data-active-class="btn-default" method="get">
@@ -41,7 +41,7 @@
                     {if $results}
                         <div class="col-md-8">
                             {foreach $r in $results}
-                                <div class="content-card">
+                                <div class="content-card panel-body">
                                     <h4><a href="/ui/wiki/{$tenantId}/{$r.guid}">{$r.title}</a></h4>
                                     <h8 style="color:gray; padding-left: 20px;">
                                         <i>
@@ -71,7 +71,7 @@
                     {if $folders}
                         <div class="col-md-2">
                             {foreach $f in $folders}
-                                <div class="direct-item">
+                                <div class="direct-item panel-body">
                                     {if $f.folderUrl}
                                         <img width="263" height="180" src="{$f.folderUrl}" class="direct-thumb" alt="" style="border-radius: 1%;border: 5px solid rgba(0,0,30,0.8);">
                                     {else}
@@ -99,7 +99,7 @@
                     {if $users}
                          <div class="col-md-2">
                             {foreach $u in $users}
-                                <div class="user-card">
+                                <div class="user-card panel-body">
                                     <div class="user-header-bg" width="250" height="70" id="header-blur"></div>
                                     <div class="user-avatar">
                                         {if $u.avatarUrl}
