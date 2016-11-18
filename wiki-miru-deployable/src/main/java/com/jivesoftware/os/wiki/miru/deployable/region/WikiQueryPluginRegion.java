@@ -124,6 +124,16 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
 
                 MiruResponse<FullTextAnswer> response = query(tenantId, contentsFilter, query);
 
+                List<String> contentKeys = Lists.newArrayList();
+
+                Set<String> uniqueFolders = new HashSet<>();
+                Set<String> uniqueUsers = new HashSet<>();
+
+                Map<String, Integer> foldersIndex = new HashMap<>();
+                Map<String, Integer> usersIndex = new HashMap<>();
+
+                List<String> folderKeys = Lists.newArrayList();
+                List<String> userKeys = Lists.newArrayList();
 
                 if (response != null && response.answer != null) {
                     LOG.info("Found:{} for {}:{}", response.answer.results.size(), input.tenantId, query);
@@ -131,16 +141,8 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
                     data.put("elapse", String.valueOf(response.totalElapsed));
                     data.put("count", response.answer.results.size());
                     List<ActivityScore> scores = response.answer.results.subList(0, Math.min(1_000, response.answer.results.size()));
-                    List<String> contentKeys = Lists.newArrayList();
 
-                    Set<String> uniqueFolders = new HashSet<>();
-                    Set<String> uniqueUsers = new HashSet<>();
 
-                    Map<String, Integer> foldersIndex = new HashMap<>();
-                    Map<String, Integer> usersIndex = new HashMap<>();
-
-                    List<String> folderKeys = Lists.newArrayList();
-                    List<String> userKeys = Lists.newArrayList();
 
                     int folderIndex = 0;
                     int userIndex = 0;
@@ -171,29 +173,40 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
                         }
                     }
 
-                    int contentKeysCount = contentKeys.size();
-                    int userKeysCount = userKeys.size();
-                    int folderKeysCount = folderKeys.size();
-
-                    List<String> allKeys = new ArrayList<>();
-                    allKeys.addAll(contentKeys);
-                    allKeys.addAll(userKeys);
-                    allKeys.addAll(folderKeys);
-
-                    if (!input.userGuids.isEmpty()) {
-                        allKeys.add(input.userGuids);
-                    }
-                    if (!input.folderGuids.isEmpty()) {
-                        allKeys.add(input.folderGuids);
-                    }
+                    ObjectMapper mapper = new ObjectMapper();
+                    mapper.enable(SerializationFeature.INDENT_OUTPUT);
+                    data.put("summary", Joiner.on("\n").join(response.log) + "\n\n" + mapper.writeValueAsString(response.solutions));
+                } else {
+                    LOG.warn("Empty full text response from {}", tenantId);
+                }
 
 
-                    long start = System.currentTimeMillis();
-                    List<Content> contents = payloads.multiGet(tenantId, allKeys, Content.class);
-                    long elapsed = System.currentTimeMillis() - start;
-                    data.put("getContentElapse", String.valueOf(elapsed));
+                int contentKeysCount = contentKeys.size();
+                int userKeysCount = userKeys.size();
+                int folderKeysCount = folderKeys.size();
 
-                    List<Map<String, Object>> results = new ArrayList<>();
+                List<String> allKeys = new ArrayList<>();
+                allKeys.addAll(contentKeys);
+                allKeys.addAll(userKeys);
+                allKeys.addAll(folderKeys);
+
+                if (!input.userGuids.isEmpty()) {
+                    allKeys.add(input.userGuids);
+                }
+                if (!input.folderGuids.isEmpty()) {
+                    allKeys.add(input.folderGuids);
+                }
+
+
+                long start = System.currentTimeMillis();
+                List<Content> contents = payloads.multiGet(tenantId, allKeys, Content.class);
+                long elapsed = System.currentTimeMillis() - start;
+                data.put("getContentElapse", String.valueOf(elapsed));
+
+                List<Map<String, Object>> results = new ArrayList<>();
+                if (response != null && response.answer != null) {
+
+                    List<ActivityScore> scores = response.answer.results.subList(0, Math.min(1_000, response.answer.results.size()));
 
                     start = System.currentTimeMillis();
                     int i = 0;
@@ -207,7 +220,7 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
                             if (score.values[0] != null && score.values[0].length > 0) {
 
                                 String userGuid = score.values[0][0].last();
-                                Content userContent = contents.get(contentKeysCount+usersIndex.get(userGuid));
+                                Content userContent = contents.get(contentKeysCount + usersIndex.get(userGuid));
                                 if (userContent != null) {
                                     result.put("userGuid", userGuid);
                                     result.put("user", userContent.title);
@@ -216,7 +229,7 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
 
                             if (score.values[1] != null && score.values[1].length > 0) {
                                 String folderGuid = score.values[1][0].last();
-                                Content folderContent = contents.get(contentKeysCount+userKeysCount+foldersIndex.get(folderGuid));
+                                Content folderContent = contents.get(contentKeysCount + userKeysCount + foldersIndex.get(folderGuid));
                                 if (folderContent != null) {
                                     result.put("folderGuid", folderGuid);
                                     result.put("folder", folderContent.title);
@@ -233,54 +246,47 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
                         i++;
                     }
 
-
-                    int u = 0;
-                    if (!input.userGuids.isEmpty()) {
-                        u++;
-                        Content content = contents.get(contentKeysCount+userKeysCount+folderKeysCount+u);
-                        Map<String, Object> result = new HashMap<>();
-
-                        Random rand = new Random(input.userGuids.hashCode());
-                        String gender = rand.nextDouble() > 0.5 ? "men" : "women";
-                        int id = rand.nextInt(100);
-
-                        String avatarUrl = "https://randomuser.me/api/portraits/" + gender + "/" + id + ".jpg";
-                        result.put("avatarUrl", avatarUrl);
-                        result.put("guid", input.userGuids);
-                        result.put("title", content.title);
-                        result.put("body",
-                            bodyQueryParser.highlight("en", input.query, content.body, "<span style=\"background-color: #FFFF00\">", "</span>", 1000));
-
-                        data.put("queryUsers", result);
-                    }
-                    if (!input.folderGuids.isEmpty()) {
-                        Content content = contents.get(contentKeysCount+userKeysCount+folderKeysCount+u);
-                        Map<String, Object> result = new HashMap<>();
-
-                        Random rand = new Random(input.folderGuids.hashCode());
-
-                        String folderUrl = "https://unsplash.it/200/300?image=" + rand.nextInt(1000);
-
-                        result.put("folderUrl", folderUrl);
-                        result.put("guid", input.folderGuids);
-                        result.put("title", content.title);
-                        result.put("body",
-                            bodyQueryParser.highlight("en", input.query, content.body, "<span style=\"background-color: #FFFF00\">", "</span>", 1000));
-
-                        data.put("folderGuids", result);
-                    }
-
-
                     elapsed = System.currentTimeMillis() - start;
                     data.put("highlightElapse", String.valueOf(elapsed));
                     data.put("results", results);
-
-                    ObjectMapper mapper = new ObjectMapper();
-                    mapper.enable(SerializationFeature.INDENT_OUTPUT);
-                    data.put("summary", Joiner.on("\n").join(response.log) + "\n\n" + mapper.writeValueAsString(response.solutions));
-                } else {
-                    LOG.warn("Empty full text response from {}", tenantId);
                 }
+
+                int u = 0;
+                if (!input.userGuids.isEmpty()) {
+                    u++;
+                    Content content = contents.get(contentKeysCount+userKeysCount+folderKeysCount+u);
+                    Map<String, Object> result = new HashMap<>();
+
+                    Random rand = new Random(input.userGuids.hashCode());
+                    String gender = rand.nextDouble() > 0.5 ? "men" : "women";
+                    int id = rand.nextInt(100);
+
+                    String avatarUrl = "https://randomuser.me/api/portraits/" + gender + "/" + id + ".jpg";
+                    result.put("avatarUrl", avatarUrl);
+                    result.put("guid", input.userGuids);
+                    result.put("title", content.title);
+                    result.put("body",
+                        bodyQueryParser.highlight("en", input.query, content.body, "<span style=\"background-color: #FFFF00\">", "</span>", 1000));
+
+                    data.put("queryUsers", result);
+                }
+                if (!input.folderGuids.isEmpty()) {
+                    Content content = contents.get(contentKeysCount+userKeysCount+folderKeysCount+u);
+                    Map<String, Object> result = new HashMap<>();
+
+                    Random rand = new Random(input.folderGuids.hashCode());
+
+                    String folderUrl = "https://unsplash.it/200/300?image=" + rand.nextInt(1000);
+
+                    result.put("folderUrl", folderUrl);
+                    result.put("guid", input.folderGuids);
+                    result.put("title", content.title);
+                    result.put("body",
+                        bodyQueryParser.highlight("en", input.query, content.body, "<span style=\"background-color: #FFFF00\">", "</span>", 1000));
+
+                    data.put("folderGuids", result);
+                }
+
 
                 if (input.folderGuids.isEmpty() && input.userGuids.isEmpty()) {
 
