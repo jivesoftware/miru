@@ -7,15 +7,21 @@
  * @param? query
  * @param? queryUsers
  * @param? queryFolders
- * @param? elapse
  * @param? getContentElapse
  * @param? highlightElapse
+ * @param? elapse
  * @param? count
  * @param? found
  * @param? results
  * @param? users
  * @param? folders
- */
+ * @param? usersElapse
+ * @param? usersCount
+ * @param? usersFound
+ * @param? foldersElapse
+ * @param? foldersCount
+ * @param? foldersFound
+*/
 {template .wikiMiruQueryPlugin}
     <div class="">
         <div class="">
@@ -82,7 +88,7 @@
                         <div class="col-md-8">
                              <small>
                                  {if $elapse} Miru: {$elapse}{/if}
-                                 {if $getContentElapse}  Fetch: Content({$getContentElapse}){/if}
+                                 {if $getContentElapse}  Amza: {$getContentElapse}{/if}
                                  {if $highlightElapse} Highlight: {$highlightElapse}{/if}
                                  {if $count} Count: {$count}{/if}
                                  {if $found} Found: {$found}{/if}
@@ -124,6 +130,11 @@
                     {/if}
                     {if $folders}
                         <div class="col-md-2">
+                            <small>
+                                 {if $foldersElapse} Miru: {$foldersElapse}{/if}
+                                 {if $foldersCount} Count: {$foldersCount}{/if}
+                                 {if $foldersFound} Found: {$foldersFound}{/if}
+                              </small>
                             {foreach $f in $folders}
                                 <div class="direct-item panel-body">
                                     {if $f.folderUrl}
@@ -151,6 +162,11 @@
                     {/if}
                     {if $users}
                          <div class="col-md-2">
+                            <small>
+                                 {if $usersElapse} Miru: {$usersElapse}{/if}
+                                 {if $usersCount} Count: {$usersCount}{/if}
+                                 {if $usersFound} Found: {$usersFound}{/if}
+                              </small>
                             {foreach $u in $users}
                                 <div class="user-card panel-body">
                                     <div class="user-header-bg" width="250" height="70" id="header-blur"></div>
