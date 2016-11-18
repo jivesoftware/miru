@@ -40,7 +40,7 @@ import com.jivesoftware.os.routing.bird.http.client.RoundRobinStrategy;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.shared.ClientCall.ClientResponse;
 import java.awt.Color;
-import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -59,6 +59,7 @@ import java.util.concurrent.TimeUnit;
 public class AnomalyQueryPluginRegion implements MiruPageRegion<Optional<AnomalyQueryPluginRegion.AnomalyPluginRegionInput>> {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
+    private final NumberFormat numberFormat = NumberFormat.getInstance();
 
     private final String template;
     private final MiruSoyRenderer renderer;
@@ -293,7 +294,7 @@ public class AnomalyQueryPluginRegion implements MiruPageRegion<Optional<Anomaly
                     long ts = (tt - ft) / (numLabels - 1);
 
                     ArrayList<Map<String, Object>> results = new ArrayList<>();
-                    int id = 0;
+                    /*int id = 0;
                     for (Entry<WaveformKey, long[]> t : rawWaveforms.entrySet()) {
                         if (labels.isEmpty()) {
                             for (int i = 0; i < numLabels; i++) {
@@ -324,10 +325,31 @@ public class AnomalyQueryPluginRegion implements MiruPageRegion<Optional<Anomaly
                         valueDatasets.add(w);
                         rateDatasets.add(r);
                         id++;
+                    }*/
+
+
+                    Set<Entry<WaveformKey, long[]>> waves = rawWaveforms.entrySet();
+                    int wcount = waves.size();
+                    Color[] colors = new Color[wcount];
+                    String[] waveName = new String[wcount];
+                    long[][] values = new long[wcount][];
+                    long[] totals = new long[wcount];
+                    boolean[] fill = new boolean[wcount];
+                    int i = 0;
+                    for (Entry<WaveformKey, long[]> t : waves) {
+                        colors[i] = defaultColors[i%defaultColors.length];
+                        waveName[i] = t.getKey().key;
+                        values[i] = t.getValue();
+                        totals[i] = 0;
+                        fill[i] = false;
+                        i++;
+
                     }
 
-                    data.put("values", ImmutableMap.of("labels", labels, "datasets", valueDatasets));
-                    data.put("rates", ImmutableMap.of("labels", labels, "datasets", rateDatasets));
+                    List<Map<String, Object>> valuesGroup = waveformGroup("Values", null, "Values", defaultColors, waveName, values, totals, fill);
+
+                    data.put("values", valuesGroup);
+                    //data.put("rates", ImmutableMap.of("labels", labels, "datasets", rateDatasets));
                     data.put("results", results);
 
                     if (input.querySummary) {
@@ -343,6 +365,9 @@ public class AnomalyQueryPluginRegion implements MiruPageRegion<Optional<Anomaly
 
         return renderer.render(template, data);
     }
+
+
+
 
     public String hms(long millis) {
         return String.format("%02d:%02d:%02d", TimeUnit.MILLISECONDS.toHours(millis),
@@ -545,5 +570,134 @@ public class AnomalyQueryPluginRegion implements MiruPageRegion<Optional<Anomaly
     @Override
     public String getTitle() {
         return "Find Anomaly";
+    }
+
+
+    private Color[] defaultColors = new Color[]{
+        Color.blue,
+        Color.green,
+        Color.red,
+        Color.orange,
+        new Color(215, 120, 40), // brown
+        Color.gray,
+        Color.pink,
+        Color.cyan
+    };
+
+    private List<Map<String, Object>> waveformGroup(String group, String filter, String title, Color[] colors, String[] waveName,
+        long[][] waveforms,
+        long[] totals,
+        boolean[] fill) {
+        if (filter != null && filter.length() > 0 && !title.contains(filter)) {
+            return Collections.emptyList();
+        }
+
+        String total = "";
+        List<String> ls = new ArrayList<>();
+        List<Map<String, Object>> ws = new ArrayList<>();
+        int s = 1;
+        for (long m : waveforms[0]) {
+            ls.add("\"" + s + "\"");
+            s++;
+        }
+
+        for (int i = 0; i < waveName.length; i++) {
+            List<String> values = Lists.newArrayList();
+            long[] metric = waveforms[i];
+            for (double m : metric) {
+                values.add("\"" + String.valueOf(m) + "\"");
+            }
+            ws.add(waveform(waveName[i], new Color[]{colors[i]}, 1f, values, fill[i], false));
+            if (i > 0) {
+                total += ", ";
+            }
+            Color c = colors[i];
+            int r = c.getRed();
+            int g = c.getGreen();
+            int b = c.getBlue();
+            String colorDiv = "<div style=\"display:inline-block; width:10px; height:10px; background:rgb(" + r + "," + g + "," + b + ");\"></div>";
+
+            total += colorDiv + waveName[i] + "=" + numberFormat.format(waveforms[i]);
+        }
+
+        List<Map<String, Object>> listOfwaveformGroups = Lists.newArrayList();
+
+        List<Map<String, Object>> ows = new ArrayList<>();
+        List<String> ols = new ArrayList<>();
+        List<String> ovalues = Lists.newArrayList();
+        Color[] ocolors = new Color[waveforms.length];
+        for (int i = 0; i < waveforms.length; i++) {
+            ovalues.add("\"" + String.valueOf(totals[i]) + "\"");
+            ols.add("\"" + waveName[i] + "\"");
+            ocolors[i] = colors[i];
+        }
+        ows.add(waveform(title + "-overview", ocolors, 1f, ovalues, true, false));
+
+        Map<String, Object> overViewMap = new HashMap<>();
+        overViewMap.put("group", group);
+        overViewMap.put("filter", title);
+        overViewMap.put("title", title + "-overview");
+        overViewMap.put("total", "");
+        overViewMap.put("height", String.valueOf(150));
+        overViewMap.put("width", String.valueOf(ls.size() * 10));
+        overViewMap.put("id", title + "-overview");
+        overViewMap.put("graphType", "bar");
+        overViewMap.put("waveform", ImmutableMap.of("labels", ols, "datasets", ows));
+        listOfwaveformGroups.add(overViewMap);
+
+        Map<String, Object> map = new HashMap<>();
+        map.put("group", group);
+        map.put("filter", title);
+        map.put("title", title);
+        map.put("total", total);
+
+        if (filter != null && filter.length() > 0) {
+            map.put("height", String.valueOf(800));
+        } else {
+            map.put("height", String.valueOf(300));
+        }
+        map.put("width", String.valueOf(ls.size() * 10));
+        map.put("id", title);
+        map.put("graphType", "line");
+        map.put("waveform", ImmutableMap.of("labels", ls, "datasets", ws));
+        listOfwaveformGroups.add(map);
+        return listOfwaveformGroups;
+    }
+
+    public Map<String, Object> waveform(String label, Color[] color, float alpha, List<String> values, boolean fill, boolean stepped) {
+        Map<String, Object> waveform = new HashMap<>();
+        waveform.put("label", "\"" + label + "\"");
+
+        Object c = "\"rgba(" + color[0].getRed() + "," + color[0].getGreen() + "," + color[0].getBlue() + "," + String.valueOf(alpha) + ")\"";
+        if (color.length > 1) {
+            List<String> colorStrings = Lists.newArrayList();
+            for (int i = 0; i < color.length; i++) {
+                colorStrings.add("\"rgba(" + color[i].getRed() + "," + color[i].getGreen() + "," + color[i].getBlue() + "," + String.valueOf(alpha) + ")\"");
+            }
+            c = colorStrings;
+        }
+
+        waveform.put("fill", fill);
+        waveform.put("steppedLine", stepped);
+        waveform.put("lineTension", "0.1");
+        waveform.put("backgroundColor", c);
+        waveform.put("borderColor", c);
+        waveform.put("borderCapStyle", "'butt'");
+        waveform.put("borderDash", "[]");
+        waveform.put("borderDashOffset", 0.0);
+        waveform.put("borderJoinStyle", "'miter'");
+        waveform.put("pointBorderColor", c);
+        waveform.put("pointBackgroundColor", "\"#fff\"");
+        waveform.put("pointBorderWidth", 1);
+        waveform.put("pointHoverRadius", 5);
+        waveform.put("pointHoverBackgroundColor", c);
+        waveform.put("pointHoverBorderColor", c);
+        waveform.put("pointHoverBorderWidth", 2);
+        waveform.put("pointRadius", 1);
+        waveform.put("pointHitRadius", 10);
+        waveform.put("spanGaps", false);
+
+        waveform.put("data", values);
+        return waveform;
     }
 }

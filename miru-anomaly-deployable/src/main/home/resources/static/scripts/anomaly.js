@@ -235,7 +235,69 @@ anomaly.query = {
     }
 };
 
+
+
+anomaly.anomaly = {
+    waves: {},
+    data: {},
+    initChart: function (which) {
+        var $canvas = $(which);
+        var ctx = which.getContext("2d");
+        var id = $canvas.data('anomalyWaveId');
+        if (!anomaly.anomaly.waves[id]) {
+            var data = anomaly.anomaly.data[id];
+
+            anomaly.anomaly.waves[id] = new Chart(ctx, {
+                type: $canvas.data('anomalyWaveType'),
+                data: data,
+                options: {
+                    maintainAspectRatio: false,
+                    responsive: true,
+                    legend: {
+                        display: false
+                    },
+                    tooltips: {
+                        enabled: true,
+                        mode: 'label',
+                        backgroundColor: 'rgba(100,100,100,0.8)'
+                    },
+                    gridLines: {
+                        display: true,
+                        color: "rgba(128,128,128,1)"
+                    },
+                    scaleLabel: {
+                        fontColor: "rgba(200,200,200,1)"
+                    },
+                    scales: {
+                        yAxes: [{
+                            position: "right",
+                            ticks: {
+                                beginAtZero: true
+                            }
+                        }]
+                    }
+                }
+            });
+        }
+        anomaly.anomaly.waves[id].update();
+
+    },
+    init: function () {
+
+        $('.anomaly-wave').each(function (i) {
+            anomaly.anomaly.initChart(this);
+        });
+    }
+};
+
+
+
+
 $(document).ready(function () {
+
+     if ($('.anomaly-wave').length) {
+        anomaly.anomaly.init();
+    }
 
 
     if ($('#anomaly-query').length) {

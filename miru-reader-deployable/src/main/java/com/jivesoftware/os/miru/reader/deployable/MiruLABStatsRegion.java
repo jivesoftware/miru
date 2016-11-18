@@ -101,26 +101,26 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
 
         List<Map<String, Object>> list = Lists.newArrayList();
 
-        list.addAll(wavformGroup(group, filter, prefix + "gc", defaultColors, new String[]{"gc", "pressureCommit", "commit", "fsyncedCommit", "gcCommit"},
+        list.addAll(waveformGroup(group, filter, prefix + "gc", defaultColors, new String[]{"gc", "pressureCommit", "commit", "fsyncedCommit", "gcCommit"},
             new LABSparseCircularMetricBuffer[]{stats.mGC, stats.mPressureCommit, stats.mCommit, stats.mFsyncedCommit, stats.mGCCommit},
             new boolean[]{false, false, false, false, false}));
 
         list.addAll(
-            wavformGroup(group, filter, prefix + "lsm", defaultColors, new String[]{"open", "closed", "debt", "merging", "merged", "splitting", "split"},
+            waveformGroup(group, filter, prefix + "lsm", defaultColors, new String[]{"open", "closed", "debt", "merging", "merged", "splitting", "split"},
                 new LABSparseCircularMetricBuffer[]{stats.mOpen, stats.mClosed, stats.mDebt, stats.mMerging, stats.mMerged, stats.mSplitings, stats.mSplits},
                 new boolean[]{false, false, false, false, false, false, false}));
 
-        list.addAll(wavformGroup(group, filter, prefix + "disk", defaultColors, new String[]{"bytesWrittenToWAL", "bytesWrittenAsIndex", "bytesWrittenAsMerge",
+        list.addAll(waveformGroup(group, filter, prefix + "disk", defaultColors, new String[]{"bytesWrittenToWAL", "bytesWrittenAsIndex", "bytesWrittenAsMerge",
             "bytesWrittenAsSplit"},
             new LABSparseCircularMetricBuffer[]{stats.mBytesWrittenToWAL, stats.mBytesWrittenAsIndex, stats.mBytesWrittenAsMerge, stats.mBytesWrittenAsSplit},
             new boolean[]{false, false, false, false, false}));
 
-        list.addAll(wavformGroup(group, filter, prefix + "rw", defaultColors, new String[]{"append", "journaledAppend", "gets", "rangeScan", "multiRangeScan",
+        list.addAll(waveformGroup(group, filter, prefix + "rw", defaultColors, new String[]{"append", "journaledAppend", "gets", "rangeScan", "multiRangeScan",
             "rowScan"},
             new LABSparseCircularMetricBuffer[]{stats.mAppend, stats.mJournaledAppend, stats.mGets, stats.mRangeScan, stats.mMultiRangeScan, stats.mRowScan},
             new boolean[]{false, false, false, false, false, false}));
 
-        list.addAll(wavformGroup(group, filter, prefix + "mem", defaultColors, new String[]{"released", "allocationed", "slabbed", "freed"},
+        list.addAll(waveformGroup(group, filter, prefix + "mem", defaultColors, new String[]{"released", "allocationed", "slabbed", "freed"},
             new LABSparseCircularMetricBuffer[]{stats.mReleased, stats.mAllocationed, stats.mSlabbed, stats.mFreed},
             new boolean[]{false, false, false, false}));
 
@@ -136,7 +136,7 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
                 waveforms[i] = entry.getValue().mEntriesWrittenBatchPower[i];
             }
 
-            list.addAll(wavformGroup(group, filter, prefix + "tally-" + entry.getKey(), histoColors, labels, waveforms, fill));
+            list.addAll(waveformGroup(group, filter, prefix + "tally-" + entry.getKey(), histoColors, labels, waveforms, fill));
 
         }
         return list;
@@ -193,7 +193,7 @@ public class MiruLABStatsRegion implements MiruPageRegion<Void> {
         Color.cyan
     };
 
-    private List<Map<String, Object>> wavformGroup(String group, String filter, String title, Color[] colors, String[] waveName,
+    private List<Map<String, Object>> waveformGroup(String group, String filter, String title, Color[] colors, String[] waveName,
         LABSparseCircularMetricBuffer[] waveforms,
         boolean[] fill) {
         if (filter != null && filter.length() > 0 && !title.contains(filter)) {
