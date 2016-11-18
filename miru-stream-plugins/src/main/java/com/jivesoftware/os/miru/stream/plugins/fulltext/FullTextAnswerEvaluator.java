@@ -36,6 +36,6 @@ public class FullTextAnswerEvaluator implements MiruAnswerEvaluator<FullTextAnsw
 
     @Override
     public boolean useParallelSolver() {
-        return (query.strategy == FullTextQuery.Strategy.TF_IDF);
+        return true; //(query.strategy == FullTextQuery.Strategy.TF_IDF);
     }
 }
