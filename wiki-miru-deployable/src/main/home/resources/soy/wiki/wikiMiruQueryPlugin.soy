@@ -48,8 +48,8 @@
                                             {if $r.userGuid}
                                                 <a color="darkgray"  href="/ui/wiki/wiki23/{$r.userGuid}">{$r.user}</a>
                                             {/if}
-                                            <span> in </span>
                                             {if $r.folderGuid}
+                                                <span> in </span>
                                                 <a color="darkgray" href="/ui/wiki/wiki23/{$r.folder}">{$r.folderGuid}</a>
                                             {/if}
                                         </i>
@@ -69,7 +69,7 @@
                                         <img width="263" height="180" src="/ui/static/img/no-folder-image.jpg" class="direct-thumb" alt="">
                                     {/if}
                                     <div class="wrap-direct-meta">
-                                      <span class="direct-category"><span class="glyphicon glyphicon-record" aria-hidden="true"></span></span>
+                                      <span class="direct-category"></span>
                                       <h3><a href="/ui/wiki/{$tenantId}/{$f.guid}"> {$f.title}</a></h3>
                                         <span class="label-bottom"></span>
                                         <p class="direct-field">{if $f.body}<p>{$f.body|noAutoescape}{/if}</p>
