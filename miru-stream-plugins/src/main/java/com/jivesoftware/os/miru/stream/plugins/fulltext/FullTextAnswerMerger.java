@@ -64,7 +64,7 @@ public class FullTextAnswerMerger implements MiruAnswerMerger<FullTextAnswer> {
             }
         }
 
-        return new FullTextAnswer(ImmutableList.copyOf(mergedResults), currentAnswer.resultsExhausted);
+        return new FullTextAnswer(ImmutableList.copyOf(mergedResults), lastAnswer.found + currentAnswer.found, currentAnswer.resultsExhausted);
     }
 
     @Override

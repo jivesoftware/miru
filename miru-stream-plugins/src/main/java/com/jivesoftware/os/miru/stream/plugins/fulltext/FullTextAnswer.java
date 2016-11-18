@@ -7,21 +7,22 @@ import com.jivesoftware.os.miru.api.query.filter.MiruValue;
 import java.util.Arrays;
 import java.util.List;
 
-import static com.jivesoftware.os.miru.api.wal.MiruWALClient.RoutingGroupType.activity;
-
 /** @author jonathan */
 public class FullTextAnswer {
 
-    public static final FullTextAnswer EMPTY_RESULTS = new FullTextAnswer(ImmutableList.<ActivityScore>of(), true);
+    public static final FullTextAnswer EMPTY_RESULTS = new FullTextAnswer(ImmutableList.<ActivityScore>of(), 0, true);
 
     public final List<ActivityScore> results;
+    public final long found;
     public final boolean resultsExhausted;
 
     @JsonCreator
     public FullTextAnswer(
         @JsonProperty("results") List<ActivityScore> results,
+        @JsonProperty("found") long found,
         @JsonProperty("resultsExhausted") boolean resultsExhausted) {
         this.results = results;
+        this.found = found;
         this.resultsExhausted = resultsExhausted;
     }
 
@@ -29,6 +30,7 @@ public class FullTextAnswer {
     public String toString() {
         return "FullTextAnswer{" +
             "results=" + results +
+            ", found=" + found +
             ", resultsExhausted=" + resultsExhausted +
             '}';
     }

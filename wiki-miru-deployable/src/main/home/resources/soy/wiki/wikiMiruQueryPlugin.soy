@@ -11,6 +11,7 @@
  * @param? getContentElapse
  * @param? highlightElapse
  * @param? count
+ * @param? found
  * @param? results
  * @param? users
  * @param? folders
@@ -57,7 +58,7 @@
                         </div>
                      </div>
                 {/if}
-                <div class="col-lg-1 col-centered" style="display: inline-flex;">
+                <div class="col-centered" style="display: inline-flex;">
                     <form id="wiki-query" data-active-class="btn-default" method="get">
 
                         <div class="input-group" style="width: 800px;">
@@ -83,8 +84,9 @@
                                  {if $elapse} Miru: {$elapse}{/if}
                                  {if $getContentElapse}  Fetch: Content({$getContentElapse}){/if}
                                  {if $highlightElapse} Highlight: {$highlightElapse}{/if}
-                                 {if $count} Found: {$count}{/if}
-                             </small>
+                                 {if $count} Count: {$count}{/if}
+                                 {if $found} Found: {$found}{/if}
+                              </small>
 
                             {foreach $r in $results}
                                 <div class="content-card panel-body">

@@ -84,10 +84,12 @@ public class FullText {
             activityScores = Collections.emptyList();
         }
 
+        long found = bitmaps.cardinality(answer);
+
         boolean resultsExhausted = request.query.strategy == FullTextQuery.Strategy.TIME
             && request.query.timeRange.smallestTimestamp > requestContext.getTimeIndex().getLargestTimestamp();
 
-        FullTextAnswer result = new FullTextAnswer(activityScores, resultsExhausted);
+        FullTextAnswer result = new FullTextAnswer(activityScores, found, resultsExhausted);
         log.debug("result={}", result);
         return result;
     }

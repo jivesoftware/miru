@@ -139,9 +139,9 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
                     LOG.info("Found:{} for {}:{}", response.answer.results.size(), input.tenantId, query);
 
                     data.put("elapse", String.valueOf(response.totalElapsed));
-                    data.put("count", response.answer.results.size());
-                    List<ActivityScore> scores = response.answer.results.subList(0, Math.min(1_000, response.answer.results.size()));
-
+                    data.put("count", String.valueOf(response.answer.results.size()));
+                    data.put("found", String.valueOf(response.answer.found));
+                    List<ActivityScore> scores = response.answer.results;
 
 
                     int folderIndex = 0;
@@ -206,7 +206,7 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
 
                 if (response != null && response.answer != null) {
                     List<Map<String, Object>> results = new ArrayList<>();
-                    List<ActivityScore> scores = response.answer.results.subList(0, Math.min(1_000, response.answer.results.size()));
+                    List<ActivityScore> scores = response.answer.results;
 
                     start = System.currentTimeMillis();
                     int i = 0;
@@ -253,7 +253,7 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
 
                 int u = 0;
                 if (!input.userGuids.isEmpty()) {
-                    Content content = contents.get(contentKeysCount+userKeysCount+folderKeysCount+u);
+                    Content content = contents.get(contentKeysCount + userKeysCount + folderKeysCount + u);
                     Map<String, Object> result = new HashMap<>();
 
                     Random rand = new Random(input.userGuids.hashCode());
@@ -271,7 +271,7 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
                     u++;
                 }
                 if (!input.folderGuids.isEmpty()) {
-                    Content content = contents.get(contentKeysCount+userKeysCount+folderKeysCount+u);
+                    Content content = contents.get(contentKeysCount + userKeysCount + folderKeysCount + u);
                     Map<String, Object> result = new HashMap<>();
 
                     Random rand = new Random(input.folderGuids.hashCode());
