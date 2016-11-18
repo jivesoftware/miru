@@ -203,9 +203,9 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
                 long elapsed = System.currentTimeMillis() - start;
                 data.put("getContentElapse", String.valueOf(elapsed));
 
-                List<Map<String, Object>> results = new ArrayList<>();
-                if (response != null && response.answer != null) {
 
+                if (response != null && response.answer != null) {
+                    List<Map<String, Object>> results = new ArrayList<>();
                     List<ActivityScore> scores = response.answer.results.subList(0, Math.min(1_000, response.answer.results.size()));
 
                     start = System.currentTimeMillis();
@@ -305,7 +305,7 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
                             keys.add(score.values[2][0].last());
                         }
 
-                        List<Content> contents = payloads.multiGet(tenantId, keys, Content.class);
+                        contents = payloads.multiGet(tenantId, keys, Content.class);
 
                         List<Map<String, Object>> results = new ArrayList<>();
                         int i = 0;
@@ -337,7 +337,7 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
                             keys.add(score.values[2][0].last());
                         }
 
-                        List<Content> contents = payloads.multiGet(tenantId, keys, Content.class);
+                        contents = payloads.multiGet(tenantId, keys, Content.class);
 
                         List<Map<String, Object>> results = new ArrayList<>();
                         int i = 0;
