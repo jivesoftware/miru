@@ -5,9 +5,9 @@
  * 
  * @param? tenantId
  * @param? query
+ * @param? queryUsers
+ * @param? queryFolders
  * @param? elapse
- * @param? getUsersElapse
- * @param? getFoldersElapse
  * @param? getContentElapse
  * @param? highlightElapse
  * @param? count
@@ -18,6 +18,46 @@
 {template .wikiMiruQueryPlugin}
     <div class="">
         <div class="">
+            <div class="row">
+                {if $queryUsers}
+                    <div class="user-card panel-body">
+                        <div class="user-header-bg" width="250" height="70" id="header-blur"></div>
+                        <div class="user-avatar">
+                            {if $queryUsers.avatarUrl}
+                                <img src="{$queryUsers.avatarUrl}" alt="{$queryUsers.title}" />
+                            {else}
+                                <img src="/ui/static/img/no-user-image.jpg" alt="{$queryUsers.title}" />
+                            {/if}
+                        </div>
+                        <div style="display:inline" >
+                            <p><h4><a color="white" href="/ui/wiki/{$tenantId}/{$queryUsers.guid}"> {$queryUsers.title} </a></h4>
+                        </div>
+
+                        <div class="panel-default-overlay-up">
+                            <div>
+                                <a href="/ui/query?tenantId={$tenantId?:''}&query={$query?:''}&folderGuids={$queryFolders?$queryFolders.guid:''}" class="btn btn-default btn-sm">Remove</a>
+                            </div>
+                        </div>
+                    </div>
+                {/if}
+                {if $queryFolders}
+                    <div class="direct-item panel-body">
+                        {if $queryFolders.folderUrl}
+                            <img width="64" height="64" src="{$queryFolders.folderUrl}" class="direct-thumb" alt="" style="border-radius: 1%;border: 5px solid rgba(0,0,30,0.8);">
+                        {else}
+                            <img width="64" height="64" src="/ui/static/img/no-folder-image.jpg" class="direct-thumb" alt="" style="border-radius: 1%;border: 5px solid rgba(0,0,30,0.8);">
+                        {/if}
+                        <div style="display:inline" class="wrap-direct-meta">
+                          <h4><a color="white" href="/ui/wiki/{$tenantId}/{$queryFolders.guid}"> {$queryFolders.title}</a></h4>
+                        </div>
+                        <div class="panel-default-overlay-up">
+                            <div>
+                                <a href="/ui/query?tenantId={$tenantId?:''}&query={$query?:''}&userGuids={$queryUsers?$queryUsers.guid:''}" class="btn btn-default btn-sm">Remove</a>
+                            </div>
+                        </div>
+                     </div>
+                {/if}
+            </div>
             <div class="row">
                 <div class="col-lg-1 col-centered">
                     <form id="wiki-query" data-active-class="btn-default" method="get">
@@ -33,7 +73,7 @@
                 </div>
             </div>
             {if $elapse}
-               <small >Query: {$elapse} Fetch: Users({$getUsersElapse}) Folders({$getFoldersElapse}) Content({$getContentElapse}) Highlight: {$highlightElapse} Found: {$count}</small>
+               <small >Query: {$elapse} Fetch: Content({$getContentElapse}) Highlight: {$highlightElapse} Found: {$count}</small>
             {/if}
 
             <div class="container-fluid">
@@ -85,8 +125,7 @@
 
                                     <div class="panel-default-overlay-up">
                                         <div>
-                                            <a href="#" class="btn btn-default btn-sm">Search</a>
-                                            <a href="#" class="btn btn-default btn-sm">Content</a>
+                                            <a href="/ui/query?tenantId={$tenantId?:''}&query={$query?:''}&userGuids={$queryUsers?$queryUsers.guid:''}&folderGuids={$f.guid}" class="btn btn-default btn-sm">Content</a>
                                             <a href="#" class="btn btn-default btn-sm">Share</a>
                                             <a href="#" class="btn btn-default btn-sm">Follow</a>
                                             <a href="#" class="btn btn-default btn-sm">Chat</a>
@@ -117,7 +156,7 @@
 
                                     <div class="panel-default-overlay-up">
                                         <div>
-                                            <a href="#" class="btn btn-default btn-sm">Content</a>
+                                            <a href="/ui/query?tenantId={$tenantId?:''}&query={$query?:''}&userGuids={$u.guid?:''}&folderGuids={$queryFolders?$queryFolders.guid:''}" class="btn btn-default btn-sm">Content</a>
                                             <a href="#" class="btn btn-default btn-sm">Follow</a>
                                             <a href="#" class="btn btn-default btn-sm">Profile</a>
                                             <a href="#" class="btn btn-default btn-sm">Chat</a>

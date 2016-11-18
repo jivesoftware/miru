@@ -43,10 +43,12 @@ public class WikiQueryPluginEndpoints {
     @Produces(MediaType.TEXT_HTML)
     public Response query(
         @QueryParam("tenantId") @DefaultValue("") String tenantId,
-        @QueryParam("query") @DefaultValue("") String query) {
+        @QueryParam("query") @DefaultValue("") String query,
+        @QueryParam("folderGuids") @DefaultValue("") String folderGuids,
+        @QueryParam("userGuids") @DefaultValue("") String userGuids) {
 
         try {
-            String rendered = wikiMiruService.renderPlugin(pluginRegion, new WikiMiruPluginRegionInput(tenantId, query));
+            String rendered = wikiMiruService.renderPlugin(pluginRegion, new WikiMiruPluginRegionInput(tenantId, query, folderGuids, userGuids));
             return Response.ok(rendered).build();
         } catch (Exception x) {
             LOG.error("Failed to generating query ui.", x);
