@@ -290,7 +290,6 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
 
                 if (input.folderGuids.isEmpty() && input.userGuids.isEmpty()) {
 
-
                     MiruFilter usersFilter = new MiruFilter(MiruFilterOperation.and, false, Arrays.asList(MiruFieldFilter.of(MiruFieldType.primary, "type",
                         Arrays.asList("user"))), null);
 
@@ -298,8 +297,16 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
                         Arrays.asList("folder"))), null);
 
 
+                    start = System.currentTimeMillis();
                     MiruResponse<FullTextAnswer> users = query(tenantId, usersFilter, query);
+                    elapsed = System.currentTimeMillis() - start;
+                    data.put("usersElapse", String.valueOf(elapsed));
+
                     if (users != null && users.answer != null) {
+                        data.put("usersCount", String.valueOf(users.answer.results.size()));
+                        data.put("usersFound", String.valueOf((users.answer.found)));
+
+
                         List<String> keys = Lists.newArrayList();
                         for (ActivityScore score : users.answer.results) {
                             keys.add(score.values[2][0].last());
@@ -330,8 +337,15 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
                         data.put("users", results);
                     }
 
+                    start = System.currentTimeMillis();
                     MiruResponse<FullTextAnswer> folders = query(tenantId, foldersFilter, query);
+                    elapsed = System.currentTimeMillis() - start;
+                    data.put("foldersElapse", String.valueOf(elapsed));
+
                     if (folders != null && folders.answer != null) {
+                        data.put("foldersCount", String.valueOf(folders.answer.results.size()));
+                        data.put("foldersFound", String.valueOf((folders.answer.found)));
+
                         List<String> keys = Lists.newArrayList();
                         for (ActivityScore score : folders.answer.results) {
                             keys.add(score.values[2][0].last());
