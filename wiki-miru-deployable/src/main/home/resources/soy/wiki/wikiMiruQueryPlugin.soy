@@ -72,10 +72,23 @@
                     {if $users}
                          <div class="col-md-2">
                             {foreach $u in $users}
-                                <div style="border-bottom:1px solid #eee;">
-                                    <h4><span class="glyphicon glyphicon-user" aria-hidden="true"></span><a href="/ui/wiki/{$tenantId}/{$u.guid}"> {$u.title} </a></h4>
-                                    {if $u.body}<p>{$u.body|noAutoescape}</p>{/if}
+                                <div class="user-card">
+                                    <canvas class="user-header-bg" width="250" height="70" id="header-blur"></canvas>
+                                    <div class="user-avatar">
+                                        {if $u.avatarUrl}
+                                            <img src="{$u.avatarUrl}" alt="{$u.title}" />
+                                        {else}
+                                            <img src="/ui/static/img/no-user-image.jpg" alt="{$u.title}" />
+                                        {/if}
+
+                                    </div>
+                                    <div class="user-content">
+                                        <p><a href="/ui/wiki/{$tenantId}/{$u.guid}"> {$u.title} </a><br>
+                                          {if $u.body}<p>{$u.body|noAutoescape}{/if}</p>
+                                        //<p><button type="button" class="btn btn-default">Contact</button></p>
+                                    </div>
                                 </div>
+
                             {/foreach}
                         </div>
                     {/if}
