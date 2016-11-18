@@ -103,13 +103,17 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
 
                 MiruTenantId tenantId = new MiruTenantId(input.tenantId.trim().getBytes(Charsets.UTF_8));
 
+                MiruFilter contentsFilter = new MiruFilter(MiruFilterOperation.and, false, Arrays.asList(MiruFieldFilter.of(MiruFieldType.primary, "type",
+                    Arrays.asList("content"))), null);
+
+
                 MiruFilter usersFilter = new MiruFilter(MiruFilterOperation.and, false, Arrays.asList(MiruFieldFilter.of(MiruFieldType.primary, "type",
                     Arrays.asList("user"))), null);
 
                 MiruFilter foldersFilter = new MiruFilter(MiruFilterOperation.and, false, Arrays.asList(MiruFieldFilter.of(MiruFieldType.primary, "type",
                     Arrays.asList("folder"))), null);
 
-                MiruResponse<FullTextAnswer> response = query(tenantId, MiruFilter.NO_FILTER, query);
+                MiruResponse<FullTextAnswer> response = query(tenantId, contentsFilter, query);
                 MiruResponse<FullTextAnswer> users = query(tenantId, usersFilter, query);
                 MiruResponse<FullTextAnswer> folders = query(tenantId, foldersFilter, query);
 
