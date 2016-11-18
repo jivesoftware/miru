@@ -234,15 +234,3 @@ table#stump-rt-events.stump-show-message .stump-event-message { display: table-c
 	padding: 0px 20px;
 }
 
-
-.panel-default-overlay-up {
-    position: absolute;
-    top: 100%;
-    width: 100%;
-    height: 10%;
-    margin: 0 auto;
-    -webkit-transition: all .5s ease-in-out;
-    -ms-transition: all .5s ease-in-out;
-    -o-transition: all .5s ease-in-out;
-    transition: all .5s ease-in-out;
-}
