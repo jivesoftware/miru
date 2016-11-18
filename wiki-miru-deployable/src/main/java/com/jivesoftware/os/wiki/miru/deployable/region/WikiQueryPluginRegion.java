@@ -41,6 +41,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 
 /**
@@ -234,9 +235,17 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
 
                     List<Map<String, Object>> results = new ArrayList<>();
                     int i = 0;
+
                     for (String key : keys) {
                         Content content = contents.get(i);
                         Map<String, Object> result = new HashMap<>();
+
+                        Random rand = new Random(key.hashCode());
+                        String gender = rand.nextDouble() > 0.5 ? "men" : "women";
+                        int id = rand.nextInt(100);
+
+                        String avatarUrl = "https://randomuser.me/api/portraits/"+gender+"/"+id+".jpg";
+                        result.put("avatarUrl", avatarUrl);
                         result.put("guid", key);
                         result.put("title", content.title);
                         result.put("body",
