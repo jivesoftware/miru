@@ -55,6 +55,15 @@
                                         </i>
                                     </h8>
                                     {if $r.body}<p style="padding-left: 40px; text-indent: 30px;">{$r.body|noAutoescape}</p>{/if}
+
+                                    <div class="panel-default-overlay-up">
+                                        <div>
+                                            <a href="#" class="btn btn-default btn-sm">Comment</a>
+                                            <a href="#" class="btn btn-default btn-sm">Like</a>
+                                            <a href="#" class="btn btn-default btn-sm">Helpful</a>
+                                            <a href="#" class="btn btn-default btn-sm">Share</a>
+                                        </div>
+                                    </div>
                                 </div>
                             {/foreach}
                         </div>
@@ -73,7 +82,17 @@
                                         <span class="label-bottom"></span>
                                         <p class="direct-field">{if $f.body}<p>{$f.body|noAutoescape}{/if}</p>
                                     </div>
-                                  </div>
+
+                                    <div class="panel-default-overlay-up">
+                                        <div>
+                                            <a href="#" class="btn btn-default btn-sm">Search</a>
+                                            <a href="#" class="btn btn-default btn-sm">Content</a>
+                                            <a href="#" class="btn btn-default btn-sm">Share</a>
+                                            <a href="#" class="btn btn-default btn-sm">Follow</a>
+                                            <a href="#" class="btn btn-default btn-sm">Chat</a>
+                                        </div>
+                                    </div>
+                                 </div>
                             {/foreach}
                         </div>
                     {/if}
@@ -94,6 +113,15 @@
                                           <span class="label-bottom"></span>
                                           {if $u.body}<p>{$u.body|noAutoescape}{/if}</p>
                                         //<p><button type="button" class="btn btn-default">Contact</button></p>
+                                    </div>
+
+                                    <div class="panel-default-overlay-up">
+                                        <div>
+                                            <a href="#" class="btn btn-default btn-sm">Content</a>
+                                            <a href="#" class="btn btn-default btn-sm">Follow</a>
+                                            <a href="#" class="btn btn-default btn-sm">Profile</a>
+                                            <a href="#" class="btn btn-default btn-sm">Chat</a>
+                                        </div>
                                     </div>
                                 </div>
 
