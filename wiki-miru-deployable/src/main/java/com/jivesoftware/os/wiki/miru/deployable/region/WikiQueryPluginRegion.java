@@ -385,10 +385,15 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
 
     private String rewrite(String query) {
         String[] part = query.split("\\s+");
-        if (part.length > 0 && !part[part.length - 1].endsWith("*")) {
-            part[part.length - 1] += "*";
+        int i = part.length-1;
+        if (part.length > 0) {
+            if (part[i].endsWith("*")) {
+                part[i] = ("( title:" + part[i] + " OR body:" + part[i] + " )");
+            } else {
+                part[i] = ("( title:" + part[i] +" OR title:" + part[i]+ "* OR body:" + part[i] + " OR body:" + part[i] + "* )");
+            }
         }
-        for (int i = 0; i < part.length; i++) {
+        for (i = 0; i < part.length-1; i++) {
             part[i] = "( title:" + part[i] + " OR body:" + part[i] + ")";
         }
         return Joiner.on(" AND ").join(part);
