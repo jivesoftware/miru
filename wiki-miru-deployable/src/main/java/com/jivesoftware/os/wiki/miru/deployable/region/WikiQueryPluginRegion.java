@@ -80,10 +80,14 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
 
         final String tenantId;
         final String query;
+        final String folderGuids;
+        final String userGuids;
 
-        public WikiMiruPluginRegionInput(String tenantId, String query) {
+        public WikiMiruPluginRegionInput(String tenantId, String query, String folderIds, String userIds) {
             this.tenantId = tenantId;
             this.query = query;
+            this.folderGuids = folderIds;
+            this.userGuids = userIds;
         }
     }
 
@@ -103,19 +107,23 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
 
                 MiruTenantId tenantId = new MiruTenantId(input.tenantId.trim().getBytes(Charsets.UTF_8));
 
-                MiruFilter contentsFilter = new MiruFilter(MiruFilterOperation.and, false, Arrays.asList(MiruFieldFilter.of(MiruFieldType.primary, "type",
-                    Arrays.asList("content"))), null);
 
+                List<MiruFieldFilter> ands = new ArrayList<>();
+                ands.add(MiruFieldFilter.of(MiruFieldType.primary, "type", Arrays.asList("content")));
 
-                MiruFilter usersFilter = new MiruFilter(MiruFilterOperation.and, false, Arrays.asList(MiruFieldFilter.of(MiruFieldType.primary, "type",
-                    Arrays.asList("user"))), null);
+                if (!input.userGuids.isEmpty()) {
+                    ands.add(MiruFieldFilter.of(MiruFieldType.primary, "userGuid", Arrays.asList(input.userGuids)));
+                }
 
-                MiruFilter foldersFilter = new MiruFilter(MiruFilterOperation.and, false, Arrays.asList(MiruFieldFilter.of(MiruFieldType.primary, "type",
-                    Arrays.asList("folder"))), null);
+                if (!input.folderGuids.isEmpty()) {
+                    ands.add(MiruFieldFilter.of(MiruFieldType.primary, "folderGuid", Arrays.asList(input.folderGuids)));
+                }
+
+                MiruFilter contentsFilter = new MiruFilter(MiruFilterOperation.and, false, ands, null);
+
 
                 MiruResponse<FullTextAnswer> response = query(tenantId, contentsFilter, query);
-                MiruResponse<FullTextAnswer> users = query(tenantId, usersFilter, query);
-                MiruResponse<FullTextAnswer> folders = query(tenantId, foldersFilter, query);
+
 
                 if (response != null && response.answer != null) {
                     LOG.info("Found:{} for {}:{}", response.answer.results.size(), input.tenantId, query);
@@ -163,19 +171,26 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
                         }
                     }
 
+                    int contentKeysCount = contentKeys.size();
+                    int userKeysCount = userKeys.size();
+                    int folderKeysCount = folderKeys.size();
+
+                    List<String> allKeys = new ArrayList<>();
+                    allKeys.addAll(contentKeys);
+                    allKeys.addAll(userKeys);
+                    allKeys.addAll(folderKeys);
+
+                    if (!input.userGuids.isEmpty()) {
+                        allKeys.add(input.userGuids);
+                    }
+                    if (!input.folderGuids.isEmpty()) {
+                        allKeys.add(input.folderGuids);
+                    }
+
+
                     long start = System.currentTimeMillis();
-                    List<Content> usersContent = payloads.multiGet(tenantId, userKeys, Content.class);
+                    List<Content> contents = payloads.multiGet(tenantId, allKeys, Content.class);
                     long elapsed = System.currentTimeMillis() - start;
-                    data.put("getUsersElapse", String.valueOf(elapsed));
-
-                    start = System.currentTimeMillis();
-                    List<Content> foldersContent = payloads.multiGet(tenantId, folderKeys, Content.class);
-                    elapsed = System.currentTimeMillis() - start;
-                    data.put("getFoldersElapse", String.valueOf(elapsed));
-
-                    start = System.currentTimeMillis();
-                    List<Content> contents = payloads.multiGet(tenantId, contentKeys, Content.class);
-                    elapsed = System.currentTimeMillis() - start;
                     data.put("getContentElapse", String.valueOf(elapsed));
 
                     List<Map<String, Object>> results = new ArrayList<>();
@@ -192,7 +207,7 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
                             if (score.values[0] != null && score.values[0].length > 0) {
 
                                 String userGuid = score.values[0][0].last();
-                                Content userContent = usersContent.get(usersIndex.get(userGuid));
+                                Content userContent = contents.get(contentKeysCount+usersIndex.get(userGuid));
                                 if (userContent != null) {
                                     result.put("userGuid", userGuid);
                                     result.put("user", userContent.title);
@@ -201,7 +216,7 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
 
                             if (score.values[1] != null && score.values[1].length > 0) {
                                 String folderGuid = score.values[1][0].last();
-                                Content folderContent = foldersContent.get(foldersIndex.get(folderGuid));
+                                Content folderContent = contents.get(contentKeysCount+userKeysCount+foldersIndex.get(folderGuid));
                                 if (folderContent != null) {
                                     result.put("folderGuid", folderGuid);
                                     result.put("folder", folderContent.title);
@@ -217,6 +232,45 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
                         }
                         i++;
                     }
+
+
+                    int u = 0;
+                    if (!input.userGuids.isEmpty()) {
+                        u++;
+                        Content content = contents.get(contentKeysCount+userKeysCount+folderKeysCount+u);
+                        Map<String, Object> result = new HashMap<>();
+
+                        Random rand = new Random(input.userGuids.hashCode());
+                        String gender = rand.nextDouble() > 0.5 ? "men" : "women";
+                        int id = rand.nextInt(100);
+
+                        String avatarUrl = "https://randomuser.me/api/portraits/" + gender + "/" + id + ".jpg";
+                        result.put("avatarUrl", avatarUrl);
+                        result.put("guid", input.userGuids);
+                        result.put("title", content.title);
+                        result.put("body",
+                            bodyQueryParser.highlight("en", input.query, content.body, "<span style=\"background-color: #FFFF00\">", "</span>", 1000));
+
+                        data.put("queryUsers", result);
+                    }
+                    if (!input.folderGuids.isEmpty()) {
+                        Content content = contents.get(contentKeysCount+userKeysCount+folderKeysCount+u);
+                        Map<String, Object> result = new HashMap<>();
+
+                        Random rand = new Random(input.folderGuids.hashCode());
+
+                        String folderUrl = "https://unsplash.it/200/300?image=" + rand.nextInt(1000);
+
+                        result.put("folderUrl", folderUrl);
+                        result.put("guid", input.folderGuids);
+                        result.put("title", content.title);
+                        result.put("body",
+                            bodyQueryParser.highlight("en", input.query, content.body, "<span style=\"background-color: #FFFF00\">", "</span>", 1000));
+
+                        data.put("folderGuids", result);
+                    }
+
+
                     elapsed = System.currentTimeMillis() - start;
                     data.put("highlightElapse", String.valueOf(elapsed));
                     data.put("results", results);
@@ -228,66 +282,77 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
                     LOG.warn("Empty full text response from {}", tenantId);
                 }
 
+                if (input.folderGuids.isEmpty() && input.userGuids.isEmpty()) {
 
-                if (users != null && users.answer != null) {
-                    List<String> keys = Lists.newArrayList();
-                    for (ActivityScore score : users.answer.results) {
-                        keys.add(score.values[2][0].last());
+
+                    MiruFilter usersFilter = new MiruFilter(MiruFilterOperation.and, false, Arrays.asList(MiruFieldFilter.of(MiruFieldType.primary, "type",
+                        Arrays.asList("user"))), null);
+
+                    MiruFilter foldersFilter = new MiruFilter(MiruFilterOperation.and, false, Arrays.asList(MiruFieldFilter.of(MiruFieldType.primary, "type",
+                        Arrays.asList("folder"))), null);
+
+
+                    MiruResponse<FullTextAnswer> users = query(tenantId, usersFilter, query);
+                    if (users != null && users.answer != null) {
+                        List<String> keys = Lists.newArrayList();
+                        for (ActivityScore score : users.answer.results) {
+                            keys.add(score.values[2][0].last());
+                        }
+
+                        List<Content> contents = payloads.multiGet(tenantId, keys, Content.class);
+
+                        List<Map<String, Object>> results = new ArrayList<>();
+                        int i = 0;
+
+                        for (String key : keys) {
+                            Content content = contents.get(i);
+                            Map<String, Object> result = new HashMap<>();
+
+                            Random rand = new Random(key.hashCode());
+                            String gender = rand.nextDouble() > 0.5 ? "men" : "women";
+                            int id = rand.nextInt(100);
+
+                            String avatarUrl = "https://randomuser.me/api/portraits/" + gender + "/" + id + ".jpg";
+                            result.put("avatarUrl", avatarUrl);
+                            result.put("guid", key);
+                            result.put("title", content.title);
+                            result.put("body",
+                                bodyQueryParser.highlight("en", input.query, content.body, "<span style=\"background-color: #FFFF00\">", "</span>", 1000));
+                            results.add(result);
+                            i++;
+                        }
+                        data.put("users", results);
                     }
 
-                    List<Content> contents = payloads.multiGet(tenantId, keys, Content.class);
+                    MiruResponse<FullTextAnswer> folders = query(tenantId, foldersFilter, query);
+                    if (folders != null && folders.answer != null) {
+                        List<String> keys = Lists.newArrayList();
+                        for (ActivityScore score : folders.answer.results) {
+                            keys.add(score.values[2][0].last());
+                        }
 
-                    List<Map<String, Object>> results = new ArrayList<>();
-                    int i = 0;
+                        List<Content> contents = payloads.multiGet(tenantId, keys, Content.class);
 
-                    for (String key : keys) {
-                        Content content = contents.get(i);
-                        Map<String, Object> result = new HashMap<>();
+                        List<Map<String, Object>> results = new ArrayList<>();
+                        int i = 0;
+                        for (String key : keys) {
+                            Content content = contents.get(i);
+                            Map<String, Object> result = new HashMap<>();
 
-                        Random rand = new Random(key.hashCode());
-                        String gender = rand.nextDouble() > 0.5 ? "men" : "women";
-                        int id = rand.nextInt(100);
+                            Random rand = new Random(key.hashCode());
 
-                        String avatarUrl = "https://randomuser.me/api/portraits/"+gender+"/"+id+".jpg";
-                        result.put("avatarUrl", avatarUrl);
-                        result.put("guid", key);
-                        result.put("title", content.title);
-                        result.put("body",
-                            bodyQueryParser.highlight("en", input.query, content.body, "<span style=\"background-color: #FFFF00\">", "</span>", 1000));
-                        results.add(result);
-                        i++;
+                            String folderUrl = "https://unsplash.it/200/300?image=" + rand.nextInt(1000);
+
+                            result.put("folderUrl", folderUrl);
+                            result.put("guid", key);
+                            result.put("title", content.title);
+                            result.put("body",
+                                bodyQueryParser.highlight("en", input.query, content.body, "<span style=\"background-color: #FFFF00\">", "</span>", 1000));
+                            results.add(result);
+                            i++;
+                        }
+                        data.put("folders", results);
                     }
-                    data.put("users", results);
-                }
-
-
-                if (folders != null && folders.answer != null) {
-                    List<String> keys = Lists.newArrayList();
-                    for (ActivityScore score : folders.answer.results) {
-                        keys.add(score.values[2][0].last());
-                    }
-
-                    List<Content> contents = payloads.multiGet(tenantId, keys, Content.class);
-
-                    List<Map<String, Object>> results = new ArrayList<>();
-                    int i = 0;
-                    for (String key : keys) {
-                        Content content = contents.get(i);
-                        Map<String, Object> result = new HashMap<>();
-
-                        Random rand = new Random(key.hashCode());
-
-                        String folderUrl = "https://unsplash.it/200/300?image="+rand.nextInt(1000);
-
-                        result.put("folderUrl", folderUrl);
-                        result.put("guid", key);
-                        result.put("title", content.title);
-                        result.put("body",
-                            bodyQueryParser.highlight("en", input.query, content.body, "<span style=\"background-color: #FFFF00\">", "</span>", 1000));
-                        results.add(result);
-                        i++;
-                    }
-                    data.put("folders", results);
                 }
             }
 
