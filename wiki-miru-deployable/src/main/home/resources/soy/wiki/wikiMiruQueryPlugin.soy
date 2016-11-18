@@ -18,9 +18,9 @@
 {template .wikiMiruQueryPlugin}
     <div class="">
         <div class="">
-            <div class="row">
+            <div class="row" style="padding: 10px 10px 10px 30px;">
                 {if $queryUsers}
-                    <div class="user-card panel-body">
+                    <div class="user-card panel-body" style="display: inline-flex;">
                         <div class="user-header-bg" width="250" height="70" id="header-blur"></div>
                         <div class="user-avatar">
                             {if $queryUsers.avatarUrl}
@@ -41,7 +41,7 @@
                     </div>
                 {/if}
                 {if $queryFolders}
-                    <div class="direct-item panel-body">
+                    <div class="direct-item panel-body" style="display: inline-flex;">
                         {if $queryFolders.folderUrl}
                             <img width="64" height="64" src="{$queryFolders.folderUrl}" class="direct-thumb" alt="" style="border-radius: 1%;border: 5px solid rgba(0,0,30,0.8);">
                         {else}
@@ -57,9 +57,7 @@
                         </div>
                      </div>
                 {/if}
-            </div>
-            <div class="row">
-                <div class="col-lg-1 col-centered">
+                <div class="col-lg-1 col-centered" style="display: inline-flex;">
                     <form id="wiki-query" data-active-class="btn-default" method="get">
 
                         <div class="input-group" style="width: 800px;">

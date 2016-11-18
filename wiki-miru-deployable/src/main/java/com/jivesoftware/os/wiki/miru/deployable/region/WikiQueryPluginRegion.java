@@ -253,7 +253,6 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
 
                 int u = 0;
                 if (!input.userGuids.isEmpty()) {
-                    u++;
                     Content content = contents.get(contentKeysCount+userKeysCount+folderKeysCount+u);
                     Map<String, Object> result = new HashMap<>();
 
@@ -269,6 +268,7 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
                         bodyQueryParser.highlight("en", input.query, content.body, "<span style=\"background-color: #FFFF00\">", "</span>", 1000));
 
                     data.put("queryUsers", result);
+                    u++;
                 }
                 if (!input.folderGuids.isEmpty()) {
                     Content content = contents.get(contentKeysCount+userKeysCount+folderKeysCount+u);
