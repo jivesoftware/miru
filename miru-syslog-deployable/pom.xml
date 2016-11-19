@@ -14,7 +14,7 @@
     <artifactId>miru-syslog-deployable</artifactId>
 
     <properties>
-        <java.main>com.jivesoftware.os.miru.stumptown.deployable.MiruSyslogMain</java.main>
+        <java.main>com.jivesoftware.os.miru.syslog.deployable.MiruSyslogMain</java.main>
         <assembly.home>${project.basedir}</assembly.home>
     </properties>
 
