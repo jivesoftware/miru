@@ -50,5 +50,6 @@
         <module>miru-wal-client</module>
         <module>wiki-miru-deployable</module>
         <module>miru-bot-deployable</module>
+        <module>miru-syslog-deployable</module>
   </modules>
 </project>
