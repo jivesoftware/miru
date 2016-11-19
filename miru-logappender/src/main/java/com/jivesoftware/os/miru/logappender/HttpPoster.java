@@ -1,12 +1,13 @@
 package com.jivesoftware.os.miru.logappender;
 
-import com.google.gson.Gson;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.logging.log4j.core.util.Charsets;
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
-import java.io.UnsupportedEncodingException;
 import java.net.Socket;
 import java.net.SocketException;
 import java.util.List;
@@ -15,33 +16,36 @@ import java.util.List;
  *
  * @author jonathan.colt
  */
-public class HttpPoster implements MiruLogSender {
+class HttpPoster implements MiruLogSender {
 
     private static final String path = "/miru/stumptown/intake";
-    private final Gson gson = new Gson();
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
     private final String host;
     private final int port;
     private final long soTimeout;
+
     private Socket socket;
     private BufferedWriter wr;
     private BufferedReader rd;
 
-    public HttpPoster(String host, int port, long soTimeout) throws IOException {
+    HttpPoster(String host, int port, long soTimeout) throws IOException {
         this.host = host;
         this.port = port;
         this.soTimeout = soTimeout;
     }
 
-    void connect() throws UnsupportedEncodingException, IOException {
+    private void connect() throws IOException {
         socket = new Socket(host, port);
         socket.setKeepAlive(true);
         socket.setSoTimeout((int) soTimeout);
-        wr = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), "UTF8"));
+
+        wr = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), Charsets.UTF_8));
         rd = new BufferedReader(new InputStreamReader(socket.getInputStream()));
     }
 
-    void post(String data) throws IOException {
-        wr.write("POST " + path + " HTTP/1.0\r\n");
+    private void post(String data) throws IOException {
+        wr.write("POST " + path + " HTTP/1.1\r\n");
         wr.write("Content-Length: " + data.length() + "\r\n");
         wr.write("Content-Type: application/json\r\n");
         wr.write("\r\n");
@@ -50,11 +54,11 @@ public class HttpPoster implements MiruLogSender {
         BufferedReader rd = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         String line;
         while ((line = rd.readLine()) != null) {
-            //System.out.println(line);
+            System.out.println(line);
         }
     }
 
-    void destroy() {
+    private void destroy() {
         try {
             wr.close();
         } catch (Exception x) {
@@ -66,7 +70,6 @@ public class HttpPoster implements MiruLogSender {
         socket = null;
         wr = null;
         rd = null;
-
     }
 
     @Override
@@ -74,7 +77,8 @@ public class HttpPoster implements MiruLogSender {
         if (socket == null) {
             connect();
         }
-        String toJson = gson.toJson(events);
+
+        String toJson = objectMapper.writeValueAsString(events);
         try {
             post(toJson);
         } catch (SocketException x) {

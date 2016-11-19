@@ -2,30 +2,40 @@
 <project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     <modelVersion>4.0.0</modelVersion>
+
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-build-management</artifactId>
-        <version>0.1607-SNAPSHOT</version>
+        <version>0.1572-SNAPSHOT</version>
         <relativePath>../inheritance-poms/global-build-management/pom.xml</relativePath>
     </parent>
+
     <groupId>com.jivesoftware.os.miru</groupId>
-    <artifactId>miru-logappender</artifactId>
+    <artifactId>miru-syslog-deployable</artifactId>
+
     <properties>
-        <module.type>shared_lib</module.type>
+        <java.main>com.jivesoftware.os.miru.stumptown.deployable.MiruSyslogMain</java.main>
+        <assembly.home>${project.basedir}</assembly.home>
     </properties>
+
     <dependencies>
+        <dependency>
+            <groupId>com.jivesoftware.os.routing.bird</groupId>
+            <artifactId>deployable-scripts</artifactId>
+            <type>tar.gz</type>
+            <classifier>bin</classifier>
+            <scope>runtime</scope>
+        </dependency>
+
         <dependency>
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
             <scope>test</scope>
         </dependency>
+
         <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-api</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-core</artifactId>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
         </dependency>
 
         <dependency>
@@ -40,12 +50,7 @@
         </dependency>
         <dependency>
             <groupId>io.netty</groupId>
-            <artifactId>netty-codec-http</artifactId>
-            <version>${netty.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-handler</artifactId>
+            <artifactId>netty-codec</artifactId>
             <version>${netty.version}</version>
         </dependency>
 
@@ -53,10 +58,36 @@
             <groupId>com.jivesoftware.os.routing.bird</groupId>
             <artifactId>merlin-config</artifactId>
         </dependency>
-
+        <dependency>
+            <groupId>com.jivesoftware.os.routing.bird</groupId>
+            <artifactId>deployable</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.routing.bird</groupId>
+            <artifactId>routing-bird-server</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.routing.bird</groupId>
+            <artifactId>routing-bird-http-client</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.routing.bird</groupId>
+            <artifactId>routing-bird-health</artifactId>
+        </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.routing.bird</groupId>
             <artifactId>routing-bird-shared</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.jivesoftware.os.mlogger</groupId>
+            <artifactId>core</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.jivesoftware.os.miru</groupId>
+            <artifactId>miru-logappender</artifactId>
+            <version>${project.version}</version>
         </dependency>
     </dependencies>
 </project>

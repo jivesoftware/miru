@@ -6,20 +6,17 @@ import com.jivesoftware.os.filer.queue.guaranteed.delivery.GuaranteedDeliverySer
 import com.jivesoftware.os.miru.logappender.MiruLogEvent;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+
 import java.util.Collections;
 import java.util.List;
 import javax.inject.Singleton;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-/**
- *
- */
 @Singleton
 @Path("/miru/stumptown")
 public class MiruStumptownIntakeEndpoints {
@@ -37,17 +34,22 @@ public class MiruStumptownIntakeEndpoints {
     @POST
     @Path("/intake")
     @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.TEXT_HTML)
     public Response intake(List<MiruLogEvent> logEvents) throws Exception {
         try {
             for (MiruLogEvent logEvent : logEvents) {
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("host:{} service:{} instance:{} message:{}",
+                            logEvent.host, logEvent.service, logEvent.instance, logEvent.message);
+                }
+
                 int hash = Objects.hashCode(logEvent.host, logEvent.service, logEvent.instance, logEvent.threadName);
                 GuaranteedDeliveryService guaranteedDeliveryService = deliveryQueueProvider.getGuaranteedDeliveryServices(hash);
                 guaranteedDeliveryService.add(Collections.singletonList(mapper.writeValueAsBytes(logEvent)));
             }
-            return Response.ok().build();
+
+            return Response.accepted().build();
         } catch (Throwable t) {
-            LOG.error("Error on intake for {} events", new Object[] { logEvents.size() }, t);
+            LOG.error("Error on intake for {} events", new Object[]{logEvents.size()}, t);
             return Response.serverError().build();
         }
     }

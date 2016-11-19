@@ -37,7 +37,7 @@ public class RoutingBirdLogSenderProvider<T> implements MiruLogSenderProvider {
                 int i = 0;
                 for (ConnectionDescriptor connectionDescriptor : latest) {
                     HostPort hostPort = connectionDescriptor.getHostPort();
-                    senders[i] = new HttpPoster(hostPort.getHost(), hostPort.getPort(), soTimeout);
+                    senders[i] = new NettyHttpPoster(hostPort.getHost(), hostPort.getPort(), soTimeout);
                     i++;
                 }
                 cache.set(senders);
