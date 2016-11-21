@@ -7,7 +7,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 
-public class SyslogEventTest {
+public class SyslogEventDateTest {
 
     @Test
     public void testShortDateFormat() throws Exception {
