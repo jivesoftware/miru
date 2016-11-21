@@ -7,9 +7,11 @@ import com.jivesoftware.os.amza.api.PartitionClient;
 import com.jivesoftware.os.amza.api.PartitionClientProvider;
 import com.jivesoftware.os.amza.api.partition.PartitionName;
 import com.jivesoftware.os.amza.api.partition.PartitionProperties;
+import com.jivesoftware.os.amza.api.ring.RingMember;
 import com.jivesoftware.os.amza.api.wal.KeyUtil;
 import com.jivesoftware.os.amza.client.aquarium.AmzaClientAquariumProvider;
 import com.jivesoftware.os.amza.client.test.InMemoryPartitionClient;
+import com.jivesoftware.os.amza.client.test.InMemoryPartitionClient.Tx;
 import com.jivesoftware.os.aquarium.AquariumStats;
 import com.jivesoftware.os.aquarium.Member;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
@@ -58,20 +60,22 @@ import static com.jivesoftware.os.miru.sync.deployable.MiruSyncSender.ProgressTy
  *
  */
 public class MiruSyncSenderTest {
+
     @Test
     public void testProgress() throws Exception {
         MiruTenantId tenantId = new MiruTenantId("tenant1".getBytes(StandardCharsets.UTF_8));
+        RingMember ringMember = new RingMember("member1");
 
         TimestampedOrderIdProvider orderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(1),
             new SnowflakeIdPacker(),
             new JiveEpochTimestampProvider());
-        PartitionClientProvider partitionClientProvider = new InMemoryPartitionClientProvider(orderIdProvider);
+        PartitionClientProvider partitionClientProvider = new InMemoryPartitionClientProvider(ringMember, orderIdProvider);
 
         AmzaClientAquariumProvider amzaClientAquariumProvider = new AmzaClientAquariumProvider(new AquariumStats(),
             "test",
             partitionClientProvider,
             orderIdProvider,
-            new Member("member1".getBytes(StandardCharsets.UTF_8)),
+            ringMember.asAquariumMember(),
             count -> count == 1,
             member -> true,
             128, //TODO config
@@ -200,11 +204,13 @@ public class MiruSyncSenderTest {
 
     private static class InMemoryPartitionClientProvider implements PartitionClientProvider {
 
+        private final RingMember ringMember;
         private final OrderIdProvider orderIdProvider;
 
         private final Map<PartitionName, PartitionClient> clients = Maps.newConcurrentMap();
 
-        public InMemoryPartitionClientProvider(OrderIdProvider orderIdProvider) {
+        public InMemoryPartitionClientProvider(RingMember ringMember, OrderIdProvider orderIdProvider) {
+            this.ringMember = ringMember;
             this.orderIdProvider = orderIdProvider;
         }
 
@@ -216,7 +222,10 @@ public class MiruSyncSenderTest {
         @Override
         public PartitionClient getPartition(PartitionName partitionName) throws Exception {
             return clients.computeIfAbsent(partitionName,
-                partitionName1 -> new InMemoryPartitionClient(new ConcurrentSkipListMap<>(KeyUtil.lexicographicalComparator()), orderIdProvider));
+                partitionName1 -> new InMemoryPartitionClient(ringMember,
+                    new ConcurrentSkipListMap<>(),
+                    new ConcurrentSkipListMap<>(KeyUtil.lexicographicalComparator()),
+                    orderIdProvider));
         }
 
         @Override
@@ -346,6 +355,4 @@ public class MiruSyncSenderTest {
             return null;
         }
     }
-
-    ;
 }
