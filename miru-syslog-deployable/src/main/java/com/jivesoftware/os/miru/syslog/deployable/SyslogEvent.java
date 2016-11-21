@@ -118,9 +118,11 @@ class SyslogEvent {
                 if (leftBrace > 0 && rightBrace > 0) {
                     res.service = message.substring(0, leftBrace).trim();
                     res.instance = message.substring(leftBrace + 1, rightBrace).trim();
+                } else {
+                    res.service = appPid.trim();
                 }
 
-                message = message.substring(firstSpace + 1);
+                message = message.substring(firstSpace + 1).trim();
             }
         }
 
