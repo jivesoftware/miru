@@ -24,7 +24,7 @@ public class MiruSyslogMain {
         new MiruSyslogMain().run(args);
     }
 
-    public void run(String[] args) throws Exception {
+    void run(String[] args) throws Exception {
         ServiceStartupHealthCheck serviceStartupHealthCheck = new ServiceStartupHealthCheck();
 
         try {
