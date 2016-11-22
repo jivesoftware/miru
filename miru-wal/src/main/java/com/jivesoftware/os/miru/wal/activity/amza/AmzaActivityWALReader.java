@@ -8,6 +8,7 @@ import com.google.common.collect.Sets;
 import com.jivesoftware.os.amza.api.FailedToAchieveQuorumException;
 import com.jivesoftware.os.amza.api.partition.Consistency;
 import com.jivesoftware.os.amza.api.partition.PartitionProperties;
+import com.jivesoftware.os.amza.api.stream.TxKeyValueStream.TxResult;
 import com.jivesoftware.os.amza.api.take.TakeCursors;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider.EmbeddedClient;
 import com.jivesoftware.os.amza.service.Partition.ScanRange;
@@ -63,18 +64,22 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
         StreamSuppressed streamSuppressed,
         EmbeddedClient client,
         Map<String, NamedCursor> cursorsByName,
-        Set<TimeAndVersion> lastSeen) throws Exception {
+        Set<TimeAndVersion> lastSeen,
+        long stopAtTimestamp) throws Exception {
         return amzaWALUtil.take(client, cursorsByName,
-            (long rowTxId, byte[] prefix, byte[] key, byte[] value, long valueTimestamp, boolean valueTombstoned, long valueVersion) -> {
+            (rowTxId, prefix, key, value, valueTimestamp, valueTombstoned, valueVersion) -> {
                 MiruPartitionedActivity partitionedActivity = partitionedActivityMarshaller.fromBytes(value);
-                if (partitionedActivity != null
-                && partitionedActivity.type.isActivityType()
-                && !streamAlreadySeen(lastSeen, partitionedActivity, streamSuppressed)) {
-                    if (!streamMiruActivityWAL.stream(partitionedActivity.timestamp, partitionedActivity, valueTimestamp)) {
-                        return false;
+                if (partitionedActivity != null && partitionedActivity.type.isActivityType()) {
+                    if (stopAtTimestamp > 0 && partitionedActivity.timestamp > stopAtTimestamp) {
+                        return TxResult.REJECT_AND_STOP;
+                    }
+                    if (!streamAlreadySeen(lastSeen, partitionedActivity, streamSuppressed)) {
+                        if (!streamMiruActivityWAL.stream(partitionedActivity.timestamp, partitionedActivity, valueTimestamp)) {
+                            return TxResult.ACCEPT_AND_STOP;
+                        }
                     }
                 }
-                return true;
+                return TxResult.MORE;
             });
     }
 
@@ -124,6 +129,7 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
         MiruPartitionId partitionId,
         AmzaCursor cursor,
         int batchSize,
+        long stopAtTimestamp,
         StreamMiruActivityWAL streamMiruActivityWAL) throws Exception {
 
         EmbeddedClient client = amzaWALUtil.getActivityClient(tenantId, partitionId);
@@ -136,7 +142,7 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
             Map<String, NamedCursor> sipCursorsByName = cursor != null && cursor.sipCursor != null
                 ? amzaWALUtil.extractCursors(cursor.sipCursor.cursors) : Maps.newHashMap();
 
-            TakeCursors takeCursors = takeCursors(streamMiruActivityWAL, null, client, cursorsByName, null);
+            TakeCursors takeCursors = takeCursors(streamMiruActivityWAL, null, client, cursorsByName, null, stopAtTimestamp);
 
             amzaWALUtil.mergeCursors(cursorsByName, takeCursors);
             amzaWALUtil.mergeCursors(sipCursorsByName, takeCursors);
@@ -167,7 +173,7 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
         try {
             Map<String, NamedCursor> sipCursorsByName = sipCursor != null ? amzaWALUtil.extractCursors(sipCursor.cursors) : Maps.newHashMap();
 
-            TakeCursors takeCursors = takeCursors(streamMiruActivityWAL, streamSuppressed, client, sipCursorsByName, lastSeen);
+            TakeCursors takeCursors = takeCursors(streamMiruActivityWAL, streamSuppressed, client, sipCursorsByName, lastSeen, -1L);
             if (takeCursors.tookToEnd) {
                 streamMiruActivityWAL.stream(-1, null, -1);
             }
@@ -321,7 +327,7 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
     @Override
     public long clockMax(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         EmbeddedClient client = amzaWALUtil.getActivityClient(tenantId, partitionId);
-        long[] clockTimestamp = {-1L};
+        long[] clockTimestamp = { -1L };
         if (client != null) {
             try {
                 byte[] fromKey = columnKeyMarshaller.toBytes(new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.END.getSort(), Long.MIN_VALUE));

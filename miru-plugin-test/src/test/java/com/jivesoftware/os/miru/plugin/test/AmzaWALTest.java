@@ -179,7 +179,7 @@ public class AmzaWALTest {
         AmzaCursor cursor = null;
         int count = 0;
         while (true) {
-            MiruWALClient.StreamBatch<MiruWALEntry, AmzaCursor> streamBatch = walDirector.getActivity(tenantId, partitionId, cursor, 317);
+            MiruWALClient.StreamBatch<MiruWALEntry, AmzaCursor> streamBatch = walDirector.getActivity(tenantId, partitionId, cursor, 317, -1L);
             count += streamBatch.activities.size();
             cursor = streamBatch.cursor;
             System.out.println("Streamed " + streamBatch.activities.size() + " " + count);

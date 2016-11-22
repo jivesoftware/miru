@@ -23,6 +23,7 @@ public interface MiruActivityWALReader<C extends MiruCursor<C, S>, S extends Mir
         MiruPartitionId partitionId,
         C afterCursor,
         int batchSize,
+        long stopAtTimestamp,
         StreamMiruActivityWAL streamMiruActivityWAL)
         throws Exception;
 

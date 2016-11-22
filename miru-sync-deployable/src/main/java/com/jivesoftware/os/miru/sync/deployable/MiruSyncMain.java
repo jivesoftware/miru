@@ -269,6 +269,7 @@ public class MiruSyncMain {
                 if (syncConfig.getSyncSenderEnabled()) {
                     syncSender = (MiruSyncSender) new MiruSyncSenderInitializer().initialize(syncConfig,
                         amzaClientAquariumProvider,
+                        orderIdProvider,
                         clusterClient,
                         rcvsWALClient,
                         amzaClientProvider,
@@ -287,6 +288,7 @@ public class MiruSyncMain {
                 if (syncConfig.getSyncSenderEnabled()) {
                     syncSender = (MiruSyncSender) new MiruSyncSenderInitializer().initialize(syncConfig,
                         amzaClientAquariumProvider,
+                        orderIdProvider,
                         clusterClient,
                         amzaWALClient,
                         amzaClientProvider,

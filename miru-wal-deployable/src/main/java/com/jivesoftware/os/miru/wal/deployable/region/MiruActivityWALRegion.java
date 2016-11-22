@@ -189,7 +189,8 @@ public class MiruActivityWALRegion implements MiruPageRegion<MiruActivityWALRegi
         MiruWALClient.StreamBatch<MiruWALEntry, C> gopped = director.getActivity(tenantId,
             partitionId,
             cursor,
-            limit);
+            limit,
+            -1L);
         walActivities.addAll(Lists.transform(gopped.activities,
             input -> new WALBean(input.collisionId, Optional.of(input.activity), input.version)));
         lastTimestamp.set(gopped.cursor != null ? extractLastTimestamp.apply(gopped.cursor) : Long.MAX_VALUE);

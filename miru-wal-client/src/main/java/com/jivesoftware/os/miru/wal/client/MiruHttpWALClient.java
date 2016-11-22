@@ -247,18 +247,22 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
     public StreamBatch<MiruWALEntry, C> getActivity(MiruTenantId tenantId,
         MiruPartitionId partitionId,
         C cursor,
-        int batchSize) throws Exception {
+        int batchSize,
+        long stopAtTimestamp) throws Exception {
         try {
-            final String jsonCursor = requestMapper.writeValueAsString(cursor);
+            String endpoint = pathPrefix + "/activity/" + tenantId.toString() + "/" + partitionId.getId() + "/" + batchSize + "/" + stopAtTimestamp;
+            String jsonCursor = requestMapper.writeValueAsString(cursor);
             while (true) {
                 try {
                     @SuppressWarnings("unchecked")
                     StreamBatch<MiruWALEntry, C> response = sendWithTenantPartition(RoutingGroupType.activity, tenantId, partitionId, "getActivity",
-                        client -> extract(
-                            client.postJson(pathPrefix + "/activity/" + tenantId.toString() + "/" + partitionId.getId() + "/" + batchSize, jsonCursor, null),
-                            StreamBatch.class,
-                            new Class[] { MiruWALEntry.class, cursorClass },
-                            null));
+                        client -> {
+                            return extract(
+                                client.postJson(endpoint, jsonCursor, null),
+                                StreamBatch.class,
+                                new Class[] { MiruWALEntry.class, cursorClass },
+                                null);
+                        });
                     if (response != null) {
                         return response;
                     }

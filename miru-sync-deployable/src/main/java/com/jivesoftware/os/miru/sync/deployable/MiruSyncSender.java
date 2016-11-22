@@ -18,6 +18,7 @@ import com.jivesoftware.os.amza.api.wal.WALKey;
 import com.jivesoftware.os.amza.client.aquarium.AmzaClientAquariumProvider;
 import com.jivesoftware.os.aquarium.LivelyEndState;
 import com.jivesoftware.os.aquarium.State;
+import com.jivesoftware.os.jive.utils.ordered.id.TimestampedOrderIdProvider;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
@@ -68,6 +69,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         false, Consistency.leader_quorum, true, true, false, RowType.primary, "lab", 8, null, -1, -1);
 
     private final AmzaClientAquariumProvider amzaClientAquariumProvider;
+    private final TimestampedOrderIdProvider orderIdProvider;
     private final int syncRingStripes;
     private final ExecutorService executorService;
     private final int syncThreadCount;
@@ -93,6 +95,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
     private final long abandonSolutionAfterNMillis = 60_000; //TODO expose to conf?
 
     public MiruSyncSender(AmzaClientAquariumProvider amzaClientAquariumProvider,
+        TimestampedOrderIdProvider orderIdProvider,
         int syncRingStripes,
         ExecutorService executorService,
         int syncThreadCount,
@@ -109,6 +112,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         C defaultCursor,
         Class<C> cursorClass) {
         this.amzaClientAquariumProvider = amzaClientAquariumProvider;
+        this.orderIdProvider = orderIdProvider;
         this.syncRingStripes = syncRingStripes;
         this.executorService = executorService;
         this.syncThreadCount = syncThreadCount;
@@ -414,35 +418,28 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
 
         int synced = 0;
         while (true) {
-            StreamBatch<MiruWALEntry, C> batch = fromWALClient.getActivity(fromTenantId, partitionId, cursor, batchSize);
+            long stopAtTimestamp = type == forward ? orderIdProvider.getApproximateId(System.currentTimeMillis() - forwardSyncDelayMillis) : -1;
+            StreamBatch<MiruWALEntry, C> batch = fromWALClient.getActivity(fromTenantId, partitionId, cursor, batchSize, stopAtTimestamp);
             if (!isElected(stripe)) {
                 return synced;
             }
             int activityTypes = 0;
             if (batch.activities != null && !batch.activities.isEmpty()) {
                 List<MiruPartitionedActivity> activities = Lists.newArrayListWithCapacity(batch.activities.size());
-                long pauseOnClockTimestamp = type == forward ? System.currentTimeMillis() + forwardSyncDelayMillis : Long.MAX_VALUE;
                 for (MiruWALEntry entry : batch.activities) {
                     if (entry.activity.type.isActivityType() && entry.activity.activity.isPresent()) {
                         activityTypes++;
-                        if (entry.activity.clockTimestamp > pauseOnClockTimestamp) {
-                            LOG.warn("Paused sync fromTenantId:{} toTenantId:{} partition:{} for clock:{} age:{}",
-                                fromTenantId, toTenantId, partitionId, entry.activity.clockTimestamp,
-                                System.currentTimeMillis() - entry.activity.clockTimestamp);
-                            break;
-                        } else {
-                            // rough estimate of index depth
-                            lastIndex = Math.max(lastIndex, numWriters * entry.activity.index);
-                            // copy to new tenantId if necessary, and assign to fake writerId
-                            MiruActivity fromActivity = entry.activity.activity.get();
-                            MiruActivity toActivity = fromTenantId.equals(toTenantId) ? fromActivity : fromActivity.copyToTenantId(toTenantId);
-                            // forge clock timestamp
-                            clockTimestamp.set(entry.activity.clockTimestamp);
-                            activities.add(partitionedActivityFactory.activity(-1,
-                                partitionId,
-                                lastIndex,
-                                toActivity));
-                        }
+                        // rough estimate of index depth
+                        lastIndex = Math.max(lastIndex, numWriters * entry.activity.index);
+                        // copy to new tenantId if necessary, and assign to fake writerId
+                        MiruActivity fromActivity = entry.activity.activity.get();
+                        MiruActivity toActivity = fromTenantId.equals(toTenantId) ? fromActivity : fromActivity.copyToTenantId(toTenantId);
+                        // forge clock timestamp
+                        clockTimestamp.set(entry.activity.clockTimestamp);
+                        activities.add(partitionedActivityFactory.activity(-1,
+                            partitionId,
+                            lastIndex,
+                            toActivity));
                     }
                 }
                 if (!activities.isEmpty()) {
@@ -467,7 +464,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
             }
 
             // close our fake writerId
-            toSyncClient.writeActivity(fromTenantId, partitionId, Collections.singletonList(
+            toSyncClient.writeActivity(toTenantId, partitionId, Collections.singletonList(
                 partitionedActivityFactory.end(-1, partitionId, fromTenantId, lastIndex)));
             advanceTenantProgress(fromTenantId, toTenantId, partitionId, type);
         }
