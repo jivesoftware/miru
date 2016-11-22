@@ -20,6 +20,7 @@ import com.jivesoftware.os.amza.api.partition.PartitionProperties;
 import com.jivesoftware.os.amza.api.scan.RowChanges;
 import com.jivesoftware.os.amza.api.scan.RowsChanged;
 import com.jivesoftware.os.amza.api.stream.RowType;
+import com.jivesoftware.os.amza.api.stream.TxKeyValueStream.TxResult;
 import com.jivesoftware.os.amza.api.take.TakeCursors;
 import com.jivesoftware.os.amza.api.wal.WALKey;
 import com.jivesoftware.os.amza.service.AmzaPartitionUpdates;
@@ -402,7 +403,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
                 if (existing == null || existing.timestamp < valueTimestamp) {
                     updates.put(tenantId, new MiruTenantTopologyUpdate(tenantId, valueTimestamp));
                 }
-                return true;
+                return TxResult.MORE;
             });
 
         Collection<NamedCursor> cursors = sinceCursors;
@@ -458,7 +459,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
                 if (registryCount[0] % 10_000 == 0) {
                     LOG.info("Found {} registry updates for {} from txId {}", registryCount[0], host, registryTransactionId[0]);
                 }
-                return true;
+                return TxResult.MORE;
             });
         int[] infoCount = new int[1];
         TakeCursors infoTakeCursors = topologyInfoClient.takeFromTransactionId(infoTransactionId[0],
@@ -469,7 +470,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
                 if (infoCount[0] % 10_000 == 0) {
                     LOG.info("Found {} info updates for {} from txId {}", infoCount[0], host, infoTransactionId[0]);
                 }
-                return true;
+                return TxResult.MORE;
             });
         int[] ingressCount = new int[1];
         TakeCursors ingressTakeCursors = ingressClient.takeFromTransactionId(ingressTransactionId[0],
@@ -480,7 +481,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
                 if (ingressCount[0] % 10_000 == 0) {
                     LOG.info("Found {} ingress updates for {} from txId {}", ingressCount[0], host, ingressTransactionId[0]);
                 }
-                return true;
+                return TxResult.MORE;
             });
         LOG.info("Returning {} active updates for {} using registry={} info={} ingress={}",
             tenantPartitions.size(), host, registryCount[0], infoCount[0], ingressCount[0]);

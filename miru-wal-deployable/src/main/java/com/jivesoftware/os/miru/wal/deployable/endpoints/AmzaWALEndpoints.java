@@ -1,7 +1,6 @@
 package com.jivesoftware.os.miru.wal.deployable.endpoints;
 
 import com.google.common.base.Charsets;
-import com.jivesoftware.os.amza.api.FailedToAchieveQuorumException;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
@@ -107,21 +106,6 @@ public class AmzaWALEndpoints {
     }
 
     @POST
-    @Path("/repairBoundaries")
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response repairBoundaries() throws Exception {
-        try {
-            long start = System.currentTimeMillis();
-            walDirector.repairBoundaries();
-            stats.ingressed("/repairBoundaries", 1, System.currentTimeMillis() - start);
-            return responseHelper.jsonResponse("ok");
-        } catch (Exception x) {
-            log.error("Failed calling repairBoundaries()", x);
-            return responseHelper.errorResponse("Server error", x);
-        }
-    }
-
-    @POST
     @Path("/repairRanges/{fast}")
     @Produces(MediaType.APPLICATION_JSON)
     public Response repairRanges(@PathParam("fast") boolean fast) throws Exception {
@@ -132,54 +116,6 @@ public class AmzaWALEndpoints {
             return responseHelper.jsonResponse("ok");
         } catch (Exception x) {
             log.error("Failed calling repairRanges()", x);
-            return responseHelper.errorResponse("Server error", x);
-        }
-    }
-
-    @POST
-    @Path("/sanitize/activity/wal/{tenantId}/{partitionId}")
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response sanitizeActivityWAL(@PathParam("tenantId") String tenantId,
-        @PathParam("partitionId") int partitionId) throws Exception {
-        try {
-            long start = System.currentTimeMillis();
-            walDirector.sanitizeActivityWAL(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), MiruPartitionId.of(partitionId));
-            stats.ingressed("/sanitize/activity/wal/" + tenantId + "/" + partitionId, 1, System.currentTimeMillis() - start);
-            return responseHelper.jsonResponse("ok");
-        } catch (MiruWALNotInitializedException x) {
-            log.error("WAL not initialized calling sanitizeActivityWAL({}, {})",
-                new Object[] { tenantId, partitionId }, x);
-            return responseHelper.errorResponse(Response.Status.SERVICE_UNAVAILABLE, "WAL not initialized", x);
-        } catch (MiruWALWrongRouteException x) {
-            log.error("Wrong route calling sanitizeActivityWAL({},{})",
-                new Object[] { tenantId, partitionId }, x);
-            return responseHelper.errorResponse(Response.Status.CONFLICT, "Wrong route", x);
-        } catch (Exception x) {
-            log.error("Failed calling sanitizeActivityWAL({}, {})", new Object[] { tenantId, partitionId }, x);
-            return responseHelper.errorResponse("Server error", x);
-        }
-    }
-
-    @POST
-    @Path("/sanitize/sip/wal/{tenantId}/{partitionId}")
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response sanitizeActivitySipWAL(@PathParam("tenantId") String tenantId,
-        @PathParam("partitionId") int partitionId) throws Exception {
-        try {
-            long start = System.currentTimeMillis();
-            walDirector.sanitizeActivitySipWAL(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), MiruPartitionId.of(partitionId));
-            stats.ingressed("/sanitize/sip/wal/" + tenantId + "/" + partitionId, 1, System.currentTimeMillis() - start);
-            return responseHelper.jsonResponse("ok");
-        } catch (MiruWALNotInitializedException x) {
-            log.error("WAL not initialized calling sanitizeActivitySipWAL({}, {})",
-                new Object[] { tenantId, partitionId }, x);
-            return responseHelper.errorResponse(Response.Status.SERVICE_UNAVAILABLE, "WAL not initialized", x);
-        } catch (MiruWALWrongRouteException x) {
-            log.error("Wrong route calling sanitizeActivityWAL({},{})",
-                new Object[] { tenantId, partitionId }, x);
-            return responseHelper.errorResponse(Response.Status.CONFLICT, "Wrong route", x);
-        } catch (Exception x) {
-            log.error("Failed calling sanitizeActivitySipWAL({}, {})", new Object[] { tenantId, partitionId }, x);
             return responseHelper.errorResponse("Server error", x);
         }
     }
@@ -402,18 +338,19 @@ public class AmzaWALEndpoints {
     }
 
     @POST
-    @Path("/activity/{tenantId}/{partitionId}/{batchSize}")
+    @Path("/activity/{tenantId}/{partitionId}/{batchSize}/{stopAtTimestamp}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public Response getActivity(@PathParam("tenantId") String tenantId,
         @PathParam("partitionId") int partitionId,
         @PathParam("batchSize") int batchSize,
+        @PathParam("stopAtTimestamp") long stopAtTimestamp,
         AmzaCursor cursor)
         throws Exception {
         try {
             long start = System.currentTimeMillis();
             StreamBatch<MiruWALEntry, AmzaCursor> activity = walDirector.getActivity(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
-                MiruPartitionId.of(partitionId), cursor, batchSize);
+                MiruPartitionId.of(partitionId), cursor, batchSize, stopAtTimestamp);
             stats.ingressed("/activity/" + tenantId + "/" + partitionId + "/" + batchSize, 1, System.currentTimeMillis() - start);
             return responseHelper.jsonResponse(activity);
         } catch (MiruWALNotInitializedException x) {

@@ -56,7 +56,10 @@ public interface MiruWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
     List<MiruVersionedActivityLookupEntry> getVersionedEntries(MiruTenantId tenantId, MiruPartitionId partitionId, Long[] timestamps) throws Exception;
 
     StreamBatch<MiruWALEntry, C> getActivity(MiruTenantId tenantId,
-        MiruPartitionId partitionId, C cursor, int batchSize) throws Exception;
+        MiruPartitionId partitionId,
+        C cursor,
+        int batchSize,
+        long stopAtTimestamp) throws Exception;
 
     StreamBatch<MiruWALEntry, S> sipActivity(MiruTenantId tenantId,
         MiruPartitionId partitionId, S cursor, Set<TimeAndVersion> lastSeen, int batchSize) throws Exception;

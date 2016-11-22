@@ -5,6 +5,7 @@ import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.amza.api.FailedToAchieveQuorumException;
 import com.jivesoftware.os.amza.api.partition.PartitionProperties;
+import com.jivesoftware.os.amza.api.stream.TxKeyValueStream.TxResult;
 import com.jivesoftware.os.amza.api.take.TakeCursors;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider.EmbeddedClient;
 import com.jivesoftware.os.amza.service.PartitionIsDisposedException;
@@ -68,10 +69,10 @@ public class AmzaReadTrackingWALReader implements MiruReadTrackingWALReader<Amza
                 if (partitionedActivity != null) {
                     //TODO key->bytes is sufficient for the activity timestamp, so technically we don't need values at all
                     if (!streamMiruReadTrackingSipWAL.stream(partitionedActivity.timestamp, rowTxId)) {
-                        return false;
+                        return TxResult.ACCEPT_AND_STOP;
                     }
                 }
-                return true;
+                return TxResult.MORE;
             });
     }
 

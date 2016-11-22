@@ -11,9 +11,7 @@ import com.jivesoftware.os.amza.api.ring.RingMember;
 import com.jivesoftware.os.amza.api.wal.KeyUtil;
 import com.jivesoftware.os.amza.client.aquarium.AmzaClientAquariumProvider;
 import com.jivesoftware.os.amza.client.test.InMemoryPartitionClient;
-import com.jivesoftware.os.amza.client.test.InMemoryPartitionClient.Tx;
 import com.jivesoftware.os.aquarium.AquariumStats;
-import com.jivesoftware.os.aquarium.Member;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
@@ -130,6 +128,7 @@ public class MiruSyncSenderTest {
 
         TestWALClient testWALClient = new TestWALClient(tenantId, largestPartitionId);
         MiruSyncSender<AmzaCursor, AmzaSipCursor> syncService = new MiruSyncSender<>(amzaClientAquariumProvider,
+            orderIdProvider,
             1,
             Executors.newSingleThreadExecutor(),
             1,
@@ -271,7 +270,8 @@ public class MiruSyncSenderTest {
         public StreamBatch<MiruWALEntry, AmzaCursor> getActivity(MiruTenantId tenantId,
             MiruPartitionId partitionId,
             AmzaCursor cursor,
-            int batchSize) throws Exception {
+            int batchSize,
+            long stopAtTimestamp) throws Exception {
             List<MiruWALEntry> entries;
             NamedCursor namedCursor = (cursor == null || cursor.cursors == null || cursor.cursors.isEmpty()) ? null : cursor.cursors.get(0);
             if (partitionId.getId() == largestPartitionId.get() || namedCursor != null && namedCursor.compareTo(stopCursor) == 0) {

@@ -5,12 +5,12 @@ import com.google.common.base.Optional;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.wal.MiruWALDirector;
+import com.jivesoftware.os.miru.wal.MiruWALRepair;
 import com.jivesoftware.os.miru.wal.deployable.region.input.MiruActivityWALRegionInput;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import javax.inject.Singleton;
 import javax.ws.rs.Consumes;
-import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -32,11 +32,14 @@ public class MiruWALEndpoints {
 
     private final MiruWALUIService writerUIService;
     private final MiruWALDirector miruWALDirector;
+    private final MiruWALRepair miruWALRepair;
 
     public MiruWALEndpoints(@Context MiruWALUIService writerUIService,
-        @Context MiruWALDirector miruWALDirector) {
+        @Context MiruWALDirector miruWALDirector,
+        @Context MiruWALRepair miruWALRepair) {
         this.writerUIService = writerUIService;
         this.miruWALDirector = miruWALDirector;
+        this.miruWALRepair = miruWALRepair;
     }
 
     @GET
@@ -117,22 +120,6 @@ public class MiruWALEndpoints {
         return Response.ok(rendered).build();
     }
 
-    @POST
-    @Path("/sanitize/{tenantId}/{partitionId}")
-    @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
-    @Produces(MediaType.TEXT_HTML)
-    public Response sanitizeWAL(@PathParam("tenantId") @DefaultValue("") String tenantId,
-        @PathParam("partitionId") @DefaultValue("-1") int partitionId) {
-        try {
-            miruWALDirector.sanitizeActivityWAL(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), MiruPartitionId.of(partitionId));
-            miruWALDirector.sanitizeActivitySipWAL(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), MiruPartitionId.of(partitionId));
-            return Response.ok("success").build();
-        } catch (Throwable t) {
-            LOG.error("POST /sanitize/" + tenantId + "/" + partitionId, t);
-            return Response.serverError().entity(t.getMessage()).build();
-        }
-    }
-
     @GET
     @Path("/repair")
     @Produces(MediaType.TEXT_HTML)
@@ -155,7 +142,7 @@ public class MiruWALEndpoints {
     @Produces(MediaType.TEXT_HTML)
     public Response repairBoundaries() {
         try {
-            miruWALDirector.repairBoundaries();
+            miruWALRepair.repairBoundaries();
             return Response.ok("success").build();
         } catch (Throwable t) {
             LOG.error("POST /repair/repairBoundaries", t);

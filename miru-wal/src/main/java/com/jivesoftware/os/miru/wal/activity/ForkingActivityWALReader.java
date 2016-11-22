@@ -33,8 +33,9 @@ public class ForkingActivityWALReader<C extends MiruCursor<C, S>, S extends Miru
         MiruPartitionId partitionId,
         C afterCursor,
         int batchSize,
+        long stopAtTimestamp,
         StreamMiruActivityWAL streamMiruActivityWAL) throws Exception {
-        return readWAL.stream(tenantId, partitionId, afterCursor, batchSize, streamMiruActivityWAL);
+        return readWAL.stream(tenantId, partitionId, afterCursor, batchSize, stopAtTimestamp, streamMiruActivityWAL);
     }
 
     @Override

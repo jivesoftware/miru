@@ -48,7 +48,7 @@ public class RCVSActivityWALReaderTest {
 
         final List<Long> timestamps = Lists.newArrayListWithCapacity(totalActivities);
         RCVSCursor cursor = new RCVSCursor(MiruPartitionedActivity.Type.ACTIVITY.getSort(), startingTimestamp, false, null);
-        activityWALReader.stream(tenantId, partitionId, cursor, batchSize,
+        activityWALReader.stream(tenantId, partitionId, cursor, batchSize, -1L,
             (collisionId, partitionedActivity, timestamp) -> {
                 timestamps.add(collisionId);
                 return true;

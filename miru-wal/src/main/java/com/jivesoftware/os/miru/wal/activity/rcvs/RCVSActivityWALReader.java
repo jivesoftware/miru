@@ -66,7 +66,8 @@ public class RCVSActivityWALReader implements MiruActivityWALReader<RCVSCursor, 
     public RCVSCursor stream(MiruTenantId tenantId,
         MiruPartitionId partitionId,
         RCVSCursor afterCursor,
-        final int batchSize,
+        int batchSize,
+        long stopAtTimestamp,
         StreamMiruActivityWAL streamMiruActivityWAL)
         throws Exception {
 
@@ -90,6 +91,9 @@ public class RCVSActivityWALReader implements MiruActivityWALReader<RCVSCursor, 
             activityWAL.getEntrys(tenantId, rowKey, start, Long.MAX_VALUE, batchSize, false, null, null,
                 (ColumnValueAndTimestamp<MiruActivityWALColumnKey, MiruPartitionedActivity, Long> v) -> {
                     if (v != null && v.getValue().type.isActivityType()) {
+                        if (stopAtTimestamp > 0 && v.getValue().timestamp > stopAtTimestamp) {
+                            return null;
+                        }
                         cvats.add(v);
                     }
                     if (cvats.size() < batchSize) {
