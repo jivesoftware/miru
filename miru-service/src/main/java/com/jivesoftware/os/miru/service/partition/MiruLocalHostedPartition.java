@@ -102,7 +102,6 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
     private final Object factoryLock = new Object();
     //private final AtomicBoolean firstRebuild = new AtomicBoolean(true);
     private final AtomicBoolean sipEndOfWAL = new AtomicBoolean(false);
-    private final AtomicBoolean firstSip = new AtomicBoolean(true);
     private final CheckPersistent checkPersistent;
 
     private interface BootstrapCount extends MinMaxHealthCheckConfig {
@@ -1031,7 +1030,8 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                                 }
                             }
 
-                            SipResult sipResult = sip(accessor, stackBuffer);
+                            boolean recovery = !sipEndOfWAL.get();
+                            SipResult sipResult = sip(accessor, recovery, stackBuffer);
                             if (sipResult.sippedEndOfWAL) {
                                 sipEndOfWAL.set(true);
                             }
@@ -1095,12 +1095,11 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
             }
         }
 
-        private SipResult sip(final MiruPartitionAccessor<BM, IBM, C, S> accessor, StackBuffer stackBuffer) throws Exception {
+        private SipResult sip(MiruPartitionAccessor<BM, IBM, C, S> accessor, boolean recovery, StackBuffer stackBuffer) throws Exception {
 
             final MiruSipTracker<S> sipTracker = sipTrackerFactory.create(accessor.seenLastSip.get());
 
             S sipCursor = accessor.getSipCursor(stackBuffer).orNull();
-            boolean first = firstSip.get();
 
             MiruWALClient.StreamBatch<MiruWALEntry, S> sippedActivity = walClient.sipActivity(coord.tenantId,
                 coord.partitionId,
@@ -1135,12 +1134,12 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                 }
 
                 S lastCursor = sipCursor;
-                sipCursor = deliver(partitionedActivities, accessor, sipTracker, sipCursor, sippedActivity.cursor, stackBuffer);
+                sipCursor = deliver(partitionedActivities, accessor, sipTracker, sipCursor, sippedActivity.cursor, recovery, stackBuffer);
                 partitionedActivities.clear();
 
                 if (sippedActivity.cursor != null && sippedActivity.cursor.endOfStream()) {
                     LOG.info("Sipped to end of stream for {}", coord);
-                    long threshold = first ? 0 : timings.partitionSipNotifyEndOfStreamMillis;
+                    long threshold = recovery ? 0 : timings.partitionSipNotifyEndOfStreamMillis;
                     sippedEndOfWAL = true;
                     sippedEndOfStream = accessor.notifyEndOfStream(threshold);
                     break;
@@ -1181,9 +1180,14 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
             }
         }
 
-        private S deliver(final List<MiruPartitionedActivity> partitionedActivities, final MiruPartitionAccessor<BM, IBM, C, S> accessor,
-            final MiruSipTracker<S> sipTracker, S sipCursor, S nextSipCursor, StackBuffer stackBuffer) throws Exception {
-            boolean repair = firstSip.compareAndSet(true, false);
+        private S deliver(final List<MiruPartitionedActivity> partitionedActivities,
+            MiruPartitionAccessor<BM, IBM, C, S> accessor,
+            MiruSipTracker<S> sipTracker,
+            S sipCursor,
+            S nextSipCursor,
+            boolean recovery,
+            StackBuffer stackBuffer) throws Exception {
+
             int initialCount = partitionedActivities.size();
             int count = 0;
             if (accessor.persistentContext.isPresent()) {
@@ -1191,7 +1195,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                     accessor.persistentContext.get(),
                     partitionedActivities.iterator(),
                     MiruPartitionAccessor.IndexStrategy.sip,
-                    repair,
+                    recovery,
                     persistentMergeChits,
                     sipIndexExecutor,
                     persistentMergeExecutor,
