@@ -68,4 +68,7 @@ public interface MiruAmzaServiceConfig extends Config {
 
     @BooleanDefault(true)
     boolean getAckWatersVerboseLogTimeouts();
+
+    @IntDefault(-1)
+    int getDeltaMergeThreads();
 }

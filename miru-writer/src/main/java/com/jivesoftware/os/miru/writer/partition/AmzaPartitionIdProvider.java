@@ -200,6 +200,9 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
         byte[] got = cursors.getValue(Consistency.none, null, cursorKey);
         if (got == null) {
             WriterCursor cursor = walClient.getCursorForWriterId(tenantId, partitionId, writerId);
+            if (cursor == null) {
+                throw new IllegalStateException("Unknown cursor for tenant " + tenantId + " partition " + partitionId + " writer " + writerId);
+            }
             cursors.commit(Consistency.none,
                 null,
                 new AmzaPartitionUpdates().set(cursorKey, FilerIO.intBytes(cursor.index), -1),
