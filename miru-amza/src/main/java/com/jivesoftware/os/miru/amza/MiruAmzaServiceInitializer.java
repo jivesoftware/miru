@@ -47,6 +47,7 @@ public class MiruAmzaServiceInitializer {
         amzaServiceConfig.checkIfCompactionIsNeededIntervalInMillis = config.getCheckIfCompactionIsNeededIntervalInMillis();
         amzaServiceConfig.deltaStripeCompactionIntervalInMillis = config.getDeltaStripeCompactionIntervalInMillis();
         amzaServiceConfig.deltaMaxValueSizeInIndex = config.getDeltaMaxValueSizeInIndex();
+        amzaServiceConfig.deltaMergeThreads = config.getDeltaMergeThreads();
         amzaServiceConfig.corruptionParanoiaFactor = config.getCorruptionParanoiaFactor();
         amzaServiceConfig.maxUpdatesBeforeDeltaStripeCompaction = config.getMaxUpdatesBeforeDeltaStripeCompaction();
         amzaServiceConfig.numberOfTakerThreads = config.getNumberOfTakerThreads();
