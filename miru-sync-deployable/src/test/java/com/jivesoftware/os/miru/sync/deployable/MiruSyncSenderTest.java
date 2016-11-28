@@ -5,6 +5,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.amza.api.PartitionClient;
 import com.jivesoftware.os.amza.api.PartitionClientProvider;
+import com.jivesoftware.os.amza.api.RingPartitionProperties;
 import com.jivesoftware.os.amza.api.partition.PartitionName;
 import com.jivesoftware.os.amza.api.partition.PartitionProperties;
 import com.jivesoftware.os.amza.api.ring.RingMember;
@@ -214,7 +215,7 @@ public class MiruSyncSenderTest {
         }
 
         @Override
-        public PartitionProperties getProperties(PartitionName partitionName) throws Exception {
+        public RingPartitionProperties getProperties(PartitionName partitionName) throws Exception {
             return null;
         }
 
