@@ -266,7 +266,7 @@ public class RCVSActivityWALReader implements MiruActivityWALReader<RCVSCursor, 
         final List<Integer> ends = Lists.newArrayList();
         activityWAL.getValues(tenantId,
             new MiruActivityWALRow(partitionId.getId()),
-            new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.END.getSort(), 0),
+            new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.END.getSort(), Long.MIN_VALUE),
             null, 1_000, false, null, null,
             partitionedActivity -> {
                 if (partitionedActivity != null) {
@@ -288,7 +288,7 @@ public class RCVSActivityWALReader implements MiruActivityWALReader<RCVSCursor, 
         final MutableLong oldestClockTimestamp = new MutableLong(-1);
         activityWAL.getValues(tenantId,
             new MiruActivityWALRow(partitionId.getId()),
-            new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.ACTIVITY.getSort(), 0L),
+            new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.ACTIVITY.getSort(), Long.MIN_VALUE),
             null,
             1,
             false,

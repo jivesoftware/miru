@@ -44,14 +44,14 @@ public class MiruWALRepair {
                             if (!status.ends.contains(begin)) {
                                 walClient.writeActivity(tenantId, partitionId,
                                     Arrays.asList(partitionedActivityFactory.end(begin, partitionId, tenantId, -1)));
-                                LOG.info("Added missing 'end' to WAL for {} {}", tenantId, partitionId);
+                                LOG.info("Added missing 'end' to WAL for tenant:{} partition:{} writer:{}", tenantId, partitionId, begin);
                             }
                         }
                         for (int end : status.ends) {
                             if (!status.begins.contains(end)) {
                                 walClient.writeActivity(tenantId, partitionId,
                                     Arrays.asList(partitionedActivityFactory.begin(end, partitionId, tenantId, -1)));
-                                LOG.info("Added missing 'begin' to WAL for {} {}", tenantId, partitionId);
+                                LOG.info("Added missing 'begin' to WAL for tenant:{} partition:{} writer:{}", tenantId, partitionId, end);
                             }
                         }
                     }
