@@ -36,6 +36,7 @@ import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALColumnKeyMarsha
 import com.jivesoftware.os.miru.wal.lookup.PartitionsStream;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import com.jivesoftware.os.rcvs.marshall.api.UtilLexMarshaller;
 import com.jivesoftware.os.routing.bird.shared.HostPort;
 import java.util.Arrays;
 import java.util.Collections;
@@ -222,7 +223,7 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
         EmbeddedClient client = amzaWALUtil.getActivityClient(tenantId, partitionId);
         if (client != null) {
             try {
-                byte[] fromKey = columnKeyMarshaller.toLexBytes(new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.END.getSort(), 0));
+                byte[] fromKey = columnKeyMarshaller.toLexBytes(new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.END.getSort(), Long.MIN_VALUE));
                 byte[] toKey = columnKeyMarshaller.toLexBytes(new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.BEGIN.getSort(), Long.MAX_VALUE));
                 client.scan(
                     Collections.singletonList(new ScanRange(null, fromKey, null, toKey)),
@@ -257,7 +258,7 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
         if (client != null) {
             try {
                 byte[] fromKey = columnKeyMarshaller.toBytes(new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.ACTIVITY.getSort(), 0L));
-                byte[] toKey = columnKeyMarshaller.toBytes(new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.END.getSort(), 0L));
+                byte[] toKey = columnKeyMarshaller.toBytes(new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.END.getSort(), Long.MIN_VALUE));
                 client.scan(
                     Collections.singletonList(new ScanRange(null, fromKey, null, toKey)),
                     (prefix, key, value, timestamp, version) -> {
