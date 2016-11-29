@@ -37,10 +37,8 @@ public class MiruStumptownIntakeEndpoints {
     public Response intake(List<MiruLogEvent> logEvents) throws Exception {
         try {
             for (MiruLogEvent logEvent : logEvents) {
-                if (LOG.isDebugEnabled()) {
-                    LOG.debug("host:{} service:{} instance:{} message:{}",
-                            logEvent.host, logEvent.service, logEvent.instance, logEvent.message);
-                }
+                LOG.debug("host:{} service:{} instance:{} message:{}",
+                        logEvent.host, logEvent.service, logEvent.instance, logEvent.message);
 
                 int hash = Objects.hashCode(logEvent.host, logEvent.service, logEvent.instance, logEvent.threadName);
                 GuaranteedDeliveryService guaranteedDeliveryService = deliveryQueueProvider.getGuaranteedDeliveryServices(hash);
