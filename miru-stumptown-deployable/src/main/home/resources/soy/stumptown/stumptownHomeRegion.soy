@@ -8,32 +8,36 @@
         <div class="panel-heading">Stumptown</div>
             <div class="panel-body">
                 <pre>
-                    Welcome to Stumptown a service which allows you to chop up your logs!
+                    Welcome to Stumptown!<br>
+                    Stumptown is service which allows you to chop up your logs.<br>
                     <br>
-                    POST json list of log events to {$intakeURL}<br>
+                    POST a json list of log events to {$intakeURL}.<br>
+                    <br>
                     Example input:<br>
-                    &nbsp;
+                    <br>
                     [<br>
-                        &nbsp;&nbsp;&nbsp;&nbsp;{lb}<br>
-                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;datacenter: "ds1",<br>
-                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cluster: "dev",<br>
-                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;host: "128.0.0.1",<br>
-                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;service: "myServiceName",<br>
-                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;instance: "1",<br>
-                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;version: "1.0",<br>
-                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;level: "INFO",<br>
-                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;threadName: "thread-7",<br>
-                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;loggerName: "com.company.Foo",<br>
-                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;message: "My first message",<br>
-                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;timestamp: "34279234", GMT millis<br>
-                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;thrownStackTrace: [<br>
-                                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"",<br>
-                                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;""<br>
-                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;]<br>
-                        &nbsp;&nbsp;&nbsp;&nbsp;{rb}<br>
+                    &nbsp;&nbsp;{lb}<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;"datacenter": "ds1",<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;"cluster": "dev",<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;"host": "127.0.0.1",<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;"service": "myServiceName",<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;"instance": "1",<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;"version": "1.0",<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;"level": "INFO",<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;"threadName": "thread-7",<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;"loggerName": "com.company.Foo",<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;"message": "My first message",<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;"timestamp": "34279234",<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;"thrownStackTrace": [<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"",<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;""<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;]<br>
+                    &nbsp;&nbsp;{rb}<br>
                     ]<br>
                     <br>
-                    Note: All fields are optional.
+                    Note:<br>
+                    All fields are optional.<br>
+                    Timestamp is in GMT milliseconds.
                 </pre>
             </div>
         </div>
