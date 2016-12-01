@@ -119,6 +119,7 @@ public class DistinctCountInboxQuestion implements Question<DistinctCountQuery, 
                 null,
                 lastId,
                 -1,
+                -1,
                 stackBuffer);
             ands.add(filtered);
         }

@@ -69,7 +69,15 @@ public class AggregateCountsCustomQuestion implements Question<AggregateCountsQu
         List<IBM> ands = new ArrayList<>();
         int lastId = context.getActivityIndex().lastId(stackBuffer);
 
-        BM filtered = aggregateUtil.filter("aggregateCountsCustom", bitmaps, context, request.query.streamFilter, solutionLog, null, lastId, -1, stackBuffer);
+        BM filtered = aggregateUtil.filter("aggregateCountsCustom", bitmaps,
+            context,
+            request.query.streamFilter,
+            solutionLog,
+            null,
+            lastId,
+            -1,
+            -1,
+            stackBuffer);
         ands.add(filtered);
 
         ands.add(bitmaps.buildIndexMask(lastId, context.getRemovalIndex(), null, stackBuffer));

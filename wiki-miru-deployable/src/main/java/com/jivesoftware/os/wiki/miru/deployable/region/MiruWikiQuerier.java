@@ -226,6 +226,7 @@ public class MiruWikiQuerier implements WikiQuerier {
                     "title",
                     locale,
                     query,
+                    10_000,
                     filter,
                     Strategy.TIME,
                     100,

@@ -114,7 +114,7 @@ public class Analytics {
             solutionLog.log(MiruSolutionLogLevel.INFO, "analytics filter: no constraints.");
         } else {
             start = System.currentTimeMillis();
-            BM filtered = aggregateUtil.filter(name, bitmaps, context, constraintsFilter, solutionLog, null, lastId, -1, stackBuffer);
+            BM filtered = aggregateUtil.filter(name, bitmaps, context, constraintsFilter, solutionLog, null, lastId, -1, -1, stackBuffer);
             solutionLog.log(MiruSolutionLogLevel.INFO, "analytics filter: {} millis.", System.currentTimeMillis() - start);
             ands.add(filtered);
         }

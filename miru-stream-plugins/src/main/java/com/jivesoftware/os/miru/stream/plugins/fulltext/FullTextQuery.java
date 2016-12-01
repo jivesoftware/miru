@@ -19,6 +19,7 @@ public class FullTextQuery {
     public final String defaultField;
     public final String locale;
     public final String query;
+    public final int maxWildcardExpansion;
     public final MiruFilter constraintsFilter;
     public final Strategy strategy;
     public final int desiredNumberOfResults;
@@ -29,6 +30,7 @@ public class FullTextQuery {
         @JsonProperty("defaultField") String defaultField,
         @JsonProperty("locale") String locale,
         @JsonProperty("query") String query,
+        @JsonProperty("maxDeterminizedStates") int maxWildcardExpansion,
         @JsonProperty("constraintsFilter") MiruFilter constraintsFilter,
         @JsonProperty("strategy") Strategy strategy,
         @JsonProperty("desiredNumberOfResults") int desiredNumberOfResults,
@@ -37,6 +39,7 @@ public class FullTextQuery {
         this.defaultField = Preconditions.checkNotNull(defaultField);
         this.locale = locale;
         this.query = Preconditions.checkNotNull(query);
+        this.maxWildcardExpansion = maxWildcardExpansion;
         this.constraintsFilter = Preconditions.checkNotNull(constraintsFilter);
         this.strategy = Preconditions.checkNotNull(strategy);
         Preconditions.checkArgument(desiredNumberOfResults > 0, "Number of results must be at least 1");
@@ -51,6 +54,7 @@ public class FullTextQuery {
             ", defaultField='" + defaultField + '\'' +
             ", locale='" + locale + '\'' +
             ", query='" + query + '\'' +
+            ", maxWildcardExpansion=" + maxWildcardExpansion +
             ", constraintsFilter=" + constraintsFilter +
             ", strategy=" + strategy +
             ", desiredNumberOfResults=" + desiredNumberOfResults +

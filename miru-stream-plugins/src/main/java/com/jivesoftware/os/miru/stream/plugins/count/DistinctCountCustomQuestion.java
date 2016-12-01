@@ -69,7 +69,7 @@ public class DistinctCountCustomQuestion implements Question<DistinctCountQuery,
         int lastId = context.getActivityIndex().lastId(stackBuffer);
 
         // 1) Execute the combined filter above on the given stream, add the bitmap
-        BM filtered = aggregateUtil.filter("distinctCountCustom", bitmaps, context, combinedFilter, solutionLog, null, lastId, -1, stackBuffer);
+        BM filtered = aggregateUtil.filter("distinctCountCustom", bitmaps, context, combinedFilter, solutionLog, null, lastId, -1, -1, stackBuffer);
         ands.add(filtered);
 
         // 2) Add in the authz check if we have it

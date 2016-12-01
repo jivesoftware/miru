@@ -122,6 +122,7 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
                     null,
                     lastId,
                     -1,
+                    -1,
                     stackBuffer));
             }
             bitmapsDebug.debug(solutionLog, bitmaps, "gatherAnds", gatherAnds);
@@ -149,6 +150,7 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
                     solutionLog,
                     null,
                     lastId,
+                    -1,
                     -1,
                     stackBuffer);
 

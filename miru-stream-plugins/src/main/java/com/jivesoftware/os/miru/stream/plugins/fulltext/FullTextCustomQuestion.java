@@ -73,7 +73,16 @@ public class FullTextCustomQuestion implements Question<FullTextQuery, FullTextA
         if (request.query.query != null && !request.query.query.isEmpty()) {
             MiruFilter filter = fullText.parseQuery(request.query.defaultField, request.query.locale, request.query.query);
 
-            BM filtered = aggregateUtil.filter("fullTextCustom", bitmaps, context, filter, solutionLog, termCollector, lastId, -1, stackBuffer);
+            BM filtered = aggregateUtil.filter("fullTextCustom",
+                bitmaps,
+                context,
+                filter,
+                solutionLog,
+                termCollector,
+                lastId,
+                -1,
+                request.query.maxWildcardExpansion,
+                stackBuffer);
             ands.add(filtered);
         }
 
@@ -87,6 +96,7 @@ public class FullTextCustomQuestion implements Question<FullTextQuery, FullTextA
                 solutionLog,
                 null,
                 lastId,
+                -1,
                 -1,
                 stackBuffer);
             ands.add(constrained);

@@ -82,7 +82,7 @@ public class AnalyticsQuestion implements Question<AnalyticsQuery, AnalyticsAnsw
             stackBuffer,
             (Analytics.ToAnalyze<MiruValue, BM> toAnalyze) -> {
                 for (Map.Entry<String, MiruFilter> entry : request.query.analyticsFilters.entrySet()) {
-                    BM waveformFiltered = aggregateUtil.filter("analytics", bitmaps, context, entry.getValue(), solutionLog, null, lastId, -1, stackBuffer);
+                    BM waveformFiltered = aggregateUtil.filter("analytics", bitmaps, context, entry.getValue(), solutionLog, null, lastId, -1, -1, stackBuffer);
 
                     if (!toAnalyze.analyze(new MiruValue(entry.getKey()), waveformFiltered)) {
                         return false;

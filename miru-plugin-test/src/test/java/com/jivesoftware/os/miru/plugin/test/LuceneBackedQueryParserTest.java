@@ -94,7 +94,7 @@ public class LuceneBackedQueryParserTest {
         // (2, 6) OR (0, 4, 8)
         // (0, 2, 4, 6, 8)
         MiruSolutionLog solutionLog = new MiruSolutionLog(MiruSolutionLogLevel.NONE);
-        RoaringBitmap storage = aggregateUtil.filter("test", bitmaps, context, filter, solutionLog, null, 9, -1, stackBuffer);
+        RoaringBitmap storage = aggregateUtil.filter("test", bitmaps, context, filter, solutionLog, null, 9, -1, -1, stackBuffer);
         Assert.assertEquals(storage.getCardinality(), 5);
         assertTrue(storage.contains(0));
         assertTrue(storage.contains(2));
@@ -123,7 +123,7 @@ public class LuceneBackedQueryParserTest {
         // (2, 6) OR (0, 4, 8)
         // (0, 2, 4, 6, 8)
         MiruSolutionLog solutionLog = new MiruSolutionLog(MiruSolutionLogLevel.NONE);
-        RoaringBitmap storage = aggregateUtil.filter("test", bitmaps, context, filter, solutionLog, null, 9, -1, stackBuffer);
+        RoaringBitmap storage = aggregateUtil.filter("test", bitmaps, context, filter, solutionLog, null, 9, -1, -1, stackBuffer);
         Assert.assertEquals(storage.getCardinality(), 5);
         assertTrue(storage.contains(0));
         assertTrue(storage.contains(2));

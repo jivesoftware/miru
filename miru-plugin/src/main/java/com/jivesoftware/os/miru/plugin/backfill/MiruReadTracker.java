@@ -33,7 +33,7 @@ public class MiruReadTracker {
         synchronized (context.getStreamLocks().lock(streamId, 0)) {
             IBM timeMask = bitmaps.buildTimeRangeMask(context.getTimeIndex(), 0L, lastActivityTimestamp, stackBuffer);
             int lastId = context.getActivityIndex().lastId(stackBuffer);
-            BM filtered = aggregateUtil.filter("readTrackerRead", bitmaps, context, filter, solutionLog, null, lastId, -1, stackBuffer);
+            BM filtered = aggregateUtil.filter("readTrackerRead", bitmaps, context, filter, solutionLog, null, lastId, -1, -1, stackBuffer);
 
             BM result = bitmaps.and(Arrays.asList(filtered, indexMask, timeMask));
             context.getUnreadTrackingIndex().applyRead(streamId, result, stackBuffer);
@@ -55,7 +55,7 @@ public class MiruReadTracker {
         synchronized (context.getStreamLocks().lock(streamId, 0)) {
             IBM timeMask = bitmaps.buildTimeRangeMask(context.getTimeIndex(), 0L, lastActivityTimestamp, stackBuffer);
             int lastId = context.getActivityIndex().lastId(stackBuffer);
-            BM filtered = aggregateUtil.filter("readTrackUnread", bitmaps, context, filter, solutionLog, null, lastId, -1, stackBuffer);
+            BM filtered = aggregateUtil.filter("readTrackUnread", bitmaps, context, filter, solutionLog, null, lastId, -1, -1, stackBuffer);
 
             BM result = bitmaps.and(Arrays.asList(filtered, indexMask, timeMask));
             context.getUnreadTrackingIndex().applyUnread(streamId, result, stackBuffer);

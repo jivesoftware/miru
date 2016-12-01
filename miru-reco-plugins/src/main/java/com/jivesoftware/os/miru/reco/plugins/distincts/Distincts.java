@@ -110,7 +110,7 @@ public class Distincts {
 
                 List<IBM> ands = Lists.newArrayList();
                 int lastId = requestContext.getActivityIndex().lastId(stackBuffer);
-                BM constrained = aggregateUtil.filter(name, bitmaps, requestContext, query.constraintsFilter, solutionLog, null, lastId, -1, stackBuffer);
+                BM constrained = aggregateUtil.filter(name, bitmaps, requestContext, query.constraintsFilter, solutionLog, null, lastId, -1, -1, stackBuffer);
                 ands.add(constrained);
 
                 if (!MiruTimeRange.ALL_TIME.equals(query.timeRange)) {
