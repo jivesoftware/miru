@@ -40,16 +40,16 @@ public class ESWikiQuerier implements WikiQuerier {
         List<String> userKeys) throws Exception {
 
 
-        String query = "type:+content";
-        query = filter("tenant:+" + input.tenantId, query);
+        String query = "+type:content";
+        query = filter("+tenant:" + input.tenantId, query);
 
         if (!input.userGuids.isEmpty()) {
-            query = filter(query, "userGuid:( +" + Joiner.on(" OR +").join(Splitter.on(",").omitEmptyStrings().trimResults().split(input.userGuids)) + ")");
+            query = filter(query, "+userGuid:( " + Joiner.on(" OR ").join(Splitter.on(",").omitEmptyStrings().trimResults().split(input.userGuids)) + ")");
         }
 
         if (!input.folderGuids.isEmpty()) {
             query = filter(query,
-                "folderGuid:( +" + Joiner.on(" OR +").join(Splitter.on(",").omitEmptyStrings().trimResults().split(input.folderGuids)) + ")");
+                "+folderGuid:( " + Joiner.on(" OR ").join(Splitter.on(",").omitEmptyStrings().trimResults().split(input.folderGuids)) + ")");
         }
 
         query = filter(query, rewrite(input.query));
@@ -127,13 +127,13 @@ public class ESWikiQuerier implements WikiQuerier {
         int i = part.length - 1;
         if (part.length > 0) {
             if (part[i].endsWith("*")) {
-                part[i] = ("( title:+" + part[i] + " OR body:+" + part[i] + " )");
+                part[i] = ("( +title:" + part[i] + " OR +body:" + part[i] + " )");
             } else {
-                part[i] = ("( title:+" + part[i] + " OR title:+" + part[i] + "* OR body:+" + part[i] + " OR body:+" + part[i] + "* )");
+                part[i] = ("( +title:" + part[i] + " OR +title:" + part[i] + "* OR +body:" + part[i] + " OR +body:" + part[i] + "* )");
             }
         }
         for (i = 0; i < part.length - 1; i++) {
-            part[i] = "( title:+" + part[i] + " OR body:+" + part[i] + ")";
+            part[i] = "( +title:" + part[i] + " OR +body:" + part[i] + ")";
         }
         return Joiner.on(" AND ").join(part);
     }
@@ -142,8 +142,8 @@ public class ESWikiQuerier implements WikiQuerier {
     @Override
     public Found queryUsers(WikiMiruPluginRegionInput input) throws Exception {
 
-        String query = "type:+user";
-        query = filter("tenant:+" + input.tenantId, query);
+        String query = "+type:user";
+        query = filter("+tenant:" + input.tenantId, query);
         query = filter(query, rewrite(input.query));
         LOG.info(query);
         SearchResponse response = client.prepareSearch("wiki")
@@ -177,8 +177,8 @@ public class ESWikiQuerier implements WikiQuerier {
     @Override
     public Found queryFolders(WikiMiruPluginRegionInput input) throws Exception {
 
-        String query = "type:+folder";
-        query = filter("tenant:+" + input.tenantId, query);
+        String query = "+type:folder";
+        query = filter("+tenant:" + input.tenantId, query);
         query = filter(query, rewrite(input.query));
         LOG.info(query);
         SearchResponse response = client.prepareSearch("wiki")
