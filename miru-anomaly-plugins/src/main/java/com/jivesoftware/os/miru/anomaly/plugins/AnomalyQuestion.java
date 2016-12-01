@@ -99,7 +99,7 @@ public class AnomalyQuestion implements Question<AnomalyQuery, AnomalyAnswer, An
             solutionLog.log(MiruSolutionLogLevel.INFO, "anomaly filter: no constraints.");
         } else {
             start = System.currentTimeMillis();
-            BM filtered = aggregateUtil.filter("anomaly", bitmaps, context, request.query.constraintsFilter, solutionLog, null, lastId, -1, stackBuffer);
+            BM filtered = aggregateUtil.filter("anomaly", bitmaps, context, request.query.constraintsFilter, solutionLog, null, lastId, -1, -1, stackBuffer);
             solutionLog.log(MiruSolutionLogLevel.INFO, "anomaly filter: {} millis.", System.currentTimeMillis() - start);
             ands.add(filtered);
         }
@@ -207,7 +207,7 @@ public class AnomalyQuestion implements Question<AnomalyQuery, AnomalyAnswer, An
         for (Map.Entry<String, MiruFilter> entry : expand.entrySet()) {
             AnomalyAnswer.Waveform waveform = null;
             if (!bitmaps.isEmpty(constrained)) {
-                BM waveformFiltered = aggregateUtil.filter("anomaly", bitmaps, context, entry.getValue(), solutionLog, null, lastId, -1, stackBuffer);
+                BM waveformFiltered = aggregateUtil.filter("anomaly", bitmaps, context, entry.getValue(), solutionLog, null, lastId, -1, -1, stackBuffer);
 
                 BM rawAnswer = bitmaps.and(Arrays.asList(constrained, waveformFiltered));
                 if (!bitmaps.isEmpty(rawAnswer)) {

@@ -110,6 +110,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 null,
                 activityIndexLastId,
                 -1,
+                -1,
                 stackBuffer);
             ands.add(constrained);
         }

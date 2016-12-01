@@ -489,6 +489,7 @@ public class StrutModelScorer {
                     null,
                     activityIndexLastId,
                     -1,
+                    -1,
                     stackBuffer);
                 constrainFeature[i] = constrained;
             }

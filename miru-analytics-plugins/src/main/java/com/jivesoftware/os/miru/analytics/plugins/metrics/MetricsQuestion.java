@@ -95,7 +95,7 @@ public class MetricsQuestion implements Question<MetricsQuery, MetricsAnswer, Me
             solutionLog.log(MiruSolutionLogLevel.INFO, "metrics filter: no constraints.");
         } else {
             start = System.currentTimeMillis();
-            BM filtered = aggregateUtil.filter("metrics", bitmaps, context, request.query.constraintsFilter, solutionLog, null, lastId, -1, stackBuffer);
+            BM filtered = aggregateUtil.filter("metrics", bitmaps, context, request.query.constraintsFilter, solutionLog, null, lastId, -1, -1, stackBuffer);
             solutionLog.log(MiruSolutionLogLevel.INFO, "metrics filter: {} millis.", System.currentTimeMillis() - start);
             ands.add(filtered);
         }
@@ -154,7 +154,7 @@ public class MetricsQuestion implements Question<MetricsQuery, MetricsAnswer, Me
         for (Map.Entry<String, MiruFilter> entry : request.query.filters.entrySet()) {
             Waveform waveform = null;
             if (!bitmaps.isEmpty(constrained)) {
-                BM waveformFiltered = aggregateUtil.filter("metrics", bitmaps, context, entry.getValue(), solutionLog, null, lastId, -1, stackBuffer);
+                BM waveformFiltered = aggregateUtil.filter("metrics", bitmaps, context, entry.getValue(), solutionLog, null, lastId, -1, -1, stackBuffer);
 
                 BM rawAnswer = bitmaps.and(Arrays.asList(constrained, waveformFiltered));
                 if (!bitmaps.isEmpty(rawAnswer)) {

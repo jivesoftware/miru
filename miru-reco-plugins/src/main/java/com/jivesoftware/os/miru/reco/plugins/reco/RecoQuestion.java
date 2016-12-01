@@ -87,7 +87,7 @@ public class RecoQuestion implements Question<RecoQuery, RecoAnswer, RecoReport>
         int lastId = context.getActivityIndex().lastId(stackBuffer);
 
         // 1) Execute the combined filter above on the given stream, add the bitmap
-        BM filtered = aggregateUtil.filter("reco", bitmaps, context, request.query.scorableFilter, solutionLog, null, lastId, -1, stackBuffer);
+        BM filtered = aggregateUtil.filter("reco", bitmaps, context, request.query.scorableFilter, solutionLog, null, lastId, -1, -1, stackBuffer);
         if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
             solutionLog.log(MiruSolutionLogLevel.INFO, "constrained scorable down to {} items.", bitmaps.cardinality(filtered));
             solutionLog.log(MiruSolutionLogLevel.TRACE, "constrained scorable down bitmap {}", filtered);
@@ -121,7 +121,7 @@ public class RecoQuestion implements Question<RecoQuery, RecoAnswer, RecoReport>
             solutionLog.log(MiruSolutionLogLevel.TRACE, "answering bitmap {}", okActivity);
         }
 
-        BM allMyActivity = aggregateUtil.filter("reco", bitmaps, context, request.query.constraintsFilter, solutionLog, null, lastId, -1, stackBuffer);
+        BM allMyActivity = aggregateUtil.filter("reco", bitmaps, context, request.query.constraintsFilter, solutionLog, null, lastId, -1, -1, stackBuffer);
         if (solutionLog.isLogLevelEnabled(MiruSolutionLogLevel.INFO)) {
             solutionLog.log(MiruSolutionLogLevel.INFO, "constrained mine down to {} items.", bitmaps.cardinality(allMyActivity));
             solutionLog.log(MiruSolutionLogLevel.TRACE, "constrained mine down bitmap {}", allMyActivity);

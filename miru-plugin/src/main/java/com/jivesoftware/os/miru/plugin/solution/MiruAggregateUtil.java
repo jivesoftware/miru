@@ -1029,9 +1029,20 @@ public class MiruAggregateUtil {
         Map<FieldAndTermId, MutableInt> termCollector,
         int largestIndex,
         int considerIfIndexIdGreaterThanN,
+        int maxWildcardExpansion,
         StackBuffer stackBuffer)
         throws Exception {
-        return filterInOut(name, bitmaps, context, filter, solutionLog, termCollector, true, largestIndex, considerIfIndexIdGreaterThanN, stackBuffer);
+        return filterInOut(name,
+            bitmaps,
+            context,
+            filter,
+            solutionLog,
+            termCollector,
+            true,
+            largestIndex,
+            considerIfIndexIdGreaterThanN,
+            maxWildcardExpansion,
+            stackBuffer);
     }
 
     private <BM extends IBM, IBM> BM filterInOut(String name,
@@ -1043,6 +1054,7 @@ public class MiruAggregateUtil {
         boolean termIn,
         int largestIndex,
         int considerIfLastIdGreaterThanN,
+        int maxWildcardExpansion,
         StackBuffer stackBuffer)
         throws Exception {
 
@@ -1069,13 +1081,15 @@ public class MiruAggregateUtil {
                             String[] baseParts = value.slice(0, value.parts.length - 1);
                             byte[] lowerInclusive = termComposer.prefixLowerInclusive(schema, fieldDefinition, stackBuffer, baseParts);
                             byte[] upperExclusive = termComposer.prefixUpperExclusive(schema, fieldDefinition, stackBuffer, baseParts);
+                            int[] count = { 0 };
                             fieldIndex.streamTermIdsForField(name, fieldId,
                                 Collections.singletonList(new KeyRange(lowerInclusive, upperExclusive)),
                                 termId -> {
                                     if (termId != null) {
                                         collectTerm(fieldId, termId, fieldTermIn, fieldTermIds, termCollector);
+                                        count[0]++;
                                     }
-                                    return true;
+                                    return maxWildcardExpansion <= 0 || count[0] < maxWildcardExpansion;
                                 }, stackBuffer);
                         } else {
                             MiruTermId termId = termComposer.compose(schema, fieldDefinition, stackBuffer, value.parts);
@@ -1106,7 +1120,7 @@ public class MiruAggregateUtil {
             for (MiruFilter subFilter : filter.subFilters) {
                 boolean subTermIn = (filter.operation == MiruFilterOperation.pButNotQ && !filterBitmaps.isEmpty()) ? !termIn : termIn;
                 BM subStorage = filterInOut(name, bitmaps, context, subFilter, solutionLog,
-                    termCollector, subTermIn, largestIndex, considerIfLastIdGreaterThanN, stackBuffer);
+                    termCollector, subTermIn, largestIndex, considerIfLastIdGreaterThanN, maxWildcardExpansion, stackBuffer);
                 filterBitmaps.add(new SimpleInvertedIndex<>(subStorage));
             }
         }

@@ -146,6 +146,7 @@ public class FullTextPluginRegion implements MiruPageRegion<Optional<FullTextPlu
                             input.defaultField,
                             input.locale,
                             input.queryString,
+                            -1, //TODO input
                             constraintsFilter,
                             input.strategy,
                             input.maxCount,

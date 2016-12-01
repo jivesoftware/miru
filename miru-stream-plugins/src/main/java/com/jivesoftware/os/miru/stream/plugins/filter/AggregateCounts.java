@@ -145,7 +145,7 @@ public class AggregateCounts {
 
         if (!MiruFilter.NO_FILTER.equals(constraint.constraintsFilter)) {
             int lastId = requestContext.getActivityIndex().lastId(stackBuffer);
-            BM filtered = aggregateUtil.filter(name, bitmaps, requestContext, constraint.constraintsFilter, solutionLog, null, lastId, -1, stackBuffer);
+            BM filtered = aggregateUtil.filter(name, bitmaps, requestContext, constraint.constraintsFilter, solutionLog, null, lastId, -1, -1, stackBuffer);
 
             if (bitmaps.supportsInPlace()) {
                 bitmaps.inPlaceAnd(answer, filtered);
