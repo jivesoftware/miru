@@ -13,6 +13,8 @@ import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.index.query.QueryStringQueryBuilder;
 import org.elasticsearch.search.SearchHit;
 
+import static org.eclipse.jetty.io.SelectChannelEndPoint.LOG;
+
 /**
  * Created by jonathan.colt on 12/1/16.
  */
@@ -37,22 +39,26 @@ public class ESWikiQuerier implements WikiQuerier {
         List<String> userKeys) throws Exception {
 
 
-        String filter = "type:content";
-        filter = filter("tenant:" + input.tenantId, filter);
+        String query = "type:+content";
+        query = filter("tenant:+" + input.tenantId, query);
 
         if (!input.userGuids.isEmpty()) {
-            filter = filter(filter, "userGuid:(" + Joiner.on(" OR ").join(Splitter.on(",").omitEmptyStrings().trimResults().split(input.userGuids)) + ")");
+            query = filter(query, "userGuid:( +" + Joiner.on(" OR +").join(Splitter.on(",").omitEmptyStrings().trimResults().split(input.userGuids)) + ")");
         }
 
         if (!input.folderGuids.isEmpty()) {
-            filter = filter(filter, "folderGuid:(" + Joiner.on(" OR ").join(Splitter.on(",").omitEmptyStrings().trimResults().split(input.folderGuids)) + ")");
+            query = filter(query,
+                "folderGuid:( +" + Joiner.on(" OR +").join(Splitter.on(",").omitEmptyStrings().trimResults().split(input.folderGuids)) + ")");
         }
+
+        query = filter(query, rewrite(input.query));
+        LOG.info(query);
 
         SearchResponse response = client.prepareSearch("wiki")
             .setTypes("page")
             .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
             .setFetchSource(new String[] { "userGuid", "folderGuid", "guid", "type" }, null)
-            .setQuery(new QueryStringQueryBuilder(filter(filter, rewrite(input.query))))
+            .setQuery(new QueryStringQueryBuilder(query))
             .setFrom(0).setSize(100).setExplain(false)
             .get();
 
@@ -120,13 +126,13 @@ public class ESWikiQuerier implements WikiQuerier {
         int i = part.length - 1;
         if (part.length > 0) {
             if (part[i].endsWith("*")) {
-                part[i] = ("( title:" + part[i] + " OR body:" + part[i] + " )");
+                part[i] = ("( title:+" + part[i] + " OR body:+" + part[i] + " )");
             } else {
-                part[i] = ("( title:" + part[i] + " OR title:" + part[i] + "* OR body:" + part[i] + " OR body:" + part[i] + "* )");
+                part[i] = ("( title:+" + part[i] + " OR title:+" + part[i] + "* OR body:+" + part[i] + " OR body:+" + part[i] + "* )");
             }
         }
         for (i = 0; i < part.length - 1; i++) {
-            part[i] = "( title:" + part[i] + " OR body:" + part[i] + ")";
+            part[i] = "( title:+" + part[i] + " OR body:+" + part[i] + ")";
         }
         return Joiner.on(" AND ").join(part);
     }
@@ -135,13 +141,15 @@ public class ESWikiQuerier implements WikiQuerier {
     @Override
     public Found queryUsers(WikiMiruPluginRegionInput input) throws Exception {
 
-        String filter = "type:user";
-        filter = filter("tenant:" + input.tenantId, filter);
+        String query = "type:+user";
+        query = filter("tenant:+" + input.tenantId, query);
+        query = filter(query, rewrite(input.query));
+        LOG.info(query);
         SearchResponse response = client.prepareSearch("wiki")
             .setTypes("page")
             .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
             .setFetchSource(new String[] { "userGuid", "folderGuid", "guid", "type" }, null)
-            .setQuery(new QueryStringQueryBuilder(filter(filter, rewrite(input.query))))
+            .setQuery(new QueryStringQueryBuilder(query))
             .setFrom(0).setSize(100).setExplain(false)
             .get();
 
@@ -168,13 +176,15 @@ public class ESWikiQuerier implements WikiQuerier {
     @Override
     public Found queryFolders(WikiMiruPluginRegionInput input) throws Exception {
 
-        String filter = "type:folder";
-        filter = filter("tenant:" + input.tenantId, filter);
+        String query = "type:+folder";
+        query = filter("tenant:+" + input.tenantId, query);
+        query = filter(query, rewrite(input.query));
+        LOG.info(query);
         SearchResponse response = client.prepareSearch("wiki")
             .setTypes("page")
             .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
             .setFetchSource(new String[] { "userGuid", "folderGuid", "guid", "type" }, null)
-            .setQuery(new QueryStringQueryBuilder(filter(filter, rewrite(input.query))))
+            .setQuery(new QueryStringQueryBuilder(query))
             .setFrom(0).setSize(100).setExplain(false)
             .get();
 
