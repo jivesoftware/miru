@@ -36,11 +36,15 @@ import info.bliki.wiki.filter.PlainTextConverter;
 import info.bliki.wiki.model.WikiModel;
 import java.io.File;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.security.NoSuchAlgorithmException;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -52,6 +56,18 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.en.EnglishAnalyzer;
+import org.elasticsearch.action.ActionFuture;
+import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
+import org.elasticsearch.action.admin.indices.mapping.put.PutMappingResponse;
+import org.elasticsearch.action.bulk.BulkRequest;
+import org.elasticsearch.action.bulk.BulkResponse;
+import org.elasticsearch.action.index.IndexRequest;
+import org.elasticsearch.client.AdminClient;
+import org.elasticsearch.client.IndicesAdminClient;
+import org.elasticsearch.client.transport.TransportClient;
+import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.transport.InetSocketTransportAddress;
+import org.elasticsearch.transport.client.PreBuiltTransportClient;
 
 /**
  * @author jonathan.colt
@@ -85,9 +101,14 @@ public class WikiMiruIndexService {
         this.wikiMiruGramsAmza = wikiMiruGramsAmza;
     }
 
-    public Indexer index(String tenantId, String pathToWikiDumpFile, int batchSize) throws Exception {
+    public Indexer index(String tenantId,
+        String pathToWikiDumpFile,
+        int batchSize,
+        boolean miruEnabled,
+        String esClusterName,
+        List<String> esHosts) throws Exception {
 
-        return new Indexer(String.valueOf(idProvider.nextId()), tenantId, pathToWikiDumpFile, batchSize);
+        return new Indexer(String.valueOf(idProvider.nextId()), tenantId, pathToWikiDumpFile, batchSize, miruEnabled, esClusterName, esHosts);
 
     }
 
@@ -97,29 +118,79 @@ public class WikiMiruIndexService {
         public final String tenantId;
         public final String pathToWikiDumpFile;
         private final int batchSize;
+        private final boolean miruEnabled;
+
+        private final String esClusterName;
+        private final List<String> esHosts;
+        private final boolean esEnabled;
+
+        TransportClient esClient;
+
         public final AtomicLong indexed = new AtomicLong();
         public final AtomicBoolean running = new AtomicBoolean(true);
         public final long startTimestampMillis = System.currentTimeMillis();
         public String message = "";
 
 
-        public Indexer(String indexerId, String tenantId, String pathToWikiDumpFile, int batchSize) throws NoSuchAlgorithmException {
+        public Indexer(String indexerId,
+            String tenantId,
+            String pathToWikiDumpFile,
+            int batchSize,
+            boolean miruEnabled,
+            String esClusterName,
+            List<String> esHosts) throws NoSuchAlgorithmException, UnknownHostException {
             this.indexerId = indexerId;
             this.tenantId = tenantId;
             this.pathToWikiDumpFile = pathToWikiDumpFile;
             this.batchSize = batchSize;
+            this.miruEnabled = miruEnabled;
+            this.esClusterName = esClusterName;
+            this.esHosts = esHosts;
 
+            this.esEnabled = esClusterName != null;
         }
 
 
         public void start() throws Exception {
             ExecutorService tokenizers = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() * 2);
             try {
+
+                if (esClusterName != null) {
+                    Settings settings = Settings.builder()
+                        .put("cluster.name", "test-wiki")
+                        .build();
+
+                    esClient = new PreBuiltTransportClient(settings);
+                    for (String esHost : esHosts) {
+                        esClient.addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName(esHost), 9300));
+                    }
+
+                    AdminClient adminClient = esClient.admin();
+                    IndicesAdminClient indicesAdminClient = adminClient.indices();
+
+
+
+                    CreateIndexResponse createIndexResponse = esClient.admin().indices().prepareCreate("wiki")
+                        .setSettings(Settings.builder()
+                            .put("index.number_of_shards", 3)
+                            .put("index.number_of_replicas", 2)
+                        ).get();
+
+
+                    PutMappingResponse response = esClient.admin().indices().preparePutMapping("wiki")
+                        .setType("page")
+                        .setSource(WikiSchemaConstants.esSchema())
+                        .get();
+
+
+                }
+
                 message = "starting";
                 MiruTenantId miruTenantId = new MiruTenantId(tenantId.getBytes(StandardCharsets.UTF_8));
 
                 wikiSchemaService.ensureSchema(miruTenantId, WikiSchemaConstants.SCHEMA);
 
+                AtomicReference<List<IndexRequest>> esIndexables = new AtomicReference<>(Collections.synchronizedList(Lists.newArrayList()));
                 AtomicReference<List<MiruActivity>> activities = new AtomicReference<>(Collections.synchronizedList(Lists.newArrayList()));
                 AtomicReference<List<KeyAndPayload<Content>>> pages = new AtomicReference<>(Collections.synchronizedList(Lists.newArrayList()));
                 AtomicReference<List<MiruActivity>> grams = new AtomicReference<>(Collections.synchronizedList(Lists.newArrayList()));
@@ -134,7 +205,14 @@ public class WikiMiruIndexService {
                     }
                     if (page.isMain()) {
 
-                        futures.add(tokenizers.submit(new WikiTokenizer(miruTenantId, idProvider, page, stnf, activities, pages, grams)));
+                        futures.add(tokenizers.submit(new WikiTokenizer(miruTenantId,
+                            idProvider,
+                            page,
+                            stnf,
+                            (esEnabled) ? esIndexables : null,
+                            (miruEnabled) ? activities : null,
+                            pages,
+                            grams)));
                         if (futures.size() > batchSize) {
                             long start = System.currentTimeMillis();
                             for (Future<Void> future : futures) {
@@ -150,11 +228,17 @@ public class WikiMiruIndexService {
                             try {
                                 LOG.info("Indexing batch of {}", activities.get().size());
 
+                                List<IndexRequest> batchOfEsIndexables = esIndexables.getAndSet(Collections.synchronizedList(Lists.newArrayList()));
                                 List<MiruActivity> batchOfActivities = activities.getAndSet(Collections.synchronizedList(Lists.newArrayList()));
                                 List<KeyAndPayload<Content>> batchOfPages = pages.getAndSet(Collections.synchronizedList(Lists.newArrayList()));
                                 List<MiruActivity> batchOfGrams = grams.getAndSet(Collections.synchronizedList(Lists.newArrayList()));
 
-                                futures.add(tokenizers.submit(new FlushActivities(indexed, batchOfActivities)));
+                                if (esEnabled) {
+                                    futures.add(tokenizers.submit(new FlushEsActivities(esClient, indexed, batchOfEsIndexables)));
+                                }
+                                if (miruEnabled) {
+                                    futures.add(tokenizers.submit(new FlushActivities(indexed, batchOfActivities)));
+                                }
                                 futures.add(tokenizers.submit(new FlushPages(miruTenantId, batchOfPages)));
 
                             } catch (Exception x) {
@@ -171,13 +255,13 @@ public class WikiMiruIndexService {
                 LOG.info("Completed indexing run for {} using '{}'", tenantId, pathToWikiDumpFile);
                 if (running.get() && !activities.get().isEmpty()) {
 
+                    List<IndexRequest> batchOfEsIndexables = esIndexables.getAndSet(Collections.synchronizedList(Lists.newArrayList()));
                     List<MiruActivity> batchOfActivities = activities.getAndSet(Collections.synchronizedList(Lists.newArrayList()));
                     List<KeyAndPayload<Content>> batchOfPages = pages.getAndSet(Collections.synchronizedList(Lists.newArrayList()));
                     List<MiruActivity> batchOfGrams = grams.getAndSet(Collections.synchronizedList(Lists.newArrayList()));
 
+                    new FlushEsActivities(esClient, indexed, batchOfEsIndexables).call();
                     new FlushActivities(indexed, batchOfActivities).call();
-
-                    futures.add(tokenizers.submit(new FlushActivities(indexed, batchOfActivities)));
                     new FlushPages(miruTenantId, batchOfPages).call();
                 }
             } finally {
@@ -185,6 +269,9 @@ public class WikiMiruIndexService {
                 running.set(false);
                 if (tokenizers != null) {
                     tokenizers.shutdownNow();
+                }
+                if (esClient != null) {
+                    esClient.close();
                 }
             }
         }
@@ -204,7 +291,7 @@ public class WikiMiruIndexService {
         private final OrderIdProvider idProvider;
         private final WikiArticle page;
         private final Siteinfo stnf;
-
+        private final AtomicReference<List<IndexRequest>> esIndexables;
         private final AtomicReference<List<MiruActivity>> activities;
         private final AtomicReference<List<KeyAndPayload<Content>>> pages;
         private final AtomicReference<List<MiruActivity>> grams;
@@ -214,6 +301,7 @@ public class WikiMiruIndexService {
             OrderIdProvider idProvider,
             WikiArticle page,
             Siteinfo stnf,
+            AtomicReference<List<IndexRequest>> esIndexables,
             AtomicReference<List<MiruActivity>> activities,
             AtomicReference<List<KeyAndPayload<Content>>> pages,
             AtomicReference<List<MiruActivity>> grams) {
@@ -223,6 +311,7 @@ public class WikiMiruIndexService {
             this.idProvider = idProvider;
             this.page = page;
             this.stnf = stnf;
+            this.esIndexables = esIndexables;
             this.activities = activities;
             this.pages = pages;
             this.grams = grams;
@@ -247,7 +336,7 @@ public class WikiMiruIndexService {
                     if (topicsBody.length() != 0) {
                         topicsBody.append(", ");
                     }
-                    String topicName =Joiner.on(' ').join(topic.topic);
+                    String topicName = Joiner.on(' ').join(topic.topic);
                     if (folderName == null) {
                         folderName = topicName;
                     }
@@ -260,18 +349,20 @@ public class WikiMiruIndexService {
             }
 
             long folderHash = Hashing.sha256().hashString(folderName).asLong();
-            String folderGuid = "folder|"+folderHash;
+            String folderGuid = "folder|" + folderHash;
 
             Random random = new Random(folderHash);
-            String firstName = (random.nextDouble() > 0.5) ? FemaleFirstName.list[random.nextInt(FemaleFirstName.list.length)] : MaleFirstNames.list[random.nextInt(MaleFirstNames.list.length)];
+            String firstName = (random.nextDouble() > 0.5) ? FemaleFirstName.list[random.nextInt(
+                FemaleFirstName.list.length)] : MaleFirstNames.list[random.nextInt(MaleFirstNames.list.length)];
             String lastName = LastNames.list[random.nextInt(LastNames.list.length)];
             firstName = firstName.toLowerCase();
             lastName = lastName.toLowerCase();
 
 
-            String userName =  firstName.substring(0, 1).toUpperCase() + firstName.substring(1)+" "+lastName.substring(0, 1).toUpperCase() + lastName.substring(1);
+            String userName = firstName.substring(0, 1).toUpperCase() + firstName.substring(1) + " " + lastName.substring(0,
+                1).toUpperCase() + lastName.substring(1);
             long userHash = Hashing.sha256().hashString(userName).asLong();
-            String userGuid = "user|"+userHash;
+            String userGuid = "user|" + userHash;
 
             if (userHashcodes.add(userHash)) {
 
@@ -283,21 +374,47 @@ public class WikiMiruIndexService {
 
                 pages.get().add(new KeyAndPayload<>(String.valueOf(userGuid), new Content(userName, about.toString())));
 
-                MiruActivity ma = new MiruActivity.Builder(miruTenantId, idProvider.nextId(), 0, false, new String[0])
-                    .putFieldValue("locale", "en")
-                    //.publicFieldValue("timestampInMDYHMS") // TODO
-                    //.putFieldValue("userGuid", "") // TODO
-                    //.putFieldValue("folderGuid", String.valueOf(folderGuid))
-                    .putFieldValue("guid", userGuid)
-                    .putFieldValue("verb", "import")
-                    .putFieldValue("type", "user")
-                    .putAllFieldValues("title", tokenize(termTokenizer, analyzer, userName, grams.get()))
-                    .putAllFieldValues("body", tokenize(termTokenizer, analyzer, about.toString(), grams.get()))
-                    //.putFieldValue("bodyGuid", "") // Not applicable
-                    //.putFieldValue("properties", "") // Not applicable
-                    //.putFieldValue("edgeGuids", "") // Not applicable
-                    .build();
-                activities.get().add(ma);
+                Set<String> titleTokens = tokenize(termTokenizer, analyzer, userName, grams.get());
+                Set<String> bodyTokens = tokenize(termTokenizer, analyzer, about.toString(), grams.get());
+
+                if (activities != null) {
+                    MiruActivity ma = new MiruActivity.Builder(miruTenantId, idProvider.nextId(), 0, false, new String[0])
+                        .putFieldValue("locale", "en")
+                        //.publicFieldValue("timestampInMDYHMS") // TODO
+                        //.putFieldValue("userGuid", "") // TODO
+                        //.putFieldValue("folderGuid", String.valueOf(folderGuid))
+                        .putFieldValue("guid", userGuid)
+                        .putFieldValue("verb", "import")
+                        .putFieldValue("type", "user")
+                        .putAllFieldValues("title", titleTokens)
+                        .putAllFieldValues("body", bodyTokens)
+                        //.putFieldValue("bodyGuid", "") // Not applicable
+                        //.putFieldValue("properties", "") // Not applicable
+                        //.putFieldValue("edgeGuids", "") // Not applicable
+                        .build();
+                    activities.get().add(ma);
+                }
+
+                if (esIndexables != null) {
+
+                    Map<String, Object> json = new HashMap<>();
+                    json.put("tenant",miruTenantId.toString());
+                    json.put("locale", "en");
+                    json.put("guid", userGuid);
+                    json.put("verb", "import");
+                    json.put("type", "user");
+                    json.put("title", userName);
+                    json.put("body", about.toString());
+
+
+                    IndexRequest indexRequest = new IndexRequest()
+                        .id(userGuid)
+                        .type("page")
+                        .create(true)
+                        .source(json);
+
+                    esIndexables.get().add(indexRequest);
+                }
             }
 
 
@@ -305,16 +422,60 @@ public class WikiMiruIndexService {
 
                 pages.get().add(new KeyAndPayload<>(String.valueOf(folderGuid), new Content(folderName, folderName)));
 
+                if (activities != null) {
+                    MiruActivity ma = new MiruActivity.Builder(miruTenantId, idProvider.nextId(), 0, false, new String[0])
+                        .putFieldValue("locale", "en")
+                        //.publicFieldValue("timestampInMDYHMS") // TODO
+                        .putFieldValue("userGuid", userGuid)
+                        //.putFieldValue("folderGuid", String.valueOf(folderGuid))
+                        .putFieldValue("guid", folderGuid)
+                        .putFieldValue("verb", "import")
+                        .putFieldValue("type", "folder")
+                        .putAllFieldValues("title", tokenize(termTokenizer, analyzer, folderName, grams.get()))
+                        .putAllFieldValues("body", tokenize(termTokenizer, analyzer, folderName, grams.get()))
+                        //.putFieldValue("bodyGuid", "") // Not applicable
+                        //.putFieldValue("properties", "") // Not applicable
+                        //.putFieldValue("edgeGuids", "") // Not applicable
+                        .build();
+                    activities.get().add(ma);
+                }
+
+                if (esIndexables != null) {
+
+                    Map<String, Object> json = new HashMap<>();
+                    json.put("tenant",miruTenantId.toString());
+                    json.put("locale", "en");
+                    json.put("userGuid", userGuid);
+                    json.put("guid", folderGuid);
+                    json.put("verb", "import");
+                    json.put("type", "folder");
+                    json.put("title", folderName);
+                    json.put("body", folderName.toString());
+
+
+                    IndexRequest indexRequest = new IndexRequest()
+                        .id(folderGuid)
+                        .type("page")
+                        .create(true)
+                        .source(json);
+
+                    esIndexables.get().add(indexRequest);
+                }
+            }
+
+            String contentGuid = "content|" + page.getId();
+
+            if (activities != null) {
                 MiruActivity ma = new MiruActivity.Builder(miruTenantId, idProvider.nextId(), 0, false, new String[0])
                     .putFieldValue("locale", "en")
                     //.publicFieldValue("timestampInMDYHMS") // TODO
                     .putFieldValue("userGuid", userGuid)
-                    //.putFieldValue("folderGuid", String.valueOf(folderGuid))
-                    .putFieldValue("guid", folderGuid)
+                    .putFieldValue("folderGuid", folderGuid)
+                    .putFieldValue("guid", contentGuid)
                     .putFieldValue("verb", "import")
-                    .putFieldValue("type", "folder")
-                    .putAllFieldValues("title", tokenize(termTokenizer, analyzer, folderName, grams.get()))
-                    .putAllFieldValues("body", tokenize(termTokenizer, analyzer, folderName, grams.get()))
+                    .putFieldValue("type", "content")
+                    .putAllFieldValues("title", tokenize(termTokenizer, analyzer, page.getTitle(), grams.get()))
+                    .putAllFieldValues("body", tokenize(termTokenizer, analyzer, plainBody, grams.get()))
                     //.putFieldValue("bodyGuid", "") // Not applicable
                     //.putFieldValue("properties", "") // Not applicable
                     //.putFieldValue("edgeGuids", "") // Not applicable
@@ -322,24 +483,27 @@ public class WikiMiruIndexService {
                 activities.get().add(ma);
             }
 
-            String contentGuid = "content|"+page.getId();
+            if (esIndexables != null) {
+                Map<String, Object> json = new HashMap<>();
+                json.put("tenant",miruTenantId.toString());
+                json.put("locale", "en");
+                json.put("userGuid", userGuid);
+                json.put("folderGuid", folderGuid);
+                json.put("guid", contentGuid);
+                json.put("verb", "import");
+                json.put("type", "content");
+                json.put("title", page.getTitle());
+                json.put("body", plainBody);
 
 
-            MiruActivity ma = new MiruActivity.Builder(miruTenantId, idProvider.nextId(), 0, false, new String[0])
-                .putFieldValue("locale", "en")
-                //.publicFieldValue("timestampInMDYHMS") // TODO
-                .putFieldValue("userGuid", userGuid)
-                .putFieldValue("folderGuid", folderGuid)
-                .putFieldValue("guid", contentGuid)
-                .putFieldValue("verb", "import")
-                .putFieldValue("type", "content")
-                .putAllFieldValues("title", tokenize(termTokenizer, analyzer, page.getTitle(), grams.get()))
-                .putAllFieldValues("body", tokenize(termTokenizer, analyzer, plainBody, grams.get()))
-                //.putFieldValue("bodyGuid", "") // Not applicable
-                //.putFieldValue("properties", "") // Not applicable
-                //.putFieldValue("edgeGuids", "") // Not applicable
-                .build();
-            activities.get().add(ma);
+                IndexRequest indexRequest = new IndexRequest()
+                    .id(contentGuid)
+                    .type("page")
+                    .create(true)
+                    .source(json);
+
+                esIndexables.get().add(indexRequest);
+            }
 
             Content content = new Content(page.getTitle(), page.getText());
             pages.get().add(new KeyAndPayload<>(contentGuid, content));
@@ -370,6 +534,73 @@ public class WikiMiruIndexService {
         }
     }
 
+
+    private class FlushEsActivities implements Callable<Void> {
+        private final TransportClient esClient;
+        private final AtomicLong indexed;
+        private final List<IndexRequest> activities;
+
+        private FlushEsActivities(TransportClient esClient, AtomicLong indexed, List<IndexRequest> activities) {
+            this.esClient = esClient;
+            this.indexed = indexed;
+            this.activities = activities;
+        }
+
+
+        @Override
+        public Void call() throws Exception {
+            while (true) {
+                try {
+                    long start = System.currentTimeMillis();
+                    ingress(activities);
+                    LOG.info("Flushed {} activities to Miru in {} millis", activities.size(), (System.currentTimeMillis() - start));
+                    break;
+                } catch (Exception x) {
+                    LOG.warn("Failed to record", x);
+                    Thread.currentThread().sleep(10_000);
+                }
+            }
+            return null;
+        }
+
+        private void ingress(List<IndexRequest> activities) throws JsonProcessingException {
+            try {
+
+                BulkRequest bulkRequest = new BulkRequest();
+                for (IndexRequest activity : activities) {
+                    bulkRequest.add(activity);
+                }
+                while (true && !activities.isEmpty()) {
+                    try {
+                        ActionFuture<BulkResponse> actionFuture = esClient.bulk(bulkRequest);
+                        BulkResponse bulkItemResponses = actionFuture.get();
+                        if (!bulkItemResponses.hasFailures()) {
+                            LOG.inc("ingressed");
+                            break;
+                        } else {
+                            try {
+                                LOG.error("Failed to forward ingress. Will retry shortly....");
+                                Thread.sleep(5000);
+                            } catch (InterruptedException ex) {
+                                Thread.interrupted();
+                                return;
+                            }
+                        }
+                    } catch (Exception x) {
+                        try {
+                            LOG.error("Failed to forward ingress. Will retry shortly....", x);
+                            Thread.sleep(5000);
+                        } catch (InterruptedException ex) {
+                            Thread.interrupted();
+                            return;
+                        }
+                    }
+                }
+            } finally {
+                indexed.addAndGet(activities.size());
+            }
+        }
+    }
 
     private class FlushActivities implements Callable<Void> {
 
@@ -402,7 +633,7 @@ public class WikiMiruIndexService {
             try {
 
                 String jsonActivities = activityMapper.writeValueAsString(activities);
-                while (true) {
+                while (true && !activities.isEmpty()) {
                     try {
                         // TODO expose "" tenant to config?
                         HttpResponse response = miruWriter.call("", roundRobinStrategy, "ingress",

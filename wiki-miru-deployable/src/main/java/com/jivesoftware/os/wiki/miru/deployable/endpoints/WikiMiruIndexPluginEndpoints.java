@@ -1,5 +1,7 @@
 package com.jivesoftware.os.wiki.miru.deployable.endpoints;
 
+import com.google.common.base.Splitter;
+import com.google.common.collect.Lists;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.wiki.miru.deployable.WikiMiruService;
@@ -14,6 +16,7 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import org.apache.commons.lang.StringUtils;
 
 /**
  *
@@ -40,11 +43,22 @@ public class WikiMiruIndexPluginEndpoints {
         @QueryParam("tenantId") @DefaultValue("") String tenantId,
         @QueryParam("wikiDumpFile") @DefaultValue("") String wikiDumpFile,
         @QueryParam("batchSize") @DefaultValue("1000") int batchSize,
+        @QueryParam("miruEnabled") @DefaultValue("true") boolean miruEnabled,
+        @QueryParam("esClusterName") @DefaultValue("") String esClusterName,
+        @QueryParam("esHosts") @DefaultValue("") String esHosts,
         @QueryParam("action") @DefaultValue("status") String action) {
 
         try {
 
-            String rendered = wikiMiruService.renderPlugin(pluginRegion, new WikiMiruIndexPluginRegionInput(indexerId, tenantId, wikiDumpFile, batchSize, action));
+            String rendered = wikiMiruService.renderPlugin(pluginRegion, new WikiMiruIndexPluginRegionInput(indexerId,
+                tenantId,
+                wikiDumpFile,
+                batchSize,
+                miruEnabled,
+                StringUtils.trimToNull(esClusterName),
+                Lists.newArrayList(Splitter.on(",").omitEmptyStrings().trimResults().split(esHosts)),
+                action)
+            );
             return Response.ok(rendered).build();
 
         } catch (Exception x) {

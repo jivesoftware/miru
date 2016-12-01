@@ -40,13 +40,27 @@ public class WikiMiruIndexPluginRegion implements MiruPageRegion<WikiMiruIndexPl
         final String tenantId;
         final String wikiDumpFile;
         final int batchSize;
+        final boolean miruEnabled;
+        final String esClusterName;
+        final List<String> esHosts;
         final String action;
 
-        public WikiMiruIndexPluginRegionInput(String indexerId, String tenantId, String wikiDumpFile, int batchSize, String action) {
+        public WikiMiruIndexPluginRegionInput(String indexerId,
+            String tenantId,
+            String wikiDumpFile,
+            int batchSize,
+            boolean miruEnabled,
+            String esClusterName,
+            List<String> esHosts,
+            String action) {
+
             this.indexerId = indexerId;
             this.tenantId = tenantId;
             this.wikiDumpFile = wikiDumpFile;
             this.batchSize = batchSize;
+            this.miruEnabled = miruEnabled;
+            this.esClusterName = esClusterName;
+            this.esHosts = esHosts;
             this.action = action;
         }
 
@@ -58,7 +72,7 @@ public class WikiMiruIndexPluginRegion implements MiruPageRegion<WikiMiruIndexPl
         try {
 
             if (input.action.equals("start")) {
-                WikiMiruIndexService.Indexer i = indexService.index(input.tenantId, input.wikiDumpFile, input.batchSize);
+                WikiMiruIndexService.Indexer i = indexService.index(input.tenantId, input.wikiDumpFile, input.batchSize, input.miruEnabled, input.esClusterName, input.esHosts);
                 indexers.put(i.indexerId, i);
                 Executors.newSingleThreadExecutor().submit(() -> {
                     try {
