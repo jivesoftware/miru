@@ -58,12 +58,12 @@ import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.en.EnglishAnalyzer;
 import org.elasticsearch.action.ActionFuture;
 import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
+import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsRequest;
 import org.elasticsearch.action.admin.indices.mapping.put.PutMappingResponse;
 import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.client.AdminClient;
-import org.elasticsearch.client.IndicesAdminClient;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
@@ -166,22 +166,21 @@ public class WikiMiruIndexService {
                     }
 
                     AdminClient adminClient = esClient.admin();
-                    IndicesAdminClient indicesAdminClient = adminClient.indices();
+
+                    if (!esClient.admin().indices().exists(new IndicesExistsRequest("wiki")).get().isExists()) {
+
+                        CreateIndexResponse createIndexResponse = esClient.admin().indices().prepareCreate("wiki")
+                            .setSettings(Settings.builder()
+                                .put("index.number_of_shards", 3)
+                                .put("index.number_of_replicas", 2)
+                            ).get();
 
 
-
-                    CreateIndexResponse createIndexResponse = esClient.admin().indices().prepareCreate("wiki")
-                        .setSettings(Settings.builder()
-                            .put("index.number_of_shards", 3)
-                            .put("index.number_of_replicas", 2)
-                        ).get();
-
-
-                    PutMappingResponse response = esClient.admin().indices().preparePutMapping("wiki")
-                        .setType("page")
-                        .setSource(WikiSchemaConstants.esSchema())
-                        .get();
-
+                        PutMappingResponse response = esClient.admin().indices().preparePutMapping("wiki")
+                            .setType("page")
+                            .setSource(WikiSchemaConstants.esSchema())
+                            .get();
+                    }
 
                 }
 
