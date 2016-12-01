@@ -6,6 +6,7 @@ import com.google.common.collect.Lists;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.apache.commons.lang3.StringUtils;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.client.transport.TransportClient;
@@ -58,24 +59,24 @@ public class ESWikiQuerier implements WikiQuerier {
         int userIndex = 0;
         List<Result> results = Lists.newArrayList();
         for (SearchHit hit : response.getHits().getHits()) {
-
+            Map<String, Object> storedFields = hit.sourceAsMap();
 
             results.add(new Result(
-                hit.field("userGuid") != null ? hit.field("userGuid").getValue() : null,
-                hit.field("folderGuid") != null ? hit.field("folderGuid").getValue() : null,
-                hit.field("guid").getValue(),
-                hit.field("type").getValue()
+                (String)storedFields.get("userGuid"),
+                (String)storedFields.get("folderGuid"),
+                (String)storedFields.get("guid"),
+                (String)storedFields.get("type")
             ));
 
 
-            if (hit.field("type").getValue().equals("content")) {
-                contentKeys.add(hit.field("guid").getValue() + "-slug");
+            if (storedFields.get("type").equals("content")) {
+                contentKeys.add(storedFields.get("guid") + "-slug");
             } else {
-                contentKeys.add(hit.field("guid").getValue());
+                contentKeys.add((String)storedFields.get("guid"));
             }
-            if (hit.field("userGuid") != null) {
+            if (storedFields.get("userGuid") != null) {
 
-                String userGuid = hit.field("userGuid").getValue();
+                String userGuid = (String)storedFields.get("userGuid");
                 if (userGuid != null && uniqueUsers.add(userGuid)) {
                     userKeys.add(userGuid);
                     usersIndex.put(userGuid, userIndex);
@@ -83,8 +84,8 @@ public class ESWikiQuerier implements WikiQuerier {
                 }
             }
 
-            if (hit.field("folderGuid") != null) {
-                String folderGuid = hit.field("folderGuid").getValue();
+            if (storedFields.get("folderGuid") != null) {
+                String folderGuid = (String)storedFields.get("folderGuid");
                 if (folderGuid != null && uniqueFolders.add(folderGuid)) {
                     folderKeys.add(folderGuid);
                     foldersIndex.put(folderGuid, folderIndex);
@@ -103,6 +104,10 @@ public class ESWikiQuerier implements WikiQuerier {
 
 
     private String rewrite(String query) {
+        if (StringUtils.isBlank(query)) {
+            return "";
+        }
+
         String[] part = query.split("\\s+");
         int i = part.length - 1;
         if (part.length > 0) {
@@ -134,12 +139,12 @@ public class ESWikiQuerier implements WikiQuerier {
         List<Result> results = Lists.newArrayList();
         for (SearchHit hit : response.getHits().getHits()) {
 
-
+            Map<String, Object> storedFields = hit.sourceAsMap();
             results.add(new Result(
-                hit.field("userGuid") != null ? hit.field("userGuid").getValue() : null,
-                hit.field("folderGuid") != null ? hit.field("folderGuid").getValue() : null,
-                hit.field("guid").getValue(),
-                hit.field("type").getValue()
+                (String)storedFields.get("userGuid"),
+                (String)storedFields.get("folderGuid"),
+                (String)storedFields.get("guid"),
+                (String)storedFields.get("type")
             ));
         }
 
@@ -162,11 +167,12 @@ public class ESWikiQuerier implements WikiQuerier {
         for (SearchHit hit : response.getHits().getHits()) {
 
 
+            Map<String, Object> storedFields = hit.sourceAsMap();
             results.add(new Result(
-                hit.field("userGuid") != null ? hit.field("userGuid").getValue() : null,
-                hit.field("folderGuid") != null ? hit.field("folderGuid").getValue() : null,
-                hit.field("guid").getValue(),
-                hit.field("type").getValue()
+                (String)storedFields.get("userGuid"),
+                (String)storedFields.get("folderGuid"),
+                (String)storedFields.get("guid"),
+                (String)storedFields.get("type")
             ));
         }
 
