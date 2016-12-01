@@ -407,6 +407,7 @@ public class WikiMiruIndexService {
 
 
                     IndexRequest indexRequest = new IndexRequest()
+                        .index("wiki")
                         .id(userGuid)
                         .type("page")
                         .create(true)
@@ -453,6 +454,7 @@ public class WikiMiruIndexService {
 
 
                     IndexRequest indexRequest = new IndexRequest()
+                        .index("wiki")
                         .id(folderGuid)
                         .type("page")
                         .create(true)
@@ -496,6 +498,7 @@ public class WikiMiruIndexService {
 
 
                 IndexRequest indexRequest = new IndexRequest()
+                    .index("wiki")
                     .id(contentGuid)
                     .type("page")
                     .create(true)
