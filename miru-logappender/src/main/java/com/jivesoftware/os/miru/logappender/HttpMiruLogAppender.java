@@ -22,6 +22,7 @@ import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.appender.DefaultErrorHandler;
 import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.LoggerConfig;
+import org.apache.logging.log4j.core.layout.ByteBufferDestination;
 
 /**
  *
@@ -206,6 +207,15 @@ public class HttpMiruLogAppender implements MiruLogAppender, Appender {
     @Override
     public void setHandler(ErrorHandler errorHandler) {
         this.errorHandler = errorHandler;
+    }
+
+    @Override
+    public State getState() {
+        return State.INITIALIZED;
+    }
+
+    @Override
+    public void initialize() {
     }
 
     @Override
@@ -396,6 +406,10 @@ public class HttpMiruLogAppender implements MiruLogAppender, Appender {
         @Override
         public Map<String, String> getContentFormat() {
             return Collections.emptyMap();
+        }
+
+        @Override
+        public void encode(LogEvent logEvent, ByteBufferDestination byteBufferDestination) {
         }
     }
 }
