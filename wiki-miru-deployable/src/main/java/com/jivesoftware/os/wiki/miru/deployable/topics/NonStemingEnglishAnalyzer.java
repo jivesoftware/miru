@@ -1,6 +1,8 @@
 package com.jivesoftware.os.wiki.miru.deployable.topics;
 
 import java.io.Reader;
+import org.apache.lucene.analysis.CharArraySet;
+import org.apache.lucene.analysis.StopwordAnalyzerBase;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.Tokenizer;
 import org.apache.lucene.analysis.core.LowerCaseFilter;
@@ -10,9 +12,6 @@ import org.apache.lucene.analysis.en.PorterStemFilter;
 import org.apache.lucene.analysis.miscellaneous.SetKeywordMarkerFilter;
 import org.apache.lucene.analysis.standard.StandardFilter;
 import org.apache.lucene.analysis.standard.StandardTokenizer;
-import org.apache.lucene.analysis.util.CharArraySet;
-import org.apache.lucene.analysis.util.StopwordAnalyzerBase;
-import org.apache.lucene.util.Version;
 
 /**
  * Created by jonathan.colt on 11/16/16.
@@ -68,16 +67,13 @@ public class NonStemingEnglishAnalyzer extends StopwordAnalyzerBase {
      * provided and {@link PorterStemFilter}.
      */
     @Override
-    protected TokenStreamComponents createComponents(String fieldName,
-        Reader reader) {
-        final Tokenizer source = new StandardTokenizer(getVersion(), reader);
-        TokenStream result = new StandardFilter(getVersion(), source);
+    protected TokenStreamComponents createComponents(String fieldName) {
+        final Tokenizer source = new StandardTokenizer();
+        TokenStream result = new StandardFilter(source);
         // prior to this we get the classic behavior, standardfilter does it for us.
-        if (getVersion().onOrAfter(Version.LUCENE_3_1)) {
-            result = new EnglishPossessiveFilter(getVersion(), result);
-        }
-        result = new LowerCaseFilter(getVersion(), result);
-        result = new StopFilter(getVersion(), result, stopwords);
+        result = new EnglishPossessiveFilter(result);
+        result = new LowerCaseFilter(result);
+        result = new StopFilter(result, stopwords);
         if (!stemExclusionSet.isEmpty()) {
             result = new SetKeywordMarkerFilter(result, stemExclusionSet);
         }

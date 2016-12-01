@@ -2,7 +2,7 @@ package com.jivesoftware.os.wiki.miru.deployable.topics;
 
 import java.util.Arrays;
 import java.util.List;
-import org.apache.lucene.analysis.util.CharArraySet;
+import org.apache.lucene.analysis.CharArraySet;
 
 /**
  * Created by jonathan.colt on 11/16/16.

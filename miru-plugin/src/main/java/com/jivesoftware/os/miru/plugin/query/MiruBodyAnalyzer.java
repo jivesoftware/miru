@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.plugin.query;
 
-import java.io.Reader;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenFilter;
 import org.apache.lucene.analysis.TokenStream;
@@ -21,8 +20,8 @@ public class MiruBodyAnalyzer extends Analyzer {
     }
 
     @Override
-    protected Analyzer.TokenStreamComponents createComponents(String fieldName, Reader reader) {
-        StandardTokenizer standardTokenizer = new StandardTokenizer(reader);
+    protected TokenStreamComponents createComponents(String fieldName) {
+        StandardTokenizer standardTokenizer = new StandardTokenizer();
 
         TokenFilter tok = new StandardFilter(standardTokenizer);
         tok = new LowerCaseFilter(tok);
@@ -31,4 +30,5 @@ public class MiruBodyAnalyzer extends Analyzer {
 
         return new Analyzer.TokenStreamComponents(standardTokenizer, tok);
     }
+
 }
