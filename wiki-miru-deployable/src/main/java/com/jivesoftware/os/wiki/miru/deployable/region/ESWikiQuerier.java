@@ -3,6 +3,8 @@ package com.jivesoftware.os.wiki.miru.deployable.region;
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
+import com.jivesoftware.os.mlogger.core.MetricLogger;
+import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -13,14 +15,13 @@ import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.index.query.QueryStringQueryBuilder;
 import org.elasticsearch.search.SearchHit;
 
-import static org.eclipse.jetty.io.SelectChannelEndPoint.LOG;
-
 /**
  * Created by jonathan.colt on 12/1/16.
  */
 public class ESWikiQuerier implements WikiQuerier {
 
-
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
+    
     private final TransportClient client;
 
     public ESWikiQuerier(TransportClient client) {
