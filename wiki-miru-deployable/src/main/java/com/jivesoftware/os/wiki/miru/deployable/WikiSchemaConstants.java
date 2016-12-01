@@ -33,8 +33,7 @@ public class WikiSchemaConstants {
         Map<String, Object> source = new HashMap<>();
         Map<String, Object> properties = new HashMap<>();
         source.put("properties", properties);
-
-        properties.put("_all", ImmutableMap.of("enabled", "false"));
+        source.put("_all", ImmutableMap.of("enabled", "false"));
 
         properties.put("tenant", ImmutableMap.of("type", "string"));
         properties.put("locale", ImmutableMap.of("type", "string"));
