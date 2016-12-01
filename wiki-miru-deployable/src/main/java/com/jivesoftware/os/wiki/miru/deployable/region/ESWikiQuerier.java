@@ -1,7 +1,6 @@
 package com.jivesoftware.os.wiki.miru.deployable.region;
 
 import com.google.common.base.Joiner;
-import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -44,12 +43,12 @@ public class ESWikiQuerier implements WikiQuerier {
         query = filter("+tenant:" + input.tenantId, query);
 
         if (!input.userGuids.isEmpty()) {
-            query = filter(query, "+userGuid:( " + Joiner.on(" OR ").join(Splitter.on(",").omitEmptyStrings().trimResults().split(input.userGuids)) + ")");
+            query = filter(query, "+userGuid:"+input.userGuids);
         }
 
         if (!input.folderGuids.isEmpty()) {
             query = filter(query,
-                "+folderGuid:( " + Joiner.on(" OR ").join(Splitter.on(",").omitEmptyStrings().trimResults().split(input.folderGuids)) + ")");
+                "+folderGuid:"+input.folderGuids);
         }
 
         query = filter(query, rewrite(input.query));
@@ -114,7 +113,7 @@ public class ESWikiQuerier implements WikiQuerier {
     }
 
     public String filter(String filter, String query) {
-        return (query == null || query.isEmpty()) ? filter : "( " + filter + ") AND ( " + query + " )";
+        return (query == null || query.isEmpty()) ? filter : "+( " + filter + ") AND +( " + query + " )";
     }
 
 
@@ -127,13 +126,13 @@ public class ESWikiQuerier implements WikiQuerier {
         int i = part.length - 1;
         if (part.length > 0) {
             if (part[i].endsWith("*")) {
-                part[i] = ("( +title:" + part[i] + " OR +body:" + part[i] + " )");
+                part[i] = ("+( +title:" + part[i] + " OR +body:" + part[i] + " )");
             } else {
-                part[i] = ("( +title:" + part[i] + " OR +title:" + part[i] + "* OR +body:" + part[i] + " OR +body:" + part[i] + "* )");
+                part[i] = ("+( +title:" + part[i] + " OR +title:" + part[i] + "* OR +body:" + part[i] + " OR +body:" + part[i] + "* )");
             }
         }
         for (i = 0; i < part.length - 1; i++) {
-            part[i] = "( +title:" + part[i] + " OR +body:" + part[i] + ")";
+            part[i] = "+( +title:" + part[i] + " OR +body:" + part[i] + ")";
         }
         return Joiner.on(" AND ").join(part);
     }
