@@ -6,7 +6,7 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.wiki.miru.deployable.WikiMiruService;
 import com.jivesoftware.os.wiki.miru.deployable.region.WikiQueryPluginRegion;
-import com.jivesoftware.os.wiki.miru.deployable.region.WikiQueryPluginRegion.WikiMiruPluginRegionInput;
+import com.jivesoftware.os.wiki.miru.deployable.region.WikiMiruPluginRegionInput;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -45,10 +45,12 @@ public class WikiQueryPluginEndpoints {
         @QueryParam("tenantId") @DefaultValue("") String tenantId,
         @QueryParam("query") @DefaultValue("") String query,
         @QueryParam("folderGuids") @DefaultValue("") String folderGuids,
-        @QueryParam("userGuids") @DefaultValue("") String userGuids) {
+        @QueryParam("userGuids") @DefaultValue("") String userGuids,
+        @QueryParam("querier") @DefaultValue("miru") String querier
+        ) {
 
         try {
-            String rendered = wikiMiruService.renderPlugin(pluginRegion, new WikiMiruPluginRegionInput(tenantId, query, folderGuids, userGuids));
+            String rendered = wikiMiruService.renderPlugin(pluginRegion, new WikiMiruPluginRegionInput(tenantId, query, folderGuids, userGuids, querier));
             return Response.ok(rendered).build();
         } catch (Exception x) {
             LOG.error("Failed to generating query ui.", x);
