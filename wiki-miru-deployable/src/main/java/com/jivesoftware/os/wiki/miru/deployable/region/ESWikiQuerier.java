@@ -38,6 +38,8 @@ public class ESWikiQuerier implements WikiQuerier {
 
 
         String filter = "type:content";
+        filter = filter("tenant:" + input.tenantId, filter);
+
         if (!input.userGuids.isEmpty()) {
             filter = filter(filter, "userGuid:(" + Joiner.on(" OR ").join(Splitter.on(",").omitEmptyStrings().trimResults().split(input.userGuids)) + ")");
         }
@@ -48,7 +50,7 @@ public class ESWikiQuerier implements WikiQuerier {
 
         SearchResponse response = client.prepareSearch("wiki")
             .setTypes("page")
-            .setSearchType(SearchType.QUERY_AND_FETCH)
+            .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
             .setFetchSource(new String[] { "userGuid", "folderGuid", "guid", "type" }, null)
             .setQuery(new QueryStringQueryBuilder(filter(filter, rewrite(input.query))))
             .setFrom(0).setSize(100).setExplain(false)
@@ -58,25 +60,27 @@ public class ESWikiQuerier implements WikiQuerier {
         int folderIndex = 0;
         int userIndex = 0;
         List<Result> results = Lists.newArrayList();
+
+        int count = 0;
         for (SearchHit hit : response.getHits().getHits()) {
             Map<String, Object> storedFields = hit.sourceAsMap();
 
             results.add(new Result(
-                (String)storedFields.get("userGuid"),
-                (String)storedFields.get("folderGuid"),
-                (String)storedFields.get("guid"),
-                (String)storedFields.get("type")
+                (String) storedFields.get("userGuid"),
+                (String) storedFields.get("folderGuid"),
+                (String) storedFields.get("guid"),
+                (String) storedFields.get("type")
             ));
 
 
             if (storedFields.get("type").equals("content")) {
                 contentKeys.add(storedFields.get("guid") + "-slug");
             } else {
-                contentKeys.add((String)storedFields.get("guid"));
+                contentKeys.add((String) storedFields.get("guid"));
             }
             if (storedFields.get("userGuid") != null) {
 
-                String userGuid = (String)storedFields.get("userGuid");
+                String userGuid = (String) storedFields.get("userGuid");
                 if (userGuid != null && uniqueUsers.add(userGuid)) {
                     userKeys.add(userGuid);
                     usersIndex.put(userGuid, userIndex);
@@ -85,12 +89,16 @@ public class ESWikiQuerier implements WikiQuerier {
             }
 
             if (storedFields.get("folderGuid") != null) {
-                String folderGuid = (String)storedFields.get("folderGuid");
+                String folderGuid = (String) storedFields.get("folderGuid");
                 if (folderGuid != null && uniqueFolders.add(folderGuid)) {
                     folderKeys.add(folderGuid);
                     foldersIndex.put(folderGuid, folderIndex);
                     folderIndex++;
                 }
+            }
+            count++;
+            if (count == 100) {
+                break;
             }
         }
 
@@ -127,25 +135,31 @@ public class ESWikiQuerier implements WikiQuerier {
     @Override
     public Found queryUsers(WikiMiruPluginRegionInput input) throws Exception {
 
-
+        String filter = "type:user";
+        filter = filter("tenant:" + input.tenantId, filter);
         SearchResponse response = client.prepareSearch("wiki")
             .setTypes("page")
-            .setSearchType(SearchType.QUERY_AND_FETCH)
+            .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
             .setFetchSource(new String[] { "userGuid", "folderGuid", "guid", "type" }, null)
-            .setQuery(new QueryStringQueryBuilder(filter("type:user", rewrite(input.query))))
+            .setQuery(new QueryStringQueryBuilder(filter(filter, rewrite(input.query))))
             .setFrom(0).setSize(100).setExplain(false)
             .get();
 
         List<Result> results = Lists.newArrayList();
+        int count = 0;
         for (SearchHit hit : response.getHits().getHits()) {
 
             Map<String, Object> storedFields = hit.sourceAsMap();
             results.add(new Result(
-                (String)storedFields.get("userGuid"),
-                (String)storedFields.get("folderGuid"),
-                (String)storedFields.get("guid"),
-                (String)storedFields.get("type")
+                (String) storedFields.get("userGuid"),
+                (String) storedFields.get("folderGuid"),
+                (String) storedFields.get("guid"),
+                (String) storedFields.get("type")
             ));
+            count++;
+            if (count == 100) {
+                break;
+            }
         }
 
         return new Found(response.getTookInMillis(), response.getHits().getTotalHits(), results);
@@ -154,26 +168,32 @@ public class ESWikiQuerier implements WikiQuerier {
     @Override
     public Found queryFolders(WikiMiruPluginRegionInput input) throws Exception {
 
-
+        String filter = "type:folder";
+        filter = filter("tenant:" + input.tenantId, filter);
         SearchResponse response = client.prepareSearch("wiki")
             .setTypes("page")
-            .setSearchType(SearchType.QUERY_AND_FETCH)
+            .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
             .setFetchSource(new String[] { "userGuid", "folderGuid", "guid", "type" }, null)
-            .setQuery(new QueryStringQueryBuilder(filter("type:folder", rewrite(input.query))))
+            .setQuery(new QueryStringQueryBuilder(filter(filter, rewrite(input.query))))
             .setFrom(0).setSize(100).setExplain(false)
             .get();
 
         List<Result> results = Lists.newArrayList();
+        int count = 0;
         for (SearchHit hit : response.getHits().getHits()) {
 
 
             Map<String, Object> storedFields = hit.sourceAsMap();
             results.add(new Result(
-                (String)storedFields.get("userGuid"),
-                (String)storedFields.get("folderGuid"),
-                (String)storedFields.get("guid"),
-                (String)storedFields.get("type")
+                (String) storedFields.get("userGuid"),
+                (String) storedFields.get("folderGuid"),
+                (String) storedFields.get("guid"),
+                (String) storedFields.get("type")
             ));
+            count++;
+            if (count == 100) {
+                break;
+            }
         }
 
         return new Found(response.getTookInMillis(), response.getHits().getTotalHits(), results);
