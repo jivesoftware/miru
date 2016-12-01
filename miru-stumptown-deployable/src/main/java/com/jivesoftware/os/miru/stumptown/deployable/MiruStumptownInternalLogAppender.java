@@ -23,6 +23,7 @@ import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.appender.DefaultErrorHandler;
 import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.LoggerConfig;
+import org.apache.logging.log4j.core.layout.ByteBufferDestination;
 
 /**
  *
@@ -211,6 +212,16 @@ public class MiruStumptownInternalLogAppender implements Appender {
     }
 
     @Override
+    public State getState() {
+        return State.INITIALIZED;
+    }
+
+    @Override
+    public void initialize() {
+
+    }
+
+    @Override
     public void start() {
         if (started.compareAndSet(false, true)) {
             QueueConsumer consumer = new QueueConsumer();
@@ -395,6 +406,11 @@ public class MiruStumptownInternalLogAppender implements Appender {
         @Override
         public Map<String, String> getContentFormat() {
             return Collections.emptyMap();
+        }
+
+        @Override
+        public void encode(LogEvent logEvent, ByteBufferDestination byteBufferDestination) {
+
         }
     }
 }

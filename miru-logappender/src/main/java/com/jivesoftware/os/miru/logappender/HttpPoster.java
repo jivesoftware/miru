@@ -1,7 +1,6 @@
 package com.jivesoftware.os.miru.logappender;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.logging.log4j.core.util.Charsets;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -10,6 +9,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.net.SocketException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
@@ -40,7 +40,7 @@ class HttpPoster implements MiruLogSender {
         socket.setKeepAlive(true);
         socket.setSoTimeout((int) soTimeout);
 
-        wr = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), Charsets.UTF_8));
+        wr = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8));
         rd = new BufferedReader(new InputStreamReader(socket.getInputStream()));
     }
 
