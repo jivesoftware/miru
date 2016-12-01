@@ -53,16 +53,24 @@ import com.jivesoftware.os.wiki.miru.deployable.endpoints.WikiMiruIndexPluginEnd
 import com.jivesoftware.os.wiki.miru.deployable.endpoints.WikiMiruStressPluginEndpoints;
 import com.jivesoftware.os.wiki.miru.deployable.endpoints.WikiQueryPluginEndpoints;
 import com.jivesoftware.os.wiki.miru.deployable.endpoints.WikiWikiPluginEndpoints;
+import com.jivesoftware.os.wiki.miru.deployable.region.ESWikiQuerier;
 import com.jivesoftware.os.wiki.miru.deployable.region.MiruManagePlugin;
+import com.jivesoftware.os.wiki.miru.deployable.region.MiruWikiQuerier;
 import com.jivesoftware.os.wiki.miru.deployable.region.WikiMiruIndexPluginRegion;
 import com.jivesoftware.os.wiki.miru.deployable.region.WikiMiruStressPluginRegion;
+import com.jivesoftware.os.wiki.miru.deployable.region.WikiQuerierProvider;
 import com.jivesoftware.os.wiki.miru.deployable.region.WikiQueryPluginRegion;
 import com.jivesoftware.os.wiki.miru.deployable.region.WikiWikiPluginRegion;
 import com.jivesoftware.os.wiki.miru.deployable.storage.WikiMiruGramsAmza;
 import com.jivesoftware.os.wiki.miru.deployable.storage.WikiMiruPayloadsAmza;
 import java.io.File;
+import java.net.InetAddress;
 import java.util.Arrays;
 import java.util.List;
+import org.elasticsearch.client.transport.TransportClient;
+import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.transport.InetSocketTransportAddress;
+import org.elasticsearch.transport.client.PreBuiltTransportClient;
 
 public class WikiMiruMain {
 
@@ -167,11 +175,29 @@ public class WikiMiruMain {
             MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
             WikiMiruService wikiMiruService = new WikiMiruQueryInitializer().initialize(renderer);
 
+            MiruWikiQuerier miruWikiQuerier = new MiruWikiQuerier(readerClient, mapper, responseMapper);
+
+
+            Settings settings = Settings.builder()
+                .put("cluster.name", "test-wiki")
+                .build();
+
+            TransportClient transportClient = new PreBuiltTransportClient(settings);
+            for (String esHost : new String[]{"reco-test-data4.phx1.jivehosted.com","reco-test-data5.phx1.jivehosted.com","reco-test-data6.phx1.jivehosted.com"}) {
+                transportClient.addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName(esHost), 9300));
+            }
+
+            ESWikiQuerier esWikiQuerier = new ESWikiQuerier(transportClient);
+            WikiQuerierProvider wikiQuerierProvider = new WikiQuerierProvider(miruWikiQuerier, esWikiQuerier);
+
+
             List<MiruManagePlugin> plugins = Lists.newArrayList();
             plugins.add(new MiruManagePlugin("search", "Query", "/ui/query",
                 WikiQueryPluginEndpoints.class,
                 new WikiQueryPluginRegion("soy.wikimiru.page.wikiMiruQueryPlugin",
-                    renderer, readerClient, mapper, responseMapper, payloads)));
+                    wikiQuerierProvider,
+                    renderer,
+                    payloads)));
 
             plugins.add(new MiruManagePlugin("eye-open", "Index", "/ui/index",
                 WikiMiruIndexPluginEndpoints.class,
