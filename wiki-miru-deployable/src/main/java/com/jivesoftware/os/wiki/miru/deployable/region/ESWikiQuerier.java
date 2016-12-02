@@ -54,11 +54,13 @@ public class ESWikiQuerier implements WikiQuerier {
         query = filter(query, rewrite(input.query));
         LOG.info(query);
 
+        QueryStringQueryBuilder queryBuilder = new QueryStringQueryBuilder(query);
+        queryBuilder.analyzer("english");
         SearchResponse response = client.prepareSearch("wiki")
             .setTypes("page")
             .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
             .setFetchSource(new String[] { "userGuid", "folderGuid", "guid", "type" }, null)
-            .setQuery(new QueryStringQueryBuilder(query))
+            .setQuery(queryBuilder)
             .setFrom(0).setSize(100).setExplain(false)
             .get();
 
@@ -145,11 +147,13 @@ public class ESWikiQuerier implements WikiQuerier {
         query = filter("+tenant:" + input.tenantId, query);
         query = filter(query, rewrite(input.query));
         LOG.info(query);
+        QueryStringQueryBuilder queryBuilder = new QueryStringQueryBuilder(query);
+        queryBuilder.analyzer("english");
         SearchResponse response = client.prepareSearch("wiki")
             .setTypes("page")
             .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
             .setFetchSource(new String[] { "userGuid", "folderGuid", "guid", "type" }, null)
-            .setQuery(new QueryStringQueryBuilder(query))
+            .setQuery(queryBuilder)
             .setFrom(0).setSize(100).setExplain(false)
             .get();
 
@@ -180,11 +184,13 @@ public class ESWikiQuerier implements WikiQuerier {
         query = filter("+tenant:" + input.tenantId, query);
         query = filter(query, rewrite(input.query));
         LOG.info(query);
+        QueryStringQueryBuilder queryBuilder = new QueryStringQueryBuilder(query);
+        queryBuilder.analyzer("english");
         SearchResponse response = client.prepareSearch("wiki")
             .setTypes("page")
             .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
             .setFetchSource(new String[] { "userGuid", "folderGuid", "guid", "type" }, null)
-            .setQuery(new QueryStringQueryBuilder(query))
+            .setQuery(queryBuilder)
             .setFrom(0).setSize(100).setExplain(false)
             .get();
 
