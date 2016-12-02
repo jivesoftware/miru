@@ -1,17 +1,21 @@
 package com.jivesoftware.os.wiki.miru.deployable.region;
 
-import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import org.apache.commons.lang.StringUtils;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.client.transport.TransportClient;
-import org.elasticsearch.index.query.QueryStringQueryBuilder;
+import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.QueryBuilder;
+import org.elasticsearch.index.query.SimpleQueryStringBuilder;
+import org.elasticsearch.index.query.TermsQueryBuilder;
+import org.elasticsearch.index.query.WildcardQueryBuilder;
 import org.elasticsearch.search.SearchHit;
 
 /**
@@ -20,7 +24,7 @@ import org.elasticsearch.search.SearchHit;
 public class ESWikiQuerier implements WikiQuerier {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
-    
+
     private final TransportClient client;
 
     public ESWikiQuerier(TransportClient client) {
@@ -38,29 +42,25 @@ public class ESWikiQuerier implements WikiQuerier {
         List<String> folderKeys,
         List<String> userKeys) throws Exception {
 
-
-        String query = "+type:content";
-        query = filter("+tenant:" + input.tenantId, query);
+        BoolQueryBuilder booleanQueryBuilder = new BoolQueryBuilder();
+        booleanQueryBuilder.must(new TermsQueryBuilder("type", "content"));
+        booleanQueryBuilder.must(new TermsQueryBuilder("tenant", input.tenantId));
 
         if (!input.userGuids.isEmpty()) {
-            query = filter(query, "+userGuid:"+input.userGuids);
+            booleanQueryBuilder.must(new TermsQueryBuilder("type", input.userGuids));
         }
 
         if (!input.folderGuids.isEmpty()) {
-            query = filter(query,
-                "+folderGuid:"+input.folderGuids);
+            booleanQueryBuilder.must(new TermsQueryBuilder("folderGuid", input.folderGuids));
         }
 
-        query = filter(query, rewrite(input.query));
-        LOG.info(query);
+        rewrite(input.query, booleanQueryBuilder);
 
-        QueryStringQueryBuilder queryBuilder = new QueryStringQueryBuilder(query);
-        queryBuilder.analyzer("english");
         SearchResponse response = client.prepareSearch("wiki")
             .setTypes("page")
             .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
             .setFetchSource(new String[] { "userGuid", "folderGuid", "guid", "type" }, null)
-            .setQuery(queryBuilder)
+            .setQuery(booleanQueryBuilder)
             .setFrom(0).setSize(100).setExplain(false)
             .get();
 
@@ -119,42 +119,69 @@ public class ESWikiQuerier implements WikiQuerier {
     }
 
 
-    private String rewrite(String query) {
+    private QueryBuilder rewrite(String query, BoolQueryBuilder filter) {
         if (StringUtils.isBlank(query)) {
-            return "";
+            return filter;
         }
 
+        BoolQueryBuilder all = new BoolQueryBuilder();
         String[] part = query.split("\\s+");
         int i = part.length - 1;
         if (part.length > 0) {
+
+            BoolQueryBuilder tail = new BoolQueryBuilder();
             if (part[i].endsWith("*")) {
-                part[i] = ("+( +title:" + part[i] + " OR +body:" + part[i] + " )");
+
+                tail.should(new WildcardQueryBuilder("title", part[i]));
+                tail.should(new WildcardQueryBuilder("body", part[i]));
+
+
             } else {
-                part[i] = ("+( +title:" + part[i] + " OR +title:" + part[i] + "* OR +body:" + part[i] + " OR +body:" + part[i] + "* )");
+
+                tail.should(new SimpleQueryStringBuilder(part[i]).field("title").analyzer("english").locale(Locale.ENGLISH).lowercaseExpandedTerms(
+                    true).analyzeWildcard(false));
+                tail.should(
+                    new SimpleQueryStringBuilder(part[i]).field("body").analyzer("english").locale(Locale.ENGLISH).lowercaseExpandedTerms(true).analyzeWildcard(
+                        false));
+                tail.should(new WildcardQueryBuilder("title", part[i] + "*"));
+                tail.should(new WildcardQueryBuilder("body", part[i] + "*"));
+
             }
+            all.must(tail);
         }
+
         for (i = 0; i < part.length - 1; i++) {
-            part[i] = "+( +title:" + part[i] + " OR +body:" + part[i] + ")";
+            BoolQueryBuilder b = new BoolQueryBuilder();
+            b.should(
+                new SimpleQueryStringBuilder(part[i]).field("title").analyzer("english").locale(Locale.ENGLISH).lowercaseExpandedTerms(true).analyzeWildcard(
+                    false));
+            b.should(
+                new SimpleQueryStringBuilder(part[i]).field("body").analyzer("english").locale(Locale.ENGLISH).lowercaseExpandedTerms(true).analyzeWildcard(
+                    false));
+            all.must(b);
         }
-        return Joiner.on(" AND ").join(part);
+
+        filter.must(all);
+        return filter;
     }
 
 
     @Override
     public Found queryUsers(WikiMiruPluginRegionInput input) throws Exception {
 
-        String query = "+type:user";
-        query = filter("+tenant:" + input.tenantId, query);
-        query = filter(query, rewrite(input.query));
-        LOG.info(query);
-        QueryStringQueryBuilder queryBuilder = new QueryStringQueryBuilder(query);
-        queryBuilder.analyzer("english");
+        BoolQueryBuilder booleanQueryBuilder = new BoolQueryBuilder();
+        booleanQueryBuilder.must(new TermsQueryBuilder("type", "user"));
+        booleanQueryBuilder.must(new TermsQueryBuilder("tenant", input.tenantId));
+        rewrite(input.query, booleanQueryBuilder);
+
         SearchResponse response = client.prepareSearch("wiki")
             .setTypes("page")
             .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
             .setFetchSource(new String[] { "userGuid", "folderGuid", "guid", "type" }, null)
-            .setQuery(queryBuilder)
-            .setFrom(0).setSize(100).setExplain(false)
+            .setQuery(booleanQueryBuilder)
+            .setFrom(0)
+            .setSize(100)
+            .setExplain(false)
             .get();
 
         List<Result> results = Lists.newArrayList();
@@ -180,17 +207,16 @@ public class ESWikiQuerier implements WikiQuerier {
     @Override
     public Found queryFolders(WikiMiruPluginRegionInput input) throws Exception {
 
-        String query = "+type:folder";
-        query = filter("+tenant:" + input.tenantId, query);
-        query = filter(query, rewrite(input.query));
-        LOG.info(query);
-        QueryStringQueryBuilder queryBuilder = new QueryStringQueryBuilder(query);
-        queryBuilder.analyzer("english");
+        BoolQueryBuilder booleanQueryBuilder = new BoolQueryBuilder();
+        booleanQueryBuilder.must(new TermsQueryBuilder("type", "user"));
+        booleanQueryBuilder.must(new TermsQueryBuilder("tenant", input.tenantId));
+        rewrite(input.query, booleanQueryBuilder);
+
         SearchResponse response = client.prepareSearch("wiki")
             .setTypes("page")
             .setSearchType(SearchType.DFS_QUERY_THEN_FETCH)
             .setFetchSource(new String[] { "userGuid", "folderGuid", "guid", "type" }, null)
-            .setQuery(queryBuilder)
+            .setQuery(booleanQueryBuilder)
             .setFrom(0).setSize(100).setExplain(false)
             .get();
 
