@@ -14,7 +14,6 @@ import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.SimpleQueryStringBuilder;
-import org.elasticsearch.index.query.TermsQueryBuilder;
 import org.elasticsearch.index.query.WildcardQueryBuilder;
 import org.elasticsearch.search.SearchHit;
 
@@ -43,15 +42,15 @@ public class ESWikiQuerier implements WikiQuerier {
         List<String> userKeys) throws Exception {
 
         BoolQueryBuilder booleanQueryBuilder = new BoolQueryBuilder();
-        booleanQueryBuilder.must(new TermsQueryBuilder("type", "content"));
-        booleanQueryBuilder.must(new TermsQueryBuilder("tenant", input.tenantId));
+        booleanQueryBuilder.must(new SimpleQueryStringBuilder("content").field("type").analyzer("whitespace").lowercaseExpandedTerms(false));
+        booleanQueryBuilder.must(new SimpleQueryStringBuilder(input.tenantId).field("tenant").analyzer("whitespace").lowercaseExpandedTerms(false));
 
         if (!input.userGuids.isEmpty()) {
-            booleanQueryBuilder.must(new TermsQueryBuilder("type", input.userGuids));
+            booleanQueryBuilder.must(new SimpleQueryStringBuilder(input.userGuids).field("userGuid").analyzer("whitespace").lowercaseExpandedTerms(false));
         }
 
         if (!input.folderGuids.isEmpty()) {
-            booleanQueryBuilder.must(new TermsQueryBuilder("folderGuid", input.folderGuids));
+            booleanQueryBuilder.must(new SimpleQueryStringBuilder(input.folderGuids).field("folderGuid").analyzer("whitespace").lowercaseExpandedTerms(false));
         }
 
         rewrite(input.query, booleanQueryBuilder);
@@ -170,8 +169,8 @@ public class ESWikiQuerier implements WikiQuerier {
     public Found queryUsers(WikiMiruPluginRegionInput input) throws Exception {
 
         BoolQueryBuilder booleanQueryBuilder = new BoolQueryBuilder();
-        booleanQueryBuilder.must(new TermsQueryBuilder("type", "user"));
-        booleanQueryBuilder.must(new TermsQueryBuilder("tenant", input.tenantId));
+        booleanQueryBuilder.must(new SimpleQueryStringBuilder("user").field("type").analyzer("whitespace").lowercaseExpandedTerms(false));
+        booleanQueryBuilder.must(new SimpleQueryStringBuilder(input.tenantId).field("tenant").analyzer("whitespace").lowercaseExpandedTerms(false));
         rewrite(input.query, booleanQueryBuilder);
 
         SearchResponse response = client.prepareSearch("wiki")
@@ -208,8 +207,8 @@ public class ESWikiQuerier implements WikiQuerier {
     public Found queryFolders(WikiMiruPluginRegionInput input) throws Exception {
 
         BoolQueryBuilder booleanQueryBuilder = new BoolQueryBuilder();
-        booleanQueryBuilder.must(new TermsQueryBuilder("type", "user"));
-        booleanQueryBuilder.must(new TermsQueryBuilder("tenant", input.tenantId));
+        booleanQueryBuilder.must(new SimpleQueryStringBuilder("folder").field("type").analyzer("whitespace").lowercaseExpandedTerms(false));
+        booleanQueryBuilder.must(new SimpleQueryStringBuilder(input.tenantId).field("tenant").analyzer("whitespace").lowercaseExpandedTerms(false));
         rewrite(input.query, booleanQueryBuilder);
 
         SearchResponse response = client.prepareSearch("wiki")
