@@ -327,7 +327,7 @@ public class WikiMiruIndexService {
 
             String plainBody = wikiModelThreadLocal.get().render(converter, page.getText());
 
-            KeywordsExtractor.Topic[] topics = KeywordsExtractor.getKeywordsList(plainBody, 20, 20);
+            KeywordsExtractor.Topic[] topics = KeywordsExtractor.getKeywordsList(page.getTitle() + " " + plainBody, 20, 20);
             StringBuilder topicsBody = new StringBuilder();
             String folderName = null;
             for (Topic topic : topics) {
@@ -350,7 +350,7 @@ public class WikiMiruIndexService {
             long folderHash = Hashing.sha256().hashString(folderName).asLong();
             String folderGuid = "folder|" + folderHash;
 
-            Random random = new Random(folderHash);
+            Random random = new Random(new Random().nextInt(100_000));
             String firstName = (random.nextDouble() > 0.5) ? FemaleFirstName.list[random.nextInt(
                 FemaleFirstName.list.length)] : MaleFirstNames.list[random.nextInt(MaleFirstNames.list.length)];
             String lastName = LastNames.list[random.nextInt(LastNames.list.length)];
@@ -450,7 +450,7 @@ public class WikiMiruIndexService {
                     json.put("verb", "import");
                     json.put("type", "folder");
                     json.put("title", folderName);
-                    json.put("body", folderName.toString());
+                    json.put("body", folderName);
 
 
                     IndexRequest indexRequest = new IndexRequest()

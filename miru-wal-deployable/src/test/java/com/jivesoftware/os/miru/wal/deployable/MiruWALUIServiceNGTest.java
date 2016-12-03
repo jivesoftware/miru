@@ -113,6 +113,7 @@ public class MiruWALUIServiceNGTest {
             null,
             acrc,
             false,
+            1,
             rowsChanged -> {
             });
 

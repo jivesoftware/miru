@@ -218,6 +218,7 @@ public class MiruWALMain {
                 null, //"miru-wal-" + instanceConfig.getClusterName(),
                 amzaServiceConfig,
                 true,
+                -1,
                 changes -> {
                 });
 

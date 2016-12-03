@@ -34,6 +34,7 @@ public class MiruAmzaServiceInitializer {
         String clusterName,
         MiruAmzaServiceConfig config,
         boolean useAmzaDiscovery,
+        int systemRingSize,
         RowChanges allRowChanges) throws Exception {
 
         SnowflakeIdPacker idPacker = new SnowflakeIdPacker();
@@ -43,6 +44,7 @@ public class MiruAmzaServiceInitializer {
         BAInterner baInterner = new BAInterner();
 
         AmzaServiceConfig amzaServiceConfig = new AmzaServiceConfig();
+        amzaServiceConfig.systemRingSize = systemRingSize;
         amzaServiceConfig.workingDirectories = config.getWorkingDirectories().split(",");
         amzaServiceConfig.checkIfCompactionIsNeededIntervalInMillis = config.getCheckIfCompactionIsNeededIntervalInMillis();
         amzaServiceConfig.deltaStripeCompactionIntervalInMillis = config.getDeltaStripeCompactionIntervalInMillis();
@@ -87,7 +89,7 @@ public class MiruAmzaServiceInitializer {
             idPacker,
             timestampProvider,
             blacklistRingMembers,
-            true,
+            useAmzaDiscovery,
             false,
             allRowChanges);
         AmzaService amzaService = lifecycle.amzaService;

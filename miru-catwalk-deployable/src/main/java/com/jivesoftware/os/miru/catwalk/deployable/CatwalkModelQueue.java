@@ -145,9 +145,9 @@ public class CatwalkModelQueue {
 
     private EmbeddedClient queueClient(int queueId) throws Exception {
         PartitionName partitionName = queuePartition(queueId);
-        amzaService.getRingWriter().ensureMaximalRing(partitionName.getRingName());
+        amzaService.getRingWriter().ensureMaximalRing(partitionName.getRingName(), 30_000L); //TODO config
         amzaService.createPartitionIfAbsent(partitionName, UPDATE_MODEL_QUEUE);
-        amzaService.awaitOnline(partitionName, 30_000);
+        amzaService.awaitOnline(partitionName, 30_000L); //TODO config
         return embeddedClientProvider.getClient(partitionName);
     }
 

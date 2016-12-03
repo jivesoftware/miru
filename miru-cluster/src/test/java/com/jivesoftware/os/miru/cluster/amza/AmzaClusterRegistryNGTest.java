@@ -80,6 +80,7 @@ public class AmzaClusterRegistryNGTest {
             null,
             acrc,
             false,
+            1,
             rowsChanged -> {
             });
         registry = new AmzaClusterRegistry(amzaService,

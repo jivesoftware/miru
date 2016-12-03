@@ -184,6 +184,7 @@ public class MiruPluginTestBootstrap {
             null,
             acrc,
             false,
+            1,
             rowsChanged -> {
             });
 

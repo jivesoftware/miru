@@ -91,6 +91,7 @@ public class MiruManageServiceTest {
             null,
             acrc,
             false,
+            1,
             rowsChanged -> {
             });
         MiruClusterRegistry clusterRegistry = new AmzaClusterRegistry(amzaService,

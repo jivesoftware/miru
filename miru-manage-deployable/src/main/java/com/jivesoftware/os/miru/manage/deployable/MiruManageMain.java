@@ -213,6 +213,7 @@ public class MiruManageMain {
                 null, //"amza-topology-" + instanceConfig.getClusterName(), // Manual service discovery if null
                 amzaClusterRegistryConfig,
                 true,
+                -1,
                 rowsChanged -> {
                 });
 

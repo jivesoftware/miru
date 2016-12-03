@@ -35,14 +35,14 @@ public class WikiSchemaConstants {
         source.put("properties", properties);
         source.put("_all", ImmutableMap.of("enabled", "false"));
 
-        properties.put("tenant", ImmutableMap.of("type", "string"));
-        properties.put("locale", ImmutableMap.of("type", "string"));
-        properties.put("auth", ImmutableMap.of("type", "string", "store", "yes"));
-        properties.put("userGuid", ImmutableMap.of("type", "string", "store", "yes"));
-        properties.put("folderGuid", ImmutableMap.of("type", "string", "store", "yes"));
-        properties.put("guid", ImmutableMap.of("type", "string", "store", "yes"));
-        properties.put("verb", ImmutableMap.of("type", "string", "store", "yes"));
-        properties.put("type", ImmutableMap.of("type", "string", "store", "yes"));
+        properties.put("tenant", ImmutableMap.of("type", "string", "analyzer", "whitespace"));
+        properties.put("locale", ImmutableMap.of("type", "string", "analyzer", "whitespace"));
+        properties.put("auth", ImmutableMap.of("type", "string", "store", "yes", "analyzer", "whitespace"));
+        properties.put("userGuid", ImmutableMap.of("type", "string", "store", "yes", "analyzer", "whitespace"));
+        properties.put("folderGuid", ImmutableMap.of("type", "string", "store", "yes", "analyzer", "whitespace"));
+        properties.put("guid", ImmutableMap.of("type", "string", "store", "yes", "analyzer", "whitespace"));
+        properties.put("verb", ImmutableMap.of("type", "string", "store", "yes", "analyzer", "whitespace"));
+        properties.put("type", ImmutableMap.of("type", "string", "store", "yes", "analyzer", "whitespace"));
         properties.put("title", ImmutableMap.of("type", "text", "analyzer", "english"));
         properties.put("body", ImmutableMap.of("type", "text", "analyzer", "english"));
 

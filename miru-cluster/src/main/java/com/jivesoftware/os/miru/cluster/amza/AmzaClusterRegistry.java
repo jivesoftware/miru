@@ -148,7 +148,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
     private EmbeddedClient ensureClient(String name, PartitionProperties partitionProperties) throws Exception {
         return clientMap.computeIfAbsent(name, s -> {
             try {
-                amzaService.getRingWriter().ensureMaximalRing(CLUSTER_REGISTRY_RING_NAME);
+                amzaService.getRingWriter().ensureMaximalRing(CLUSTER_REGISTRY_RING_NAME, 10_000L); //TODO config
                 PartitionName partitionName = new PartitionName(false, CLUSTER_REGISTRY_RING_NAME, name.getBytes(Charsets.UTF_8));
                 amzaService.createPartitionIfAbsent(partitionName, partitionProperties);
                 amzaService.awaitOnline(partitionName, 10_000L); //TODO config

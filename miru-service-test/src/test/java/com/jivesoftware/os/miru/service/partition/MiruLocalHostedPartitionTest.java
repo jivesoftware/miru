@@ -345,6 +345,7 @@ public class MiruLocalHostedPartitionTest {
             null,
             acrc,
             false,
+            1,
             rowsChanged -> {
             });
 
