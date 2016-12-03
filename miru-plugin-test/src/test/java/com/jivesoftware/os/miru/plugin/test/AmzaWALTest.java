@@ -107,6 +107,7 @@ public class AmzaWALTest {
             null,
             acrc,
             false,
+            1,
             rowsChanged -> {
             });
         EmbeddedClientProvider amzaClientProvider = new EmbeddedClientProvider(amzaService);

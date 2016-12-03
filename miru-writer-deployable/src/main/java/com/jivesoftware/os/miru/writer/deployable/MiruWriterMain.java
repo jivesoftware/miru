@@ -185,6 +185,7 @@ public class MiruWriterMain {
                 null, //"miru-writer-" + instanceConfig.getClusterName(),
                 miruAmzaServiceConfig,
                 true,
+                -1,
                 changes -> {
                     if (changes.getVersionedPartitionName().getPartitionName().equals(AmzaPartitionIdProvider.LATEST_PARTITIONS_PARTITION_NAME)) {
                         for (WALKey key : changes.getApply().keySet()) {

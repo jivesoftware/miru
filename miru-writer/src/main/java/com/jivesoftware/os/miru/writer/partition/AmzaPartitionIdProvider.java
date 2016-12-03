@@ -85,7 +85,7 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
 
     private EmbeddedClient ensureClient(PartitionName partitionName, Consistency consistency, boolean requireConsistency) throws Exception {
         if (!ringInitialized.get()) {
-            amzaService.getRingWriter().ensureMaximalRing(AMZA_RING_NAME);
+            amzaService.getRingWriter().ensureMaximalRing(AMZA_RING_NAME, 10_000L); //TODO config
             ringInitialized.set(true);
         }
 
