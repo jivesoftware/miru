@@ -399,7 +399,7 @@ public class WikiMiruIndexService {
                 if (esIndexables != null) {
 
                     Map<String, Object> json = new HashMap<>();
-                    json.put("tenant",miruTenantId.toString());
+                    json.put("tenant", miruTenantId.toString());
                     json.put("locale", "en");
                     json.put("guid", userGuid);
                     json.put("verb", "import");
@@ -410,7 +410,7 @@ public class WikiMiruIndexService {
 
                     IndexRequest indexRequest = new IndexRequest()
                         .index("wiki")
-                        .id(userGuid)
+                        .id(miruTenantId.toString() + "-" + userGuid)
                         .type("page")
                         .create(false)
                         .source(json);
@@ -445,7 +445,7 @@ public class WikiMiruIndexService {
                 if (esIndexables != null) {
 
                     Map<String, Object> json = new HashMap<>();
-                    json.put("tenant",miruTenantId.toString());
+                    json.put("tenant", miruTenantId.toString());
                     json.put("locale", "en");
                     json.put("userGuid", userGuid);
                     json.put("guid", folderGuid);
@@ -457,7 +457,7 @@ public class WikiMiruIndexService {
 
                     IndexRequest indexRequest = new IndexRequest()
                         .index("wiki")
-                        .id(folderGuid)
+                        .id(miruTenantId.toString() + "-" + folderGuid)
                         .type("page")
                         .create(true)
                         .source(json);
@@ -488,7 +488,7 @@ public class WikiMiruIndexService {
 
             if (esIndexables != null) {
                 Map<String, Object> json = new HashMap<>();
-                json.put("tenant",miruTenantId.toString());
+                json.put("tenant", miruTenantId.toString());
                 json.put("locale", "en");
                 json.put("userGuid", userGuid);
                 json.put("folderGuid", folderGuid);
@@ -501,7 +501,7 @@ public class WikiMiruIndexService {
 
                 IndexRequest indexRequest = new IndexRequest()
                     .index("wiki")
-                    .id(contentGuid)
+                    .id(miruTenantId.toString() + "-" + contentGuid)
                     .type("page")
                     .create(true)
                     .source(json);
