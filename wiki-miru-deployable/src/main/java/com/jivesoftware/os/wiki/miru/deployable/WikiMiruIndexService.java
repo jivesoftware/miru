@@ -412,7 +412,7 @@ public class WikiMiruIndexService {
                         .index("wiki")
                         .id(userGuid)
                         .type("page")
-                        .create(true)
+                        .create(false)
                         .source(json);
 
                     esIndexables.get().add(indexRequest);
@@ -583,7 +583,8 @@ public class WikiMiruIndexService {
                             break;
                         } else {
                             try {
-                                LOG.error("Failed to forward ingress to ES. Will retry shortly....");
+                                LOG.error("Failed to forward ingress to ES. message:{}. Will retry shortly....",
+                                    bulkItemResponses.buildFailureMessage());
                                 Thread.sleep(5000);
                             } catch (InterruptedException ex) {
                                 Thread.interrupted();
