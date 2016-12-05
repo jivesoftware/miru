@@ -51,6 +51,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -67,6 +68,7 @@ import org.elasticsearch.client.AdminClient;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
+import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.transport.client.PreBuiltTransportClient;
 
 /**
@@ -173,13 +175,13 @@ public class WikiMiruIndexService {
                             .setSettings(Settings.builder()
                                 .put("index.number_of_shards", 3)
                                 .put("index.number_of_replicas", 2)
-                            ).get();
+                            ).get(new TimeValue(30_000));
 
 
                         PutMappingResponse response = esClient.admin().indices().preparePutMapping("wiki")
                             .setType("page")
                             .setSource(WikiSchemaConstants.esSchema())
-                            .get();
+                            .get(new TimeValue(30_000));
                     }
 
                 }
@@ -575,13 +577,13 @@ public class WikiMiruIndexService {
                 while (true && !activities.isEmpty()) {
                     try {
                         ActionFuture<BulkResponse> actionFuture = esClient.bulk(bulkRequest);
-                        BulkResponse bulkItemResponses = actionFuture.get();
+                        BulkResponse bulkItemResponses = actionFuture.get(30, TimeUnit.SECONDS);
                         if (!bulkItemResponses.hasFailures()) {
                             LOG.inc("ingressed");
                             break;
                         } else {
                             try {
-                                LOG.error("Failed to forward ingress. Will retry shortly....");
+                                LOG.error("Failed to forward ingress to ES. Will retry shortly....");
                                 Thread.sleep(5000);
                             } catch (InterruptedException ex) {
                                 Thread.interrupted();
@@ -590,7 +592,7 @@ public class WikiMiruIndexService {
                         }
                     } catch (Exception x) {
                         try {
-                            LOG.error("Failed to forward ingress. Will retry shortly....", x);
+                            LOG.error("Failed to forward ingress to ES. Will retry shortly....", x);
                             Thread.sleep(5000);
                         } catch (InterruptedException ex) {
                             Thread.interrupted();
