@@ -8,6 +8,8 @@ import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.logappender.MiruLogEvent;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
+
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
@@ -37,10 +39,11 @@ public class LogMill {
             firstNonNull(Strings.emptyToNull(logEvent.instance), "unknown"),
             firstNonNull(Strings.emptyToNull(logEvent.version), "unknown"));
 
-        AtomicLong levelCount = levelCounts.get(serviceId, logEvent.level);
+        String level = firstNonNull(Strings.emptyToNull(logEvent.level), String.valueOf(MiruSolutionLogLevel.INFO));
+        AtomicLong levelCount = levelCounts.get(serviceId, level);
         if (levelCount == null) {
             levelCount = new AtomicLong();
-            levelCounts.put(serviceId, logEvent.level, levelCount);
+            levelCounts.put(serviceId, level, levelCount);
         }
         levelCount.incrementAndGet();
 
@@ -51,7 +54,7 @@ public class LogMill {
             .putFieldValue("service", firstNonNull(Strings.emptyToNull(logEvent.service), "unknown"))
             .putFieldValue("instance", firstNonNull(Strings.emptyToNull(logEvent.instance), "unknown"))
             .putFieldValue("version", firstNonNull(Strings.emptyToNull(logEvent.version), "unknown"))
-            .putFieldValue("level", firstNonNull(Strings.emptyToNull(logEvent.level), "unknown"))
+            .putFieldValue("level", level)
             .putFieldValue("thread", firstNonNull(Strings.emptyToNull(logEvent.threadName), "unknown"))
             .putFieldValue("methodName", firstNonNull(Strings.emptyToNull(logEvent.methodName), "unknown"))
             .putFieldValue("lineNumber", firstNonNull(Strings.emptyToNull(logEvent.lineNumber), "unknown"))
