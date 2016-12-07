@@ -85,7 +85,7 @@ public class WikiMiruStressPluginRegion implements MiruPageRegion<WikiMiruStress
                     phrases.addAll(stream.collect(Collectors.toList()));
                 }
 
-                if (input.queryPhraseFile != null && !input.queryPhraseFile.trim().isEmpty()) {
+                if (input.queryPhrases != null && !input.queryPhrases.trim().isEmpty()) {
                     phrases.addAll(Lists.newArrayList(Splitter.on(",").omitEmptyStrings().trimResults().split(input.queryPhrases)));
                 }
 
