@@ -76,7 +76,6 @@ import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.unit.TimeValue;
-import org.jetbrains.annotations.NotNull;
 
 /**
  * @author jonathan.colt
@@ -244,7 +243,7 @@ public class WikiMiruIndexService {
 
 
             @Override
-            public int compareTo(@NotNull TupleFrequence o) {
+            public int compareTo(TupleFrequence o) {
                 return -Integer.compare(count, o.count);
             }
         }
