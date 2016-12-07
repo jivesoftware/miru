@@ -41,7 +41,7 @@ public class WikiMiruStressService {
         public final Random rand;
         public final String stresserId;
         public final String tenantId;
-        private final List<String> queryPhrase;
+        private final List<String> queryPhrases;
         private final WikiMiruStressPluginRegionInput input;
         public final AtomicLong failed = new AtomicLong();
         public final AtomicLong queried = new AtomicLong();
@@ -51,10 +51,10 @@ public class WikiMiruStressService {
         public final DescriptiveStatistics statistics;
 
 
-        public Stresser(String stresserId, String tenantId, List<String> queryPhrase, WikiMiruStressPluginRegionInput input) throws NoSuchAlgorithmException {
+        public Stresser(String stresserId, String tenantId, List<String> queryPhrases, WikiMiruStressPluginRegionInput input) throws NoSuchAlgorithmException {
             this.stresserId = stresserId;
             this.tenantId = tenantId;
-            this.queryPhrase = queryPhrase;
+            this.queryPhrases = queryPhrases;
             this.input = input;
 
             this.rand = new Random(tenantId.hashCode());
@@ -69,7 +69,7 @@ public class WikiMiruStressService {
                 message = "starting";
                 while (running.get()) {
                     try {
-                        String phrase = queryPhrase.get(rand.nextInt(queryPhrase.size()));
+                        String phrase = queryPhrases.get(rand.nextInt(queryPhrases.size()));
                         long start = System.currentTimeMillis();
                         String rendered = wikiMiruService.renderPlugin(pluginRegion, new WikiMiruPluginRegionInput(tenantId, phrase, "", "", input.querier));
                         long elapse = System.currentTimeMillis() - start;
@@ -85,6 +85,7 @@ public class WikiMiruStressService {
                     } catch (Exception x) {
                         failed.incrementAndGet();
                         LOG.warn("Query failed", x);
+                        Thread.sleep(10_000);
                     }
                 }
             } finally {
