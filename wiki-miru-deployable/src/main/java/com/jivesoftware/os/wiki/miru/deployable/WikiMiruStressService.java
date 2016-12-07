@@ -44,6 +44,7 @@ public class WikiMiruStressService {
         private final List<String> queryPhrases;
         private final WikiMiruStressPluginRegionInput input;
         public final AtomicLong failed = new AtomicLong();
+        public final AtomicLong totalQueryTime = new AtomicLong();
         public final AtomicLong queried = new AtomicLong();
         public final AtomicBoolean running = new AtomicBoolean(true);
         public final long startTimestampMillis = System.currentTimeMillis();
@@ -73,6 +74,7 @@ public class WikiMiruStressService {
                         long start = System.currentTimeMillis();
                         String rendered = wikiMiruService.renderPlugin(pluginRegion, new WikiMiruPluginRegionInput(tenantId, phrase, "", "", input.querier));
                         long elapse = System.currentTimeMillis() - start;
+                        totalQueryTime.addAndGet(elapse);
 
                         queried.incrementAndGet();
                         statistics.addValue(elapse);
