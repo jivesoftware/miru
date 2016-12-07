@@ -155,49 +155,51 @@ public class WikiMiruMain {
             MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize(new MiruStats(), "", miruManageClient, mapper);
             WikiSchemaService wikiSchemaService = new WikiSchemaService(clusterClient);
 
+            Settings settings = Settings.builder()
+                .put("cluster.name", "test-wiki")
+                .build();
+
+            TransportClient transportClient = new PreBuiltTransportClient(settings);
+            for (String esHost : new String[] { "reco-test-data4.phx1.jivehosted.com", "reco-test-data5.phx1.jivehosted.com",
+                "reco-test-data6.phx1.jivehosted.com" }) {
+                transportClient.addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName(esHost), 9300));
+            }
+
             WikiMiruIndexService indexService = new WikiMiruIndexService(orderIdProvider,
                 wikiSchemaService,
                 wikiMiruServiceConfig.getMiruIngressEndpoint(),
                 mapper,
                 miruWriterClient,
                 payloads,
-                grams);
-
-            WikiMiruStressService stressService = new WikiMiruStressService(orderIdProvider,
-                wikiSchemaService,
-                wikiMiruServiceConfig.getMiruIngressEndpoint(),
-                mapper,
-                miruWriterClient,
-                payloads,
-                grams);
-
-            MiruSoyRendererConfig rendererConfig = deployable.config(MiruSoyRendererConfig.class);
-            MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
-            WikiMiruService wikiMiruService = new WikiMiruQueryInitializer().initialize(renderer);
+                grams,
+                transportClient);
 
             MiruWikiQuerier miruWikiQuerier = new MiruWikiQuerier(readerClient, mapper, responseMapper);
 
 
-            Settings settings = Settings.builder()
-                .put("cluster.name", "test-wiki")
-                .build();
 
-            TransportClient transportClient = new PreBuiltTransportClient(settings);
-            for (String esHost : new String[]{"reco-test-data4.phx1.jivehosted.com","reco-test-data5.phx1.jivehosted.com","reco-test-data6.phx1.jivehosted.com"}) {
-                transportClient.addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName(esHost), 9300));
-            }
 
             ESWikiQuerier esWikiQuerier = new ESWikiQuerier(transportClient);
+
+            MiruSoyRendererConfig rendererConfig = deployable.config(MiruSoyRendererConfig.class);
+            MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
+            WikiMiruService wikiMiruService = new WikiMiruQueryInitializer().initialize(renderer);
             WikiQuerierProvider wikiQuerierProvider = new WikiQuerierProvider(miruWikiQuerier, esWikiQuerier);
 
 
+            WikiQueryPluginRegion wikiQueryPluginRegion = new WikiQueryPluginRegion("soy.wikimiru.page.wikiMiruQueryPlugin",
+                wikiQuerierProvider,
+                renderer,
+                payloads);
+
+            WikiMiruStressService stressService = new WikiMiruStressService(orderIdProvider, wikiMiruService, wikiQueryPluginRegion);
+
+
             List<MiruManagePlugin> plugins = Lists.newArrayList();
+
             plugins.add(new MiruManagePlugin("search", "Query", "/ui/query",
                 WikiQueryPluginEndpoints.class,
-                new WikiQueryPluginRegion("soy.wikimiru.page.wikiMiruQueryPlugin",
-                    wikiQuerierProvider,
-                    renderer,
-                    payloads)));
+                wikiQueryPluginRegion));
 
             plugins.add(new MiruManagePlugin("eye-open", "Index", "/ui/index",
                 WikiMiruIndexPluginEndpoints.class,

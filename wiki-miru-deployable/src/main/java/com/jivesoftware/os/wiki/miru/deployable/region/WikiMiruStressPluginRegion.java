@@ -1,17 +1,23 @@
 package com.jivesoftware.os.wiki.miru.deployable.region;
 
+import com.google.common.base.Splitter;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.ui.MiruPageRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.wiki.miru.deployable.WikiMiruStressService;
+import java.io.File;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  *
@@ -35,15 +41,31 @@ public class WikiMiruStressPluginRegion implements MiruPageRegion<WikiMiruStress
 
     public static class WikiMiruStressPluginRegionInput {
 
-        final String stresserId;
-        final String tenantId;
-        final int qps;
-        final String action;
+        final public String stresserId;
+        final public String tenantId;
+        final public int concurrency;
+        final public int qps;
+        final public String querier;
+        final String queryPhrases;
+        final public String queryPhraseFile;
+        final public String action;
 
-        public WikiMiruStressPluginRegionInput(String stresserId, String tenantId, int batchSize, String action) {
+        public WikiMiruStressPluginRegionInput(String stresserId,
+            String tenantId,
+            int concurrency,
+            int batchSize,
+            String querier,
+            String queryPhrases,
+            String queryPhraseFile,
+            String action) {
+
             this.stresserId = stresserId;
             this.tenantId = tenantId;
+            this.concurrency = concurrency;
             this.qps = batchSize;
+            this.querier = querier;
+            this.queryPhrases = queryPhrases;
+            this.queryPhraseFile = queryPhraseFile;
             this.action = action;
         }
 
@@ -55,18 +77,32 @@ public class WikiMiruStressPluginRegion implements MiruPageRegion<WikiMiruStress
         try {
 
             if (input.action.equals("start")) {
-                WikiMiruStressService.Stresser s = stressService.stress(input.tenantId, input.qps);
-                stressers.put(s.stresserId, s);
-                Executors.newSingleThreadExecutor().submit(() -> {
-                    try {
-                        s.start();
-                        return null;
-                    } catch (Throwable x) {
-                        s.message = "failed: "+x.getMessage();
-                        LOG.error("Wiki oops", x);
-                        return null;
+
+                Stream<String> phrases = Files.lines(new File(input.queryPhraseFile).toPath());
+                List<String> collect = phrases.collect(Collectors.toList());
+
+                List<String> tenantIds = Lists.newArrayList(Splitter.on(",").trimResults().omitEmptyStrings().split(input.tenantId));
+
+                for (String tenantId : tenantIds) {
+
+                    for (int i = 0; i < input.concurrency; i++) {
+
+                        WikiMiruStressService.Stresser s = stressService.stress(tenantId, collect, input);
+                        stressers.put(s.stresserId, s);
+                        Executors.newSingleThreadExecutor().submit(() -> {
+                            try {
+                                s.start();
+                                return null;
+                            } catch (Throwable x) {
+                                s.message = "failed: " + x.getMessage();
+                                LOG.error("Wiki oops", x);
+                                return null;
+                            }
+                        });
                     }
-                });
+                }
+
+
             }
 
             if (input.action.equals("stop")) {
@@ -89,7 +125,15 @@ public class WikiMiruStressPluginRegion implements MiruPageRegion<WikiMiruStress
                 m.put("message", s.message);
                 m.put("stresserId", s.stresserId);
                 m.put("running", s.running.toString());
+                m.put("failed", s.failed.toString());
                 m.put("queried", s.queried.toString());
+                m.put("latency",
+                    "P50:" + s.statistics.getPercentile(50) +
+                        " P75:" + s.statistics.getPercentile(75) +
+                        " P90:" + s.statistics.getPercentile(90) +
+                        " P95:" + s.statistics.getPercentile(95) +
+                        " P99:" + s.statistics.getPercentile(99) +
+                        " P99.9:" + s.statistics.getPercentile(99.9));
                 m.put("tenantId", s.tenantId);
                 m.put("elapse", String.valueOf(System.currentTimeMillis() - s.startTimestampMillis));
 
