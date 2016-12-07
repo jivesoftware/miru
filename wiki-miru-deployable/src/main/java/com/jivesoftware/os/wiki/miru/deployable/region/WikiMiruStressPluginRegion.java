@@ -135,6 +135,7 @@ public class WikiMiruStressPluginRegion implements MiruPageRegion<WikiMiruStress
                 m.put("running", s.running.toString());
                 m.put("failed", s.failed.toString());
                 m.put("queried", s.queried.toString());
+                m.put("qps", "" + (int) (1000d / (s.totalQueryTime.get() / (double) s.queried.get())));
                 m.put("latencyP50", "" + s.statistics.getPercentile(50));
                 m.put("latencyP74", "" + s.statistics.getPercentile(75));
                 m.put("latencyP90", "" + s.statistics.getPercentile(90));
