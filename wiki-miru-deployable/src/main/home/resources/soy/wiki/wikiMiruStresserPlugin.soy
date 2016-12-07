@@ -86,7 +86,12 @@
                         <th>Running</th>
                         <th>Queried</th>
                         <th>Failed</th>
-                        <th>Latency</th>
+                        <th>P50</th>
+                        <th>P75</th>
+                        <th>P90</th>
+                        <th>P95</th>
+                        <th>P99</th>
+                        <th>P99.9</th>
                         <th>TenantId</th>
                         <th>Elapse</th>
                         <th>Actions</th>
@@ -111,7 +116,22 @@
                                     {$s.failed}
                                 </td>
                                 <td>
-                                    {$s.latency}
+                                    {$s.latencyP50}
+                                </td>
+                                <td>
+                                    {$s.latencyP75}
+                                </td>
+                                <td>
+                                    {$s.latencyP90}
+                                </td>
+                                <td>
+                                    {$s.latencyP95}
+                                </td>
+                                <td>
+                                    {$s.latencyP99}
+                                </td>
+                                <td>
+                                    {$s.latencyP999}
                                 </td>
                                 <td>
                                     {$s.tenantId}
