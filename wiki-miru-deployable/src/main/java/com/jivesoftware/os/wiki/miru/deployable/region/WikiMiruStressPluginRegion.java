@@ -89,27 +89,27 @@ public class WikiMiruStressPluginRegion implements MiruPageRegion<WikiMiruStress
                     phrases.addAll(Lists.newArrayList(Splitter.on(",").omitEmptyStrings().trimResults().split(input.queryPhrases)));
                 }
 
-                List<String> tenantIds = Lists.newArrayList(Splitter.on(",").trimResults().omitEmptyStrings().split(input.tenantId));
+                if (!phrases.isEmpty()) {
+                    List<String> tenantIds = Lists.newArrayList(Splitter.on(",").trimResults().omitEmptyStrings().split(input.tenantId));
+                    for (String tenantId : tenantIds) {
 
-                for (String tenantId : tenantIds) {
+                        for (int i = 0; i < input.concurrency; i++) {
 
-                    for (int i = 0; i < input.concurrency; i++) {
-
-                        WikiMiruStressService.Stresser s = stressService.stress(tenantId, phrases, input);
-                        stressers.put(s.stresserId, s);
-                        Executors.newSingleThreadExecutor().submit(() -> {
-                            try {
-                                s.start();
-                                return null;
-                            } catch (Throwable x) {
-                                s.message = "failed: " + x.getMessage();
-                                LOG.error("Wiki oops", x);
-                                return null;
-                            }
-                        });
+                            WikiMiruStressService.Stresser s = stressService.stress(tenantId, phrases, input);
+                            stressers.put(s.stresserId, s);
+                            Executors.newSingleThreadExecutor().submit(() -> {
+                                try {
+                                    s.start();
+                                    return null;
+                                } catch (Throwable x) {
+                                    s.message = "failed: " + x.getMessage();
+                                    LOG.error("Wiki oops", x);
+                                    return null;
+                                }
+                            });
+                        }
                     }
                 }
-
 
             }
 
