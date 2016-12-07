@@ -135,13 +135,12 @@ public class WikiMiruStressPluginRegion implements MiruPageRegion<WikiMiruStress
                 m.put("running", s.running.toString());
                 m.put("failed", s.failed.toString());
                 m.put("queried", s.queried.toString());
-                m.put("latency",
-                    "P50:" + s.statistics.getPercentile(50) +
-                        " P75:" + s.statistics.getPercentile(75) +
-                        " P90:" + s.statistics.getPercentile(90) +
-                        " P95:" + s.statistics.getPercentile(95) +
-                        " P99:" + s.statistics.getPercentile(99) +
-                        " P99.9:" + s.statistics.getPercentile(99.9));
+                m.put("latencyP50", "" + s.statistics.getPercentile(50));
+                m.put("latencyP74", "" + s.statistics.getPercentile(75));
+                m.put("latencyP90", "" + s.statistics.getPercentile(90));
+                m.put("latencyP95", "" + s.statistics.getPercentile(95));
+                m.put("latencyP99", "" + s.statistics.getPercentile(99));
+                m.put("latencyP999", "" + s.statistics.getPercentile(99.9));
                 m.put("tenantId", s.tenantId);
                 m.put("elapse", String.valueOf(System.currentTimeMillis() - s.startTimestampMillis));
 
