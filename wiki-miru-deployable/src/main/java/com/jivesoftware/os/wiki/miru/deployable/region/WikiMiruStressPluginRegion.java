@@ -78,8 +78,16 @@ public class WikiMiruStressPluginRegion implements MiruPageRegion<WikiMiruStress
 
             if (input.action.equals("start")) {
 
-                Stream<String> phrases = Files.lines(new File(input.queryPhraseFile).toPath());
-                List<String> collect = phrases.collect(Collectors.toList());
+                List<String> phrases = Lists.newArrayList();
+                if (input.queryPhraseFile != null && !input.queryPhraseFile.trim().isEmpty()) {
+                    Stream<String> stream = Files.lines(new File(input.queryPhraseFile.trim()).toPath());
+                    stream.map(s -> s.split(",")[1].trim()).forEach(phrases::add);
+                    phrases.addAll(stream.collect(Collectors.toList()));
+                }
+
+                if (input.queryPhraseFile != null && !input.queryPhraseFile.trim().isEmpty()) {
+                    phrases.addAll(Lists.newArrayList(Splitter.on(",").omitEmptyStrings().trimResults().split(input.queryPhrases)));
+                }
 
                 List<String> tenantIds = Lists.newArrayList(Splitter.on(",").trimResults().omitEmptyStrings().split(input.tenantId));
 
@@ -87,7 +95,7 @@ public class WikiMiruStressPluginRegion implements MiruPageRegion<WikiMiruStress
 
                     for (int i = 0; i < input.concurrency; i++) {
 
-                        WikiMiruStressService.Stresser s = stressService.stress(tenantId, collect, input);
+                        WikiMiruStressService.Stresser s = stressService.stress(tenantId, phrases, input);
                         stressers.put(s.stresserId, s);
                         Executors.newSingleThreadExecutor().submit(() -> {
                             try {
