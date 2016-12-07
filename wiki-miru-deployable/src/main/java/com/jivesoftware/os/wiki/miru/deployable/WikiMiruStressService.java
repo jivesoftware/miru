@@ -1,16 +1,17 @@
 package com.jivesoftware.os.wiki.miru.deployable;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.routing.bird.http.client.RoundRobinStrategy;
-import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
-import com.jivesoftware.os.wiki.miru.deployable.storage.WikiMiruGramsAmza;
-import com.jivesoftware.os.wiki.miru.deployable.storage.WikiMiruPayloadsAmza;
+import com.jivesoftware.os.wiki.miru.deployable.region.WikiMiruPluginRegionInput;
+import com.jivesoftware.os.wiki.miru.deployable.region.WikiMiruStressPluginRegion.WikiMiruStressPluginRegionInput;
+import com.jivesoftware.os.wiki.miru.deployable.region.WikiQueryPluginRegion;
 import java.security.NoSuchAlgorithmException;
+import java.util.List;
+import java.util.Random;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import org.apache.commons.math.stat.descriptive.DescriptiveStatistics;
 
 /**
  * @author jonathan.colt
@@ -19,52 +20,46 @@ public class WikiMiruStressService {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
-    public final AtomicLong indexed = new AtomicLong();
     private final OrderIdProvider idProvider;
-    private final WikiSchemaService wikiSchemaService;
-    private final String miruIngressEndpoint;
-    private final ObjectMapper activityMapper;
-    private final TenantAwareHttpClient<String> miruWriter;
-    private final WikiMiruPayloadsAmza payloads;
-    private final WikiMiruGramsAmza wikiMiruGramsAmza;
-    private final RoundRobinStrategy roundRobinStrategy = new RoundRobinStrategy();
+    private final WikiMiruService wikiMiruService;
+    private final WikiQueryPluginRegion pluginRegion;
 
-    public WikiMiruStressService(OrderIdProvider idProvider,
-        WikiSchemaService wikiSchemaService,
-        String miruIngressEndpoint,
-        ObjectMapper activityMapper,
-        TenantAwareHttpClient<String> miruWriter,
-        WikiMiruPayloadsAmza payloads, WikiMiruGramsAmza wikiMiruGramsAmza) {
+    public WikiMiruStressService(OrderIdProvider idProvider, WikiMiruService wikiMiruService, WikiQueryPluginRegion pluginRegion) {
         this.idProvider = idProvider;
-        this.wikiSchemaService = wikiSchemaService;
-        this.miruIngressEndpoint = miruIngressEndpoint;
-        this.activityMapper = activityMapper;
-        this.miruWriter = miruWriter;
-        this.payloads = payloads;
-        this.wikiMiruGramsAmza = wikiMiruGramsAmza;
+        this.wikiMiruService = wikiMiruService;
+        this.pluginRegion = pluginRegion;
     }
 
-    public Stresser stress(String tenantId, int qps) throws Exception {
 
-        return new Stresser(String.valueOf(idProvider.nextId()), tenantId, qps);
+    public Stresser stress(String tenantId, List<String> queryPhrase, WikiMiruStressPluginRegionInput input) throws Exception {
+        return new Stresser(String.valueOf(idProvider.nextId()), tenantId, queryPhrase, input);
 
     }
 
     public class Stresser {
 
+        public final Random rand;
         public final String stresserId;
         public final String tenantId;
-        private final int qps;
+        private final List<String> queryPhrase;
+        private final WikiMiruStressPluginRegionInput input;
+        public final AtomicLong failed = new AtomicLong();
         public final AtomicLong queried = new AtomicLong();
         public final AtomicBoolean running = new AtomicBoolean(true);
         public final long startTimestampMillis = System.currentTimeMillis();
         public String message = "";
+        public final DescriptiveStatistics statistics;
 
 
-        public Stresser(String stresserId, String tenantId, int qps) throws NoSuchAlgorithmException {
+        public Stresser(String stresserId, String tenantId, List<String> queryPhrase, WikiMiruStressPluginRegionInput input) throws NoSuchAlgorithmException {
             this.stresserId = stresserId;
             this.tenantId = tenantId;
-            this.qps = qps;
+            this.queryPhrase = queryPhrase;
+            this.input = input;
+
+            this.rand = new Random(tenantId.hashCode());
+
+            this.statistics = new DescriptiveStatistics(6_000);
 
         }
 
@@ -72,11 +67,24 @@ public class WikiMiruStressService {
         public void start() throws Exception {
             try {
                 message = "starting";
-                while(running.get()) {
+                while (running.get()) {
                     try {
+                        String phrase = queryPhrase.get(rand.nextInt(queryPhrase.size()));
+                        long start = System.currentTimeMillis();
+                        String rendered = wikiMiruService.renderPlugin(pluginRegion, new WikiMiruPluginRegionInput(tenantId, phrase, "", "", input.querier));
+                        long elapse = System.currentTimeMillis() - start;
 
-                    } catch(Exception x) {
+                        queried.incrementAndGet();
+                        statistics.addValue(elapse);
 
+                        float qps = 1000f / elapse;
+                        if (input.qps < qps) {
+                            Thread.sleep((int)Math.max(0, (1000f / input.qps) - elapse));
+                        }
+
+                    } catch (Exception x) {
+                        failed.incrementAndGet();
+                        LOG.warn("Query failed", x);
                     }
                 }
             } finally {
@@ -85,7 +93,5 @@ public class WikiMiruStressService {
             }
         }
     }
-
-
 
 }

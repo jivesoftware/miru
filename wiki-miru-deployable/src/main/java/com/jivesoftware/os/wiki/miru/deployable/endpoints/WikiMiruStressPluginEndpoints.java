@@ -38,12 +38,17 @@ public class WikiMiruStressPluginEndpoints {
     public Response index(
         @QueryParam("stresserId") @DefaultValue("") String stresserId,
         @QueryParam("tenantId") @DefaultValue("") String tenantId,
+        @QueryParam("concurrency") @DefaultValue("10") int concurrency,
         @QueryParam("qps") @DefaultValue("10") int qps,
+        @QueryParam("queryPhrases") @DefaultValue("") String queryPhrases,
+        @QueryParam("queryPhraseFile") @DefaultValue("10") String queryPhraseFile,
+        @QueryParam("querier") @DefaultValue("miru") String querier,
         @QueryParam("action") @DefaultValue("status") String action) {
 
         try {
 
-            String rendered = wikiMiruService.renderPlugin(pluginRegion, new WikiMiruStressPluginRegionInput(stresserId, tenantId, qps, action));
+            String rendered = wikiMiruService.renderPlugin(pluginRegion,
+                new WikiMiruStressPluginRegionInput(stresserId, tenantId, concurrency, qps, querier, queryPhrases, queryPhraseFile, action));
             return Response.ok(rendered).build();
 
         } catch (Exception x) {

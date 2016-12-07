@@ -1,7 +1,5 @@
 package com.jivesoftware.os.wiki.miru.deployable.endpoints;
 
-import com.google.common.base.Splitter;
-import com.google.common.collect.Lists;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.wiki.miru.deployable.WikiMiruService;
@@ -45,7 +43,6 @@ public class WikiMiruIndexPluginEndpoints {
         @QueryParam("batchSize") @DefaultValue("1000") int batchSize,
         @QueryParam("miruEnabled") @DefaultValue("true") boolean miruEnabled,
         @QueryParam("esClusterName") @DefaultValue("") String esClusterName,
-        @QueryParam("esHosts") @DefaultValue("") String esHosts,
         @QueryParam("action") @DefaultValue("status") String action) {
 
         try {
@@ -56,7 +53,6 @@ public class WikiMiruIndexPluginEndpoints {
                 batchSize,
                 miruEnabled,
                 StringUtils.trimToNull(esClusterName),
-                Lists.newArrayList(Splitter.on(",").omitEmptyStrings().trimResults().split(esHosts)),
                 action)
             );
             return Response.ok(rendered).build();

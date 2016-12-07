@@ -1,5 +1,6 @@
 package com.jivesoftware.os.wiki.miru.deployable.region;
 
+import com.google.common.base.Joiner;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.ui.MiruPageRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
@@ -36,14 +37,13 @@ public class WikiMiruIndexPluginRegion implements MiruPageRegion<WikiMiruIndexPl
 
     public static class WikiMiruIndexPluginRegionInput {
 
-        final String indexerId;
-        final String tenantId;
-        final String wikiDumpFile;
-        final int batchSize;
-        final boolean miruEnabled;
-        final String esClusterName;
-        final List<String> esHosts;
-        final String action;
+        final public String indexerId;
+        final public String tenantId;
+        final public String wikiDumpFile;
+        final public int batchSize;
+        final public boolean miruEnabled;
+        final public String esClusterName;
+        final public String action;
 
         public WikiMiruIndexPluginRegionInput(String indexerId,
             String tenantId,
@@ -51,7 +51,6 @@ public class WikiMiruIndexPluginRegion implements MiruPageRegion<WikiMiruIndexPl
             int batchSize,
             boolean miruEnabled,
             String esClusterName,
-            List<String> esHosts,
             String action) {
 
             this.indexerId = indexerId;
@@ -60,7 +59,6 @@ public class WikiMiruIndexPluginRegion implements MiruPageRegion<WikiMiruIndexPl
             this.batchSize = batchSize;
             this.miruEnabled = miruEnabled;
             this.esClusterName = esClusterName;
-            this.esHosts = esHosts;
             this.action = action;
         }
 
@@ -71,8 +69,24 @@ public class WikiMiruIndexPluginRegion implements MiruPageRegion<WikiMiruIndexPl
         Map<String, Object> data = Maps.newHashMap();
         try {
 
+            if (input.action.equals("grams")) {
+                WikiMiruIndexService.Indexer i = indexService.index(input);
+                indexers.put(i.indexerId, i);
+                Executors.newSingleThreadExecutor().submit(() -> {
+                    try {
+                        i.startTuples();
+                        return null;
+                    } catch (Throwable x) {
+                        i.message = "failed: "+x.getMessage();
+                        LOG.error("Wiki oops", x);
+                        return null;
+                    }
+                });
+            }
+
             if (input.action.equals("start")) {
-                WikiMiruIndexService.Indexer i = indexService.index(input.tenantId, input.wikiDumpFile, input.batchSize, input.miruEnabled, input.esClusterName, input.esHosts);
+
+                WikiMiruIndexService.Indexer i = indexService.index(input);
                 indexers.put(i.indexerId, i);
                 Executors.newSingleThreadExecutor().submit(() -> {
                     try {
@@ -107,7 +121,7 @@ public class WikiMiruIndexPluginRegion implements MiruPageRegion<WikiMiruIndexPl
                 m.put("indexerId", i.indexerId);
                 m.put("running", i.running.toString());
                 m.put("indexed", i.indexed.toString());
-                m.put("tenantId", i.tenantId);
+                m.put("tenantId", Joiner.on(",").join(i.tenantIds));
                 m.put("pathToWikiDumpFile", i.pathToWikiDumpFile);
                 m.put("elapse", String.valueOf(System.currentTimeMillis() - i.startTimestampMillis));
 

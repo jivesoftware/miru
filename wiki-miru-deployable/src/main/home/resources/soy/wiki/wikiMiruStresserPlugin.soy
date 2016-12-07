@@ -21,13 +21,50 @@
                     </tr>
                     <tr>
                         <td  style="font-weight:bold; vertical-align:top;">
+                            Backing search engine
+                        </td>
+                        <td>
+                            <input type="text" class="form-control" placeholder="miru or es" value=""
+                                name="querier" id="querier" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td  style="font-weight:bold; vertical-align:top;">
+                            concurrency
+                        </td>
+                        <td>
+                            <input type="number" class="form-control" placeholder="10" value=""
+                                name="concurrency" id="concurrencyPicker" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td  style="font-weight:bold; vertical-align:top;">
                             qps
                         </td>
                         <td>
                             <input type="number" class="form-control" placeholder="1000" value=""
-                                name="qps" id="qpsSizePicker" title="">
+                                name="qps" id="qpsPicker" title="">
                         </td>
                     </tr>
+                    <tr>
+                        <td  style="font-weight:bold; vertical-align:top;">
+                            Query Phrases File
+                        </td>
+                        <td>
+                            <input type="text" class="form-control" placeholder="queryPhraseFile" value=""
+                                name="queryPhraseFile" id="queryPhraseFilePicker" title="">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td  style="font-weight:bold; vertical-align:top;">
+                            Query Phrases
+                        </td>
+                        <td>
+                            <input type="text" class="form-control" placeholder="queryPhrases" value=""
+                                name="queryPhrases" id="queryPhrasesPicker" title="">
+                        </td>
+                    </tr>
+
                     <tr>
                         <td colspan="2">
                              <input class="form-control btn btn-primary"  name="action" type="submit" value="start"/>
@@ -48,6 +85,8 @@
                         <th>Status</th>
                         <th>Running</th>
                         <th>Queried</th>
+                        <th>Failed</th>
+                        <th>Latency</th>
                         <th>TenantId</th>
                         <th>Elapse</th>
                         <th>Actions</th>
@@ -67,6 +106,12 @@
                                 </td>
                                 <td>
                                     {$s.queried}
+                                </td>
+                                <td>
+                                    {$s.failed}
+                                </td>
+                                <td>
+                                    {$s.latency}
                                 </td>
                                 <td>
                                     {$s.tenantId}
