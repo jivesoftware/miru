@@ -133,6 +133,7 @@ public class WikiMiruStressPluginRegion implements MiruPageRegion<WikiMiruStress
                 m.put("message", s.message);
                 m.put("stresserId", s.stresserId);
                 m.put("running", s.running.toString());
+                m.put("querier", input.querier);
                 m.put("failed", s.failed.toString());
                 m.put("queried", s.queried.toString());
                 m.put("qps", "" + (int) (1000d / (s.totalQueryTime.get() / (double) s.queried.get())));

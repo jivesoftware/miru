@@ -70,6 +70,7 @@ public class WikiMiruStressService {
                 message = "starting";
                 while (running.get()) {
                     try {
+                        message = "running";
                         String phrase = queryPhrases.get(rand.nextInt(queryPhrases.size()));
                         long start = System.currentTimeMillis();
                         String rendered = wikiMiruService.renderPlugin(pluginRegion, new WikiMiruPluginRegionInput(tenantId, phrase, "", "", input.querier));
