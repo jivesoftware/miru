@@ -201,7 +201,7 @@ public class WikiMiruIndexService {
                 });
                 LOG.info("Begin tuplizer run for {} using '{}'", tenantIds, pathToWikiDumpFile);
                 wxp.parse();
-                
+
             } finally {
 
                 MinMaxPriorityQueue<TupleFrequence> topN = MinMaxPriorityQueue.expectedSize(100_000).maximumSize(100_000).create();
@@ -213,15 +213,17 @@ public class WikiMiruIndexService {
                 Arrays.sort(tupleFrequences);
 
                 File fout = new File(new File(pathToWikiDumpFile).getParentFile(), "topNTuples.csv");
+                if (fout.exists()) {
+                    fout.delete();
+                }
                 FileOutputStream fos = new FileOutputStream(fout);
 
                 BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(fos));
                 for (TupleFrequence tupleFrequence : tupleFrequences) {
-                    bw.write(tupleFrequence.count + "," + tupleFrequence.tuple);
+                    bw.write(tupleFrequence.count + "," + tupleFrequence.tuple + "\n");
                 }
 
                 bw.close();
-
 
 
                 message = "done";
@@ -247,6 +249,7 @@ public class WikiMiruIndexService {
 
             @Override
             public int compareTo(TupleFrequence o) {
+
                 return -Integer.compare(count, o.count);
             }
         }
@@ -416,7 +419,7 @@ public class WikiMiruIndexService {
             for (int i = 0; i < tokens.size() - 2; i++) {
                 grams.add(tokens.get(i) + " " + tokens.get(i + 1) + " " + tokens.get(i + 2));
             }
-            return tokens;
+            return grams;
         }
     }
 
