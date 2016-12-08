@@ -397,32 +397,23 @@ public class WikiMiruIndexService {
 
 
             Multiset<String> grams = HashMultiset.create();
-            Set<String> tokenized = tokenize(termTokenizer, analyzer, page.getTitle().toLowerCase() + " " + plainBody.toLowerCase());
-            String[] ts = tokenized.toArray(new String[0]);
-            Arrays.sort(ts);
-
-            for (int i = 0; i < ts.length; i++) {
-                for (int j = i + 1; j < ts.length; j++) {
-                    for (int k = j + 1; k < ts.length; k++) {
-                        grams.add(ts[i] + " " + ts[j] + " " + ts[k]);
-                    }
-                }
+            List<String> tokenized = tokenize(termTokenizer, analyzer, page.getTitle().toLowerCase() + " " + plainBody.toLowerCase());
+            for (String t : tokenized) {
+                grams.add(t);
             }
             return grams;
         }
 
-        private Set<String> tokenize(TermTokenizer termTokenizer, Analyzer analyzer, String plainText) {
+        private List<String> tokenize(TermTokenizer termTokenizer, Analyzer analyzer, String plainText) {
             if (plainText == null) {
-                return Collections.emptySet();
+                return Collections.emptyList();
             }
+            List<String> grams = Lists.newArrayList();
             List<String> tokens = termTokenizer.tokenize(analyzer, plainText);
-            HashSet<String> set = Sets.newHashSet();
-            for (String s : tokens) {
-                if (!Strings.isNullOrEmpty(s)) {
-                    set.add(s);
-                }
+            for (int i = 0; i < tokens.size() - 2; i++) {
+                grams.add(tokens.get(i) + " " + tokens.get(i + 1) + " " + tokens.get(i + 2));
             }
-            return set;
+            return tokens;
         }
     }
 
