@@ -204,7 +204,7 @@ public class WikiMiruIndexService {
                 
             } finally {
 
-                MinMaxPriorityQueue<TupleFrequence> topN = MinMaxPriorityQueue.expectedSize(100_000).create();
+                MinMaxPriorityQueue<TupleFrequence> topN = MinMaxPriorityQueue.expectedSize(100_000).maximumSize(100_000).create();
                 for (String tuple : tuples) {
                     topN.add(new TupleFrequence(tuple, tuples.count(tuple)));
                 }
