@@ -18,6 +18,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import org.nustaq.serialization.FSTConfiguration;
 
 import static com.jivesoftware.os.miru.stream.plugins.fulltext.FullTextConstants.FULLTEXT_PREFIX;
 
@@ -27,6 +28,7 @@ import static com.jivesoftware.os.miru.stream.plugins.fulltext.FullTextConstants
 public class FullTextEndpoints {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
+    private static final FSTConfiguration conf = FSTConfiguration.createDefaultConfiguration();
 
     private final FullTextInjectable injectable;
     private final ResponseHelper responseHelper = ResponseHelper.INSTANCE;
@@ -57,9 +59,11 @@ public class FullTextEndpoints {
     @Path(FullTextConstants.CUSTOM_QUERY_ENDPOINT + "/{partitionId}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response filterCustomStream(@PathParam("partitionId") int id, MiruRequestAndReport<FullTextQuery, FullTextReport> requestAndReport) {
+    public Response filterCustomStream(@PathParam("partitionId") int id, byte[] rawBytes) {
         MiruPartitionId partitionId = MiruPartitionId.of(id);
         try {
+            MiruRequestAndReport<FullTextQuery, FullTextReport> requestAndReport = (MiruRequestAndReport<FullTextQuery, FullTextReport>) conf.asObject(
+                rawBytes);
             MiruPartitionResponse<FullTextAnswer> result = injectable.filterCustomStream(partitionId, requestAndReport);
 
             return responseHelper.jsonResponse(result != null ? result : new MiruPartitionResponse<>(FullTextAnswer.EMPTY_RESULTS, null));

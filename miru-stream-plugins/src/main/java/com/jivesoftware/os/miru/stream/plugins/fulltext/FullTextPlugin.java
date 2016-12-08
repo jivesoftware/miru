@@ -4,6 +4,7 @@ import com.jivesoftware.os.miru.plugin.Miru;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.plugin.MiruEndpointInjectable;
 import com.jivesoftware.os.miru.plugin.plugin.MiruPlugin;
+import com.jivesoftware.os.miru.plugin.solution.FstRemotePartitionReader;
 import com.jivesoftware.os.miru.plugin.solution.JsonRemotePartitionReader;
 import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
 import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartitionReader;
@@ -34,15 +35,8 @@ public class FullTextPlugin implements MiruPlugin<FullTextEndpoints, FullTextInj
 
     @Override
     public Collection<MiruRemotePartition<?, ?, ?>> getRemotePartitions(MiruProvider<? extends Miru> miruProvider) {
-        FullTextConfig config = miruProvider.getConfig(FullTextConfig.class);
-        MiruRemotePartitionReader remotePartitionReader;
-        if (config.getRemoteSnappyCompression()) {
-            remotePartitionReader = new SnappyJsonRemotePartitionReader(miruProvider.getReaderHttpClient(),
-                miruProvider.getReaderStrategyCache());
-        } else {
-            remotePartitionReader = new JsonRemotePartitionReader(miruProvider.getReaderHttpClient(),
-                miruProvider.getReaderStrategyCache());
-        }
+        MiruRemotePartitionReader remotePartitionReader = new FstRemotePartitionReader(miruProvider.getReaderHttpClient(),
+                miruProvider.getReaderStrategyCache(), false);
         return Arrays.asList(new FullTextCustomRemotePartition(remotePartitionReader));
     }
 }
