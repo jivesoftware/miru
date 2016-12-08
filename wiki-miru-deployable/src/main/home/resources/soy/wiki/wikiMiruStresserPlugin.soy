@@ -84,8 +84,10 @@
                         <th>StresserId</th>
                         <th>Status</th>
                         <th>Running</th>
+                        <th>Search Engine</th>
                         <th>Queried</th>
                         <th>Failed</th>
+                        <th>qps</th>
                         <th>P50</th>
                         <th>P75</th>
                         <th>P90</th>
@@ -108,6 +110,9 @@
                                 </td>
                                 <td>
                                     <span>{$s.running}</span>
+                                </td>
+                                <td>
+                                    {$s.querier}
                                 </td>
                                 <td>
                                     {$s.queried}
