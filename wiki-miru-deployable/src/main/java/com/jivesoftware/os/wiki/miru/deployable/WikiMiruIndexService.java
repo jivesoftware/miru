@@ -11,6 +11,7 @@ import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Multiset;
+import com.google.common.collect.Multiset.Entry;
 import com.google.common.collect.Sets;
 import com.google.common.collect.TreeMultiset;
 import com.google.common.hash.Hashing;
@@ -181,8 +182,9 @@ public class WikiMiruIndexService {
                                 for (Future<Multiset<String>> future : futures) {
                                     try {
                                         Multiset<String> ts = future.get();
-                                        for (String t : ts) {
-                                            tuples.add(t, ts.count(t));
+
+                                        for (Entry<String> t : ts.entrySet()) {
+                                            tuples.add(t.getElement(), t.getCount());
                                         }
                                     } catch (Exception e) {
                                         throw new RuntimeException(e);
@@ -205,8 +207,8 @@ public class WikiMiruIndexService {
             } finally {
 
                 MinMaxPriorityQueue<TupleFrequence> topN = MinMaxPriorityQueue.expectedSize(100_000).maximumSize(100_000).create();
-                for (String tuple : tuples) {
-                    topN.add(new TupleFrequence(tuple, tuples.count(tuple)));
+                for (Entry<String> tuple : tuples.entrySet()) {
+                    topN.add(new TupleFrequence(tuple.getElement(), tuple.getCount()));
                 }
 
                 TupleFrequence[] tupleFrequences = topN.toArray(new TupleFrequence[0]);
