@@ -16,7 +16,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -82,7 +81,6 @@ public class WikiMiruStressPluginRegion implements MiruPageRegion<WikiMiruStress
                 if (input.queryPhraseFile != null && !input.queryPhraseFile.trim().isEmpty()) {
                     Stream<String> stream = Files.lines(new File(input.queryPhraseFile.trim()).toPath());
                     stream.map(s -> s.split(",")[1].trim()).forEach(phrases::add);
-                    phrases.addAll(stream.collect(Collectors.toList()));
                 }
 
                 if (input.queryPhrases != null && !input.queryPhrases.trim().isEmpty()) {
