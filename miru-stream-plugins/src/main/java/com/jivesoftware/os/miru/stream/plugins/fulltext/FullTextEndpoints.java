@@ -1,11 +1,18 @@
 package com.jivesoftware.os.miru.stream.plugins.fulltext;
 
+import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
+import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestAndReport;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
+import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
+import com.jivesoftware.os.miru.stream.plugins.fulltext.FullTextQuery.Strategy;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.shared.ResponseHelper;
@@ -66,7 +73,8 @@ public class FullTextEndpoints {
                 rawBytes);
             MiruPartitionResponse<FullTextAnswer> result = injectable.filterCustomStream(partitionId, requestAndReport);
 
-            return responseHelper.jsonResponse(result != null ? result : new MiruPartitionResponse<>(FullTextAnswer.EMPTY_RESULTS, null));
+            byte[] responseBytes = result != null ? conf.asByteArray(result) : new byte[0];
+            return Response.ok(responseBytes, MediaType.APPLICATION_OCTET_STREAM).build();
         } catch (MiruPartitionUnavailableException | InterruptedException e) {
             return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Unavailable " + e.getMessage()).build();
         } catch (Exception e) {
