@@ -19,6 +19,4 @@ public interface FullTextConfig extends Config {
     @IntDefault(10_000)
     int getUpdateBatchSize();
 
-    @BooleanDefault(true)
-    boolean getRemoteSnappyCompression();
 }
