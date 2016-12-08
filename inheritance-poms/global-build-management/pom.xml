@@ -4,22 +4,22 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-repo-management</artifactId>
-        <version>0.1646</version>
+        <version>0.1647</version>
         <relativePath>../global-repo-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
     <artifactId>global-build-management</artifactId>
-    <version>0.1646</version>
+    <version>0.1647</version>
     <packaging>pom</packaging>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <mlogger-version>0.23</mlogger-version>
-        <jive-utils-version>0.108</jive-utils-version>
+        <jive-utils-version>0.109</jive-utils-version>
         <rcvs-version>0.26</rcvs-version>
         <filer-version>0.98</filer-version>
-        <lab-version>0.186</lab-version>
-        <amza-version>0.652</amza-version>
-        <aquarium-version>0.29</aquarium-version>
+        <lab-version>0.187</lab-version>
+        <amza-version>0.654</amza-version>
+        <aquarium-version>0.30</aquarium-version>
         <routing-bird-version>0.163</routing-bird-version>
         <jackson-version>2.8.1</jackson-version>
         <jersey-version>2.13</jersey-version>
@@ -135,7 +135,7 @@
             <dependency>
                 <groupId>com.jivesoftware.os.miru</groupId>
                 <artifactId>miru-reco</artifactId>
-                <version>0.1646</version>
+                <version>0.1647</version>
             </dependency>
             <dependency>
                 <groupId>commons-cli</groupId>
