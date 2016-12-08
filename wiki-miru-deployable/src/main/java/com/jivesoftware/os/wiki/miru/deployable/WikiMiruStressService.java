@@ -42,7 +42,7 @@ public class WikiMiruStressService {
         public final String stresserId;
         public final String tenantId;
         private final List<String> queryPhrases;
-        private final WikiMiruStressPluginRegionInput input;
+        public final WikiMiruStressPluginRegionInput input;
         public final AtomicLong failed = new AtomicLong();
         public final AtomicLong totalQueryTime = new AtomicLong();
         public final AtomicLong queried = new AtomicLong();
