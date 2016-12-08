@@ -201,6 +201,8 @@ public class WikiMiruIndexService {
                 });
                 LOG.info("Begin tuplizer run for {} using '{}'", tenantIds, pathToWikiDumpFile);
                 wxp.parse();
+                
+            } finally {
 
                 MinMaxPriorityQueue<TupleFrequence> topN = MinMaxPriorityQueue.expectedSize(100_000).create();
                 for (String tuple : tuples) {
@@ -220,7 +222,8 @@ public class WikiMiruIndexService {
 
                 bw.close();
 
-            } finally {
+
+
                 message = "done";
                 running.set(false);
                 if (tokenizers != null) {
