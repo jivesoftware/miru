@@ -91,6 +91,16 @@ public class MiruFilerSipIndex<S extends MiruSipCursor<S>> implements MiruSipInd
     }
 
     @Override
+    public <C extends Comparable<C>> C getCustom(byte[] key, CustomMarshaller<C> deserializer) throws Exception {
+        return null;
+    }
+
+    @Override
+    public <C extends Comparable<C>> boolean setCustom(byte[] key, C comparable, CustomMarshaller<C> marshaller) throws Exception {
+        return false;
+    }
+
+    @Override
     public void merge() throws Exception {
         LOG.warn("Unimplemented merge");
     }
