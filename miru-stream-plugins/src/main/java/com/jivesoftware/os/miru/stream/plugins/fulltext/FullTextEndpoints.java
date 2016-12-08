@@ -57,8 +57,8 @@ public class FullTextEndpoints {
 
     @POST
     @Path(FullTextConstants.CUSTOM_QUERY_ENDPOINT + "/{partitionId}")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
+    @Consumes(MediaType.APPLICATION_OCTET_STREAM)
+    @Produces(MediaType.APPLICATION_OCTET_STREAM)
     public Response filterCustomStream(@PathParam("partitionId") int id, byte[] rawBytes) {
         MiruPartitionId partitionId = MiruPartitionId.of(id);
         try {
