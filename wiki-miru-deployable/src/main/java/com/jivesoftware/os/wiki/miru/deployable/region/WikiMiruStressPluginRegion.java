@@ -133,16 +133,16 @@ public class WikiMiruStressPluginRegion implements MiruPageRegion<WikiMiruStress
                 m.put("message", s.message);
                 m.put("stresserId", s.stresserId);
                 m.put("running", s.running.toString());
-                m.put("querier", input.querier);
+                m.put("querier", s.input.querier);
                 m.put("failed", s.failed.toString());
                 m.put("queried", s.queried.toString());
                 m.put("qps", "" + (int) (1000d / (s.totalQueryTime.get() / (double) s.queried.get())));
-                m.put("latencyP50", "" + s.statistics.getPercentile(50));
-                m.put("latencyP75", "" + s.statistics.getPercentile(75));
-                m.put("latencyP90", "" + s.statistics.getPercentile(90));
-                m.put("latencyP95", "" + s.statistics.getPercentile(95));
-                m.put("latencyP99", "" + s.statistics.getPercentile(99));
-                m.put("latencyP999", "" + s.statistics.getPercentile(99.9));
+                m.put("latencyP50", "" + (int)s.statistics.getPercentile(50));
+                m.put("latencyP75", "" + (int)s.statistics.getPercentile(75));
+                m.put("latencyP90", "" + (int)s.statistics.getPercentile(90));
+                m.put("latencyP95", "" + (int)s.statistics.getPercentile(95));
+                m.put("latencyP99", "" + (int)s.statistics.getPercentile(99));
+                m.put("latencyP999", "" + (int)s.statistics.getPercentile(99.9));
                 m.put("tenantId", s.tenantId);
                 m.put("elapse", String.valueOf(System.currentTimeMillis() - s.startTimestampMillis));
 
