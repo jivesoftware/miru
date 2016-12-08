@@ -23,4 +23,15 @@ public interface MiruSipIndex<S extends MiruSipCursor<S>> {
     int getRealtimeDeliveryId(StackBuffer stackBuffer) throws Exception;
 
     boolean setRealtimeDeliveryId(int deliveryId, StackBuffer stackBuffer) throws Exception;
+
+    <C extends Comparable<C>> C getCustom(byte[] key, CustomMarshaller<C> deserializer) throws Exception;
+
+    <C extends Comparable<C>> boolean setCustom(byte[] key, C comparable, CustomMarshaller<C> marshaller) throws Exception;
+
+    interface CustomMarshaller<C extends Comparable<C>> {
+
+        byte[] toBytes(C comparable);
+
+        C fromBytes(byte[] bytes);
+    }
 }

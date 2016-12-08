@@ -22,6 +22,7 @@ import com.jivesoftware.os.filer.io.map.MapContext;
 import com.jivesoftware.os.filer.io.primative.LongIntKeyValueMarshaller;
 import com.jivesoftware.os.filer.keyed.store.TxKeyValueStore;
 import com.jivesoftware.os.filer.keyed.store.TxKeyedFilerStore;
+import com.jivesoftware.os.jive.utils.collections.bah.ConcurrentBAHash;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.lab.LABEnvironment;
 import com.jivesoftware.os.lab.api.MemoryRawEntryFormat;
@@ -654,6 +655,9 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             metaIndex,
             keyBytes("sip"),
             keyBytes("realtimeDeliveryId"),
+            keyBytes("sip-"),
+            new ConcurrentBAHash<>(3, true, 4),
+            new ConcurrentBAHash<>(3, true, 4),
             sipMarshaller);
 
         MiruRemovalIndex<BM, IBM> removalIndex = new LabRemovalIndex<>(

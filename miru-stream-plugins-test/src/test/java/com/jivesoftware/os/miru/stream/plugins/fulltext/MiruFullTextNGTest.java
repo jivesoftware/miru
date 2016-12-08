@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package com.jivesoftware.os.miru.stream.plugins;
+package com.jivesoftware.os.miru.stream.plugins.fulltext;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -105,69 +105,25 @@ public class MiruFullTextNGTest {
         AtomicLong time = new AtomicLong(snowflakeIdPacker.pack(System.currentTimeMillis(), 0, 0) - timespan);
         System.out.println("Building activities....");
 
-        service.writeToIndex(Collections.singletonList(contentActivity(rand, tenant1, partitionId, time.addAndGet(intervalPerActivity),
-            "bob0", walIndex.incrementAndGet())));
-        service.writeToIndex(Collections.singletonList(contentActivity(rand, tenant1, partitionId, time.addAndGet(intervalPerActivity),
-            "bob0", walIndex.incrementAndGet())));
-        service.writeToIndex(Collections.singletonList(contentActivity(rand, tenant1, partitionId, time.addAndGet(intervalPerActivity),
-            "bob0", walIndex.incrementAndGet())));
-        service.writeToIndex(Collections.singletonList(contentActivity(rand, tenant1, partitionId, time.addAndGet(intervalPerActivity),
-            "bob0", walIndex.incrementAndGet())));
-        service.writeToIndex(Collections.singletonList(contentActivity(rand, tenant1, partitionId, time.addAndGet(intervalPerActivity),
-            "bob0", walIndex.incrementAndGet())));
-        service.writeToIndex(Collections.singletonList(contentActivity(rand, tenant1, partitionId, time.addAndGet(intervalPerActivity),
-            "bob0", walIndex.incrementAndGet())));
-        service.writeToIndex(Collections.singletonList(contentActivity(rand, tenant1, partitionId, time.addAndGet(intervalPerActivity),
-            "bob0", walIndex.incrementAndGet())));
-        service.writeToIndex(Collections.singletonList(contentActivity(rand, tenant1, partitionId, time.addAndGet(intervalPerActivity),
-            "bob0", walIndex.incrementAndGet())));
+        for (int i = 0; i < 8; i++) {
+            service.writeToIndex(Collections.singletonList(contentActivity(rand, tenant1, partitionId, time.addAndGet(intervalPerActivity),
+                "bob0", walIndex.incrementAndGet())));
+        }
 
-        service.writeToIndex(Collections.singletonList(contentActivity(rand, tenant1, partitionId, time.addAndGet(intervalPerActivity),
-            "frank", walIndex.incrementAndGet())));
-        service.writeToIndex(Collections.singletonList(contentActivity(rand, tenant1, partitionId, time.addAndGet(intervalPerActivity),
-            "frank", walIndex.incrementAndGet())));
-        service.writeToIndex(Collections.singletonList(contentActivity(rand, tenant1, partitionId, time.addAndGet(intervalPerActivity),
-            "frank", walIndex.incrementAndGet())));
-        service.writeToIndex(Collections.singletonList(contentActivity(rand, tenant1, partitionId, time.addAndGet(intervalPerActivity),
-            "frank", walIndex.incrementAndGet())));
-        service.writeToIndex(Collections.singletonList(contentActivity(rand, tenant1, partitionId, time.addAndGet(intervalPerActivity),
-            "frank", walIndex.incrementAndGet())));
-        service.writeToIndex(Collections.singletonList(contentActivity(rand, tenant1, partitionId, time.addAndGet(intervalPerActivity),
-            "frank", walIndex.incrementAndGet())));
-        service.writeToIndex(Collections.singletonList(contentActivity(rand, tenant1, partitionId, time.addAndGet(intervalPerActivity),
-            "frank", walIndex.incrementAndGet())));
-        service.writeToIndex(Collections.singletonList(contentActivity(rand, tenant1, partitionId, time.addAndGet(intervalPerActivity),
-            "frank", walIndex.incrementAndGet())));
-        service.writeToIndex(Collections.singletonList(contentActivity(rand, tenant1, partitionId, time.addAndGet(intervalPerActivity),
-            "frank", walIndex.incrementAndGet())));
+        for (int i = 0; i < 9; i++) {
+            service.writeToIndex(Collections.singletonList(contentActivity(rand, tenant1, partitionId, time.addAndGet(intervalPerActivity),
+                "frank", walIndex.incrementAndGet())));
+        }
 
-        service.writeToIndex(Collections.singletonList(contentActivity(rand, tenant1, partitionId, time.addAndGet(intervalPerActivity),
-            "jane", walIndex.incrementAndGet())));
-        service.writeToIndex(Collections.singletonList(contentActivity(rand, tenant1, partitionId, time.addAndGet(intervalPerActivity),
-            "jane", walIndex.incrementAndGet())));
-        service.writeToIndex(Collections.singletonList(contentActivity(rand, tenant1, partitionId, time.addAndGet(intervalPerActivity),
-            "jane", walIndex.incrementAndGet())));
-        service.writeToIndex(Collections.singletonList(contentActivity(rand, tenant1, partitionId, time.addAndGet(intervalPerActivity),
-            "jane", walIndex.incrementAndGet())));
-        service.writeToIndex(Collections.singletonList(contentActivity(rand, tenant1, partitionId, time.addAndGet(intervalPerActivity),
-            "jane", walIndex.incrementAndGet())));
-        service.writeToIndex(Collections.singletonList(contentActivity(rand, tenant1, partitionId, time.addAndGet(intervalPerActivity),
-            "jane", walIndex.incrementAndGet())));
-        service.writeToIndex(Collections.singletonList(contentActivity(rand, tenant1, partitionId, time.addAndGet(intervalPerActivity),
-            "jane", walIndex.incrementAndGet())));
+        for (int i = 0; i < 7; i++) {
+            service.writeToIndex(Collections.singletonList(contentActivity(rand, tenant1, partitionId, time.addAndGet(intervalPerActivity),
+                "jane", walIndex.incrementAndGet())));
+        }
 
-        service.writeToIndex(Collections.singletonList(contentActivity(rand, tenant1, partitionId, time.addAndGet(intervalPerActivity),
-            "liz", walIndex.incrementAndGet())));
-        service.writeToIndex(Collections.singletonList(contentActivity(rand, tenant1, partitionId, time.addAndGet(intervalPerActivity),
-            "liz", walIndex.incrementAndGet())));
-        service.writeToIndex(Collections.singletonList(contentActivity(rand, tenant1, partitionId, time.addAndGet(intervalPerActivity),
-            "liz", walIndex.incrementAndGet())));
-        service.writeToIndex(Collections.singletonList(contentActivity(rand, tenant1, partitionId, time.addAndGet(intervalPerActivity),
-            "liz", walIndex.incrementAndGet())));
-        service.writeToIndex(Collections.singletonList(contentActivity(rand, tenant1, partitionId, time.addAndGet(intervalPerActivity),
-            "liz", walIndex.incrementAndGet())));
-        service.writeToIndex(Collections.singletonList(contentActivity(rand, tenant1, partitionId, time.addAndGet(intervalPerActivity),
-            "liz", walIndex.incrementAndGet())));
+        for (int i = 0; i < 6; i++) {
+            service.writeToIndex(Collections.singletonList(contentActivity(rand, tenant1, partitionId, time.addAndGet(intervalPerActivity),
+                "liz", walIndex.incrementAndGet())));
+        }
 
         List<MiruPartitionedActivity> batch = Lists.newArrayListWithCapacity(10_000);
         for (int i = 0; i < numberOfActivities; i++) {
