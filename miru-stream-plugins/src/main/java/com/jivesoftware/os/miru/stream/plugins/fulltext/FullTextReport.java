@@ -1,12 +1,13 @@
 package com.jivesoftware.os.miru.stream.plugins.fulltext;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.io.Serializable;
 
 
 /**
  * @author jonathan
  */
-public class FullTextReport {
+public class FullTextReport implements Serializable {
 
     public final int scoredActivities;
     public final float lowestScore;

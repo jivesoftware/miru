@@ -4,11 +4,12 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.jivesoftware.os.miru.api.query.filter.MiruValue;
+import java.io.Serializable;
 import java.util.Arrays;
 import java.util.List;
 
 /** @author jonathan */
-public class FullTextAnswer {
+public class FullTextAnswer implements Serializable {
 
     public static final FullTextAnswer EMPTY_RESULTS = new FullTextAnswer(ImmutableList.<ActivityScore>of(), 0, true);
 
@@ -60,7 +61,7 @@ public class FullTextAnswer {
         return result;
     }
 
-    public static class ActivityScore implements Comparable<ActivityScore> {
+    public static class ActivityScore implements Comparable<ActivityScore>, Serializable {
 
         public final MiruValue[][] values;
         public final long timestamp;

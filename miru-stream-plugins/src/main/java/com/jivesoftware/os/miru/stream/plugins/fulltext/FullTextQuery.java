@@ -4,14 +4,15 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
+import java.io.Serializable;
 import java.util.Arrays;
 
 /**
  *
  */
-public class FullTextQuery {
+public class FullTextQuery implements Serializable {
 
-    public enum Strategy {
+    public enum Strategy implements Serializable {
         TIME, TF_IDF;
     }
 
