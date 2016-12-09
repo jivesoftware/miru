@@ -10,12 +10,22 @@ public class WikiMiruPluginRegionInput {
     final String folderGuids;
     final String userGuids;
     final String querier;
+    final int numberOfResult;
+    final boolean wildcardExpansion;
 
-    public WikiMiruPluginRegionInput(String tenantId, String query, String folderIds, String userIds, String querier) {
+    public WikiMiruPluginRegionInput(String tenantId,
+        String query,
+        String folderIds,
+        String userIds,
+        String querier,
+        int numberOfResult,
+        boolean wildcardExpansion) {
         this.tenantId = tenantId;
         this.query = query;
         this.folderGuids = folderIds;
         this.userGuids = userIds;
         this.querier = querier;
+        this.numberOfResult = numberOfResult;
+        this.wildcardExpansion = wildcardExpansion;
     }
 }

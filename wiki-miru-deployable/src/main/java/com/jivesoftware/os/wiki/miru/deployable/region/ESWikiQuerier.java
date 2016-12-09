@@ -53,7 +53,7 @@ public class ESWikiQuerier implements WikiQuerier {
             booleanQueryBuilder.must(new SimpleQueryStringBuilder(input.folderGuids).field("folderGuid").analyzer("whitespace").lowercaseExpandedTerms(false));
         }
 
-        rewrite(input.query, booleanQueryBuilder);
+        rewrite(input.query, booleanQueryBuilder, input.wildcardExpansion);
 
         SearchResponse response = client.prepareSearch("wiki")
             .setTypes("page")
@@ -118,7 +118,7 @@ public class ESWikiQuerier implements WikiQuerier {
     }
 
 
-    private QueryBuilder rewrite(String query, BoolQueryBuilder filter) {
+    private QueryBuilder rewrite(String query, BoolQueryBuilder filter, boolean expandWildcards) {
         if (StringUtils.isBlank(query)) {
             return filter;
         }
@@ -142,8 +142,11 @@ public class ESWikiQuerier implements WikiQuerier {
                 tail.should(
                     new SimpleQueryStringBuilder(part[i]).field("body").analyzer("english").locale(Locale.ENGLISH).lowercaseExpandedTerms(true).analyzeWildcard(
                         false));
-                tail.should(new WildcardQueryBuilder("title", part[i] + "*"));
-                tail.should(new WildcardQueryBuilder("body", part[i] + "*"));
+
+                if (expandWildcards) {
+                    tail.should(new WildcardQueryBuilder("title", part[i] + "*"));
+                    tail.should(new WildcardQueryBuilder("body", part[i] + "*"));
+                }
 
             }
             all.must(tail);
@@ -171,7 +174,7 @@ public class ESWikiQuerier implements WikiQuerier {
         BoolQueryBuilder booleanQueryBuilder = new BoolQueryBuilder();
         booleanQueryBuilder.must(new SimpleQueryStringBuilder("user").field("type").analyzer("whitespace").lowercaseExpandedTerms(false));
         booleanQueryBuilder.must(new SimpleQueryStringBuilder(input.tenantId).field("tenant").analyzer("whitespace").lowercaseExpandedTerms(false));
-        rewrite(input.query, booleanQueryBuilder);
+        rewrite(input.query, booleanQueryBuilder, input.wildcardExpansion);
 
         SearchResponse response = client.prepareSearch("wiki")
             .setTypes("page")
@@ -209,7 +212,7 @@ public class ESWikiQuerier implements WikiQuerier {
         BoolQueryBuilder booleanQueryBuilder = new BoolQueryBuilder();
         booleanQueryBuilder.must(new SimpleQueryStringBuilder("folder").field("type").analyzer("whitespace").lowercaseExpandedTerms(false));
         booleanQueryBuilder.must(new SimpleQueryStringBuilder(input.tenantId).field("tenant").analyzer("whitespace").lowercaseExpandedTerms(false));
-        rewrite(input.query, booleanQueryBuilder);
+        rewrite(input.query, booleanQueryBuilder, input.wildcardExpansion);
 
         SearchResponse response = client.prepareSearch("wiki")
             .setTypes("page")

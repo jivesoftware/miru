@@ -56,7 +56,7 @@ public class MiruWikiQuerier implements WikiQuerier {
     public Found queryFolders(WikiMiruPluginRegionInput input) throws Exception {
 
         MiruTenantId tenantId = new MiruTenantId(input.tenantId.getBytes(StandardCharsets.UTF_8));
-        String query = input.query.isEmpty() ? "" : rewrite(input.query.toLowerCase());
+        String query = input.query.isEmpty() ? "" : rewrite(input.query.toLowerCase(),  input.wildcardExpansion);
 
         MiruFilter foldersFilter = new MiruFilter(MiruFilterOperation.and, false, Arrays.asList(MiruFieldFilter.of(MiruFieldType.primary, "type",
             Arrays.asList("folder"))), null);
@@ -85,7 +85,7 @@ public class MiruWikiQuerier implements WikiQuerier {
     public Found queryUsers(WikiMiruPluginRegionInput input) throws Exception {
         MiruTenantId tenantId = new MiruTenantId(input.tenantId.getBytes(StandardCharsets.UTF_8));
 
-        String query = input.query.isEmpty() ? "" : rewrite(input.query.toLowerCase());
+        String query = input.query.isEmpty() ? "" : rewrite(input.query.toLowerCase(),input.wildcardExpansion);
 
         MiruFilter usersFilter = new MiruFilter(MiruFilterOperation.and, false, Arrays.asList(MiruFieldFilter.of(MiruFieldType.primary, "type",
             Arrays.asList("user"))), null);
@@ -120,7 +120,7 @@ public class MiruWikiQuerier implements WikiQuerier {
         List<String> userKeys) throws Exception {
 
         MiruTenantId tenantId = new MiruTenantId(input.tenantId.getBytes(StandardCharsets.UTF_8));
-        String query = input.query.isEmpty() ? "" : rewrite(input.query.toLowerCase());
+        String query = input.query.isEmpty() ? "" : rewrite(input.query.toLowerCase(), input.wildcardExpansion);
 
 
         List<MiruFieldFilter> ands = new ArrayList<>();
@@ -194,14 +194,18 @@ public class MiruWikiQuerier implements WikiQuerier {
 
     }
 
-    private String rewrite(String query) {
+    private String rewrite(String query, boolean wildcardExpansion) {
         String[] part = query.split("\\s+");
         int i = part.length - 1;
         if (part.length > 0) {
             if (part[i].endsWith("*")) {
                 part[i] = ("( title:" + part[i] + " OR body:" + part[i] + " )");
             } else {
-                part[i] = ("( title:" + part[i] + " OR title:" + part[i] + "* OR body:" + part[i] + " OR body:" + part[i] + "* )");
+                if (wildcardExpansion) {
+                    part[i] = ("( title:" + part[i] + " OR title:" + part[i] + "* OR body:" + part[i] + " OR body:" + part[i] + "* )");
+                } else {
+                    part[i] = ("( title:" + part[i] + " OR body:" + part[i] + " )");
+                }
             }
         }
         for (i = 0; i < part.length - 1; i++) {
