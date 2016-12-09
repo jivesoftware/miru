@@ -45,7 +45,10 @@ public class WikiMiruStressPluginRegion implements MiruPageRegion<WikiMiruStress
         final public int concurrency;
         final public int qps;
         final public String querier;
-        final String queryPhrases;
+        final public int numberOfResult;
+        final public boolean wildcardExpansion;
+
+        final public String queryPhrases;
         final public String queryPhraseFile;
         final public String action;
 
@@ -54,6 +57,8 @@ public class WikiMiruStressPluginRegion implements MiruPageRegion<WikiMiruStress
             int concurrency,
             int batchSize,
             String querier,
+            int numberOfResult,
+            boolean wildcardExpansion,
             String queryPhrases,
             String queryPhraseFile,
             String action) {
@@ -63,6 +68,8 @@ public class WikiMiruStressPluginRegion implements MiruPageRegion<WikiMiruStress
             this.concurrency = concurrency;
             this.qps = batchSize;
             this.querier = querier;
+            this.numberOfResult = numberOfResult;
+            this.wildcardExpansion = wildcardExpansion;
             this.queryPhrases = queryPhrases;
             this.queryPhraseFile = queryPhraseFile;
             this.action = action;

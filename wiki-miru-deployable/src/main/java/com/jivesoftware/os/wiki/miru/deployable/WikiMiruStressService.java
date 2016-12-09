@@ -73,7 +73,8 @@ public class WikiMiruStressService {
                         message = "running";
                         String phrase = queryPhrases.get(rand.nextInt(queryPhrases.size()));
                         long start = System.currentTimeMillis();
-                        String rendered = wikiMiruService.renderPlugin(pluginRegion, new WikiMiruPluginRegionInput(tenantId, phrase, "", "", input.querier));
+                        String rendered = wikiMiruService.renderPlugin(pluginRegion,
+                            new WikiMiruPluginRegionInput(tenantId, phrase, "", "", input.querier,  input.numberOfResult, input.wildcardExpansion));
                         long elapse = System.currentTimeMillis() - start;
                         totalQueryTime.addAndGet(elapse);
 

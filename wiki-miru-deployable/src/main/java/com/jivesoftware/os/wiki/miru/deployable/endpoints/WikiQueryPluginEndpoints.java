@@ -46,11 +46,14 @@ public class WikiQueryPluginEndpoints {
         @QueryParam("query") @DefaultValue("") String query,
         @QueryParam("folderGuids") @DefaultValue("") String folderGuids,
         @QueryParam("userGuids") @DefaultValue("") String userGuids,
-        @QueryParam("querier") @DefaultValue("miru") String querier
-        ) {
+        @QueryParam("querier") @DefaultValue("miru") String querier,
+        @QueryParam("numberOfResult") @DefaultValue("100") int numberOfResult,
+        @QueryParam("wildcardExpansion") @DefaultValue("false") boolean wildcardExpansion
+    ) {
 
         try {
-            String rendered = wikiMiruService.renderPlugin(pluginRegion, new WikiMiruPluginRegionInput(tenantId, query, folderGuids, userGuids, querier));
+            String rendered = wikiMiruService.renderPlugin(pluginRegion, new WikiMiruPluginRegionInput(tenantId, query, folderGuids, userGuids, querier,
+                numberOfResult, wildcardExpansion));
             return Response.ok(rendered).build();
         } catch (Exception x) {
             LOG.error("Failed to generating query ui.", x);

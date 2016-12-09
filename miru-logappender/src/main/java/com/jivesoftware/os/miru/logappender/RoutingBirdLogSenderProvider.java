@@ -4,12 +4,12 @@ import com.jivesoftware.os.routing.bird.shared.ConnectionDescriptor;
 import com.jivesoftware.os.routing.bird.shared.ConnectionDescriptors;
 import com.jivesoftware.os.routing.bird.shared.HostPort;
 import com.jivesoftware.os.routing.bird.shared.TenantsServiceConnectionDescriptorProvider;
+
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- *
  * @author jonathan.colt
  */
 public class RoutingBirdLogSenderProvider<T> implements MiruLogSenderProvider {
@@ -37,7 +37,9 @@ public class RoutingBirdLogSenderProvider<T> implements MiruLogSenderProvider {
                 int i = 0;
                 for (ConnectionDescriptor connectionDescriptor : latest) {
                     HostPort hostPort = connectionDescriptor.getHostPort();
-                    senders[i] = new NettyHttpPoster(hostPort.getHost(), hostPort.getPort(), soTimeout);
+                    senders[i] = new NettyHttpPoster(
+                            hostPort.getHost(), hostPort.getPort(),
+                            connectionDescriptor.getSslEnabled(), soTimeout);
                     i++;
                 }
                 cache.set(senders);
