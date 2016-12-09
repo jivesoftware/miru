@@ -24,6 +24,7 @@ import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.api.wal.MiruWALEntry;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruSipIndex;
 import com.jivesoftware.os.miru.plugin.index.TimeVersionRealtime;
@@ -542,6 +543,15 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
         LOG.inc("warm", 1);
         LOG.inc("warm", 1, coord.tenantId.toString());
         LOG.inc("warm>partition>" + coord.partitionId, 1, coord.tenantId.toString());
+    }
+
+    @Override
+    public void compact() throws Exception {
+        MiruPartitionAccessor<BM, IBM, C, S> accessor = accessorRef.get();
+        if (accessor.persistentContext.isPresent()) {
+            MiruContext<BM, IBM, S> context = accessor.persistentContext.get();
+            context.compactable.compact(Executors.newFixedThreadPool(8)); //TODO
+        }
     }
 
     @Override

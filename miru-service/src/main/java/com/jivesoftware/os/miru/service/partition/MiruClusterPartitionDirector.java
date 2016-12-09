@@ -119,6 +119,12 @@ public class MiruClusterPartitionDirector implements MiruPartitionDirector {
         return expectedTenants.prioritizeRebuild(new MiruPartitionCoord(tenantId, partitionId, host));
     }
 
+    /** If the given coordinate is expected on this host, compact the partition's index. */
+    @Override
+    public boolean compact(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+        return expectedTenants.compact(new MiruPartitionCoord(tenantId, partitionId, host));
+    }
+
     @Override
     public boolean rebuildTimeRange(MiruTimeRange miruTimeRange, boolean hotDeploy, boolean chunkStores, boolean labIndex) throws Exception {
         return expectedTenants.rebuildTimeRange(miruTimeRange, hotDeploy, chunkStores, labIndex);

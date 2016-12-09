@@ -338,6 +338,10 @@ public class MiruService implements Miru {
         return partitionDirector.prioritizeRebuild(tenantId, partitionId);
     }
 
+    public boolean compact(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+        return partitionDirector.compact(tenantId, partitionId);
+    }
+
     public boolean rebuildTimeRange(MiruTimeRange miruTimeRange, boolean hotDeploy, boolean chunkStores, boolean labIndex) throws Exception {
         return partitionDirector.rebuildTimeRange(miruTimeRange, hotDeploy, chunkStores, labIndex);
     }
