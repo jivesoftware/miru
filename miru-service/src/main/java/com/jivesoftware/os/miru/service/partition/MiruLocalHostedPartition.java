@@ -550,7 +550,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
         MiruPartitionAccessor<BM, IBM, C, S> accessor = accessorRef.get();
         if (accessor.persistentContext.isPresent()) {
             MiruContext<BM, IBM, S> context = accessor.persistentContext.get();
-            context.compactable.compact(Executors.newFixedThreadPool(8)); //TODO
+            context.compactable.compact(persistentMergeExecutor, false);
         }
     }
 

@@ -425,7 +425,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             },
             () -> getAllocator(storage).close(chunkStores),
             () -> getAllocator(storage).remove(chunkStores),
-            (executorService) -> {
+            (executorService, waitForCompletion) -> {
             });
 
         return context;
@@ -755,15 +755,16 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                 getAllocator(storage).close(labEnvironments);
             },
             () -> getAllocator(storage).remove(labEnvironments),
-            executorService -> {
+            (executorService, waitForCompletion) -> {
                 List<Future<?>> futures = Lists.newArrayList();
                 for (ValueIndex valueIndex : commitables) {
                     log.info("Compacting {} for {}", valueIndex.name(), coord);
-                    valueIndex.commit(fsyncOnCommit, true);
-                    futures.addAll(valueIndex.compact(true, 0, 0, true));
+                    futures.addAll(valueIndex.compact(true, 0, 0, false));
                 }
-                for (Future<?> future : futures) {
-                    future.get();
+                if (waitForCompletion) {
+                    for (Future<?> future : futures) {
+                        future.get();
+                    }
                 }
             });
 
