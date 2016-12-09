@@ -13,7 +13,7 @@ public class NettyHttpPosterNGTest {
     @Test(enabled = false)
     public void testSend() throws Exception {
 
-        NettyHttpPoster httpPoster = new NettyHttpPoster("10.126.5.155", 10_004, 60_000);
+        NettyHttpPoster httpPoster = new NettyHttpPoster("10.126.5.155", 10_004, false, 60_000);
 
         httpPoster.send(Collections.singletonList(
                 new MiruLogEvent(null, "dev", "foo", "bar", "baz", "1", "INFO", "main", "logger", "meth", "line", "hi", String.valueOf(System.currentTimeMillis()) + 1, null, null)));
