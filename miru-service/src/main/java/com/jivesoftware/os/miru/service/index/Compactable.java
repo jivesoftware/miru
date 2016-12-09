@@ -7,5 +7,5 @@ import java.util.concurrent.ExecutorService;
  */
 public interface Compactable {
 
-    void compact(ExecutorService executorService) throws Exception;
+    void compact(ExecutorService executorService, boolean waitForCompletion) throws Exception;
 }
