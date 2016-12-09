@@ -49,9 +49,14 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
 
     @Override
     public String render(WikiMiruPluginRegionInput input) {
+        return renderer.render(template, query(input));
+    }
+
+    public Map<String, Object> query(WikiMiruPluginRegionInput input) {
         Map<String, Object> data = Maps.newHashMap();
         try {
-
+            int amzaGetCount = 0;
+            long amzaGetElapsed = 0;
             data.put("querier", input.querier);
             data.put("tenantId", input.tenantId);
             data.put("query", input.query);
@@ -101,8 +106,10 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
 
                 long start = System.currentTimeMillis();
                 List<Content> contents = payloads.multiGet(tenantId, allKeys, Content.class);
+                amzaGetCount += allKeys.size();
                 long elapsed = System.currentTimeMillis() - start;
                 data.put("getContentElapse", String.valueOf(elapsed));
+                amzaGetElapsed += elapsed;
 
 
                 if (!found.results.isEmpty()) {
@@ -200,7 +207,11 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
                             keys.add(r.guid);
                         }
 
+                        long getStart = System.currentTimeMillis();
                         contents = payloads.multiGet(tenantId, keys, Content.class);
+                        long getElapsed = System.currentTimeMillis() - getStart;
+                        amzaGetCount += keys.size();
+                        amzaGetElapsed += getElapsed;
 
                         List<Map<String, Object>> results = new ArrayList<>();
                         int i = 0;
@@ -237,7 +248,11 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
                             keys.add(r.guid);
                         }
 
+                        long getStart = System.currentTimeMillis();
                         contents = payloads.multiGet(tenantId, keys, Content.class);
+                        long getElapsed = System.currentTimeMillis() - getStart;
+                        amzaGetCount += keys.size();
+                        amzaGetElapsed += getElapsed;
 
                         List<Map<String, Object>> results = new ArrayList<>();
                         int i = 0;
@@ -262,15 +277,15 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
                 }
             }
 
+            data.put("amzaGetCount", String.valueOf(amzaGetCount));
+            data.put("amzaGetElapse", String.valueOf(amzaGetElapsed));
+            return data;
 
         } catch (Exception e) {
             LOG.error("Unable to retrieve data", e);
+            return null;
         }
-        return renderer.render(template, data);
     }
-
-
-
 
     @Override
     public String getTitle() {

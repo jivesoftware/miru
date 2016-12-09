@@ -103,7 +103,9 @@
                         <th>Search Engine</th>
                         <th>Queried</th>
                         <th>Failed</th>
-                        <th>qps</th>
+                        <th>QPS</th>
+                        <th>Amza Gets</th>
+                        <th>Amza GPS</th>
                         <th>P50</th>
                         <th>P75</th>
                         <th>P90</th>
@@ -138,6 +140,12 @@
                                 </td>
                                 <td>
                                     {$s.qps}
+                                </td>
+                                <td>
+                                    {$s.amzaGets}
+                                </td>
+                                <td>
+                                    {$s.amzaGps}
                                 </td>
                                 <td>
                                     {$s.latencyP50}
