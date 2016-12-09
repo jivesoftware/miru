@@ -225,13 +225,11 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
                 coord.tenantId, routingTopologies.getIfPresent(coord.tenantId) != null);
             return false;
         }
-        StackBuffer stackBuffer = new StackBuffer();
-        return prioritizeRebuildInternal(coord, (MiruTenantTopology) topology, stackBuffer);
+        return prioritizeRebuildInternal(coord, (MiruTenantTopology) topology);
     }
 
     private <BM extends IBM, IBM> boolean prioritizeRebuildInternal(MiruPartitionCoord coord,
-        MiruTenantTopology<BM, IBM> topology,
-        StackBuffer stackBuffer) throws Exception {
+        MiruTenantTopology<BM, IBM> topology) throws Exception {
 
         Optional<MiruLocalHostedPartition<BM, IBM, ?, ?>> optionalPartition = topology.getPartition(coord.partitionId);
         if (optionalPartition.isPresent()) {
@@ -247,6 +245,18 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
             }
         }
         return false;
+    }
+
+    @Override
+    public boolean compact(MiruPartitionCoord coord) throws Exception {
+        MiruTenantTopology<?, ?> topology = localTopologies.get(coord.tenantId);
+        if (topology == null) {
+            LOG.warn("Attempted to compact for unknown tenant {} (temporary = {})",
+                coord.tenantId, routingTopologies.getIfPresent(coord.tenantId) != null);
+            return false;
+        }
+        topology.compact(coord.partitionId);
+        return true;
     }
 
     @Override

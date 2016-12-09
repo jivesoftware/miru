@@ -30,5 +30,7 @@ public interface MiruHostedPartition {
 
     void warm() throws Exception;
 
+    void compact() throws Exception;
+
     boolean rebuild() throws Exception;
 }

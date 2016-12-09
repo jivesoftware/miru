@@ -82,4 +82,27 @@ public class MiruReaderConfigEndpoints {
             return Response.serverError().build();
         }
     }
+
+    @POST
+    @Path("/compact/{tenantId}/{partitionId}")
+    public Response compact(
+        @PathParam("tenantId") String tenantId,
+        @PathParam("partitionId") Integer partitionId) {
+        try {
+            long start = System.currentTimeMillis();
+            MiruTenantId tenant = new MiruTenantId(tenantId.getBytes(Charsets.UTF_8));
+            MiruPartitionId partition = MiruPartitionId.of(partitionId);
+            Response response;
+            if (miruService.compact(tenant, partition)) {
+                response = responseHelper.jsonResponse("Success");
+            } else {
+                response = Response.status(Response.Status.NOT_FOUND).build();
+            }
+            stats.ingressed("POST:/compact/" + tenantId + "/" + partitionId, 1, System.currentTimeMillis() - start);
+            return response;
+        } catch (Throwable t) {
+            log.error("Failed to compact for tenant {} partition {}", new Object[] { tenantId, partitionId }, t);
+            return Response.serverError().build();
+        }
+    }
 }

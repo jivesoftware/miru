@@ -95,6 +95,7 @@ import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.builder.HashCodeBuilder;
@@ -107,7 +108,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
     private static final int LAB_VERSION = 5;
-    private static final int[] SUPPORTED_LAB_VERSIONS = {-1, 2, 3, 4};
+    private static final int[] SUPPORTED_LAB_VERSIONS = { -1, 2, 3, 4 };
 
     private static final int LAB_ATOMIZED_MIN_VERSION = 2;
     private static final int LAB_REALTIME_MIN_VERSION = 3;
@@ -374,7 +375,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                 TxNamedMapOfFiler.CHUNK_FILER_OPENER,
                 TxNamedMapOfFiler.OVERWRITE_GROWER_PROVIDER,
                 TxNamedMapOfFiler.REWRITE_GROWER_PROVIDER),
-            new byte[]{0},
+            new byte[] { 0 },
             new Object());
 
         MiruUnreadTrackingIndex<BM, IBM> unreadTrackingIndex = new MiruFilerUnreadTrackingIndex<>(
@@ -423,7 +424,9 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             (executorService) -> {
             },
             () -> getAllocator(storage).close(chunkStores),
-            () -> getAllocator(storage).remove(chunkStores));
+            () -> getAllocator(storage).remove(chunkStores),
+            (executorService) -> {
+            });
 
         return context;
     }
@@ -673,7 +676,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             idProvider,
             bitmaps,
             trackError,
-            new byte[]{(byte) -1},
+            new byte[] { (byte) -1 },
             atomized,
             bitmapIndex,
             streamStripingLocksProvider);
@@ -682,7 +685,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             idProvider,
             bitmaps,
             trackError,
-            new byte[]{(byte) -2},
+            new byte[] { (byte) -2 },
             atomized,
             bitmapIndex,
             streamStripingLocksProvider);
@@ -699,7 +702,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             idProvider,
             bitmaps,
             trackError,
-            new byte[]{(byte) -3},
+            new byte[] { (byte) -3 },
             atomized,
             bitmapIndex,
             miruAuthzCache,
@@ -751,7 +754,18 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                 cacheProvider.close(true, fsyncOnCommit);
                 getAllocator(storage).close(labEnvironments);
             },
-            () -> getAllocator(storage).remove(labEnvironments));
+            () -> getAllocator(storage).remove(labEnvironments),
+            executorService -> {
+                List<Future<?>> futures = Lists.newArrayList();
+                for (ValueIndex valueIndex : commitables) {
+                    log.info("Compacting {} for {}", valueIndex.name(), coord);
+                    valueIndex.commit(fsyncOnCommit, true);
+                    futures.addAll(valueIndex.compact(true, 0, 0, true));
+                }
+                for (Future<?> future : futures) {
+                    future.get();
+                }
+            });
 
         return context;
     }

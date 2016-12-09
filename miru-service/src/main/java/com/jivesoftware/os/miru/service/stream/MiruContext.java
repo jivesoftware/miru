@@ -21,6 +21,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruUnreadTrackingIndex;
 import com.jivesoftware.os.miru.service.index.Closeable;
 import com.jivesoftware.os.miru.service.index.Commitable;
+import com.jivesoftware.os.miru.service.index.Compactable;
 import com.jivesoftware.os.miru.service.index.Removable;
 import com.jivesoftware.os.miru.service.index.TimeIdIndex;
 import com.jivesoftware.os.miru.service.stream.MiruRebuildDirector.Token;
@@ -59,6 +60,7 @@ public class MiruContext<BM extends IBM, IBM, S extends MiruSipCursor<S>> implem
     public final Commitable commitable;
     public final Closeable closeable;
     public final Removable removable;
+    public final Compactable compactable;
 
     public MiruContext(long version,
         TimeIdIndex timeIdIndex,
@@ -81,7 +83,7 @@ public class MiruContext<BM extends IBM, IBM, S extends MiruSipCursor<S>> implem
         Token rebuildToken,
         Commitable commitable,
         Closeable closeable,
-        Removable removable) {
+        Removable removable, Compactable compactable) {
         this.version = version;
         this.timeIdIndex = timeIdIndex;
         this.schema = schema;
@@ -104,6 +106,7 @@ public class MiruContext<BM extends IBM, IBM, S extends MiruSipCursor<S>> implem
         this.commitable = commitable;
         this.closeable = closeable;
         this.removable = removable;
+        this.compactable = compactable;
     }
 
     @Override

@@ -90,6 +90,13 @@ public class MiruTenantTopology<BM extends IBM, IBM> {
         }
     }
 
+    public void compact(MiruPartitionId partitionId) throws Exception {
+        MiruLocalHostedPartition<BM, IBM, ?, ?> hostedPartition = topology.get(partitionId);
+        if (hostedPartition != null) {
+            hostedPartition.compact();
+        }
+    }
+
     public boolean rebuild(MiruPartitionId partitionId) throws Exception {
         Optional<MiruLocalHostedPartition<BM, IBM, ?, ?>> partition = getPartition(partitionId);
         return partition.isPresent() && partition.get().rebuild();
