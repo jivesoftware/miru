@@ -11,6 +11,8 @@ import com.jivesoftware.os.wiki.miru.deployable.WikiMiruStressService;
 import java.io.File;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -157,6 +159,23 @@ public class WikiMiruStressPluginRegion implements MiruPageRegion<WikiMiruStress
 
                 rows.add(m);
             }
+
+            Collections.sort(rows, new Comparator<Map<String,String>>() {
+                @Override
+                public int compare(Map<String, String> o1, Map<String, String> o2) {
+                    int i = o1.get("querier").compareTo(o2.get("querier"));
+                    if (i != 0) {
+                        return i;
+                    }
+                    i = Long.compare(Long.parseLong(o1.get("latencyP50")), Long.parseLong(o2.get("latencyP50")));
+                    if (i != 0) {
+                        return i;
+                    }
+                    return Long.compare(Long.parseLong(o1.get("stresserId")), Long.parseLong(o2.get("stresserId")));
+                }
+            });
+
+
             data.put("stressers", rows);
 
         } catch (Exception e) {
