@@ -75,6 +75,9 @@ public interface MiruServiceConfig extends Config {
     @BooleanDefault(true)
     boolean getPartitionAllowNonLatestSchemaInteractions();
 
+    @BooleanDefault(true)
+    boolean getPartitionCompactOnClosedWriters();
+
     @LongDefault(5_000)
     long getPartitionBootstrapIntervalInMillis();
 

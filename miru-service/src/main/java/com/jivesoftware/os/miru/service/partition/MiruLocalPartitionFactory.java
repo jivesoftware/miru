@@ -123,6 +123,7 @@ public class MiruLocalPartitionFactory<C extends MiruCursor<C, S>, S extends Mir
                 new MiruIndexLatest<>(),
                 new MiruIndexPairedLatest<>()),
             config.getPartitionAllowNonLatestSchemaInteractions(),
+            config.getPartitionCompactOnClosedWriters(),
             config.getPartitionRebuildBatchSize(),
             config.getPartitionSipBatchSize(),
             persistentMergeChits,
