@@ -700,6 +700,7 @@ public class MiruLocalHostedPartitionTest {
             new NoOpMiruIndexRepairs(),
             indexer,
             true,
+            true,
             100,
             100,
             persistentMergeChits,

@@ -73,6 +73,8 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
 
     private final AtomicLong timestampOfLastMerge;
     private final AtomicBoolean obsolete;
+    private final AtomicBoolean sipEndOfWAL;
+    private final AtomicBoolean compactEndOfWAL;
 
     private MiruPartitionAccessor(MiruStats miruStats,
         MiruBitmaps<BM, IBM> bitmaps,
@@ -91,7 +93,9 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         MiruIndexRepairs indexRepairs,
         MiruIndexer<BM, IBM> indexer,
         AtomicLong timestampOfLastMerge,
-        AtomicBoolean obsolete) {
+        AtomicBoolean obsolete,
+        AtomicBoolean sipEndOfWAL,
+        AtomicBoolean compactEndOfWAL) {
 
         this.miruStats = miruStats;
         this.bitmaps = bitmaps;
@@ -111,6 +115,8 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         this.indexer = indexer;
         this.timestampOfLastMerge = timestampOfLastMerge;
         this.obsolete = obsolete;
+        this.sipEndOfWAL = sipEndOfWAL;
+        this.compactEndOfWAL = compactEndOfWAL;
     }
 
     static <BM extends IBM, IBM, C extends MiruCursor<C, S>, S extends MiruSipCursor<S>> MiruPartitionAccessor<BM, IBM, C, S> initialize(MiruStats miruStats,
@@ -122,7 +128,9 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         Optional<MiruContext<BM, IBM, S>> transientContext,
         MiruIndexRepairs indexRepairs,
         MiruIndexer<BM, IBM> indexer,
-        boolean obsolete) {
+        boolean obsolete,
+        boolean sipEndOfWAL,
+        boolean compactEndOfWAL) {
         return new MiruPartitionAccessor<BM, IBM, C, S>(miruStats,
             bitmaps,
             coord,
@@ -140,12 +148,15 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
             indexRepairs,
             indexer,
             new AtomicLong(System.currentTimeMillis()),
-            new AtomicBoolean(obsolete));
+            new AtomicBoolean(obsolete),
+            new AtomicBoolean(sipEndOfWAL),
+            new AtomicBoolean(compactEndOfWAL));
     }
 
     MiruPartitionAccessor<BM, IBM, C, S> copyToState(MiruPartitionState toState) {
         return new MiruPartitionAccessor<>(miruStats, bitmaps, coord, toState, hasPersistentStorage, persistentContext, transientContext, rebuildCursor,
-            seenLastSip.get(), endOfStream, hasOpenWriters, readSemaphore, writeSemaphore, closed, indexRepairs, indexer, timestampOfLastMerge, obsolete);
+            seenLastSip.get(), endOfStream, hasOpenWriters, readSemaphore, writeSemaphore, closed, indexRepairs, indexer, timestampOfLastMerge, obsolete,
+            sipEndOfWAL, compactEndOfWAL);
     }
 
     void close(MiruContextFactory<S> contextFactory) throws Exception {
@@ -221,6 +232,22 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         if (persistentContext.isPresent()) {
             persistentContext.get().markClosed();
         }
+    }
+
+    void setSipEndOfWAL(boolean sipEndOfWAL) {
+        this.sipEndOfWAL.set(sipEndOfWAL);
+    }
+
+    boolean getSipEndOfWAL() {
+        return sipEndOfWAL.get();
+    }
+
+    boolean updateCompactEndOfWAL(boolean from, boolean to) {
+        return compactEndOfWAL.compareAndSet(from, to);
+    }
+
+    boolean getCompactEndOfWAL() {
+        return compactEndOfWAL.get();
     }
 
     boolean canHotDeploy(CheckPersistent checkPersistent) {
@@ -720,6 +747,8 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
                     newTransientContext,
                     indexRepairs,
                     indexer,
+                    false,
+                    false,
                     false);
             }
 
