@@ -40,8 +40,8 @@ class MiruBotBucket {
     private final int birthRateFactor;
 
     MiruBotBucket(int numberOfFields,
-                  int valueSizeFactor,
-                  int birthRateFactor) {
+        int valueSizeFactor,
+        int birthRateFactor) {
         this.numberOfFields = numberOfFields;
         this.valueSizeFactor = valueSizeFactor;
         this.birthRateFactor = birthRateFactor;
@@ -52,23 +52,23 @@ class MiruBotBucket {
         LOG.info("Generate a miru schema {} for {} fields.", this.miruTenantId, numberOfFields);
 
         MiruFieldDefinition[] miruFieldDefinitions =
-                new MiruFieldDefinition[numberOfFields];
+            new MiruFieldDefinition[numberOfFields];
 
         for (int i = 0; i < numberOfFields; i++) {
             String name = "field" + i;
             miruFieldDefinitions[i] = new MiruFieldDefinition(
-                    i,
-                    name,
-                    singleTerm,
-                    MiruFieldDefinition.Prefix.NONE);
+                i,
+                name,
+                singleTerm,
+                MiruFieldDefinition.Prefix.NONE);
             LOG.debug("Generated field definition: {}", name);
         }
 
         String schemaName = "mirubot-" + numberOfFields + "-singleTerm";
         LOG.info("Generated schema: {}", schemaName);
         miruSchema = new MiruSchema.Builder(schemaName, 0)
-                .setFieldDefinitions(miruFieldDefinitions)
-                .build();
+            .setFieldDefinitions(miruFieldDefinitions)
+            .build();
 
         return miruSchema;
     }
@@ -90,7 +90,7 @@ class MiruBotBucket {
                 int idx = Math.min(i, statedMiruValues.get(miruFieldDefinition.name).size() - 1);
 
                 StatedMiruValue statedMiruValue =
-                        (StatedMiruValue) statedMiruValues.get(miruFieldDefinition.name).toArray()[idx];
+                    (StatedMiruValue) statedMiruValues.get(miruFieldDefinition.name).toArray()[idx];
 
                 values.put(miruFieldDefinition.name, statedMiruValue);
             }
@@ -101,33 +101,31 @@ class MiruBotBucket {
         return res;
     }
 
-    StatedMiruValue birthNewFieldValue() {
-        if (miruSchema.getFieldDefinitions() == null) return null;
-
-        return birthNewFieldValue(miruSchema.getFieldDefinition(RAND.nextInt(miruSchema.getFieldDefinitions().length)));
+    void birthNewFieldValue() {
+        if (miruSchema.getFieldDefinitions() != null) {
+            birthNewFieldValue(miruSchema.getFieldDefinition(RAND.nextInt(miruSchema.getFieldDefinitions().length)));
+        }
     }
 
-    StatedMiruValue birthNewFieldValue(MiruFieldDefinition miruFieldDefinition) {
+    void birthNewFieldValue(MiruFieldDefinition miruFieldDefinition) {
         StatedMiruValue statedMiruValue = StatedMiruValue.birth(valueSizeFactor);
         LOG.info("Birthed field: {}:{}", miruFieldDefinition.name, statedMiruValue.value.last());
 
         Set<StatedMiruValue> values = statedMiruValues.computeIfAbsent(
-                miruFieldDefinition.name, (k) -> Sets.newHashSet());
+            miruFieldDefinition.name, (k) -> Sets.newHashSet());
         values.add(statedMiruValue);
-
-        return statedMiruValue;
     }
 
     void addFieldValue(MiruFieldDefinition miruFieldDefinition, MiruValue miruValue, State state) {
         LOG.info("Add pre-generated field: {}:{}", miruFieldDefinition.name, miruValue.last());
 
         Set<StatedMiruValue> values = statedMiruValues.computeIfAbsent(
-                miruFieldDefinition.name, (key) -> Sets.newHashSet());
+            miruFieldDefinition.name, (key) -> Sets.newHashSet());
         values.add(new StatedMiruValue(miruValue, state));
     }
 
     Map<String, StatedMiruValue> genWriteMiruActivity(
-            Predicate<StatedMiruValue> predicate) throws Exception {
+        Predicate<StatedMiruValue> predicate) throws Exception {
         if (miruSchema == null) {
             throw new Exception("Schema must be generated before generating a miru activity.");
         }
@@ -141,11 +139,11 @@ class MiruBotBucket {
         Map<String, StatedMiruValue> res = Maps.newHashMap();
         for (MiruFieldDefinition miruFieldDefinition : miruSchema.getFieldDefinitions()) {
             Set<StatedMiruValue> values = statedMiruValues.computeIfAbsent(
-                    miruFieldDefinition.name, (key) -> Sets.newHashSet());
+                miruFieldDefinition.name, (key) -> Sets.newHashSet());
 
             LOG.debug("Create list of potential values based on given predicate");
             Iterator<StatedMiruValue> iter =
-                    values.stream().filter(predicate).iterator();
+                values.stream().filter(predicate).iterator();
             List<StatedMiruValue> statedMiruValueList = Lists.newArrayList();
             iter.forEachRemaining(statedMiruValueList::add);
 
@@ -154,7 +152,7 @@ class MiruBotBucket {
                 LOG.debug("No miru values selected during generation");
             } else {
                 StatedMiruValue statedMiruValue =
-                        (StatedMiruValue) statedMiruValueList.toArray()[RAND.nextInt(statedMiruValueList.size())];
+                    (StatedMiruValue) statedMiruValueList.toArray()[RAND.nextInt(statedMiruValueList.size())];
                 LOG.debug("Select miru value {}", statedMiruValue);
                 res.put(miruFieldDefinition.name, statedMiruValue);
             }
@@ -219,16 +217,16 @@ class MiruBotBucket {
 
     MiruBotBucketSnapshot genSnapshot() {
         return new MiruBotBucketSnapshot(
-                miruSchema.getName(),
-                miruTenantId.toString(),
-                totalActivitiesGenerated.getCount(),
-                getFieldsValuesCount(),
-                new MiruBotBucketSnapshotFields(
-                        getFieldsValuesCount(State.UNKNOWN),
-                        getFieldsValuesCount(State.WRITTEN),
-                        getFieldsValuesCount(State.READ_FAIL),
-                        getFieldsValuesCount(State.READ_SUCCESS)),
-                getFieldsValues(State.READ_FAIL));
+            miruSchema.getName(),
+            miruTenantId.toString(),
+            totalActivitiesGenerated.getCount(),
+            getFieldsValuesCount(),
+            new MiruBotBucketSnapshotFields(
+                getFieldsValuesCount(State.UNKNOWN),
+                getFieldsValuesCount(State.WRITTEN),
+                getFieldsValuesCount(State.READ_FAIL),
+                getFieldsValuesCount(State.READ_SUCCESS)),
+            getFieldsValues(State.READ_FAIL));
     }
 
 }

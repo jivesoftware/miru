@@ -32,7 +32,6 @@ import com.jivesoftware.os.routing.bird.shared.NextClientStrategy;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -48,7 +47,6 @@ class MiruBotUniquesWorker implements Runnable {
     private final TenantAwareHttpClient<String> miruWriterClient;
 
     private final NextClientStrategy nextClientStrategy = new RoundRobinStrategy();
-    private final Random RAND = new Random();
 
     private MiruBotBucket miruBotBucket;
     private AtomicBoolean running = new AtomicBoolean(false);
@@ -56,11 +54,11 @@ class MiruBotUniquesWorker implements Runnable {
     private HttpResponseMapper httpResponseMapper = new HttpResponseMapper(objectMapper);
 
     MiruBotUniquesWorker(String miruIngressEndpoint,
-                         MiruBotUniquesConfig miruBotUniquesConfig,
-                         OrderIdProvider orderIdProvider,
-                         MiruBotSchemaService miruBotSchemaService,
-                         TenantAwareHttpClient<String> miruReaderClient,
-                         TenantAwareHttpClient<String> miruWriterClient) {
+        MiruBotUniquesConfig miruBotUniquesConfig,
+        OrderIdProvider orderIdProvider,
+        MiruBotSchemaService miruBotSchemaService,
+        TenantAwareHttpClient<String> miruReaderClient,
+        TenantAwareHttpClient<String> miruWriterClient) {
         this.miruIngressEndpoint = miruIngressEndpoint;
         this.miruBotUniquesConfig = miruBotUniquesConfig;
         this.orderIdProvider = orderIdProvider;
@@ -74,13 +72,13 @@ class MiruBotUniquesWorker implements Runnable {
         running.set(true);
 
         MiruTenantId miruTenantId = new MiruTenantId(
-                ("mirubot-uniques-" + UUID.randomUUID().toString()).getBytes(Charsets.UTF_8));
+            ("mirubot-uniques-" + UUID.randomUUID().toString()).getBytes(Charsets.UTF_8));
         LOG.info("Miru Tenant Id: {}", miruTenantId.toString());
 
         miruBotBucket = new MiruBotBucket(
-                miruBotUniquesConfig.getNumberOfFields(),
-                miruBotUniquesConfig.getValueSizeFactor(),
-                miruBotUniquesConfig.getBirthRateFactor());
+            miruBotUniquesConfig.getNumberOfFields(),
+            miruBotUniquesConfig.getValueSizeFactor(),
+            miruBotUniquesConfig.getBirthRateFactor());
 
         int seedCount = miruBotUniquesConfig.getBotBucketSeed();
         AtomicCounter totalCount = new AtomicCounter();
@@ -91,11 +89,11 @@ class MiruBotUniquesWorker implements Runnable {
                 miruBotSchemaService.ensureSchema(miruTenantId, miruSchema);
 
                 StatedMiruValueWriter statedMiruValueWriter =
-                        new StatedMiruValueWriter(
-                                miruIngressEndpoint,
-                                miruBotUniquesConfig,
-                                miruWriterClient,
-                                orderIdProvider);
+                    new StatedMiruValueWriter(
+                        miruIngressEndpoint,
+                        miruBotUniquesConfig,
+                        miruWriterClient,
+                        orderIdProvider);
 
                 if (seedCount > 0) {
                     List<Map<String, StatedMiruValue>> miruSeededActivities = miruBotBucket.seed(seedCount);
@@ -108,36 +106,36 @@ class MiruBotUniquesWorker implements Runnable {
 
                 while (running.get()) {
                     AtomicCounter count = statedMiruValueWriter.writeAll(
-                            miruBotBucket,
-                            miruTenantId,
-                            smv -> smv.state != State.READ_FAIL);
+                        miruBotBucket,
+                        miruTenantId,
+                        smv -> smv.state != State.READ_FAIL);
                     totalCount.inc(count.getCount());
                     LOG.info("Wrote {} of {} activities",
-                            count.getCount(), totalCount.getCount());
+                        count.getCount(), totalCount.getCount());
 
                     LOG.info("Sleep {}ms between writes and reads", miruBotUniquesConfig.getWriteReadPauseMs());
                     Thread.sleep(miruBotUniquesConfig.getWriteReadPauseMs());
 
                     SnowflakeIdPacker snowflakeIdPacker = new SnowflakeIdPacker();
                     long packCurrentTime = snowflakeIdPacker.pack(
-                            new JiveEpochTimestampProvider().getTimestamp(), 0, 0);
+                        new JiveEpochTimestampProvider().getTimestamp(), 0, 0);
                     long packFromTime = packCurrentTime - snowflakeIdPacker.pack(
-                            miruBotUniquesConfig.getReadTimeRange(), 0, 0);
+                        miruBotUniquesConfig.getReadTimeRange(), 0, 0);
                     MiruTimeRange miruTimeRange = new MiruTimeRange(packFromTime, packCurrentTime);
                     LOG.debug("Read from {}ms in the past until now.",
-                            miruBotUniquesConfig.getReadTimeRange());
+                        miruBotUniquesConfig.getReadTimeRange());
                     LOG.debug("Read time range: {}", miruTimeRange);
 
                     LOG.debug("Query miru uniques for each field in the schema.");
                     for (MiruFieldDefinition miruFieldDefinition : miruSchema.getFieldDefinitions()) {
                         List<StatedMiruValue> uniqueValuesForField = miruBotBucket.getActivitiesForField(miruFieldDefinition);
                         LOG.debug("{} unique mirubot values for {}.",
-                                uniqueValuesForField.size(), miruFieldDefinition.name);
+                            uniqueValuesForField.size(), miruFieldDefinition.name);
 
                         UniquesAnswer miruUniquesAnswer = miruReadUniquesAnswer(
-                                miruTenantId,
-                                miruTimeRange,
-                                miruFieldDefinition);
+                            miruTenantId,
+                            miruTimeRange,
+                            miruFieldDefinition);
 
                         uniqueValuesForField.forEach(smv -> smv.state = State.READ_FAIL);
 
@@ -147,9 +145,9 @@ class MiruBotUniquesWorker implements Runnable {
                             LOG.error("No uniques answer (uniques=0) found for {}", miruTenantId);
                         } else {
                             LOG.debug("{} unique miru values for {}.",
-                                    miruUniquesAnswer.uniques, miruFieldDefinition.name);
+                                miruUniquesAnswer.uniques, miruFieldDefinition.name);
                             LOG.info("Number of {} miru uniques {}; mirubot {}",
-                                    miruFieldDefinition.name, miruUniquesAnswer.uniques, uniqueValuesForField.size());
+                                miruFieldDefinition.name, miruUniquesAnswer.uniques, uniqueValuesForField.size());
 
                             if (miruUniquesAnswer.uniques == uniqueValuesForField.size()) {
                                 LOG.debug("Unique activities in miru matches mirubot.");
@@ -157,8 +155,8 @@ class MiruBotUniquesWorker implements Runnable {
                             } else {
                                 LOG.debug("Unique activities in mirubot {}", uniqueValuesForField);
                                 LOG.warn("Unique activities in miru {} does not match mirubot {}",
-                                        miruUniquesAnswer.uniques,
-                                        uniqueValuesForField.size());
+                                    miruUniquesAnswer.uniques,
+                                    uniqueValuesForField.size());
                             }
                         }
                     }
@@ -189,23 +187,23 @@ class MiruBotUniquesWorker implements Runnable {
     }
 
     private UniquesAnswer miruReadUniquesAnswer(
-            MiruTenantId miruTenantId,
-            MiruTimeRange miruTimeRange,
-            MiruFieldDefinition miruFieldDefinition) throws Exception {
+        MiruTenantId miruTenantId,
+        MiruTimeRange miruTimeRange,
+        MiruFieldDefinition miruFieldDefinition) throws Exception {
         LOG.debug("Read uniques answer from miru");
 
         MiruRequest<UniquesQuery> request = new MiruRequest<>(
-                "mirubot",
-                miruTenantId,
-                MiruActorId.NOT_PROVIDED,
-                MiruAuthzExpression.NOT_PROVIDED,
-                new UniquesQuery(
-                        miruTimeRange,
-                        miruFieldDefinition.name,
-                        null,
-                        MiruFilter.NO_FILTER,
-                        null),
-                MiruSolutionLogLevel.DEBUG);
+            "mirubot",
+            miruTenantId,
+            MiruActorId.NOT_PROVIDED,
+            MiruAuthzExpression.NOT_PROVIDED,
+            new UniquesQuery(
+                miruTimeRange,
+                miruFieldDefinition.name,
+                null,
+                MiruFilter.NO_FILTER,
+                null),
+            MiruSolutionLogLevel.DEBUG);
 
         String jsonRequest = objectMapper.writeValueAsString(request);
         LOG.debug("Read uniques json {}", jsonRequest);
@@ -214,27 +212,27 @@ class MiruBotUniquesWorker implements Runnable {
         LOG.debug("Read uniques endpoint {}", endpoint);
 
         MiruResponse<UniquesAnswer> uniquesResponse = miruReaderClient.call(
-                "",
-                nextClientStrategy,
-                "uniquesQuery",
-                httpClient -> {
-                    HttpResponse httpResponse = httpClient.postJson(endpoint, jsonRequest, null);
-                    LOG.debug("Miru read response {}:{}", httpResponse.getStatusCode(), new String(httpResponse.getResponseBody()));
+            "",
+            nextClientStrategy,
+            "uniquesQuery",
+            httpClient -> {
+                HttpResponse httpResponse = httpClient.postJson(endpoint, jsonRequest, null);
+                LOG.debug("Miru read response {}:{}", httpResponse.getStatusCode(), new String(httpResponse.getResponseBody()));
 
-                    if (httpResponse.getStatusCode() < 200 || httpResponse.getStatusCode() >= 300) {
-                        LOG.error("Error occurred reading uniques {}:{}", httpResponse.getStatusCode(), new String(httpResponse.getResponseBody()));
-                        throw new RuntimeException("Failed to read uniques from " + endpoint);
-                    }
+                if (httpResponse.getStatusCode() < 200 || httpResponse.getStatusCode() >= 300) {
+                    LOG.error("Error occurred reading uniques {}:{}", httpResponse.getStatusCode(), new String(httpResponse.getResponseBody()));
+                    throw new RuntimeException("Failed to read uniques from " + endpoint);
+                }
 
-                    @SuppressWarnings("unchecked")
-                    MiruResponse<UniquesAnswer> extractResponse = httpResponseMapper.extractResultFromResponse(
-                            httpResponse,
-                            MiruResponse.class,
-                            new Class[]{UniquesAnswer.class},
-                            null);
+                @SuppressWarnings("unchecked")
+                MiruResponse<UniquesAnswer> extractResponse = httpResponseMapper.extractResultFromResponse(
+                    httpResponse,
+                    MiruResponse.class,
+                    new Class[]{UniquesAnswer.class},
+                    null);
 
-                    return new ClientCall.ClientResponse<>(extractResponse, true);
-                });
+                return new ClientCall.ClientResponse<>(extractResponse, true);
+            });
 
         LOG.debug("Read answer uniques {}", uniquesResponse.answer.uniques);
         return uniquesResponse.answer;

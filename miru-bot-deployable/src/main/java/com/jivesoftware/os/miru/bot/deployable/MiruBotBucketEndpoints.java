@@ -33,8 +33,8 @@ public class MiruBotBucketEndpoints {
     private final ResponseHelper responseHelper = ResponseHelper.INSTANCE;
 
     public MiruBotBucketEndpoints(
-            @Context MiruBotDistinctsService miruBotDistinctsService,
-            @Context MiruBotUniquesService miruBotUniquesService) {
+        @Context MiruBotDistinctsService miruBotDistinctsService,
+        @Context MiruBotUniquesService miruBotUniquesService) {
         this.miruBotDistinctsService = miruBotDistinctsService;
         this.miruBotUniquesService = miruBotUniquesService;
     }
@@ -74,11 +74,11 @@ public class MiruBotBucketEndpoints {
     public Response newDistinctsBucket(MiruBotBucketRequest miruBotBucketRequest) throws Exception {
         try {
             MiruBotDistinctsConfig miruBotDistinctsConfig =
-                    MiruBotBucketRequest.genDistinctsConfig(miruBotBucketRequest);
+                MiruBotBucketRequest.genDistinctsConfig(miruBotBucketRequest);
 
             Executors.newSingleThreadExecutor(
-                    new ThreadFactoryBuilder().setNameFormat("mirubot-adhoc-distincts-%d").build()).submit(
-                    miruBotDistinctsService.createWithConfig(miruBotDistinctsConfig));
+                new ThreadFactoryBuilder().setNameFormat("mirubot-adhoc-distincts-%d").build()).submit(
+                miruBotDistinctsService.createWithConfig(miruBotDistinctsConfig));
 
             return Response.accepted().build();
         } catch (Throwable t) {
@@ -93,11 +93,11 @@ public class MiruBotBucketEndpoints {
     public Response newUniquesBucket(MiruBotBucketRequest miruBotBucketRequest) throws Exception {
         try {
             MiruBotUniquesConfig miruBotUniquesConfig =
-                    MiruBotBucketRequest.genUniquesConfig(miruBotBucketRequest);
+                MiruBotBucketRequest.genUniquesConfig(miruBotBucketRequest);
 
             Executors.newSingleThreadExecutor(
-                    new ThreadFactoryBuilder().setNameFormat("mirubot-adhoc-uniques-%d").build()).submit(
-                    miruBotUniquesService.createWithConfig(miruBotUniquesConfig));
+                new ThreadFactoryBuilder().setNameFormat("mirubot-adhoc-uniques-%d").build()).submit(
+                miruBotUniquesService.createWithConfig(miruBotUniquesConfig));
 
             return Response.accepted().build();
         } catch (Throwable t) {

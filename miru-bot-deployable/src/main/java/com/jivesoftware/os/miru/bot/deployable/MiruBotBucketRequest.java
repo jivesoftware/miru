@@ -24,18 +24,18 @@ class MiruBotBucketRequest {
 
     @JsonCreator
     public MiruBotBucketRequest(
-            @JsonProperty("readTimeRange") int readTimeRange,
-            @JsonProperty("writeHesitationFactor") int writeHesitationFactor,
-            @JsonProperty("valueSizeFactor") int valueSizeFactor,
-            @JsonProperty("failureRetryWaitMs") long failureRetryWaitMs,
-            @JsonProperty("birthRateFactor") int birthRateFactor,
-            @JsonProperty("readFrequency") int readFrequency,
-            @JsonProperty("batchWriteCountFactor") int batchWriteCountFactor,
-            @JsonProperty("batchWriteFrequency") int batchWriteFrequency,
-            @JsonProperty("numberOfFields") int numberOfFields,
-            @JsonProperty("botBucketSeed") int botBucketSeed,
-            @JsonProperty("writeReadPauseMs") long writeReadPauseMs,
-            @JsonProperty("runtimeMs") long runtimeMs) {
+        @JsonProperty("readTimeRange") int readTimeRange,
+        @JsonProperty("writeHesitationFactor") int writeHesitationFactor,
+        @JsonProperty("valueSizeFactor") int valueSizeFactor,
+        @JsonProperty("failureRetryWaitMs") long failureRetryWaitMs,
+        @JsonProperty("birthRateFactor") int birthRateFactor,
+        @JsonProperty("readFrequency") int readFrequency,
+        @JsonProperty("batchWriteCountFactor") int batchWriteCountFactor,
+        @JsonProperty("batchWriteFrequency") int batchWriteFrequency,
+        @JsonProperty("numberOfFields") int numberOfFields,
+        @JsonProperty("botBucketSeed") int botBucketSeed,
+        @JsonProperty("writeReadPauseMs") long writeReadPauseMs,
+        @JsonProperty("runtimeMs") long runtimeMs) {
         this.readTimeRange = readTimeRange;
         this.writeHesitationFactor = writeHesitationFactor;
         this.valueSizeFactor = valueSizeFactor;
@@ -51,8 +51,8 @@ class MiruBotBucketRequest {
     }
 
     static void genConfig(
-            MiruBotBucketRequest miruBotBucketRequest,
-            MiruBotDistinctsConfig config) {
+        MiruBotBucketRequest miruBotBucketRequest,
+        MiruBotDistinctsConfig config) {
         if (miruBotBucketRequest != null) {
             if (miruBotBucketRequest.readTimeRange > 0) {
                 config.setReadTimeRange(miruBotBucketRequest.readTimeRange);
@@ -106,14 +106,14 @@ class MiruBotBucketRequest {
 
     static MiruBotDistinctsConfig genDistinctsConfig(MiruBotBucketRequest request) {
         MiruBotDistinctsConfig res =
-                BindInterfaceToConfiguration.bindDefault(MiruBotDistinctsConfig.class);
+            BindInterfaceToConfiguration.bindDefault(MiruBotDistinctsConfig.class);
         genConfig(request, res);
         return res;
     }
 
     static MiruBotUniquesConfig genUniquesConfig(MiruBotBucketRequest request) {
         MiruBotUniquesConfig res =
-                BindInterfaceToConfiguration.bindDefault(MiruBotUniquesConfig.class);
+            BindInterfaceToConfiguration.bindDefault(MiruBotUniquesConfig.class);
         genConfig(request, res);
         return res;
     }

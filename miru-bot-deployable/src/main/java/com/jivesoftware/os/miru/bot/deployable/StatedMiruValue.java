@@ -20,16 +20,16 @@ class StatedMiruValue {
     State state;
 
     StatedMiruValue(
-            MiruValue value,
-            State state) {
+        MiruValue value,
+        State state) {
         this.value = value;
         this.state = state;
     }
 
     static StatedMiruValue birth(int valueSizeFactor) {
         return new StatedMiruValue(
-                new MiruValue(RandomStringUtils.randomAlphanumeric(RAND.nextInt(valueSizeFactor) + 1)),
-                State.UNKNOWN);
+            new MiruValue(RandomStringUtils.randomAlphanumeric(RAND.nextInt(valueSizeFactor) + 1)),
+            State.UNKNOWN);
     }
 
     public boolean equals(Object o) {
@@ -48,9 +48,9 @@ class StatedMiruValue {
 
     public String toString() {
         return "StatedMiruValue{" +
-                "value=" + value +
-                ", state=" + state +
-                '}';
+            "value=" + value +
+            ", state=" + state +
+            '}';
     }
 
 }
