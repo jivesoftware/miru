@@ -16,18 +16,18 @@ class MiruBotUniquesInitializer {
     }
 
     MiruBotUniquesService initialize(MiruBotConfig miruBotConfig,
-                                     MiruBotUniquesConfig miruBotUniquesConfig,
-                                     OrderIdProvider orderIdProvider,
-                                     MiruBotSchemaService miruBotSchemaService,
-                                     TenantAwareHttpClient<String> miruReader,
-                                     TenantAwareHttpClient<String> miruWriter) {
+        MiruBotUniquesConfig miruBotUniquesConfig,
+        OrderIdProvider orderIdProvider,
+        MiruBotSchemaService miruBotSchemaService,
+        TenantAwareHttpClient<String> miruReader,
+        TenantAwareHttpClient<String> miruWriter) {
         return new MiruBotUniquesService(
-                miruBotConfig.getMiruIngressEndpoint(),
-                miruBotUniquesConfig,
-                orderIdProvider,
-                miruBotSchemaService,
-                miruReader,
-                miruWriter);
+            miruBotConfig.getMiruIngressEndpoint(),
+            miruBotUniquesConfig,
+            orderIdProvider,
+            miruBotSchemaService,
+            miruReader,
+            miruWriter);
     }
 
 }

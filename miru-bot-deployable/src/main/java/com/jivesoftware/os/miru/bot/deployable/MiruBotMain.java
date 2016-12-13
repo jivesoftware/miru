@@ -32,6 +32,7 @@ import com.jivesoftware.os.routing.bird.http.client.HttpDeliveryClientHealthProv
 import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelperUtils;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.http.client.TenantRoutingHttpClientInitializer;
+
 import java.util.Arrays;
 
 public class MiruBotMain {
@@ -52,16 +53,16 @@ public class MiruBotMain {
             deployable.addManageInjectables(HasUI.class, new HasUI(Arrays.asList()));
 
             MiruBotHealthCheck miruBotHealthCheck =
-                    new MiruBotHealthCheck(deployable.config(MiruBotHealthCheckConfig.class));
+                new MiruBotHealthCheck(deployable.config(MiruBotHealthCheckConfig.class));
 
             deployable.addHealthCheck(
-                    new GCPauseHealthChecker(deployable.config(GCPauseHealthChecker.GCPauseHealthCheckerConfig.class)),
-                    new GCLoadHealthChecker(deployable.config(GCLoadHealthChecker.GCLoadHealthCheckerConfig.class)),
-                    new SystemCpuHealthChecker(deployable.config(SystemCpuHealthChecker.SystemCpuHealthCheckerConfig.class)),
-                    new LoadAverageHealthChecker(deployable.config(LoadAverageHealthChecker.LoadAverageHealthCheckerConfig.class)),
-                    new FileDescriptorCountHealthChecker(deployable.config(FileDescriptorCountHealthChecker.FileDescriptorCountHealthCheckerConfig.class)),
-                    miruBotHealthCheck,
-                    serviceStartupHealthCheck);
+                new GCPauseHealthChecker(deployable.config(GCPauseHealthChecker.GCPauseHealthCheckerConfig.class)),
+                new GCLoadHealthChecker(deployable.config(GCLoadHealthChecker.GCLoadHealthCheckerConfig.class)),
+                new SystemCpuHealthChecker(deployable.config(SystemCpuHealthChecker.SystemCpuHealthCheckerConfig.class)),
+                new LoadAverageHealthChecker(deployable.config(LoadAverageHealthChecker.LoadAverageHealthCheckerConfig.class)),
+                new FileDescriptorCountHealthChecker(deployable.config(FileDescriptorCountHealthChecker.FileDescriptorCountHealthCheckerConfig.class)),
+                miruBotHealthCheck,
+                serviceStartupHealthCheck);
             deployable.addErrorHealthChecks(deployable.config(ErrorHealthCheckConfig.class));
             deployable.buildManageServer().start();
 
@@ -74,96 +75,96 @@ public class MiruBotMain {
             LOG.info("Miru ingress endpoint: {}", miruBotConfig.getMiruIngressEndpoint());
 
             HttpDeliveryClientHealthProvider clientHealthProvider = new HttpDeliveryClientHealthProvider(
-                    instanceConfig.getInstanceKey(),
-                    HttpRequestHelperUtils.buildRequestHelper(false, false, null, instanceConfig.getRoutesHost(), instanceConfig.getRoutesPort()),
-                    instanceConfig.getConnectionsHealth(),
-                    miruBotConfig.getHealthInterval(),
-                    miruBotConfig.getHealthSampleWindow());
+                instanceConfig.getInstanceKey(),
+                HttpRequestHelperUtils.buildRequestHelper(false, false, null, instanceConfig.getRoutesHost(), instanceConfig.getRoutesPort()),
+                instanceConfig.getConnectionsHealth(),
+                miruBotConfig.getHealthInterval(),
+                miruBotConfig.getHealthSampleWindow());
 
             TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer =
-                    deployable.getTenantRoutingHttpClientInitializer();
+                deployable.getTenantRoutingHttpClientInitializer();
 
             @SuppressWarnings("unchecked")
             TenantAwareHttpClient<String> miruWriterClient = tenantRoutingHttpClientInitializer.builder(
-                    deployable.getTenantRoutingProvider().getConnections(
-                            "miru-writer",
-                            "main",
-                            miruBotConfig.getRefreshConnectionsAfterNMillis()),
-                    clientHealthProvider)
-                    .deadAfterNErrors(miruBotConfig.getDeadAfterNErrors())
-                    .checkDeadEveryNMillis(miruBotConfig.getCheckDeadEveryNMillis())
-                    .build();
+                deployable.getTenantRoutingProvider().getConnections(
+                    "miru-writer",
+                    "main",
+                    miruBotConfig.getRefreshConnectionsAfterNMillis()),
+                clientHealthProvider)
+                .deadAfterNErrors(miruBotConfig.getDeadAfterNErrors())
+                .checkDeadEveryNMillis(miruBotConfig.getCheckDeadEveryNMillis())
+                .build();
 
             @SuppressWarnings("unchecked")
             TenantAwareHttpClient<String> miruManageClient = tenantRoutingHttpClientInitializer.builder(
-                    deployable.getTenantRoutingProvider().getConnections(
-                            "miru-manage",
-                            "main",
-                            miruBotConfig.getRefreshConnectionsAfterNMillis()),
-                    clientHealthProvider)
-                    .deadAfterNErrors(miruBotConfig.getDeadAfterNErrors())
-                    .checkDeadEveryNMillis(miruBotConfig.getCheckDeadEveryNMillis())
-                    .build();
+                deployable.getTenantRoutingProvider().getConnections(
+                    "miru-manage",
+                    "main",
+                    miruBotConfig.getRefreshConnectionsAfterNMillis()),
+                clientHealthProvider)
+                .deadAfterNErrors(miruBotConfig.getDeadAfterNErrors())
+                .checkDeadEveryNMillis(miruBotConfig.getCheckDeadEveryNMillis())
+                .build();
 
             @SuppressWarnings("unchecked")
             TenantAwareHttpClient<String> miruReaderClient = tenantRoutingHttpClientInitializer.builder(
-                    deployable.getTenantRoutingProvider().getConnections(
-                            "miru-reader",
-                            "main",
-                            miruBotConfig.getRefreshConnectionsAfterNMillis()),
-                    clientHealthProvider)
-                    .deadAfterNErrors(miruBotConfig.getDeadAfterNErrors())
-                    .checkDeadEveryNMillis(miruBotConfig.getCheckDeadEveryNMillis())
-                    .build();
+                deployable.getTenantRoutingProvider().getConnections(
+                    "miru-reader",
+                    "main",
+                    miruBotConfig.getRefreshConnectionsAfterNMillis()),
+                clientHealthProvider)
+                .deadAfterNErrors(miruBotConfig.getDeadAfterNErrors())
+                .checkDeadEveryNMillis(miruBotConfig.getCheckDeadEveryNMillis())
+                .build();
 
             MiruLogAppenderConfig miruLogAppenderConfig =
-                    deployable.config(MiruLogAppenderConfig.class);
+                deployable.config(MiruLogAppenderConfig.class);
             @SuppressWarnings("unchecked")
             RoutingBirdLogSenderProvider routingBirdLogSenderProvider = new RoutingBirdLogSenderProvider<>(
-                    deployable.getTenantRoutingProvider().getConnections(
-                            "miru-stumptown",
-                            "main",
-                            miruBotConfig.getRefreshConnectionsAfterNMillis()),
-                    "",
-                    miruLogAppenderConfig.getSocketTimeoutInMillis());
+                deployable.getTenantRoutingProvider().getConnections(
+                    "miru-stumptown",
+                    "main",
+                    miruBotConfig.getRefreshConnectionsAfterNMillis()),
+                "",
+                miruLogAppenderConfig.getSocketTimeoutInMillis());
             new MiruLogAppenderInitializer().initialize(
-                    instanceConfig.getDatacenter(),
-                    instanceConfig.getClusterName(),
-                    instanceConfig.getHost(),
-                    instanceConfig.getServiceName(),
-                    String.valueOf(instanceConfig.getInstanceName()),
-                    instanceConfig.getVersion(),
-                    miruLogAppenderConfig,
-                    routingBirdLogSenderProvider).install();
+                instanceConfig.getDatacenter(),
+                instanceConfig.getClusterName(),
+                instanceConfig.getHost(),
+                instanceConfig.getServiceName(),
+                String.valueOf(instanceConfig.getInstanceName()),
+                instanceConfig.getVersion(),
+                miruLogAppenderConfig,
+                routingBirdLogSenderProvider).install();
 
             MiruBotDistinctsConfig miruBotDistinctsConfig = deployable.config(MiruBotDistinctsConfig.class);
             MiruBotUniquesConfig miruBotUniquesConfig = deployable.config(MiruBotUniquesConfig.class);
 
             MiruClusterClient miruClusterClient = new MiruClusterClientInitializer().initialize(
-                    new MiruStats(), "", miruManageClient, new ObjectMapper());
+                new MiruStats(), "", miruManageClient, new ObjectMapper());
 
             MiruBotSchemaService miruBotSchemaService = new MiruBotSchemaService(miruClusterClient);
 
             OrderIdProvider orderIdProvider = new OrderIdProviderImpl(
-                    new ConstantWriterIdProvider(instanceConfig.getInstanceName()));
+                new ConstantWriterIdProvider(instanceConfig.getInstanceName()));
 
             MiruBotDistinctsService miruBotDistinctsService = new MiruBotDistinctsInitializer().initialize(
-                    miruBotConfig,
-                    miruBotDistinctsConfig,
-                    orderIdProvider,
-                    miruBotSchemaService,
-                    miruReaderClient,
-                    miruWriterClient);
+                miruBotConfig,
+                miruBotDistinctsConfig,
+                orderIdProvider,
+                miruBotSchemaService,
+                miruReaderClient,
+                miruWriterClient);
             miruBotHealthCheck.addMiruBotHealthPercenter(miruBotDistinctsService);
             miruBotDistinctsService.start();
 
             MiruBotUniquesService miruBotUniquesService = new MiruBotUniquesInitializer().initialize(
-                    miruBotConfig,
-                    miruBotUniquesConfig,
-                    orderIdProvider,
-                    miruBotSchemaService,
-                    miruReaderClient,
-                    miruWriterClient);
+                miruBotConfig,
+                miruBotUniquesConfig,
+                orderIdProvider,
+                miruBotSchemaService,
+                miruReaderClient,
+                miruWriterClient);
             miruBotHealthCheck.addMiruBotHealthPercenter(miruBotUniquesService);
             miruBotUniquesService.start();
 
