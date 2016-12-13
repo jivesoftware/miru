@@ -24,15 +24,15 @@ class MiruBotDistinctsService implements MiruBotHealthPercent {
     private MiruBotDistinctsWorker miruBotDistinctsWorker;
 
     private final ScheduledExecutorService processor =
-            Executors.newSingleThreadScheduledExecutor(
-                    new ThreadFactoryBuilder().setNameFormat("mirubot-distincts-%d").build());
+        Executors.newSingleThreadScheduledExecutor(
+            new ThreadFactoryBuilder().setNameFormat("mirubot-distincts-%d").build());
 
     MiruBotDistinctsService(String miruIngressEndpoint,
-                            MiruBotDistinctsConfig miruBotDistinctsConfig,
-                            OrderIdProvider orderIdProvider,
-                            MiruBotSchemaService miruBotSchemaService,
-                            TenantAwareHttpClient<String> miruClientReader,
-                            TenantAwareHttpClient<String> miruClientWriter) {
+        MiruBotDistinctsConfig miruBotDistinctsConfig,
+        OrderIdProvider orderIdProvider,
+        MiruBotSchemaService miruBotSchemaService,
+        TenantAwareHttpClient<String> miruClientReader,
+        TenantAwareHttpClient<String> miruClientWriter) {
         this.miruIngressEndpoint = miruIngressEndpoint;
         this.miruBotDistinctsConfig = miruBotDistinctsConfig;
         this.orderIdProvider = orderIdProvider;
@@ -56,7 +56,7 @@ class MiruBotDistinctsService implements MiruBotHealthPercent {
     public void stop() throws InterruptedException {
         miruBotDistinctsWorker.setRunning(false);
         Thread.sleep(miruBotDistinctsConfig.getWriteReadPauseMs() +
-                miruBotDistinctsConfig.getFailureRetryWaitMs());
+            miruBotDistinctsConfig.getFailureRetryWaitMs());
         processor.shutdownNow();
     }
 
@@ -75,12 +75,12 @@ class MiruBotDistinctsService implements MiruBotHealthPercent {
         LOG.info("Runtime: {}ms", miruBotDistinctsConfig.getRuntimeMs());
 
         return new MiruBotDistinctsWorker(
-                miruIngressEndpoint,
-                miruBotDistinctsConfig,
-                orderIdProvider,
-                miruBotSchemaService,
-                miruClientReader,
-                miruClientWriter);
+            miruIngressEndpoint,
+            miruBotDistinctsConfig,
+            orderIdProvider,
+            miruBotSchemaService,
+            miruClientReader,
+            miruClientWriter);
     }
 
     MiruBotBucketSnapshot genMiruBotBucketSnapshot() {

@@ -37,9 +37,9 @@ class StatedMiruValueWriter {
     private final Random RAND = new Random();
 
     StatedMiruValueWriter(String endpoint,
-                          MiruBotDistinctsConfig config,
-                          TenantAwareHttpClient<String> client,
-                          OrderIdProvider order) {
+        MiruBotDistinctsConfig config,
+        TenantAwareHttpClient<String> client,
+        OrderIdProvider order) {
         this.endpoint = endpoint;
         this.config = config;
         this.client = client;
@@ -47,7 +47,7 @@ class StatedMiruValueWriter {
     }
 
     void write(MiruTenantId miruTenantId,
-               List<Map<String, StatedMiruValue>> fieldsStatedValues) throws Exception {
+        List<Map<String, StatedMiruValue>> fieldsStatedValues) throws Exception {
         LOG.debug("Miru write {} activities", fieldsStatedValues.size());
 
         List<MiruActivity> miruActivities = Lists.newArrayList();
@@ -66,23 +66,23 @@ class StatedMiruValueWriter {
 
             if (LOG.isDebugEnabled()) LOG.debug("Write miru activity: " + sb.toString());
             miruActivities.add(new MiruActivity(
-                    miruTenantId,
-                    order.nextId(),
-                    0,
-                    false,
-                    new String[0],
-                    fieldsValues,
-                    Collections.emptyMap()));
+                miruTenantId,
+                order.nextId(),
+                0,
+                false,
+                new String[0],
+                fieldsValues,
+                Collections.emptyMap()));
         }
 
         String jsonActivities = objectMapper.writeValueAsString(miruActivities);
         LOG.debug("Miru activity json post data '{}'", jsonActivities);
 
         HttpResponse httpResponse = client.call(
-                "",
-                nextClientStrategy,
-                "ingress",
-                client -> new ClientCall.ClientResponse<>(client.postJson(endpoint, jsonActivities, null), true));
+            "",
+            nextClientStrategy,
+            "ingress",
+            client -> new ClientCall.ClientResponse<>(client.postJson(endpoint, jsonActivities, null), true));
 
         LOG.debug("Miru write response {}:{}", httpResponse.getStatusCode(), new String(httpResponse.getResponseBody()));
         if (httpResponse.getStatusCode() < 200 || httpResponse.getStatusCode() >= 300) {
@@ -97,8 +97,8 @@ class StatedMiruValueWriter {
     }
 
     AtomicCounter writeAll(MiruBotBucket miruBotBucket,
-                           MiruTenantId miruTenantId,
-                           Predicate<StatedMiruValue> predicate) throws Exception {
+        MiruTenantId miruTenantId,
+        Predicate<StatedMiruValue> predicate) throws Exception {
         AtomicCounter res = new AtomicCounter();
 
         while (res.getCount() < config.getReadFrequency()) {

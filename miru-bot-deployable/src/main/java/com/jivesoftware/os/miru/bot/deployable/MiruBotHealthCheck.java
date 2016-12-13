@@ -55,12 +55,12 @@ class MiruBotHealthCheck implements HealthCheck {
 
         if (healthPercentage[0] == PERFECT_HEALTH) {
             return new HealthCheckResponseImpl(
-                    config.getName(),
-                    PERFECT_HEALTH,
-                    "Healthy",
-                    config.getDescription(),
-                    "",
-                    System.currentTimeMillis());
+                config.getName(),
+                PERFECT_HEALTH,
+                "Healthy",
+                config.getDescription(),
+                "",
+                System.currentTimeMillis());
         } else {
             return new HealthCheckResponse() {
                 @Override
