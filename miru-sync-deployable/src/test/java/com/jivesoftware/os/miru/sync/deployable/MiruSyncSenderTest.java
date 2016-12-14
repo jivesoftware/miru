@@ -77,16 +77,17 @@ public class MiruSyncSenderTest {
             ringMember.asAquariumMember(),
             count -> count == 1,
             member -> true,
-            128, //TODO config
-            128, //TODO config
-            5_000L, //TODO config
-            100L, //TODO config
-            60_000L, //TODO config
-            10_000L, //TODO config
+            128,
+            128,
+            5_000L,
+            100L,
+            60_000L,
+            10_000L,
             Executors.newSingleThreadExecutor(),
-            100L, //TODO config
-            1_000L, //TODO config
-            10_000L); //TODO config
+            100L,
+            1_000L,
+            10_000L,
+            false);
 
         AtomicInteger largestPartitionId = new AtomicInteger(10);
         int initialId = largestPartitionId.get();
