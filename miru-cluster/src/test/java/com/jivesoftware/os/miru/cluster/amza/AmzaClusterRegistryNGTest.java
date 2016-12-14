@@ -12,6 +12,7 @@ import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceConfig;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceInitializer;
+import com.jivesoftware.os.miru.amza.NoOpClientHealth;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruHostProvider;
@@ -31,9 +32,11 @@ import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSet;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSetDirector;
 import com.jivesoftware.os.miru.cluster.rcvs.MiruSchemaColumnKey;
-import com.jivesoftware.os.miru.amza.NoOpClientHealth;
 import com.jivesoftware.os.rcvs.inmemory.InMemoryRowColumnValueStore;
 import com.jivesoftware.os.routing.bird.deployable.Deployable;
+import com.jivesoftware.os.routing.bird.health.api.HealthCheckRegistry;
+import com.jivesoftware.os.routing.bird.health.api.HealthChecker;
+import com.jivesoftware.os.routing.bird.health.api.HealthFactory;
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
@@ -62,6 +65,18 @@ public class AmzaClusterRegistryNGTest {
 
     @BeforeMethod
     public void setUp() throws Exception {
+        HealthFactory.initialize(BindInterfaceToConfiguration::bindDefault,
+            new HealthCheckRegistry() {
+
+                @Override
+                public void register(HealthChecker healthChecker) {
+                }
+
+                @Override
+                public void unregister(HealthChecker healthChecker) {
+                    throw new UnsupportedOperationException("Not supported yet.");
+                }
+            });
         ObjectMapper mapper = new ObjectMapper();
         File amzaDataDir = Files.createTempDir();
         MiruAmzaServiceConfig acrc = BindInterfaceToConfiguration.bindDefault(MiruAmzaServiceConfig.class);

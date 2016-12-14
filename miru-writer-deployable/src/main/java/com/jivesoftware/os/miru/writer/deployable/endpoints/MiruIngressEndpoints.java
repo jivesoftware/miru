@@ -36,6 +36,8 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import org.merlin.config.defaults.DoubleDefault;
+import org.merlin.config.defaults.IntDefault;
 import org.merlin.config.defaults.StringDefault;
 
 /**
@@ -62,6 +64,14 @@ public class MiruIngressEndpoints {
         @StringDefault("http>ingress")
         @Override
         String getName();
+
+        @DoubleDefault(30000d) /// 30sec
+        @Override
+        Double get95ThPecentileMax();
+
+        @IntDefault(50)
+        @Override
+        Integer getSampleWindowSize();
     }
 
     private final HealthTimer ingressHealthTimer = HealthFactory.getHealthTimer(IngressHealth.class, TimerHealthChecker.FACTORY);
@@ -106,6 +116,14 @@ public class MiruIngressEndpoints {
         @StringDefault("http>remove")
         @Override
         String getName();
+
+        @DoubleDefault(30000d) /// 30sec
+        @Override
+        Double get95ThPecentileMax();
+
+        @IntDefault(50)
+        @Override
+        Integer getSampleWindowSize();
     }
 
     private final HealthTimer removeHealthTimer = HealthFactory.getHealthTimer(RemoveHealth.class, TimerHealthChecker.FACTORY);
@@ -139,6 +157,14 @@ public class MiruIngressEndpoints {
         @StringDefault("http>ingressReadAll")
         @Override
         String getName();
+
+        @DoubleDefault(30000d) /// 30sec
+        @Override
+        Double get95ThPecentileMax();
+
+        @IntDefault(50)
+        @Override
+        Integer getSampleWindowSize();
     }
 
     private final HealthTimer ingressReadAllTimer = HealthFactory.getHealthTimer(IngressReadAllHealth.class, TimerHealthChecker.FACTORY);
@@ -174,6 +200,14 @@ public class MiruIngressEndpoints {
         @StringDefault("http>ingressRead")
         @Override
         String getName();
+
+        @DoubleDefault(30000d) /// 30sec
+        @Override
+        Double get95ThPecentileMax();
+
+        @IntDefault(50)
+        @Override
+        Integer getSampleWindowSize();
     }
 
     private HealthTimer ingressReadTimer = HealthFactory.getHealthTimer(IngressReadHealth.class, TimerHealthChecker.FACTORY);
@@ -209,6 +243,14 @@ public class MiruIngressEndpoints {
         @StringDefault("http>ingressUnread")
         @Override
         String getName();
+
+        @DoubleDefault(30000d) /// 30sec
+        @Override
+        Double get95ThPecentileMax();
+
+        @IntDefault(50)
+        @Override
+        Integer getSampleWindowSize();
     }
 
     private final HealthTimer ingressUnreadTimer = HealthFactory.getHealthTimer(IngressUnreadHealth.class, TimerHealthChecker.FACTORY);
