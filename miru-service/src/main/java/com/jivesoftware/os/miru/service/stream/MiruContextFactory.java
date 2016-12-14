@@ -759,7 +759,10 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                 List<Future<?>> futures = Lists.newArrayList();
                 for (ValueIndex valueIndex : commitables) {
                     log.info("Compacting {} for {}", valueIndex.name(), coord);
-                    futures.addAll(valueIndex.compact(true, 0, 0, false));
+                    List<Future<?>> compact = valueIndex.compact(true, 0, 0, false);
+                    if (compact != null) {
+                        futures.addAll(compact);
+                    }
                 }
                 if (waitForCompletion) {
                     for (Future<?> future : futures) {

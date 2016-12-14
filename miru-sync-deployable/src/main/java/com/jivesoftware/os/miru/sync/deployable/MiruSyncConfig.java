@@ -63,4 +63,7 @@ public interface MiruSyncConfig extends Config {
 
     @ClassDefault(NoOpActivityReadEventConverter.class)
     Class<? extends ActivityReadEventConverter> getSyncReceiverActivityReadEventConverterClass();
+
+    @BooleanDefault(false)
+    boolean getUseClientSolutionLog();
 }

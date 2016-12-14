@@ -249,7 +249,8 @@ public class MiruSyncMain {
                 Executors.newSingleThreadExecutor(),
                 100L, //TODO config
                 1_000L, //TODO config
-                10_000L);//TODO config
+                10_000L, //TODO config
+                syncConfig.getUseClientSolutionLog());
 
             SickThreads walClientSickThreads = new SickThreads();
             deployable.addHealthCheck(new SickThreadsHealthCheck(deployable.config(WALClientSickThreadsHealthCheckConfig.class), walClientSickThreads));
