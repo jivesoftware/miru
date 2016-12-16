@@ -21,4 +21,8 @@ public interface MiruRegistryConfig extends Config {
     // 90 days
     @LongDefault(7_776_000_000L)
     long getDefaultTopologyDestroyAfterMillis();
+
+    // 180 days
+    @LongDefault(15_552_000_000L)
+    long getDefaultTopologyCleanupAfterMillis();
 }

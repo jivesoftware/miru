@@ -11,15 +11,15 @@
         <div class="panel-body">
             <table class="table table-condensed">
                 <tr>
-                    <td><input type="button" value="Remove Destroyed" onclick="miru.cleanup.removeDestroyed(this)" /></td>
-                    <td>Remove all partitions for all tenants that have been marked for destruction based on their latest clock timestamp</td>
+                    <td><input type="button" value="Remove Cleanup" onclick="miru.cleanup.removeCleanup(this)" /></td>
+                    <td>Remove all partitions for all tenants that have been marked for cleanup based on their latest clock timestamp</td>
                 </tr>
             </table>
         </div>
     </div>
     {if $tenants}
         <div class="panel panel-default">
-            <div class="panel-heading">Partitions marked for destruction</div>
+            <div class="panel-heading">Partitions eligible for cleanup</div>
             <div class="panel-body">
                 <table class="table table-condensed">
                     <thead>
@@ -28,6 +28,8 @@
                             <th>Partition</th>
                             <th>Last Ingress</th>
                             <th>Destroy After</th>
+                            <th>Cleanup After</th>
+                            <th>Is Latest</th>
                             <th>Action</th>
                         </tr>
                     </thead>
@@ -39,12 +41,14 @@
                                     <td>{$partition.partitionId}</td>
                                     <td>{$partition.lastIngressTimestamp}</td>
                                     <td>{$partition.destroyAfterTimestamp}</td>
+                                    <td>{$partition.cleanupAfterTimestamp}</td>
+                                    <td>{$partition.isLatest}</td>
                                     <td><input type="button" value="Remove" onclick="miru.cleanup.removePartition(this, '{$tenant.tenantId}', {$partition.partitionId})"></td>
                                 </tr>
                             {/foreach}
                         {ifempty}
                             <tr>
-                                <td colspan="4">No partitions found</td>
+                                <td colspan="7">No partitions eligible for cleanup</td>
                             </tr>
                         {/foreach}
                     </tbody>

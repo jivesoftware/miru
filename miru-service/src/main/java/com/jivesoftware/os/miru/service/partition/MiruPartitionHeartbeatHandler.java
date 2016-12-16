@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.service.partition;
 
-import com.google.common.base.Objects;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.MiruHost;
@@ -131,7 +130,7 @@ public class MiruPartitionHeartbeatHandler {
         if (partitionActive != null) {
             return partitionActive;
         }
-        return new MiruPartitionActive(-1, -1, -1);
+        return new MiruPartitionActive(-1, -1, -1, -1);
     }
 
     private Collection<PartitionInfo> heartbeats() {
@@ -150,7 +149,7 @@ public class MiruPartitionHeartbeatHandler {
         for (MiruPartitionActiveUpdate update : updates) {
             MiruPartitionCoord coord = new MiruPartitionCoord(update.tenantId, MiruPartitionId.of(update.partitionId), host);
             MiruPartitionActive partitionActive = new MiruPartitionActive(update.activeUntilTimestamp,
-                update.idleAfterTimestamp, update.destroyAfterTimestamp);
+                update.idleAfterTimestamp, update.destroyAfterTimestamp, update.cleanupAfterTimestamp);
             active.put(coord, partitionActive);
         }
     }

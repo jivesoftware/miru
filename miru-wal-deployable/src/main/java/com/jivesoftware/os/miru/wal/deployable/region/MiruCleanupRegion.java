@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.wal.deployable.region;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.topology.MiruPartitionStatus;
 import com.jivesoftware.os.miru.ui.MiruPageRegion;
@@ -47,13 +48,22 @@ public class MiruCleanupRegion implements MiruPageRegion<Void> {
                 count++;
                 log.info("Gathering partition status for tenant {}, {}/{}", tenantId, count, tenantIds.size());
                 List<MiruPartitionStatus> status = miruWALDirector.getAllPartitionStatus(tenantId);
+                MiruPartitionId latestPartitionId = null;
+                for (MiruPartitionStatus partitionStatus : status) {
+                    if (latestPartitionId == null || latestPartitionId.compareTo(partitionStatus.getPartitionId()) < 0) {
+                        latestPartitionId = partitionStatus.getPartitionId();
+                    }
+                }
+
                 List<Map<String, Object>> partitions = Lists.newArrayList();
                 for (MiruPartitionStatus partitionStatus : status) {
                     if (partitionStatus.getDestroyAfterTimestamp() > 0 && System.currentTimeMillis() > partitionStatus.getDestroyAfterTimestamp()) {
                         partitions.add(ImmutableMap.of(
                             "partitionId", String.valueOf(partitionStatus.getPartitionId()),
                             "lastIngressTimestamp", dateFormat.format(new Date(partitionStatus.getLastIngressTimestamp())),
-                            "destroyAfterTimestamp", dateFormat.format(new Date(partitionStatus.getDestroyAfterTimestamp()))));
+                            "destroyAfterTimestamp", dateFormat.format(new Date(partitionStatus.getDestroyAfterTimestamp())),
+                            "cleanupAfterTimestamp", dateFormat.format(new Date(partitionStatus.getCleanupAfterTimestamp())),
+                            "isLatest", partitionStatus.getPartitionId().equals(latestPartitionId)));
                     }
                 }
                 if (!partitions.isEmpty()) {

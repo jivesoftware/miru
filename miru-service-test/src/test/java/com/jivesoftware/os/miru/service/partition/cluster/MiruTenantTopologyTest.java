@@ -87,21 +87,21 @@ public class MiruTenantTopologyTest {
         when(localPartitionFactory.create(same(bitmaps), any(MiruPartitionCoord.class), anyLong())).thenAnswer(localAnswer);
 
         tenantTopology.checkForPartitionAlignment(Lists.newArrayList(
-            new MiruPartitionActiveUpdate(tenantId, p0.getId(), true, Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE)));
+            new MiruPartitionActiveUpdate(tenantId, p0.getId(), true, Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE)));
 
         verify(localPartitionFactory).create(same(bitmaps), eq(new MiruPartitionCoord(tenantId, p0, localhost)), anyLong());
         verifyNoMoreInteractions(localPartitionFactory);
 
         tenantTopology.checkForPartitionAlignment(Lists.newArrayList(
-            new MiruPartitionActiveUpdate(tenantId, p0.getId(), true, Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE),
-            new MiruPartitionActiveUpdate(tenantId, p1.getId(), true, Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE)));
+            new MiruPartitionActiveUpdate(tenantId, p0.getId(), true, Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE),
+            new MiruPartitionActiveUpdate(tenantId, p1.getId(), true, Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE)));
 
         verify(localPartitionFactory).create(same(bitmaps), eq(new MiruPartitionCoord(tenantId, p1, localhost)), anyLong());
         verifyNoMoreInteractions(localPartitionFactory);
 
         tenantTopology.checkForPartitionAlignment(Lists.newArrayList(
-            new MiruPartitionActiveUpdate(tenantId, p0.getId(), false, Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE),
-            new MiruPartitionActiveUpdate(tenantId, p1.getId(), false, Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE)));
+            new MiruPartitionActiveUpdate(tenantId, p0.getId(), false, Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE),
+            new MiruPartitionActiveUpdate(tenantId, p1.getId(), false, Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE)));
 
         verifyNoMoreInteractions(localPartitionFactory);
         verify(coordToPartition.get(new MiruPartitionCoord(tenantId, p0, localhost))).remove();
