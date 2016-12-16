@@ -13,6 +13,7 @@ public class MiruPartitionActiveUpdate {
     public long activeUntilTimestamp;
     public long idleAfterTimestamp;
     public long destroyAfterTimestamp;
+    public long cleanupAfterTimestamp;
 
     public MiruPartitionActiveUpdate() {
     }
@@ -22,12 +23,14 @@ public class MiruPartitionActiveUpdate {
         boolean hosted,
         long activeUntilTimestamp,
         long idleAfterTimestamp,
-        long destroyAfterTimestamp) {
+        long destroyAfterTimestamp,
+        long cleanupAfterTimestamp) {
         this.tenantId = tenantId;
         this.partitionId = partitionId;
         this.hosted = hosted;
         this.activeUntilTimestamp = activeUntilTimestamp;
         this.idleAfterTimestamp = idleAfterTimestamp;
         this.destroyAfterTimestamp = destroyAfterTimestamp;
+        this.cleanupAfterTimestamp = cleanupAfterTimestamp;
     }
 }

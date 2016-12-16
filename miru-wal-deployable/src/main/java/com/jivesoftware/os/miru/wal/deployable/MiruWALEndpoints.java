@@ -188,14 +188,14 @@ public class MiruWALEndpoints {
     }
 
     @POST
-    @Path("/cleanup/destroyed")
+    @Path("/cleanup/remove")
     @Produces(MediaType.TEXT_HTML)
-    public Response cleanupDestroyed() {
+    public Response cleanupRemove() {
         try {
-            miruWALDirector.removeDestroyed();
+            miruWALDirector.removeCleanup();
             return Response.ok("success").build();
         } catch (Throwable t) {
-            LOG.error("POST /cleanup/destroyed", t);
+            LOG.error("POST /cleanup/remove", t);
             return Response.serverError().entity(t.getMessage()).build();
         }
     }

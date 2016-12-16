@@ -115,14 +115,14 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
         }
     }
 
-    public void removeDestroyed() throws Exception {
-        LOG.info("Beginning scan for destroyed partitions");
+    public void removeCleanup() throws Exception {
+        LOG.info("Beginning scan for partitions to clean up");
         List<MiruTenantId> tenantIds = getAllTenantIds();
         for (MiruTenantId tenantId : tenantIds) {
             List<MiruPartitionStatus> status = getAllPartitionStatus(tenantId);
             int count = 0;
             for (MiruPartitionStatus partitionStatus : status) {
-                if (partitionStatus.getDestroyAfterTimestamp() > 0 && System.currentTimeMillis() > partitionStatus.getDestroyAfterTimestamp()) {
+                if (partitionStatus.getCleanupAfterTimestamp() > 0 && System.currentTimeMillis() > partitionStatus.getCleanupAfterTimestamp()) {
                     removePartition(tenantId, partitionStatus.getPartitionId());
                     count++;
                 }
@@ -131,7 +131,7 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
                 LOG.info("Removed {} partitions for tenant {}", count, tenantId);
             }
         }
-        LOG.info("Finished scan for destroyed partitions");
+        LOG.info("Finished scan for partitions to clean up");
     }
 
     public List<MiruPartitionStatus> getAllPartitionStatus(MiruTenantId tenantId) throws Exception {

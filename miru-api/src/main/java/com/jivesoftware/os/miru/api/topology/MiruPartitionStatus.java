@@ -14,16 +14,19 @@ public class MiruPartitionStatus {
     private final MiruPartitionId partitionId;
     private final long lastIngressTimestamp;
     private final long destroyAfterTimestamp;
+    private final long cleanupAfterTimestamp;
 
     @JsonCreator
     public MiruPartitionStatus(@JsonProperty("tenantId") MiruTenantId tenantId,
         @JsonProperty("partitionId") MiruPartitionId partitionId,
         @JsonProperty("lastIngressTimestamp") long lastIngressTimestamp,
-        @JsonProperty("destroyAfterTimestamp") long destroyAfterTimestamp) {
+        @JsonProperty("destroyAfterTimestamp") long destroyAfterTimestamp,
+        @JsonProperty("cleanupAfterTimestamp") long cleanupAfterTimestamp) {
         this.tenantId = tenantId;
         this.partitionId = partitionId;
         this.lastIngressTimestamp = lastIngressTimestamp;
         this.destroyAfterTimestamp = destroyAfterTimestamp;
+        this.cleanupAfterTimestamp = cleanupAfterTimestamp;
     }
 
     public MiruTenantId getTenantId() {
@@ -42,6 +45,10 @@ public class MiruPartitionStatus {
         return destroyAfterTimestamp;
     }
 
+    public long getCleanupAfterTimestamp() {
+        return cleanupAfterTimestamp;
+    }
+
     @Override
     public String toString() {
         return "MiruPartitionStatus{" +
@@ -49,6 +56,7 @@ public class MiruPartitionStatus {
             ", partitionId=" + partitionId +
             ", lastIngressTimestamp=" + lastIngressTimestamp +
             ", destroyAfterTimestamp=" + destroyAfterTimestamp +
+            ", cleanupAfterTimestamp=" + cleanupAfterTimestamp +
             '}';
     }
 }

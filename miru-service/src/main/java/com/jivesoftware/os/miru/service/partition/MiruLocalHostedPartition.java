@@ -758,7 +758,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                     } catch (Throwable t) {
                         LOG.error("Failed to check realtime delivery id for inactive partition {}", new Object[] { coord }, t);
                     }
-                    if (deliveryId == lastId) {
+                    if (deliveryId == Integer.MAX_VALUE || deliveryId == lastId) {
                         close();
                     } else {
                         LOG.warn("Partition {} is inactive but realtime deliveryId {} needs to catch up with lastId {}", coord, deliveryId, lastId);

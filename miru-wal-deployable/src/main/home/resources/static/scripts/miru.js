@@ -88,13 +88,13 @@ miru.repair = {
 
 miru.cleanup = {
 
-    removeDestroyed: function (ele) {
+    removeCleanup: function (ele) {
         var $button = $(ele);
         $button.attr('disabled', 'disabled');
         var value = $button.val();
         $.ajax({
             type: "POST",
-            url: "/ui/cleanup/destroyed",
+            url: "/ui/cleanup/remove",
             data: {},
             //contentType: "application/json",
             success: function () {

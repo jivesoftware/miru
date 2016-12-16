@@ -23,14 +23,16 @@ public interface MiruClusterClient {
         public MiruPartitionId partitionId;
         public RangeMinMax rangeMinMax;
         public long destroyAfterTimestamp;
+        public long cleanupAfterTimestamp;
 
         public PartitionRange() {
         }
 
-        public PartitionRange(MiruPartitionId partitionId, RangeMinMax rangeMinMax, long destroyAfterTimestamp) {
+        public PartitionRange(MiruPartitionId partitionId, RangeMinMax rangeMinMax, long destroyAfterTimestamp, long cleanupAfterTimestamp) {
             this.partitionId = partitionId;
             this.rangeMinMax = rangeMinMax;
             this.destroyAfterTimestamp = destroyAfterTimestamp;
+            this.cleanupAfterTimestamp = cleanupAfterTimestamp;
         }
     }
 
