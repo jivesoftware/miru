@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.wal;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
@@ -32,7 +33,9 @@ import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.shared.HostPort;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
@@ -120,18 +123,42 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
         List<MiruTenantId> tenantIds = getAllTenantIds();
         for (MiruTenantId tenantId : tenantIds) {
             List<MiruPartitionStatus> status = getAllPartitionStatus(tenantId);
-            int count = 0;
-            for (MiruPartitionStatus partitionStatus : status) {
-                if (partitionStatus.getCleanupAfterTimestamp() > 0 && System.currentTimeMillis() > partitionStatus.getCleanupAfterTimestamp()) {
-                    removePartition(tenantId, partitionStatus.getPartitionId());
-                    count++;
-                }
-            }
-            if (count > 0) {
+            int[] count = { 0 };
+            filterCleanup(status, false, (partitionStatus, isLatest) -> {
+                removePartition(tenantId, partitionStatus.getPartitionId());
+                count[0]++;
+                return true;
+            });
+            if (count[0] > 0) {
                 LOG.info("Removed {} partitions for tenant {}", count, tenantId);
             }
         }
         LOG.info("Finished scan for partitions to clean up");
+    }
+
+    public void filterCleanup(List<MiruPartitionStatus> status, boolean includeLatestPartitions, PartitionStatusStream stream) throws Exception {
+        MiruPartitionId latestPartitionId = null;
+        for (MiruPartitionStatus partitionStatus : status) {
+            if (latestPartitionId == null || latestPartitionId.compareTo(partitionStatus.getPartitionId()) < 0) {
+                latestPartitionId = partitionStatus.getPartitionId();
+            }
+        }
+
+        for (MiruPartitionStatus partitionStatus : status) {
+            boolean isLatest = partitionStatus.getPartitionId().equals(latestPartitionId);
+            if (partitionStatus.getCleanupAfterTimestamp() > 0
+                && System.currentTimeMillis() > partitionStatus.getCleanupAfterTimestamp()
+                && (includeLatestPartitions || !isLatest)) {
+                if (!stream.stream(partitionStatus, isLatest)) {
+                    break;
+                }
+            }
+        }
+    }
+
+    public interface PartitionStatusStream {
+
+        boolean stream(MiruPartitionStatus partitionStatus, boolean isLatest) throws Exception;
     }
 
     public List<MiruPartitionStatus> getAllPartitionStatus(MiruTenantId tenantId) throws Exception {

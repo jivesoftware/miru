@@ -48,6 +48,18 @@ public class MiruCleanupRegion implements MiruPageRegion<Void> {
                 count++;
                 log.info("Gathering partition status for tenant {}, {}/{}", tenantId, count, tenantIds.size());
                 List<MiruPartitionStatus> status = miruWALDirector.getAllPartitionStatus(tenantId);
+                List<Map<String, Object>> partitions = Lists.newArrayList();
+                miruWALDirector.filterCleanup(status, true, (partitionStatus, isLatest) -> {
+                    partitions.add(ImmutableMap.of(
+                        "partitionId", String.valueOf(partitionStatus.getPartitionId()),
+                        "lastIngressTimestamp", dateFormat.format(new Date(partitionStatus.getLastIngressTimestamp())),
+                        "destroyAfterTimestamp", dateFormat.format(new Date(partitionStatus.getDestroyAfterTimestamp())),
+                        "cleanupAfterTimestamp", dateFormat.format(new Date(partitionStatus.getCleanupAfterTimestamp())),
+                        "isLatest", isLatest));
+                    return true;
+                });
+
+
                 MiruPartitionId latestPartitionId = null;
                 for (MiruPartitionStatus partitionStatus : status) {
                     if (latestPartitionId == null || latestPartitionId.compareTo(partitionStatus.getPartitionId()) < 0) {
@@ -55,9 +67,8 @@ public class MiruCleanupRegion implements MiruPageRegion<Void> {
                     }
                 }
 
-                List<Map<String, Object>> partitions = Lists.newArrayList();
                 for (MiruPartitionStatus partitionStatus : status) {
-                    if (partitionStatus.getDestroyAfterTimestamp() > 0 && System.currentTimeMillis() > partitionStatus.getDestroyAfterTimestamp()) {
+                    if (partitionStatus.getCleanupAfterTimestamp() > 0 && System.currentTimeMillis() > partitionStatus.getCleanupAfterTimestamp()) {
                         partitions.add(ImmutableMap.of(
                             "partitionId", String.valueOf(partitionStatus.getPartitionId()),
                             "lastIngressTimestamp", dateFormat.format(new Date(partitionStatus.getLastIngressTimestamp())),
