@@ -1,26 +1,16 @@
 package com.jivesoftware.os.miru.logappender;
 
 import java.io.IOException;
+
+import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import org.merlin.config.Config;
 import org.merlin.config.defaults.BooleanDefault;
 import org.merlin.config.defaults.IntDefault;
 import org.merlin.config.defaults.LongDefault;
 
-/**
- *
- */
 public class MiruLogAppenderInitializer {
 
-    public static interface MiruLogAppenderConfig extends Config {
-
-        @IntDefault(60_000)
-        int getSocketTimeoutInMillis();
-
-        @IntDefault(-1)
-        int getMaxConnections();
-
-        @IntDefault(1)
-        int getMaxConnectionsPerHost();
+    public interface MiruLogAppenderConfig extends Config {
 
         @IntDefault(100_000)
         int getQueueMaxDepth();
@@ -40,9 +30,6 @@ public class MiruLogAppenderInitializer {
         @LongDefault(5_000)
         long getIfErrorPauseMillis();
 
-        @LongDefault(1_000)
-        long getCycleReceiverAfterAppendCount();
-
         @IntDefault(1_000)
         int getNonBlockingDrainThreshold();
 
@@ -60,24 +47,22 @@ public class MiruLogAppenderInitializer {
         String instance,
         String version,
         MiruLogAppenderConfig config,
-        MiruLogSenderProvider logSenderProvider) throws IOException {
+        TenantAwareHttpClient<String> client) throws IOException {
 
         if (config.getEnabled()) {
-
             return new HttpMiruLogAppender(datacenter,
                 cluster,
                 host,
                 service,
                 instance,
                 version,
-                logSenderProvider,
+                client,
                 config.getQueueMaxDepth(),
                 config.getBatchSize(),
                 config.getQueueIsBlocking(),
                 config.getIfSuccessPauseMillis(),
                 config.getIfEmptyPauseMillis(),
                 config.getIfErrorPauseMillis(),
-                config.getCycleReceiverAfterAppendCount(),
                 config.getNonBlockingDrainThreshold(),
                 config.getNonBlockingDrainCount());
         } else {

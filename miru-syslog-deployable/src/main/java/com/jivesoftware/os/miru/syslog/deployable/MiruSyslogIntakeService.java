@@ -1,11 +1,15 @@
 package com.jivesoftware.os.miru.syslog.deployable;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.jivesoftware.os.miru.logappender.MiruLogEvent;
-import com.jivesoftware.os.miru.logappender.MiruLogSender;
-import com.jivesoftware.os.miru.logappender.RoutingBirdLogSenderProvider;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import com.jivesoftware.os.routing.bird.http.client.HttpResponse;
+import com.jivesoftware.os.routing.bird.http.client.RoundRobinStrategy;
+import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
+import com.jivesoftware.os.routing.bird.shared.ClientCall;
+import com.jivesoftware.os.routing.bird.shared.NextClientStrategy;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
@@ -33,7 +37,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
 
 class MiruSyslogIntakeService {
 
@@ -44,7 +47,7 @@ class MiruSyslogIntakeService {
     private final boolean tcpKeepAlive;
     private final int maxFrameLength;
     private final int receiveBufferSize;
-    private final RoutingBirdLogSenderProvider routingBirdLogSenderProvider;
+    TenantAwareHttpClient<String> client;
 
     private final BlockingQueue<MiruLogEvent> queue;
     private final int batchSize;
@@ -52,36 +55,36 @@ class MiruSyslogIntakeService {
     private final long ifSuccessPauseMillis;
     private final long ifEmptyPauseMillis;
     private final long ifErrorPauseMillis;
-    private final long cycleReceiverAfterAppendCount;
     private final int nonBlockingDrainThreshold;
     private final int nonBlockingDrainCount;
 
     private final AtomicBoolean started = new AtomicBoolean(false);
-    private final AtomicLong helperIndex = new AtomicLong(0);
-    private final AtomicLong appendCount = new AtomicLong(0);
 
     private ExecutorService listenProcessor =
-            Executors.newSingleThreadScheduledExecutor(
-                    new ThreadFactoryBuilder().setNameFormat("miru-syslog-listener-%d").build());
+        Executors.newSingleThreadScheduledExecutor(
+            new ThreadFactoryBuilder().setNameFormat("miru-syslog-listener-%d").build());
     private ExecutorService queueProcessor =
-            Executors.newSingleThreadScheduledExecutor(
-                    new ThreadFactoryBuilder().setNameFormat("miru-syslog-queue-%d").build());
+        Executors.newSingleThreadScheduledExecutor(
+            new ThreadFactoryBuilder().setNameFormat("miru-syslog-queue-%d").build());
+
+    private final NextClientStrategy nextClientStrategy = new RoundRobinStrategy();
+    private final ObjectMapper objectMapper = new ObjectMapper();
+    private static final String endpoint = "/miru/stumptown/intake";
 
     MiruSyslogIntakeService(boolean enabled,
-                            int port,
-                            boolean tcpKeepAlive,
-                            int receiveBufferSize,
-                            int maxFrameLength,
-                            int queueSize,
-                            int batchSize,
-                            boolean blocking,
-                            long ifSuccessPauseMillis,
-                            long ifEmptyPauseMillis,
-                            long ifErrorPauseMillis,
-                            long cycleReceiverAfterAppendCount,
-                            int nonBlockingDrainThreshold,
-                            int nonBlockingDrainCount,
-                            RoutingBirdLogSenderProvider routingBirdLogSenderProvider) {
+        int port,
+        boolean tcpKeepAlive,
+        int receiveBufferSize,
+        int maxFrameLength,
+        int queueSize,
+        int batchSize,
+        boolean blocking,
+        long ifSuccessPauseMillis,
+        long ifEmptyPauseMillis,
+        long ifErrorPauseMillis,
+        int nonBlockingDrainThreshold,
+        int nonBlockingDrainCount,
+        TenantAwareHttpClient<String> client) {
         this.enabled = enabled;
 
         this.port = port;
@@ -95,11 +98,10 @@ class MiruSyslogIntakeService {
         this.ifSuccessPauseMillis = ifSuccessPauseMillis;
         this.ifEmptyPauseMillis = ifEmptyPauseMillis;
         this.ifErrorPauseMillis = ifErrorPauseMillis;
-        this.cycleReceiverAfterAppendCount = cycleReceiverAfterAppendCount;
         this.nonBlockingDrainThreshold = nonBlockingDrainThreshold;
         this.nonBlockingDrainCount = nonBlockingDrainCount;
 
-        this.routingBirdLogSenderProvider = routingBirdLogSenderProvider;
+        this.client = client;
     }
 
     void start() {
@@ -136,9 +138,9 @@ class MiruSyslogIntakeService {
                 InetSocketAddress remoteAddress = (InetSocketAddress) ctx.channel().remoteAddress();
 
                 SyslogEvent syslogEvent = new SyslogEvent()
-                        .setMessage(line)
-                        .setAddress(remoteAddress)
-                        .build();
+                    .setMessage(line)
+                    .setAddress(remoteAddress)
+                    .build();
                 LOG.info(syslogEvent.toString());
 
                 if (syslogEvent.miruLogEvent == null) {
@@ -159,11 +161,6 @@ class MiruSyslogIntakeService {
                             LOG.error("Syslog is unable to write to full syslog queue.");
                         }
                     }
-
-                    long count = appendCount.incrementAndGet();
-                    if (count % cycleReceiverAfterAppendCount == 0) {
-                        helperIndex.incrementAndGet();
-                    }
                 }
             }
 
@@ -176,20 +173,20 @@ class MiruSyslogIntakeService {
 
             try {
                 new ServerBootstrap().group(parentGroup, childGroup)
-                        .option(ChannelOption.SO_RCVBUF, receiveBufferSize)
-                        .option(ChannelOption.SO_KEEPALIVE, tcpKeepAlive)
-                        .channel(NioServerSocketChannel.class)
-                        .childHandler(new ChannelInitializer<SocketChannel>() {
-                            @Override
-                            public void initChannel(SocketChannel ch) {
-                                ChannelPipeline pipeline = ch.pipeline();
-                                pipeline.addLast(new StringEncoder(CharsetUtil.UTF_8));
-                                pipeline.addLast(new LineBasedFrameDecoder(maxFrameLength));
-                                pipeline.addLast(new StringDecoder(CharsetUtil.UTF_8));
-                                pipeline.addLast(new SyslogServerHandler());
-                            }
-                        })
-                        .bind(port).sync().channel().closeFuture().sync();
+                    .option(ChannelOption.SO_RCVBUF, receiveBufferSize)
+                    .option(ChannelOption.SO_KEEPALIVE, tcpKeepAlive)
+                    .channel(NioServerSocketChannel.class)
+                    .childHandler(new ChannelInitializer<SocketChannel>() {
+                        @Override
+                        public void initChannel(SocketChannel ch) {
+                            ChannelPipeline pipeline = ch.pipeline();
+                            pipeline.addLast(new StringEncoder(CharsetUtil.UTF_8));
+                            pipeline.addLast(new LineBasedFrameDecoder(maxFrameLength));
+                            pipeline.addLast(new StringDecoder(CharsetUtil.UTF_8));
+                            pipeline.addLast(new SyslogServerHandler());
+                        }
+                    })
+                    .bind(port).sync().channel().closeFuture().sync();
             } catch (InterruptedException e) {
                 e.printStackTrace();
             } finally {
@@ -219,20 +216,24 @@ class MiruSyslogIntakeService {
                         Thread.interrupted();
                     }
                 } else {
-                    deliver:
                     while (true) {
-                        MiruLogSender[] logSenders = routingBirdLogSenderProvider.getLogSenders();
-                        for (int tries = 0; tries < logSenders.length; tries++) {
-                            try {
-                                logSenders[(int) (helperIndex.get() % logSenders.length)].send(miruLogEvents);
-                                break deliver;
-                            } catch (Exception e) {
-                                LOG.debug("Send to logger fail for syslog.");
-                                helperIndex.incrementAndGet();
+                        try {
+                            String toJson = objectMapper.writeValueAsString(miruLogEvents);
+
+                            HttpResponse httpResponse = client.call(
+                                "",
+                                nextClientStrategy,
+                                "ingress",
+                                client -> new ClientCall.ClientResponse<>(client.postJson(endpoint, toJson, null), true));
+                            if (httpResponse.getStatusCode() != 202) {
+                                throw new Exception("Error [" + httpResponse.getStatusCode() + "] posting: " + toJson);
                             }
+
+                            break;
+                        } catch (Exception e) {
+                            System.err.println("Append failed for logger: " + e.getClass().getCanonicalName() + ": " + e.getMessage());
                         }
 
-                        LOG.error("Send failed for all loggers.");
                         try {
                             Thread.sleep(ifErrorPauseMillis);
                         } catch (InterruptedException e) {

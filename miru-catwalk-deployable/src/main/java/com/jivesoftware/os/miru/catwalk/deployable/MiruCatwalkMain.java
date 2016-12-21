@@ -30,13 +30,10 @@ import com.jivesoftware.os.miru.amza.MiruAmzaServiceConfig;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceInitializer;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.catwalk.deployable.endpoints.CatwalkModelEndpoints;
-import com.jivesoftware.os.miru.logappender.MiruLogAppender;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
-import com.jivesoftware.os.miru.logappender.RoutingBirdLogSenderProvider;
-import com.jivesoftware.os.miru.metric.sampler.MiruMetricSampler;
+import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer.MiruLogAppenderConfig;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer.MiruMetricSamplerConfig;
-import com.jivesoftware.os.miru.metric.sampler.RoutingBirdMetricSampleSenderProvider;
 import com.jivesoftware.os.miru.plugin.query.MiruTenantQueryRouting;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer;
@@ -44,7 +41,6 @@ import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer.MiruSoyRendererCon
 import com.jivesoftware.os.miru.wal.client.MiruWALClientInitializer.WALClientSickThreadsHealthCheckConfig;
 import com.jivesoftware.os.routing.bird.deployable.Deployable;
 import com.jivesoftware.os.routing.bird.deployable.DeployableHealthCheckRegistry;
-import com.jivesoftware.os.routing.bird.deployable.DeployableMainAuthHealthCheckConfig;
 import com.jivesoftware.os.routing.bird.deployable.ErrorHealthCheckConfig;
 import com.jivesoftware.os.routing.bird.deployable.InstanceConfig;
 import com.jivesoftware.os.routing.bird.endpoints.base.HasUI;
@@ -55,7 +51,6 @@ import com.jivesoftware.os.routing.bird.health.checkers.FileDescriptorCountHealt
 import com.jivesoftware.os.routing.bird.health.checkers.GCLoadHealthChecker;
 import com.jivesoftware.os.routing.bird.health.checkers.GCPauseHealthChecker;
 import com.jivesoftware.os.routing.bird.health.checkers.LoadAverageHealthChecker;
-import com.jivesoftware.os.routing.bird.health.checkers.PercentileHealthChecker;
 import com.jivesoftware.os.routing.bird.health.checkers.ServiceStartupHealthCheck;
 import com.jivesoftware.os.routing.bird.health.checkers.SickThreads;
 import com.jivesoftware.os.routing.bird.health.checkers.SickThreadsHealthCheck;
@@ -69,7 +64,6 @@ import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.http.client.TenantRoutingHttpClientInitializer;
 import com.jivesoftware.os.routing.bird.server.util.Resource;
 import com.jivesoftware.os.routing.bird.shared.TenantRoutingProvider;
-import com.jivesoftware.os.routing.bird.shared.TenantsServiceConnectionDescriptorProvider;
 import java.io.File;
 import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
@@ -151,7 +145,7 @@ public class MiruCatwalkMain {
         long getAmzaDebugClientCountInterval();
     }
 
-    public void run(String[] args) throws Exception {
+    void run(String[] args) throws Exception {
         ServiceStartupHealthCheck serviceStartupHealthCheck = new ServiceStartupHealthCheck();
         try {
             final Deployable deployable = new Deployable(args);
@@ -178,39 +172,57 @@ public class MiruCatwalkMain {
             HttpResponseMapper responseMapper = new HttpResponseMapper(mapper);
 
             TenantRoutingProvider tenantRoutingProvider = deployable.getTenantRoutingProvider();
-            MiruLogAppenderInitializer.MiruLogAppenderConfig miruLogAppenderConfig = deployable.config(MiruLogAppenderInitializer.MiruLogAppenderConfig.class);
-            TenantsServiceConnectionDescriptorProvider logConnections = tenantRoutingProvider.getConnections("miru-stumptown", "main", 10_000); // TODO config
-            MiruLogAppender miruLogAppender = new MiruLogAppenderInitializer().initialize(null, //TODO datacenter
+            TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = deployable.getTenantRoutingHttpClientInitializer();
+            HttpDeliveryClientHealthProvider clientHealthProvider = new HttpDeliveryClientHealthProvider(instanceConfig.getInstanceKey(),
+                HttpRequestHelperUtils.buildRequestHelper(false, false, null, instanceConfig.getRoutesHost(), instanceConfig.getRoutesPort()),
+                instanceConfig.getConnectionsHealth(), 5_000, 100);
+
+            MiruLogAppenderConfig miruLogAppenderConfig = deployable.config(MiruLogAppenderConfig.class);
+            @SuppressWarnings("unchecked")
+            TenantAwareHttpClient<String> miruStumptownClient = tenantRoutingHttpClientInitializer.builder(
+                tenantRoutingProvider.getConnections(
+                    "miru-stumptown",
+                    "main",
+                    10_000),
+                clientHealthProvider)
+                .deadAfterNErrors(10)
+                .checkDeadEveryNMillis(10_000)
+                .build();
+            new MiruLogAppenderInitializer().initialize(
+                instanceConfig.getDatacenter(),
                 instanceConfig.getClusterName(),
                 instanceConfig.getHost(),
                 instanceConfig.getServiceName(),
                 String.valueOf(instanceConfig.getInstanceName()),
                 instanceConfig.getVersion(),
                 miruLogAppenderConfig,
-                new RoutingBirdLogSenderProvider<>(logConnections, "", miruLogAppenderConfig.getSocketTimeoutInMillis()));
-            miruLogAppender.install();
+                miruStumptownClient).install();
 
             MiruMetricSamplerConfig metricSamplerConfig = deployable.config(MiruMetricSamplerConfig.class);
-            TenantsServiceConnectionDescriptorProvider metricConnections = tenantRoutingProvider.getConnections("miru-anomaly", "main", 10_000); // TODO config
-            MiruMetricSampler sampler = new MiruMetricSamplerInitializer().initialize(null, //TODO datacenter
+            @SuppressWarnings("unchecked")
+            TenantAwareHttpClient<String> miruAnomalyClient = tenantRoutingHttpClientInitializer.builder(
+                tenantRoutingProvider.getConnections(
+                    "miru-anomaly",
+                    "main",
+                    10_000),
+                clientHealthProvider)
+                .deadAfterNErrors(10)
+                .checkDeadEveryNMillis(10_000)
+                .build();
+            new MiruMetricSamplerInitializer().initialize(
+                instanceConfig.getDatacenter(),
                 instanceConfig.getClusterName(),
                 instanceConfig.getHost(),
                 instanceConfig.getServiceName(),
                 String.valueOf(instanceConfig.getInstanceName()),
                 instanceConfig.getVersion(),
                 metricSamplerConfig,
-                new RoutingBirdMetricSampleSenderProvider<>(metricConnections, "", metricSamplerConfig.getSocketTimeoutInMillis()));
-            sampler.start();
+                miruAnomalyClient).start();
 
             MiruSoyRendererConfig rendererConfig = deployable.config(MiruSoyRendererConfig.class);
 
-            HttpDeliveryClientHealthProvider clientHealthProvider = new HttpDeliveryClientHealthProvider(instanceConfig.getInstanceKey(),
-                HttpRequestHelperUtils.buildRequestHelper(false, false, null, instanceConfig.getRoutesHost(), instanceConfig.getRoutesPort()),
-                instanceConfig.getConnectionsHealth(), 5_000, 100);
-
-            TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = deployable.getTenantRoutingHttpClientInitializer();
-
             AmzaCatwalkConfig amzaCatwalkConfig = deployable.config(AmzaCatwalkConfig.class);
+            @SuppressWarnings("unchecked")
             TenantAwareHttpClient<String> amzaClient = tenantRoutingHttpClientInitializer.builder(
                 tenantRoutingProvider.getConnections("amza", "main", 10_000), // TODO config
                 clientHealthProvider)
@@ -219,12 +231,15 @@ public class MiruCatwalkMain {
                 .debugClient(amzaCatwalkConfig.getAmzaDebugClientCount(), amzaCatwalkConfig.getAmzaDebugClientCountInterval())
                 .build(); // TODO expose to conf
 
+            @SuppressWarnings("unchecked")
             TenantAwareHttpClient<String> manageHttpClient = tenantRoutingHttpClientInitializer.builder(
                 tenantRoutingProvider.getConnections("miru-manage", "main", 10_000), // TODO config
                 clientHealthProvider)
                 .deadAfterNErrors(10)
                 .checkDeadEveryNMillis(10_000)
                 .build(); // TODO expose to conf
+
+            @SuppressWarnings("unchecked")
             TenantAwareHttpClient<String> readerClient = tenantRoutingHttpClientInitializer.builder(
                 tenantRoutingProvider.getConnections("miru-reader", "main", 10_000), // TODO config
                 clientHealthProvider)
@@ -319,7 +334,6 @@ public class MiruCatwalkMain {
             File staticResourceDir = new File(System.getProperty("user.dir"));
             System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());
             Resource sourceTree = new Resource(staticResourceDir)
-                //.addResourcePath("../../../../../src/main/resources") // fluff?
                 .addResourcePath(rendererConfig.getPathToStaticResources())
                 .setDirectoryListingAllowed(false)
                 .setContext("/ui/static");

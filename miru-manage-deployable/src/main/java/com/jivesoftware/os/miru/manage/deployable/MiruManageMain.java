@@ -43,16 +43,13 @@ import com.jivesoftware.os.miru.api.wal.RCVSSipCursor;
 import com.jivesoftware.os.miru.cluster.MiruRegistryClusterClient;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSetDirector;
 import com.jivesoftware.os.miru.cluster.amza.AmzaClusterRegistry;
-import com.jivesoftware.os.miru.logappender.MiruLogAppender;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
-import com.jivesoftware.os.miru.logappender.RoutingBirdLogSenderProvider;
+import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer.MiruLogAppenderConfig;
 import com.jivesoftware.os.miru.manage.deployable.balancer.MiruRebalanceDirector;
 import com.jivesoftware.os.miru.manage.deployable.balancer.MiruRebalanceInitializer;
 import com.jivesoftware.os.miru.manage.deployable.topology.MiruTopologyEndpoints;
-import com.jivesoftware.os.miru.metric.sampler.MiruMetricSampler;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer.MiruMetricSamplerConfig;
-import com.jivesoftware.os.miru.metric.sampler.RoutingBirdMetricSampleSenderProvider;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer.MiruSoyRendererConfig;
@@ -107,7 +104,7 @@ public class MiruManageMain {
         long getReplicateTimeoutMillis();
     }
 
-    public void run(String[] args) throws Exception {
+    void run(String[] args) throws Exception {
         ServiceStartupHealthCheck serviceStartupHealthCheck = new ServiceStartupHealthCheck();
         try {
             final Deployable deployable = new Deployable(args);
@@ -132,47 +129,68 @@ public class MiruManageMain {
             mapper.registerModule(new GuavaModule());
 
             TenantRoutingProvider tenantRoutingProvider = deployable.getTenantRoutingProvider();
-            MiruLogAppenderInitializer.MiruLogAppenderConfig miruLogAppenderConfig = deployable.config(MiruLogAppenderInitializer.MiruLogAppenderConfig.class);
-            TenantsServiceConnectionDescriptorProvider logConnections = tenantRoutingProvider.getConnections("miru-stumptown", "main", 10_000); // TODO config
-            MiruLogAppender miruLogAppender = new MiruLogAppenderInitializer().initialize(null, //TODO datacenter
+            TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer =
+                deployable.getTenantRoutingHttpClientInitializer();
+            HttpDeliveryClientHealthProvider clientHealthProvider = new HttpDeliveryClientHealthProvider(instanceConfig.getInstanceKey(),
+                HttpRequestHelperUtils.buildRequestHelper(false, false, null, instanceConfig.getRoutesHost(), instanceConfig.getRoutesPort()),
+                instanceConfig.getConnectionsHealth(), 5_000, 100);
+
+            MiruLogAppenderConfig miruLogAppenderConfig = deployable.config(MiruLogAppenderConfig.class);
+            @SuppressWarnings("unchecked")
+            TenantAwareHttpClient<String> miruStumptownClient = tenantRoutingHttpClientInitializer.builder(
+                tenantRoutingProvider.getConnections(
+                    "miru-stumptown",
+                    "main",
+                    10_000),
+                clientHealthProvider)
+                .deadAfterNErrors(10)
+                .checkDeadEveryNMillis(10_000)
+                .build();
+            new MiruLogAppenderInitializer().initialize(
+                instanceConfig.getDatacenter(),
                 instanceConfig.getClusterName(),
                 instanceConfig.getHost(),
                 instanceConfig.getServiceName(),
                 String.valueOf(instanceConfig.getInstanceName()),
                 instanceConfig.getVersion(),
                 miruLogAppenderConfig,
-                new RoutingBirdLogSenderProvider<>(logConnections, "", miruLogAppenderConfig.getSocketTimeoutInMillis()));
-            miruLogAppender.install();
+                miruStumptownClient).install();
 
             MiruMetricSamplerConfig metricSamplerConfig = deployable.config(MiruMetricSamplerConfig.class);
-            TenantsServiceConnectionDescriptorProvider metricConnections = tenantRoutingProvider.getConnections("miru-anomaly", "main", 10_000); // TODO config
-            MiruMetricSampler sampler = new MiruMetricSamplerInitializer().initialize(null, //TODO datacenter
+            @SuppressWarnings("unchecked")
+            TenantAwareHttpClient<String> miruAnomalyClient = tenantRoutingHttpClientInitializer.builder(
+                tenantRoutingProvider.getConnections(
+                    "miru-anomaly",
+                    "main",
+                    10_000),
+                clientHealthProvider)
+                .deadAfterNErrors(10)
+                .checkDeadEveryNMillis(10_000)
+                .build();
+            new MiruMetricSamplerInitializer().initialize(
+                instanceConfig.getDatacenter(),
                 instanceConfig.getClusterName(),
                 instanceConfig.getHost(),
                 instanceConfig.getServiceName(),
                 String.valueOf(instanceConfig.getInstanceName()),
                 instanceConfig.getVersion(),
                 metricSamplerConfig,
-                new RoutingBirdMetricSampleSenderProvider<>(metricConnections, "", miruLogAppenderConfig.getSocketTimeoutInMillis()));
-            sampler.start();
+                miruAnomalyClient).start();
 
             MiruRegistryConfig registryConfig = deployable.config(MiruRegistryConfig.class);
             MiruWALConfig walConfig = deployable.config(MiruWALConfig.class);
             MiruSoyRendererConfig rendererConfig = deployable.config(MiruSoyRendererConfig.class);
 
-            HttpDeliveryClientHealthProvider clientHealthProvider = new HttpDeliveryClientHealthProvider(instanceConfig.getInstanceKey(),
-                HttpRequestHelperUtils.buildRequestHelper(false, false, null, instanceConfig.getRoutesHost(), instanceConfig.getRoutesPort()),
-                instanceConfig.getConnectionsHealth(), 5_000, 100);
-
-            TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = deployable.getTenantRoutingHttpClientInitializer();
+            @SuppressWarnings("unchecked")
             TenantAwareHttpClient<String> walHttpClient = tenantRoutingHttpClientInitializer.builder(
                 tenantRoutingProvider.getConnections("miru-wal", "main", 10_000), // TODO config
                 clientHealthProvider)
                 .deadAfterNErrors(10)
                 .checkDeadEveryNMillis(10_000)
                 .build(); // TODO expose to conf
-            TenantsServiceConnectionDescriptorProvider<String> readerConnectionDescriptorProvider = tenantRoutingProvider
-                .getConnections("miru-reader", "main", 10_000); // TODO config
+            @SuppressWarnings("unchecked")
+            TenantsServiceConnectionDescriptorProvider<String> readerConnectionDescriptorProvider =
+                tenantRoutingProvider.getConnections("miru-reader", "main", 10_000); // TODO config
             TenantAwareHttpClient<String> readerClient = tenantRoutingHttpClientInitializer.builder(
                 readerConnectionDescriptorProvider,
                 clientHealthProvider)
@@ -210,7 +228,7 @@ public class MiruManageMain {
                 instanceConfig.getHost(),
                 instanceConfig.getMainPort(),
                 instanceConfig.getMainServiceAuthEnabled(),
-                null, //"amza-topology-" + instanceConfig.getClusterName(), // Manual service discovery if null
+                null,
                 amzaClusterRegistryConfig,
                 true,
                 -1,
@@ -274,7 +292,6 @@ public class MiruManageMain {
             File staticResourceDir = new File(System.getProperty("user.dir"));
             System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());
             Resource sourceTree = new Resource(staticResourceDir)
-                //.addResourcePath("../../../../../src/main/resources") // fluff?
                 .addResourcePath(rendererConfig.getPathToStaticResources())
                 .setDirectoryListingAllowed(false)
                 .setContext("/ui/static");
