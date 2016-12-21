@@ -2,7 +2,6 @@ package com.jivesoftware.os.miru.syslog.deployable;
 
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer.MiruLogAppenderConfig;
-import com.jivesoftware.os.miru.logappender.RoutingBirdLogSenderProvider;
 import com.jivesoftware.os.miru.syslog.deployable.MiruSyslogIntakeInitializer.MiruSyslogIntakeConfig;
 import com.jivesoftware.os.routing.bird.deployable.Deployable;
 import com.jivesoftware.os.routing.bird.deployable.DeployableHealthCheckRegistry;
@@ -17,6 +16,8 @@ import com.jivesoftware.os.routing.bird.health.checkers.ServiceStartupHealthChec
 import com.jivesoftware.os.routing.bird.health.checkers.SystemCpuHealthChecker;
 import com.jivesoftware.os.routing.bird.http.client.HttpDeliveryClientHealthProvider;
 import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelperUtils;
+import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
+import com.jivesoftware.os.routing.bird.http.client.TenantRoutingHttpClientInitializer;
 
 public class MiruSyslogMain {
 
@@ -46,45 +47,50 @@ public class MiruSyslogMain {
             MiruSyslogIntakeConfig miruSyslogIntakeConfig = deployable.config(MiruSyslogIntakeConfig.class);
             MiruLogAppenderConfig miruLogAppenderConfig = deployable.config(MiruLogAppenderConfig.class);
 
-            @SuppressWarnings("unchecked")
-            RoutingBirdLogSenderProvider logSenderProviderAppender = new RoutingBirdLogSenderProvider<>(
-                    deployable.getTenantRoutingProvider().getConnections(
-                            "miru-stumptown",
-                            "main",
-                            miruSyslogConfig.getRefreshConnectionsAfterNMillis()),
-                    miruSyslogConfig.getTenant(),
-                    miruLogAppenderConfig.getSocketTimeoutInMillis());
-            new MiruLogAppenderInitializer().initialize(
-                    instanceConfig.getDatacenter(),
-                    instanceConfig.getClusterName(),
-                    instanceConfig.getHost(),
-                    instanceConfig.getServiceName(),
-                    String.valueOf(instanceConfig.getInstanceName()),
-                    instanceConfig.getVersion(),
-                    miruLogAppenderConfig,
-                    logSenderProviderAppender).install();
-
-            @SuppressWarnings("unchecked")
-            RoutingBirdLogSenderProvider logSenderProviderIntake = new RoutingBirdLogSenderProvider<>(
-                    deployable.getTenantRoutingProvider().getConnections(
-                            "miru-stumptown",
-                            "main",
-                            miruSyslogConfig.getRefreshConnectionsAfterNMillis()),
-                    miruSyslogConfig.getTenant(),
-                    miruLogAppenderConfig.getSocketTimeoutInMillis());
-            new MiruSyslogIntakeInitializer().initialize(
-                    instanceConfig,
-                    miruSyslogIntakeConfig,
-                    miruLogAppenderConfig,
-                    logSenderProviderIntake).start();
-
             HttpDeliveryClientHealthProvider clientHealthProvider = new HttpDeliveryClientHealthProvider(
-                    instanceConfig.getInstanceKey(),
-                    HttpRequestHelperUtils.buildRequestHelper(false, false, null, instanceConfig.getRoutesHost(), instanceConfig.getRoutesPort()),
-                    instanceConfig.getConnectionsHealth(),
-                    miruSyslogConfig.getHealthIntervalNMillis(),
-                    miruSyslogConfig.getHealthSampleWindow());
+                instanceConfig.getInstanceKey(),
+                HttpRequestHelperUtils.buildRequestHelper(false, false, null, instanceConfig.getRoutesHost(), instanceConfig.getRoutesPort()),
+                instanceConfig.getConnectionsHealth(),
+                miruSyslogConfig.getHealthIntervalNMillis(),
+                miruSyslogConfig.getHealthSampleWindow());
             clientHealthProvider.start();
+
+            TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = deployable.getTenantRoutingHttpClientInitializer();
+            @SuppressWarnings("unchecked")
+            TenantAwareHttpClient<String> miruStumptownClient = tenantRoutingHttpClientInitializer.builder(
+                deployable.getTenantRoutingProvider().getConnections(
+                    "miru-stumptown",
+                    "main",
+                    10_000),
+                clientHealthProvider)
+                .deadAfterNErrors(10)
+                .checkDeadEveryNMillis(10_000)
+                .build();
+            new MiruLogAppenderInitializer().initialize(
+                instanceConfig.getDatacenter(),
+                instanceConfig.getClusterName(),
+                instanceConfig.getHost(),
+                instanceConfig.getServiceName(),
+                String.valueOf(instanceConfig.getInstanceName()),
+                instanceConfig.getVersion(),
+                miruLogAppenderConfig,
+                miruStumptownClient).install();
+
+            @SuppressWarnings("unchecked")
+            TenantAwareHttpClient<String> miruStumptownClientIntake = tenantRoutingHttpClientInitializer.builder(
+                deployable.getTenantRoutingProvider().getConnections(
+                    "miru-stumptown",
+                    "main",
+                    10_000),
+                clientHealthProvider)
+                .deadAfterNErrors(10)
+                .checkDeadEveryNMillis(10_000)
+                .build();
+            new MiruSyslogIntakeInitializer().initialize(
+                instanceConfig,
+                miruSyslogIntakeConfig,
+                miruLogAppenderConfig,
+                miruStumptownClientIntake).start();
 
             serviceStartupHealthCheck.success();
         } catch (Throwable t) {

@@ -31,9 +31,8 @@ import com.jivesoftware.os.miru.anomaly.deployable.region.AnomalyStatusPluginReg
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.cluster.client.MiruClusterClientInitializer;
-import com.jivesoftware.os.miru.logappender.MiruLogAppender;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
-import com.jivesoftware.os.miru.logappender.RoutingBirdLogSenderProvider;
+import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer.MiruLogAppenderConfig;
 import com.jivesoftware.os.miru.metric.sampler.AnomalyMetric;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer;
@@ -60,7 +59,7 @@ import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.http.client.TenantRoutingHttpClientInitializer;
 import com.jivesoftware.os.routing.bird.server.util.Resource;
-import com.jivesoftware.os.routing.bird.shared.TenantsServiceConnectionDescriptorProvider;
+
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
@@ -73,7 +72,7 @@ public class MiruAnomalyMain {
         new MiruAnomalyMain().run(args);
     }
 
-    public void run(String[] args) throws Exception {
+    void run(String[] args) throws Exception {
         ServiceStartupHealthCheck serviceStartupHealthCheck = new ServiceStartupHealthCheck();
         try {
             final Deployable deployable = new Deployable(args);
@@ -109,6 +108,7 @@ public class MiruAnomalyMain {
                 instanceConfig.getConnectionsHealth(), 5_000, 100);
 
             TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = deployable.getTenantRoutingHttpClientInitializer();
+            @SuppressWarnings("unchecked")
             TenantAwareHttpClient<String> miruManageClient = tenantRoutingHttpClientInitializer.builder(deployable
                     .getTenantRoutingProvider()
                     .getConnections("miru-manage", "main", 10_000), // TODO config
@@ -117,6 +117,7 @@ public class MiruAnomalyMain {
                 .checkDeadEveryNMillis(10_000)
                 .build(); // TODO expose to conf
 
+            @SuppressWarnings("unchecked")
             TenantAwareHttpClient<String> miruWriteClient = tenantRoutingHttpClientInitializer.builder(deployable
                     .getTenantRoutingProvider()
                     .getConnections("miru-writer", "main", 10_000), // TODO config
@@ -125,6 +126,7 @@ public class MiruAnomalyMain {
                 .checkDeadEveryNMillis(10_000)
                 .build(); // TODO expose to conf
 
+            @SuppressWarnings("unchecked")
             TenantAwareHttpClient<String> readerClient = tenantRoutingHttpClientInitializer.builder(deployable
                     .getTenantRoutingProvider()
                     .getConnections("miru-reader", "main", 10_000), // TODO config
@@ -135,8 +137,6 @@ public class MiruAnomalyMain {
 
             HttpResponseMapper responseMapper = new HttpResponseMapper(mapper);
 
-            // TODO add fall back to config
-            //MiruClusterClientConfig clusterClientConfig = deployable.config(MiruClusterClientConfig.class);
             MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize(new MiruStats(), "", miruManageClient, mapper);
             AnomalySchemaService anomalySchemaService = new AnomalySchemaService(clusterClient);
 
@@ -167,18 +167,26 @@ public class MiruAnomalyMain {
             IngressGuaranteedDeliveryQueueProvider ingressGuaranteedDeliveryQueueProvider = new IngressGuaranteedDeliveryQueueProvider(
                 intakeConfig.getPathToQueues(), intakeConfig.getNumberOfQueues(), intakeConfig.getNumberOfThreadsPerQueue(), deliveryCallback);
 
-            MiruLogAppenderInitializer.MiruLogAppenderConfig miruLogAppenderConfig = deployable.config(MiruLogAppenderInitializer.MiruLogAppenderConfig.class);
-            TenantsServiceConnectionDescriptorProvider connections = deployable.getTenantRoutingProvider().getConnections("miru-stumptown", "main",
-                10_000); // TODO config
-            MiruLogAppender miruLogAppender = new MiruLogAppenderInitializer().initialize(null, //TODO datacenter
+            MiruLogAppenderConfig miruLogAppenderConfig = deployable.config(MiruLogAppenderConfig.class);
+            @SuppressWarnings("unchecked")
+            TenantAwareHttpClient<String> miruStumptownClient = tenantRoutingHttpClientInitializer.builder(
+                deployable.getTenantRoutingProvider().getConnections(
+                    "miru-stumptown",
+                    "main",
+                    10_000),
+                clientHealthProvider)
+                .deadAfterNErrors(10)
+                .checkDeadEveryNMillis(10_000)
+                .build();
+            new MiruLogAppenderInitializer().initialize(
+                instanceConfig.getDatacenter(),
                 instanceConfig.getClusterName(),
                 instanceConfig.getHost(),
                 instanceConfig.getServiceName(),
                 String.valueOf(instanceConfig.getInstanceName()),
                 instanceConfig.getVersion(),
                 miruLogAppenderConfig,
-                new RoutingBirdLogSenderProvider<>(connections, "", miruLogAppenderConfig.getSocketTimeoutInMillis()));
-            miruLogAppender.install();
+                miruStumptownClient).install();
 
             MiruSoyRendererConfig rendererConfig = deployable.config(MiruSoyRendererConfig.class);
             MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
@@ -189,9 +197,6 @@ public class MiruAnomalyMain {
             List<AnomalyPlugin> plugins = Lists.newArrayList(new AnomalyPlugin("eye-open", "Status", "/ui/anomaly/status",
                     AnomalyStatusPluginEndpoints.class,
                     new AnomalyStatusPluginRegion("soy.anomaly.page.anomalyStatusPluginRegion", renderer, sampleTrawl)),
-                /*new AnomalyPlugin("stats", "Trends", "/ui/anomaly/trends",
-                    AnomalyTrendsPluginEndpoints.class,
-                    new AnomalyTrendsPluginRegion("soy.anomaly.page.anomalyTrendsPluginRegion", renderer, readerClient, mapper, responseMapper)),*/
                 new AnomalyPlugin("search", "Query", "/ui/anomaly/query",
                     AnomalyQueryPluginEndpoints.class,
                     new AnomalyQueryPluginRegion("soy.anomaly.page.anomalyQueryPluginRegion", renderer, readerClient, mapper, responseMapper)));

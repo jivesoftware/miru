@@ -7,8 +7,6 @@ import com.jivesoftware.os.filer.queue.guaranteed.delivery.GuaranteedDeliverySer
 import com.jivesoftware.os.filer.queue.guaranteed.delivery.GuaranteedDeliveryServiceStatus;
 import com.jivesoftware.os.filer.queue.processor.PhasedQueueProcessorConfig;
 import com.jivesoftware.os.mlogger.core.Counter;
-import com.jivesoftware.os.mlogger.core.MetricLogger;
-import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.mlogger.core.ValueType;
 import com.jivesoftware.os.routing.bird.health.api.HealthCheckUtil;
 import com.jivesoftware.os.routing.bird.health.api.HealthChecker;
@@ -22,12 +20,7 @@ import java.io.IOException;
 import org.merlin.config.defaults.LongDefault;
 import org.merlin.config.defaults.StringDefault;
 
-/**
- *
- */
-public class IngressGuaranteedDeliveryQueueProvider {
-
-    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
+class IngressGuaranteedDeliveryQueueProvider {
 
     interface IngressDiskCheck extends ScheduledMinMaxHealthCheckConfig {
 
@@ -124,7 +117,7 @@ public class IngressGuaranteedDeliveryQueueProvider {
 
     }
 
-    public GuaranteedDeliveryService getGuaranteedDeliveryServices(int hash) {
+    GuaranteedDeliveryService getGuaranteedDeliveryServices(int hash) {
         return guaranteedDeliveryServices[Math.abs(hash % guaranteedDeliveryServices.length)];
     }
 

@@ -40,13 +40,10 @@ import com.jivesoftware.os.miru.api.wal.MiruWALConfig;
 import com.jivesoftware.os.miru.api.wal.RCVSCursor;
 import com.jivesoftware.os.miru.api.wal.RCVSSipCursor;
 import com.jivesoftware.os.miru.cluster.client.MiruClusterClientInitializer;
-import com.jivesoftware.os.miru.logappender.MiruLogAppender;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
-import com.jivesoftware.os.miru.logappender.RoutingBirdLogSenderProvider;
-import com.jivesoftware.os.miru.metric.sampler.MiruMetricSampler;
+import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer.MiruLogAppenderConfig;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer.MiruMetricSamplerConfig;
-import com.jivesoftware.os.miru.metric.sampler.RoutingBirdMetricSampleSenderProvider;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer.MiruSoyRendererConfig;
@@ -111,11 +108,11 @@ public class MiruWALMain {
 
         @StringDefault("disk>free")
         @Override
-        public String getName();
+        String getName();
 
         @LongDefault(80)
         @Override
-        public Long getMax();
+        Long getMax();
 
     }
 
@@ -129,7 +126,7 @@ public class MiruWALMain {
         long getReplicateTimeoutMillis();
     }
 
-    public void run(String[] args) throws Exception {
+    void run(String[] args) throws Exception {
         ServiceStartupHealthCheck serviceStartupHealthCheck = new ServiceStartupHealthCheck();
         try {
             final Deployable deployable = new Deployable(args);
@@ -161,31 +158,53 @@ public class MiruWALMain {
             mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
             mapper.registerModule(new GuavaModule());
 
-            MiruLogAppenderInitializer.MiruLogAppenderConfig miruLogAppenderConfig = deployable.config(MiruLogAppenderInitializer.MiruLogAppenderConfig.class);
-            TenantsServiceConnectionDescriptorProvider logConnections = deployable.getTenantRoutingProvider().getConnections("miru-stumptown", "main",
-                10_000); // TODO config
-            MiruLogAppender miruLogAppender = new MiruLogAppenderInitializer().initialize(null, //TODO datacenter
+            TenantRoutingProvider tenantRoutingProvider = deployable.getTenantRoutingProvider();
+            HttpDeliveryClientHealthProvider clientHealthProvider = new HttpDeliveryClientHealthProvider(instanceConfig.getInstanceKey(),
+                HttpRequestHelperUtils.buildRequestHelper(false, false, null, instanceConfig.getRoutesHost(), instanceConfig.getRoutesPort()),
+                instanceConfig.getConnectionsHealth(), 5_000, 100);
+            TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = deployable.getTenantRoutingHttpClientInitializer();
+
+            MiruLogAppenderConfig miruLogAppenderConfig = deployable.config(MiruLogAppenderConfig.class);
+            @SuppressWarnings("unchecked")
+            TenantAwareHttpClient<String> miruStumptownClient = tenantRoutingHttpClientInitializer.builder(
+                tenantRoutingProvider.getConnections(
+                    "miru-stumptown",
+                    "main",
+                    10_000),
+                clientHealthProvider)
+                .deadAfterNErrors(10)
+                .checkDeadEveryNMillis(10_000)
+                .build();
+            new MiruLogAppenderInitializer().initialize(
+                instanceConfig.getDatacenter(),
                 instanceConfig.getClusterName(),
                 instanceConfig.getHost(),
                 instanceConfig.getServiceName(),
                 String.valueOf(instanceConfig.getInstanceName()),
                 instanceConfig.getVersion(),
                 miruLogAppenderConfig,
-                new RoutingBirdLogSenderProvider<>(logConnections, "", miruLogAppenderConfig.getSocketTimeoutInMillis()));
-            miruLogAppender.install();
+                miruStumptownClient).install();
 
             MiruMetricSamplerConfig metricSamplerConfig = deployable.config(MiruMetricSamplerConfig.class);
-            TenantsServiceConnectionDescriptorProvider metricConnections = deployable.getTenantRoutingProvider().getConnections("miru-anomaly", "main",
-                10_000); // TODO config
-            MiruMetricSampler sampler = new MiruMetricSamplerInitializer().initialize(null, //TODO datacenter
+            @SuppressWarnings("unchecked")
+            TenantAwareHttpClient<String> miruAnomalyClient = tenantRoutingHttpClientInitializer.builder(
+                tenantRoutingProvider.getConnections(
+                    "miru-anomaly",
+                    "main",
+                    10_000),
+                clientHealthProvider)
+                .deadAfterNErrors(10)
+                .checkDeadEveryNMillis(10_000)
+                .build();
+            new MiruMetricSamplerInitializer().initialize(
+                instanceConfig.getDatacenter(),
                 instanceConfig.getClusterName(),
                 instanceConfig.getHost(),
                 instanceConfig.getServiceName(),
                 String.valueOf(instanceConfig.getInstanceName()),
                 instanceConfig.getVersion(),
                 metricSamplerConfig,
-                new RoutingBirdMetricSampleSenderProvider<>(metricConnections, "", miruLogAppenderConfig.getSocketTimeoutInMillis()));
-            sampler.start();
+                miruAnomalyClient).start();
 
             RCVSWALConfig rcvsWALConfig = deployable.config(RCVSWALConfig.class);
             MiruWALConfig walConfig = deployable.config(MiruWALConfig.class);
@@ -201,10 +220,6 @@ public class MiruWALMain {
 
             MiruStats miruStats = new MiruStats();
 
-            HttpDeliveryClientHealthProvider clientHealthProvider = new HttpDeliveryClientHealthProvider(instanceConfig.getInstanceKey(),
-                HttpRequestHelperUtils.buildRequestHelper(false, false, null, instanceConfig.getRoutesHost(), instanceConfig.getRoutesPort()),
-                instanceConfig.getConnectionsHealth(), 5_000, 100);
-
             AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable,
                 clientHealthProvider,
                 instanceConfig.getInstanceName(),
@@ -215,15 +230,13 @@ public class MiruWALMain {
                 instanceConfig.getHost(),
                 instanceConfig.getMainPort(),
                 instanceConfig.getMainServiceAuthEnabled(),
-                null, //"miru-wal-" + instanceConfig.getClusterName(),
+                null,
                 amzaServiceConfig,
                 true,
                 -1,
                 changes -> {
                 });
 
-            //WALStorageDescriptor storageDescriptor = new WALStorageDescriptor(false, new PrimaryIndexDescriptor("berkeleydb", 0, false, null),
-            //    null, 1000, 1000);
             EmbeddedClientProvider clientProvider = new EmbeddedClientProvider(amzaService);
             PartitionProperties activityProperties = new PartitionProperties(Durability.fsync_async, 0, 0, 0, 0, 0, 0, 0, 0,
                 false,
@@ -271,18 +284,20 @@ public class MiruWALMain {
                 amzaServiceConfig.getReadTrackingRingSize(),
                 amzaServiceConfig.getReadTrackingRoutingTimeoutMillis());
 
-            TenantRoutingProvider tenantRoutingProvider = deployable.getTenantRoutingProvider();
-            TenantsServiceConnectionDescriptorProvider walConnectionDescriptorProvider = tenantRoutingProvider.getConnections("miru-wal", "main",
-                10_000); // TODO config
+            TenantsServiceConnectionDescriptorProvider walConnectionDescriptorProvider =
+                tenantRoutingProvider.getConnections("miru-wal", "main", 10_000); // TODO config
+            @SuppressWarnings("unchecked")
             HostPortProvider hostPortProvider = new RoutingBirdHostPortProvider(walConnectionDescriptorProvider, "");
 
-            TenantRoutingHttpClientInitializer<String> tenantRoutingHttpClientInitializer = deployable.getTenantRoutingHttpClientInitializer();
+            @SuppressWarnings("unchecked")
             TenantAwareHttpClient<String> walHttpClient = tenantRoutingHttpClientInitializer.builder(
                 tenantRoutingProvider.getConnections(instanceConfig.getServiceName(), "main", 10_000), // TODO config
                 clientHealthProvider)
                 .deadAfterNErrors(10)
                 .checkDeadEveryNMillis(10_000)
                 .build(); // TODO expose to conf
+
+            @SuppressWarnings("unchecked")
             TenantAwareHttpClient<String> manageHttpClient = tenantRoutingHttpClientInitializer.builder(
                 tenantRoutingProvider.getConnections("miru-manage", "main", 10_000), // TODO config
                 clientHealthProvider)

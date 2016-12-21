@@ -12,7 +12,6 @@ import com.jivesoftware.os.miru.bot.deployable.MiruBotHealthCheck.MiruBotHealthC
 import com.jivesoftware.os.miru.cluster.client.MiruClusterClientInitializer;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer.MiruLogAppenderConfig;
-import com.jivesoftware.os.miru.logappender.RoutingBirdLogSenderProvider;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.deployable.Deployable;
@@ -120,13 +119,15 @@ public class MiruBotMain {
             MiruLogAppenderConfig miruLogAppenderConfig =
                 deployable.config(MiruLogAppenderConfig.class);
             @SuppressWarnings("unchecked")
-            RoutingBirdLogSenderProvider routingBirdLogSenderProvider = new RoutingBirdLogSenderProvider<>(
+            TenantAwareHttpClient<String> miruStumptownClient = tenantRoutingHttpClientInitializer.builder(
                 deployable.getTenantRoutingProvider().getConnections(
                     "miru-stumptown",
                     "main",
                     miruBotConfig.getRefreshConnectionsAfterNMillis()),
-                "",
-                miruLogAppenderConfig.getSocketTimeoutInMillis());
+                clientHealthProvider)
+                .deadAfterNErrors(miruBotConfig.getDeadAfterNErrors())
+                .checkDeadEveryNMillis(miruBotConfig.getCheckDeadEveryNMillis())
+                .build();
             new MiruLogAppenderInitializer().initialize(
                 instanceConfig.getDatacenter(),
                 instanceConfig.getClusterName(),
@@ -135,7 +136,7 @@ public class MiruBotMain {
                 String.valueOf(instanceConfig.getInstanceName()),
                 instanceConfig.getVersion(),
                 miruLogAppenderConfig,
-                routingBirdLogSenderProvider).install();
+                miruStumptownClient).install();
 
             MiruBotDistinctsConfig miruBotDistinctsConfig = deployable.config(MiruBotDistinctsConfig.class);
             MiruBotUniquesConfig miruBotUniquesConfig = deployable.config(MiruBotUniquesConfig.class);

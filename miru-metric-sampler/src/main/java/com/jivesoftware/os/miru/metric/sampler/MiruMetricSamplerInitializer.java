@@ -1,29 +1,18 @@
 package com.jivesoftware.os.miru.metric.sampler;
 
-import com.jivesoftware.os.mlogger.core.MetricLogger;
-import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.IOException;
+
+import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import org.merlin.config.Config;
 import org.merlin.config.defaults.BooleanDefault;
 import org.merlin.config.defaults.IntDefault;
 
-/**
- *
- */
 public class MiruMetricSamplerInitializer {
 
-    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
-
-    public static interface MiruMetricSamplerConfig extends Config {
-
-        @IntDefault(60_000)
-        int getSocketTimeoutInMillis();
+    public interface MiruMetricSamplerConfig extends Config {
 
         @IntDefault(60_000)
         int getSampleIntervalInMillis();
-
-        @IntDefault(100)
-        int getMaxBacklog();
 
         @BooleanDefault(false)
         boolean getEnabled();
@@ -43,24 +32,21 @@ public class MiruMetricSamplerInitializer {
         String instance,
         String version,
         MiruMetricSamplerConfig config,
-        MiruMetricSampleSenderProvider senderProvider) throws IOException {
+        TenantAwareHttpClient<String> client) throws IOException {
 
         if (config.getEnabled()) {
-
             return new HttpMiruMetricSampler(datacenter,
                 cluster,
                 host,
                 service,
                 instance,
                 version,
-                senderProvider,
+                client,
                 config.getSampleIntervalInMillis(),
-                config.getMaxBacklog(),
                 config.getEnableTenantMetrics(),
                 config.getEnableJVMMetrics());
         } else {
             return new MiruMetricSampler() {
-
                 @Override
                 public void start() {
                 }

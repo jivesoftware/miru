@@ -44,14 +44,11 @@ public class MiruStumptownInternalLogAppender implements Appender {
     private final long ifSuccessPauseMillis;
     private final long ifEmptyPauseMillis;
     private final long ifErrorPauseMillis;
-    private final long cycleReceiverAfterAppendCount;
     private final int nonBlockingDrainThreshold;
     private final int nonBlockingDrainCount;
 
     private final AtomicBoolean installed = new AtomicBoolean(false);
     private final AtomicBoolean started = new AtomicBoolean(false);
-    private final AtomicLong helperIndex = new AtomicLong(0);
-    private final AtomicLong appendCount = new AtomicLong(0);
     private final AtomicReference<QueueConsumer> queueConsumer = new AtomicReference<>();
     private final Layout<?> layout = new EmptyLayout();
 
@@ -70,7 +67,6 @@ public class MiruStumptownInternalLogAppender implements Appender {
         long ifSuccessPauseMillis,
         long ifEmptyPauseMillis,
         long ifErrorPauseMillis,
-        long cycleReceiverAfterAppendCount,
         int nonBlockingDrainThreshold,
         int nonBlockingDrainCount) {
         this.datacenter = datacenter;
@@ -86,7 +82,6 @@ public class MiruStumptownInternalLogAppender implements Appender {
         this.ifSuccessPauseMillis = ifSuccessPauseMillis;
         this.ifEmptyPauseMillis = ifEmptyPauseMillis;
         this.ifErrorPauseMillis = ifErrorPauseMillis;
-        this.cycleReceiverAfterAppendCount = cycleReceiverAfterAppendCount;
         this.nonBlockingDrainThreshold = nonBlockingDrainThreshold;
         this.nonBlockingDrainCount = nonBlockingDrainCount;
     }
@@ -164,12 +159,6 @@ public class MiruStumptownInternalLogAppender implements Appender {
                     System.err.println("MiruLogAppender " + getName() + " is unable to write. Queue is full!");
                 }
             }
-
-            long count = appendCount.incrementAndGet();
-            if (count % cycleReceiverAfterAppendCount == 0) {
-                helperIndex.incrementAndGet();
-            }
-
         }
     }
 
@@ -274,11 +263,9 @@ public class MiruStumptownInternalLogAppender implements Appender {
                             intakeService.ingressLogEvents(events);
                             break deliver;
                         } catch (Exception e) {
-                            System.err.println("Append failed for a logger");
-                            helperIndex.incrementAndGet();
+                            System.err.println("Append failed for logger: " + e.getMessage());
                         }
 
-                        System.err.println("Append failed for all loggers");
                         try {
                             Thread.sleep(ifErrorPauseMillis);
                         } catch (InterruptedException e) {
