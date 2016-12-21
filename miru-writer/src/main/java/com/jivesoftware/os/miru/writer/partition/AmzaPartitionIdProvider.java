@@ -10,6 +10,7 @@ import com.jivesoftware.os.amza.api.wal.WALKey;
 import com.jivesoftware.os.amza.service.AmzaPartitionUpdates;
 import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider;
+import com.jivesoftware.os.amza.service.EmbeddedClientProvider.CheckOnline;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider.EmbeddedClient;
 import com.jivesoftware.os.amza.service.Partition.ScanRange;
 import com.jivesoftware.os.filer.io.FilerIO;
@@ -97,12 +98,12 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
             false,
             RowType.primary,
             indexClass,
-            -1,
+            8,
             null,
             -1,
             -1));
         amzaService.awaitOnline(partitionName, 10_000L); //TODO config
-        return clientProvider.getClient(partitionName);
+        return clientProvider.getClient(partitionName, CheckOnline.once);
     }
 
     private EmbeddedClient latestPartitionsClient() throws Exception {

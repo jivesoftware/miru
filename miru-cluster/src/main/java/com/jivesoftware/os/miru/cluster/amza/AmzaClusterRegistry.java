@@ -26,6 +26,7 @@ import com.jivesoftware.os.amza.api.wal.WALKey;
 import com.jivesoftware.os.amza.service.AmzaPartitionUpdates;
 import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider;
+import com.jivesoftware.os.amza.service.EmbeddedClientProvider.CheckOnline;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider.EmbeddedClient;
 import com.jivesoftware.os.amza.service.Partition.ScanRange;
 import com.jivesoftware.os.amza.service.storage.PartitionCreator;
@@ -155,7 +156,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
                 PartitionName partitionName = new PartitionName(false, CLUSTER_REGISTRY_RING_NAME, name.getBytes(Charsets.UTF_8));
                 amzaService.createPartitionIfAbsent(partitionName, partitionProperties);
                 amzaService.awaitOnline(partitionName, 10_000L); //TODO config
-                return embeddedClientProvider.getClient(partitionName);
+                return embeddedClientProvider.getClient(partitionName, CheckOnline.once);
             } catch (Exception e) {
                 throw new RuntimeException("Failed to get amza client", e);
             }

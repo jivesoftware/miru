@@ -25,6 +25,7 @@ import com.jivesoftware.os.amza.api.partition.PartitionProperties;
 import com.jivesoftware.os.amza.api.stream.RowType;
 import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider;
+import com.jivesoftware.os.amza.service.EmbeddedClientProvider.CheckOnline;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider.EmbeddedClient;
 import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.MiruStats;
@@ -292,7 +293,7 @@ public class CatwalkModelUpdater {
         amzaService.getRingWriter().ensureMaximalRing(partitionName.getRingName(), 30_000L); //TODO config
         amzaService.createPartitionIfAbsent(partitionName, CATS_WALKED);
         amzaService.awaitOnline(partitionName, 30_000L); //TODO config
-        return embeddedClientProvider.getClient(partitionName);
+        return embeddedClientProvider.getClient(partitionName, CheckOnline.once);
     }
 
     private PartitionName catsPartition() {
@@ -310,7 +311,7 @@ public class CatwalkModelUpdater {
         amzaService.getRingWriter().ensureMaximalRing(partitionName.getRingName(), 30_000L); //TODO config
         amzaService.createPartitionIfAbsent(partitionName, PROCESSED_MODEL);
         amzaService.awaitOnline(partitionName, 30_000L); //TODO config
-        return embeddedClientProvider.getClient(partitionName);
+        return embeddedClientProvider.getClient(partitionName, CheckOnline.once);
     }
 
     private PartitionName processedPartition(int queueId) {

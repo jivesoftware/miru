@@ -10,6 +10,7 @@ import com.jivesoftware.os.amza.api.ring.RingMember;
 import com.jivesoftware.os.amza.api.stream.RowType;
 import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider;
+import com.jivesoftware.os.amza.service.EmbeddedClientProvider.CheckOnline;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider.EmbeddedClient;
 import com.jivesoftware.os.amza.service.Partition.ScanRange;
 import com.jivesoftware.os.amza.service.filer.HeapFiler;
@@ -148,7 +149,7 @@ public class CatwalkModelQueue {
         amzaService.getRingWriter().ensureMaximalRing(partitionName.getRingName(), 30_000L); //TODO config
         amzaService.createPartitionIfAbsent(partitionName, UPDATE_MODEL_QUEUE);
         amzaService.awaitOnline(partitionName, 30_000L); //TODO config
-        return embeddedClientProvider.getClient(partitionName);
+        return embeddedClientProvider.getClient(partitionName, CheckOnline.once);
     }
 
     public void enqueue(MiruTenantId tenantId, String catwalkId, String modelId, int partitionId, CatwalkQuery catwalkQuery) throws Exception {
