@@ -1,12 +1,18 @@
 package com.jivesoftware.os.miru.metric.sampler;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jivesoftware.os.mlogger.core.AtomicCounter;
 import com.jivesoftware.os.mlogger.core.Counter;
 import com.jivesoftware.os.mlogger.core.CountersAndTimers;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.mlogger.core.Timer;
-import java.net.SocketException;
+import com.jivesoftware.os.routing.bird.http.client.HttpResponse;
+import com.jivesoftware.os.routing.bird.http.client.RoundRobinStrategy;
+import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
+import com.jivesoftware.os.routing.bird.shared.ClientCall;
+import com.jivesoftware.os.routing.bird.shared.NextClientStrategy;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -15,14 +21,10 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
 
-/**
- *
- */
 public class HttpMiruMetricSampler implements MiruMetricSampler, Runnable {
 
-    private static final MetricLogger log = MetricLoggerFactory.getLogger();
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final String datacenter;
     private final String cluster;
@@ -30,9 +32,7 @@ public class HttpMiruMetricSampler implements MiruMetricSampler, Runnable {
     private final String service;
     private final String instance;
     private final String version;
-    private final AtomicLong senderIndex = new AtomicLong();
-    private final MiruMetricSampleSenderProvider senderProvider;
-    private final int maxBacklog;
+    private final TenantAwareHttpClient<String> client;
     private final int sampleIntervalInMillis;
     private final boolean tenantLevelMetricsEnable;
     private final boolean jvmMetricsEnabled;
@@ -41,15 +41,18 @@ public class HttpMiruMetricSampler implements MiruMetricSampler, Runnable {
     private final ScheduledExecutorService sampler = Executors.newSingleThreadScheduledExecutor();
     private final JVMMetrics jvmMetrics;
 
+    private final NextClientStrategy nextClientStrategy = new RoundRobinStrategy();
+    private final ObjectMapper objectMapper = new ObjectMapper();
+    private static final String endpoint = "/miru/anomaly/intake";
+
     public HttpMiruMetricSampler(String datacenter,
         String cluster,
         String host,
         String service,
         String instance,
         String version,
-        MiruMetricSampleSenderProvider senderProvider,
+        TenantAwareHttpClient<String> client,
         int sampleIntervalInMillis,
-        int maxBacklog,
         boolean tenantLevelMetricsEnable,
         boolean jvmMetricsEnabled) {
         this.datacenter = datacenter;
@@ -57,10 +60,9 @@ public class HttpMiruMetricSampler implements MiruMetricSampler, Runnable {
         this.service = service;
         this.instance = instance;
         this.version = version;
-        this.senderProvider = senderProvider;
+        this.client = client;
         this.cluster = cluster;
         this.sampleIntervalInMillis = sampleIntervalInMillis;
-        this.maxBacklog = maxBacklog;
         this.tenantLevelMetricsEnable = tenantLevelMetricsEnable;
         this.jvmMetricsEnabled = jvmMetricsEnabled;
         if (this.jvmMetricsEnabled) {
@@ -91,23 +93,35 @@ public class HttpMiruMetricSampler implements MiruMetricSampler, Runnable {
 
     @Override
     public void run() {
-
         List<AnomalyMetric> samples = new ArrayList<>();
 
         while (running.get()) {
             samples.addAll(sample());
-            send(samples);
+
+            try {
+                String toJson = objectMapper.writeValueAsString(samples);
+
+                HttpResponse httpResponse = client.call(
+                    "",
+                    nextClientStrategy,
+                    "ingress",
+                    client -> new ClientCall.ClientResponse<>(client.postJson(endpoint, toJson, null), true));
+                if (httpResponse.getStatusCode() != 200) {
+                    LOG.warn("Error posting: {}", toJson);
+                }
+            } catch (Exception e) {
+                LOG.warn("Error posting: {}", endpoint);
+            }
+
             try {
                 samples.clear();
                 Thread.sleep(sampleIntervalInMillis); // expose to config
             } catch (InterruptedException e) {
-                log.warn("Sender was interrupted while sleeping due to errors");
+                LOG.warn("Sender was interrupted while sleeping due to errors");
                 Thread.interrupted();
                 break;
             }
-
         }
-
     }
 
     private List<AnomalyMetric> sample() {
@@ -176,25 +190,6 @@ public class HttpMiruMetricSampler implements MiruMetricSampler, Runnable {
                 "timer",
                 timers.getValue().getLastSample(),
                 time));
-        }
-    }
-
-    private void send(List<AnomalyMetric> samples) {
-        MiruMetricSampleSender[] senders = senderProvider.getSenders();
-        for (MiruMetricSampleSender s : senders) {
-            int i = 0;
-            try {
-                i = (int) (senderIndex.get() % senders.length);
-                senders[i].send(samples);
-                samples.clear();
-                return;
-            } catch (SocketException e) {
-                log.warn("Sampler:{} failed to send:{} samples: {}: {}", senders[i], samples.size(), e.getClass().getCanonicalName(), e.getMessage());
-                senderIndex.incrementAndGet();
-            } catch (Exception e) {
-                log.warn("Sampler:{} failed to send:{} samples", new Object[]{senders[i], samples.size(), e.getMessage()}, e);
-                senderIndex.incrementAndGet();
-            }
         }
     }
 

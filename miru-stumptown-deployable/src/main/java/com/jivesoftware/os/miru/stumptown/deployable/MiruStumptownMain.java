@@ -74,7 +74,7 @@ public class MiruStumptownMain {
         new MiruStumptownMain().run(args);
     }
 
-    public void run(String[] args) throws Exception {
+    void run(String[] args) throws Exception {
         ServiceStartupHealthCheck serviceStartupHealthCheck = new ServiceStartupHealthCheck();
         try {
             final Deployable deployable = new Deployable(args);
@@ -200,7 +200,6 @@ public class MiruStumptownMain {
                 miruLogAppenderConfig.getIfSuccessPauseMillis(),
                 miruLogAppenderConfig.getIfEmptyPauseMillis(),
                 miruLogAppenderConfig.getIfErrorPauseMillis(),
-                miruLogAppenderConfig.getCycleReceiverAfterAppendCount(),
                 miruLogAppenderConfig.getNonBlockingDrainThreshold(),
                 miruLogAppenderConfig.getNonBlockingDrainCount()).install();
 

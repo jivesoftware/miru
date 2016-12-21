@@ -1,17 +1,11 @@
 package com.jivesoftware.os.miru.logappender;
 
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jivesoftware.os.routing.bird.http.client.HttpResponse;
+import com.jivesoftware.os.routing.bird.http.client.RoundRobinStrategy;
+import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
+import com.jivesoftware.os.routing.bird.shared.ClientCall;
+import com.jivesoftware.os.routing.bird.shared.NextClientStrategy;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.core.Appender;
@@ -24,9 +18,18 @@ import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.LoggerConfig;
 import org.apache.logging.log4j.core.layout.ByteBufferDestination;
 
-/**
- *
- */
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+
 public class HttpMiruLogAppender implements MiruLogAppender, Appender {
 
     private final String datacenter;
@@ -35,40 +38,40 @@ public class HttpMiruLogAppender implements MiruLogAppender, Appender {
     private final String service;
     private final String instance;
     private final String version;
-    private final MiruLogSenderProvider logSenderProvider;
+    private final TenantAwareHttpClient<String> client;
     private final BlockingQueue<MiruLogEvent> queue;
     private final int batchSize;
     private final boolean blocking;
     private final long ifSuccessPauseMillis;
     private final long ifEmptyPauseMillis;
     private final long ifErrorPauseMillis;
-    private final long cycleReceiverAfterAppendCount;
     private final int nonBlockingDrainThreshold;
     private final int nonBlockingDrainCount;
 
     private final AtomicBoolean installed = new AtomicBoolean(false);
     private final AtomicBoolean started = new AtomicBoolean(false);
-    private final AtomicLong helperIndex = new AtomicLong(0);
-    private final AtomicLong appendCount = new AtomicLong(0);
     private final AtomicReference<QueueConsumer> queueConsumer = new AtomicReference<>();
     private final Layout<?> layout = new EmptyLayout();
 
     private ErrorHandler errorHandler = new DefaultErrorHandler(this);
 
-    public HttpMiruLogAppender(String datacenter,
+    private final NextClientStrategy nextClientStrategy = new RoundRobinStrategy();
+    private final ObjectMapper objectMapper = new ObjectMapper();
+    private static final String endpoint = "/miru/stumptown/intake";
+
+    HttpMiruLogAppender(String datacenter,
         String cluster,
         String host,
         String service,
         String instance,
         String version,
-        MiruLogSenderProvider logSenderProvider,
+        TenantAwareHttpClient<String> client,
         int queueSize,
         int batchSize,
         boolean blocking,
         long ifSuccessPauseMillis,
         long ifEmptyPauseMillis,
         long ifErrorPauseMillis,
-        long cycleReceiverAfterAppendCount,
         int nonBlockingDrainThreshold,
         int nonBlockingDrainCount) {
         this.datacenter = datacenter;
@@ -76,7 +79,7 @@ public class HttpMiruLogAppender implements MiruLogAppender, Appender {
         this.service = service;
         this.instance = instance;
         this.version = version;
-        this.logSenderProvider = logSenderProvider;
+        this.client = client;
         this.cluster = cluster;
         this.queue = new ArrayBlockingQueue<>(queueSize);
         this.batchSize = batchSize;
@@ -84,7 +87,6 @@ public class HttpMiruLogAppender implements MiruLogAppender, Appender {
         this.ifSuccessPauseMillis = ifSuccessPauseMillis;
         this.ifEmptyPauseMillis = ifEmptyPauseMillis;
         this.ifErrorPauseMillis = ifErrorPauseMillis;
-        this.cycleReceiverAfterAppendCount = cycleReceiverAfterAppendCount;
         this.nonBlockingDrainThreshold = nonBlockingDrainThreshold;
         this.nonBlockingDrainCount = nonBlockingDrainCount;
     }
@@ -122,7 +124,6 @@ public class HttpMiruLogAppender implements MiruLogAppender, Appender {
                 exceptionClass = thrown.getClass().getCanonicalName();
             }
 
-
             MiruLogEvent miruLogEvent = new MiruLogEvent(datacenter,
                 cluster,
                 host,
@@ -150,18 +151,11 @@ public class HttpMiruLogAppender implements MiruLogAppender, Appender {
                     System.err.println("Draining to create space in the MiruLogAppender MiruLogEvent-queue " + getName());
                     queue.drainTo(DEV_NULL_COLLECTION, nonBlockingDrainCount);
                 }
-                boolean appendSuccessful = queue.offer(miruLogEvent);
-                if (appendSuccessful) {
-                } else {
-                    System.err.println("MiruLogAppender " + getName() + " is unable to write. Queue is full!");
+
+                if (!queue.offer(miruLogEvent)) {
+                    System.err.println("MiruLogAppender " + getName() + " is unable to write. Queue is full.");
                 }
             }
-
-            long count = appendCount.incrementAndGet();
-            if (count % cycleReceiverAfterAppendCount == 0) {
-                helperIndex.incrementAndGet();
-            }
-
         }
     }
 
@@ -181,6 +175,7 @@ public class HttpMiruLogAppender implements MiruLogAppender, Appender {
                 stackTrace.add("Caused by: " + throwable.getClass().getCanonicalName() + ": " + throwable.getMessage());
             }
         }
+
         return stackTrace.toArray(new String[stackTrace.size()]);
     }
 
@@ -254,10 +249,11 @@ public class HttpMiruLogAppender implements MiruLogAppender, Appender {
 
         @Override
         public void run() {
-            List<MiruLogEvent> events = new ArrayList<>();
+            List<MiruLogEvent> miruLogEvents = new ArrayList<>();
+
             while (running.get()) {
-                queue.drainTo(events, batchSize);
-                if (events.isEmpty()) {
+                queue.drainTo(miruLogEvents, batchSize);
+                if (miruLogEvents.isEmpty()) {
                     try {
                         Thread.sleep(ifEmptyPauseMillis);
                     } catch (InterruptedException e) {
@@ -265,20 +261,23 @@ public class HttpMiruLogAppender implements MiruLogAppender, Appender {
                         Thread.interrupted();
                     }
                 } else {
-                    deliver:
                     while (true) {
-                        MiruLogSender[] logSenders = logSenderProvider.getLogSenders();
-                        for (int tries = 0; tries < logSenders.length; tries++) {
-                            try {
-                                logSenders[(int) (helperIndex.get() % logSenders.length)].send(events);
-                                break deliver;
-                            } catch (Exception e) {
-                                System.err.println("Append failed for a logger: " + e.getClass().getCanonicalName() + ": " + e.getMessage());
-                                helperIndex.incrementAndGet();
+                        try {
+                            String toJson = objectMapper.writeValueAsString(miruLogEvents);
+                            HttpResponse httpResponse = client.call(
+                                "",
+                                nextClientStrategy,
+                                "ingress",
+                                client -> new ClientCall.ClientResponse<>(client.postJson(endpoint, toJson, null), true));
+                            if (httpResponse.getStatusCode() != 202) {
+                                throw new Exception("Error [" + httpResponse.getStatusCode() + "] posting: " + toJson);
                             }
+
+                            break;
+                        } catch (Exception e) {
+                            System.err.println("Append failed for logger: " + e.getClass().getCanonicalName() + ": " + e.getMessage());
                         }
 
-                        System.err.println("Append failed for all loggers");
                         try {
                             Thread.sleep(ifErrorPauseMillis);
                         } catch (InterruptedException e) {
@@ -287,7 +286,7 @@ public class HttpMiruLogAppender implements MiruLogAppender, Appender {
                         }
                     }
 
-                    events.clear();
+                    miruLogEvents.clear();
 
                     try {
                         Thread.sleep(ifSuccessPauseMillis);
@@ -412,4 +411,5 @@ public class HttpMiruLogAppender implements MiruLogAppender, Appender {
         public void encode(LogEvent logEvent, ByteBufferDestination byteBufferDestination) {
         }
     }
+
 }

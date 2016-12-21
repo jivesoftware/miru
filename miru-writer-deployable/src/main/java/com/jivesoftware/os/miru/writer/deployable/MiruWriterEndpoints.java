@@ -1,7 +1,5 @@
 package com.jivesoftware.os.miru.writer.deployable;
 
-import com.jivesoftware.os.mlogger.core.MetricLogger;
-import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import javax.inject.Singleton;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -17,8 +15,6 @@ import javax.ws.rs.core.Response;
 @Path("/ui")
 public class MiruWriterEndpoints {
 
-    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
-
     private final MiruWriterUIService writerUIService;
 
     public MiruWriterEndpoints(@Context MiruWriterUIService writerUIService) {
@@ -26,7 +22,6 @@ public class MiruWriterEndpoints {
     }
 
     @GET
-    @Path("/")
     @Produces(MediaType.TEXT_HTML)
     public Response get() {
         String rendered = writerUIService.render();
