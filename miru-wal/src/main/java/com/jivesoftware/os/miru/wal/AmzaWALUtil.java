@@ -11,6 +11,7 @@ import com.jivesoftware.os.amza.api.stream.TxKeyValueStream;
 import com.jivesoftware.os.amza.api.take.TakeCursors;
 import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider;
+import com.jivesoftware.os.amza.service.EmbeddedClientProvider.CheckOnline;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider.EmbeddedClient;
 import com.jivesoftware.os.amza.service.Partition.ScanRange;
 import com.jivesoftware.os.filer.io.FilerIO;
@@ -142,7 +143,7 @@ public class AmzaWALUtil {
     }
      */
     private EmbeddedClient getClient(PartitionName partitionName) throws Exception {
-        return clientProvider.getClient(partitionName);
+        return clientProvider.getClient(partitionName, CheckOnline.once);
     }
 
     public EmbeddedClient getActivityClient(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
@@ -167,7 +168,7 @@ public class AmzaWALUtil {
                 amzaService.getRingWriter().ensureMaximalRing(partitionName.getRingName(), 10_000); //TODO config
                 amzaService.createPartitionIfAbsent(partitionName, partitionProperties.or(lookupProperties));
                 amzaService.awaitOnline(partitionName, 10_000); //TODO config
-                return clientProvider.getClient(partitionName);
+                return clientProvider.getClient(partitionName, CheckOnline.once);
             } catch (Exception e) {
                 throw new RuntimeException("Failed to create maximal client", e);
             }

@@ -207,6 +207,14 @@ public class MiruSyncMain {
                 .build(); // TODO expose to conf
 
             @SuppressWarnings("unchecked")
+            TenantAwareHttpClient<String> writerHttpClient = tenantRoutingHttpClientInitializer.builder(
+                tenantRoutingProvider.getConnections("miru-writer", "main", 10_000), // TODO config
+                clientHealthProvider)
+                .deadAfterNErrors(10)
+                .checkDeadEveryNMillis(10_000)
+                .build(); // TODO expose to conf
+
+            @SuppressWarnings("unchecked")
             TenantAwareHttpClient<String> manageHttpClient = tenantRoutingHttpClientInitializer.builder(
                 tenantRoutingProvider.getConnections("miru-manage", "main", 10_000), // TODO config
                 clientHealthProvider)
@@ -280,6 +288,7 @@ public class MiruSyncMain {
             MiruWALConfig walConfig = deployable.config(MiruWALConfig.class);
             MiruSyncSender<?, ?> syncSender = null;
             MiruSyncReceiver<?, ?> syncReceiver = null;
+            MiruSyncCopier<?, ?> syncCopier;
             if (walConfig.getActivityWALType().equals("rcvs") || walConfig.getActivityWALType().equals("rcvs_amza")) {
                 MiruWALClient<RCVSCursor, RCVSSipCursor> rcvsWALClient = new MiruWALClientInitializer().initialize("", walHttpClient, mapper,
                     walClientSickThreads, 10_000,
@@ -297,8 +306,9 @@ public class MiruSyncMain {
                         RCVSCursor.class);
                 }
                 if (syncConfig.getSyncReceiverEnabled()) {
-                    syncReceiver = (MiruSyncReceiver) new MiruSyncReceiver<>(rcvsWALClient, clusterClient, activityReadEventConverter);
+                    syncReceiver = (MiruSyncReceiver) new MiruSyncReceiver<>(rcvsWALClient, writerHttpClient, clusterClient, activityReadEventConverter);
                 }
+                syncCopier = new MiruSyncCopier<>(rcvsWALClient, syncConfig.getCopyBatchSize(), RCVSCursor.INITIAL, RCVSCursor.class);
             } else if (walConfig.getActivityWALType().equals("amza") || walConfig.getActivityWALType().equals("amza_rcvs")) {
                 MiruWALClient<AmzaCursor, AmzaSipCursor> amzaWALClient = new MiruWALClientInitializer().initialize("", walHttpClient, mapper,
                     walClientSickThreads, 10_000,
@@ -316,8 +326,9 @@ public class MiruSyncMain {
                         AmzaCursor.class);
                 }
                 if (syncConfig.getSyncReceiverEnabled()) {
-                    syncReceiver = (MiruSyncReceiver) new MiruSyncReceiver<>(amzaWALClient, clusterClient, activityReadEventConverter);
+                    syncReceiver = (MiruSyncReceiver) new MiruSyncReceiver<>(amzaWALClient, writerHttpClient, clusterClient, activityReadEventConverter);
                 }
+                syncCopier = new MiruSyncCopier<>(amzaWALClient, syncConfig.getCopyBatchSize(), null, AmzaCursor.class);
             } else {
                 throw new IllegalStateException("Invalid activity WAL type: " + walConfig.getActivityWALType());
             }
@@ -363,6 +374,7 @@ public class MiruSyncMain {
             }
 
             deployable.addEndpoints(MiruSyncEndpoints.class);
+            deployable.addInjectables(MiruSyncCopier.class, syncCopier);
             if (syncSender != null) {
                 deployable.addInjectables(MiruSyncSender.class, syncSender);
             }

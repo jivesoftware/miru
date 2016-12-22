@@ -4,6 +4,7 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruReadEvent;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.writer.deployable.MiruPartitioner;
@@ -86,6 +87,10 @@ public class MiruActivityIngress {
         MiruTenantId tenantId = readEvent.tenantId;
         checkForWriterAlignmentIfNecessary(tenantId);
         miruPartitioner.writeAllReadEvent(tenantId, readEvent);
+    }
+
+    public void updateCursor(int writerId, MiruTenantId tenantId, MiruPartitionId partitionId, int index) throws Exception {
+        miruPartitioner.updateCursor(writerId, tenantId, partitionId, index);
     }
 
     private void checkForWriterAlignmentIfNecessary(MiruTenantId tenantId) {

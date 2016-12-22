@@ -18,7 +18,9 @@ package com.jivesoftware.os.miru.writer.deployable.endpoints;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.MiruWriterEndpointConstants;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruReadEvent;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.writer.deployable.base.MiruActivityIngress;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -32,6 +34,7 @@ import javax.inject.Singleton;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
@@ -39,6 +42,8 @@ import javax.ws.rs.core.Response;
 import org.merlin.config.defaults.DoubleDefault;
 import org.merlin.config.defaults.IntDefault;
 import org.merlin.config.defaults.StringDefault;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * @author jonathan
@@ -281,4 +286,20 @@ public class MiruIngressEndpoints {
         }
     }
 
+    @POST
+    @Path("/cursor/{writerId}/{tenantId}/{partitionId}/{index}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response cursor(@PathParam("writerId") int writerId,
+        @PathParam("tenantId") String tenantId,
+        @PathParam("partitionId") int partitionId,
+        @PathParam("index") int index) {
+
+        try {
+            activityIngress.updateCursor(writerId, new MiruTenantId(tenantId.getBytes(UTF_8)), MiruPartitionId.of(partitionId), index);
+            return responseHelper.jsonResponse("Success");
+        } catch (Exception e) {
+            LOG.error("Failed to update cursor.", e);
+            return Response.serverError().build();
+        }
+    }
 }

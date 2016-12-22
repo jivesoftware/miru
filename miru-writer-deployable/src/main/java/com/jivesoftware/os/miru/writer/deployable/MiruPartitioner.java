@@ -225,6 +225,10 @@ public class MiruPartitioner {
         }
     }
 
+    public void updateCursor(int writerId, MiruTenantId tenantId, MiruPartitionId partitionId, int index) throws Exception {
+        partitionIdProvider.setLargestPartitionIdForWriter(tenantId, partitionId, writerId, index);
+    }
+
     private void flushActivities(MiruTenantId tenantId,
         MiruPartitionId partitionId,
         int latestIndex,
@@ -248,7 +252,7 @@ public class MiruPartitioner {
 
         if (partitionRolloverOccurred) {
             synchronized (locks.lock(tenantId, 0)) {
-                partitionIdProvider.setLargestPartitionIdForWriter(tenantId, partitionId, writerId);
+                partitionIdProvider.setLargestPartitionIdForWriter(tenantId, partitionId, writerId, 0);
                 tenantIngressRangeCache.invalidate(tenantId);
             }
         }
