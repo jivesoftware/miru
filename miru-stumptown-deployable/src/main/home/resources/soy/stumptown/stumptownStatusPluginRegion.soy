@@ -8,57 +8,63 @@
 {template .stumptownStatusPluginRegion}
     {if $serviceStatus}
         <div class="panel panel-default">
-            <div class="panel-heading">Status</div>
-                <div class="panel-body">
-                    <table class="table table-condensed">
-                        <thead>
+            <div class="panel-heading">
+                Status
+            </div>
+            <div class="panel-body">
+                <table class="table table-condensed">
+                    <thead>
+                        <tr>
+                            <th>ERROR</th>
+                            <th>WARN</th>
+                            <th>INFO</th>
+                            <th>Cluster</th>
+                            <th>Host</th>
+                            <th>Service</th>
+                            <th>Instance</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {foreach $status in $serviceStatus}
                             <tr>
-                                <th>ERROR</th>
-                                <th>WARN</th>
-                                <th>INFO</th>
-                                <th>Cluster</th>
-                                <th>Host</th>
-                                <th>Service</th>
-                                <th>Instance</th>
+                                <td>
+                                    <input class="btn btn-default form-control" type="button" value="{$status.error}"
+                                        onclick="document.location.href='query?logLevels=ERROR&amp;cluster={$status.cluster}&amp;host={$status.host}&amp;service={$status.service}&amp;instance={$status.instance}';" />
+                                </td>
+                                <td>
+                                    <input class="btn btn-default form-control" type="button" value="{$status.warn}"
+                                        onclick="document.location.href='query?logLevels=WARN&amp;cluster={$status.cluster}&amp;host={$status.host}&amp;service={$status.service}&amp;instance={$status.instance}';" />
+                                </td>
+                                <td>
+                                    <input class="btn btn-default form-control" type="button" value="{$status.info}"
+                                        onclick="document.location.href='query?logLevels=INFO&amp;cluster={$status.cluster}&amp;host={$status.host}&amp;service={$status.service}&amp;instance={$status.instance}';" />
+                                </td>
+                                <td>
+                                    <input class="btn btn-default form-control" type="button" value="{$status.cluster}"
+                                        onclick="document.location.href='query?cluster={$status.cluster}';" />
+                                </td>
+                                <td>
+                                    <input class="btn btn-default form-control" type="button" value="{$status.host}"
+                                        onclick="document.location.href='query?host={$status.host}';" />
+                                </td>
+                                <td>
+                                    <input class="btn btn-default form-control" type="button" value="{$status.service}"
+                                        onclick="document.location.href='query?service={$status.service}';" />
+                                </td>
+                                <td>
+                                    <input class="btn btn-default form-control" type="button" value="{$status.instance}"
+                                        onclick="document.location.href='query?instance={$status.instance}';" />
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            {foreach $status in $serviceStatus}
-                                <tr>
-                                    <td>
-                                        <input class="btn btn-default form-control" type="button" value="{$status.error}"
-                                            onclick="document.location.href='query?logLevels=ERROR&amp;cluster={$status.cluster}&amp;host={$status.host}&amp;service={$status.service}&amp;instance={$status.instance}';" />
-                                    </td>
-                                    <td>
-                                        <input class="btn btn-default form-control" type="button" value="{$status.warn}"
-                                            onclick="document.location.href='query?logLevels=WARN&amp;cluster={$status.cluster}&amp;host={$status.host}&amp;service={$status.service}&amp;instance={$status.instance}';" />
-                                    </td>
-                                    <td>
-                                        <input class="btn btn-default form-control" type="button" value="{$status.info}"
-                                            onclick="document.location.href='query?logLevels=INFO&amp;cluster={$status.cluster}&amp;host={$status.host}&amp;service={$status.service}&amp;instance={$status.instance}';" />
-                                    </td>
-                                    <td>
-                                        <input class="btn btn-default form-control" type="button" value="{$status.cluster}"
-                                            onclick="document.location.href='query?cluster={$status.cluster}';" />
-                                    </td>
-                                    <td>
-                                        <input class="btn btn-default form-control" type="button" value="{$status.host}"
-                                            onclick="document.location.href='query?host={$status.host}';" />
-                                    </td>
-                                    <td>
-                                        <input class="btn btn-default form-control" type="button" value="{$status.service}"
-                                            onclick="document.location.href='query?service={$status.service}';" />
-                                    </td>
-                                    <td>
-                                        <input class="btn btn-default form-control" type="button" value="{$status.instance}"
-                                            onclick="document.location.href='query?instance={$status.instance}';" />
-                                    </td>
-                                </tr>
-                            {/foreach}
-                        </tbody>
-                    </table>
-                </div>
+                        {/foreach}
+                    </tbody>
+                </table>
+            <div>
+                 <form class="form" method="post">
+                    <input class="form-control btn btn-primary" type="submit" name="action" value="reset"/>
+                 </form>
             </div>
         </div>
+    </div>
     {/if}
 {/template}
