@@ -74,13 +74,17 @@ public class MiruSyncCopier<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         this.cursorClass = cursorClass;
     }
 
-    public int copyLocal(MiruTenantId tenantId, MiruPartitionId fromPartitionId, MiruPartitionId toPartitionId, long fromTimestamp) throws Exception {
-        C cursor = defaultCursor;
+    public int copyLocal(MiruTenantId fromTenantId,
+        MiruPartitionId fromPartitionId,
+        MiruTenantId toTenantId,
+        MiruPartitionId toPartitionId,
+        long fromTimestamp) throws Exception {
 
+        C cursor = defaultCursor;
         int copied = 0;
         boolean started = false;
         while (true) {
-            StreamBatch<MiruWALEntry, C> batch = walClient.getActivity(tenantId, fromPartitionId, cursor, batchSize, -1);
+            StreamBatch<MiruWALEntry, C> batch = walClient.getActivity(fromTenantId, fromPartitionId, cursor, batchSize, -1);
             if (batch.activities != null && !batch.activities.isEmpty()) {
                 List<MiruPartitionedActivity> copyOfActivities = Lists.newArrayListWithCapacity(batch.activities.size());
                 for (MiruWALEntry entry : batch.activities) {
@@ -94,7 +98,7 @@ public class MiruSyncCopier<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                         copyOfActivities.add(MiruPartitionedActivity.fromJson(activity.type,
                             activity.writerId,
                             toPartitionId.getId(),
-                            activity.tenantId.getBytes(),
+                            toTenantId.getBytes(),
                             activity.index,
                             activity.timestamp,
                             activity.clockTimestamp,
@@ -105,7 +109,7 @@ public class MiruSyncCopier<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                 if (copyOfActivities.isEmpty()) {
                     break;
                 } else {
-                    walClient.writeActivity(tenantId, toPartitionId, copyOfActivities);
+                    walClient.writeActivity(toTenantId, toPartitionId, copyOfActivities);
                     copied += copyOfActivities.size();
                 }
             }

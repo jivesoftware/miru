@@ -87,16 +87,18 @@ public class MiruSyncEndpoints {
     }
 
     @POST
-    @Path("/copy/local/{tenantId}/{fromPartitionId}/{toPartitionId}/{fromTimestamp}")
+    @Path("/copy/local/{fromTenantId}/{fromPartitionId}/{toTenantId}/{toPartitionId}/{fromTimestamp}")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response copyLocal(@PathParam("tenantId") String tenantId,
+    public Response copyLocal(@PathParam("fromTenantId") String fromTenantId,
         @PathParam("fromPartitionId") int fromPartitionId,
+        @PathParam("toTenantId") String toTenantId,
         @PathParam("toPartitionId") int toPartitionId,
         @PathParam("fromTimestamp") long fromTimestamp) {
         try {
             if (syncCopier != null) {
-                int copied = syncCopier.copyLocal(new MiruTenantId(tenantId.getBytes(StandardCharsets.UTF_8)),
+                int copied = syncCopier.copyLocal(new MiruTenantId(fromTenantId.getBytes(StandardCharsets.UTF_8)),
                     MiruPartitionId.of(fromPartitionId),
+                    new MiruTenantId(toTenantId.getBytes(StandardCharsets.UTF_8)),
                     MiruPartitionId.of(toPartitionId),
                     fromTimestamp);
                 return Response.ok("Copied " + copied).build();
