@@ -66,4 +66,7 @@ public interface MiruSyncConfig extends Config {
 
     @BooleanDefault(false)
     boolean getUseClientSolutionLog();
+
+    @IntDefault(10_000)
+    int getCopyBatchSize();
 }

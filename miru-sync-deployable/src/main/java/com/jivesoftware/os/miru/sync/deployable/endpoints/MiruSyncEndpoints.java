@@ -16,7 +16,9 @@
 package com.jivesoftware.os.miru.sync.deployable.endpoints;
 
 import com.jivesoftware.os.miru.api.MiruStats;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.sync.deployable.MiruSyncCopier;
 import com.jivesoftware.os.miru.sync.deployable.MiruSyncSender;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -44,11 +46,14 @@ public class MiruSyncEndpoints {
 
     private final ResponseHelper responseHelper = ResponseHelper.INSTANCE;
     private final MiruSyncSender<?, ?> syncSender;
+    private final MiruSyncCopier<?, ?> syncCopier;
     private final MiruStats miruStats;
 
     public MiruSyncEndpoints(@Context MiruSyncSender<?, ?> syncSender,
+        @Context MiruSyncCopier<?, ?> syncCopier,
         @Context MiruStats miruStats) {
         this.syncSender = syncSender;
+        this.syncCopier = syncCopier;
         this.miruStats = miruStats;
     }
 
@@ -77,6 +82,29 @@ public class MiruSyncEndpoints {
             }
         } catch (Exception e) {
             LOG.error("Failed to reset.", e);
+            return Response.serverError().build();
+        }
+    }
+
+    @POST
+    @Path("/copy/local/{tenantId}/{fromPartitionId}/{toPartitionId}/{fromTimestamp}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response copyLocal(@PathParam("tenantId") String tenantId,
+        @PathParam("fromPartitionId") int fromPartitionId,
+        @PathParam("toPartitionId") int toPartitionId,
+        @PathParam("fromTimestamp") long fromTimestamp) {
+        try {
+            if (syncCopier != null) {
+                int copied = syncCopier.copyLocal(new MiruTenantId(tenantId.getBytes(StandardCharsets.UTF_8)),
+                    MiruPartitionId.of(fromPartitionId),
+                    MiruPartitionId.of(toPartitionId),
+                    fromTimestamp);
+                return Response.ok("Copied " + copied).build();
+            } else {
+                return Response.status(Status.SERVICE_UNAVAILABLE).entity("Copier is not enabled").build();
+            }
+        } catch (Exception e) {
+            LOG.error("Failed to copy.", e);
             return Response.serverError().build();
         }
     }

@@ -216,8 +216,8 @@ public class AmzaPartitionIdProvider implements MiruPartitionIdProvider {
     }
 
     @Override
-    public void setLargestPartitionIdForWriter(MiruTenantId tenantId, MiruPartitionId partition, int writerId) throws Exception {
-        MiruPartitionCursor cursor = new MiruPartitionCursor(partition, new AtomicInteger(0), capacity);
+    public void setLargestPartitionIdForWriter(MiruTenantId tenantId, MiruPartitionId partition, int writerId, int index) throws Exception {
+        MiruPartitionCursor cursor = new MiruPartitionCursor(partition, new AtomicInteger(index), capacity);
         setCursor(tenantId, writerId, cursor);
     }
 
