@@ -328,7 +328,7 @@ public class MiruSyncMain {
                 if (syncConfig.getSyncReceiverEnabled()) {
                     syncReceiver = (MiruSyncReceiver) new MiruSyncReceiver<>(amzaWALClient, writerHttpClient, clusterClient, activityReadEventConverter);
                 }
-                syncCopier = new MiruSyncCopier<>(amzaWALClient, syncConfig.getCopyBatchSize(), null, AmzaCursor.class);
+                syncCopier = (MiruSyncCopier) new MiruSyncCopier<>(amzaWALClient, syncConfig.getCopyBatchSize(), null, AmzaCursor.class);
             } else {
                 throw new IllegalStateException("Invalid activity WAL type: " + walConfig.getActivityWALType());
             }
