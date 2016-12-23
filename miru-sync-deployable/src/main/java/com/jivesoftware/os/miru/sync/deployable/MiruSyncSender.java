@@ -79,7 +79,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
     private final MiruSyncClient toSyncClient;
     private final PartitionClientProvider partitionClientProvider;
     private final ObjectMapper mapper;
-    private final Map<MiruTenantId, MiruTenantId> whitelist;
+    private final MiruSyncConfigStorage whitelistConfigStorage;
     private final int batchSize;
     private final long forwardSyncDelayMillis;
     private final long reverseSyncMaxAgeMillis;
@@ -105,12 +105,13 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         MiruSyncClient toSyncClient,
         PartitionClientProvider partitionClientProvider,
         ObjectMapper mapper,
-        Map<MiruTenantId, MiruTenantId> whitelist,
+        MiruSyncConfigStorage whitelistConfigStorage,
         int batchSize,
         long forwardSyncDelayMillis,
         long reverseSyncMaxAgeMillis,
         C defaultCursor,
         Class<C> cursorClass) {
+
         this.amzaClientAquariumProvider = amzaClientAquariumProvider;
         this.orderIdProvider = orderIdProvider;
         this.syncRingStripes = syncRingStripes;
@@ -122,7 +123,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         this.toSyncClient = toSyncClient;
         this.partitionClientProvider = partitionClientProvider;
         this.mapper = mapper;
-        this.whitelist = whitelist;
+        this.whitelistConfigStorage = whitelistConfigStorage;
         this.batchSize = batchSize;
         this.forwardSyncDelayMillis = forwardSyncDelayMillis;
         this.reverseSyncMaxAgeMillis = reverseSyncMaxAgeMillis;
@@ -300,22 +301,29 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         LOG.info("Syncing stripe:{}", stripe);
         int tenantCount = 0;
         int activityCount = 0;
-        Map<MiruTenantId, MiruTenantId> tenantIds;
-        if (whitelist != null) {
-            tenantIds = whitelist;
+        Map<MiruTenantId, MiruSyncTenantConfig> tenantIds;
+        if (whitelistConfigStorage != null) {
+            tenantIds = whitelistConfigStorage.getAll();
         } else {
             tenantIds = Maps.newHashMap();
             List<MiruTenantId> allTenantIds = fromWALClient.getAllTenantIds();
             for (MiruTenantId tenantId : allTenantIds) {
-                tenantIds.put(tenantId, tenantId);
+                tenantIds.put(tenantId, new MiruSyncTenantConfig(
+                    new String(tenantId.getBytes(), StandardCharsets.UTF_8),
+                    new String(tenantId.getBytes(), StandardCharsets.UTF_8),
+                    System.currentTimeMillis() - reverseSyncMaxAgeMillis,
+                    Long.MAX_VALUE,
+                    0,
+                    MiruSyncTimeShiftStrategy.none
+                ));
             }
         }
-        for (Entry<MiruTenantId, MiruTenantId> entry : tenantIds.entrySet()) {
+        for (Entry<MiruTenantId, MiruSyncTenantConfig> entry : tenantIds.entrySet()) {
             if (!isElected(stripe)) {
                 break;
             }
             MiruTenantId fromTenantId = entry.getKey();
-            MiruTenantId toTenantId = entry.getValue();
+            MiruTenantId toTenantId = new MiruTenantId(entry.getValue().syncToTenantId.getBytes(StandardCharsets.UTF_8));
             int tenantStripe = Math.abs(fromTenantId.hashCode() % syncRingStripes);
             if (tenantStripe == stripe) {
                 tenantCount++;
@@ -324,7 +332,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                     break;
                 }
 
-                int synced = syncTenant(fromTenantId, toTenantId, stripe, forward);
+                int synced = syncTenant(fromTenantId, entry.getValue(), stripe, forward);
                 if (synced > 0) {
                     LOG.info("Synced stripe:{} tenantId:{} activities:{} type:{}", stripe, fromTenantId, synced, forward);
                 }
@@ -334,7 +342,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                     continue;
                 }
 
-                synced = syncTenant(fromTenantId, toTenantId, stripe, reverse);
+                synced = syncTenant(fromTenantId, entry.getValue(), stripe, reverse);
                 if (synced > 0) {
                     LOG.info("Synced stripe:{} tenantId:{} activities:{} type:{}", stripe, fromTenantId, synced, reverse);
                 }
@@ -354,7 +362,8 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         }
     }
 
-    private int syncTenant(MiruTenantId fromTenantId, MiruTenantId toTenantId, int stripe, ProgressType type) throws Exception {
+    private int syncTenant(MiruTenantId fromTenantId, MiruSyncTenantConfig toTenantConfig, int stripe, ProgressType type) throws Exception {
+        MiruTenantId toTenantId = new MiruTenantId(toTenantConfig.syncToTenantId.getBytes(StandardCharsets.UTF_8));
         TenantProgress progress = getTenantProgress(fromTenantId, toTenantId, stripe);
         if (!isElected(stripe)) {
             return 0;
@@ -374,7 +383,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
             for (WriterCount count : status.counts) {
                 maxClockTimestamp = Math.max(maxClockTimestamp, count.clockTimestamp);
             }
-
+            // TODO toTenantConfig.startTimestampMillis
             if (reverseSyncMaxAgeMillis != -1 && (maxClockTimestamp == -1 || maxClockTimestamp < System.currentTimeMillis() - reverseSyncMaxAgeMillis)) {
                 if (maxAgeSet.add(new TenantAndPartition(fromTenantId, partitionId))) {
                     LOG.info("Reverse sync reached max age for tenant:{} partition:{} clock:{}", fromTenantId, partitionId, maxClockTimestamp);
