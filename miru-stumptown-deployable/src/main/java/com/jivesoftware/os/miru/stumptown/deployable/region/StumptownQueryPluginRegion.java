@@ -51,13 +51,10 @@ import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Objects.firstNonNull;
 
-/**
- *
- */
 // soy.stumptown.page.stumptownQueryPluginRegion
 public class StumptownQueryPluginRegion implements MiruPageRegion<Optional<StumptownQueryPluginRegion.StumptownPluginRegionInput>> {
 
-    private static final MetricLogger log = MetricLoggerFactory.getLogger();
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final String template;
     private final String logEventTemplate;
@@ -69,7 +66,6 @@ public class StumptownQueryPluginRegion implements MiruPageRegion<Optional<Stump
     private final MiruStumptownPayloadStorage payloads;
 
     private final LuceneBackedQueryParser messageQueryParser = new LuceneBackedQueryParser("message");
-    private final LuceneBackedQueryParser thrownQueryParser = new LuceneBackedQueryParser("thrownStackTrace");
 
     public StumptownQueryPluginRegion(String template,
         String logEventTemplate,
@@ -203,13 +199,13 @@ public class StumptownQueryPluginRegion implements MiruPageRegion<Optional<Stump
                 data.put("execute", execute);
             }
         } catch (Exception e) {
-            log.error("Unable to retrieve data", e);
+            LOG.error("Unable to retrieve data", e);
         }
         return renderer.render(template, data);
     }
 
 
-    public List<Map<String, String>> typeahead(String name,
+    public List<Map<String, String>> typeahead(String fieldName,
         String cluster,
         String host,
         String service,
@@ -222,7 +218,7 @@ public class StumptownQueryPluginRegion implements MiruPageRegion<Optional<Stump
         String thread,
         String logger,
         String method,
-        String fieldName,
+        String line,
         String contains) throws Exception {
 
         MiruTimeRange timeRange = new MiruTimeRange(Long.MIN_VALUE, Long.MAX_VALUE);
@@ -233,21 +229,17 @@ public class StumptownQueryPluginRegion implements MiruPageRegion<Optional<Stump
 
         List<MiruFieldFilter> fieldFilters = Lists.newArrayList();
         List<MiruFieldFilter> notFieldFilters = Lists.newArrayList();
-        addFilter(name, "cluster",  cluster, fieldFilters, notFieldFilters);
-        addFilter(name, "host",  host, fieldFilters, notFieldFilters);
-        addFilter(name, "service",  service, fieldFilters, notFieldFilters);
-        addFilter(name, "instance",  instance, fieldFilters, notFieldFilters);
-        addFilter(name, "version",  version, fieldFilters, notFieldFilters);
-        addFilter(name, "thread",  thread, fieldFilters, notFieldFilters);
-        addFilter(name, "methodName",  method, fieldFilters, notFieldFilters);
-        //addFilter(name, "lineNumber",  line, fieldFilters, notFieldFilters);
-        addFilter(name, "logger",  logger, fieldFilters, notFieldFilters);
-        //addFilter(name, "level",  level, fieldFilters, notFieldFilters);
-        //addFilter(name, "exceptionClass",  exceptionClass, fieldFilters, notFieldFilters);
+        addFilter(fieldName, "cluster", cluster, fieldFilters, notFieldFilters);
+        addFilter(fieldName, "host",  host, fieldFilters, notFieldFilters);
+        addFilter(fieldName, "service", service, fieldFilters, notFieldFilters);
+        addFilter(fieldName, "instance", instance, fieldFilters, notFieldFilters);
+        addFilter(fieldName, "version", version, fieldFilters, notFieldFilters);
+        addFilter(fieldName, "thread", thread, fieldFilters, notFieldFilters);
+        addFilter(fieldName, "methodName", method, fieldFilters, notFieldFilters);
+        addFilter(fieldName, "logger", logger, fieldFilters, notFieldFilters);
 
         List<MiruFilter> filters = Lists.newArrayList();
         filters.add(new MiruFilter(MiruFilterOperation.and, false, fieldFilters, null));
-
         if (!notFieldFilters.isEmpty()) {
             filters.add(new MiruFilter(MiruFilterOperation.or, false, notFieldFilters, null));
         }
@@ -285,12 +277,10 @@ public class StumptownQueryPluginRegion implements MiruPageRegion<Optional<Stump
         if (distinctsResponse != null && distinctsResponse.answer != null) {
             response = distinctsResponse;
         } else {
-            log.warn("Empty distincts response from {}", tenantId);
+            LOG.warn("Empty distincts response from {}", tenantId);
         }
 
-
         List<Map<String, String>> data = new ArrayList<>();
-
         if (response != null && response.answer != null) {
             int count = 0;
             for (MiruValue result : response.answer.results) {
@@ -303,15 +293,15 @@ public class StumptownQueryPluginRegion implements MiruPageRegion<Optional<Stump
                 count++;
             }
         }
+
         return data;
     }
 
-    private void addFilter(String typeaheadField,String  field, String value, List<MiruFieldFilter> fieldFilters, List<MiruFieldFilter> notFieldFilters) {
-        if (typeaheadField == null || !typeaheadField.equals(field)) {
+    private void addFilter(String fieldName,String  field, String value, List<MiruFieldFilter> fieldFilters, List<MiruFieldFilter> notFieldFilters) {
+        if (fieldName == null || !fieldName.equals(field)) {
             QueryUtils.addFieldFilter(fieldFilters, notFieldFilters, field, value);
         }
     }
-
 
     public Map<String, Object> poll(StumptownPluginRegionInput input) throws Exception {
         Map<String, Object> data = Maps.newHashMap();
@@ -388,7 +378,7 @@ public class StumptownQueryPluginRegion implements MiruPageRegion<Optional<Stump
         if (stumptownResponse != null && stumptownResponse.answer != null) {
             response = stumptownResponse;
         } else {
-            log.warn("Empty stumptown response from {}", tenantId);
+            LOG.warn("Empty stumptown response from {}", tenantId);
         }
 
         if (response != null && response.answer != null) {
@@ -397,7 +387,7 @@ public class StumptownQueryPluginRegion implements MiruPageRegion<Optional<Stump
             Map<String, StumptownAnswer.Waveform> waveforms = response.answer.waveforms;
             if (waveforms == null) {
                 waveforms = Collections.emptyMap();
-                log.warn("Empty waveform answer from stumptown");
+                LOG.warn("Empty waveform answer from stumptown");
             }
 
             Map<String, Object> waveformData = Maps.newHashMap();
@@ -419,6 +409,7 @@ public class StumptownQueryPluginRegion implements MiruPageRegion<Optional<Stump
                     activityTimes.add(activity.time);
                 }
             }
+
             List<MiruLogEvent> logEvents = Lists.newArrayList(payloads.multiGet(tenantId, activityTimes, MiruLogEvent.class));
             if (!logEvents.isEmpty()) {
                 data.put("logEvents", Lists.transform(logEvents,
@@ -453,4 +444,5 @@ public class StumptownQueryPluginRegion implements MiruPageRegion<Optional<Stump
     public String getTitle() {
         return "Query";
     }
+
 }
