@@ -15,6 +15,7 @@
  */
 package com.jivesoftware.os.miru.sync.deployable;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
@@ -172,29 +173,6 @@ public class MiruSyncMain {
 
             MiruSyncConfig syncConfig = deployable.config(MiruSyncConfig.class);
 
-            String syncWhitelist = syncConfig.getSyncSenderWhitelist().trim();
-            Map<MiruTenantId, MiruTenantId> whitelistTenantIds;
-            if (syncWhitelist.equals("*")) {
-                whitelistTenantIds = null;
-            } else {
-                String[] splitWhitelist = syncWhitelist.split("\\s*,\\s*");
-                Builder<MiruTenantId, MiruTenantId> builder = ImmutableMap.builder();
-                for (String s : splitWhitelist) {
-                    if (!s.isEmpty()) {
-                        if (s.contains(":")) {
-                            String[] parts = s.split(":");
-                            MiruTenantId fromTenantId = new MiruTenantId(parts[0].trim().getBytes(StandardCharsets.UTF_8));
-                            MiruTenantId toTenantId = new MiruTenantId(parts[1].trim().getBytes(StandardCharsets.UTF_8));
-                            builder.put(fromTenantId, toTenantId);
-                        } else {
-                            MiruTenantId tenantId = new MiruTenantId(s.trim().getBytes(StandardCharsets.UTF_8));
-                            builder.put(tenantId, tenantId);
-                        }
-                    }
-                }
-                whitelistTenantIds = builder.build();
-            }
-
             TenantsServiceConnectionDescriptorProvider syncDescriptorProvider = tenantRoutingProvider
                 .getConnections(instanceConfig.getServiceName(), "main", 10_000); // TODO config
 
@@ -277,6 +255,59 @@ public class MiruSyncMain {
                 10_000L, //TODO config
                 syncConfig.getUseClientSolutionLog());
 
+            ObjectMapper miruSyncMapper = new ObjectMapper();
+            miruSyncMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
+            miruSyncMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+            MiruSyncConfigStorage miruSyncConfigStorage = new MiruSyncConfigStorage(
+                "default", // TODO config
+                mapper,
+                amzaClient,
+                30_000L // TODO config
+            );
+
+
+            String syncWhitelist = syncConfig.getSyncSenderWhitelist().trim();
+            Map<MiruTenantId, MiruSyncTenantConfig> whitelistTenantIds;
+            if (syncWhitelist.equals("*")) {
+                whitelistTenantIds = null;
+            } else {
+                String[] splitWhitelist = syncWhitelist.split("\\s*,\\s*");
+                Builder<MiruTenantId, MiruSyncTenantConfig> builder = ImmutableMap.builder();
+                for (String s : splitWhitelist) {
+                    if (!s.isEmpty()) {
+                        if (s.contains(":")) {
+                            String[] parts = s.split(":");
+                            MiruTenantId fromTenantId = new MiruTenantId(parts[0].trim().getBytes(StandardCharsets.UTF_8));
+                            builder.put(fromTenantId,
+                                new MiruSyncTenantConfig(
+                                    parts[0].trim(),
+                                    parts[1].trim(),
+                                    System.currentTimeMillis() - syncConfig.getReverseSyncMaxAgeMillis(),
+                                    Long.MAX_VALUE,
+                                    0,
+                                    MiruSyncTimeShiftStrategy.none
+                                )
+                            );
+                        } else {
+                            MiruTenantId tenantId = new MiruTenantId(s.trim().getBytes(StandardCharsets.UTF_8));
+                            builder.put(tenantId,
+                                new MiruSyncTenantConfig(
+                                    s.trim(),
+                                    s.trim(),
+                                    System.currentTimeMillis() - syncConfig.getReverseSyncMaxAgeMillis(),
+                                    Long.MAX_VALUE,
+                                    0,
+                                    MiruSyncTimeShiftStrategy.none
+                                ));
+                        }
+                    }
+                }
+                whitelistTenantIds = builder.build();
+            }
+
+            miruSyncConfigStorage.multiPutIfAbsent(whitelistTenantIds);
+
+
             SickThreads walClientSickThreads = new SickThreads();
             deployable.addHealthCheck(new SickThreadsHealthCheck(deployable.config(WALClientSickThreadsHealthCheckConfig.class), walClientSickThreads));
 
@@ -301,7 +332,7 @@ public class MiruSyncMain {
                         rcvsWALClient,
                         amzaClientProvider,
                         mapper,
-                        whitelistTenantIds,
+                        miruSyncConfigStorage,
                         RCVSCursor.INITIAL,
                         RCVSCursor.class);
                 }
@@ -321,7 +352,7 @@ public class MiruSyncMain {
                         amzaWALClient,
                         amzaClientProvider,
                         mapper,
-                        whitelistTenantIds,
+                        miruSyncConfigStorage,
                         null,
                         AmzaCursor.class);
                 }
