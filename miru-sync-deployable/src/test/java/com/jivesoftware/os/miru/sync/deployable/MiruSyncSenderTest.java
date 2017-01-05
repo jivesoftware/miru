@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.sync.deployable;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.jivesoftware.os.amza.api.PartitionClient;
 import com.jivesoftware.os.amza.api.PartitionClientProvider;
 import com.jivesoftware.os.amza.api.RingPartitionProperties;
@@ -76,7 +77,7 @@ public class MiruSyncSenderTest {
             orderIdProvider,
             ringMember.asAquariumMember(),
             count -> count == 1,
-            member -> true,
+            () -> Sets.newHashSet(ringMember.asAquariumMember()),
             128,
             128,
             5_000L,
