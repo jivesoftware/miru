@@ -21,6 +21,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
+import com.google.common.collect.Sets;
 import com.jivesoftware.os.amza.api.BAInterner;
 import com.jivesoftware.os.amza.client.aquarium.AmzaClientAquariumProvider;
 import com.jivesoftware.os.amza.client.http.AmzaClientProvider;
@@ -90,6 +91,7 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Executors;
 import org.glassfish.jersey.oauth1.signature.OAuth1Request;
 import org.glassfish.jersey.oauth1.signature.OAuth1Signature;
@@ -233,15 +235,13 @@ public class MiruSyncMain {
                     int ringSize = descriptors.getConnectionDescriptors().size();
                     return count > ringSize / 2;
                 },
-                member -> {
-                    String instanceKey = new String(member.getMember(), StandardCharsets.UTF_8);
+                () -> {
+                    Set<Member> members = Sets.newHashSet();
                     ConnectionDescriptors descriptors = syncDescriptorProvider.getConnections("");
                     for (ConnectionDescriptor connectionDescriptor : descriptors.getConnectionDescriptors()) {
-                        if (instanceKey.equals(connectionDescriptor.getInstanceDescriptor().instanceKey)) {
-                            return true;
-                        }
+                        members.add(new Member(connectionDescriptor.getInstanceDescriptor().instanceKey.getBytes(StandardCharsets.UTF_8)));
                     }
-                    return false;
+                    return members;
                 },
                 128, //TODO config
                 128, //TODO config
