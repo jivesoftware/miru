@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.stream.plugins.strut;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.jivesoftware.os.filer.chunk.store.ChunkStoreInitializer;
@@ -38,7 +39,6 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import org.testng.annotations.Test;
 
@@ -165,7 +165,7 @@ public class StrutModelScorerNGTest {
 
         @Override
         public Map<IBA, Long> createCache() {
-            return new ConcurrentHashMap<>();
+            return Maps.newConcurrentMap();
         }
     }
 

@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.plugin.backfill;
 
+import com.google.common.collect.Maps;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
@@ -18,7 +19,6 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /** @author jonathan */
 public class RCVSInboxReadTracker implements MiruInboxReadTracker {
@@ -26,7 +26,7 @@ public class RCVSInboxReadTracker implements MiruInboxReadTracker {
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
     // TODO - this should probably live in the context
-    private final Map<MiruTenantPartitionAndStreamId, Long> userSipTimestamp = new ConcurrentHashMap<>();
+    private final Map<MiruTenantPartitionAndStreamId, Long> userSipTimestamp = Maps.newConcurrentMap();
 
     private final MiruWALClient<RCVSCursor, RCVSSipCursor> walClient;
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();

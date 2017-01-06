@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.plugin.backfill;
 
+import com.google.common.collect.Maps;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
@@ -21,7 +22,6 @@ import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /** @author jonathan */
 public class AmzaInboxReadTracker implements MiruInboxReadTracker {
@@ -29,7 +29,7 @@ public class AmzaInboxReadTracker implements MiruInboxReadTracker {
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
     // TODO - this should probably live in the context
-    private final Map<MiruTenantPartitionAndStreamId, Collection<NamedCursor>> userSipTransactionId = new ConcurrentHashMap<>();
+    private final Map<MiruTenantPartitionAndStreamId, Collection<NamedCursor>> userSipTransactionId = Maps.newConcurrentMap();
 
     private final MiruWALClient<AmzaCursor, AmzaSipCursor> walClient;
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.filer.chunk.store.transaction.KeyToFPCacheFactory;
 import com.jivesoftware.os.filer.chunk.store.transaction.TxCogs;
@@ -70,7 +71,6 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -384,7 +384,7 @@ public class MiruServiceInitializer {
 
         @Override
         public Map<IBA, Long> createCache() {
-            return new ConcurrentHashMap<>();
+            return Maps.newConcurrentMap();
         }
     }
 

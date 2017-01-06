@@ -11,7 +11,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 
 /**
@@ -25,7 +24,7 @@ public class WikiMiruIndexPluginRegion implements MiruPageRegion<WikiMiruIndexPl
     private final String template;
     private final MiruSoyRenderer renderer;
     private final WikiMiruIndexService indexService;
-    private final Map<String, WikiMiruIndexService.Indexer> indexers = new ConcurrentHashMap<>();
+    private final Map<String, WikiMiruIndexService.Indexer> indexers = Maps.newConcurrentMap();
 
     public WikiMiruIndexPluginRegion(String template,
         MiruSoyRenderer renderer,

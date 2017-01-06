@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.service.partition;
 
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.plugin.partition.TrackError;
@@ -12,7 +13,6 @@ import com.jivesoftware.os.routing.bird.health.api.HealthCheckConfig;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import org.merlin.config.defaults.FloatDefault;
 import org.merlin.config.defaults.StringDefault;
 
@@ -39,8 +39,8 @@ public class PartitionErrorTracker implements HealthCheck {
 
     private final PartitionErrorTrackerConfig config;
 
-    private final Set<MiruPartitionCoord> errorsBeforeRebuild = Collections.newSetFromMap(new ConcurrentHashMap<>());
-    private final Map<MiruPartitionCoord, Set<String>> errorsSinceRebuild = new ConcurrentHashMap<>();
+    private final Set<MiruPartitionCoord> errorsBeforeRebuild = Collections.newSetFromMap(Maps.newConcurrentMap());
+    private final Map<MiruPartitionCoord, Set<String>> errorsSinceRebuild = Maps.newConcurrentMap();
 
     public PartitionErrorTracker(PartitionErrorTrackerConfig config) {
         this.config = config;

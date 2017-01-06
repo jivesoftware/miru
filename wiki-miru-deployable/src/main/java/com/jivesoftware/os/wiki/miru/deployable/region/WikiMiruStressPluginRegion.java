@@ -16,7 +16,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.stream.Stream;
 
@@ -30,7 +29,7 @@ public class WikiMiruStressPluginRegion implements MiruPageRegion<WikiMiruStress
     private final String template;
     private final MiruSoyRenderer renderer;
     private final WikiMiruStressService stressService;
-    private final Map<String, WikiMiruStressService.Stresser> stressers = new ConcurrentHashMap<>();
+    private final Map<String, WikiMiruStressService.Stresser> stressers = Maps.newConcurrentMap();
 
     public WikiMiruStressPluginRegion(String template,
         MiruSoyRenderer renderer,

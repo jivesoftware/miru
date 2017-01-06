@@ -19,8 +19,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -32,8 +30,8 @@ public class MiruPartitionHeartbeatHandler {
 
     private final MiruClusterClient clusterClient;
 
-    private final Map<MiruPartitionCoord, PartitionInfo> heartbeats = new ConcurrentHashMap<>();
-    private final ConcurrentMap<MiruPartitionCoord, MiruPartitionActive> active = Maps.newConcurrentMap();
+    private final Map<MiruPartitionCoord, PartitionInfo> heartbeats = Maps.newConcurrentMap();
+    private final Map<MiruPartitionCoord, MiruPartitionActive> active = Maps.newConcurrentMap();
 
     private final Object cursorLock = new Object();
     private final Map<String, NamedCursor> partitionActiveUpdatesSinceCursors = Maps.newHashMap();
