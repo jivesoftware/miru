@@ -1,8 +1,7 @@
 package com.jivesoftware.os.miru.api;
 
+import com.google.common.collect.Maps;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -11,8 +10,8 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class MiruStats {
 
-    private final ConcurrentMap<String, Stat> egressedMap = new ConcurrentHashMap<>();
-    private final ConcurrentMap<String, Stat> ingressedMap = new ConcurrentHashMap<>();
+    private final Map<String, Stat> egressedMap = Maps.newConcurrentMap();
+    private final Map<String, Stat> ingressedMap = Maps.newConcurrentMap();
 
     public Map<String, Stat> ingressedMap() {
         return ingressedMap;

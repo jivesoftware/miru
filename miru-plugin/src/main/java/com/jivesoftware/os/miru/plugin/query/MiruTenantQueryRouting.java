@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.plugin.query;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruHostProvider;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -16,7 +17,7 @@ import com.jivesoftware.os.routing.bird.shared.ConnectionDescriptor;
 import com.jivesoftware.os.routing.bird.shared.HostPort;
 import com.jivesoftware.os.routing.bird.shared.InstanceDescriptor;
 import com.jivesoftware.os.routing.bird.shared.NextClientStrategy;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Map;
 
 /**
  *
@@ -24,7 +25,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class MiruTenantQueryRouting {
 
     private final RoundRobinStrategy robinStrategy = new RoundRobinStrategy();
-    private final ConcurrentHashMap<MiruTenantId, NextClientStrategy> strategyCache = new ConcurrentHashMap<>();
+    private final Map<MiruTenantId, NextClientStrategy> strategyCache = Maps.newConcurrentMap();
 
     public <Q, A, T> MiruResponse<A> query(T routingTenant,
         String family,
