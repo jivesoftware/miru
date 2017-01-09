@@ -7,8 +7,8 @@ import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.bot.deployable.MiruBotDistinctsInitializer.MiruBotDistinctsConfig;
-import com.jivesoftware.os.miru.bot.deployable.MiruBotUniquesInitializer.MiruBotUniquesConfig;
 import com.jivesoftware.os.miru.bot.deployable.MiruBotHealthCheck.MiruBotHealthCheckConfig;
+import com.jivesoftware.os.miru.bot.deployable.MiruBotUniquesInitializer.MiruBotUniquesConfig;
 import com.jivesoftware.os.miru.cluster.client.MiruClusterClientInitializer;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer.MiruLogAppenderConfig;
@@ -18,6 +18,7 @@ import com.jivesoftware.os.routing.bird.deployable.Deployable;
 import com.jivesoftware.os.routing.bird.deployable.DeployableHealthCheckRegistry;
 import com.jivesoftware.os.routing.bird.deployable.ErrorHealthCheckConfig;
 import com.jivesoftware.os.routing.bird.deployable.InstanceConfig;
+import com.jivesoftware.os.routing.bird.endpoints.base.FullyOnlineVersion;
 import com.jivesoftware.os.routing.bird.endpoints.base.HasUI;
 import com.jivesoftware.os.routing.bird.endpoints.base.LoadBalancerHealthCheckEndpoints;
 import com.jivesoftware.os.routing.bird.health.api.HealthFactory;
@@ -31,7 +32,6 @@ import com.jivesoftware.os.routing.bird.http.client.HttpDeliveryClientHealthProv
 import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelperUtils;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.http.client.TenantRoutingHttpClientInitializer;
-
 import java.util.Arrays;
 
 public class MiruBotMain {
@@ -63,6 +63,13 @@ public class MiruBotMain {
                 miruBotHealthCheck,
                 serviceStartupHealthCheck);
             deployable.addErrorHealthChecks(deployable.config(ErrorHealthCheckConfig.class));
+            deployable.addManageInjectables(FullyOnlineVersion.class, (FullyOnlineVersion)() -> {
+                if (serviceStartupHealthCheck.startupHasSucceeded()) {
+                    return instanceConfig.getVersion();
+                } else {
+                    return null;
+                }
+            });
             deployable.buildManageServer().start();
 
             MiruBotConfig miruBotConfig = deployable.config(MiruBotConfig.class);
