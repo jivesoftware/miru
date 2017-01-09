@@ -63,6 +63,7 @@ import com.jivesoftware.os.routing.bird.deployable.Deployable;
 import com.jivesoftware.os.routing.bird.deployable.DeployableHealthCheckRegistry;
 import com.jivesoftware.os.routing.bird.deployable.ErrorHealthCheckConfig;
 import com.jivesoftware.os.routing.bird.deployable.InstanceConfig;
+import com.jivesoftware.os.routing.bird.endpoints.base.FullyOnlineVersion;
 import com.jivesoftware.os.routing.bird.endpoints.base.HasUI;
 import com.jivesoftware.os.routing.bird.endpoints.base.HasUI.UI;
 import com.jivesoftware.os.routing.bird.endpoints.base.LoadBalancerHealthCheckEndpoints;
@@ -106,6 +107,7 @@ public class MiruSyncMain {
         ServiceStartupHealthCheck serviceStartupHealthCheck = new ServiceStartupHealthCheck();
         try {
             final Deployable deployable = new Deployable(args);
+            InstanceConfig instanceConfig = deployable.config(InstanceConfig.class);
             HealthFactory.initialize(deployable::config, new DeployableHealthCheckRegistry(deployable));
             deployable.addManageInjectables(HasUI.class, new HasUI(Arrays.asList(new UI("Miru-Sync", "main", "/ui"))));
 
@@ -117,9 +119,15 @@ public class MiruSyncMain {
                 new FileDescriptorCountHealthChecker(deployable.config(FileDescriptorCountHealthChecker.FileDescriptorCountHealthCheckerConfig.class)));
             deployable.addHealthCheck(serviceStartupHealthCheck);
             deployable.addErrorHealthChecks(deployable.config(ErrorHealthCheckConfig.class));
+            deployable.addManageInjectables(FullyOnlineVersion.class, (FullyOnlineVersion) () -> {
+                if (serviceStartupHealthCheck.startupHasSucceeded()) {
+                    return instanceConfig.getVersion();
+                } else {
+                    return null;
+                }
+            });
             deployable.buildManageServer().start();
 
-            InstanceConfig instanceConfig = deployable.config(InstanceConfig.class);
 
             ObjectMapper mapper = new ObjectMapper();
             mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
