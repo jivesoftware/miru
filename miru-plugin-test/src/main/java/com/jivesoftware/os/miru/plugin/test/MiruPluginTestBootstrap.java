@@ -6,7 +6,7 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Interners;
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
-import com.jivesoftware.os.amza.service.AmzaService;
+import com.jivesoftware.os.amza.embed.EmbedAmzaServiceInitializer.Lifecycle;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
@@ -171,7 +171,7 @@ public class MiruPluginTestBootstrap {
         MiruAmzaServiceConfig acrc = BindInterfaceToConfiguration.bindDefault(MiruAmzaServiceConfig.class);
         acrc.setWorkingDirectories(amzaDataDir.getAbsolutePath());
         Deployable deployable = new Deployable(new String[0]);
-        AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable,
+        Lifecycle amzaLifecycle = new MiruAmzaServiceInitializer().initialize(deployable,
             connectionDescriptor -> new NoOpClientHealth(),
             1,
             "instanceKey",
@@ -188,8 +188,8 @@ public class MiruPluginTestBootstrap {
             rowsChanged -> {
             });
 
-        EmbeddedClientProvider amzaClientProvider = new EmbeddedClientProvider(amzaService);
-        clusterRegistry = new AmzaClusterRegistry(amzaService,
+        EmbeddedClientProvider amzaClientProvider = new EmbeddedClientProvider(amzaLifecycle.amzaService);
+        clusterRegistry = new AmzaClusterRegistry(amzaLifecycle.amzaService,
             amzaClientProvider,
             10_000L,
             new JacksonJsonObjectTypeMarshaller<>(MiruSchema.class, mapper),

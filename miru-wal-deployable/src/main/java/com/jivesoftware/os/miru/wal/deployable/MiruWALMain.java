@@ -25,7 +25,7 @@ import com.jivesoftware.os.amza.api.partition.Consistency;
 import com.jivesoftware.os.amza.api.partition.Durability;
 import com.jivesoftware.os.amza.api.partition.PartitionProperties;
 import com.jivesoftware.os.amza.api.stream.RowType;
-import com.jivesoftware.os.amza.service.AmzaService;
+import com.jivesoftware.os.amza.embed.EmbedAmzaServiceInitializer.Lifecycle;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceConfig;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceInitializer;
@@ -96,6 +96,8 @@ import com.jivesoftware.os.routing.bird.shared.TenantsServiceConnectionDescripto
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicReference;
 import org.merlin.config.defaults.LongDefault;
 import org.merlin.config.defaults.StringDefault;
 
@@ -144,8 +146,9 @@ public class MiruWALMain {
                 new FileDescriptorCountHealthChecker(deployable.config(FileDescriptorCountHealthChecker.FileDescriptorCountHealthCheckerConfig.class)));
             deployable.addHealthCheck(serviceStartupHealthCheck);
             deployable.addErrorHealthChecks(deployable.config(ErrorHealthCheckConfig.class));
-            deployable.addManageInjectables(FullyOnlineVersion.class, (FullyOnlineVersion) () -> {
-                if (serviceStartupHealthCheck.startupHasSucceeded()) {
+            AtomicReference<Callable<Boolean>> isAmzaReady = new AtomicReference<>(()-> false);
+            deployable.addManageInjectables(FullyOnlineVersion.class, (FullyOnlineVersion)() -> {
+                if (serviceStartupHealthCheck.startupHasSucceeded() && isAmzaReady.get().call()) {
                     return instanceConfig.getVersion();
                 } else {
                     return null;
@@ -228,7 +231,7 @@ public class MiruWALMain {
 
             MiruStats miruStats = new MiruStats();
 
-            AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable,
+            Lifecycle amzaLifecycle = new MiruAmzaServiceInitializer().initialize(deployable,
                 clientHealthProvider,
                 instanceConfig.getInstanceName(),
                 instanceConfig.getInstanceKey(),
@@ -245,7 +248,7 @@ public class MiruWALMain {
                 changes -> {
                 });
 
-            EmbeddedClientProvider clientProvider = new EmbeddedClientProvider(amzaService);
+            EmbeddedClientProvider clientProvider = new EmbeddedClientProvider(amzaLifecycle.amzaService);
             PartitionProperties activityProperties = new PartitionProperties(Durability.fsync_async, 0, 0, 0, 0, 0, 0, 0, 0,
                 false,
                 Consistency.leader_quorum,
@@ -282,7 +285,7 @@ public class MiruWALMain {
                 null,
                 -1,
                 -1);
-            AmzaWALUtil amzaWALUtil = new AmzaWALUtil(amzaService,
+            AmzaWALUtil amzaWALUtil = new AmzaWALUtil(amzaLifecycle.amzaService,
                 clientProvider,
                 activityProperties,
                 readTrackingProperties,
@@ -434,7 +437,9 @@ public class MiruWALMain {
             deployable.addEndpoints(LoadBalancerHealthCheckEndpoints.class);
             deployable.buildServer().start();
             clientHealthProvider.start();
+            isAmzaReady.set(amzaLifecycle::isReady);
             serviceStartupHealthCheck.success();
+
         } catch (Throwable t) {
             serviceStartupHealthCheck.info("Encountered the following failure during startup.", t);
         }

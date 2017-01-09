@@ -20,7 +20,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.amza.api.wal.WALKey;
-import com.jivesoftware.os.amza.service.AmzaService;
+import com.jivesoftware.os.amza.embed.EmbedAmzaServiceInitializer.Lifecycle;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceConfig;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceInitializer;
@@ -72,8 +72,10 @@ import com.jivesoftware.os.routing.bird.shared.TenantRoutingProvider;
 import java.io.File;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicReference;
 import org.merlin.config.defaults.LongDefault;
 import org.merlin.config.defaults.StringDefault;
 
@@ -113,8 +115,9 @@ public class MiruWriterMain {
                 new FileDescriptorCountHealthChecker(deployable.config(FileDescriptorCountHealthChecker.FileDescriptorCountHealthCheckerConfig.class)));
             deployable.addHealthCheck(serviceStartupHealthCheck);
             deployable.addErrorHealthChecks(deployable.config(ErrorHealthCheckConfig.class));
-            deployable.addManageInjectables(FullyOnlineVersion.class, (FullyOnlineVersion) () -> {
-                if (serviceStartupHealthCheck.startupHasSucceeded()) {
+            AtomicReference<Callable<Boolean>> isAmzaReady = new AtomicReference<>(()-> false);
+            deployable.addManageInjectables(FullyOnlineVersion.class, (FullyOnlineVersion)() -> {
+                if (serviceStartupHealthCheck.startupHasSucceeded() && isAmzaReady.get().call()) {
                     return instanceConfig.getVersion();
                 } else {
                     return null;
@@ -196,7 +199,7 @@ public class MiruWriterMain {
             final Map<MiruTenantId, Boolean> latestAlignmentCache = Maps.newConcurrentMap();
 
             WriterAmzaServiceConfig miruAmzaServiceConfig = deployable.config(WriterAmzaServiceConfig.class);
-            AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable,
+            Lifecycle amzaLifecycle = new MiruAmzaServiceInitializer().initialize(deployable,
                 clientHealthProvider,
                 instanceConfig.getInstanceName(),
                 instanceConfig.getInstanceKey(),
@@ -240,8 +243,8 @@ public class MiruWriterMain {
 
             String indexClass = "lab";
 
-            EmbeddedClientProvider clientProvider = new EmbeddedClientProvider(amzaService);
-            AmzaPartitionIdProvider amzaPartitionIdProvider = new AmzaPartitionIdProvider(amzaService,
+            EmbeddedClientProvider clientProvider = new EmbeddedClientProvider(amzaLifecycle.amzaService);
+            AmzaPartitionIdProvider amzaPartitionIdProvider = new AmzaPartitionIdProvider(amzaLifecycle.amzaService,
                 clientProvider,
                 miruAmzaServiceConfig.getReplicateLatestPartitionTimeoutMillis(),
                 miruAmzaServiceConfig.getReplicateCursorTimeoutMillis(),
@@ -295,6 +298,7 @@ public class MiruWriterMain {
             deployable.addEndpoints(LoadBalancerHealthCheckEndpoints.class);
             deployable.buildServer().start();
             clientHealthProvider.start();
+            isAmzaReady.set(amzaLifecycle::isReady);
             serviceStartupHealthCheck.success();
         } catch (Throwable t) {
             serviceStartupHealthCheck.info("Encountered the following failure during startup.", t);

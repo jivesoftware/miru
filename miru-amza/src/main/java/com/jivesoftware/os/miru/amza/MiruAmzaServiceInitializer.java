@@ -7,7 +7,6 @@ import com.jivesoftware.os.amza.api.scan.RowChanges;
 import com.jivesoftware.os.amza.embed.EmbedAmzaServiceInitializer;
 import com.jivesoftware.os.amza.embed.EmbedAmzaServiceInitializer.Lifecycle;
 import com.jivesoftware.os.amza.lab.pointers.LABPointerIndexConfig;
-import com.jivesoftware.os.amza.service.AmzaService;
 import com.jivesoftware.os.amza.service.AmzaServiceInitializer.AmzaServiceConfig;
 import com.jivesoftware.os.amza.service.stats.AmzaStats;
 import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
@@ -21,7 +20,7 @@ import java.util.Set;
  */
 public class MiruAmzaServiceInitializer {
 
-    public AmzaService initialize(Deployable deployable,
+    public Lifecycle initialize(Deployable deployable,
         ClientHealthProvider clientHealthProvider,
         int instanceId,
         String instanceKey,
@@ -92,7 +91,6 @@ public class MiruAmzaServiceInitializer {
             useAmzaDiscovery,
             false,
             allRowChanges);
-        AmzaService amzaService = lifecycle.amzaService;
 
         lifecycle.startAmzaService();
 
@@ -100,6 +98,6 @@ public class MiruAmzaServiceInitializer {
             lifecycle.startRoutingBirdAmzaDiscovery();
         }
 
-        return amzaService;
+        return lifecycle;
     }
 }

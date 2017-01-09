@@ -5,7 +5,7 @@ import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
-import com.jivesoftware.os.amza.service.AmzaService;
+import com.jivesoftware.os.amza.embed.EmbedAmzaServiceInitializer.Lifecycle;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceConfig;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceInitializer;
@@ -93,7 +93,7 @@ public class MiruManageServiceTest {
         MiruAmzaServiceConfig acrc = BindInterfaceToConfiguration.bindDefault(MiruAmzaServiceConfig.class);
         acrc.setWorkingDirectories(amzaDataDir.getAbsolutePath());
         Deployable deployable = new Deployable(new String[0]);
-        AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable,
+        Lifecycle amzaLifecycle = new MiruAmzaServiceInitializer().initialize(deployable,
             connectionDescriptor -> new NoOpClientHealth(),
             1,
             "instanceKey",
@@ -109,8 +109,8 @@ public class MiruManageServiceTest {
             1,
             rowsChanged -> {
             });
-        MiruClusterRegistry clusterRegistry = new AmzaClusterRegistry(amzaService,
-            new EmbeddedClientProvider(amzaService),
+        MiruClusterRegistry clusterRegistry = new AmzaClusterRegistry(amzaLifecycle.amzaService,
+            new EmbeddedClientProvider(amzaLifecycle.amzaService),
             10_000L,
             new JacksonJsonObjectTypeMarshaller<>(MiruSchema.class, mapper),
             3,

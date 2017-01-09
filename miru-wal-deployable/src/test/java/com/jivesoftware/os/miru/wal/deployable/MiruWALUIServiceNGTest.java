@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.io.Files;
 import com.jivesoftware.os.amza.api.ring.RingHost;
 import com.jivesoftware.os.amza.api.ring.RingMember;
-import com.jivesoftware.os.amza.service.AmzaService;
+import com.jivesoftware.os.amza.embed.EmbedAmzaServiceInitializer.Lifecycle;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.JiveEpochTimestampProvider;
@@ -116,7 +116,7 @@ public class MiruWALUIServiceNGTest {
         MiruAmzaServiceConfig acrc = BindInterfaceToConfiguration.bindDefault(MiruAmzaServiceConfig.class);
         acrc.setWorkingDirectories(amzaDataDir.getAbsolutePath());
         Deployable deployable = new Deployable(new String[0]);
-        AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable,
+        Lifecycle amzaLifecycle = new MiruAmzaServiceInitializer().initialize(deployable,
             connectionDescriptor -> new NoOpClientHealth(),
             1,
             "instanceKey",
@@ -133,8 +133,8 @@ public class MiruWALUIServiceNGTest {
             rowsChanged -> {
             });
 
-        EmbeddedClientProvider clientProvider = new EmbeddedClientProvider(amzaService);
-        MiruClusterRegistry clusterRegistry = new AmzaClusterRegistry(amzaService,
+        EmbeddedClientProvider clientProvider = new EmbeddedClientProvider(amzaLifecycle.amzaService);
+        MiruClusterRegistry clusterRegistry = new AmzaClusterRegistry(amzaLifecycle.amzaService,
             clientProvider,
             10_000L,
             new JacksonJsonObjectTypeMarshaller<>(MiruSchema.class, mapper),
