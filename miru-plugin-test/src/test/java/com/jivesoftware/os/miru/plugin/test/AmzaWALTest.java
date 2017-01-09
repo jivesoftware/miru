@@ -11,7 +11,7 @@ import com.jivesoftware.os.amza.api.partition.Durability;
 import com.jivesoftware.os.amza.api.partition.PartitionName;
 import com.jivesoftware.os.amza.api.partition.PartitionProperties;
 import com.jivesoftware.os.amza.api.stream.RowType;
-import com.jivesoftware.os.amza.service.AmzaService;
+import com.jivesoftware.os.amza.embed.EmbedAmzaServiceInitializer.Lifecycle;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider;
 import com.jivesoftware.os.amza.service.Partition;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceConfig;
@@ -94,7 +94,7 @@ public class AmzaWALTest {
         acrc.setWorkingDirectories(amzaDataDir.getAbsolutePath());
         acrc.setMaxUpdatesBeforeDeltaStripeCompaction(100_000);
         Deployable deployable = new Deployable(new String[0]);
-        AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable,
+        Lifecycle amzaLifecycle = new MiruAmzaServiceInitializer().initialize(deployable,
             connectionDescriptor -> new NoOpClientHealth(),
             1,
             "instanceKey",
@@ -110,11 +110,11 @@ public class AmzaWALTest {
             1,
             rowsChanged -> {
             });
-        EmbeddedClientProvider amzaClientProvider = new EmbeddedClientProvider(amzaService);
+        EmbeddedClientProvider amzaClientProvider = new EmbeddedClientProvider(amzaLifecycle.amzaService);
         //WALStorageDescriptor storageDescriptor = new WALStorageDescriptor(false, new PrimaryIndexDescriptor("berkeleydb", 0, false, null),
         //    null, 1000, 1000);
 
-        AmzaWALUtil amzaWALUtil = new AmzaWALUtil(amzaService, amzaClientProvider,
+        AmzaWALUtil amzaWALUtil = new AmzaWALUtil(amzaLifecycle.amzaService, amzaClientProvider,
             new PartitionProperties(Durability.fsync_async, 0, 0, 0, 0, 0, 0, 0, 0, false, Consistency.leader_quorum, true, false, false,
                 RowType.snappy_primary, "lab", -1, null, -1, -1),
             new PartitionProperties(Durability.fsync_async, 0, 0, 0, 0, 0, 0, 0, 0, false, Consistency.leader_quorum, true, false, false,
@@ -161,17 +161,17 @@ public class AmzaWALTest {
         }
 
         System.out.println("Merging...");
-        amzaService.mergeAllDeltas(true);
+        amzaLifecycle.amzaService.mergeAllDeltas(true);
         System.out.println("Merged!");
         //amzaService.compactAllTombstones();
 
-        for (PartitionName partitionName : amzaService.getMemberPartitionNames()) {
-            Partition partition = amzaService.getPartition(partitionName);
+        for (PartitionName partitionName : amzaLifecycle.amzaService.getMemberPartitionNames()) {
+            Partition partition = amzaLifecycle.amzaService.getPartition(partitionName);
             System.out.println("Count: " + partitionName + " = " + partition.count());
         }
 
         byte[] partitionNameBytes = "activityWAL-test-0".getBytes(Charsets.UTF_8);
-        Partition partition = amzaService.getPartition(new PartitionName(false, partitionNameBytes, partitionNameBytes));
+        Partition partition = amzaLifecycle.amzaService.getPartition(new PartitionName(false, partitionNameBytes, partitionNameBytes));
         System.out.println("Count: " + partition.count());
         //assertEquals(partition.count(), batchSize * numBatches);
 

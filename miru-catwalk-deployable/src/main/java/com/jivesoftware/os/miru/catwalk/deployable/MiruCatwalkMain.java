@@ -24,7 +24,7 @@ import com.jivesoftware.os.amza.client.http.AmzaClientProvider;
 import com.jivesoftware.os.amza.client.http.HttpPartitionClientFactory;
 import com.jivesoftware.os.amza.client.http.HttpPartitionHostsProvider;
 import com.jivesoftware.os.amza.client.http.RingHostHttpClientProvider;
-import com.jivesoftware.os.amza.service.AmzaService;
+import com.jivesoftware.os.amza.embed.EmbedAmzaServiceInitializer.Lifecycle;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceConfig;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceInitializer;
@@ -67,9 +67,11 @@ import com.jivesoftware.os.routing.bird.server.util.Resource;
 import com.jivesoftware.os.routing.bird.shared.TenantRoutingProvider;
 import java.io.File;
 import java.util.Arrays;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.atomic.AtomicReference;
 import org.merlin.config.defaults.BooleanDefault;
 import org.merlin.config.defaults.FloatDefault;
 import org.merlin.config.defaults.IntDefault;
@@ -164,8 +166,9 @@ public class MiruCatwalkMain {
                 new FileDescriptorCountHealthChecker(deployable.config(FileDescriptorCountHealthChecker.FileDescriptorCountHealthCheckerConfig.class)));
             deployable.addHealthCheck(serviceStartupHealthCheck);
             deployable.addErrorHealthChecks(deployable.config(ErrorHealthCheckConfig.class));
+            AtomicReference<Callable<Boolean>> isAmzaReady = new AtomicReference<>(()-> false);
             deployable.addManageInjectables(FullyOnlineVersion.class, (FullyOnlineVersion)() -> {
-                if (serviceStartupHealthCheck.startupHasSucceeded()) {
+                if (serviceStartupHealthCheck.startupHasSucceeded() && isAmzaReady.get().call()) {
                     return instanceConfig.getVersion();
                 } else {
                     return null;
@@ -259,7 +262,7 @@ public class MiruCatwalkMain {
             SickThreads walClientSickThreads = new SickThreads();
             deployable.addHealthCheck(new SickThreadsHealthCheck(deployable.config(WALClientSickThreadsHealthCheckConfig.class), walClientSickThreads));
 
-            AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable,
+            Lifecycle amzaLifecycle = new MiruAmzaServiceInitializer().initialize(deployable,
                 clientHealthProvider,
                 instanceConfig.getInstanceName(),
                 instanceConfig.getInstanceKey(),
@@ -286,7 +289,7 @@ public class MiruCatwalkMain {
                 amzaCatwalkConfig.getAmzaDebugClientCount(),
                 amzaCatwalkConfig.getAmzaDebugClientCountInterval());
 
-            EmbeddedClientProvider embeddedClientProvider = new EmbeddedClientProvider(amzaService);
+            EmbeddedClientProvider embeddedClientProvider = new EmbeddedClientProvider(amzaLifecycle.amzaService);
 
             MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
 
@@ -300,7 +303,7 @@ public class MiruCatwalkMain {
 
             MiruTenantQueryRouting tenantQueryRouting = new MiruTenantQueryRouting();
 
-            CatwalkModelQueue catwalkModelQueue = new CatwalkModelQueue(amzaService,
+            CatwalkModelQueue catwalkModelQueue = new CatwalkModelQueue(amzaLifecycle.amzaService,
                 embeddedClientProvider,
                 mapper,
                 amzaCatwalkConfig.getNumberOfUpateModelQueues());
@@ -324,7 +327,7 @@ public class MiruCatwalkMain {
                 mapper,
                 responseMapper,
                 modelUpdaters,
-                amzaService,
+                amzaLifecycle.amzaService,
                 embeddedClientProvider,
                 stats,
                 amzaCatwalkConfig.getModelUpdateIntervalInMillis(),
@@ -371,6 +374,7 @@ public class MiruCatwalkMain {
             catwalkModelUpdater.start(amzaCatwalkConfig.getNumberOfUpateModelQueues(),
                 amzaCatwalkConfig.getCheckQueuesBatchSize(),
                 amzaCatwalkConfig.getCheckQueuesForWorkEvenNMillis());
+            isAmzaReady.set(amzaLifecycle::isReady);
             serviceStartupHealthCheck.success();
         } catch (Throwable t) {
             serviceStartupHealthCheck.info("Encountered the following failure during startup.", t);

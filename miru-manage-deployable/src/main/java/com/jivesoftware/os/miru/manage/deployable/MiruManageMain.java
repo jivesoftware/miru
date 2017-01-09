@@ -18,7 +18,7 @@ package com.jivesoftware.os.miru.manage.deployable;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
-import com.jivesoftware.os.amza.service.AmzaService;
+import com.jivesoftware.os.amza.embed.EmbedAmzaServiceInitializer.Lifecycle;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider;
 import com.jivesoftware.os.amza.service.storage.PartitionCreator;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
@@ -86,6 +86,8 @@ import com.jivesoftware.os.routing.bird.shared.TenantRoutingProvider;
 import com.jivesoftware.os.routing.bird.shared.TenantsServiceConnectionDescriptorProvider;
 import java.io.File;
 import java.util.Arrays;
+import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicReference;
 import org.merlin.config.defaults.LongDefault;
 import org.merlin.config.defaults.StringDefault;
 
@@ -122,8 +124,9 @@ public class MiruManageMain {
                 new FileDescriptorCountHealthChecker(deployable.config(FileDescriptorCountHealthChecker.FileDescriptorCountHealthCheckerConfig.class)));
             deployable.addHealthCheck(serviceStartupHealthCheck);
             deployable.addErrorHealthChecks(deployable.config(ErrorHealthCheckConfig.class));
-            deployable.addManageInjectables(FullyOnlineVersion.class, (FullyOnlineVersion) () -> {
-                if (serviceStartupHealthCheck.startupHasSucceeded()) {
+            AtomicReference<Callable<Boolean>> isAmzaReady = new AtomicReference<>(()-> false);
+            deployable.addManageInjectables(FullyOnlineVersion.class, (FullyOnlineVersion)() -> {
+                if (serviceStartupHealthCheck.startupHasSucceeded() && isAmzaReady.get().call()) {
                     return instanceConfig.getVersion();
                 } else {
                     return null;
@@ -226,7 +229,7 @@ public class MiruManageMain {
             }
 
             AmzaClusterRegistryConfig amzaClusterRegistryConfig = deployable.config(AmzaClusterRegistryConfig.class);
-            AmzaService amzaService = new MiruAmzaServiceInitializer().initialize(deployable,
+            Lifecycle amzaLifecycle = new MiruAmzaServiceInitializer().initialize(deployable,
                 clientHealthProvider,
                 instanceConfig.getInstanceName(),
                 instanceConfig.getInstanceKey(),
@@ -243,8 +246,8 @@ public class MiruManageMain {
                 rowsChanged -> {
                 });
 
-            EmbeddedClientProvider clientProvider = new EmbeddedClientProvider(amzaService);
-            AmzaClusterRegistry clusterRegistry = new AmzaClusterRegistry(amzaService,
+            EmbeddedClientProvider clientProvider = new EmbeddedClientProvider(amzaLifecycle.amzaService);
+            AmzaClusterRegistry clusterRegistry = new AmzaClusterRegistry(amzaLifecycle.amzaService,
                 clientProvider,
                 amzaClusterRegistryConfig.getReplicateTimeoutMillis(),
                 new JacksonJsonObjectTypeMarshaller<>(MiruSchema.class, mapper),
@@ -253,7 +256,7 @@ public class MiruManageMain {
                 registryConfig.getDefaultTopologyIsIdleAfterMillis(),
                 registryConfig.getDefaultTopologyDestroyAfterMillis(),
                 registryConfig.getDefaultTopologyCleanupAfterMillis());
-            amzaService.watch(PartitionCreator.RING_INDEX.getPartitionName(), clusterRegistry);
+            amzaLifecycle.amzaService.watch(PartitionCreator.RING_INDEX.getPartitionName(), clusterRegistry);
 
             MiruSoyRenderer renderer = new MiruSoyRendererInitializer().initialize(rendererConfig);
 
@@ -324,6 +327,7 @@ public class MiruManageMain {
             deployable.addEndpoints(LoadBalancerHealthCheckEndpoints.class);
             deployable.buildServer().start();
             clientHealthProvider.start();
+            isAmzaReady.set(amzaLifecycle::isReady);
             serviceStartupHealthCheck.success();
         } catch (Throwable t) {
             serviceStartupHealthCheck.info("Encountered the following failure during startup.", t);
