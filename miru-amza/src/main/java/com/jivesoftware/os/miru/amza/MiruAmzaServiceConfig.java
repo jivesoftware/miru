@@ -54,7 +54,7 @@ public interface MiruAmzaServiceConfig extends Config {
     @LongDefault(10_000L)
     long getReadTrackingRoutingTimeoutMillis();
 
-    @LongDefault(60_000L)
+    @LongDefault(1_000L)
     long getTakeSlowThresholdInMillis();
     
     @LongDefault(60_000)
