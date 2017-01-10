@@ -146,6 +146,10 @@
             <artifactId>amza-api</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.jivesoftware.os.amza</groupId>
+            <artifactId>amza-embed</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.jivesoftware.os.rcvs</groupId>
             <artifactId>row-column-value-store-api</artifactId>
             <scope>test</scope>
