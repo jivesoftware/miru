@@ -18,7 +18,7 @@ public class AggregateCountsQuery {
     public final MiruTimeRange countTimeRange;
     public final MiruFilter streamFilter;
     public final Map<String, AggregateCountsQueryConstraint> constraints;
-
+    public final boolean unreadOnly;
 
     public AggregateCountsQuery(
         @JsonProperty("streamId") MiruStreamId streamId,
@@ -26,25 +26,27 @@ public class AggregateCountsQuery {
         @JsonProperty("answerTimeRange") MiruTimeRange answerTimeRange,
         @JsonProperty("countTimeRange") MiruTimeRange countTimeRange,
         @JsonProperty("streamFilter") MiruFilter streamFilter,
-        @JsonProperty("constraints") Map<String, AggregateCountsQueryConstraint> constraints) {
+        @JsonProperty("constraints") Map<String, AggregateCountsQueryConstraint> constraints,
+        @JsonProperty("unreadOnly") boolean unreadOnly) {
         this.streamId = Preconditions.checkNotNull(streamId);
         this.collectTimeRange = Preconditions.checkNotNull(collectTimeRange);
         this.answerTimeRange = Preconditions.checkNotNull(answerTimeRange);
         this.countTimeRange = Preconditions.checkNotNull(countTimeRange);
         this.streamFilter = Preconditions.checkNotNull(streamFilter);
         this.constraints = Preconditions.checkNotNull(constraints);
-
+        this.unreadOnly = unreadOnly;
     }
 
     @Override
     public String toString() {
-        return "AggregateCountsQuery{"
-            + "streamId=" + streamId
-            + ", collectTimeRange=" + collectTimeRange
-            + ", answerTimeRange=" + answerTimeRange
-            + ", countTimeRange=" + countTimeRange
-            + ", streamFilter=" + streamFilter
-            + ", constraints=" + constraints
-            + '}';
+        return "AggregateCountsQuery{" +
+            "streamId=" + streamId +
+            ", collectTimeRange=" + collectTimeRange +
+            ", answerTimeRange=" + answerTimeRange +
+            ", countTimeRange=" + countTimeRange +
+            ", streamFilter=" + streamFilter +
+            ", constraints=" + constraints +
+            ", unreadOnly=" + unreadOnly +
+            '}';
     }
 }

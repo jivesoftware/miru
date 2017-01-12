@@ -159,11 +159,13 @@ public class AggregateCountsPluginRegion implements MiruPageRegion<Optional<Aggr
                                 timeRange,
                                 MiruTimeRange.ALL_TIME,
                                 streamFilter,
-                                ImmutableMap.of(input.field, new AggregateCountsQueryConstraint(constraintsFilter,
-                                    input.field,
-                                    0,
-                                    input.count,
-                                    new String[0]))),
+                                ImmutableMap.of(input.field,
+                                    new AggregateCountsQueryConstraint(constraintsFilter,
+                                        input.field,
+                                        0,
+                                        input.count,
+                                        new String[0])),
+                                false),
                             MiruSolutionLogLevel.valueOf(input.logLevel)));
 
                         MiruResponse<AggregateCountsAnswer> aggregatesResponse = readerClient.call("",
