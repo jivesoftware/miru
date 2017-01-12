@@ -121,7 +121,8 @@ public class InMemoryEndpointsTest {
                     OBJECT_ID.getFieldName(),
                     0,
                     100,
-                    new String[0]))),
+                    new String[0])),
+                false),
             MiruSolutionLogLevel.NONE));
         assertNotNull(getResponse);
         JavaType type = objectMapper.getTypeFactory().constructParametricType(MiruResponse.class, AggregateCountsAnswer.class);
@@ -149,7 +150,8 @@ public class InMemoryEndpointsTest {
                     OBJECT_ID.getFieldName(),
                     0,
                     100,
-                    new String[0]))),
+                    new String[0])),
+                false),
             MiruSolutionLogLevel.NONE));
         assertNotNull(getResponse);
         result = objectMapper.readValue(getResponse.getEntity().toString(), type);
