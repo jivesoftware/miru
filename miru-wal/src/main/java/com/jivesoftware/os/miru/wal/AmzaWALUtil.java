@@ -72,10 +72,10 @@ public class AmzaWALUtil {
 
     public HostPort[] getActivityRoutingGroup(MiruTenantId tenantId,
         MiruPartitionId partitionId,
-        Optional<PartitionProperties> regionProperties) throws Exception {
+        Optional<PartitionProperties> partitionProperties) throws Exception {
         PartitionName partitionName = getActivityPartitionName(tenantId, partitionId);
         amzaService.getRingWriter().ensureSubRing(partitionName.getRingName(), activityRingSize, activityRoutingTimeoutMillis);
-        amzaService.createPartitionIfAbsent(partitionName, regionProperties.or(activityProperties));
+        amzaService.createPartitionIfAbsent(partitionName, partitionProperties.or(activityProperties));
         AmzaService.AmzaPartitionRoute partitionRoute = amzaService.getPartitionRoute(partitionName, activityRoutingTimeoutMillis);
         if (!partitionRoute.disposed && partitionRoute.leader != null) {
             return new HostPort[]{new HostPort(partitionRoute.leader.ringHost.getHost(), partitionRoute.leader.ringHost.getPort())};
