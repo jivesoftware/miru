@@ -9,6 +9,7 @@
  * @param? toHoursAgo
  * @param? buckets
  * @param? field
+ * @param? strategy
  * @param? filter
  * @param? subFilters
  * @param? fieldPrefixes
@@ -78,6 +79,18 @@
                             class="j-field-autocomplete j-autocomplete-input j-ui-elem" placeholder="Field" value="{$field?:''}"
                             name="field" id="fieldPicker" data-original-title="" title="">
                         </td>
+                    </tr>
+                    <tr>
+                        <td>Strategy</td>
+                        <td>
+                        <select style="width:280px; padding-left:10px;"
+                            class="j-strategy-autocomplete j-autocomplete-input j-ui-elem" placeholder="Strategy"
+                            name="strategy" id="strategyPicker" data-original-title="" title="">
+                            <option value="LINEAR_REGRESSION" {if $strategy == 'LINEAR_REGRESSION'}selected="selected"{/if}>LINEAR_REGRESSION</option>
+                            <option value="LEADER" {if $strategy == 'LEADER'}selected="selected"{/if}>LEADER</option>
+                            <option value="PEAKS" {if $strategy == 'PEAKS'}selected="selected"{/if}>PEAKS</option>
+                            <option value="HIGHEST_PEAK" {if $strategy == 'HIGHEST_PEAK'}selected="selected"{/if}>HIGHEST_PEAK</option>
+                        </select>
                     </tr>
                     <tr>
                         <td>Filter</td>
