@@ -281,7 +281,7 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                             true,
                             input.usePartitionModelCache,
                             gatherTermsForFieldSplit,
-                            input.unreadStreamId.isEmpty() ? null : new MiruStreamId(input.unreadStreamId.getBytes(StandardCharsets.UTF_8)),
+                            input.unreadStreamId.isEmpty() ? MiruStreamId.NULL : new MiruStreamId(input.unreadStreamId.getBytes(StandardCharsets.UTF_8)),
                             input.unreadOnly,
                             100), // TODO expose to UI??
                         MiruSolutionLogLevel.valueOf(input.logLevel)));
