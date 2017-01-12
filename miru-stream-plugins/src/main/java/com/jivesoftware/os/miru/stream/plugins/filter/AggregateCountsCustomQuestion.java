@@ -6,7 +6,9 @@ import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
+import com.jivesoftware.os.miru.plugin.backfill.MiruJustInTimeBackfillerizer;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
@@ -34,15 +36,18 @@ public class AggregateCountsCustomQuestion implements Question<AggregateCountsQu
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final AggregateCounts aggregateCounts;
+    private final MiruJustInTimeBackfillerizer backfillerizer;
     private final MiruRequest<AggregateCountsQuery> request;
     private final MiruRemotePartition<AggregateCountsQuery, AggregateCountsAnswer, AggregateCountsReport> remotePartition;
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
 
     public AggregateCountsCustomQuestion(AggregateCounts aggregateCounts,
+        MiruJustInTimeBackfillerizer backfillerizer,
         MiruRequest<AggregateCountsQuery> request,
         MiruRemotePartition<AggregateCountsQuery, AggregateCountsAnswer, AggregateCountsReport> remotePartition) {
         this.aggregateCounts = aggregateCounts;
+        this.backfillerizer = backfillerizer;
         this.request = request;
         this.remotePartition = remotePartition;
     }
@@ -64,6 +69,17 @@ public class AggregateCountsCustomQuestion implements Question<AggregateCountsQu
                 handle.getCoord().partitionId, context.getTimeIndex(), answerTimeRange);
             return new MiruPartitionResponse<>(aggregateCounts.getAggregateCounts("aggregateCountsCustom", solutionLog,
                 bitmaps, context, request, handle.getCoord(), report, bitmaps.create(), Optional.absent()), solutionLog.asList());
+        }
+
+        if (request.query.streamId != null && !MiruStreamId.NULL.equals(request.query.streamId)) {
+            if (handle.canBackfill()) {
+                backfillerizer.backfillUnread(bitmaps,
+                    context,
+                    solutionLog,
+                    request.tenantId,
+                    handle.getCoord().partitionId,
+                    request.query.streamId);
+            }
         }
 
         List<IBM> ands = new ArrayList<>();

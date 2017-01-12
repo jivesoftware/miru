@@ -10,6 +10,7 @@ import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
+import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
@@ -118,7 +119,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         BitmapAndLastId<BM> container = new BitmapAndLastId<>();
 
         Optional<BM> unreadIndex = Optional.absent();
-        if (request.query.unreadStreamId != null) {
+        if (request.query.unreadStreamId != null && !MiruStreamId.NULL.equals(request.query.unreadStreamId)) {
             if (handle.canBackfill()) {
                 backfillerizer.backfillUnread(bitmaps,
                     context,
