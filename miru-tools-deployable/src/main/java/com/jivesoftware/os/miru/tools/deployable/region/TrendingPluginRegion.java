@@ -80,6 +80,7 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
         final int toHoursAgo;
         final int buckets;
         final String field;
+        final String strategy;
         final String filter;
         final String subFilters;
         final List<String> fieldPrefixes;
@@ -91,6 +92,7 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
             int toHoursAgo,
             int buckets,
             String field,
+            String strategy,
             String filter,
             String subFilters,
             List<String> fieldPrefixes,
@@ -101,6 +103,7 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
             this.toHoursAgo = toHoursAgo;
             this.buckets = buckets;
             this.field = field;
+            this.strategy = strategy;
             this.filter = filter;
             this.subFilters = subFilters;
             this.fieldPrefixes = fieldPrefixes;
@@ -124,6 +127,7 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
                 data.put("toHoursAgo", String.valueOf(toHoursAgo));
                 data.put("buckets", String.valueOf(input.buckets));
                 data.put("field", input.field);
+                data.put("strategy", input.strategy);
                 data.put("filter", input.filter);
                 data.put("subFilters", input.subFilters);
                 data.put("fieldPrefixes", input.fieldPrefixes != null ? Joiner.on(", ").join(input.fieldPrefixes) : "");
@@ -162,7 +166,7 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
                         MiruAuthzExpression.NOT_PROVIDED,
                         new TrendingQuery(
                             Collections.singletonList(new TrendingQueryScoreSet("tools",
-                                Collections.singleton(Strategy.LINEAR_REGRESSION),
+                                Collections.singleton(Strategy.valueOf(input.strategy)),
                                 timeRange,
                                 input.buckets,
                                 100)),
@@ -199,7 +203,7 @@ public class TrendingPluginRegion implements MiruPageRegion<Optional<TrendingPlu
 
                     List<Waveform> answerWaveforms = response.answer.waveforms.get("tools");
                     Map<MiruValue, Waveform> waveforms = Maps.uniqueIndex(answerWaveforms, Waveform::getId);
-                    List<Trendy> results = response.answer.scoreSets.get("tools").results.get(Strategy.LINEAR_REGRESSION.name());
+                    List<Trendy> results = response.answer.scoreSets.get("tools").results.get(input.strategy);
                     if (results == null) {
                         results = Collections.emptyList();
                     }
