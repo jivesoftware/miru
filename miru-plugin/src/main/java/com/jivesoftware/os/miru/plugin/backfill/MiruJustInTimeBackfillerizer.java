@@ -53,7 +53,8 @@ public class MiruJustInTimeBackfillerizer {
         MiruSolutionLog solutionLog,
         MiruTenantId tenantId,
         MiruPartitionId partitionId,
-        MiruStreamId streamId)
+        MiruStreamId streamId,
+        MiruFilter suppressUnreadFilter)
         throws Exception {
 
         // backfill in another thread to guard WAL interface from solver cancellation/interruption
@@ -64,7 +65,6 @@ public class MiruJustInTimeBackfillerizer {
                     int lastActivityIndex = requestContext.getUnreadTrackingIndex().getLastActivityIndex(streamId, stackBuffer);
                     int lastId = requestContext.getActivityIndex().lastId(stackBuffer);
 
-                    MiruInvertedIndexAppender unread = requestContext.getUnreadTrackingIndex().getAppender(streamId);
                     if (log.isDebugEnabled()) {
                         BitmapAndLastId<BM> container = new BitmapAndLastId<>();
                         requestContext.getUnreadTrackingIndex().getUnread(streamId).getIndex(container, stackBuffer);
@@ -75,12 +75,33 @@ public class MiruJustInTimeBackfillerizer {
                             lastActivityIndex);
                     }
 
-                    long oldestBackfilledEventId = Long.MAX_VALUE;
+                    long oldestBackfilledTimestamp = Long.MAX_VALUE;
                     TIntList unreadIds = new TIntArrayList();
                     for (int i = lastActivityIndex + 1; i <= lastId; i++) {
                         unreadIds.add(i);
+                        if (oldestBackfilledTimestamp == Long.MAX_VALUE) {
+                            TimeVersionRealtime tvr = requestContext.getActivityIndex().getTimeVersionRealtime("backfillUnread", lastActivityIndex, stackBuffer);
+                            if (tvr != null) {
+                                oldestBackfilledTimestamp = tvr.monoTimestamp;
+                            }
+                        }
                     }
-                    unread.set(stackBuffer, unreadIds.toArray());
+
+                    BM unreadMask = bitmaps.createWithBits(unreadIds.toArray());
+                    if (!MiruFilter.NO_FILTER.equals(suppressUnreadFilter)) {
+                        BM suppressUnreadBitmap = aggregateUtil.filter("backfillUnread",
+                            bitmaps,
+                            requestContext,
+                            suppressUnreadFilter,
+                            solutionLog,
+                            null,
+                            lastId,
+                            lastActivityIndex,
+                            -1,
+                            stackBuffer);
+                        bitmaps.inPlaceAndNot(unreadMask, suppressUnreadBitmap);
+                    }
+                    requestContext.getUnreadTrackingIndex().applyUnread(streamId, unreadMask, stackBuffer);
 
                     if (log.isDebugEnabled()) {
                         BitmapAndLastId<BM> container = new BitmapAndLastId<>();
@@ -99,7 +120,7 @@ public class MiruJustInTimeBackfillerizer {
                         streamId,
                         solutionLog,
                         lastId,
-                        oldestBackfilledEventId,
+                        oldestBackfilledTimestamp,
                         stackBuffer);
                 }
 
@@ -120,7 +141,8 @@ public class MiruJustInTimeBackfillerizer {
         final MiruSolutionLog solutionLog,
         final MiruTenantId tenantId,
         final MiruPartitionId partitionId,
-        final MiruStreamId streamId)
+        final MiruStreamId streamId,
+        MiruFilter suppressUnreadFilter)
         throws Exception {
 
         // backfill in another thread to guard WAL interface from solver cancellation/interruption
@@ -130,7 +152,8 @@ public class MiruJustInTimeBackfillerizer {
                 synchronized (requestContext.getStreamLocks().lock(streamId, 0)) {
                     int lastActivityIndex = requestContext.getInboxIndex().getLastActivityIndex(streamId, stackBuffer);
                     int lastId = requestContext.getActivityIndex().lastId(stackBuffer);
-                    BM answer = aggregateUtil.filter("justInTimeBackfillerizer", bitmaps,
+                    BM answer = aggregateUtil.filter("justInTimeBackfillerizer",
+                        bitmaps,
                         requestContext,
                         streamFilter,
                         solutionLog,
@@ -141,7 +164,6 @@ public class MiruJustInTimeBackfillerizer {
                         stackBuffer);
 
                     MiruInvertedIndexAppender inbox = requestContext.getInboxIndex().getAppender(streamId);
-                    MiruInvertedIndexAppender unread = requestContext.getUnreadTrackingIndex().getAppender(streamId);
                     if (log.isDebugEnabled()) {
                         BitmapAndLastId<BM> inboxContainer = new BitmapAndLastId<>();
                         requestContext.getInboxIndex().getInbox(streamId).getIndex(inboxContainer, stackBuffer);
@@ -184,7 +206,22 @@ public class MiruJustInTimeBackfillerizer {
                         }
                     }
                     inbox.set(stackBuffer, inboxIds.toArray());
-                    unread.set(stackBuffer, unreadIds.toArray());
+
+                    BM unreadMask = bitmaps.createWithBits(unreadIds.toArray());
+                    if (!MiruFilter.NO_FILTER.equals(suppressUnreadFilter)) {
+                        BM suppressUnreadBitmap = aggregateUtil.filter("backfillUnread",
+                            bitmaps,
+                            requestContext,
+                            suppressUnreadFilter,
+                            solutionLog,
+                            null,
+                            lastId,
+                            lastActivityIndex,
+                            -1,
+                            stackBuffer);
+                        bitmaps.inPlaceAndNot(unreadMask, suppressUnreadBitmap);
+                    }
+                    requestContext.getUnreadTrackingIndex().applyUnread(streamId, unreadMask, stackBuffer);
 
                     if (log.isDebugEnabled()) {
                         BitmapAndLastId<BM> inboxContainer = new BitmapAndLastId<>();

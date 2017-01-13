@@ -311,7 +311,7 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
     public StreamBatch<MiruWALEntry, S> getRead(MiruTenantId tenantId,
         MiruStreamId streamId,
         S sipCursor,
-        long oldestEventId,
+        long oldestTimestamp,
         int batchSize) throws Exception {
 
         long[] minEventId = {-1L};
@@ -323,7 +323,7 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
         });
 
         // Take either the oldest eventId or the oldest readtracking sip time
-        minEventId[0] = Math.min(minEventId[0], oldestEventId);
+        minEventId[0] = Math.min(minEventId[0], oldestTimestamp);
         C cursor = minEventId[0] > 0 ? readTrackingWALReader.getCursor(minEventId[0]) : null;
 
         List<MiruWALEntry> batch = new ArrayList<>();

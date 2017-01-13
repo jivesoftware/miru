@@ -61,6 +61,7 @@ public class RemoteStreamHttpTest {
             MiruAuthzExpression.NOT_PROVIDED,
             new AggregateCountsQuery(
                 MiruStreamId.NULL,
+                MiruFilter.NO_FILTER,
                 MiruTimeRange.ALL_TIME,
                 MiruTimeRange.ALL_TIME,
                 MiruTimeRange.ALL_TIME,

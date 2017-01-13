@@ -22,7 +22,6 @@ import javax.ws.rs.core.Response;
 import static com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsConstants.CUSTOM_QUERY_ENDPOINT;
 import static com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsConstants.FILTER_PREFIX;
 import static com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsConstants.INBOX_ALL_QUERY_ENDPOINT;
-import static com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsConstants.INBOX_UNREAD_QUERY_ENDPOINT;
 
 @Path(FILTER_PREFIX)
 @Singleton
@@ -61,7 +60,7 @@ public class AggregateCountsEndpoints {
     @Produces(MediaType.APPLICATION_JSON)
     public Response filterInboxStreamAll(MiruRequest<AggregateCountsQuery> request) {
         try {
-            MiruResponse<AggregateCountsAnswer> result = injectable.filterInboxStreamAll(request);
+            MiruResponse<AggregateCountsAnswer> result = injectable.filterInboxStream(request);
 
             //log.info("filterInboxStreamAll: " + answer.collectedDistincts);
             return responseHelper.jsonResponse(result);
@@ -69,24 +68,6 @@ public class AggregateCountsEndpoints {
             return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Unavailable " + e.getMessage()).build();
         } catch (Exception e) {
             log.error("Failed to filter inbox.", e);
-            return Response.serverError().build();
-        }
-    }
-
-    @POST
-    @Path(INBOX_UNREAD_QUERY_ENDPOINT)
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response filterInboxStreamUnread(MiruRequest<AggregateCountsQuery> request) {
-        try {
-            MiruResponse<AggregateCountsAnswer> result = injectable.filterInboxStreamUnread(request);
-
-            //log.info("filterInboxStreamUnread: " + answer.collectedDistincts);
-            return responseHelper.jsonResponse(result);
-        } catch (MiruPartitionUnavailableException | InterruptedException e) {
-            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Unavailable " + e.getMessage()).build();
-        } catch (Exception e) {
-            log.error("Failed to filter inbox (unread).", e);
             return Response.serverError().build();
         }
     }
@@ -116,32 +97,13 @@ public class AggregateCountsEndpoints {
     public Response filterInboxStreamAll(@PathParam("partitionId") int id, MiruRequestAndReport<AggregateCountsQuery, AggregateCountsReport> requestAndReport) {
         MiruPartitionId partitionId = MiruPartitionId.of(id);
         try {
-            MiruPartitionResponse<AggregateCountsAnswer> result = injectable.filterInboxStreamAll(partitionId, requestAndReport);
+            MiruPartitionResponse<AggregateCountsAnswer> result = injectable.filterInboxStream(partitionId, requestAndReport);
 
             return responseHelper.jsonResponse(result != null ? result : new MiruPartitionResponse<>(AggregateCountsAnswer.EMPTY_RESULTS, null));
         } catch (MiruPartitionUnavailableException | InterruptedException e) {
             return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Unavailable " + e.getMessage()).build();
         } catch (Exception e) {
-            log.error("Failed to filter inbox stream all for partition: " + partitionId.getId(), e);
-            return Response.serverError().build();
-        }
-    }
-
-    @POST
-    @Path(INBOX_UNREAD_QUERY_ENDPOINT + "/{partitionId}")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response filterInboxStreamUnread(@PathParam("partitionId") int id,
-        MiruRequestAndReport<AggregateCountsQuery, AggregateCountsReport> requestAndReport) {
-        MiruPartitionId partitionId = MiruPartitionId.of(id);
-        try {
-            MiruPartitionResponse<AggregateCountsAnswer> result = injectable.filterInboxStreamUnread(partitionId, requestAndReport);
-
-            return responseHelper.jsonResponse(result != null ? result : new MiruPartitionResponse<>(AggregateCountsAnswer.EMPTY_RESULTS, null));
-        } catch (MiruPartitionUnavailableException | InterruptedException e) {
-            return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Unavailable " + e.getMessage()).build();
-        } catch (Exception e) {
-            log.error("Failed to filter inbox stream unread for partition: " + partitionId.getId(), e);
+            log.error("Failed to filter inbox stream for partition: " + partitionId.getId(), e);
             return Response.serverError().build();
         }
     }

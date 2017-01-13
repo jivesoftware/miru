@@ -35,6 +35,7 @@ public class StrutQuery implements Serializable {
 
     public final String[] gatherTermsForFields;
     public final MiruStreamId unreadStreamId;
+    public final MiruFilter suppressUnreadFilter;
     public final boolean unreadOnly;
     public final int batchSize;
 
@@ -52,6 +53,7 @@ public class StrutQuery implements Serializable {
         @JsonProperty("usePartitionModelCache") boolean usePartitionModelCache,
         @JsonProperty("gatherTermsForFields") String[] gatherTermsForFields,
         @JsonProperty("unreadStreamId") MiruStreamId unreadStreamId, // nullable
+        @JsonProperty("suppressUnreadFilter") MiruFilter suppressUnreadFilter, // nullable
         @JsonProperty("unreadOnly") boolean unreadOnly,
         @JsonProperty("batchSize") int batchSize) {
 
@@ -80,29 +82,31 @@ public class StrutQuery implements Serializable {
         this.usePartitionModelCache = usePartitionModelCache;
         this.gatherTermsForFields = gatherTermsForFields;
         this.unreadStreamId = unreadStreamId;
+        this.suppressUnreadFilter = suppressUnreadFilter;
         this.unreadOnly = unreadOnly;
         this.batchSize = batchSize;
     }
 
     @Override
     public String toString() {
-        return "StrutQuery{"
-            + "modelScalars='" + modelScalars + '\''
-            + ", timeRange=" + timeRange
-            + ", constraintField='" + constraintField + '\''
-            + ", constraintFilter=" + constraintFilter
-            + ", numeratorStrategy=" + numeratorStrategy
-            + ", numeratorScalars=" + Arrays.toString(numeratorScalars)
-            + ", featureStrategy=" + featureStrategy
-            + ", featureScalars=" + Arrays.toString(featureScalars)
-            + ", desiredNumberOfResults=" + desiredNumberOfResults
-            + ", includeFeatures=" + includeFeatures
-            + ", usePartitionModelCache=" + usePartitionModelCache
-            + ", gatherTermsForFields=" + Arrays.toString(gatherTermsForFields)
-            + ", unreadStreamId=" + unreadStreamId
-            + ", unreadOnly=" + unreadOnly
-            + ", batchSize=" + batchSize
-            + '}';
+        return "StrutQuery{" +
+            "modelScalars=" + modelScalars +
+            ", timeRange=" + timeRange +
+            ", constraintField='" + constraintField + '\'' +
+            ", constraintFilter=" + constraintFilter +
+            ", numeratorStrategy=" + numeratorStrategy +
+            ", numeratorScalars=" + Arrays.toString(numeratorScalars) +
+            ", featureStrategy=" + featureStrategy +
+            ", featureScalars=" + Arrays.toString(featureScalars) +
+            ", desiredNumberOfResults=" + desiredNumberOfResults +
+            ", includeFeatures=" + includeFeatures +
+            ", usePartitionModelCache=" + usePartitionModelCache +
+            ", gatherTermsForFields=" + Arrays.toString(gatherTermsForFields) +
+            ", unreadStreamId=" + unreadStreamId +
+            ", suppressUnreadFilter=" + suppressUnreadFilter +
+            ", unreadOnly=" + unreadOnly +
+            ", batchSize=" + batchSize +
+            '}';
     }
 
 }

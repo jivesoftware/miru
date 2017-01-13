@@ -18,6 +18,6 @@ public interface MiruInboxReadTracker {
         MiruStreamId streamId,
         MiruSolutionLog solutionLog,
         int lastActivityIndex,
-        long oldestBackfilledEventId,
+        long oldestBackfilledTimestamp,
         StackBuffer stackBuffer) throws Exception;
 }

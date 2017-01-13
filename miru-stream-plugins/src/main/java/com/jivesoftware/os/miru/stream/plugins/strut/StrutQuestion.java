@@ -119,14 +119,16 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         BitmapAndLastId<BM> container = new BitmapAndLastId<>();
 
         Optional<BM> unreadIndex = Optional.absent();
-        if (request.query.unreadStreamId != null && !MiruStreamId.NULL.equals(request.query.unreadStreamId)) {
-            if (handle.canBackfill()) {
+        if (request.query.unreadStreamId != null
+            && !MiruStreamId.NULL.equals(request.query.unreadStreamId)) {
+            if (request.query.suppressUnreadFilter != null && handle.canBackfill()) {
                 backfillerizer.backfillUnread(bitmaps,
                     context,
                     solutionLog,
                     request.tenantId,
                     handle.getCoord().partitionId,
-                    request.query.unreadStreamId);
+                    request.query.unreadStreamId,
+                    request.query.suppressUnreadFilter);
             }
 
             context.getUnreadTrackingIndex().getUnread(request.query.unreadStreamId).getIndex(container, stackBuffer);

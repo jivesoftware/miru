@@ -13,6 +13,7 @@ import java.util.Map;
 public class AggregateCountsQuery {
 
     public final MiruStreamId streamId;
+    public final MiruFilter suppressUnreadFilter;
     public final MiruTimeRange collectTimeRange;
     public final MiruTimeRange answerTimeRange;
     public final MiruTimeRange countTimeRange;
@@ -22,6 +23,7 @@ public class AggregateCountsQuery {
 
     public AggregateCountsQuery(
         @JsonProperty("streamId") MiruStreamId streamId,
+        @JsonProperty("suppressUnreadFilter") MiruFilter suppressUnreadFilter,
         @JsonProperty("collectTimeRange") MiruTimeRange collectTimeRange,
         @JsonProperty("answerTimeRange") MiruTimeRange answerTimeRange,
         @JsonProperty("countTimeRange") MiruTimeRange countTimeRange,
@@ -29,6 +31,7 @@ public class AggregateCountsQuery {
         @JsonProperty("constraints") Map<String, AggregateCountsQueryConstraint> constraints,
         @JsonProperty("unreadOnly") boolean unreadOnly) {
         this.streamId = Preconditions.checkNotNull(streamId);
+        this.suppressUnreadFilter = suppressUnreadFilter;
         this.collectTimeRange = Preconditions.checkNotNull(collectTimeRange);
         this.answerTimeRange = Preconditions.checkNotNull(answerTimeRange);
         this.countTimeRange = Preconditions.checkNotNull(countTimeRange);
@@ -41,6 +44,7 @@ public class AggregateCountsQuery {
     public String toString() {
         return "AggregateCountsQuery{" +
             "streamId=" + streamId +
+            ", suppressUnreadFilter=" + suppressUnreadFilter +
             ", collectTimeRange=" + collectTimeRange +
             ", answerTimeRange=" + answerTimeRange +
             ", countTimeRange=" + countTimeRange +

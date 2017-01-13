@@ -53,7 +53,7 @@ public class RCVSInboxReadTracker implements MiruInboxReadTracker {
         MiruStreamId streamId,
         MiruSolutionLog solutionLog,
         int lastActivityIndex,
-        long oldestBackfilledEventId,
+        long oldestBackfilledTimestamp,
         StackBuffer stackBuffer) throws Exception {
 
         // First find the oldest eventId from our sip WAL
@@ -62,7 +62,7 @@ public class RCVSInboxReadTracker implements MiruInboxReadTracker {
         MiruWALClient.StreamBatch<MiruWALEntry, RCVSSipCursor> got = walClient.getRead(tenantId,
             streamId,
             new RCVSSipCursor(MiruPartitionedActivity.Type.ACTIVITY.getSort(), afterTimestamp, 0, false),
-            oldestBackfilledEventId,
+            oldestBackfilledTimestamp,
             1000);
         RCVSSipCursor lastCursor = null;
         while (got != null && !got.activities.isEmpty()) {
