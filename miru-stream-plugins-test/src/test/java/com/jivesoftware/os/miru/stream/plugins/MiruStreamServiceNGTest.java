@@ -167,6 +167,7 @@ public class MiruStreamServiceNGTest {
                     MiruAuthzExpression.NOT_PROVIDED,
                     new AggregateCountsQuery(
                         streamId,
+                        MiruFilter.NO_FILTER,
                         MiruTimeRange.ALL_TIME,
                         new MiruTimeRange(0, capacity),
                         new MiruTimeRange(0, capacity),
@@ -180,7 +181,7 @@ public class MiruStreamServiceNGTest {
                     MiruSolutionLogLevel.NONE);
 
                 long start = System.currentTimeMillis();
-                MiruResponse<AggregateCountsAnswer> results = aggregateCountsInjectable.filterInboxStreamAll(query);
+                MiruResponse<AggregateCountsAnswer> results = aggregateCountsInjectable.filterInboxStream(query);
                 long elapse = System.currentTimeMillis() - start;
                 //System.out.println("Results:" + query);
                 //                for (AggregateCount a : results.results) {
@@ -277,6 +278,7 @@ public class MiruStreamServiceNGTest {
                 MiruActorId.NOT_PROVIDED,
                 MiruAuthzExpression.NOT_PROVIDED, new AggregateCountsQuery(
                 streamId,
+                MiruFilter.NO_FILTER,
                 MiruTimeRange.ALL_TIME,
                 new MiruTimeRange(0, 1_000),
                 new MiruTimeRange(0, 1_000),
@@ -284,7 +286,7 @@ public class MiruStreamServiceNGTest {
                 ImmutableMap.of("blah", new AggregateCountsQueryConstraint(MiruFilter.NO_FILTER, "container", 0, 10, new String[0])),
                 false),
                 MiruSolutionLogLevel.NONE);
-            MiruResponse<AggregateCountsAnswer> results = aggregateCountsInjectable.filterInboxStreamAll(query);
+            MiruResponse<AggregateCountsAnswer> results = aggregateCountsInjectable.filterInboxStream(query);
             for (AggregateCount a : results.answer.constraints.get("blah").results) {
                 System.out.println(a);
             }
@@ -300,13 +302,15 @@ public class MiruStreamServiceNGTest {
                 MiruAuthzExpression.NOT_PROVIDED,
                 new DistinctCountQuery(
                     streamId,
+                    MiruFilter.NO_FILTER,
                     new MiruTimeRange(0, 1_000),
                     filter,
                     MiruFilter.NO_FILTER,
                     "container",
-                    50),
+                    50,
+                    false),
                 MiruSolutionLogLevel.NONE);
-            MiruResponse<DistinctCountAnswer> count = distinctCountInjectable.countInboxStreamAll(query);
+            MiruResponse<DistinctCountAnswer> count = distinctCountInjectable.countInboxStream(query);
             System.out.println(count);
         }
 
@@ -321,6 +325,7 @@ public class MiruStreamServiceNGTest {
                 MiruActorId.NOT_PROVIDED,
                 MiruAuthzExpression.NOT_PROVIDED, new AggregateCountsQuery(
                 streamId,
+                MiruFilter.NO_FILTER,
                 MiruTimeRange.ALL_TIME,
                 new MiruTimeRange(0, 1_000),
                 new MiruTimeRange(0, 1_000),
@@ -329,7 +334,7 @@ public class MiruStreamServiceNGTest {
                     "container", 0, 10, new String[0])),
                 false),
                 MiruSolutionLogLevel.NONE);
-            MiruResponse<AggregateCountsAnswer> results = aggregateCountsInjectable.filterInboxStreamAll(query);
+            MiruResponse<AggregateCountsAnswer> results = aggregateCountsInjectable.filterInboxStream(query);
             for (AggregateCount a : results.answer.constraints.get("blah").results) {
                 System.out.println(a);
             }
@@ -345,13 +350,15 @@ public class MiruStreamServiceNGTest {
                 MiruAuthzExpression.NOT_PROVIDED,
                 new DistinctCountQuery(
                     streamId,
+                    MiruFilter.NO_FILTER,
                     new MiruTimeRange(0, 1_000),
                     filter,
                     MiruFilter.NO_FILTER,
                     "container",
-                    50),
+                    50,
+                    false),
                 MiruSolutionLogLevel.NONE);
-            MiruResponse<DistinctCountAnswer> count = distinctCountInjectable.countInboxStreamAll(query);
+            MiruResponse<DistinctCountAnswer> count = distinctCountInjectable.countInboxStream(query);
             System.out.println(count);
         }
 

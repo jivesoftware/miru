@@ -1,7 +1,6 @@
 package com.jivesoftware.os.miru.stream.plugins.filter;
 
 import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruHost;
@@ -89,29 +88,30 @@ public class AggregateCountsCustomQuestion implements Question<AggregateCountsQu
 
         ands.add(bitmaps.buildIndexMask(lastId, context.getRemovalIndex(), null, stackBuffer));
 
-        if (request.query.streamId != null && !MiruStreamId.NULL.equals(request.query.streamId)) {
-            if (handle.canBackfill()) {
+        if (request.query.streamId != null
+            && !MiruStreamId.NULL.equals(request.query.streamId)
+            && request.query.unreadOnly) {
+            if (request.query.suppressUnreadFilter != null && handle.canBackfill()) {
                 backfillerizer.backfillUnread(bitmaps,
                     context,
                     solutionLog,
                     request.tenantId,
                     handle.getCoord().partitionId,
-                    request.query.streamId);
+                    request.query.streamId,
+                    request.query.suppressUnreadFilter);
             }
 
             BitmapAndLastId<BM> container = new BitmapAndLastId<>();
-            if (request.query.unreadOnly) {
-                context.getUnreadTrackingIndex().getUnread(request.query.streamId).getIndex(container, stackBuffer);
-                if (container.isSet()) {
-                    ands.add(container.getBitmap());
-                } else {
-                    // Short-circuit if the user doesn't have any unread
-                    LOG.debug("No user unread");
-                    return new MiruPartitionResponse<>(
-                        aggregateCounts.getAggregateCounts("aggregateCountsCustom", solutionLog, bitmaps, context, request, handle.getCoord(), report,
-                            bitmaps.create(), Optional.of(bitmaps.create())),
-                        solutionLog.asList());
-                }
+            context.getUnreadTrackingIndex().getUnread(request.query.streamId).getIndex(container, stackBuffer);
+            if (container.isSet()) {
+                ands.add(container.getBitmap());
+            } else {
+                // Short-circuit if the user doesn't have any unread
+                LOG.debug("No user unread");
+                return new MiruPartitionResponse<>(
+                    aggregateCounts.getAggregateCounts("aggregateCountsCustom", solutionLog, bitmaps, context, request, handle.getCoord(), report,
+                        bitmaps.create(), Optional.of(bitmaps.create())),
+                    solutionLog.asList());
             }
         }
 

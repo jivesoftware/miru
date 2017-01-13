@@ -39,22 +39,19 @@ public class DistinctCountInboxQuestion implements Question<DistinctCountQuery, 
     private final MiruJustInTimeBackfillerizer backfillerizer;
     private final MiruRequest<DistinctCountQuery> request;
     private final MiruRemotePartition<DistinctCountQuery, DistinctCountAnswer, DistinctCountReport> remotePartition;
-    private final boolean unreadOnly;
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
 
     public DistinctCountInboxQuestion(DistinctCount distinctCount,
         MiruJustInTimeBackfillerizer backfillerizer,
         MiruRequest<DistinctCountQuery> request,
-        MiruRemotePartition<DistinctCountQuery, DistinctCountAnswer, DistinctCountReport> remotePartition,
-        boolean unreadOnly) {
+        MiruRemotePartition<DistinctCountQuery, DistinctCountAnswer, DistinctCountReport> remotePartition) {
 
         Preconditions.checkArgument(!MiruStreamId.NULL.equals(request.query.streamId), "Inbox queries require a streamId");
         this.distinctCount = distinctCount;
         this.backfillerizer = backfillerizer;
         this.request = request;
         this.remotePartition = remotePartition;
-        this.unreadOnly = unreadOnly;
     }
 
     @Override
@@ -66,9 +63,9 @@ public class DistinctCountInboxQuestion implements Question<DistinctCountQuery, 
         MiruRequestContext<BM, IBM, ?> context = handle.getRequestContext();
         MiruBitmaps<BM, IBM> bitmaps = handle.getBitmaps();
 
-        if (handle.canBackfill()) {
+        if (request.query.suppressUnreadFilter != null && handle.canBackfill()) {
             backfillerizer.backfill(bitmaps, context, request.query.streamFilter, solutionLog, request.tenantId,
-                handle.getCoord().partitionId, request.query.streamId);
+                handle.getCoord().partitionId, request.query.streamId, request.query.suppressUnreadFilter);
         }
 
         List<IBM> ands = new ArrayList<>();
@@ -98,7 +95,7 @@ public class DistinctCountInboxQuestion implements Question<DistinctCountQuery, 
                 solutionLog.asList());
         }
 
-        if (unreadOnly) {
+        if (request.query.unreadOnly) {
             context.getUnreadTrackingIndex().getUnread(request.query.streamId).getIndex(container, stackBuffer);
             if (container.isSet()) {
                 ands.add(container.getBitmap());

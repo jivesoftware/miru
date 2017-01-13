@@ -5,12 +5,15 @@ import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
+import com.jivesoftware.os.miru.plugin.backfill.MiruJustInTimeBackfillerizer;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
+import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
@@ -33,15 +36,18 @@ public class DistinctCountCustomQuestion implements Question<DistinctCountQuery,
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final DistinctCount distinctCount;
+    private final MiruJustInTimeBackfillerizer backfillerizer;
     private final MiruRequest<DistinctCountQuery> request;
     private final MiruRemotePartition<DistinctCountQuery, DistinctCountAnswer, DistinctCountReport> remotePartition;
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
 
     public DistinctCountCustomQuestion(DistinctCount distinctCount,
+        MiruJustInTimeBackfillerizer backfillerizer,
         MiruRequest<DistinctCountQuery> request,
         MiruRemotePartition<DistinctCountQuery, DistinctCountAnswer, DistinctCountReport> remotePartition) {
         this.distinctCount = distinctCount;
+        this.backfillerizer = backfillerizer;
         this.request = request;
         this.remotePartition = remotePartition;
     }
@@ -85,6 +91,32 @@ public class DistinctCountCustomQuestion implements Question<DistinctCountQuery,
 
         // 4) Mask out anything that hasn't made it into the activityIndex yet, or that has been removed from the index
         ands.add(bitmaps.buildIndexMask(lastId, context.getRemovalIndex(), null, stackBuffer));
+
+        if (request.query.streamId != null
+            && !MiruStreamId.NULL.equals(request.query.streamId)
+            && request.query.unreadOnly) {
+            if (request.query.suppressUnreadFilter != null && handle.canBackfill()) {
+                backfillerizer.backfillUnread(bitmaps,
+                    context,
+                    solutionLog,
+                    request.tenantId,
+                    handle.getCoord().partitionId,
+                    request.query.streamId,
+                    request.query.suppressUnreadFilter);
+            }
+
+            BitmapAndLastId<BM> container = new BitmapAndLastId<>();
+            context.getUnreadTrackingIndex().getUnread(request.query.streamId).getIndex(container, stackBuffer);
+            if (container.isSet()) {
+                ands.add(container.getBitmap());
+            } else {
+                // Short-circuit if the user doesn't have any unread
+                LOG.debug("No user unread");
+                return new MiruPartitionResponse<>(
+                    distinctCount.numberOfDistincts("distinctCountCustom", bitmaps, context, request, report, bitmaps.create()),
+                    solutionLog.asList());
+            }
+        }
 
         // AND it all together and return the results
         bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);

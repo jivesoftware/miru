@@ -32,9 +32,13 @@ public class DistinctCountInjectable {
             MiruTenantId tenantId = request.tenantId;
             Miru miru = provider.getMiru(tenantId);
             return miru.askAndMerge(tenantId,
-                new MiruSolvableFactory<>(request.name, provider.getStats(), "countCustomStream", new DistinctCountCustomQuestion(distinctCount,
-                    request,
-                    provider.getRemotePartition(DistinctCountCustomRemotePartition.class))),
+                new MiruSolvableFactory<>(request.name,
+                    provider.getStats(),
+                    "countCustomStream",
+                    new DistinctCountCustomQuestion(distinctCount,
+                        provider.getBackfillerizer(tenantId),
+                        request,
+                        provider.getRemotePartition(DistinctCountCustomRemotePartition.class))),
                 new DistinctCountAnswerEvaluator(request.query),
                 new DistinctCounterAnswerMerger(),
                 DistinctCountAnswer.EMPTY_RESULTS,
@@ -48,17 +52,18 @@ public class DistinctCountInjectable {
         }
     }
 
-    public MiruResponse<DistinctCountAnswer> countInboxStreamAll(MiruRequest<DistinctCountQuery> request)
+    public MiruResponse<DistinctCountAnswer> countInboxStream(MiruRequest<DistinctCountQuery> request)
         throws MiruQueryServiceException, InterruptedException {
         try {
             MiruTenantId tenantId = request.tenantId;
             Miru miru = provider.getMiru(tenantId);
             return miru.askAndMerge(tenantId,
-                new MiruSolvableFactory<>(request.name, provider.getStats(), "countInboxStreamAll", new DistinctCountInboxQuestion(distinctCount,
-                    provider.getBackfillerizer(tenantId),
-                    request,
-                    provider.getRemotePartition(DistinctCountInboxAllRemotePartition.class),
-                    false)),
+                new MiruSolvableFactory<>(request.name, provider.getStats(),
+                    "countInboxStreamAll",
+                    new DistinctCountInboxQuestion(distinctCount,
+                        provider.getBackfillerizer(tenantId),
+                        request,
+                        provider.getRemotePartition(DistinctCountInboxAllRemotePartition.class))),
                 new DistinctCountAnswerEvaluator(request.query),
                 new DistinctCounterAnswerMerger(),
                 DistinctCountAnswer.EMPTY_RESULTS,
@@ -68,31 +73,7 @@ public class DistinctCountInjectable {
             throw e;
         } catch (Exception e) {
             //TODO throw http error codes
-            throw new MiruQueryServiceException("Failed to count inbox all stream", e);
-        }
-    }
-
-    public MiruResponse<DistinctCountAnswer> countInboxStreamUnread(MiruRequest<DistinctCountQuery> request)
-        throws MiruQueryServiceException, InterruptedException {
-        try {
-            MiruTenantId tenantId = request.tenantId;
-            Miru miru = provider.getMiru(tenantId);
-            return miru.askAndMerge(tenantId,
-                new MiruSolvableFactory<>(request.name, provider.getStats(), "countInboxStreamUnread", new DistinctCountInboxQuestion(distinctCount,
-                    provider.getBackfillerizer(tenantId),
-                    request,
-                    provider.getRemotePartition(DistinctCountInboxUnreadRemotePartition.class),
-                    true)),
-                new DistinctCountAnswerEvaluator(request.query),
-                new DistinctCounterAnswerMerger(),
-                DistinctCountAnswer.EMPTY_RESULTS,
-                miru.getDefaultExecutor(),
-                request.logLevel);
-        } catch (MiruPartitionUnavailableException | InterruptedException e) {
-            throw e;
-        } catch (Exception e) {
-            //TODO throw http error codes
-            throw new MiruQueryServiceException("Failed to count inbox unread stream", e);
+            throw new MiruQueryServiceException("Failed to count inbox stream", e);
         }
     }
 
@@ -104,8 +85,11 @@ public class DistinctCountInjectable {
             Miru miru = provider.getMiru(tenantId);
             return miru.askImmediate(tenantId,
                 partitionId,
-                new MiruSolvableFactory<>(requestAndReport.request.name, provider.getStats(), "countCustomStream",
+                new MiruSolvableFactory<>(requestAndReport.request.name,
+                    provider.getStats(),
+                    "countCustomStream",
                     new DistinctCountCustomQuestion(distinctCount,
+                        provider.getBackfillerizer(tenantId),
                         requestAndReport.request,
                         provider.getRemotePartition(DistinctCountCustomRemotePartition.class))),
                 Optional.fromNullable(requestAndReport.report),
@@ -119,7 +103,7 @@ public class DistinctCountInjectable {
         }
     }
 
-    public MiruPartitionResponse<DistinctCountAnswer> countInboxStreamAll(MiruPartitionId partitionId,
+    public MiruPartitionResponse<DistinctCountAnswer> countInboxStream(MiruPartitionId partitionId,
         MiruRequestAndReport<DistinctCountQuery, DistinctCountReport> requestAndReport)
         throws MiruQueryServiceException, InterruptedException {
         try {
@@ -127,12 +111,14 @@ public class DistinctCountInjectable {
             Miru miru = provider.getMiru(tenantId);
             return miru.askImmediate(tenantId,
                 partitionId,
-                new MiruSolvableFactory<>(requestAndReport.request.name, provider.getStats(), "countInboxStreamAll", new DistinctCountInboxQuestion(
-                    distinctCount,
-                    provider.getBackfillerizer(tenantId),
-                    requestAndReport.request,
-                    provider.getRemotePartition(DistinctCountInboxAllRemotePartition.class),
-                    false)),
+                new MiruSolvableFactory<>(requestAndReport.request.name,
+                    provider.getStats(),
+                    "countInboxStream",
+                    new DistinctCountInboxQuestion(
+                        distinctCount,
+                        provider.getBackfillerizer(tenantId),
+                        requestAndReport.request,
+                        provider.getRemotePartition(DistinctCountInboxAllRemotePartition.class))),
                 Optional.fromNullable(requestAndReport.report),
                 DistinctCountAnswer.EMPTY_RESULTS,
                 MiruSolutionLogLevel.NONE);
@@ -140,32 +126,7 @@ public class DistinctCountInjectable {
             throw e;
         } catch (Exception e) {
             //TODO throw http error codes
-            throw new MiruQueryServiceException("Failed to count inbox all stream for partition: " + partitionId.getId(), e);
-        }
-    }
-
-    public MiruPartitionResponse<DistinctCountAnswer> countInboxStreamUnread(MiruPartitionId partitionId,
-        MiruRequestAndReport<DistinctCountQuery, DistinctCountReport> requestAndReport)
-        throws MiruQueryServiceException, InterruptedException {
-        try {
-            MiruTenantId tenantId = requestAndReport.request.tenantId;
-            Miru miru = provider.getMiru(tenantId);
-            return miru.askImmediate(tenantId,
-                partitionId,
-                new MiruSolvableFactory<>(requestAndReport.request.name, provider.getStats(), "countInboxStreamUnread", new DistinctCountInboxQuestion(
-                    distinctCount,
-                    provider.getBackfillerizer(tenantId),
-                    requestAndReport.request,
-                    provider.getRemotePartition(DistinctCountInboxUnreadRemotePartition.class),
-                    true)),
-                Optional.fromNullable(requestAndReport.report),
-                DistinctCountAnswer.EMPTY_RESULTS,
-                MiruSolutionLogLevel.NONE);
-        } catch (MiruPartitionUnavailableException | InterruptedException e) {
-            throw e;
-        } catch (Exception e) {
-            //TODO throw http error codes
-            throw new MiruQueryServiceException("Failed to count inbox unread stream for partition: " + partitionId.getId(), e);
+            throw new MiruQueryServiceException("Failed to count inbox stream for partition: " + partitionId.getId(), e);
         }
     }
 

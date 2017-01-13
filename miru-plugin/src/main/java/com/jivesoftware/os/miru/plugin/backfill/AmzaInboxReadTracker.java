@@ -56,14 +56,14 @@ public class AmzaInboxReadTracker implements MiruInboxReadTracker {
         MiruStreamId streamId,
         MiruSolutionLog solutionLog,
         int lastActivityIndex,
-        long oldestBackfilledEventId,
+        long oldestBackfilledTimestamp,
         StackBuffer stackBuffer) throws Exception {
 
         Collection<NamedCursor> cursors = getSipCursors(tenantId, partitionId, streamId);
         MiruWALClient.StreamBatch<MiruWALEntry, AmzaSipCursor> got = walClient.getRead(tenantId,
             streamId,
             new AmzaSipCursor(cursors, false),
-            oldestBackfilledEventId,
+            oldestBackfilledTimestamp,
             1000);
         AmzaSipCursor lastCursor = null;
         while (got != null && !got.activities.isEmpty()) {

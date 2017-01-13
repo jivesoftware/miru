@@ -35,7 +35,6 @@ public class AggregateCountsPlugin implements MiruPlugin<AggregateCountsEndpoint
         JsonRemotePartitionReader remotePartitionReader = new JsonRemotePartitionReader(miruProvider.getReaderHttpClient(),
             miruProvider.getReaderStrategyCache());
         return Arrays.asList(new AggregateCountsCustomRemotePartition(remotePartitionReader),
-            new AggregateCountsInboxAllRemotePartition(remotePartitionReader),
-            new AggregateCountsInboxUnreadRemotePartition(remotePartitionReader));
+            new AggregateCountsInboxAllRemotePartition(remotePartitionReader));
     }
 }

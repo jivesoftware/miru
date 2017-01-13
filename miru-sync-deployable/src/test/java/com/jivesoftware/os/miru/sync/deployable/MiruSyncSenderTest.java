@@ -353,7 +353,7 @@ public class MiruSyncSenderTest {
         public StreamBatch<MiruWALEntry, AmzaSipCursor> getRead(MiruTenantId tenantId,
             MiruStreamId streamId,
             AmzaSipCursor cursor,
-            long oldestEventId,
+            long oldestTimestamp,
             int batchSize) throws Exception {
             return null;
         }

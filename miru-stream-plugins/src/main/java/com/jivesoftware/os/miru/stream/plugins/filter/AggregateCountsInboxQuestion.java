@@ -38,21 +38,18 @@ public class AggregateCountsInboxQuestion implements Question<AggregateCountsQue
     private final MiruJustInTimeBackfillerizer backfillerizer;
     private final MiruRequest<AggregateCountsQuery> request;
     private final MiruRemotePartition<AggregateCountsQuery, AggregateCountsAnswer, AggregateCountsReport> remotePartition;
-    private final boolean unreadOnly;
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
 
     public AggregateCountsInboxQuestion(AggregateCounts aggregateCounts,
         MiruJustInTimeBackfillerizer backfillerizer,
         MiruRequest<AggregateCountsQuery> request,
-        MiruRemotePartition<AggregateCountsQuery, AggregateCountsAnswer, AggregateCountsReport> remotePartition,
-        boolean unreadOnly) {
+        MiruRemotePartition<AggregateCountsQuery, AggregateCountsAnswer, AggregateCountsReport> remotePartition) {
 
         Preconditions.checkArgument(!MiruStreamId.NULL.equals(request.query.streamId), "Inbox queries require a streamId");
         this.aggregateCounts = aggregateCounts;
         this.backfillerizer = backfillerizer;
         this.request = request;
         this.remotePartition = remotePartition;
-        this.unreadOnly = unreadOnly;
     }
 
     @Override
@@ -64,9 +61,9 @@ public class AggregateCountsInboxQuestion implements Question<AggregateCountsQue
         MiruRequestContext<BM, IBM, ?> context = handle.getRequestContext();
         MiruBitmaps<BM, IBM> bitmaps = handle.getBitmaps();
 
-        if (handle.canBackfill()) {
+        if (request.query.suppressUnreadFilter != null && handle.canBackfill()) {
             backfillerizer.backfill(bitmaps, context, request.query.streamFilter, solutionLog, request.tenantId,
-                handle.getCoord().partitionId, request.query.streamId);
+                handle.getCoord().partitionId, request.query.streamId, request.query.suppressUnreadFilter);
         }
 
         List<IBM> ands = new ArrayList<>();
@@ -105,7 +102,7 @@ public class AggregateCountsInboxQuestion implements Question<AggregateCountsQue
                 solutionLog.asList());
         }
 
-        if (unreadOnly) {
+        if (request.query.unreadOnly) {
             context.getUnreadTrackingIndex().getUnread(request.query.streamId).getIndex(container, stackBuffer);
             if (container.isSet()) {
                 ands.add(container.getBitmap());
@@ -129,7 +126,7 @@ public class AggregateCountsInboxQuestion implements Question<AggregateCountsQue
         BM answer = bitmaps.and(ands);
 
         counterAnds.add(answer);
-        if (!unreadOnly) {
+        if (!request.query.unreadOnly) {
             // if unreadOnly is true, the read-tracking index would already be applied to the answer
             context.getUnreadTrackingIndex().getUnread(request.query.streamId).getIndex(container, stackBuffer);
             if (container.isSet()) {
