@@ -1,7 +1,7 @@
 package com.jivesoftware.os.miru.sync.deployable;
 
-import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.sync.api.MiruSyncTenantConfig;
+import com.jivesoftware.os.miru.sync.api.MiruSyncTenantTuple;
 import java.util.Map;
 
 /**
@@ -9,5 +9,5 @@ import java.util.Map;
  */
 public interface MiruSyncConfigProvider {
 
-     Map<MiruTenantId, MiruSyncTenantConfig> getAll(String senderName) throws Exception;
+     Map<MiruSyncTenantTuple, MiruSyncTenantConfig> getAll(String senderName) throws Exception;
 }

@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.sync.deployable;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.amza.api.PartitionClient;
@@ -38,6 +39,9 @@ import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus;
 import com.jivesoftware.os.miru.api.wal.MiruVersionedActivityLookupEntry;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.api.wal.MiruWALEntry;
+import com.jivesoftware.os.miru.sync.api.MiruSyncTenantConfig;
+import com.jivesoftware.os.miru.sync.api.MiruSyncTenantTuple;
+import com.jivesoftware.os.miru.sync.api.MiruSyncTimeShiftStrategy;
 import com.jivesoftware.os.miru.sync.deployable.MiruSyncSender.ProgressType;
 import com.jivesoftware.os.routing.bird.shared.HostPort;
 import java.nio.charset.StandardCharsets;
@@ -130,7 +134,6 @@ public class MiruSyncSenderTest {
         MiruSchemaProvider schemaProvider = miruTenantId -> schema;
 
         TestWALClient testWALClient = new TestWALClient(tenantId, largestPartitionId);
-
         MiruSyncSender<AmzaCursor, AmzaSipCursor> syncService = new MiruSyncSender<>("default",
             amzaClientAquariumProvider,
             orderIdProvider,
@@ -143,10 +146,14 @@ public class MiruSyncSenderTest {
             syncClient,
             partitionClientProvider,
             new ObjectMapper(),
-            null,
+            senderName -> ImmutableMap.of(new MiruSyncTenantTuple(tenantId, tenantId), new MiruSyncTenantConfig(
+                -1,
+                Long.MAX_VALUE,
+                0,
+                MiruSyncTimeShiftStrategy.linear
+            )),
             1_000,
             0,
-            -1,
             null,
             AmzaCursor.class);
 
