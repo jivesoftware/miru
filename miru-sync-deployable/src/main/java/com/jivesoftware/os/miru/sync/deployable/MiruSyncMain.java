@@ -440,7 +440,7 @@ public class MiruSyncMain {
                     ExecutorService executorService = Executors.newCachedThreadPool();
                     ClusterSchemaProvider schemaProvider = new ClusterSchemaProvider(clusterClient, 10_000);
 
-                    syncSenders = new MiruSyncSenders<>(
+                    syncSenders = new MiruSyncSenders<RCVSCursor, RCVSSipCursor>( //  don't remove generics (fails compilation for others when we do)
                         syncConfig,
                         orderIdProvider,
                         executorService,
@@ -472,7 +472,7 @@ public class MiruSyncMain {
                     ExecutorService executorService = Executors.newCachedThreadPool();
                     ClusterSchemaProvider schemaProvider = new ClusterSchemaProvider(clusterClient, 10_000);
 
-                    syncSenders = new MiruSyncSenders<>(
+                    syncSenders = new MiruSyncSenders<AmzaCursor, AmzaSipCursor>( //  don't remove generics (fails compilation for others when we do)
                         syncConfig,
                         orderIdProvider,
                         executorService,
