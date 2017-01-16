@@ -117,8 +117,7 @@ public class MiruSyncSenders<C extends MiruCursor<C, S>, S extends MiruSipCursor
                                     mapper,
                                     syncConfigProvider,
                                     senderConfig.batchSize,
-                                    syncConfig.getForwardSyncDelayMillis(),
-                                    syncConfig.getReverseSyncMaxAgeMillis(),
+                                    senderConfig.forwardSyncDelayMillis,
                                     defaultCursor,
                                     cursorClass
                                 );

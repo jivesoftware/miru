@@ -15,6 +15,7 @@ public class MiruSyncSenderConfig {
     public final String senderHost;
     public final int senderPort;
     public final long syncIntervalMillis;
+    public final long forwardSyncDelayMillis;
     public final int batchSize;
     public final String oAuthConsumerKey;
     public final String oAuthConsumerSecret;
@@ -28,6 +29,7 @@ public class MiruSyncSenderConfig {
         @JsonProperty("senderHost")  String senderHost,
         @JsonProperty("senderPort") int senderPort,
         @JsonProperty("syncIntervalMillis") long syncIntervalMillis,
+        @JsonProperty("forwardSyncDelayMillis") long forwardSyncDelayMillis,
         @JsonProperty("batchSize") int batchSize,
         @JsonProperty("oAuthConsumerKey") String oAuthConsumerKey,
         @JsonProperty("oAuthConsumerSecret") String oAuthConsumerSecret,
@@ -40,6 +42,7 @@ public class MiruSyncSenderConfig {
         this.senderHost = senderHost;
         this.senderPort = senderPort;
         this.syncIntervalMillis = syncIntervalMillis;
+        this.forwardSyncDelayMillis = forwardSyncDelayMillis;
         this.batchSize = batchSize;
         this.oAuthConsumerKey = oAuthConsumerKey;
         this.oAuthConsumerSecret = oAuthConsumerSecret;
