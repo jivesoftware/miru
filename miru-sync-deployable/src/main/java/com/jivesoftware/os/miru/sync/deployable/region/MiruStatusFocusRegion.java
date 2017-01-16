@@ -8,6 +8,7 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.wal.MiruCursor;
 import com.jivesoftware.os.miru.sync.deployable.MiruSyncSender;
+import com.jivesoftware.os.miru.sync.deployable.MiruSyncSenders;
 import com.jivesoftware.os.miru.ui.MiruRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
@@ -24,17 +25,17 @@ public class MiruStatusFocusRegion implements MiruRegion<MiruTenantId> {
 
     private final String template;
     private final MiruSoyRenderer renderer;
-    private final MiruSyncSender<?, ?> syncSender;
+    private final MiruSyncSenders<?, ?> syncSenders;
     private final ObjectMapper mapper;
 
     public MiruStatusFocusRegion(String template,
         MiruSoyRenderer renderer,
-        MiruSyncSender<?, ?> syncSender,
+        MiruSyncSenders<?, ?> syncSenders,
         ObjectMapper mapper) {
 
         this.template = template;
         this.renderer = renderer;
-        this.syncSender = syncSender;
+        this.syncSenders = syncSenders;
         this.mapper = mapper;
     }
 
@@ -45,16 +46,19 @@ public class MiruStatusFocusRegion implements MiruRegion<MiruTenantId> {
         data.put("tenant", tenantId.toString());
         try {
             List<Map<String, Object>> progress = Lists.newArrayList();
-            if (syncSender != null) {
-                syncSender.streamProgress(tenantId, null, (toTenantId, type, partitionId) -> {
-                    MiruCursor<?, ?> cursor = syncSender.getTenantPartitionCursor(tenantId, toTenantId, MiruPartitionId.of(partitionId));
-                    progress.add(ImmutableMap.of(
-                        "toTenantId", toTenantId.toString(),
-                        "type", type.name(),
-                        "partitionId", String.valueOf(partitionId),
-                        "cursor", mapper.writeValueAsString(cursor)));
-                    return true;
-                });
+            if (syncSenders != null) {
+                for (MiruSyncSender<?, ?> syncSender : syncSenders.getActiveSenders()) {
+                    syncSender.streamProgress(tenantId, null, (toTenantId, type, partitionId) -> {
+                        MiruCursor<?, ?> cursor = syncSender.getTenantPartitionCursor(tenantId, toTenantId, MiruPartitionId.of(partitionId));
+                        progress.add(ImmutableMap.of(
+                            "name", syncSender.getName(),
+                            "toTenantId", toTenantId.toString(),
+                            "type", type.name(),
+                            "partitionId", String.valueOf(partitionId),
+                            "cursor", mapper.writeValueAsString(cursor)));
+                        return true;
+                    });
+                }
             } else {
                 data.put("warning", "Sync sender is not enabled");
             }

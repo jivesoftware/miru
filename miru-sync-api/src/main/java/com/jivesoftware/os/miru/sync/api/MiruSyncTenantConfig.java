@@ -1,4 +1,4 @@
-package com.jivesoftware.os.miru.sync.deployable;
+package com.jivesoftware.os.miru.sync.api;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;

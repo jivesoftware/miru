@@ -35,6 +35,8 @@ import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.StreamBatch;
 import com.jivesoftware.os.miru.api.wal.MiruWALEntry;
+import com.jivesoftware.os.miru.sync.api.MiruSyncTenantConfig;
+import com.jivesoftware.os.miru.sync.api.MiruSyncTimeShiftStrategy;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.nio.charset.StandardCharsets;
@@ -68,6 +70,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         0, 0, 0, 0, 0, 0, 0, 0,
         false, Consistency.leader_quorum, true, true, false, RowType.primary, "lab", 8, null, -1, -1);
 
+    private final String name;
     private final AmzaClientAquariumProvider amzaClientAquariumProvider;
     private final TimestampedOrderIdProvider orderIdProvider;
     private final int syncRingStripes;
@@ -79,7 +82,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
     private final MiruSyncClient toSyncClient;
     private final PartitionClientProvider partitionClientProvider;
     private final ObjectMapper mapper;
-    private final MiruSyncConfigStorage whitelistConfigStorage;
+    private final MiruSyncConfigProvider syncConfigProvider;
     private final int batchSize;
     private final long forwardSyncDelayMillis;
     private final long reverseSyncMaxAgeMillis;
@@ -94,7 +97,8 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
     private final long abandonLeaderSolutionAfterNMillis = 30_000; //TODO expose to conf?
     private final long abandonSolutionAfterNMillis = 60_000; //TODO expose to conf?
 
-    public MiruSyncSender(AmzaClientAquariumProvider amzaClientAquariumProvider,
+    public MiruSyncSender(String name,
+        AmzaClientAquariumProvider amzaClientAquariumProvider,
         TimestampedOrderIdProvider orderIdProvider,
         int syncRingStripes,
         ExecutorService executorService,
@@ -105,13 +109,14 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         MiruSyncClient toSyncClient,
         PartitionClientProvider partitionClientProvider,
         ObjectMapper mapper,
-        MiruSyncConfigStorage whitelistConfigStorage,
+        MiruSyncConfigProvider syncConfigProvider,
         int batchSize,
         long forwardSyncDelayMillis,
         long reverseSyncMaxAgeMillis,
         C defaultCursor,
         Class<C> cursorClass) {
 
+        this.name = name;
         this.amzaClientAquariumProvider = amzaClientAquariumProvider;
         this.orderIdProvider = orderIdProvider;
         this.syncRingStripes = syncRingStripes;
@@ -123,12 +128,16 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         this.toSyncClient = toSyncClient;
         this.partitionClientProvider = partitionClientProvider;
         this.mapper = mapper;
-        this.whitelistConfigStorage = whitelistConfigStorage;
+        this.syncConfigProvider = syncConfigProvider;
         this.batchSize = batchSize;
         this.forwardSyncDelayMillis = forwardSyncDelayMillis;
         this.reverseSyncMaxAgeMillis = reverseSyncMaxAgeMillis;
         this.defaultCursor = defaultCursor;
         this.cursorClass = cursorClass;
+    }
+
+    public String getName() {
+        return name;
     }
 
     public void start() {
@@ -302,8 +311,8 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         int tenantCount = 0;
         int activityCount = 0;
         Map<MiruTenantId, MiruSyncTenantConfig> tenantIds;
-        if (whitelistConfigStorage != null) {
-            tenantIds = whitelistConfigStorage.getAll();
+        if (syncConfigProvider != null) {
+            tenantIds = syncConfigProvider.getAll(name);
         } else {
             tenantIds = Maps.newHashMap();
             List<MiruTenantId> allTenantIds = fromWALClient.getAllTenantIds();

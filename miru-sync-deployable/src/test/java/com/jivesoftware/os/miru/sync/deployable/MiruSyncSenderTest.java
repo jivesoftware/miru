@@ -130,7 +130,9 @@ public class MiruSyncSenderTest {
         MiruSchemaProvider schemaProvider = miruTenantId -> schema;
 
         TestWALClient testWALClient = new TestWALClient(tenantId, largestPartitionId);
-        MiruSyncSender<AmzaCursor, AmzaSipCursor> syncService = new MiruSyncSender<>(amzaClientAquariumProvider,
+
+        MiruSyncSender<AmzaCursor, AmzaSipCursor> syncService = new MiruSyncSender<>("default",
+            amzaClientAquariumProvider,
             orderIdProvider,
             1,
             Executors.newSingleThreadExecutor(),

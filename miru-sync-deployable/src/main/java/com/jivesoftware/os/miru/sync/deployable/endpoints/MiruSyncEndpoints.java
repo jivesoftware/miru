@@ -15,16 +15,28 @@
  */
 package com.jivesoftware.os.miru.sync.deployable.endpoints;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.sync.api.MiruSyncSenderConfig;
+import com.jivesoftware.os.miru.sync.api.MiruSyncTenantConfig;
+import com.jivesoftware.os.miru.sync.deployable.MiruSyncConfigStorage;
 import com.jivesoftware.os.miru.sync.deployable.MiruSyncCopier;
 import com.jivesoftware.os.miru.sync.deployable.MiruSyncSender;
+import com.jivesoftware.os.miru.sync.deployable.MiruSyncSenderConfigStorage;
+import com.jivesoftware.os.miru.sync.deployable.MiruSyncSenders;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.shared.ResponseHelper;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
+import java.util.Map.Entry;
 import javax.inject.Singleton;
+import javax.ws.rs.Consumes;
+import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -44,18 +56,117 @@ public class MiruSyncEndpoints {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
+    private final MiruSyncSenderConfigStorage syncSenderConfigStorage;
+    private final MiruSyncConfigStorage syncConfigStorage;
     private final ResponseHelper responseHelper = ResponseHelper.INSTANCE;
-    private final MiruSyncSender<?, ?> syncSender;
+    private final MiruSyncSenders<?, ?> syncSenders;
     private final MiruSyncCopier<?, ?> syncCopier;
     private final MiruStats miruStats;
 
-    public MiruSyncEndpoints(@Context MiruSyncSender<?, ?> syncSender,
+    public MiruSyncEndpoints(@Context MiruSyncSenderConfigStorage syncSenderConfigStorage,
+        @Context MiruSyncConfigStorage syncConfigStorage,
+        @Context MiruSyncSenders<?, ?> syncSenders,
         @Context MiruSyncCopier<?, ?> syncCopier,
         @Context MiruStats miruStats) {
-        this.syncSender = syncSender;
+        this.syncSenderConfigStorage = syncSenderConfigStorage;
+        this.syncConfigStorage = syncConfigStorage;
+        this.syncSenders = syncSenders;
         this.syncCopier = syncCopier;
         this.miruStats = miruStats;
     }
+
+    @GET
+    @Path("/syncspace/list")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response listNamesSpaces() {
+        try {
+            Map<String, MiruSyncSenderConfig> all = syncSenderConfigStorage.getAll();
+            return Response.ok(all).build();
+        } catch (Exception e) {
+            LOG.error("Failed to get.", e);
+            return Response.serverError().build();
+        }
+    }
+
+
+    @POST
+    @Path("/syncspace/add/{name}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response addsyncspace(@PathParam("name") String name,
+        MiruSyncSenderConfig syncspaceConfig) {
+        try {
+            syncSenderConfigStorage.multiPut(ImmutableMap.of(name, syncspaceConfig));
+            return responseHelper.jsonResponse("Success");
+        } catch (Exception e) {
+            LOG.error("Failed to get.", e);
+            return Response.serverError().build();
+        }
+    }
+
+    @DELETE
+    @Path("/syncspace/delete/{name}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response deletesyncspace(@PathParam("name") String name) {
+        try {
+            syncSenderConfigStorage.multiRemove(ImmutableList.of(name));
+            return responseHelper.jsonResponse("Success");
+        } catch (Exception e) {
+            LOG.error("Failed to get.", e);
+            return Response.serverError().build();
+        }
+    }
+
+
+    @GET
+    @Path("/list/{syncspaceName}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getSyncing(@PathParam("syncspaceName") String syncspaceName) {
+        try {
+            Map<MiruTenantId, MiruSyncTenantConfig> all = syncConfigStorage.getAll(syncspaceName);
+            if (all != null && !all.isEmpty()) {
+                Map<String, MiruSyncTenantConfig> map = Maps.newHashMap();
+                for (Entry<MiruTenantId, MiruSyncTenantConfig> a : all.entrySet()) {
+                    map.put(a.getKey().toString(), a.getValue());
+                }
+                return Response.ok(map).build();
+            }
+            return Response.noContent().entity("{}").build();
+        } catch (Exception e) {
+            LOG.error("Failed to get.", e);
+            return Response.serverError().build();
+        }
+    }
+
+    @POST
+    @Path("/add/{syncspaceName}/{tenantId}")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response post(@PathParam("syncspaceName") String syncspaceName,
+        @PathParam("tenantId") String tenantId,
+        MiruSyncTenantConfig config) {
+        try {
+            syncConfigStorage.multiPut(syncspaceName, ImmutableMap.of(new MiruTenantId(tenantId.getBytes(StandardCharsets.UTF_8)), config));
+            return responseHelper.jsonResponse("Success");
+        } catch (Exception e) {
+            LOG.error("Failed to add.", e);
+            return Response.serverError().build();
+        }
+    }
+
+    @DELETE
+    @Path("/delete/{syncspaceName}/{tenantId}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response delete(@PathParam("syncspace") String syncspaceName,
+        @PathParam("tenantId") String tenantId) {
+        try {
+            syncConfigStorage.multiRemove(syncspaceName, ImmutableList.of(new MiruTenantId(tenantId.getBytes(StandardCharsets.UTF_8))));
+            return responseHelper.jsonResponse("Success");
+        } catch (Exception e) {
+            LOG.error("Failed to get.", e);
+            return Response.serverError().build();
+        }
+    }
+
 
     @GET
     @Path("/")
@@ -70,12 +181,19 @@ public class MiruSyncEndpoints {
     }
 
     @POST
-    @Path("/reset/{tenantId}")
+    @Path("/reset/{syncspaceName}/{tenantId}")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response postReset(@PathParam("tenantId") String tenantId) {
+    public Response postReset(@PathParam("syncspaceName") String syncspaceName,
+        @PathParam("tenantId") String tenantId) {
         try {
-            if (syncSender != null) {
-                boolean result = syncSender.resetProgress(new MiruTenantId(tenantId.getBytes(StandardCharsets.UTF_8)));
+            if (syncSenders != null) {
+                boolean result = false;
+                for (MiruSyncSender<?, ?> miruSyncSender : syncSenders.getActiveSenders()) {
+                    if (miruSyncSender.getName().equals(syncspaceName)) {
+                        result = miruSyncSender.resetProgress(new MiruTenantId(tenantId.getBytes(StandardCharsets.UTF_8)));
+                        break;
+                    }
+                }
                 return Response.ok(result).build();
             } else {
                 return Response.status(Status.SERVICE_UNAVAILABLE).entity("Sender is not enabled").build();

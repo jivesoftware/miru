@@ -23,11 +23,16 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.amza.api.BAInterner;
+import com.jivesoftware.os.amza.api.partition.Consistency;
+import com.jivesoftware.os.amza.api.partition.Durability;
+import com.jivesoftware.os.amza.api.partition.PartitionProperties;
+import com.jivesoftware.os.amza.api.stream.RowType;
 import com.jivesoftware.os.amza.client.aquarium.AmzaClientAquariumProvider;
 import com.jivesoftware.os.amza.client.http.AmzaClientProvider;
 import com.jivesoftware.os.amza.client.http.HttpPartitionClientFactory;
 import com.jivesoftware.os.amza.client.http.HttpPartitionHostsProvider;
 import com.jivesoftware.os.amza.client.http.RingHostHttpClientProvider;
+import com.jivesoftware.os.amza.sync.api.AmzaConfigMarshaller;
 import com.jivesoftware.os.aquarium.AquariumStats;
 import com.jivesoftware.os.aquarium.Member;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
@@ -45,11 +50,15 @@ import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.api.wal.MiruWALConfig;
 import com.jivesoftware.os.miru.api.wal.RCVSCursor;
 import com.jivesoftware.os.miru.api.wal.RCVSSipCursor;
+import com.jivesoftware.os.miru.cluster.client.ClusterSchemaProvider;
 import com.jivesoftware.os.miru.cluster.client.MiruClusterClientInitializer;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer.MiruLogAppenderConfig;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer.MiruMetricSamplerConfig;
+import com.jivesoftware.os.miru.sync.api.MiruSyncSenderConfig;
+import com.jivesoftware.os.miru.sync.api.MiruSyncTenantConfig;
+import com.jivesoftware.os.miru.sync.api.MiruSyncTimeShiftStrategy;
 import com.jivesoftware.os.miru.sync.deployable.endpoints.MiruSyncApiEndpoints;
 import com.jivesoftware.os.miru.sync.deployable.endpoints.MiruSyncEndpoints;
 import com.jivesoftware.os.miru.sync.deployable.oauth.MiruSyncOAuthValidatorInitializer;
@@ -93,6 +102,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import org.glassfish.jersey.oauth1.signature.OAuth1Request;
 import org.glassfish.jersey.oauth1.signature.OAuth1Signature;
@@ -266,11 +276,93 @@ public class MiruSyncMain {
             ObjectMapper miruSyncMapper = new ObjectMapper();
             miruSyncMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
             miruSyncMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-            MiruSyncConfigStorage miruSyncConfigStorage = new MiruSyncConfigStorage(
-                "default", // TODO config
-                mapper,
-                amzaClient,
-                30_000L // TODO config
+
+            AmzaClientProvider clientProvider = new AmzaClientProvider<>(
+                new HttpPartitionClientFactory(interner),
+                new HttpPartitionHostsProvider(interner, amzaClient, mapper),
+                new RingHostHttpClientProvider(amzaClient),
+                Executors.newCachedThreadPool(), //TODO expose to conf?
+                30_000L, // TODO config
+                -1,
+                -1);
+
+            MiruSyncConfigStorage miruSyncConfigStorage = new MiruSyncConfigStorage(clientProvider,
+                "miru-sync-config-",
+                new PartitionProperties(Durability.fsync_async,
+                    0, 0, 0, 0, 0, 0, 0, 0,
+                    false,
+                    Consistency.leader_quorum,
+                    true,
+                    true,
+                    false,
+                    RowType.snappy_primary,
+                    "lab",
+                    -1,
+                    null,
+                    -1,
+                    -1),
+                new AmzaConfigMarshaller<MiruTenantId>() {
+                    @Override
+                    public MiruTenantId fromBytes(byte[] bytes) throws Exception {
+                        return new MiruTenantId(bytes);
+                    }
+
+                    @Override
+                    public byte[] toBytes(MiruTenantId miruTenantId) throws Exception {
+                        return miruTenantId.getBytes();
+                    }
+                },
+                new AmzaConfigMarshaller<MiruSyncTenantConfig>() {
+                    @Override
+                    public MiruSyncTenantConfig fromBytes(byte[] bytes) throws Exception {
+                        return mapper.readValue(bytes, MiruSyncTenantConfig.class);
+                    }
+
+                    @Override
+                    public byte[] toBytes(MiruSyncTenantConfig miruSyncTenantConfig) throws Exception {
+                        return mapper.writeValueAsBytes(miruSyncTenantConfig);
+                    }
+                }
+            );
+
+
+            MiruSyncSenderConfigStorage miruSyncSenderConfigStorage = new MiruSyncSenderConfigStorage(clientProvider,
+                "miru-sync-sender-config",
+                new PartitionProperties(Durability.fsync_async,
+                    0, 0, 0, 0, 0, 0, 0, 0,
+                    false,
+                    Consistency.leader_quorum,
+                    true,
+                    true,
+                    false,
+                    RowType.snappy_primary,
+                    "lab",
+                    -1,
+                    null,
+                    -1,
+                    -1),
+                new AmzaConfigMarshaller<String>() {
+                    @Override
+                    public String fromBytes(byte[] bytes) throws Exception {
+                        return new String(bytes, StandardCharsets.UTF_8);
+                    }
+
+                    @Override
+                    public byte[] toBytes(String s) throws Exception {
+                        return s == null ? null : s.getBytes(StandardCharsets.UTF_8);
+                    }
+                },
+                new AmzaConfigMarshaller<MiruSyncSenderConfig>() {
+                    @Override
+                    public MiruSyncSenderConfig fromBytes(byte[] bytes) throws Exception {
+                        return mapper.readValue(bytes, MiruSyncSenderConfig.class);
+                    }
+
+                    @Override
+                    public byte[] toBytes(MiruSyncSenderConfig miruSyncSenderConfig) throws Exception {
+                        return mapper.writeValueAsBytes(miruSyncSenderConfig);
+                    }
+                }
             );
 
 
@@ -313,7 +405,7 @@ public class MiruSyncMain {
                 whitelistTenantIds = builder.build();
             }
 
-            miruSyncConfigStorage.multiPutIfAbsent(whitelistTenantIds);
+            miruSyncConfigStorage.multiPutIfAbsent("default", whitelistTenantIds);
 
 
             SickThreads walClientSickThreads = new SickThreads();
@@ -325,56 +417,86 @@ public class MiruSyncMain {
             ActivityReadEventConverter activityReadEventConverter = syncConfig.getSyncReceiverActivityReadEventConverterClass().newInstance();
 
             MiruWALConfig walConfig = deployable.config(MiruWALConfig.class);
-            MiruSyncSender<?, ?> syncSender = null;
             MiruSyncReceiver<?, ?> syncReceiver = null;
             MiruSyncCopier<?, ?> syncCopier;
+            MiruSyncSenders<?, ?> syncSenders = null;
+
             if (walConfig.getActivityWALType().equals("rcvs") || walConfig.getActivityWALType().equals("rcvs_amza")) {
-                MiruWALClient<RCVSCursor, RCVSSipCursor> rcvsWALClient = new MiruWALClientInitializer().initialize("", walHttpClient, mapper,
-                    walClientSickThreads, 10_000,
-                    "/miru/wal/rcvs", RCVSCursor.class, RCVSSipCursor.class);
-                if (syncConfig.getSyncSenderEnabled()) {
-                    syncSender = (MiruSyncSender) new MiruSyncSenderInitializer().initialize(syncConfig,
-                        amzaClientAquariumProvider,
-                        orderIdProvider,
-                        clusterClient,
-                        rcvsWALClient,
-                        amzaClientProvider,
-                        mapper,
-                        miruSyncConfigStorage,
-                        RCVSCursor.INITIAL,
-                        RCVSCursor.class);
-                }
+                MiruWALClient<RCVSCursor, RCVSSipCursor> rcvsWALClient = new MiruWALClientInitializer().initialize("",
+                    walHttpClient,
+                    mapper,
+                    walClientSickThreads,
+                    10_000,
+                    "/miru/wal/rcvs",
+                    RCVSCursor.class,
+                    RCVSSipCursor.class);
+                syncCopier = (MiruSyncCopier) new MiruSyncCopier<>(rcvsWALClient, syncConfig.getCopyBatchSize(), RCVSCursor.INITIAL, RCVSCursor.class);
+
                 if (syncConfig.getSyncReceiverEnabled()) {
                     syncReceiver = (MiruSyncReceiver) new MiruSyncReceiver<>(rcvsWALClient, writerHttpClient, clusterClient, activityReadEventConverter);
                 }
-                syncCopier = (MiruSyncCopier) new MiruSyncCopier<>(rcvsWALClient, syncConfig.getCopyBatchSize(), RCVSCursor.INITIAL, RCVSCursor.class);
-            } else if (walConfig.getActivityWALType().equals("amza") || walConfig.getActivityWALType().equals("amza_rcvs")) {
-                MiruWALClient<AmzaCursor, AmzaSipCursor> amzaWALClient = new MiruWALClientInitializer().initialize("", walHttpClient, mapper,
-                    walClientSickThreads, 10_000,
-                    "/miru/wal/amza", AmzaCursor.class, AmzaSipCursor.class);
+
                 if (syncConfig.getSyncSenderEnabled()) {
-                    syncSender = (MiruSyncSender) new MiruSyncSenderInitializer().initialize(syncConfig,
-                        amzaClientAquariumProvider,
+                    ExecutorService executorService = Executors.newCachedThreadPool();
+                    ClusterSchemaProvider schemaProvider = new ClusterSchemaProvider(clusterClient, 10_000);
+
+                    syncSenders = new MiruSyncSenders<>(
+                        syncConfig,
                         orderIdProvider,
-                        clusterClient,
-                        amzaWALClient,
+                        executorService,
                         amzaClientProvider,
+                        amzaClientAquariumProvider,
                         mapper,
+                        schemaProvider,
+                        miruSyncSenderConfigStorage,
                         miruSyncConfigStorage,
-                        null,
-                        AmzaCursor.class);
+                        30_000, // TODO config
+                        rcvsWALClient,
+                        RCVSCursor.INITIAL,
+                        RCVSCursor.class
+                    );
                 }
-                if (syncConfig.getSyncReceiverEnabled()) {
-                    syncReceiver = (MiruSyncReceiver) new MiruSyncReceiver<>(amzaWALClient, writerHttpClient, clusterClient, activityReadEventConverter);
-                }
+
+            } else if (walConfig.getActivityWALType().equals("amza") || walConfig.getActivityWALType().equals("amza_rcvs")) {
+                MiruWALClient<AmzaCursor, AmzaSipCursor> amzaWALClient = new MiruWALClientInitializer().initialize("",
+                    walHttpClient,
+                    mapper,
+                    walClientSickThreads, 10_000,
+                    "/miru/wal/amza",
+                    AmzaCursor.class,
+                    AmzaSipCursor.class);
+
                 syncCopier = (MiruSyncCopier) new MiruSyncCopier<>(amzaWALClient, syncConfig.getCopyBatchSize(), null, AmzaCursor.class);
+
+                if (syncConfig.getSyncSenderEnabled()) {
+                    ExecutorService executorService = Executors.newCachedThreadPool();
+                    ClusterSchemaProvider schemaProvider = new ClusterSchemaProvider(clusterClient, 10_000);
+
+                    syncSenders = new MiruSyncSenders<>(
+                        syncConfig,
+                        orderIdProvider,
+                        executorService,
+                        amzaClientProvider,
+                        amzaClientAquariumProvider,
+                        mapper,
+                        schemaProvider,
+                        miruSyncSenderConfigStorage,
+                        miruSyncConfigStorage,
+                        30_000, // TODO config
+                        amzaWALClient,
+                        null,
+                        AmzaCursor.class
+                    );
+                }
+
             } else {
                 throw new IllegalStateException("Invalid activity WAL type: " + walConfig.getActivityWALType());
             }
 
+
             amzaClientAquariumProvider.start();
-            if (syncSender != null) {
-                syncSender.start();
+            if (syncSenders != null) {
+                syncSenders.start();
             }
 
             MiruSoyRendererConfig rendererConfig = deployable.config(MiruSoyRendererConfig.class);
@@ -392,7 +514,7 @@ public class MiruSyncMain {
             MiruSyncUIService miruSyncUIService = new MiruSyncUIServiceInitializer().initialize(instanceConfig.getClusterName(),
                 instanceConfig.getInstanceName(),
                 renderer,
-                syncSender,
+                syncSenders,
                 miruStats,
                 tenantRoutingProvider,
                 mapper);
@@ -414,8 +536,8 @@ public class MiruSyncMain {
 
             deployable.addEndpoints(MiruSyncEndpoints.class);
             deployable.addInjectables(MiruSyncCopier.class, syncCopier);
-            if (syncSender != null) {
-                deployable.addInjectables(MiruSyncSender.class, syncSender);
+            if (syncSenders != null) {
+                deployable.addInjectables(MiruSyncSenders.class, syncSenders);
             }
 
             deployable.addEndpoints(MiruSyncUIEndpoints.class);
@@ -426,6 +548,10 @@ public class MiruSyncMain {
                 deployable.addEndpoints(MiruSyncApiEndpoints.class);
                 deployable.addInjectables(MiruSyncReceiver.class, syncReceiver);
             }
+
+            deployable.addInjectables(MiruSyncConfigStorage.class, miruSyncConfigStorage);
+            deployable.addInjectables(MiruSyncSenderConfigStorage.class, miruSyncSenderConfigStorage);
+
 
             deployable.addResource(sourceTree);
             deployable.addEndpoints(LoadBalancerHealthCheckEndpoints.class);

@@ -14,7 +14,7 @@ public class MiruSyncUIServiceInitializer {
     public MiruSyncUIService initialize(String cluster,
         int instance,
         MiruSoyRenderer renderer,
-        MiruSyncSender<?, ?> syncSender,
+        MiruSyncSenders<?, ?> syncSenders,
         MiruStats miruStats,
         TenantRoutingProvider tenantRoutingProvider,
         ObjectMapper mapper)
@@ -25,6 +25,6 @@ public class MiruSyncUIServiceInitializer {
             new MiruHeaderRegion(cluster, instance, "soy.miru.chrome.headerRegion", renderer, tenantRoutingProvider),
             new MiruAdminRegion("soy.miru.page.adminRegion", renderer, miruStats),
             new MiruStatusRegion("soy.miru.page.statusRegion", renderer,
-                new MiruStatusFocusRegion("soy.miru.page.statusFocusRegion", renderer, syncSender, mapper)));
+                new MiruStatusFocusRegion("soy.miru.page.statusFocusRegion", renderer, syncSenders, mapper)));
     }
 }
