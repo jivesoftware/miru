@@ -18,6 +18,7 @@
                 <table class="table table-condensed">
                     <thead>
                         <tr>
+                            <th>Name</th>
                             <th>To</th>
                             <th>Type</th>
                             <th>Partition</th>
@@ -27,6 +28,7 @@
                     <tbody>
                         {foreach $p in $progress}
                             <tr>
+                                <td>{$p.name}</td>
                                 <td>{$p.toTenantId}</td>
                                 <td>{$p.type}</td>
                                 <td>{$p.partitionId}</td>
