@@ -22,7 +22,7 @@ public interface MiruSyncConfig extends Config {
     int getSyncRingStripes();
 
     @IntDefault(4)
-    int getSyncThreadCount();
+    int getSyncSendersThreadCount();
 
     @IntDefault(16)
     int getAmzaCallerThreadPoolSize();

@@ -10,7 +10,7 @@ import java.util.Map;
 /**
  *
  */
-public class MiruStatusRegion implements MiruPageRegion<MiruTenantId> {
+public class MiruStatusRegion implements MiruPageRegion<MiruStatusRegionInput> {
 
     private final String template;
     private final MiruSoyRenderer renderer;
@@ -23,11 +23,12 @@ public class MiruStatusRegion implements MiruPageRegion<MiruTenantId> {
     }
 
     @Override
-    public String render(MiruTenantId tenantId) {
+    public String render(MiruStatusRegionInput input) {
         Map<String, Object> data = Maps.newHashMap();
-        if (tenantId != null) {
-            data.put("tenant", tenantId.toString());
-            data.put("statusFocusRegion", statusFocusRegion.render(tenantId));
+        if (input != null) {
+            data.put("syncspaceName", input.syncspaceName);
+            data.put("tenant", input.tenantId.toString());
+            data.put("statusFocusRegion", statusFocusRegion.render(input));
         }
         return renderer.render(template, data);
     }

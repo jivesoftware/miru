@@ -19,7 +19,7 @@ import java.util.Map;
 /**
  *
  */
-public class MiruStatusFocusRegion implements MiruRegion<MiruTenantId> {
+public class MiruStatusFocusRegion implements MiruRegion<MiruStatusRegionInput> {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
@@ -40,18 +40,20 @@ public class MiruStatusFocusRegion implements MiruRegion<MiruTenantId> {
     }
 
     @Override
-    public String render(MiruTenantId tenantId) {
+    public String render(MiruStatusRegionInput input) {
         Map<String, Object> data = Maps.newHashMap();
 
-        data.put("tenant", tenantId.toString());
+        data.put("syncspaceName", input.syncspaceName);
+        data.put("tenant", input.tenantId.toString());
         try {
             List<Map<String, Object>> progress = Lists.newArrayList();
             if (syncSenders != null) {
-                for (MiruSyncSender<?, ?> syncSender : syncSenders.getActiveSenders()) {
-                    syncSender.streamProgress(tenantId, null, (toTenantId, type, partitionId) -> {
-                        MiruCursor<?, ?> cursor = syncSender.getTenantPartitionCursor(tenantId, toTenantId, MiruPartitionId.of(partitionId));
+                MiruSyncSender<?, ?> syncSender = syncSenders.getSender(input.syncspaceName);
+                if (syncSender != null) {
+                    syncSender.streamProgress(input.tenantId, null, (toTenantId, type, partitionId) -> {
+                        MiruCursor<?, ?> cursor = syncSender.getTenantPartitionCursor(input.tenantId, toTenantId, MiruPartitionId.of(partitionId));
                         progress.add(ImmutableMap.of(
-                            "name", syncSender.getName(),
+                            "name", syncSender.getConfig().name,
                             "toTenantId", toTenantId.toString(),
                             "type", type.name(),
                             "partitionId", String.valueOf(partitionId),
@@ -64,7 +66,7 @@ public class MiruStatusFocusRegion implements MiruRegion<MiruTenantId> {
             }
             data.put("progress", progress);
         } catch (Exception e) {
-            log.error("Unable to get progress for tenant: {}", new Object[] { tenantId }, e);
+            log.error("Unable to get progress for syncspace:{} tenant:{}", new Object[] { input.syncspaceName, input.tenantId }, e);
         }
 
         return renderer.render(template, data);

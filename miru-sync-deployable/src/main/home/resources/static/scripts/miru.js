@@ -11,13 +11,13 @@ miru.statusFocus = {
     init: function () {
     },
 
-    reset: function(ele, tenant) {
+    reset: function(ele, syncspaceName, tenant) {
         var $button = $(ele);
         $button.attr('disabled', 'disabled');
         var value = $button.val();
         $.ajax({
             type: "POST",
-            url: "/miru/sync/reset/" + tenant,
+            url: "/miru/sync/reset/" + syncspaceName + "/" + tenant,
             data: {},
             //contentType: "application/json",
             success: function () {

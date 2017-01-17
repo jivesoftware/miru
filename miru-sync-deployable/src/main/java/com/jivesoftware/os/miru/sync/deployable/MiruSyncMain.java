@@ -100,6 +100,7 @@ import java.util.Arrays;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import org.glassfish.jersey.oauth1.signature.OAuth1Request;
 import org.glassfish.jersey.oauth1.signature.OAuth1Signature;
 
@@ -391,10 +392,10 @@ public class MiruSyncMain {
                 }
 
                 if (syncConfig.getSyncSenderEnabled()) {
-                    ExecutorService executorService = Executors.newCachedThreadPool();
+                    ScheduledExecutorService executorService = Executors.newScheduledThreadPool(syncConfig.getSyncSendersThreadCount());
                     ClusterSchemaProvider schemaProvider = new ClusterSchemaProvider(clusterClient, 10_000);
 
-                    syncSenders = new MiruSyncSenders<RCVSCursor, RCVSSipCursor>( //  don't remove generics (fails compilation for others when we do)
+                    syncSenders = (MiruSyncSenders) new MiruSyncSenders<>( //  don't remove generics (fails compilation for others when we do)
                         syncConfig,
                         orderIdProvider,
                         executorService,
@@ -427,10 +428,10 @@ public class MiruSyncMain {
                 }
 
                 if (syncConfig.getSyncSenderEnabled()) {
-                    ExecutorService executorService = Executors.newCachedThreadPool();
+                    ScheduledExecutorService executorService = Executors.newScheduledThreadPool(syncConfig.getSyncSendersThreadCount());
                     ClusterSchemaProvider schemaProvider = new ClusterSchemaProvider(clusterClient, 10_000);
 
-                    syncSenders = new MiruSyncSenders<AmzaCursor, AmzaSipCursor>( //  don't remove generics (fails compilation for others when we do)
+                    syncSenders = (MiruSyncSenders) new MiruSyncSenders<>( //  don't remove generics (fails compilation for others when we do)
                         syncConfig,
                         orderIdProvider,
                         executorService,

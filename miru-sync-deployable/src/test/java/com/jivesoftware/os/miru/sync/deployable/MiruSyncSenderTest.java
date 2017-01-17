@@ -39,6 +39,7 @@ import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus;
 import com.jivesoftware.os.miru.api.wal.MiruVersionedActivityLookupEntry;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.api.wal.MiruWALEntry;
+import com.jivesoftware.os.miru.sync.api.MiruSyncSenderConfig;
 import com.jivesoftware.os.miru.sync.api.MiruSyncTenantConfig;
 import com.jivesoftware.os.miru.sync.api.MiruSyncTenantTuple;
 import com.jivesoftware.os.miru.sync.api.MiruSyncTimeShiftStrategy;
@@ -134,13 +135,19 @@ public class MiruSyncSenderTest {
         MiruSchemaProvider schemaProvider = miruTenantId -> schema;
 
         TestWALClient testWALClient = new TestWALClient(tenantId, largestPartitionId);
-        MiruSyncSender<AmzaCursor, AmzaSipCursor> syncService = new MiruSyncSender<>("default",
+        MiruSyncSender<AmzaCursor, AmzaSipCursor> syncService = new MiruSyncSender<>(
+            new MiruSyncSenderConfig(
+                "default",
+                true,
+                "", "", -1,
+                100L,
+                0L,
+                1_000,
+                "", "", "", true),
             amzaClientAquariumProvider,
             orderIdProvider,
             1,
-            Executors.newSingleThreadExecutor(),
-            1,
-            100L,
+            Executors.newScheduledThreadPool(1),
             schemaProvider,
             testWALClient,
             syncClient,
@@ -152,8 +159,6 @@ public class MiruSyncSenderTest {
                 0,
                 MiruSyncTimeShiftStrategy.linear
             )),
-            1_000,
-            0,
             null,
             AmzaCursor.class);
 

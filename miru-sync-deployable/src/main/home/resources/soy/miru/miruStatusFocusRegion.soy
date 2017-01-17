@@ -3,6 +3,7 @@
 /**
  * Status focus page
  *
+ * @param syncspaceName
  * @param tenant
  * @param? error
  * @param? progress
@@ -36,14 +37,14 @@
                             </tr>
                             {if isLast($p)}
                                 <tr>
-                                    <td colspan="4">
-                                        <input class="btn btn-default" type="button" value="Reset" onclick="if (confirm('Are you sure you want to reset progress?')) miru.statusFocus.reset(this, '{$tenant}'); return false"/>
+                                    <td colspan="5">
+                                        <input class="btn btn-default" type="button" value="Reset" onclick="if (confirm('Are you sure you want to reset progress?')) miru.statusFocus.reset(this, '{$syncspaceName}', '{$tenant}'); return false"/>
                                     </td>
                                 </tr>
                             {/if}
                         {ifempty}
                             <tr>
-                                <td colspan="4">No progress found</td>
+                                <td colspan="5">No progress found</td>
                             </tr>
                         {/foreach}
                     </tbody>
