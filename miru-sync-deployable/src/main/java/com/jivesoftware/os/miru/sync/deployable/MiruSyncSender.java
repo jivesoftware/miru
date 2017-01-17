@@ -35,6 +35,7 @@ import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.StreamBatch;
 import com.jivesoftware.os.miru.api.wal.MiruWALEntry;
+import com.jivesoftware.os.miru.sync.api.MiruSyncSenderConfig;
 import com.jivesoftware.os.miru.sync.api.MiruSyncTenantConfig;
 import com.jivesoftware.os.miru.sync.api.MiruSyncTenantTuple;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
@@ -47,7 +48,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -70,21 +73,18 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         0, 0, 0, 0, 0, 0, 0, 0,
         false, Consistency.leader_quorum, true, true, false, RowType.primary, "lab", 8, null, -1, -1);
 
-    private final String name;
+    private final MiruSyncSenderConfig config;
     private final AmzaClientAquariumProvider amzaClientAquariumProvider;
     private final TimestampedOrderIdProvider orderIdProvider;
     private final int syncRingStripes;
-    private final ExecutorService executorService;
-    private final int syncThreadCount;
-    private final long syncIntervalMillis;
+    private final ScheduledExecutorService executorService;
+    private final ScheduledFuture[] syncFutures;
     private final MiruSchemaProvider schemaProvider;
     private final MiruWALClient<C, S> fromWALClient;
     private final MiruSyncClient toSyncClient;
     private final PartitionClientProvider partitionClientProvider;
     private final ObjectMapper mapper;
     private final MiruSyncConfigProvider syncConfigProvider;
-    private final int batchSize;
-    private final long forwardSyncDelayMillis;
     private final C defaultCursor;
     private final Class<C> cursorClass;
 
@@ -96,80 +96,74 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
     private final long abandonLeaderSolutionAfterNMillis = 30_000; //TODO expose to conf?
     private final long abandonSolutionAfterNMillis = 60_000; //TODO expose to conf?
 
-    public MiruSyncSender(String name,
+    public MiruSyncSender(MiruSyncSenderConfig config,
         AmzaClientAquariumProvider amzaClientAquariumProvider,
         TimestampedOrderIdProvider orderIdProvider,
         int syncRingStripes,
-        ExecutorService executorService,
-        int syncThreadCount,
-        long syncIntervalMillis,
+        ScheduledExecutorService executorService,
         MiruSchemaProvider schemaProvider,
         MiruWALClient<C, S> fromWALClient,
         MiruSyncClient toSyncClient,
         PartitionClientProvider partitionClientProvider,
         ObjectMapper mapper,
         MiruSyncConfigProvider syncConfigProvider,
-        int batchSize,
-        long forwardSyncDelayMillis,
         C defaultCursor,
         Class<C> cursorClass) {
 
-        this.name = name;
+        this.config = config;
         this.amzaClientAquariumProvider = amzaClientAquariumProvider;
         this.orderIdProvider = orderIdProvider;
         this.syncRingStripes = syncRingStripes;
         this.executorService = executorService;
-        this.syncThreadCount = syncThreadCount;
-        this.syncIntervalMillis = syncIntervalMillis;
+        this.syncFutures = new ScheduledFuture[syncRingStripes];
         this.schemaProvider = schemaProvider;
         this.fromWALClient = fromWALClient;
         this.toSyncClient = toSyncClient;
         this.partitionClientProvider = partitionClientProvider;
         this.mapper = mapper;
         this.syncConfigProvider = syncConfigProvider;
-        this.batchSize = batchSize;
-        this.forwardSyncDelayMillis = forwardSyncDelayMillis;
         this.defaultCursor = defaultCursor;
         this.cursorClass = cursorClass;
     }
 
-    public String getName() {
-        return name;
+    public MiruSyncSenderConfig getConfig() {
+        return config;
+    }
+
+    public boolean configHasChanged(MiruSyncSenderConfig senderConfig) {
+        return !config.equals(senderConfig);
+    }
+
+    private String aquariumName(int syncStripe) {
+        return "miru-sync-" + config.name + "-stripe-" + syncStripe;
     }
 
     public void start() {
         if (running.compareAndSet(false, true)) {
-            for (int i = 0; i < syncThreadCount; i++) {
-                int index = i;
-                executorService.submit(() -> {
-                    while (running.get()) {
-                        try {
-                            for (int j = 0; j < syncRingStripes; j++) {
-                                if (threadIndex(j) == index) {
-                                    syncStripe(j);
-                                }
-                            }
-                            Thread.sleep(syncIntervalMillis);
-                        } catch (InterruptedException e) {
-                            LOG.info("Sync thread {} was interrupted", index);
-                        } catch (Throwable t) {
-                            LOG.error("Failure in sync thread {}", new Object[] { index }, t);
-                            Thread.sleep(syncIntervalMillis);
-                        }
-                    }
-                    return null;
-                });
+            for (int i = 0; i < syncRingStripes; i++) {
+                amzaClientAquariumProvider.register(aquariumName(i));
             }
 
             for (int i = 0; i < syncRingStripes; i++) {
-                amzaClientAquariumProvider.register("sync-stripe-" + i);
+                int index = i;
+                syncFutures[i] = executorService.scheduleWithFixedDelay(() -> {
+                    try {
+                        syncStripe(index);
+                    } catch (InterruptedException e) {
+                        LOG.info("Sync thread {} was interrupted", index);
+                    } catch (Throwable t) {
+                        LOG.error("Failure in sync thread {}", new Object[] { index }, t);
+                    }
+                }, 0, config.syncIntervalMillis, TimeUnit.MILLISECONDS);
             }
         }
     }
 
     public void stop() {
         if (running.compareAndSet(true, false)) {
-            executorService.shutdownNow();
+            for (int i = 0; i < syncRingStripes; i++) {
+                syncFutures[i].cancel(true);
+            }
         }
     }
 
@@ -274,11 +268,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
     }
 
     private LivelyEndState livelyEndState(int syncStripe) throws Exception {
-        return amzaClientAquariumProvider.livelyEndState("sync-stripe-" + syncStripe);
-    }
-
-    private int threadIndex(int syncStripe) {
-        return syncStripe % syncThreadCount;
+        return amzaClientAquariumProvider.livelyEndState(aquariumName(syncStripe));
     }
 
     private PartitionClient progressClient() throws Exception {
@@ -286,7 +276,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
     }
 
     private PartitionName progressName() {
-        byte[] nameBytes = ("sync-progress-" + name).getBytes(StandardCharsets.UTF_8);
+        byte[] nameBytes = ("miru-sync-progress-" + config.name).getBytes(StandardCharsets.UTF_8);
         return new PartitionName(false, nameBytes, nameBytes);
     }
 
@@ -295,7 +285,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
     }
 
     private PartitionName cursorName() {
-        byte[] nameBytes = ("sync-cursor-" + name).getBytes(StandardCharsets.UTF_8);
+        byte[] nameBytes = ("miru-sync-cursor-" + config.name).getBytes(StandardCharsets.UTF_8);
         return new PartitionName(false, nameBytes, nameBytes);
     }
 
@@ -308,7 +298,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         int tenantCount = 0;
         int activityCount = 0;
         Map<MiruSyncTenantTuple, MiruSyncTenantConfig> tenantIds;
-        tenantIds = syncConfigProvider.getAll(name);
+        tenantIds = syncConfigProvider.getAll(config.name);
 
         for (Entry<MiruSyncTenantTuple, MiruSyncTenantConfig> entry : tenantIds.entrySet()) {
             if (!isElected(stripe)) {
@@ -415,8 +405,8 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
 
         int synced = 0;
         while (true) {
-            long stopAtTimestamp = type == forward ? orderIdProvider.getApproximateId(System.currentTimeMillis() - forwardSyncDelayMillis) : -1;
-            StreamBatch<MiruWALEntry, C> batch = fromWALClient.getActivity(tenantTuple.from, partitionId, cursor, batchSize, stopAtTimestamp);
+            long stopAtTimestamp = type == forward ? orderIdProvider.getApproximateId(System.currentTimeMillis() - config.forwardSyncDelayMillis) : -1;
+            StreamBatch<MiruWALEntry, C> batch = fromWALClient.getActivity(tenantTuple.from, partitionId, cursor, config.batchSize, stopAtTimestamp);
             if (!isElected(stripe)) {
                 return synced;
             }

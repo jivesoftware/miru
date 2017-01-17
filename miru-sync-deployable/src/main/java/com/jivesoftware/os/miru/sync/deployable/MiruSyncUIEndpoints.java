@@ -1,12 +1,12 @@
 package com.jivesoftware.os.miru.sync.deployable;
 
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.sync.deployable.region.MiruStatusRegionInput;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.nio.charset.StandardCharsets;
 import javax.inject.Singleton;
 import javax.ws.rs.GET;
-import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
@@ -46,10 +46,11 @@ public class MiruSyncUIEndpoints {
     }
 
     @GET
-    @Path("/status/{tenantId}")
+    @Path("/status/{syncspaceName}/{tenantId}")
     @Produces(MediaType.TEXT_HTML)
-    public Response getStatus(@PathParam("tenantId") String tenantId) {
-        String rendered = syncUIService.renderStatus(new MiruTenantId(tenantId.getBytes(StandardCharsets.UTF_8)));
+    public Response getStatus(@PathParam("syncspaceName") String syncspaceName,
+        @PathParam("tenantId") String tenantId) {
+        String rendered = syncUIService.renderStatus(new MiruStatusRegionInput(syncspaceName, new MiruTenantId(tenantId.getBytes(StandardCharsets.UTF_8))));
         return Response.ok(rendered).build();
     }
 

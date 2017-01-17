@@ -18,10 +18,12 @@ import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelper;
 import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelperUtils;
 import com.jivesoftware.os.routing.bird.http.client.OAuthSigner;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import oauth.signpost.commonshttp.CommonsHttpOAuthConsumer;
 import oauth.signpost.signature.HmacSha1MessageSigner;
@@ -40,7 +42,7 @@ public class MiruSyncSenders<C extends MiruCursor<C, S>, S extends MiruSipCursor
 
     private final MiruSyncConfig syncConfig;
     private final TimestampedOrderIdProvider orderIdProvider;
-    private final ExecutorService executorService;
+    private final ScheduledExecutorService executorService;
     private final PartitionClientProvider partitionClientProvider;
     private final AmzaClientAquariumProvider clientAquariumProvider;
     private final ObjectMapper mapper;
@@ -56,7 +58,7 @@ public class MiruSyncSenders<C extends MiruCursor<C, S>, S extends MiruSipCursor
 
     public MiruSyncSenders(MiruSyncConfig syncConfig,
         TimestampedOrderIdProvider orderIdProvider,
-        ExecutorService executorService,
+        ScheduledExecutorService executorService,
         PartitionClientProvider partitionClientProvider,
         AmzaClientAquariumProvider clientAquariumProvider,
         ObjectMapper mapper,
@@ -84,6 +86,10 @@ public class MiruSyncSenders<C extends MiruCursor<C, S>, S extends MiruSipCursor
         this.cursorClass = cursorClass;
     }
 
+    public MiruSyncSender<?, ?> getSender(String syncspaceName) {
+        return senders.get(syncspaceName);
+    }
+
     public Collection<MiruSyncSender<C, S>> getActiveSenders() {
         return senders.values();
     }
@@ -96,34 +102,39 @@ public class MiruSyncSenders<C extends MiruCursor<C, S>, S extends MiruSipCursor
                         Map<String, MiruSyncSenderConfig> all = syncSenderConfigProvider.getAll();
                         for (Entry<String, MiruSyncSenderConfig> entry : all.entrySet()) {
                             MiruSyncSender<C, S> syncSender = senders.get(entry.getKey());
-                            if (syncSender != null) {
-                                // TODO see if config changes and if so teardown and restart?
-                            } else {
-
-                                MiruSyncSenderConfig senderConfig = entry.getValue();
-
+                            MiruSyncSenderConfig senderConfig = entry.getValue();
+                            if (syncSender != null && syncSender.configHasChanged(senderConfig)) {
+                                syncSender.stop();
+                                syncSender = null;
+                            }
+                            if (syncSender == null) {
                                 syncSender = new MiruSyncSender<C, S>(
-                                    entry.getKey(),
+                                    senderConfig,
                                     clientAquariumProvider,
                                     orderIdProvider,
                                     syncConfig.getSyncRingStripes(),
                                     executorService,
-                                    syncConfig.getSyncThreadCount(),
-                                    senderConfig.syncIntervalMillis,
                                     schemaProvider,
                                     miruWALClient,
                                     syncClient(senderConfig),
                                     partitionClientProvider,
                                     mapper,
                                     syncConfigProvider,
-                                    senderConfig.batchSize,
-                                    senderConfig.forwardSyncDelayMillis,
                                     defaultCursor,
                                     cursorClass
                                 );
 
                                 senders.put(entry.getKey(), syncSender);
                                 syncSender.start();
+                            }
+                        }
+
+                        // stop any senders that are no longer registered
+                        for (Iterator<Entry<String, MiruSyncSender<C, S>>> iterator = senders.entrySet().iterator(); iterator.hasNext(); ) {
+                            Entry<String, MiruSyncSender<C, S>> entry = iterator.next();
+                            if (!all.containsKey(entry.getKey())) {
+                                entry.getValue().stop();
+                                iterator.remove();
                             }
                         }
 

@@ -178,19 +178,6 @@ public class MiruSyncEndpoints {
         }
     }
 
-
-    @GET
-    @Path("/")
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response get() {
-        try {
-            return responseHelper.jsonResponse("Success");
-        } catch (Exception e) {
-            LOG.error("Failed to get.", e);
-            return Response.serverError().build();
-        }
-    }
-
     @POST
     @Path("/reset/{syncspaceName}/{tenantId}")
     @Produces(MediaType.APPLICATION_JSON)
@@ -198,13 +185,8 @@ public class MiruSyncEndpoints {
         @PathParam("tenantId") String tenantId) {
         try {
             if (syncSenders != null) {
-                boolean result = false;
-                for (MiruSyncSender<?, ?> miruSyncSender : syncSenders.getActiveSenders()) {
-                    if (miruSyncSender.getName().equals(syncspaceName)) {
-                        result = miruSyncSender.resetProgress(new MiruTenantId(tenantId.getBytes(StandardCharsets.UTF_8)));
-                        break;
-                    }
-                }
+                MiruSyncSender<?, ?> miruSyncSender = syncSenders.getSender(syncspaceName);
+                boolean result = miruSyncSender != null && miruSyncSender.resetProgress(new MiruTenantId(tenantId.getBytes(StandardCharsets.UTF_8)));
                 return Response.ok(result).build();
             } else {
                 return Response.status(Status.SERVICE_UNAVAILABLE).entity("Sender is not enabled").build();

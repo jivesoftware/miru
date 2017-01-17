@@ -1221,7 +1221,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
                             return streamRangeLookup.stream(streamPartitionId, ingressType, FilerIO.bytesLong(value));
                         }
                     }
-                    return false;
+                    return true;
                 },
                 true
             );

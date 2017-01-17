@@ -3,6 +3,8 @@
 /**
  * Status page
  *
+ * @param syncspaces
+ * @param? syncspaceName
  * @param? tenant
  * @param? statusFocusRegion
  */
@@ -14,10 +16,36 @@
             <form id="tenantPickerForm" class="j-form" data-active-class="btn-default" data-input-el="#tenantPicker" data-form-el="#tenantPickerForm"
                 data-jive-ui="jive/ui/typeahead/tenant_typeahead" method="post" name="tenantPickerForm" action="#"
                 //TODO wire this up correctly
-                onsubmit="location.href='/ui/status/'+document.getElementById('tenantPicker').value+'#focus'; return false">
-                <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
-                    class="j-tenant-autocomplete j-autocomplete-input j-ui-elem" placeholder="Tenant" value="{$tenant?:''}"
-                    name="tenantId" id="tenantPicker" data-original-title="" title="">
+                onsubmit="location.href='/ui/status/'+document.getElementById('syncspaceNamePicker').value+'/'+document.getElementById('tenantPicker').value+'#focus'; return false">
+
+                <table class="table table-condensed">
+                    <tbody>
+                        <tr>
+                            <td>Sync Space</td>
+                            <td>
+                                <select class="form-control" placeholder="type" style="width:360px; padding-left:10px;"
+                                    name="syncspaceName" id="syncspaceNamePicker" title="">
+                                    {foreach $s in $syncspaces}
+                                        <option value="{$s}" {if $s == $syncspaceName}selected="selected"{/if}>{$s}</option>
+                                    {/foreach}
+                                </select>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Tenant</td>
+                            <td>
+                                <input type="text" autocomplete="off" role="combobox" style="width:280px; padding-left:10px;"
+                                    class="j-tenant-autocomplete j-autocomplete-input j-ui-elem" placeholder="Tenant" value="{$tenant?:''}"
+                                    name="tenantId" id="tenantPicker" data-original-title="" title="">
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2">
+                                <input type="submit" value="Find Progress">
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </form>
         </div>
     </div>

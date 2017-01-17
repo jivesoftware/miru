@@ -2,11 +2,12 @@ package com.jivesoftware.os.miru.sync.deployable;
 
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.ui.MiruPageRegion;
-import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.miru.sync.deployable.region.MiruChromeRegion;
 import com.jivesoftware.os.miru.sync.deployable.region.MiruHeaderRegion;
+import com.jivesoftware.os.miru.sync.deployable.region.MiruStatusRegionInput;
 import com.jivesoftware.os.miru.sync.deployable.region.MiruSyncPlugin;
+import com.jivesoftware.os.miru.ui.MiruPageRegion;
+import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import java.util.List;
 
 /**
@@ -17,7 +18,7 @@ public class MiruSyncUIService {
     private final MiruSoyRenderer renderer;
     private final MiruHeaderRegion headerRegion;
     private final MiruPageRegion<Void> adminRegion;
-    private final MiruPageRegion<MiruTenantId> statusRegion;
+    private final MiruPageRegion<MiruStatusRegionInput> statusRegion;
 
     private final List<MiruSyncPlugin> plugins = Lists.newCopyOnWriteArrayList();
 
@@ -25,7 +26,7 @@ public class MiruSyncUIService {
         MiruSoyRenderer renderer,
         MiruHeaderRegion headerRegion,
         MiruPageRegion<Void> adminRegion,
-        MiruPageRegion<MiruTenantId> statusRegion) {
+        MiruPageRegion<MiruStatusRegionInput> statusRegion) {
         this.renderer = renderer;
         this.headerRegion = headerRegion;
         this.adminRegion = adminRegion;
@@ -40,7 +41,7 @@ public class MiruSyncUIService {
         return chrome(adminRegion).render(null);
     }
 
-    public String renderStatus(MiruTenantId tenantId) {
-        return chrome(statusRegion).render(tenantId);
+    public String renderStatus(MiruStatusRegionInput input) {
+        return chrome(statusRegion).render(input);
     }
 }
