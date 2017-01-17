@@ -131,7 +131,7 @@ public class MiruSyncEndpoints {
                 }
                 return Response.ok(map).build();
             }
-            return Response.noContent().entity("{}").build();
+            return Response.ok("{}").build();
         } catch (Exception e) {
             LOG.error("Failed to get.", e);
             return Response.serverError().build();
