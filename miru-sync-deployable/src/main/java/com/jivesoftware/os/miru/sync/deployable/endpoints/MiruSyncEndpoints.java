@@ -163,7 +163,7 @@ public class MiruSyncEndpoints {
     @DELETE
     @Path("/delete/{syncspaceName}/{fromTenantId}/{toTenantId}")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response delete(@PathParam("syncspace") String syncspaceName,
+    public Response delete(@PathParam("syncspaceName") String syncspaceName,
         @PathParam("fromTenantId") String fromTenantId,
         @PathParam("toTenantId") String toTenantId) {
         try {
