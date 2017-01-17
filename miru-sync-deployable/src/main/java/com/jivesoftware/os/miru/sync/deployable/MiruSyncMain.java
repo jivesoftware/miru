@@ -422,6 +422,10 @@ public class MiruSyncMain {
 
                 syncCopier = (MiruSyncCopier) new MiruSyncCopier<>(amzaWALClient, syncConfig.getCopyBatchSize(), null, AmzaCursor.class);
 
+                if (syncConfig.getSyncReceiverEnabled()) {
+                    syncReceiver = (MiruSyncReceiver) new MiruSyncReceiver<>(amzaWALClient, writerHttpClient, clusterClient, activityReadEventConverter);
+                }
+
                 if (syncConfig.getSyncSenderEnabled()) {
                     ExecutorService executorService = Executors.newCachedThreadPool();
                     ClusterSchemaProvider schemaProvider = new ClusterSchemaProvider(clusterClient, 10_000);
