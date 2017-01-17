@@ -86,6 +86,10 @@ public class MiruSyncSenders<C extends MiruCursor<C, S>, S extends MiruSipCursor
         this.cursorClass = cursorClass;
     }
 
+    public Collection<String> getSyncspaces() {
+        return senders.keySet();
+    }
+
     public MiruSyncSender<?, ?> getSender(String syncspaceName) {
         return senders.get(syncspaceName);
     }
