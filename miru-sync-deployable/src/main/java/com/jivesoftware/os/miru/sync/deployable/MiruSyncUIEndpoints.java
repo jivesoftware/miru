@@ -41,8 +41,13 @@ public class MiruSyncUIEndpoints {
     @Path("/status")
     @Produces(MediaType.TEXT_HTML)
     public Response getStatus() {
-        String rendered = syncUIService.renderStatus(null);
-        return Response.ok(rendered).build();
+        try {
+            String rendered = syncUIService.renderStatus(null);
+            return Response.ok(rendered).build();
+        } catch (Throwable t) {
+            LOG.error("Failed to getStatus", t);
+            return Response.serverError().build();
+        }
     }
 
     @GET
@@ -50,8 +55,13 @@ public class MiruSyncUIEndpoints {
     @Produces(MediaType.TEXT_HTML)
     public Response getStatus(@PathParam("syncspaceName") String syncspaceName,
         @PathParam("tenantId") String tenantId) {
-        String rendered = syncUIService.renderStatus(new MiruStatusRegionInput(syncspaceName, new MiruTenantId(tenantId.getBytes(StandardCharsets.UTF_8))));
-        return Response.ok(rendered).build();
+        try {
+            String rendered = syncUIService.renderStatus(new MiruStatusRegionInput(syncspaceName, new MiruTenantId(tenantId.getBytes(StandardCharsets.UTF_8))));
+            return Response.ok(rendered).build();
+        } catch (Throwable t) {
+            LOG.error("Failed to getStatus({}, {})", new Object[] { syncspaceName, tenantId }, t);
+            return Response.serverError().build();
+        }
     }
 
 }
