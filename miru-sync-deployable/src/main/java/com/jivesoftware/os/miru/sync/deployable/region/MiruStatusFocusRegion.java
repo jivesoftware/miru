@@ -5,7 +5,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
-import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.wal.MiruCursor;
 import com.jivesoftware.os.miru.sync.deployable.MiruSyncSender;
 import com.jivesoftware.os.miru.sync.deployable.MiruSyncSenders;
@@ -13,6 +12,8 @@ import com.jivesoftware.os.miru.ui.MiruRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -43,6 +44,8 @@ public class MiruStatusFocusRegion implements MiruRegion<MiruStatusRegionInput> 
     public String render(MiruStatusRegionInput input) {
         Map<String, Object> data = Maps.newHashMap();
 
+        SimpleDateFormat dateFormat = new SimpleDateFormat("EEE, dd MMM yyyy hh:mm:ss z");
+
         data.put("syncspaceName", input.syncspaceName);
         data.put("tenant", input.tenantId.toString());
         try {
@@ -50,14 +53,18 @@ public class MiruStatusFocusRegion implements MiruRegion<MiruStatusRegionInput> 
             if (syncSenders != null) {
                 MiruSyncSender<?, ?> syncSender = syncSenders.getSender(input.syncspaceName);
                 if (syncSender != null) {
-                    syncSender.streamProgress(input.tenantId, null, (toTenantId, type, partitionId) -> {
+                    syncSender.streamProgress(input.tenantId, null, (fromTenantId, toTenantId, type, partitionId, timestamp, taking) -> {
                         MiruCursor<?, ?> cursor = syncSender.getTenantPartitionCursor(input.tenantId, toTenantId, MiruPartitionId.of(partitionId));
-                        progress.add(ImmutableMap.of(
-                            "name", syncSender.getConfig().name,
-                            "toTenantId", toTenantId.toString(),
-                            "type", type.name(),
-                            "partitionId", String.valueOf(partitionId),
-                            "cursor", mapper.writeValueAsString(cursor)));
+                        progress.add(ImmutableMap.<String, Object>builder()
+                            .put("name", syncSender.getConfig().name)
+                            .put("from", fromTenantId.toString())
+                            .put("to", toTenantId.toString())
+                            .put("type", type.name())
+                            .put("partitionId", String.valueOf(partitionId))
+                            .put("time", dateFormat.format(new Date(timestamp)))
+                            .put("taking", taking)
+                            .put("cursor", mapper.writeValueAsString(cursor))
+                            .build());
                         return true;
                     });
                 }
