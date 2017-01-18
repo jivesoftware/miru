@@ -46,6 +46,7 @@ import com.jivesoftware.os.miru.sync.api.MiruSyncTimeShiftStrategy;
 import com.jivesoftware.os.miru.sync.deployable.MiruSyncSender.ProgressType;
 import com.jivesoftware.os.routing.bird.shared.HostPort;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -202,7 +203,7 @@ public class MiruSyncSenderTest {
         long failAfter) throws Exception {
         int[] progressIds = { Integer.MIN_VALUE, Integer.MIN_VALUE, Integer.MIN_VALUE };
         while (true) {
-            syncService.streamProgress(tenantId, tenantId, (toTenantId, type, partitionId) -> {
+            syncService.streamProgress(tenantId, tenantId, (fromTenantId, toTenantId, type, partitionId, timestamp, taking) -> {
                 Assert.assertEquals(toTenantId, tenantId);
                 progressIds[type.index] = partitionId;
                 return true;

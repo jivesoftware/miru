@@ -20,9 +20,12 @@
                     <thead>
                         <tr>
                             <th>Name</th>
+                            <th>From</th>
                             <th>To</th>
                             <th>Type</th>
                             <th>Partition</th>
+                            <th>Time</th>
+                            <th>Taking</th>
                             <th>Cursor</th>
                         </tr>
                     </thead>
@@ -30,21 +33,24 @@
                         {foreach $p in $progress}
                             <tr>
                                 <td>{$p.name}</td>
-                                <td>{$p.toTenantId}</td>
+                                <td>{$p.from}</td>
+                                <td>{$p.to}</td>
                                 <td>{$p.type}</td>
                                 <td>{$p.partitionId}</td>
+                                <td>{$p.time}</td>
+                                <td>{$p.taking}</td>
                                 <td>{$p.cursor}</td>
                             </tr>
                             {if isLast($p)}
                                 <tr>
-                                    <td colspan="5">
+                                    <td colspan="8">
                                         <input class="btn btn-default" type="button" value="Reset" onclick="if (confirm('Are you sure you want to reset progress?')) miru.statusFocus.reset(this, '{$syncspaceName}', '{$tenant}'); return false"/>
                                     </td>
                                 </tr>
                             {/if}
                         {ifempty}
                             <tr>
-                                <td colspan="5">No progress found</td>
+                                <td colspan="8">No progress found</td>
                             </tr>
                         {/foreach}
                     </tbody>
