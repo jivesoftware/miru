@@ -18,10 +18,10 @@ public interface MiruSyncConfig extends Config {
     @BooleanDefault(false)
     boolean getSyncReceiverEnabled();
 
-    @IntDefault(16)
+    @IntDefault(128)
     int getSyncRingStripes();
 
-    @IntDefault(4)
+    @IntDefault(24)
     int getSyncSendersThreadCount();
 
     @IntDefault(16)
