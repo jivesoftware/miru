@@ -443,7 +443,9 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
             int activityTypes = 0;
             if (batch.activities != null && !batch.activities.isEmpty()) {
                 long ingressLatency = System.currentTimeMillis() - start;
+                stats.ingressed("sender/sync/bytes", bytesCount.longValue(), 0);
                 stats.ingressed(statsBytes, bytesCount.longValue(), ingressLatency);
+                stats.ingressed("sender/sync/count", batch.activities.size(), 0);
                 stats.ingressed(statsCount, batch.activities.size(), ingressLatency);
                 start = System.currentTimeMillis();
 
@@ -471,7 +473,9 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                     synced += activities.size();
 
                     long egressLatency = System.currentTimeMillis() - start;
+                    stats.egressed("sender/sync/bytes", bytesCount.longValue(), 0);
                     stats.egressed(statsBytes, bytesCount.longValue(), egressLatency);
+                    stats.egressed("sender/sync/count", activities.size(), 0);
                     stats.egressed(statsCount, activities.size(), egressLatency);
 
                     if (!took) {
