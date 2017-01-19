@@ -21,6 +21,7 @@ import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.jive.utils.ordered.id.TimestampedOrderIdProvider;
+import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
@@ -46,7 +47,6 @@ import com.jivesoftware.os.miru.sync.api.MiruSyncTimeShiftStrategy;
 import com.jivesoftware.os.miru.sync.deployable.MiruSyncSender.ProgressType;
 import com.jivesoftware.os.routing.bird.shared.HostPort;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -55,6 +55,7 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import org.apache.commons.lang.mutable.MutableLong;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
@@ -137,6 +138,7 @@ public class MiruSyncSenderTest {
 
         TestWALClient testWALClient = new TestWALClient(tenantId, largestPartitionId);
         MiruSyncSender<AmzaCursor, AmzaSipCursor> syncService = new MiruSyncSender<>(
+            new MiruStats(),
             new MiruSyncSenderConfig(
                 "default",
                 true,
@@ -289,7 +291,8 @@ public class MiruSyncSenderTest {
             MiruPartitionId partitionId,
             AmzaCursor cursor,
             int batchSize,
-            long stopAtTimestamp) throws Exception {
+            long stopAtTimestamp,
+            MutableLong bytesCount) throws Exception {
             List<MiruWALEntry> entries;
             NamedCursor namedCursor = (cursor == null || cursor.cursors == null || cursor.cursors.isEmpty()) ? null : cursor.cursors.get(0);
             if (partitionId.getId() == largestPartitionId.get() || namedCursor != null && namedCursor.compareTo(stopCursor) == 0) {

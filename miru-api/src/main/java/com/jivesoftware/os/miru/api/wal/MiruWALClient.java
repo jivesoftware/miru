@@ -8,6 +8,7 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.routing.bird.shared.HostPort;
 import java.util.List;
 import java.util.Set;
+import org.apache.commons.lang.mutable.MutableLong;
 
 /**
  * @author jonathan.colt
@@ -59,7 +60,8 @@ public interface MiruWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
         MiruPartitionId partitionId,
         C cursor,
         int batchSize,
-        long stopAtTimestamp) throws Exception;
+        long stopAtTimestamp,
+        MutableLong bytesCount) throws Exception;
 
     StreamBatch<MiruWALEntry, S> sipActivity(MiruTenantId tenantId,
         MiruPartitionId partitionId, S cursor, Set<TimeAndVersion> lastSeen, int batchSize) throws Exception;

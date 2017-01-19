@@ -351,7 +351,7 @@ public class RCVSWALEndpoints {
         try {
             long start = System.currentTimeMillis();
             StreamBatch<MiruWALEntry, RCVSCursor> activity = walDirector.getActivity(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
-                MiruPartitionId.of(partitionId), cursor, batchSize, stopAtTimestamp);
+                MiruPartitionId.of(partitionId), cursor, batchSize, stopAtTimestamp, null);
             stats.ingressed("/activity/" + tenantId + "/" + partitionId + "/" + batchSize, 1, System.currentTimeMillis() - start);
             return responseHelper.jsonResponse(activity);
         } catch (MiruWALNotInitializedException x) {

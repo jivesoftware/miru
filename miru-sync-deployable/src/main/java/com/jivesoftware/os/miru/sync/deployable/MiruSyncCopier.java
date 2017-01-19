@@ -42,7 +42,7 @@ public class MiruSyncCopier<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         int copied = 0;
         boolean started = false;
         while (true) {
-            StreamBatch<MiruWALEntry, C> batch = walClient.getActivity(fromTenantId, fromPartitionId, cursor, batchSize, -1);
+            StreamBatch<MiruWALEntry, C> batch = walClient.getActivity(fromTenantId, fromPartitionId, cursor, batchSize, -1, null);
             int activityTypes = 0;
             if (batch.activities != null && !batch.activities.isEmpty()) {
                 List<MiruPartitionedActivity> copyOfActivities = Lists.newArrayListWithCapacity(batch.activities.size());

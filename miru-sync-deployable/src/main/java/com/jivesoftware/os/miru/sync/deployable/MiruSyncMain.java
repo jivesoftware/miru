@@ -98,7 +98,6 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import org.glassfish.jersey.oauth1.signature.OAuth1Request;
@@ -138,6 +137,7 @@ public class MiruSyncMain {
 
             ObjectMapper mapper = new ObjectMapper();
             mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
+            mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
             mapper.registerModule(new GuavaModule());
 
             TenantRoutingProvider tenantRoutingProvider = deployable.getTenantRoutingProvider();
@@ -270,10 +270,6 @@ public class MiruSyncMain {
                 10_000L, //TODO config
                 syncConfig.getUseClientSolutionLog());
 
-            ObjectMapper miruSyncMapper = new ObjectMapper();
-            miruSyncMapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
-            miruSyncMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-
             AmzaClientProvider clientProvider = new AmzaClientProvider<>(
                 new HttpPartitionClientFactory(interner),
                 new HttpPartitionHostsProvider(interner, amzaClient, mapper),
@@ -396,6 +392,7 @@ public class MiruSyncMain {
                     ClusterSchemaProvider schemaProvider = new ClusterSchemaProvider(clusterClient, 10_000);
 
                     syncSenders = (MiruSyncSenders) new MiruSyncSenders<>( //  don't remove generics (fails compilation for others when we do)
+                        miruStats,
                         syncConfig,
                         orderIdProvider,
                         executorService,
@@ -432,6 +429,7 @@ public class MiruSyncMain {
                     ClusterSchemaProvider schemaProvider = new ClusterSchemaProvider(clusterClient, 10_000);
 
                     syncSenders = (MiruSyncSenders) new MiruSyncSenders<>( //  don't remove generics (fails compilation for others when we do)
+                        miruStats,
                         syncConfig,
                         orderIdProvider,
                         executorService,
@@ -508,6 +506,7 @@ public class MiruSyncMain {
                 deployable.addInjectables(MiruSyncReceiver.class, syncReceiver);
             }
 
+            deployable.addInjectables(ObjectMapper.class, mapper);
             deployable.addInjectables(MiruSyncConfigStorage.class, miruSyncConfigStorage);
             deployable.addInjectables(MiruSyncSenderConfigStorage.class, miruSyncSenderConfigStorage);
 
