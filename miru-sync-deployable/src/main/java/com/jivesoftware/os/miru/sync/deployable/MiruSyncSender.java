@@ -26,6 +26,7 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivityFactory;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaProvider;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaUnvailableException;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.sync.MiruSyncClient;
 import com.jivesoftware.os.miru.api.wal.MiruActivityWALStatus;
@@ -320,7 +321,12 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
             int tenantStripe = Math.abs(tenantTuple.from.hashCode() % syncRingStripes);
             if (tenantStripe == stripe) {
                 tenantCount++;
-                ensureSchema(tenantTuple.from, tenantTuple.to);
+                try {
+                    ensureSchema(tenantTuple.from, tenantTuple.to);
+                } catch (MiruSchemaUnvailableException e) {
+                    LOG.warn("Sync skipped tenantId:{} because schema is unavailable", tenantTuple.from);
+                    continue;
+                }
                 if (!isElected(stripe)) {
                     break;
                 }
