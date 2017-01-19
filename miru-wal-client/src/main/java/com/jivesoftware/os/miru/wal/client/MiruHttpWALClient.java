@@ -33,6 +33,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import org.apache.commons.lang.mutable.MutableLong;
 import org.apache.http.HttpStatus;
 
 public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCursor<S>> implements MiruWALClient<C, S> {
@@ -248,7 +249,8 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
         MiruPartitionId partitionId,
         C cursor,
         int batchSize,
-        long stopAtTimestamp) throws Exception {
+        long stopAtTimestamp,
+        MutableLong bytesCount) throws Exception {
         try {
             String endpoint = pathPrefix + "/activity/" + tenantId.toString() + "/" + partitionId.getId() + "/" + batchSize + "/" + stopAtTimestamp;
             String jsonCursor = requestMapper.writeValueAsString(cursor);
@@ -257,8 +259,12 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
                     @SuppressWarnings("unchecked")
                     StreamBatch<MiruWALEntry, C> response = sendWithTenantPartition(RoutingGroupType.activity, tenantId, partitionId, "getActivity",
                         client -> {
+                            HttpResponse httpResponse = client.postJson(endpoint, jsonCursor, null);
+                            if (bytesCount != null && httpResponse.getResponseBody() != null) {
+                                bytesCount.add(httpResponse.getResponseBody().length);
+                            }
                             return extract(
-                                client.postJson(endpoint, jsonCursor, null),
+                                httpResponse,
                                 StreamBatch.class,
                                 new Class[] { MiruWALEntry.class, cursorClass },
                                 null);

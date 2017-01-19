@@ -17,7 +17,7 @@ public class MiruStats {
         return ingressedMap;
     }
 
-    public void ingressed(String tenantId, int count, long latency) {
+    public void ingressed(String tenantId, long count, long latency) {
         Stat got = ingressedMap.get(tenantId);
         if (got == null) {
             got = new Stat();
@@ -33,7 +33,7 @@ public class MiruStats {
         return egressedMap;
     }
 
-    public void egressed(String path, int count, long latency) {
+    public void egressed(String path, long count, long latency) {
         Stat got = egressedMap.get(path);
         if (got == null) {
             got = new Stat();

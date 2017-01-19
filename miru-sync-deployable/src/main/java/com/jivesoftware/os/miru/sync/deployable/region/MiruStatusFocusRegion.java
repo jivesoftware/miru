@@ -44,7 +44,7 @@ public class MiruStatusFocusRegion implements MiruRegion<MiruStatusRegionInput> 
     public String render(MiruStatusRegionInput input) {
         Map<String, Object> data = Maps.newHashMap();
 
-        SimpleDateFormat dateFormat = new SimpleDateFormat("EEE, dd MMM yyyy hh:mm:ss z");
+        SimpleDateFormat dateFormat = new SimpleDateFormat("EEE, dd MMM yyyy H:mm:ss z");
 
         data.put("syncspaceName", input.syncspaceName);
         data.put("tenant", input.tenantId.toString());

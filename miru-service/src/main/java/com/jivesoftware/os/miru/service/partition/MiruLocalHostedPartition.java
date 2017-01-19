@@ -881,7 +881,8 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                         coord.partitionId,
                         cursor.get(),
                         partitionRebuildBatchSize,
-                        -1L);
+                        -1L,
+                        null);
 
                     while (rebuilding.get() && accessorRef.get() == accessor && streamBatch != null) {
                         tryQueuePut(rebuilding, queue, streamBatch);
@@ -889,7 +890,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                             break;
                         }
                         streamBatch = (streamBatch.cursor != null)
-                            ? walClient.getActivity(coord.tenantId, coord.partitionId, streamBatch.cursor, partitionRebuildBatchSize, -1L)
+                            ? walClient.getActivity(coord.tenantId, coord.partitionId, streamBatch.cursor, partitionRebuildBatchSize, -1L, null)
                             : null;
                     }
 

@@ -19,6 +19,7 @@ import com.jivesoftware.os.amza.client.aquarium.AmzaClientAquariumProvider;
 import com.jivesoftware.os.aquarium.LivelyEndState;
 import com.jivesoftware.os.aquarium.State;
 import com.jivesoftware.os.jive.utils.ordered.id.TimestampedOrderIdProvider;
+import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
@@ -52,6 +53,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import org.apache.commons.lang.mutable.MutableLong;
 
 import static com.jivesoftware.os.miru.sync.deployable.MiruSyncSender.ProgressType.forward;
 import static com.jivesoftware.os.miru.sync.deployable.MiruSyncSender.ProgressType.initial;
@@ -72,6 +74,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         0, 0, 0, 0, 0, 0, 0, 0,
         false, Consistency.leader_quorum, true, true, false, RowType.primary, "lab", 8, null, -1, -1);
 
+    private final MiruStats stats;
     private final MiruSyncSenderConfig config;
     private final AmzaClientAquariumProvider amzaClientAquariumProvider;
     private final TimestampedOrderIdProvider orderIdProvider;
@@ -95,7 +98,8 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
     private final long abandonLeaderSolutionAfterNMillis = 30_000; //TODO expose to conf?
     private final long abandonSolutionAfterNMillis = 60_000; //TODO expose to conf?
 
-    public MiruSyncSender(MiruSyncSenderConfig config,
+    public MiruSyncSender(MiruStats stats,
+        MiruSyncSenderConfig config,
         AmzaClientAquariumProvider amzaClientAquariumProvider,
         TimestampedOrderIdProvider orderIdProvider,
         int syncRingStripes,
@@ -108,6 +112,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         MiruSyncConfigProvider syncConfigProvider,
         C defaultCursor,
         Class<C> cursorClass) {
+        this.stats = stats;
 
         this.config = config;
         this.amzaClientAquariumProvider = amzaClientAquariumProvider;
@@ -414,16 +419,28 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         AtomicLong clockTimestamp = new AtomicLong(-1);
         MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory(clockTimestamp::get);
 
+        String readableFromTo = tenantTuple.from.toString() + "/" + tenantTuple.to.toString();
+        String statsBytes = "sender/sync/" + readableFromTo + "/bytes";
+        String statsCount = "sender/sync/" + readableFromTo + "/count";
+
         boolean took = false;
         int synced = 0;
         while (true) {
+            MutableLong bytesCount = new MutableLong();
             long stopAtTimestamp = type == forward ? orderIdProvider.getApproximateId(System.currentTimeMillis() - config.forwardSyncDelayMillis) : -1;
-            StreamBatch<MiruWALEntry, C> batch = fromWALClient.getActivity(tenantTuple.from, partitionId, cursor, config.batchSize, stopAtTimestamp);
+            long start = System.currentTimeMillis();
+            StreamBatch<MiruWALEntry, C> batch = fromWALClient.getActivity(tenantTuple.from, partitionId, cursor, config.batchSize, stopAtTimestamp,
+                bytesCount);
             if (!isElected(stripe)) {
                 return synced;
             }
             int activityTypes = 0;
             if (batch.activities != null && !batch.activities.isEmpty()) {
+                long ingressLatency = System.currentTimeMillis() - start;
+                stats.ingressed(statsBytes, bytesCount.longValue(), ingressLatency);
+                stats.ingressed(statsCount, batch.activities.size(), ingressLatency);
+                start = System.currentTimeMillis();
+
                 List<MiruPartitionedActivity> activities = Lists.newArrayListWithCapacity(batch.activities.size());
                 for (MiruWALEntry entry : batch.activities) {
                     if (entry.activity.type.isActivityType() && entry.activity.activity.isPresent()) {
@@ -446,6 +463,10 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                     activities.add(partitionedActivityFactory.begin(-1, partitionId, tenantTuple.to, lastIndex));
                     toSyncClient.writeActivity(tenantTuple.to, partitionId, activities);
                     synced += activities.size();
+
+                    long egressLatency = System.currentTimeMillis() - start;
+                    stats.egressed(statsBytes, bytesCount.longValue(), egressLatency);
+                    stats.egressed(statsCount, activities.size(), egressLatency);
 
                     if (!took) {
                         // set 'taking' to true to indicate active progress

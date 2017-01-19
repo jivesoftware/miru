@@ -10,6 +10,7 @@ import com.jivesoftware.os.routing.bird.server.oauth.validator.NoOpAuthValidator
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import org.apache.commons.lang.StringUtils;
 import org.glassfish.jersey.oauth1.signature.OAuth1Request;
 import org.glassfish.jersey.oauth1.signature.OAuth1Signature;
 import org.merlin.config.Config;
@@ -51,7 +52,7 @@ public class MiruSyncOAuthValidatorInitializer {
 
         Map<String, String> consumerKeyTokens = Maps.newConcurrentMap();
         String tuples = config.getOauthConsumerKeyTokenTuples();
-        if (tuples != null) {
+        if (StringUtils.isNotBlank(tuples)) {
             String[] keyTokenPairs = tuples.trim().split("\\s*,\\s*");
             for (String pair : keyTokenPairs) {
                 String[] parts = pair.trim().split(":");

@@ -15,6 +15,7 @@
  */
 package com.jivesoftware.os.miru.sync.deployable.endpoints;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
@@ -25,7 +26,8 @@ import com.jivesoftware.os.miru.sync.deployable.MiruSyncReceiver;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.shared.ResponseHelper;
-import java.util.List;
+import java.io.InputStream;
+import java.util.ArrayList;
 import javax.inject.Singleton;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
@@ -35,6 +37,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import org.xerial.snappy.SnappyInputStream;
 
 
 /**
@@ -47,12 +50,14 @@ public class MiruSyncApiEndpoints {
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final MiruSyncReceiver syncReceiver;
+    private final ObjectMapper mapper;
     private final MiruStats miruStats;
 
     private final ResponseHelper responseHelper = ResponseHelper.INSTANCE;
 
-    public MiruSyncApiEndpoints(@Context MiruSyncReceiver syncReceiver, @Context MiruStats miruStats) {
+    public MiruSyncApiEndpoints(@Context MiruSyncReceiver syncReceiver, @Context ObjectMapper mapper, @Context MiruStats miruStats) {
         this.syncReceiver = syncReceiver;
+        this.mapper = mapper;
         this.miruStats = miruStats;
     }
 
@@ -62,7 +67,15 @@ public class MiruSyncApiEndpoints {
     @Produces(MediaType.APPLICATION_JSON)
     public Response writeActivity(@PathParam("tenantId") String tenantId,
         @PathParam("partitionId") int partitionId,
-        List<MiruPartitionedActivity> partitionedActivities) throws Exception {
+        InputStream inputStream) throws Exception {
+        PartitionedActivities partitionedActivities;
+        try {
+            partitionedActivities = mapper.readValue(new SnappyInputStream(inputStream), PartitionedActivities.class);
+        } catch (Exception x) {
+            LOG.error("Failed decompressing writeActivity({})",
+                new Object[] { tenantId }, x);
+            return responseHelper.errorResponse("Server error", x);
+        }
         try {
             long start = System.currentTimeMillis();
             syncReceiver.writeActivity(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)), MiruPartitionId.of(partitionId), partitionedActivities);
@@ -73,6 +86,10 @@ public class MiruSyncApiEndpoints {
                 new Object[] { tenantId, partitionedActivities != null ? partitionedActivities.size() : null }, x);
             return responseHelper.errorResponse("Server error", x);
         }
+    }
+
+    private static class PartitionedActivities extends ArrayList<MiruPartitionedActivity> {
+
     }
 
     @POST
@@ -92,7 +109,6 @@ public class MiruSyncApiEndpoints {
             return responseHelper.errorResponse("Server error", x);
         }
     }
-
 
 
 }

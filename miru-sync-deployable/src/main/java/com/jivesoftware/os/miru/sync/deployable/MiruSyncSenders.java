@@ -6,6 +6,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.jivesoftware.os.amza.api.PartitionClientProvider;
 import com.jivesoftware.os.amza.client.aquarium.AmzaClientAquariumProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.TimestampedOrderIdProvider;
+import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaProvider;
 import com.jivesoftware.os.miru.api.sync.MiruSyncClient;
 import com.jivesoftware.os.miru.api.wal.MiruCursor;
@@ -14,7 +15,7 @@ import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.sync.api.MiruSyncSenderConfig;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelper;
+import com.jivesoftware.os.routing.bird.http.client.HttpClient;
 import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelperUtils;
 import com.jivesoftware.os.routing.bird.http.client.OAuthSigner;
 import java.util.Collection;
@@ -36,10 +37,10 @@ public class MiruSyncSenders<C extends MiruCursor<C, S>, S extends MiruSipCursor
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
-
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final Map<String, MiruSyncSender<C, S>> senders = Maps.newConcurrentMap();
 
+    private final MiruStats stats;
     private final MiruSyncConfig syncConfig;
     private final TimestampedOrderIdProvider orderIdProvider;
     private final ScheduledExecutorService executorService;
@@ -56,7 +57,8 @@ public class MiruSyncSenders<C extends MiruCursor<C, S>, S extends MiruSipCursor
 
     private final ExecutorService ensureSenders = Executors.newFixedThreadPool(1, new ThreadFactoryBuilder().setNameFormat("ensure-sender-%d").build());
 
-    public MiruSyncSenders(MiruSyncConfig syncConfig,
+    public MiruSyncSenders(MiruStats stats,
+        MiruSyncConfig syncConfig,
         TimestampedOrderIdProvider orderIdProvider,
         ScheduledExecutorService executorService,
         PartitionClientProvider partitionClientProvider,
@@ -68,8 +70,8 @@ public class MiruSyncSenders<C extends MiruCursor<C, S>, S extends MiruSipCursor
         long ensureSendersInterval,
         MiruWALClient<C, S> miruWALClient,
         C defaultCursor,
-        Class<C> cursorClass
-    ) {
+        Class<C> cursorClass) {
+        this.stats = stats;
         this.syncConfig = syncConfig;
         this.orderIdProvider = orderIdProvider;
 
@@ -113,6 +115,7 @@ public class MiruSyncSenders<C extends MiruCursor<C, S>, S extends MiruSipCursor
                             }
                             if (syncSender == null) {
                                 syncSender = new MiruSyncSender<C, S>(
+                                    stats,
                                     senderConfig,
                                     clientAquariumProvider,
                                     orderIdProvider,
@@ -194,16 +197,16 @@ public class MiruSyncSenders<C extends MiruCursor<C, S>, S extends MiruSipCursor
             oAuthConsumer.setTokenWithSecret(consumerKey, consumerSecret);
             return oAuthConsumer.sign(request);
         };
-        HttpRequestHelper requestHelper = HttpRequestHelperUtils.buildRequestHelper(sslEnable,
+        HttpClient httpClient = HttpRequestHelperUtils.buildHttpClient(sslEnable,
             config.allowSelfSignedCerts,
             authSigner,
             host,
             port,
             syncConfig.getSyncSenderSocketTimeout());
 
-        return new HttpSyncClient(requestHelper,
+        return new HttpMiruSyncClient(httpClient,
+            mapper,
             "/api/sync/v1/write/activities",
-            "/api/sync/v1/write/reads",
             "/api/sync/v1/register/schema");
     }
 }
