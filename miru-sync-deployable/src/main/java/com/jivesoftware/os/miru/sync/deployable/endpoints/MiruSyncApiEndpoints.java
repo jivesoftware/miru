@@ -63,7 +63,7 @@ public class MiruSyncApiEndpoints {
 
     @POST
     @Path("/write/activities/{tenantId}/{partitionId}")
-    @Consumes(MediaType.APPLICATION_JSON)
+    @Consumes(MediaType.APPLICATION_OCTET_STREAM)
     @Produces(MediaType.APPLICATION_JSON)
     public Response writeActivity(@PathParam("tenantId") String tenantId,
         @PathParam("partitionId") int partitionId,
