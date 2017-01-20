@@ -211,16 +211,18 @@ public class MiruWALDirector<C extends MiruCursor<C, S>, S extends MiruSipCursor
 
     @Override
     public void writeActivity(MiruTenantId tenantId, MiruPartitionId partitionId, List<MiruPartitionedActivity> partitionedActivities) throws Exception {
-        RangeMinMax partitionMinMax = activityWALWriter.write(tenantId, partitionId, partitionedActivities);
-        walLookup.add(tenantId, partitionId);
-
         boolean onlyBoundaries = true;
+
+        // gather before we write because the writer may clear the list
         for (MiruPartitionedActivity partitionedActivity : partitionedActivities) {
             if (!partitionedActivity.type.isBoundaryType()) {
                 onlyBoundaries = false;
                 break;
             }
         }
+
+        RangeMinMax partitionMinMax = activityWALWriter.write(tenantId, partitionId, partitionedActivities);
+        walLookup.add(tenantId, partitionId);
 
         if (!onlyBoundaries) {
             clusterClient.updateIngress(new MiruIngressUpdate(tenantId, partitionId, partitionMinMax, System.currentTimeMillis(), false));
