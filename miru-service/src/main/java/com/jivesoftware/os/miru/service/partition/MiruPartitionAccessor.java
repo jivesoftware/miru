@@ -29,6 +29,8 @@ import com.jivesoftware.os.miru.service.stream.MiruRebuildDirector;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.mlogger.core.ValueType;
+import gnu.trove.map.TLongIntMap;
+import gnu.trove.map.hash.TLongIntHashMap;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
@@ -504,95 +506,114 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         StackBuffer stackBuffer)
         throws Exception {
 
+        if (partitionedActivities.isEmpty()) {
+            return 0;
+        }
+
+        // dedupe
+        TLongIntMap uniques = new TLongIntHashMap(partitionedActivities.size(), 0.5f, -1L, -1);
+        List<MiruPartitionedActivity> deduped = Lists.newArrayListWithCapacity(partitionedActivities.size());
+        for (MiruPartitionedActivity partitionedActivity : partitionedActivities) {
+            int existing = uniques.putIfAbsent(partitionedActivity.timestamp, deduped.size());
+            if (existing == -1) {
+                deduped.add(partitionedActivity);
+            } else if (deduped.get(existing).activity.get().version < partitionedActivity.activity.get().version) {
+                deduped.set(existing, partitionedActivity);
+            }
+        }
+        // free for gc
+        partitionedActivities.clear();
+        uniques = null;
+        // flip to deduped
+        partitionedActivities = deduped;
+
         int activityCount = 0;
-        if (!partitionedActivities.isEmpty()) {
-            MiruTimeIndex timeIndex = got.getTimeIndex();
+        MiruTimeIndex timeIndex = got.getTimeIndex();
 
-            //List<Long> activityTimes = new ArrayList<>();
-            long[] timestamps = new long[partitionedActivities.size()];
-            for (int i = 0; i < partitionedActivities.size(); i++) {
-                MiruActivity activity = partitionedActivities.get(i).activity.get();
-                timestamps[i] = activity.time;
+        //List<Long> activityTimes = new ArrayList<>();
+        long[] timestamps = new long[partitionedActivities.size()];
+        for (int i = 0; i < partitionedActivities.size(); i++) {
+            MiruActivity activity = partitionedActivities.get(i).activity.get();
+            timestamps[i] = activity.time;
+        }
+
+        int[] ids = new int[timestamps.length];
+        Arrays.fill(ids, -1);
+        long[] monotonics = new long[timestamps.length];
+        Arrays.fill(monotonics, -1);
+        got.timeIdIndex.lookup(got.version, timestamps, ids, monotonics);
+
+        int hits = 0;
+        int misses = 0;
+        for (int i = 0; i < ids.length; i++) {
+            if (ids[i] == -1) {
+                misses++;
+            } else {
+                hits++;
             }
+        }
 
-            int[] ids = new int[timestamps.length];
-            Arrays.fill(ids, -1);
-            long[] monotonics = new long[timestamps.length];
-            Arrays.fill(monotonics, -1);
-            got.timeIdIndex.lookup(got.version, timestamps, ids, monotonics);
+        MiruActivity[] hitActivities = new MiruActivity[hits];
+        long[] hitTimestamps = new long[hits];
+        int[] hitIds = new int[hits];
+        long[] hitMonotonics = new long[hits];
 
-            int hits = 0;
-            int misses = 0;
-            for (int i = 0; i < ids.length; i++) {
-                if (ids[i] == -1) {
-                    misses++;
+        MiruActivity[] missActivities = new MiruActivity[misses];
+        long[] missTimestamps = new long[misses];
+        int[] missIds = new int[misses];
+        long[] missMonotonics = new long[misses];
+
+        for (int i = 0, h = 0, m = 0; i < partitionedActivities.size(); i++) {
+            if (ids[i] == -1) {
+                missActivities[m] = partitionedActivities.get(i).activity.get();
+                missTimestamps[m] = timestamps[i];
+                missIds[m] = -1;
+                missMonotonics[m] = -1;
+                m++;
+            } else {
+                hitActivities[h] = partitionedActivities.get(i).activity.get();
+                hitTimestamps[h] = timestamps[i];
+                hitIds[h] = ids[i];
+                hitMonotonics[h] = monotonics[i];
+                h++;
+            }
+        }
+
+        List<MiruActivityAndId<MiruActivity>> indexables = Lists.newArrayListWithCapacity(partitionedActivities.size());
+
+        if ((indexHits || removeHits) && hits > 0) {
+            timeIndex.nextId(stackBuffer, hitTimestamps, hitIds, hitMonotonics);
+
+            for (int i = 0; i < hits; i++) {
+                if (indexHits) {
+                    indexables.add(new MiruActivityAndId<>(hitActivities[i], hitIds[i], hitMonotonics[i]));
                 } else {
-                    hits++;
+                    indexer.remove(got, hitActivities[i], hitIds[i]);
                 }
             }
+        }
 
-            MiruActivity[] hitActivities = new MiruActivity[hits];
-            long[] hitTimestamps = new long[hits];
-            int[] hitIds = new int[hits];
-            long[] hitMonotonics = new long[hits];
+        if ((indexMisses || removeMisses) && misses > 0) {
+            int lastIdHint = got.timeIndex.lastId();
+            long largestTimestampHint = got.timeIndex.getLargestTimestamp();
+            got.timeIdIndex.allocate(got.version, missTimestamps, missIds, missMonotonics, lastIdHint, largestTimestampHint);
+            timeIndex.nextId(stackBuffer, missTimestamps, missIds, missMonotonics);
 
-            MiruActivity[] missActivities = new MiruActivity[misses];
-            long[] missTimestamps = new long[misses];
-            int[] missIds = new int[misses];
-            long[] missMonotonics = new long[misses];
-
-            for (int i = 0, h = 0, m = 0; i < partitionedActivities.size(); i++) {
-                if (ids[i] == -1) {
-                    missActivities[m] = partitionedActivities.get(i).activity.get();
-                    missTimestamps[m] = timestamps[i];
-                    missIds[m] = -1;
-                    missMonotonics[m] = -1;
-                    m++;
+            for (int i = 0; i < misses; i++) {
+                if (indexMisses) {
+                    indexables.add(new MiruActivityAndId<>(missActivities[i], missIds[i], missMonotonics[i]));
                 } else {
-                    hitActivities[h] = partitionedActivities.get(i).activity.get();
-                    hitTimestamps[h] = timestamps[i];
-                    hitIds[h] = ids[i];
-                    hitMonotonics[h] = monotonics[i];
-                    h++;
+                    indexer.remove(got, missActivities[i], missIds[i]);
                 }
             }
+        }
 
-            List<MiruActivityAndId<MiruActivity>> indexables = Lists.newArrayListWithCapacity(partitionedActivities.size());
-
-            if ((indexHits || removeHits) && hits > 0) {
-                timeIndex.nextId(stackBuffer, hitTimestamps, hitIds, hitMonotonics);
-
-                for (int i = 0; i < hits; i++) {
-                    if (indexHits) {
-                        indexables.add(new MiruActivityAndId<>(hitActivities[i], hitIds[i], hitMonotonics[i]));
-                    } else {
-                        indexer.remove(got, hitActivities[i], hitIds[i]);
-                    }
-                }
-            }
-
-            if ((indexMisses || removeMisses) && misses > 0) {
-                int lastIdHint = got.timeIndex.lastId();
-                long largestTimestampHint = got.timeIndex.getLargestTimestamp();
-                got.timeIdIndex.allocate(got.version, missTimestamps, missIds, missMonotonics, lastIdHint, largestTimestampHint);
-                timeIndex.nextId(stackBuffer, missTimestamps, missIds, missMonotonics);
-
-                for (int i = 0; i < misses; i++) {
-                    if (indexMisses) {
-                        indexables.add(new MiruActivityAndId<>(missActivities[i], missIds[i], missMonotonics[i]));
-                    } else {
-                        indexer.remove(got, missActivities[i], missIds[i]);
-                    }
-                }
-            }
-
-            // free for GC before we begin indexing
-            partitionedActivities.clear();
-            if (!indexables.isEmpty()) {
-                activityCount = indexables.size(); // indexer consumes, so count first
-                Collections.sort(indexables);
-                indexer.index(got, coord, indexables, indexExecutor);
-            }
+        // free for GC before we begin indexing
+        partitionedActivities.clear();
+        if (!indexables.isEmpty()) {
+            activityCount = indexables.size(); // indexer consumes, so count first
+            Collections.sort(indexables);
+            indexer.index(got, coord, indexables, indexExecutor);
         }
         return activityCount;
     }

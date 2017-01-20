@@ -23,6 +23,7 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.topology.HostHeartbeat;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
+import com.jivesoftware.os.miru.cluster.MiruReplicaSet;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.http.client.ConnectionDescriptorSelectiveStrategy;
@@ -207,15 +208,15 @@ public class MiruRebalanceDirector {
         clusterRegistry.debugTenantPartition(tenantId, partitionId, stringBuilder);
     }
 
-    public String diffTenantPartition(MiruTenantId tenantId, MiruPartitionId partitionId) {
-        ConnectionDescriptors connectionDescriptors = readerConnectionDescriptorsProvider.getConnections("");
-        List<ConnectionDescriptor> descriptors = connectionDescriptors.getConnectionDescriptors();
+    public String diffTenantPartition(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+        MiruReplicaSet replicaSet = clusterRegistry.getReplicaSet(tenantId, partitionId);
+        List<MiruHost> hosts = Lists.newArrayList(replicaSet.getHostsWithReplica());
         List<List<String>> diffables = Lists.newArrayList();
-        for (ConnectionDescriptor descriptor : descriptors) {
-            HostPort hostPort = descriptor.getHostPort();
+        for (MiruHost miruHost : hosts) {
             List<String> diffable = null;
             try {
-                diffable = readerClient.call("", new ConnectionDescriptorSelectiveStrategy(new HostPort[] { hostPort }), "diffTenantPartition",
+                MiruHostSelectiveStrategy strategy = new MiruHostSelectiveStrategy(new MiruHost[] { miruHost });
+                diffable = readerClient.call("", strategy, "diffTenantPartition",
                     httpClient -> {
                         String endpoint = MiruReader.QUERY_SERVICE_ENDPOINT_PREFIX + MiruReader.TIMESTAMPS_ENDPOINT + "/" + tenantId + "/" + partitionId;
                         HttpResponse response = httpClient.get(endpoint, null);
@@ -228,7 +229,7 @@ public class MiruRebalanceDirector {
                         }
                     });
             } catch (HttpClientException e) {
-                LOG.error("Failed to diff {}", new Object[] { descriptor }, e);
+                LOG.error("Failed to diff {}", new Object[] { miruHost }, e);
             }
             diffables.add(diffable);
         }
@@ -243,12 +244,12 @@ public class MiruRebalanceDirector {
         */
         for (int i = 0; i < diffables.size(); i++) {
             for (int j = i + 1; j < diffables.size(); j++) {
-                HostPort hostPortI = descriptors.get(i).getHostPort();
-                HostPort hostPortJ = descriptors.get(j).getHostPort();
+                MiruHost hostI = hosts.get(i);
+                MiruHost hostJ = hosts.get(j);
                 buf.append("==================================== ")
-                    .append(hostPortI.getHost()).append(':').append(hostPortI.getPort())
+                    .append(hostI)
                     .append(" to ")
-                    .append(hostPortJ.getHost()).append(':').append(hostPortJ.getPort())
+                    .append(hostJ)
                     .append(" ====================================\n");
                 List<String> diffI = diffables.get(i);
                 List<String> diffJ = diffables.get(j);

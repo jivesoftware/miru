@@ -107,9 +107,11 @@ public class MiruSyncSenders<C extends MiruCursor<C, S>, S extends MiruSipCursor
                     try {
                         Map<String, MiruSyncSenderConfig> all = syncSenderConfigProvider.getAll();
                         for (Entry<String, MiruSyncSenderConfig> entry : all.entrySet()) {
-                            MiruSyncSender<C, S> syncSender = senders.get(entry.getKey());
+                            String name = entry.getKey();
+                            MiruSyncSender<C, S> syncSender = senders.get(name);
                             MiruSyncSenderConfig senderConfig = entry.getValue();
                             if (syncSender != null && syncSender.configHasChanged(senderConfig)) {
+                                LOG.info("Restarting sender {} because config has changed", name);
                                 syncSender.stop();
                                 syncSender = null;
                             }
@@ -131,7 +133,7 @@ public class MiruSyncSenders<C extends MiruCursor<C, S>, S extends MiruSipCursor
                                     cursorClass
                                 );
 
-                                senders.put(entry.getKey(), syncSender);
+                                senders.put(name, syncSender);
                                 syncSender.start();
                             }
                         }

@@ -26,35 +26,9 @@ public class LabTimeIdIndexTest {
     @Test
     public void testAllocateAndLookup() throws Exception {
         int numberOfChunkStores = 1;
-        MiruTempDirectoryResourceLocator resourceLocator = new MiruTempDirectoryResourceLocator();
-        LABStats labStats = new LABStats();
-
-        LabHeapPressure labHeapPressure = new LabHeapPressure(labStats, MoreExecutors.sameThreadExecutor(), "test", 1024 * 1024, 1024 * 1024 * 2,
-            new AtomicLong(),
-            FreeHeapStrategy.mostBytesFirst);
-        OnDiskChunkAllocator chunkAllocator = new OnDiskChunkAllocator(new MiruTempDirectoryResourceLocator(),
-            new HeapByteBufferFactory(),
-            numberOfChunkStores,
-            100,
-            1_000,
-            new LABStats[] { labStats },
-            new LabHeapPressure[] { labHeapPressure },
-            labHeapPressure,
-            10 * 1024 * 1024,
-            1000,
-            10 * 1024 * 1024,
-            10 * 1024 * 1024,
-            true,
-            LABEnvironment.buildLeapsCache(1_000_000, 10),
-            new StripingBolBufferLocks(2048));
-
         int keepNIndexes = 4;
         int maxEntriesPerIndex = 10;
-        LabTimeIdIndex[] indexes = new LabTimeIdIndexInitializer().initialize(keepNIndexes, maxEntriesPerIndex, 1024 * 1024, false, resourceLocator,
-            chunkAllocator);
-
-        assertEquals(indexes.length, numberOfChunkStores);
-        LabTimeIdIndex index = indexes[0];
+        LabTimeIdIndex index = getLabTimeIdIndex(numberOfChunkStores, keepNIndexes, maxEntriesPerIndex);
 
         for (long version : new LongRange(1000, 2000).toArray()) {
             long[] timestamps = { 1L, 2L, 3L, 4L };
@@ -90,6 +64,63 @@ public class LabTimeIdIndexTest {
                 }
             }
         }
+    }
+
+    @Test
+    public void testDuplicatesInBatch() throws Exception {
+        int numberOfChunkStores = 1;
+        int keepNIndexes = 4;
+        int maxEntriesPerIndex = 10;
+        LabTimeIdIndex index = getLabTimeIdIndex(numberOfChunkStores, keepNIndexes, maxEntriesPerIndex);
+
+        long version = 0L;
+        long[] timestamps = { 1L, 2L, 3L, 4L, 1L, 2L, 3L, 4L, 1L, 2L, 3L, 4L };
+        int[] ids = { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 };
+        long[] monotonics = { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 };
+        index.lookup(version, timestamps, ids, monotonics);
+        assertCount(keepNIndexes, maxEntriesPerIndex, index);
+        for (int i = 0; i < timestamps.length; i++) {
+            assertEquals(ids[i], -1);
+            assertEquals(monotonics[i], -1);
+        }
+
+        index.allocate(version, timestamps, ids, monotonics, -1, -1);
+        assertCount(keepNIndexes, maxEntriesPerIndex, index);
+        for (int i = 0; i < timestamps.length; i++) {
+            assertEquals(ids[i], i);
+            assertEquals(monotonics[i], i + 1);
+        }
+
+    }
+
+    private LabTimeIdIndex getLabTimeIdIndex(int numberOfChunkStores, int keepNIndexes, int maxEntriesPerIndex) throws Exception {
+        MiruTempDirectoryResourceLocator resourceLocator = new MiruTempDirectoryResourceLocator();
+        LABStats labStats = new LABStats();
+
+        LabHeapPressure labHeapPressure = new LabHeapPressure(labStats, MoreExecutors.sameThreadExecutor(), "test", 1024 * 1024, 1024 * 1024 * 2,
+            new AtomicLong(),
+            FreeHeapStrategy.mostBytesFirst);
+        OnDiskChunkAllocator chunkAllocator = new OnDiskChunkAllocator(new MiruTempDirectoryResourceLocator(),
+            new HeapByteBufferFactory(),
+            numberOfChunkStores,
+            100,
+            1_000,
+            new LABStats[] { labStats },
+            new LabHeapPressure[] { labHeapPressure },
+            labHeapPressure,
+            10 * 1024 * 1024,
+            1000,
+            10 * 1024 * 1024,
+            10 * 1024 * 1024,
+            true,
+            LABEnvironment.buildLeapsCache(1_000_000, 10),
+            new StripingBolBufferLocks(2048));
+
+        LabTimeIdIndex[] indexes = new LabTimeIdIndexInitializer().initialize(keepNIndexes, maxEntriesPerIndex, 1024 * 1024, false, resourceLocator,
+            chunkAllocator);
+
+        assertEquals(indexes.length, numberOfChunkStores);
+        return indexes[0];
     }
 
     private void assertCount(int keepNIndexes, int maxEntriesPerIndex, LabTimeIdIndex index) throws Exception {
