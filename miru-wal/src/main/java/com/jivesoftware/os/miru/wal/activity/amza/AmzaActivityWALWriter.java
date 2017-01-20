@@ -18,6 +18,8 @@ import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivitySipWALColumnKey;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALColumnKey;
 import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALColumnKeyMarshaller;
+import com.jivesoftware.os.mlogger.core.MetricLogger;
+import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -26,6 +28,8 @@ import java.util.concurrent.TimeUnit;
  *
  */
 public class AmzaActivityWALWriter implements MiruActivityWALWriter {
+
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final AmzaWALUtil amzaWALUtil;
     private final long replicateTimeoutMillis;
@@ -72,24 +76,34 @@ public class AmzaActivityWALWriter implements MiruActivityWALWriter {
         RangeMinMax partitionMinMax = new RangeMinMax();
         EmbeddedClient client = amzaWALUtil.getActivityClient(tenantId, partitionId);
         try {
-            client.commit(Consistency.leader_quorum, null,
-                (txKeyValueStream) -> {
-                    for (MiruPartitionedActivity activity : partitionedActivities) {
-                        long timestamp = activity.activity.isPresent() ? activity.activity.get().version : System.currentTimeMillis();
-                        if (!txKeyValueStream.commit(activityWALKeyFunction.apply(activity), activitySerializerFunction.apply(activity), timestamp, false)) {
-                            return false;
-                        }
+            if (!partitionedActivities.isEmpty()) {
+                // gather before we write because the list will be cleared
+                for (MiruPartitionedActivity activity : partitionedActivities) {
+                    if (partitionId.equals(activity.partitionId) && activity.type.isActivityType()) {
+                        partitionMinMax.put(activity.clockTimestamp, activity.timestamp);
                     }
-                    return true;
-                },
-                replicateTimeoutMillis,
-                TimeUnit.MILLISECONDS);
-
-            for (MiruPartitionedActivity activity : partitionedActivities) {
-                if (partitionId.equals(activity.partitionId) && activity.type.isActivityType()) {
-                    partitionMinMax.put(activity.clockTimestamp, activity.timestamp);
                 }
+
+                client.commit(Consistency.leader_quorum, null,
+                    (txKeyValueStream) -> {
+                        if (partitionedActivities.isEmpty()) {
+                            throw new IllegalStateException("This callback is not reentrant, please fix!");
+                        }
+                        for (MiruPartitionedActivity activity : partitionedActivities) {
+                            long timestamp = activity.activity.isPresent() ? activity.activity.get().version : System.currentTimeMillis();
+                            if (!txKeyValueStream.commit(activityWALKeyFunction.apply(activity), activitySerializerFunction.apply(activity), timestamp,
+                                false)) {
+                                return false;
+                            }
+                        }
+                        // this is only safe because this is a single threaded leader write and this collection is not needed after the commit
+                        partitionedActivities.clear();
+                        return true;
+                    },
+                    replicateTimeoutMillis,
+                    TimeUnit.MILLISECONDS);
             }
+
         } catch (PartitionIsDisposedException e) {
             // Ignored
         } catch (FailedToAchieveQuorumException e) {
