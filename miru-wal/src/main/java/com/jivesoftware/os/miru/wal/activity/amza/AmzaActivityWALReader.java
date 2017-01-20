@@ -14,7 +14,6 @@ import com.jivesoftware.os.amza.service.EmbeddedClientProvider.EmbeddedClient;
 import com.jivesoftware.os.amza.service.Partition.ScanRange;
 import com.jivesoftware.os.amza.service.PartitionIsDisposedException;
 import com.jivesoftware.os.amza.service.PropertiesNotPresentException;
-import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.TimeAndVersion;
@@ -36,7 +35,6 @@ import com.jivesoftware.os.miru.wal.activity.rcvs.MiruActivityWALColumnKeyMarsha
 import com.jivesoftware.os.miru.wal.lookup.PartitionsStream;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.rcvs.marshall.api.UtilLexMarshaller;
 import com.jivesoftware.os.routing.bird.shared.HostPort;
 import java.util.Arrays;
 import java.util.Collections;
@@ -291,7 +289,9 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
                 int[] index = new int[1];
                 client.get(Consistency.leader_quorum, null, unprefixedWALKeyStream -> {
                     for (Long timestamp : timestamps) {
-                        if (timestamp != null && !unprefixedWALKeyStream.stream(FilerIO.longBytes(timestamp))) {
+                        byte[] key = timestamp == null ? null :
+                            columnKeyMarshaller.toBytes(new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.ACTIVITY.getSort(), timestamp));
+                        if (key != null && !unprefixedWALKeyStream.stream(key)) {
                             return false;
                         }
                         index[0]++;

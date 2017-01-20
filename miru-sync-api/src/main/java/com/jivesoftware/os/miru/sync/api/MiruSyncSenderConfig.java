@@ -49,4 +49,69 @@ public class MiruSyncSenderConfig {
         this.oAuthConsumerMethod = oAuthConsumerMethod;
         this.allowSelfSignedCerts = allowSelfSignedCerts;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
+        MiruSyncSenderConfig that = (MiruSyncSenderConfig) o;
+
+        if (enabled != that.enabled) {
+            return false;
+        }
+        if (senderPort != that.senderPort) {
+            return false;
+        }
+        if (syncIntervalMillis != that.syncIntervalMillis) {
+            return false;
+        }
+        if (forwardSyncDelayMillis != that.forwardSyncDelayMillis) {
+            return false;
+        }
+        if (batchSize != that.batchSize) {
+            return false;
+        }
+        if (allowSelfSignedCerts != that.allowSelfSignedCerts) {
+            return false;
+        }
+        if (name != null ? !name.equals(that.name) : that.name != null) {
+            return false;
+        }
+        if (senderScheme != null ? !senderScheme.equals(that.senderScheme) : that.senderScheme != null) {
+            return false;
+        }
+        if (senderHost != null ? !senderHost.equals(that.senderHost) : that.senderHost != null) {
+            return false;
+        }
+        if (oAuthConsumerKey != null ? !oAuthConsumerKey.equals(that.oAuthConsumerKey) : that.oAuthConsumerKey != null) {
+            return false;
+        }
+        if (oAuthConsumerSecret != null ? !oAuthConsumerSecret.equals(that.oAuthConsumerSecret) : that.oAuthConsumerSecret != null) {
+            return false;
+        }
+        return oAuthConsumerMethod != null ? oAuthConsumerMethod.equals(that.oAuthConsumerMethod) : that.oAuthConsumerMethod == null;
+
+    }
+
+    @Override
+    public int hashCode() {
+        int result = name != null ? name.hashCode() : 0;
+        result = 31 * result + (enabled ? 1 : 0);
+        result = 31 * result + (senderScheme != null ? senderScheme.hashCode() : 0);
+        result = 31 * result + (senderHost != null ? senderHost.hashCode() : 0);
+        result = 31 * result + senderPort;
+        result = 31 * result + (int) (syncIntervalMillis ^ (syncIntervalMillis >>> 32));
+        result = 31 * result + (int) (forwardSyncDelayMillis ^ (forwardSyncDelayMillis >>> 32));
+        result = 31 * result + batchSize;
+        result = 31 * result + (oAuthConsumerKey != null ? oAuthConsumerKey.hashCode() : 0);
+        result = 31 * result + (oAuthConsumerSecret != null ? oAuthConsumerSecret.hashCode() : 0);
+        result = 31 * result + (oAuthConsumerMethod != null ? oAuthConsumerMethod.hashCode() : 0);
+        result = 31 * result + (allowSelfSignedCerts ? 1 : 0);
+        return result;
+    }
 }
