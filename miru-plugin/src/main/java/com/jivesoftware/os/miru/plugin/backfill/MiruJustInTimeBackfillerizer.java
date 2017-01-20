@@ -80,7 +80,7 @@ public class MiruJustInTimeBackfillerizer {
                     for (int i = lastActivityIndex + 1; i <= lastId; i++) {
                         unreadIds.add(i);
                         if (oldestBackfilledTimestamp == Long.MAX_VALUE) {
-                            TimeVersionRealtime tvr = requestContext.getActivityIndex().getTimeVersionRealtime("backfillUnread", lastActivityIndex, stackBuffer);
+                            TimeVersionRealtime tvr = requestContext.getActivityIndex().getTimeVersionRealtime("backfillUnread", i, stackBuffer);
                             if (tvr != null) {
                                 oldestBackfilledTimestamp = tvr.monoTimestamp;
                             }
