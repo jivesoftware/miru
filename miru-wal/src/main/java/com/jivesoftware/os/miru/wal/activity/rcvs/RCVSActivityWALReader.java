@@ -79,13 +79,13 @@ public class RCVSActivityWALReader implements MiruActivityWALReader<RCVSCursor, 
         throws Exception {
 
         if (blacklist != null && blacklist.contains(new TenantAndPartition(tenantId, partitionId))) {
-            int writerId = -1;
+            /*int writerId = -1;
             long timestamp = Long.MAX_VALUE;
             long clockTimestamp = System.currentTimeMillis();
             streamMiruActivityWAL.stream(writerId, MiruPartitionedActivity.fromJson(Type.BEGIN, writerId, partitionId.getId(), tenantId.getBytes(), 0,
                 timestamp, clockTimestamp, null, null), timestamp);
             streamMiruActivityWAL.stream(writerId, MiruPartitionedActivity.fromJson(Type.END, writerId, partitionId.getId(), tenantId.getBytes(), 0,
-                timestamp, clockTimestamp, null, null), timestamp);
+                timestamp, clockTimestamp, null, null), timestamp);*/
             return new RCVSCursor(Byte.MAX_VALUE, Long.MAX_VALUE, true, null);
         }
 

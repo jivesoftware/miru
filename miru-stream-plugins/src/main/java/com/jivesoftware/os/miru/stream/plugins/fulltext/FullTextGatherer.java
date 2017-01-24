@@ -167,10 +167,10 @@ public class FullTextGatherer implements IndexOpenCallback, IndexCommitCallback,
 
         MiruRequestContext<BM, IBM, ?> requestContext = handle.getRequestContext();
         MiruSchema schema = requestContext.getSchema();
-        FullTextTermProvider fullTextTermProvider = fullTextTermProviders.get(schema.getName());
-
         MiruPartitionCoord coord = handle.getCoord();
-        if (!fullTextTermProvider.isEnabled(coord.tenantId)) {
+
+        FullTextTermProvider fullTextTermProvider = fullTextTermProviders.get(schema.getName());
+        if (fullTextTermProvider == null || !fullTextTermProvider.isEnabled(coord.tenantId)) {
             return;
         }
 
