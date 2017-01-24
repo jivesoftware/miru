@@ -33,8 +33,8 @@ public class FullTextPlugin implements MiruPlugin<FullTextEndpoints, FullTextInj
                 executorService = Executors.newFixedThreadPool(config.getGathererThreadPoolSize());
                 FullTextTermProviders fullTextTermProviders = new FullTextTermProviders();
 
-                Class<? extends FullTextTermProvider> termProviderClass = config.getTermProviderClass();
-                FullTextTermProvider fullTextTermProvider = termProviderClass.getConstructor(MiruProvider.class).newInstance(miruProvider);
+                Class<? extends FullTextTermProviderInitializer> initializerClass = config.getTermProviderInitializerClass();
+                FullTextTermProvider fullTextTermProvider = initializerClass.newInstance().initialize(miruProvider);
                 fullTextTermProviders.addProvider(fullTextTermProvider);
 
                 FullTextGatherer fullTextGatherer = new FullTextGatherer(miruProvider, fullTextTermProviders, config.getGathererBatchSize(), executorService);
