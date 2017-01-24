@@ -45,4 +45,7 @@ public interface MiruSyncConfig extends Config {
 
     @LongDefault(1_000L * 60 * 60 * 24 * 30)
     long getSyncLoopbackDurationMillis();
+
+    @IntDefault(4)
+    int getSyncLoopbackRingStripes();
 }
