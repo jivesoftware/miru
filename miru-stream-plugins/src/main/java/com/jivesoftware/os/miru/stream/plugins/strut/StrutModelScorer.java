@@ -11,6 +11,7 @@ import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
+import com.jivesoftware.os.miru.plugin.Miru;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.LastIdCacheKeyValues;
@@ -54,7 +55,7 @@ public class StrutModelScorer {
         boolean score(int termIndex, float[] scores, int lastId);
     }
 
-    private final MiruProvider miruProvider;
+    private final MiruProvider<? extends Miru> miruProvider;
     private final Strut strut;
     private final StrutRemotePartition strutRemotePartition;
     private final MiruAggregateUtil aggregateUtil;
@@ -68,7 +69,7 @@ public class StrutModelScorer {
     private final AtomicBoolean running = new AtomicBoolean();
     private final List<Future<?>> futures = Lists.newArrayList();
 
-    public StrutModelScorer(MiruProvider miruProvider,
+    public StrutModelScorer(MiruProvider<? extends Miru> miruProvider,
         Strut strut,
         StrutRemotePartition strutRemotePartition,
         MiruAggregateUtil aggregateUtil,

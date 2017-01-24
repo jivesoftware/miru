@@ -23,7 +23,7 @@ public class AggregateCountsPlugin implements MiruPlugin<AggregateCountsEndpoint
     @Override
     public Collection<MiruEndpointInjectable<AggregateCountsInjectable>> getInjectables(MiruProvider<? extends Miru> miruProvider) {
 
-        AggregateCounts aggregateCounts = new AggregateCounts(miruProvider);
+        AggregateCounts aggregateCounts = new AggregateCounts();
         return Collections.singletonList(new MiruEndpointInjectable<>(
             AggregateCountsInjectable.class,
             new AggregateCountsInjectable(miruProvider, aggregateCounts)

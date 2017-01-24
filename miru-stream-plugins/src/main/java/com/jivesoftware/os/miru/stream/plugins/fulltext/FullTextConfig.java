@@ -10,13 +10,16 @@ import org.merlin.config.defaults.IntDefault;
  */
 public interface FullTextConfig extends Config {
 
-    @ClassDefault(DisabledTermProvider.class)
-    Class<? extends FullTextTermProvider> getTermProviderClass();
+    @BooleanDefault(true)
+    boolean getGathererEnabled();
 
     @IntDefault(4)
-    int getAsyncThreadPoolSize();
+    int getGathererThreadPoolSize();
 
     @IntDefault(10_000)
-    int getUpdateBatchSize();
+    int getGathererBatchSize();
+
+    @ClassDefault(DisabledTermProvider.class)
+    Class<? extends FullTextTermProvider> getTermProviderClass();
 
 }

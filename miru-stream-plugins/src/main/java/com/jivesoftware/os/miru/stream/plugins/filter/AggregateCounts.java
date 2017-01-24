@@ -14,7 +14,6 @@ import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruValue;
-import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
@@ -46,11 +45,6 @@ public class AggregateCounts {
 
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
-    private final MiruProvider miruProvider;
-
-    public AggregateCounts(MiruProvider miruProvider) {
-        this.miruProvider = miruProvider;
-    }
 
     public <BM extends IBM, IBM> AggregateCountsAnswer getAggregateCounts(String name,
         MiruSolutionLog solutionLog,

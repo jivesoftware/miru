@@ -13,6 +13,7 @@ import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruValue;
+import com.jivesoftware.os.miru.plugin.Miru;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
@@ -39,9 +40,9 @@ public class FullText {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
-    private final MiruProvider miruProvider;
+    private final MiruProvider<? extends Miru> miruProvider;
 
-    public FullText(MiruProvider miruProvider) {
+    public FullText(MiruProvider<? extends Miru> miruProvider) {
         this.miruProvider = miruProvider;
     }
 

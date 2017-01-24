@@ -75,6 +75,7 @@ import com.jivesoftware.os.miru.service.stream.LabPluginCacheProvider;
 import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
 import com.jivesoftware.os.miru.service.stream.MiruIndexAuthz;
 import com.jivesoftware.os.miru.service.stream.MiruIndexBloom;
+import com.jivesoftware.os.miru.service.stream.MiruIndexCallbacks;
 import com.jivesoftware.os.miru.service.stream.MiruIndexLatest;
 import com.jivesoftware.os.miru.service.stream.MiruIndexPairedLatest;
 import com.jivesoftware.os.miru.service.stream.MiruIndexPrimaryFields;
@@ -698,6 +699,7 @@ public class MiruLocalHostedPartitionTest {
             persistentMergeExecutor,
             transientMergeExecutor,
             1,
+            new MiruIndexCallbacks(),
             new NoOpMiruIndexRepairs(),
             indexer,
             true,

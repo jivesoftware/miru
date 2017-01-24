@@ -36,6 +36,7 @@ import com.jivesoftware.os.miru.service.NamedThreadFactory;
 import com.jivesoftware.os.miru.service.partition.MiruPartitionAccessor.CheckPersistent;
 import com.jivesoftware.os.miru.service.stream.MiruContext;
 import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
+import com.jivesoftware.os.miru.service.stream.MiruIndexCallbacks;
 import com.jivesoftware.os.miru.service.stream.MiruIndexer;
 import com.jivesoftware.os.miru.service.stream.MiruRebuildDirector;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
@@ -89,6 +90,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
     private final ExecutorService persistentMergeExecutor;
     private final ExecutorService transientMergeExecutor;
     private final int rebuildIndexerThreads;
+    private final MiruIndexCallbacks indexCallbacks;
     private final MiruIndexRepairs indexRepairs;
     private final MiruIndexer<BM, IBM> indexer;
     private final boolean partitionAllowNonLatestSchemaInteractions;
@@ -145,6 +147,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
         ExecutorService persistentMergeExecutor,
         ExecutorService transientMergeExecutor,
         int rebuildIndexerThreads,
+        MiruIndexCallbacks indexCallbacks,
         MiruIndexRepairs indexRepairs,
         MiruIndexer<BM, IBM> indexer,
         boolean partitionAllowNonLatestSchemaInteractions,
@@ -174,6 +177,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
         this.persistentMergeExecutor = persistentMergeExecutor;
         this.transientMergeExecutor = transientMergeExecutor;
         this.rebuildIndexerThreads = rebuildIndexerThreads;
+        this.indexCallbacks = indexCallbacks;
         this.indexRepairs = indexRepairs;
         this.indexer = indexer;
         this.partitionAllowNonLatestSchemaInteractions = partitionAllowNonLatestSchemaInteractions;
@@ -309,6 +313,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                         opened.markWritersClosed();
                     }
                 }
+                indexCallbacks.open(coord);
                 return opened;
             } else {
                 return accessor;
@@ -417,7 +422,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
             MiruPartitionAccessor<BM, IBM, C, S> existing = accessorRef.get();
             Optional<MiruContext<BM, IBM, S>> persistentContext = existing.persistentContext;
             if (persistentContext.isPresent()) {
-                existing.merge(persistentMergeExecutor, persistentContext.get(), persistentMergeChits, trackError);
+                existing.merge(persistentContext.get(), persistentMergeChits, trackError);
             }
             synchronized (factoryLock) {
                 MiruPartitionAccessor<BM, IBM, C, S> closed = MiruPartitionAccessor.initialize(miruStats,
@@ -439,6 +444,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                     existing.refundChits(persistentMergeChits);
                     existing.refundChits(transientMergeChits);
                     clearFutures();
+                    indexCallbacks.close(coord);
                     return true;
                 } else {
                     return false;
@@ -763,6 +769,8 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                     } else {
                         LOG.warn("Partition {} is inactive but realtime deliveryId {} needs to catch up with lastId {}", coord, deliveryId, lastId);
                     }
+                } else if (!indexCallbacks.canClose(coord)) {
+                    LOG.info("Partition {} is idle but has active callbacks, closure will be deferred", coord);
                 } else {
                     close();
                 }
@@ -815,7 +823,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                                             MiruPartitionAccessor<BM, IBM, C, S> online = accessor.copyToState(MiruPartitionState.online);
                                             accessor = updatePartition(accessor, online);
                                             if (accessor != null) {
-                                                accessor.merge(transientMergeExecutor, got, transientMergeChits, trackError);
+                                                accessor.merge(got, transientMergeChits, trackError);
                                                 trackError.reset();
                                             }
                                         } else {
@@ -1060,7 +1068,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                                 LOG.info("Forcing merge after sip with no open writers for coord:{} sippedEndOfWAL:{} sippedEndOfStream:{}",
                                     coord, sipResult.sippedEndOfWAL, sipResult.sippedEndOfStream);
                                 MiruContext<BM, IBM, S> persistentContext = accessor.persistentContext.get();
-                                accessor.merge(persistentMergeExecutor, persistentContext, persistentMergeChits, trackError);
+                                accessor.merge(persistentContext, persistentMergeChits, trackError);
 
                                 boolean compact = false;
                                 synchronized (factoryLock) {
@@ -1229,6 +1237,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                     persistentMergeExecutor,
                     trackError,
                     stackBuffer);
+                indexCallbacks.commit(coord);
                 int lastId = accessor.persistentContext.get().activityIndex.lastId(stackBuffer);
                 if (lastId != updatedLastId.get()) {
                     heartbeatHandler.updateLastId(coord, lastId);

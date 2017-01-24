@@ -309,7 +309,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         return (context.isPresent() && context.get().sipIndex.setSip(sip, stackBuffer));
     }
 
-    void merge(ExecutorService mergeExecutor, MiruContext<BM, IBM, S> context, MiruMergeChits chits, TrackError trackError) throws Exception {
+    void merge(MiruContext<BM, IBM, S> context, MiruMergeChits chits, TrackError trackError) throws Exception {
         long elapsed;
         synchronized (context.writeLock) {
             if (chits.taken(coord) == 0) {
@@ -321,7 +321,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
             long start = System.currentTimeMillis();
 
             try {
-                context.commitable.commit(mergeExecutor);
+                context.commitable.commit();
             } catch (Exception e) {
                 if (!(e instanceof InterruptedException)) {
                     trackError.error("Failed to merge: " + e.getMessage());
@@ -417,7 +417,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         }
 
         if (chits.take(coord, consumedCount)) {
-            merge(mergeExecutor, context, chits, trackError);
+            merge(context, chits, trackError);
         }
 
         return consumedCount;
@@ -750,7 +750,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
                 MiruContext<BM, IBM, S> context,
                 MiruMergeChits chits,
                 TrackError trackError) throws Exception {
-                MiruPartitionAccessor.this.merge(mergeExecutor, context, chits, trackError);
+                MiruPartitionAccessor.this.merge(context, chits, trackError);
             }
 
             @Override

@@ -13,6 +13,7 @@ import com.jivesoftware.os.miru.service.MiruServiceConfig;
 import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
 import com.jivesoftware.os.miru.service.stream.MiruIndexAuthz;
 import com.jivesoftware.os.miru.service.stream.MiruIndexBloom;
+import com.jivesoftware.os.miru.service.stream.MiruIndexCallbacks;
 import com.jivesoftware.os.miru.service.stream.MiruIndexLatest;
 import com.jivesoftware.os.miru.service.stream.MiruIndexPairedLatest;
 import com.jivesoftware.os.miru.service.stream.MiruIndexPrimaryFields;
@@ -43,6 +44,7 @@ public class MiruLocalPartitionFactory<C extends MiruCursor<C, S>, S extends Mir
     private final ExecutorService persistentMergeExecutor;
     private final ExecutorService transientMergeExecutor;
     private final int rebuildIndexerThreads;
+    private final MiruIndexCallbacks indexCallbacks;
     private final MiruIndexRepairs indexRepairs;
     private final MiruMergeChits persistentMergeChits;
     private final MiruMergeChits transientMergeChits;
@@ -64,6 +66,7 @@ public class MiruLocalPartitionFactory<C extends MiruCursor<C, S>, S extends Mir
         ExecutorService persistentMergeExecutor,
         ExecutorService transientMergeExecutor,
         int rebuildIndexerThreads,
+        MiruIndexCallbacks indexCallbacks,
         MiruIndexRepairs indexRepairs,
         MiruMergeChits persistentMergeChits,
         MiruMergeChits transientMergeChits,
@@ -85,6 +88,7 @@ public class MiruLocalPartitionFactory<C extends MiruCursor<C, S>, S extends Mir
         this.persistentMergeExecutor = persistentMergeExecutor;
         this.transientMergeExecutor = transientMergeExecutor;
         this.rebuildIndexerThreads = rebuildIndexerThreads;
+        this.indexCallbacks = indexCallbacks;
         this.indexRepairs = indexRepairs;
         this.persistentMergeChits = persistentMergeChits;
         this.transientMergeChits = transientMergeChits;
@@ -114,6 +118,7 @@ public class MiruLocalPartitionFactory<C extends MiruCursor<C, S>, S extends Mir
             persistentMergeExecutor,
             transientMergeExecutor,
             rebuildIndexerThreads,
+            indexCallbacks,
             indexRepairs,
             new MiruIndexer<>(
                 new MiruIndexAuthz<>(),
