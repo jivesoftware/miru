@@ -6,6 +6,7 @@ import org.merlin.config.defaults.BooleanDefault;
 import org.merlin.config.defaults.ClassDefault;
 import org.merlin.config.defaults.IntDefault;
 import org.merlin.config.defaults.LongDefault;
+import org.merlin.config.defaults.StringDefault;
 
 public interface MiruSyncConfig extends Config {
 
@@ -38,4 +39,10 @@ public interface MiruSyncConfig extends Config {
 
     @IntDefault(10_000)
     int getCopyBatchSize();
+
+    @StringDefault("")
+    String getSyncLoopback();
+
+    @LongDefault(1_000L * 60 * 60 * 24 * 30)
+    long getSyncLoopbackDurationMillis();
 }

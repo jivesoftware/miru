@@ -52,10 +52,15 @@ public class MiruSyncSenders<C extends MiruCursor<C, S>, S extends MiruSipCursor
     private final MiruSyncConfigProvider syncConfigProvider;
     private final long ensureSendersInterval;
     private final MiruWALClient<C, S> miruWALClient;
+    private final boolean syncLoopback;
+    private final MiruSyncClient loopbackSyncClient;
+    private final MiruSyncConfigProvider loopbackSyncConfigProvider;
     private final C defaultCursor;
     private final Class<C> cursorClass;
 
     private final ExecutorService ensureSenders = Executors.newFixedThreadPool(1, new ThreadFactoryBuilder().setNameFormat("ensure-sender-%d").build());
+
+    private MiruSyncSender<C, S> loopbackSender;
 
     public MiruSyncSenders(MiruStats stats,
         MiruSyncConfig syncConfig,
@@ -69,12 +74,15 @@ public class MiruSyncSenders<C extends MiruCursor<C, S>, S extends MiruSipCursor
         MiruSyncConfigProvider syncConfigProvider,
         long ensureSendersInterval,
         MiruWALClient<C, S> miruWALClient,
+        boolean syncLoopback,
+        MiruSyncClient loopbackSyncClient,
+        MiruSyncConfigProvider loopbackSyncConfigProvider,
         C defaultCursor,
         Class<C> cursorClass) {
+
         this.stats = stats;
         this.syncConfig = syncConfig;
         this.orderIdProvider = orderIdProvider;
-
         this.executorService = executorService;
         this.partitionClientProvider = partitionClientProvider;
         this.clientAquariumProvider = clientAquariumProvider;
@@ -84,6 +92,9 @@ public class MiruSyncSenders<C extends MiruCursor<C, S>, S extends MiruSipCursor
         this.syncConfigProvider = syncConfigProvider;
         this.ensureSendersInterval = ensureSendersInterval;
         this.miruWALClient = miruWALClient;
+        this.syncLoopback = syncLoopback;
+        this.loopbackSyncClient = loopbackSyncClient;
+        this.loopbackSyncConfigProvider = loopbackSyncConfigProvider;
         this.defaultCursor = defaultCursor;
         this.cursorClass = cursorClass;
     }
@@ -102,6 +113,24 @@ public class MiruSyncSenders<C extends MiruCursor<C, S>, S extends MiruSipCursor
 
     public void start() {
         if (running.compareAndSet(false, true)) {
+            if (syncLoopback) {
+                loopbackSender = new MiruSyncSender<>(
+                    stats,
+                    new MiruSyncSenderConfig("loopback", true, null, null, -1, 10_000L, 60_000L, 10_000, null, null, null, false),
+                    clientAquariumProvider,
+                    orderIdProvider,
+                    syncConfig.getSyncRingStripes(),
+                    executorService,
+                    schemaProvider,
+                    miruWALClient,
+                    loopbackSyncClient,
+                    partitionClientProvider,
+                    mapper,
+                    loopbackSyncConfigProvider,
+                    defaultCursor,
+                    cursorClass);
+                loopbackSender.start();
+            }
             ensureSenders.submit(() -> {
                 while (running.get()) {
                     try {
@@ -163,6 +192,10 @@ public class MiruSyncSenders<C extends MiruCursor<C, S>, S extends MiruSipCursor
     public void stop() {
         if (running.compareAndSet(true, false)) {
             ensureSenders.shutdownNow();
+            if (loopbackSender != null) {
+                loopbackSender.stop();
+                loopbackSender = null;
+            }
         }
 
         for (MiruSyncSender amzaSyncSender : senders.values()) {
@@ -174,7 +207,7 @@ public class MiruSyncSenders<C extends MiruCursor<C, S>, S extends MiruSipCursor
         }
     }
 
-    public MiruSyncClient syncClient(MiruSyncSenderConfig config) throws Exception {
+    private MiruSyncClient syncClient(MiruSyncSenderConfig config) throws Exception {
 
         String consumerKey = StringUtils.trimToNull(config.oAuthConsumerKey);
         String consumerSecret = StringUtils.trimToNull(config.oAuthConsumerSecret);

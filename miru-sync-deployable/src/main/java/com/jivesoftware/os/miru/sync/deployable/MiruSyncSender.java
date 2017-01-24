@@ -310,10 +310,8 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         LOG.info("Syncing stripe:{}", stripe);
         int tenantCount = 0;
         int activityCount = 0;
-        Map<MiruSyncTenantTuple, MiruSyncTenantConfig> tenantIds;
-        tenantIds = syncConfigProvider.getAll(config.name);
-
-        for (Entry<MiruSyncTenantTuple, MiruSyncTenantConfig> entry : tenantIds.entrySet()) {
+        Map<MiruSyncTenantTuple, MiruSyncTenantConfig> tenantTupleConfigs = syncConfigProvider.getAll(config.name);
+        for (Entry<MiruSyncTenantTuple, MiruSyncTenantConfig> entry : tenantTupleConfigs.entrySet()) {
             if (!isElected(stripe)) {
                 break;
             }

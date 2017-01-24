@@ -160,7 +160,7 @@ public class MiruSyncSenderTest {
                 -1,
                 Long.MAX_VALUE,
                 0,
-                MiruSyncTimeShiftStrategy.linear
+                MiruSyncTimeShiftStrategy.none
             )),
             null,
             AmzaCursor.class);

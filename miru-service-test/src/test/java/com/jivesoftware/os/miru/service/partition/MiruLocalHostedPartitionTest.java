@@ -86,6 +86,7 @@ import com.jivesoftware.os.miru.service.stream.allocator.InMemoryChunkAllocator;
 import com.jivesoftware.os.miru.service.stream.allocator.MiruChunkAllocator;
 import com.jivesoftware.os.miru.service.stream.allocator.OnDiskChunkAllocator;
 import com.jivesoftware.os.miru.wal.MiruWALDirector;
+import com.jivesoftware.os.miru.wal.RCVSWALDirector;
 import com.jivesoftware.os.miru.wal.RCVSWALInitializer;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
@@ -319,13 +320,13 @@ public class MiruLocalHostedPartitionTest {
 
         HostPortProvider hostPortProvider = host -> 10_000;
 
-        MiruActivityWALWriter activityWALWriter = new RCVSActivityWALWriter(wal.getActivityWAL(), wal.getActivitySipWAL(), null);
-        MiruActivityWALReader<RCVSCursor, RCVSSipCursor> activityWALReader = new RCVSActivityWALReader(hostPortProvider,
+        RCVSActivityWALWriter activityWALWriter = new RCVSActivityWALWriter(wal.getActivityWAL(), wal.getActivitySipWAL(), null);
+        RCVSActivityWALReader activityWALReader = new RCVSActivityWALReader(hostPortProvider,
             wal.getActivityWAL(),
             wal.getActivitySipWAL(),
             null);
-        MiruReadTrackingWALWriter readTrackingWALWriter = new RCVSReadTrackingWALWriter(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
-        MiruReadTrackingWALReader<RCVSCursor, RCVSSipCursor> readTrackingWALReader = new RCVSReadTrackingWALReader(hostPortProvider,
+        RCVSReadTrackingWALWriter readTrackingWALWriter = new RCVSReadTrackingWALWriter(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
+        RCVSReadTrackingWALReader readTrackingWALReader = new RCVSReadTrackingWALReader(hostPortProvider,
             wal.getReadTrackingWAL(),
             wal.getReadTrackingSipWAL());
         MiruWALLookup walLookup = new RCVSWALLookup(wal.getWALLookupTable());
@@ -370,7 +371,7 @@ public class MiruLocalHostedPartitionTest {
         MiruClusterClient clusterClient = new MiruRegistryClusterClient(clusterRegistry, replicaSetDirector);
         replicaSetDirector.elect(host, tenantId, partitionId, System.currentTimeMillis());
 
-        walClient = new MiruWALDirector<>(walLookup, activityWALReader, activityWALWriter, readTrackingWALReader, readTrackingWALWriter, clusterClient);
+        walClient = new RCVSWALDirector(walLookup, activityWALReader, activityWALWriter, readTrackingWALReader, readTrackingWALWriter, clusterClient);
 
         partitionEventHandler = new MiruPartitionHeartbeatHandler(clusterClient);
         rebuildDirector = new MiruRebuildDirector(Long.MAX_VALUE);

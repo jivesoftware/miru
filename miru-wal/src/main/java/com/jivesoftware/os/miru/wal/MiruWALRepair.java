@@ -19,23 +19,20 @@ public class MiruWALRepair {
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final MiruWALClient<? ,?> walClient;
-    private final MiruWALDirector<?, ?> walDirector;
     private final MiruActivityWALReader<?, ?> activityWALReader;
 
     private final MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory();
 
     public MiruWALRepair(MiruWALClient<?, ?> walClient,
-        MiruWALDirector<?, ?> walDirector,
         MiruActivityWALReader<?, ?> activityWALReader) {
         this.walClient = walClient;
-        this.walDirector = walDirector;
         this.activityWALReader = activityWALReader;
     }
 
     public void repairBoundaries() throws Exception {
-        List<MiruTenantId> tenantIds = walDirector.getAllTenantIds();
+        List<MiruTenantId> tenantIds = walClient.getAllTenantIds();
         for (MiruTenantId tenantId : tenantIds) {
-            MiruPartitionId latestPartitionId = walDirector.getLargestPartitionId(tenantId);
+            MiruPartitionId latestPartitionId = walClient.getLargestPartitionId(tenantId);
             if (latestPartitionId != null) {
                 for (MiruPartitionId partitionId = latestPartitionId.prev(); partitionId != null; partitionId = partitionId.prev()) {
                     MiruActivityWALStatus status = activityWALReader.getStatus(tenantId, partitionId);
