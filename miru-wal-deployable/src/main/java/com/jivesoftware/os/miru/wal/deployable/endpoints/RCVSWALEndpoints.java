@@ -18,6 +18,7 @@ import com.jivesoftware.os.miru.api.wal.SipAndLastSeen;
 import com.jivesoftware.os.miru.wal.MiruWALDirector;
 import com.jivesoftware.os.miru.wal.MiruWALNotInitializedException;
 import com.jivesoftware.os.miru.wal.MiruWALWrongRouteException;
+import com.jivesoftware.os.miru.wal.RCVSWALDirector;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.shared.HostPort;
@@ -44,11 +45,11 @@ public class RCVSWALEndpoints {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
-    private final MiruWALDirector<RCVSCursor, RCVSSipCursor> walDirector;
+    private final RCVSWALDirector walDirector;
     private final MiruStats stats;
     private final ResponseHelper responseHelper = ResponseHelper.INSTANCE;
 
-    public RCVSWALEndpoints(@Context MiruWALDirector walDirector, @Context MiruStats stats) {
+    public RCVSWALEndpoints(@Context RCVSWALDirector walDirector, @Context MiruStats stats) {
         this.walDirector = walDirector;
         this.stats = stats;
     }

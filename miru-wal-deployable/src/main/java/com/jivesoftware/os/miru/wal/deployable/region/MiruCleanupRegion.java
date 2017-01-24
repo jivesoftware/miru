@@ -6,6 +6,7 @@ import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.topology.MiruPartitionStatus;
+import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.ui.MiruPageRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.miru.wal.MiruWALDirector;
@@ -25,13 +26,16 @@ public class MiruCleanupRegion implements MiruPageRegion<Void> {
 
     private final String template;
     private final MiruSoyRenderer renderer;
-    private final MiruWALDirector<?, ?> miruWALDirector;
+    private final MiruWALClient<?, ?> miruWALClient;
+    private final MiruWALDirector miruWALDirector;
 
     public MiruCleanupRegion(String template,
         MiruSoyRenderer renderer,
-        MiruWALDirector<?, ?> miruWALDirector) {
+        MiruWALClient<?, ?> miruWALClient,
+        MiruWALDirector miruWALDirector) {
         this.template = template;
         this.renderer = renderer;
+        this.miruWALClient = miruWALClient;
         this.miruWALDirector = miruWALDirector;
     }
 
@@ -42,7 +46,7 @@ public class MiruCleanupRegion implements MiruPageRegion<Void> {
         ISO8601DateFormat dateFormat = new ISO8601DateFormat();
         try {
             List<Map<String, Object>> tenantData = Lists.newArrayList();
-            List<MiruTenantId> tenantIds = miruWALDirector.getAllTenantIds();
+            List<MiruTenantId> tenantIds = miruWALClient.getAllTenantIds();
             int count = 0;
             for (MiruTenantId tenantId : tenantIds) {
                 count++;

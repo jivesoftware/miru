@@ -23,14 +23,11 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivityFactory;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.wal.AmzaCursor;
-import com.jivesoftware.os.miru.api.wal.AmzaSipCursor;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.api.wal.MiruWALEntry;
 import com.jivesoftware.os.miru.service.MiruServiceConfig;
+import com.jivesoftware.os.miru.wal.AmzaWALDirector;
 import com.jivesoftware.os.miru.wal.AmzaWALUtil;
-import com.jivesoftware.os.miru.wal.MiruWALDirector;
-import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
-import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
 import com.jivesoftware.os.miru.wal.activity.amza.AmzaActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.amza.AmzaActivityWALWriter;
 import com.jivesoftware.os.routing.bird.deployable.Deployable;
@@ -125,8 +122,8 @@ public class AmzaWALTest {
             10_000,
             3,
             10_000);
-        MiruActivityWALWriter activityWALWriter = new AmzaActivityWALWriter(amzaWALUtil, 0, mapper);
-        MiruActivityWALReader<AmzaCursor, AmzaSipCursor> activityWALReader = new AmzaActivityWALReader(amzaWALUtil, mapper);
+        AmzaActivityWALWriter activityWALWriter = new AmzaActivityWALWriter(amzaWALUtil, 0, mapper);
+        AmzaActivityWALReader activityWALReader = new AmzaActivityWALReader(amzaWALUtil, mapper);
 
         HostPort[] routingGroup = activityWALReader.getRoutingGroup(tenantId, partitionId);
         assertNotNull(routingGroup);
@@ -175,7 +172,7 @@ public class AmzaWALTest {
         System.out.println("Count: " + partition.count());
         //assertEquals(partition.count(), batchSize * numBatches);
 
-        MiruWALDirector<AmzaCursor, AmzaSipCursor> walDirector = new MiruWALDirector<>(null, activityWALReader, activityWALWriter, null, null, null);
+        AmzaWALDirector walDirector = new AmzaWALDirector(null, activityWALReader, activityWALWriter, null, null, null);
 
         AmzaCursor cursor = null;
         int count = 0;

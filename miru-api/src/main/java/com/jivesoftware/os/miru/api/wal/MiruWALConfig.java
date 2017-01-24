@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.api.wal;
 
 import org.merlin.config.Config;
+import org.merlin.config.defaults.BooleanDefault;
 import org.merlin.config.defaults.StringDefault;
 
 /**
@@ -13,4 +14,7 @@ public interface MiruWALConfig extends Config {
 
     @StringDefault("")
     String getTenantPartitionBlacklist();
+
+    @BooleanDefault(false)
+    boolean getSecondaryAmzaWAL();
 }

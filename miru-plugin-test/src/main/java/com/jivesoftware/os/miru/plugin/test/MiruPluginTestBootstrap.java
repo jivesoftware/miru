@@ -66,16 +66,12 @@ import com.jivesoftware.os.miru.service.partition.PartitionErrorTracker;
 import com.jivesoftware.os.miru.service.partition.RCVSSipTrackerFactory;
 import com.jivesoftware.os.miru.service.realtime.NoOpRealtimeDelivery;
 import com.jivesoftware.os.miru.service.stream.MiruIndexCallbacks;
-import com.jivesoftware.os.miru.wal.MiruWALDirector;
+import com.jivesoftware.os.miru.wal.RCVSWALDirector;
 import com.jivesoftware.os.miru.wal.RCVSWALInitializer;
-import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
-import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
 import com.jivesoftware.os.miru.wal.activity.rcvs.RCVSActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.rcvs.RCVSActivityWALWriter;
 import com.jivesoftware.os.miru.wal.lookup.MiruWALLookup;
 import com.jivesoftware.os.miru.wal.lookup.RCVSWALLookup;
-import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
-import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALWriter;
 import com.jivesoftware.os.miru.wal.readtracking.rcvs.RCVSReadTrackingWALReader;
 import com.jivesoftware.os.miru.wal.readtracking.rcvs.RCVSReadTrackingWALWriter;
 import com.jivesoftware.os.rcvs.inmemory.InMemoryRowColumnValueStoreInitializer;
@@ -155,17 +151,17 @@ public class MiruPluginTestBootstrap {
         partitionedActivities.add(new MiruPartitionedActivityFactory().begin(1, partitionId, tenantId, 0));
         partitionedActivities.addAll(includeActivities);
 
-        MiruActivityWALWriter activityWALWriter = new RCVSActivityWALWriter(wal.getActivityWAL(), wal.getActivitySipWAL(), null);
+        RCVSActivityWALWriter activityWALWriter = new RCVSActivityWALWriter(wal.getActivityWAL(), wal.getActivitySipWAL(), null);
         activityWALWriter.write(tenantId, partitionId, partitionedActivities);
 
         HostPortProvider hostPortProvider = host -> 10_000;
 
-        MiruActivityWALReader<RCVSCursor, RCVSSipCursor> activityWALReader = new RCVSActivityWALReader(hostPortProvider,
+        RCVSActivityWALReader activityWALReader = new RCVSActivityWALReader(hostPortProvider,
             wal.getActivityWAL(),
             wal.getActivitySipWAL(),
             null);
-        MiruReadTrackingWALWriter readTrackingWALWriter = new RCVSReadTrackingWALWriter(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
-        MiruReadTrackingWALReader<RCVSCursor, RCVSSipCursor> readTrackingWALReader = new RCVSReadTrackingWALReader(hostPortProvider,
+        RCVSReadTrackingWALWriter readTrackingWALWriter = new RCVSReadTrackingWALWriter(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
+        RCVSReadTrackingWALReader readTrackingWALReader = new RCVSReadTrackingWALReader(hostPortProvider,
             wal.getReadTrackingWAL(),
             wal.getReadTrackingSipWAL());
         MiruWALLookup walLookup = new RCVSWALLookup(wal.getWALLookupTable());
@@ -206,7 +202,7 @@ public class MiruPluginTestBootstrap {
 
         MiruReplicaSetDirector replicaSetDirector = new MiruReplicaSetDirector(new OrderIdProviderImpl(new ConstantWriterIdProvider(1)), clusterRegistry,
             stream -> stream.descriptor("datacenter", "rack", miruHost), false);
-        MiruWALClient<RCVSCursor, RCVSSipCursor> walClient = new MiruWALDirector<>(walLookup, activityWALReader, activityWALWriter, readTrackingWALReader,
+        MiruWALClient<RCVSCursor, RCVSSipCursor> walClient = new RCVSWALDirector(walLookup, activityWALReader, activityWALWriter, readTrackingWALReader,
             readTrackingWALWriter, new MiruRegistryClusterClient(clusterRegistry, replicaSetDirector));
         MiruInboxReadTracker inboxReadTracker = new RCVSInboxReadTracker(walClient);
 

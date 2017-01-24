@@ -22,8 +22,10 @@ import com.jivesoftware.os.miru.api.wal.RCVSCursor;
 import com.jivesoftware.os.miru.api.wal.RCVSSipCursor;
 import com.jivesoftware.os.miru.ui.MiruPageRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
+import com.jivesoftware.os.miru.wal.AmzaWALDirector;
 import com.jivesoftware.os.miru.wal.AmzaWALUtil;
 import com.jivesoftware.os.miru.wal.MiruWALDirector;
+import com.jivesoftware.os.miru.wal.RCVSWALDirector;
 import com.jivesoftware.os.miru.wal.deployable.region.bean.WALBean;
 import com.jivesoftware.os.miru.wal.deployable.region.input.MiruActivityWALRegionInput;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
@@ -45,14 +47,14 @@ public class MiruActivityWALRegion implements MiruPageRegion<MiruActivityWALRegi
     private final String template;
     private final MiruSoyRenderer renderer;
     private final AmzaWALUtil amzaWALUtil;
-    private final MiruWALDirector<RCVSCursor, RCVSSipCursor> rcvsWALDirector;
-    private final MiruWALDirector<AmzaCursor, AmzaSipCursor> amzaWALDirector;
+    private final RCVSWALDirector rcvsWALDirector;
+    private final AmzaWALDirector amzaWALDirector;
 
     public MiruActivityWALRegion(String template,
         MiruSoyRenderer renderer,
         AmzaWALUtil amzaWALUtil,
-        MiruWALDirector<RCVSCursor, RCVSSipCursor> rcvsWALDirector,
-        MiruWALDirector<AmzaCursor, AmzaSipCursor> amzaWALDirector) {
+        RCVSWALDirector rcvsWALDirector,
+        AmzaWALDirector amzaWALDirector) {
         this.template = template;
         this.renderer = renderer;
         this.amzaWALUtil = amzaWALUtil;
@@ -147,18 +149,18 @@ public class MiruActivityWALRegion implements MiruPageRegion<MiruActivityWALRegi
     }
 
     private <S extends MiruSipCursor<S>, C extends MiruCursor<C, S>> SortedMap<Integer, Map<String, String>> getPartitions(MiruTenantId tenantId,
-        MiruWALDirector<C, S> director) throws Exception {
+        MiruWALClient<C, S> client) throws Exception {
 
-        if (director == null) {
+        if (client == null) {
             return Collections.emptySortedMap();
         }
 
-        MiruPartitionId latestPartitionId = director.getLargestPartitionId(tenantId);
+        MiruPartitionId latestPartitionId = client.getLargestPartitionId(tenantId);
 
         List<MiruActivityWALStatus> partitionStatuses = Lists.newArrayList();
         if (latestPartitionId != null) {
             for (MiruPartitionId latest = latestPartitionId; latest != null; latest = latest.prev()) {
-                partitionStatuses.add(director.getActivityWALStatusForTenant(tenantId, latest));
+                partitionStatuses.add(client.getActivityWALStatusForTenant(tenantId, latest));
             }
         }
 
@@ -182,11 +184,11 @@ public class MiruActivityWALRegion implements MiruPageRegion<MiruActivityWALRegi
         List<WALBean> walActivities,
         int limit,
         AtomicLong lastTimestamp,
-        MiruWALDirector<C, S> director,
+        MiruWALClient<C, S> client,
         C cursor,
         Function<C, Long> extractLastTimestamp) throws Exception {
 
-        MiruWALClient.StreamBatch<MiruWALEntry, C> gopped = director.getActivity(tenantId,
+        MiruWALClient.StreamBatch<MiruWALEntry, C> gopped = client.getActivity(tenantId,
             partitionId,
             cursor,
             limit,
@@ -202,11 +204,11 @@ public class MiruActivityWALRegion implements MiruPageRegion<MiruActivityWALRegi
         List<WALBean> walActivities,
         int limit,
         AtomicLong lastTimestamp,
-        MiruWALDirector<C, S> director,
+        MiruWALClient<C, S> client,
         S cursor,
         Function<S, Long> extractLastTimestamp) throws Exception {
 
-        MiruWALClient.StreamBatch<MiruWALEntry, S> sipped = director.sipActivity(tenantId,
+        MiruWALClient.StreamBatch<MiruWALEntry, S> sipped = client.sipActivity(tenantId,
             partitionId,
             cursor,
             null,

@@ -14,6 +14,7 @@ import com.jivesoftware.os.miru.api.wal.RCVSSipCursor;
 import com.jivesoftware.os.miru.ui.MiruPageRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.miru.wal.MiruWALDirector;
+import com.jivesoftware.os.miru.wal.RCVSWALDirector;
 import com.jivesoftware.os.miru.wal.deployable.region.bean.WALBean;
 import com.jivesoftware.os.miru.wal.deployable.region.input.MiruReadWALRegionInput;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
@@ -32,12 +33,12 @@ public class MiruReadWALRegion implements MiruPageRegion<MiruReadWALRegionInput>
 
     private final String template;
     private final MiruSoyRenderer renderer;
-    private final MiruWALDirector<RCVSCursor, RCVSSipCursor> miruWALDirector;
+    private final RCVSWALDirector rcvsWALDirector;
 
-    public MiruReadWALRegion(String template, MiruSoyRenderer renderer, MiruWALDirector<RCVSCursor, RCVSSipCursor> miruWALDirector) {
+    public MiruReadWALRegion(String template, MiruSoyRenderer renderer, RCVSWALDirector rcvsWALDirector) {
         this.template = template;
         this.renderer = renderer;
-        this.miruWALDirector = miruWALDirector;
+        this.rcvsWALDirector = rcvsWALDirector;
     }
 
     @Override
@@ -64,7 +65,7 @@ public class MiruReadWALRegion implements MiruPageRegion<MiruReadWALRegionInput>
                 MiruStreamId miruStreamId = new MiruStreamId(streamId.getBytes(Charsets.UTF_8));
 
                 try {
-                    MiruWALClient.StreamBatch<MiruWALEntry, RCVSSipCursor> read = miruWALDirector.getRead(miruTenantId, miruStreamId,
+                    MiruWALClient.StreamBatch<MiruWALEntry, RCVSSipCursor> read = rcvsWALDirector.getRead(miruTenantId, miruStreamId,
                         new RCVSSipCursor(MiruPartitionedActivity.Type.ACTIVITY.getSort(), afterTimestamp, 0, false), Long.MAX_VALUE, limit);
 
                     walReadEvents = Lists.transform(read.activities, input -> new WALBean(input.collisionId, Optional.of(input.activity), input.version));

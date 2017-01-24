@@ -29,6 +29,7 @@ import com.jivesoftware.os.miru.api.wal.MiruWALEntry;
 import com.jivesoftware.os.miru.api.wal.RCVSCursor;
 import com.jivesoftware.os.miru.api.wal.RCVSSipCursor;
 import com.jivesoftware.os.miru.wal.MiruWALDirector;
+import com.jivesoftware.os.miru.wal.RCVSWALDirector;
 import com.jivesoftware.os.miru.wal.RCVSWALInitializer;
 import com.jivesoftware.os.miru.wal.activity.rcvs.RCVSActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.rcvs.RCVSActivityWALWriter;
@@ -60,7 +61,7 @@ public class SipTest {
         MiruPartitionId partitionId = MiruPartitionId.of(0);
         RCVSWALInitializer.RCVSWAL rcvsWAL = new RCVSWALInitializer().initialize("test", new InMemoryRowColumnValueStoreInitializer(), new ObjectMapper());
         HostPortProvider hostPortProvider = host -> 10_000;
-        MiruWALDirector<RCVSCursor, RCVSSipCursor> walDirector = new MiruWALDirector<>(new RCVSWALLookup(rcvsWAL.getWALLookupTable()),
+        RCVSWALDirector walDirector = new RCVSWALDirector(new RCVSWALLookup(rcvsWAL.getWALLookupTable()),
             new RCVSActivityWALReader(hostPortProvider, rcvsWAL.getActivityWAL(), rcvsWAL.getActivitySipWAL(), null),
             new RCVSActivityWALWriter(rcvsWAL.getActivityWAL(), rcvsWAL.getActivitySipWAL(), null),
             null,
@@ -151,7 +152,7 @@ public class SipTest {
 
     private CursorAndLastSeen sip(MiruTenantId tenantId,
         MiruPartitionId partitionId,
-        MiruWALDirector<RCVSCursor, RCVSSipCursor> walDirector,
+        RCVSWALDirector walDirector,
         RCVSSipCursor sipCursor,
         Set<TimeAndVersion> seenLastSip,
         ActivityStream stream) throws Exception {

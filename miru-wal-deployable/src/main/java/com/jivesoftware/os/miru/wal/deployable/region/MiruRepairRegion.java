@@ -10,6 +10,7 @@ import com.google.common.collect.Table;
 import com.google.common.collect.TreeBasedTable;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.wal.MiruWALClient;
 import com.jivesoftware.os.miru.ui.MiruPageRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.miru.wal.MiruWALDirector;
@@ -34,16 +35,16 @@ public class MiruRepairRegion implements MiruPageRegion<Optional<String>> {
     private final String template;
     private final MiruSoyRenderer renderer;
     private final MiruActivityWALReader activityWALReader;
-    private final MiruWALDirector<?, ?> miruWALDirector;
+    private final MiruWALClient<?, ?> miruWALClient;
 
     public MiruRepairRegion(String template,
         MiruSoyRenderer renderer,
         MiruActivityWALReader activityWALReader,
-        MiruWALDirector<?, ?> miruWALDirector) {
+        MiruWALClient<?, ?> miruWALClient) {
         this.template = template;
         this.renderer = renderer;
         this.activityWALReader = activityWALReader;
-        this.miruWALDirector = miruWALDirector;
+        this.miruWALClient = miruWALClient;
     }
 
     @Override
@@ -69,7 +70,7 @@ public class MiruRepairRegion implements MiruPageRegion<Optional<String>> {
 
     private Table<String, String, String> getTenantPartitions(MiruTenantId tenantId) throws Exception {
         final Table<String, String, String> tenantPartitions = TreeBasedTable.create(); // tree for order
-        MiruPartitionId latestPartitionId = miruWALDirector.getLargestPartitionId(tenantId);
+        MiruPartitionId latestPartitionId = miruWALClient.getLargestPartitionId(tenantId);
         if (latestPartitionId != null) {
             for (MiruPartitionId latest = latestPartitionId; latest != null; latest = latest.prev()) {
                 tenantPartitions.put(tenantId.toString(), latest.toString(), "");

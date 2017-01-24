@@ -15,6 +15,7 @@ import com.jivesoftware.os.miru.api.wal.MiruWALClient.RoutingGroupType;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient.StreamBatch;
 import com.jivesoftware.os.miru.api.wal.MiruWALEntry;
 import com.jivesoftware.os.miru.api.wal.SipAndLastSeen;
+import com.jivesoftware.os.miru.wal.AmzaWALDirector;
 import com.jivesoftware.os.miru.wal.MiruWALDirector;
 import com.jivesoftware.os.miru.wal.MiruWALNotInitializedException;
 import com.jivesoftware.os.miru.wal.MiruWALWrongRouteException;
@@ -44,11 +45,11 @@ public class AmzaWALEndpoints {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
-    private final MiruWALDirector<AmzaCursor, AmzaSipCursor> walDirector;
+    private final AmzaWALDirector walDirector;
     private final MiruStats stats;
     private final ResponseHelper responseHelper = ResponseHelper.INSTANCE;
 
-    public AmzaWALEndpoints(@Context MiruWALDirector walDirector, @Context MiruStats stats) {
+    public AmzaWALEndpoints(@Context AmzaWALDirector walDirector, @Context MiruStats stats) {
         this.walDirector = walDirector;
         this.stats = stats;
     }

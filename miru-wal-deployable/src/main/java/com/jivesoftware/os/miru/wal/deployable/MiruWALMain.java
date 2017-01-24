@@ -52,9 +52,11 @@ import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer.Miru
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer.MiruSoyRendererConfig;
+import com.jivesoftware.os.miru.wal.AmzaWALDirector;
 import com.jivesoftware.os.miru.wal.AmzaWALUtil;
 import com.jivesoftware.os.miru.wal.MiruWALDirector;
 import com.jivesoftware.os.miru.wal.MiruWALRepair;
+import com.jivesoftware.os.miru.wal.RCVSWALDirector;
 import com.jivesoftware.os.miru.wal.RCVSWALInitializer;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.amza.AmzaActivityWALReader;
@@ -331,18 +333,27 @@ public class MiruWALMain {
             MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize(miruStats, "", manageHttpClient, mapper);
             SickThreads walClientSickThreads = new SickThreads();
 
-            MiruActivityWALReader<?, ?> activityWALReader;
-            MiruWALDirector<RCVSCursor, RCVSSipCursor> rcvsWALDirector = null;
-            MiruWALDirector<AmzaCursor, AmzaSipCursor> amzaWALDirector = null;
-            MiruWALDirector<?, ?> miruWALDirector;
-            MiruWALClient<?, ?> miruWALClient;
-            Class<?> walEndpointsClass;
+            /*
+            Class<?> walEndpointsClass = null;
 
-            if (walConfig.getActivityWALType().equals("rcvs")) {
+            MiruWALDirector<?, ?> secondaryWALDirector = null;
+            MiruWALClient<?, ?> secondaryWALClient = null;
+            Class<?> secondaryWALEndpointsClass = null;*/
+
+            MiruWALClient<?, ?> miruWALClient = null;
+            MiruWALDirector miruWALDirector = null;
+            RCVSWALDirector rcvsWALDirector = null;
+            AmzaWALDirector amzaWALDirector = null;
+            MiruActivityWALReader<?, ?> activityWALReader = null;
+
+            boolean primaryRCVSWAL = walConfig.getActivityWALType().equals("rcvs");
+            boolean primaryAmzaWAL = walConfig.getActivityWALType().equals("amza");
+            boolean secondaryAmzaWAL = walConfig.getSecondaryAmzaWAL();
+
+            if (primaryRCVSWAL) {
                 MiruWALClient<RCVSCursor, RCVSSipCursor> rcvsWALClient = new MiruWALClientInitializer().initialize("", walHttpClient, mapper,
                     walClientSickThreads, 10_000,
                     "/miru/wal/rcvs", RCVSCursor.class, RCVSSipCursor.class);
-                miruWALClient = rcvsWALClient;
 
                 RCVSWALInitializer.RCVSWAL rcvsWAL = new RCVSWALInitializer().initialize(instanceConfig.getClusterName(),
                     rowColumnValueStoreInitializer,
@@ -376,7 +387,7 @@ public class MiruWALMain {
                     rcvsWAL.getReadTrackingWAL(),
                     rcvsWAL.getReadTrackingSipWAL());
 
-                rcvsWALDirector = new MiruWALDirector<>(rcvsWALLookup,
+                rcvsWALDirector = new RCVSWALDirector(rcvsWALLookup,
                     rcvsActivityWALReader,
                     rcvsActivityWALWriter,
                     readTrackingWALReader,
@@ -384,13 +395,17 @@ public class MiruWALMain {
                     clusterClient);
 
                 activityWALReader = rcvsActivityWALReader;
-                miruWALDirector = rcvsWALDirector;
-                walEndpointsClass = RCVSWALEndpoints.class;
-            } else if (walConfig.getActivityWALType().equals("amza")) {
+                miruWALClient = rcvsWALClient;
+                miruWALDirector = new MiruWALDirector(rcvsWALLookup, rcvsWALClient, rcvsActivityWALReader, rcvsActivityWALWriter, clusterClient);
+
+                deployable.addEndpoints(RCVSWALEndpoints.class);
+                deployable.addInjectables(RCVSWALDirector.class, rcvsWALDirector);
+            }
+
+            if (primaryAmzaWAL || secondaryAmzaWAL) {
                 MiruWALClient<AmzaCursor, AmzaSipCursor> amzaWALClient = new MiruWALClientInitializer().initialize("", walHttpClient, mapper,
                     walClientSickThreads, 10_000,
                     "/miru/wal/amza", AmzaCursor.class, AmzaSipCursor.class);
-                miruWALClient = amzaWALClient;
 
                 AmzaActivityWALWriter amzaActivityWALWriter = new AmzaActivityWALWriter(amzaWALUtil,
                     amzaServiceConfig.getReplicateTimeoutMillis(),
@@ -404,23 +419,30 @@ public class MiruWALMain {
                     mapper);
                 AmzaReadTrackingWALReader readTrackingWALReader = new AmzaReadTrackingWALReader(amzaWALUtil, mapper);
 
-                amzaWALDirector = new MiruWALDirector<>(amzaWALLookup,
+                amzaWALDirector = new AmzaWALDirector(amzaWALLookup,
                     amzaActivityWALReader,
                     amzaActivityWALWriter,
                     readTrackingWALReader,
                     readTrackingWALWriter,
                     clusterClient);
 
-                activityWALReader = amzaActivityWALReader;
-                miruWALDirector = amzaWALDirector;
-                walEndpointsClass = AmzaWALEndpoints.class;
-            } else if (walConfig.getActivityWALType().equals("rcvs_amza") || walConfig.getActivityWALType().equals("amza_rcvs")) {
+                deployable.addEndpoints(AmzaWALEndpoints.class);
+                deployable.addInjectables(AmzaWALDirector.class, amzaWALDirector);
+
+                if (primaryAmzaWAL) {
+                    activityWALReader = amzaActivityWALReader;
+                    miruWALClient = amzaWALClient;
+                    miruWALDirector = new MiruWALDirector(amzaWALLookup, amzaWALClient, amzaActivityWALReader, amzaActivityWALWriter, clusterClient);
+                }
+            }
+
+            if (walConfig.getActivityWALType().equals("rcvs_amza") || walConfig.getActivityWALType().equals("amza_rcvs")) {
                 throw new IllegalStateException("Activity WAL type is no longer supported: " + walConfig.getActivityWALType());
-            } else {
+            } else if (miruWALClient == null) {
                 throw new IllegalStateException("Invalid activity WAL type: " + walConfig.getActivityWALType());
             }
 
-            MiruWALRepair miruWALRepair = new MiruWALRepair(miruWALClient, miruWALDirector, activityWALReader);
+            MiruWALRepair miruWALRepair = new MiruWALRepair(miruWALClient, activityWALReader);
 
             MiruSoyRendererConfig rendererConfig = deployable.config(MiruSoyRendererConfig.class);
 
@@ -440,6 +462,7 @@ public class MiruWALMain {
                     renderer,
                     amzaWALUtil,
                     tenantRoutingProvider,
+                    miruWALClient,
                     miruWALDirector,
                     rcvsWALDirector,
                     amzaWALDirector,
@@ -457,9 +480,8 @@ public class MiruWALMain {
             deployable.addEndpoints(MiruWALEndpoints.class);
             deployable.addInjectables(MiruWALUIService.class, miruWALUIService);
             deployable.addInjectables(MiruWALDirector.class, miruWALDirector);
+            deployable.addInjectables(MiruWALClient.class, miruWALClient);
             deployable.addInjectables(MiruWALRepair.class, miruWALRepair);
-
-            deployable.addEndpoints(walEndpointsClass);
             deployable.addInjectables(MiruStats.class, miruStats);
 
             deployable.addResource(sourceTree);

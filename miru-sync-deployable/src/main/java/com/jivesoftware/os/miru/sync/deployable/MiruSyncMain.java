@@ -19,6 +19,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.amza.api.BAInterner;
 import com.jivesoftware.os.amza.api.partition.Consistency;
@@ -39,6 +40,7 @@ import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
 import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.jive.utils.ordered.id.TimestampedOrderIdProvider;
 import com.jivesoftware.os.miru.api.MiruStats;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.sync.ActivityReadEventConverter;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.api.wal.AmzaCursor;
@@ -56,6 +58,7 @@ import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer.Miru
 import com.jivesoftware.os.miru.sync.api.MiruSyncSenderConfig;
 import com.jivesoftware.os.miru.sync.api.MiruSyncTenantConfig;
 import com.jivesoftware.os.miru.sync.api.MiruSyncTenantTuple;
+import com.jivesoftware.os.miru.sync.api.MiruSyncTimeShiftStrategy;
 import com.jivesoftware.os.miru.sync.deployable.endpoints.MiruSyncApiEndpoints;
 import com.jivesoftware.os.miru.sync.deployable.endpoints.MiruSyncEndpoints;
 import com.jivesoftware.os.miru.sync.deployable.oauth.MiruSyncOAuthValidatorInitializer;
@@ -97,6 +100,8 @@ import com.jivesoftware.os.routing.bird.shared.TenantsServiceConnectionDescripto
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -372,7 +377,32 @@ public class MiruSyncMain {
             MiruSyncCopier<?, ?> syncCopier;
             MiruSyncSenders<?, ?> syncSenders = null;
 
-            if (walConfig.getActivityWALType().equals("rcvs") || walConfig.getActivityWALType().equals("rcvs_amza")) {
+            boolean syncLoopback = false;
+            LoopbackSyncClient loopbackSyncClient = null;
+            if (syncConfig.getSyncLoopback().equals("rcvs")) {
+                MiruWALClient<RCVSCursor, RCVSSipCursor> rcvsWALClient = new MiruWALClientInitializer().initialize("",
+                    walHttpClient,
+                    mapper,
+                    walClientSickThreads,
+                    10_000,
+                    "/miru/wal/rcvs",
+                    RCVSCursor.class,
+                    RCVSSipCursor.class);
+                loopbackSyncClient = new LoopbackSyncClient(rcvsWALClient);
+                syncLoopback = true;
+            } else if (syncConfig.getSyncLoopback().equals("amza")) {
+                MiruWALClient<AmzaCursor, AmzaSipCursor> amzaWALClient = new MiruWALClientInitializer().initialize("",
+                    walHttpClient,
+                    mapper,
+                    walClientSickThreads, 10_000,
+                    "/miru/wal/amza",
+                    AmzaCursor.class,
+                    AmzaSipCursor.class);
+                loopbackSyncClient = new LoopbackSyncClient(amzaWALClient);
+                syncLoopback = true;
+            }
+
+            if (walConfig.getActivityWALType().equals("rcvs")) {
                 MiruWALClient<RCVSCursor, RCVSSipCursor> rcvsWALClient = new MiruWALClientInitializer().initialize("",
                     walHttpClient,
                     mapper,
@@ -391,6 +421,22 @@ public class MiruSyncMain {
                     ScheduledExecutorService executorService = Executors.newScheduledThreadPool(syncConfig.getSyncSendersThreadCount());
                     ClusterSchemaProvider schemaProvider = new ClusterSchemaProvider(clusterClient, 10_000);
 
+                    MiruSyncConfigProvider loopbackSyncConfigProvider = null;
+                    if (syncLoopback) {
+                        long loopbackSyncDurationMillis = syncConfig.getSyncLoopbackDurationMillis();
+                        loopbackSyncConfigProvider = senderName -> {
+                            List<MiruTenantId> tenantIds = rcvsWALClient.getAllTenantIds();
+                            Map<MiruSyncTenantTuple, MiruSyncTenantConfig> tenantTupleConfigs = Maps.newHashMap();
+                            MiruSyncTenantConfig config = new MiruSyncTenantConfig(System.currentTimeMillis() - loopbackSyncDurationMillis,
+                                Long.MAX_VALUE,
+                                0,
+                                MiruSyncTimeShiftStrategy.none);
+                            for (MiruTenantId tenantId : tenantIds) {
+                                tenantTupleConfigs.put(new MiruSyncTenantTuple(tenantId, tenantId), config);
+                            }
+                            return tenantTupleConfigs;
+                        };
+                    }
                     syncSenders = (MiruSyncSenders) new MiruSyncSenders<>( //  don't remove generics (fails compilation for others when we do)
                         miruStats,
                         syncConfig,
@@ -404,12 +450,14 @@ public class MiruSyncMain {
                         miruSyncConfigStorage,
                         30_000, // TODO config
                         rcvsWALClient,
+                        syncLoopback,
+                        loopbackSyncClient,
+                        loopbackSyncConfigProvider,
                         RCVSCursor.INITIAL,
-                        RCVSCursor.class
-                    );
+                        RCVSCursor.class);
                 }
 
-            } else if (walConfig.getActivityWALType().equals("amza") || walConfig.getActivityWALType().equals("amza_rcvs")) {
+            } else if (walConfig.getActivityWALType().equals("amza")) {
                 MiruWALClient<AmzaCursor, AmzaSipCursor> amzaWALClient = new MiruWALClientInitializer().initialize("",
                     walHttpClient,
                     mapper,
@@ -428,6 +476,22 @@ public class MiruSyncMain {
                     ScheduledExecutorService executorService = Executors.newScheduledThreadPool(syncConfig.getSyncSendersThreadCount());
                     ClusterSchemaProvider schemaProvider = new ClusterSchemaProvider(clusterClient, 10_000);
 
+                    MiruSyncConfigProvider loopbackSyncConfigProvider = null;
+                    if (syncLoopback) {
+                        long loopbackSyncDurationMillis = syncConfig.getSyncLoopbackDurationMillis();
+                        loopbackSyncConfigProvider = senderName -> {
+                            List<MiruTenantId> tenantIds = amzaWALClient.getAllTenantIds();
+                            Map<MiruSyncTenantTuple, MiruSyncTenantConfig> tenantTupleConfigs = Maps.newHashMap();
+                            MiruSyncTenantConfig config = new MiruSyncTenantConfig(System.currentTimeMillis() - loopbackSyncDurationMillis,
+                                Long.MAX_VALUE,
+                                0,
+                                MiruSyncTimeShiftStrategy.none);
+                            for (MiruTenantId tenantId : tenantIds) {
+                                tenantTupleConfigs.put(new MiruSyncTenantTuple(tenantId, tenantId), config);
+                            }
+                            return tenantTupleConfigs;
+                        };
+                    }
                     syncSenders = (MiruSyncSenders) new MiruSyncSenders<>( //  don't remove generics (fails compilation for others when we do)
                         miruStats,
                         syncConfig,
@@ -441,9 +505,11 @@ public class MiruSyncMain {
                         miruSyncConfigStorage,
                         30_000, // TODO config
                         amzaWALClient,
+                        syncLoopback,
+                        loopbackSyncClient,
+                        loopbackSyncConfigProvider,
                         null,
-                        AmzaCursor.class
-                    );
+                        AmzaCursor.class);
                 }
 
             } else {
