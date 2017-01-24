@@ -61,8 +61,8 @@ public class SipTest {
         RCVSWALInitializer.RCVSWAL rcvsWAL = new RCVSWALInitializer().initialize("test", new InMemoryRowColumnValueStoreInitializer(), new ObjectMapper());
         HostPortProvider hostPortProvider = host -> 10_000;
         MiruWALDirector<RCVSCursor, RCVSSipCursor> walDirector = new MiruWALDirector<>(new RCVSWALLookup(rcvsWAL.getWALLookupTable()),
-            new RCVSActivityWALReader(hostPortProvider, rcvsWAL.getActivityWAL(), rcvsWAL.getActivitySipWAL()),
-            new RCVSActivityWALWriter(rcvsWAL.getActivityWAL(), rcvsWAL.getActivitySipWAL()),
+            new RCVSActivityWALReader(hostPortProvider, rcvsWAL.getActivityWAL(), rcvsWAL.getActivitySipWAL(), null),
+            new RCVSActivityWALWriter(rcvsWAL.getActivityWAL(), rcvsWAL.getActivitySipWAL(), null),
             null,
             null,
             new NoOpClusterClient());

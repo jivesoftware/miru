@@ -11,4 +11,6 @@ public interface MiruWALConfig extends Config {
     @StringDefault("rcvs")
     String getActivityWALType(); // one of: rcvs, rcvs_amza, amza_rcvs, amza
 
+    @StringDefault("")
+    String getTenantPartitionBlacklist();
 }

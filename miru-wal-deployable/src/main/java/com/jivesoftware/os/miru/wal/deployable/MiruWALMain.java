@@ -19,6 +19,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSet.Builder;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.amza.api.partition.Consistency;
@@ -32,6 +34,9 @@ import com.jivesoftware.os.miru.amza.MiruAmzaServiceInitializer;
 import com.jivesoftware.os.miru.api.HostPortProvider;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.RoutingBirdHostPortProvider;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.api.activity.TenantAndPartition;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.api.wal.AmzaCursor;
 import com.jivesoftware.os.miru.api.wal.AmzaSipCursor;
@@ -65,6 +70,8 @@ import com.jivesoftware.os.miru.wal.readtracking.amza.AmzaReadTrackingWALReader;
 import com.jivesoftware.os.miru.wal.readtracking.amza.AmzaReadTrackingWALWriter;
 import com.jivesoftware.os.miru.wal.readtracking.rcvs.RCVSReadTrackingWALReader;
 import com.jivesoftware.os.miru.wal.readtracking.rcvs.RCVSReadTrackingWALWriter;
+import com.jivesoftware.os.mlogger.core.MetricLogger;
+import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStoreInitializer;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStoreProvider;
 import com.jivesoftware.os.routing.bird.deployable.Deployable;
@@ -94,14 +101,19 @@ import com.jivesoftware.os.routing.bird.server.util.Resource;
 import com.jivesoftware.os.routing.bird.shared.TenantRoutingProvider;
 import com.jivesoftware.os.routing.bird.shared.TenantsServiceConnectionDescriptorProvider;
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicReference;
+import org.apache.commons.lang.StringUtils;
 import org.merlin.config.defaults.LongDefault;
 import org.merlin.config.defaults.StringDefault;
 
 public class MiruWALMain {
+
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     public static void main(String[] args) throws Exception {
         new MiruWALMain().run(args);
@@ -146,8 +158,8 @@ public class MiruWALMain {
                 new FileDescriptorCountHealthChecker(deployable.config(FileDescriptorCountHealthChecker.FileDescriptorCountHealthCheckerConfig.class)));
             deployable.addHealthCheck(serviceStartupHealthCheck);
             deployable.addErrorHealthChecks(deployable.config(ErrorHealthCheckConfig.class));
-            AtomicReference<Callable<Boolean>> isAmzaReady = new AtomicReference<>(()-> false);
-            deployable.addManageInjectables(FullyOnlineVersion.class, (FullyOnlineVersion)() -> {
+            AtomicReference<Callable<Boolean>> isAmzaReady = new AtomicReference<>(() -> false);
+            deployable.addManageInjectables(FullyOnlineVersion.class, (FullyOnlineVersion) () -> {
                 if (serviceStartupHealthCheck.startupHasSucceeded() && isAmzaReady.get().call()) {
                     return instanceConfig.getVersion();
                 } else {
@@ -336,10 +348,27 @@ public class MiruWALMain {
                     rowColumnValueStoreInitializer,
                     mapper);
 
-                RCVSActivityWALWriter rcvsActivityWALWriter = new RCVSActivityWALWriter(rcvsWAL.getActivityWAL(), rcvsWAL.getActivitySipWAL());
+                Set<TenantAndPartition> blacklist = null;
+                String tenantPartitionBlacklist = StringUtils.trimToNull(walConfig.getTenantPartitionBlacklist());
+                if (tenantPartitionBlacklist != null) {
+                    Builder<TenantAndPartition> builder = ImmutableSet.builder();
+                    String[] tenantPartitions = tenantPartitionBlacklist.split("\\s*,\\s*");
+                    for (int i = 0; i < tenantPartitions.length; i++) {
+                        String[] split = tenantPartitions[i].split(":");
+                        MiruTenantId tenantId = new MiruTenantId(split[0].getBytes(StandardCharsets.UTF_8));
+                        MiruPartitionId partitionId = MiruPartitionId.of(Integer.parseInt(split[1]));
+                        TenantAndPartition tenantAndPartition = new TenantAndPartition(tenantId, partitionId);
+                        builder.add(tenantAndPartition);
+                        LOG.info("Added {} to RCVS blacklist", tenantAndPartition);
+                    }
+                    blacklist = builder.build();
+                }
+
+                RCVSActivityWALWriter rcvsActivityWALWriter = new RCVSActivityWALWriter(rcvsWAL.getActivityWAL(), rcvsWAL.getActivitySipWAL(), blacklist);
                 RCVSActivityWALReader rcvsActivityWALReader = new RCVSActivityWALReader(hostPortProvider,
                     rcvsWAL.getActivityWAL(),
-                    rcvsWAL.getActivitySipWAL());
+                    rcvsWAL.getActivitySipWAL(),
+                    blacklist);
                 RCVSWALLookup rcvsWALLookup = new RCVSWALLookup(rcvsWAL.getWALLookupTable());
 
                 RCVSReadTrackingWALWriter readTrackingWALWriter = new RCVSReadTrackingWALWriter(rcvsWAL.getReadTrackingWAL(), rcvsWAL.getReadTrackingSipWAL());

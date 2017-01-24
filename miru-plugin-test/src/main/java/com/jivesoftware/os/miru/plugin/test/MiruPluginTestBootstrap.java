@@ -155,14 +155,15 @@ public class MiruPluginTestBootstrap {
         partitionedActivities.add(new MiruPartitionedActivityFactory().begin(1, partitionId, tenantId, 0));
         partitionedActivities.addAll(includeActivities);
 
-        MiruActivityWALWriter activityWALWriter = new RCVSActivityWALWriter(wal.getActivityWAL(), wal.getActivitySipWAL());
+        MiruActivityWALWriter activityWALWriter = new RCVSActivityWALWriter(wal.getActivityWAL(), wal.getActivitySipWAL(), null);
         activityWALWriter.write(tenantId, partitionId, partitionedActivities);
 
         HostPortProvider hostPortProvider = host -> 10_000;
 
         MiruActivityWALReader<RCVSCursor, RCVSSipCursor> activityWALReader = new RCVSActivityWALReader(hostPortProvider,
             wal.getActivityWAL(),
-            wal.getActivitySipWAL());
+            wal.getActivitySipWAL(),
+            null);
         MiruReadTrackingWALWriter readTrackingWALWriter = new RCVSReadTrackingWALWriter(wal.getReadTrackingWAL(), wal.getReadTrackingSipWAL());
         MiruReadTrackingWALReader<RCVSCursor, RCVSSipCursor> readTrackingWALReader = new RCVSReadTrackingWALReader(hostPortProvider,
             wal.getReadTrackingWAL(),
