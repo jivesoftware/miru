@@ -37,8 +37,8 @@ public class RCVSActivityWALReaderTest {
         RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception> activitySipWAL =
             new InMemoryRowColumnValueStore<>();
 
-        RCVSActivityWALWriter activityWALWriter = new RCVSActivityWALWriter(activityWAL, activitySipWAL);
-        RCVSActivityWALReader activityWALReader = new RCVSActivityWALReader(host -> 10_000, activityWAL, activitySipWAL);
+        RCVSActivityWALWriter activityWALWriter = new RCVSActivityWALWriter(activityWAL, activitySipWAL, null);
+        RCVSActivityWALReader activityWALReader = new RCVSActivityWALReader(host -> 10_000, activityWAL, activitySipWAL, null);
         MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory();
 
         for (int i = 0; i < totalActivities; i++) {
@@ -72,8 +72,8 @@ public class RCVSActivityWALReaderTest {
         RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception> activitySipWAL =
             new InMemoryRowColumnValueStore<>();
 
-        RCVSActivityWALWriter activityWALWriter = new RCVSActivityWALWriter(activityWAL, activitySipWAL);
-        RCVSActivityWALReader activityWALReader = new RCVSActivityWALReader(host -> 10_000, activityWAL, activitySipWAL);
+        RCVSActivityWALWriter activityWALWriter = new RCVSActivityWALWriter(activityWAL, activitySipWAL, null);
+        RCVSActivityWALReader activityWALReader = new RCVSActivityWALReader(host -> 10_000, activityWAL, activitySipWAL, null);
         final AtomicLong clockTimestamp = new AtomicLong();
         MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory(clockTimestamp::get);
 
@@ -109,8 +109,8 @@ public class RCVSActivityWALReaderTest {
         RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception> activitySipWAL =
             new InMemoryRowColumnValueStore<>();
 
-        RCVSActivityWALWriter activityWALWriter = new RCVSActivityWALWriter(activityWAL, activitySipWAL);
-        RCVSActivityWALReader activityWALReader = new RCVSActivityWALReader(host -> 10_000, activityWAL, activitySipWAL);
+        RCVSActivityWALWriter activityWALWriter = new RCVSActivityWALWriter(activityWAL, activitySipWAL, null);
+        RCVSActivityWALReader activityWALReader = new RCVSActivityWALReader(host -> 10_000, activityWAL, activitySipWAL, null);
         final AtomicLong clockTimestamp = new AtomicLong();
         MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory(clockTimestamp::get);
 

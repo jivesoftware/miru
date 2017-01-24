@@ -6,6 +6,8 @@ import com.google.common.collect.Sets;
 import com.jivesoftware.os.miru.api.HostPortProvider;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity.Type;
+import com.jivesoftware.os.miru.api.activity.TenantAndPartition;
 import com.jivesoftware.os.miru.api.activity.TimeAndVersion;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.wal.MiruActivityLookupEntry;
@@ -23,6 +25,7 @@ import com.jivesoftware.os.rcvs.api.ColumnValueAndTimestamp;
 import com.jivesoftware.os.rcvs.api.RowColumnValueStore;
 import com.jivesoftware.os.routing.bird.shared.HostPort;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -37,14 +40,17 @@ public class RCVSActivityWALReader implements MiruActivityWALReader<RCVSCursor, 
     private final RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity, ? extends Exception> activityWAL;
     private final RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception>
         activitySipWAL;
+    private final Set<TenantAndPartition> blacklist;
 
     public RCVSActivityWALReader(
         HostPortProvider hostPortProvider,
         RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivityWALColumnKey, MiruPartitionedActivity, ? extends Exception> activityWAL,
-        RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception> activitySipWAL) {
+        RowColumnValueStore<MiruTenantId, MiruActivityWALRow, MiruActivitySipWALColumnKey, MiruPartitionedActivity, ? extends Exception> activitySipWAL,
+        Set<TenantAndPartition> blacklist) {
         this.hostPortProvider = hostPortProvider;
         this.activityWAL = activityWAL;
         this.activitySipWAL = activitySipWAL;
+        this.blacklist = blacklist;
     }
 
     private MiruActivityWALRow rowKey(MiruPartitionId partition) {
@@ -53,6 +59,7 @@ public class RCVSActivityWALReader implements MiruActivityWALReader<RCVSCursor, 
 
     @Override
     public HostPort[] getRoutingGroup(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+        //TODO how to blacklist?
         RowColumnValueStore.HostAndPort hostAndPort = activityWAL.locate(tenantId, rowKey(partitionId));
         int port = hostPortProvider.getPort(hostAndPort.host);
         if (port < 0) {
@@ -70,6 +77,17 @@ public class RCVSActivityWALReader implements MiruActivityWALReader<RCVSCursor, 
         long stopAtTimestamp,
         StreamMiruActivityWAL streamMiruActivityWAL)
         throws Exception {
+
+        if (blacklist != null && blacklist.contains(new TenantAndPartition(tenantId, partitionId))) {
+            int writerId = -1;
+            long timestamp = Long.MAX_VALUE;
+            long clockTimestamp = System.currentTimeMillis();
+            streamMiruActivityWAL.stream(writerId, MiruPartitionedActivity.fromJson(Type.BEGIN, writerId, partitionId.getId(), tenantId.getBytes(), 0,
+                timestamp, clockTimestamp, null, null), timestamp);
+            streamMiruActivityWAL.stream(writerId, MiruPartitionedActivity.fromJson(Type.END, writerId, partitionId.getId(), tenantId.getBytes(), 0,
+                timestamp, clockTimestamp, null, null), timestamp);
+            return new RCVSCursor(Byte.MAX_VALUE, Long.MAX_VALUE, true, null);
+        }
 
         if (afterCursor != null && afterCursor.endOfStream) {
             return afterCursor;
@@ -153,6 +171,17 @@ public class RCVSActivityWALReader implements MiruActivityWALReader<RCVSCursor, 
         final StreamMiruActivityWAL streamMiruActivityWAL,
         final StreamSuppressed streamSuppressed)
         throws Exception {
+
+        if (blacklist != null && blacklist.contains(new TenantAndPartition(tenantId, partitionId))) {
+            int writerId = -1;
+            long timestamp = Long.MAX_VALUE;
+            long clockTimestamp = System.currentTimeMillis();
+            streamMiruActivityWAL.stream(writerId, MiruPartitionedActivity.fromJson(Type.BEGIN, writerId, partitionId.getId(), tenantId.getBytes(), 0,
+                timestamp, clockTimestamp, null, null), timestamp);
+            streamMiruActivityWAL.stream(writerId, MiruPartitionedActivity.fromJson(Type.END, writerId, partitionId.getId(), tenantId.getBytes(), 0,
+                timestamp, clockTimestamp, null, null), timestamp);
+            return new RCVSSipCursor(Byte.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE, true);
+        }
 
         if (afterCursor != null && afterCursor.endOfStream) {
             return afterCursor;
@@ -261,6 +290,16 @@ public class RCVSActivityWALReader implements MiruActivityWALReader<RCVSCursor, 
 
     @Override
     public MiruActivityWALStatus getStatus(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+
+        if (blacklist != null && blacklist.contains(new TenantAndPartition(tenantId, partitionId))) {
+            int writerId = -1;
+            long clockTimestamp = System.currentTimeMillis();
+            return new MiruActivityWALStatus(partitionId,
+                Collections.singletonList(new WriterCount(writerId, 0, clockTimestamp)),
+                Collections.singletonList(writerId),
+                Collections.singletonList(writerId));
+        }
+
         final Map<Integer, WriterCount> counts = Maps.newHashMap();
         final List<Integer> begins = Lists.newArrayList();
         final List<Integer> ends = Lists.newArrayList();
@@ -285,6 +324,11 @@ public class RCVSActivityWALReader implements MiruActivityWALReader<RCVSCursor, 
 
     @Override
     public long oldestActivityClockTimestamp(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+
+        if (blacklist != null && blacklist.contains(new TenantAndPartition(tenantId, partitionId))) {
+            return -1;
+        }
+
         final MutableLong oldestClockTimestamp = new MutableLong(-1);
         activityWAL.getValues(tenantId,
             new MiruActivityWALRow(partitionId.getId()),
@@ -305,6 +349,11 @@ public class RCVSActivityWALReader implements MiruActivityWALReader<RCVSCursor, 
 
     @Override
     public WriterCursor getCursorForWriterId(MiruTenantId tenantId, MiruPartitionId partitionId, final int writerId) throws Exception {
+
+        if (blacklist != null && blacklist.contains(new TenantAndPartition(tenantId, partitionId))) {
+            return new WriterCursor(0, 0);
+        }
+
         LOG.inc("getCursorForWriterId");
         LOG.inc("getCursorForWriterId>" + writerId, tenantId.toString());
         MiruPartitionedActivity latestBoundaryActivity = activityWAL.get(tenantId, new MiruActivityWALRow(partitionId.getId()),
@@ -318,6 +367,11 @@ public class RCVSActivityWALReader implements MiruActivityWALReader<RCVSCursor, 
 
     @Override
     public List<MiruVersionedActivityLookupEntry> getVersionedEntries(MiruTenantId tenantId, MiruPartitionId partitionId, Long[] timestamps) throws Exception {
+
+        if (blacklist != null && blacklist.contains(new TenantAndPartition(tenantId, partitionId))) {
+            return Collections.emptyList();
+        }
+
         MiruActivityWALColumnKey[] columnKeys = new MiruActivityWALColumnKey[timestamps.length];
         int[] offsets = new int[timestamps.length];
         int index = 0;
@@ -366,6 +420,11 @@ public class RCVSActivityWALReader implements MiruActivityWALReader<RCVSCursor, 
 
     @Override
     public long clockMax(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+
+        if (blacklist != null && blacklist.contains(new TenantAndPartition(tenantId, partitionId))) {
+            return -1;
+        }
+
         long[] clockTimestamp = { -1L };
         activityWAL.getEntrys(tenantId, new MiruActivityWALRow(partitionId.getId()),
             new MiruActivityWALColumnKey(MiruPartitionedActivity.Type.END.getSort(), Long.MIN_VALUE), null, 10_000, false, null, null,
