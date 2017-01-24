@@ -51,6 +51,9 @@ import com.jivesoftware.os.miru.plugin.index.MiruActivityInternExtern;
 import com.jivesoftware.os.miru.plugin.index.MiruBackfillerizerInitializer;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.marshaller.RCVSSipIndexMarshaller;
+import com.jivesoftware.os.miru.plugin.plugin.IndexCloseCallback;
+import com.jivesoftware.os.miru.plugin.plugin.IndexCommitCallback;
+import com.jivesoftware.os.miru.plugin.plugin.IndexOpenCallback;
 import com.jivesoftware.os.miru.plugin.query.LuceneBackedQueryParser;
 import com.jivesoftware.os.miru.plugin.query.MiruQueryParser;
 import com.jivesoftware.os.miru.plugin.schema.SingleSchemaProvider;
@@ -62,6 +65,7 @@ import com.jivesoftware.os.miru.service.locator.MiruTempDirectoryResourceLocator
 import com.jivesoftware.os.miru.service.partition.PartitionErrorTracker;
 import com.jivesoftware.os.miru.service.partition.RCVSSipTrackerFactory;
 import com.jivesoftware.os.miru.service.realtime.NoOpRealtimeDelivery;
+import com.jivesoftware.os.miru.service.stream.MiruIndexCallbacks;
 import com.jivesoftware.os.miru.wal.MiruWALDirector;
 import com.jivesoftware.os.miru.wal.RCVSWALInitializer;
 import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
@@ -290,6 +294,7 @@ public class MiruPluginTestBootstrap {
             termComposer,
             activityInternExtern,
             new SingleBitmapsProvider(bitmaps),
+            new MiruIndexCallbacks(),
             new PartitionErrorTracker(BindInterfaceToConfiguration.bindDefault(PartitionErrorTracker.PartitionErrorTrackerConfig.class)),
             termInterner);
 
@@ -389,6 +394,11 @@ public class MiruPluginTestBootstrap {
             }
 
             @Override
+            public TenantAwareHttpClient<String> getTenantAwareHttpClient(String serviceName, int socketTimeoutMillis) {
+                return null;
+            }
+
+            @Override
             public Map<MiruHost, MiruHostSelectiveStrategy> getReaderStrategyCache() {
                 return null;
             }
@@ -400,6 +410,30 @@ public class MiruPluginTestBootstrap {
 
             @Override
             public void addHealthCheck(HealthCheck healthCheck) {
+            }
+
+            @Override
+            public void addIndexOpenCallback(IndexOpenCallback callback) {
+            }
+
+            @Override
+            public void addIndexCommitCallback(IndexCommitCallback callback) {
+            }
+
+            @Override
+            public void addIndexCloseCallback(IndexCloseCallback callback) {
+            }
+
+            @Override
+            public void removeIndexOpenCallback(IndexOpenCallback callback) {
+            }
+
+            @Override
+            public void removeIndexCommitCallback(IndexCommitCallback callback) {
+            }
+
+            @Override
+            public void removeIndexCloseCallback(IndexCloseCallback callback) {
             }
         };
     }

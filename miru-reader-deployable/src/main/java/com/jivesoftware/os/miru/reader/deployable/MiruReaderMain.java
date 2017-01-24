@@ -64,6 +64,10 @@ import com.jivesoftware.os.miru.plugin.index.MiruBackfillerizerInitializer;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.marshaller.AmzaSipIndexMarshaller;
 import com.jivesoftware.os.miru.plugin.marshaller.RCVSSipIndexMarshaller;
+import com.jivesoftware.os.miru.plugin.plugin.IndexCloseCallback;
+import com.jivesoftware.os.miru.plugin.plugin.IndexCommitCallback;
+import com.jivesoftware.os.miru.plugin.plugin.IndexOpenCallback;
+import com.jivesoftware.os.miru.plugin.plugin.LifecycleMiruPlugin;
 import com.jivesoftware.os.miru.plugin.plugin.MiruEndpointInjectable;
 import com.jivesoftware.os.miru.plugin.plugin.MiruPlugin;
 import com.jivesoftware.os.miru.plugin.query.LuceneBackedQueryParser;
@@ -82,6 +86,7 @@ import com.jivesoftware.os.miru.service.partition.PartitionErrorTracker;
 import com.jivesoftware.os.miru.service.partition.RCVSSipTrackerFactory;
 import com.jivesoftware.os.miru.service.realtime.NoOpRealtimeDelivery;
 import com.jivesoftware.os.miru.service.realtime.RoutingBirdRealtimeDelivery;
+import com.jivesoftware.os.miru.service.stream.MiruIndexCallbacks;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer;
 import com.jivesoftware.os.miru.ui.MiruSoyRendererInitializer.MiruSoyRendererConfig;
@@ -337,10 +342,11 @@ public class MiruReaderMain {
             deployable.addHealthCheck(new SickThreadsHealthCheck(deployable.config(WALClientSickThreadsHealthCheckConfig.class), walClientSickThreads));
 
             MiruInboxReadTracker inboxReadTracker;
-            MiruLifecyle<MiruService> miruServiceLifecyle;
             LABStats rebuildLABStats = new LABStats();
             LABStats globalLABStats = new LABStats();
+            MiruIndexCallbacks indexCallbacks = new MiruIndexCallbacks();
 
+            MiruLifecyle<MiruService> miruServiceLifecyle;
             if (walConfig.getActivityWALType().equals("rcvs") || walConfig.getActivityWALType().equals("rcvs_amza")) {
                 MiruWALClient<RCVSCursor, RCVSSipCursor> rcvsWALClient = new MiruWALClientInitializer().initialize("", walHttpClient, mapper,
                     walClientSickThreads, 10_000,
@@ -365,6 +371,7 @@ public class MiruReaderMain {
                     termComposer,
                     internExtern,
                     new SingleBitmapsProvider(bitmaps),
+                    indexCallbacks,
                     partitionErrorTracker,
                     termInterner);
             } else if (walConfig.getActivityWALType().equals("amza") || walConfig.getActivityWALType().equals("amza_rcvs")) {
@@ -391,6 +398,7 @@ public class MiruReaderMain {
                     termComposer,
                     internExtern,
                     new SingleBitmapsProvider(bitmaps),
+                    indexCallbacks,
                     partitionErrorTracker,
                     termInterner);
             } else {
@@ -501,6 +509,19 @@ public class MiruReaderMain {
                 }
 
                 @Override
+                public TenantAwareHttpClient<String> getTenantAwareHttpClient(String serviceName, int socketTimeoutMillis) {
+                    @SuppressWarnings("unchecked")
+                    TenantAwareHttpClient<String> client = tenantRoutingHttpClientInitializer.builder(
+                        tenantRoutingProvider.getConnections(serviceName, "main", 10_000), // TODO config
+                        clientHealthProvider)
+                        .deadAfterNErrors(10)
+                        .socketTimeoutInMillis(socketTimeoutMillis)
+                        .checkDeadEveryNMillis(10_000) // TODO expose to conf
+                        .build();
+                    return client;
+                }
+
+                @Override
                 public Map<MiruHost, MiruHostSelectiveStrategy> getReaderStrategyCache() {
                     return readerStrategyCache;
                 }
@@ -514,6 +535,36 @@ public class MiruReaderMain {
                 public void addHealthCheck(HealthCheck healthCheck) {
                     deployable.addHealthCheck(healthCheck);
                 }
+
+                @Override
+                public void addIndexOpenCallback(IndexOpenCallback callback) {
+                    indexCallbacks.openCallbacks.add(callback);
+                }
+
+                @Override
+                public void addIndexCommitCallback(IndexCommitCallback callback) {
+                    indexCallbacks.commitCallbacks.add(callback);
+                }
+
+                @Override
+                public void addIndexCloseCallback(IndexCloseCallback callback) {
+                    indexCallbacks.closeCallbacks.add(callback);
+                }
+
+                @Override
+                public void removeIndexOpenCallback(IndexOpenCallback callback) {
+                    indexCallbacks.openCallbacks.remove(callback);
+                }
+
+                @Override
+                public void removeIndexCommitCallback(IndexCommitCallback callback) {
+                    indexCallbacks.commitCallbacks.remove(callback);
+                }
+
+                @Override
+                public void removeIndexCloseCallback(IndexCloseCallback callback) {
+                    indexCallbacks.closeCallbacks.remove(callback);
+                }
             };
 
             for (String pluginPackage : miruServiceConfig.getPluginPackages().split(",")) {
@@ -525,7 +576,9 @@ public class MiruReaderMain {
                     LOG.info("Loading plugin {}", pluginType.getSimpleName());
                     MiruPlugin<?, ?> plugin = pluginType.newInstance();
                     add(miruProvider, deployable, plugin, pluginRemotesMap);
-                    //TODO give plugin a start/stop lifecycle
+                    if (plugin instanceof LifecycleMiruPlugin) {
+                        ((LifecycleMiruPlugin) plugin).start(miruProvider);
+                    }
                 }
             }
 

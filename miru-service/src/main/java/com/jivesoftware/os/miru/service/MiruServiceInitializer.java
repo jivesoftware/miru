@@ -63,6 +63,7 @@ import com.jivesoftware.os.miru.service.solver.MiruLowestLatencySolver;
 import com.jivesoftware.os.miru.service.solver.MiruSolver;
 import com.jivesoftware.os.miru.service.stream.LabPluginCacheProvider;
 import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
+import com.jivesoftware.os.miru.service.stream.MiruIndexCallbacks;
 import com.jivesoftware.os.miru.service.stream.MiruRebuildDirector;
 import com.jivesoftware.os.miru.service.stream.allocator.InMemoryChunkAllocator;
 import com.jivesoftware.os.miru.service.stream.allocator.MiruChunkAllocator;
@@ -100,6 +101,7 @@ public class MiruServiceInitializer {
         MiruTermComposer termComposer,
         MiruActivityInternExtern internExtern,
         MiruBitmapsProvider bitmapsProvider,
+        MiruIndexCallbacks indexCallbacks,
         PartitionErrorTracker partitionErrorTracker,
         MiruInterner<MiruTermId> termInterner) throws Exception {
 
@@ -313,6 +315,7 @@ public class MiruServiceInitializer {
             persistentMergeExecutor,
             transientMergeExecutor,
             config.getRebuildIndexerThreads(),
+            indexCallbacks,
             indexRepairs,
             persistentMergeChits,
             transientMergeChits,

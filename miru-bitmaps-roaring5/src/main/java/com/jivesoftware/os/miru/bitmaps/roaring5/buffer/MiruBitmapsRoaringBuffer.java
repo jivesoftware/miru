@@ -480,6 +480,31 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
     }
 
     @Override
+    public ImmutableRoaringBitmap buildIndexMask(int smallestIndex,
+        int largestIndex,
+        MiruInvertedIndex<MutableRoaringBitmap, ImmutableRoaringBitmap> removalIndex,
+        BitmapAndLastId<MutableRoaringBitmap> container,
+        StackBuffer stackBuffer) throws Exception {
+
+        MutableRoaringBitmap mask = new MutableRoaringBitmap();
+        if (largestIndex < 0 || smallestIndex > largestIndex) {
+            return mask;
+        }
+
+        mask.flip(smallestIndex, largestIndex + 1);
+        if (removalIndex != null) {
+            if (container == null) {
+                container = new BitmapAndLastId<>();
+            }
+            removalIndex.getIndex(container, stackBuffer);
+            if (container.isSet()) {
+                mask.andNot(container.getBitmap());
+            }
+        }
+        return mask;
+    }
+
+    @Override
     public MutableRoaringBitmap buildTimeRangeMask(MiruTimeIndex timeIndex,
         long smallestTimestamp,
         long largestTimestamp,

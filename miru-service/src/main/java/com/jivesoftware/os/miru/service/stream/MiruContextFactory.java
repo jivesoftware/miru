@@ -421,7 +421,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             null,
             storage,
             rebuildToken,
-            (executorService) -> {
+            () -> {
             },
             () -> getAllocator(storage).close(chunkStores),
             () -> getAllocator(storage).remove(chunkStores),
@@ -731,7 +731,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             labEnvironments,
             storage,
             rebuildToken,
-            (executorService) -> {
+            () -> {
                 for (ValueIndex valueIndex : commitables) {
                     valueIndex.commit(fsyncOnCommit, true);
                 }
@@ -753,6 +753,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
 
                 cacheProvider.close(true, fsyncOnCommit);
                 getAllocator(storage).close(labEnvironments);
+
             },
             () -> getAllocator(storage).remove(labEnvironments),
             (executorService, waitForCompletion) -> {

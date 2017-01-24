@@ -7,6 +7,7 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
+import com.jivesoftware.os.miru.plugin.Miru;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
@@ -27,9 +28,9 @@ public class Stumptown {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
 
-    private final MiruProvider miruProvider;
+    private final MiruProvider<? extends Miru> miruProvider;
 
-    public Stumptown(MiruProvider miruProvider) {
+    public Stumptown(MiruProvider<? extends Miru> miruProvider) {
         this.miruProvider = miruProvider;
     }
 

@@ -137,6 +137,12 @@ public interface MiruBitmaps<BM extends IBM, IBM> {
 
     IBM buildIndexMask(int largestIndex, MiruInvertedIndex<BM, IBM> removalIndex, BitmapAndLastId<BM> container, StackBuffer stackBuffer) throws Exception;
 
+    IBM buildIndexMask(int smallestIndex,
+        int largestIndex,
+        MiruInvertedIndex<BM, IBM> removalIndex,
+        BitmapAndLastId<BM> container,
+        StackBuffer stackBuffer) throws Exception;
+
     IBM buildTimeRangeMask(MiruTimeIndex timeIndex, long smallestTimestamp, long largestTimestamp, StackBuffer stackBuffer) throws Exception;
 
     MiruIntIterator intIterator(IBM bitmap);
