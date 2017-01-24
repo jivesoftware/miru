@@ -418,14 +418,13 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
             return 0;
         }
 
-        // ignore our own writerId when determining if a partition is closed
-        List<Integer> begins = Lists.newArrayList(status.begins);
-        List<Integer> ends = Lists.newArrayList(status.ends);
-        begins.remove(new Integer(-1));
-        ends.remove(new Integer(-1));
+        if (status.begins.isEmpty()) {
+            LOG.warn("Source partition has no open writers, progress will not advance from:{} to:{} partition:{}",
+                tenantTuple.from, tenantTuple.to, partitionId);
+        }
 
-        boolean closed = ends.containsAll(begins);
-        int numWriters = Math.max(begins.size(), 1);
+        boolean closed = !status.begins.isEmpty() && status.ends.containsAll(status.begins);
+        int numWriters = Math.max(status.begins.size(), 1);
         int lastIndex = -1;
 
         AtomicLong clockTimestamp = new AtomicLong(-1);
