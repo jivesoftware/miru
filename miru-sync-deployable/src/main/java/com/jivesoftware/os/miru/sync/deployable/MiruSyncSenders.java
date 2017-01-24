@@ -119,7 +119,7 @@ public class MiruSyncSenders<C extends MiruCursor<C, S>, S extends MiruSipCursor
                     new MiruSyncSenderConfig("loopback", true, null, null, -1, 10_000L, 60_000L, 10_000, null, null, null, false),
                     clientAquariumProvider,
                     orderIdProvider,
-                    syncConfig.getSyncRingStripes(),
+                    syncConfig.getSyncLoopbackRingStripes(),
                     executorService,
                     schemaProvider,
                     miruWALClient,
