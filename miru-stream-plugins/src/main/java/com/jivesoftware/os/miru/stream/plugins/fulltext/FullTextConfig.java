@@ -19,7 +19,7 @@ public interface FullTextConfig extends Config {
     @IntDefault(10_000)
     int getGathererBatchSize();
 
-    @ClassDefault(DisabledTermProvider.class)
-    Class<? extends FullTextTermProvider> getTermProviderClass();
+    @ClassDefault(DisabledTermProviderInitializer.class)
+    Class<? extends FullTextTermProviderInitializer> getTermProviderInitializerClass();
 
 }
