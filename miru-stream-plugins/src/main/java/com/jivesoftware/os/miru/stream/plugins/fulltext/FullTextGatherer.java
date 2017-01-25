@@ -35,6 +35,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -62,7 +64,7 @@ public class FullTextGatherer implements IndexOpenCallback, IndexCommitCallback,
     private final MiruProvider<? extends Miru> miruProvider;
     private final FullTextTermProviders fullTextTermProviders;
     private final int batchSize;
-    private final ExecutorService executorService;
+    private final ScheduledExecutorService executorService;
 
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
     private final Map<MiruPartitionCoord, Gatherer> gatherers = Maps.newConcurrentMap();
@@ -70,7 +72,7 @@ public class FullTextGatherer implements IndexOpenCallback, IndexCommitCallback,
     public FullTextGatherer(MiruProvider<? extends Miru> miruProvider,
         FullTextTermProviders fullTextTermProviders,
         int batchSize,
-        ExecutorService executorService) {
+        ScheduledExecutorService executorService) {
         this.miruProvider = miruProvider;
         this.fullTextTermProviders = fullTextTermProviders;
         this.batchSize = batchSize;
@@ -141,16 +143,21 @@ public class FullTextGatherer implements IndexOpenCallback, IndexCommitCallback,
                 Optional<? extends MiruQueryablePartition<?, ?>> got = miru.getQueryablePartition(coord);
                 if (got.isPresent()) {
                     MiruQueryablePartition<?, ?> queryablePartition = got.get();
-                    try (MiruRequestHandle<?, ?, ?> handle = queryablePartition.acquireQueryHandle()) {
-                        gather(handle);
-                        synchronized (this) {
-                            long current = commitVersion.get();
-                            if (current == version || closed.get()) {
-                                running.set(false);
-                            } else {
-                                executorService.submit(this);
+                    if (queryablePartition.isAvailable()) {
+                        try (MiruRequestHandle<?, ?, ?> handle = queryablePartition.acquireQueryHandle()) {
+                            gather(handle);
+                            synchronized (this) {
+                                long current = commitVersion.get();
+                                if (current == version || closed.get()) {
+                                    running.set(false);
+                                } else {
+                                    executorService.submit(this);
+                                }
                             }
                         }
+                    } else {
+                        LOG.info("Delaying gather for {} because partition is unavailable", coord);
+                        executorService.schedule(this, 10_000L, TimeUnit.MILLISECONDS); //TODO config
                     }
                 } else {
                     LOG.warn("Could not find queryable partition for coord:{}", coord);
@@ -158,7 +165,7 @@ public class FullTextGatherer implements IndexOpenCallback, IndexCommitCallback,
                 }
             } catch (Throwable t) {
                 LOG.error("Failed to gather full text for coord:{}", new Object[] { coord }, t);
-                running.set(false);
+                executorService.schedule(this, 10_000L, TimeUnit.MILLISECONDS); //TODO config
             }
         }
     }
