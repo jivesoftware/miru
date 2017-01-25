@@ -250,7 +250,7 @@ public class FullTextGatherer implements IndexOpenCallback, IndexCommitCallback,
             MiruTermId[][] got = activityIndex.getAll("fullTextGatherer", indexes, fieldId, stackBuffer);
             MiruValue[][] values = new MiruValue[got.length][];
             for (int j = 0; j < got.length; j++) {
-                values[i] = new MiruValue[got[j].length];
+                values[j] = new MiruValue[got[j].length];
                 for (int k = 0; k < got[j].length; k++) {
                     values[j][k] = new MiruValue(termComposer.decompose(schema, fieldDefinition, stackBuffer, got[j][k]));
                 }
