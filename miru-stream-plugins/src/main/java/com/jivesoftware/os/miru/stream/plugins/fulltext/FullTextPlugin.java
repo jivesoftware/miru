@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.stream.plugins.fulltext;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.jivesoftware.os.miru.plugin.Miru;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.plugin.LifecycleMiruPlugin;
@@ -11,10 +12,9 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartitionReader;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
-import org.merlin.config.Config;
 
 /**
  *
@@ -23,14 +23,15 @@ public class FullTextPlugin implements MiruPlugin<FullTextEndpoints, FullTextInj
 
     private final AtomicReference<FullTextGatherer> fullTextGatherer = new AtomicReference<>();
 
-    private ExecutorService executorService;
+    private ScheduledExecutorService executorService;
 
     @Override
     public void start(MiruProvider<? extends Miru> miruProvider) throws Exception {
         if (executorService == null) {
             FullTextConfig config = miruProvider.getConfig(FullTextConfig.class);
             if (config.getGathererEnabled()) {
-                executorService = Executors.newFixedThreadPool(config.getGathererThreadPoolSize());
+                executorService = Executors.newScheduledThreadPool(config.getGathererThreadPoolSize(),
+                    new ThreadFactoryBuilder().setNameFormat("fullTextGatherer-%d").build());
                 FullTextTermProviders fullTextTermProviders = new FullTextTermProviders();
 
                 Class<? extends FullTextTermProviderInitializer> initializerClass = config.getTermProviderInitializerClass();
