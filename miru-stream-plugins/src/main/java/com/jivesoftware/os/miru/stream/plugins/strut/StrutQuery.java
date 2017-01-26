@@ -32,12 +32,6 @@ public class StrutQuery implements Serializable {
     public final int desiredNumberOfResults;
     public final boolean includeFeatures;
     public final boolean usePartitionModelCache;
-
-    public final String defaultField;
-    public final String locale;
-    public final String query;
-    public final int maxWildcardExpansion;
-
     public final String[] gatherTermsForFields;
     public final MiruStreamId unreadStreamId;
     public final MiruFilter suppressUnreadFilter;
@@ -56,10 +50,6 @@ public class StrutQuery implements Serializable {
         @JsonProperty("desiredNumberOfResults") int desiredNumberOfResults,
         @JsonProperty("includeFeatures") boolean includeFeatures,
         @JsonProperty("usePartitionModelCache") boolean usePartitionModelCache,
-        @JsonProperty("defaultField") String defaultField,
-        @JsonProperty("locale") String locale,
-        @JsonProperty("query") String query,
-        @JsonProperty("maxWildcardExpansion") int maxWildcardExpansion,
         @JsonProperty("gatherTermsForFields") String[] gatherTermsForFields,
         @JsonProperty("unreadStreamId") MiruStreamId unreadStreamId, // nullable
         @JsonProperty("suppressUnreadFilter") MiruFilter suppressUnreadFilter, // nullable
@@ -89,12 +79,6 @@ public class StrutQuery implements Serializable {
         this.desiredNumberOfResults = desiredNumberOfResults;
         this.includeFeatures = includeFeatures;
         this.usePartitionModelCache = usePartitionModelCache;
-
-        this.defaultField = defaultField;
-        this.locale = locale;
-        this.query = query;
-        this.maxWildcardExpansion = maxWildcardExpansion;
-
         this.gatherTermsForFields = gatherTermsForFields;
         this.unreadStreamId = unreadStreamId;
         this.suppressUnreadFilter = suppressUnreadFilter;

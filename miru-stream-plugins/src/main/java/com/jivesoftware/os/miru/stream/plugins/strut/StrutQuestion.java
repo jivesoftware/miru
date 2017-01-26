@@ -54,7 +54,6 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
 
     private final StrutModelScorer modelScorer;
     private final Strut strut;
-    private final FullText fullText;
     private final MiruJustInTimeBackfillerizer backfillerizer;
     private final MiruRequest<StrutQuery> request;
     private final MiruRemotePartition<StrutQuery, StrutAnswer, StrutReport> remotePartition;
@@ -66,7 +65,6 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
 
     public StrutQuestion(StrutModelScorer modelScorer,
         Strut strut,
-        FullText fullText,
         MiruJustInTimeBackfillerizer backfillerizer,
         MiruRequest<StrutQuery> request,
         MiruRemotePartition<StrutQuery, StrutAnswer, StrutReport> remotePartition,
@@ -74,7 +72,6 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         boolean allowImmediateRescore) {
         this.modelScorer = modelScorer;
         this.strut = strut;
-        this.fullText = fullText;
         this.backfillerizer = backfillerizer;
         this.request = request;
         this.remotePartition = remotePartition;
@@ -118,22 +115,6 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 -1,
                 stackBuffer);
             ands.add(constrained);
-        }
-
-        if (request.query.query != null && !request.query.query.isEmpty()) {
-            MiruFilter filter = fullText.parseQuery(request.query.defaultField, request.query.locale, request.query.query);
-
-            BM filtered = aggregateUtil.filter("fullTextCustom",
-                bitmaps,
-                context,
-                filter,
-                solutionLog,
-                null,
-                activityIndexLastId,
-                -1,
-                request.query.maxWildcardExpansion,
-                stackBuffer);
-            ands.add(filtered);
         }
 
         BitmapAndLastId<BM> container = new BitmapAndLastId<>();
