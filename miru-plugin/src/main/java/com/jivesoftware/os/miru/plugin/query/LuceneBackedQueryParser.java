@@ -16,6 +16,7 @@ import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.queryparser.classic.QueryParser;
+import org.apache.lucene.queryparser.classic.QueryParser.Operator;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.PrefixQuery;
@@ -46,6 +47,7 @@ public class LuceneBackedQueryParser implements MiruQueryParser {
     public MiruFilter parse(String locale, String queryString) throws Exception {
         Analyzer analyzer = termAnalyzers.findAnalyzer(locale);
         QueryParser parser = new QueryParser(defaultField, analyzer);
+        parser.setDefaultOperator(Operator.AND);
         return makeFilter(parser.parse(queryString));
     }
 
