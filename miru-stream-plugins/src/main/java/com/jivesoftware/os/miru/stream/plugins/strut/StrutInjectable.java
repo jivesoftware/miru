@@ -15,6 +15,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRequestAndReport;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolvableFactory;
+import com.jivesoftware.os.miru.stream.plugins.fulltext.FullText;
 
 /**
  *
@@ -48,6 +49,7 @@ public class StrutInjectable {
                     "strut",
                     new StrutQuestion(modelScorer,
                         strut,
+                        new FullText(provider),
                         provider.getBackfillerizer(tenantId),
                         request,
                         provider.getRemotePartition(StrutRemotePartition.class),
@@ -78,6 +80,7 @@ public class StrutInjectable {
                     "strut",
                     new StrutQuestion(modelScorer,
                         strut,
+                        new FullText(provider),
                         provider.getBackfillerizer(tenantId),
                         requestAndReport.request,
                         provider.getRemotePartition(StrutRemotePartition.class),
@@ -106,6 +109,7 @@ public class StrutInjectable {
                     "strut",
                     new StrutQuestion(modelScorer,
                         strut,
+                        new FullText(provider),
                         provider.getBackfillerizer(tenantId),
                         request,
                         provider.getRemotePartition(StrutRemotePartition.class),
