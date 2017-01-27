@@ -20,9 +20,9 @@ public class LabCacheKeyValues implements CacheKeyValues {
 
     private final String name;
     private final OrderIdProvider idProvider;
-    private final ValueIndex[] indexes;
+    private final ValueIndex<byte[]>[] indexes;
 
-    public LabCacheKeyValues(String name, OrderIdProvider idProvider, ValueIndex[] indexes) {
+    public LabCacheKeyValues(String name, OrderIdProvider idProvider, ValueIndex<byte[]>[] indexes) {
         this.name = name;
         this.idProvider = idProvider;
         this.indexes = indexes;
@@ -134,13 +134,13 @@ public class LabCacheKeyValues implements CacheKeyValues {
     }
 
     public void commit(boolean fsyncOnCommit) throws Exception {
-        for (ValueIndex index : indexes) {
+        for (ValueIndex<byte[]> index : indexes) {
             index.commit(fsyncOnCommit, true);
         }
     }
 
     public void close(boolean flushUncommited, boolean fsync) throws Exception {
-        for (ValueIndex index : indexes) {
+        for (ValueIndex<byte[]> index : indexes) {
             index.close(flushUncommited, fsync);
         }
     }

@@ -40,14 +40,14 @@ import org.apache.lucene.analysis.tr.TurkishAnalyzer;
  */
 public class TermAnalyzers {
 
-    private final Analyzer STANDARD_ANALYZER = new StandardAnalyzer();
+    private final Analyzer STANDARD_ANALYZER = new StandardAnalyzer(EnStopwords.ENGLISH_STOP_WORDS_SET);
     private final Map<String, Analyzer> analyzers = ImmutableMap.<String, Analyzer>builder()
         .put("ar", new ArabicAnalyzer())
         .put("bg", new BulgarianAnalyzer())
         .put("ca", new CatalanAnalyzer())
         .put("cs", new CzechAnalyzer())
-        .put("en", new EnglishAnalyzer())
-        .put("en_ie", new IrishAnalyzer())
+        .put("en", new EnglishAnalyzer(EnStopwords.ENGLISH_STOP_WORDS_SET))
+        .put("en_ie", new IrishAnalyzer(EnStopwords.ENGLISH_STOP_WORDS_SET))
         .put("es", new SpanishAnalyzer())
         .put("eu", new BasqueAnalyzer())
         .put("da", new DanishAnalyzer())

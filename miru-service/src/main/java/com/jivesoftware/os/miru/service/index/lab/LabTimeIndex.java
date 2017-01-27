@@ -33,16 +33,16 @@ public class LabTimeIndex implements MiruTimeIndex {
     private int timestampsLength;
 
     private final OrderIdProvider idProvider;
-    private final ValueIndex metaIndex;
+    private final ValueIndex<byte[]> metaIndex;
     private final byte[] metaKey;
-    private final ValueIndex monotonicTimestampIndex;
-    private final ValueIndex rawTimestampToIndex;
+    private final ValueIndex<byte[]> monotonicTimestampIndex;
+    private final ValueIndex<byte[]> rawTimestampToIndex;
 
     public LabTimeIndex(OrderIdProvider idProvider,
-        ValueIndex metaIndex,
+        ValueIndex<byte[]> metaIndex,
         byte[] metaKey,
-        ValueIndex monotonicTimestampIndex,
-        ValueIndex rawTimestampToIndex)
+        ValueIndex<byte[]> monotonicTimestampIndex,
+        ValueIndex<byte[]> rawTimestampToIndex)
         throws Exception {
 
         this.idProvider = idProvider;

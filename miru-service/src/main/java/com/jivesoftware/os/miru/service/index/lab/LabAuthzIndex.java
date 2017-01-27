@@ -23,7 +23,7 @@ public class LabAuthzIndex<BM extends IBM, IBM> implements MiruAuthzIndex<BM, IB
     private final TrackError trackError;
     private final byte[] prefix;
     private final boolean atomized;
-    private final ValueIndex[] keyedStores;
+    private final ValueIndex<byte[]>[] keyedStores;
     private final MiruAuthzCache<BM, IBM> cache;
     private final StripingLocksProvider<String> stripingLocksProvider;
 
@@ -32,7 +32,7 @@ public class LabAuthzIndex<BM extends IBM, IBM> implements MiruAuthzIndex<BM, IB
         TrackError trackError,
         byte[] prefix,
         boolean atomized,
-        ValueIndex[] keyedStores,
+        ValueIndex<byte[]>[] keyedStores,
         MiruAuthzCache<BM, IBM> cache,
         StripingLocksProvider<String> stripingLocksProvider)
         throws Exception {
@@ -47,7 +47,7 @@ public class LabAuthzIndex<BM extends IBM, IBM> implements MiruAuthzIndex<BM, IB
         this.stripingLocksProvider = stripingLocksProvider;
     }
 
-    private ValueIndex getStore(String authz) {
+    private ValueIndex<byte[]> getStore(String authz) {
         return keyedStores[Math.abs(authz.hashCode() % keyedStores.length)];
     }
 

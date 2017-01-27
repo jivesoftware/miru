@@ -45,7 +45,7 @@ public class LabPluginCacheProvider implements MiruPluginCacheProvider {
     public CacheKeyValues getKeyValues(String name, int payloadSize, boolean variablePayloadSize, long maxHeapPressureInBytes) {
         return pluginPersistentCache.computeIfAbsent(name, (key) -> {
             try {
-                ValueIndex[] cacheIndexes = new ValueIndex[labEnvironments.length];
+                ValueIndex<byte[]>[] cacheIndexes = new ValueIndex[labEnvironments.length];
                 for (int i = 0; i < cacheIndexes.length; i++) {
                     // currently not commitable, as the commit is done immediately at write time
                     cacheIndexes[i] = labEnvironments[i].open(new ValueIndexConfig("pluginCache-" + key, // serialization compatible with lastId keyValues
@@ -70,7 +70,7 @@ public class LabPluginCacheProvider implements MiruPluginCacheProvider {
     public LastIdCacheKeyValues getLastIdKeyValues(String name, int payloadSize, boolean variablePayloadSize, long maxHeapPressureInBytes) {
         return lastIdPluginPersistentCache.computeIfAbsent(name, (key) -> {
             try {
-                ValueIndex[] cacheIndexes = new ValueIndex[labEnvironments.length];
+                ValueIndex<byte[]>[] cacheIndexes = new ValueIndex[labEnvironments.length];
                 for (int i = 0; i < cacheIndexes.length; i++) {
                     // currently not commitable, as the commit is done immediately at write time
                     cacheIndexes[i] = labEnvironments[i].open(new ValueIndexConfig("pluginCache-" + key, // serialization compatible with plain keyValues
@@ -95,7 +95,7 @@ public class LabPluginCacheProvider implements MiruPluginCacheProvider {
     public TimestampedCacheKeyValues getTimestampedKeyValues(String name, int payloadSize, boolean variablePayloadSize, long maxHeapPressureInBytes) {
         return timestampedPluginPersistentCache.computeIfAbsent(name, (key) -> {
             try {
-                ValueIndex[] cacheIndexes = new ValueIndex[labEnvironments.length];
+                ValueIndex<byte[]>[] cacheIndexes = new ValueIndex[labEnvironments.length];
                 for (int i = 0; i < cacheIndexes.length; i++) {
                     // currently not commitable, as the commit is done immediately at write time
                     cacheIndexes[i] = labEnvironments[i].open(new ValueIndexConfig("timestampedCache-" + key,

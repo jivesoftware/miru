@@ -4,6 +4,7 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Multiset;
+import com.jivesoftware.os.miru.plugin.query.EnStopwords;
 import com.jivesoftware.os.miru.plugin.query.TermTokenizer;
 import java.io.IOException;
 import java.util.ArrayList;

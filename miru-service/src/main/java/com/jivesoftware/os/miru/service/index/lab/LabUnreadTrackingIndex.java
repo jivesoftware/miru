@@ -22,7 +22,7 @@ public class LabUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUnreadTr
     private final TrackError trackError;
     private final byte[] prefix;
     private final boolean atomized;
-    private final ValueIndex[] stores;
+    private final ValueIndex<byte[]>[] stores;
     private final StripingLocksProvider<MiruStreamId> stripingLocksProvider;
 
     public LabUnreadTrackingIndex(OrderIdProvider idProvider,
@@ -30,7 +30,7 @@ public class LabUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUnreadTr
         TrackError trackError,
         byte[] prefix,
         boolean atomized,
-        ValueIndex[] stores,
+        ValueIndex<byte[]>[] stores,
         StripingLocksProvider<MiruStreamId> stripingLocksProvider)
         throws Exception {
 
@@ -43,7 +43,7 @@ public class LabUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUnreadTr
         this.stripingLocksProvider = stripingLocksProvider;
     }
 
-    private ValueIndex getStore(MiruStreamId streamId) {
+    private ValueIndex<byte[]> getStore(MiruStreamId streamId) {
         return stores[Math.abs(streamId.hashCode() % stores.length)];
     }
 

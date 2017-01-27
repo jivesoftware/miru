@@ -30,22 +30,22 @@ public class LabActivityIndex implements MiruActivityIndex {
     private final OrderIdProvider idProvider;
     private final boolean monotime;
     private final boolean realtime;
-    private final ValueIndex timeAndVersionIndex;
+    private final ValueIndex<byte[]> timeAndVersionIndex;
     private final AtomicInteger indexSize = new AtomicInteger(Integer.MIN_VALUE);
     private final IntTermIdsKeyValueMarshaller intTermIdsKeyValueMarshaller;
-    private final ValueIndex metaIndex;
+    private final ValueIndex<byte[]> metaIndex;
     private final byte[] metaKey;
-    private final ValueIndex[] termStorage;
+    private final ValueIndex<byte[]>[] termStorage;
     private final boolean[] hasTermStorage;
 
     public LabActivityIndex(OrderIdProvider idProvider,
         boolean monotime,
         boolean realtime,
-        ValueIndex timeAndVersionIndex,
+        ValueIndex<byte[]> timeAndVersionIndex,
         IntTermIdsKeyValueMarshaller intTermIdsKeyValueMarshaller,
-        ValueIndex metaIndex,
+        ValueIndex<byte[]> metaIndex,
         byte[] metaKey,
-        ValueIndex[] termStorage,
+        ValueIndex<byte[]>[] termStorage,
         boolean[] hasTermStorage) {
         this.idProvider = idProvider;
         this.monotime = monotime;
@@ -58,7 +58,7 @@ public class LabActivityIndex implements MiruActivityIndex {
         this.hasTermStorage = hasTermStorage;
     }
 
-    private ValueIndex getTermIndex(int fieldId) {
+    private ValueIndex<byte[]> getTermIndex(int fieldId) {
         return termStorage[fieldId % termStorage.length];
     }
 
@@ -198,7 +198,7 @@ public class LabActivityIndex implements MiruActivityIndex {
         }
 
         MiruTermId[][] termIds = new MiruTermId[length][];
-        ValueIndex termIndex = getTermIndex(fieldId);
+        ValueIndex<byte[]> termIndex = getTermIndex(fieldId);
         byte[] fieldBytes = FilerIO.intBytes(fieldId);
         int[] count = { 0 };
         termIndex.get(

@@ -1,4 +1,4 @@
-package com.jivesoftware.os.wiki.miru.deployable.topics;
+package com.jivesoftware.os.miru.plugin.query;
 
 import java.util.Arrays;
 import java.util.List;

@@ -12,7 +12,7 @@ public class LabRemovalIndex<BM extends IBM, IBM> extends LabInvertedIndex<BM, I
         MiruBitmaps<BM, IBM> bitmaps,
         TrackError trackError,
         boolean atomized,
-        ValueIndex valueIndex,
+        ValueIndex<byte[]> valueIndex,
         byte[] keyBytes,
         Object mutationLock) {
 

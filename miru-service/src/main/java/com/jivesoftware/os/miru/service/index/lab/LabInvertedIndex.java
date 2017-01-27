@@ -43,9 +43,9 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
     private final int fieldId;
     private final boolean atomized;
     private final byte[] bitmapKeyBytes;
-    private final ValueIndex bitmapIndex;
+    private final ValueIndex<byte[]> bitmapIndex;
     private final byte[] termKeyBytes;
-    private final ValueIndex termIndex;
+    private final ValueIndex<byte[]> termIndex;
     private final Object mutationLock;
     private volatile int lastId = Integer.MIN_VALUE;
 
@@ -56,9 +56,9 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
         int fieldId,
         boolean atomized,
         byte[] bitmapKeyBytes,
-        ValueIndex bitmapIndex,
+        ValueIndex<byte[]> bitmapIndex,
         byte[] termKeyBytes,
-        ValueIndex termIndex,
+        ValueIndex<byte[]> termIndex,
         Object mutationLock) {
 
         this.idProvider = idProvider;
