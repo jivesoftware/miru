@@ -34,7 +34,6 @@ import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -246,6 +245,9 @@ public class FullTextGatherer implements IndexOpenCallback, IndexCommitCallback,
         for (int i = 0; i < gatherFieldNames.length; i++) {
             String fieldName = gatherFieldNames[i];
             int fieldId = schema.getFieldId(fieldName);
+            if (fieldId < 0) {
+                throw new RuntimeException("Unknown field: " + fieldName);
+            }
             MiruFieldDefinition fieldDefinition = schema.getFieldDefinition(fieldId);
             MiruTermId[][] got = activityIndex.getAll("fullTextGatherer", indexes, fieldId, stackBuffer);
             MiruValue[][] values = new MiruValue[got.length][];
@@ -258,7 +260,7 @@ public class FullTextGatherer implements IndexOpenCallback, IndexCommitCallback,
             termIds.put(fieldName, values);
         }
 
-        fullTextTermProvider.gatherText(coord, indexes, termIds, (fieldName, value, ids) -> {
+        boolean result = fullTextTermProvider.gatherText(coord, indexes, termIds, (fieldName, value, ids) -> {
             int fieldId = schema.getFieldId(fieldName);
             MiruFieldDefinition fieldDefinition = schema.getFieldDefinition(fieldId);
             MiruTermId termId = termComposer.compose(schema, fieldDefinition, stackBuffer, value.parts);
@@ -266,5 +268,9 @@ public class FullTextGatherer implements IndexOpenCallback, IndexCommitCallback,
             toIndex.set(stackBuffer, ids);
             return true;
         });
+
+        if (!result) {
+            throw new RuntimeException("Term provider returned a failure result");
+        }
     }
 }
