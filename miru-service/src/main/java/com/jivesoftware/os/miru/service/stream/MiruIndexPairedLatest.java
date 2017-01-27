@@ -42,10 +42,10 @@ public class MiruIndexPairedLatest<BM extends IBM, IBM> {
         ExecutorService indexExecutor)
         throws Exception {
 
-        List<MiruFieldDefinition> fieldsWithAggregates = context.schema.getFieldsWithPairedLatest();
+        List<MiruFieldDefinition> fieldsWithAggregates = context.getSchema().getFieldsWithPairedLatest();
         List<Future<List<PairedLatestWork>>> workFutures = Lists.newArrayList();
         for (final MiruFieldDefinition fieldDefinition : fieldsWithAggregates) {
-            List<MiruFieldDefinition> aggregateFieldDefinitions = context.schema.getPairedLatestFieldDefinitions(fieldDefinition.fieldId);
+            List<MiruFieldDefinition> aggregateFieldDefinitions = context.getSchema().getPairedLatestFieldDefinitions(fieldDefinition.fieldId);
             for (final MiruFieldDefinition aggregateFieldDefinition : aggregateFieldDefinitions) {
                 workFutures.add(indexExecutor.submit(() -> {
                     Map<MiruTermId, List<IdAndTerm>> fieldWork = Maps.newHashMap();
@@ -118,7 +118,7 @@ public class MiruIndexPairedLatest<BM extends IBM, IBM> {
                 MiruTermId fieldValue = pairedLatestWork.fieldValue;
                 List<IdAndTerm> idAndTerms = pairedLatestWork.work;
 
-                MiruFieldDefinition aggregateFieldDefinition = context.schema.getFieldDefinition(pairedLatestWork.aggregateFieldId);
+                MiruFieldDefinition aggregateFieldDefinition = context.getSchema().getFieldDefinition(pairedLatestWork.aggregateFieldId);
                 MiruTermId pairedLatestTerm = indexUtil.makePairedLatestTerm(fieldValue, aggregateFieldDefinition.name);
                 MiruInvertedIndex<BM, IBM> invertedIndex = pairedLatestFieldIndex
                     .getOrCreateInvertedIndex("indexPairedLatest", pairedLatestWork.fieldId, pairedLatestTerm);

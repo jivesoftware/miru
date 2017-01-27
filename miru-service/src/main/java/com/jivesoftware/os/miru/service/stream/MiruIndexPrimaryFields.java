@@ -39,7 +39,7 @@ public class MiruIndexPrimaryFields<BM extends IBM, IBM> {
         ExecutorService indexExecutor)
         throws Exception {
 
-        MiruFieldDefinition[] fieldDefinitions = context.schema.getFieldDefinitions();
+        MiruFieldDefinition[] fieldDefinitions = context.getSchema().getFieldDefinitions();
         List<Future<List<PrimaryIndexWork>>> workFutures = new ArrayList<>(fieldDefinitions.length);
         for (final MiruFieldDefinition fieldDefinition : fieldDefinitions) {
             if (!fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.indexed)
@@ -104,11 +104,11 @@ public class MiruIndexPrimaryFields<BM extends IBM, IBM> {
         List<PrimaryIndexWork>[] work = awaitFieldWorkFutures(fieldWorkFutures);
 
         final MiruFieldIndex<BM, IBM> fieldIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
-        List<Integer> fieldIds = context.schema.getFieldIds();
+        List<Integer> fieldIds = context.getSchema().getFieldIds();
         List<Future<?>> futures = new ArrayList<>(fieldIds.size());
         for (int fieldId = 0; fieldId < work.length; fieldId++) {
             List<PrimaryIndexWork> fieldWork = work[fieldId];
-            MiruFieldDefinition fieldDefinition = context.schema.getFieldDefinition(fieldId);
+            MiruFieldDefinition fieldDefinition = context.getSchema().getFieldDefinition(fieldId);
             final int finalFieldId = fieldId;
             for (final PrimaryIndexWork primaryIndexWork : fieldWork) {
                 futures.add(indexExecutor.submit(() -> {

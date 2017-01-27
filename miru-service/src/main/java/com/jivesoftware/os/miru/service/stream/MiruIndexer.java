@@ -69,7 +69,7 @@ public class MiruIndexer<BM extends IBM, IBM> {
             final int startOfSubList = i;
             internFutures.add(indexExecutor.submit(() -> {
                 StackBuffer stackBuffer = new StackBuffer();
-                context.activityInternExtern.intern(activityAndIds, startOfSubList, partitionSize, internalActivityAndIds, context.schema, stackBuffer);
+                context.activityInternExtern.intern(activityAndIds, startOfSubList, partitionSize, internalActivityAndIds, context.getSchema(), stackBuffer);
                 return null;
             }));
         }
@@ -95,7 +95,7 @@ public class MiruIndexer<BM extends IBM, IBM> {
         // 5. Update activity index
         otherFutures.add(indexExecutor.submit(() -> {
             StackBuffer stackBuffer = new StackBuffer();
-            context.activityIndex.set(context.schema, internalActivityAndIds, stackBuffer);
+            context.activityIndex.set(context.getSchema(), internalActivityAndIds, stackBuffer);
             return null;
         }));
 
@@ -131,8 +131,8 @@ public class MiruIndexer<BM extends IBM, IBM> {
             new MiruActivityAndId[activityAndIds.size()]);
 
         StackBuffer stackBuffer = new StackBuffer();
-        context.activityInternExtern.intern(activityAndIds, 0, activityAndIds.size(), internalActivityAndIds, context.schema, stackBuffer);
-        context.activityIndex.setAndReady(context.schema, internalActivityAndIds, stackBuffer);
+        context.activityInternExtern.intern(activityAndIds, 0, activityAndIds.size(), internalActivityAndIds, context.getSchema(), stackBuffer);
+        context.activityIndex.setAndReady(context.getSchema(), internalActivityAndIds, stackBuffer);
     }
 
     public void remove(MiruContext<BM, IBM, ?> context, MiruActivity activity, int id) throws Exception {
@@ -149,7 +149,7 @@ public class MiruIndexer<BM extends IBM, IBM> {
                 0,
                 1,
                 internalActivity,
-                context.schema,
+                context.getSchema(),
                 stackBuffer);
 
             //TODO apply field changes?
@@ -157,7 +157,7 @@ public class MiruIndexer<BM extends IBM, IBM> {
             context.removalIndex.set(stackBuffer, id);
 
             // finally, update the activity index
-            context.activityIndex.setAndReady(context.schema, internalActivity, stackBuffer);
+            context.activityIndex.setAndReady(context.getSchema(), internalActivity, stackBuffer);
         }
     }
 

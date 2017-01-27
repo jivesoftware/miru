@@ -97,6 +97,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.builder.HashCodeBuilder;
 
@@ -404,7 +405,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
 
         MiruContext<BM, IBM, S> context = new MiruContext<>(version,
             getTimeIdIndex(version),
-            schema,
+            new AtomicReference<>(schema),
             termComposer,
             timeIndex,
             activityIndex,
@@ -714,7 +715,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
 
         MiruContext<BM, IBM, S> context = new MiruContext<>(version,
             getTimeIdIndex(version),
-            schema,
+            new AtomicReference<>(schema),
             termComposer,
             timeIndex,
             activityIndex,
@@ -782,7 +783,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         MiruBackingStorage toStorage,
         StackBuffer stackBuffer) throws Exception {
 
-        saveSchema(coord, from.schema);
+        saveSchema(coord, from.getSchema());
         saveVersion(coord, from.version);
 
         if (from.chunkStores != null) {

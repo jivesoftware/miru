@@ -1129,7 +1129,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
                 LOG.warn("Failed to deserialize schema for {}", to);
                 error = true;
             }
-            if (existing != null && existing.getName().equals(schema.getName()) && existing.getVersion() != schema.getVersion()
+            if (existing != null && !MiruSchema.deepEquals(existing, schema)
                 || existing == null && !error && upgradeOnMissing
                 || existing == null && error && upgradeOnError) {
                 updates.set(toTenantKey(to), schemaBytes, -1);

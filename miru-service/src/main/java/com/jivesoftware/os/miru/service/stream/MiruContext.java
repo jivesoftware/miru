@@ -26,6 +26,7 @@ import com.jivesoftware.os.miru.service.index.Removable;
 import com.jivesoftware.os.miru.service.index.TimeIdIndex;
 import com.jivesoftware.os.miru.service.stream.MiruRebuildDirector.Token;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Composes the building blocks of a MiruContext together for convenience.
@@ -37,7 +38,7 @@ public class MiruContext<BM extends IBM, IBM, S extends MiruSipCursor<S>> implem
 
     public final long version;
     public final TimeIdIndex timeIdIndex;
-    public final MiruSchema schema;
+    public final AtomicReference<MiruSchema> schema;
     public final MiruTermComposer termComposer;
     public final MiruTimeIndex timeIndex;
     public final MiruActivityIndex activityIndex;
@@ -64,7 +65,7 @@ public class MiruContext<BM extends IBM, IBM, S extends MiruSipCursor<S>> implem
 
     public MiruContext(long version,
         TimeIdIndex timeIdIndex,
-        MiruSchema schema,
+        AtomicReference<MiruSchema> schema,
         MiruTermComposer termComposer,
         MiruTimeIndex timeIndex,
         MiruActivityIndex activityIndex,
@@ -111,7 +112,7 @@ public class MiruContext<BM extends IBM, IBM, S extends MiruSipCursor<S>> implem
 
     @Override
     public MiruSchema getSchema() {
-        return schema;
+        return schema.get();
     }
 
     @Override
