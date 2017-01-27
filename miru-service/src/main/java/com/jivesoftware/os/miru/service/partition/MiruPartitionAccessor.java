@@ -13,6 +13,7 @@ import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.TimeAndVersion;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.wal.MiruCursor;
 import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
@@ -258,6 +259,12 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
 
     boolean canHandleQueries() {
         return state.isOnline();
+    }
+
+    void setPersistentSchema(MiruSchema schema) {
+        if (persistentContext.isPresent()) {
+            persistentContext.get().schema.set(schema);
+        }
     }
 
     boolean isOpenForWrites() {

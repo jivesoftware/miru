@@ -36,7 +36,7 @@ public class MiruIndexValueBits<BM extends IBM, IBM> {
         throws Exception {
 
         TIntList activityIds = null;
-        MiruFieldDefinition[] fieldDefinitions = context.schema.getFieldDefinitions();
+        MiruFieldDefinition[] fieldDefinitions = context.getSchema().getFieldDefinitions();
         List<Future<List<ValueIndexWork>>> workFutures = new ArrayList<>(fieldDefinitions.length);
         for (final MiruFieldDefinition fieldDefinition : fieldDefinitions) {
             if (!fieldDefinition.type.hasFeature(Feature.indexedValueBits)) {
@@ -103,7 +103,7 @@ public class MiruIndexValueBits<BM extends IBM, IBM> {
         List<ValueIndexWork>[] work = awaitFieldWorkFutures(fieldWorkFutures);
 
         final MiruFieldIndex<BM, IBM> valueBitsIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.valueBits);
-        List<Integer> fieldIds = context.schema.getFieldIds();
+        List<Integer> fieldIds = context.getSchema().getFieldIds();
         List<Future<?>> futures = new ArrayList<>(fieldIds.size());
         for (int fieldId = 0; fieldId < work.length; fieldId++) {
             List<ValueIndexWork> fieldWork = work[fieldId];

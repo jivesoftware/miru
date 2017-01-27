@@ -370,7 +370,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
         MiruPartitionAccessor<BM, IBM, C, S> accessor = accessorRef.get();
         if (!partitionAllowNonLatestSchemaInteractions && accessor.persistentContext.isPresent()) {
             MiruSchema latestSchema = contextFactory.lookupLatestSchema(coord.tenantId);
-            if (!MiruSchema.checkEquals(accessor.persistentContext.get().schema, latestSchema)) {
+            if (!MiruSchema.checkEquals(accessor.persistentContext.get().getSchema(), latestSchema)) {
                 throw new MiruPartitionUnavailableException("Partition is outdated");
             }
         }
@@ -625,7 +625,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                     synchronized (fromContext.writeLock) {
                         handle.merge(transientMergeExecutor, fromContext, transientMergeChits, trackError);
                         handle.closeTransient(contextFactory);
-                        toContext = contextFactory.copy(bitmaps, fromContext.schema, coord, fromContext, MiruBackingStorage.disk, stackBuffer);
+                        toContext = contextFactory.copy(bitmaps, fromContext.getSchema(), coord, fromContext, MiruBackingStorage.disk, stackBuffer);
                     }
 
                     Optional<MiruContext<BM, IBM, S>> newPersistentContext = Optional.of(toContext);
@@ -1053,7 +1053,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                         if (accessor.isOpenForWrites() && accessor.hasOpenWriters()) {
                             if (!partitionAllowNonLatestSchemaInteractions && accessor.persistentContext.isPresent()) {
                                 MiruSchema latestSchema = contextFactory.lookupLatestSchema(coord.tenantId);
-                                if (!MiruSchema.checkEquals(accessor.persistentContext.get().schema, latestSchema)) {
+                                if (!MiruSchema.checkEquals(accessor.persistentContext.get().getSchema(), latestSchema)) {
                                     accessor.setSipEndOfWAL(false);
                                     return;
                                 }
@@ -1117,9 +1117,26 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
             if (accessor.persistentContext.isPresent() && !accessor.isObsolete()) {
                 MiruSchema latestSchema = contextFactory.lookupLatestSchema(coord.tenantId);
                 MiruContext<BM, IBM, S> context = accessor.persistentContext.get();
-                if (!MiruSchema.checkEquals(latestSchema, context.schema)) {
+                MiruSchema schema = context.getSchema();
+                if (MiruSchema.checkEquals(schema, latestSchema)) {
+                    if (MiruSchema.deepEquals(schema, latestSchema)) {
+                        // do nothing
+                    } else if (MiruSchema.checkAdditive(schema, latestSchema)) {
+                        synchronized (factoryLock) {
+                            if (accessor == accessorRef.get()) {
+                                LOG.warn("Detected schema change for persistent storage on {}", coord);
+                                contextFactory.saveSchema(coord, latestSchema);
+                                accessor.setPersistentSchema(latestSchema);
+                            }
+                        }
+                    } else {
+                        LOG.warn("Non-additive schema change for persistent storage on {}", coord);
+                        trackError.error("Non-additive schema change for persistent storage, " +
+                            "fix schema and restart, or force rebuild to resolve");
+                    }
+                } else {
                     LOG.warn("Found obsolete schema for {}: {} {} vs {} {}",
-                        coord, latestSchema.getName(), latestSchema.getVersion(), context.schema.getName(), context.schema.getVersion());
+                        coord, latestSchema.getName(), latestSchema.getVersion(), schema.getName(), schema.getVersion());
                     accessor.markObsolete();
                 }
             }

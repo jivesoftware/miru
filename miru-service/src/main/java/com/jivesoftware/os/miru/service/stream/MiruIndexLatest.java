@@ -36,7 +36,7 @@ public class MiruIndexLatest<BM extends IBM, IBM> {
 
         final MiruFieldIndex<BM, IBM> allFieldIndex = context.fieldIndexProvider.getFieldIndex(MiruFieldType.primary);
         final MiruFieldIndex<BM, IBM> latestFieldIndex = context.fieldIndexProvider.getFieldIndex(MiruFieldType.latest);
-        List<MiruFieldDefinition> writeTimeAggregateFields = context.schema.getFieldsWithLatest();
+        List<MiruFieldDefinition> writeTimeAggregateFields = context.getSchema().getFieldsWithLatest();
         // rough estimate of necessary capacity
         List<Future<?>> futures = Lists.newArrayListWithCapacity(internalActivityAndIds.size() * writeTimeAggregateFields.size());
         for (final MiruActivityAndId<MiruInternalActivity> internalActivityAndId : internalActivityAndIds) {

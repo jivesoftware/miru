@@ -31,7 +31,7 @@ public class MiruIndexFirst<BM extends IBM, IBM> {
         throws Exception {
 
         final MiruFieldIndex<BM, IBM> primaryFieldIndex = context.fieldIndexProvider.getFieldIndex(MiruFieldType.primary);
-        List<MiruFieldDefinition> referenceFields = context.schema.getFieldsWithFirst();
+        List<MiruFieldDefinition> referenceFields = context.getSchema().getFieldsWithFirst();
         List<Future<?>> futures = Lists.newArrayListWithCapacity(referenceFields.size());
         for (final MiruFieldDefinition fieldDefinition : referenceFields) {
             futures.add(indexExecutor.submit(() -> {
