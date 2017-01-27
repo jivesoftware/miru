@@ -22,6 +22,8 @@ public interface FullTextTermProvider {
 
     String[] getFieldNames();
 
+    String[] getIndexFieldNames();
+
     interface GatherStream {
         boolean stream(String fieldName, MiruValue value, int[] ids) throws Exception;
     }

@@ -35,6 +35,11 @@ public class DisabledTermProvider implements FullTextTermProvider {
     }
 
     @Override
+    public String[] getIndexFieldNames() {
+        return new String[0];
+    }
+
+    @Override
     public boolean gatherText(MiruPartitionCoord coord, int[] indexes, Map<String, MiruValue[][]> fieldValues, GatherStream gatherStream) throws Exception {
         return true;
     }

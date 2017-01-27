@@ -162,6 +162,9 @@ public class FullTextGatherer implements IndexOpenCallback, IndexCommitCallback,
                     LOG.warn("Could not find queryable partition for coord:{}", coord);
                     running.set(false);
                 }
+            } catch (SchemaNotReadyException e) {
+                LOG.error("Schema not ready coord:{} reason: {}", coord, e.getMessage());
+                executorService.schedule(this, 60_000L, TimeUnit.MILLISECONDS); //TODO config
             } catch (Throwable t) {
                 LOG.error("Failed to gather full text for coord:{}", new Object[] { coord }, t);
                 executorService.schedule(this, 10_000L, TimeUnit.MILLISECONDS); //TODO config
@@ -178,6 +181,17 @@ public class FullTextGatherer implements IndexOpenCallback, IndexCommitCallback,
         FullTextTermProvider fullTextTermProvider = fullTextTermProviders.get(schema.getName());
         if (fullTextTermProvider == null || !fullTextTermProvider.isEnabled(coord.tenantId)) {
             return;
+        }
+
+        for (String fieldName : fullTextTermProvider.getFieldNames()) {
+            if (schema.getFieldId(fieldName) < 0) {
+                throw new SchemaNotReadyException("Unknown gather field: " + fieldName);
+            }
+        }
+        for (String fieldName : fullTextTermProvider.getIndexFieldNames()) {
+            if (schema.getFieldId(fieldName) < 0) {
+                throw new SchemaNotReadyException("Unknown index field: " + fieldName);
+            }
         }
 
         MiruFilter acceptableFilter = fullTextTermProvider.getAcceptableFilter();
@@ -262,6 +276,9 @@ public class FullTextGatherer implements IndexOpenCallback, IndexCommitCallback,
 
         boolean result = fullTextTermProvider.gatherText(coord, indexes, termIds, (fieldName, value, ids) -> {
             int fieldId = schema.getFieldId(fieldName);
+            if (fieldId < 0) {
+                throw new RuntimeException("Unknown field: " + fieldName);
+            }
             MiruFieldDefinition fieldDefinition = schema.getFieldDefinition(fieldId);
             MiruTermId termId = termComposer.compose(schema, fieldDefinition, stackBuffer, value.parts);
             MiruInvertedIndex<BM, IBM> toIndex = primaryFieldIndex.get("fullTextGatherer", fieldId, termId);
@@ -271,6 +288,13 @@ public class FullTextGatherer implements IndexOpenCallback, IndexCommitCallback,
 
         if (!result) {
             throw new RuntimeException("Term provider returned a failure result");
+        }
+    }
+
+    private static class SchemaNotReadyException extends Exception {
+
+        public SchemaNotReadyException(String message) {
+            super(message);
         }
     }
 }
