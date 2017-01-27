@@ -9,13 +9,13 @@ import static org.testng.Assert.assertNull;
 /**
  *
  */
-public class ValueIndexTest {
+public class ValueBitsIndexTest {
 
     @Test
     public void testPackUnpack() {
         for (String value : new String[] { "", "3 2902", "barf" }) {
             byte[] expected = value.getBytes(StandardCharsets.UTF_8);
-            byte[] actual = ValueIndex.unpackValue(ValueIndex.packValue(expected));
+            byte[] actual = ValueBitsIndex.unpackValue(ValueBitsIndex.packValue(expected));
             if (expected.length == 0) {
                 assertNull(actual);
             } else {

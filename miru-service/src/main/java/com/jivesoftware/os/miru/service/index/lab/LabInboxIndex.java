@@ -21,7 +21,7 @@ public class LabInboxIndex<BM extends IBM, IBM> implements MiruInboxIndex<BM, IB
     private final TrackError trackError;
     private final byte[] prefix;
     private final boolean atomized;
-    private final ValueIndex[] stores;
+    private final ValueIndex<byte[]>[] stores;
     private final StripingLocksProvider<MiruStreamId> stripingLocksProvider;
 
     public LabInboxIndex(OrderIdProvider idProvider,
@@ -29,7 +29,7 @@ public class LabInboxIndex<BM extends IBM, IBM> implements MiruInboxIndex<BM, IB
         TrackError trackError,
         byte[] prefix,
         boolean atomized,
-        ValueIndex[] stores,
+        ValueIndex<byte[]>[] stores,
         StripingLocksProvider<MiruStreamId> stripingLocksProvider)
         throws Exception {
 
@@ -42,7 +42,7 @@ public class LabInboxIndex<BM extends IBM, IBM> implements MiruInboxIndex<BM, IB
         this.stripingLocksProvider = stripingLocksProvider;
     }
 
-    private ValueIndex getStore(MiruStreamId streamId) {
+    private ValueIndex<byte[]> getStore(MiruStreamId streamId) {
         return stores[Math.abs(streamId.hashCode() % stores.length)];
     }
 

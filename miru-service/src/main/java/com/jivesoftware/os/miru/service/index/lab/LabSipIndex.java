@@ -26,7 +26,7 @@ public class LabSipIndex<S extends MiruSipCursor<S>> implements MiruSipIndex<S> 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final OrderIdProvider idProvider;
-    private final ValueIndex valueIndex;
+    private final ValueIndex<byte[]> valueIndex;
     private final byte[] sipKey;
     private final byte[] realtimeDeliveryIdKey;
     private final byte[] customPrefix;
@@ -38,7 +38,7 @@ public class LabSipIndex<S extends MiruSipCursor<S>> implements MiruSipIndex<S> 
     private final AtomicBoolean sipAbsent = new AtomicBoolean(false);
 
     public LabSipIndex(OrderIdProvider idProvider,
-        ValueIndex valueIndex,
+        ValueIndex<byte[]> valueIndex,
         byte[] sipKey,
         byte[] realtimeDeliveryIdKey,
         byte[] customPrefix,
@@ -173,17 +173,22 @@ public class LabSipIndex<S extends MiruSipCursor<S>> implements MiruSipIndex<S> 
     public void merge() throws Exception {
         valueIndex.append(
             stream -> {
+                long timestamp = System.currentTimeMillis();
+                long version = idProvider.nextId();
+
                 S sip = sipReference.get();
                 if (sip != null) {
                     ByteArrayFiler filer = new ByteArrayFiler();
                     marshaller.toFiler(filer, sip, new StackBuffer());
-                    if (!stream.stream(-1, sipKey, System.currentTimeMillis(), false, idProvider.nextId(), filer.getBytes())) {
+                    LOG.inc("sip>merge>primary");
+                    if (!stream.stream(-1, sipKey, timestamp, false, version, filer.getBytes())) {
                         return false;
                     }
                 }
 
                 return customSip.stream((key, value) -> {
-                    return stream.stream(-1, Bytes.concat(customPrefix, key), System.currentTimeMillis(), false, idProvider.nextId(), value);
+                    LOG.inc("sip>merge>custom");
+                    return stream.stream(-1, Bytes.concat(customPrefix, key), timestamp, false, version, value);
                 });
             },
             true,

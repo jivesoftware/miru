@@ -30,7 +30,7 @@ import com.jivesoftware.os.wiki.miru.deployable.storage.KeyAndPayload;
 import com.jivesoftware.os.wiki.miru.deployable.storage.WikiMiruGramsAmza;
 import com.jivesoftware.os.wiki.miru.deployable.storage.WikiMiruPayloadsAmza;
 import com.jivesoftware.os.wiki.miru.deployable.topics.ActivityNames;
-import com.jivesoftware.os.wiki.miru.deployable.topics.EnStopwords;
+import com.jivesoftware.os.miru.plugin.query.EnStopwords;
 import com.jivesoftware.os.wiki.miru.deployable.topics.FemaleFirstName;
 import com.jivesoftware.os.wiki.miru.deployable.topics.KeywordsExtractor;
 import com.jivesoftware.os.wiki.miru.deployable.topics.KeywordsExtractor.Topic;

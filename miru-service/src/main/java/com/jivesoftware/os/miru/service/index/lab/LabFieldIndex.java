@@ -40,12 +40,12 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
     private final TrackError trackError;
     private final boolean atomized;
     private final byte[] bitmapPrefix;
-    private final ValueIndex[] bitmapIndexes;
+    private final ValueIndex<byte[]>[] bitmapIndexes;
     private final byte[] termPrefix;
-    private final ValueIndex[] termIndexes;
+    private final ValueIndex<byte[]>[] termIndexes;
     private final int termKeyOffset;
     private final byte[] cardinalityPrefix;
-    private final ValueIndex[] cardinalities;
+    private final ValueIndex<byte[]>[] cardinalities;
     private final boolean[] hasCardinalities;
     // We could lock on both field + termId for improved hash/striping, but we favor just termId to reduce object creation
     private final StripingLocksProvider<MiruTermId> stripingLocksProvider;
@@ -56,11 +56,11 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
         TrackError trackError,
         boolean atomized,
         byte[] bitmapPrefix,
-        ValueIndex[] bitmapIndexes,
+        ValueIndex<byte[]>[] bitmapIndexes,
         byte[] termPrefix,
-        ValueIndex[] termIndexes,
+        ValueIndex<byte[]>[] termIndexes,
         byte[] cardinalityPrefix,
-        ValueIndex[] cardinalities,
+        ValueIndex<byte[]>[] cardinalities,
         boolean[] hasCardinalities,
         StripingLocksProvider<MiruTermId> stripingLocksProvider,
         MiruInterner<MiruTermId> termInterner) throws Exception {
@@ -81,15 +81,15 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
         this.termInterner = termInterner;
     }
 
-    private ValueIndex getBitmapIndex(int fieldId) {
+    private ValueIndex<byte[]> getBitmapIndex(int fieldId) {
         return bitmapIndexes[fieldId % bitmapIndexes.length];
     }
 
-    private ValueIndex getTermIndex(int fieldId) {
+    private ValueIndex<byte[]> getTermIndex(int fieldId) {
         return termIndexes[fieldId % termIndexes.length];
     }
 
-    private ValueIndex getCardinalityIndex(int fieldId) {
+    private ValueIndex<byte[]> getCardinalityIndex(int fieldId) {
         return cardinalities[fieldId % cardinalities.length];
     }
 
@@ -210,7 +210,7 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
     public void multiGet(String name, int fieldId, MiruTermId[] termIds, BitmapAndLastId<BM>[] results, StackBuffer stackBuffer) throws Exception {
         byte[] fieldIdBytes = FilerIO.intBytes(fieldId);
         MutableLong bytes = new MutableLong();
-        ValueIndex bitmapIndex = getBitmapIndex(fieldId);
+        ValueIndex<byte[]> bitmapIndex = getBitmapIndex(fieldId);
         if (atomized) {
             for (int i = 0; i < termIds.length; i++) {
                 if (termIds[i] != null) {
@@ -274,7 +274,7 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
     public void multiGetLastIds(String name, int fieldId, MiruTermId[] termIds, int[] results, StackBuffer stackBuffer) throws Exception {
         byte[] fieldIdBytes = FilerIO.intBytes(fieldId);
         MutableLong bytes = new MutableLong();
-        ValueIndex bitmapIndex = getBitmapIndex(fieldId);
+        ValueIndex<byte[]> bitmapIndex = getBitmapIndex(fieldId);
         if (atomized) {
             int[] lastId = new int[1];
             for (int i = 0; i < termIds.length; i++) {
@@ -343,7 +343,7 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
 
         byte[] fieldIdBytes = FilerIO.intBytes(fieldId);
         MutableLong bytes = new MutableLong();
-        ValueIndex bitmapIndex = getBitmapIndex(fieldId);
+        ValueIndex<byte[]> bitmapIndex = getBitmapIndex(fieldId);
         if (atomized) {
             int[] lastId = new int[1];
             BitmapAndLastId<BM> container = new BitmapAndLastId<>();
@@ -437,7 +437,7 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
         long[] counts = new long[ids.length];
         if (hasCardinalities[fieldId]) {
             byte[] fieldIdBytes = FilerIO.intBytes(fieldId);
-            ValueIndex cardinalityIndex = getCardinalityIndex(fieldId);
+            ValueIndex<byte[]> cardinalityIndex = getCardinalityIndex(fieldId);
 
             cardinalityIndex.get(
                 (stream) -> {
@@ -472,7 +472,7 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
     private void mergeCardinalities(int fieldId, MiruTermId termId, int[] ids, long[] counts) throws Exception {
         if (hasCardinalities[fieldId] && counts != null) {
             byte[] fieldBytes = FilerIO.intBytes(fieldId);
-            ValueIndex cardinalityIndex = getCardinalityIndex(fieldId);
+            ValueIndex<byte[]> cardinalityIndex = getCardinalityIndex(fieldId);
 
             long[] merge = new long[counts.length];
             long delta = 0;

@@ -11,7 +11,7 @@ import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityAndId;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruInternalActivity;
-import com.jivesoftware.os.miru.plugin.index.ValueIndex;
+import com.jivesoftware.os.miru.plugin.index.ValueBitsIndex;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import gnu.trove.list.TIntList;
@@ -57,7 +57,7 @@ public class MiruIndexValueBits<BM extends IBM, IBM> {
                     MiruTermId[] fieldValues = activity.fieldsValues[fieldDefinition.fieldId];
                     if (fieldValues != null && fieldValues.length > 0) {
                         byte[] rawValue = fieldValues[0].getBytes();
-                        byte[] value = ValueIndex.packValue(rawValue);
+                        byte[] value = ValueBitsIndex.packValue(rawValue);
 
 
                         for (int aye = 0; aye < value.length; aye++) {
@@ -112,7 +112,7 @@ public class MiruIndexValueBits<BM extends IBM, IBM> {
                 futures.add(indexExecutor.submit(() -> {
                     StackBuffer stackBuffer = new StackBuffer();
                     byte[] bit = new byte[2];
-                    ValueIndex.shortBytes((short) valueIndexWork.bit, bit, 0);
+                    ValueBitsIndex.shortBytes((short) valueIndexWork.bit, bit, 0);
                     TIntList allIds = valueIndexWork.allIds;
                     TIntList setIds = valueIndexWork.setIds;
                     TIntList removeIds = computeDifference(allIds, setIds);

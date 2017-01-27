@@ -21,10 +21,10 @@ public class LabTimestampedCacheKeyValues implements TimestampedCacheKeyValues {
 
     private final String name;
     private final OrderIdProvider idProvider;
-    private final ValueIndex[] indexes;
+    private final ValueIndex<byte[]>[] indexes;
     private final Object[] stripedLocks;
 
-    public LabTimestampedCacheKeyValues(String name, OrderIdProvider idProvider, ValueIndex[] indexes, Object[] stripedLocks) {
+    public LabTimestampedCacheKeyValues(String name, OrderIdProvider idProvider, ValueIndex<byte[]>[] indexes, Object[] stripedLocks) {
         this.name = name;
         this.idProvider = idProvider;
         this.indexes = indexes;
@@ -127,13 +127,13 @@ public class LabTimestampedCacheKeyValues implements TimestampedCacheKeyValues {
     }
 
     public void commit(boolean fsyncOnCommit) throws Exception {
-        for (ValueIndex index : indexes) {
+        for (ValueIndex<byte[]> index : indexes) {
             index.commit(fsyncOnCommit, true);
         }
     }
 
     public void close(boolean flushUncommited, boolean fsync) throws Exception {
-        for (ValueIndex index : indexes) {
+        for (ValueIndex<byte[]> index : indexes) {
             index.close(flushUncommited, fsync);
         }
     }

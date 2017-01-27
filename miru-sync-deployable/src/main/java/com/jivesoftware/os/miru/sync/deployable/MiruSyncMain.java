@@ -27,11 +27,11 @@ import com.jivesoftware.os.amza.api.partition.Durability;
 import com.jivesoftware.os.amza.api.partition.PartitionProperties;
 import com.jivesoftware.os.amza.api.stream.RowType;
 import com.jivesoftware.os.amza.client.aquarium.AmzaClientAquariumProvider;
+import com.jivesoftware.os.amza.client.collection.AmzaMarshaller;
 import com.jivesoftware.os.amza.client.http.AmzaClientProvider;
 import com.jivesoftware.os.amza.client.http.HttpPartitionClientFactory;
 import com.jivesoftware.os.amza.client.http.HttpPartitionHostsProvider;
 import com.jivesoftware.os.amza.client.http.RingHostHttpClientProvider;
-import com.jivesoftware.os.amza.sync.api.AmzaConfigMarshaller;
 import com.jivesoftware.os.aquarium.AquariumStats;
 import com.jivesoftware.os.aquarium.Member;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
@@ -299,7 +299,7 @@ public class MiruSyncMain {
                     null,
                     -1,
                     -1),
-                new AmzaConfigMarshaller<MiruSyncTenantTuple>() {
+                new AmzaMarshaller<MiruSyncTenantTuple>() {
                     @Override
                     public MiruSyncTenantTuple fromBytes(byte[] bytes) throws Exception {
                         return MiruSyncTenantTuple.fromBytes(bytes);
@@ -310,7 +310,7 @@ public class MiruSyncMain {
                         return MiruSyncTenantTuple.toBytes(miruSyncTenantTuple);
                     }
                 },
-                new AmzaConfigMarshaller<MiruSyncTenantConfig>() {
+                new AmzaMarshaller<MiruSyncTenantConfig>() {
                     @Override
                     public MiruSyncTenantConfig fromBytes(byte[] bytes) throws Exception {
                         return mapper.readValue(bytes, MiruSyncTenantConfig.class);
@@ -339,7 +339,7 @@ public class MiruSyncMain {
                     null,
                     -1,
                     -1),
-                new AmzaConfigMarshaller<String>() {
+                new AmzaMarshaller<String>() {
                     @Override
                     public String fromBytes(byte[] bytes) throws Exception {
                         return new String(bytes, StandardCharsets.UTF_8);
@@ -350,7 +350,7 @@ public class MiruSyncMain {
                         return s == null ? null : s.getBytes(StandardCharsets.UTF_8);
                     }
                 },
-                new AmzaConfigMarshaller<MiruSyncSenderConfig>() {
+                new AmzaMarshaller<MiruSyncSenderConfig>() {
                     @Override
                     public MiruSyncSenderConfig fromBytes(byte[] bytes) throws Exception {
                         return mapper.readValue(bytes, MiruSyncSenderConfig.class);

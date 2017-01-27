@@ -23,7 +23,7 @@ public class LabTimeIdIndex implements TimeIdIndex {
     private static final int NUM_SEMAPHORES = 1024;
 
     private final LABEnvironment environment;
-    private final ValueIndex[] indexes;
+    private final ValueIndex<byte[]>[] indexes;
     private final int maxEntriesPerIndex;
     private final long maxHeapPressureInBytes;
     private final boolean fsyncOnAppend;
@@ -58,7 +58,7 @@ public class LabTimeIdIndex implements TimeIdIndex {
         }
     }
 
-    private ValueIndex open(String name) throws Exception {
+    private ValueIndex<byte[]> open(String name) throws Exception {
         return environment.open(new ValueIndexConfig(name, 4096, maxHeapPressureInBytes, 10 * 1024 * 1024, -1L, -1L,
             NoOpFormatTransformerProvider.NAME, LABRawhide.NAME, MemoryRawEntryFormat.NAME, 20));
     }
@@ -67,7 +67,7 @@ public class LabTimeIdIndex implements TimeIdIndex {
     public void lookup(long version, long[] timestamps, int[] ids, long[] monotonics) throws Exception {
         semaphore.acquire();
         try {
-            for (ValueIndex index : indexes) {
+            for (ValueIndex<byte[]> index : indexes) {
                 if (index != null) {
                     index.get(
                         keyStream -> {
@@ -102,7 +102,7 @@ public class LabTimeIdIndex implements TimeIdIndex {
             Cursor cursor = cursors.computeIfAbsent(version, k -> {
                 try {
                     Cursor v = new Cursor();
-                    for (ValueIndex index : indexes) {
+                    for (ValueIndex<byte[]> index : indexes) {
                         if (index != null) {
                             index.get(
                                 keyStream -> keyStream.key(0, UIO.longBytes(version), 0, 8),
@@ -162,7 +162,7 @@ public class LabTimeIdIndex implements TimeIdIndex {
         try {
             long count = indexes[0].count();
             if (count > maxEntriesPerIndex) {
-                ValueIndex[] rotated = new ValueIndex[indexes.length];
+                ValueIndex<byte[]>[] rotated = new ValueIndex[indexes.length];
                 System.arraycopy(indexes, 0, rotated, 1, indexes.length - 1);
                 int last = Integer.valueOf(indexes[0].name());
                 rotated[0] = open(String.valueOf(last + 1));
@@ -177,7 +177,7 @@ public class LabTimeIdIndex implements TimeIdIndex {
         semaphore.acquire();
         try {
             long count = 0;
-            for (ValueIndex index : indexes) {
+            for (ValueIndex<byte[]> index : indexes) {
                 if (index != null) {
                     count += index.count();
                 }

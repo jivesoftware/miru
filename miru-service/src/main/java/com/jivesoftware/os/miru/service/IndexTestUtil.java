@@ -206,7 +206,7 @@ public class IndexTestUtil {
 
     }
 
-    public static ValueIndex buildValueIndex(String name) throws Exception {
+    public static ValueIndex<byte[]> buildValueIndex(String name) throws Exception {
         File root = Files.createTempDir();
         LABEnvironment environment = new LABEnvironment(new LABStats(), LABEnvironment.buildLABSchedulerThreadPool(1),
             LABEnvironment.buildLABCompactorThreadPool(1),

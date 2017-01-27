@@ -465,11 +465,11 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
 
         long version = getVersion(coord, storage);
 
-        List<ValueIndex> commitables = Lists.newArrayList();
+        List<ValueIndex<byte[]>> commitables = Lists.newArrayList();
 
         // do NOT hash storage, as disk/memory require the same stripe order
         int seed = new HashCodeBuilder().append(coord).toHashCode();
-        ValueIndex metaIndex = labEnvironments[Math.abs(seed % labEnvironments.length)].open(new ValueIndexConfig("meta",
+        ValueIndex<byte[]> metaIndex = labEnvironments[Math.abs(seed % labEnvironments.length)].open(new ValueIndexConfig("meta",
             4096,
             maxHeapPressureInBytes,
             10 * 1024 * 1024,
@@ -481,7 +481,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             20));
         // metaIndex is not part of commitables; it will be committed explicitly
 
-        ValueIndex monoTimeIndex = labEnvironments[Math.abs((seed + 1) % labEnvironments.length)].open(new ValueIndexConfig("monoTime",
+        ValueIndex<byte[]> monoTimeIndex = labEnvironments[Math.abs((seed + 1) % labEnvironments.length)].open(new ValueIndexConfig("monoTime",
             4096,
             maxHeapPressureInBytes,
             10 * 1024 * 1024,
@@ -493,7 +493,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             20));
         commitables.add(monoTimeIndex);
 
-        ValueIndex rawTimeIndex = labEnvironments[Math.abs((seed + 1) % labEnvironments.length)].open(new ValueIndexConfig("rawTime",
+        ValueIndex<byte[]> rawTimeIndex = labEnvironments[Math.abs((seed + 1) % labEnvironments.length)].open(new ValueIndexConfig("rawTime",
             4096,
             maxHeapPressureInBytes,
             10 * 1024 * 1024,
@@ -514,7 +514,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
 
         IntTermIdsKeyValueMarshaller intTermIdsKeyValueMarshaller = new IntTermIdsKeyValueMarshaller();
 
-        ValueIndex[] termStorage = new ValueIndex[smallFootprint ? 1 : labEnvironments.length];
+        ValueIndex<byte[]>[] termStorage = new ValueIndex[smallFootprint ? 1 : labEnvironments.length];
         for (int i = 0; i < termStorage.length; i++) {
             int ei = smallFootprint ? Math.abs((seed + 2 + i) % labEnvironments.length) : i;
             termStorage[i] = labEnvironments[ei].open(new ValueIndexConfig("termStorage",
@@ -534,7 +534,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             hasTermStorage[fieldDefinition.fieldId] = fieldDefinition.type.hasFeature(Feature.stored);
         }
 
-        ValueIndex timeAndVersionIndex = labEnvironments[Math.abs((seed + 2) % labEnvironments.length)].open(new ValueIndexConfig("timeAndVersion",
+        ValueIndex<byte[]> timeAndVersionIndex = labEnvironments[Math.abs((seed + 2) % labEnvironments.length)].open(new ValueIndexConfig("timeAndVersion",
             4096,
             maxHeapPressureInBytes,
             10 * 1024 * 1024,
@@ -559,9 +559,9 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
 
         TrackError trackError = partitionErrorTracker.track(coord);
 
-        ValueIndex[] bitmapIndex, termIndex, cardinalityIndex;
+        ValueIndex<byte[]>[] bitmapIndex, termIndex, cardinalityIndex;
         if (smallFootprint) {
-            ValueIndex sharedFieldIndex = labEnvironments[Math.abs(seed % labEnvironments.length)].open(new ValueIndexConfig("sharedField",
+            ValueIndex<byte[]> sharedFieldIndex = labEnvironments[Math.abs(seed % labEnvironments.length)].open(new ValueIndexConfig("sharedField",
                 4096,
                 maxHeapPressureInBytes,
                 100 * 1024 * 1024,
@@ -733,7 +733,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             storage,
             rebuildToken,
             () -> {
-                for (ValueIndex valueIndex : commitables) {
+                for (ValueIndex<byte[]> valueIndex : commitables) {
                     valueIndex.commit(fsyncOnCommit, true);
                 }
 
@@ -744,7 +744,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                 cacheProvider.commit(fsyncOnCommit);
             },
             () -> {
-                for (ValueIndex valueIndex : commitables) {
+                for (ValueIndex<byte[]> valueIndex : commitables) {
                     valueIndex.close(true, fsyncOnCommit);
                 }
 
@@ -759,9 +759,9 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             () -> getAllocator(storage).remove(labEnvironments),
             (executorService, waitForCompletion) -> {
                 List<Future<?>> futures = Lists.newArrayList();
-                for (ValueIndex valueIndex : commitables) {
+                for (ValueIndex<byte[]> valueIndex : commitables) {
                     log.info("Compacting {} for {}", valueIndex.name(), coord);
-                    List<Future<?>> compact = valueIndex.compact(true, 0, 0, false);
+                    List<Future<Object>> compact = valueIndex.compact(true, 0, 0, false);
                     if (compact != null) {
                         futures.addAll(compact);
                     }

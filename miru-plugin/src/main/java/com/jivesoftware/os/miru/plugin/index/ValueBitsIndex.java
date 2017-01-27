@@ -3,7 +3,7 @@ package com.jivesoftware.os.miru.plugin.index;
 /**
  *
  */
-public class ValueIndex {
+public class ValueBitsIndex {
 
     public static byte[] shortBytes(short v, byte[] bytes, int offset) {
         bytes[offset + 0] = (byte) (v >>> 8);

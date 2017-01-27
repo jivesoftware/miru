@@ -73,20 +73,22 @@ public class MiruAggregateUtilTest {
             true,
             false);
 
+        @SuppressWarnings("unchecked")
+        ValueIndex<byte[]>[] cacheKeyIndexes = new ValueIndex[] {
+            env.open(new ValueIndexConfig("primary",
+                4096,
+                10 * 1024 * 1024,
+                -1,
+                -1,
+                -1,
+                NoOpFormatTransformerProvider.NAME,
+                LABRawhide.NAME,
+                MemoryRawEntryFormat.NAME,
+                20))
+        };
         LabTimestampedCacheKeyValues cacheKeyValues = new LabTimestampedCacheKeyValues("lab-test",
             orderIdProvider,
-            new ValueIndex[]{
-                env.open(new ValueIndexConfig("primary",
-                    4096,
-                    10 * 1024 * 1024,
-                    -1,
-                    -1,
-                    -1,
-                    NoOpFormatTransformerProvider.NAME,
-                    LABRawhide.NAME,
-                    MemoryRawEntryFormat.NAME,
-                    20))
-            },
+            cacheKeyIndexes,
             new Object[]{new Object(), new Object(), new Object(), new Object()});
 
         int fieldCount = 3;
