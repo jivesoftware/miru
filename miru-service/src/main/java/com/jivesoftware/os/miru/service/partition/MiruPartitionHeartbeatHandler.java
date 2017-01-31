@@ -29,6 +29,7 @@ public class MiruPartitionHeartbeatHandler {
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final MiruClusterClient clusterClient;
+    private final AtomicBoolean atleastOneThumpThump;
 
     private final Map<MiruPartitionCoord, PartitionInfo> heartbeats = Maps.newConcurrentMap();
     private final Map<MiruPartitionCoord, MiruPartitionActive> active = Maps.newConcurrentMap();
@@ -38,8 +39,9 @@ public class MiruPartitionHeartbeatHandler {
     private final Map<String, NamedCursor> topologyUpdatesSinceCursors = Maps.newHashMap();
     private final AtomicBoolean destructionPermit = new AtomicBoolean();
 
-    public MiruPartitionHeartbeatHandler(MiruClusterClient clusterClient) {
+    public MiruPartitionHeartbeatHandler(MiruClusterClient clusterClient, AtomicBoolean atleastOneThumpThump) {
         this.clusterClient = clusterClient;
+        this.atleastOneThumpThump = atleastOneThumpThump;
     }
 
     public void updateInfo(MiruPartitionCoord coord, MiruPartitionCoordInfo info) throws Exception {
@@ -118,7 +120,7 @@ public class MiruPartitionHeartbeatHandler {
             } else {
                 LOG.warn("Missing thumpthump response");
             }
-
+            atleastOneThumpThump.set(true);
             return thumpthump;
         }
     }

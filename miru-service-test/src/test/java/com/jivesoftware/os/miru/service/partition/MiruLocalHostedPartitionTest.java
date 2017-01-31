@@ -111,6 +111,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import org.merlin.config.BindInterfaceToConfiguration;
@@ -373,7 +374,7 @@ public class MiruLocalHostedPartitionTest {
 
         walClient = new RCVSWALDirector(walLookup, activityWALReader, activityWALWriter, readTrackingWALReader, readTrackingWALWriter, clusterClient);
 
-        partitionEventHandler = new MiruPartitionHeartbeatHandler(clusterClient);
+        partitionEventHandler = new MiruPartitionHeartbeatHandler(clusterClient, new AtomicBoolean(false));
         rebuildDirector = new MiruRebuildDirector(Long.MAX_VALUE);
         factory = new MiruPartitionedActivityFactory();
 

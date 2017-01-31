@@ -103,7 +103,8 @@ public class MiruServiceInitializer {
         MiruBitmapsProvider bitmapsProvider,
         MiruIndexCallbacks indexCallbacks,
         PartitionErrorTracker partitionErrorTracker,
-        MiruInterner<MiruTermId> termInterner) throws Exception {
+        MiruInterner<MiruTermId> termInterner,
+        AtomicBoolean atleastOneThumpThump) throws Exception {
 
         final ThreadGroup threadGroup = Thread.currentThread().getThreadGroup();
 
@@ -275,7 +276,7 @@ public class MiruServiceInitializer {
             config.getRealtimeDelivery(),
             config.getFsyncOnCommit());
 
-        MiruPartitionHeartbeatHandler heartbeatHandler = new MiruPartitionHeartbeatHandler(clusterClient);
+        MiruPartitionHeartbeatHandler heartbeatHandler = new MiruPartitionHeartbeatHandler(clusterClient, atleastOneThumpThump);
         MiruRebuildDirector rebuildDirector = new MiruRebuildDirector(config.getMaxRebuildActivityCount());
 
         MiruIndexRepairs indexRepairs = new MiruIndexRepairs() {

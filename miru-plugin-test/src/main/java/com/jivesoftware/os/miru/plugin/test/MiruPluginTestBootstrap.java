@@ -90,6 +90,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -293,7 +294,8 @@ public class MiruPluginTestBootstrap {
             new SingleBitmapsProvider(bitmaps),
             new MiruIndexCallbacks(),
             new PartitionErrorTracker(BindInterfaceToConfiguration.bindDefault(PartitionErrorTracker.PartitionErrorTrackerConfig.class)),
-            termInterner);
+            termInterner,
+            new AtomicBoolean(false));
 
         miruServiceLifecyle.start();
 

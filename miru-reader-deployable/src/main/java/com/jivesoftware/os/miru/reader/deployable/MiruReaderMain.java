@@ -127,6 +127,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.merlin.config.Config;
 import org.reflections.Reflections;
 import org.reflections.scanners.SubTypesScanner;
@@ -158,8 +159,10 @@ public class MiruReaderMain {
             deployable.addHealthCheck(new DirectBufferHealthChecker(deployable.config(DirectBufferHealthChecker.DirectBufferHealthCheckerConfig.class)));
             deployable.addHealthCheck(serviceStartupHealthCheck);
             deployable.addErrorHealthChecks(deployable.config(ErrorHealthCheckConfig.class));
+
+            AtomicBoolean atleastOneThumpThump = new AtomicBoolean(false);
             deployable.addManageInjectables(FullyOnlineVersion.class, (FullyOnlineVersion) () -> {
-                if (serviceStartupHealthCheck.startupHasSucceeded()) {
+                if (serviceStartupHealthCheck.startupHasSucceeded() && atleastOneThumpThump.get()) {
                     return instanceConfig.getVersion();
                 } else {
                     return null;
@@ -373,7 +376,8 @@ public class MiruReaderMain {
                     new SingleBitmapsProvider(bitmaps),
                     indexCallbacks,
                     partitionErrorTracker,
-                    termInterner);
+                    termInterner,
+                    atleastOneThumpThump);
             } else if (walConfig.getActivityWALType().equals("amza") || walConfig.getActivityWALType().equals("amza_rcvs")) {
                 MiruWALClient<AmzaCursor, AmzaSipCursor> amzaWALClient = new MiruWALClientInitializer().initialize("", walHttpClient, mapper,
                     walClientSickThreads, 10_000,
@@ -400,7 +404,8 @@ public class MiruReaderMain {
                     new SingleBitmapsProvider(bitmaps),
                     indexCallbacks,
                     partitionErrorTracker,
-                    termInterner);
+                    termInterner,
+                    atleastOneThumpThump);
             } else {
                 throw new IllegalStateException("Invalid activity WAL type: " + walConfig.getActivityWALType());
             }
