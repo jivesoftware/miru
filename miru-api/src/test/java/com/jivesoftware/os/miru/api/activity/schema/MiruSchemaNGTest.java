@@ -17,6 +17,7 @@
 package com.jivesoftware.os.miru.api.activity.schema;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition.Prefix;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition.Type;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema.Builder;
@@ -192,6 +193,44 @@ public class MiruSchemaNGTest {
         assertTrue(MiruSchema.checkEquals(a, b));
         assertFalse(MiruSchema.deepEquals(a, b));
         assertTrue(MiruSchema.checkAdditive(a, b));
+    }
+
+    @Test
+    public void testComposite() throws Exception {
+        MiruSchema schema1 = new Builder("test", 1)
+            .setFieldDefinitions(new MiruFieldDefinition[] {
+                new MiruFieldDefinition(0, "a", Type.singleTerm, Prefix.NONE),
+                new MiruFieldDefinition(1, "b", Type.singleTerm, Prefix.NONE),
+                new MiruFieldDefinition(2, "c", Type.singleTerm, Prefix.NONE)
+            })
+            .setComposite(ImmutableMap.<String, String[]>builder()
+                .put("d", new String[] { "a", "b" })
+                .put("e", new String[] { "b", "c" })
+                .put("f", new String[] { "a", "c" })
+                .build()
+            )
+            .build();
+        MiruSchema schema2 = new Builder("test", 1)
+            .setFieldDefinitions(new MiruFieldDefinition[] {
+                new MiruFieldDefinition(0, "a", Type.singleTerm, Prefix.NONE),
+                new MiruFieldDefinition(1, "b", Type.singleTerm, Prefix.NONE),
+                new MiruFieldDefinition(2, "c", Type.singleTerm, Prefix.NONE)
+            })
+            .setComposite(ImmutableMap.<String, String[]>builder()
+                .put("d", new String[] { "a", "b" })
+                .put("e", new String[] { "b", "c" })
+                .build()
+            )
+            .build();
+
+        MiruSchema a = serdes(schema1);
+        MiruSchema b = serdes(schema1);
+        assertTrue(MiruSchema.checkEquals(a, b));
+        assertTrue(MiruSchema.deepEquals(a, b));
+        MiruSchema c = serdes(schema2);
+        assertTrue(MiruSchema.checkEquals(a, c));
+        assertFalse(MiruSchema.deepEquals(a, c));
+
     }
 
     private ObjectMapper objectMapper = new ObjectMapper();

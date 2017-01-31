@@ -9,8 +9,10 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 /**
@@ -234,12 +236,40 @@ public class MiruSchema {
             if (a.bloom != null ? !a.bloom.equals(b.bloom) : b.bloom != null) {
                 return false;
             }
-            if (a.composite != null ? !a.composite.equals(b.composite) : b.composite != null) {
-                return false;
+            if (!deepEqualsComposite(a.composite, b.composite)) {
+                    return false;
             }
             return !(a.compositePrefixWhitelist != null ? !a.compositePrefixWhitelist.equals(b.compositePrefixWhitelist) : b.compositePrefixWhitelist != null);
         }
         return false;
+    }
+
+    private static boolean deepEqualsComposite(Map<String, String[]> a, Map<String, String[]> b) {
+        if (a == b) {
+            return true;
+        }
+
+        if (a.size() != b.size()) {
+            return false;
+        }
+
+        Iterator<Entry<String, String[]>> i = a.entrySet().iterator();
+        while (i.hasNext()) {
+            Entry<String, String[]> e = i.next();
+            String key = e.getKey();
+            String[] value = e.getValue();
+            if (value == null) {
+                if (b.get(key) != null) {
+                    return false;
+                }
+            } else {
+                if (!Arrays.equals(value, b.get(key))) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     public static boolean checkAdditive(MiruSchema a, MiruSchema b) {

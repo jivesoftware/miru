@@ -274,8 +274,8 @@ public class MiruService implements Miru {
 
             log.inc("askImmediate");
             log.inc("askImmediate", tenantId.toString());
-            log.inc("askImmediate>query" + factory.getQueryKey());
-            log.inc("askImmediate>query" + factory.getQueryKey(), tenantId.toString());
+            log.inc("askImmediate>query>" + factory.getQueryKey());
+            log.inc("askImmediate>query>" + factory.getQueryKey(), tenantId.toString());
 
             return answer;
         } else {
