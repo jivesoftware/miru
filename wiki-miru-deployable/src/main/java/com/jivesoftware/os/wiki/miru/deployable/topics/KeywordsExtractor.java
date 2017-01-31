@@ -14,6 +14,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.en.EnglishAnalyzer;
 import org.jsoup.Jsoup;
@@ -69,6 +70,8 @@ public class KeywordsExtractor {
      * @throws IOException
      */
     public static Topic[] getKeywordsList(String fullText, int maxPhraseLength, int topN) throws IOException {
+
+        fullText = removeUrls(fullText);
 
         Analyzer analyzer = new EnglishAnalyzer(EnStopwords.ENGLISH_STOP_WORDS_SET);
         Analyzer nonSteming = new NonStemingEnglishAnalyzer(EnStopwords.ENGLISH_STOP_WORDS_SET);
@@ -128,6 +131,12 @@ public class KeywordsExtractor {
         Arrays.sort(finalTopics);
         return finalTopics;
 
+    }
+
+    final static Pattern p = Pattern.compile("https?://\\S+\\s?");
+
+    private static String removeUrls(String text) {
+        return p.matcher(text).replaceAll("");
     }
 
     static public class Topic implements Comparable<Topic> {
