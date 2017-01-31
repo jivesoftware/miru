@@ -254,6 +254,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                         if (MiruSchema.deepEquals(schema, latestSchema)) {
                             schema = latestSchema;
                         } else if (MiruSchema.checkAdditive(schema, latestSchema)) {
+                            LOG.info("Additive schema change for persistent storage on {}", coord);
                             contextFactory.saveSchema(coord, latestSchema);
                             schema = latestSchema;
                         } else {
