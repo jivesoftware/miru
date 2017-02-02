@@ -11,6 +11,7 @@ import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import org.apache.commons.lang.StringUtils;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.index.Term;
@@ -64,15 +65,12 @@ public class LuceneBackedQueryParser implements MiruQueryParser {
             hg.setTextFragmenter(new SimpleFragmenter(100));
 
             TokenStream tokens = TokenSources.getTokenStream(defaultField, content, analyzer);
-            summary = hg.getBestFragments(tokens, content, 4, "...");
+            summary = hg.getBestFragments(tokens, content, 4, " ... ");
         } catch (InvalidTokenOffsetsException | IOException | ParseException ex) {
             LOG.error("Failed to highlight", ex);
         }
 
-        if (summary == null || summary.trim().isEmpty()) {
-            summary = content.substring(0, Math.min(preview, content.length())) + "...";
-        }
-        return summary;
+        return StringUtils.isBlank(summary) ? null : summary;
     }
 
     private MiruFilter makeFilter(Query query) {
