@@ -143,8 +143,7 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
 
                             result.put("guid", r.guid);
                             result.put("title", content.title);
-                            result.put("body",
-                                bodyQueryParser.highlight("en", input.query, content.body, "<span style=\"background-color: #FFFF00\">", "</span>", 1000));
+                            result.put("body", highlight("en", input.query, content.body));
                             results.add(result);
                         }
                         i++;
@@ -168,8 +167,7 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
                     result.put("avatarUrl", avatarUrl);
                     result.put("guid", input.userGuids);
                     result.put("title", content.title);
-                    result.put("body",
-                        bodyQueryParser.highlight("en", input.query, content.body, "<span style=\"background-color: #FFFF00\">", "</span>", 1000));
+                    result.put("body", highlight("en", input.query, content.body));
 
                     data.put("queryUsers", result);
                     u++;
@@ -185,8 +183,7 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
                     result.put("folderUrl", folderUrl);
                     result.put("guid", input.folderGuids);
                     result.put("title", content.title);
-                    result.put("body",
-                        bodyQueryParser.highlight("en", input.query, content.body, "<span style=\"background-color: #FFFF00\">", "</span>", 1000));
+                    result.put("body", highlight("en", input.query, content.body));
 
                     data.put("queryFolders", result);
                 }
@@ -228,8 +225,7 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
                             result.put("avatarUrl", avatarUrl);
                             result.put("guid", key);
                             result.put("title", content.title);
-                            result.put("body",
-                                bodyQueryParser.highlight("en", input.query, content.body, "<span style=\"background-color: #FFFF00\">", "</span>", 1000));
+                            result.put("body", highlight("en", input.query, content.body));
                             results.add(result);
                             i++;
                         }
@@ -267,8 +263,7 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
                             result.put("folderUrl", folderUrl);
                             result.put("guid", key);
                             result.put("title", content.title);
-                            result.put("body",
-                                bodyQueryParser.highlight("en", input.query, content.body, "<span style=\"background-color: #FFFF00\">", "</span>", 1000));
+                            result.put("body", highlight("en", input.query, content.body));
                             results.add(result);
                             i++;
                         }
@@ -285,6 +280,10 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
             LOG.error("Unable to retrieve data", e);
             return null;
         }
+    }
+
+    private String highlight(String locale, String query, String body) {
+        return bodyQueryParser.highlight(locale, query, body, "<span style=\"background-color: #FFFF00\">", "</span>", 1000);
     }
 
     @Override
