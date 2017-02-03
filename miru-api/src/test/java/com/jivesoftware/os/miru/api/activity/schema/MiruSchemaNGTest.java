@@ -207,8 +207,12 @@ public class MiruSchemaNGTest {
                 .put("d", new String[] { "a", "b" })
                 .put("e", new String[] { "b", "c" })
                 .put("f", new String[] { "a", "c" })
-                .build()
-            )
+                .build())
+            .setCompositeWhitelist(ImmutableMap.<String, String[][]>builder()
+                .put("x", new String[][] { { "x1", "x2" }, { "x3", "x4" }})
+                .put("y", new String[][] { { "y1", "y2" }, { "y3", "y4" }})
+                .put("z", new String[][] { { "z1", "z2" }, { "z3", "z4" }})
+                .build())
             .build();
         MiruSchema schema2 = new Builder("test", 1)
             .setFieldDefinitions(new MiruFieldDefinition[] {
@@ -219,8 +223,11 @@ public class MiruSchemaNGTest {
             .setComposite(ImmutableMap.<String, String[]>builder()
                 .put("d", new String[] { "a", "b" })
                 .put("e", new String[] { "b", "c" })
-                .build()
-            )
+                .build())
+            .setCompositeWhitelist(ImmutableMap.<String, String[][]>builder()
+                .put("x", new String[][] { { "x1", "x2" }, { "x3", "x4" }})
+                .put("y", new String[][] { { "y1", "y2" }, { "y3", "y4" }})
+                .build())
             .build();
 
         MiruSchema a = serdes(schema1);
