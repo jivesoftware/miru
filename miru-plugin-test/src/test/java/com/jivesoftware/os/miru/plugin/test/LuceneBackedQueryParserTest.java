@@ -89,7 +89,7 @@ public class LuceneBackedQueryParserTest {
 
         LuceneBackedQueryParser parser = new LuceneBackedQueryParser("a");
 
-        MiruFilter filter = parser.parse("en", "(red AND b:blue) OR (b:yellow NOT yellow)");
+        MiruFilter filter = parser.parse("en", false, "(red AND b:blue) OR (b:yellow NOT yellow)");
         // ((0, 2, 4, 6, 8) AND (2, 3, 6, 7)) OR ((0, 2, 4, 6, 8) NOT (2, 3, 6, 7))
         // (2, 6) OR (0, 4, 8)
         // (0, 2, 4, 6, 8)
@@ -118,7 +118,7 @@ public class LuceneBackedQueryParserTest {
 
         LuceneBackedQueryParser parser = new LuceneBackedQueryParser("a");
 
-        MiruFilter filter = parser.parse("en", "(re* AND b:bl*) OR (b:ye* NOT ye*)");
+        MiruFilter filter = parser.parse("en", false, "(re* AND b:bl*) OR (b:ye* NOT ye*)");
         // ((0, 2, 4, 6, 8) AND (2, 3, 6, 7)) OR ((0, 2, 4, 6, 8) NOT (2, 3, 6, 7))
         // (2, 6) OR (0, 4, 8)
         // (0, 2, 4, 6, 8)

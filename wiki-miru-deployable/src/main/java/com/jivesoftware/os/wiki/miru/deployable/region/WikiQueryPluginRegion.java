@@ -283,7 +283,7 @@ public class WikiQueryPluginRegion implements MiruPageRegion<WikiMiruPluginRegio
     }
 
     private String highlight(String locale, String query, String body) {
-        return bodyQueryParser.highlight(locale, query, body, "<span style=\"background-color: #FFFF00\">", "</span>", 1000);
+        return bodyQueryParser.highlight(locale, true, query, body, "<span style=\"background-color: #FFFF00\">", "</span>", 1000);
     }
 
     @Override

@@ -29,10 +29,6 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.test.MiruPluginTestBootstrap;
 import com.jivesoftware.os.miru.service.MiruService;
-import com.jivesoftware.os.miru.stream.plugins.fulltext.FullText;
-import com.jivesoftware.os.miru.stream.plugins.fulltext.FullTextAnswer;
-import com.jivesoftware.os.miru.stream.plugins.fulltext.FullTextInjectable;
-import com.jivesoftware.os.miru.stream.plugins.fulltext.FullTextQuery;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -160,6 +156,7 @@ public class MiruFullTextNGTest {
                 new FullTextQuery(timeRange,
                     "text",
                     "en",
+                    false,
                     queryAnd(rand, numberOfTermsPerQuery),
                     -1,
                     MiruFilter.NO_FILTER,
