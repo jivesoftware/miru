@@ -529,10 +529,6 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                 20));
             commitables.add(termStorage[i]);
         }
-        boolean[] hasTermStorage = new boolean[schema.fieldCount()];
-        for (MiruFieldDefinition fieldDefinition : schema.getFieldDefinitions()) {
-            hasTermStorage[fieldDefinition.fieldId] = fieldDefinition.type.hasFeature(Feature.stored);
-        }
 
         ValueIndex<byte[]> timeAndVersionIndex = labEnvironments[Math.abs((seed + 2) % labEnvironments.length)].open(new ValueIndexConfig("timeAndVersion",
             4096,
@@ -554,8 +550,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
             intTermIdsKeyValueMarshaller,
             metaIndex,
             keyBytes("lastId"),
-            termStorage,
-            hasTermStorage);
+            termStorage);
 
         TrackError trackError = partitionErrorTracker.track(coord);
 
@@ -622,11 +617,6 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         @SuppressWarnings("unchecked")
         MiruFieldIndex<BM, IBM>[] fieldIndexes = new MiruFieldIndex[MiruFieldType.values().length];
         for (MiruFieldType fieldType : MiruFieldType.values()) {
-            boolean[] hasCardinalities = new boolean[schema.fieldCount()];
-            for (MiruFieldDefinition fieldDefinition : schema.getFieldDefinitions()) {
-                hasCardinalities[fieldDefinition.fieldId] = fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.cardinality);
-            }
-
             byte[] bitmapPrefix, termPrefix, cardinalityPrefix;
             if (smallFootprint) {
                 bitmapPrefix = new byte[] { 0, (byte) fieldType.getIndex() };
@@ -648,7 +638,6 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                 termIndex,
                 cardinalityPrefix,
                 cardinalityIndex,
-                hasCardinalities,
                 fieldIndexStripingLocksProvider,
                 termInterner);
         }

@@ -10,6 +10,7 @@ import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.schema.DefaultMiruSchemaDefinition;
+import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
@@ -147,7 +148,8 @@ public class MiruIndexerTest {
         int fieldId,
         StackBuffer stackBuffer) throws Exception {
 
-        MiruTermId[] fieldValues = context.getActivityIndex().get("test", activityId, fieldId, stackBuffer);
+        MiruFieldDefinition fieldDefinition = context.schema.get().getFieldDefinition(fieldId);
+        MiruTermId[] fieldValues = context.getActivityIndex().get("test", activityId, fieldDefinition, stackBuffer);
         if (fieldValues == null) {
             fieldValues = new MiruTermId[0];
         }

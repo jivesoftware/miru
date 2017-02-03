@@ -9,6 +9,7 @@ import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
@@ -40,6 +41,7 @@ public class MiruFieldIndexTest {
 
     @Test(dataProvider = "miruIndexDataProvider")
     public <BM extends IBM, IBM> void testGetMissingFieldTerm(MiruBitmaps<BM, IBM> bitmaps,
+        MiruSchema schema,
         MiruFieldIndex<BM, IBM> miruFieldIndex,
         MiruBackingStorage miruBackingStorage) throws
         Exception {
@@ -51,10 +53,11 @@ public class MiruFieldIndexTest {
 
     @Test(dataProvider = "miruIndexDataProvider")
     public <BM extends IBM, IBM> void testIndexFieldTerm(MiruBitmaps<BM, IBM> bitmaps,
+        MiruSchema schema,
         MiruFieldIndex<BM, IBM> miruFieldIndex,
         MiruBackingStorage miruBackingStorage) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
-        miruFieldIndex.set(0, new MiruTermId(FilerIO.intBytes(2)), new int[] { 3 }, null, stackBuffer);
+        miruFieldIndex.set(schema.getFieldDefinition(0), new MiruTermId(FilerIO.intBytes(2)), new int[] { 3 }, null, stackBuffer);
         MiruInvertedIndex<BM, IBM> invertedIndex = miruFieldIndex.get("test", 0, new MiruTermId(FilerIO.intBytes(2)));
         assertNotNull(invertedIndex);
         assertTrue(getIndex(invertedIndex, stackBuffer).isSet());
@@ -140,8 +143,8 @@ public class MiruFieldIndexTest {
             MiruFieldType.primary);
 
         return new Object[][] {
-            { bitmaps, miruInMemoryFieldIndex, MiruBackingStorage.memory },
-            { bitmaps, miruOnDiskFieldIndex, MiruBackingStorage.disk }
+            { bitmaps, hybridContext.getSchema(), miruInMemoryFieldIndex, MiruBackingStorage.memory },
+            { bitmaps, onDiskContext.getSchema(), miruOnDiskFieldIndex, MiruBackingStorage.disk }
         };
     }
 
@@ -164,12 +167,20 @@ public class MiruFieldIndexTest {
         MiruContext<RoaringBitmap, RoaringBitmap, ?> hybridContext = buildInMemoryContext(4, useLabIndexes, true, bitmaps, coord);
         MiruFieldIndex<RoaringBitmap, RoaringBitmap> miruHybridFieldIndex = hybridContext.fieldIndexProvider.getFieldIndex(
             MiruFieldType.primary);
-        miruHybridFieldIndex.set(0, new MiruTermId("term1".getBytes()), new int[] { 1, 2, 3 }, null, stackBuffer);
+        miruHybridFieldIndex.set(hybridContext.getSchema().getFieldDefinition(0),
+            new MiruTermId("term1".getBytes()),
+            new int[] { 1, 2, 3 },
+            null,
+            stackBuffer);
 
         MiruContext<RoaringBitmap, RoaringBitmap, ?> onDiskContext = buildOnDiskContext(4, useLabIndexes, true, bitmaps, coord);
         MiruFieldIndex<RoaringBitmap, RoaringBitmap> miruOnDiskFieldIndex = onDiskContext.fieldIndexProvider.getFieldIndex(
             MiruFieldType.primary);
-        miruOnDiskFieldIndex.set(0, new MiruTermId("term1".getBytes()), new int[] { 1, 2, 3 }, null, stackBuffer);
+        miruOnDiskFieldIndex.set(onDiskContext.getSchema().getFieldDefinition(0),
+            new MiruTermId("term1".getBytes()),
+            new int[] { 1, 2, 3 },
+            null,
+            stackBuffer);
 
         return new Object[][] {
             { bitmaps, miruHybridFieldIndex, Arrays.asList(1, 2, 3), MiruBackingStorage.memory },

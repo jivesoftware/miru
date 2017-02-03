@@ -65,7 +65,7 @@ public class MiruIndexLatest<BM extends IBM, IBM> {
 
                         log.inc("count>set", 1);
                         log.inc("count>set", 1, tenantId.toString());
-                        latestFieldIndex.set(fieldDefinition.fieldId, fieldAggregateTermId, new int[] { internalActivityAndId.id }, null, stackBuffer);
+                        latestFieldIndex.set(fieldDefinition, fieldAggregateTermId, new int[] { internalActivityAndId.id }, null, stackBuffer);
 
                         return null;
                     }));

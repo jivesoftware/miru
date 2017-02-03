@@ -109,21 +109,20 @@ public class MiruIndexPrimaryFields<BM extends IBM, IBM> {
         for (int fieldId = 0; fieldId < work.length; fieldId++) {
             List<PrimaryIndexWork> fieldWork = work[fieldId];
             MiruFieldDefinition fieldDefinition = context.getSchema().getFieldDefinition(fieldId);
-            final int finalFieldId = fieldId;
             for (final PrimaryIndexWork primaryIndexWork : fieldWork) {
                 futures.add(indexExecutor.submit(() -> {
                     StackBuffer stackBuffer = new StackBuffer();
                     if (fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.indexed)) {
                         log.inc("count>set", primaryIndexWork.ids.size());
                         log.inc("count>set", primaryIndexWork.ids.size(), tenantId.toString());
-                        fieldIndex.set(finalFieldId,
+                        fieldIndex.set(fieldDefinition,
                             primaryIndexWork.fieldValue,
                             primaryIndexWork.ids.toArray(),
                             primaryIndexWork.counts != null ? primaryIndexWork.counts.toArray() : null,
                             stackBuffer);
                     } else if (fieldDefinition.type.hasFeature(MiruFieldDefinition.Feature.indexedFirst)) {
                         log.inc("count>setIfEmpty", 1);
-                        fieldIndex.setIfEmpty(finalFieldId,
+                        fieldIndex.setIfEmpty(fieldDefinition,
                             primaryIndexWork.fieldValue,
                             primaryIndexWork.ids.get(0),
                             primaryIndexWork.counts != null ? primaryIndexWork.counts.get(0) : -1,

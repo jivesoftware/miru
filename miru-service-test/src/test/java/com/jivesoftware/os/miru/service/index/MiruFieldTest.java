@@ -72,14 +72,14 @@ public class MiruFieldTest {
         List<Integer> ids = Lists.newArrayList();
         for (int id = 0; id < 10; id++) {
             ids.add(id);
-            hybridFieldIndex.set(fieldDefinition.fieldId, new MiruTermId(FilerIO.intBytes(id)), new int[] { id }, null, stackBuffer);
+            hybridFieldIndex.set(fieldDefinition, new MiruTermId(FilerIO.intBytes(id)), new int[] { id }, null, stackBuffer);
         }
 
         MiruContext<RoaringBitmap, RoaringBitmap, ?> onDiskContext = IndexTestUtil.buildOnDiskContext(4, useLabIndexes, true, bitmaps, coord);
         MiruFieldIndex<RoaringBitmap, RoaringBitmap> onDiskFieldIndex = onDiskContext.fieldIndexProvider.getFieldIndex(MiruFieldType.primary);
 
         for (int id = 0; id < 10; id++) {
-            onDiskFieldIndex.set(fieldDefinition.fieldId, new MiruTermId(FilerIO.intBytes(id)), new int[] { id }, null, stackBuffer);
+            onDiskFieldIndex.set(fieldDefinition, new MiruTermId(FilerIO.intBytes(id)), new int[] { id }, null, stackBuffer);
         }
 
         return new Object[][] {

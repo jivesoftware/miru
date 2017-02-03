@@ -6,6 +6,7 @@
 package com.jivesoftware.os.miru.plugin.index;
 
 import com.jivesoftware.os.filer.io.api.StackBuffer;
+import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -47,19 +48,19 @@ public interface MiruActivityIndex {
      * Get the terms from the given field for the activity at the requested index.
      *
      * @param index the activity index
-     * @param fieldId the field
+     * @param fieldDefinition the field
      * @return the terms
      */
-    MiruTermId[] get(String name, int index, int fieldId, StackBuffer stackBuffer) throws Exception;
+    MiruTermId[] get(String name, int index, MiruFieldDefinition fieldDefinition, StackBuffer stackBuffer) throws Exception;
 
     /**
      * Get the terms from the given field for each activity index.
      *
      * @param indexes the activity indexes
-     * @param fieldId the field
+     * @param fieldDefinition the field
      * @return the terms
      */
-    MiruTermId[][] getAll(String name, int[] indexes, int fieldId, StackBuffer stackBuffer) throws Exception;
+    MiruTermId[][] getAll(String name, int[] indexes, MiruFieldDefinition fieldDefinition, StackBuffer stackBuffer) throws Exception;
 
     /**
      * Get the values from the given property for the activity at the requested index.
@@ -84,14 +85,14 @@ public interface MiruActivityIndex {
      * @param indexes the activity indexes
      * @param offset the offset into indexes
      * @param length the length of indexes
-     * @param fieldId the field
+     * @param fieldDefinition the field
      * @return the terms
      */
     MiruTermId[][] getAll(String name,
         int[] indexes,
         int offset,
         int length,
-        int fieldId,
+        MiruFieldDefinition fieldDefinition,
         StackBuffer stackBuffer) throws Exception;
 
     /**

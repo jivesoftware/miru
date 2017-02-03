@@ -7,6 +7,8 @@ import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.lab.api.ValueIndex;
 import com.jivesoftware.os.lab.io.BolBuffer;
 import com.jivesoftware.os.lab.io.api.UIO;
+import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
+import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition.Feature;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -36,7 +38,6 @@ public class LabActivityIndex implements MiruActivityIndex {
     private final ValueIndex<byte[]> metaIndex;
     private final byte[] metaKey;
     private final ValueIndex<byte[]>[] termStorage;
-    private final boolean[] hasTermStorage;
 
     public LabActivityIndex(OrderIdProvider idProvider,
         boolean monotime,
@@ -45,8 +46,7 @@ public class LabActivityIndex implements MiruActivityIndex {
         IntTermIdsKeyValueMarshaller intTermIdsKeyValueMarshaller,
         ValueIndex<byte[]> metaIndex,
         byte[] metaKey,
-        ValueIndex<byte[]>[] termStorage,
-        boolean[] hasTermStorage) {
+        ValueIndex<byte[]>[] termStorage) {
         this.idProvider = idProvider;
         this.monotime = monotime;
         this.realtime = realtime;
@@ -55,7 +55,6 @@ public class LabActivityIndex implements MiruActivityIndex {
         this.metaIndex = metaIndex;
         this.metaKey = metaKey;
         this.termStorage = termStorage;
-        this.hasTermStorage = hasTermStorage;
     }
 
     private ValueIndex<byte[]> getTermIndex(int fieldId) {
@@ -160,11 +159,12 @@ public class LabActivityIndex implements MiruActivityIndex {
     }
 
     @Override
-    public MiruTermId[] get(String name, int index, final int fieldId, StackBuffer stackBuffer) throws Exception {
-        if (!hasTermStorage[fieldId] || index > lastId(stackBuffer)) {
+    public MiruTermId[] get(String name, int index, final MiruFieldDefinition fieldDefinition, StackBuffer stackBuffer) throws Exception {
+        if (!fieldDefinition.type.hasFeature(Feature.stored) || index > lastId(stackBuffer)) {
             return null;
         }
 
+        int fieldId = fieldDefinition.fieldId;
         MiruTermId[][] termIds = { null };
         byte[] concatKey = Bytes.concat(FilerIO.intBytes(fieldId), FilerIO.intBytes(index));
         getTermIndex(fieldId).get((streamKeys) -> streamKeys.key(0, concatKey, 0, concatKey.length),
@@ -181,8 +181,8 @@ public class LabActivityIndex implements MiruActivityIndex {
     }
 
     @Override
-    public MiruTermId[][] getAll(String name, int[] indexes, final int fieldId, StackBuffer stackBuffer) throws Exception {
-        return getAll(name, indexes, 0, indexes.length, fieldId, stackBuffer);
+    public MiruTermId[][] getAll(String name, int[] indexes, final MiruFieldDefinition fieldDefinition, StackBuffer stackBuffer) throws Exception {
+        return getAll(name, indexes, 0, indexes.length, fieldDefinition, stackBuffer);
     }
 
     @Override
@@ -190,13 +190,14 @@ public class LabActivityIndex implements MiruActivityIndex {
         int[] indexes,
         int offset,
         int length,
-        final int fieldId,
+        final MiruFieldDefinition fieldDefinition,
         StackBuffer stackBuffer) throws Exception {
 
-        if (!hasTermStorage[fieldId]) {
+        if (!fieldDefinition.type.hasFeature(Feature.stored)) {
             return null;
         }
 
+        int fieldId = fieldDefinition.fieldId;
         MiruTermId[][] termIds = new MiruTermId[length][];
         ValueIndex<byte[]> termIndex = getTermIndex(fieldId);
         byte[] fieldBytes = FilerIO.intBytes(fieldId);
@@ -305,7 +306,8 @@ public class LabActivityIndex implements MiruActivityIndex {
 
         for (int i = 0; i < schema.fieldCount(); i++) {
             int fieldId = i;
-            if (hasTermStorage[fieldId]) {
+            MiruFieldDefinition fieldDefinition = schema.getFieldDefinition(fieldId);
+            if (fieldDefinition.type.hasFeature(Feature.stored)) {
                 getTermIndex(fieldId).append(stream -> {
                     byte[] fieldBytes = FilerIO.intBytes(fieldId);
                     for (int j = 0; j < activityAndIdsArray.length; j++) {

@@ -8,6 +8,7 @@ import com.jivesoftware.os.filer.io.api.KeyedFilerStore;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.filer.io.map.MapContext;
 import com.jivesoftware.os.filer.io.map.MapStore;
+import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.MiruInterner;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
@@ -55,22 +56,22 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
     }
 
     @Override
-    public void set(int fieldId, MiruTermId termId, int[] ids, long[] counts, StackBuffer stackBuffer) throws Exception {
-        getIndex("set", fieldId, termId).set(stackBuffer, ids);
-        mergeCardinalities(fieldId, termId, ids, counts, stackBuffer);
+    public void set(MiruFieldDefinition fieldDefinition, MiruTermId termId, int[] ids, long[] counts, StackBuffer stackBuffer) throws Exception {
+        getIndex("set", fieldDefinition.fieldId, termId).set(stackBuffer, ids);
+        mergeCardinalities(fieldDefinition, termId, ids, counts, stackBuffer);
     }
 
     @Override
-    public void setIfEmpty(int fieldId, MiruTermId termId, int id, long count, StackBuffer stackBuffer) throws Exception {
-        if (getIndex("setIfEmpty", fieldId, termId).setIfEmpty(stackBuffer, id)) {
-            mergeCardinalities(fieldId, termId, new int[] { id }, new long[] { count }, stackBuffer);
+    public void setIfEmpty(MiruFieldDefinition fieldDefinition, MiruTermId termId, int id, long count, StackBuffer stackBuffer) throws Exception {
+        if (getIndex("setIfEmpty", fieldDefinition.fieldId, termId).setIfEmpty(stackBuffer, id)) {
+            mergeCardinalities(fieldDefinition, termId, new int[] { id }, new long[] { count }, stackBuffer);
         }
     }
 
     @Override
-    public void remove(int fieldId, MiruTermId termId, int[] ids, StackBuffer stackBuffer) throws Exception {
-        getIndex("remove", fieldId, termId).remove(stackBuffer, ids);
-        mergeCardinalities(fieldId, termId, ids, cardinalities[fieldId] != null ? new long[ids.length] : null, stackBuffer);
+    public void remove(MiruFieldDefinition fieldDefinition, MiruTermId termId, int[] ids, StackBuffer stackBuffer) throws Exception {
+        getIndex("remove", fieldDefinition.fieldId, termId).remove(stackBuffer, ids);
+        mergeCardinalities(fieldDefinition, termId, ids, cardinalities[fieldDefinition.fieldId] != null ? new long[ids.length] : null, stackBuffer);
     }
 
     @Override
@@ -201,7 +202,8 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
     }
 
     @Override
-    public long getCardinality(int fieldId, MiruTermId termId, int id, StackBuffer stackBuffer) throws Exception {
+    public long getCardinality(MiruFieldDefinition fieldDefinition, MiruTermId termId, int id, StackBuffer stackBuffer) throws Exception {
+        int fieldId = fieldDefinition.fieldId;
         if (cardinalities[fieldId] != null) {
             Long count = cardinalities[fieldId].read(termId.getBytes(), null, (monkey, filer, _stackBuffer, lock) -> {
                 if (filer != null) {
@@ -220,7 +222,8 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
     }
 
     @Override
-    public long[] getCardinalities(int fieldId, MiruTermId termId, int[] ids, StackBuffer stackBuffer) throws Exception {
+    public long[] getCardinalities(MiruFieldDefinition fieldDefinition, MiruTermId termId, int[] ids, StackBuffer stackBuffer) throws Exception {
+        int fieldId = fieldDefinition.fieldId;
         long[] counts = new long[ids.length];
         if (cardinalities[fieldId] != null) {
             cardinalities[fieldId].read(termId.getBytes(), null, (monkey, filer, _stackBuffer, lock) -> {
@@ -245,11 +248,17 @@ public class MiruFilerFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<
     }
 
     @Override
-    public long getGlobalCardinality(int fieldId, MiruTermId termId, StackBuffer stackBuffer) throws Exception {
-        return getCardinality(fieldId, termId, -1, stackBuffer);
+    public long getGlobalCardinality(MiruFieldDefinition fieldDefinition, MiruTermId termId, StackBuffer stackBuffer) throws Exception {
+        return getCardinality(fieldDefinition, termId, -1, stackBuffer);
     }
 
-    private void mergeCardinalities(int fieldId, MiruTermId termId, int[] ids, long[] counts, StackBuffer stackBuffer) throws Exception {
+    private void mergeCardinalities(MiruFieldDefinition fieldDefinition,
+        MiruTermId termId,
+        int[] ids,
+        long[] counts,
+        StackBuffer stackBuffer) throws Exception {
+
+        int fieldId = fieldDefinition.fieldId;
         if (cardinalities[fieldId] != null && counts != null) {
             cardinalities[fieldId].readWriteAutoGrow(termId.getBytes(), ids.length, (monkey, filer, _stackBuffer, lock) -> {
                 synchronized (lock) {

@@ -107,7 +107,7 @@ public class MiruIndexValueBits<BM extends IBM, IBM> {
         List<Future<?>> futures = new ArrayList<>(fieldIds.size());
         for (int fieldId = 0; fieldId < work.length; fieldId++) {
             List<ValueIndexWork> fieldWork = work[fieldId];
-            final int finalFieldId = fieldId;
+            MiruFieldDefinition fieldDefinition = context.getSchema().getFieldDefinition(fieldId);
             for (final ValueIndexWork valueIndexWork : fieldWork) {
                 futures.add(indexExecutor.submit(() -> {
                     StackBuffer stackBuffer = new StackBuffer();
@@ -121,14 +121,14 @@ public class MiruIndexValueBits<BM extends IBM, IBM> {
                     log.inc("count>set", setIds.size(), tenantId.toString());
                     log.inc("count>remove", removeIds.size(), tenantId.toString());
                     if (!setIds.isEmpty()) {
-                        valueBitsIndex.set(finalFieldId,
+                        valueBitsIndex.set(fieldDefinition,
                             new MiruTermId(bit),
                             setIds.toArray(),
                             null,
                             stackBuffer);
                     }
                     if (!removeIds.isEmpty()) {
-                        valueBitsIndex.remove(finalFieldId,
+                        valueBitsIndex.remove(fieldDefinition,
                             new MiruTermId(bit),
                             removeIds.toArray(),
                             stackBuffer);

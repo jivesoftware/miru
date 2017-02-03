@@ -296,12 +296,12 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             LOG.inc("strut>rescore>none");
         }
 
-        int[] gatherFieldIds = null;
+        MiruFieldDefinition[] gatherFieldDefinitions = null;
         if (request.query.gatherTermsForFields != null && request.query.gatherTermsForFields.length > 0) {
-            gatherFieldIds = new int[request.query.gatherTermsForFields.length];
-            for (int i = 0; i < gatherFieldIds.length; i++) {
-                gatherFieldIds[i] = schema.getFieldId(request.query.gatherTermsForFields[i]);
-                Preconditions.checkArgument(schema.getFieldDefinition(gatherFieldIds[i]).type.hasFeature(MiruFieldDefinition.Feature.stored),
+            gatherFieldDefinitions = new MiruFieldDefinition[request.query.gatherTermsForFields.length];
+            for (int i = 0; i < gatherFieldDefinitions.length; i++) {
+                gatherFieldDefinitions[i] = schema.getFieldDefinition(schema.getFieldId(request.query.gatherTermsForFields[i]));
+                Preconditions.checkArgument(gatherFieldDefinitions[i].type.hasFeature(MiruFieldDefinition.Feature.stored),
                     "You can only gather stored fields");
             }
         }
@@ -318,18 +318,18 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
 
         long gatherStart = System.currentTimeMillis();
         MiruValue[][][] gatherScoredValues = null;
-        if (gatherFieldIds != null) {
-            gatherScoredValues = new MiruValue[scoredLastIds.length][gatherFieldIds.length][];
+        if (gatherFieldDefinitions != null) {
+            gatherScoredValues = new MiruValue[scoredLastIds.length][gatherFieldDefinitions.length][];
             int[] consumeLastIds = new int[scoredLastIds.length];
-            for (int j = 0; j < gatherFieldIds.length; j++) {
+            for (int j = 0; j < gatherFieldDefinitions.length; j++) {
                 System.arraycopy(scoredLastIds, 0, consumeLastIds, 0, scoredLastIds.length);
-                MiruTermId[][] termIds = activityIndex.getAll("strut", consumeLastIds, gatherFieldIds[j], stackBuffer);
+                MiruTermId[][] termIds = activityIndex.getAll("strut", consumeLastIds, gatherFieldDefinitions[j], stackBuffer);
                 for (int k = 0; k < termIds.length; k++) {
                     if (termIds[k] != null) {
                         gatherScoredValues[k][j] = new MiruValue[termIds[k].length];
                         for (int l = 0; l < termIds[k].length; l++) {
                             gatherScoredValues[k][j][l] = new MiruValue(termComposer.decompose(schema,
-                                schema.getFieldDefinition(gatherFieldIds[j]),
+                                gatherFieldDefinitions[j],
                                 stackBuffer,
                                 termIds[k][l]));
                         }
