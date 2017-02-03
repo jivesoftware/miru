@@ -114,7 +114,7 @@ public class Strut {
 
             strutStream.stream((streamIndex, lastId, fieldId, termId, scoredToLastId, answers) -> {
                 boolean more = true;
-                if (!hotStuff.steamStream(streamIndex, new Scored(lastId, termId, scoredToLastId, 0f, new float[numeratorsCount], null), false)) {
+                if (!hotStuff.steamStream(streamIndex, new Scored(lastId, termId, scoredToLastId, 0f, new float[numeratorsCount], null, -1), false)) {
                     more = false;
                 }
                 return more;
@@ -156,7 +156,7 @@ public class Strut {
                             termScores[i] = finalizeScore(scores[i], counts[i], featureStrategy);
                         }
                         float scaledScore = Strut.scaleScore(termScores, numeratorScalars, numeratorStrategy);
-                        Scored scored = new Scored(lastId, answerTermId, answerScoredLastId, scaledScore, termScores, scoredFeatures);
+                        Scored scored = new Scored(lastId, answerTermId, answerScoredLastId, scaledScore, termScores, scoredFeatures, count);
                         if (!hotStuff.steamStream(streamIndex, scored, cacheable[0])) {
                             stopped = true;
                         }

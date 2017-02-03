@@ -88,7 +88,8 @@ public class StrutAnswerMerger implements MiruAnswerMerger<StrutAnswer> {
                     mergeScores(big, small),
                     features,
                     (bigger == lastFeatures) ? big.timestamp : small.timestamp,
-                    (bigger == lastFeatures) ? big.unread : small.unread));
+                    (bigger == lastFeatures) ? big.unread : small.unread,
+                    big.count + small.count));
             } else {
                 merged.add(big);
             }
