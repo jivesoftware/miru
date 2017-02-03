@@ -239,7 +239,7 @@ public class MiruSchema {
             if (!deepEqualsComposite(a.composite, b.composite)) {
                     return false;
             }
-            return !(a.compositePrefixWhitelist != null ? !a.compositePrefixWhitelist.equals(b.compositePrefixWhitelist) : b.compositePrefixWhitelist != null);
+            return deepEqualsCompositePrefixWhitelist(a.compositePrefixWhitelist, b.compositePrefixWhitelist);
         }
         return false;
     }
@@ -264,6 +264,34 @@ public class MiruSchema {
                 }
             } else {
                 if (!Arrays.equals(value, b.get(key))) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    private static boolean deepEqualsCompositePrefixWhitelist(Map<String, String[][]> a, Map<String, String[][]> b) {
+        if (a == b) {
+            return true;
+        }
+
+        if (a.size() != b.size()) {
+            return false;
+        }
+
+        Iterator<Entry<String, String[][]>> i = a.entrySet().iterator();
+        while (i.hasNext()) {
+            Entry<String, String[][]> e = i.next();
+            String key = e.getKey();
+            String[][] value = e.getValue();
+            if (value == null) {
+                if (b.get(key) != null) {
+                    return false;
+                }
+            } else {
+                if (!Arrays.deepEquals(value, b.get(key))) {
                     return false;
                 }
             }
