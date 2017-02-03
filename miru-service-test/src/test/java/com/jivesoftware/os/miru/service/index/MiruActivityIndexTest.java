@@ -70,7 +70,7 @@ public class MiruActivityIndexTest {
                 MiruActivityAndId<MiruInternalActivity> activityAndId = activityAndIds.get(i);
                 for (int j = 0; j < numberOfFields; j++) {
                     MiruFieldDefinition fieldDefinition = schema.getFieldDefinition(j);
-                    MiruTermId[] termIds = activityIndex.get("test", i, j, stackBuffer);
+                    MiruTermId[] termIds = activityIndex.get("test", i, fieldDefinition, stackBuffer);
                     assertNotNull(termIds);
                     assertEquals(termIds.length, 1);
                     assertEquals(termIds[0], termComposer.compose(schema, fieldDefinition, stackBuffer, activityAndId.activity.time + "-" + j));

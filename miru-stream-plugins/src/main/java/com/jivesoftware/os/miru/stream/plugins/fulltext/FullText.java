@@ -7,6 +7,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
+import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition.Feature;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -64,23 +65,23 @@ public class FullText {
         //System.out.println("Number of matches: " + bitmaps.cardinality(answer));
 
         MiruSchema schema = requestContext.getSchema();
-        int[] gatherFieldIds;
+        MiruFieldDefinition[] gatherFieldDefinitions;
         if (request.query.gatherTermsForFields != null && request.query.gatherTermsForFields.length > 0) {
-            gatherFieldIds = new int[request.query.gatherTermsForFields.length];
-            for (int i = 0; i < gatherFieldIds.length; i++) {
-                gatherFieldIds[i] = schema.getFieldId(request.query.gatherTermsForFields[i]);
-                Preconditions.checkArgument(schema.getFieldDefinition(gatherFieldIds[i]).type.hasFeature(Feature.stored),
+            gatherFieldDefinitions = new MiruFieldDefinition[request.query.gatherTermsForFields.length];
+            for (int i = 0; i < gatherFieldDefinitions.length; i++) {
+                gatherFieldDefinitions[i] = schema.getFieldDefinition(schema.getFieldId(request.query.gatherTermsForFields[i]));
+                Preconditions.checkArgument(gatherFieldDefinitions[i].type.hasFeature(Feature.stored),
                     "You can only gather stored fields");
             }
         } else {
-            gatherFieldIds = new int[0];
+            gatherFieldDefinitions = new MiruFieldDefinition[0];
         }
 
         List<ActivityScore> activityScores;
         if (request.query.strategy == FullTextQuery.Strategy.TF_IDF) {
-            activityScores = collectTfIdf(name, bitmaps, requestContext, request, lastReport, answer, termCollector, gatherFieldIds, stackBuffer);
+            activityScores = collectTfIdf(name, bitmaps, requestContext, request, lastReport, answer, termCollector, gatherFieldDefinitions, stackBuffer);
         } else if (request.query.strategy == FullTextQuery.Strategy.TIME) {
-            activityScores = collectTime(name, bitmaps, requestContext, request, lastReport, answer, gatherFieldIds, stackBuffer);
+            activityScores = collectTime(name, bitmaps, requestContext, request, lastReport, answer, gatherFieldDefinitions, stackBuffer);
         } else {
             activityScores = Collections.emptyList();
         }
@@ -102,11 +103,12 @@ public class FullText {
         Optional<FullTextReport> lastReport,
         BM answer,
         Map<FieldAndTermId, MutableInt> termCollector,
-        int[] gatherFieldIds,
+        MiruFieldDefinition[] gatherFieldDefinitions,
         StackBuffer stackBuffer) throws Exception {
 
         MiruActivityInternExtern internExtern = miruProvider.getActivityInternExtern(request.tenantId);
         MiruFieldIndex<BM, IBM> primaryFieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
+        MiruSchema schema = requestContext.getSchema();
 
         int desiredNumberOfResults = request.query.desiredNumberOfResults;
         int alreadyScoredCount = lastReport.isPresent() ? lastReport.get().scoredActivities : 0;
@@ -116,7 +118,8 @@ public class FullText {
         Map<FieldAndTermId, Float> termMultipliers = Maps.newHashMapWithExpectedSize(termCollector.size());
         for (Map.Entry<FieldAndTermId, MutableInt> entry : termCollector.entrySet()) {
             FieldAndTermId fieldAndTermId = entry.getKey();
-            long idf = primaryFieldIndex.getGlobalCardinality(fieldAndTermId.fieldId, fieldAndTermId.termId, stackBuffer);
+            MiruFieldDefinition fieldDefinition = schema.getFieldDefinition(fieldAndTermId.fieldId);
+            long idf = primaryFieldIndex.getGlobalCardinality(fieldDefinition, fieldAndTermId.termId, stackBuffer);
             if (idf > 0) {
                 float multiplier = entry.getValue().floatValue() / (float) idf;
                 termMultipliers.put(fieldAndTermId, multiplier);
@@ -141,7 +144,7 @@ public class FullText {
 
             if (i == batchSize) {
                 batchTfIdf(name, requestContext, request, internExtern, primaryFieldIndex, termMultipliers, scored, minScore, acceptableBelowMin, ids,
-                    gatherFieldIds, stackBuffer);
+                    gatherFieldDefinitions, stackBuffer);
                 i = 0;
             }
         }
@@ -150,7 +153,7 @@ public class FullText {
             int[] remainder = new int[i];
             System.arraycopy(ids, 0, remainder, 0, i);
             batchTfIdf(name, requestContext, request, internExtern, primaryFieldIndex, termMultipliers, scored, minScore, acceptableBelowMin, remainder,
-                gatherFieldIds, stackBuffer);
+                gatherFieldDefinitions, stackBuffer);
         }
 
         Iterables.addAll(activityScores, Iterables.transform(scored, (RawBitScore input) -> {
@@ -176,7 +179,7 @@ public class FullText {
         float minScore,
         MutableInt acceptableBelowMin,
         int[] ids,
-        int[] gatherFieldIds,
+        MiruFieldDefinition[] gatherFieldDefinitions,
         StackBuffer stackBuffer) throws Exception {
 
         MiruSchema schema = requestContext.getSchema();
@@ -186,7 +189,8 @@ public class FullText {
             FieldAndTermId fieldAndTermId = entry.getKey();
             float multiplier = entry.getValue();
 
-            long[] tf = primaryFieldIndex.getCardinalities(fieldAndTermId.fieldId, fieldAndTermId.termId, ids, stackBuffer);
+            MiruFieldDefinition fieldDefinition = schema.getFieldDefinition(fieldAndTermId.fieldId);
+            long[] tf = primaryFieldIndex.getCardinalities(fieldDefinition, fieldAndTermId.termId, ids, stackBuffer);
             for (int i = 0; i < tf.length; i++) {
                 if (tf[i] > 0) {
                     scores[i] += multiplier * (float) tf[i];
@@ -200,14 +204,14 @@ public class FullText {
                 RawBitScore bitScore = new RawBitScore(new Promise<>(() -> {
                     //TODO formalize gathering of fields/terms
                     TimeVersionRealtime tvr = requestContext.getActivityIndex().getTimeVersionRealtime(name, ids[_i], stackBuffer);
-                    return new TimestampedValues(tvr.timestamp, gatherValues(name, requestContext, ids[_i], gatherFieldIds, stackBuffer));
+                    return new TimestampedValues(tvr.timestamp, gatherValues(name, requestContext, ids[_i], gatherFieldDefinitions, stackBuffer));
                 }), ids[i], scores[i]);
                 scored.add(bitScore);
             } else if (acceptableBelowMin.intValue() > 0) {
                 RawBitScore bitScore = new RawBitScore(new Promise<>(() -> {
                     //TODO formalize gathering of fields/terms
                     TimeVersionRealtime tvr = requestContext.getActivityIndex().getTimeVersionRealtime(name, ids[_i], stackBuffer);
-                    return new TimestampedValues(tvr.timestamp, gatherValues(name, requestContext, ids[_i], gatherFieldIds, stackBuffer));
+                    return new TimestampedValues(tvr.timestamp, gatherValues(name, requestContext, ids[_i], gatherFieldDefinitions, stackBuffer));
                 }), ids[i], scores[i]);
                 scored.add(bitScore);
                 acceptableBelowMin.decrement();
@@ -221,7 +225,7 @@ public class FullText {
         MiruRequest<FullTextQuery> request,
         Optional<FullTextReport> lastReport,
         BM answer,
-        int[] gatherFieldIds,
+        MiruFieldDefinition[] gatherFieldDefinitions,
         StackBuffer stackBuffer) throws Exception {
 
         int desiredNumberOfResults = request.query.desiredNumberOfResults;
@@ -233,7 +237,7 @@ public class FullText {
             int lastSetBit = iter.next();
             //TODO formalize gathering of fields/terms
             TimeVersionRealtime tvr = requestContext.getActivityIndex().getTimeVersionRealtime(name, lastSetBit, stackBuffer);
-            MiruValue[][] values = gatherValues(name, requestContext, lastSetBit, gatherFieldIds, stackBuffer);
+            MiruValue[][] values = gatherValues(name, requestContext, lastSetBit, gatherFieldDefinitions, stackBuffer);
             float score = 0f; //TODO ?
             ActivityScore activityScore = new ActivityScore(values, tvr.timestamp, score);
             activityScores.add(activityScore);
@@ -249,21 +253,21 @@ public class FullText {
     private <BM extends IBM, IBM> MiruValue[][] gatherValues(String name,
         MiruRequestContext<BM, IBM, ?> requestContext,
         int index,
-        int[] gatherFieldIds,
+        MiruFieldDefinition[] gatherFieldDefinitions,
         StackBuffer stackBuffer) throws Exception {
 
         MiruTermComposer termComposer = requestContext.getTermComposer();
         MiruSchema schema = requestContext.getSchema();
 
         //TODO much more efficient to accumulate indexes and gather these once at the end
-        MiruValue[][] gatherValues = new MiruValue[gatherFieldIds.length][];
-        for (int i = 0; i < gatherFieldIds.length; i++) {
-            MiruTermId[] termIds = requestContext.getActivityIndex().get(name, index, gatherFieldIds[i], stackBuffer);
+        MiruValue[][] gatherValues = new MiruValue[gatherFieldDefinitions.length][];
+        for (int i = 0; i < gatherFieldDefinitions.length; i++) {
+            MiruTermId[] termIds = requestContext.getActivityIndex().get(name, index, gatherFieldDefinitions[i], stackBuffer);
             if (termIds != null) {
                 MiruValue[] gather = new MiruValue[termIds.length];
                 for (int j = 0; j < gather.length; j++) {
                     gather[j] = new MiruValue(termComposer.decompose(schema,
-                        schema.getFieldDefinition(gatherFieldIds[i]),
+                        gatherFieldDefinitions[i],
                         stackBuffer,
                         termIds[j]));
                 }

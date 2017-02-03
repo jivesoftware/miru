@@ -106,16 +106,16 @@ public class AggregateCounts {
         MiruFieldDefinition fieldDefinition = schema.getFieldDefinition(fieldId);
         Preconditions.checkArgument(fieldDefinition.type.hasFeature(Feature.stored), "You can only aggregate stored fields");
 
-        int[] gatherFieldIds;
+        MiruFieldDefinition[] gatherFieldDefinitions;
         if (constraint.gatherTermsForFields != null && constraint.gatherTermsForFields.length > 0) {
-            gatherFieldIds = new int[constraint.gatherTermsForFields.length];
-            for (int i = 0; i < gatherFieldIds.length; i++) {
-                gatherFieldIds[i] = schema.getFieldId(constraint.gatherTermsForFields[i]);
-                Preconditions.checkArgument(schema.getFieldDefinition(gatherFieldIds[i]).type.hasFeature(Feature.stored),
+            gatherFieldDefinitions = new MiruFieldDefinition[constraint.gatherTermsForFields.length];
+            for (int i = 0; i < gatherFieldDefinitions.length; i++) {
+                gatherFieldDefinitions[i] = schema.getFieldDefinition(schema.getFieldId(constraint.gatherTermsForFields[i]));
+                Preconditions.checkArgument(gatherFieldDefinitions[i].type.hasFeature(Feature.stored),
                     "You can only gather stored fields");
             }
         } else {
-            gatherFieldIds = new int[0];
+            gatherFieldDefinitions = new MiruFieldDefinition[0];
         }
 
         if (bitmaps.supportsInPlace()) {
@@ -255,7 +255,7 @@ public class AggregateCounts {
                     break;
                 }
 
-                MiruTermId[] fieldValues = requestContext.getActivityIndex().get(name, lastSetBit, fieldId, stackBuffer);
+                MiruTermId[] fieldValues = requestContext.getActivityIndex().get(name, lastSetBit, fieldDefinition, stackBuffer);
                 if (log.isTraceEnabled()) {
                     log.trace("fieldValues={}", Arrays.toString(fieldValues));
                 }
@@ -322,13 +322,14 @@ public class AggregateCounts {
 
                     if (collected && collectedDistincts > constraint.startFromDistinctN) {
                         //TODO much more efficient to accumulate lastSetBits and gather these once at the end
-                        MiruValue[][] gatherValues = new MiruValue[gatherFieldIds.length][];
-                        for (int i = 0; i < gatherFieldIds.length; i++) {
-                            MiruTermId[] termIds = requestContext.getActivityIndex().get(name, lastSetBit, gatherFieldIds[i], stackBuffer);
+                        MiruValue[][] gatherValues = new MiruValue[gatherFieldDefinitions.length][];
+                        for (int i = 0; i < gatherFieldDefinitions.length; i++) {
+                            MiruFieldDefinition gatherFieldDefinition = gatherFieldDefinitions[i];
+                            MiruTermId[] termIds = requestContext.getActivityIndex().get(name, lastSetBit, gatherFieldDefinition, stackBuffer);
                             MiruValue[] gather = new MiruValue[termIds.length];
                             for (int j = 0; j < gather.length; j++) {
                                 gather[j] = new MiruValue(termComposer.decompose(schema,
-                                    schema.getFieldDefinition(gatherFieldIds[i]),
+                                    gatherFieldDefinition,
                                     stackBuffer,
                                     termIds[j]));
                             }

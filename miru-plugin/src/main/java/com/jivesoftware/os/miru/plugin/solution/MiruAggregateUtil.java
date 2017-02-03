@@ -71,14 +71,14 @@ public class MiruAggregateUtil {
 
     public interface GetAllTermIds {
 
-        MiruTermId[][] getAll(String name, int[] ids, int offset, int count, int fieldId, StackBuffer stackBuffer) throws Exception;
+        MiruTermId[][] getAll(String name, int[] ids, int offset, int count, MiruFieldDefinition fieldDefinition, StackBuffer stackBuffer) throws Exception;
     }
 
     public <BM extends IBM, IBM> void gatherFeatures(String name,
         MiruPartitionCoord coord,
         MiruBitmaps<BM, IBM> bitmaps,
+        MiruSchema schema,
         GetAllTermIds getAllTermIds,
-        int fieldCount,
         TimestampedCacheKeyValues termFeatureCache,
         ConsumeBitmaps<BM> consumeAnswers,
         int[][] featureFieldIds,
@@ -96,6 +96,7 @@ public class MiruAggregateUtil {
             }
         }
 
+        int fieldCount = schema.fieldCount();
         MiruTermId[][][] fieldTerms = new MiruTermId[fieldCount][][];
 
         @SuppressWarnings("unchecked")
@@ -161,7 +162,7 @@ public class MiruAggregateUtil {
                     metrics.maxFromId = Math.max(metrics.maxFromId, fromId);
 
                     if (answerScoredLastId >= fromId) {
-                        gatherFeaturesForTerm(name, bitmaps, featureFieldIds, stackBuffer, uniqueFieldIds, getAllTermIds, fieldTerms,
+                        gatherFeaturesForTerm(name, bitmaps, schema, featureFieldIds, stackBuffer, uniqueFieldIds, getAllTermIds, fieldTerms,
                             ids, featuresContained, answerBitmaps, features, gathered, fromId, answerScoredLastId, metrics);
                     }
 
@@ -206,7 +207,7 @@ public class MiruAggregateUtil {
                         }
 
                         fromId = 0;
-                        gatherFeaturesForTerm(name, bitmaps, featureFieldIds, stackBuffer, uniqueFieldIds, getAllTermIds, fieldTerms,
+                        gatherFeaturesForTerm(name, bitmaps, schema, featureFieldIds, stackBuffer, uniqueFieldIds, getAllTermIds, fieldTerms,
                             ids, featuresContained, answerBitmaps, features, null, fromId, answerScoredLastId, metrics);
 
                         for (int i = 0; i < features.length; i++) {
@@ -251,7 +252,7 @@ public class MiruAggregateUtil {
                 metrics.minFromId = -1;
                 metrics.maxFromId = -1;
 
-                gatherFeaturesForTerm(name, bitmaps, featureFieldIds, stackBuffer, uniqueFieldIds, getAllTermIds, fieldTerms,
+                gatherFeaturesForTerm(name, bitmaps, schema, featureFieldIds, stackBuffer, uniqueFieldIds, getAllTermIds, fieldTerms,
                     ids, featuresContained, answerBitmaps, features, null, 0, answerScoredLastId, metrics);
             }
 
@@ -304,6 +305,7 @@ public class MiruAggregateUtil {
 
     private <BM extends IBM, IBM> void gatherFeaturesForTerm(String name,
         MiruBitmaps<BM, IBM> bitmaps,
+        MiruSchema schema,
         int[][] featureFieldIds,
         StackBuffer stackBuffer,
         Set<Integer> uniqueFieldIds,
@@ -337,13 +339,13 @@ public class MiruAggregateUtil {
             count++;
             if (count == ids.length) {
                 gatherAndCountFeaturesForTerm(name, featureFieldIds, stackBuffer, uniqueFieldIds, getAllTermIds, fieldTerms,
-                    ids, featuresContained, count, features, gathered, metrics);
+                    ids, featuresContained, count, features, gathered, schema, metrics);
                 count = 0;
             }
         }
         if (count > 0) {
             gatherAndCountFeaturesForTerm(name, featureFieldIds, stackBuffer, uniqueFieldIds, getAllTermIds, fieldTerms,
-                ids, featuresContained, count, features, gathered, metrics);
+                ids, featuresContained, count, features, gathered, schema, metrics);
             count = 0;
         }
     }
@@ -359,12 +361,13 @@ public class MiruAggregateUtil {
         int count,
         Multiset<Feature>[] features,
         Set<Feature>[] gathered,
+        MiruSchema schema,
         GatherFeatureMetrics metrics) throws Exception {
 
         int[] consumableIds = new int[ids.length];
         for (int fieldId : uniqueFieldIds) {
             System.arraycopy(ids, 0, consumableIds, 0, ids.length);
-            fieldTerms[fieldId] = getAllTermIds.getAll(name, consumableIds, 0, count, fieldId, stackBuffer);
+            fieldTerms[fieldId] = getAllTermIds.getAll(name, consumableIds, 0, count, schema.getFieldDefinition(fieldId), stackBuffer);
         }
 
         PermutationStream permutationStream = (fi, permuteTermIds) -> {
@@ -758,6 +761,7 @@ public class MiruAggregateUtil {
 
         boolean traceEnabled = LOG.isTraceEnabled();
         boolean debugEnabled = LOG.isDebugEnabled();
+        MiruSchema schema = requestContext.getSchema();
 
         if (bitmaps.supportsInPlace()) {
             // don't mutate the original
@@ -782,7 +786,7 @@ public class MiruAggregateUtil {
 
         MiruActivityIndex activityIndex = requestContext.getActivityIndex();
         MiruFieldIndex<BM, IBM> primaryFieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
-        int streamFieldId = requestContext.getSchema().getFieldId(streamField);
+        int streamFieldId = schema.getFieldId(streamField);
 
         MutableLong beforeCount = new MutableLong(counter != null ? bitmaps.cardinality(counter[0]) : bitmaps.cardinality(answer[0]));
         LOG.debug("stream: streamField={} streamFieldId={} pivotFieldId={} beforeCount={}", streamField, streamFieldId, pivotFieldId, beforeCount);
@@ -813,10 +817,11 @@ public class MiruAggregateUtil {
                 /*answer[0] = bitmaps.removeRange(answer[0], actualIds[0], actualIds[actualIds.length - 1] + 1);*/
             }
 
-            MiruTermId[][] all = activityIndex.getAll(name, actualIds, pivotFieldId, stackBuffer);
+
+            MiruTermId[][] all = activityIndex.getAll(name, actualIds, schema.getFieldDefinition(pivotFieldId), stackBuffer);
             MiruTermId[][] streamAll;
             if (streamFieldId != pivotFieldId) {
-                streamAll = activityIndex.getAll(name, actualIds, streamFieldId, stackBuffer);
+                streamAll = activityIndex.getAll(name, actualIds, schema.getFieldDefinition(streamFieldId), stackBuffer);
             } else {
                 streamAll = all;
             }
@@ -933,6 +938,7 @@ public class MiruAggregateUtil {
         StackBuffer stackBuffer) throws Exception {
 
         MiruActivityIndex activityIndex = requestContext.getActivityIndex();
+        MiruSchema schema = requestContext.getSchema();
         MiruFieldIndex<BM, IBM> primaryFieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
 
         if (bitmaps.supportsInPlace()) {
@@ -976,7 +982,7 @@ public class MiruAggregateUtil {
             }
 
             long start = System.nanoTime();
-            MiruTermId[][] all = activityIndex.getAll(name, actualIds, pivotFieldId, stackBuffer);
+            MiruTermId[][] all = activityIndex.getAll(name, actualIds, schema.getFieldDefinition(pivotFieldId), stackBuffer);
             getAllCost += (System.nanoTime() - start);
             distincts.clear();
 

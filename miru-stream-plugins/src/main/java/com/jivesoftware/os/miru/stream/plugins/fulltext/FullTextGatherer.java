@@ -263,7 +263,7 @@ public class FullTextGatherer implements IndexOpenCallback, IndexCommitCallback,
                 throw new RuntimeException("Unknown field: " + fieldName);
             }
             MiruFieldDefinition fieldDefinition = schema.getFieldDefinition(fieldId);
-            MiruTermId[][] got = activityIndex.getAll("fullTextGatherer", indexes, fieldId, stackBuffer);
+            MiruTermId[][] got = activityIndex.getAll("fullTextGatherer", indexes, fieldDefinition, stackBuffer);
             MiruValue[][] values = new MiruValue[got.length][];
             for (int j = 0; j < got.length; j++) {
                 values[j] = new MiruValue[got[j].length];

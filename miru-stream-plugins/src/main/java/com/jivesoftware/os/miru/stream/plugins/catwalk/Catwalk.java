@@ -100,8 +100,8 @@ public class Catwalk {
         aggregateUtil.gatherFeatures(name,
             coord,
             bitmaps,
+            schema,
             activityIndex::getAll,
-            schema.fieldCount(),
             termFeatureCache,
             streamBitmaps -> {
                 return consumeAnswers.consume((index, answerFieldId, answerTermId, answerScoredToLastId, featureAnswers) -> {

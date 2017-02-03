@@ -12,6 +12,8 @@ import com.jivesoftware.os.lab.LABUtils;
 import com.jivesoftware.os.lab.api.ValueIndex;
 import com.jivesoftware.os.lab.io.BolBuffer;
 import com.jivesoftware.os.lab.io.api.UIO;
+import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
+import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition.Feature;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.plugin.MiruInterner;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
@@ -46,7 +48,6 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
     private final int termKeyOffset;
     private final byte[] cardinalityPrefix;
     private final ValueIndex<byte[]>[] cardinalities;
-    private final boolean[] hasCardinalities;
     // We could lock on both field + termId for improved hash/striping, but we favor just termId to reduce object creation
     private final StripingLocksProvider<MiruTermId> stripingLocksProvider;
     private final MiruInterner<MiruTermId> termInterner;
@@ -61,7 +62,6 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
         ValueIndex<byte[]>[] termIndexes,
         byte[] cardinalityPrefix,
         ValueIndex<byte[]>[] cardinalities,
-        boolean[] hasCardinalities,
         StripingLocksProvider<MiruTermId> stripingLocksProvider,
         MiruInterner<MiruTermId> termInterner) throws Exception {
 
@@ -76,7 +76,6 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
         this.termKeyOffset = termPrefix.length + 4;
         this.cardinalityPrefix = cardinalityPrefix;
         this.cardinalities = cardinalities;
-        this.hasCardinalities = hasCardinalities;
         this.stripingLocksProvider = stripingLocksProvider;
         this.termInterner = termInterner;
     }
@@ -94,22 +93,22 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
     }
 
     @Override
-    public void set(int fieldId, MiruTermId termId, int[] ids, long[] counts, StackBuffer stackBuffer) throws Exception {
-        getIndex("set", fieldId, termId).set(stackBuffer, ids);
-        mergeCardinalities(fieldId, termId, ids, counts);
+    public void set(MiruFieldDefinition fieldDefinition, MiruTermId termId, int[] ids, long[] counts, StackBuffer stackBuffer) throws Exception {
+        getIndex("set", fieldDefinition.fieldId, termId).set(stackBuffer, ids);
+        mergeCardinalities(fieldDefinition, termId, ids, counts);
     }
 
     @Override
-    public void setIfEmpty(int fieldId, MiruTermId termId, int id, long count, StackBuffer stackBuffer) throws Exception {
-        if (getIndex("setIfEmpty", fieldId, termId).setIfEmpty(stackBuffer, id)) {
-            mergeCardinalities(fieldId, termId, new int[] { id }, new long[] { count });
+    public void setIfEmpty(MiruFieldDefinition fieldDefinition, MiruTermId termId, int id, long count, StackBuffer stackBuffer) throws Exception {
+        if (getIndex("setIfEmpty", fieldDefinition.fieldId, termId).setIfEmpty(stackBuffer, id)) {
+            mergeCardinalities(fieldDefinition, termId, new int[] { id }, new long[] { count });
         }
     }
 
     @Override
-    public void remove(int fieldId, MiruTermId termId, int[] ids, StackBuffer stackBuffer) throws Exception {
-        getIndex("remove", fieldId, termId).remove(stackBuffer, ids);
-        mergeCardinalities(fieldId, termId, ids, cardinalities[fieldId] != null ? new long[ids.length] : null);
+    public void remove(MiruFieldDefinition fieldDefinition, MiruTermId termId, int[] ids, StackBuffer stackBuffer) throws Exception {
+        getIndex("remove", fieldDefinition.fieldId, termId).remove(stackBuffer, ids);
+        mergeCardinalities(fieldDefinition, termId, ids, fieldDefinition.type.hasFeature(Feature.cardinality) ? new long[ids.length] : null);
     }
 
     @Override
@@ -415,8 +414,9 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
     }
 
     @Override
-    public long getCardinality(int fieldId, MiruTermId termId, int id, StackBuffer stackBuffer) throws Exception {
-        if (hasCardinalities[fieldId]) {
+    public long getCardinality(MiruFieldDefinition fieldDefinition, MiruTermId termId, int id, StackBuffer stackBuffer) throws Exception {
+        if (fieldDefinition.type.hasFeature(Feature.cardinality)) {
+            int fieldId = fieldDefinition.fieldId;
             byte[] fieldIdBytes = FilerIO.intBytes(fieldId);
             long[] count = { 0 };
             byte[] cardinalityIndexKey = cardinalityIndexKey(fieldIdBytes, id, termId.getBytes());
@@ -433,9 +433,10 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
     }
 
     @Override
-    public long[] getCardinalities(int fieldId, MiruTermId termId, int[] ids, StackBuffer stackBuffer) throws Exception {
+    public long[] getCardinalities(MiruFieldDefinition fieldDefinition, MiruTermId termId, int[] ids, StackBuffer stackBuffer) throws Exception {
         long[] counts = new long[ids.length];
-        if (hasCardinalities[fieldId]) {
+        if (fieldDefinition.type.hasFeature(Feature.cardinality)) {
+            int fieldId = fieldDefinition.fieldId;
             byte[] fieldIdBytes = FilerIO.intBytes(fieldId);
             ValueIndex<byte[]> cardinalityIndex = getCardinalityIndex(fieldId);
 
@@ -465,12 +466,13 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
     }
 
     @Override
-    public long getGlobalCardinality(int fieldId, MiruTermId termId, StackBuffer stackBuffer) throws Exception {
-        return getCardinality(fieldId, termId, -1, stackBuffer);
+    public long getGlobalCardinality(MiruFieldDefinition fieldDefinition, MiruTermId termId, StackBuffer stackBuffer) throws Exception {
+        return getCardinality(fieldDefinition, termId, -1, stackBuffer);
     }
 
-    private void mergeCardinalities(int fieldId, MiruTermId termId, int[] ids, long[] counts) throws Exception {
-        if (hasCardinalities[fieldId] && counts != null) {
+    private void mergeCardinalities(MiruFieldDefinition fieldDefinition, MiruTermId termId, int[] ids, long[] counts) throws Exception {
+        if (fieldDefinition.type.hasFeature(Feature.cardinality) && counts != null) {
+            int fieldId = fieldDefinition.fieldId;
             byte[] fieldBytes = FilerIO.intBytes(fieldId);
             ValueIndex<byte[]> cardinalityIndex = getCardinalityIndex(fieldId);
 

@@ -24,6 +24,11 @@ import com.jivesoftware.os.lab.guts.StripingBolBufferLocks;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
+import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition.Prefix;
+import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition.Type;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
+import com.jivesoftware.os.miru.api.activity.schema.MiruSchema.Builder;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.bitmaps.roaring5.MiruBitmapsRoaring;
@@ -89,9 +94,15 @@ public class MiruAggregateUtilTest {
         LabTimestampedCacheKeyValues cacheKeyValues = new LabTimestampedCacheKeyValues("lab-test",
             orderIdProvider,
             cacheKeyIndexes,
-            new Object[]{new Object(), new Object(), new Object(), new Object()});
+            new Object[] { new Object(), new Object(), new Object(), new Object() });
 
-        int fieldCount = 3;
+        MiruSchema schema = new Builder("test", 1)
+            .setFieldDefinitions(new MiruFieldDefinition[] {
+                new MiruFieldDefinition(0, "a", Type.singleTerm, Prefix.NONE),
+                new MiruFieldDefinition(1, "b", Type.singleTerm, Prefix.NONE),
+                new MiruFieldDefinition(2, "c", Type.singleTerm, Prefix.NONE),
+            })
+            .build();
         List<Map<Integer, String>> activityFieldTerms = Lists.newArrayList(
             ImmutableMap.of(0, "bob",
                 1, "creates",
@@ -112,12 +123,12 @@ public class MiruAggregateUtilTest {
                 1, "likes",
                 2, "doc2"));
 
-        GetAllTermIds getAllTermIds = (name, ids, offset, count, fieldId, stackBuffer1) -> {
+        GetAllTermIds getAllTermIds = (name, ids, offset, count, fieldDefinition, stackBuffer1) -> {
             MiruTermId[][] termIds = new MiruTermId[count][];
             for (int i = 0; i < count; i++) {
                 int index = ids[offset + i];
-                String term = activityFieldTerms.get(index).get(fieldId);
-                termIds[i] = term == null ? new MiruTermId[0] : new MiruTermId[]{new MiruTermId(term.getBytes())};
+                String term = activityFieldTerms.get(index).get(fieldDefinition.fieldId);
+                termIds[i] = term == null ? new MiruTermId[0] : new MiruTermId[] { new MiruTermId(term.getBytes()) };
             }
             return termIds;
         };
@@ -125,21 +136,21 @@ public class MiruAggregateUtilTest {
         RoaringBitmap[] answers = {
             RoaringBitmap.bitmapOf(0, 1, 2, 3, 4, 5),
             RoaringBitmap.bitmapOf(0, 1, 2, 3, 4, 5),
-            RoaringBitmap.bitmapOf(0, 1, 2, 3, 4, 5),};
+            RoaringBitmap.bitmapOf(0, 1, 2, 3, 4, 5), };
 
-        for (int toId : new int[]{0, 1, 2, 3, 4, 5}) {
+        for (int toId : new int[] { 0, 1, 2, 3, 4, 5 }) {
             System.out.println("-------------------------------- toId: " + toId + " --------------------------------");
             aggregateUtil.gatherFeatures("test",
                 coord,
                 bitmaps,
+                schema,
                 getAllTermIds,
-                fieldCount,
                 cacheKeyValues,
                 streamBitmaps -> streamBitmaps.stream(-1, -1, 0, new MiruTermId("parent1".getBytes()), toId, answers),
-                new int[][]{
-                    {0, 1},
-                    {0, 2},
-                    {1, 2},},
+                new int[][] {
+                    { 0, 1 },
+                    { 0, 2 },
+                    { 1, 2 }, },
                 100,
                 (streamIndex, lastId, answerFieldId, answerTermId, answerScoredLastId, featureId, termIds, count) -> {
                     log(streamIndex, lastId, answerFieldId, answerTermId, answerScoredLastId, featureId, termIds, count);
@@ -160,12 +171,12 @@ public class MiruAggregateUtilTest {
         int count) {
         System.out.println(
             "streamIndex:" + streamIndex
-            + ", lastId:" + lastId
-            + ", answerFieldId:" + answerFieldId
-            + ", answerTermId:" + answerTermId
-            + ", answerScoredLastId:" + answerScoredLastId
-            + ", featureId:" + featureId
-            + ", termIds:" + Arrays.toString(termIds)
-            + ", count1:" + count);
+                + ", lastId:" + lastId
+                + ", answerFieldId:" + answerFieldId
+                + ", answerTermId:" + answerTermId
+                + ", answerScoredLastId:" + answerScoredLastId
+                + ", featureId:" + featureId
+                + ", termIds:" + Arrays.toString(termIds)
+                + ", count1:" + count);
     }
 }

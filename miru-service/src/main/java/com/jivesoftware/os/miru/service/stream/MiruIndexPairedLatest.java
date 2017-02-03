@@ -145,7 +145,8 @@ public class MiruIndexPairedLatest<BM extends IBM, IBM> {
                 ids.reverse(); // we built in reverse order, so flip back to ascending
                 log.inc("count>set", 1);
                 log.inc("count>set", 1, tenantId.toString());
-                pairedLatestFieldIndex.set(pairedLatestWork.fieldId, pairedLatestTerm, ids.toArray(), null, stackBuffer);
+                MiruFieldDefinition fieldDefinition = context.getSchema().getFieldDefinition(pairedLatestWork.fieldId);
+                pairedLatestFieldIndex.set(fieldDefinition, pairedLatestTerm, ids.toArray(), null, stackBuffer);
 
                 return null;
             }));

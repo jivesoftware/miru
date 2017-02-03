@@ -5,6 +5,7 @@ import com.jivesoftware.os.filer.io.api.KeyValueContext;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.filer.io.chunk.ChunkFiler;
 import com.jivesoftware.os.filer.keyed.store.TxKeyValueStore;
+import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruIBA;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -116,7 +117,8 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
     }
 
     @Override
-    public MiruTermId[] get(String name, int index, final int fieldId, StackBuffer stackBuffer) throws IOException, InterruptedException {
+    public MiruTermId[] get(String name, int index, final MiruFieldDefinition fieldDefinition, StackBuffer stackBuffer) throws IOException, InterruptedException {
+        int fieldId = fieldDefinition.fieldId;
         if (termLookup[fieldId] == null || index > lastId(stackBuffer)) {
             return null;
         }
@@ -153,8 +155,8 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
     }
 
     @Override
-    public MiruTermId[][] getAll(String name, int[] indexes, final int fieldId, StackBuffer stackBuffer) throws IOException, InterruptedException {
-        return getAll(name, indexes, 0, indexes.length, fieldId, stackBuffer);
+    public MiruTermId[][] getAll(String name, int[] indexes, final MiruFieldDefinition fieldDefinition, StackBuffer stackBuffer) throws IOException, InterruptedException {
+        return getAll(name, indexes, 0, indexes.length, fieldDefinition, stackBuffer);
     }
 
     @Override
@@ -162,9 +164,10 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
         int[] indexes,
         int offset,
         int length,
-        final int fieldId,
+        final MiruFieldDefinition fieldDefinition,
         StackBuffer stackBuffer) throws IOException, InterruptedException {
 
+        int fieldId = fieldDefinition.fieldId;
         if (termLookup[fieldId] == null) {
             return null;
         }
