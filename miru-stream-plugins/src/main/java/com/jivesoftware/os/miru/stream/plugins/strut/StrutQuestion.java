@@ -35,7 +35,6 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.solution.Question;
-import com.jivesoftware.os.miru.stream.plugins.fulltext.FullText;
 import com.jivesoftware.os.miru.stream.plugins.strut.StrutModelScorer.LastIdAndTermId;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -176,8 +175,8 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         long start = System.currentTimeMillis();
         List<LastIdAndTermId> lastIdAndTermIds = Lists.newArrayList();
         //TODO config batch size
-        aggregateUtil.gather("strut", bitmaps, context, eligible, pivotFieldId, 100, true, false, solutionLog, (lastId, termId, count) -> {
-            lastIdAndTermIds.add(new LastIdAndTermId(lastId, termId));
+        aggregateUtil.gather("strut", bitmaps, context, eligible, pivotFieldId, 100, true, true, solutionLog, (lastId, termId, count) -> {
+            lastIdAndTermIds.add(new LastIdAndTermId(lastId, termId, count));
             return maxTermIdsPerRequest <= 0 || lastIdAndTermIds.size() < maxTermIdsPerRequest;
         }, stackBuffer);
 
@@ -240,7 +239,8 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                         scoredToLastId,
                         scaledScore,
                         scores,
-                        null));
+                        null,
+                        lastIdAndTermId.count));
                     return true;
                 },
                 stackBuffer);
@@ -353,7 +353,8 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                     s[j].scaledScore,
                     s[j].features,
                     timeVersionRealtimes[j].timestamp,
-                    unreadIndex.isPresent() && bitmaps.isSet(unreadIndex.get(), s[j].lastId)));
+                    unreadIndex.isPresent() && bitmaps.isSet(unreadIndex.get(), s[j].lastId),
+                    s[j].count));
             } else {
                 LOG.warn("Failed to get timestamp for {}", scoredLastIds[j]);
             }

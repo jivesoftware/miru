@@ -18,6 +18,7 @@ public class Scored implements Comparable<Scored>, Serializable {
     public final float scaledScore;
     public final float[] scores;
     public final List<Hotness>[] features;
+    public final long count;
 
     @JsonCreator
     public Scored(@JsonProperty("lastId") int lastId,
@@ -25,7 +26,8 @@ public class Scored implements Comparable<Scored>, Serializable {
         @JsonProperty("scoredToLastId") int scoredToLastId,
         @JsonProperty("scaledScore") float scaledScore,
         @JsonProperty("scores") float[] scores,
-        @JsonProperty("features") List<Hotness>[] features) {
+        @JsonProperty("features") List<Hotness>[] features,
+        @JsonProperty("count") long count) {
 
         this.lastId = lastId;
         this.term = term;
@@ -33,6 +35,7 @@ public class Scored implements Comparable<Scored>, Serializable {
         this.scoredToLastId = scoredToLastId;
         this.scores = scores;
         this.features = features;
+        this.count = count;
     }
 
     @Override

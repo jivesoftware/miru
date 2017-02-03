@@ -334,7 +334,7 @@ public class StrutModelScorer {
 
             List<LastIdAndTermId> asyncRescore = Lists.newArrayListWithCapacity(termIds.size());
             for (MiruTermId termId : termIds) {
-                asyncRescore.add(new LastIdAndTermId(-1, termId));
+                asyncRescore.add(new LastIdAndTermId(-1, termId, -1));
             }
 
             BM[] asyncConstrainFeature = buildConstrainFeatures(bitmaps,
@@ -575,10 +575,12 @@ public class StrutModelScorer {
 
         public final int lastId;
         public final MiruTermId termId;
+        public final long count;
 
-        public LastIdAndTermId(int lastId, MiruTermId termId) {
+        public LastIdAndTermId(int lastId, MiruTermId termId, long count) {
             this.lastId = lastId;
             this.termId = termId;
+            this.count = count;
         }
     }
 }
