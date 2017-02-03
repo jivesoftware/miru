@@ -45,16 +45,16 @@ public class LuceneBackedQueryParser implements MiruQueryParser {
     }
 
     @Override
-    public MiruFilter parse(String locale, String queryString) throws Exception {
-        Analyzer analyzer = termAnalyzers.findAnalyzer(locale);
+    public MiruFilter parse(String locale, boolean useStopWords, String queryString) throws Exception {
+        Analyzer analyzer = termAnalyzers.findAnalyzer(locale, useStopWords);
         QueryParser parser = new QueryParser(defaultField, analyzer);
         parser.setDefaultOperator(Operator.AND);
         return makeFilter(parser.parse(queryString));
     }
 
     @Override
-    public String highlight(String locale, String query, String content, String pre, String post, int preview) {
-        Analyzer analyzer = termAnalyzers.findAnalyzer(locale);
+    public String highlight(String locale, boolean useStopWords, String query, String content, String pre, String post, int preview) {
+        Analyzer analyzer = termAnalyzers.findAnalyzer(locale, useStopWords);
         QueryParser parser = new QueryParser(defaultField, analyzer);
 
         String summary = null;

@@ -331,10 +331,10 @@ public class StumptownQueryPluginRegion implements MiruPageRegion<Optional<Stump
 
         List<MiruFilter> subFilters = Lists.newArrayList();
         if (!input.message.isEmpty()) {
-            subFilters.add(messageQueryParser.parse("en", input.message.toLowerCase()));
+            subFilters.add(messageQueryParser.parse("en", false, input.message.toLowerCase()));
         }
         if (!input.thrown.isEmpty()) {
-            subFilters.add(messageQueryParser.parse("en", input.thrown.toLowerCase()));
+            subFilters.add(messageQueryParser.parse("en", false, input.thrown.toLowerCase()));
         }
 
         List<MiruFilter> filters = Lists.newArrayList();

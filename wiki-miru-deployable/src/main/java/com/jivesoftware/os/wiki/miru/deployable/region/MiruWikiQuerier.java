@@ -229,6 +229,7 @@ public class MiruWikiQuerier implements WikiQuerier {
                     MiruTimeRange.ALL_TIME,
                     "title",
                     locale,
+                    true,
                     query,
                     10_000,
                     filter,

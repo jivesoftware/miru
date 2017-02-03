@@ -71,6 +71,7 @@ public class FullTextPluginRegion implements MiruPageRegion<Optional<FullTextPlu
         final int toHoursAgo;
         final String defaultField;
         final String locale;
+        final boolean useStopWords;
         final String queryString;
         final FullTextQuery.Strategy strategy;
         final String filters;
@@ -83,6 +84,7 @@ public class FullTextPluginRegion implements MiruPageRegion<Optional<FullTextPlu
             int toHoursAgo,
             String defaultField,
             String locale,
+            boolean useStopWords,
             String queryString,
             Strategy strategy,
             String filters,
@@ -94,6 +96,7 @@ public class FullTextPluginRegion implements MiruPageRegion<Optional<FullTextPlu
             this.toHoursAgo = toHoursAgo;
             this.defaultField = defaultField;
             this.locale = locale;
+            this.useStopWords = useStopWords;
             this.queryString = queryString;
             this.strategy = strategy;
             this.filters = filters;
@@ -145,6 +148,7 @@ public class FullTextPluginRegion implements MiruPageRegion<Optional<FullTextPlu
                             new MiruTimeRange(fromTime, toTime),
                             input.defaultField,
                             input.locale,
+                            input.useStopWords,
                             input.queryString,
                             -1, //TODO input
                             constraintsFilter,

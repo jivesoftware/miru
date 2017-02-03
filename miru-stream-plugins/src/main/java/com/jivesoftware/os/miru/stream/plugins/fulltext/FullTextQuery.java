@@ -19,6 +19,7 @@ public class FullTextQuery implements Serializable {
     public final MiruTimeRange timeRange;
     public final String defaultField;
     public final String locale;
+    public final boolean useStopWords;
     public final String query;
     public final int maxWildcardExpansion;
     public final MiruFilter constraintsFilter;
@@ -30,6 +31,7 @@ public class FullTextQuery implements Serializable {
         @JsonProperty("timeRange") MiruTimeRange timeRange,
         @JsonProperty("defaultField") String defaultField,
         @JsonProperty("locale") String locale,
+        @JsonProperty("useStopWords") boolean useStopWords,
         @JsonProperty("query") String query,
         @JsonProperty("maxDeterminizedStates") int maxWildcardExpansion,
         @JsonProperty("constraintsFilter") MiruFilter constraintsFilter,
@@ -39,6 +41,7 @@ public class FullTextQuery implements Serializable {
         this.timeRange = Preconditions.checkNotNull(timeRange);
         this.defaultField = Preconditions.checkNotNull(defaultField);
         this.locale = locale;
+        this.useStopWords = useStopWords;
         this.query = Preconditions.checkNotNull(query);
         this.maxWildcardExpansion = maxWildcardExpansion;
         this.constraintsFilter = Preconditions.checkNotNull(constraintsFilter);
@@ -54,6 +57,7 @@ public class FullTextQuery implements Serializable {
             "timeRange=" + timeRange +
             ", defaultField='" + defaultField + '\'' +
             ", locale='" + locale + '\'' +
+            ", useStopWords=" + useStopWords +
             ", query='" + query + '\'' +
             ", maxWildcardExpansion=" + maxWildcardExpansion +
             ", constraintsFilter=" + constraintsFilter +
