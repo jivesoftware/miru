@@ -22,8 +22,8 @@ import javax.ws.rs.core.Response;
 import static com.jivesoftware.os.miru.analytics.plugins.metrics.MetricsConstants.CUSTOM_QUERY_ENDPOINT;
 import static com.jivesoftware.os.miru.analytics.plugins.metrics.MetricsConstants.METRICS_PREFIX;
 
-@Path(METRICS_PREFIX)
 @Singleton
+@Path(METRICS_PREFIX)
 public class MetricsEndpoints {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();

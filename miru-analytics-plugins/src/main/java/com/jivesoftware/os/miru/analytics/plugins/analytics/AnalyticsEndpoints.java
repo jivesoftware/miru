@@ -25,8 +25,8 @@ import org.nustaq.serialization.FSTConfiguration;
 import static com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsConstants.ANALYTICS_PREFIX;
 import static com.jivesoftware.os.miru.analytics.plugins.analytics.AnalyticsConstants.CUSTOM_QUERY_ENDPOINT;
 
-@Path(ANALYTICS_PREFIX)
 @Singleton
+@Path(ANALYTICS_PREFIX)
 public class AnalyticsEndpoints {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();

@@ -22,8 +22,8 @@ import javax.ws.rs.core.Response;
 import static com.jivesoftware.os.miru.reco.plugins.reco.RecoConstants.CUSTOM_QUERY_ENDPOINT;
 import static com.jivesoftware.os.miru.reco.plugins.reco.RecoConstants.RECO_PREFIX;
 
-@Path(RECO_PREFIX)
 @Singleton
+@Path(RECO_PREFIX)
 public class RecoEndpoints {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();

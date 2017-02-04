@@ -25,8 +25,8 @@ import org.nustaq.serialization.FSTConfiguration;
 import static com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsConstants.CUSTOM_QUERY_ENDPOINT;
 import static com.jivesoftware.os.miru.reco.plugins.distincts.DistinctsConstants.DISTINCTS_PREFIX;
 
-@Path(DISTINCTS_PREFIX)
 @Singleton
+@Path(DISTINCTS_PREFIX)
 public class DistinctsEndpoints {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();

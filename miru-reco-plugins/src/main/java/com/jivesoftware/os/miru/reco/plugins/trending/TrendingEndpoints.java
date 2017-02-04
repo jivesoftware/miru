@@ -27,8 +27,8 @@ import org.nustaq.serialization.FSTConfiguration;
 import static com.jivesoftware.os.miru.reco.plugins.trending.TrendingConstants.CUSTOM_QUERY_ENDPOINT;
 import static com.jivesoftware.os.miru.reco.plugins.trending.TrendingConstants.TRENDING_PREFIX;
 
-@Path(TRENDING_PREFIX)
 @Singleton
+@Path(TRENDING_PREFIX)
 public class TrendingEndpoints {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();

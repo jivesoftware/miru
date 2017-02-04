@@ -45,16 +45,21 @@ public class MiruPartitionHeartbeatHandler {
     }
 
     public void updateInfo(MiruPartitionCoord coord, MiruPartitionCoordInfo info) throws Exception {
-        updateHeartbeat(coord, info, -1);
+        updateHeartbeat(coord, info, -1, -1);
     }
 
     public void updateQueryTimestamp(MiruPartitionCoord coord, long queryTimestamp) throws Exception {
-        updateHeartbeat(coord, null, queryTimestamp);
+        updateHeartbeat(coord, null, queryTimestamp, -1);
+    }
+
+    public void updateLastId(MiruPartitionCoord coord, int lastId) throws Exception {
+        updateHeartbeat(coord, null, -1, lastId);
     }
 
     private void updateHeartbeat(MiruPartitionCoord coord,
         MiruPartitionCoordInfo info,
-        long queryTimestamp)
+        long queryTimestamp,
+        int lastId)
         throws Exception {
 
         heartbeats.compute(coord, (key, got) -> {
@@ -62,18 +67,16 @@ public class MiruPartitionHeartbeatHandler {
                 return new PartitionInfo(coord.tenantId,
                     coord.partitionId.getId(),
                     queryTimestamp,
-                    info);
+                    info,
+                    lastId);
             } else {
                 return new PartitionInfo(coord.tenantId,
                     coord.partitionId.getId(),
                     Math.max(queryTimestamp, got.queryTimestamp),
-                    info != null ? info : got.info);
+                    info != null ? info : got.info,
+                    lastId);
             }
         });
-    }
-
-    public void updateLastId(MiruPartitionCoord coord, int lastId) throws Exception {
-        clusterClient.updateLastId(coord, lastId);
     }
 
     private void retry(MiruHost host, PartitionInfo partitionInfo) throws Exception {
@@ -85,7 +88,8 @@ public class MiruPartitionHeartbeatHandler {
                 return new PartitionInfo(coord.tenantId,
                     coord.partitionId.getId(),
                     Math.max(partitionInfo.queryTimestamp, got.queryTimestamp),
-                    got.info != null ? got.info : partitionInfo.info);
+                    got.info != null ? got.info : partitionInfo.info,
+                    Math.max(partitionInfo.lastId, got.lastId));
             }
         });
     }

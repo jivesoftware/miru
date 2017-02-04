@@ -22,8 +22,8 @@ import javax.ws.rs.core.Response;
 import static com.jivesoftware.os.miru.anomaly.plugins.AnomalyConstants.CUSTOM_QUERY_ENDPOINT;
 import static com.jivesoftware.os.miru.anomaly.plugins.AnomalyConstants.ANOMALY_PREFIX;
 
-@Path(ANOMALY_PREFIX)
 @Singleton
+@Path(ANOMALY_PREFIX)
 public class AnomalyEndpoints {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();

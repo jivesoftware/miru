@@ -18,8 +18,8 @@ import javax.ws.rs.core.Response;
 import static com.jivesoftware.os.miru.reco.plugins.uniques.UniquesConstants.CUSTOM_QUERY_ENDPOINT;
 import static com.jivesoftware.os.miru.reco.plugins.uniques.UniquesConstants.UNIQUES_PREFIX;
 
-@Path(UNIQUES_PREFIX)
 @Singleton
+@Path(UNIQUES_PREFIX)
 public class UniquesEndpoints {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();

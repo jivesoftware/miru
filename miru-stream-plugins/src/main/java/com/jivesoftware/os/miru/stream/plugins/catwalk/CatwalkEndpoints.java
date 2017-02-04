@@ -20,8 +20,8 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import org.nustaq.serialization.FSTConfiguration;
 
-@Path(CatwalkConstants.CATWALK_PREFIX)
 @Singleton
+@Path(CatwalkConstants.CATWALK_PREFIX)
 public class CatwalkEndpoints {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();
