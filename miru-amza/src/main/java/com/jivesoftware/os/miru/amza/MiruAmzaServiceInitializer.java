@@ -54,6 +54,7 @@ public class MiruAmzaServiceInitializer {
         amzaServiceConfig.numberOfTakerThreads = config.getNumberOfTakerThreads();
         amzaServiceConfig.hardFsync = config.getHardFsync();
         amzaServiceConfig.takeSlowThresholdInMillis = config.getTakeSlowThresholdInMillis();
+        amzaServiceConfig.takeCyaIntervalInMillis = config.getTakeCyaIntervalInMillis();
         amzaServiceConfig.rackDistributionEnabled = config.getRackDistributionEnabled();
         amzaServiceConfig.ackWatersVerboseLogTimeouts = config.getAckWatersVerboseLogTimeouts();
 
