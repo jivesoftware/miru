@@ -30,8 +30,8 @@ import org.nustaq.serialization.FSTConfiguration;
 import static com.jivesoftware.os.miru.stream.plugins.fulltext.FullTextConstants.FULLTEXT_PREFIX;
 
 
-@Path(FULLTEXT_PREFIX)
 @Singleton
+@Path(FULLTEXT_PREFIX)
 public class FullTextEndpoints {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();

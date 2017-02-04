@@ -21,8 +21,8 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import org.nustaq.serialization.FSTConfiguration;
 
-@Path(StrutConstants.STRUT_PREFIX)
 @Singleton
+@Path(StrutConstants.STRUT_PREFIX)
 public class StrutEndpoints {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();

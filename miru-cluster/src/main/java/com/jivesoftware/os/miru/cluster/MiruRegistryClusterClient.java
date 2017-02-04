@@ -25,6 +25,7 @@ import com.jivesoftware.os.miru.api.topology.MiruTopologyPartition;
 import com.jivesoftware.os.miru.api.topology.MiruTopologyResponse;
 import com.jivesoftware.os.miru.api.topology.MiruTopologyStatus;
 import com.jivesoftware.os.miru.api.topology.NamedCursorsResult;
+import com.jivesoftware.os.miru.api.topology.PartitionInfo;
 import com.jivesoftware.os.miru.api.topology.RangeMinMax;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -146,6 +147,12 @@ public class MiruRegistryClusterClient implements MiruClusterClient {
                     queryTimestamp);
             })
             .collect(Collectors.toList()));
+        for (PartitionInfo partitionInfo : heartbeatRequest.active) {
+            if (partitionInfo.lastId != -1) {
+                MiruPartitionCoord coord = new MiruPartitionCoord(partitionInfo.tenantId, MiruPartitionId.of(partitionInfo.partitionId), miruHost);
+                updateLastId(coord, partitionInfo.lastId);
+            }
+        }
 
         NamedCursorsResult<Collection<MiruPartitionActiveUpdate>> partitionActiveHasChanged =
             clusterRegistry.getPartitionActiveUpdatesForHost(miruHost, heartbeatRequest.partitionActiveUpdatesSinceCursors);

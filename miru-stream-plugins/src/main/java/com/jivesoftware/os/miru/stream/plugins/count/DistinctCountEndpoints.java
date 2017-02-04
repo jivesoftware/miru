@@ -23,8 +23,8 @@ import static com.jivesoftware.os.miru.stream.plugins.count.DistinctCountConstan
 import static com.jivesoftware.os.miru.stream.plugins.count.DistinctCountConstants.CUSTOM_QUERY_ENDPOINT;
 import static com.jivesoftware.os.miru.stream.plugins.count.DistinctCountConstants.INBOX_ALL_QUERY_ENDPOINT;
 
-@Path(COUNT_PREFIX)
 @Singleton
+@Path(COUNT_PREFIX)
 public class DistinctCountEndpoints {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();

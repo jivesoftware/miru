@@ -23,8 +23,8 @@ import static com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsCons
 import static com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsConstants.FILTER_PREFIX;
 import static com.jivesoftware.os.miru.stream.plugins.filter.AggregateCountsConstants.INBOX_ALL_QUERY_ENDPOINT;
 
-@Path(FILTER_PREFIX)
 @Singleton
+@Path(FILTER_PREFIX)
 public class AggregateCountsEndpoints {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();

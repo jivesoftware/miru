@@ -22,8 +22,8 @@ import javax.ws.rs.core.Response;
 import static com.jivesoftware.os.miru.stumptown.plugins.StumptownConstants.CUSTOM_QUERY_ENDPOINT;
 import static com.jivesoftware.os.miru.stumptown.plugins.StumptownConstants.STUMPTOWN_PREFIX;
 
-@Path(STUMPTOWN_PREFIX)
 @Singleton
+@Path(STUMPTOWN_PREFIX)
 public class StumptownEndpoints {
 
     private static final MetricLogger log = MetricLoggerFactory.getLogger();

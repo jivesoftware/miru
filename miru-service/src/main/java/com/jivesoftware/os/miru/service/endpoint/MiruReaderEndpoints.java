@@ -17,6 +17,7 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.shared.ResponseHelper;
 import java.util.List;
+import javax.inject.Singleton;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -33,6 +34,7 @@ import static com.jivesoftware.os.miru.api.MiruReader.TIMESTAMPS_ENDPOINT;
 import static com.jivesoftware.os.miru.api.MiruReader.WARM_ALL_ENDPOINT;
 import static com.jivesoftware.os.miru.api.MiruReader.WARM_ENDPOINT;
 
+@Singleton
 @Path(QUERY_SERVICE_ENDPOINT_PREFIX)
 public class MiruReaderEndpoints {
 
