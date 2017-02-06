@@ -255,7 +255,7 @@ public class FullTextGatherer implements IndexOpenCallback, IndexCommitCallback,
 
         String[] gatherFieldNames = fullTextTermProvider.getFieldNames();
 
-        Map<String, MiruValue[][]> termIds = Maps.newHashMap();
+        Map<String, MiruValue[][]> fieldValues = Maps.newHashMap();
         for (int i = 0; i < gatherFieldNames.length; i++) {
             String fieldName = gatherFieldNames[i];
             int fieldId = schema.getFieldId(fieldName);
@@ -271,10 +271,10 @@ public class FullTextGatherer implements IndexOpenCallback, IndexCommitCallback,
                     values[j][k] = new MiruValue(termComposer.decompose(schema, fieldDefinition, stackBuffer, got[j][k]));
                 }
             }
-            termIds.put(fieldName, values);
+            fieldValues.put(fieldName, values);
         }
 
-        boolean result = fullTextTermProvider.gatherText(coord, indexes, termIds, (fieldName, value, ids) -> {
+        boolean result = fullTextTermProvider.gatherText(coord, indexes, fieldValues, (fieldName, value, ids) -> {
             int fieldId = schema.getFieldId(fieldName);
             if (fieldId < 0) {
                 throw new RuntimeException("Unknown field: " + fieldName);
