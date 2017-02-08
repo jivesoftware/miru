@@ -6,8 +6,9 @@ import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.sun.tools.doclint.Entity.times;
+
 /**
- *
  * @author jonathan.colt
  */
 public class MiruSolutionLog {
@@ -16,6 +17,7 @@ public class MiruSolutionLog {
 
     private final MiruSolutionLogLevel level;
     private final List<String> log = new ArrayList<>();
+    private volatile long lastLoggedTimestampMillis = -1;
 
     public MiruSolutionLog(MiruSolutionLogLevel level) {
         this.level = level;
@@ -31,7 +33,10 @@ public class MiruSolutionLog {
 
     public void log(MiruSolutionLogLevel atLevel, String message) {
         if (isLogLevelEnabled(atLevel)) {
-            log.add(System.currentTimeMillis() + " " + message);
+            long time = System.currentTimeMillis();
+            long delta = lastLoggedTimestampMillis == -1 ? 0L : time - lastLoggedTimestampMillis;
+            lastLoggedTimestampMillis = time;
+            log.add(time + " (" + delta + ") " + message);
             METRIC_LOGGER.debug(message);
         } else {
             METRIC_LOGGER.trace(message);
@@ -40,7 +45,10 @@ public class MiruSolutionLog {
 
     public void log(MiruSolutionLogLevel atLevel, String message, Object... args) {
         if (isLogLevelEnabled(atLevel)) {
-            log.add(System.currentTimeMillis() + " " + MessageFormatter.format(message, args));
+            long time = System.currentTimeMillis();
+            long delta = lastLoggedTimestampMillis == -1 ? 0L : time - lastLoggedTimestampMillis;
+            lastLoggedTimestampMillis = time;
+            log.add(time + " (" + delta + ") " + MessageFormatter.format(message, args));
             METRIC_LOGGER.debug(message, args);
         } else {
             METRIC_LOGGER.trace(message, args);
