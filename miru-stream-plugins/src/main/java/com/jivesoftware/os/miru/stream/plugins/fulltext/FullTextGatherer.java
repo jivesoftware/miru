@@ -232,17 +232,23 @@ public class FullTextGatherer implements IndexOpenCallback, IndexCommitCallback,
                 indexes = batch;
             }
 
-            gatherBatch(coord,
+            boolean result = gatherBatch(coord,
                 requestContext,
                 fullTextTermProvider,
                 indexes,
                 stackBuffer);
-            requestContext.getSipIndex().setCustom(KEY, toId, MARSHALLER);
-            LOG.info("Gathered {} full text items for coord:{} to:{}", count, coord, toId);
+
+            if (result) {
+                requestContext.getSipIndex().setCustom(KEY, toId, MARSHALLER);
+                handle.acquireChitsAndMerge("fullTextGatherer", count);
+                LOG.info("Gathered {} full text items for coord:{} to:{}", count, coord, toId);
+            } else {
+                throw new RuntimeException("Term provider returned a failure result");
+            }
         }
     }
 
-    private <BM extends IBM, IBM> void gatherBatch(MiruPartitionCoord coord,
+    private <BM extends IBM, IBM> boolean gatherBatch(MiruPartitionCoord coord,
         MiruRequestContext<BM, IBM, ?> requestContext,
         FullTextTermProvider fullTextTermProvider,
         int[] indexes,
@@ -286,9 +292,7 @@ public class FullTextGatherer implements IndexOpenCallback, IndexCommitCallback,
             return true;
         });
 
-        if (!result) {
-            throw new RuntimeException("Term provider returned a failure result");
-        }
+        return result;
     }
 
     private static class SchemaNotReadyException extends Exception {
