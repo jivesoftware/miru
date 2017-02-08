@@ -90,6 +90,10 @@ public class MiruRemoteQueryablePartitionFactory {
                     public void submit(ExecutorService executorService, MiruRequestHandle.AsyncQuestion<BM, IBM> asyncQuestion) {
                         throw new UnsupportedOperationException();
                     }
+
+                    @Override
+                    public void acquireChitsAndMerge(String name, long batchSize) {
+                    }
                 };
             }
         };

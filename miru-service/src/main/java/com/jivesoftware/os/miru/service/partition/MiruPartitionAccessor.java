@@ -316,13 +316,13 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         return (context.isPresent() && context.get().sipIndex.setSip(sip, stackBuffer));
     }
 
-    void merge(MiruContext<BM, IBM, S> context, MiruMergeChits chits, TrackError trackError) throws Exception {
+    void merge(String name, MiruContext<BM, IBM, S> context, MiruMergeChits chits, TrackError trackError) throws Exception {
         long elapsed;
         synchronized (context.writeLock) {
             if (chits.taken(coord) == 0) {
-                LOG.info("Skipped merge because no chits have been acquired for {}", coord);
+                LOG.info("Skipped merge because no chits have been acquired for name:{} coord:{}", name, coord);
                 chits.refundAll(coord);
-                LOG.inc("merge>skip>count");
+                LOG.inc("merge>" + name + ">skip>count");
                 return;
             }
             long start = System.currentTimeMillis();
@@ -340,7 +340,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
             elapsed = System.currentTimeMillis() - start;
             chits.refundAll(coord);
         }
-        LOG.inc("merge>time>pow>" + FilerIO.chunkPower(elapsed, 0));
+        LOG.inc("merge>" + name + ">time>pow>" + FilerIO.chunkPower(elapsed, 0));
     }
 
     void refundChits(MiruMergeChits mergeChits) {
@@ -424,7 +424,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         }
 
         if (chits.take(coord, consumedCount)) {
-            merge(context, chits, trackError);
+            merge("index", context, chits, trackError);
         }
 
         return consumedCount;
@@ -625,7 +625,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         return activityCount;
     }
 
-    MiruRequestHandle<BM, IBM, S> getRequestHandle(TrackError trackError) {
+    MiruRequestHandle<BM, IBM, S> getRequestHandle(TrackError trackError, MiruMergeChits persistentMergeChits) {
         LOG.debug("Request handle requested for {}", coord);
 
         if (closed.get()) {
@@ -693,13 +693,22 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
             @Override
             public void submit(ExecutorService executorService, MiruRequestHandle.AsyncQuestion<BM, IBM> asyncQuestion) {
                 executorService.submit(() -> {
-                    try (MiruRequestHandle<BM, IBM, S> requestHandle = getRequestHandle(trackError)) {
+                    try (MiruRequestHandle<BM, IBM, S> requestHandle = getRequestHandle(trackError, persistentMergeChits)) {
                         asyncQuestion.ask(requestHandle);
                     } catch (Exception x) {
                         LOG.error("Failed handling async request.", x);
                     }
                 });
+            }
 
+            @Override
+            public void acquireChitsAndMerge(String name, long count) throws Exception {
+                if (persistentContext.isPresent()) {
+                    MiruContext<BM, IBM, S> context = persistentContext.get();
+                    if (persistentMergeChits.take(coord, count)) {
+                        merge(name, context, persistentMergeChits, trackError);
+                    }
+                }
             }
         };
     }
@@ -753,11 +762,12 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
             }
 
             @Override
-            public void merge(ExecutorService mergeExecutor,
+            public void merge(String name,
+                ExecutorService mergeExecutor,
                 MiruContext<BM, IBM, S> context,
                 MiruMergeChits chits,
                 TrackError trackError) throws Exception {
-                MiruPartitionAccessor.this.merge(context, chits, trackError);
+                MiruPartitionAccessor.this.merge(name, context, chits, trackError);
             }
 
             @Override

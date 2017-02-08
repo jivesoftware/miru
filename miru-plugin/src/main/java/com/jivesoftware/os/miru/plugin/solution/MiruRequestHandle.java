@@ -26,6 +26,8 @@ public interface MiruRequestHandle<BM extends IBM, IBM, S extends MiruSipCursor<
 
     void submit(ExecutorService executorService, AsyncQuestion<BM, IBM> asyncQuestion);
 
+    void acquireChitsAndMerge(String name, long batchSize) throws Exception;
+
     interface AsyncQuestion<BM extends IBM, IBM> {
 
         void ask(MiruRequestHandle<BM, IBM, ?> handle) throws Exception;

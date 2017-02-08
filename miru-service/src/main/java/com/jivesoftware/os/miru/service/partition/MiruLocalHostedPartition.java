@@ -382,7 +382,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
         if (!accessor.getSipEndOfWAL()) {
             throw new MiruPartitionUnavailableException("Partition needs to catch up");
         }
-        return accessor.getRequestHandle(trackError);
+        return accessor.getRequestHandle(trackError, persistentMergeChits);
     }
 
     @Override
@@ -401,7 +401,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
             }
         }
 
-        return accessor.getRequestHandle(trackError);
+        return accessor.getRequestHandle(trackError, persistentMergeChits);
     }
 
     @Override
@@ -423,7 +423,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
             MiruPartitionAccessor<BM, IBM, C, S> existing = accessorRef.get();
             Optional<MiruContext<BM, IBM, S>> persistentContext = existing.persistentContext;
             if (persistentContext.isPresent()) {
-                existing.merge(persistentContext.get(), persistentMergeChits, trackError);
+                existing.merge("close", persistentContext.get(), persistentMergeChits, trackError);
             }
             synchronized (factoryLock) {
                 MiruPartitionAccessor<BM, IBM, C, S> closed = MiruPartitionAccessor.initialize(miruStats,
@@ -624,7 +624,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                     MiruContext<BM, IBM, S> toContext;
                     MiruContext<BM, IBM, S> fromContext = accessor.transientContext.get();
                     synchronized (fromContext.writeLock) {
-                        handle.merge(transientMergeExecutor, fromContext, transientMergeChits, trackError);
+                        handle.merge("transition", transientMergeExecutor, fromContext, transientMergeChits, trackError);
                         handle.closeTransient(contextFactory);
                         toContext = contextFactory.copy(bitmaps, fromContext.getSchema(), coord, fromContext, MiruBackingStorage.disk, stackBuffer);
                     }
@@ -758,7 +758,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                 } else if (accessor.persistentContext.isPresent()) {
                     int deliveryId = -1;
                     int lastId = -1;
-                    try (MiruRequestHandle<BM, IBM, S> handle = accessor.getRequestHandle(trackError)) {
+                    try (MiruRequestHandle<BM, IBM, S> handle = accessor.getRequestHandle(trackError, persistentMergeChits)) {
                         StackBuffer stackBuffer = new StackBuffer();
                         deliveryId = handle.getRequestContext().getSipIndex().getRealtimeDeliveryId(stackBuffer);
                         lastId = handle.getRequestContext().getActivityIndex().lastId(stackBuffer);
@@ -824,7 +824,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                                             MiruPartitionAccessor<BM, IBM, C, S> online = accessor.copyToState(MiruPartitionState.online);
                                             accessor = updatePartition(accessor, online);
                                             if (accessor != null) {
-                                                accessor.merge(got, transientMergeChits, trackError);
+                                                accessor.merge("rebuild", got, transientMergeChits, trackError);
                                                 trackError.reset();
                                             }
                                         } else {
@@ -1069,7 +1069,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                                 LOG.info("Forcing merge after sip with no open writers for coord:{} sippedEndOfWAL:{} sippedEndOfStream:{}",
                                     coord, sipResult.sippedEndOfWAL, sipResult.sippedEndOfStream);
                                 MiruContext<BM, IBM, S> persistentContext = accessor.persistentContext.get();
-                                accessor.merge(persistentContext, persistentMergeChits, trackError);
+                                accessor.merge("endOfStream", persistentContext, persistentMergeChits, trackError);
 
                                 boolean compact = false;
                                 synchronized (factoryLock) {
@@ -1294,7 +1294,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
             return;
         }
         int count = 0;
-        try (MiruRequestHandle<BM, IBM, S> handle = accessor.getRequestHandle(trackError)) {
+        try (MiruRequestHandle<BM, IBM, S> handle = accessor.getRequestHandle(trackError, persistentMergeChits)) {
             MiruSipIndex<S> sipIndex = handle.getRequestContext().getSipIndex();
             MiruActivityIndex activityIndex = handle.getRequestContext().getActivityIndex();
             int deliveryId = sipIndex.getRealtimeDeliveryId(stackBuffer);

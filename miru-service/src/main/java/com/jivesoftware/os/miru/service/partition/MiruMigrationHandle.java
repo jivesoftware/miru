@@ -28,7 +28,7 @@ public interface MiruMigrationHandle<BM extends IBM, IBM, C extends MiruCursor<C
 
     void releaseRebuildTokens(MiruRebuildDirector rebuildDirector) throws Exception;
 
-    void merge(ExecutorService mergeExecutor, MiruContext<BM, IBM, S> context, MiruMergeChits chits, TrackError trackError) throws Exception;
+    void merge(String name, ExecutorService mergeExecutor, MiruContext<BM, IBM, S> context, MiruMergeChits chits, TrackError trackError) throws Exception;
 
     MiruPartitionAccessor<BM, IBM, C, S> migrated(Optional<MiruContext<BM, IBM, S>> newPersistentContext,
         Optional<MiruContext<BM, IBM, S>> newTransientContext,
