@@ -755,6 +755,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
                         futures.addAll(compact);
                     }
                 }
+                cacheProvider.compact(true, 0, 0, false);
                 if (waitForCompletion) {
                     for (Future<?> future : futures) {
                         future.get();

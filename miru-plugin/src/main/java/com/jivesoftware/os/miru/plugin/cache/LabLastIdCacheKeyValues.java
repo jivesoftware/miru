@@ -130,6 +130,12 @@ public class LabLastIdCacheKeyValues implements LastIdCacheKeyValues {
         }
     }
 
+    public void compact(boolean fsync, int minDebt, int maxDebt, boolean waitIfTooFarBehind) throws Exception {
+        for (ValueIndex<byte[]> index : indexes) {
+            index.compact(fsync, minDebt, maxDebt, waitIfTooFarBehind);
+        }
+    }
+
     private int stripe(byte[] cacheId) {
         return Math.abs(compute(cacheId, 0, cacheId.length) % indexes.length);
     }

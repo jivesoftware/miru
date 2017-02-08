@@ -85,7 +85,7 @@ public class MiruFieldDefinition {
         }
 
         public boolean isAdditiveTo(Type oldType) {
-            if (this == Type.nonIndexedNonStored) {
+            if (this == nonIndexedNonStored) {
                 return true;
             }
 
@@ -99,6 +99,10 @@ public class MiruFieldDefinition {
 
             if (this == singleTermNonStored) {
                 return (oldType == singleTerm || oldType == singleTermIndexValueBits);
+            }
+
+            if (this == multiTermNonStored) {
+                return (oldType == multiTerm);
             }
 
             return false;

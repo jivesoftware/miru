@@ -138,6 +138,12 @@ public class LabTimestampedCacheKeyValues implements TimestampedCacheKeyValues {
         }
     }
 
+    public void compact(boolean fsync, int minDebt, int maxDebt, boolean waitIfTooFarBehind) throws Exception {
+        for (ValueIndex<byte[]> index : indexes) {
+            index.compact(fsync, minDebt, maxDebt, waitIfTooFarBehind);
+        }
+    }
+
     @Override
     public Object lock(byte[] cacheId) {
         return stripedLocks[Math.abs(compute(cacheId, 0, cacheId.length) % stripedLocks.length)];
