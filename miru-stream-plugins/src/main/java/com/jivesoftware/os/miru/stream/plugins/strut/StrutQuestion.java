@@ -103,6 +103,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         MiruTermComposer termComposer = context.getTermComposer();
 
         if (!MiruFilter.NO_FILTER.equals(request.query.constraintFilter)) {
+            long start = System.currentTimeMillis();
             BM constrained = aggregateUtil.filter("strutGather",
                 bitmaps,
                 context,
@@ -114,6 +115,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 -1,
                 stackBuffer);
             ands.add(constrained);
+            solutionLog.log(MiruSolutionLogLevel.INFO, "Constrained in {} ms", System.currentTimeMillis() - start);
         }
 
         BitmapAndLastId<BM> container = new BitmapAndLastId<>();
@@ -122,6 +124,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         if (request.query.unreadStreamId != null
             && !MiruStreamId.NULL.equals(request.query.unreadStreamId)) {
             if (request.query.suppressUnreadFilter != null && handle.canBackfill()) {
+                long start = System.currentTimeMillis();
                 backfillerizer.backfillUnread(bitmaps,
                     context,
                     solutionLog,
@@ -129,6 +132,8 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                     handle.getCoord().partitionId,
                     request.query.unreadStreamId,
                     request.query.suppressUnreadFilter);
+                solutionLog.log(MiruSolutionLogLevel.INFO, "Backfill unread for {} took {} ms",
+                    request.query.unreadStreamId, System.currentTimeMillis() - start);
             }
 
             context.getUnreadTrackingIndex().getUnread(request.query.unreadStreamId).getIndex(container, stackBuffer);

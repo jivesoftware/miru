@@ -21,6 +21,10 @@ public class MiruSolutionLog {
         this.level = level;
     }
 
+    public MiruSolutionLogLevel getLevel() {
+        return level;
+    }
+
     public boolean isLogLevelEnabled(MiruSolutionLogLevel checkLevel) {
         return level.ordinal() <= checkLevel.ordinal();
     }
@@ -51,4 +55,7 @@ public class MiruSolutionLog {
         log.clear();
     }
 
+    public void append(MiruSolutionLog append) {
+        log.addAll(append.asList());
+    }
 }
