@@ -22,6 +22,6 @@ public class StrutAnswerEvaluator implements MiruAnswerEvaluator<StrutAnswer> {
 
     @Override
     public boolean useParallelSolver() {
-        return false;
+        return true;
     }
 }
