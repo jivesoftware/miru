@@ -31,7 +31,7 @@ public class MiruSolutionLog {
 
     public void log(MiruSolutionLogLevel atLevel, String message) {
         if (isLogLevelEnabled(atLevel)) {
-            log.add(message);
+            log.add(System.currentTimeMillis() + " " + message);
             METRIC_LOGGER.debug(message);
         } else {
             METRIC_LOGGER.trace(message);
@@ -40,7 +40,7 @@ public class MiruSolutionLog {
 
     public void log(MiruSolutionLogLevel atLevel, String message, Object... args) {
         if (isLogLevelEnabled(atLevel)) {
-            log.add(MessageFormatter.format(message, args));
+            log.add(System.currentTimeMillis() + " " + MessageFormatter.format(message, args));
             METRIC_LOGGER.debug(message, args);
         } else {
             METRIC_LOGGER.trace(message, args);

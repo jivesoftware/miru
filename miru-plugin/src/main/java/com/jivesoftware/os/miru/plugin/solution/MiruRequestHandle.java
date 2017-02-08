@@ -28,6 +28,8 @@ public interface MiruRequestHandle<BM extends IBM, IBM, S extends MiruSipCursor<
 
     void acquireChitsAndMerge(String name, long batchSize) throws Exception;
 
+    void compact() throws Exception;
+
     interface AsyncQuestion<BM extends IBM, IBM> {
 
         void ask(MiruRequestHandle<BM, IBM, ?> handle) throws Exception;

@@ -246,6 +246,10 @@ public class FullTextGatherer implements IndexOpenCallback, IndexCommitCallback,
                 throw new RuntimeException("Term provider returned a failure result");
             }
         }
+
+        if (handle.getRequestContext().isClosed()) {
+            handle.compact();
+        }
     }
 
     private <BM extends IBM, IBM> boolean gatherBatch(MiruPartitionCoord coord,

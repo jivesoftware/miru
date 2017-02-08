@@ -625,7 +625,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         return activityCount;
     }
 
-    MiruRequestHandle<BM, IBM, S> getRequestHandle(TrackError trackError, MiruMergeChits persistentMergeChits) {
+    MiruRequestHandle<BM, IBM, S> getRequestHandle(TrackError trackError, MiruMergeChits persistentMergeChits, ExecutorService persistentMergeExecutor) {
         LOG.debug("Request handle requested for {}", coord);
 
         if (closed.get()) {
@@ -693,7 +693,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
             @Override
             public void submit(ExecutorService executorService, MiruRequestHandle.AsyncQuestion<BM, IBM> asyncQuestion) {
                 executorService.submit(() -> {
-                    try (MiruRequestHandle<BM, IBM, S> requestHandle = getRequestHandle(trackError, persistentMergeChits)) {
+                    try (MiruRequestHandle<BM, IBM, S> requestHandle = getRequestHandle(trackError, persistentMergeChits, persistentMergeExecutor)) {
                         asyncQuestion.ask(requestHandle);
                     } catch (Exception x) {
                         LOG.error("Failed handling async request.", x);
@@ -708,6 +708,14 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
                     if (persistentMergeChits.take(coord, count)) {
                         merge(name, context, persistentMergeChits, trackError);
                     }
+                }
+            }
+
+            @Override
+            public void compact() throws Exception {
+                if (persistentContext.isPresent()) {
+                    MiruContext<BM, IBM, S> context = persistentContext.get();
+                    context.compactable.compact(persistentMergeExecutor, false);
                 }
             }
         };

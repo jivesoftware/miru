@@ -94,6 +94,10 @@ public class MiruRemoteQueryablePartitionFactory {
                     @Override
                     public void acquireChitsAndMerge(String name, long batchSize) {
                     }
+
+                    @Override
+                    public void compact() {
+                    }
                 };
             }
         };

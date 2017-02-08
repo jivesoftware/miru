@@ -382,7 +382,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
         if (!accessor.getSipEndOfWAL()) {
             throw new MiruPartitionUnavailableException("Partition needs to catch up");
         }
-        return accessor.getRequestHandle(trackError, persistentMergeChits);
+        return accessor.getRequestHandle(trackError, persistentMergeChits, persistentMergeExecutor);
     }
 
     @Override
@@ -401,7 +401,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
             }
         }
 
-        return accessor.getRequestHandle(trackError, persistentMergeChits);
+        return accessor.getRequestHandle(trackError, persistentMergeChits, persistentMergeExecutor);
     }
 
     @Override
@@ -758,7 +758,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                 } else if (accessor.persistentContext.isPresent()) {
                     int deliveryId = -1;
                     int lastId = -1;
-                    try (MiruRequestHandle<BM, IBM, S> handle = accessor.getRequestHandle(trackError, persistentMergeChits)) {
+                    try (MiruRequestHandle<BM, IBM, S> handle = accessor.getRequestHandle(trackError, persistentMergeChits, persistentMergeExecutor)) {
                         StackBuffer stackBuffer = new StackBuffer();
                         deliveryId = handle.getRequestContext().getSipIndex().getRealtimeDeliveryId(stackBuffer);
                         lastId = handle.getRequestContext().getActivityIndex().lastId(stackBuffer);
@@ -1294,7 +1294,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
             return;
         }
         int count = 0;
-        try (MiruRequestHandle<BM, IBM, S> handle = accessor.getRequestHandle(trackError, persistentMergeChits)) {
+        try (MiruRequestHandle<BM, IBM, S> handle = accessor.getRequestHandle(trackError, persistentMergeChits, persistentMergeExecutor)) {
             MiruSipIndex<S> sipIndex = handle.getRequestContext().getSipIndex();
             MiruActivityIndex activityIndex = handle.getRequestContext().getActivityIndex();
             int deliveryId = sipIndex.getRealtimeDeliveryId(stackBuffer);
