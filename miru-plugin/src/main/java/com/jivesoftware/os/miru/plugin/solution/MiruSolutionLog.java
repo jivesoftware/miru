@@ -6,8 +6,6 @@ import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.sun.tools.doclint.Entity.times;
-
 /**
  * @author jonathan.colt
  */
