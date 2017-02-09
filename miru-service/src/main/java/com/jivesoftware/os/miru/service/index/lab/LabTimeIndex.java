@@ -16,6 +16,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -311,4 +312,13 @@ public class LabTimeIndex implements MiruTimeIndex {
     public void close() {
     }
 
+    @Override
+    public String toString() {
+        return "LabTimeIndex{" +
+            "id=" + id +
+            ", smallestTimestamp=" + smallestTimestamp +
+            ", largestTimestamp=" + largestTimestamp +
+            ", timestampsLength=" + timestampsLength +
+            '}';
+    }
 }
