@@ -1085,8 +1085,6 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                                     persistentContext.compactable.compact(persistentMergeExecutor, false);
                                 }
                             }
-                        } else {
-                            accessor.refundChits(persistentMergeChits);
                         }
                     } catch (Throwable t) {
                         LOG.error("Sip encountered a problem for {}", new Object[] { coord }, t);
