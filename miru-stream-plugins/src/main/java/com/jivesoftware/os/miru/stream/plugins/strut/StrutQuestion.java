@@ -182,6 +182,9 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         //TODO config batch size
         aggregateUtil.gather("strut", bitmaps, context, eligible, pivotFieldId, 100, true, true, solutionLog, (lastId, termId, count) -> {
             lastIdAndTermIds.add(new LastIdAndTermId(lastId, termId, count));
+            if (count <= 0) {
+                LOG.inc("strut>gather>empty");
+            }
             return maxTermIdsPerRequest <= 0 || lastIdAndTermIds.size() < maxTermIdsPerRequest;
         }, stackBuffer);
 
