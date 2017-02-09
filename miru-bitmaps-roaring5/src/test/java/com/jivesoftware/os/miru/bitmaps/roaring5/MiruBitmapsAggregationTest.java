@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.bitmaps.roaring5;
 
 import com.google.common.collect.Lists;
+import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
 import gnu.trove.list.array.TIntArrayList;
 import java.util.List;
@@ -155,4 +156,21 @@ public class MiruBitmapsAggregationTest {
         assertEquals(cardinalityAndLastSetBit.lastSetBit, (numOriginal - 1) * 137);
     }
 
+    @Test
+    public void testMultiAndNotWithCounts() throws Exception {
+        MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
+        RoaringBitmap original = RoaringBitmap.bitmapOf(0, 1, 2, 3, 4, 5, 6, 7);
+        long[] counts = new long[4];
+        bitmaps.inPlaceAndNotMultiTx(original, (tx, stackBuffer) -> {
+            tx.tx(0, 1, RoaringBitmap.bitmapOf(0, 1), null, -1, stackBuffer);
+            tx.tx(1, 3, RoaringBitmap.bitmapOf(2, 3), null, -1, stackBuffer);
+            tx.tx(2, 5, RoaringBitmap.bitmapOf(4, 5), null, -1, stackBuffer);
+            tx.tx(3, 7, RoaringBitmap.bitmapOf(6, 7), null, -1, stackBuffer);
+        }, counts, new StackBuffer());
+
+        assertEquals(original.getCardinality(), 0);
+        for (int i = 0; i < counts.length; i++) {
+            assertEquals(counts[i], 2);
+        }
+    }
 }
