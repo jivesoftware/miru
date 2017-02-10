@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.reco.plugins.distincts;
 
+import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.filer.io.api.KeyRange;
@@ -128,19 +129,30 @@ public class Distincts {
 
                 start = System.currentTimeMillis();
                 //TODO expose batch size to query?
-                aggregateUtil.gather(name, bitmaps, requestContext, result, fieldId, gatherBatchSize, false, false, solutionLog, (lastId1, termId, count) -> {
-                    if (prefixesAsBytes.length > 0) {
-                        byte[] termBytes = termId.getBytes();
-                        for (byte[] prefixAsBytes : prefixesAsBytes) {
-                            if (arrayStartsWith(termBytes, prefixAsBytes)) {
-                                return termIdStream.stream(termId);
+                aggregateUtil.gather(name,
+                    bitmaps,
+                    requestContext,
+                    result,
+                    fieldId,
+                    gatherBatchSize,
+                    false,
+                    false,
+                    Optional.absent(),
+                    solutionLog,
+                    (lastId1, termId, count) -> {
+                        if (prefixesAsBytes.length > 0) {
+                            byte[] termBytes = termId.getBytes();
+                            for (byte[] prefixAsBytes : prefixesAsBytes) {
+                                if (arrayStartsWith(termBytes, prefixAsBytes)) {
+                                    return termIdStream.stream(termId);
+                                }
                             }
+                            return true;
+                        } else {
+                            return termIdStream.stream(termId);
                         }
-                        return true;
-                    } else {
-                        return termIdStream.stream(termId);
-                    }
-                }, stackBuffer);
+                    },
+                    stackBuffer);
                 solutionLog.log(MiruSolutionLogLevel.INFO, "distincts gatherDirect: gather {} ms.", System.currentTimeMillis() - start);
             }
         }

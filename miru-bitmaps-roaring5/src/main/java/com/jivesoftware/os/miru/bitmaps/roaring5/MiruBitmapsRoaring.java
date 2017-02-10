@@ -15,6 +15,7 @@
  */
 package com.jivesoftware.os.miru.bitmaps.roaring5;
 
+import com.google.common.base.Optional;
 import com.jivesoftware.os.filer.io.ByteBufferDataInput;
 import com.jivesoftware.os.filer.io.Filer;
 import com.jivesoftware.os.filer.io.FilerDataInput;
@@ -287,10 +288,11 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
     public RoaringBitmap andNotMultiTx(RoaringBitmap original,
         MiruMultiTxIndex<RoaringBitmap> multiTermTxIndex,
         long[] counts,
+        Optional<RoaringBitmap> counter,
         StackBuffer stackBuffer) throws Exception {
 
         RoaringBitmap container = copy(original);
-        inPlaceAndNotMultiTx(container, multiTermTxIndex, counts, stackBuffer);
+        inPlaceAndNotMultiTx(container, multiTermTxIndex, counts, counter, stackBuffer);
         return container;
     }
 
@@ -298,16 +300,24 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
     public void inPlaceAndNotMultiTx(RoaringBitmap original,
         MiruMultiTxIndex<RoaringBitmap> multiTermTxIndex,
         long[] counts,
+        Optional<RoaringBitmap> counter,
         StackBuffer stackBuffer) throws Exception {
-        long[] originalCardinality = counts != null ? new long[] { cardinality(original) } : null;
+        long[] originalCardinality = (counts == null) ? null : new long[] { cardinality(counter.or(original)) };
         multiTermTxIndex.txIndex((index, lastId, bitmap, filer, offset, stackBuffer1) -> {
             if (bitmap != null) {
                 original.andNot(bitmap);
+                if (counter.isPresent()) {
+                    counter.get().andNot(bitmap);
+                }
             } else if (filer != null) {
-                original.andNot(bitmapFromFiler(filer, offset, stackBuffer1));
+                RoaringBitmap bitmapFromFiler = bitmapFromFiler(filer, offset, stackBuffer1);
+                original.andNot(bitmapFromFiler);
+                if (counter.isPresent()) {
+                    counter.get().andNot(bitmapFromFiler);
+                }
             }
             if (counts != null) {
-                long nextCardinality = cardinality(original);
+                long nextCardinality = cardinality(counter.or(original));
                 counts[index] = originalCardinality[0] - nextCardinality;
                 originalCardinality[0] = nextCardinality;
             }

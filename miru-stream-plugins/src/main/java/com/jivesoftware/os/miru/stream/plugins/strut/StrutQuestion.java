@@ -179,14 +179,26 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
 
         long start = System.currentTimeMillis();
         List<LastIdAndTermId> lastIdAndTermIds = Lists.newArrayList();
+        Optional<BM> counter = request.query.countUnread ? unreadIndex.transform(input -> bitmaps.and(Arrays.asList(input, eligible))) : Optional.absent();
         //TODO config batch size
-        aggregateUtil.gather("strut", bitmaps, context, eligible, pivotFieldId, 100, true, true, solutionLog, (lastId, termId, count) -> {
-            lastIdAndTermIds.add(new LastIdAndTermId(lastId, termId, count));
-            if (count <= 0) {
-                LOG.inc("strut>gather>empty");
-            }
-            return maxTermIdsPerRequest <= 0 || lastIdAndTermIds.size() < maxTermIdsPerRequest;
-        }, stackBuffer);
+        aggregateUtil.gather("strut",
+            bitmaps,
+            context,
+            eligible,
+            pivotFieldId,
+            100,
+            true,
+            true,
+            counter,
+            solutionLog,
+            (lastId, termId, count) -> {
+                lastIdAndTermIds.add(new LastIdAndTermId(lastId, termId, count));
+                if (count <= 0) {
+                    LOG.inc("strut>gather>empty");
+                }
+                return maxTermIdsPerRequest <= 0 || lastIdAndTermIds.size() < maxTermIdsPerRequest;
+            },
+            stackBuffer);
 
         solutionLog.log(MiruSolutionLogLevel.INFO, "Strut accumulated {} terms in {} ms", lastIdAndTermIds.size(), System.currentTimeMillis() - start);
         start = System.currentTimeMillis();

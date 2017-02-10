@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.bitmaps.roaring5;
 
+import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
@@ -159,6 +160,7 @@ public class MiruBitmapsAggregationTest {
     @Test
     public void testMultiAndNotWithCounts() throws Exception {
         MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
+
         RoaringBitmap original = RoaringBitmap.bitmapOf(0, 1, 2, 3, 4, 5, 6, 7);
         long[] counts = new long[4];
         bitmaps.inPlaceAndNotMultiTx(original, (tx, stackBuffer) -> {
@@ -166,11 +168,27 @@ public class MiruBitmapsAggregationTest {
             tx.tx(1, 3, RoaringBitmap.bitmapOf(2, 3), null, -1, stackBuffer);
             tx.tx(2, 5, RoaringBitmap.bitmapOf(4, 5), null, -1, stackBuffer);
             tx.tx(3, 7, RoaringBitmap.bitmapOf(6, 7), null, -1, stackBuffer);
-        }, counts, new StackBuffer());
+        }, counts, Optional.absent(), new StackBuffer());
 
         assertEquals(original.getCardinality(), 0);
         for (int i = 0; i < counts.length; i++) {
             assertEquals(counts[i], 2);
+        }
+
+        original = RoaringBitmap.bitmapOf(0, 1, 2, 3, 4, 5, 6, 7);
+        RoaringBitmap counter = RoaringBitmap.bitmapOf(1, 3, 5, 7);
+        counts = new long[4];
+        bitmaps.inPlaceAndNotMultiTx(original, (tx, stackBuffer) -> {
+            tx.tx(0, 1, RoaringBitmap.bitmapOf(0, 1), null, -1, stackBuffer);
+            tx.tx(1, 3, RoaringBitmap.bitmapOf(2, 3), null, -1, stackBuffer);
+            tx.tx(2, 5, RoaringBitmap.bitmapOf(4, 5), null, -1, stackBuffer);
+            tx.tx(3, 7, RoaringBitmap.bitmapOf(6, 7), null, -1, stackBuffer);
+        }, counts, Optional.of(counter), new StackBuffer());
+
+        assertEquals(original.getCardinality(), 0);
+        assertEquals(counter.getCardinality(), 0);
+        for (int i = 0; i < counts.length; i++) {
+            assertEquals(counts[i], 1);
         }
     }
 }
