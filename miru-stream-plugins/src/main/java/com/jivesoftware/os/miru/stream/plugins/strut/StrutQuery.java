@@ -36,6 +36,7 @@ public class StrutQuery implements Serializable {
     public final MiruStreamId unreadStreamId;
     public final MiruFilter suppressUnreadFilter;
     public final boolean unreadOnly;
+    public final boolean countUnread;
     public final int batchSize;
 
     public StrutQuery(
@@ -54,6 +55,7 @@ public class StrutQuery implements Serializable {
         @JsonProperty("unreadStreamId") MiruStreamId unreadStreamId, // nullable
         @JsonProperty("suppressUnreadFilter") MiruFilter suppressUnreadFilter, // nullable
         @JsonProperty("unreadOnly") boolean unreadOnly,
+        @JsonProperty("countUnread") boolean countUnread,
         @JsonProperty("batchSize") int batchSize) {
 
         this.modelScalars = Preconditions.checkNotNull(modelScalars);
@@ -83,6 +85,7 @@ public class StrutQuery implements Serializable {
         this.unreadStreamId = unreadStreamId;
         this.suppressUnreadFilter = suppressUnreadFilter;
         this.unreadOnly = unreadOnly;
+        this.countUnread = countUnread;
         this.batchSize = batchSize;
     }
 
@@ -104,6 +107,7 @@ public class StrutQuery implements Serializable {
             ", unreadStreamId=" + unreadStreamId +
             ", suppressUnreadFilter=" + suppressUnreadFilter +
             ", unreadOnly=" + unreadOnly +
+            ", countUnread=" + countUnread +
             ", batchSize=" + batchSize +
             '}';
     }

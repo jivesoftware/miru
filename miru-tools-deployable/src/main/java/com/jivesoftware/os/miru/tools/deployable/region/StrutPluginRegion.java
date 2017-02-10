@@ -284,6 +284,7 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                             input.unreadStreamId.isEmpty() ? MiruStreamId.NULL : new MiruStreamId(input.unreadStreamId.getBytes(StandardCharsets.UTF_8)),
                             null, //TODO this prevents backfill
                             input.unreadOnly,
+                            false,
                             100), // TODO expose to UI??
                         MiruSolutionLogLevel.valueOf(input.logLevel)));
                     MiruResponse<StrutAnswer> strutResponse = readerClient.call("",

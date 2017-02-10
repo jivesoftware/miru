@@ -879,6 +879,7 @@ public class MiruAggregateUtil {
         int batchSize,
         boolean descending,
         boolean includeCounts,
+        Optional<BM> counter,
         MiruSolutionLog solutionLog,
         LastIdAndTermIdStream lastIdAndTermIdStream,
         StackBuffer stackBuffer) throws Exception {
@@ -891,6 +892,7 @@ public class MiruAggregateUtil {
             batchSize,
             descending,
             includeCounts,
+            counter,
             solutionLog,
             lastIdAndTermIdStream,
             stackBuffer);
@@ -933,6 +935,7 @@ public class MiruAggregateUtil {
         int batchSize,
         boolean descending,
         boolean includeCounts,
+        Optional<BM> counter,
         MiruSolutionLog solutionLog,
         LastIdAndTermIdStream lastIdAndTermIdStream,
         StackBuffer stackBuffer) throws Exception {
@@ -1001,9 +1004,9 @@ public class MiruAggregateUtil {
             System.arraycopy(termIds, 0, consumableTermIds, 0, termIds.length);
             multiTermTxIndex.setTermIds(consumableTermIds);
             if (bitmaps.supportsInPlace()) {
-                bitmaps.inPlaceAndNotMultiTx(answer, multiTermTxIndex, counts, stackBuffer);
+                bitmaps.inPlaceAndNotMultiTx(answer, multiTermTxIndex, counts, counter, stackBuffer);
             } else {
-                answer = bitmaps.andNotMultiTx(answer, multiTermTxIndex, counts, stackBuffer);
+                answer = bitmaps.andNotMultiTx(answer, multiTermTxIndex, counts, counter, stackBuffer);
             }
             if (bitmaps.supportsInPlace()) {
                 bitmaps.inPlaceAndNot(answer, bitmaps.createWithBits(actualIds));

@@ -129,10 +129,21 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
             BM eligible = bitmaps.and(gatherAnds);
 
             MinMaxPriorityQueue<TermIdAndCount> topNTermIds = MinMaxPriorityQueue.maximumSize(topNTermsPerNumerator).create();
-            aggregateUtil.gather("catwalk", bitmaps, context, eligible, pivotFieldId, 100, false, true, solutionLog, (lastId1, termId, count) -> {
-                topNTermIds.add(new TermIdAndCount(termId, count));
-                return true;
-            }, stackBuffer);
+            aggregateUtil.gather("catwalk",
+                bitmaps,
+                context,
+                eligible,
+                pivotFieldId,
+                100,
+                false,
+                true,
+                Optional.absent(),
+                solutionLog,
+                (lastId1, termId, count) -> {
+                    topNTermIds.add(new TermIdAndCount(termId, count));
+                    return true;
+                },
+                stackBuffer);
 
             numeratorTermSets[i] = Sets.newHashSet(Collections2.transform(topNTermIds, input -> input.termId));
             termIds.addAll(numeratorTermSets[i]);

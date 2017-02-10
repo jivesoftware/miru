@@ -106,11 +106,13 @@ public interface MiruBitmaps<BM extends IBM, IBM> {
     BM andNotMultiTx(BM original,
         MiruMultiTxIndex<IBM> multiTermTxIndex,
         long[] counts,
+        Optional<BM> countEligible,
         StackBuffer stackBuffer) throws Exception;
 
     void inPlaceAndNotMultiTx(BM original,
         MiruMultiTxIndex<IBM> multiTermTxIndex,
         long[] counts,
+        Optional<BM> countEligible,
         StackBuffer stackBuffer) throws Exception;
 
     void multiTx(MiruMultiTxIndex<IBM> multiTermTxIndex, IndexAlignedBitmapStream<BM> stream, StackBuffer stackBuffer) throws Exception;

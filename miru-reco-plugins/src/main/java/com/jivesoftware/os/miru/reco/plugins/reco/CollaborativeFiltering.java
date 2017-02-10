@@ -88,10 +88,21 @@ public class CollaborativeFiltering {
         // distinctParents: distinct parents <field1> that I've touched
         Set<MiruTermId> distinctParents = Sets.newHashSet();
 
-        aggregateUtil.gather(name, bitmaps, requestContext, myOkActivity, fieldId1, gatherBatchSize, false, false, solutionLog, (lastId, termId, count) -> {
-            distinctParents.add(termId);
-            return true;
-        }, stackBuffer);
+        aggregateUtil.gather(name,
+            bitmaps,
+            requestContext,
+            myOkActivity,
+            fieldId1,
+            gatherBatchSize,
+            false,
+            false,
+            Optional.absent(),
+            solutionLog,
+            (lastId, termId, count) -> {
+                distinctParents.add(termId);
+                return true;
+            },
+            stackBuffer);
 
         log.debug("allField1Activity: fieldId={}", fieldId1);
         FieldMultiTermTxIndex<BM, IBM> field1MultiTermTxIndex = new FieldMultiTermTxIndex<>(name, primaryFieldIndex, fieldId1, -1);
@@ -171,7 +182,16 @@ public class CollaborativeFiltering {
         for (int i = 0; i < contributorBitmaps.length; i++) {
             if (contributorBitmaps[i] != null) {
                 Set<MiruTermId> distinctContributorParents = Sets.newHashSet();
-                aggregateUtil.gather(name, bitmaps, requestContext, contributorBitmaps[i], fieldId3, gatherBatchSize, false, false, solutionLog,
+                aggregateUtil.gather(name,
+                    bitmaps,
+                    requestContext,
+                    contributorBitmaps[i],
+                    fieldId3,
+                    gatherBatchSize,
+                    false,
+                    false,
+                    Optional.absent(),
+                    solutionLog,
                     (lastId, termId, count) -> {
                         distinctContributorParents.add(termId);
                         return true;
