@@ -580,12 +580,8 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
 
     @Override
     public int lastSetBit(RoaringBitmap bitmap) {
-        MiruIntIterator iterator = intIterator(bitmap);
-        int last = -1;
-        while (iterator.hasNext()) {
-            last = iterator.next();
-        }
-        return last;
+        IntIterator iterator = bitmap.getReverseIntIterator();
+        return iterator.hasNext() ? iterator.next() : -1;
     }
 
     @Override
