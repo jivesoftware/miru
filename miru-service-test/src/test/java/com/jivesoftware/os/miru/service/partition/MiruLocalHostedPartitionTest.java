@@ -85,17 +85,12 @@ import com.jivesoftware.os.miru.service.stream.MiruRebuildDirector;
 import com.jivesoftware.os.miru.service.stream.allocator.InMemoryChunkAllocator;
 import com.jivesoftware.os.miru.service.stream.allocator.MiruChunkAllocator;
 import com.jivesoftware.os.miru.service.stream.allocator.OnDiskChunkAllocator;
-import com.jivesoftware.os.miru.wal.MiruWALDirector;
 import com.jivesoftware.os.miru.wal.RCVSWALDirector;
 import com.jivesoftware.os.miru.wal.RCVSWALInitializer;
-import com.jivesoftware.os.miru.wal.activity.MiruActivityWALReader;
-import com.jivesoftware.os.miru.wal.activity.MiruActivityWALWriter;
 import com.jivesoftware.os.miru.wal.activity.rcvs.RCVSActivityWALReader;
 import com.jivesoftware.os.miru.wal.activity.rcvs.RCVSActivityWALWriter;
 import com.jivesoftware.os.miru.wal.lookup.MiruWALLookup;
 import com.jivesoftware.os.miru.wal.lookup.RCVSWALLookup;
-import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALReader;
-import com.jivesoftware.os.miru.wal.readtracking.MiruReadTrackingWALWriter;
 import com.jivesoftware.os.miru.wal.readtracking.rcvs.RCVSReadTrackingWALReader;
 import com.jivesoftware.os.miru.wal.readtracking.rcvs.RCVSReadTrackingWALWriter;
 import com.jivesoftware.os.rcvs.inmemory.InMemoryRowColumnValueStoreInitializer;
@@ -285,7 +280,7 @@ public class MiruLocalHostedPartitionTest {
         TxCogs cogs = new TxCogs(256, 64, null, null, null);
         ObjectMapper mapper = new ObjectMapper();
 
-        LabTimeIdIndex[] timeIdIndexes = new LabTimeIdIndexInitializer().initialize(1, 1_000, 1024 * 1024, false, resourceLocator, diskContextAllocator);
+        LabTimeIdIndex[] timeIdIndexes = new LabTimeIdIndexInitializer().initialize(1, 1_000, 1024 * 1024, 1d, false, resourceLocator, diskContextAllocator);
 
         OrderIdProvider idProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(0));
         contextFactory = new MiruContextFactory<>(idProvider,
@@ -310,6 +305,7 @@ public class MiruLocalHostedPartitionTest {
             termInterner,
             mapper,
             1024 * 1024 * 10,
+            1d,
             true,
             true,
             false);

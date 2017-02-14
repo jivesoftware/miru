@@ -62,6 +62,7 @@ public class StrutModelScorer {
     private final AtomicLong pendingUpdates;
     private final int topNValuesPerFeature;
     private final long maxHeapPressureInBytes;
+    private final double hashIndexLoadFactor;
     private final boolean shareScores;
 
     private final LinkedHashMap<StrutQueueKey, Enqueued>[] queues;
@@ -76,6 +77,7 @@ public class StrutModelScorer {
         AtomicLong pendingUpdates,
         int topNValuesPerFeature,
         long maxHeapPressureInBytes,
+        double hashIndexLoadFactor,
         int queueStripeCount,
         boolean shareScores) {
         this.miruProvider = miruProvider;
@@ -85,6 +87,7 @@ public class StrutModelScorer {
         this.pendingUpdates = pendingUpdates;
         this.topNValuesPerFeature = topNValuesPerFeature;
         this.maxHeapPressureInBytes = maxHeapPressureInBytes;
+        this.hashIndexLoadFactor = hashIndexLoadFactor;
         this.shareScores = shareScores;
 
         this.queues = new LinkedHashMap[queueStripeCount];
@@ -365,12 +368,12 @@ public class StrutModelScorer {
     <BM extends IBM, IBM> LastIdCacheKeyValues getTermScoreCache(MiruRequestContext<BM, IBM, ? extends MiruSipCursor<?>> context,
         String catwalkId) {
         int payloadSize = -1; // TODO fix maybe? this is amazing
-        return context.getCacheProvider().getLastIdKeyValues("strut-scores-" + catwalkId, payloadSize, false, maxHeapPressureInBytes);
+        return context.getCacheProvider().getLastIdKeyValues("strut-scores-" + catwalkId, payloadSize, false, maxHeapPressureInBytes, hashIndexLoadFactor);
     }
 
     <BM extends IBM, IBM> TimestampedCacheKeyValues getTermFeatureCache(MiruRequestContext<BM, IBM, ? extends MiruSipCursor<?>> context, String catwalkId) {
         int payloadSize = 4; // this is amazing
-        return context.getCacheProvider().getTimestampedKeyValues("strut-features-" + catwalkId, payloadSize, false, maxHeapPressureInBytes);
+        return context.getCacheProvider().getTimestampedKeyValues("strut-features-" + catwalkId, payloadSize, false, maxHeapPressureInBytes, 0d);
     }
 
     <BM extends IBM, IBM> List<Scored> rescore(

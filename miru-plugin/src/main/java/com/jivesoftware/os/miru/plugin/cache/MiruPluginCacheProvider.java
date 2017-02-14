@@ -8,7 +8,7 @@ import java.nio.ByteBuffer;
  */
 public interface MiruPluginCacheProvider {
 
-    CacheKeyValues getKeyValues(String name, int payloadSize, boolean variablePayloadSize, long maxHeapPressureInBytes);
+    CacheKeyValues getKeyValues(String name, int payloadSize, boolean variablePayloadSize, long maxHeapPressureInBytes, double hashIndexLoadFactor);
 
     interface CacheKeyValues {
 
@@ -34,7 +34,7 @@ public interface MiruPluginCacheProvider {
         boolean stream(ByteBuffer key, ByteBuffer value) throws Exception;
     }
 
-    LastIdCacheKeyValues getLastIdKeyValues(String name, int payloadSize, boolean variablePayloadSize, long maxHeapPressureInBytes);
+    LastIdCacheKeyValues getLastIdKeyValues(String name, int payloadSize, boolean variablePayloadSize, long maxHeapPressureInBytes, double hashIndexLoadFactor);
 
     interface LastIdCacheKeyValues {
 
@@ -67,7 +67,11 @@ public interface MiruPluginCacheProvider {
         boolean consume(AppendLastIdKeyValueStream stream) throws Exception;
     }
 
-    TimestampedCacheKeyValues getTimestampedKeyValues(String name, int payloadSize, boolean variablePayloadSize, long maxHeapPressureInBytes);
+    TimestampedCacheKeyValues getTimestampedKeyValues(String name,
+        int payloadSize,
+        boolean variablePayloadSize,
+        long maxHeapPressureInBytes,
+        double hashIndexLoadFactor);
 
     interface TimestampedCacheKeyValues {
 
