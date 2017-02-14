@@ -4,6 +4,7 @@ import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import org.merlin.config.Config;
 import org.merlin.config.defaults.BooleanDefault;
 import org.merlin.config.defaults.ClassDefault;
+import org.merlin.config.defaults.DoubleDefault;
 import org.merlin.config.defaults.IntDefault;
 import org.merlin.config.defaults.LongDefault;
 import org.merlin.config.defaults.StringDefault;
@@ -235,6 +236,9 @@ public interface MiruServiceConfig extends Config {
     @BooleanDefault(false)
     boolean getLabUseOffHeap();
 
+    @DoubleDefault(1d)
+    double getLabHashIndexLoadFactor();
+
     @IntDefault(4)
     int getTimeIdKeepNIndexes();
 
@@ -252,6 +256,9 @@ public interface MiruServiceConfig extends Config {
 
     @IntDefault(3)
     int getTimeIdLabHeapPressureStripes();
+
+    @DoubleDefault(1d)
+    double getTimeIdLabHashIndexLoadFactor();
 
     @BooleanDefault(true)
     boolean getTimeIdFsyncOnAppend();

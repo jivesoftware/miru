@@ -26,6 +26,7 @@ public class LabTimeIdIndex implements TimeIdIndex {
     private final ValueIndex<byte[]>[] indexes;
     private final int maxEntriesPerIndex;
     private final long maxHeapPressureInBytes;
+    private final double hashIndexLoadFactor;
     private final boolean fsyncOnAppend;
 
     private final ConcurrentMap<Long, Cursor> cursors = Maps.newConcurrentMap();
@@ -35,11 +36,13 @@ public class LabTimeIdIndex implements TimeIdIndex {
         int keepNIndexes,
         int maxEntriesPerIndex,
         long maxHeapPressureInBytes,
+        double hashIndexLoadFactor,
         boolean fsyncOnAppend) throws Exception {
         this.environment = environment;
         this.indexes = new ValueIndex[keepNIndexes];
         this.maxEntriesPerIndex = maxEntriesPerIndex;
         this.maxHeapPressureInBytes = maxHeapPressureInBytes;
+        this.hashIndexLoadFactor = hashIndexLoadFactor;
         this.fsyncOnAppend = fsyncOnAppend;
 
         List<String> names = environment.list();
@@ -60,7 +63,7 @@ public class LabTimeIdIndex implements TimeIdIndex {
 
     private ValueIndex<byte[]> open(String name) throws Exception {
         return environment.open(new ValueIndexConfig(name, 4096, maxHeapPressureInBytes, 10 * 1024 * 1024, -1L, -1L,
-            NoOpFormatTransformerProvider.NAME, LABRawhide.NAME, MemoryRawEntryFormat.NAME, 20));
+            NoOpFormatTransformerProvider.NAME, LABRawhide.NAME, MemoryRawEntryFormat.NAME, 20, hashIndexLoadFactor));
     }
 
     @Override

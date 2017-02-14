@@ -101,6 +101,7 @@ public class StrutPlugin implements MiruPlugin<StrutEndpoints, StrutInjectable> 
             pendingUpdates,
             config.getStrutTopNValuesPerFeature(),
             config.getMaxHeapPressureInBytes(),
+            config.getScoresHashIndexLoadFactor(),
             config.getQueueStripeCount(),
             config.getShareScores());
         modelScorer.start(asyncExecutorService, config.getQueueStripeCount(), config.getQueueConsumeIntervalMillis());

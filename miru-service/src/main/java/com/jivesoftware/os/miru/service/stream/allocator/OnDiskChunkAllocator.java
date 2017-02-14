@@ -9,7 +9,7 @@ import com.jivesoftware.os.jive.utils.collections.bah.LRUConcurrentBAHLinkedHash
 import com.jivesoftware.os.lab.LABEnvironment;
 import com.jivesoftware.os.lab.LABStats;
 import com.jivesoftware.os.lab.LabHeapPressure;
-import com.jivesoftware.os.lab.LalWALConfig;
+import com.jivesoftware.os.lab.LabWALConfig;
 import com.jivesoftware.os.lab.api.rawhide.FixedWidthRawhide;
 import com.jivesoftware.os.lab.guts.Leaps;
 import com.jivesoftware.os.lab.guts.StripingBolBufferLocks;
@@ -245,7 +245,7 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
                 buildLABSchedulerThreadPool,
                 buildLABCompactorThreadPool,
                 buildLABDestroyThreadPool,
-                new LalWALConfig("wal",
+                new LabWALConfig("wal",
                     "labMeta",
                     labMaxWALSizeInBytes,
                     labMaxEntriesPerWAL,

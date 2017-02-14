@@ -42,7 +42,7 @@ public class LabPluginCacheProvider implements MiruPluginCacheProvider {
     }
 
     @Override
-    public CacheKeyValues getKeyValues(String name, int payloadSize, boolean variablePayloadSize, long maxHeapPressureInBytes) {
+    public CacheKeyValues getKeyValues(String name, int payloadSize, boolean variablePayloadSize, long maxHeapPressureInBytes, double hashIndexLoadFactor) {
         return pluginPersistentCache.computeIfAbsent(name, (key) -> {
             try {
                 ValueIndex<byte[]>[] cacheIndexes = new ValueIndex[labEnvironments.length];
@@ -57,7 +57,8 @@ public class LabPluginCacheProvider implements MiruPluginCacheProvider {
                         NoOpFormatTransformerProvider.NAME,
                         KeyValueRawhide.NAME,
                         MemoryRawEntryFormat.NAME,
-                        UIO.chunkPower(payloadSize * 1024, 4)));
+                        UIO.chunkPower(payloadSize * 1024, 4),
+                        hashIndexLoadFactor));
                 }
                 return new LabCacheKeyValues(name, idProvider, cacheIndexes);
             } catch (Exception x) {
@@ -67,7 +68,11 @@ public class LabPluginCacheProvider implements MiruPluginCacheProvider {
     }
 
     @Override
-    public LastIdCacheKeyValues getLastIdKeyValues(String name, int payloadSize, boolean variablePayloadSize, long maxHeapPressureInBytes) {
+    public LastIdCacheKeyValues getLastIdKeyValues(String name,
+        int payloadSize,
+        boolean variablePayloadSize,
+        long maxHeapPressureInBytes,
+        double hashIndexLoadFactor) {
         return lastIdPluginPersistentCache.computeIfAbsent(name, (key) -> {
             try {
                 ValueIndex<byte[]>[] cacheIndexes = new ValueIndex[labEnvironments.length];
@@ -82,7 +87,8 @@ public class LabPluginCacheProvider implements MiruPluginCacheProvider {
                         NoOpFormatTransformerProvider.NAME,
                         "lastIdKeyValue",
                         MemoryRawEntryFormat.NAME,
-                        UIO.chunkPower(payloadSize * 1024, 4)));
+                        UIO.chunkPower(payloadSize * 1024, 4),
+                        hashIndexLoadFactor));
                 }
                 return new LabLastIdCacheKeyValues(name, idProvider, cacheIndexes);
             } catch (Exception x) {
@@ -92,7 +98,11 @@ public class LabPluginCacheProvider implements MiruPluginCacheProvider {
     }
 
     @Override
-    public TimestampedCacheKeyValues getTimestampedKeyValues(String name, int payloadSize, boolean variablePayloadSize, long maxHeapPressureInBytes) {
+    public TimestampedCacheKeyValues getTimestampedKeyValues(String name,
+        int payloadSize,
+        boolean variablePayloadSize,
+        long maxHeapPressureInBytes,
+        double hashIndexLoadFactor) {
         return timestampedPluginPersistentCache.computeIfAbsent(name, (key) -> {
             try {
                 ValueIndex<byte[]>[] cacheIndexes = new ValueIndex[labEnvironments.length];
@@ -107,7 +117,8 @@ public class LabPluginCacheProvider implements MiruPluginCacheProvider {
                         NoOpFormatTransformerProvider.NAME,
                         LABRawhide.NAME,
                         MemoryRawEntryFormat.NAME,
-                        UIO.chunkPower(payloadSize * 1024, 4)));
+                        UIO.chunkPower(payloadSize * 1024, 4),
+                        hashIndexLoadFactor));
                 }
                 return new LabTimestampedCacheKeyValues(name, idProvider, cacheIndexes, stripedLocks);
             } catch (Exception x) {
@@ -121,21 +132,21 @@ public class LabPluginCacheProvider implements MiruPluginCacheProvider {
             try {
                 cache.commit(fsyncOnCommit);
             } catch (Exception e) {
-                LOG.error("Failed to close plugin cache {}", new Object[]{cache.name()}, e);
+                LOG.error("Failed to close plugin cache {}", new Object[] { cache.name() }, e);
             }
         }
         for (LabLastIdCacheKeyValues cache : lastIdPluginPersistentCache.values()) {
             try {
                 cache.commit(fsyncOnCommit);
             } catch (Exception e) {
-                LOG.error("Failed to close lastId plugin cache {}", new Object[]{cache.name()}, e);
+                LOG.error("Failed to close lastId plugin cache {}", new Object[] { cache.name() }, e);
             }
         }
         for (LabTimestampedCacheKeyValues cache : timestampedPluginPersistentCache.values()) {
             try {
                 cache.commit(fsyncOnCommit);
             } catch (Exception e) {
-                LOG.error("Failed to close timestamped plugin cache {}", new Object[]{cache.name()}, e);
+                LOG.error("Failed to close timestamped plugin cache {}", new Object[] { cache.name() }, e);
             }
         }
     }

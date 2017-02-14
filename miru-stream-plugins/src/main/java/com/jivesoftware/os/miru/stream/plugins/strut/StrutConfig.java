@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.stream.plugins.strut;
 
 import org.merlin.config.Config;
 import org.merlin.config.defaults.BooleanDefault;
+import org.merlin.config.defaults.DoubleDefault;
 import org.merlin.config.defaults.IntDefault;
 import org.merlin.config.defaults.LongDefault;
 
@@ -54,4 +55,7 @@ public interface StrutConfig extends Config {
 
     @BooleanDefault(false)
     boolean getVerboseLogging();
+
+    @DoubleDefault(1d)
+    double getScoresHashIndexLoadFactor();
 }

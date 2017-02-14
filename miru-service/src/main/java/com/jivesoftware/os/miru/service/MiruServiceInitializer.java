@@ -246,6 +246,7 @@ public class MiruServiceInitializer {
         TimeIdIndex[] timeIdIndexes = new LabTimeIdIndexInitializer().initialize(config.getTimeIdKeepNIndexes(),
             config.getTimeIdMaxEntriesPerIndex(),
             config.getTimeIdMaxHeapPressureInBytes(),
+            config.getTimeIdLabHashIndexLoadFactor(),
             config.getTimeIdFsyncOnAppend(),
             resourceLocator,
             onDiskChunkAllocator);
@@ -272,6 +273,7 @@ public class MiruServiceInitializer {
             termInterner,
             objectMapper,
             config.getLabMaxHeapPressureInBytes(),
+            config.getLabHashIndexLoadFactor(),
             config.getUseLabIndexes(),
             config.getRealtimeDelivery(),
             config.getFsyncOnCommit());

@@ -131,8 +131,8 @@ public class IndexTestUtil {
             true,
             100,
             1_000,
-            new LABStats[]{labStats},
-            new LabHeapPressure[]{labHeapPressure},
+            new LABStats[] { labStats },
+            new LabHeapPressure[] { labHeapPressure },
             labMaxWALSizeInBytes,
             labMaxEntriesPerWAL,
             labMaxEntrySizeInBytes,
@@ -147,8 +147,8 @@ public class IndexTestUtil {
             numberOfChunkStores,
             100,
             1_000,
-            new LABStats[]{labStats},
-            new LabHeapPressure[]{labHeapPressure},
+            new LABStats[] { labStats },
+            new LabHeapPressure[] { labHeapPressure },
             labHeapPressure,
             labMaxWALSizeInBytes,
             labMaxEntriesPerWAL,
@@ -158,7 +158,8 @@ public class IndexTestUtil {
             leapCache,
             bolBufferLocks);
 
-        LabTimeIdIndex[] timeIdIndexes = new LabTimeIdIndexInitializer().initialize(4, 1_000, 1024 * 1024, false, diskResourceLocator, onDiskChunkAllocator);
+        LabTimeIdIndex[] timeIdIndexes = new LabTimeIdIndexInitializer().initialize(4, 1_000, 1024 * 1024, 1d, false, diskResourceLocator,
+            onDiskChunkAllocator);
 
         OrderIdProvider idProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(1));
         return new MiruContextFactory<>(idProvider,
@@ -170,9 +171,9 @@ public class IndexTestUtil {
             termComposer,
             activityInternExtern,
             ImmutableMap.<MiruBackingStorage, MiruChunkAllocator>builder()
-            .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
-            .put(MiruBackingStorage.disk, onDiskChunkAllocator)
-            .build(),
+                .put(MiruBackingStorage.memory, inMemoryChunkAllocator)
+                .put(MiruBackingStorage.disk, onDiskChunkAllocator)
+                .build(),
             new RCVSSipIndexMarshaller(),
             new MiruTempDirectoryResourceLocator(),
             1024,
@@ -183,6 +184,7 @@ public class IndexTestUtil {
             termInterner,
             new ObjectMapper(),
             1024 * 1024 * 10,
+            1d,
             useLabIndexes,
             hasRealtime,
             false);
@@ -228,7 +230,7 @@ public class IndexTestUtil {
             false,
             false);
         return environment.open(new ValueIndexConfig(name, 64, 1024 * 1024, -1, -1, 10 * 1024 * 1024, NoOpFormatTransformerProvider.NAME, LABRawhide.NAME,
-            MemoryRawEntryFormat.NAME, 20));
+            MemoryRawEntryFormat.NAME, 20, 1d));
     }
 
     public static KeyedFilerStore<Long, Void> buildKeyedFilerStore(String name, ChunkStore[] chunkStores) throws Exception {
