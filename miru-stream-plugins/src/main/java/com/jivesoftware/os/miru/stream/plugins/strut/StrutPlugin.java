@@ -112,7 +112,8 @@ public class StrutPlugin implements MiruPlugin<StrutEndpoints, StrutInjectable> 
                 modelScorer,
                 strut,
                 config.getMaxTermIdsPerRequest(),
-                config.getAllowImmediateStrutRescore())));
+                config.getAllowImmediateStrutRescore(),
+                config.getGatherBatchSize())));
     }
 
     @Override

@@ -58,6 +58,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
     private final MiruRemotePartition<StrutQuery, StrutAnswer, StrutReport> remotePartition;
     private final int maxTermIdsPerRequest;
     private final boolean allowImmediateRescore;
+    private final int gatherBatchSize;
 
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
@@ -68,7 +69,8 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         MiruRequest<StrutQuery> request,
         MiruRemotePartition<StrutQuery, StrutAnswer, StrutReport> remotePartition,
         int maxTermIdsPerRequest,
-        boolean allowImmediateRescore) {
+        boolean allowImmediateRescore,
+        int gatherBatchSize) {
         this.modelScorer = modelScorer;
         this.strut = strut;
         this.backfillerizer = backfillerizer;
@@ -76,6 +78,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         this.remotePartition = remotePartition;
         this.maxTermIdsPerRequest = maxTermIdsPerRequest;
         this.allowImmediateRescore = allowImmediateRescore;
+        this.gatherBatchSize = gatherBatchSize;
     }
 
     @Override
@@ -186,7 +189,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             context,
             eligible,
             pivotFieldId,
-            100,
+            gatherBatchSize,
             true,
             true,
             counter,

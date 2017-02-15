@@ -50,6 +50,9 @@ public interface StrutConfig extends Config {
     @BooleanDefault(false)
     boolean getAllowImmediateStrutRescore();
 
+    @IntDefault(100)
+    int getGatherBatchSize();
+
     @BooleanDefault(true)
     boolean getShareScores();
 
