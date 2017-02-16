@@ -580,10 +580,11 @@ public class MiruReaderMain {
                 for (Class<? extends MiruPlugin> pluginType : pluginTypes) {
                     LOG.info("Loading plugin {}", pluginType.getSimpleName());
                     MiruPlugin<?, ?> plugin = pluginType.newInstance();
-                    add(miruProvider, deployable, plugin, pluginRemotesMap);
                     if (plugin instanceof LifecycleMiruPlugin) {
+                        LOG.info("Started lifecycle plugin {}", pluginType.getSimpleName());
                         ((LifecycleMiruPlugin) plugin).start(miruProvider);
                     }
+                    add(miruProvider, deployable, plugin, pluginRemotesMap);
                 }
             }
 
