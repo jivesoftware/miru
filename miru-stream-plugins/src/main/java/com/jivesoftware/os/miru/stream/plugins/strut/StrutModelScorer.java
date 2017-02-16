@@ -37,6 +37,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -118,6 +119,31 @@ public class StrutModelScorer {
         }
     }
 
+    static void scoreParallel(String[] modelId,
+        int numeratorsCount,
+        MiruTermId[] termIds,
+        int concurrencyLevel,
+        final LastIdCacheKeyValues[] termScoreCaches,
+        float[] termScoreCacheScalars,
+        ScoredStream scoredStream,
+        ExecutorService executorService,
+        StackBuffer stackBuffer) throws Exception {
+
+        int batchSize = (termIds.length + concurrencyLevel - 1) / concurrencyLevel;
+        List<Future<?>> futures = Lists.newArrayList();
+        for (int i = 0; i < termIds.length; i += batchSize) {
+            int offset = i;
+            int length = Math.min(batchSize, termIds.length - offset);
+            futures.add(executorService.submit(() -> {
+                scoreInternal(modelId, numeratorsCount, termIds, offset, length, termScoreCaches, termScoreCacheScalars, scoredStream, stackBuffer);
+                return null;
+            }));
+        }
+        for (Future<?> future : futures) {
+            future.get();
+        }
+    }
+
     static void score(String[] modelId,
         int numeratorsCount,
         MiruTermId[] termIds,
@@ -126,15 +152,28 @@ public class StrutModelScorer {
         ScoredStream scoredStream,
         StackBuffer stackBuffer) throws Exception {
 
-        byte[][] keys = new byte[termIds.length][];
-        for (int i = 0; i < keys.length; i++) {
-            if (termIds[i] != null) {
-                keys[i] = termIds[i].getBytes();
+        scoreInternal(modelId, numeratorsCount, termIds, 0, termIds.length, termScoreCaches, termScoreCacheScalars, scoredStream, stackBuffer);
+    }
+
+    static void scoreInternal(String[] modelId,
+        int numeratorsCount,
+        MiruTermId[] termIds,
+        int offset,
+        int length,
+        final LastIdCacheKeyValues[] termScoreCaches,
+        float[] termScoreCacheScalars,
+        ScoredStream scoredStream,
+        StackBuffer stackBuffer) throws Exception {
+
+        byte[][] keys = new byte[length][];
+        for (int i = 0; i < length; i++) {
+            if (termIds[offset + i] != null) {
+                keys[i] = termIds[offset + i].getBytes();
             }
         }
 
-        float[][] scores = new float[termIds.length][numeratorsCount];
-        int[] lastIds = new int[termIds.length];
+        float[][] scores = new float[length][numeratorsCount];
+        int[] lastIds = new int[length];
 
         float sumOfScalars = 0;
         for (int c = 0; c < termScoreCacheScalars.length; c++) {
@@ -143,10 +182,10 @@ public class StrutModelScorer {
             sumOfScalars += termScoreCacheScalar;
             termScoreCache.get(modelId[c].getBytes(StandardCharsets.UTF_8), keys, (index, value, lastId) -> {
                 if (value != null && value.capacity() == (4 * numeratorsCount)) {
-                    int offset = 0;
+                    int valueOffset = 0;
                     for (int n = 0; n < numeratorsCount; n++) {
-                        scores[index][n] += (value.getFloat(offset) * termScoreCacheScalar);
-                        offset += 4;
+                        scores[index][n] += (value.getFloat(valueOffset) * termScoreCacheScalar);
+                        valueOffset += 4;
                     }
                 } else {
                     if (value != null) {
@@ -160,7 +199,7 @@ public class StrutModelScorer {
             }, stackBuffer);
         }
 
-        for (int i = 0; i < termIds.length; i++) {
+        for (int i = 0; i < length; i++) {
             for (int n = 0; n < numeratorsCount; n++) {
                 scores[i][n] /= sumOfScalars;
             }

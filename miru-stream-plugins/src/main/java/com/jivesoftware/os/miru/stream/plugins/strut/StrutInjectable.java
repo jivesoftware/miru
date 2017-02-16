@@ -28,6 +28,7 @@ public class StrutInjectable {
     private final int maxTermIdsPerRequest;
     private final boolean allowImmediateRescore;
     private final int gatherBatchSize;
+    private final int scoreConcurrencyLevel;
     private final ExecutorService gatherExecutorService;
 
     public StrutInjectable(MiruProvider<? extends Miru> provider,
@@ -36,13 +37,14 @@ public class StrutInjectable {
         int maxTermIdsPerRequest,
         boolean allowImmediateRescore,
         int gatherBatchSize,
-        ExecutorService gatherExecutorService) {
+        int scoreConcurrencyLevel, ExecutorService gatherExecutorService) {
         this.provider = provider;
         this.modelScorer = modelScorer;
         this.strut = strut;
         this.maxTermIdsPerRequest = maxTermIdsPerRequest;
         this.allowImmediateRescore = allowImmediateRescore;
         this.gatherBatchSize = gatherBatchSize;
+        this.scoreConcurrencyLevel = scoreConcurrencyLevel;
         this.gatherExecutorService = gatherExecutorService;
     }
 
@@ -60,7 +62,9 @@ public class StrutInjectable {
                         provider.getRemotePartition(StrutRemotePartition.class),
                         maxTermIdsPerRequest,
                         allowImmediateRescore,
-                        gatherBatchSize, gatherExecutorService)),
+                        gatherBatchSize,
+                        scoreConcurrencyLevel,
+                        gatherExecutorService)),
                 new StrutAnswerEvaluator(),
                 new StrutAnswerMerger(request.query.desiredNumberOfResults),
                 StrutAnswer.EMPTY_RESULTS,
@@ -92,6 +96,7 @@ public class StrutInjectable {
                         maxTermIdsPerRequest,
                         allowImmediateRescore,
                         gatherBatchSize,
+                        scoreConcurrencyLevel,
                         gatherExecutorService)),
                 Optional.fromNullable(requestAndReport.report),
                 StrutAnswer.EMPTY_RESULTS,
@@ -122,6 +127,7 @@ public class StrutInjectable {
                         maxTermIdsPerRequest,
                         allowImmediateRescore,
                         gatherBatchSize,
+                        scoreConcurrencyLevel,
                         gatherExecutorService)),
                 new StrutAnswerMerger(request.query.desiredNumberOfResults),
                 StrutAnswer.EMPTY_RESULTS,
