@@ -42,6 +42,7 @@ import java.util.Random;
 import org.roaringbitmap.FastAggregation;
 import org.roaringbitmap.IntIterator;
 import org.roaringbitmap.RoaringBitmap;
+import org.roaringbitmap.RoaringInspection;
 import org.roaringbitmap.buffer.BufferFastAggregation;
 import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
 import org.roaringbitmap.buffer.MutableRoaringBitmap;
@@ -594,6 +595,11 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
     public boolean containsAny(ImmutableRoaringBitmap container, ImmutableRoaringBitmap contained) {
         MutableRoaringBitmap intersection = ImmutableRoaringBitmap.and(container, contained);
         return !intersection.isEmpty();
+    }
+
+    @Override
+    public MutableRoaringBitmap[] split(MutableRoaringBitmap answer) {
+        throw new UnsupportedOperationException("Wahhh");
     }
 
     @Override

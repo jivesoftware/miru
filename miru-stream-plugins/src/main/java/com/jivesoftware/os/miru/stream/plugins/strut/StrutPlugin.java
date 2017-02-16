@@ -5,9 +5,11 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.jivesoftware.os.miru.plugin.Miru;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
+import com.jivesoftware.os.miru.plugin.plugin.LifecycleMiruPlugin;
 import com.jivesoftware.os.miru.plugin.plugin.MiruEndpointInjectable;
 import com.jivesoftware.os.miru.plugin.plugin.MiruPlugin;
 import com.jivesoftware.os.miru.plugin.solution.FstRemotePartitionReader;
@@ -21,6 +23,7 @@ import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -32,7 +35,7 @@ import org.merlin.config.defaults.StringDefault;
 /**
  *
  */
-public class StrutPlugin implements MiruPlugin<StrutEndpoints, StrutInjectable> {
+public class StrutPlugin implements MiruPlugin<StrutEndpoints, StrutInjectable>, LifecycleMiruPlugin {
 
     public interface PendingUpdatesHealthCheckConfig extends HealthCheckConfig {
 
@@ -49,6 +52,25 @@ public class StrutPlugin implements MiruPlugin<StrutEndpoints, StrutInjectable> 
 
         @DoubleDefault(0.2)
         double getUnhealthyPercent();
+    }
+
+    private ExecutorService gatherExecutorService;
+
+    @Override
+    public void start(MiruProvider<? extends Miru> miruProvider) throws Exception {
+        if (gatherExecutorService == null) {
+            StrutConfig config = miruProvider.getConfig(StrutConfig.class);
+            int gatherThreadPoolSize = config.getGatherThreadPoolSize();
+            gatherExecutorService = gatherThreadPoolSize <= 1 ? MoreExecutors.sameThreadExecutor() : Executors.newFixedThreadPool(gatherThreadPoolSize);
+        }
+    }
+
+    @Override
+    public void stop(MiruProvider<? extends Miru> miruProvider) {
+        if (gatherExecutorService != null) {
+            gatherExecutorService.shutdownNow();
+            gatherExecutorService = null;
+        }
     }
 
     @Override
@@ -113,7 +135,8 @@ public class StrutPlugin implements MiruPlugin<StrutEndpoints, StrutInjectable> 
                 strut,
                 config.getMaxTermIdsPerRequest(),
                 config.getAllowImmediateStrutRescore(),
-                config.getGatherBatchSize())));
+                config.getGatherBatchSize(),
+                gatherExecutorService)));
     }
 
     @Override

@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.plugin.solution;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.HashMultiset;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Multiset;
@@ -36,6 +37,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndexProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.index.MiruTxIndex;
+import com.jivesoftware.os.miru.plugin.index.TermIdLastIdCountStream;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.rcvs.marshall.api.UtilLexMarshaller;
@@ -48,6 +50,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.lang.mutable.MutableInt;
 import org.apache.commons.lang.mutable.MutableLong;
@@ -869,6 +873,83 @@ public class MiruAggregateUtil {
         }
         terms.callback(null); // EOS
         LOG.debug("stream: bytesTraversed={}", bytesTraversed.longValue());
+    }
+
+    public <BM extends IBM, IBM, S extends MiruSipCursor<S>> void gatherParallel(String name,
+        MiruBitmaps<BM, IBM> bitmaps,
+        MiruRequestContext<BM, IBM, S> requestContext,
+        BM answer,
+        int pivotFieldId,
+        int batchSize,
+        boolean includeCounts,
+        int limit,
+        Optional<BM> counter,
+        MiruSolutionLog solutionLog,
+        ExecutorService executorService,
+        TermIdLastIdCountStream stream,
+        StackBuffer stackBuffer) throws Exception {
+
+        BM[] splitAnswers = bitmaps.split(answer);
+        BM[] splitCounters = null;
+        if (counter.isPresent()) {
+            splitCounters = bitmaps.split(counter.get());
+        }
+        List<Future<List<TermIdLastIdCount>>> futures = Lists.newArrayListWithCapacity(splitAnswers.length);
+        for (int i = splitAnswers.length - 1; i >= 0; i--) {
+            BM splitAnswer = splitAnswers[i];
+            if (bitmaps.isEmpty(splitAnswer)) {
+                futures.add(null);
+            } else {
+                Optional<BM> splitCounter = splitCounters == null ? Optional.absent() : Optional.fromNullable(splitCounters[i]);
+                futures.add(executorService.submit(() -> {
+                    List<TermIdLastIdCount> gatherSplit = Lists.newArrayList();
+                    gatherActivityLookup(name,
+                        bitmaps,
+                        requestContext,
+                        splitAnswer,
+                        pivotFieldId,
+                        batchSize,
+                        false,
+                        includeCounts,
+                        splitCounter,
+                        solutionLog,
+                        (lastId, termId, count) -> {
+                            gatherSplit.add(new TermIdLastIdCount(termId, lastId, count));
+                            return true;
+                        },
+                        stackBuffer);
+                    return gatherSplit;
+                }));
+            }
+        }
+
+        Map<MiruTermId, TermIdLastIdCount> results = Maps.newHashMap();
+        boolean done = false;
+        for (Future<List<TermIdLastIdCount>> future : futures) {
+            if (future != null) {
+                if (done) {
+                    future.cancel(true);
+                }
+                List<TermIdLastIdCount> got = future.get();
+                for (TermIdLastIdCount termIdLastIdCount : got) {
+                    TermIdLastIdCount existing = results.putIfAbsent(termIdLastIdCount.termId, termIdLastIdCount);
+                    if (existing != null) {
+                        existing.lastId = Math.max(existing.lastId, termIdLastIdCount.lastId);
+                        existing.count += termIdLastIdCount.count;
+                    } else if (limit >= 0 && results.size() > limit) {
+                        done = true;
+                    }
+                }
+            }
+        }
+
+        int count = 0;
+        for (TermIdLastIdCount termIdLastIdCount : results.values()) {
+            if ((limit >= 0 && count > limit) || !stream.stream(termIdLastIdCount)) {
+                break;
+            }
+            count++;
+        }
     }
 
     public <BM extends IBM, IBM, S extends MiruSipCursor<S>> void gather(String name,

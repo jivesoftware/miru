@@ -18,6 +18,22 @@ import static org.testng.Assert.assertEquals;
 public class RoaringInspectionTest {
 
     @Test
+    public void testSplitJoin() throws Exception {
+        RoaringBitmap bitmap = new RoaringBitmap();
+        Random r = new Random();
+        for (int i = 0; i < 3_000_000; i++) {
+            if (r.nextBoolean()) {
+                bitmap.add(i);
+            }
+        }
+
+        RoaringBitmap[] split = RoaringInspection.split(bitmap);
+        RoaringBitmap joined = RoaringInspection.join(split);
+
+        assertEquals(joined, bitmap);
+    }
+
+    @Test
     public void testCardinalityAndLastSetBit() throws Exception {
         RoaringBitmap bitmap = new RoaringBitmap();
         for (int i = 0; i * 37 < 5 * Short.MAX_VALUE; i++) {

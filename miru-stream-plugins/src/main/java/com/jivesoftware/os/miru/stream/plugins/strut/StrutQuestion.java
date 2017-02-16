@@ -26,6 +26,7 @@ import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.index.TimeVersionRealtime;
+import com.jivesoftware.os.miru.plugin.solution.TermIdLastIdCount;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
@@ -35,13 +36,13 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.solution.Question;
-import com.jivesoftware.os.miru.stream.plugins.strut.StrutModelScorer.LastIdAndTermId;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -59,6 +60,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
     private final int maxTermIdsPerRequest;
     private final boolean allowImmediateRescore;
     private final int gatherBatchSize;
+    private final ExecutorService gatherExecutorService;
 
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
     private final MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
@@ -70,7 +72,8 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         MiruRemotePartition<StrutQuery, StrutAnswer, StrutReport> remotePartition,
         int maxTermIdsPerRequest,
         boolean allowImmediateRescore,
-        int gatherBatchSize) {
+        int gatherBatchSize,
+        ExecutorService gatherExecutorService) {
         this.modelScorer = modelScorer;
         this.strut = strut;
         this.backfillerizer = backfillerizer;
@@ -79,6 +82,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         this.maxTermIdsPerRequest = maxTermIdsPerRequest;
         this.allowImmediateRescore = allowImmediateRescore;
         this.gatherBatchSize = gatherBatchSize;
+        this.gatherExecutorService = gatherExecutorService;
     }
 
     @Override
@@ -181,29 +185,30 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         AtomicInteger modelTotalPartitionCount = new AtomicInteger();
 
         long start = System.currentTimeMillis();
-        List<LastIdAndTermId> lastIdAndTermIds = Lists.newArrayList();
+        List<TermIdLastIdCount> termIdLastIdCounts = Lists.newArrayList();
         Optional<BM> counter = request.query.countUnread ? unreadIndex.transform(input -> bitmaps.and(Arrays.asList(input, eligible))) : Optional.absent();
         //TODO config batch size
-        aggregateUtil.gather("strut",
+        aggregateUtil.gatherParallel("strut",
             bitmaps,
             context,
             eligible,
             pivotFieldId,
             gatherBatchSize,
             true,
-            true,
+            maxTermIdsPerRequest,
             counter,
             solutionLog,
-            (lastId, termId, count) -> {
-                lastIdAndTermIds.add(new LastIdAndTermId(lastId, termId, count));
-                if (count <= 0) {
+            gatherExecutorService,
+            (termIdLastIdCount) -> {
+                termIdLastIdCounts.add(termIdLastIdCount);
+                if (termIdLastIdCount.count <= 0) {
                     LOG.inc("strut>gather>empty");
                 }
-                return maxTermIdsPerRequest <= 0 || lastIdAndTermIds.size() < maxTermIdsPerRequest;
+                return maxTermIdsPerRequest <= 0 || termIdLastIdCounts.size() < maxTermIdsPerRequest;
             },
             stackBuffer);
 
-        solutionLog.log(MiruSolutionLogLevel.INFO, "Strut accumulated {} terms in {} ms", lastIdAndTermIds.size(), System.currentTimeMillis() - start);
+        solutionLog.log(MiruSolutionLogLevel.INFO, "Strut accumulated {} terms in {} ms", termIdLastIdCounts.size(), System.currentTimeMillis() - start);
         start = System.currentTimeMillis();
 
         long totalTimeFetchingLastId = 0;
@@ -215,16 +220,16 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         if (request.query.usePartitionModelCache) {
             long fetchScoresStart = System.currentTimeMillis();
 
-            int[] scorableToLastIds = new int[lastIdAndTermIds.size()];
-            MiruTermId[] nullableMiruTermIds = new MiruTermId[lastIdAndTermIds.size()];
-            MiruTermId[] miruTermIds = new MiruTermId[lastIdAndTermIds.size()];
+            int[] scorableToLastIds = new int[termIdLastIdCounts.size()];
+            MiruTermId[] nullableMiruTermIds = new MiruTermId[termIdLastIdCounts.size()];
+            MiruTermId[] miruTermIds = new MiruTermId[termIdLastIdCounts.size()];
 
             Arrays.fill(miruTermIds, null);
-            for (int i = 0; i < lastIdAndTermIds.size(); i++) {
-                miruTermIds[i] = lastIdAndTermIds.get(i).termId;
+            for (int i = 0; i < termIdLastIdCounts.size(); i++) {
+                miruTermIds[i] = termIdLastIdCounts.get(i).termId;
             }
 
-            System.arraycopy(miruTermIds, 0, nullableMiruTermIds, 0, lastIdAndTermIds.size());
+            System.arraycopy(miruTermIds, 0, nullableMiruTermIds, 0, termIdLastIdCounts.size());
             Arrays.fill(scorableToLastIds, -1);
 
             long fetchLastIdsStart = System.currentTimeMillis();
@@ -252,18 +257,18 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                             maxScore[0] = Math.max(maxScore[0], scores[i]);
                         }
                     }
-                    LastIdAndTermId lastIdAndTermId = lastIdAndTermIds.get(termIndex);
+                    TermIdLastIdCount termIdLastIdCount = termIdLastIdCounts.get(termIndex);
                     if (needsRescore) {
-                        asyncRescore.add(lastIdAndTermId.termId);
+                        asyncRescore.add(termIdLastIdCount.termId);
                     }
                     float scaledScore = Strut.scaleScore(scores, request.query.numeratorScalars, request.query.numeratorStrategy);
-                    scored.add(new Scored(lastIdAndTermId.lastId,
+                    scored.add(new Scored(termIdLastIdCount.lastId,
                         miruTermIds[termIndex],
                         scoredToLastId,
                         scaledScore,
                         scores,
                         null,
-                        lastIdAndTermId.count));
+                        termIdLastIdCount.count));
                     return true;
                 },
                 stackBuffer);
@@ -291,7 +296,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 solutionLog);
 
             long rescoreStart = System.currentTimeMillis();
-            for (List<LastIdAndTermId> batch : Lists.partition(lastIdAndTermIds, request.query.batchSize)) {
+            for (List<TermIdLastIdCount> batch : Lists.partition(termIdLastIdCounts, request.query.batchSize)) {
                 List<Scored> rescored = modelScorer.rescore(strutModelScalar.catwalkId,
                     strutModelScalar.modelId,
                     strutModelScalar.catwalkQuery,
@@ -391,7 +396,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 + " gather {} ms,"
                 + " timeAndVersion {} ms,"
                 + " total {} ms",
-            lastIdAndTermIds.size(),
+            termIdLastIdCounts.size(),
             totalTimeFetchingLastId,
             totalTimeFetchingScores,
             totalTimeRescores,

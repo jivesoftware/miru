@@ -20,6 +20,7 @@ import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.partition.MiruQueryablePartition;
 import com.jivesoftware.os.miru.plugin.partition.OrderedPartitions;
+import com.jivesoftware.os.miru.plugin.solution.TermIdLastIdCount;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
@@ -335,9 +336,9 @@ public class StrutModelScorer {
             TimestampedCacheKeyValues termFeatureCache = getTermFeatureCache(context, catwalkId);
             int activityIndexLastId = context.getActivityIndex().lastId(stackBuffer);
 
-            List<LastIdAndTermId> asyncRescore = Lists.newArrayListWithCapacity(termIds.size());
+            List<TermIdLastIdCount> asyncRescore = Lists.newArrayListWithCapacity(termIds.size());
             for (MiruTermId termId : termIds) {
-                asyncRescore.add(new LastIdAndTermId(-1, termId, -1));
+                asyncRescore.add(new TermIdLastIdCount(termId, -1, -1));
             }
 
             BM[] asyncConstrainFeature = buildConstrainFeatures(bitmaps,
@@ -386,7 +387,7 @@ public class StrutModelScorer {
         float[] numeratorScalars,
         Strategy numeratorStrategy,
         MiruRequestHandle<BM, IBM, ?> handle,
-        List<LastIdAndTermId> score,
+        List<TermIdLastIdCount> score,
         int pivotFieldId,
         BM[] constrainFeature,
         LastIdCacheKeyValues termScoreCache,
@@ -422,7 +423,7 @@ public class StrutModelScorer {
             topNValuesPerFeature,
             termFeatureCache,
             (streamBitmaps) -> {
-                LastIdAndTermId[] rescoreMiruTermIds = score.toArray(new LastIdAndTermId[0]);
+                TermIdLastIdCount[] rescoreMiruTermIds = score.toArray(new TermIdLastIdCount[0]);
                 MiruTermId[] miruTermIds = new MiruTermId[rescoreMiruTermIds.length];
                 for (int i = 0; i < rescoreMiruTermIds.length; i++) {
                     miruTermIds[i] = rescoreMiruTermIds[i].termId;
@@ -574,16 +575,4 @@ public class StrutModelScorer {
         }
     }
 
-    static class LastIdAndTermId {
-
-        public final int lastId;
-        public final MiruTermId termId;
-        public final long count;
-
-        public LastIdAndTermId(int lastId, MiruTermId termId, long count) {
-            this.lastId = lastId;
-            this.termId = termId;
-            this.count = count;
-        }
-    }
 }

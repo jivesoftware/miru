@@ -50,6 +50,7 @@ public class FullTextPlugin implements MiruPlugin<FullTextEndpoints, FullTextInj
     @Override
     public void stop(MiruProvider<? extends Miru> miruProvider) {
         if (executorService != null) {
+            executorService.shutdownNow();
             executorService = null;
             FullTextGatherer fullTextGatherer = this.fullTextGatherer.get();
             miruProvider.removeIndexOpenCallback(fullTextGatherer);

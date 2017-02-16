@@ -159,6 +159,8 @@ public interface MiruBitmaps<BM extends IBM, IBM> {
 
     boolean containsAny(IBM container, IBM contained);
 
+    BM[] split(BM answer);
+
     int key(int position);
 
     int[] keys(IBM mask);

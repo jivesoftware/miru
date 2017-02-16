@@ -597,6 +597,11 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
     }
 
     @Override
+    public RoaringBitmap[] split(RoaringBitmap answer) {
+        return RoaringInspection.split(answer);
+    }
+
+    @Override
     public int key(int position) {
         return RoaringInspection.key(position);
     }

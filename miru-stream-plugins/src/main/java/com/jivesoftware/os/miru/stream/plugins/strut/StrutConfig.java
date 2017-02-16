@@ -53,6 +53,9 @@ public interface StrutConfig extends Config {
     @IntDefault(100)
     int getGatherBatchSize();
 
+    @IntDefault(1)
+    int getGatherThreadPoolSize();
+
     @BooleanDefault(true)
     boolean getShareScores();
 
