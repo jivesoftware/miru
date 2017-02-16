@@ -60,6 +60,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
     private final int maxTermIdsPerRequest;
     private final boolean allowImmediateRescore;
     private final int gatherBatchSize;
+    private final int scoreConcurrencyLevel;
     private final ExecutorService gatherExecutorService;
 
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
@@ -73,6 +74,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         int maxTermIdsPerRequest,
         boolean allowImmediateRescore,
         int gatherBatchSize,
+        int scoreConcurrencyLevel,
         ExecutorService gatherExecutorService) {
         this.modelScorer = modelScorer;
         this.strut = strut;
@@ -82,6 +84,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         this.maxTermIdsPerRequest = maxTermIdsPerRequest;
         this.allowImmediateRescore = allowImmediateRescore;
         this.gatherBatchSize = gatherBatchSize;
+        this.scoreConcurrencyLevel = scoreConcurrencyLevel;
         this.gatherExecutorService = gatherExecutorService;
     }
 
@@ -236,10 +239,11 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             primaryIndex.multiGetLastIds("strut", pivotFieldId, nullableMiruTermIds, scorableToLastIds, stackBuffer);
             totalTimeFetchingLastId += (System.currentTimeMillis() - fetchLastIdsStart);
 
-            StrutModelScorer.score(
+            StrutModelScorer.scoreParallel(
                 modelIds,
                 request.query.numeratorScalars.length,
                 miruTermIds,
+                scoreConcurrencyLevel,
                 termScoresCaches,
                 termScoresCacheScalars,
                 (termIndex, scores, scoredToLastId) -> {
@@ -271,6 +275,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                         termIdLastIdCount.count));
                     return true;
                 },
+                gatherExecutorService,
                 stackBuffer);
             totalTimeFetchingScores += (System.currentTimeMillis() - fetchScoresStart);
         }
