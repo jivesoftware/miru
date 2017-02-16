@@ -902,23 +902,31 @@ public class MiruAggregateUtil {
             } else {
                 Optional<BM> splitCounter = splitCounters == null ? Optional.absent() : Optional.fromNullable(splitCounters[i]);
                 futures.add(executorService.submit(() -> {
-                    List<TermIdLastIdCount> gatherSplit = Lists.newArrayList();
-                    gatherActivityLookup(name,
-                        bitmaps,
-                        requestContext,
-                        splitAnswer,
-                        pivotFieldId,
-                        batchSize,
-                        false,
-                        includeCounts,
-                        splitCounter,
-                        solutionLog,
-                        (lastId, termId, count) -> {
-                            gatherSplit.add(new TermIdLastIdCount(termId, lastId, count));
-                            return true;
-                        },
-                        stackBuffer);
-                    return gatherSplit;
+                    try {
+                        List<TermIdLastIdCount> gatherSplit = Lists.newArrayList();
+                        gatherActivityLookup(name,
+                            bitmaps,
+                            requestContext,
+                            splitAnswer,
+                            pivotFieldId,
+                            batchSize,
+                            false,
+                            includeCounts,
+                            splitCounter,
+                            solutionLog,
+                            (lastId, termId, count) -> {
+                                gatherSplit.add(new TermIdLastIdCount(termId, lastId, count));
+                                return true;
+                            },
+                            stackBuffer);
+                        return gatherSplit;
+                    } catch (InterruptedException e) {
+                        // ignore
+                        return null;
+                    } catch (Throwable t) {
+                        LOG.warn("Parallel gather failed", t);
+                        return null;
+                    }
                 }));
             }
         }
@@ -929,15 +937,18 @@ public class MiruAggregateUtil {
             if (future != null) {
                 if (done) {
                     future.cancel(true);
-                }
-                List<TermIdLastIdCount> got = future.get();
-                for (TermIdLastIdCount termIdLastIdCount : got) {
-                    TermIdLastIdCount existing = results.putIfAbsent(termIdLastIdCount.termId, termIdLastIdCount);
-                    if (existing != null) {
-                        existing.lastId = Math.max(existing.lastId, termIdLastIdCount.lastId);
-                        existing.count += termIdLastIdCount.count;
-                    } else if (limit >= 0 && results.size() > limit) {
-                        done = true;
+                } else {
+                    List<TermIdLastIdCount> got = future.get();
+                    if (got != null) {
+                        for (TermIdLastIdCount termIdLastIdCount : got) {
+                            TermIdLastIdCount existing = results.putIfAbsent(termIdLastIdCount.termId, termIdLastIdCount);
+                            if (existing != null) {
+                                existing.lastId = Math.max(existing.lastId, termIdLastIdCount.lastId);
+                                existing.count += termIdLastIdCount.count;
+                            } else if (limit >= 0 && results.size() > limit) {
+                                done = true;
+                            }
+                        }
                     }
                 }
             }
