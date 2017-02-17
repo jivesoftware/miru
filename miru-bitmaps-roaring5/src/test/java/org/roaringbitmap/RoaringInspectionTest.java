@@ -20,7 +20,7 @@ public class RoaringInspectionTest {
     @Test
     public void testSplitJoin() throws Exception {
         RoaringBitmap bitmap = new RoaringBitmap();
-        Random r = new Random();
+        Random r = new Random(123);
         for (int i = 0; i < 3_000_000; i++) {
             if (r.nextBoolean()) {
                 bitmap.add(i);
@@ -31,6 +31,29 @@ public class RoaringInspectionTest {
         RoaringBitmap joined = RoaringInspection.join(split);
 
         assertEquals(joined, bitmap);
+    }
+
+    @Test
+    public void testExtract() throws Exception {
+        RoaringBitmap bitmap1 = new RoaringBitmap();
+        Random r = new Random(123);
+        for (int i = 0; i < 3_000_000; i += 65_536) {
+            if (r.nextBoolean()) {
+                bitmap1.add(i);
+            }
+        }
+
+        RoaringBitmap bitmap2 = new RoaringBitmap();
+        bitmap2.flip(0, 3_000_000);
+
+        int[] keys1 = RoaringInspection.keys(bitmap1);
+
+        RoaringBitmap[] extracted = RoaringInspection.extract(bitmap2, keys1);
+        RoaringBitmap joined = RoaringInspection.join(extracted);
+
+        int[] keys2 = RoaringInspection.keys(joined);
+
+        assertEquals(keys1, keys2);
     }
 
     @Test

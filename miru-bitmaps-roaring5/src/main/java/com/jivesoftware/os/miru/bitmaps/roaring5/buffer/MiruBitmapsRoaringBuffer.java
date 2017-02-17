@@ -598,7 +598,12 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
     }
 
     @Override
-    public MutableRoaringBitmap[] split(MutableRoaringBitmap answer) {
+    public MutableRoaringBitmap[] split(MutableRoaringBitmap bitmap) {
+        throw new UnsupportedOperationException("Wahhh");
+    }
+
+    @Override
+    public MutableRoaringBitmap[] extract(MutableRoaringBitmap bitmap, int[] keys) {
         throw new UnsupportedOperationException("Wahhh");
     }
 

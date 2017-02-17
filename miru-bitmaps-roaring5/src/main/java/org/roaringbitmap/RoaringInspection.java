@@ -39,6 +39,20 @@ public class RoaringInspection {
         return bitmap;
     }
 
+    public static RoaringBitmap[] extract(RoaringBitmap bitmap, int[] ukeys) {
+        RoaringArray array = bitmap.highLowContainer;
+        short[] keys = intToShortKeys(ukeys);
+        RoaringBitmap[] extract = new RoaringBitmap[keys.length];
+        for (int i = 0; i < keys.length; i++) {
+            Container container = array.getContainer(keys[i]);
+            if (container != null) {
+                extract[i] = new RoaringBitmap();
+                extract[i].highLowContainer.append(keys[i], container);
+            }
+        }
+        return extract;
+    }
+
     public static CardinalityAndLastSetBit<RoaringBitmap> cardinalityAndLastSetBit(RoaringBitmap bitmap) {
         int pos = bitmap.highLowContainer.size() - 1;
         int lastSetBit = -1;
@@ -273,8 +287,8 @@ public class RoaringInspection {
 
     public static int[] keys(RoaringBitmap bitmap) {
         short[] bitmapKeys = bitmap.highLowContainer.keys;
-        int[] copyKeys = new int[bitmapKeys.length];
-        for (int i = 0; i < bitmapKeys.length; i++) {
+        int[] copyKeys = new int[bitmap.highLowContainer.size];
+        for (int i = 0; i < copyKeys.length; i++) {
             copyKeys[i] = Util.toIntUnsigned(bitmapKeys[i]);
         }
         return copyKeys;
