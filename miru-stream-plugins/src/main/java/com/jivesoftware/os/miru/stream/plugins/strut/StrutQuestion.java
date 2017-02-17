@@ -239,6 +239,15 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             primaryIndex.multiGetLastIds("strut", pivotFieldId, nullableMiruTermIds, scorableToLastIds, stackBuffer);
             totalTimeFetchingLastId += (System.currentTimeMillis() - fetchLastIdsStart);
 
+            @SuppressWarnings("unchecked")
+            MinMaxPriorityQueue<Scored>[] parallelScored = new MinMaxPriorityQueue[scoreConcurrencyLevel];
+            for (int i = 0; i < parallelScored.length; i++) {
+                parallelScored[i] = MinMaxPriorityQueue
+                    .expectedSize(request.query.desiredNumberOfResults)
+                    .maximumSize(request.query.desiredNumberOfResults)
+                    .create();
+            }
+
             StrutModelScorer.scoreParallel(
                 modelIds,
                 request.query.numeratorScalars.length,
@@ -246,7 +255,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 scoreConcurrencyLevel,
                 termScoresCaches,
                 termScoresCacheScalars,
-                (termIndex, scores, scoredToLastId) -> {
+                (bucket, termIndex, scores, scoredToLastId) -> {
                     boolean needsRescore = scoredToLastId < scorableToLastIds[termIndex];
                     if (needsRescore) {
                         LOG.inc("strut>scores>rescoreId");
@@ -266,7 +275,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                         asyncRescore.add(termIdLastIdCount.termId);
                     }
                     float scaledScore = Strut.scaleScore(scores, request.query.numeratorScalars, request.query.numeratorStrategy);
-                    scored.add(new Scored(termIdLastIdCount.lastId,
+                    parallelScored[bucket].add(new Scored(termIdLastIdCount.lastId,
                         miruTermIds[termIndex],
                         scoredToLastId,
                         scaledScore,
@@ -277,6 +286,11 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 },
                 gatherExecutorService,
                 stackBuffer);
+
+            for (int i = 0; i < parallelScored.length; i++) {
+                scored.addAll(parallelScored[i]);
+            }
+
             totalTimeFetchingScores += (System.currentTimeMillis() - fetchScoresStart);
         }
 

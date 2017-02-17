@@ -57,6 +57,11 @@ public class StrutModelScorer {
         boolean score(int termIndex, float[] scores, int lastId);
     }
 
+    public interface ParallelScoredStream {
+
+        boolean score(int bucket, int termIndex, float[] scores, int lastId);
+    }
+
     private final MiruProvider<? extends Miru> miruProvider;
     private final Strut strut;
     private final StrutRemotePartition strutRemotePartition;
@@ -125,17 +130,22 @@ public class StrutModelScorer {
         int concurrencyLevel,
         final LastIdCacheKeyValues[] termScoreCaches,
         float[] termScoreCacheScalars,
-        ScoredStream scoredStream,
+        ParallelScoredStream parallelScoredStream,
         ExecutorService executorService,
         StackBuffer stackBuffer) throws Exception {
 
         int batchSize = (termIds.length + concurrencyLevel - 1) / concurrencyLevel;
         List<Future<?>> futures = Lists.newArrayList();
-        for (int i = 0; i < termIds.length; i += batchSize) {
-            int offset = i;
+        for (int i = 0, j = 0; j < termIds.length; i++, j += batchSize) {
+            int bucket = i;
+            int offset = j;
             int length = Math.min(batchSize, termIds.length - offset);
             futures.add(executorService.submit(() -> {
-                scoreInternal(modelId, numeratorsCount, termIds, offset, length, termScoreCaches, termScoreCacheScalars, scoredStream, stackBuffer);
+                scoreInternal(modelId, numeratorsCount, termIds, offset, length, termScoreCaches, termScoreCacheScalars,
+                    (termIndex, scores, lastId) -> {
+                        return parallelScoredStream.score(bucket, termIndex, scores, lastId);
+                    },
+                    stackBuffer);
                 return null;
             }));
         }
@@ -167,8 +177,9 @@ public class StrutModelScorer {
 
         byte[][] keys = new byte[length][];
         for (int i = 0; i < length; i++) {
-            if (termIds[offset + i] != null) {
-                keys[i] = termIds[offset + i].getBytes();
+            MiruTermId termId = termIds[offset + i];
+            if (termId != null) {
+                keys[i] = termId.getBytes();
             }
         }
 
@@ -203,7 +214,7 @@ public class StrutModelScorer {
             for (int n = 0; n < numeratorsCount; n++) {
                 scores[i][n] /= sumOfScalars;
             }
-            if (!scoredStream.score(i, scores[i], lastIds[i])) {
+            if (!scoredStream.score(offset + i, scores[i], lastIds[i])) {
                 return;
             }
         }
