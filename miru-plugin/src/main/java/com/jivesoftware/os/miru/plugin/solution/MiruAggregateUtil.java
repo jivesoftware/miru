@@ -892,7 +892,8 @@ public class MiruAggregateUtil {
         BM[] splitAnswers = bitmaps.split(answer);
         BM[] splitCounters = null;
         if (counter.isPresent()) {
-            splitCounters = bitmaps.split(counter.get());
+            int[] keys = bitmaps.keys(answer);
+            splitCounters = bitmaps.extract(counter.get(), keys);
         }
         List<Future<List<TermIdLastIdCount>>> futures = Lists.newArrayListWithCapacity(splitAnswers.length);
         for (int i = splitAnswers.length - 1; i >= 0; i--) {
@@ -900,7 +901,7 @@ public class MiruAggregateUtil {
             if (bitmaps.isEmpty(splitAnswer)) {
                 futures.add(null);
             } else {
-                Optional<BM> splitCounter = splitCounters == null ? Optional.absent() : Optional.fromNullable(splitCounters[i]);
+                Optional<BM> splitCounter = splitCounters == null || splitCounters[i] == null ? Optional.absent() : Optional.fromNullable(splitCounters[i]);
                 futures.add(executorService.submit(() -> {
                     try {
                         List<TermIdLastIdCount> gatherSplit = Lists.newArrayList();
