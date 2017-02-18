@@ -14,7 +14,6 @@ import com.jivesoftware.os.miru.service.partition.cluster.PartitionAndHost;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
@@ -27,7 +26,7 @@ import java.util.concurrent.ConcurrentSkipListMap;
  */
 public class MiruHostedPartitionComparison {
 
-    private static final MetricLogger log = MetricLoggerFactory.getLogger();
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final ConcurrentMap<TenantPartitionAndQuery, ConcurrentSkipListMap<PartitionAndHost, Long>> coordRecency = Maps.newConcurrentMap();
     private final ConcurrentMap<TenantPartitionAndQuery, RunningPercentile> queryPercentile = Maps.newConcurrentMap();
@@ -44,11 +43,6 @@ public class MiruHostedPartitionComparison {
         return ComparisonChain
             .start()
             .compare(p2.partitionId, p1.partitionId) // flipped p1 and p2 so that we get descending order.
-            /*.compareTrueFirst(p1.local, p2.local)*/
-            /*.compare(p1.storage, p2.storage, Ordering.explicit(
-                MiruBackingStorage.memory,
-                MiruBackingStorage.disk,
-                MiruBackingStorage.unknown))*/
             .compare(t2, t1) // descending order
             .compare(p1.host, p2.host)
             .result();
@@ -81,7 +75,7 @@ public class MiruHostedPartitionComparison {
 
         ConcurrentSkipListMap<PartitionAndHost, Long> skipList = coordRecency.get(new TenantPartitionAndQuery(tenantId, partitionId, requestName, queryKey));
         Iterator<Map.Entry<PartitionAndHost, Long>> skipIter = skipList != null
-            ? skipList.entrySet().iterator() : Iterators.<Map.Entry<PartitionAndHost, Long>>emptyIterator();
+            ? skipList.entrySet().iterator() : Iterators.emptyIterator();
         Map.Entry<PartitionAndHost, Long> skipEntry = skipIter.hasNext() ? skipIter.next() : null;
 
         List<PartitionAndTime> partitionAndTimes = Lists.newArrayListWithCapacity(partitions.size());
@@ -102,7 +96,7 @@ public class MiruHostedPartitionComparison {
             partitionAndTimes.add(new PartitionAndTime(partition, time));
         }
 
-        Collections.sort(partitionAndTimes, partitionAndTimeComparator);
+        partitionAndTimes.sort(partitionAndTimeComparator);
         return Lists.transform(partitionAndTimes, input -> input.partition);
     }
 
@@ -131,6 +125,8 @@ public class MiruHostedPartitionComparison {
                 queryPercentile.putIfAbsent(key, new RunningPercentile(windowSize, percentile));
                 runningPercentile = queryPercentile.get(key);
             }
+
+            LOG.debug("Solution for {} {}: {}", requestName, queryKey, solution);
             runningPercentile.add(solution.usedResultElapsed);
         }
     }
@@ -140,7 +136,7 @@ public class MiruHostedPartitionComparison {
         if (runningPercentile != null) {
             long suggestion = runningPercentile.get();
             if (suggestion > 0) {
-                log.debug("Suggested {} for {} {} {}", suggestion, tenantId, partitionId, queryKey);
+                LOG.debug("Suggested {} for {} {} {}", suggestion, tenantId, partitionId, queryKey);
                 return Optional.of(suggestion);
             }
         }
@@ -195,7 +191,7 @@ public class MiruHostedPartitionComparison {
         }
     }
 
-    public static interface Timestamper {
+    public interface Timestamper {
         long get();
     }
 

@@ -1,7 +1,5 @@
 package com.jivesoftware.os.miru.reco.plugins.distincts;
 
-import com.fasterxml.jackson.databind.JavaType;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
@@ -33,16 +31,11 @@ public class DistinctsEndpoints {
     private static final FSTConfiguration conf = FSTConfiguration.createDefaultConfiguration();
 
     private final DistinctsInjectable injectable;
-    private final ObjectMapper objectMapper;
-    private final JavaType resultType;
     private final ResponseHelper responseHelper = ResponseHelper.INSTANCE;
 
     public DistinctsEndpoints(
-        @Context DistinctsInjectable injectable,
-        @Context ObjectMapper objectMapper) {
+        @Context DistinctsInjectable injectable) {
         this.injectable = injectable;
-        this.objectMapper = objectMapper;
-        this.resultType = objectMapper.getTypeFactory().constructParametricType(MiruRequestAndReport.class, DistinctsQuery.class, DistinctsReport.class);
     }
 
     @POST
@@ -54,16 +47,15 @@ public class DistinctsEndpoints {
             long t = System.currentTimeMillis();
             MiruResponse<DistinctsAnswer> response = injectable.gatherDistincts(request);
 
-            if (response.answer != null) {
-                int numResults = response.answer.results != null ? response.answer.results.size() : -1;
-                log.info("gatherDistincts {}:{} / {} in {}ms for tenant {}",
-                        request.query.gatherDistinctsForField,
-                        numResults,
-                        response.answer.collectedDistincts,
-                        System.currentTimeMillis() - t,
-                        request.tenantId);
-            } else {
+            if (response.answer == null) {
                 log.warn("gatherDistincts: no answer for tenant {}", request.tenantId);
+            } else {
+                log.info("gatherDistincts {}:{} / {} in {}ms for tenant {}",
+                    request.query.gatherDistinctsForField,
+                    response.answer.results != null ? response.answer.results.size() : -1,
+                    response.answer.collectedDistincts,
+                    System.currentTimeMillis() - t,
+                    request.tenantId);
             }
             return responseHelper.jsonResponse(response);
         } catch (MiruPartitionUnavailableException | InterruptedException e) {
@@ -90,11 +82,7 @@ public class DistinctsEndpoints {
         }
 
         try {
-            //byte[] jsonBytes = Snappy.uncompress(rawBytes);
-            //MiruRequestAndReport<DistinctsQuery, DistinctsReport> requestAndReport = objectMapper.readValue(jsonBytes, resultType);
-            //MiruPartitionResponse<DistinctsAnswer> result = injectable.gatherDistincts(partitionId, requestAndReport);
             MiruPartitionResponse<DistinctsAnswer> result = injectable.gatherDistincts(partitionId, requestAndReport);
-            //byte[] responseBytes = result != null ? Snappy.compress(objectMapper.writeValueAsBytes(result)) : new byte[0];
             byte[] responseBytes = result != null ? conf.asByteArray(result) : new byte[0];
             return Response.ok(responseBytes, MediaType.APPLICATION_OCTET_STREAM).build();
         } catch (MiruPartitionUnavailableException | InterruptedException e) {

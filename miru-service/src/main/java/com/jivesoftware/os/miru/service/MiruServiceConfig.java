@@ -26,12 +26,10 @@ public interface MiruServiceConfig extends Config {
     @StringDefault("var/lib/miru/transient")
     String getTransientResourceLocatorPaths();
 
-    // 4 KB
-    @LongDefault(4_096)
+    @LongDefault(4 * 1_024)
     long getOnDiskInitialChunkSize();
 
-    // 32 MB
-    @LongDefault(33_554_432)
+    @LongDefault(3 * 1_024 * 1_024)
     long getInMemoryChunkSize();
 
     @LongDefault(5_000)
@@ -65,13 +63,7 @@ public interface MiruServiceConfig extends Config {
 
     void setPersistentMergeChitCount(long mergeChitCount);
 
-    @LongDefault(1_000_000)
-    long getTransientMergeChitCount();
-
     void setTransientMergeChitCount(long mergeChitCount);
-
-    @LongDefault(-1)
-    long getMergeMaxOverage();
 
     @BooleanDefault(true)
     boolean getPartitionAllowNonLatestSchemaInteractions();
@@ -103,8 +95,6 @@ public interface MiruServiceConfig extends Config {
     @IntDefault(3)
     int getPartitionNumberOfChunkStores();
 
-    void setPartitionNumberOfChunkStores(int partitionNumberOfChunkStores);
-
     @IntDefault(10_000)
     int getPartitionAuthzCacheSize();
 
@@ -125,12 +115,6 @@ public interface MiruServiceConfig extends Config {
 
     @IntDefault(1_024)
     int getAuthzNumberOfLocks();
-
-    @IntDefault(65_536)
-    int getChunkStoreNumberOfLocks();
-
-    @IntDefault(65_536)
-    int getKeyedFilerNumberOfLocks();
 
     @IntDefault(1_000)
     int getLongTailSolverWindowSize();
@@ -161,8 +145,6 @@ public interface MiruServiceConfig extends Config {
 
     @IntDefault(24)
     int getRebuildIndexerThreads();
-
-    void setRebuildIndexerThreads(int rebuildIndexerThreads);
 
     @IntDefault(24)
     int getSipIndexerThreads();
