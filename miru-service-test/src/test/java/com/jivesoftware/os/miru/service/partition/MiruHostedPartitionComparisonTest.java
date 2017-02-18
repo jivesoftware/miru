@@ -54,7 +54,7 @@ public class MiruHostedPartitionComparisonTest {
 
         timestamper.set(0);
         partitionComparison.analyzeSolutions(Collections.singletonList(new MiruSolution(new MiruPartitionCoord(tenantId, partitionId, p2.host), 0, 0,
-            Collections.<MiruPartitionCoord>emptyList(), null)), requestName, queryKey);
+            Collections.emptyList(), null)), requestName, queryKey);
 
         // p2 answered, so now it's on top
         ordered = partitionComparison.orderPartitions(tenantId, partitionId, requestName, queryKey, skipList.values());
@@ -63,7 +63,7 @@ public class MiruHostedPartitionComparisonTest {
 
         timestamper.set(1);
         partitionComparison.analyzeSolutions(Collections.singletonList(new MiruSolution(new MiruPartitionCoord(tenantId, partitionId, p1.host), 0, 0,
-            Collections.<MiruPartitionCoord>emptyList(), null)), requestName, queryKey);
+            Collections.emptyList(), null)), requestName, queryKey);
 
         // p1 answered, so now it's on top
         ordered = partitionComparison.orderPartitions(tenantId, partitionId, requestName, queryKey, skipList.values());
@@ -76,7 +76,7 @@ public class MiruHostedPartitionComparisonTest {
         List<MiruSolution> solutions = Lists.newArrayList();
         for (int i = 1; i <= 100; i++) {
             MiruPartitionCoord coord = new MiruPartitionCoord(tenantId, partitionId, new MiruHost("logicalName_" + (10_000 + i)));
-            solutions.add(new MiruSolution(coord, i, i, Collections.<MiruPartitionCoord>emptyList(), null));
+            solutions.add(new MiruSolution(coord, i, i, Collections.emptyList(), null));
         }
         partitionComparison.analyzeSolutions(solutions, requestName, queryKey);
         assertEquals(partitionComparison.suggestTimeout(tenantId, partitionId, requestName, queryKey).get().longValue(), percentile);
@@ -88,7 +88,6 @@ public class MiruHostedPartitionComparisonTest {
     }
 
     private class TestTimestamper implements MiruHostedPartitionComparison.Timestamper {
-
         private long timestamp;
 
         public void set(long timestamp) {

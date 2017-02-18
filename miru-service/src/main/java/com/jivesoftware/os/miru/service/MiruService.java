@@ -55,7 +55,7 @@ import java.util.concurrent.Future;
  */
 public class MiruService implements Miru {
 
-    private static final MetricLogger log = MetricLoggerFactory.getLogger();
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private final MiruHost localhost;
     private final MiruPartitionDirector partitionDirector;
@@ -110,13 +110,13 @@ public class MiruService implements Miru {
         try {
             schemaProvider.getSchema(tenantId);
         } catch (MiruSchemaUnvailableException e) {
-            return new MiruResponse<>(null, null, 0, true, Collections.<Integer>emptyList(),
+            return new MiruResponse<>(null, null, 0, true, Collections.emptyList(),
                 Collections.singletonList("Schema has not been registered for this tenantId"));
         }
 
-        log.startTimer("askAndMerge");
+        LOG.startTimer("askAndMerge");
 
-        A answer = null;
+        A answer;
         List<MiruSolution> solutions = Lists.newArrayList();
         List<Integer> incompletePartitionIds = Lists.newArrayList();
         final MiruSolutionLog solutionLog = new MiruSolutionLog(logLevel);
@@ -148,14 +148,14 @@ public class MiruService implements Miru {
                 if (done) {
                     expectedSolution.cancel();
                 } else {
-                    MiruSolved<A> solved = expectedSolution.get(Optional.<A>absent());
+                    MiruSolved<A> solved = expectedSolution.get(Optional.absent());
                     if (solved == null) {
                         solutionLog.log(MiruSolutionLogLevel.WARN, "No solution for partition:{}", expectedSolution.getPartitionId());
                         solutionLog.log(MiruSolutionLogLevel.WARN, "WARNING result set is incomplete! elapse:{}",
                             (System.currentTimeMillis() - expectedSolution.getStart()));
                         incompletePartitionIds.add(expectedSolution.getPartitionId().getId());
                         if (evaluator.stopOnUnsolvablePartition()) {
-                            solutionLog.log(MiruSolutionLogLevel.ERROR, "ERROR result set is unsolvable!");
+                            solutionLog.log(MiruSolutionLogLevel.ERROR, "ERROR result set is unsolvable");
                             done = true;
                         }
                     } else {
@@ -180,15 +180,14 @@ public class MiruService implements Miru {
             partitionComparison.analyzeSolutions(solutions, solvableFactory.getRequestName(), solvableFactory.getQueryKey());
 
             answer = merger.done(lastAnswer, defaultValue, solutionLog);
-
         } finally {
-            totalElapsed = log.stopTimer("askAndMerge");
+            totalElapsed = LOG.stopTimer("askAndMerge");
         }
 
-        log.inc("askAndMerge");
-        log.inc("askAndMerge", tenantId.toString());
-        log.inc("askAndMerge>query>" + solvableFactory.getQueryKey());
-        log.inc("askAndMerge>query>" + solvableFactory.getQueryKey(), tenantId.toString());
+        LOG.inc("askAndMerge");
+        LOG.inc("askAndMerge", tenantId.toString());
+        LOG.inc("askAndMerge>query>" + solvableFactory.getQueryKey());
+        LOG.inc("askAndMerge>query>" + solvableFactory.getQueryKey(), tenantId.toString());
 
         return new MiruResponse<>(answer, solutions, totalElapsed, false, incompletePartitionIds, solutionLog.asList());
     }
@@ -207,13 +206,13 @@ public class MiruService implements Miru {
         try {
             schemaProvider.getSchema(tenantId);
         } catch (MiruSchemaUnvailableException e) {
-            return new MiruResponse<>(null, null, 0, true, Collections.<Integer>emptyList(),
+            return new MiruResponse<>(null, null, 0, true, Collections.emptyList(),
                 Collections.singletonList("Schema has not been registered for this tenantId"));
         }
 
-        log.startTimer("askAndMergePartition");
+        LOG.startTimer("askAndMergePartition");
 
-        A answer = null;
+        A answer;
         MiruSolutionLog solutionLog = new MiruSolutionLog(logLevel);
         List<MiruSolution> solutions = Lists.newArrayList();
         List<Integer> incompletePartitionIds = Lists.newArrayList();
@@ -236,7 +235,7 @@ public class MiruService implements Miru {
                     suggestedTimeoutInMillis,
                     executor,
                     solutionLog)
-                    .get(Optional.<A>absent());
+                    .get(Optional.absent());
             }
 
             Optional<A> lastAnswer = Optional.absent();
@@ -247,11 +246,14 @@ public class MiruService implements Miru {
                 solutionLog.log(MiruSolutionLogLevel.INFO, "Solved partition:{}. elapse:{} millis",
                     partitionId, (System.currentTimeMillis() - start));
                 solutions.add(solved.solution);
-                lastAnswer = Optional.of(merger.merge(Optional.<A>absent(), solved.answer, solutionLog));
+                lastAnswer = Optional.of(merger.merge(Optional.absent(), solved.answer, solutionLog));
             }
+
+            partitionComparison.analyzeSolutions(solutions, solvableFactory.getRequestName(), solvableFactory.getQueryKey());
+
             answer = merger.done(lastAnswer, defaultValue, solutionLog);
         } finally {
-            totalElapsed = log.stopTimer("askAndMergePartition");
+            totalElapsed = LOG.stopTimer("askAndMergePartition");
         }
 
         return new MiruResponse<>(answer, solutions, totalElapsed, false, incompletePartitionIds, solutionLog.asList());
@@ -272,10 +274,10 @@ public class MiruService implements Miru {
             Callable<MiruPartitionResponse<A>> callable = factory.create((MiruQueryablePartition) partition.get(), report);
             MiruPartitionResponse<A> answer = callable.call();
 
-            log.inc("askImmediate");
-            log.inc("askImmediate", tenantId.toString());
-            log.inc("askImmediate>query>" + factory.getQueryKey());
-            log.inc("askImmediate>query>" + factory.getQueryKey(), tenantId.toString());
+            LOG.inc("askImmediate");
+            LOG.inc("askImmediate", tenantId.toString());
+            LOG.inc("askImmediate>query>" + factory.getQueryKey());
+            LOG.inc("askImmediate>query>" + factory.getQueryKey(), tenantId.toString());
 
             return answer;
         } else {
@@ -381,7 +383,6 @@ public class MiruService implements Miru {
     }
 
     private interface ExpectedSolution<A> {
-
         MiruPartitionId getPartitionId();
 
         MiruSolved<A> get(Optional<A> lastAnswer) throws Exception;
@@ -394,7 +395,6 @@ public class MiruService implements Miru {
     private class ParallelExpectedSolution<A, BM extends IBM, IBM> implements ExpectedSolution<A> {
 
         private final OrderedPartitions<BM, IBM> orderedPartitions;
-        private final Executor executor;
         private final Future<MiruSolved<A>> future;
         private final long start;
 
@@ -403,13 +403,12 @@ public class MiruService implements Miru {
             Optional<Long> suggestedTimeoutInMillis,
             Executor executor,
             MiruSolutionLog solutionLog) {
-            this.executor = executor;
 
             Iterable<MiruSolvable<A>> solvables = Iterables.transform(orderedPartitions.partitions, replica -> {
                 if (replica.isLocal()) {
                     solutionLog.log(MiruSolutionLogLevel.INFO, "Created local solvable for coord={}.", replica.getCoord());
                 }
-                return solvableFactory.create(replica, solvableFactory.getReport(Optional.<A>absent()));
+                return solvableFactory.create(replica, solvableFactory.getReport(Optional.absent()));
             });
 
             this.orderedPartitions = orderedPartitions;
