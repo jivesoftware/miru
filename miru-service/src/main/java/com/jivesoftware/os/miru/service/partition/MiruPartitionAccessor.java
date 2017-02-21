@@ -75,6 +75,8 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
     private final MiruIndexer<BM, IBM> indexer;
 
     private final AtomicLong timestampOfLastMerge;
+    private final AtomicLong sipIngressTimestamp;
+    private final AtomicLong sipClockTimestamp;
     private final AtomicBoolean obsolete;
     private final AtomicBoolean sipEndOfWAL;
     private final AtomicBoolean compactEndOfWAL;
@@ -96,6 +98,8 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         MiruIndexRepairs indexRepairs,
         MiruIndexer<BM, IBM> indexer,
         AtomicLong timestampOfLastMerge,
+        AtomicLong sipIngressTimestamp,
+        AtomicLong sipClockTimestamp,
         AtomicBoolean obsolete,
         AtomicBoolean sipEndOfWAL,
         AtomicBoolean compactEndOfWAL) {
@@ -117,6 +121,8 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         this.indexRepairs = indexRepairs;
         this.indexer = indexer;
         this.timestampOfLastMerge = timestampOfLastMerge;
+        this.sipIngressTimestamp = sipIngressTimestamp;
+        this.sipClockTimestamp = sipClockTimestamp;
         this.obsolete = obsolete;
         this.sipEndOfWAL = sipEndOfWAL;
         this.compactEndOfWAL = compactEndOfWAL;
@@ -151,15 +157,36 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
             indexRepairs,
             indexer,
             new AtomicLong(System.currentTimeMillis()),
+            new AtomicLong(-1),
+            new AtomicLong(-1),
             new AtomicBoolean(obsolete),
             new AtomicBoolean(sipEndOfWAL),
             new AtomicBoolean(compactEndOfWAL));
     }
 
     MiruPartitionAccessor<BM, IBM, C, S> copyToState(MiruPartitionState toState) {
-        return new MiruPartitionAccessor<>(miruStats, bitmaps, coord, toState, hasPersistentStorage, persistentContext, transientContext, rebuildCursor,
-            seenLastSip.get(), endOfStream, hasOpenWriters, readSemaphore, writeSemaphore, closed, indexRepairs, indexer, timestampOfLastMerge, obsolete,
-            sipEndOfWAL, compactEndOfWAL);
+        return new MiruPartitionAccessor<>(miruStats,
+            bitmaps,
+            coord,
+            toState,
+            hasPersistentStorage,
+            persistentContext,
+            transientContext,
+            rebuildCursor,
+            seenLastSip.get(),
+            endOfStream,
+            hasOpenWriters,
+            readSemaphore,
+            writeSemaphore,
+            closed,
+            indexRepairs,
+            indexer,
+            timestampOfLastMerge,
+            sipIngressTimestamp,
+            sipClockTimestamp,
+            obsolete,
+            sipEndOfWAL,
+            compactEndOfWAL);
     }
 
     void close(MiruContextFactory<S> contextFactory) throws Exception {
@@ -265,6 +292,22 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         if (persistentContext.isPresent()) {
             persistentContext.get().schema.set(schema);
         }
+    }
+
+    long getSipIngressTimestamp() {
+        return sipIngressTimestamp.get();
+    }
+
+    void setSipIngressTimestamp(long timestamp) {
+        sipIngressTimestamp.set(timestamp);
+    }
+
+    long getSipClockTimestamp() {
+        return sipClockTimestamp.get();
+    }
+
+    void setSipClockTimestamp(long timestamp) {
+        sipClockTimestamp.set(timestamp);
     }
 
     boolean isOpenForWrites() {

@@ -1048,7 +1048,6 @@ public class MiruAggregateUtil {
         int[] ids = new int[batchSize];
         int gets = 0;
         int fetched = 0;
-        int used = 0;
         long getAllCost = 0;
         long andNotCost = 0;
         done:
@@ -1118,8 +1117,8 @@ public class MiruAggregateUtil {
                 }
             }
         }
-        solutionLog.log(MiruSolutionLogLevel.INFO, "gather aggregate gets:{} fetched:{} used:{} getAllCost:{} andNotCost:{}",
-            gets, fetched, used, getAllCost, andNotCost);
+        solutionLog.log(MiruSolutionLogLevel.INFO, "gather aggregate gets:{} fetched:{} getAllCost:{} andNotCost:{}",
+            gets, fetched, getAllCost, andNotCost);
     }
 
     public <BM extends IBM, IBM> BM filter(String name,

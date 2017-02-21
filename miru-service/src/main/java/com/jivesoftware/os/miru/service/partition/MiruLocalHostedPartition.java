@@ -1052,37 +1052,54 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                     }
                     try {
                         if (accessor.isOpenForWrites() && accessor.hasOpenWriters()) {
-                            if (!partitionAllowNonLatestSchemaInteractions && accessor.persistentContext.isPresent()) {
-                                MiruSchema latestSchema = contextFactory.lookupLatestSchema(coord.tenantId);
-                                if (!MiruSchema.checkEquals(accessor.persistentContext.get().getSchema(), latestSchema)) {
-                                    accessor.setSipEndOfWAL(false);
-                                    return;
-                                }
-                            }
-
-                            boolean recovery = !accessor.getSipEndOfWAL();
-                            SipResult sipResult = sip(accessor, recovery, stackBuffer);
-                            if (sipResult.sippedEndOfWAL) {
-                                accessor.setSipEndOfWAL(true);
-                            }
-                            if (sipResult.sippedEndOfStream && !accessor.hasOpenWriters() && accessor.persistentContext.isPresent()) {
-                                LOG.info("Forcing merge after sip with no open writers for coord:{} sippedEndOfWAL:{} sippedEndOfStream:{}",
-                                    coord, sipResult.sippedEndOfWAL, sipResult.sippedEndOfStream);
-                                MiruContext<BM, IBM, S> persistentContext = accessor.persistentContext.get();
-                                accessor.merge("endOfStream", persistentContext, persistentMergeChits, trackError);
-
-                                boolean compact = false;
-                                synchronized (factoryLock) {
-                                    if (accessor == accessorRef.get()) {
-                                        if (persistentMergeChits.taken(coord) == 0) {
-                                            contextFactory.markClosed(coord);
-                                            compact = true;
-                                        }
+                            MiruPartitionActive partitionActive = heartbeatHandler.getPartitionActive(coord);
+                            long sipIngressTimestamp = accessor.getSipIngressTimestamp();
+                            long cyaSipAfterTimestamp = accessor.getSipClockTimestamp() + timings.partitionCyaSipIntervalInMillis;
+                            long sipClockTimestamp = System.currentTimeMillis();
+                            boolean sipIngress = sipIngressTimestamp == -1 || partitionActive.lastIngressTimestamp != sipIngressTimestamp;
+                            boolean sipCya = sipClockTimestamp > cyaSipAfterTimestamp;
+                            if (sipIngress || sipCya) {
+                                if (!partitionAllowNonLatestSchemaInteractions && accessor.persistentContext.isPresent()) {
+                                    MiruSchema latestSchema = contextFactory.lookupLatestSchema(coord.tenantId);
+                                    if (!MiruSchema.checkEquals(accessor.persistentContext.get().getSchema(), latestSchema)) {
+                                        accessor.setSipEndOfWAL(false);
+                                        return;
                                     }
                                 }
-                                if (partitionCompactOnClosedWriters && compact && accessor.updateCompactEndOfWAL(false, true)) {
-                                    LOG.info("Compacting closed partition for coord:{}", coord);
-                                    persistentContext.compactable.compact(persistentMergeExecutor, false);
+
+                                boolean recovery = !accessor.getSipEndOfWAL();
+                                SipResult sipResult = sip(accessor, recovery, stackBuffer);
+                                if (sipIngress) {
+                                    LOG.inc("sip>trigger>ingress");
+                                }
+                                if (sipCya) {
+                                    LOG.inc("sip>trigger>cya");
+                                }
+                                accessor.setSipIngressTimestamp(sipIngressTimestamp);
+                                accessor.setSipClockTimestamp(sipClockTimestamp);
+
+                                if (sipResult.sippedEndOfWAL) {
+                                    accessor.setSipEndOfWAL(true);
+                                }
+                                if (sipResult.sippedEndOfStream && !accessor.hasOpenWriters() && accessor.persistentContext.isPresent()) {
+                                    LOG.info("Forcing merge after sip with no open writers for coord:{} sippedEndOfWAL:{} sippedEndOfStream:{}",
+                                        coord, sipResult.sippedEndOfWAL, sipResult.sippedEndOfStream);
+                                    MiruContext<BM, IBM, S> persistentContext = accessor.persistentContext.get();
+                                    accessor.merge("endOfStream", persistentContext, persistentMergeChits, trackError);
+
+                                    boolean compact = false;
+                                    synchronized (factoryLock) {
+                                        if (accessor == accessorRef.get()) {
+                                            if (persistentMergeChits.taken(coord) == 0) {
+                                                contextFactory.markClosed(coord);
+                                                compact = true;
+                                            }
+                                        }
+                                    }
+                                    if (partitionCompactOnClosedWriters && compact && accessor.updateCompactEndOfWAL(false, true)) {
+                                        LOG.info("Compacting closed partition for coord:{}", coord);
+                                        persistentContext.compactable.compact(persistentMergeExecutor, false);
+                                    }
                                 }
                             }
                         }
@@ -1362,6 +1379,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
         private final long partitionMigrationWaitInMillis;
         private final long partitionSipNotifyEndOfStreamMillis;
         private final long partitionRebuildEstimateActivityCountIntervalInMillis;
+        private final long partitionCyaSipIntervalInMillis;
 
         public Timings(long partitionBootstrapIntervalInMillis,
             long partitionRebuildIntervalInMillis,
@@ -1369,7 +1387,8 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
             long partitionBanUnregisteredSchemaMillis,
             long partitionMigrationWaitInMillis,
             long partitionSipNotifyEndOfStreamMillis,
-            long partitionRebuildEstimateActivityCountIntervalInMillis) {
+            long partitionRebuildEstimateActivityCountIntervalInMillis,
+            long partitionCyaSipIntervalInMillis) {
             this.partitionBootstrapIntervalInMillis = partitionBootstrapIntervalInMillis;
             this.partitionRebuildIntervalInMillis = partitionRebuildIntervalInMillis;
             this.partitionSipMigrateIntervalInMillis = partitionSipMigrateIntervalInMillis;
@@ -1377,6 +1396,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
             this.partitionMigrationWaitInMillis = partitionMigrationWaitInMillis;
             this.partitionSipNotifyEndOfStreamMillis = partitionSipNotifyEndOfStreamMillis;
             this.partitionRebuildEstimateActivityCountIntervalInMillis = partitionRebuildEstimateActivityCountIntervalInMillis;
+            this.partitionCyaSipIntervalInMillis = partitionCyaSipIntervalInMillis;
         }
     }
 

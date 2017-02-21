@@ -140,7 +140,8 @@ public class MiruLocalPartitionFactory<C extends MiruCursor<C, S>, S extends Mir
                 config.getPartitionBanUnregisteredSchemaMillis(),
                 config.getPartitionMigrationWaitInMillis(),
                 config.getPartitionSipNotifyEndOfStreamMillis(),
-                config.getPartitionRebuildEstimateActivityCountIntervalInMillis()));
+                config.getPartitionRebuildEstimateActivityCountIntervalInMillis(),
+                config.getPartitionCyaSipIntervalInMillis()));
     }
 
     public void prioritizeRebuild(MiruLocalHostedPartition<?, ?, ?, ?> partition) {

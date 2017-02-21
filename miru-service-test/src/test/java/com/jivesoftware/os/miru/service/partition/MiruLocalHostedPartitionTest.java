@@ -206,7 +206,7 @@ public class MiruLocalHostedPartitionTest {
             new MiruIndexBloom<>(new BloomIndex<>(bitmaps, Hashing.murmur3_128(), 100_000, 0.01f)),
             new MiruIndexLatest<>(),
             new MiruIndexPairedLatest<>());
-        timings = new MiruLocalHostedPartition.Timings(5_000, 5_000, 5_000, 30_000, 3_000, 30_000, 300_000);
+        timings = new MiruLocalHostedPartition.Timings(5_000, 5_000, 5_000, 30_000, 3_000, 30_000, 300_000, 60_000);
 
         MiruInterner<MiruIBA> ibaInterner = new MiruInterner<MiruIBA>(true) {
             @Override

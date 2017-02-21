@@ -134,7 +134,7 @@ public class MiruPartitionHeartbeatHandler {
         if (partitionActive != null) {
             return partitionActive;
         }
-        return new MiruPartitionActive(-1, -1, -1, -1);
+        return new MiruPartitionActive(-1, -1, -1, -1, -1);
     }
 
     private Collection<PartitionInfo> heartbeats() {
@@ -152,8 +152,7 @@ public class MiruPartitionHeartbeatHandler {
     private void setActive(MiruHost host, Collection<MiruPartitionActiveUpdate> updates) {
         for (MiruPartitionActiveUpdate update : updates) {
             MiruPartitionCoord coord = new MiruPartitionCoord(update.tenantId, MiruPartitionId.of(update.partitionId), host);
-            MiruPartitionActive partitionActive = new MiruPartitionActive(update.activeUntilTimestamp,
-                update.idleAfterTimestamp, update.destroyAfterTimestamp, update.cleanupAfterTimestamp);
+            MiruPartitionActive partitionActive = update.partitionActive;
             active.put(coord, partitionActive);
         }
     }

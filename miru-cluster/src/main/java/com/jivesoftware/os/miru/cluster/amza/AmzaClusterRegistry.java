@@ -515,10 +515,7 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
                 updates.add(new MiruPartitionActiveUpdate(tenantId,
                     partitionId.getId(),
                     hosted,
-                    partitionActive.activeUntilTimestamp,
-                    partitionActive.idleAfterTimestamp,
-                    partitionActive.destroyAfterTimestamp,
-                    partitionActive.cleanupAfterTimestamp));
+                    partitionActive));
             }
         }
 
@@ -1008,7 +1005,8 @@ public class AmzaClusterRegistry implements MiruClusterRegistry, RowChanges {
         }
 
         IngressStatusTimestamps ingressStatusTimestamps = getIngressStatusTimestamps(coord.tenantId, coord.partitionId);
-        return new MiruPartitionActive(activeUntilTimestamp,
+        return new MiruPartitionActive(lastIngressTimestamp,
+            activeUntilTimestamp,
             idleAfterTimestamp,
             ingressStatusTimestamps.destroyAfterTimestamp,
             ingressStatusTimestamps.cleanupAfterTimestamp);

@@ -107,6 +107,9 @@ public interface MiruServiceConfig extends Config {
     @IntDefault(100_000)
     int getPartitionMaxChunkCacheSize();
 
+    @LongDefault(60_000)
+    long getPartitionCyaSipIntervalInMillis();
+
     @IntDefault(65_536)
     int getFieldIndexNumberOfLocks();
 
