@@ -10,6 +10,7 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivityFactory;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.api.topology.MiruPartitionActive;
 import com.jivesoftware.os.miru.api.topology.MiruPartitionActiveUpdate;
 import com.jivesoftware.os.miru.bitmaps.roaring5.MiruBitmapsRoaring;
 import com.jivesoftware.os.miru.plugin.partition.MiruHostedPartition;
@@ -87,21 +88,36 @@ public class MiruTenantTopologyTest {
         when(localPartitionFactory.create(same(bitmaps), any(MiruPartitionCoord.class), anyLong())).thenAnswer(localAnswer);
 
         tenantTopology.checkForPartitionAlignment(Lists.newArrayList(
-            new MiruPartitionActiveUpdate(tenantId, p0.getId(), true, Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE)));
+            new MiruPartitionActiveUpdate(tenantId,
+                p0.getId(),
+                true,
+                new MiruPartitionActive(Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE))));
 
         verify(localPartitionFactory).create(same(bitmaps), eq(new MiruPartitionCoord(tenantId, p0, localhost)), anyLong());
         verifyNoMoreInteractions(localPartitionFactory);
 
         tenantTopology.checkForPartitionAlignment(Lists.newArrayList(
-            new MiruPartitionActiveUpdate(tenantId, p0.getId(), true, Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE),
-            new MiruPartitionActiveUpdate(tenantId, p1.getId(), true, Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE)));
+            new MiruPartitionActiveUpdate(tenantId,
+                p0.getId(),
+                true,
+                new MiruPartitionActive(Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE)),
+            new MiruPartitionActiveUpdate(tenantId,
+                p1.getId(),
+                true,
+                new MiruPartitionActive(Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE))));
 
         verify(localPartitionFactory).create(same(bitmaps), eq(new MiruPartitionCoord(tenantId, p1, localhost)), anyLong());
         verifyNoMoreInteractions(localPartitionFactory);
 
         tenantTopology.checkForPartitionAlignment(Lists.newArrayList(
-            new MiruPartitionActiveUpdate(tenantId, p0.getId(), false, Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE),
-            new MiruPartitionActiveUpdate(tenantId, p1.getId(), false, Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE)));
+            new MiruPartitionActiveUpdate(tenantId,
+                p0.getId(),
+                false,
+                new MiruPartitionActive(Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE)),
+            new MiruPartitionActiveUpdate(tenantId,
+                p1.getId(),
+                false,
+                new MiruPartitionActive(Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE, Long.MAX_VALUE))));
 
         verifyNoMoreInteractions(localPartitionFactory);
         verify(coordToPartition.get(new MiruPartitionCoord(tenantId, p0, localhost))).remove();
