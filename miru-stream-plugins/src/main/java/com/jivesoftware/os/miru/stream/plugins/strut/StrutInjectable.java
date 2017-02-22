@@ -28,6 +28,7 @@ public class StrutInjectable {
     private final int maxTermIdsPerRequest;
     private final boolean allowImmediateRescore;
     private final int gatherBatchSize;
+    private final boolean gatherParallel;
     private final int scoreConcurrencyLevel;
     private final ExecutorService gatherExecutorService;
 
@@ -37,13 +38,16 @@ public class StrutInjectable {
         int maxTermIdsPerRequest,
         boolean allowImmediateRescore,
         int gatherBatchSize,
-        int scoreConcurrencyLevel, ExecutorService gatherExecutorService) {
+        boolean gatherParallel,
+        int scoreConcurrencyLevel,
+        ExecutorService gatherExecutorService) {
         this.provider = provider;
         this.modelScorer = modelScorer;
         this.strut = strut;
         this.maxTermIdsPerRequest = maxTermIdsPerRequest;
         this.allowImmediateRescore = allowImmediateRescore;
         this.gatherBatchSize = gatherBatchSize;
+        this.gatherParallel = gatherParallel;
         this.scoreConcurrencyLevel = scoreConcurrencyLevel;
         this.gatherExecutorService = gatherExecutorService;
     }
@@ -63,6 +67,7 @@ public class StrutInjectable {
                         maxTermIdsPerRequest,
                         allowImmediateRescore,
                         gatherBatchSize,
+                        gatherParallel,
                         scoreConcurrencyLevel,
                         gatherExecutorService)),
                 new StrutAnswerEvaluator(),
@@ -96,6 +101,7 @@ public class StrutInjectable {
                         maxTermIdsPerRequest,
                         allowImmediateRescore,
                         gatherBatchSize,
+                        gatherParallel,
                         scoreConcurrencyLevel,
                         gatherExecutorService)),
                 Optional.fromNullable(requestAndReport.report),
@@ -127,6 +133,7 @@ public class StrutInjectable {
                         maxTermIdsPerRequest,
                         allowImmediateRescore,
                         gatherBatchSize,
+                        gatherParallel,
                         scoreConcurrencyLevel,
                         gatherExecutorService)),
                 new StrutAnswerMerger(request.query.desiredNumberOfResults),
