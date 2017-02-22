@@ -4,6 +4,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MinMaxPriorityQueue;
+import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
@@ -26,7 +27,6 @@ import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.index.TimeVersionRealtime;
-import com.jivesoftware.os.miru.plugin.solution.TermIdLastIdCount;
 import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
@@ -36,6 +36,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.solution.Question;
+import com.jivesoftware.os.miru.plugin.solution.TermIdLastIdCount;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
@@ -103,6 +104,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             solutionLog.log(MiruSolutionLogLevel.WARN, "No time index intersection. Partition {}: {} doesn't intersect with {}",
                 handle.getCoord().partitionId, context.getTimeIndex(), timeRange);
             StrutAnswer answer = strut.composeAnswer(context, request, Collections.emptyList(), 0);
+            LOG.inc("askLocal>noIntersection");
             return new MiruPartitionResponse<>(answer, solutionLog.asList());
         }
 
@@ -125,7 +127,9 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 -1,
                 stackBuffer);
             ands.add(constrained);
-            solutionLog.log(MiruSolutionLogLevel.INFO, "Constrained in {} ms", System.currentTimeMillis() - start);
+            long elapsed = System.currentTimeMillis() - start;
+            LOG.inc("askLocal>constrained>pow>" + FilerIO.chunkPower(elapsed, 0));
+            solutionLog.log(MiruSolutionLogLevel.INFO, "Constrained in {} ms", elapsed);
         }
 
         BitmapAndLastId<BM> container = new BitmapAndLastId<>();
@@ -142,8 +146,9 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                     handle.getCoord().partitionId,
                     request.query.unreadStreamId,
                     request.query.suppressUnreadFilter);
-                solutionLog.log(MiruSolutionLogLevel.INFO, "Backfill unread for {} took {} ms",
-                    request.query.unreadStreamId, System.currentTimeMillis() - start);
+                long elapsed = System.currentTimeMillis() - start;
+                LOG.inc("askLocal>backfill>pow>" + FilerIO.chunkPower(elapsed, 0));
+                solutionLog.log(MiruSolutionLogLevel.INFO, "Backfill unread for {} took {} ms", request.query.unreadStreamId, elapsed);
             }
 
             context.getUnreadTrackingIndex().getUnread(request.query.unreadStreamId).getIndex(container, stackBuffer);
@@ -211,7 +216,9 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             },
             stackBuffer);
 
-        solutionLog.log(MiruSolutionLogLevel.INFO, "Strut accumulated {} terms in {} ms", termIdLastIdCounts.size(), System.currentTimeMillis() - start);
+        long elapsed = System.currentTimeMillis() - start;
+        LOG.inc("askLocal>accumulated>pow>" + FilerIO.chunkPower(elapsed, 0));
+        solutionLog.log(MiruSolutionLogLevel.INFO, "Strut accumulated {} terms in {} ms", termIdLastIdCounts.size(), elapsed);
         start = System.currentTimeMillis();
 
         long totalTimeFetchingLastId = 0;
@@ -407,6 +414,8 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             }
         }
 
+        elapsed = System.currentTimeMillis() - start;
+        LOG.inc("askLocal>strutYourStuff>pow>" + FilerIO.chunkPower(elapsed, 0));
         solutionLog.log(MiruSolutionLogLevel.INFO,
             "Strut your stuff for {} terms took"
                 + " lastIds {} ms,"
@@ -421,7 +430,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             totalTimeRescores,
             totalTimeGather,
             totalTimeAndVersion,
-            System.currentTimeMillis() - start);
+            elapsed);
 
         solutionLog.log(MiruSolutionLogLevel.INFO, "Strut found {} terms", hotOrNots.size());
 

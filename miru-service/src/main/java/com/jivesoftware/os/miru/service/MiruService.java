@@ -5,6 +5,7 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
+import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
@@ -413,14 +414,22 @@ public class MiruService implements Miru {
 
             this.orderedPartitions = orderedPartitions;
             this.start = System.currentTimeMillis();
-            this.future = parallelExecutor.submit(() -> solver.solve(solvableFactory.getRequestName(),
-                solvableFactory.getQueryKey(),
-                orderedPartitions.tenantId,
-                orderedPartitions.partitionId,
-                solvables.iterator(),
-                suggestedTimeoutInMillis,
-                executor,
-                solutionLog));
+            this.future = parallelExecutor.submit(() -> {
+                solutionLog.log(MiruSolutionLogLevel.INFO, "Parallel solution began execution in {} ms", System.currentTimeMillis() - start);
+                MiruSolved<A> solved = solver.solve(solvableFactory.getRequestName(),
+                    solvableFactory.getQueryKey(),
+                    orderedPartitions.tenantId,
+                    orderedPartitions.partitionId,
+                    solvables.iterator(),
+                    suggestedTimeoutInMillis,
+                    executor,
+                    solutionLog);
+
+                long elapsed = System.currentTimeMillis() - start;
+                LOG.inc("parallel>elapsed>pow>" + FilerIO.chunkPower(elapsed, 0));
+                solutionLog.log(MiruSolutionLogLevel.INFO, "Parallel solution finished execution in {} ms", elapsed);
+                return solved;
+            });
         }
 
         @Override
