@@ -2,6 +2,8 @@ package com.jivesoftware.os.miru.service.solver;
 
 import com.google.common.base.Optional;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
+import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolution;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
@@ -10,6 +12,8 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolvable;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.mlogger.core.ValueType;
+import java.io.InterruptedIOException;
+import java.nio.channels.ClosedByInterruptException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -46,6 +50,8 @@ public class MiruLowestLatencySolver implements MiruSolver {
     @Override
     public <R> MiruSolved<R> solve(String requestName,
         String queryKey,
+        MiruTenantId tenantId,
+        MiruPartitionId partitionId,
         Iterator<MiruSolvable<R>> solvables,
         Optional<Long> suggestedTimeoutInMillis,
         Executor executor,
@@ -67,6 +73,14 @@ public class MiruLowestLatencySolver implements MiruSolver {
             log.set(ValueType.COUNT, "solve>request>" + requestName + ">" + queryKey + ">timeout", suggestedTimeoutInMillis.or(-1L));
             log.inc("solve>calls");
             log.inc("solve>request>" + requestName + ">" + queryKey + ">calls");
+
+            if (!solvables.hasNext()) {
+                log.inc("solve>empty");
+                log.inc("solve>request>" + requestName + ">" + queryKey + ">empty");
+                solutionLog.log(MiruSolutionLogLevel.ERROR, "No solvables available tenant={} partition={}", tenantId, partitionId);
+                return null;
+            }
+
             while (solvables.hasNext() && solversAdded < initialSolvers) {
                 MiruSolvable<R> solvable = solvables.next();
                 solutionLog.log(MiruSolutionLogLevel.INFO, "Initial solver index={} coord={}", solversAdded, solvable.getCoord());
@@ -129,8 +143,24 @@ public class MiruLowestLatencySolver implements MiruSolver {
                             solversFailed++;
                         }
                     } catch (ExecutionException e) {
+                        boolean interrupted = false;
+                        Throwable cause = e;
+                        for (int i = 0; i < 10 && cause != null; i++) {
+                            if (cause instanceof InterruptedException
+                                || cause instanceof InterruptedIOException
+                                || cause instanceof ClosedByInterruptException) {
+                                interrupted = true;
+                                break;
+                            }
+                            cause = cause.getCause();
+                        }
+                        if (interrupted) {
+                            log.inc("solve>request>" + requestName + ">" + queryKey + ">solvableInterrupted");
+                        } else {
+                            log.inc("solve>request>" + requestName + ">" + queryKey + ">solvableError>" + e.getCause().getClass().getSimpleName());
+                        }
+
                         log.debug("Solver failed to execute", e.getCause());
-                        log.inc("solve>request>" + requestName + ">" + queryKey + ">solvableError");
                         log.incBucket("solve>throughput>failure", 1_000L, 100);
                         log.incBucket("solve>throughput>failure>" + requestName + ">" + queryKey, 1_000L, 100);
                         solutionLog.log(MiruSolutionLogLevel.WARN, "WARNING: Solver failed to execute. cause: {}", e.getMessage());
