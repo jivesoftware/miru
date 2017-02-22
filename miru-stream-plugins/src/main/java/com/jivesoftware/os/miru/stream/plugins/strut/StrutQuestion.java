@@ -61,6 +61,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
     private final int maxTermIdsPerRequest;
     private final boolean allowImmediateRescore;
     private final int gatherBatchSize;
+    private final boolean gatherParallel;
     private final int scoreConcurrencyLevel;
     private final ExecutorService gatherExecutorService;
 
@@ -75,6 +76,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         int maxTermIdsPerRequest,
         boolean allowImmediateRescore,
         int gatherBatchSize,
+        boolean gatherParallel,
         int scoreConcurrencyLevel,
         ExecutorService gatherExecutorService) {
         this.modelScorer = modelScorer;
@@ -85,6 +87,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         this.maxTermIdsPerRequest = maxTermIdsPerRequest;
         this.allowImmediateRescore = allowImmediateRescore;
         this.gatherBatchSize = gatherBatchSize;
+        this.gatherParallel = gatherParallel;
         this.scoreConcurrencyLevel = scoreConcurrencyLevel;
         this.gatherExecutorService = gatherExecutorService;
     }
@@ -195,26 +198,46 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         long start = System.currentTimeMillis();
         List<TermIdLastIdCount> termIdLastIdCounts = Lists.newArrayList();
         Optional<BM> counter = request.query.countUnread ? unreadIndex.transform(input -> bitmaps.and(Arrays.asList(input, eligible))) : Optional.absent();
-        //TODO config batch size
-        aggregateUtil.gatherParallel("strut",
-            bitmaps,
-            context,
-            eligible,
-            pivotFieldId,
-            gatherBatchSize,
-            true,
-            maxTermIdsPerRequest,
-            counter,
-            solutionLog,
-            gatherExecutorService,
-            (termIdLastIdCount) -> {
-                termIdLastIdCounts.add(termIdLastIdCount);
-                if (termIdLastIdCount.count <= 0) {
-                    LOG.inc("strut>gather>empty");
-                }
-                return maxTermIdsPerRequest <= 0 || termIdLastIdCounts.size() < maxTermIdsPerRequest;
-            },
-            stackBuffer);
+        if (gatherParallel) {
+            aggregateUtil.gatherParallel("strut",
+                bitmaps,
+                context,
+                eligible,
+                pivotFieldId,
+                gatherBatchSize,
+                true,
+                maxTermIdsPerRequest,
+                counter,
+                solutionLog,
+                gatherExecutorService,
+                (termIdLastIdCount) -> {
+                    termIdLastIdCounts.add(termIdLastIdCount);
+                    if (termIdLastIdCount.count <= 0) {
+                        LOG.inc("strut>gather>empty");
+                    }
+                    return maxTermIdsPerRequest <= 0 || termIdLastIdCounts.size() < maxTermIdsPerRequest;
+                },
+                stackBuffer);
+        } else {
+            aggregateUtil.gather("strut",
+                bitmaps,
+                context,
+                eligible,
+                pivotFieldId,
+                gatherBatchSize,
+                false,
+                true,
+                counter,
+                solutionLog,
+                (lastId, termId, count) -> {
+                    termIdLastIdCounts.add(new TermIdLastIdCount(termId, lastId, count));
+                    if (count <= 0) {
+                        LOG.inc("strut>gather>empty");
+                    }
+                    return maxTermIdsPerRequest <= 0 || termIdLastIdCounts.size() < maxTermIdsPerRequest;
+                },
+                stackBuffer);
+        }
 
         long elapsed = System.currentTimeMillis() - start;
         LOG.inc("askLocal>accumulated>pow>" + FilerIO.chunkPower(elapsed, 0));

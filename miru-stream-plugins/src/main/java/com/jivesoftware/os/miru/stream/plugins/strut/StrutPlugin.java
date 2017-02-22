@@ -128,6 +128,9 @@ public class StrutPlugin implements MiruPlugin<StrutEndpoints, StrutInjectable>,
             config.getShareScores());
         modelScorer.start(asyncExecutorService, config.getQueueStripeCount(), config.getQueueConsumeIntervalMillis());
 
+
+        int gatherThreadPoolSize = config.getGatherThreadPoolSize(); //TODO reconsider
+        boolean gatherParallel = gatherThreadPoolSize > 1;
         return Collections.singletonList(new MiruEndpointInjectable<>(
             StrutInjectable.class,
             new StrutInjectable(miruProvider,
@@ -136,7 +139,8 @@ public class StrutPlugin implements MiruPlugin<StrutEndpoints, StrutInjectable>,
                 config.getMaxTermIdsPerRequest(),
                 config.getAllowImmediateStrutRescore(),
                 config.getGatherBatchSize(),
-                config.getGatherThreadPoolSize(), //TODO reconsider
+                gatherParallel,
+                gatherThreadPoolSize,
                 gatherExecutorService)));
     }
 
