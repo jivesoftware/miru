@@ -415,6 +415,8 @@ public class MiruService implements Miru {
             this.start = System.currentTimeMillis();
             this.future = parallelExecutor.submit(() -> solver.solve(solvableFactory.getRequestName(),
                 solvableFactory.getQueryKey(),
+                orderedPartitions.tenantId,
+                orderedPartitions.partitionId,
                 solvables.iterator(),
                 suggestedTimeoutInMillis,
                 executor,
@@ -481,6 +483,8 @@ public class MiruService implements Miru {
             start = System.currentTimeMillis();
             return solver.solve(solvableFactory.getRequestName(),
                 solvableFactory.getQueryKey(),
+                orderedPartitions.tenantId,
+                orderedPartitions.partitionId,
                 solvables.iterator(),
                 suggestedTimeoutInMillis,
                 executor,

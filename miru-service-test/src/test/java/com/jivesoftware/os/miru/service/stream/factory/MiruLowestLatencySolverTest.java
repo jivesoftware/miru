@@ -42,12 +42,15 @@ public class MiruLowestLatencySolverTest {
         MiruLowestLatencySolver solver = new MiruLowestLatencySolver(initialSolvers, maxNumberOfSolvers,
             addAnotherSolverAfterNMillis, failAfterNMillis);
 
+        MiruTenantId tenantId = new MiruTenantId("test".getBytes());
+        MiruPartitionId partitionId = MiruPartitionId.of(1);
+
         List<MiruSolvable<Integer>> solvables = Lists.newArrayList();
         List<MiruPartition> orderedPartitions = Lists.newArrayList();
         for (int i = 0; i < 10; i++) {
             final int id = i;
-            MiruPartitionCoord coord = new MiruPartitionCoord(new MiruTenantId("test".getBytes()),
-                MiruPartitionId.of(1),
+            MiruPartitionCoord coord = new MiruPartitionCoord(tenantId,
+                partitionId,
                 new MiruHost("logicalName_" + (10_000 + i)));
             solvables.add(new MiruSolvable<>(
                 coord,
@@ -62,7 +65,7 @@ public class MiruLowestLatencySolverTest {
         Collections.shuffle(solvables, new Random(1_234)); // randomize the solvers
 
         MiruSolutionLog solutionLog = new MiruSolutionLog(MiruSolutionLogLevel.ERROR);
-        MiruSolved<Integer> solved = solver.solve("a", "b", solvables.iterator(), Optional.<Long>absent(), executor, solutionLog);
+        MiruSolved<Integer> solved = solver.solve("a", "b", tenantId, partitionId, solvables.iterator(), Optional.<Long>absent(), executor, solutionLog);
         assertNotNull(solved.answer, "The answer was null, this probably means that the solver timed out when it shouldn't have.");
         assertEquals((int) solved.answer, 0);
         assertNotNull(solved.solution, "The solution was null");
