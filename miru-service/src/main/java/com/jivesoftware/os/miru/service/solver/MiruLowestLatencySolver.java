@@ -64,22 +64,23 @@ public class MiruLowestLatencySolver implements MiruSolver {
         List<MiruPartitionCoord> triedPartitions = new ArrayList<>(initialSolvers);
         MiruSolved<R> solved = null;
         try {
-            log.set(ValueType.COUNT, "solve>timeout>" + requestName + ">" + queryKey, suggestedTimeoutInMillis.or(-1L));
+            log.set(ValueType.COUNT, "solve>request>" + requestName + ">" + queryKey + ">timeout", suggestedTimeoutInMillis.or(-1L));
             log.inc("solve>calls");
-            log.inc("solve>calls>" + requestName + ">" + queryKey);
+            log.inc("solve>request>" + requestName + ">" + queryKey + ">calls");
             while (solvables.hasNext() && solversAdded < initialSolvers) {
                 MiruSolvable<R> solvable = solvables.next();
                 solutionLog.log(MiruSolutionLogLevel.INFO, "Initial solver index={} coord={}", solversAdded, solvable.getCoord());
                 triedPartitions.add(solvable.getCoord());
                 futures.add(new SolvableFuture<>(solvable, completionService.submit(solvable), System.currentTimeMillis()));
                 log.inc("solve>initial");
-                log.inc("solve>initial>" + requestName + ">" + queryKey);
+                log.inc("solve>request>" + requestName + ">" + queryKey + ">initial");
                 solversAdded++;
             }
             while (solversFailed < maxNumberOfSolvers && System.currentTimeMillis() < failAfterTime) {
                 boolean mayAddSolver = (solversAdded < maxNumberOfSolvers && solvables.hasNext());
                 long timeout = Math.max(failAfterTime - System.currentTimeMillis(), 0);
                 if (timeout == 0) {
+                    log.inc("solve>request>" + requestName + ">" + queryKey + ">outOfTime");
                     solutionLog.log(MiruSolutionLogLevel.WARN, "WARNING: Ran out of time. Took more than {} millis to compute a solution.", failAfterTime);
                     break; // out of time
                 }
@@ -105,7 +106,7 @@ public class MiruLowestLatencySolver implements MiruSolver {
                                             response.log),
                                         response.answer);
                                     log.inc("solve>success");
-                                    log.inc("solve>success>" + requestName + ">" + queryKey);
+                                    log.inc("solve>request>" + requestName + ">" + queryKey + ">success");
                                     String locality = f.solvable.isLocal() ? "local" : "remote";
                                     log.incBucket("solve>throughput>success>" + locality, 1_000L, 100);
                                     log.incBucket("solve>throughput>success>" + locality + ">" + requestName + ">" + queryKey, 1_000L, 100);
@@ -124,27 +125,31 @@ public class MiruLowestLatencySolver implements MiruSolver {
                             }
                             break;
                         } else {
+                            log.inc("solve>request>" + requestName + ">" + queryKey + ">solvableFailed");
                             solversFailed++;
                         }
                     } catch (ExecutionException e) {
                         log.debug("Solver failed to execute", e.getCause());
+                        log.inc("solve>request>" + requestName + ">" + queryKey + ">solvableError");
                         log.incBucket("solve>throughput>failure", 1_000L, 100);
                         log.incBucket("solve>throughput>failure>" + requestName + ">" + queryKey, 1_000L, 100);
                         solutionLog.log(MiruSolutionLogLevel.WARN, "WARNING: Solver failed to execute. cause: {}", e.getMessage());
                         solversFailed++;
                     }
                 } else {
+                    log.inc("solve>request>" + requestName + ">" + queryKey + ">moreSolvers");
                     solutionLog.log(MiruSolutionLogLevel.WARN, "No solution completed within {} millis. Will add addition solver if possible.", timeout);
                 }
                 if (mayAddSolver) {
                     MiruSolvable<R> solvable = solvables.next();
                     solutionLog.log(MiruSolutionLogLevel.INFO, "Added a solver coord={}", solvable.getCoord());
                     log.inc("solve>added");
-                    log.inc("solve>added>" + requestName + ">" + queryKey);
+                    log.inc("solve>request>" + requestName + ">" + queryKey + ">added");
                     triedPartitions.add(solvable.getCoord());
                     futures.add(new SolvableFuture<>(solvable, completionService.submit(solvable), System.currentTimeMillis()));
                     solversAdded++;
                 } else if (solversFailed == solversAdded) {
+                    log.inc("solve>request>" + requestName + ">" + queryKey + ">allFailed");
                     solutionLog.log(MiruSolutionLogLevel.ERROR, "All solvers failed to execute.");
                     break;
                 }

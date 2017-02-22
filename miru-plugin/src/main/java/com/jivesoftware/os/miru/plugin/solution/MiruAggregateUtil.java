@@ -44,6 +44,8 @@ import com.jivesoftware.os.rcvs.marshall.api.UtilLexMarshaller;
 import gnu.trove.iterator.TObjectIntIterator;
 import gnu.trove.map.hash.TObjectIntHashMap;
 import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.nio.channels.ClosedByInterruptException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -925,7 +927,12 @@ public class MiruAggregateUtil {
                         // ignore
                         return null;
                     } catch (Throwable t) {
-                        LOG.warn("Parallel gather failed", t);
+                        Throwable cause = t.getCause();
+                        if (cause instanceof InterruptedException || cause instanceof InterruptedIOException || cause instanceof ClosedByInterruptException) {
+                            // ignore
+                        } else {
+                            LOG.warn("Parallel gather failed", t);
+                        }
                         return null;
                     }
                 }));
