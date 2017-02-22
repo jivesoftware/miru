@@ -77,7 +77,7 @@ public class MiruLowestLatencySolver implements MiruSolver {
             if (!solvables.hasNext()) {
                 log.inc("solve>empty");
                 log.inc("solve>request>" + requestName + ">" + queryKey + ">empty");
-                solutionLog.log(MiruSolutionLogLevel.ERROR, "No solvables available tenant={} partition={}", tenantId, partitionId);
+                solutionLog.log(MiruSolutionLogLevel.WARN, "WARNING: No solvables available tenant={} partition={}", tenantId, partitionId);
                 return null;
             }
 
