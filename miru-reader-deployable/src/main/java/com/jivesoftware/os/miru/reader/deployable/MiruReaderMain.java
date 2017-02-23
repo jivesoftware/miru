@@ -254,7 +254,7 @@ public class MiruReaderMain {
                 ibaInterner,
                 tenantInterner,
                 // makes sense to share string internment as this is authz in both cases
-                Interners.<String>newWeakInterner(),
+                Interners.newWeakInterner(),
                 termComposer);
 
             MiruBitmaps<?, ?> bitmaps = miruServiceConfig.getBitmapsClass().newInstance();
