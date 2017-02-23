@@ -71,7 +71,7 @@ public class MiruTenantQueryRouting {
 
         private final MiruHost host;
 
-        public PreferredNodeStrategy(MiruHost host) {
+        PreferredNodeStrategy(MiruHost host) {
             this.host = host;
         }
 
