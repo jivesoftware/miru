@@ -16,7 +16,6 @@ import com.jivesoftware.os.miru.api.MiruHostProvider;
 import com.jivesoftware.os.miru.api.MiruHostSelectiveStrategy;
 import com.jivesoftware.os.miru.api.MiruPartition;
 import com.jivesoftware.os.miru.api.MiruReader;
-import com.jivesoftware.os.miru.api.MiruReaderEndpointConstants;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.TenantAndPartition;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
@@ -26,7 +25,6 @@ import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSet;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.routing.bird.http.client.ConnectionDescriptorSelectiveStrategy;
 import com.jivesoftware.os.routing.bird.http.client.HttpClientException;
 import com.jivesoftware.os.routing.bird.http.client.HttpResponse;
 import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
@@ -46,7 +44,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -320,10 +317,10 @@ public class MiruRebalanceDirector {
         Table<MiruTenantId, MiruPartitionId, List<MiruPartition>> replicaTable = HashBasedTable.create();
 
         if (currentPartitionOnly) {
-            replicaTable.put(tenantId, currentPartitionId, Lists.<MiruPartition>newArrayList());
+            replicaTable.put(tenantId, currentPartitionId, Lists.newArrayList());
         } else {
             for (MiruPartitionId partitionId = currentPartitionId; partitionId != null; partitionId = partitionId.prev()) {
-                replicaTable.put(tenantId, partitionId, Lists.<MiruPartition>newArrayList());
+                replicaTable.put(tenantId, partitionId, Lists.newArrayList());
             }
         }
 
@@ -337,18 +334,6 @@ public class MiruRebalanceDirector {
 
         return replicaTable;
     }
-
-    /*private static final Color[] COLORS;
-    static {
-        COLORS = new Color[MiruPartitionState.values().length];
-        Arrays.fill(COLORS, Color.WHITE);
-        COLORS[MiruPartitionState.offline.ordinal()] = Color.GRAY;
-        COLORS[MiruPartitionState.bootstrap.ordinal()] = Color.BLUE;
-        COLORS[MiruPartitionState.rebuilding.ordinal()] = Color.MAGENTA;
-        COLORS[MiruPartitionState.online.ordinal()] = Color.GREEN;
-        COLORS[MiruPartitionState.obsolete.ordinal()] = Color.CYAN;
-        COLORS[MiruPartitionState.upgrading.ordinal()] = Color.PINK;
-    }*/
 
     public void rebuildTenantPartition(MiruHost miruHost, MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
         String result = readerClient.call("", new MiruHostSelectiveStrategy(new MiruHost[] { miruHost }), "prioritizeRebuild", httpClient -> {

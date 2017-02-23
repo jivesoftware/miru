@@ -1,11 +1,7 @@
 package com.jivesoftware.os.miru.api;
 
 import com.google.common.base.Strings;
-import com.jivesoftware.os.routing.bird.shared.ConnectionDescriptorsProvider;
 
-/**
- *
- */
 public class MiruHostProvider {
 
     public static MiruHost fromInstance(Integer instanceName, String instanceKey) {
@@ -26,4 +22,5 @@ public class MiruHostProvider {
             return false;
         }
     }
+
 }
