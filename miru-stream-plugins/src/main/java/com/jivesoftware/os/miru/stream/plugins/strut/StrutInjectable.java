@@ -138,6 +138,7 @@ public class StrutInjectable {
                         gatherExecutorService)),
                 new StrutAnswerMerger(request.query.desiredNumberOfResults),
                 StrutAnswer.EMPTY_RESULTS,
+                StrutAnswer.EMPTY_RESULTS,
                 miru.getDefaultExecutor(),
                 request.logLevel);
         } catch (MiruPartitionUnavailableException | InterruptedException e) {

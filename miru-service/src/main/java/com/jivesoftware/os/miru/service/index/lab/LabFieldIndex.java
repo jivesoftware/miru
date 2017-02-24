@@ -210,6 +210,7 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
         byte[] fieldIdBytes = FilerIO.intBytes(fieldId);
         MutableLong bytes = new MutableLong();
         ValueIndex<byte[]> bitmapIndex = getBitmapIndex(fieldId);
+        ReusableByteBufferDataInput in = new ReusableByteBufferDataInput();
         if (atomized) {
             for (int i = 0; i < termIds.length; i++) {
                 if (termIds[i] != null) {
@@ -225,7 +226,8 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
                                     if (payload != null) {
                                         bytes.add(payload.length);
                                         int labKey = LabInvertedIndex.deatomize(key.asByteBuffer());
-                                        return atomStream.stream(labKey, new ByteBufferDataInput(payload.asByteBuffer()));
+                                        in.setBuffer(payload.asByteBuffer());
+                                        return atomStream.stream(labKey, in);
                                     }
                                     return true;
                                 },
@@ -253,6 +255,7 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
                         BitmapAndLastId<BM> bitmapAndLastId = new BitmapAndLastId<>();
                         LabInvertedIndex.deserNonAtomized(bitmaps,
                             trackError,
+                            in,
                             payload.asByteBuffer(),
                             bitmapAndLastId);
                         results[index] = bitmapAndLastId.isSet() ? bitmapAndLastId : null;
@@ -275,6 +278,7 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
         MutableLong bytes = new MutableLong();
         ValueIndex<byte[]> bitmapIndex = getBitmapIndex(fieldId);
         if (atomized) {
+            ReusableByteBufferDataInput in = new ReusableByteBufferDataInput();
             int[] lastId = new int[1];
             for (int i = 0; i < termIds.length; i++) {
                 if (termIds[i] != null) {
@@ -287,7 +291,7 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
                                 if (lastId[0] == -1) {
                                     bytes.add(payload.length);
                                     int labKey = LabInvertedIndex.deatomize(key.asByteBuffer());
-                                    lastId[0] = LabInvertedIndex.deserLastId(bitmaps, atomized, labKey, payload.asByteBuffer());
+                                    lastId[0] = LabInvertedIndex.deserLastId(bitmaps, atomized, labKey, in, payload.asByteBuffer());
                                     if (lastId[0] != -1) {
                                         return false;
                                     }
@@ -346,6 +350,7 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
         if (atomized) {
             int[] lastId = new int[1];
             BitmapAndLastId<BM> container = new BitmapAndLastId<>();
+            ReusableByteBufferDataInput in = new ReusableByteBufferDataInput();
             for (int i = 0; i < termIds.length; i++) {
                 if (termIds[i] != null) {
                     container.clear();
@@ -363,12 +368,13 @@ public class LabFieldIndex<BM extends IBM, IBM> implements MiruFieldIndex<BM, IB
                                         bytes.add(payload.length);
                                         int labKey = LabInvertedIndex.deatomize(key.asByteBuffer());
                                         if (lastId[0] == -1) {
-                                            lastId[0] = LabInvertedIndex.deserLastId(bitmaps, atomized, labKey, payload.asByteBuffer());
+                                            lastId[0] = LabInvertedIndex.deserLastId(bitmaps, atomized, labKey, in, payload.asByteBuffer());
                                             if (lastId[0] != -1 && lastId[0] < considerIfLastIdGreaterThanN) {
                                                 return false;
                                             }
                                         }
-                                        return atomStream.stream(labKey, new ByteBufferDataInput(payload.asByteBuffer()));
+                                        in.setBuffer(payload.asByteBuffer());
+                                        return atomStream.stream(labKey, in);
                                     }
                                     return true;
                                 },

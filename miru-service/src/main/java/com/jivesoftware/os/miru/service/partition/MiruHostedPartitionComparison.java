@@ -80,11 +80,13 @@ public class MiruHostedPartitionComparison {
 
         List<PartitionAndTime> partitionAndTimes = Lists.newArrayListWithCapacity(partitions.size());
 
+        boolean allDestroyed = true;
         for (MiruRoutablePartition partition : partitions) {
             if (partition.destroyAfterTimestamp > 0 && System.currentTimeMillis() > partition.destroyAfterTimestamp) {
                 continue;
             }
 
+            allDestroyed = false;
             PartitionAndHost partitionAndHost = new PartitionAndHost(partition.partitionId, partition.host);
             while (skipEntry != null && skipEntry.getKey().compareTo(partitionAndHost) < 0) {
                 skipEntry = skipIter.hasNext() ? skipIter.next() : null;
@@ -96,8 +98,12 @@ public class MiruHostedPartitionComparison {
             partitionAndTimes.add(new PartitionAndTime(partition, time));
         }
 
-        partitionAndTimes.sort(partitionAndTimeComparator);
-        return Lists.transform(partitionAndTimes, input -> input.partition);
+        if (allDestroyed) {
+            return null;
+        } else {
+            partitionAndTimes.sort(partitionAndTimeComparator);
+            return Lists.transform(partitionAndTimes, input -> input.partition);
+        }
     }
 
     /**

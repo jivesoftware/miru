@@ -111,6 +111,7 @@ public class CatwalkInjectable {
                         maxHeapPressureInBytes)),
                 new CatwalkAnswerMerger(request.query.desiredNumberOfResults),
                 CatwalkAnswer.EMPTY_RESULTS,
+                CatwalkAnswer.DESTROYED_RESULTS,
                 catwalkExecutor,
                 request.logLevel);
         } catch (MiruPartitionUnavailableException | InterruptedException e) {

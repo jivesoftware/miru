@@ -203,7 +203,7 @@ public class Catwalk {
             requestContext.getTimeIndex().getLargestTimestamp());
 
         long totalCount = requestContext.getTimeIndex().lastId();
-        CatwalkAnswer result = new CatwalkAnswer(featureScoreResults, modelCounts, totalCount, timeRange, resultsExhausted, resultsClosed);
+        CatwalkAnswer result = new CatwalkAnswer(featureScoreResults, modelCounts, totalCount, timeRange, resultsExhausted, resultsClosed, false);
         LOG.debug("result={}", result);
         return result;
     }

@@ -99,7 +99,8 @@ public class CatwalkAnswerMerger implements MiruAnswerMerger<CatwalkAnswer> {
             lastAnswer.totalCount + currentAnswer.totalCount,
             mergedTimeRange,
             currentAnswer.resultsExhausted,
-            mergedResultsClosed);
+            mergedResultsClosed,
+            false);
     }
 
     @Override

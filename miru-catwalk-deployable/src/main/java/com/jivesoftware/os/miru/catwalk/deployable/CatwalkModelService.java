@@ -126,86 +126,86 @@ public class CatwalkModelService {
                     String featureName = range.featureName;
                     int featureId = range.featureId;
                     ModelFeatureScores scores = valueFromBytes(value, featureId);
-
-                    fieldIdsToFeatureScores.compute(featureName, (t, currentMerged) -> {
-                        if (currentMerged == null) {
-                            MergedScores mergedScores = new MergedScores(range, scores);
-                            mergedScores.allRanges.add(range);
-                            if (scores.partitionIsClosed) {
-                                mergedScores.ranges.add(range);
-                                mergedScores.scores = scores;
-                                mergedScores.timeRange = scores.timeRange;
+                    if (scores.timeRange != null) {
+                        fieldIdsToFeatureScores.compute(featureName, (t, currentMerged) -> {
+                            if (currentMerged == null) {
+                                MergedScores mergedScores = new MergedScores(range, scores);
+                                mergedScores.allRanges.add(range);
+                                if (scores.partitionIsClosed) {
+                                    mergedScores.ranges.add(range);
+                                    mergedScores.scores = scores;
+                                    mergedScores.timeRange = scores.timeRange;
+                                }
+                                return mergedScores;
                             }
-                            return mergedScores;
-                        }
 
-                        PeekingIterator<FeatureScore> a = Iterators.peekingIterator(currentMerged.mergedScores.featureScores.iterator());
-                        PeekingIterator<FeatureScore> b = Iterators.peekingIterator(scores.featureScores.iterator());
+                            PeekingIterator<FeatureScore> a = Iterators.peekingIterator(currentMerged.mergedScores.featureScores.iterator());
+                            PeekingIterator<FeatureScore> b = Iterators.peekingIterator(scores.featureScores.iterator());
 
-                        // dur: 9  5  7  6  5  7  9  4
-                        // pid: 0, 1, 2, 3, 4, 5, 6, 7
-                        // 0*0.9, 1...
-                        // 01*0.9, 2...
-                        // 02*0.9, 3...
-                        // 06 -> A-view-B -> 21 / 70 = (3 / 10) / partition
-                        //  7 -> A-view-B -> 0 / 10
-                        // 06, 7... -> 21/80
-                        // 06, 7, 8
-                        // 07, 8
-                        // 07*0.9, 8
-                        // 07, A-view-B ->   99 / 100
-                        // 8 9 10 11 12 13 157, A-view-B -> ???????
-                        // 158, A-view-B -> 99 / 100
-                        // 0..158, A-view-B -> 198 / 200
-                        List<FeatureScore> merged = new ArrayList<>(currentMerged.mergedScores.featureScores.size() + scores.featureScores.size());
-                        while (a.hasNext() || b.hasNext()) {
+                            // dur: 9  5  7  6  5  7  9  4
+                            // pid: 0, 1, 2, 3, 4, 5, 6, 7
+                            // 0*0.9, 1...
+                            // 01*0.9, 2...
+                            // 02*0.9, 3...
+                            // 06 -> A-view-B -> 21 / 70 = (3 / 10) / partition
+                            //  7 -> A-view-B -> 0 / 10
+                            // 06, 7... -> 21/80
+                            // 06, 7, 8
+                            // 07, 8
+                            // 07*0.9, 8
+                            // 07, A-view-B ->   99 / 100
+                            // 8 9 10 11 12 13 157, A-view-B -> ???????
+                            // 158, A-view-B -> 99 / 100
+                            // 0..158, A-view-B -> 198 / 200
+                            List<FeatureScore> merged = new ArrayList<>(currentMerged.mergedScores.featureScores.size() + scores.featureScores.size());
+                            while (a.hasNext() || b.hasNext()) {
 
-                            if (a.hasNext() && b.hasNext()) {
-                                int c = FEATURE_SCORE_COMPARATOR.compare(a.peek(), b.peek());
-                                if (c == 0) {
-                                    merged.add(merge(a.next(), b.next()));
-                                } else if (c < 0) {
+                                if (a.hasNext() && b.hasNext()) {
+                                    int c = FEATURE_SCORE_COMPARATOR.compare(a.peek(), b.peek());
+                                    if (c == 0) {
+                                        merged.add(merge(a.next(), b.next()));
+                                    } else if (c < 0) {
+                                        merged.add(a.next());
+                                    } else {
+                                        merged.add(b.next());
+                                    }
+                                } else if (a.hasNext()) {
                                     merged.add(a.next());
-                                } else {
+
+                                } else if (b.hasNext()) {
                                     merged.add(b.next());
                                 }
-                            } else if (a.hasNext()) {
-                                merged.add(a.next());
-
-                            } else if (b.hasNext()) {
-                                merged.add(b.next());
                             }
-                        }
 
-                        ModelFeatureScores mergedScores = new ModelFeatureScores(scores.partitionIsClosed,
-                            currentMerged.mergedScores.modelCount + scores.modelCount,
-                            currentMerged.mergedScores.totalCount + scores.totalCount,
-                            merged,
-                            scores.timeRange);
+                            ModelFeatureScores mergedScores = new ModelFeatureScores(scores.partitionIsClosed,
+                                currentMerged.mergedScores.modelCount + scores.modelCount,
+                                currentMerged.mergedScores.totalCount + scores.totalCount,
+                                merged,
+                                scores.timeRange);
 
-                        currentMerged.contiguousClosedPartitions &= scores.partitionIsClosed;
-                        currentMerged.contiguousClosedPartitions &= (currentMerged.mergedRange.toPartitionId + 1 == range.fromPartitionId);
-                        if (currentMerged.contiguousClosedPartitions) {
-                            currentMerged.ranges.add(range);
-                            currentMerged.scores = mergedScores;
-                            if (currentMerged.timeRange == null) {
-                                currentMerged.timeRange = scores.timeRange;
-                            } else {
-                                currentMerged.timeRange = new MiruTimeRange(
-                                    Math.min(scores.timeRange.smallestTimestamp, currentMerged.timeRange.smallestTimestamp),
-                                    Math.max(scores.timeRange.largestTimestamp, currentMerged.timeRange.largestTimestamp));
+                            currentMerged.contiguousClosedPartitions &= scores.partitionIsClosed;
+                            currentMerged.contiguousClosedPartitions &= (currentMerged.mergedRange.toPartitionId + 1 == range.fromPartitionId);
+                            if (currentMerged.contiguousClosedPartitions) {
+                                currentMerged.ranges.add(range);
+                                currentMerged.scores = mergedScores;
+                                if (currentMerged.timeRange == null) {
+                                    currentMerged.timeRange = scores.timeRange;
+                                } else {
+                                    currentMerged.timeRange = new MiruTimeRange(
+                                        Math.min(scores.timeRange.smallestTimestamp, currentMerged.timeRange.smallestTimestamp),
+                                        Math.max(scores.timeRange.largestTimestamp, currentMerged.timeRange.largestTimestamp));
+                                }
                             }
-                        }
 
-                        currentMerged.numberOfMerges++;
-                        currentMerged.allRanges.add(range);
-                        currentMerged.mergedRange = new FeatureRange(range.featureName,
-                            featureId, Math.min(range.fromPartitionId, currentMerged.mergedRange.fromPartitionId),
-                            Math.min(range.toPartitionId, currentMerged.mergedRange.toPartitionId));
-                        currentMerged.mergedScores = mergedScores;
-                        return currentMerged;
-                    });
-
+                            currentMerged.numberOfMerges++;
+                            currentMerged.allRanges.add(range);
+                            currentMerged.mergedRange = new FeatureRange(range.featureName,
+                                featureId, Math.min(range.fromPartitionId, currentMerged.mergedRange.fromPartitionId),
+                                Math.min(range.toPartitionId, currentMerged.mergedRange.toPartitionId));
+                            currentMerged.mergedScores = mergedScores;
+                            return currentMerged;
+                        });
+                    }
                 } else {
                     deletableRanges.add(range);
                 }
@@ -354,42 +354,44 @@ public class CatwalkModelService {
         int totalCount = 0;
         int scoreCount = 0;
         int dropCount = 0;
-        ModelFeatureScores[] models = new ModelFeatureScores[saveModels.length]; // mutable copy
-        for (int i = 0; i < saveModels.length; i++) {
-            ModelFeatureScores initialModel = saveModels[i];
+        ModelFeatureScores[] models = new ModelFeatureScores[featureNames.length]; // mutable copy
+        if (saveModels != null) {
+            for (int i = 0; i < saveModels.length; i++) {
+                ModelFeatureScores initialModel = saveModels[i];
 
-            List<FeatureScore> featureScores;
-            if (initialModel.featureScores.size() > maxFeatureScoresPerFeature) {
-                MinMaxPriorityQueue<FeatureScore> topFeatures = MinMaxPriorityQueue
-                    .orderedBy(FEATURE_SCORES_PER_FEATURE_COMPARATOR)
-                    .expectedSize(maxFeatureScoresPerFeature)
-                    .maximumSize(maxFeatureScoresPerFeature)
-                    .create();
+                List<FeatureScore> featureScores;
+                if (initialModel.featureScores.size() > maxFeatureScoresPerFeature) {
+                    MinMaxPriorityQueue<FeatureScore> topFeatures = MinMaxPriorityQueue
+                        .orderedBy(FEATURE_SCORES_PER_FEATURE_COMPARATOR)
+                        .expectedSize(maxFeatureScoresPerFeature)
+                        .maximumSize(maxFeatureScoresPerFeature)
+                        .create();
 
-                if (minFeatureScore > 0f) {
-                    topFeatures.addAll(filterEligibleScores(initialModel.featureScores, minFeatureScore));
+                    if (minFeatureScore > 0f) {
+                        topFeatures.addAll(filterEligibleScores(initialModel.featureScores, minFeatureScore));
+                    } else {
+                        topFeatures.addAll(initialModel.featureScores);
+                    }
+                    featureScores = Lists.newArrayList(topFeatures);
+                } else if (minFeatureScore > 0f) {
+                    featureScores = filterEligibleScores(initialModel.featureScores, minFeatureScore);
                 } else {
-                    topFeatures.addAll(initialModel.featureScores);
+                    featureScores = initialModel.featureScores;
                 }
-                featureScores = Lists.newArrayList(topFeatures);
-            } else if (minFeatureScore > 0f) {
-                featureScores = filterEligibleScores(initialModel.featureScores, minFeatureScore);
-            } else {
-                featureScores = initialModel.featureScores;
+
+                Collections.sort(featureScores, FEATURE_SCORE_COMPARATOR);
+
+                models[i] = new ModelFeatureScores(initialModel.partitionIsClosed,
+                    initialModel.modelCount,
+                    initialModel.totalCount,
+                    featureScores,
+                    initialModel.timeRange);
+
+                modelCount += initialModel.modelCount;
+                totalCount += initialModel.totalCount;
+                scoreCount += featureScores.size();
+                dropCount += (initialModel.featureScores.size() - featureScores.size());
             }
-
-            Collections.sort(featureScores, FEATURE_SCORE_COMPARATOR);
-
-            models[i] = new ModelFeatureScores(initialModel.partitionIsClosed,
-                initialModel.modelCount,
-                initialModel.totalCount,
-                featureScores,
-                initialModel.timeRange);
-
-            modelCount += initialModel.modelCount;
-            totalCount += initialModel.totalCount;
-            scoreCount += featureScores.size();
-            dropCount += (initialModel.featureScores.size() - featureScores.size());
         }
 
         LOG.info("Saving model for tenantId:{} catwalkId:{} modelId:{} from:{} to:{} modelCount:{} totalCount:{} scored:{} dropped:{}",
@@ -400,12 +402,17 @@ public class CatwalkModelService {
             commitKeyValueStream -> {
                 for (int i = 0; i < featureNames.length; i++) {
                     byte[] key = modelPartitionKey(catwalkId, modelId, featureNames[i], fromPartitionId, toPartitionId);
-                    byte[] value = valueToBytes(models[i].partitionIsClosed,
-                        models[i].modelCount,
-                        models[i].totalCount,
-                        numeratorsCount,
-                        models[i].featureScores,
-                        models[i].timeRange);
+                    byte[] value;
+                    if (models[i] == null) {
+                        value = valueToBytes(true, 0, 0, 0, Collections.emptyList(), null);
+                    } else {
+                        value = valueToBytes(models[i].partitionIsClosed,
+                            models[i].modelCount,
+                            models[i].totalCount,
+                            numeratorsCount,
+                            models[i].featureScores,
+                            models[i].timeRange);
+                    }
                     if (!commitKeyValueStream.commit(key, value, -1, false)) {
                         return false;
                     }
@@ -498,8 +505,8 @@ public class CatwalkModelService {
             UIO.writeInt(filer, score.numPartitions, "numPartitions", lengthBuffer);
         }
 
-        UIO.writeLong(filer, timeRange.smallestTimestamp, "smallestTimestamp");
-        UIO.writeLong(filer, timeRange.largestTimestamp, "largestTimestamp");
+        UIO.writeLong(filer, timeRange == null ? -1 : timeRange.smallestTimestamp, "smallestTimestamp");
+        UIO.writeLong(filer, timeRange == null ? -1 : timeRange.largestTimestamp, "largestTimestamp");
 
         return filer.getBytes();
     }
@@ -552,9 +559,11 @@ public class CatwalkModelService {
             scores.add(new FeatureScore(terms, numerators, denominator, numPartitions));
         }
 
-        MiruTimeRange timeRange = new MiruTimeRange(
-            UIO.readLong(filer, "smallestTimestamp", lengthBuffer),
-            UIO.readLong(filer, "largestTimestamp", lengthBuffer));
+        long smallestTimestamp = UIO.readLong(filer, "smallestTimestamp", lengthBuffer);
+        long largestTimestamp = UIO.readLong(filer, "largestTimestamp", lengthBuffer);
+        MiruTimeRange timeRange = (smallestTimestamp == -1 && largestTimestamp == -1) ? null : new MiruTimeRange(
+            smallestTimestamp,
+            largestTimestamp);
         return new ModelFeatureScores(partitionIsClosed, modelCount, totalCount, scores, timeRange);
     }
 
