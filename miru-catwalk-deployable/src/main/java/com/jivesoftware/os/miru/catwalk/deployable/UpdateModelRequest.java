@@ -32,4 +32,19 @@ public class UpdateModelRequest {
         this.catwalkQuery = catwalkQuery;
         this.timestamp = timestamp;
     }
+
+    @Override
+    public String toString() {
+        return "UpdateModelRequest{" +
+            "tenantId=" + tenantId +
+            ", catwalkId='" + catwalkId + '\'' +
+            ", modelId='" + modelId + '\'' +
+            ", partitionId=" + partitionId +
+            ", catwalkQuery=" + catwalkQuery +
+            ", timestamp=" + timestamp +
+            ", markProcessed=" + markProcessed +
+            ", removeFromQueue=" + removeFromQueue +
+            ", delayInQueue=" + delayInQueue +
+            '}';
+    }
 }
