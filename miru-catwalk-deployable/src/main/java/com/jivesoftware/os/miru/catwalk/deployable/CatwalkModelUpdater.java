@@ -50,6 +50,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import static org.eclipse.jetty.server.handler.gzip.GzipHttpOutputInterceptor.LOG;
+
 /**
  * @author jonathan.colt
  */
@@ -156,8 +158,16 @@ public class CatwalkModelUpdater {
                                     return request;
                                 }
 
-                                ModelFeatureScores[] models = fetchModel(request);
-                                if (models != null) {
+                                FetchedModel fetched = fetchModel(request);
+                                if (fetched.destroyed) {
+                                    request.markProcessed = true;
+                                    request.removeFromQueue = true;
+                                    request.delayInQueue = false;
+                                } else if (fetched.unavailable) {
+                                    request.markProcessed = false;
+                                    request.removeFromQueue = false;
+                                    request.delayInQueue = true;
+                                } else {
                                     int numeratorsCount = gatherFilters.length;
                                     String[] featureNames = new String[request.catwalkQuery.features.length];
                                     for (int i = 0; i < featureNames.length; i++) {
@@ -170,16 +180,12 @@ public class CatwalkModelUpdater {
                                         request.partitionId,
                                         request.partitionId,
                                         featureNames,
-                                        models,
+                                        fetched.scores,
                                         updateMinFeatureScore,
                                         updateMaxFeatureScoresPerFeature);
                                     request.markProcessed = true;
                                     request.removeFromQueue = true;
                                     request.delayInQueue = false;
-                                } else {
-                                    request.markProcessed = false;
-                                    request.removeFromQueue = false;
-                                    request.delayInQueue = true;
                                 }
                                 return request;
                             }
@@ -223,7 +229,20 @@ public class CatwalkModelUpdater {
         }
     }
 
-    private ModelFeatureScores[] fetchModel(UpdateModelRequest updateModelRequest) throws Exception {
+    private static class FetchedModel {
+
+        private final ModelFeatureScores[] scores;
+        private final boolean unavailable;
+        private final boolean destroyed;
+
+        public FetchedModel(ModelFeatureScores[] scores, boolean unavailable, boolean destroyed) {
+            this.scores = scores;
+            this.unavailable = unavailable;
+            this.destroyed = destroyed;
+        }
+    }
+
+    private FetchedModel fetchModel(UpdateModelRequest updateModelRequest) throws Exception {
         MiruTenantId tenantId = updateModelRequest.tenantId;
 
         MiruRequest<CatwalkQuery> request = new MiruRequest<>("catwalkModelQueue",
@@ -238,20 +257,24 @@ public class CatwalkModelUpdater {
         MiruResponse<CatwalkAnswer> catwalkResponse = tenantQueryRouting.query("", "catwalkModelQueue", readerClient, requestMapper, responseMapper,
             request, endpoint, CatwalkAnswer.class);
 
-        if (catwalkResponse != null && catwalkResponse.answer != null && catwalkResponse.answer.results != null) {
-            ModelFeatureScores[] featureScores = new ModelFeatureScores[updateModelRequest.catwalkQuery.features.length];
-            for (int i = 0; i < featureScores.length; i++) {
-                featureScores[i] = new ModelFeatureScores(catwalkResponse.answer.resultsClosed,
-                    catwalkResponse.answer.modelCounts[i],
-                    catwalkResponse.answer.totalCount,
-                    catwalkResponse.answer.results[i],
-                    catwalkResponse.answer.timeRange);
+        if (catwalkResponse != null && catwalkResponse.answer != null) {
+            if (catwalkResponse.answer.destroyed) {
+                return new FetchedModel(null, false, true);
+            } else if (catwalkResponse.answer.results != null) {
+                ModelFeatureScores[] featureScores = new ModelFeatureScores[updateModelRequest.catwalkQuery.features.length];
+                for (int i = 0; i < featureScores.length; i++) {
+                    featureScores[i] = new ModelFeatureScores(catwalkResponse.answer.resultsClosed,
+                        catwalkResponse.answer.modelCounts[i],
+                        catwalkResponse.answer.totalCount,
+                        catwalkResponse.answer.results[i],
+                        catwalkResponse.answer.timeRange);
+                }
+                return new FetchedModel(featureScores, false, false);
             }
-            return featureScores;
-        } else {
-            LOG.warn("Empty catwalk response from {}", updateModelRequest);
-            return null;
         }
+
+        LOG.warn("Empty catwalk response from {}", updateModelRequest);
+        return new FetchedModel(null, true, false);
     }
 
     public void updateModel(MiruTenantId tenantId, String catwalkId, String modelId, int partitionId, CatwalkQuery catwalkQuery) throws Exception {

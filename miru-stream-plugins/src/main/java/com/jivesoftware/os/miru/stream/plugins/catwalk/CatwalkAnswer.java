@@ -10,7 +10,8 @@ import java.util.List;
 /** @author jonathan */
 public class CatwalkAnswer implements Serializable {
 
-    public static final CatwalkAnswer EMPTY_RESULTS = new CatwalkAnswer(null, null, -1L, MiruTimeRange.ALL_TIME, true, false);
+    public static final CatwalkAnswer EMPTY_RESULTS = new CatwalkAnswer(null, null, -1L, MiruTimeRange.ALL_TIME, true, false, false);
+    public static final CatwalkAnswer DESTROYED_RESULTS = new CatwalkAnswer(null, null, -1L, MiruTimeRange.ALL_TIME, true, false, true);
 
     public final List<FeatureScore>[] results;
     public final long[] modelCounts;
@@ -18,6 +19,7 @@ public class CatwalkAnswer implements Serializable {
     public final MiruTimeRange timeRange;
     public final boolean resultsExhausted;
     public final boolean resultsClosed;
+    public final boolean destroyed;
 
     @JsonCreator
     public CatwalkAnswer(
@@ -26,13 +28,15 @@ public class CatwalkAnswer implements Serializable {
         @JsonProperty("totalCount") long totalCount,
         @JsonProperty("timeRange") MiruTimeRange timeRange,
         @JsonProperty("resultsExhausted") boolean resultsExhausted,
-        @JsonProperty("resultsClosed") boolean resultsClosed) {
+        @JsonProperty("resultsClosed") boolean resultsClosed,
+        @JsonProperty("destroyed") boolean destroyed) {
         this.results = results;
         this.modelCounts = modelCounts;
         this.totalCount = totalCount;
         this.timeRange = timeRange;
         this.resultsExhausted = resultsExhausted;
         this.resultsClosed = resultsClosed;
+        this.destroyed = destroyed;
     }
 
     @Override
@@ -44,6 +48,7 @@ public class CatwalkAnswer implements Serializable {
             ", timeRange=" + timeRange +
             ", resultsExhausted=" + resultsExhausted +
             ", resultsClosed=" + resultsClosed +
+            ", destroyed=" + destroyed +
             '}';
     }
 

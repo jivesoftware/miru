@@ -34,6 +34,7 @@ public interface Miru {
         MiruSolvableFactory<Q, A, P> solvableFactory,
         MiruAnswerMerger<A> merger,
         A defaultValue,
+        A destroyedValue,
         Executor executor,
         MiruSolutionLogLevel logLevel)
         throws Exception;

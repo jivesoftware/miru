@@ -88,6 +88,7 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
 
     private void getIndexInternal(int[] keys, BitmapAndLastId<BM> container, MutableLong bytes) throws Exception {
         container.clear();
+        ReusableByteBufferDataInput in = new ReusableByteBufferDataInput();
         if (atomized) {
             bitmaps.deserializeAtomized(
                 container,
@@ -107,10 +108,10 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
                             (index, key, timestamp, tombstoned, version, payload) -> {
                                 if (payload != null) {
                                     int labKey = deatomize(key.asByteBuffer());
-                                    DataInput dataInput = new ByteBufferDataInput(payload.asByteBuffer());
                                     bytes.add(payload.length);
                                     atoms[0]++;
-                                    return atomStream.stream(labKey, dataInput);
+                                    in.setBuffer(payload.asByteBuffer());
+                                    return atomStream.stream(labKey, in);
                                 }
                                 return true;
                             },
@@ -126,10 +127,10 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
                             (index, key, timestamp, tombstoned, version, payload) -> {
                                 if (payload != null) {
                                     int labKey = deatomize(key.asByteBuffer());
-                                    ByteBufferDataInput dataInput = new ByteBufferDataInput(payload.asByteBuffer());
                                     bytes.add(payload.length);
                                     atoms[0]++;
-                                    return atomStream.stream(labKey, dataInput);
+                                    in.setBuffer(payload.asByteBuffer());
+                                    return atomStream.stream(labKey, in);
                                 }
                                 return true;
                             },
@@ -143,7 +144,7 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
             bitmapIndex.get((keyStream) -> keyStream.key(0, bitmapKeyBytes, 0, bitmapKeyBytes.length),
                 (index, key, timestamp, tombstoned, version, payload) -> {
                     if (payload != null) {
-                        deserNonAtomized(bitmaps, trackError, payload.asByteBuffer(), container);
+                        deserNonAtomized(bitmaps, trackError, in, payload.asByteBuffer(), container);
                         bytes.add(payload.length);
                     }
                     return true;
@@ -167,6 +168,7 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
         R result;
         if (atomized) {
             BitmapAndLastId<BM> container = new BitmapAndLastId<>();
+            ReusableByteBufferDataInput in = new ReusableByteBufferDataInput();
             bitmaps.deserializeAtomized(
                 container,
                 atomStream -> {
@@ -177,10 +179,10 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
                         (index, key, timestamp, tombstoned, version, payload) -> {
                             if (payload != null) {
                                 int labKey = deatomize(key.asByteBuffer());
-                                ByteBufferDataInput dataInput = new ByteBufferDataInput(payload.asByteBuffer());
                                 bytes.add(payload.length);
                                 atoms[0]++;
-                                return atomStream.stream(labKey, dataInput);
+                                in.setBuffer(payload.asByteBuffer());
+                                return atomStream.stream(labKey, in);
                             }
                             return true;
                         },
@@ -229,6 +231,7 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
 
     public static <BM extends IBM, IBM> void deserNonAtomized(MiruBitmaps<BM, IBM> bitmaps,
         TrackError trackError,
+        ReusableByteBufferDataInput in,
         ByteBuffer byteBuffer,
         BitmapAndLastId<BM> container) throws IOException {
 
@@ -236,9 +239,9 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
         if (byteBuffer.capacity() > LAST_ID_LENGTH + 4) {
             int lastId = byteBuffer.getInt();
             byteBuffer.position(LAST_ID_LENGTH);
-            DataInput dataInput = new ByteBufferDataInput(byteBuffer);
+            in.setBuffer(byteBuffer);
             try {
-                container.set(bitmaps.deserialize(dataInput), lastId);
+                container.set(bitmaps.deserialize(in), lastId);
             } catch (Exception e) {
                 trackError.error("Failed to deserialize a bitmap, length=" + byteBuffer.capacity());
                 throw new IOException("Failed to deserialize", e);
@@ -249,11 +252,13 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
     public static <BM extends IBM, IBM> int deserLastId(MiruBitmaps<BM, IBM> bitmaps,
         boolean atomized,
         int key,
+        ReusableByteBufferDataInput in,
         ByteBuffer byteBuffer) throws IOException {
 
         byteBuffer.clear();
         if (atomized) {
-            return bitmaps.lastIdAtomized(new ByteBufferDataInput(byteBuffer), key);
+            in.setBuffer(byteBuffer);
+            return bitmaps.lastIdAtomized(in, key);
         } else {
             if (byteBuffer.capacity() > LAST_ID_LENGTH + 4) {
                 return byteBuffer.getInt();
@@ -448,6 +453,7 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
             synchronized (mutationLock) {
                 int[] id = { -1 };
                 if (atomized) {
+                    ReusableByteBufferDataInput in = new ReusableByteBufferDataInput();
                     byte[] from = bitmapKeyBytes;
                     byte[] to = LABUtils.prefixUpperExclusive(bitmapKeyBytes);
                     bitmapIndex.rangeScan(from, to,
@@ -456,7 +462,7 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
                                 if (id[0] == -1) {
                                     bytes.add(payload.length);
                                     int labKey = LabInvertedIndex.deatomize(key.asByteBuffer());
-                                    id[0] = LabInvertedIndex.deserLastId(bitmaps, atomized, labKey, payload.asByteBuffer());
+                                    id[0] = LabInvertedIndex.deserLastId(bitmaps, atomized, labKey, in, payload.asByteBuffer());
                                     if (id[0] != -1) {
                                         return false;
                                     }

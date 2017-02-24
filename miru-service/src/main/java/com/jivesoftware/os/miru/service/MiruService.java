@@ -200,6 +200,7 @@ public class MiruService implements Miru {
         MiruSolvableFactory<Q, A, P> solvableFactory,
         MiruAnswerMerger<A> merger,
         A defaultValue,
+        A destroyedValue,
         Executor executor,
         MiruSolutionLogLevel logLevel)
         throws Exception {
@@ -227,32 +228,33 @@ public class MiruService implements Miru {
                 partitionId,
                 solvableFactory.getRequestName(),
                 solvableFactory.getQueryKey());
-
-            long start = System.currentTimeMillis();
-            MiruSolved<A> solved = null;
-            if (orderedPartitions != null) {
-                solved = new SerialExpectedSolution<>(orderedPartitions,
+            if (orderedPartitions == null) {
+                LOG.inc("askAndMergePartition>destroyed");
+                answer = merger.done(Optional.absent(), destroyedValue, solutionLog);
+            } else {
+                long start = System.currentTimeMillis();
+                MiruSolved<A> solved = new SerialExpectedSolution<>(orderedPartitions,
                     solvableFactory,
                     suggestedTimeoutInMillis,
                     executor,
                     solutionLog)
                     .get(Optional.absent());
+
+                Optional<A> lastAnswer = Optional.absent();
+                if (solved == null) {
+                    solutionLog.log(MiruSolutionLogLevel.WARN, "No solution for partition:{}", partitionId);
+                    incompletePartitionIds.add(partitionId.getId());
+                } else {
+                    solutionLog.log(MiruSolutionLogLevel.INFO, "Solved partition:{}. elapse:{} millis",
+                        partitionId, (System.currentTimeMillis() - start));
+                    solutions.add(solved.solution);
+                    lastAnswer = Optional.of(merger.merge(Optional.absent(), solved.answer, solutionLog));
+                }
+
+                partitionComparison.analyzeSolutions(solutions, solvableFactory.getRequestName(), solvableFactory.getQueryKey());
+
+                answer = merger.done(lastAnswer, defaultValue, solutionLog);
             }
-
-            Optional<A> lastAnswer = Optional.absent();
-            if (solved == null) {
-                solutionLog.log(MiruSolutionLogLevel.WARN, "No solution for partition:{}", partitionId);
-                incompletePartitionIds.add(partitionId.getId());
-            } else {
-                solutionLog.log(MiruSolutionLogLevel.INFO, "Solved partition:{}. elapse:{} millis",
-                    partitionId, (System.currentTimeMillis() - start));
-                solutions.add(solved.solution);
-                lastAnswer = Optional.of(merger.merge(Optional.absent(), solved.answer, solutionLog));
-            }
-
-            partitionComparison.analyzeSolutions(solutions, solvableFactory.getRequestName(), solvableFactory.getQueryKey());
-
-            answer = merger.done(lastAnswer, defaultValue, solutionLog);
         } finally {
             totalElapsed = LOG.stopTimer("askAndMergePartition");
         }

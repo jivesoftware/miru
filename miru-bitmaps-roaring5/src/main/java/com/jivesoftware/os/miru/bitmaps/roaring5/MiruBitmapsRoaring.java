@@ -39,6 +39,7 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
 import org.roaringbitmap.FastAggregation;
 import org.roaringbitmap.IntIterator;
 import org.roaringbitmap.RoaringBitmap;
@@ -273,6 +274,10 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
     @Override
     public void inPlaceAndNot(RoaringBitmap original, RoaringBitmap not) {
         original.andNot(not);
+    }
+
+    public void inPlaceAndNotParallel(RoaringBitmap original, RoaringBitmap not, ExecutorService executorService) {
+        //RoaringAggregation.andNotParallel(original, not, executorService);
     }
 
     @Override

@@ -10,7 +10,6 @@ import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
-import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruPartitionState;
@@ -110,6 +109,9 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
             return null;
         }
         PartitionGroup partitionGroup = topology.partitionInOrder(tenantId, partitionId, requestName, queryKey);
+        if (partitionGroup.partitions == null) {
+            return null;
+        }
         final MiruTenantTopology<?, ?> localTopology = localTopologies.get(tenantId);
         return getOrderedPartition(tenantId, (MiruTenantTopology) localTopology, partitionGroup);
     }
@@ -137,9 +139,13 @@ public class MiruClusterExpectedTenants implements MiruExpectedTenants {
         MiruTenantTopology<BM, IBM> localTopology) {
 
         List<PartitionGroup> allPartitionsInOrder = topology.allPartitionsInOrder(tenantId, requestName, queryKey);
-        return Lists.transform(allPartitionsInOrder, input -> {
-            return getOrderedPartition(tenantId, localTopology, input);
-        });
+        List<OrderedPartitions<BM, IBM>>  orderedPartitions = Lists.newArrayListWithCapacity(allPartitionsInOrder.size());
+        for (PartitionGroup partitionGroup : allPartitionsInOrder) {
+            if (partitionGroup.partitions != null) {
+                orderedPartitions.add(getOrderedPartition(tenantId, localTopology, partitionGroup));
+            }
+        }
+        return orderedPartitions;
     }
 
     private <BM extends IBM, IBM> OrderedPartitions<BM, IBM> getOrderedPartition(MiruTenantId tenantId,
