@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.stream.plugins.catwalk;
 
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
+import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;

@@ -5,8 +5,8 @@ import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.catwalk.deployable.CatwalkModelService;
 import com.jivesoftware.os.miru.catwalk.deployable.CatwalkModelUpdater;
-import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkModel;
-import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkQuery;
+import com.jivesoftware.os.miru.catwalk.shared.CatwalkModel;
+import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.BufferedOutputStream;
@@ -21,7 +21,6 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
-import org.xerial.snappy.Snappy;
 import org.xerial.snappy.SnappyOutputStream;
 
 /**

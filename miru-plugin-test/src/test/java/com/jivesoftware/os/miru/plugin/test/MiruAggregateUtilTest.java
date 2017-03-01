@@ -19,6 +19,7 @@ import com.jivesoftware.os.lab.api.NoOpFormatTransformerProvider;
 import com.jivesoftware.os.lab.api.ValueIndex;
 import com.jivesoftware.os.lab.api.ValueIndexConfig;
 import com.jivesoftware.os.lab.api.rawhide.LABRawhide;
+import com.jivesoftware.os.lab.guts.LABHashIndexType;
 import com.jivesoftware.os.lab.guts.Leaps;
 import com.jivesoftware.os.lab.guts.StripingBolBufferLocks;
 import com.jivesoftware.os.miru.api.MiruHost;
@@ -90,7 +91,8 @@ public class MiruAggregateUtilTest {
                 LABRawhide.NAME,
                 MemoryRawEntryFormat.NAME,
                 20,
-                1d))
+                LABHashIndexType.cuckoo,
+                2d))
         };
         LabTimestampedCacheKeyValues cacheKeyValues = new LabTimestampedCacheKeyValues("lab-test",
             orderIdProvider,

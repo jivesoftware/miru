@@ -13,6 +13,7 @@ import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
+import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider;
@@ -28,7 +29,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.solution.Question;
-import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkQuery.CatwalkFeature;
+import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery.CatwalkFeature;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.ArrayList;
@@ -172,7 +173,8 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
         //TODO this duplicates StrutModelScorer behavior
         int payloadSize = 4; // this is amazing
         MiruPluginCacheProvider.TimestampedCacheKeyValues termFeaturesCache = request.query.catwalkId == null ? null
-            : context.getCacheProvider().getTimestampedKeyValues("strut-features-" + request.query.catwalkId, payloadSize, false, maxHeapPressureInBytes, 0d);
+            : context.getCacheProvider().getTimestampedKeyValues("strut-features-" + request.query.catwalkId, payloadSize, false, maxHeapPressureInBytes,
+            "cuckoo", 0d);
 
         List<MiruTermId> uniqueTermIds = Lists.newArrayList(termIds);
         return new MiruPartitionResponse<>(

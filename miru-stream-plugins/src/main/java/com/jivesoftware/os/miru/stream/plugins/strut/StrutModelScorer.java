@@ -11,6 +11,8 @@ import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
+import com.jivesoftware.os.miru.catwalk.shared.Scored;
+import com.jivesoftware.os.miru.catwalk.shared.StrutModelScalar;
 import com.jivesoftware.os.miru.plugin.Miru;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
@@ -25,7 +27,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRequestHandle;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.TermIdLastIdCount;
-import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkQuery;
+import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery;
 import com.jivesoftware.os.miru.stream.plugins.strut.StrutQuery.Strategy;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -419,12 +421,13 @@ public class StrutModelScorer {
     <BM extends IBM, IBM> LastIdCacheKeyValues getTermScoreCache(MiruRequestContext<BM, IBM, ? extends MiruSipCursor<?>> context,
         String catwalkId) {
         int payloadSize = -1; // TODO fix maybe? this is amazing
-        return context.getCacheProvider().getLastIdKeyValues("strut-scores-" + catwalkId, payloadSize, false, maxHeapPressureInBytes, hashIndexLoadFactor);
+        return context.getCacheProvider().getLastIdKeyValues("strut-scores-" + catwalkId, payloadSize, false, maxHeapPressureInBytes, "cuckoo",
+            hashIndexLoadFactor);
     }
 
     <BM extends IBM, IBM> TimestampedCacheKeyValues getTermFeatureCache(MiruRequestContext<BM, IBM, ? extends MiruSipCursor<?>> context, String catwalkId) {
         int payloadSize = 4; // this is amazing
-        return context.getCacheProvider().getTimestampedKeyValues("strut-features-" + catwalkId, payloadSize, false, maxHeapPressureInBytes, 0d);
+        return context.getCacheProvider().getTimestampedKeyValues("strut-features-" + catwalkId, payloadSize, false, maxHeapPressureInBytes, "cuckoo", 0d);
     }
 
     <BM extends IBM, IBM> List<Scored> rescore(

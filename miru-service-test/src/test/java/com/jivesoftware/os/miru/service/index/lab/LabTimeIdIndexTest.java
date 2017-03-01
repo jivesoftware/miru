@@ -6,6 +6,7 @@ import com.jivesoftware.os.lab.LABEnvironment;
 import com.jivesoftware.os.lab.LABStats;
 import com.jivesoftware.os.lab.LabHeapPressure;
 import com.jivesoftware.os.lab.LabHeapPressure.FreeHeapStrategy;
+import com.jivesoftware.os.lab.guts.LABHashIndexType;
 import com.jivesoftware.os.lab.guts.StripingBolBufferLocks;
 import com.jivesoftware.os.miru.service.locator.MiruTempDirectoryResourceLocator;
 import com.jivesoftware.os.miru.service.stream.allocator.OnDiskChunkAllocator;
@@ -115,7 +116,8 @@ public class LabTimeIdIndexTest {
             LABEnvironment.buildLeapsCache(1_000_000, 10),
             new StripingBolBufferLocks(2048));
 
-        LabTimeIdIndex[] indexes = new LabTimeIdIndexInitializer().initialize(keepNIndexes, maxEntriesPerIndex, 1024 * 1024, 1d, false, resourceLocator,
+        LabTimeIdIndex[] indexes = new LabTimeIdIndexInitializer().initialize(keepNIndexes, maxEntriesPerIndex, 1024 * 1024, LABHashIndexType.cuckoo, 2d, false,
+            resourceLocator,
             chunkAllocator);
 
         assertEquals(indexes.length, numberOfChunkStores);

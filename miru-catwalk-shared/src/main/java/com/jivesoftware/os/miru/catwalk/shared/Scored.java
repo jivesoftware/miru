@@ -1,9 +1,9 @@
-package com.jivesoftware.os.miru.stream.plugins.strut;
+package com.jivesoftware.os.miru.catwalk.shared;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
-import com.jivesoftware.os.miru.stream.plugins.strut.HotOrNot.Hotness;
+import com.jivesoftware.os.miru.catwalk.shared.HotOrNot.Hotness;
 import java.io.Serializable;
 import java.util.List;
 

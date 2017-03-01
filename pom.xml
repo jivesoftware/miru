@@ -3,12 +3,12 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.jivesoftware.miru</groupId>
     <artifactId>miru</artifactId>
-    <version>0.1775</version>
+    <version>0.1776</version>
     <packaging>pom</packaging>
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-repo-management</artifactId>
-        <version>0.1775</version>
+        <version>0.1776</version>
         <relativePath>inheritance-poms/global-repo-management/pom.xml</relativePath>
     </parent>
     <modules>
@@ -40,6 +40,7 @@
         <module>miru-reco-plugins-test</module>
         <module>miru-analytics-plugins</module>
         <module>miru-analytics-plugins-test</module>
+        <module>miru-catwalk-shared</module>
         <module>miru-catwalk-deployable</module>
         <module>miru-stumptown-deployable</module>
         <module>miru-stumptown-plugins</module>

@@ -3,10 +3,12 @@ package com.jivesoftware.os.miru.stream.plugins.strut;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.cache.Cache;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.api.base.MiruTermId;
-import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkModel;
-import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkQuery;
-import com.jivesoftware.os.miru.stream.plugins.catwalk.FeatureScore;
+import com.jivesoftware.os.miru.catwalk.shared.CatwalkModel;
+import com.jivesoftware.os.miru.catwalk.shared.StrutModelScore;
+import com.jivesoftware.os.miru.catwalk.shared.StrutModel;
+import com.jivesoftware.os.miru.catwalk.shared.StrutModelKey;
+import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery;
+import com.jivesoftware.os.miru.catwalk.shared.FeatureScore;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.http.client.HttpResponse;
@@ -18,7 +20,6 @@ import com.jivesoftware.os.routing.bird.shared.ClientCall;
 import com.jivesoftware.os.routing.bird.shared.ClientCall.ClientResponse;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -95,7 +96,7 @@ public class StrutModelCache {
                 return null;
             } else {
                 boolean empty = true;
-                for (Map<StrutModelKey, ModelScore> featureModel : model.model) {
+                for (Map<StrutModelKey, StrutModelScore> featureModel : model.model) {
                     if (!featureModel.isEmpty()) {
                         empty = false;
                         break;
@@ -161,7 +162,7 @@ public class StrutModelCache {
     private StrutModel convert(CatwalkQuery catwalkQuery, CatwalkModel model) {
 
         @SuppressWarnings("unchecked")
-        Map<StrutModelKey, ModelScore>[] modelFeatureScore = new Map[catwalkQuery.features.length];
+        Map<StrutModelKey, StrutModelScore>[] modelFeatureScore = new Map[catwalkQuery.features.length];
         for (int i = 0; i < modelFeatureScore.length; i++) {
             modelFeatureScore[i] = new HashMap<>();
         }
@@ -171,7 +172,7 @@ public class StrutModelCache {
                 for (FeatureScore featureScore : featureScores) {
                     // magical deflation
                     long denominator = (featureScore.denominator * model.totalNumPartitions[i]) / featureScore.numPartitions;
-                    modelFeatureScore[i].put(new StrutModelKey(featureScore.termIds), new ModelScore(featureScore.numerators, denominator));
+                    modelFeatureScore[i].put(new StrutModelKey(featureScore.termIds), new StrutModelScore(featureScore.numerators, denominator));
                 }
             }
         }
@@ -181,52 +182,6 @@ public class StrutModelCache {
             model != null ? model.numberOfModels : new int[catwalkQuery.features.length],
             model != null ? model.totalNumPartitions : new int[catwalkQuery.features.length]
         );
-    }
-
-    static class StrutModelKey {
-
-        private final MiruTermId[] termIds;
-
-        StrutModelKey(MiruTermId[] termIds) {
-            this.termIds = termIds;
-        }
-
-        @Override
-        public int hashCode() {
-            int hash = 7;
-            hash = 23 * hash + Arrays.deepHashCode(this.termIds);
-            return hash;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (this == obj) {
-                return true;
-            }
-            if (obj == null) {
-                return false;
-            }
-            if (getClass() != obj.getClass()) {
-                return false;
-            }
-            final StrutModelKey other = (StrutModelKey) obj;
-            if (!Arrays.deepEquals(this.termIds, other.termIds)) {
-                return false;
-            }
-            return true;
-        }
-
-    }
-
-    public static class ModelScore {
-
-        public final long[] numerators;
-        public final long denominator;
-
-        public ModelScore(long[] numerators, long denominator) {
-            this.numerators = numerators;
-            this.denominator = denominator;
-        }
     }
 
 }

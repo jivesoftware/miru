@@ -4,8 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
-import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkQuery;
-import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkQuery.CatwalkFeature;
+import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery;
+import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery.CatwalkFeature;
 import org.testng.annotations.Test;
 
 import static org.testng.Assert.assertEquals;

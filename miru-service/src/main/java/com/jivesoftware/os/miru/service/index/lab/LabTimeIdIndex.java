@@ -7,6 +7,7 @@ import com.jivesoftware.os.lab.api.NoOpFormatTransformerProvider;
 import com.jivesoftware.os.lab.api.ValueIndex;
 import com.jivesoftware.os.lab.api.ValueIndexConfig;
 import com.jivesoftware.os.lab.api.rawhide.LABRawhide;
+import com.jivesoftware.os.lab.guts.LABHashIndexType;
 import com.jivesoftware.os.lab.io.BolBuffer;
 import com.jivesoftware.os.lab.io.api.UIO;
 import com.jivesoftware.os.miru.service.index.TimeIdIndex;
@@ -26,6 +27,7 @@ public class LabTimeIdIndex implements TimeIdIndex {
     private final ValueIndex<byte[]>[] indexes;
     private final int maxEntriesPerIndex;
     private final long maxHeapPressureInBytes;
+    private final LABHashIndexType hashIndexType;
     private final double hashIndexLoadFactor;
     private final boolean fsyncOnAppend;
 
@@ -36,12 +38,15 @@ public class LabTimeIdIndex implements TimeIdIndex {
         int keepNIndexes,
         int maxEntriesPerIndex,
         long maxHeapPressureInBytes,
+        LABHashIndexType hashIndexType,
         double hashIndexLoadFactor,
         boolean fsyncOnAppend) throws Exception {
+
         this.environment = environment;
         this.indexes = new ValueIndex[keepNIndexes];
         this.maxEntriesPerIndex = maxEntriesPerIndex;
         this.maxHeapPressureInBytes = maxHeapPressureInBytes;
+        this.hashIndexType = hashIndexType;
         this.hashIndexLoadFactor = hashIndexLoadFactor;
         this.fsyncOnAppend = fsyncOnAppend;
 
@@ -63,7 +68,7 @@ public class LabTimeIdIndex implements TimeIdIndex {
 
     private ValueIndex<byte[]> open(String name) throws Exception {
         return environment.open(new ValueIndexConfig(name, 4096, maxHeapPressureInBytes, 10 * 1024 * 1024, -1L, -1L,
-            NoOpFormatTransformerProvider.NAME, LABRawhide.NAME, MemoryRawEntryFormat.NAME, 20, hashIndexLoadFactor));
+            NoOpFormatTransformerProvider.NAME, LABRawhide.NAME, MemoryRawEntryFormat.NAME, 20, hashIndexType, hashIndexLoadFactor));
     }
 
     @Override

@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.stream.plugins.catwalk;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.jivesoftware.os.miru.catwalk.shared.FeatureScore;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import java.io.Serializable;
 import java.util.Arrays;

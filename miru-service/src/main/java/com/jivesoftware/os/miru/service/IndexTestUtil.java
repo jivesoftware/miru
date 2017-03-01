@@ -28,6 +28,7 @@ import com.jivesoftware.os.lab.api.NoOpFormatTransformerProvider;
 import com.jivesoftware.os.lab.api.ValueIndex;
 import com.jivesoftware.os.lab.api.ValueIndexConfig;
 import com.jivesoftware.os.lab.api.rawhide.LABRawhide;
+import com.jivesoftware.os.lab.guts.LABHashIndexType;
 import com.jivesoftware.os.lab.guts.Leaps;
 import com.jivesoftware.os.lab.guts.StripingBolBufferLocks;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
@@ -158,7 +159,8 @@ public class IndexTestUtil {
             leapCache,
             bolBufferLocks);
 
-        LabTimeIdIndex[] timeIdIndexes = new LabTimeIdIndexInitializer().initialize(4, 1_000, 1024 * 1024, 1d, false, diskResourceLocator,
+        LabTimeIdIndex[] timeIdIndexes = new LabTimeIdIndexInitializer().initialize(4, 1_000, 1024 * 1024, LABHashIndexType.cuckoo, 2d, false,
+            diskResourceLocator,
             onDiskChunkAllocator);
 
         OrderIdProvider idProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(1));
@@ -184,7 +186,8 @@ public class IndexTestUtil {
             termInterner,
             new ObjectMapper(),
             1024 * 1024 * 10,
-            1d,
+            "cuckoo",
+            2d,
             useLabIndexes,
             hasRealtime,
             false);
@@ -230,7 +233,7 @@ public class IndexTestUtil {
             false,
             false);
         return environment.open(new ValueIndexConfig(name, 64, 1024 * 1024, -1, -1, 10 * 1024 * 1024, NoOpFormatTransformerProvider.NAME, LABRawhide.NAME,
-            MemoryRawEntryFormat.NAME, 20, 1d));
+            MemoryRawEntryFormat.NAME, 20, LABHashIndexType.cuckoo, 2d));
     }
 
     public static KeyedFilerStore<Long, Void> buildKeyedFilerStore(String name, ChunkStore[] chunkStores) throws Exception {

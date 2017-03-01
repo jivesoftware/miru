@@ -6,6 +6,10 @@ import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.query.filter.MiruValue;
+import com.jivesoftware.os.miru.catwalk.shared.HotOrNot;
+import com.jivesoftware.os.miru.catwalk.shared.StrutModelScore;
+import com.jivesoftware.os.miru.catwalk.shared.Scored;
+import com.jivesoftware.os.miru.catwalk.shared.StrutModel;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.TimestampedCacheKeyValues;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
@@ -15,10 +19,9 @@ import com.jivesoftware.os.miru.plugin.solution.MiruAggregateUtil;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
-import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkQuery;
-import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkQuery.CatwalkFeature;
-import com.jivesoftware.os.miru.stream.plugins.strut.HotOrNot.Hotness;
-import com.jivesoftware.os.miru.stream.plugins.strut.StrutModelCache.ModelScore;
+import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery;
+import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery.CatwalkFeature;
+import com.jivesoftware.os.miru.catwalk.shared.HotOrNot.Hotness;
 import com.jivesoftware.os.miru.stream.plugins.strut.StrutQuery.Strategy;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -176,7 +179,7 @@ public class Strut {
 
                     } else {
                         featureCount[0]++;
-                        ModelScore modelScore = model.score(featureId, termIds);
+                        StrutModelScore modelScore = model.score(featureId, termIds);
                         if (modelScore != null) {
                             float[] s = new float[modelScore.numerators.length];
                             for (int i = 0; i < s.length; i++) {

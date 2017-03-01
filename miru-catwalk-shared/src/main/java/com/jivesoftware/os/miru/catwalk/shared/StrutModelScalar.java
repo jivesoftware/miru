@@ -1,7 +1,6 @@
-package com.jivesoftware.os.miru.stream.plugins.strut;
+package com.jivesoftware.os.miru.catwalk.shared;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkQuery;
 import java.io.Serializable;
 
 /**

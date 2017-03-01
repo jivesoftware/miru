@@ -1,7 +1,7 @@
 package com.jivesoftware.os.miru.catwalk.deployable;
 
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkQuery;
+import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery;
 
 /**
  *

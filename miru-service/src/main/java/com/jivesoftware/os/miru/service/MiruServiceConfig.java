@@ -221,7 +221,10 @@ public interface MiruServiceConfig extends Config {
     @BooleanDefault(false)
     boolean getLabUseOffHeap();
 
-    @DoubleDefault(1d)
+    @StringDefault("cuckoo")
+    String getLabHashIndexType();
+
+    @DoubleDefault(2d)
     double getLabHashIndexLoadFactor();
 
     @IntDefault(4)
@@ -242,7 +245,10 @@ public interface MiruServiceConfig extends Config {
     @IntDefault(3)
     int getTimeIdLabHeapPressureStripes();
 
-    @DoubleDefault(1d)
+    @StringDefault("cuckoo")
+    String getTimeIdLabHashIndexType();
+
+    @DoubleDefault(2d)
     double getTimeIdLabHashIndexLoadFactor();
 
     @BooleanDefault(true)

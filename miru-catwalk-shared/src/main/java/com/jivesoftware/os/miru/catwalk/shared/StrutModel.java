@@ -1,4 +1,4 @@
-package com.jivesoftware.os.miru.stream.plugins.strut;
+package com.jivesoftware.os.miru.catwalk.shared;
 
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import java.util.Map;
@@ -8,13 +8,13 @@ import java.util.Map;
  */
 public class StrutModel {
 
-    final Map<StrutModelCache.StrutModelKey, StrutModelCache.ModelScore>[] model;
+    public final Map<StrutModelKey, StrutModelScore>[] model;
     public final long[] modelCounts;
     public final long totalCount;
     public final int[] numberOfModels;
     public final int[] totalNumPartitions;
 
-    public StrutModel(Map<StrutModelCache.StrutModelKey, StrutModelCache.ModelScore>[] model,
+    public StrutModel(Map<StrutModelKey, StrutModelScore>[] model,
         long[] modelCounts,
         long totalCount,
         int[] numberOfModels,
@@ -26,8 +26,8 @@ public class StrutModel {
         this.totalNumPartitions = totalNumPartitions;
     }
 
-    public StrutModelCache.ModelScore score(int featureId, MiruTermId[] values) {
-        return model[featureId].get(new StrutModelCache.StrutModelKey(values));
+    public StrutModelScore score(int featureId, MiruTermId[] values) {
+        return model[featureId].get(new StrutModelKey(values));
     }
 
 }
