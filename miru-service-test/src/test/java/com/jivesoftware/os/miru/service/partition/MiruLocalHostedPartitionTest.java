@@ -23,6 +23,7 @@ import com.jivesoftware.os.jive.utils.ordered.id.SnowflakeIdPacker;
 import com.jivesoftware.os.lab.LABEnvironment;
 import com.jivesoftware.os.lab.LABStats;
 import com.jivesoftware.os.lab.LabHeapPressure;
+import com.jivesoftware.os.lab.guts.LABHashIndexType;
 import com.jivesoftware.os.lab.guts.Leaps;
 import com.jivesoftware.os.lab.guts.StripingBolBufferLocks;
 import com.jivesoftware.os.miru.amza.MiruAmzaServiceConfig;
@@ -280,7 +281,8 @@ public class MiruLocalHostedPartitionTest {
         TxCogs cogs = new TxCogs(256, 64, null, null, null);
         ObjectMapper mapper = new ObjectMapper();
 
-        LabTimeIdIndex[] timeIdIndexes = new LabTimeIdIndexInitializer().initialize(1, 1_000, 1024 * 1024, 1d, false, resourceLocator, diskContextAllocator);
+        LabTimeIdIndex[] timeIdIndexes = new LabTimeIdIndexInitializer().initialize(1, 1_000, 1024 * 1024, LABHashIndexType.cuckoo, 2d, false, resourceLocator,
+            diskContextAllocator);
 
         OrderIdProvider idProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(0));
         contextFactory = new MiruContextFactory<>(idProvider,
@@ -305,7 +307,8 @@ public class MiruLocalHostedPartitionTest {
             termInterner,
             mapper,
             1024 * 1024 * 10,
-            1d,
+            "cuckoo",
+            2d,
             true,
             true,
             false);

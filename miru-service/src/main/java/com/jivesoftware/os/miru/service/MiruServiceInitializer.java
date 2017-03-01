@@ -21,6 +21,7 @@ import com.jivesoftware.os.lab.LABEnvironment;
 import com.jivesoftware.os.lab.LABStats;
 import com.jivesoftware.os.lab.LabHeapPressure;
 import com.jivesoftware.os.lab.LabHeapPressure.FreeHeapStrategy;
+import com.jivesoftware.os.lab.guts.LABHashIndexType;
 import com.jivesoftware.os.lab.guts.Leaps;
 import com.jivesoftware.os.lab.guts.StripingBolBufferLocks;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
@@ -246,6 +247,7 @@ public class MiruServiceInitializer {
         TimeIdIndex[] timeIdIndexes = new LabTimeIdIndexInitializer().initialize(config.getTimeIdKeepNIndexes(),
             config.getTimeIdMaxEntriesPerIndex(),
             config.getTimeIdMaxHeapPressureInBytes(),
+            LABHashIndexType.valueOf(config.getTimeIdLabHashIndexType()),
             config.getTimeIdLabHashIndexLoadFactor(),
             config.getTimeIdFsyncOnAppend(),
             resourceLocator,
@@ -273,6 +275,7 @@ public class MiruServiceInitializer {
             termInterner,
             objectMapper,
             config.getLabMaxHeapPressureInBytes(),
+            config.getLabHashIndexType(),
             config.getLabHashIndexLoadFactor(),
             config.getUseLabIndexes(),
             config.getRealtimeDelivery(),

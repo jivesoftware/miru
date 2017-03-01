@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.service.index.lab;
 
 import com.jivesoftware.os.lab.LABEnvironment;
+import com.jivesoftware.os.lab.guts.LABHashIndexType;
 import com.jivesoftware.os.miru.service.locator.MiruResourceLocator;
 import com.jivesoftware.os.miru.service.stream.allocator.MiruChunkAllocator;
 import java.io.File;
@@ -13,6 +14,7 @@ public class LabTimeIdIndexInitializer {
     public LabTimeIdIndex[] initialize(int keepNIndexes,
         int maxEntriesPerIndex,
         long maxHeapPressureInBytes,
+        LABHashIndexType hashIndexType,
         double hashIndexLoadFactor,
         boolean fsyncOnAppend,
         MiruResourceLocator resourceLocator,
@@ -25,7 +27,12 @@ public class LabTimeIdIndexInitializer {
         LABEnvironment[] labEnvironments = chunkAllocator.allocateTimeIdLABEnvironments(labDirs);
         LabTimeIdIndex[] timeIdIndexes = new LabTimeIdIndex[labEnvironments.length];
         for (int i = 0; i < labEnvironments.length; i++) {
-            timeIdIndexes[i] = new LabTimeIdIndex(labEnvironments[i], keepNIndexes, maxEntriesPerIndex, maxHeapPressureInBytes, hashIndexLoadFactor,
+            timeIdIndexes[i] = new LabTimeIdIndex(labEnvironments[i],
+                keepNIndexes,
+                maxEntriesPerIndex,
+                maxHeapPressureInBytes,
+                hashIndexType,
+                hashIndexLoadFactor,
                 fsyncOnAppend);
         }
         return timeIdIndexes;

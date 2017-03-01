@@ -30,6 +30,7 @@ import com.jivesoftware.os.lab.api.NoOpFormatTransformerProvider;
 import com.jivesoftware.os.lab.api.ValueIndex;
 import com.jivesoftware.os.lab.api.ValueIndexConfig;
 import com.jivesoftware.os.lab.api.rawhide.KeyValueRawhide;
+import com.jivesoftware.os.lab.guts.LABHashIndexType;
 import com.jivesoftware.os.lab.guts.Leaps;
 import com.jivesoftware.os.lab.guts.StripingBolBufferLocks;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
@@ -122,8 +123,18 @@ public class StrutModelScorerNGTest {
         @SuppressWarnings("unchecked")
         ValueIndex<byte[]>[] stores = new ValueIndex[16];
         for (int i = 0; i < stores.length; i++) {
-            stores[i] = env.open(new ValueIndexConfig("cache-" + i + "-" + catwalkId, 4096, 1024 * 1024, 0, 0, 0, NoOpFormatTransformerProvider.NAME,
-                KeyValueRawhide.NAME, MemoryRawEntryFormat.NAME, 20, 1d));
+            stores[i] = env.open(new ValueIndexConfig("cache-" + i + "-" + catwalkId,
+                4096,
+                1024 * 1024,
+                0,
+                0,
+                0,
+                NoOpFormatTransformerProvider.NAME,
+                KeyValueRawhide.NAME,
+                MemoryRawEntryFormat.NAME,
+                20,
+                LABHashIndexType.cuckoo,
+                2d));
         }
 
         LastIdCacheKeyValues cacheKeyValues = new LabLastIdCacheKeyValues("test", new OrderIdProviderImpl(new ConstantWriterIdProvider(1)), stores);

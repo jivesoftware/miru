@@ -9,6 +9,7 @@ import com.jivesoftware.os.lab.api.ValueIndex;
 import com.jivesoftware.os.lab.api.ValueIndexConfig;
 import com.jivesoftware.os.lab.api.rawhide.KeyValueRawhide;
 import com.jivesoftware.os.lab.api.rawhide.LABRawhide;
+import com.jivesoftware.os.lab.guts.LABHashIndexType;
 import com.jivesoftware.os.lab.io.api.UIO;
 import com.jivesoftware.os.miru.plugin.cache.LabCacheKeyValues;
 import com.jivesoftware.os.miru.plugin.cache.LabLastIdCacheKeyValues;
@@ -42,7 +43,13 @@ public class LabPluginCacheProvider implements MiruPluginCacheProvider {
     }
 
     @Override
-    public CacheKeyValues getKeyValues(String name, int payloadSize, boolean variablePayloadSize, long maxHeapPressureInBytes, double hashIndexLoadFactor) {
+    public CacheKeyValues getKeyValues(String name,
+        int payloadSize,
+        boolean variablePayloadSize,
+        long maxHeapPressureInBytes,
+        String hashIndexType,
+        double hashIndexLoadFactor) {
+
         return pluginPersistentCache.computeIfAbsent(name, (key) -> {
             try {
                 ValueIndex<byte[]>[] cacheIndexes = new ValueIndex[labEnvironments.length];
@@ -58,6 +65,7 @@ public class LabPluginCacheProvider implements MiruPluginCacheProvider {
                         KeyValueRawhide.NAME,
                         MemoryRawEntryFormat.NAME,
                         UIO.chunkPower(payloadSize * 1024, 4),
+                        LABHashIndexType.valueOf(hashIndexType),
                         hashIndexLoadFactor));
                 }
                 return new LabCacheKeyValues(name, idProvider, cacheIndexes);
@@ -72,7 +80,9 @@ public class LabPluginCacheProvider implements MiruPluginCacheProvider {
         int payloadSize,
         boolean variablePayloadSize,
         long maxHeapPressureInBytes,
+        String hashIndexType,
         double hashIndexLoadFactor) {
+
         return lastIdPluginPersistentCache.computeIfAbsent(name, (key) -> {
             try {
                 ValueIndex<byte[]>[] cacheIndexes = new ValueIndex[labEnvironments.length];
@@ -88,6 +98,7 @@ public class LabPluginCacheProvider implements MiruPluginCacheProvider {
                         "lastIdKeyValue",
                         MemoryRawEntryFormat.NAME,
                         UIO.chunkPower(payloadSize * 1024, 4),
+                        LABHashIndexType.valueOf(hashIndexType),
                         hashIndexLoadFactor));
                 }
                 return new LabLastIdCacheKeyValues(name, idProvider, cacheIndexes);
@@ -102,6 +113,7 @@ public class LabPluginCacheProvider implements MiruPluginCacheProvider {
         int payloadSize,
         boolean variablePayloadSize,
         long maxHeapPressureInBytes,
+        String hashIndexType,
         double hashIndexLoadFactor) {
         return timestampedPluginPersistentCache.computeIfAbsent(name, (key) -> {
             try {
@@ -118,6 +130,7 @@ public class LabPluginCacheProvider implements MiruPluginCacheProvider {
                         LABRawhide.NAME,
                         MemoryRawEntryFormat.NAME,
                         UIO.chunkPower(payloadSize * 1024, 4),
+                        LABHashIndexType.valueOf(hashIndexType),
                         hashIndexLoadFactor));
                 }
                 return new LabTimestampedCacheKeyValues(name, idProvider, cacheIndexes, stripedLocks);

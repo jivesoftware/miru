@@ -173,7 +173,8 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
         //TODO this duplicates StrutModelScorer behavior
         int payloadSize = 4; // this is amazing
         MiruPluginCacheProvider.TimestampedCacheKeyValues termFeaturesCache = request.query.catwalkId == null ? null
-            : context.getCacheProvider().getTimestampedKeyValues("strut-features-" + request.query.catwalkId, payloadSize, false, maxHeapPressureInBytes, 0d);
+            : context.getCacheProvider().getTimestampedKeyValues("strut-features-" + request.query.catwalkId, payloadSize, false, maxHeapPressureInBytes,
+            "cuckoo", 0d);
 
         List<MiruTermId> uniqueTermIds = Lists.newArrayList(termIds);
         return new MiruPartitionResponse<>(
