@@ -1,7 +1,7 @@
 package com.jivesoftware.os.miru.catwalk.deployable;
 
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
-import com.jivesoftware.os.miru.stream.plugins.catwalk.FeatureScore;
+import com.jivesoftware.os.miru.catwalk.shared.FeatureScore;
 import java.util.List;
 
 /**

@@ -40,6 +40,7 @@
         <module>miru-reco-plugins-test</module>
         <module>miru-analytics-plugins</module>
         <module>miru-analytics-plugins-test</module>
+        <module>miru-catwalk-shared</module>
         <module>miru-catwalk-deployable</module>
         <module>miru-stumptown-deployable</module>
         <module>miru-stumptown-plugins</module>

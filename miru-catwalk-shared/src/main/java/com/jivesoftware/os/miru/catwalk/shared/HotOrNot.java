@@ -1,4 +1,4 @@
-package com.jivesoftware.os.miru.stream.plugins.strut;
+package com.jivesoftware.os.miru.catwalk.shared;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;

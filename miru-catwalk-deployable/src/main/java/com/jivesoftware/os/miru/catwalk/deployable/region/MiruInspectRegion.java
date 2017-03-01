@@ -10,8 +10,8 @@ import com.jivesoftware.os.miru.catwalk.deployable.CatwalkModelService.FeatureRa
 import com.jivesoftware.os.miru.catwalk.deployable.CatwalkModelService.MergedScores;
 import com.jivesoftware.os.miru.catwalk.deployable.ModelFeatureScores;
 import com.jivesoftware.os.miru.catwalk.deployable.region.MiruInspectRegion.InspectInput;
-import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkQuery.CatwalkFeature;
-import com.jivesoftware.os.miru.stream.plugins.catwalk.FeatureScore;
+import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery.CatwalkFeature;
+import com.jivesoftware.os.miru.catwalk.shared.FeatureScore;
 import com.jivesoftware.os.miru.ui.MiruPageRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;

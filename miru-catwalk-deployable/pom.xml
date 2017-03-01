@@ -116,6 +116,11 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
+            <groupId>com.jivesoftware.os.miru</groupId>
+            <artifactId>miru-catwalk-shared</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
             <scope>test</scope>
