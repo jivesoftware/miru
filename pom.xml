@@ -16,6 +16,7 @@
         <module>miru-service</module>
         <module>miru-service-test</module>
         <module>miru-bitmaps-roaring5</module>
+        <module>miru-bitmaps-roaring6</module>
         <module>miru-api</module>
         <module>miru-sync-api</module>
         <module>miru-amza</module>

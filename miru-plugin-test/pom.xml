@@ -17,7 +17,7 @@
         <dependency>
             <groupId>org.roaringbitmap</groupId>
             <artifactId>RoaringBitmap</artifactId>
-            <version>0.5.11</version>
+            <version>0.6.37</version>
         </dependency>
 
         <dependency>
@@ -72,7 +72,7 @@
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>
-            <artifactId>miru-bitmaps-roaring5</artifactId>
+            <artifactId>miru-bitmaps-roaring6</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
