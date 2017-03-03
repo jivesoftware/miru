@@ -437,8 +437,9 @@ public class RoaringInspection {
             int nbrruns = Util.toIntUnsigned(Short.reverseBytes(inContainer.readShort()));
             final short lengthsAndValues[] = new short[2 * nbrruns];
 
-            for (int j = 0; j < 2 * nbrruns; ++j)
+            for (int j = 0; j < 2 * nbrruns; ++j) {
                 lengthsAndValues[j] = Short.reverseBytes(inContainer.readShort());
+            }
             val = new RunContainer(lengthsAndValues, nbrruns);
         } else {
             final short[] shortArray = new short[cardinality];

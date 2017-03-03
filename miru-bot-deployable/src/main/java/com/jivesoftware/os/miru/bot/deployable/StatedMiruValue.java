@@ -1,9 +1,8 @@
 package com.jivesoftware.os.miru.bot.deployable;
 
 import com.jivesoftware.os.miru.api.query.filter.MiruValue;
-import org.apache.commons.lang.RandomStringUtils;
-
 import java.util.Random;
+import org.apache.commons.lang.RandomStringUtils;
 
 class StatedMiruValue {
 
@@ -33,8 +32,12 @@ class StatedMiruValue {
     }
 
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
 
         StatedMiruValue that = (StatedMiruValue) o;
 

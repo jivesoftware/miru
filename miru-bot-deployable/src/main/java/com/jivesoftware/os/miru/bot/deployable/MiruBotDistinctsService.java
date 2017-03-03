@@ -2,11 +2,10 @@ package com.jivesoftware.os.miru.bot.deployable;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
+import com.jivesoftware.os.miru.bot.deployable.MiruBotDistinctsInitializer.MiruBotDistinctsConfig;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
-import com.jivesoftware.os.miru.bot.deployable.MiruBotDistinctsInitializer.MiruBotDistinctsConfig;
-
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 

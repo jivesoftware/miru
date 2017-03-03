@@ -7,12 +7,11 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.MiruValue;
-import com.jivesoftware.os.mlogger.core.AtomicCounter;
-import com.jivesoftware.os.miru.bot.deployable.StatedMiruValue.State;
 import com.jivesoftware.os.miru.bot.deployable.MiruBotBucketSnapshot.MiruBotBucketSnapshotFields;
+import com.jivesoftware.os.miru.bot.deployable.StatedMiruValue.State;
+import com.jivesoftware.os.mlogger.core.AtomicCounter;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -179,7 +178,9 @@ class MiruBotBucket {
         for (Entry<String, Set<StatedMiruValue>> values : statedMiruValues.entrySet()) {
             values.getValue().forEach(smv -> {
                 if (smv.state == state) {
-                    if (res.length() > 0) res.append(",");
+                    if (res.length() > 0) {
+                        res.append(",");
+                    }
 
                     res.append(values.getKey());
                     res.append(":");

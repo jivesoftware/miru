@@ -27,12 +27,10 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.plugin.test.MiruPluginTestBootstrap;
 import com.jivesoftware.os.miru.service.MiruService;
-
 import java.util.Collections;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
@@ -50,23 +48,23 @@ public class MiruAnalyticsNGTest {
     @BeforeMethod
     public void setUpMethod() throws Exception {
         MiruProvider<MiruService> miruProvider = new MiruPluginTestBootstrap().bootstrap(
-                tenant1,
-                partitionId,
-                new MiruHost("logicalName"),
-                new MiruSchema.Builder("test", 1)
-                        .setFieldDefinitions(new MiruFieldDefinition[]{
-                                new MiruFieldDefinition(0, "user", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
-                                new MiruFieldDefinition(1, "doc", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE)
-                        })
-                        .setPairedLatest(ImmutableMap.of(
-                                "user", Collections.singletonList("doc"),
-                                "doc", Collections.singletonList("user")))
-                        .setBloom(ImmutableMap.of(
-                                "doc", Collections.singletonList("user")))
-                        .build(),
-                MiruBackingStorage.disk,
-                new MiruBitmapsRoaring(),
-                Collections.emptyList());
+            tenant1,
+            partitionId,
+            new MiruHost("logicalName"),
+            new MiruSchema.Builder("test", 1)
+                .setFieldDefinitions(new MiruFieldDefinition[] {
+                    new MiruFieldDefinition(0, "user", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
+                    new MiruFieldDefinition(1, "doc", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE)
+                })
+                .setPairedLatest(ImmutableMap.of(
+                    "user", Collections.singletonList("doc"),
+                    "doc", Collections.singletonList("user")))
+                .setBloom(ImmutableMap.of(
+                    "doc", Collections.singletonList("user")))
+                .build(),
+            MiruBackingStorage.disk,
+            new MiruBitmapsRoaring(),
+            Collections.emptyList());
 
         this.service = miruProvider.getMiru(tenant1);
 
@@ -100,7 +98,8 @@ public class MiruAnalyticsNGTest {
             for (int d = 0; d < numberOfViewsPerUser; d++) {
                 int docId = userRand.nextInt(numberOfDocument);
                 long activityTime = time.addAndGet(intervalPerActivity);
-                service.writeToIndex(Collections.singletonList(new ActivityUtil().viewActivity(tenant1, partitionId, activityTime, user, String.valueOf(docId))));
+                service.writeToIndex(
+                    Collections.singletonList(new ActivityUtil().viewActivity(tenant1, partitionId, activityTime, user, String.valueOf(docId))));
                 if (++count % 10_000 == 0) {
                     System.out.println("Finished " + count + " in " + (System.currentTimeMillis() - start) + " ms");
                 }
@@ -120,19 +119,19 @@ public class MiruAnalyticsNGTest {
 
             long s = System.currentTimeMillis();
             MiruResponse<AnalyticsAnswer> result = injectable.score(new MiruRequest<>("test",
-                    tenant1,
-                    MiruActorId.NOT_PROVIDED,
-                    MiruAuthzExpression.NOT_PROVIDED,
-                    new AnalyticsQuery(
-                            Collections.singletonList(new AnalyticsQueryScoreSet(
-                                    "test",
-                                    timeRange,
-                                    8)),
-                            MiruFilter.NO_FILTER,
-                            ImmutableMap.<String, MiruFilter>builder()
-                                    .put(user, filter)
-                                    .build()),
-                    MiruSolutionLogLevel.INFO));
+                tenant1,
+                MiruActorId.NOT_PROVIDED,
+                MiruAuthzExpression.NOT_PROVIDED,
+                new AnalyticsQuery(
+                    Collections.singletonList(new AnalyticsQueryScoreSet(
+                        "test",
+                        timeRange,
+                        8)),
+                    MiruFilter.NO_FILTER,
+                    ImmutableMap.<String, MiruFilter>builder()
+                        .put(user, filter)
+                        .build()),
+                MiruSolutionLogLevel.INFO));
 
             System.out.println("result: " + result);
             System.out.println("took: " + (System.currentTimeMillis() - s));

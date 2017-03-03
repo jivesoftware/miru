@@ -58,6 +58,9 @@ public class MiruFieldDefinition {
 
     public enum Type {
         singleTerm(Feature.indexed, Feature.stored),
+        /**
+         * @deprecated Just don't.
+         */
         @Deprecated
         singleTermIndexValueBits(Feature.indexedValueBits),
         singleTermNonStored(Feature.indexed),
@@ -113,6 +116,9 @@ public class MiruFieldDefinition {
         indexed,
         indexedFirst,
         indexedLatest,
+        /**
+         * @deprecated Just don't.
+         */
         @Deprecated
         indexedValueBits,
         multiValued,

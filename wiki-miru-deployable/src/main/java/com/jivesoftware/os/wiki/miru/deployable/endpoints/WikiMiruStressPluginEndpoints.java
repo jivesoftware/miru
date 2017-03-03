@@ -50,7 +50,8 @@ public class WikiMiruStressPluginEndpoints {
         try {
 
             String rendered = wikiMiruService.renderPlugin(pluginRegion,
-                new WikiMiruStressPluginRegionInput(stresserId, tenantId, concurrency, qps, querier, numberOfResult, wildcardExpansion, queryPhrases, queryPhraseFile, action));
+                new WikiMiruStressPluginRegionInput(stresserId, tenantId, concurrency, qps, querier, numberOfResult, wildcardExpansion, queryPhrases,
+                    queryPhraseFile, action));
             return Response.ok(rendered).build();
 
         } catch (Exception x) {

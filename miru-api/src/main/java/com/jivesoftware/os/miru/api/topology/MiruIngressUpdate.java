@@ -4,7 +4,6 @@ import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 
 /**
- *
  * @author jonathan.colt
  */
 public class MiruIngressUpdate {
@@ -28,7 +27,13 @@ public class MiruIngressUpdate {
 
     @Override
     public String toString() {
-        return "MiruIngressUpdate{" + "tenantId=" + tenantId + ", partitionId=" + partitionId + ", minMax=" + minMax + ", ingressTimestamp=" + ingressTimestamp + ", absolute=" + absolute + '}';
+        return "MiruIngressUpdate{" +
+            "tenantId=" + tenantId +
+            ", partitionId=" + partitionId +
+            ", minMax=" + minMax +
+            ", ingressTimestamp=" + ingressTimestamp +
+            ", absolute=" + absolute +
+            '}';
     }
 
 }

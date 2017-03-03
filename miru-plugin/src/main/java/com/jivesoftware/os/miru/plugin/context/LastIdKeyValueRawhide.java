@@ -3,12 +3,10 @@ package com.jivesoftware.os.miru.plugin.context;
 import com.jivesoftware.os.lab.api.FormatTransformer;
 import com.jivesoftware.os.lab.api.ValueStream;
 import com.jivesoftware.os.lab.api.rawhide.Rawhide;
-import com.jivesoftware.os.lab.guts.IndexUtil;
 import com.jivesoftware.os.lab.io.BolBuffer;
 import com.jivesoftware.os.lab.io.api.IAppendOnly;
 import com.jivesoftware.os.lab.io.api.IPointerReadable;
 import com.jivesoftware.os.lab.io.api.UIO;
-import java.util.Comparator;
 
 /**
  * @author jonathan.colt

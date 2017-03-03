@@ -21,24 +21,23 @@ import com.jivesoftware.os.miru.reco.plugins.uniques.UniquesAnswer;
 import com.jivesoftware.os.miru.reco.plugins.uniques.UniquesInjectable;
 import com.jivesoftware.os.miru.reco.plugins.uniques.UniquesQuery;
 import com.jivesoftware.os.miru.service.MiruService;
-import org.testng.Assert;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Test;
-
 import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import org.testng.Assert;
+import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.Test;
 
 public class MiruUniquesNGTest {
 
     private MiruSchema miruSchema = new MiruSchema.Builder("test", 1)
-            .setFieldDefinitions(new MiruFieldDefinition[]{
-                    new MiruFieldDefinition(0, "user", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
-                    new MiruFieldDefinition(1, "context", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
-                    new MiruFieldDefinition(2, "locale", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE)
-            })
-            .build();
+        .setFieldDefinitions(new MiruFieldDefinition[] {
+            new MiruFieldDefinition(0, "user", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
+            new MiruFieldDefinition(1, "context", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE),
+            new MiruFieldDefinition(2, "locale", MiruFieldDefinition.Type.singleTerm, MiruFieldDefinition.Prefix.NONE)
+        })
+        .build();
 
     private MiruTenantId tenant1 = new MiruTenantId("tenant1".getBytes());
     private MiruPartitionId partitionId = MiruPartitionId.of(1);
@@ -57,13 +56,13 @@ public class MiruUniquesNGTest {
     @BeforeMethod
     public void setUpMethod() throws Exception {
         MiruProvider<MiruService> miruProvider = new MiruPluginTestBootstrap().bootstrap(
-                tenant1,
-                partitionId,
-                new MiruHost("logicalName"),
-                miruSchema,
-                MiruBackingStorage.disk,
-                new MiruBitmapsRoaring(),
-                Collections.emptyList());
+            tenant1,
+            partitionId,
+            new MiruHost("logicalName"),
+            miruSchema,
+            MiruBackingStorage.disk,
+            new MiruBitmapsRoaring(),
+            Collections.emptyList());
 
         this.service = miruProvider.getMiru(tenant1);
 
@@ -86,9 +85,9 @@ public class MiruUniquesNGTest {
                 for (int k = 0; k < numberOfOrgs; k++) {
                     String org = "org" + k;
                     service.writeToIndex(Collections.singletonList(
-                            util.globalActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity),
-                                    user, group, org,
-                                    walIndex.incrementAndGet())));
+                        util.globalActivity(tenant1, partitionId, time.addAndGet(intervalPerActivity),
+                            user, group, org,
+                            walIndex.incrementAndGet())));
                 }
             }
         }
@@ -101,15 +100,15 @@ public class MiruUniquesNGTest {
         for (MiruFieldDefinition fieldDefinition : miruSchema.getFieldDefinitions()) {
             long s = System.currentTimeMillis();
             MiruRequest<UniquesQuery> request = new MiruRequest<>("test",
-                    tenant1,
-                    MiruActorId.NOT_PROVIDED,
-                    MiruAuthzExpression.NOT_PROVIDED,
-                    new UniquesQuery(timeRange,
-                            fieldDefinition.name,
-                            null,
-                            MiruFilter.NO_FILTER,
-                            null),
-                    MiruSolutionLogLevel.INFO);
+                tenant1,
+                MiruActorId.NOT_PROVIDED,
+                MiruAuthzExpression.NOT_PROVIDED,
+                new UniquesQuery(timeRange,
+                    fieldDefinition.name,
+                    null,
+                    MiruFilter.NO_FILTER,
+                    null),
+                MiruSolutionLogLevel.INFO);
             MiruResponse<UniquesAnswer> uniquesResult = injectable.gatherUniques(request);
 
             Assert.assertEquals(uniquesResult.answer.uniques, numberOfUsers);

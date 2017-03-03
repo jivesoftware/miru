@@ -5,7 +5,7 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-build-management</artifactId>
-        <version>0.1777</version>
+        <version>0.1778</version>
         <relativePath>../inheritance-poms/global-build-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru</groupId>
@@ -39,6 +39,18 @@
         <dependency>
             <groupId>com.jivesoftware.os.jive.utils</groupId>
             <artifactId>ordered-id</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.amza</groupId>
+            <artifactId>amza-embed</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.jive.utils</groupId>
+            <artifactId>collections</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.leaps-n-bounds</groupId>
+            <artifactId>leaps-n-bounds</artifactId>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.miru</groupId>

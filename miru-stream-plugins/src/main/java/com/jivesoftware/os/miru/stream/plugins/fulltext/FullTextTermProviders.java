@@ -1,9 +1,6 @@
 package com.jivesoftware.os.miru.stream.plugins.fulltext;
 
 import com.google.common.collect.Maps;
-import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
-import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaProvider;
-import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import java.util.Collection;
 import java.util.Map;
 

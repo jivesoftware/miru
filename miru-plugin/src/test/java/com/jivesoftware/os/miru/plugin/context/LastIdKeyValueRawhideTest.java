@@ -5,7 +5,6 @@ import com.jivesoftware.os.lab.api.rawhide.KeyValueRawhide;
 import com.jivesoftware.os.lab.api.rawhide.Rawhide;
 import com.jivesoftware.os.lab.io.BolBuffer;
 import com.jivesoftware.os.lab.io.api.UIO;
-import java.io.IOException;
 import java.util.Arrays;
 import org.testng.Assert;
 import org.testng.annotations.Test;
@@ -69,10 +68,10 @@ public class LastIdKeyValueRawhideTest {
         Assert.assertEquals(rawhide.compareBB(UIO.longBytes(0), 0, 8, UIO.longBytes(1), 0, 8), -1);
         Assert.assertEquals(rawhide.compareBB(UIO.longBytes(1), 0, 8, UIO.longBytes(0), 0, 8), 1);
 
-        Long[] sort = new Long[]{new Long(9), new Long(5), new Long(6), new Long(3), new Long(4), new Long(5), new Long(1), new Long(2), new Long(9)};
+        Long[] sort = new Long[] { new Long(9), new Long(5), new Long(6), new Long(3), new Long(4), new Long(5), new Long(1), new Long(2), new Long(9) };
         Arrays.sort(sort, (o1, o2) -> rawhide.compareBB(UIO.longBytes(o1), 0, 8, UIO.longBytes(o2), 0, 8));
 
-        long[] sorted = new long[]{1, 2, 3, 4, 5, 5, 6, 9, 9};
+        long[] sorted = new long[] { 1, 2, 3, 4, 5, 5, 6, 9, 9 };
         for (int i = 0; i < sorted.length; i++) {
             Assert.assertEquals((long) sort[i], sorted[i]);
         }
@@ -92,7 +91,7 @@ public class LastIdKeyValueRawhideTest {
             new BolBuffer(toRawEntry(1).copy()), new BolBuffer(),
             new BolBuffer(UIO.longBytes(0))), 1);
 
-        Long[] sort = new Long[]{new Long(9), new Long(5), new Long(6), new Long(3), new Long(4), new Long(5), new Long(1), new Long(2), new Long(9)};
+        Long[] sort = new Long[] { new Long(9), new Long(5), new Long(6), new Long(3), new Long(4), new Long(5), new Long(1), new Long(2), new Long(9) };
         Arrays.sort(sort, (o1, o2) -> {
             try {
                 return rawhide.compareKey(FormatTransformer.NO_OP,
@@ -106,7 +105,7 @@ public class LastIdKeyValueRawhideTest {
 
         System.out.println("hmm:" + Arrays.toString(sort));
 
-        long[] sorted = new long[]{1, 2, 3, 4, 5, 5, 6, 9, 9};
+        long[] sorted = new long[] { 1, 2, 3, 4, 5, 5, 6, 9, 9 };
         for (int i = 0; i < sorted.length; i++) {
             Assert.assertEquals((long) sort[i], sorted[i]);
         }
@@ -134,7 +133,7 @@ public class LastIdKeyValueRawhideTest {
             FormatTransformer.NO_OP, FormatTransformer.NO_OP,
             new BolBuffer(toRawEntry(0).copy()), new BolBuffer()), 1);
 
-        Long[] sort = new Long[]{new Long(9), new Long(5), new Long(6), new Long(3), new Long(4), new Long(5), new Long(1), new Long(2), new Long(9)};
+        Long[] sort = new Long[] { new Long(9), new Long(5), new Long(6), new Long(3), new Long(4), new Long(5), new Long(1), new Long(2), new Long(9) };
         Arrays.sort(sort, (o1, o2) -> {
             try {
                 return rawhide.compareKey(FormatTransformer.NO_OP, FormatTransformer.NO_OP, new BolBuffer(toRawEntry(o1).copy()), new BolBuffer(),
@@ -144,20 +143,20 @@ public class LastIdKeyValueRawhideTest {
             }
         });
 
-        long[] sorted = new long[]{1, 2, 3, 4, 5, 5, 6, 9, 9};
+        long[] sorted = new long[] { 1, 2, 3, 4, 5, 5, 6, 9, 9 };
         for (int i = 0; i < sorted.length; i++) {
             Assert.assertEquals((long) sort[i], sorted[i]);
         }
     }
-    
+
     @Test
     public void testReverseCompatibility() throws Exception {
         KeyValueRawhide keyValueRawhide = KeyValueRawhide.SINGLETON;
         LastIdKeyValueRawhide lastIdKeyValueRawhide = new LastIdKeyValueRawhide();
 
-        byte[] rawKey = {0, 1, 2};
+        byte[] rawKey = { 0, 1, 2 };
         long rawTimestamp = 123L;
-        byte[] rawPayload = {3, 4, 5};
+        byte[] rawPayload = { 3, 4, 5 };
         byte[] mergedPayload = new byte[rawPayload.length + 4];
         System.arraycopy(rawPayload, 0, mergedPayload, 0, rawPayload.length);
         UIO.intBytes((int) rawTimestamp, mergedPayload, mergedPayload.length - 4);
@@ -190,8 +189,8 @@ public class LastIdKeyValueRawhideTest {
     public void testMerge() throws Exception {
         LastIdKeyValueRawhide lastIdKeyValueRawhide = new LastIdKeyValueRawhide();
 
-        byte[] rawKey = {0, 1, 2};
-        byte[] rawPayload = {3, 4, 5};
+        byte[] rawKey = { 0, 1, 2 };
+        byte[] rawPayload = { 3, 4, 5 };
 
         BolBuffer firstRawEntry = lastIdKeyValueRawhide.toRawEntry(rawKey, 123L, false, 0L, rawPayload, new BolBuffer());
         BolBuffer secondRawEntry = lastIdKeyValueRawhide.toRawEntry(rawKey, 124L, false, 0L, rawPayload, new BolBuffer());

@@ -1,7 +1,6 @@
 package com.jivesoftware.os.miru.service.solver;
 
 import com.google.common.base.Optional;
-import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;

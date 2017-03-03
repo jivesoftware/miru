@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.plugin.cache;
 
-import com.google.common.base.Throwables;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.api.KeyedFilerStore;
 import com.jivesoftware.os.filer.io.api.StackBuffer;

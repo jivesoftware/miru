@@ -147,7 +147,7 @@ public class MiruSyncEndpoints {
         try {
             MiruSyncSender<?, ?> sender = syncSenders.getSender(syncspaceName);
             Map<String, MiruSyncStatus> map = Maps.newHashMap();
-            if (sender !=null) {
+            if (sender != null) {
                 MiruSyncTenantTuple[] current = new MiruSyncTenantTuple[1];
                 long[] forwardTimestamp = { -1 };
                 boolean[] forwardTaking = { false };

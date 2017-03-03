@@ -39,7 +39,8 @@ public class MiruSyslogMain {
             deployable.addHealthCheck(new GCLoadHealthChecker(deployable.config(GCLoadHealthChecker.GCLoadHealthCheckerConfig.class)));
             deployable.addHealthCheck(new SystemCpuHealthChecker(deployable.config(SystemCpuHealthChecker.SystemCpuHealthCheckerConfig.class)));
             deployable.addHealthCheck(new LoadAverageHealthChecker(deployable.config(LoadAverageHealthChecker.LoadAverageHealthCheckerConfig.class)));
-            deployable.addHealthCheck(new FileDescriptorCountHealthChecker(deployable.config(FileDescriptorCountHealthChecker.FileDescriptorCountHealthCheckerConfig.class)));
+            deployable.addHealthCheck(
+                new FileDescriptorCountHealthChecker(deployable.config(FileDescriptorCountHealthChecker.FileDescriptorCountHealthCheckerConfig.class)));
             deployable.addHealthCheck(serviceStartupHealthCheck);
             deployable.addErrorHealthChecks(deployable.config(ErrorHealthCheckConfig.class));
             deployable.addManageInjectables(FullyOnlineVersion.class, (FullyOnlineVersion) () -> {

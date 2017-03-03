@@ -72,5 +72,5 @@ public class MiruStumptownPayloadsHBase implements MiruStumptownPayloadStorage {
         return payloads;
     }
 
-   
+
 }

@@ -1,11 +1,10 @@
 package com.jivesoftware.os.miru.catwalk.deployable;
 
-import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.catwalk.shared.FeatureScore;
+import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import java.util.List;
 
 /**
- *
  * @author jonathan.colt
  */
 public class ModelFeatureScores {

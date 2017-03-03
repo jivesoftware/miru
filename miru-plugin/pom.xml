@@ -5,7 +5,7 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-build-management</artifactId>
-        <version>0.1777</version>
+        <version>0.1778</version>
         <relativePath>../inheritance-poms/global-build-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru</groupId>
@@ -107,10 +107,6 @@
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.jivesoftware.os.filer</groupId>
-            <artifactId>keyed-store</artifactId>
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.leaps-n-bounds</groupId>

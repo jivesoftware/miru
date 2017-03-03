@@ -17,7 +17,6 @@ package com.jivesoftware.os.miru.plugin.bitmap;
 
 import com.google.common.base.Optional;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
-import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.plugin.index.IndexAlignedBitmapStream;
 import com.jivesoftware.os.miru.plugin.index.MiruInvertedIndex;

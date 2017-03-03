@@ -4,7 +4,6 @@ import com.jivesoftware.os.filer.io.chunk.ChunkStore;
 import com.jivesoftware.os.lab.LABEnvironment;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import java.io.File;
-import java.io.IOException;
 
 /**
  *

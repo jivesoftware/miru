@@ -1,6 +1,5 @@
 package com.jivesoftware.os.wiki.miru.deployable.topics;
 
-import java.io.Reader;
 import org.apache.lucene.analysis.CharArraySet;
 import org.apache.lucene.analysis.StopwordAnalyzerBase;
 import org.apache.lucene.analysis.TokenStream;
@@ -25,7 +24,7 @@ public class NonStemingEnglishAnalyzer extends StopwordAnalyzerBase {
      * provided this analyzer will add a {@link SetKeywordMarkerFilter} before
      * stemming.
      *
-     * @param stopwords        a stopword set
+     * @param stopwords a stopword set
      */
     public NonStemingEnglishAnalyzer(CharArraySet stopwords) {
         super(stopwords);
@@ -52,11 +51,10 @@ public class NonStemingEnglishAnalyzer extends StopwordAnalyzerBase {
     }
 
 
-
     /**
      * Creates a
      * {@link org.apache.lucene.analysis.Analyzer.TokenStreamComponents}
-     * which tokenizes all the text in the provided {@link Reader}.
+     * which tokenizes all the text in the provided {@link java.io.Reader}.
      *
      * @return A
      * {@link org.apache.lucene.analysis.Analyzer.TokenStreamComponents}

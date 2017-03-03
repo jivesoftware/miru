@@ -165,7 +165,9 @@ public class MiruActivityIndexTest {
     }
 
     @Test(dataProvider = "miruActivityIndexDataProviderWithData", expectedExceptions = IllegalArgumentException.class)
-    public void testGetActivityOverCapacity(MiruActivityIndex miruActivityIndex, MiruInternalActivity[] expectedActivities, boolean hasRealtime) throws Exception {
+    public void testGetActivityOverCapacity(MiruActivityIndex miruActivityIndex,
+        MiruInternalActivity[] expectedActivities,
+        boolean hasRealtime) throws Exception {
         StackBuffer stackBuffer = new StackBuffer();
         miruActivityIndex.getTimeVersionRealtime("test", expectedActivities.length, stackBuffer); // This should throw an exception
     }

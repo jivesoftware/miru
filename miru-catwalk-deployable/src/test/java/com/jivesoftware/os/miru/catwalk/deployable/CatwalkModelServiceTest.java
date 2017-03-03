@@ -2,9 +2,9 @@ package com.jivesoftware.os.miru.catwalk.deployable;
 
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.catwalk.deployable.CatwalkModelService.FeatureRange;
-import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery.CatwalkFeature;
 import com.jivesoftware.os.miru.catwalk.shared.FeatureScore;
+import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import java.util.Arrays;
 import java.util.List;
 import org.testng.annotations.Test;
@@ -21,7 +21,7 @@ public class CatwalkModelServiceTest {
         int fromPartitionId = 123;
         int toPartitionId = Integer.MAX_VALUE - 456;
         String featureName = "test";
-        CatwalkFeature[] features = {new CatwalkFeature(featureName, null, null)};
+        CatwalkFeature[] features = { new CatwalkFeature(featureName, null, null) };
         byte[] keyBytes = CatwalkModelService.modelPartitionKey("catwalkId",
             "modelId",
             featureName,

@@ -63,7 +63,7 @@ public class WikiMiruGramsAmza {
         long tombstoneTimestampAgeInMillis = TimeUnit.HOURS.toMillis(1);
 
         partitionProperties = new PartitionProperties(Durability.fsync_async,
-            tombstoneTimestampAgeInMillis,tombstoneTimestampAgeInMillis/2, tombstoneTimestampAgeInMillis, tombstoneTimestampAgeInMillis/2, -1, -1, -1, -1,
+            tombstoneTimestampAgeInMillis, tombstoneTimestampAgeInMillis / 2, tombstoneTimestampAgeInMillis, tombstoneTimestampAgeInMillis / 2, -1, -1, -1, -1,
             false,
             Consistency.leader_quorum,
             true,

@@ -21,7 +21,7 @@ public class MiruHomeRegion implements MiruPageRegion<HomeInput> {
 
     public static class HomeInput {
 
-        
+
         public HomeInput() {
         }
     }

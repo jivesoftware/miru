@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.service.stream;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;

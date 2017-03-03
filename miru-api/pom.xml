@@ -5,7 +5,7 @@
     <parent>
         <groupId>com.jivesoftware.os.miru.inheritance.poms</groupId>
         <artifactId>global-build-management</artifactId>
-        <version>0.1777</version>
+        <version>0.1778</version>
         <relativePath>../inheritance-poms/global-build-management/pom.xml</relativePath>
     </parent>
     <groupId>com.jivesoftware.os.miru</groupId>
@@ -41,11 +41,15 @@
         </dependency>
         <dependency>
             <groupId>com.jivesoftware.os.routing.bird</groupId>
-            <artifactId>routing-bird-http-client</artifactId>
+            <artifactId>routing-bird-shared</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.jivesoftware.os.routing.bird</groupId>
-            <artifactId>routing-bird-shared</artifactId>
+            <groupId>commons-lang</groupId>
+            <artifactId>commons-lang</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.jivesoftware.os.mlogger</groupId>
+            <artifactId>core</artifactId>
         </dependency>
     </dependencies>
 </project>

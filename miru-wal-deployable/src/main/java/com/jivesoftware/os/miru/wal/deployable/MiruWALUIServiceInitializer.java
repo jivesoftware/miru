@@ -1,11 +1,7 @@
 package com.jivesoftware.os.miru.wal.deployable;
 
 import com.jivesoftware.os.miru.api.MiruStats;
-import com.jivesoftware.os.miru.api.wal.AmzaCursor;
-import com.jivesoftware.os.miru.api.wal.AmzaSipCursor;
 import com.jivesoftware.os.miru.api.wal.MiruWALClient;
-import com.jivesoftware.os.miru.api.wal.RCVSCursor;
-import com.jivesoftware.os.miru.api.wal.RCVSSipCursor;
 import com.jivesoftware.os.miru.ui.MiruAdminRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.miru.wal.AmzaWALDirector;

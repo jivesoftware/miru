@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.service.index;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.api.StackBuffer;

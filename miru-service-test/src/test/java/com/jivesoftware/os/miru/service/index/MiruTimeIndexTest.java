@@ -1,6 +1,6 @@
 package com.jivesoftware.os.miru.service.index;
 
-import com.beust.jcommander.internal.Lists;
+import com.google.common.collect.Lists;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;

@@ -89,34 +89,34 @@ public class WikiMiruStressService {
                         }
 
                         long e = 0;
-                        long elapse = Long.parseLong((String)results.getOrDefault("elapse", "0"));
+                        long elapse = Long.parseLong((String) results.getOrDefault("elapse", "0"));
                         e += elapse;
                         totalQueryTime.addAndGet(elapse);
                         statistics.addValue(elapse);
                         queried.incrementAndGet();
 
-                        elapse = Long.parseLong((String)results.getOrDefault("foldersElapse", "0"));
+                        elapse = Long.parseLong((String) results.getOrDefault("foldersElapse", "0"));
                         e += elapse;
                         totalQueryTime.addAndGet(elapse);
                         statistics.addValue(elapse);
                         queried.incrementAndGet();
 
-                        elapse = Long.parseLong((String)results.getOrDefault("usersElapse", "0"));
+                        elapse = Long.parseLong((String) results.getOrDefault("usersElapse", "0"));
                         e += elapse;
                         totalQueryTime.addAndGet(elapse);
                         statistics.addValue(elapse);
                         queried.incrementAndGet();
 
 
-                        long amzaGetCount = Long.parseLong((String)results.getOrDefault("amzaGetCount", "0"));
-                        long amzaGetElapse = Long.parseLong((String)results.getOrDefault("amzaGetElapse", "0"));
+                        long amzaGetCount = Long.parseLong((String) results.getOrDefault("amzaGetCount", "0"));
+                        long amzaGetElapse = Long.parseLong((String) results.getOrDefault("amzaGetElapse", "0"));
 
                         totalAmzaTime.addAndGet(amzaGetElapse);
                         amzaGets.addAndGet(amzaGetCount);
 
                         float qps = 3000f / e;
                         if (input.qps < qps) {
-                            Thread.sleep((int)Math.max(0, (1000f / input.qps) - e));
+                            Thread.sleep((int) Math.max(0, (1000f / input.qps) - e));
                         }
 
                     } catch (Exception x) {

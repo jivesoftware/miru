@@ -29,7 +29,6 @@ import com.jivesoftware.os.routing.bird.http.client.RoundRobinStrategy;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.shared.ClientCall;
 import com.jivesoftware.os.routing.bird.shared.NextClientStrategy;
-
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -228,7 +227,7 @@ class MiruBotUniquesWorker implements Runnable {
                 MiruResponse<UniquesAnswer> extractResponse = httpResponseMapper.extractResultFromResponse(
                     httpResponse,
                     MiruResponse.class,
-                    new Class[]{UniquesAnswer.class},
+                    new Class[] { UniquesAnswer.class },
                     null);
 
                 return new ClientCall.ClientResponse<>(extractResponse, true);
@@ -248,7 +247,9 @@ class MiruBotUniquesWorker implements Runnable {
 
     double getHealthPercentage() {
         double totalFail = miruBotBucket.getFieldsValuesCount(State.READ_FAIL);
-        if (totalFail == 0.0) return 1.0;
+        if (totalFail == 0.0) {
+            return 1.0;
+        }
 
         double total = miruBotBucket.getFieldsValuesCount();
 
@@ -257,7 +258,9 @@ class MiruBotUniquesWorker implements Runnable {
 
     String getHealthDescription() {
         String fail = miruBotBucket.getFieldsValues(State.READ_FAIL);
-        if (fail.isEmpty()) return "";
+        if (fail.isEmpty()) {
+            return "";
+        }
         return "Uniques read failures: " + fail;
     }
 

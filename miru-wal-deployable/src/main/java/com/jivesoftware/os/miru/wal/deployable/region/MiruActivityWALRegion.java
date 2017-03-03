@@ -24,7 +24,6 @@ import com.jivesoftware.os.miru.ui.MiruPageRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.miru.wal.AmzaWALDirector;
 import com.jivesoftware.os.miru.wal.AmzaWALUtil;
-import com.jivesoftware.os.miru.wal.MiruWALDirector;
 import com.jivesoftware.os.miru.wal.RCVSWALDirector;
 import com.jivesoftware.os.miru.wal.deployable.region.bean.WALBean;
 import com.jivesoftware.os.miru.wal.deployable.region.input.MiruActivityWALRegionInput;

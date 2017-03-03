@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.service.stream;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;

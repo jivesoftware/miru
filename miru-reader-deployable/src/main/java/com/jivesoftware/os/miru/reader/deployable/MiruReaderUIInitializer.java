@@ -1,10 +1,10 @@
 package com.jivesoftware.os.miru.reader.deployable;
 
-import com.jivesoftware.os.miru.ui.MiruAdminRegion;
 import com.jivesoftware.os.lab.LABStats;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.service.MiruService;
 import com.jivesoftware.os.miru.service.partition.PartitionErrorTracker;
+import com.jivesoftware.os.miru.ui.MiruAdminRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.routing.bird.shared.TenantRoutingProvider;
 
@@ -17,8 +17,8 @@ public class MiruReaderUIInitializer {
         MiruService service,
         PartitionErrorTracker partitionErrorTracker,
         TenantRoutingProvider tenantRoutingProvider,
-        LABStats rebuild, LABStats global
-        ) throws Exception {
+        LABStats rebuild,
+        LABStats global) throws Exception {
 
         return new MiruReaderUIService(
             renderer,

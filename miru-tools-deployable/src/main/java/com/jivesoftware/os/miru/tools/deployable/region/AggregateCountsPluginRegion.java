@@ -228,11 +228,7 @@ public class AggregateCountsPluginRegion implements MiruPageRegion<Optional<Aggr
                     data.put("summaries", summaries);
                 }
             }
-        } catch (
-            Exception e
-            )
-
-        {
+        } catch (Exception e) {
             log.error("Unable to retrieve data", e);
         }
 

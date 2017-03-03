@@ -19,8 +19,8 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-import static com.jivesoftware.os.miru.anomaly.plugins.AnomalyConstants.CUSTOM_QUERY_ENDPOINT;
 import static com.jivesoftware.os.miru.anomaly.plugins.AnomalyConstants.ANOMALY_PREFIX;
+import static com.jivesoftware.os.miru.anomaly.plugins.AnomalyConstants.CUSTOM_QUERY_ENDPOINT;
 
 @Singleton
 @Path(ANOMALY_PREFIX)

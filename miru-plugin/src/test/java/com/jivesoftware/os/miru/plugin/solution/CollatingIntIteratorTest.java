@@ -14,11 +14,11 @@ public class CollatingIntIteratorTest {
 
     private static MiruIntIterator iter(boolean descending, int... ids) {
         return new MiruIntIterator() {
-            private int index = descending ? ids.length -1 : 0;
+            private int index = descending ? ids.length - 1 : 0;
 
             @Override
             public boolean hasNext() {
-                return descending? index >= 0 : index < ids.length;
+                return descending ? index >= 0 : index < ids.length;
             }
 
             @Override

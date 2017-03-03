@@ -16,17 +16,17 @@ import com.jivesoftware.os.miru.api.query.filter.FilterStringUtil;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruValue;
-import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
-import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
-import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
-import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery;
 import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery.CatwalkFeature;
 import com.jivesoftware.os.miru.catwalk.shared.HotOrNot;
 import com.jivesoftware.os.miru.catwalk.shared.HotOrNot.Hotness;
+import com.jivesoftware.os.miru.catwalk.shared.StrutModelScalar;
+import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
+import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
+import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
+import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.stream.plugins.strut.StrutAnswer;
 import com.jivesoftware.os.miru.stream.plugins.strut.StrutConstants;
-import com.jivesoftware.os.miru.catwalk.shared.StrutModelScalar;
 import com.jivesoftware.os.miru.stream.plugins.strut.StrutQuery;
 import com.jivesoftware.os.miru.stream.plugins.strut.StrutQuery.Strategy;
 import com.jivesoftware.os.miru.ui.MiruPageRegion;
@@ -295,7 +295,7 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                             @SuppressWarnings("unchecked")
                             MiruResponse<StrutAnswer> extractResponse = responseMapper.extractResultFromResponse(httpResponse,
                                 MiruResponse.class,
-                                new Class<?>[]{StrutAnswer.class},
+                                new Class<?>[] { StrutAnswer.class },
                                 null);
                             return new ClientResponse<>(extractResponse, true);
                         });

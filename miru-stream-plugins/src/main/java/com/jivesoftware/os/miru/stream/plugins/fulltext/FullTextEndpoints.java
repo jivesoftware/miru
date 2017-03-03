@@ -1,18 +1,11 @@
 package com.jivesoftware.os.miru.stream.plugins.fulltext;
 
-import com.jivesoftware.os.miru.api.MiruActorId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
-import com.jivesoftware.os.miru.api.base.MiruTenantId;
-import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
-import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
 import com.jivesoftware.os.miru.plugin.solution.MiruPartitionResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequestAndReport;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
-import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
-import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
-import com.jivesoftware.os.miru.stream.plugins.fulltext.FullTextQuery.Strategy;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.shared.ResponseHelper;

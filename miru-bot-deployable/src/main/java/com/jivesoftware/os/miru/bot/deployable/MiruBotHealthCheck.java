@@ -5,9 +5,8 @@ import com.jivesoftware.os.routing.bird.health.HealthCheck;
 import com.jivesoftware.os.routing.bird.health.HealthCheckResponse;
 import com.jivesoftware.os.routing.bird.health.HealthCheckResponseImpl;
 import com.jivesoftware.os.routing.bird.health.api.HealthCheckConfig;
-import org.merlin.config.defaults.StringDefault;
-
 import java.util.List;
+import org.merlin.config.defaults.StringDefault;
 
 class MiruBotHealthCheck implements HealthCheck {
 
@@ -37,7 +36,7 @@ class MiruBotHealthCheck implements HealthCheck {
 
     public HealthCheckResponse checkHealth() throws Exception {
         final double PERFECT_HEALTH = 1.0;
-        double[] healthPercentage = new double[]{PERFECT_HEALTH};
+        double[] healthPercentage = new double[] { PERFECT_HEALTH };
 
         StringBuilder healthDescription = new StringBuilder();
         for (MiruBotHealthPercent miruBotHealthPercent : miruBotHealthPercentList) {
@@ -47,7 +46,9 @@ class MiruBotHealthCheck implements HealthCheck {
 
                 String description = miruBotHealthPercent.getHealthDescription();
                 if (!description.isEmpty()) {
-                    if (healthDescription.length() > 0) healthDescription.append("; ");
+                    if (healthDescription.length() > 0) {
+                        healthDescription.append("; ");
+                    }
                     healthDescription.append(description);
                 }
             }

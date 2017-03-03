@@ -117,7 +117,10 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
     }
 
     @Override
-    public MiruTermId[] get(String name, int index, final MiruFieldDefinition fieldDefinition, StackBuffer stackBuffer) throws IOException, InterruptedException {
+    public MiruTermId[] get(String name,
+        int index,
+        final MiruFieldDefinition fieldDefinition,
+        StackBuffer stackBuffer) throws IOException, InterruptedException {
         int fieldId = fieldDefinition.fieldId;
         if (termLookup[fieldId] == null || index > lastId(stackBuffer)) {
             return null;
@@ -155,7 +158,10 @@ public class MiruFilerActivityIndex implements MiruActivityIndex {
     }
 
     @Override
-    public MiruTermId[][] getAll(String name, int[] indexes, final MiruFieldDefinition fieldDefinition, StackBuffer stackBuffer) throws IOException, InterruptedException {
+    public MiruTermId[][] getAll(String name,
+        int[] indexes,
+        final MiruFieldDefinition fieldDefinition,
+        StackBuffer stackBuffer) throws IOException, InterruptedException {
         return getAll(name, indexes, 0, indexes.length, fieldDefinition, stackBuffer);
     }
 

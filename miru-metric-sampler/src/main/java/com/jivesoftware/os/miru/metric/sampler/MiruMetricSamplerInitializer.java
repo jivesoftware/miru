@@ -1,8 +1,7 @@
 package com.jivesoftware.os.miru.metric.sampler;
 
-import java.io.IOException;
-
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
+import java.io.IOException;
 import org.merlin.config.Config;
 import org.merlin.config.defaults.BooleanDefault;
 import org.merlin.config.defaults.IntDefault;

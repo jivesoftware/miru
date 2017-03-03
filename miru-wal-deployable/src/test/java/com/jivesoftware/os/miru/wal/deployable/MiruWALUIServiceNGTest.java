@@ -23,8 +23,6 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.marshall.JacksonJsonObjectTypeMarshaller;
 import com.jivesoftware.os.miru.api.marshall.MiruVoidByte;
-import com.jivesoftware.os.miru.api.wal.RCVSCursor;
-import com.jivesoftware.os.miru.api.wal.RCVSSipCursor;
 import com.jivesoftware.os.miru.cluster.MiruClusterRegistry;
 import com.jivesoftware.os.miru.cluster.MiruRegistryClusterClient;
 import com.jivesoftware.os.miru.cluster.MiruReplicaSetDirector;
