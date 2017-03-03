@@ -1,14 +1,13 @@
 package com.jivesoftware.os.miru.bot.deployable;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.jivesoftware.os.miru.bot.deployable.MiruBotDistinctsInitializer.MiruBotDistinctsConfig;
+import com.jivesoftware.os.miru.bot.deployable.MiruBotUniquesInitializer.MiruBotUniquesConfig;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.shared.ResponseHelper;
-import com.jivesoftware.os.miru.bot.deployable.MiruBotDistinctsInitializer.MiruBotDistinctsConfig;
-import com.jivesoftware.os.miru.bot.deployable.MiruBotUniquesInitializer.MiruBotUniquesConfig;
-
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import io.swagger.annotations.Api;
-
+import java.util.concurrent.Executors;
 import javax.inject.Singleton;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
@@ -18,7 +17,6 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.util.concurrent.Executors;
 
 @Api(value = "MiruBotBucket")
 @Singleton
@@ -40,7 +38,9 @@ public class MiruBotBucketEndpoints {
     }
 
     private Response safeSnapshot(MiruBotBucketSnapshot miruBotBucketSnapshot) {
-        if (miruBotBucketSnapshot == null) return Response.ok("").build();
+        if (miruBotBucketSnapshot == null) {
+            return Response.ok("").build();
+        }
         return responseHelper.jsonResponse(miruBotBucketSnapshot);
     }
 

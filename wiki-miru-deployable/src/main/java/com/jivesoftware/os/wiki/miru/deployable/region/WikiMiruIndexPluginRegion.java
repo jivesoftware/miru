@@ -76,7 +76,7 @@ public class WikiMiruIndexPluginRegion implements MiruPageRegion<WikiMiruIndexPl
                         i.startTuples();
                         return null;
                     } catch (Throwable x) {
-                        i.message = "failed: "+x.getMessage();
+                        i.message = "failed: " + x.getMessage();
                         LOG.error("Wiki oops", x);
                         return null;
                     }
@@ -92,7 +92,7 @@ public class WikiMiruIndexPluginRegion implements MiruPageRegion<WikiMiruIndexPl
                         i.start();
                         return null;
                     } catch (Throwable x) {
-                        i.message = "failed: "+x.getMessage();
+                        i.message = "failed: " + x.getMessage();
                         LOG.error("Wiki oops", x);
                         return null;
                     }

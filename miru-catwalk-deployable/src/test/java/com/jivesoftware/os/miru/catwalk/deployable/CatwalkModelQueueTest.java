@@ -3,9 +3,9 @@ package com.jivesoftware.os.miru.catwalk.deployable;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
-import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery;
 import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery.CatwalkFeature;
+import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import org.testng.annotations.Test;
 
 import static org.testng.Assert.assertEquals;

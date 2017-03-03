@@ -19,6 +19,10 @@
             <artifactId>javax.inject</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-math</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.jivesoftware.os.mlogger</groupId>
             <artifactId>core</artifactId>
         </dependency>
@@ -56,11 +60,6 @@
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.jivesoftware.os.miru</groupId>
-            <artifactId>miru-bitmaps-roaring6</artifactId>
-            <version>${project.version}</version>
         </dependency>
     </dependencies>
 </project>

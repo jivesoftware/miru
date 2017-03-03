@@ -30,7 +30,7 @@ public interface MiruExpectedTenants {
 
     Iterable<? extends OrderedPartitions<?, ?>> allQueryablePartitionsInOrder(MiruTenantId tenantId, String requestName, String queryKey) throws Exception;
 
-    OrderedPartitions<?,?> queryablePartitionInOrder(MiruTenantId tenantId, MiruPartitionId partitionId, String requestName, String queryKey) throws Exception;
+    OrderedPartitions<?, ?> queryablePartitionInOrder(MiruTenantId tenantId, MiruPartitionId partitionId, String requestName, String queryKey) throws Exception;
 
     boolean expectedTopologies(Optional<MiruTenantId> tenantId, CoordinateStream stream) throws Exception;
 

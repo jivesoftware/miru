@@ -1,10 +1,9 @@
 package com.jivesoftware.os.miru.syslog.deployable;
 
-import org.testng.Assert;
-import org.testng.annotations.Test;
-
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import org.testng.Assert;
+import org.testng.annotations.Test;
 
 public class SyslogEventParseTest {
 
@@ -14,9 +13,9 @@ public class SyslogEventParseTest {
         String message = "Nov 21 17:32:09 ip-10-126-5-158 ec2net: [rewrite_aliases] Rewriting aliases of eth0";
         String host = "1.2.3.4";
         SyslogEvent syslogEvent = new SyslogEvent()
-                .setMessage(message)
-                .setAddress(new InetSocketAddress(InetAddress.getByName(host), 1))
-                .build();
+            .setMessage(message)
+            .setAddress(new InetSocketAddress(InetAddress.getByName(host), 1))
+            .build();
 
         Assert.assertNotNull(syslogEvent.miruLogEvent);
         Assert.assertEquals(syslogEvent.miruLogEvent.host, "ip-10-126-5-158");

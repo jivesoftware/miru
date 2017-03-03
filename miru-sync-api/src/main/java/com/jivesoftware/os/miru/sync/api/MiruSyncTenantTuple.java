@@ -60,7 +60,7 @@ public class MiruSyncTenantTuple {
     }
 
     public static MiruSyncTenantTuple fromBytes(byte[] bytes) throws InterruptedException {
-        return fromKeyString(new String(bytes,StandardCharsets.UTF_8));
+        return fromKeyString(new String(bytes, StandardCharsets.UTF_8));
     }
 
     public static MiruSyncTenantTuple fromKeyString(String key) throws InterruptedException {

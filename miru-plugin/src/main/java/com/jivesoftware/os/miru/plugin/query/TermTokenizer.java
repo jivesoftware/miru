@@ -15,14 +15,12 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.SortedSet;
-import org.apache.commons.math.stat.descriptive.DescriptiveStatistics;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.en.EnglishAnalyzer;
 import org.apache.lucene.analysis.standard.StandardFilter;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.analysis.util.CharArraySet;
-import org.apache.lucene.analysis.util.StopwordAnalyzerBase;
 
 import static org.apache.commons.lang.StringUtils.trimToNull;
 
@@ -56,6 +54,7 @@ public class TermTokenizer {
     }
 
     private static final boolean average = true;
+
     private static float score(float... scores) {
         if (average) {
             float s = 0;

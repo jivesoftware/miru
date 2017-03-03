@@ -42,7 +42,6 @@ import java.util.Random;
 import org.roaringbitmap.FastAggregation;
 import org.roaringbitmap.IntIterator;
 import org.roaringbitmap.RoaringBitmap;
-import org.roaringbitmap.RoaringInspection;
 import org.roaringbitmap.buffer.BufferFastAggregation;
 import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
 import org.roaringbitmap.buffer.MutableRoaringBitmap;

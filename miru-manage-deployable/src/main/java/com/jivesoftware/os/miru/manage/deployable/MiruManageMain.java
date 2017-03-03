@@ -124,8 +124,8 @@ public class MiruManageMain {
                 new FileDescriptorCountHealthChecker(deployable.config(FileDescriptorCountHealthChecker.FileDescriptorCountHealthCheckerConfig.class)));
             deployable.addHealthCheck(serviceStartupHealthCheck);
             deployable.addErrorHealthChecks(deployable.config(ErrorHealthCheckConfig.class));
-            AtomicReference<Callable<Boolean>> isAmzaReady = new AtomicReference<>(()-> false);
-            deployable.addManageInjectables(FullyOnlineVersion.class, (FullyOnlineVersion)() -> {
+            AtomicReference<Callable<Boolean>> isAmzaReady = new AtomicReference<>(() -> false);
+            deployable.addManageInjectables(FullyOnlineVersion.class, (FullyOnlineVersion) () -> {
                 if (serviceStartupHealthCheck.startupHasSucceeded() && isAmzaReady.get().call()) {
                     return instanceConfig.getVersion();
                 } else {

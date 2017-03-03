@@ -202,7 +202,7 @@ public interface MiruServiceConfig extends Config {
 
     @StringDefault("mostBytesFirst")
     String getLabFreeHeapStrategy();
-    
+
     @IntDefault(3)
     int getRebuildLabHeapPressureStripes();
 

@@ -109,10 +109,6 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.jivesoftware.os.filer</groupId>
-            <artifactId>keyed-store</artifactId>
-        </dependency>
-        <dependency>
             <groupId>com.jivesoftware.os.leaps-n-bounds</groupId>
             <artifactId>leaps-n-bounds</artifactId>
         </dependency>

@@ -147,19 +147,19 @@ public class WikiMiruStressPluginRegion implements MiruPageRegion<WikiMiruStress
                 m.put("amzaGets", s.amzaGets.toString());
                 m.put("amzaGps", "" + (int) (1000d / (s.totalAmzaTime.get() / (double) s.amzaGets.get())));
 
-                m.put("latencyP50", "" + (int)s.statistics.getPercentile(50));
-                m.put("latencyP75", "" + (int)s.statistics.getPercentile(75));
-                m.put("latencyP90", "" + (int)s.statistics.getPercentile(90));
-                m.put("latencyP95", "" + (int)s.statistics.getPercentile(95));
-                m.put("latencyP99", "" + (int)s.statistics.getPercentile(99));
-                m.put("latencyP999", "" + (int)s.statistics.getPercentile(99.9));
+                m.put("latencyP50", "" + (int) s.statistics.getPercentile(50));
+                m.put("latencyP75", "" + (int) s.statistics.getPercentile(75));
+                m.put("latencyP90", "" + (int) s.statistics.getPercentile(90));
+                m.put("latencyP95", "" + (int) s.statistics.getPercentile(95));
+                m.put("latencyP99", "" + (int) s.statistics.getPercentile(99));
+                m.put("latencyP999", "" + (int) s.statistics.getPercentile(99.9));
                 m.put("tenantId", s.tenantId);
                 m.put("elapse", String.valueOf(System.currentTimeMillis() - s.startTimestampMillis));
 
                 rows.add(m);
             }
 
-            Collections.sort(rows, new Comparator<Map<String,String>>() {
+            Collections.sort(rows, new Comparator<Map<String, String>>() {
                 @Override
                 public int compare(Map<String, String> o1, Map<String, String> o2) {
                     int i = o1.get("querier").compareTo(o2.get("querier"));

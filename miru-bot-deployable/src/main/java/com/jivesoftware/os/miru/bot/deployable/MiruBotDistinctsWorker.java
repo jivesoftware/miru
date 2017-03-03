@@ -11,6 +11,8 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
+import com.jivesoftware.os.miru.bot.deployable.MiruBotDistinctsInitializer.MiruBotDistinctsConfig;
+import com.jivesoftware.os.miru.bot.deployable.StatedMiruValue.State;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
@@ -27,9 +29,6 @@ import com.jivesoftware.os.routing.bird.http.client.RoundRobinStrategy;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.shared.ClientCall;
 import com.jivesoftware.os.routing.bird.shared.NextClientStrategy;
-import com.jivesoftware.os.miru.bot.deployable.MiruBotDistinctsInitializer.MiruBotDistinctsConfig;
-import com.jivesoftware.os.miru.bot.deployable.StatedMiruValue.State;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -255,7 +254,7 @@ class MiruBotDistinctsWorker implements Runnable {
                 MiruResponse<DistinctsAnswer> extractResponse = httpResponseMapper.extractResultFromResponse(
                     httpResponse,
                     MiruResponse.class,
-                    new Class[]{DistinctsAnswer.class},
+                    new Class[] { DistinctsAnswer.class },
                     null);
 
                 return new ClientCall.ClientResponse<>(extractResponse, true);
@@ -276,7 +275,9 @@ class MiruBotDistinctsWorker implements Runnable {
 
     double getHealthPercentage() {
         double totalFail = miruBotBucket.getFieldsValuesCount(State.READ_FAIL);
-        if (totalFail == 0.0) return 1.0;
+        if (totalFail == 0.0) {
+            return 1.0;
+        }
 
         double total = miruBotBucket.getFieldsValuesCount();
 
@@ -292,7 +293,9 @@ class MiruBotDistinctsWorker implements Runnable {
 
     String getHealthDescription() {
         String fail = miruBotBucket.getFieldsValues(State.READ_FAIL);
-        if (fail.isEmpty()) return "";
+        if (fail.isEmpty()) {
+            return "";
+        }
         return "Distincts read failures: " + fail;
     }
 

@@ -230,7 +230,7 @@ public class StumptownQueryPluginRegion implements MiruPageRegion<Optional<Stump
         List<MiruFieldFilter> fieldFilters = Lists.newArrayList();
         List<MiruFieldFilter> notFieldFilters = Lists.newArrayList();
         addFilter(fieldName, "cluster", cluster, fieldFilters, notFieldFilters);
-        addFilter(fieldName, "host",  host, fieldFilters, notFieldFilters);
+        addFilter(fieldName, "host", host, fieldFilters, notFieldFilters);
         addFilter(fieldName, "service", service, fieldFilters, notFieldFilters);
         addFilter(fieldName, "instance", instance, fieldFilters, notFieldFilters);
         addFilter(fieldName, "version", version, fieldFilters, notFieldFilters);
@@ -297,7 +297,7 @@ public class StumptownQueryPluginRegion implements MiruPageRegion<Optional<Stump
         return data;
     }
 
-    private void addFilter(String fieldName,String  field, String value, List<MiruFieldFilter> fieldFilters, List<MiruFieldFilter> notFieldFilters) {
+    private void addFilter(String fieldName, String field, String value, List<MiruFieldFilter> fieldFilters, List<MiruFieldFilter> notFieldFilters) {
         if (fieldName == null || !fieldName.equals(field)) {
             QueryUtils.addFieldFilter(fieldFilters, notFieldFilters, field, value);
         }

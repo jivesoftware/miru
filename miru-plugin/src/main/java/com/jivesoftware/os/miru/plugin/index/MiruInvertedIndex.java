@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.plugin.index;
 
-import com.google.common.base.Optional;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import java.util.List;
 
@@ -18,7 +17,7 @@ public interface MiruInvertedIndex<BM extends IBM, IBM> extends MiruInvertedInde
      * the index remains unchanged. Effectively, the index is modified if and only if {@link #lastId(StackBuffer)} returns -1.
      *
      * @param stackBuffer the stack buffer
-     * @param id the index of the bit to set
+     * @param id          the index of the bit to set
      * @throws Exception
      */
     boolean setIfEmpty(StackBuffer stackBuffer, int id) throws Exception;

@@ -245,7 +245,7 @@ public class AnomalyQueryPluginRegion implements MiruPageRegion<Optional<Anomaly
                         @SuppressWarnings("unchecked")
                         MiruResponse<AnomalyAnswer> extractResponse = responseMapper.extractResultFromResponse(httpResponse,
                             MiruResponse.class,
-                            new Class[]{AnomalyAnswer.class},
+                            new Class[] { AnomalyAnswer.class },
                             null);
                         return new ClientResponse<>(extractResponse, true);
                     });
@@ -337,7 +337,7 @@ public class AnomalyQueryPluginRegion implements MiruPageRegion<Optional<Anomaly
                     boolean[] fill = new boolean[wcount];
                     int i = 0;
                     for (Entry<WaveformKey, long[]> t : waves) {
-                        colors[i] = defaultColors[i%defaultColors.length];
+                        colors[i] = defaultColors[i % defaultColors.length];
                         waveName[i] = t.getKey().key;
                         values[i] = t.getValue();
                         totals[i] = 0;
@@ -365,8 +365,6 @@ public class AnomalyQueryPluginRegion implements MiruPageRegion<Optional<Anomaly
 
         return renderer.render(template, data);
     }
-
-
 
 
     public String hms(long millis) {
@@ -501,7 +499,7 @@ public class AnomalyQueryPluginRegion implements MiruPageRegion<Optional<Anomaly
     }
 
 
-    public List<Map<String,String>> typeahead(String fieldName, String contains) throws Exception {
+    public List<Map<String, String>> typeahead(String fieldName, String contains) throws Exception {
         MiruTimeRange timeRange = new MiruTimeRange(Long.MIN_VALUE, Long.MAX_VALUE);
         List<MiruValue> prefixes = null;
         if (contains != null && !contains.isEmpty()) {
@@ -573,7 +571,7 @@ public class AnomalyQueryPluginRegion implements MiruPageRegion<Optional<Anomaly
     }
 
 
-    private Color[] defaultColors = new Color[]{
+    private Color[] defaultColors = new Color[] {
         Color.blue,
         Color.green,
         Color.red,
@@ -607,7 +605,7 @@ public class AnomalyQueryPluginRegion implements MiruPageRegion<Optional<Anomaly
             for (double m : metric) {
                 values.add("\"" + String.valueOf(m) + "\"");
             }
-            ws.add(waveform(waveName[i], new Color[]{colors[i]}, 1f, values, fill[i], false));
+            ws.add(waveform(waveName[i], new Color[] { colors[i] }, 1f, values, fill[i], false));
             if (i > 0) {
                 total += ", ";
             }

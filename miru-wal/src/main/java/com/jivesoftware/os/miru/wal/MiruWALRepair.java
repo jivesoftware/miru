@@ -18,7 +18,7 @@ public class MiruWALRepair {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
-    private final MiruWALClient<? ,?> walClient;
+    private final MiruWALClient<?, ?> walClient;
     private final MiruActivityWALReader<?, ?> activityWALReader;
 
     private final MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory();

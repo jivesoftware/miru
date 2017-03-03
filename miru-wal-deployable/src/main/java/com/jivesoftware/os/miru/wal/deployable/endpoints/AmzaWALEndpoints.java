@@ -16,7 +16,6 @@ import com.jivesoftware.os.miru.api.wal.MiruWALClient.StreamBatch;
 import com.jivesoftware.os.miru.api.wal.MiruWALEntry;
 import com.jivesoftware.os.miru.api.wal.SipAndLastSeen;
 import com.jivesoftware.os.miru.wal.AmzaWALDirector;
-import com.jivesoftware.os.miru.wal.MiruWALDirector;
 import com.jivesoftware.os.miru.wal.MiruWALNotInitializedException;
 import com.jivesoftware.os.miru.wal.MiruWALWrongRouteException;
 import com.jivesoftware.os.mlogger.core.MetricLogger;

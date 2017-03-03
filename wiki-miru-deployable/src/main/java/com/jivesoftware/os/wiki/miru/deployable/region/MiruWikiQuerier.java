@@ -56,7 +56,7 @@ public class MiruWikiQuerier implements WikiQuerier {
     public Found queryFolders(WikiMiruPluginRegionInput input) throws Exception {
 
         MiruTenantId tenantId = new MiruTenantId(input.tenantId.getBytes(StandardCharsets.UTF_8));
-        String query = input.query.isEmpty() ? "" : rewrite(input.query.toLowerCase(),  input.wildcardExpansion);
+        String query = input.query.isEmpty() ? "" : rewrite(input.query.toLowerCase(), input.wildcardExpansion);
 
         MiruFilter foldersFilter = new MiruFilter(MiruFilterOperation.and, false, Arrays.asList(MiruFieldFilter.of(MiruFieldType.primary, "type",
             Arrays.asList("folder"))), null);
@@ -85,7 +85,7 @@ public class MiruWikiQuerier implements WikiQuerier {
     public Found queryUsers(WikiMiruPluginRegionInput input) throws Exception {
         MiruTenantId tenantId = new MiruTenantId(input.tenantId.getBytes(StandardCharsets.UTF_8));
 
-        String query = input.query.isEmpty() ? "" : rewrite(input.query.toLowerCase(),input.wildcardExpansion);
+        String query = input.query.isEmpty() ? "" : rewrite(input.query.toLowerCase(), input.wildcardExpansion);
 
         MiruFilter usersFilter = new MiruFilter(MiruFilterOperation.and, false, Arrays.asList(MiruFieldFilter.of(MiruFieldType.primary, "type",
             Arrays.asList("user"))), null);

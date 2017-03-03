@@ -2,7 +2,6 @@ package com.jivesoftware.os.miru.bot.deployable;
 
 import com.jivesoftware.os.miru.api.MiruWriterEndpointConstants;
 import org.merlin.config.Config;
-import org.merlin.config.defaults.BooleanDefault;
 import org.merlin.config.defaults.IntDefault;
 import org.merlin.config.defaults.LongDefault;
 import org.merlin.config.defaults.StringDefault;

@@ -6,6 +6,8 @@ import com.google.common.collect.Maps;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.miru.api.activity.MiruActivity;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.bot.deployable.MiruBotDistinctsInitializer.MiruBotDistinctsConfig;
+import com.jivesoftware.os.miru.bot.deployable.StatedMiruValue.State;
 import com.jivesoftware.os.mlogger.core.AtomicCounter;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -14,9 +16,6 @@ import com.jivesoftware.os.routing.bird.http.client.RoundRobinStrategy;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.shared.ClientCall;
 import com.jivesoftware.os.routing.bird.shared.NextClientStrategy;
-import com.jivesoftware.os.miru.bot.deployable.MiruBotDistinctsInitializer.MiruBotDistinctsConfig;
-import com.jivesoftware.os.miru.bot.deployable.StatedMiruValue.State;
-
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -64,7 +63,9 @@ class StatedMiruValueWriter {
                 fieldsValues.put(value.getKey(), Collections.singletonList(value.getValue().value.last()));
             }
 
-            if (LOG.isDebugEnabled()) LOG.debug("Write miru activity: " + sb.toString());
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Write miru activity: " + sb.toString());
+            }
             miruActivities.add(new MiruActivity(
                 miruTenantId,
                 order.nextId(),

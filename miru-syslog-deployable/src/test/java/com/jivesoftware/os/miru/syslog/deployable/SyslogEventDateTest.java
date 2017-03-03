@@ -1,11 +1,10 @@
 package com.jivesoftware.os.miru.syslog.deployable;
 
-import org.testng.Assert;
-import org.testng.annotations.Test;
-
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import org.testng.Assert;
+import org.testng.annotations.Test;
 
 public class SyslogEventDateTest {
 

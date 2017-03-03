@@ -2,7 +2,6 @@ package com.jivesoftware.os.miru.service.index.lab;
 
 import com.google.common.primitives.Bytes;
 import com.jivesoftware.os.filer.io.ByteBufferBackedFiler;
-import com.jivesoftware.os.filer.io.ByteBufferDataInput;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.io.api.KeyRange;

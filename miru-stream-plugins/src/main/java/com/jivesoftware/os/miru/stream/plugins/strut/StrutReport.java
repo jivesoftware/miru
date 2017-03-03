@@ -8,7 +8,7 @@ import java.io.Serializable;
  */
 public class StrutReport implements Serializable {
 
-   
+
     @JsonCreator
     public StrutReport() {
     }

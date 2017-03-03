@@ -437,7 +437,8 @@ public class MiruSyncMain {
                             return tenantTupleConfigs;
                         };
                     }
-                    syncSenders = (MiruSyncSenders) new MiruSyncSenders<>( //  don't remove generics (fails compilation for others when we do)
+                    //  don't remove generics (fails compilation for others when we do)
+                    syncSenders = (MiruSyncSenders) new MiruSyncSenders<>(
                         miruStats,
                         syncConfig,
                         orderIdProvider,
@@ -492,7 +493,8 @@ public class MiruSyncMain {
                             return tenantTupleConfigs;
                         };
                     }
-                    syncSenders = (MiruSyncSenders) new MiruSyncSenders<>( //  don't remove generics (fails compilation for others when we do)
+                    //  don't remove generics (fails compilation for others when we do)
+                    syncSenders = (MiruSyncSenders) new MiruSyncSenders<>(
                         miruStats,
                         syncConfig,
                         orderIdProvider,

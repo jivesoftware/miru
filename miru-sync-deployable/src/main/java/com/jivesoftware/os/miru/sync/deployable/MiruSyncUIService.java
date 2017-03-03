@@ -1,7 +1,6 @@
 package com.jivesoftware.os.miru.sync.deployable;
 
 import com.google.common.collect.Lists;
-import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.sync.deployable.region.MiruChromeRegion;
 import com.jivesoftware.os.miru.sync.deployable.region.MiruHeaderRegion;
 import com.jivesoftware.os.miru.sync.deployable.region.MiruStatusRegionInput;

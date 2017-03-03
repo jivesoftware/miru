@@ -63,7 +63,7 @@ public class MiruBotMain {
                 miruBotHealthCheck,
                 serviceStartupHealthCheck);
             deployable.addErrorHealthChecks(deployable.config(ErrorHealthCheckConfig.class));
-            deployable.addManageInjectables(FullyOnlineVersion.class, (FullyOnlineVersion)() -> {
+            deployable.addManageInjectables(FullyOnlineVersion.class, (FullyOnlineVersion) () -> {
                 if (serviceStartupHealthCheck.startupHasSucceeded()) {
                     return instanceConfig.getVersion();
                 } else {

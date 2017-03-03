@@ -89,7 +89,7 @@ public class MiruAnomalyMain {
                 new FileDescriptorCountHealthChecker(deployable.config(FileDescriptorCountHealthChecker.FileDescriptorCountHealthCheckerConfig.class)));
             deployable.addHealthCheck(serviceStartupHealthCheck);
             deployable.addErrorHealthChecks(deployable.config(ErrorHealthCheckConfig.class));
-            deployable.addManageInjectables(FullyOnlineVersion.class, (FullyOnlineVersion)() -> {
+            deployable.addManageInjectables(FullyOnlineVersion.class, (FullyOnlineVersion) () -> {
                 if (serviceStartupHealthCheck.startupHasSucceeded()) {
                     return instanceConfig.getVersion();
                 } else {

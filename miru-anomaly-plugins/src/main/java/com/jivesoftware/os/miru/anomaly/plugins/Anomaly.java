@@ -1,8 +1,8 @@
 package com.jivesoftware.os.miru.anomaly.plugins;
 
 import com.google.common.math.LongMath;
-import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.anomaly.plugins.AnomalyAnswer.Waveform;
+import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.Arrays;

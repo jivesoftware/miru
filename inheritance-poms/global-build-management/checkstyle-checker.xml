@@ -58,7 +58,7 @@
         <property name="tabWidth" value="4"/>
 
         <module name="AvoidStarImport"/>
-        <module name="EmptyForIteratorPad"/>
+        <!--<module name="EmptyForIteratorPad"/>-->
         <module name="GenericWhitespace"/>
         <module name="IllegalImport"/>
         <module name="IllegalInstantiation"/>
@@ -74,10 +74,10 @@
         <module name="MethodParamPad"/>
         <module name="MissingDeprecated"/>
         <module name="MissingOverride"/>
-        <module name="ModifiedControlVariable"/>
+        <!--<module name="ModifiedControlVariable"/>-->
         <module name="NeedBraces"/>
         <module name="NestedIfDepth">
-            <property name="max" value="4"/>
+            <property name="max" value="6"/>
         </module>
         <module name="NestedTryDepth">
             <property name="max" value="3"/>
@@ -106,7 +106,7 @@
         <module name="ParenPad"/>
         <module name="RedundantImport"/>
         <module name="RightCurly"/>
-        <module name="SimplifyBooleanExpression"/>
+        <!--<module name="SimplifyBooleanExpression"/>-->
         <module name="StringLiteralEquality"/>
         <module name="SuppressWarnings"/>
         <module name="TypecastParenPad"/>

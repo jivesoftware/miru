@@ -3,7 +3,6 @@ package com.jivesoftware.os.miru.bitmaps.roaring6;
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
-import com.jivesoftware.os.miru.bitmaps.roaring6.MiruBitmapsRoaring;
 import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
 import gnu.trove.list.array.TIntArrayList;
 import java.util.List;

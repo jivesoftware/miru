@@ -1,7 +1,5 @@
 package com.jivesoftware.os.miru.service.index;
 
-import java.util.concurrent.ExecutorService;
-
 /**
  *
  */
