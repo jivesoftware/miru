@@ -646,7 +646,7 @@ public class MiruPartitionAccessor<BM extends IBM, IBM, C extends MiruCursor<C, 
         if ((indexMisses || removeMisses) && misses > 0) {
             int lastIdHint = got.timeIndex.lastId();
             long largestTimestampHint = got.timeIndex.getLargestTimestamp();
-            got.timeIdIndex.allocate(got.version, missTimestamps, missIds, missMonotonics, lastIdHint, largestTimestampHint);
+            got.timeIdIndex.allocate(coord, got.version, missTimestamps, missIds, missMonotonics, lastIdHint, largestTimestampHint);
             timeIndex.nextId(stackBuffer, missTimestamps, missIds, missMonotonics);
 
             for (int i = 0; i < misses; i++) {
