@@ -116,7 +116,8 @@ public class LabTimeIdIndexTest {
             LABEnvironment.buildLeapsCache(1_000_000, 10),
             new StripingBolBufferLocks(2048));
 
-        LabTimeIdIndex[] indexes = new LabTimeIdIndexInitializer().initialize(keepNIndexes, maxEntriesPerIndex, 1024 * 1024, LABHashIndexType.cuckoo, 2d, false,
+        LabTimeIdIndex[] indexes = new LabTimeIdIndexInitializer().initialize(keepNIndexes, maxEntriesPerIndex, 1024 * 1024, LABHashIndexType.cuckoo, 2d, true,
+            false,
             resourceLocator,
             chunkAllocator);
 

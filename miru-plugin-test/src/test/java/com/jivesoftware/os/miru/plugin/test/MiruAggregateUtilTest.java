@@ -92,7 +92,8 @@ public class MiruAggregateUtilTest {
                 MemoryRawEntryFormat.NAME,
                 20,
                 LABHashIndexType.cuckoo,
-                2d))
+                2d,
+                true))
         };
         LabTimestampedCacheKeyValues cacheKeyValues = new LabTimestampedCacheKeyValues("lab-test",
             orderIdProvider,

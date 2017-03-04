@@ -281,7 +281,7 @@ public class MiruLocalHostedPartitionTest {
         TxCogs cogs = new TxCogs(256, 64, null, null, null);
         ObjectMapper mapper = new ObjectMapper();
 
-        LabTimeIdIndex[] timeIdIndexes = new LabTimeIdIndexInitializer().initialize(1, 1_000, 1024 * 1024, LABHashIndexType.cuckoo, 2d, false, resourceLocator,
+        LabTimeIdIndex[] timeIdIndexes = new LabTimeIdIndexInitializer().initialize(1, 1_000, 1024 * 1024, LABHashIndexType.cuckoo, 2d, true, false, resourceLocator,
             diskContextAllocator);
 
         OrderIdProvider idProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(0));
@@ -309,6 +309,7 @@ public class MiruLocalHostedPartitionTest {
             1024 * 1024 * 10,
             "cuckoo",
             2d,
+            true,
             true,
             true,
             false);

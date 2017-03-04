@@ -33,13 +33,16 @@ public class LabPluginCacheProvider implements MiruPluginCacheProvider {
     private final Map<String, LabLastIdCacheKeyValues> lastIdPluginPersistentCache = Maps.newConcurrentMap();
     private final Map<String, LabTimestampedCacheKeyValues> timestampedPluginPersistentCache = Maps.newConcurrentMap();
     private final LabPluginCacheProviderLock[] stripedLocks;
+    private final boolean hashIndexEnabled;
 
     public LabPluginCacheProvider(OrderIdProvider idProvider,
         LABEnvironment[] labEnvironments,
-        LabPluginCacheProviderLock[] stripedLocks) {
+        LabPluginCacheProviderLock[] stripedLocks,
+        boolean hashIndexEnabled) {
         this.idProvider = idProvider;
         this.labEnvironments = labEnvironments;
         this.stripedLocks = stripedLocks;
+        this.hashIndexEnabled = hashIndexEnabled;
     }
 
     @Override
@@ -66,7 +69,8 @@ public class LabPluginCacheProvider implements MiruPluginCacheProvider {
                         MemoryRawEntryFormat.NAME,
                         UIO.chunkPower(payloadSize * 1024, 4),
                         LABHashIndexType.valueOf(hashIndexType),
-                        hashIndexLoadFactor));
+                        hashIndexLoadFactor,
+                        hashIndexEnabled));
                 }
                 return new LabCacheKeyValues(name, idProvider, cacheIndexes);
             } catch (Exception x) {
@@ -99,7 +103,8 @@ public class LabPluginCacheProvider implements MiruPluginCacheProvider {
                         MemoryRawEntryFormat.NAME,
                         UIO.chunkPower(payloadSize * 1024, 4),
                         LABHashIndexType.valueOf(hashIndexType),
-                        hashIndexLoadFactor));
+                        hashIndexLoadFactor,
+                        hashIndexEnabled));
                 }
                 return new LabLastIdCacheKeyValues(name, idProvider, cacheIndexes);
             } catch (Exception x) {
@@ -131,7 +136,8 @@ public class LabPluginCacheProvider implements MiruPluginCacheProvider {
                         MemoryRawEntryFormat.NAME,
                         UIO.chunkPower(payloadSize * 1024, 4),
                         LABHashIndexType.valueOf(hashIndexType),
-                        hashIndexLoadFactor));
+                        hashIndexLoadFactor,
+                        hashIndexEnabled));
                 }
                 return new LabTimestampedCacheKeyValues(name, idProvider, cacheIndexes, stripedLocks);
             } catch (Exception x) {

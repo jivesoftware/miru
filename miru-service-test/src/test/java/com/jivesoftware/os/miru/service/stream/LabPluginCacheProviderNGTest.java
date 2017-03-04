@@ -71,7 +71,7 @@ public class LabPluginCacheProviderNGTest {
             stripedLocks[i] = new LabPluginCacheProviderLock();
         }
 
-        LabPluginCacheProvider provider = new LabPluginCacheProvider(orderIdProvider, labEnvironments, stripedLocks);
+        LabPluginCacheProvider provider = new LabPluginCacheProvider(orderIdProvider, labEnvironments, stripedLocks, true);
         LastIdCacheKeyValues lastIdCache = provider.getLastIdKeyValues("testLastId", -1, false, 1024 * 1024 * 10L, "cuckoo", 2d);
         byte[] cacheId = "strut-scores-m8".getBytes(StandardCharsets.UTF_8);
 

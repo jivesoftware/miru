@@ -249,6 +249,7 @@ public class MiruServiceInitializer {
             config.getTimeIdMaxHeapPressureInBytes(),
             LABHashIndexType.valueOf(config.getTimeIdLabHashIndexType()),
             config.getTimeIdLabHashIndexLoadFactor(),
+            config.getTimeIdLabHashIndexEnabled(),
             config.getTimeIdFsyncOnAppend(),
             resourceLocator,
             onDiskChunkAllocator);
@@ -277,6 +278,7 @@ public class MiruServiceInitializer {
             config.getLabMaxHeapPressureInBytes(),
             config.getLabHashIndexType(),
             config.getLabHashIndexLoadFactor(),
+            config.getLabHashIndexEnabled(),
             config.getUseLabIndexes(),
             config.getRealtimeDelivery(),
             config.getFsyncOnCommit());
