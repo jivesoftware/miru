@@ -16,6 +16,7 @@ public class LabTimeIdIndexInitializer {
         long maxHeapPressureInBytes,
         LABHashIndexType hashIndexType,
         double hashIndexLoadFactor,
+        boolean hashIndexEnabled,
         boolean fsyncOnAppend,
         MiruResourceLocator resourceLocator,
         MiruChunkAllocator chunkAllocator) throws Exception {
@@ -33,6 +34,7 @@ public class LabTimeIdIndexInitializer {
                 maxHeapPressureInBytes,
                 hashIndexType,
                 hashIndexLoadFactor,
+                hashIndexEnabled,
                 fsyncOnAppend);
         }
         return timeIdIndexes;

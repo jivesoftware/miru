@@ -227,6 +227,9 @@ public interface MiruServiceConfig extends Config {
     @DoubleDefault(2d)
     double getLabHashIndexLoadFactor();
 
+    @BooleanDefault(true)
+    boolean getLabHashIndexEnabled();
+
     @IntDefault(4)
     int getTimeIdKeepNIndexes();
 
@@ -250,6 +253,9 @@ public interface MiruServiceConfig extends Config {
 
     @DoubleDefault(2d)
     double getTimeIdLabHashIndexLoadFactor();
+
+    @BooleanDefault(true)
+    boolean getTimeIdLabHashIndexEnabled();
 
     @BooleanDefault(true)
     boolean getTimeIdFsyncOnAppend();

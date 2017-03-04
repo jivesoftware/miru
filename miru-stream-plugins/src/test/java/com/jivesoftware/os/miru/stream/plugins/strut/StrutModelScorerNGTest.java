@@ -134,7 +134,8 @@ public class StrutModelScorerNGTest {
                 MemoryRawEntryFormat.NAME,
                 20,
                 LABHashIndexType.cuckoo,
-                2d));
+                2d,
+                true));
         }
 
         LastIdCacheKeyValues cacheKeyValues = new LabLastIdCacheKeyValues("test", new OrderIdProviderImpl(new ConstantWriterIdProvider(1)), stores);

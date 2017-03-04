@@ -159,7 +159,7 @@ public class IndexTestUtil {
             leapCache,
             bolBufferLocks);
 
-        LabTimeIdIndex[] timeIdIndexes = new LabTimeIdIndexInitializer().initialize(4, 1_000, 1024 * 1024, LABHashIndexType.cuckoo, 2d, false,
+        LabTimeIdIndex[] timeIdIndexes = new LabTimeIdIndexInitializer().initialize(4, 1_000, 1024 * 1024, LABHashIndexType.cuckoo, 2d, true, false,
             diskResourceLocator,
             onDiskChunkAllocator);
 
@@ -188,6 +188,7 @@ public class IndexTestUtil {
             1024 * 1024 * 10,
             "cuckoo",
             2d,
+            true,
             useLabIndexes,
             hasRealtime,
             false);
@@ -233,7 +234,7 @@ public class IndexTestUtil {
             false,
             false);
         return environment.open(new ValueIndexConfig(name, 64, 1024 * 1024, -1, -1, 10 * 1024 * 1024, NoOpFormatTransformerProvider.NAME, LABRawhide.NAME,
-            MemoryRawEntryFormat.NAME, 20, LABHashIndexType.cuckoo, 2d));
+            MemoryRawEntryFormat.NAME, 20, LABHashIndexType.cuckoo, 2d, true));
     }
 
     public static KeyedFilerStore<Long, Void> buildKeyedFilerStore(String name, ChunkStore[] chunkStores) throws Exception {
