@@ -41,7 +41,7 @@ public class LabTimeIdIndexTest {
                 assertEquals(monotonics[i], -1);
             }
 
-            index.allocate(version, timestamps, ids, monotonics, -1, -1);
+            index.allocate(null, version, timestamps, ids, monotonics, -1, -1);
             assertCount(keepNIndexes, maxEntriesPerIndex, index);
             for (int i = 0; i < timestamps.length; i++) {
                 assertEquals(ids[i], i);
@@ -84,7 +84,7 @@ public class LabTimeIdIndexTest {
             assertEquals(monotonics[i], -1);
         }
 
-        index.allocate(version, timestamps, ids, monotonics, -1, -1);
+        index.allocate(null, version, timestamps, ids, monotonics, -1, -1);
         assertCount(keepNIndexes, maxEntriesPerIndex, index);
         for (int i = 0; i < timestamps.length; i++) {
             assertEquals(ids[i], i);

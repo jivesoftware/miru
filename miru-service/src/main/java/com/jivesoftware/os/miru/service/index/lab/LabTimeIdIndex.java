@@ -10,7 +10,10 @@ import com.jivesoftware.os.lab.api.rawhide.LABRawhide;
 import com.jivesoftware.os.lab.guts.LABHashIndexType;
 import com.jivesoftware.os.lab.io.BolBuffer;
 import com.jivesoftware.os.lab.io.api.UIO;
+import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.service.index.TimeIdIndex;
+import com.jivesoftware.os.mlogger.core.MetricLogger;
+import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
@@ -20,6 +23,8 @@ import java.util.concurrent.Semaphore;
  *
  */
 public class LabTimeIdIndex implements TimeIdIndex {
+
+    private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
     private static final int NUM_SEMAPHORES = 1024;
 
@@ -71,7 +76,7 @@ public class LabTimeIdIndex implements TimeIdIndex {
 
     private ValueIndex<byte[]> open(String name) throws Exception {
         return environment.open(new ValueIndexConfig(name, 4096, maxHeapPressureInBytes, 10 * 1024 * 1024, -1L, -1L,
-            NoOpFormatTransformerProvider.NAME, LABRawhide.NAME, MemoryRawEntryFormat.NAME, 20, hashIndexType, hashIndexLoadFactor,hashIndexEnabled));
+            NoOpFormatTransformerProvider.NAME, LABRawhide.NAME, MemoryRawEntryFormat.NAME, 20, hashIndexType, hashIndexLoadFactor, hashIndexEnabled));
     }
 
     @Override
@@ -106,7 +111,14 @@ public class LabTimeIdIndex implements TimeIdIndex {
     }
 
     @Override
-    public void allocate(long version, long[] timestamps, int[] ids, long[] monotonics, int lastIdHint, long largestTimestampHint) throws Exception {
+    public void allocate(MiruPartitionCoord coord,
+        long version,
+        long[] timestamps,
+        int[] ids,
+        long[] monotonics,
+        int lastIdHint,
+        long largestTimestampHint) throws Exception {
+
         long count;
         semaphore.acquire();
         try {
@@ -118,7 +130,13 @@ public class LabTimeIdIndex implements TimeIdIndex {
                             index.get(
                                 keyStream -> keyStream.key(0, UIO.longBytes(version), 0, 8),
                                 (index1, key, timestamp1, tombstoned, version1, payload) -> {
-                                    if (timestamp1 >= 0 && !tombstoned) {
+                                    if (timestamp1 == -1) {
+                                        // not in the index
+                                    } else if (timestamp1 < -1) {
+                                        LOG.error("Bad timeId cursor for coord:{} version:{} id:{}", coord, version, timestamp1);
+                                    } else if (tombstoned) {
+                                        LOG.error("Tombstoned timeId cursor for coord:{} version:{} id:{}", coord, version, timestamp1);
+                                    } else {
                                         v.lastId = (int) timestamp1;
                                         v.lastTimestamp = version1;
                                     }
@@ -133,6 +151,8 @@ public class LabTimeIdIndex implements TimeIdIndex {
                     if (v.lastId == -1) {
                         v.lastId = lastIdHint;
                         v.lastTimestamp = largestTimestampHint;
+                    } else if (v.lastId < lastIdHint) {
+                        LOG.error("Lagging timeId cursor for coord:{} version:{} id:{} hint:{}", coord, version, v.lastId, lastIdHint);
                     }
                     return v;
                 } catch (Exception e) {
