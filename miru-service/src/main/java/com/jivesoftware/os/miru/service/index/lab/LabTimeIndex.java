@@ -12,6 +12,7 @@ import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.lab.api.ValueIndex;
 import com.jivesoftware.os.lab.io.BolBuffer;
 import com.jivesoftware.os.lab.io.api.UIO;
+import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.plugin.index.MiruTimeIndex;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
@@ -32,24 +33,29 @@ public class LabTimeIndex implements MiruTimeIndex {
     private long largestTimestamp;
     private int timestampsLength;
 
+    private final MiruPartitionCoord coord;
     private final OrderIdProvider idProvider;
     private final ValueIndex<byte[]> metaIndex;
     private final byte[] metaKey;
     private final ValueIndex<byte[]> monotonicTimestampIndex;
     private final ValueIndex<byte[]> rawTimestampToIndex;
+    private final boolean verboseLogging;
 
-    public LabTimeIndex(OrderIdProvider idProvider,
+    public LabTimeIndex(MiruPartitionCoord coord,
+        OrderIdProvider idProvider,
         ValueIndex<byte[]> metaIndex,
         byte[] metaKey,
         ValueIndex<byte[]> monotonicTimestampIndex,
-        ValueIndex<byte[]> rawTimestampToIndex)
-        throws Exception {
+        ValueIndex<byte[]> rawTimestampToIndex,
+        boolean verboseLogging) throws Exception {
 
+        this.coord = coord;
         this.idProvider = idProvider;
         this.metaIndex = metaIndex;
         this.metaKey = metaKey;
         this.monotonicTimestampIndex = monotonicTimestampIndex;
         this.rawTimestampToIndex = rawTimestampToIndex;
+        this.verboseLogging = verboseLogging;
 
         init();
     }
@@ -62,12 +68,16 @@ public class LabTimeIndex implements MiruTimeIndex {
             (index, key, timestamp, tombstoned, version, payload) -> {
                 if (payload != null && !tombstoned) {
                     Filer filer = new ByteBufferBackedFiler(payload.asByteBuffer());
-                    LabTimeIndex.this.id.set(FilerIO.readInt(filer, "lastId", stackBuffer));
-                    LabTimeIndex.this.smallestTimestamp = FilerIO.readLong(filer, "smallestTimestamp", stackBuffer);
-                    LabTimeIndex.this.largestTimestamp = FilerIO.readLong(filer, "largestTimestamp", stackBuffer);
-                    LabTimeIndex.this.timestampsLength = FilerIO.readInt(filer, "timestampsLength", stackBuffer);
+                    id.set(FilerIO.readInt(filer, "lastId", stackBuffer));
+                    smallestTimestamp = FilerIO.readLong(filer, "smallestTimestamp", stackBuffer);
+                    largestTimestamp = FilerIO.readLong(filer, "largestTimestamp", stackBuffer);
+                    timestampsLength = FilerIO.readInt(filer, "timestampsLength", stackBuffer);
                     initialized.set(true);
 
+                    if (verboseLogging) {
+                        LOG.info("Loaded meta for coord:{} id:{} smallestTimestamp:{} largestTimestamp:{} timestampsLength:{}",
+                            id.get(), smallestTimestamp, largestTimestamp, timestampsLength);
+                    }
                 }
                 return true;
             },
@@ -81,6 +91,11 @@ public class LabTimeIndex implements MiruTimeIndex {
             this.smallestTimestamp = Long.MAX_VALUE;
             this.largestTimestamp = Long.MIN_VALUE;
             this.timestampsLength = 0;
+
+            if (verboseLogging) {
+                LOG.info("Initialized meta for coord:{} id:{} smallestTimestamp:{} largestTimestamp:{} timestampsLength:{}",
+                    id.get(), smallestTimestamp, largestTimestamp, timestampsLength);
+            }
 
             setMeta(this.id.get(), this.smallestTimestamp, this.largestTimestamp, this.timestampsLength, stackBuffer);
 

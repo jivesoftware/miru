@@ -71,6 +71,7 @@ import com.jivesoftware.os.miru.service.stream.allocator.MiruChunkAllocator;
 import com.jivesoftware.os.miru.service.stream.allocator.OnDiskChunkAllocator;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import java.io.File;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
@@ -244,6 +245,11 @@ public class MiruServiceInitializer {
 
         OrderIdProvider idProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(1));
 
+        File[] timeIdLabDirs = resourceLocator.getChunkDirectories(() -> new String[] { "timeId" }, "lab", -1);
+        for (File labDir : timeIdLabDirs) {
+            labDir.mkdirs();
+        }
+        LABEnvironment[] timeIdLabEnvironments = onDiskChunkAllocator.allocateTimeIdLABEnvironments(timeIdLabDirs);
         TimeIdIndex[] timeIdIndexes = new LabTimeIdIndexInitializer().initialize(config.getTimeIdKeepNIndexes(),
             config.getTimeIdMaxEntriesPerIndex(),
             config.getTimeIdMaxHeapPressureInBytes(),
@@ -251,8 +257,8 @@ public class MiruServiceInitializer {
             config.getTimeIdLabHashIndexLoadFactor(),
             config.getTimeIdLabHashIndexEnabled(),
             config.getTimeIdFsyncOnAppend(),
-            resourceLocator,
-            onDiskChunkAllocator);
+            config.getTimeIdVerboseLogging(),
+            timeIdLabEnvironments);
 
         MiruContextFactory<S> contextFactory = new MiruContextFactory<>(idProvider,
             persistentCogs,
@@ -281,7 +287,8 @@ public class MiruServiceInitializer {
             config.getLabHashIndexEnabled(),
             config.getUseLabIndexes(),
             config.getRealtimeDelivery(),
-            config.getFsyncOnCommit());
+            config.getFsyncOnCommit(),
+            config.getTimeIndexVerboseLogging());
 
         MiruPartitionHeartbeatHandler heartbeatHandler = new MiruPartitionHeartbeatHandler(clusterClient, atleastOneThumpThump);
         MiruRebuildDirector rebuildDirector = new MiruRebuildDirector(config.getMaxRebuildActivityCount());

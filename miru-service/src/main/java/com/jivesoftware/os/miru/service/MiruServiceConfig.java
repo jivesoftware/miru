@@ -260,6 +260,12 @@ public interface MiruServiceConfig extends Config {
     @BooleanDefault(true)
     boolean getTimeIdFsyncOnAppend();
 
+    @BooleanDefault(false)
+    boolean getTimeIdVerboseLogging();
+
+    @BooleanDefault(false)
+    boolean getTimeIndexVerboseLogging();
+
     @StringDefault("")
     String getRealtimeDeliveryService();
 
