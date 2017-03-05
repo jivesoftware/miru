@@ -75,8 +75,8 @@ public class LabTimeIndex implements MiruTimeIndex {
                     initialized.set(true);
 
                     if (verboseLogging) {
-                        LOG.info("Loaded meta for coord:{} id:{} smallestTimestamp:{} largestTimestamp:{} timestampsLength:{}",
-                            id.get(), smallestTimestamp, largestTimestamp, timestampsLength);
+                        LOG.info("Loaded meta for coord:{} lastId:{} smallestTimestamp:{} largestTimestamp:{} timestampsLength:{}",
+                            coord, id.get(), smallestTimestamp, largestTimestamp, timestampsLength);
                     }
                 }
                 return true;
@@ -93,8 +93,8 @@ public class LabTimeIndex implements MiruTimeIndex {
             this.timestampsLength = 0;
 
             if (verboseLogging) {
-                LOG.info("Initialized meta for coord:{} id:{} smallestTimestamp:{} largestTimestamp:{} timestampsLength:{}",
-                    id.get(), smallestTimestamp, largestTimestamp, timestampsLength);
+                LOG.info("Initialized meta for coord:{} lastId:{} smallestTimestamp:{} largestTimestamp:{} timestampsLength:{}",
+                    coord, id.get(), smallestTimestamp, largestTimestamp, timestampsLength);
             }
 
             setMeta(this.id.get(), this.smallestTimestamp, this.largestTimestamp, this.timestampsLength, stackBuffer);
@@ -113,6 +113,11 @@ public class LabTimeIndex implements MiruTimeIndex {
         long timestamp = System.currentTimeMillis();
         long version = idProvider.nextId();
         metaIndex.append(stream -> stream.stream(-1, metaKey, timestamp, false, version, metaFiler.getBytes()), true, new BolBuffer(), new BolBuffer());
+
+        if (verboseLogging) {
+            LOG.info("Set meta for coord:{} lastId:{} smallestTimestamp:{} largestTimestamp:{} timestampsLength:{}",
+                coord, lastId, smallestTimestamp, largestTimestamp, timestampsLength);
+        }
     }
 
     @Override
