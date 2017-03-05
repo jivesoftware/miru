@@ -142,6 +142,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
     private final boolean useLabIndexes;
     private final boolean realtimeDelivery;
     private final boolean fsyncOnCommit;
+    private final boolean timeIndexVerboseLogging;
 
     public MiruContextFactory(OrderIdProvider idProvider,
         TxCogs persistentCogs,
@@ -167,7 +168,8 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         boolean hashIndexEnabled,
         boolean useLabIndexes,
         boolean realtimeDelivery,
-        boolean fsyncOnCommit) {
+        boolean fsyncOnCommit,
+        boolean timeIndexVerboseLogging) {
 
         this.idProvider = idProvider;
         this.persistentCogs = persistentCogs;
@@ -194,6 +196,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         this.useLabIndexes = useLabIndexes;
         this.realtimeDelivery = realtimeDelivery;
         this.fsyncOnCommit = fsyncOnCommit;
+        this.timeIndexVerboseLogging = timeIndexVerboseLogging;
     }
 
     public MiruBackingStorage findBackingStorage(MiruPartitionCoord coord) throws Exception {
@@ -527,11 +530,12 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         commitables.add(rawTimeIndex);
 
         MiruTimeIndex timeIndex = new LabTimeIndex(
-            idProvider,
+            coord, idProvider,
             metaIndex,
             keyBytes("timeIndex"),
             monoTimeIndex,
-            rawTimeIndex);
+            rawTimeIndex,
+            timeIndexVerboseLogging);
 
         IntTermIdsKeyValueMarshaller intTermIdsKeyValueMarshaller = new IntTermIdsKeyValueMarshaller();
 

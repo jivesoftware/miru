@@ -18,6 +18,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Semaphore;
+import org.apache.commons.lang.mutable.MutableInt;
 
 /**
  *
@@ -36,6 +37,7 @@ public class LabTimeIdIndex implements TimeIdIndex {
     private final double hashIndexLoadFactor;
     private final boolean hashIndexEnabled;
     private final boolean fsyncOnAppend;
+    private final boolean verboseLogging;
 
     private final ConcurrentMap<Long, Cursor> cursors = Maps.newConcurrentMap();
     private final Semaphore semaphore = new Semaphore(NUM_SEMAPHORES, true);
@@ -47,7 +49,8 @@ public class LabTimeIdIndex implements TimeIdIndex {
         LABHashIndexType hashIndexType,
         double hashIndexLoadFactor,
         boolean hashIndexEnabled,
-        boolean fsyncOnAppend) throws Exception {
+        boolean fsyncOnAppend,
+        boolean verboseLogging) throws Exception {
 
         this.environment = environment;
         this.indexes = new ValueIndex[keepNIndexes];
@@ -57,6 +60,7 @@ public class LabTimeIdIndex implements TimeIdIndex {
         this.hashIndexLoadFactor = hashIndexLoadFactor;
         this.hashIndexEnabled = hashIndexEnabled;
         this.fsyncOnAppend = fsyncOnAppend;
+        this.verboseLogging = verboseLogging;
 
         List<String> names = environment.list();
         // sort descending
@@ -72,6 +76,15 @@ public class LabTimeIdIndex implements TimeIdIndex {
         if (indexes[0] == null) {
             indexes[0] = open("1");
         }
+    }
+
+    public void close() throws Exception {
+        for (int i = 0; i < indexes.length; i++) {
+            if (indexes[i] != null) {
+                indexes[i].close(false, false); //TODO ??
+            }
+        }
+        environment.close();
     }
 
     private ValueIndex<byte[]> open(String name) throws Exception {
@@ -125,17 +138,19 @@ public class LabTimeIdIndex implements TimeIdIndex {
             Cursor cursor = cursors.computeIfAbsent(version, k -> {
                 try {
                     Cursor v = new Cursor();
+                    MutableInt depth = new MutableInt(0);
                     for (ValueIndex<byte[]> index : indexes) {
                         if (index != null) {
+                            depth.increment();
                             index.get(
                                 keyStream -> keyStream.key(0, UIO.longBytes(version), 0, 8),
                                 (index1, key, timestamp1, tombstoned, version1, payload) -> {
                                     if (timestamp1 == -1) {
                                         // not in the index
                                     } else if (timestamp1 < -1) {
-                                        LOG.error("Bad timeId cursor for coord:{} version:{} id:{}", coord, version, timestamp1);
+                                        LOG.error("Bad timeId cursor for coord:{} version:{} id:{} depth:{}", coord, version, timestamp1, depth);
                                     } else if (tombstoned) {
-                                        LOG.error("Tombstoned timeId cursor for coord:{} version:{} id:{}", coord, version, timestamp1);
+                                        LOG.error("Tombstoned timeId cursor for coord:{} version:{} id:{} depth:{}", coord, version, timestamp1, depth);
                                     } else {
                                         v.lastId = (int) timestamp1;
                                         v.lastTimestamp = version1;
@@ -152,7 +167,12 @@ public class LabTimeIdIndex implements TimeIdIndex {
                         v.lastId = lastIdHint;
                         v.lastTimestamp = largestTimestampHint;
                     } else if (v.lastId < lastIdHint) {
-                        LOG.error("Lagging timeId cursor for coord:{} version:{} id:{} hint:{}", coord, version, v.lastId, lastIdHint);
+                        LOG.error("Lagging timeId cursor for coord:{} version:{} id:{} hint:{} depth:{}", coord, version, v.lastId, lastIdHint, depth);
+                    }
+
+                    if (verboseLogging) {
+                        LOG.info("Loaded timeId cursor for coord:{} version:{} id:{} idHint:{} ts:{} tsHint:{} depth:{}",
+                            coord, version, v.lastId, lastIdHint, v.lastTimestamp, largestTimestampHint, depth);
                     }
                     return v;
                 } catch (Exception e) {
@@ -176,6 +196,10 @@ public class LabTimeIdIndex implements TimeIdIndex {
                     }
                     return true;
                 }, fsyncOnAppend, new BolBuffer(), new BolBuffer());
+
+                if (verboseLogging) {
+                    LOG.info("Advanced timeId cursor for coord:{} version:{} id:{} ts:{}", coord, version, cursor.lastId, cursor.lastTimestamp);
+                }
             }
 
             count = indexes[0].count();

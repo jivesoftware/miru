@@ -281,8 +281,20 @@ public class MiruLocalHostedPartitionTest {
         TxCogs cogs = new TxCogs(256, 64, null, null, null);
         ObjectMapper mapper = new ObjectMapper();
 
-        LabTimeIdIndex[] timeIdIndexes = new LabTimeIdIndexInitializer().initialize(1, 1_000, 1024 * 1024, LABHashIndexType.cuckoo, 2d, true, false, resourceLocator,
-            diskContextAllocator);
+        File[] labDirs = resourceLocator.getChunkDirectories(() -> new String[] { "timeId" }, "lab", -1);
+        for (File labDir : labDirs) {
+            labDir.mkdirs();
+        }
+        LABEnvironment[] labEnvironments = diskContextAllocator.allocateTimeIdLABEnvironments(labDirs);
+        LabTimeIdIndex[] timeIdIndexes = new LabTimeIdIndexInitializer().initialize(1,
+            1_000,
+            1024 * 1024,
+            LABHashIndexType.cuckoo,
+            2d,
+            true,
+            false,
+            false,
+            labEnvironments);
 
         OrderIdProvider idProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(0));
         contextFactory = new MiruContextFactory<>(idProvider,
@@ -312,6 +324,7 @@ public class MiruLocalHostedPartitionTest {
             true,
             true,
             true,
+            false,
             false);
         sipTrackerFactory = new RCVSSipTrackerFactory();
 

@@ -159,9 +159,20 @@ public class IndexTestUtil {
             leapCache,
             bolBufferLocks);
 
-        LabTimeIdIndex[] timeIdIndexes = new LabTimeIdIndexInitializer().initialize(4, 1_000, 1024 * 1024, LABHashIndexType.cuckoo, 2d, true, false,
-            diskResourceLocator,
-            onDiskChunkAllocator);
+        File[] labDirs = diskResourceLocator.getChunkDirectories(() -> new String[] { "timeId" }, "lab", -1);
+        for (File labDir : labDirs) {
+            labDir.mkdirs();
+        }
+        LABEnvironment[] labEnvironments = onDiskChunkAllocator.allocateTimeIdLABEnvironments(labDirs);
+        LabTimeIdIndex[] timeIdIndexes = new LabTimeIdIndexInitializer().initialize(4,
+            1_000,
+            1024 * 1024,
+            LABHashIndexType.cuckoo,
+            2d,
+            true,
+            false,
+            false,
+            labEnvironments);
 
         OrderIdProvider idProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(1));
         return new MiruContextFactory<>(idProvider,
@@ -191,6 +202,7 @@ public class IndexTestUtil {
             true,
             useLabIndexes,
             hasRealtime,
+            false,
             false);
     }
 
