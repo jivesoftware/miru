@@ -51,8 +51,6 @@ public class Waveform implements Serializable {
     }
 
     @JsonGetter("waveform")
-    tring
-
     public byte[] getRawBytes() {
         return waveform;
     }
