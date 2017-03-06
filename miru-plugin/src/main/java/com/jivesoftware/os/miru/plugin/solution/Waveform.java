@@ -51,6 +51,8 @@ public class Waveform implements Serializable {
     }
 
     @JsonGetter("waveform")
+    tring
+
     public byte[] getRawBytes() {
         return waveform;
     }
@@ -90,13 +92,17 @@ public class Waveform implements Serializable {
 
     @Override
     public String toString() {
-        byte precision = waveform[waveform.length - 1];
-        long[] longs = precision > 0 ? new long[(waveform.length - 1) / precision] : new long[0];
-        mergeBytesLongs(waveform, longs, 0);
-        return "Waveform{"
-            + "offset=" + offset
-            + ", waveform=" + Arrays.toString(longs)
-            + '}';
+        if (waveform.length > 0) {
+            byte precision = waveform[waveform.length - 1];
+            long[] longs = precision > 0 ? new long[(waveform.length - 1) / precision] : new long[0];
+            mergeBytesLongs(waveform, longs, 0);
+            return "Waveform{"
+                + "offset=" + offset
+                + ", waveform=" + Arrays.toString(longs)
+                + '}';
+        } else {
+            return "";
+        }
     }
 
     static int precision(long value) {
