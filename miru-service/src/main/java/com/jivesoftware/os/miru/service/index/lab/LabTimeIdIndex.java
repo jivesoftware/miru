@@ -191,6 +191,7 @@ public class LabTimeIdIndex implements TimeIdIndex {
                         boolean result = valueStream.stream(i, key, ids[i], false, monotonics[i], null);
                         result &= valueStream.stream(i, UIO.longBytes(version), ids[i], false, monotonics[i], null);
                         if (!result) {
+                            LOG.info("Aborted timeId append for coord:{} version:{} index:{} of:{}", coord, version, i, timestamps.length);
                             return false;
                         }
                     }
