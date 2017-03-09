@@ -30,7 +30,7 @@ public interface MiruChunkAllocator {
 
     LABEnvironment[] allocateLABEnvironments(File[] labDirs) throws Exception;
 
-    LABEnvironment[] allocateTimeIdLABEnvironments(File[] labDirs) throws Exception;
+    LABEnvironment[] allocateTimeIdLABEnvironments(File[] labDirs, boolean verboseLogging) throws Exception;
 
     void remove(LABEnvironment[] labEnvironments);
 }

@@ -13,8 +13,10 @@ import com.jivesoftware.os.lab.LabWALConfig;
 import com.jivesoftware.os.lab.api.rawhide.FixedWidthRawhide;
 import com.jivesoftware.os.lab.guts.Leaps;
 import com.jivesoftware.os.lab.guts.StripingBolBufferLocks;
+import com.jivesoftware.os.lab.io.api.UIO;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.plugin.context.LastIdKeyValueRawhide;
+import com.jivesoftware.os.miru.service.index.lab.LabTimeIdIndex;
 import com.jivesoftware.os.miru.service.locator.MiruPartitionCoordIdentifier;
 import com.jivesoftware.os.miru.service.locator.MiruResourceLocator;
 import com.jivesoftware.os.miru.service.locator.MiruResourcePartitionIdentifier;
@@ -22,6 +24,7 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import org.apache.commons.lang.builder.HashCodeBuilder;
@@ -237,7 +240,7 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
     }
 
     @Override
-    public LABEnvironment[] allocateTimeIdLABEnvironments(File[] labDirs) throws Exception {
+    public LABEnvironment[] allocateTimeIdLABEnvironments(File[] labDirs, boolean verboseLogging) throws Exception {
         LABEnvironment[] environments = new LABEnvironment[labDirs.length];
         for (int i = 0; i < labDirs.length; i++) {
             labDirs[i].mkdirs();
@@ -259,7 +262,25 @@ public class OnDiskChunkAllocator implements MiruChunkAllocator {
                 bolBufferLocks,
                 labUseOffHeap,
                 false);
-            environments[i].open();
+            if (verboseLogging) {
+                environments[i].open((valueIndexId, key, timestamp, tombstoned, version, payload) -> {
+                    String name = new String(valueIndexId, StandardCharsets.UTF_8);
+                    long partitionVersion = UIO.bytesLong(key);
+                    int lastId = (int) timestamp;
+                    long monotonic = version;
+                    if (key.length == 16) {
+                        long lastTimestamp = UIO.bytesLong(key, 8);
+                        LOG.info("Found journal timeId entry name:{} version:{} timestamp:{} id:{} monotonic:{}",
+                            name, partitionVersion, lastTimestamp, lastId, monotonic);
+                    } else {
+                        LOG.info("Found journal timeId cursor name:{} version:{} id:{} monotonic:{}",
+                            name, partitionVersion, lastId, monotonic);
+                    }
+                    return true;
+                });
+            } else {
+                environments[i].open();
+            }
         }
         return environments;
     }
