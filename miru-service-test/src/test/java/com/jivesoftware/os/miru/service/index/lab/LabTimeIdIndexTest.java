@@ -170,7 +170,7 @@ public class LabTimeIdIndexTest {
         for (File labDir : labDirs) {
             labDir.mkdirs();
         }
-        LABEnvironment[] labEnvironments = chunkAllocator.allocateTimeIdLABEnvironments(labDirs);
+        LABEnvironment[] labEnvironments = chunkAllocator.allocateTimeIdLABEnvironments(labDirs, false);
         LabTimeIdIndex[] indexes = new LabTimeIdIndexInitializer().initialize(keepNIndexes,
             maxEntriesPerIndex,
             1024 * 1024,

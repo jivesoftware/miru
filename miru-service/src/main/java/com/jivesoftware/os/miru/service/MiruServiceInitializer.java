@@ -249,7 +249,7 @@ public class MiruServiceInitializer {
         for (File labDir : timeIdLabDirs) {
             labDir.mkdirs();
         }
-        LABEnvironment[] timeIdLabEnvironments = onDiskChunkAllocator.allocateTimeIdLABEnvironments(timeIdLabDirs);
+        LABEnvironment[] timeIdLabEnvironments = onDiskChunkAllocator.allocateTimeIdLABEnvironments(timeIdLabDirs, config.getTimeIdVerboseLogging());
         TimeIdIndex[] timeIdIndexes = new LabTimeIdIndexInitializer().initialize(config.getTimeIdKeepNIndexes(),
             config.getTimeIdMaxEntriesPerIndex(),
             config.getTimeIdMaxHeapPressureInBytes(),

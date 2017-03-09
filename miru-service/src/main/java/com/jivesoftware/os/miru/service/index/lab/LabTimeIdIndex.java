@@ -199,6 +199,19 @@ public class LabTimeIdIndex implements TimeIdIndex {
                 }, fsyncOnAppend, new BolBuffer(), new BolBuffer());
 
                 if (verboseLogging) {
+                    indexes[0].get(keyStream -> keyStream.key(0, UIO.longBytes(version), 0, 8),
+                        (index1, key, timestamp1, tombstoned, version1, payload) -> {
+                            if (tombstoned) {
+                                LOG.error("Unexpected tombstone for timeId cursor for coord:{} version:{} id:{} depth:{}", coord, version, timestamp1);
+                            } else {
+                                int lastId = (int) timestamp1;
+                                if (lastId < cursor.lastId) {
+                                    LOG.error("Lost timeId cursor for coord:{} version:{} id:{} depth:{}", coord, version, timestamp1);
+                                }
+                            }
+                            return true;
+                        },
+                        false);
                     LOG.info("Advanced timeId cursor for coord:{} version:{} id:{} ts:{}", coord, version, cursor.lastId, cursor.lastTimestamp);
                 }
             }
