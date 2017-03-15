@@ -164,6 +164,8 @@ public class LabTimeIdIndex implements TimeIdIndex {
                         }
                     }
                     if (v.lastId == -1) {
+                        LOG.info("Initialized timeId cursor for coord:{} version:{} id:{} ts:{} depth:{}",
+                            coord, version, lastIdHint, largestTimestampHint, depth);
                         v.lastId = lastIdHint;
                         v.lastTimestamp = largestTimestampHint;
                     } else if (v.lastId < lastIdHint) {

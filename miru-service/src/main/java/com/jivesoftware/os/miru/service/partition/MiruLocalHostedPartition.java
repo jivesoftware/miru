@@ -1308,7 +1308,8 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
         if (!accessor.persistentContext.isPresent()) {
             return;
         }
-        int count = 0;
+        int delivered = 0;
+        int gathered = 0;
         try (MiruRequestHandle<BM, IBM, S> handle = accessor.getRequestHandle(trackError, persistentMergeChits, persistentMergeExecutor)) {
             MiruSipIndex<S> sipIndex = handle.getRequestContext().getSipIndex();
             MiruActivityIndex activityIndex = handle.getRequestContext().getActivityIndex();
@@ -1316,7 +1317,6 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
             int lastId = activityIndex.lastId(stackBuffer);
             if (lastId > deliveryId) {
                 List<Long> activityTimes = Lists.newArrayList();
-                int gathered = 0;
                 int missing = 0;
                 int realtimeSent = 0;
                 for (int id = deliveryId + 1; id <= lastId; id += partitionSipBatchSize) {
@@ -1337,7 +1337,7 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                         gathered++;
                         if (tvr.realtimeDelivery) {
                             activityTimes.add(tvr.timestamp);
-                            count++;
+                            delivered++;
                         }
                     }
                     if (activityTimes.size() >= partitionSipBatchSize) {
@@ -1358,8 +1358,9 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
             }
         }
         LOG.inc("deliver>realtime>" + name + ">calls", 1);
-        LOG.inc("deliver>realtime>" + name + ">total", count);
-        LOG.inc("deliver>realtime>" + name + ">power>" + FilerIO.chunkPower(count, 0), 1);
+        LOG.inc("deliver>realtime>" + name + ">gathered", gathered);
+        LOG.inc("deliver>realtime>" + name + ">delivered", delivered);
+        LOG.inc("deliver>realtime>" + name + ">power>" + FilerIO.chunkPower(delivered, 0), 1);
     }
 
     @Override
