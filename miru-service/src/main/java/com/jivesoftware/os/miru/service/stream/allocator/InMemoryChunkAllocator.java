@@ -9,6 +9,7 @@ import com.jivesoftware.os.jive.utils.collections.bah.LRUConcurrentBAHLinkedHash
 import com.jivesoftware.os.lab.LABEnvironment;
 import com.jivesoftware.os.lab.LABStats;
 import com.jivesoftware.os.lab.LabHeapPressure;
+import com.jivesoftware.os.lab.api.JournalStream;
 import com.jivesoftware.os.lab.api.rawhide.FixedWidthRawhide;
 import com.jivesoftware.os.lab.guts.Leaps;
 import com.jivesoftware.os.lab.guts.StripingBolBufferLocks;
@@ -177,7 +178,7 @@ public class InMemoryChunkAllocator implements MiruChunkAllocator {
     }
 
     @Override
-    public LABEnvironment[] allocateTimeIdLABEnvironments(File[] labDirs, boolean verboseLogging) throws Exception {
+    public LABEnvironment[] allocateTimeIdLABEnvironments(File[] labDirs, JournalStream journalStream) throws Exception {
         throw new UnsupportedOperationException("Use disk chunk allocator");
     }
 

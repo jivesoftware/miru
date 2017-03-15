@@ -81,7 +81,7 @@ public class LabTimeIdIndex implements TimeIdIndex {
     public void close() throws Exception {
         for (int i = 0; i < indexes.length; i++) {
             if (indexes[i] != null) {
-                indexes[i].close(false, false); //TODO ??
+                indexes[i].close(true, fsyncOnAppend);
             }
         }
         environment.close();
@@ -189,7 +189,7 @@ public class LabTimeIdIndex implements TimeIdIndex {
                         ids[i] = cursor.lastId;
                         monotonics[i] = cursor.lastTimestamp;
                         boolean result = valueStream.stream(i, key, ids[i], false, monotonics[i], null);
-                        result &= valueStream.stream(i, UIO.longBytes(version), ids[i], false, monotonics[i], null);
+                        valueStream.stream(i, UIO.longBytes(version), ids[i], false, monotonics[i], null);
                         if (!result) {
                             LOG.info("Aborted timeId append for coord:{} version:{} index:{} of:{}", coord, version, i, timestamps.length);
                             return false;

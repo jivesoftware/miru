@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.service.stream.allocator;
 
 import com.jivesoftware.os.filer.io.chunk.ChunkStore;
 import com.jivesoftware.os.lab.LABEnvironment;
+import com.jivesoftware.os.lab.api.JournalStream;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import java.io.File;
 
@@ -30,7 +31,7 @@ public interface MiruChunkAllocator {
 
     LABEnvironment[] allocateLABEnvironments(File[] labDirs) throws Exception;
 
-    LABEnvironment[] allocateTimeIdLABEnvironments(File[] labDirs, boolean verboseLogging) throws Exception;
+    LABEnvironment[] allocateTimeIdLABEnvironments(File[] labDirs, JournalStream journalStream) throws Exception;
 
     void remove(LABEnvironment[] labEnvironments);
 }
