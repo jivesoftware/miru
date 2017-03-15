@@ -10,7 +10,7 @@ import com.jivesoftware.os.miru.api.MiruHostSelectiveStrategy;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.plugin.partition.MiruPartitionUnavailableException;
 import com.jivesoftware.os.mlogger.core.EndPointMetrics;
-import com.jivesoftware.os.routing.bird.http.client.HttpClientException;
+import com.jivesoftware.os.routing.bird.shared.HttpClientException;
 import com.jivesoftware.os.routing.bird.http.client.HttpResponse;
 import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
 import com.jivesoftware.os.routing.bird.http.client.NonSuccessStatusCodeException;
@@ -20,9 +20,6 @@ import java.util.Map;
 import org.apache.http.HttpStatus;
 import org.xerial.snappy.Snappy;
 
-/**
- *
- */
 public class SnappyJsonRemotePartitionReader implements MiruRemotePartitionReader {
 
     private static final byte[] EMPTY_RESPONSE = new byte[0];

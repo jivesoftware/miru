@@ -1,10 +1,7 @@
 package com.jivesoftware.os.miru.amza;
 
-import com.jivesoftware.os.routing.bird.http.client.ClientHealthProvider.ClientHealth;
+import com.jivesoftware.os.routing.bird.shared.ClientHealth;
 
-/**
- *
- */
 public class NoOpClientHealth implements ClientHealth {
 
     @Override
