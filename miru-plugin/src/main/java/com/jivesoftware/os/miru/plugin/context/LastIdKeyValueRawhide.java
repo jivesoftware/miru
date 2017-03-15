@@ -68,6 +68,11 @@ public class LastIdKeyValueRawhide implements Rawhide {
     }
 
     @Override
+    public boolean hasTimestampVersion() {
+        return true;
+    }
+
+    @Override
     public long timestamp(FormatTransformer readKeyFormatTransormer, FormatTransformer readValueFormatTransormer, BolBuffer rawEntry) {
         return rawEntry.getInt(rawEntry.length - 4);
     }
