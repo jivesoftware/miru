@@ -21,9 +21,11 @@ import com.jivesoftware.os.lab.LABEnvironment;
 import com.jivesoftware.os.lab.LABStats;
 import com.jivesoftware.os.lab.LabHeapPressure;
 import com.jivesoftware.os.lab.LabHeapPressure.FreeHeapStrategy;
+import com.jivesoftware.os.lab.api.JournalStream;
 import com.jivesoftware.os.lab.guts.LABHashIndexType;
 import com.jivesoftware.os.lab.guts.Leaps;
 import com.jivesoftware.os.lab.guts.StripingBolBufferLocks;
+import com.jivesoftware.os.lab.io.api.UIO;
 import com.jivesoftware.os.miru.api.MiruBackingStorage;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruLifecyle;
@@ -72,6 +74,7 @@ import com.jivesoftware.os.miru.service.stream.allocator.OnDiskChunkAllocator;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
@@ -249,7 +252,26 @@ public class MiruServiceInitializer {
         for (File labDir : timeIdLabDirs) {
             labDir.mkdirs();
         }
-        LABEnvironment[] timeIdLabEnvironments = onDiskChunkAllocator.allocateTimeIdLABEnvironments(timeIdLabDirs, config.getTimeIdVerboseLogging());
+
+        JournalStream journalStream = null;
+        if (config.getTimeIdVerboseLogging()) {
+            journalStream = (valueIndexId, key, timestamp, tombstoned, version, payload) -> {
+                String name = new String(valueIndexId, StandardCharsets.UTF_8);
+                long partitionVersion = UIO.bytesLong(key);
+                int lastId = (int) timestamp;
+                long monotonic = version;
+                if (key.length == 16) {
+                    long lastTimestamp = UIO.bytesLong(key, 8);
+                    LOG.info("Found journal timeId entry name:{} version:{} timestamp:{} id:{} monotonic:{}",
+                        name, partitionVersion, lastTimestamp, lastId, monotonic);
+                } else {
+                    LOG.info("Found journal timeId cursor name:{} version:{} id:{} monotonic:{}",
+                        name, partitionVersion, lastId, monotonic);
+                }
+                return true;
+            };
+        }
+        LABEnvironment[] timeIdLabEnvironments = onDiskChunkAllocator.allocateTimeIdLABEnvironments(timeIdLabDirs, journalStream);
         TimeIdIndex[] timeIdIndexes = new LabTimeIdIndexInitializer().initialize(config.getTimeIdKeepNIndexes(),
             config.getTimeIdMaxEntriesPerIndex(),
             config.getTimeIdMaxHeapPressureInBytes(),

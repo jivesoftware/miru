@@ -285,7 +285,7 @@ public class MiruLocalHostedPartitionTest {
         for (File labDir : labDirs) {
             labDir.mkdirs();
         }
-        LABEnvironment[] labEnvironments = diskContextAllocator.allocateTimeIdLABEnvironments(labDirs, false);
+        LABEnvironment[] labEnvironments = diskContextAllocator.allocateTimeIdLABEnvironments(labDirs, null);
         LabTimeIdIndex[] timeIdIndexes = new LabTimeIdIndexInitializer().initialize(1,
             1_000,
             1024 * 1024,

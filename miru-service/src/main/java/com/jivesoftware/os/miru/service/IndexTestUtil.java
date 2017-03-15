@@ -163,7 +163,7 @@ public class IndexTestUtil {
         for (File labDir : labDirs) {
             labDir.mkdirs();
         }
-        LABEnvironment[] labEnvironments = onDiskChunkAllocator.allocateTimeIdLABEnvironments(labDirs, false);
+        LABEnvironment[] labEnvironments = onDiskChunkAllocator.allocateTimeIdLABEnvironments(labDirs, null);
         LabTimeIdIndex[] timeIdIndexes = new LabTimeIdIndexInitializer().initialize(4,
             1_000,
             1024 * 1024,
