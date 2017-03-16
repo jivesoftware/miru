@@ -192,12 +192,22 @@ public class MiruSyncEndpoints {
         @PathParam("toTenantId") String toTenantId,
         MiruSyncTenantConfig config) {
         try {
+            MiruTenantId from = new MiruTenantId(fromTenantId.getBytes(StandardCharsets.UTF_8));
+            MiruTenantId to = new MiruTenantId(toTenantId.getBytes(StandardCharsets.UTF_8));
+
+            MiruSyncSenderConfig miruSyncSenderConfig = syncSenderConfigStorage.get(syncspaceName);
+            if (miruSyncSenderConfig == null) {
+                LOG.warn("Rejected add from:{} to:{} for unknown syncspace:{}", from, to, syncspaceName);
+                return Response.status(Status.BAD_REQUEST).entity("Syncspace does not exist: " + syncspaceName).build();
+            }
+            if (from.equals(to) && miruSyncSenderConfig.loopback) {
+                LOG.warn("Rejected self-referential add for:{} for syncspace:{}", from, syncspaceName);
+                return Response.status(Status.BAD_REQUEST).entity("Loopback syncspace cannot be self-referential").build();
+            }
 
             syncConfigStorage.multiPut(syncspaceName, ImmutableMap.of(
-                new MiruSyncTenantTuple(
-                    new MiruTenantId(fromTenantId.getBytes(StandardCharsets.UTF_8)),
-                    new MiruTenantId(toTenantId.getBytes(StandardCharsets.UTF_8))
-                ), config));
+                new MiruSyncTenantTuple(from, to),
+                config));
             return responseHelper.jsonResponse("Success");
         } catch (Exception e) {
             LOG.error("Failed to add.", e);

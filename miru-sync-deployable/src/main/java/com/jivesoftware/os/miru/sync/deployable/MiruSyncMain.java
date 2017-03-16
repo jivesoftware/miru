@@ -86,7 +86,6 @@ import com.jivesoftware.os.routing.bird.health.checkers.SickThreads;
 import com.jivesoftware.os.routing.bird.health.checkers.SickThreadsHealthCheck;
 import com.jivesoftware.os.routing.bird.health.checkers.SystemCpuHealthChecker;
 import com.jivesoftware.os.routing.bird.http.client.HttpClient;
-import com.jivesoftware.os.routing.bird.shared.HttpClientException;
 import com.jivesoftware.os.routing.bird.http.client.HttpDeliveryClientHealthProvider;
 import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelperUtils;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
@@ -95,6 +94,7 @@ import com.jivesoftware.os.routing.bird.server.oauth.validator.AuthValidator;
 import com.jivesoftware.os.routing.bird.server.util.Resource;
 import com.jivesoftware.os.routing.bird.shared.ConnectionDescriptor;
 import com.jivesoftware.os.routing.bird.shared.ConnectionDescriptors;
+import com.jivesoftware.os.routing.bird.shared.HttpClientException;
 import com.jivesoftware.os.routing.bird.shared.TenantRoutingProvider;
 import com.jivesoftware.os.routing.bird.shared.TenantsServiceConnectionDescriptorProvider;
 import java.io.File;
@@ -378,7 +378,6 @@ public class MiruSyncMain {
             MiruSyncSenders<?, ?> syncSenders = null;
 
             boolean syncLoopback = false;
-            LoopbackSyncClient loopbackSyncClient = null;
             if (syncConfig.getSyncLoopback().equals("rcvs")) {
                 MiruWALClient<RCVSCursor, RCVSSipCursor> rcvsWALClient = new MiruWALClientInitializer().initialize("",
                     walHttpClient,
@@ -388,7 +387,6 @@ public class MiruSyncMain {
                     "/miru/wal/rcvs",
                     RCVSCursor.class,
                     RCVSSipCursor.class);
-                loopbackSyncClient = new LoopbackSyncClient(rcvsWALClient);
                 syncLoopback = true;
             } else if (syncConfig.getSyncLoopback().equals("amza")) {
                 MiruWALClient<AmzaCursor, AmzaSipCursor> amzaWALClient = new MiruWALClientInitializer().initialize("",
@@ -398,7 +396,6 @@ public class MiruSyncMain {
                     "/miru/wal/amza",
                     AmzaCursor.class,
                     AmzaSipCursor.class);
-                loopbackSyncClient = new LoopbackSyncClient(amzaWALClient);
                 syncLoopback = true;
             }
 
@@ -413,9 +410,11 @@ public class MiruSyncMain {
                     RCVSSipCursor.class);
                 syncCopier = (MiruSyncCopier) new MiruSyncCopier<>(rcvsWALClient, syncConfig.getCopyBatchSize(), RCVSCursor.INITIAL, RCVSCursor.class);
 
-                if (syncConfig.getSyncReceiverEnabled()) {
-                    syncReceiver = (MiruSyncReceiver) new MiruSyncReceiver<>(rcvsWALClient, writerHttpClient, clusterClient, activityReadEventConverter);
-                }
+                MiruSyncReceiver<RCVSCursor, RCVSSipCursor> rcvsMiruSyncReceiver = new MiruSyncReceiver<>(rcvsWALClient,
+                    writerHttpClient,
+                    clusterClient,
+                    activityReadEventConverter);
+                syncReceiver = (MiruSyncReceiver) rcvsMiruSyncReceiver;
 
                 if (syncConfig.getSyncSenderEnabled()) {
                     ScheduledExecutorService executorService = Executors.newScheduledThreadPool(syncConfig.getSyncSendersThreadCount());
@@ -441,6 +440,7 @@ public class MiruSyncMain {
                     syncSenders = (MiruSyncSenders) new MiruSyncSenders<>(
                         miruStats,
                         syncConfig,
+                        rcvsMiruSyncReceiver,
                         orderIdProvider,
                         executorService,
                         amzaClientProvider,
@@ -452,7 +452,6 @@ public class MiruSyncMain {
                         30_000, // TODO config
                         rcvsWALClient,
                         syncLoopback,
-                        loopbackSyncClient,
                         loopbackSyncConfigProvider,
                         RCVSCursor.INITIAL,
                         RCVSCursor.class);
@@ -469,9 +468,11 @@ public class MiruSyncMain {
 
                 syncCopier = (MiruSyncCopier) new MiruSyncCopier<>(amzaWALClient, syncConfig.getCopyBatchSize(), null, AmzaCursor.class);
 
-                if (syncConfig.getSyncReceiverEnabled()) {
-                    syncReceiver = (MiruSyncReceiver) new MiruSyncReceiver<>(amzaWALClient, writerHttpClient, clusterClient, activityReadEventConverter);
-                }
+                MiruSyncReceiver<AmzaCursor, AmzaSipCursor> amzaMiruSyncReceiver = new MiruSyncReceiver<>(amzaWALClient,
+                    writerHttpClient,
+                    clusterClient,
+                    activityReadEventConverter);
+                syncReceiver = (MiruSyncReceiver) amzaMiruSyncReceiver;
 
                 if (syncConfig.getSyncSenderEnabled()) {
                     ScheduledExecutorService executorService = Executors.newScheduledThreadPool(syncConfig.getSyncSendersThreadCount());
@@ -497,6 +498,7 @@ public class MiruSyncMain {
                     syncSenders = (MiruSyncSenders) new MiruSyncSenders<>(
                         miruStats,
                         syncConfig,
+                        amzaMiruSyncReceiver,
                         orderIdProvider,
                         executorService,
                         amzaClientProvider,
@@ -508,7 +510,6 @@ public class MiruSyncMain {
                         30_000, // TODO config
                         amzaWALClient,
                         syncLoopback,
-                        loopbackSyncClient,
                         loopbackSyncConfigProvider,
                         null,
                         AmzaCursor.class);
