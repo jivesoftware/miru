@@ -1,7 +1,5 @@
 package org.roaringbitmap.buffer;
 
-import com.jivesoftware.os.miru.bitmaps.roaring6.buffer.MiruBitmapsRoaringBuffer;
-import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
 import org.roaringbitmap.RoaringBitmap;
 import org.roaringbitmap.RoaringInspection;
 import org.testng.annotations.Test;
@@ -9,35 +7,6 @@ import org.testng.annotations.Test;
 import static org.testng.Assert.assertEquals;
 
 public class RoaringBufferInspectionTest {
-
-    @Test
-    public void testCardinalityAndLastSetBit() throws Exception {
-        MutableRoaringBitmap bitmap = new MutableRoaringBitmap();
-        for (int i = 0; i * 37 < 5 * Short.MAX_VALUE; i++) {
-            bitmap.add(i * 37);
-            CardinalityAndLastSetBit cardinalityAndLastSetBit = RoaringBufferInspection.cardinalityAndLastSetBit(bitmap);
-            assertEquals(cardinalityAndLastSetBit.cardinality, i + 1);
-            assertEquals(cardinalityAndLastSetBit.lastSetBit, i * 37);
-        }
-    }
-
-    @Test
-    public void testBoundary() throws Exception {
-        MiruBitmapsRoaringBuffer bitmaps = new MiruBitmapsRoaringBuffer();
-
-        MutableRoaringBitmap bitmap = bitmaps.createWithBits(0);
-        CardinalityAndLastSetBit cardinalityAndLastSetBit = RoaringBufferInspection.cardinalityAndLastSetBit(bitmap);
-
-        System.out.println("cardinalityAndLastSetBit=" + cardinalityAndLastSetBit.lastSetBit);
-
-        MutableRoaringBitmap remove = bitmaps.createWithBits(0);
-
-        MutableRoaringBitmap answer = bitmaps.andNot(bitmap, remove);
-
-        cardinalityAndLastSetBit = RoaringBufferInspection.cardinalityAndLastSetBit(answer);
-        System.out.println("cardinalityAndLastSetBit=" + cardinalityAndLastSetBit.lastSetBit);
-
-    }
 
     @Test
     public void testSizeInBits() throws Exception {

@@ -1,7 +1,5 @@
 package org.roaringbitmap;
 
-import com.jivesoftware.os.miru.bitmaps.roaring5.MiruBitmapsRoaring;
-import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
 import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -54,35 +52,6 @@ public class RoaringInspectionTest {
         int[] keys2 = RoaringInspection.keys(joined);
 
         assertEquals(keys1, keys2);
-    }
-
-    @Test
-    public void testCardinalityAndLastSetBit() throws Exception {
-        RoaringBitmap bitmap = new RoaringBitmap();
-        for (int i = 0; i * 37 < 5 * Short.MAX_VALUE; i++) {
-            bitmap.add(i * 37);
-            CardinalityAndLastSetBit cardinalityAndLastSetBit = RoaringInspection.cardinalityAndLastSetBit(bitmap);
-            assertEquals(cardinalityAndLastSetBit.cardinality, i + 1);
-            assertEquals(cardinalityAndLastSetBit.lastSetBit, i * 37);
-        }
-    }
-
-    @Test
-    public void testBoundary() throws Exception {
-        MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
-
-        RoaringBitmap bitmap = bitmaps.createWithBits(0);
-        CardinalityAndLastSetBit cardinalityAndLastSetBit = RoaringInspection.cardinalityAndLastSetBit(bitmap);
-
-        System.out.println("cardinalityAndLastSetBit=" + cardinalityAndLastSetBit.lastSetBit);
-
-        RoaringBitmap remove = bitmaps.createWithBits(0);
-
-        RoaringBitmap answer = bitmaps.andNot(bitmap, remove);
-
-        cardinalityAndLastSetBit = RoaringInspection.cardinalityAndLastSetBit(answer);
-        System.out.println("cardinalityAndLastSetBit=" + cardinalityAndLastSetBit.lastSetBit);
-
     }
 
     @Test
@@ -266,9 +235,8 @@ public class RoaringInspectionTest {
             }
 
             bitmap1.runOptimize();
-            CardinalityAndLastSetBit<RoaringBitmap> calsb = RoaringInspection.cardinalityAndLastSetBit(bitmap1);
-            int lsb1 = calsb.lastSetBit;
-            long cardinality1 = calsb.cardinality;
+            int lsb1 = RoaringInspection.lastSetBit(bitmap1);
+            long cardinality1 = bitmap1.getCardinality();
             short[] keys = RoaringInspection.serialize(bitmap1, outContainers);
 
             System.out.println("----- " + p + " -----");
@@ -320,9 +288,8 @@ public class RoaringInspectionTest {
             }
 
             bitmap1.runOptimize();
-            CardinalityAndLastSetBit<RoaringBitmap> calsb = RoaringInspection.cardinalityAndLastSetBit(bitmap1);
-            int lsb1 = calsb.lastSetBit;
-            long cardinality1 = calsb.cardinality;
+            int lsb1 = RoaringInspection.lastSetBit(bitmap1);
+            long cardinality1 = bitmap1.getCardinality();
             int[] ukeys = RoaringInspection.userialize(bitmap1, outContainers);
 
             System.out.println("----- " + p + " -----");

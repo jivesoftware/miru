@@ -70,8 +70,6 @@ public interface MiruBitmaps<BM extends IBM, IBM> {
      */
     void boundedCardinalities(IBM bitmap, int[][] indexBoundaries, long[][] rawWaveform);
 
-    boolean supportsInPlace();
-
     boolean isEmpty(IBM bitmap);
 
     long sizeInBytes(IBM bitmap);
@@ -124,12 +122,6 @@ public interface MiruBitmaps<BM extends IBM, IBM> {
 
     BM copy(IBM original);
 
-    CardinalityAndLastSetBit<BM> inPlaceAndNotWithCardinalityAndLastSetBit(BM original, IBM not);
-
-    CardinalityAndLastSetBit<BM> andNotWithCardinalityAndLastSetBit(IBM original, IBM not);
-
-    CardinalityAndLastSetBit<BM> andWithCardinalityAndLastSetBit(List<IBM> ands);
-
     BM orToSourceSize(IBM source, IBM mask);
 
     BM andNotToSourceSize(IBM source, IBM mask);
@@ -152,7 +144,13 @@ public interface MiruBitmaps<BM extends IBM, IBM> {
 
     int[] indexes(IBM bitmap);
 
+    int firstSetBit(IBM bitmap);
+
     int lastSetBit(IBM bitmap);
+
+    int firstIntersectingBit(IBM bitmap, IBM other);
+
+    boolean intersects(IBM bitmap, IBM other);
 
     boolean containsAll(IBM container, IBM contained);
 

@@ -12,26 +12,42 @@ public class AggregateCount {
 
     public final MiruValue distinctValue;
     public final MiruValue[][] gatherLatestValues;
+    public final MiruValue[][] gatherOldestValues;
     public final long count;
-    public final long timestamp;
-    public boolean unread;
+    public final long latestTimestamp;
+    public final long oldestTimestamp;
+    public boolean anyUnread;
+    public boolean latestUnread;
+    public boolean oldestUnread;
 
     @JsonCreator
     public AggregateCount(
         @JsonProperty("distinctValue") MiruValue distinctValue,
         @JsonProperty("gatherLatestValues") MiruValue[][] gatherLatestValues,
+        @JsonProperty("gatherOldestValues") MiruValue[][] gatherOldestValues,
         @JsonProperty("count") long count,
-        @JsonProperty("timestamp") long timestamp,
-        @JsonProperty("unread") boolean unread) {
+        @JsonProperty("latestTimestamp") long latestTimestamp,
+        @JsonProperty("oldestTimestamp") long oldestTimestamp,
+        @JsonProperty("anyUnread") boolean anyUnread,
+        @JsonProperty("latestUnread") boolean latestUnread,
+        @JsonProperty("oldestUnread") boolean oldestUnread) {
         this.distinctValue = distinctValue;
         this.gatherLatestValues = gatherLatestValues;
+        this.gatherOldestValues = gatherOldestValues;
         this.count = count;
-        this.timestamp = timestamp;
-        this.unread = unread;
+        this.latestTimestamp = latestTimestamp;
+        this.oldestTimestamp = oldestTimestamp;
+        this.anyUnread = anyUnread;
+        this.latestUnread = latestUnread;
+        this.oldestUnread = oldestUnread;
     }
 
-    public void setUnread(boolean unread) {
-        this.unread = unread;
+    public void setLatestUnread(boolean latestUnread) {
+        this.latestUnread = latestUnread;
+    }
+
+    public void setOldestUnread(boolean oldestUnread) {
+        this.oldestUnread = oldestUnread;
     }
 
     @Override
@@ -39,9 +55,13 @@ public class AggregateCount {
         return "AggregateCount{" +
             "distinctValue=" + distinctValue +
             ", gatherLatestValues=" + Arrays.deepToString(gatherLatestValues) +
+            ", gatherOldestValues=" + Arrays.deepToString(gatherOldestValues) +
             ", count=" + count +
-            ", timestamp=" + timestamp +
-            ", unread=" + unread +
+            ", latestTimestamp=" + latestTimestamp +
+            ", oldestTimestamp=" + oldestTimestamp +
+            ", anyUnread=" + anyUnread +
+            ", latestUnread=" + latestUnread +
+            ", oldestUnread=" + oldestUnread +
             '}';
     }
 

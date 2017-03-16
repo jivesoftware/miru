@@ -769,10 +769,8 @@ public class MiruAggregateUtil {
         boolean debugEnabled = LOG.isDebugEnabled();
         MiruSchema schema = requestContext.getSchema();
 
-        if (bitmaps.supportsInPlace()) {
-            // don't mutate the original
-            initialAnswer = bitmaps.copy(initialAnswer);
-        }
+        // don't mutate the original
+        initialAnswer = bitmaps.copy(initialAnswer);
 
         final AtomicLong bytesTraversed = new AtomicLong();
         if (debugEnabled) {
@@ -813,16 +811,9 @@ public class MiruAggregateUtil {
             int[] actualIds = new int[added];
             System.arraycopy(ids, 0, actualIds, 0, added);
 
-            if (bitmaps.supportsInPlace()) {
-                bitmaps.inPlaceAndNot(answer[0], bitmaps.createWithBits(actualIds));
-                //TODO possibly buggy, need to reevaluate
-                /*bitmaps.inPlaceRemoveRange(answer[0], actualIds[0], actualIds[actualIds.length - 1] + 1);*/
-            } else {
-                answer[0] = bitmaps.andNot(answer[0], bitmaps.createWithBits(actualIds));
-                //TODO possibly buggy, need to reevaluate
-                /*answer[0] = bitmaps.removeRange(answer[0], actualIds[0], actualIds[actualIds.length - 1] + 1);*/
-            }
-
+            bitmaps.inPlaceAndNot(answer[0], bitmaps.createWithBits(actualIds));
+            //TODO possibly buggy, need to reevaluate
+            /*bitmaps.inPlaceRemoveRange(answer[0], actualIds[0], actualIds[actualIds.length - 1] + 1);*/
 
             MiruTermId[][] all = activityIndex.getAll(name, actualIds, schema.getFieldDefinition(pivotFieldId), stackBuffer);
             MiruTermId[][] streamAll;
@@ -849,16 +840,9 @@ public class MiruAggregateUtil {
             bitmaps.multiTx(
                 (tx, stackBuffer1) -> primaryFieldIndex.multiTxIndex(name, pivotFieldId, termIds, -1, stackBuffer1, tx),
                 (index, lastId, bitmap) -> {
-                    if (bitmaps.supportsInPlace()) {
-                        bitmaps.inPlaceAndNot(answer[0], bitmap);
-                        if (counter != null) {
-                            bitmaps.inPlaceAndNot(counter[0], bitmap);
-                        }
-                    } else {
-                        answer[0] = bitmaps.andNot(answer[0], bitmap);
-                        if (counter != null) {
-                            counter[0] = bitmaps.andNot(counter[0], bitmap);
-                        }
+                    bitmaps.inPlaceAndNot(answer[0], bitmap);
+                    if (counter != null) {
+                        bitmaps.inPlaceAndNot(counter[0], bitmap);
                     }
                     long afterCount = (counter != null) ? bitmaps.cardinality(counter[0]) : bitmaps.cardinality(answer[0]);
                     termCounts[index] = beforeCount.longValue() - afterCount;
@@ -1044,10 +1028,8 @@ public class MiruAggregateUtil {
         MiruSchema schema = requestContext.getSchema();
         MiruFieldIndex<BM, IBM> primaryFieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
 
-        if (bitmaps.supportsInPlace()) {
-            // don't mutate the original
-            answer = bitmaps.copy(answer);
-        }
+        // don't mutate the original
+        answer = bitmaps.copy(answer);
 
         FieldMultiTermTxIndex<BM, IBM> multiTermTxIndex = new FieldMultiTermTxIndex<>(name, primaryFieldIndex, pivotFieldId, -1);
         TObjectIntHashMap<MiruTermId> distincts = new TObjectIntHashMap<>(batchSize);
@@ -1102,20 +1084,10 @@ public class MiruAggregateUtil {
             MiruTermId[] consumableTermIds = new MiruTermId[termIds.length];
             System.arraycopy(termIds, 0, consumableTermIds, 0, termIds.length);
             multiTermTxIndex.setTermIds(consumableTermIds);
-            if (bitmaps.supportsInPlace()) {
-                bitmaps.inPlaceAndNotMultiTx(answer, multiTermTxIndex, counts, counter, stackBuffer);
-            } else {
-                answer = bitmaps.andNotMultiTx(answer, multiTermTxIndex, counts, counter, stackBuffer);
-            }
-            if (bitmaps.supportsInPlace()) {
-                bitmaps.inPlaceAndNot(answer, bitmaps.createWithBits(actualIds));
-                //TODO possibly buggy, need to reevaluate
-                /*bitmaps.inPlaceRemoveRange(answer, actualIds[0], actualIds[actualIds.length - 1] + 1);*/
-            } else {
-                answer = bitmaps.andNot(answer, bitmaps.createWithBits(actualIds));
-                //TODO possibly buggy, need to reevaluate
-                /*answer = bitmaps.removeRange(answer, actualIds[0], actualIds[actualIds.length - 1] + 1);*/
-            }
+            bitmaps.inPlaceAndNotMultiTx(answer, multiTermTxIndex, counts, counter, stackBuffer);
+            bitmaps.inPlaceAndNot(answer, bitmaps.createWithBits(actualIds));
+            //TODO possibly buggy, need to reevaluate
+            /*bitmaps.inPlaceRemoveRange(answer, actualIds[0], actualIds[actualIds.length - 1] + 1);*/
             andNotCost += (System.nanoTime() - start);
 
             for (int i = 0; i < termIds.length; i++) {

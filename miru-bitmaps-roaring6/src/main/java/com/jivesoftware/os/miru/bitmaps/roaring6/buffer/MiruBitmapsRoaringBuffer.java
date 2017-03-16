@@ -22,7 +22,6 @@ import com.jivesoftware.os.filer.io.Filer;
 import com.jivesoftware.os.filer.io.FilerDataInput;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.filer.io.chunk.ChunkFiler;
-import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
 import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
@@ -152,11 +151,6 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
     @Override
     public MutableRoaringBitmap[][] createMultiArrayOf(int size1, int size2) {
         return new MutableRoaringBitmap[size1][size2];
-    }
-
-    @Override
-    public boolean supportsInPlace() {
-        return true;
     }
 
     @Override
@@ -401,24 +395,6 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
     }
 
     @Override
-    public CardinalityAndLastSetBit<MutableRoaringBitmap> inPlaceAndNotWithCardinalityAndLastSetBit(MutableRoaringBitmap original, ImmutableRoaringBitmap not) {
-        original.andNot(not);
-        return RoaringBufferInspection.cardinalityAndLastSetBit(original);
-    }
-
-    @Override
-    public CardinalityAndLastSetBit<MutableRoaringBitmap> andNotWithCardinalityAndLastSetBit(ImmutableRoaringBitmap original, ImmutableRoaringBitmap not) {
-        MutableRoaringBitmap container = andNot(original, not);
-        return RoaringBufferInspection.cardinalityAndLastSetBit(container);
-    }
-
-    @Override
-    public CardinalityAndLastSetBit<MutableRoaringBitmap> andWithCardinalityAndLastSetBit(List<ImmutableRoaringBitmap> ands) {
-        MutableRoaringBitmap container = and(ands);
-        return RoaringBufferInspection.cardinalityAndLastSetBit(container);
-    }
-
-    @Override
     public MutableRoaringBitmap orToSourceSize(ImmutableRoaringBitmap source, ImmutableRoaringBitmap mask) {
         return or(Arrays.asList(source, mask));
     }
@@ -579,9 +555,25 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
     }
 
     @Override
+    public int firstSetBit(ImmutableRoaringBitmap bitmap) {
+        IntIterator iterator = bitmap.getIntIterator();
+        return iterator.hasNext() ? iterator.next() : -1;
+    }
+
+    @Override
     public int lastSetBit(ImmutableRoaringBitmap bitmap) {
         IntIterator iterator = bitmap.getReverseIntIterator();
         return iterator.hasNext() ? iterator.next() : -1;
+    }
+
+    @Override
+    public int firstIntersectingBit(ImmutableRoaringBitmap bitmap, ImmutableRoaringBitmap other) {
+        throw new UnsupportedOperationException("Wahhh");
+    }
+
+    @Override
+    public boolean intersects(ImmutableRoaringBitmap bitmap, ImmutableRoaringBitmap other) {
+        return ImmutableRoaringBitmap.intersects(bitmap, other);
     }
 
     @Override

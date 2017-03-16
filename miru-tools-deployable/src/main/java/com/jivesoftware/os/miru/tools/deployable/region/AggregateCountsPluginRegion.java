@@ -186,7 +186,7 @@ public class AggregateCountsPluginRegion implements MiruPageRegion<Optional<Aggr
                             if (results.size() < input.count) {
                                 timeRange = null;
                             } else {
-                                long lastTimestamp = results.get(results.size() - 1).timestamp;
+                                long lastTimestamp = results.get(results.size() - 1).latestTimestamp;
                                 timeRange = new MiruTimeRange(0, lastTimestamp - 1);
                             }
                             responses.add(aggregatesResponse);
@@ -206,7 +206,7 @@ public class AggregateCountsPluginRegion implements MiruPageRegion<Optional<Aggr
                     for (MiruResponse<AggregateCountsAnswer> response : responses) {
                         List<Map<String, Object>> page = Lists.newArrayList();
                         for (AggregateCount result : response.answer.constraints.get(input.field).results) {
-                            long time = result.timestamp;
+                            long time = result.latestTimestamp;
                             long jiveEpochTime = snowflakeIdPacker.unpack(time)[0];
                             String clockTime = new ISO8601DateFormat().format(new Date(jiveEpochTime + JiveEpochTimestampProvider.JIVE_EPOCH));
 
@@ -215,7 +215,7 @@ public class AggregateCountsPluginRegion implements MiruPageRegion<Optional<Aggr
                                 "time", String.valueOf(time),
                                 "date", clockTime,
                                 "count", String.valueOf(result.count),
-                                "unread", String.valueOf(result.unread)));
+                                "unread", String.valueOf(result.anyUnread)));
                         }
                         resultPages.add(page);
 
