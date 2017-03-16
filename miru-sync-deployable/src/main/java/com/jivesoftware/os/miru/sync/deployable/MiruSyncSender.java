@@ -113,8 +113,8 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         MiruSyncConfigProvider syncConfigProvider,
         C defaultCursor,
         Class<C> cursorClass) {
-        this.stats = stats;
 
+        this.stats = stats;
         this.config = config;
         this.amzaClientAquariumProvider = amzaClientAquariumProvider;
         this.orderIdProvider = orderIdProvider;
@@ -397,17 +397,18 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                 }
                 return 0;
             } else if (status.ends.containsAll(status.begins)) {
-                return syncTenantPartition(tenantTuple, stripe, partitionId, type, status);
+                return syncTenantPartition(tenantTuple, tenantConfig, stripe, partitionId, type, status);
             } else {
                 LOG.error("Reverse sync encountered open partition from:{} to:{} partition:{}", tenantTuple.from, tenantTuple.to, partitionId);
                 return 0;
             }
         } else {
-            return syncTenantPartition(tenantTuple, stripe, partitionId, type, status);
+            return syncTenantPartition(tenantTuple, tenantConfig, stripe, partitionId, type, status);
         }
     }
 
     private int syncTenantPartition(MiruSyncTenantTuple tenantTuple,
+        MiruSyncTenantConfig tenantConfig,
         int stripe,
         MiruPartitionId partitionId,
         ProgressType type,
@@ -456,7 +457,10 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
 
                 List<MiruPartitionedActivity> activities = Lists.newArrayListWithCapacity(batch.activities.size());
                 for (MiruWALEntry entry : batch.activities) {
-                    if (entry.activity.type.isActivityType() && entry.activity.activity.isPresent()) {
+                    if (entry.activity.type.isActivityType()
+                        && entry.activity.activity.isPresent()
+                        && (tenantConfig.startTimestampMillis == -1 || entry.activity.clockTimestamp > tenantConfig.startTimestampMillis)
+                        && (tenantConfig.stopTimestampMillis == -1 || entry.activity.clockTimestamp < tenantConfig.stopTimestampMillis)) {
                         activityTypes++;
                         // rough estimate of index depth
                         lastIndex = Math.max(lastIndex, numWriters * entry.activity.index);

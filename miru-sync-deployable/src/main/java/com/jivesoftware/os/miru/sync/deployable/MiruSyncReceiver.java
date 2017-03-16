@@ -7,6 +7,7 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.sync.ActivityReadEventConverter;
+import com.jivesoftware.os.miru.api.sync.MiruSyncClient;
 import com.jivesoftware.os.miru.api.topology.MiruClusterClient;
 import com.jivesoftware.os.miru.api.wal.MiruCursor;
 import com.jivesoftware.os.miru.api.wal.MiruSipCursor;
@@ -29,7 +30,7 @@ import java.util.Map.Entry;
 /**
  *
  */
-public class MiruSyncReceiver<C extends MiruCursor<C, S>, S extends MiruSipCursor<S>> {
+public class MiruSyncReceiver<C extends MiruCursor<C, S>, S extends MiruSipCursor<S>> implements MiruSyncClient {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
@@ -50,6 +51,7 @@ public class MiruSyncReceiver<C extends MiruCursor<C, S>, S extends MiruSipCurso
         this.converter = converter;
     }
 
+    @Override
     public void writeActivity(MiruTenantId tenantId, MiruPartitionId partitionId, List<MiruPartitionedActivity> activities) throws Exception {
         LOG.info("Received from tenantId:{} partitionId:{} activities:{}", tenantId, partitionId, activities.size());
         walClient.writeActivity(tenantId, partitionId, activities);
@@ -101,6 +103,7 @@ public class MiruSyncReceiver<C extends MiruCursor<C, S>, S extends MiruSipCurso
         }
     }
 
+    @Override
     public void registerSchema(MiruTenantId tenantId, MiruSchema schema) throws Exception {
         clusterClient.registerSchema(tenantId, schema);
     }

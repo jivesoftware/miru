@@ -42,6 +42,7 @@ public class MiruSyncSenders<C extends MiruCursor<C, S>, S extends MiruSipCursor
 
     private final MiruStats stats;
     private final MiruSyncConfig syncConfig;
+    private final MiruSyncReceiver<C, S> syncReceiver;
     private final TimestampedOrderIdProvider orderIdProvider;
     private final ScheduledExecutorService executorService;
     private final PartitionClientProvider partitionClientProvider;
@@ -53,7 +54,6 @@ public class MiruSyncSenders<C extends MiruCursor<C, S>, S extends MiruSipCursor
     private final long ensureSendersInterval;
     private final MiruWALClient<C, S> miruWALClient;
     private final boolean syncLoopback;
-    private final MiruSyncClient loopbackSyncClient;
     private final MiruSyncConfigProvider loopbackSyncConfigProvider;
     private final C defaultCursor;
     private final Class<C> cursorClass;
@@ -64,6 +64,7 @@ public class MiruSyncSenders<C extends MiruCursor<C, S>, S extends MiruSipCursor
 
     public MiruSyncSenders(MiruStats stats,
         MiruSyncConfig syncConfig,
+        MiruSyncReceiver<C, S> syncReceiver,
         TimestampedOrderIdProvider orderIdProvider,
         ScheduledExecutorService executorService,
         PartitionClientProvider partitionClientProvider,
@@ -75,13 +76,13 @@ public class MiruSyncSenders<C extends MiruCursor<C, S>, S extends MiruSipCursor
         long ensureSendersInterval,
         MiruWALClient<C, S> miruWALClient,
         boolean syncLoopback,
-        MiruSyncClient loopbackSyncClient,
         MiruSyncConfigProvider loopbackSyncConfigProvider,
         C defaultCursor,
         Class<C> cursorClass) {
 
         this.stats = stats;
         this.syncConfig = syncConfig;
+        this.syncReceiver = syncReceiver;
         this.orderIdProvider = orderIdProvider;
         this.executorService = executorService;
         this.partitionClientProvider = partitionClientProvider;
@@ -93,7 +94,6 @@ public class MiruSyncSenders<C extends MiruCursor<C, S>, S extends MiruSipCursor
         this.ensureSendersInterval = ensureSendersInterval;
         this.miruWALClient = miruWALClient;
         this.syncLoopback = syncLoopback;
-        this.loopbackSyncClient = loopbackSyncClient;
         this.loopbackSyncConfigProvider = loopbackSyncConfigProvider;
         this.defaultCursor = defaultCursor;
         this.cursorClass = cursorClass;
@@ -116,14 +116,14 @@ public class MiruSyncSenders<C extends MiruCursor<C, S>, S extends MiruSipCursor
             if (syncLoopback) {
                 loopbackSender = new MiruSyncSender<>(
                     stats,
-                    new MiruSyncSenderConfig("loopback", true, null, null, -1, 10_000L, 60_000L, 10_000, null, null, null, false),
+                    new MiruSyncSenderConfig("loopback", true, 10_000L, 60_000L, 10_000, true, null, null, -1, null, null, null, false),
                     clientAquariumProvider,
                     orderIdProvider,
                     syncConfig.getSyncLoopbackRingStripes(),
                     executorService,
                     schemaProvider,
                     miruWALClient,
-                    loopbackSyncClient,
+                    syncReceiver,
                     partitionClientProvider,
                     mapper,
                     loopbackSyncConfigProvider,
@@ -208,40 +208,43 @@ public class MiruSyncSenders<C extends MiruCursor<C, S>, S extends MiruSipCursor
     }
 
     private MiruSyncClient syncClient(MiruSyncSenderConfig config) throws Exception {
+        if (config.loopback) {
+            return syncReceiver;
+        } else {
+            String consumerKey = StringUtils.trimToNull(config.oAuthConsumerKey);
+            String consumerSecret = StringUtils.trimToNull(config.oAuthConsumerSecret);
+            String consumerMethod = StringUtils.trimToNull(config.oAuthConsumerMethod);
+            if (consumerKey == null || consumerSecret == null || consumerMethod == null) {
+                throw new IllegalStateException("OAuth consumer has not been configured");
+            }
 
-        String consumerKey = StringUtils.trimToNull(config.oAuthConsumerKey);
-        String consumerSecret = StringUtils.trimToNull(config.oAuthConsumerSecret);
-        String consumerMethod = StringUtils.trimToNull(config.oAuthConsumerMethod);
-        if (consumerKey == null || consumerSecret == null || consumerMethod == null) {
-            throw new IllegalStateException("OAuth consumer has not been configured");
+            consumerMethod = consumerMethod.toLowerCase();
+            if (!consumerMethod.equals("hmac") && !consumerMethod.equals("rsa")) {
+                throw new IllegalStateException("OAuth consumer method must be one of HMAC or RSA");
+            }
+
+            String scheme = config.senderScheme;
+            String host = config.senderHost;
+            int port = config.senderPort;
+
+            boolean sslEnable = scheme.equals("https");
+            OAuthSigner authSigner = (request) -> {
+                CommonsHttpOAuthConsumer oAuthConsumer = new CommonsHttpOAuthConsumer(consumerKey, consumerSecret);
+                oAuthConsumer.setMessageSigner(new HmacSha1MessageSigner());
+                oAuthConsumer.setTokenWithSecret(consumerKey, consumerSecret);
+                return oAuthConsumer.sign(request);
+            };
+            HttpClient httpClient = HttpRequestHelperUtils.buildHttpClient(sslEnable,
+                config.allowSelfSignedCerts,
+                authSigner,
+                host,
+                port,
+                syncConfig.getSyncSenderSocketTimeout());
+
+            return new HttpMiruSyncClient(httpClient,
+                mapper,
+                "/api/sync/v1/write/activities",
+                "/api/sync/v1/register/schema");
         }
-
-        consumerMethod = consumerMethod.toLowerCase();
-        if (!consumerMethod.equals("hmac") && !consumerMethod.equals("rsa")) {
-            throw new IllegalStateException("OAuth consumer method must be one of HMAC or RSA");
-        }
-
-        String scheme = config.senderScheme;
-        String host = config.senderHost;
-        int port = config.senderPort;
-
-        boolean sslEnable = scheme.equals("https");
-        OAuthSigner authSigner = (request) -> {
-            CommonsHttpOAuthConsumer oAuthConsumer = new CommonsHttpOAuthConsumer(consumerKey, consumerSecret);
-            oAuthConsumer.setMessageSigner(new HmacSha1MessageSigner());
-            oAuthConsumer.setTokenWithSecret(consumerKey, consumerSecret);
-            return oAuthConsumer.sign(request);
-        };
-        HttpClient httpClient = HttpRequestHelperUtils.buildHttpClient(sslEnable,
-            config.allowSelfSignedCerts,
-            authSigner,
-            host,
-            port,
-            syncConfig.getSyncSenderSocketTimeout());
-
-        return new HttpMiruSyncClient(httpClient,
-            mapper,
-            "/api/sync/v1/write/activities",
-            "/api/sync/v1/register/schema");
     }
 }
