@@ -16,9 +16,9 @@ public class AggregateCount {
     public final long count;
     public final long latestTimestamp;
     public final long oldestTimestamp;
-    public boolean anyUnread;
-    public boolean latestUnread;
-    public boolean oldestUnread;
+    public final boolean anyUnread;
+    public final boolean latestUnread;
+    public final boolean oldestUnread;
 
     @JsonCreator
     public AggregateCount(
@@ -39,14 +39,6 @@ public class AggregateCount {
         this.oldestTimestamp = oldestTimestamp;
         this.anyUnread = anyUnread;
         this.latestUnread = latestUnread;
-        this.oldestUnread = oldestUnread;
-    }
-
-    public void setLatestUnread(boolean latestUnread) {
-        this.latestUnread = latestUnread;
-    }
-
-    public void setOldestUnread(boolean oldestUnread) {
         this.oldestUnread = oldestUnread;
     }
 

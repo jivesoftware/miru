@@ -274,11 +274,14 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
 
             @SuppressWarnings("unchecked")
             MinMaxPriorityQueue<Scored>[] parallelScored = new MinMaxPriorityQueue[scoreConcurrencyLevel];
+            @SuppressWarnings("unchecked")
+            List<MiruTermId>[] parallelAsyncRescore = new List[scoreConcurrencyLevel];
             for (int i = 0; i < parallelScored.length; i++) {
                 parallelScored[i] = MinMaxPriorityQueue
                     .expectedSize(request.query.desiredNumberOfResults)
                     .maximumSize(request.query.desiredNumberOfResults)
                     .create();
+                parallelAsyncRescore[i] = Lists.newArrayList();
             }
 
             StrutModelScorer.scoreParallel(
@@ -305,7 +308,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                     }
                     TermIdLastIdCount termIdLastIdCount = termIdLastIdCounts.get(termIndex);
                     if (needsRescore) {
-                        asyncRescore.add(termIdLastIdCount.termId);
+                        parallelAsyncRescore[bucket].add(termIdLastIdCount.termId);
                     }
                     float scaledScore = Strut.scaleScore(scores, request.query.numeratorScalars, request.query.numeratorStrategy);
                     parallelScored[bucket].add(new Scored(termIdLastIdCount.lastId,
@@ -320,8 +323,9 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 gatherExecutorService,
                 stackBuffer);
 
-            for (int i = 0; i < parallelScored.length; i++) {
+            for (int i = 0; i < scoreConcurrencyLevel; i++) {
                 scored.addAll(parallelScored[i]);
+                asyncRescore.addAll(parallelAsyncRescore[i]);
             }
 
             totalTimeFetchingScores += (System.currentTimeMillis() - fetchScoresStart);
