@@ -21,7 +21,6 @@ import com.jivesoftware.os.filer.io.Filer;
 import com.jivesoftware.os.filer.io.FilerDataInput;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.filer.io.chunk.ChunkFiler;
-import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
 import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
@@ -150,11 +149,6 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
     @Override
     public RoaringBitmap[][] createMultiArrayOf(int size1, int size2) {
         return new RoaringBitmap[size1][size2];
-    }
-
-    @Override
-    public boolean supportsInPlace() {
-        return true;
     }
 
     @Override
@@ -406,24 +400,6 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
     }
 
     @Override
-    public CardinalityAndLastSetBit<RoaringBitmap> inPlaceAndNotWithCardinalityAndLastSetBit(RoaringBitmap original, RoaringBitmap not) {
-        original.andNot(not);
-        return RoaringInspection.cardinalityAndLastSetBit(original);
-    }
-
-    @Override
-    public CardinalityAndLastSetBit<RoaringBitmap> andNotWithCardinalityAndLastSetBit(RoaringBitmap original, RoaringBitmap not) {
-        RoaringBitmap container = andNot(original, not);
-        return RoaringInspection.cardinalityAndLastSetBit(container);
-    }
-
-    @Override
-    public CardinalityAndLastSetBit<RoaringBitmap> andWithCardinalityAndLastSetBit(List<RoaringBitmap> ands) {
-        RoaringBitmap container = and(ands);
-        return RoaringInspection.cardinalityAndLastSetBit(container);
-    }
-
-    @Override
     public RoaringBitmap orToSourceSize(RoaringBitmap source, RoaringBitmap mask) {
         return or(Arrays.asList(source, mask));
     }
@@ -584,9 +560,23 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
     }
 
     @Override
+    public int firstSetBit(RoaringBitmap bitmap) {
+        return bitmap.isEmpty() ? -1 : bitmap.first();
+    }
+
+    @Override
     public int lastSetBit(RoaringBitmap bitmap) {
-        IntIterator iterator = bitmap.getReverseIntIterator();
-        return iterator.hasNext() ? iterator.next() : -1;
+        return bitmap.isEmpty() ? -1 : bitmap.last();
+    }
+
+    @Override
+    public int firstIntersectingBit(RoaringBitmap bitmap, RoaringBitmap other) {
+        return RoaringInspection.firstIntersectingBit(bitmap, other);
+    }
+
+    @Override
+    public boolean intersects(RoaringBitmap bitmap, RoaringBitmap other) {
+        return RoaringBitmap.intersects(bitmap, other);
     }
 
     @Override

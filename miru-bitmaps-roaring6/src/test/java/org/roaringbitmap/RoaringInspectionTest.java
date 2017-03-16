@@ -1,7 +1,5 @@
 package org.roaringbitmap;
 
-import com.jivesoftware.os.miru.bitmaps.roaring6.MiruBitmapsRoaring;
-import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
 import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -54,35 +52,6 @@ public class RoaringInspectionTest {
         int[] keys2 = RoaringInspection.keys(joined);
 
         assertEquals(keys1, keys2);
-    }
-
-    @Test
-    public void testCardinalityAndLastSetBit() throws Exception {
-        RoaringBitmap bitmap = new RoaringBitmap();
-        for (int i = 0; i * 37 < 5 * Short.MAX_VALUE; i++) {
-            bitmap.add(i * 37);
-            CardinalityAndLastSetBit cardinalityAndLastSetBit = RoaringInspection.cardinalityAndLastSetBit(bitmap);
-            assertEquals(cardinalityAndLastSetBit.cardinality, i + 1);
-            assertEquals(cardinalityAndLastSetBit.lastSetBit, i * 37);
-        }
-    }
-
-    @Test
-    public void testBoundary() throws Exception {
-        MiruBitmapsRoaring bitmaps = new MiruBitmapsRoaring();
-
-        RoaringBitmap bitmap = bitmaps.createWithBits(0);
-        CardinalityAndLastSetBit cardinalityAndLastSetBit = RoaringInspection.cardinalityAndLastSetBit(bitmap);
-
-        System.out.println("cardinalityAndLastSetBit=" + cardinalityAndLastSetBit.lastSetBit);
-
-        RoaringBitmap remove = bitmaps.createWithBits(0);
-
-        RoaringBitmap answer = bitmaps.andNot(bitmap, remove);
-
-        cardinalityAndLastSetBit = RoaringInspection.cardinalityAndLastSetBit(answer);
-        System.out.println("cardinalityAndLastSetBit=" + cardinalityAndLastSetBit.lastSetBit);
-
     }
 
     @Test
@@ -266,9 +235,8 @@ public class RoaringInspectionTest {
             }
 
             bitmap1.runOptimize();
-            CardinalityAndLastSetBit<RoaringBitmap> calsb = RoaringInspection.cardinalityAndLastSetBit(bitmap1);
-            int lsb1 = calsb.lastSetBit;
-            long cardinality1 = calsb.cardinality;
+            int lsb1 = bitmap1.last();
+            long cardinality1 = bitmap1.getCardinality();
             short[] keys = RoaringInspection.serialize(bitmap1, outContainers);
 
             System.out.println("----- " + p + " -----");
@@ -320,9 +288,8 @@ public class RoaringInspectionTest {
             }
 
             bitmap1.runOptimize();
-            CardinalityAndLastSetBit<RoaringBitmap> calsb = RoaringInspection.cardinalityAndLastSetBit(bitmap1);
-            int lsb1 = calsb.lastSetBit;
-            long cardinality1 = calsb.cardinality;
+            int lsb1 = bitmap1.last();
+            long cardinality1 = bitmap1.getCardinality();
             int[] ukeys = RoaringInspection.userialize(bitmap1, outContainers);
 
             System.out.println("----- " + p + " -----");
@@ -394,4 +361,194 @@ public class RoaringInspectionTest {
         int[] got = RoaringInspection.shortToIntKeys(keys);
         Assert.assertEquals(got, ukeys);
     }
+
+    @Test(enabled = false, description = "Performance comparison")
+    public void testFirstIntersectingBit() throws Exception {
+        Random r = new Random();
+        for (int numRuns : new int[] { 10_000, 100_000 }) {
+            System.out.println("---- " + numRuns + " ----");
+            for (double d1 : new double[] { 0.0001, 0.01, 0.1, 0.5, 0.9, 0.999 }) {
+                for (double d2 : new double[] { 0.0001, 0.01, 0.1, 0.5, 0.9, 0.999 }) {
+                    System.out.println("d1:" + d1 + " d2:" + d2);
+                    RoaringBitmap b1 = new RoaringBitmap();
+                    RoaringBitmap b2 = new RoaringBitmap();
+                    for (int i = 0; i < 3_000_000; i++) {
+                        if (r.nextDouble() < d1) {
+                            b1.add(i);
+                        }
+                        if (r.nextDouble() < d2) {
+                            b2.add(i);
+                        }
+                    }
+
+                    RoaringBitmap and = RoaringBitmap.and(b1, b2);
+                    int ax = and.isEmpty() ? -1 : and.first();
+
+                    int nfx = -1;
+                    long start = System.currentTimeMillis();
+                    for (int i = 0; i < numRuns; i++) {
+                        nfx = RoaringInspection.naiveFirstIntersectingBit(b1, b2);
+                    }
+                    long ne = System.currentTimeMillis() - start;
+
+                    int fx = -1;
+                    start = System.currentTimeMillis();
+                    for (int i = 0; i < numRuns; i++) {
+                        fx = RoaringInspection.firstIntersectingBit(b1, b2);
+                    }
+                    long e = System.currentTimeMillis() - start;
+
+                    Assert.assertEquals(ax, nfx);
+                    Assert.assertEquals(ax, fx);
+                    System.out.println(" -> " + nfx + " = " + ne);
+                    System.out.println(" -> " + fx + " = " + e);
+                }
+            }
+        }
+    }
+
+    @Test
+    public void testFirstIntersectingBit_RunRun() throws Exception {
+        Container c1 = new RunContainer();
+        c1.iadd(10, 20);
+        c1.iadd(30, 40);
+        c1.iadd(40, 50);
+        c1.iadd(50, 60);
+
+        Container c2 = new RunContainer();
+        c2.iadd(35, 45);
+        c2.iadd(55, 65);
+
+        int x = RoaringInspection.firstIntersectingBit(c1, c2);
+        assertEquals(x, 35);
+
+        Container c3 = new RunContainer();
+        c3.iadd(65, 75);
+        c3.iadd(85, 95);
+
+        x = RoaringInspection.firstIntersectingBit(c1, c3);
+        assertEquals(x, -1);
+    }
+
+    @Test
+    public void testFirstIntersectingBit_RunArray() throws Exception {
+        Container c1 = new RunContainer();
+        c1.iadd(10, 20);
+        c1.iadd(30, 40);
+        c1.iadd(40, 50);
+        c1.iadd(50, 60);
+
+        Container c2 = new ArrayContainer();
+        c2.iadd(35, 36);
+        c2.iadd(55, 56);
+
+        int x = RoaringInspection.firstIntersectingBit(c1, c2);
+        assertEquals(x, 35);
+
+        Container c3 = new ArrayContainer();
+        c3.iadd(65, 66);
+        c3.iadd(75, 76);
+
+        x = RoaringInspection.firstIntersectingBit(c1, c3);
+        assertEquals(x, -1);
+    }
+
+    @Test
+    public void testFirstIntersectingBit_RunBitmap() throws Exception {
+        Container c1 = new RunContainer();
+        c1.iadd(10, 20);
+        c1.iadd(30, 40);
+        c1.iadd(40, 50);
+        c1.iadd(50, 60);
+
+        Container c2 = new BitmapContainer();
+        c2.iadd(35, 36);
+        c2.iadd(55, 56);
+
+        int x = RoaringInspection.firstIntersectingBit(c1, c2);
+        assertEquals(x, 35);
+
+        Container c3 = new BitmapContainer();
+        c3.iadd(65, 66);
+        c3.iadd(75, 76);
+
+        x = RoaringInspection.firstIntersectingBit(c1, c3);
+        assertEquals(x, -1);
+    }
+
+    @Test
+    public void testFirstIntersectingBit_ArrayArray() throws Exception {
+        Container c1 = new ArrayContainer();
+        c1.iadd(15, 16);
+        c1.iadd(25, 26);
+        c1.iadd(35, 36);
+        c1.iadd(45, 46);
+        c1.iadd(56, 56);
+
+        Container c2 = new ArrayContainer();
+        c2.iadd(30, 31);
+        c2.iadd(35, 36);
+        c2.iadd(40, 41);
+
+        int x = RoaringInspection.firstIntersectingBit(c1, c2);
+        assertEquals(x, 35);
+
+        Container c3 = new ArrayContainer();
+        c3.iadd(65, 66);
+        c3.iadd(75, 76);
+
+        x = RoaringInspection.firstIntersectingBit(c1, c3);
+        assertEquals(x, -1);
+    }
+
+    @Test
+    public void testFirstIntersectingBit_ArrayBitmap() throws Exception {
+        Container c1 = new ArrayContainer();
+        c1.iadd(15, 16);
+        c1.iadd(25, 26);
+        c1.iadd(35, 36);
+        c1.iadd(45, 46);
+        c1.iadd(56, 56);
+
+        Container c2 = new BitmapContainer();
+        c2.iadd(30, 31);
+        c2.iadd(35, 36);
+        c2.iadd(40, 41);
+
+        int x = RoaringInspection.firstIntersectingBit(c1, c2);
+        assertEquals(x, 35);
+
+        Container c3 = new BitmapContainer();
+        c3.iadd(65, 66);
+        c3.iadd(75, 76);
+
+        x = RoaringInspection.firstIntersectingBit(c1, c3);
+        assertEquals(x, -1);
+    }
+
+    @Test
+    public void testFirstIntersectingBit_BitmapBitmap() throws Exception {
+        Container c1 = new BitmapContainer();
+        c1.iadd(15, 16);
+        c1.iadd(25, 26);
+        c1.iadd(35, 36);
+        c1.iadd(45, 46);
+        c1.iadd(56, 56);
+
+        Container c2 = new BitmapContainer();
+        c2.iadd(30, 31);
+        c2.iadd(35, 36);
+        c2.iadd(40, 41);
+
+        int x = RoaringInspection.firstIntersectingBit(c1, c2);
+        assertEquals(x, 35);
+
+        Container c3 = new BitmapContainer();
+        c3.iadd(65, 66);
+        c3.iadd(75, 76);
+
+        x = RoaringInspection.firstIntersectingBit(c1, c3);
+        assertEquals(x, -1);
+    }
+
 }

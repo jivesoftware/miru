@@ -1,64 +1,11 @@
 package org.roaringbitmap.buffer;
 
-import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
-import java.nio.LongBuffer;
 import java.util.Arrays;
 
 /**
  *
  */
 public class RoaringBufferInspection {
-
-    public static CardinalityAndLastSetBit<MutableRoaringBitmap> cardinalityAndLastSetBit(MutableRoaringBitmap bitmap) {
-        int pos = bitmap.highLowContainer.size() - 1;
-        int lastSetBit = -1;
-        while (pos >= 0) {
-            MappeableContainer lastContainer = bitmap.highLowContainer.getContainerAtIndex(pos);
-            lastSetBit = lastSetBit(bitmap, lastContainer, pos);
-            if (lastSetBit >= 0) {
-                break;
-            }
-            pos--;
-        }
-        int cardinality = bitmap.getCardinality();
-        assert cardinality == 0 || lastSetBit >= 0;
-        return new CardinalityAndLastSetBit<>(bitmap, cardinality, lastSetBit);
-    }
-
-    private static int lastSetBit(ImmutableRoaringBitmap bitmap, MappeableContainer container, int pos) {
-        if (container instanceof MappeableArrayContainer) {
-            MappeableArrayContainer arrayContainer = (MappeableArrayContainer) container;
-            int cardinality = arrayContainer.cardinality;
-            if (cardinality > 0) {
-                int hs = BufferUtil.toIntUnsigned(bitmap.highLowContainer.getKeyAtIndex(pos)) << 16;
-                short last = arrayContainer.content.get(cardinality - 1);
-                return BufferUtil.toIntUnsigned(last) | hs;
-            }
-        } else if (container instanceof MappeableRunContainer) {
-            MappeableRunContainer runContainer = (MappeableRunContainer) container;
-            if (runContainer.nbrruns > 0) {
-                int hs = BufferUtil.toIntUnsigned(bitmap.highLowContainer.getKeyAtIndex(pos)) << 16;
-                int maxlength = BufferUtil.toIntUnsigned(runContainer.getLength(runContainer.nbrruns - 1));
-                int base = BufferUtil.toIntUnsigned(runContainer.getValue(runContainer.nbrruns - 1));
-                return (base + maxlength) | hs;
-            }
-        } else {
-            // <-- trailing              leading -->
-            // [ 0, 0, 0, 0, 0 ... , 0, 0, 0, 0, 0 ]
-            MappeableBitmapContainer bitmapContainer = (MappeableBitmapContainer) container;
-            LongBuffer longs = bitmapContainer.bitmap;
-            for (int i = longs.limit() - 1; i >= 0; i--) {
-                long l = longs.get(i);
-                int leadingZeros = Long.numberOfLeadingZeros(l);
-                if (leadingZeros < 64) {
-                    int hs = BufferUtil.toIntUnsigned(bitmap.highLowContainer.getKeyAtIndex(pos)) << 16;
-                    short last = (short) ((i * 64) + 64 - leadingZeros - 1);
-                    return BufferUtil.toIntUnsigned(last) | hs;
-                }
-            }
-        }
-        return -1;
-    }
 
     public static long sizeInBits(ImmutableRoaringBitmap bitmap) {
         int pos = bitmap.highLowContainer.size() - 1;

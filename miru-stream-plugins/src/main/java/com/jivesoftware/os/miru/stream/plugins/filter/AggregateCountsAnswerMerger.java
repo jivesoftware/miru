@@ -41,26 +41,30 @@ public class AggregateCountsAnswerMerger implements MiruAnswerMerger<AggregateCo
             } else {
 
                 Map<MiruValue, AggregateCount> carryOverCounts = new HashMap<>();
-                for (AggregateCount aggregateCount : currentConstraint.results) {
-                    carryOverCounts.put(aggregateCount.distinctValue, aggregateCount);
+                for (AggregateCount lower : currentConstraint.results) {
+                    carryOverCounts.put(lower.distinctValue, lower);
                 }
 
                 List<AggregateCount> mergedResults = Lists.newArrayListWithCapacity(lastConstraint.results.size() + currentConstraint.results.size());
-                for (AggregateCount aggregateCount : lastConstraint.results) {
-                    AggregateCount had = carryOverCounts.remove(aggregateCount.distinctValue);
-                    if (had == null) {
-                        mergedResults.add(aggregateCount);
+                for (AggregateCount higher : lastConstraint.results) {
+                    AggregateCount lower = carryOverCounts.remove(higher.distinctValue);
+                    if (lower == null) {
+                        mergedResults.add(higher);
                     } else {
-                        mergedResults.add(new AggregateCount(aggregateCount.distinctValue,
-                            aggregateCount.gatherLatestValues,
-                            aggregateCount.count + had.count,
-                            aggregateCount.timestamp,
-                            aggregateCount.unread || had.unread));
+                        mergedResults.add(new AggregateCount(higher.distinctValue,
+                            higher.gatherLatestValues,
+                            lower.gatherOldestValues,
+                            higher.count + lower.count,
+                            higher.latestTimestamp,
+                            lower.oldestTimestamp,
+                            lower.anyUnread || higher.anyUnread,
+                            higher.latestUnread,
+                            lower.oldestUnread));
                     }
                 }
-                for (AggregateCount aggregateCount : currentConstraint.results) {
-                    if (carryOverCounts.containsKey(aggregateCount.distinctValue) && aggregateCount.timestamp != -1) {
-                        mergedResults.add(aggregateCount);
+                for (AggregateCount lower : currentConstraint.results) {
+                    if (carryOverCounts.containsKey(lower.distinctValue) && lower.latestTimestamp != -1) {
+                        mergedResults.add(lower);
                     }
                 }
 

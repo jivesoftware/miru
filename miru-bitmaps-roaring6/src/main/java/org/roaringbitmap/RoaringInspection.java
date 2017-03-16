@@ -3,7 +3,6 @@ package org.roaringbitmap;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Shorts;
-import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps.StreamAtoms;
 import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
 import java.io.DataInput;
@@ -12,6 +11,8 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+
+import static org.roaringbitmap.Util.toIntUnsigned;
 
 /**
  *
@@ -53,45 +54,19 @@ public class RoaringInspection {
         return extract;
     }
 
-    public static CardinalityAndLastSetBit<RoaringBitmap> cardinalityAndLastSetBit(RoaringBitmap bitmap) {
-        int pos = bitmap.highLowContainer.size() - 1;
-        int lastSetBit = -1;
-        while (pos >= 0) {
-            Container lastContainer = bitmap.highLowContainer.values[pos];
-            lastSetBit = lastSetBit(bitmap.highLowContainer.getKeyAtIndex(pos), lastContainer);
-            if (lastSetBit >= 0) {
-                break;
-            }
-            pos--;
-        }
-        int cardinality = bitmap.getCardinality();
-        assert cardinality == 0 || lastSetBit >= 0;
-        return new CardinalityAndLastSetBit<>(bitmap, cardinality, lastSetBit);
-    }
-
-    private static int lastSetBit(short key, Container container) {
-        int lastSetIndex = lastSetIndex(container);
-        if (lastSetIndex == -1) {
-            return -1;
-        } else {
-            int hs = Util.toIntUnsigned(key) << 16;
-            return lastSetIndex | hs;
-        }
-    }
-
     private static int lastSetIndex(Container container) {
         if (container instanceof ArrayContainer) {
             ArrayContainer arrayContainer = (ArrayContainer) container;
             int cardinality = arrayContainer.cardinality;
             if (cardinality > 0) {
                 short last = arrayContainer.content[cardinality - 1];
-                return Util.toIntUnsigned(last);
+                return toIntUnsigned(last);
             }
         } else if (container instanceof RunContainer) {
             RunContainer runContainer = (RunContainer) container;
             if (runContainer.nbrruns > 0) {
-                int maxlength = Util.toIntUnsigned(runContainer.getLength(runContainer.nbrruns - 1));
-                int base = Util.toIntUnsigned(runContainer.getValue(runContainer.nbrruns - 1));
+                int maxlength = toIntUnsigned(runContainer.getLength(runContainer.nbrruns - 1));
+                int base = toIntUnsigned(runContainer.getValue(runContainer.nbrruns - 1));
                 return (base + maxlength);
             }
         } else {
@@ -104,7 +79,7 @@ public class RoaringInspection {
                 int leadingZeros = Long.numberOfLeadingZeros(l);
                 if (leadingZeros < 64) {
                     short last = (short) ((i * 64) + 64 - leadingZeros - 1);
-                    return Util.toIntUnsigned(last);
+                    return toIntUnsigned(last);
                 }
             }
         }
@@ -114,7 +89,7 @@ public class RoaringInspection {
     public static long sizeInBits(RoaringBitmap bitmap) {
         int pos = bitmap.highLowContainer.size() - 1;
         if (pos >= 0) {
-            return (Util.toIntUnsigned(bitmap.highLowContainer.getKeyAtIndex(pos)) + 1) << 16;
+            return (toIntUnsigned(bitmap.highLowContainer.getKeyAtIndex(pos)) + 1) << 16;
         } else {
             return 0;
         }
@@ -192,7 +167,7 @@ public class RoaringInspection {
                         //System.out.println("ArrayContainer");
                         ArrayContainer arrayContainer = (ArrayContainer) container;
                         for (int i = 0; i < arrayContainer.cardinality && numExhausted < bucketLength; i++) {
-                            int index = Util.toIntUnsigned(arrayContainer.content[i]) | min;
+                            int index = toIntUnsigned(arrayContainer.content[i]) | min;
                             next:
                             for (int bi = 0; bi < bucketLength; bi++) {
                                 if (!candidate[bi] || bucketContainsPos[bi] || exhausted[bi]) {
@@ -216,10 +191,10 @@ public class RoaringInspection {
                     } else if (container instanceof RunContainer) {
                         RunContainer runContainer = (RunContainer) container;
                         for (int i = 0; i < runContainer.nbrruns && numExhausted < bucketLength; i++) {
-                            int base = Util.toIntUnsigned(runContainer.getValue(i));
+                            int base = toIntUnsigned(runContainer.getValue(i));
 
                             int startInclusive = base | min;
-                            int endExclusive = startInclusive + 1 + Util.toIntUnsigned(runContainer.getLength(i));
+                            int endExclusive = startInclusive + 1 + toIntUnsigned(runContainer.getLength(i));
                             for (int index = startInclusive; index < endExclusive && numExhausted < bucketLength; index++) {
                                 next:
                                 for (int bi = 0; bi < bucketLength; bi++) {
@@ -250,7 +225,7 @@ public class RoaringInspection {
                         for (int i = bitmapContainer.nextSetBit(0);
                              i >= 0 && numExhausted < bucketLength;
                              i = (i + 1 >= maxIndex) ? -1 : bitmapContainer.nextSetBit(i + 1)) {
-                            int index = Util.toIntUnsigned((short) i) | min;
+                            int index = toIntUnsigned((short) i) | min;
                             next:
                             for (int bi = 0; bi < bucketLength; bi++) {
                                 if (!candidate[bi] || bucketContainsPos[bi] || exhausted[bi]) {
@@ -278,7 +253,7 @@ public class RoaringInspection {
     }
 
     private static int containerMin(RoaringBitmap bitmap, int pos) {
-        return Util.toIntUnsigned(bitmap.highLowContainer.getKeyAtIndex(pos)) << 16;
+        return toIntUnsigned(bitmap.highLowContainer.getKeyAtIndex(pos)) << 16;
     }
 
     public static int key(int position) {
@@ -289,7 +264,7 @@ public class RoaringInspection {
         short[] bitmapKeys = bitmap.highLowContainer.keys;
         int[] copyKeys = new int[bitmap.highLowContainer.size];
         for (int i = 0; i < copyKeys.length; i++) {
-            copyKeys[i] = Util.toIntUnsigned(bitmapKeys[i]);
+            copyKeys[i] = toIntUnsigned(bitmapKeys[i]);
         }
         return copyKeys;
     }
@@ -421,7 +396,7 @@ public class RoaringInspection {
         int cardinality = 1 + (0xFFFF & Short.reverseBytes(inContainer.readShort()));
         boolean isBitmap = cardinality > ArrayContainer.DEFAULT_MAX_SIZE;
 
-        int hs = Util.toIntUnsigned(key) << 16;
+        int hs = toIntUnsigned(key) << 16;
         int lastSetBit = last | hs;
 
         Container val;
@@ -434,7 +409,7 @@ public class RoaringInspection {
             val = new BitmapContainer(bitmapArray, cardinality);
         } else if (isRun) {
             // cf RunContainer.writeArray()
-            int nbrruns = Util.toIntUnsigned(Short.reverseBytes(inContainer.readShort()));
+            int nbrruns = toIntUnsigned(Short.reverseBytes(inContainer.readShort()));
             final short lengthsAndValues[] = new short[2 * nbrruns];
 
             for (int j = 0; j < 2 * nbrruns; ++j) {
@@ -481,19 +456,283 @@ public class RoaringInspection {
     }
 
     public static int shortToIntKey(short key) {
-        return Util.toIntUnsigned(key);
+        return toIntUnsigned(key);
     }
 
     public static int[] shortToIntKeys(short[] keys) {
         int[] ukeys = new int[keys.length];
         for (int i = 0; i < ukeys.length; i++) {
-            ukeys[i] = Util.toIntUnsigned(keys[i]);
+            ukeys[i] = toIntUnsigned(keys[i]);
         }
         return ukeys;
     }
 
     public static int containerCount(RoaringBitmap bitmap) {
         return bitmap.highLowContainer.size;
+    }
+
+    public static int naiveFirstIntersectingBit(RoaringBitmap x1, RoaringBitmap x2) {
+        int length1 = x1.highLowContainer.size();
+        int length2 = x2.highLowContainer.size();
+        int pos1 = 0;
+        int pos2 = 0;
+
+        while (pos1 < length1 && pos2 < length2) {
+            short s1 = x1.highLowContainer.getKeyAtIndex(pos1);
+            short s2 = x2.highLowContainer.getKeyAtIndex(pos2);
+            if (s1 == s2) {
+                Container c1 = x1.highLowContainer.getContainerAtIndex(pos1);
+                Container c2 = x2.highLowContainer.getContainerAtIndex(pos2);
+                if (c1.intersects(c2)) {
+                    Container and = c1.and(c2);
+                    int hs = toIntUnsigned(s1) << 16;
+                    return and.first() | hs;
+                }
+
+                ++pos1;
+                ++pos2;
+            } else if (Util.compareUnsigned(s1, s2) < 0) {
+                pos1 = x1.highLowContainer.advanceUntil(s2, pos1);
+            } else {
+                pos2 = x2.highLowContainer.advanceUntil(s1, pos2);
+            }
+        }
+
+        return -1;
+    }
+
+    public static int firstIntersectingBit(RoaringBitmap x1, RoaringBitmap x2) {
+        int length1 = x1.highLowContainer.size();
+        int length2 = x2.highLowContainer.size();
+        int pos1 = 0;
+        int pos2 = 0;
+
+        while (pos1 < length1 && pos2 < length2) {
+            short s1 = x1.highLowContainer.getKeyAtIndex(pos1);
+            short s2 = x2.highLowContainer.getKeyAtIndex(pos2);
+            if (s1 == s2) {
+                Container c1 = x1.highLowContainer.getContainerAtIndex(pos1);
+                Container c2 = x2.highLowContainer.getContainerAtIndex(pos2);
+                int r = firstIntersectingBit(c1, c2);
+                if (r != -1) {
+                    int hs = toIntUnsigned(s1) << 16;
+                    return r | hs;
+                }
+
+                ++pos1;
+                ++pos2;
+            } else if (Util.compareUnsigned(s1, s2) < 0) {
+                pos1 = x1.highLowContainer.advanceUntil(s2, pos1);
+            } else {
+                pos2 = x2.highLowContainer.advanceUntil(s1, pos2);
+            }
+        }
+
+        return -1;
+    }
+
+    @VisibleForTesting
+    static int firstIntersectingBit(Container c1, Container c2) {
+        if (c1 instanceof RunContainer) {
+            if (c2 instanceof RunContainer) {
+                return firstIntersectingBit((RunContainer) c1, (RunContainer) c2);
+            } else if (c2 instanceof BitmapContainer) {
+                return firstIntersectingBit((RunContainer) c1, (BitmapContainer) c2);
+            } else if (c2 instanceof ArrayContainer) {
+                return firstIntersectingBit((RunContainer) c1, (ArrayContainer) c2);
+            }
+        } else if (c1 instanceof BitmapContainer) {
+            if (c2 instanceof RunContainer) {
+                return firstIntersectingBit((RunContainer) c2, (BitmapContainer) c1);
+            } else if (c2 instanceof BitmapContainer) {
+                return firstIntersectingBit((BitmapContainer) c1, (BitmapContainer) c2);
+            } else if (c2 instanceof ArrayContainer) {
+                return firstIntersectingBit((BitmapContainer) c1, (ArrayContainer) c2);
+            }
+        } else if (c1 instanceof ArrayContainer) {
+            if (c2 instanceof RunContainer) {
+                return firstIntersectingBit((RunContainer) c2, (ArrayContainer) c1);
+            } else if (c2 instanceof BitmapContainer) {
+                return firstIntersectingBit((BitmapContainer) c2, (ArrayContainer) c1);
+            } else if (c2 instanceof ArrayContainer) {
+                return firstIntersectingBit((ArrayContainer) c1, (ArrayContainer) c2);
+            }
+        }
+        return -1;
+    }
+
+    private static int firstIntersectingBit(RunContainer c1, RunContainer c2) {
+        int rlepos = 0;
+        int xrlepos = 0;
+        int start = toIntUnsigned(c1.getValue(rlepos));
+        int end = start + toIntUnsigned(c1.getLength(rlepos)) + 1;
+        int xstart = toIntUnsigned(c2.getValue(xrlepos));
+        int xend = xstart + toIntUnsigned(c2.getLength(xrlepos)) + 1;
+
+        while (rlepos < c1.nbrruns && xrlepos < c2.nbrruns) {
+            if (end <= xstart) {
+                // [start -> end]
+                //                [xstart -> xend]
+                ++rlepos;
+                if (rlepos < c1.nbrruns) {
+                    start = toIntUnsigned(c1.getValue(rlepos));
+                    end = start + toIntUnsigned(c1.getLength(rlepos)) + 1;
+                }
+            } else {
+                // [start -> end]
+                //        [xstart -> xend]
+
+                // [start    ->    end]
+                //   [xstart -> xend]
+
+                // [start  ->  end]
+                // [xstart -> xend]
+
+                //   [start -> end]
+                // [xstart  ->  xend]
+
+                //   [start -> end]
+                // [xstart -> xend]
+
+                //                  [start  ->  end]
+                // [xstart -> xend]
+
+                if (xend > start) {
+                    // [start    ->    end]
+                    //   [xstart -> xend]
+
+                    // [start  ->  end]
+                    // [xstart -> xend]
+
+                    //   [start  ->  end]
+                    // [xstart   ->   xend]
+
+                    //        [start -> end]
+                    // [xstart -> xend]
+                    return Math.max(start, xstart);
+                }
+
+                ++xrlepos;
+                if (xrlepos < c2.nbrruns) {
+                    xstart = toIntUnsigned(c2.getValue(xrlepos));
+                    xend = xstart + toIntUnsigned(c2.getLength(xrlepos)) + 1;
+                }
+            }
+        }
+
+        return -1;
+    }
+
+    private static int firstIntersectingBit(RunContainer c1, ArrayContainer c2) {
+        if (c1.nbrruns == 0) {
+            return -1;
+        } else {
+            int rlepos = 0;
+            int arraypos = 0;
+            int rleval = toIntUnsigned(c1.getValue(rlepos));
+
+            for (int rlelength = toIntUnsigned(c1.getLength(rlepos)); arraypos < c2.cardinality; arraypos = Util.advanceUntil(c2.content, arraypos,
+                c2.cardinality, c1.getValue(rlepos))) {
+                int arrayval;
+                for (arrayval = toIntUnsigned(c2.content[arraypos]); rleval + rlelength < arrayval; rlelength = toIntUnsigned(c1.getLength(rlepos))) {
+                    ++rlepos;
+                    if (rlepos == c1.nbrruns) {
+                        return -1;
+                    }
+
+                    rleval = toIntUnsigned(c1.getValue(rlepos));
+                }
+
+                if (rleval <= arrayval) {
+                    return arrayval;
+                }
+            }
+
+            return -1;
+        }
+    }
+
+    private static int firstIntersectingBit(RunContainer c1, BitmapContainer c2) {
+        for (int rlepos = 0; rlepos < c1.nbrruns; ++rlepos) {
+            int runStart = toIntUnsigned(c1.getValue(rlepos));
+            int runEnd = runStart + toIntUnsigned(c1.getLength(rlepos));
+
+            for (int runValue = runStart; runValue <= runEnd; ++runValue) {
+                if (c2.contains((short) runValue)) {
+                    return runValue;
+                }
+            }
+        }
+
+        return -1;
+    }
+
+    private static int firstIntersectingBit(BitmapContainer c1, BitmapContainer c2) {
+        for (int k = 0; k < c1.bitmap.length; ++k) {
+            long x = c1.bitmap[k] & c2.bitmap[k];
+            if (x != 0L) {
+                return (k * 64) + Long.numberOfTrailingZeros(x);
+            }
+        }
+
+        return -1;
+    }
+
+    private static int firstIntersectingBit(BitmapContainer c1, ArrayContainer c2) {
+        int c = c2.cardinality;
+
+        for (int k = 0; k < c; ++k) {
+            if (c1.contains(c2.content[k])) {
+                return toIntUnsigned(c2.content[k]);
+            }
+        }
+
+        return -1;
+    }
+
+    private static int firstIntersectingBit(ArrayContainer c1, ArrayContainer c2) {
+        short[] set1 = c1.content;
+        int length1 = c1.getCardinality();
+        short[] set2 = c2.content;
+        int length2 = c2.getCardinality();
+        if (0 != length1 && 0 != length2) {
+            int k1 = 0;
+            int k2 = 0;
+            short s1 = set1[k1];
+            short s2 = set2[k2];
+
+            while (true) {
+                if (toIntUnsigned(s2) < toIntUnsigned(s1)) {
+                    do {
+                        ++k2;
+                        if (k2 == length2) {
+                            return -1;
+                        }
+
+                        s2 = set2[k2];
+                    }
+                    while (toIntUnsigned(s2) < toIntUnsigned(s1));
+                }
+
+                if (toIntUnsigned(s1) >= toIntUnsigned(s2)) {
+                    return Util.toIntUnsigned(s1);
+                }
+
+                while (true) {
+                    ++k1;
+                    if (k1 == length1) {
+                        return -1;
+                    }
+
+                    s1 = set1[k1];
+                    if (toIntUnsigned(s1) >= toIntUnsigned(s2)) {
+                        break;
+                    }
+                }
+            }
+        } else {
+            return -1;
+        }
     }
 
     private RoaringInspection() {

@@ -1,6 +1,5 @@
 package org.roaringbitmap.buffer;
 
-import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
 import java.nio.LongBuffer;
 import java.util.Arrays;
 
@@ -8,22 +7,6 @@ import java.util.Arrays;
  *
  */
 public class RoaringBufferInspection {
-
-    public static CardinalityAndLastSetBit<MutableRoaringBitmap> cardinalityAndLastSetBit(MutableRoaringBitmap bitmap) {
-        int pos = bitmap.highLowContainer.size() - 1;
-        int lastSetBit = -1;
-        while (pos >= 0) {
-            MappeableContainer lastContainer = bitmap.highLowContainer.getContainerAtIndex(pos);
-            lastSetBit = lastSetBit(bitmap, lastContainer, pos);
-            if (lastSetBit >= 0) {
-                break;
-            }
-            pos--;
-        }
-        int cardinality = bitmap.getCardinality();
-        assert cardinality == 0 || lastSetBit >= 0;
-        return new CardinalityAndLastSetBit<>(bitmap, cardinality, lastSetBit);
-    }
 
     private static int lastSetBit(ImmutableRoaringBitmap bitmap, MappeableContainer container, int pos) {
         if (container instanceof MappeableArrayContainer) {

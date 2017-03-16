@@ -169,13 +169,8 @@ public class Analytics {
         analysis.consume((term, waveformFiltered) -> {
             boolean found = false;
             if (!bitmaps.isEmpty(constrained)) {
-                BM answer;
-                if (bitmaps.supportsInPlace()) {
-                    answer = waveformFiltered;
-                    bitmaps.inPlaceAnd(waveformFiltered, constrained);
-                } else {
-                    answer = bitmaps.and(Arrays.asList(constrained, waveformFiltered));
-                }
+                BM answer = waveformFiltered;
+                bitmaps.inPlaceAnd(waveformFiltered, constrained);
                 if (!bitmaps.isEmpty(answer)) {
                     found = true;
                     for (int i = 0; i < rawWaveformBuffer.length; i++) {

@@ -14,7 +14,6 @@ import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruValue;
-import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
@@ -28,6 +27,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLog;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -118,10 +118,8 @@ public class AggregateCounts {
             gatherFieldDefinitions = new MiruFieldDefinition[0];
         }
 
-        if (bitmaps.supportsInPlace()) {
-            // don't mutate the original
-            answer = bitmaps.copy(answer);
-        }
+        // don't mutate the original
+        answer = bitmaps.copy(answer);
 
         int collectedDistincts = 0;
         int skippedDistincts = 0;
@@ -141,22 +139,10 @@ public class AggregateCounts {
             int lastId = requestContext.getActivityIndex().lastId(stackBuffer);
             BM filtered = aggregateUtil.filter(name, bitmaps, requestContext, constraint.constraintsFilter, solutionLog, null, lastId, -1, -1, stackBuffer);
 
-            if (bitmaps.supportsInPlace()) {
-                bitmaps.inPlaceAnd(answer, filtered);
+            bitmaps.inPlaceAnd(answer, filtered);
 
-                if (counter.isPresent()) {
-                    bitmaps.inPlaceAnd(counter.get(), filtered);
-                }
-            } else {
-                List<IBM> ands = Arrays.asList(answer, filtered);
-                bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
-                answer = bitmaps.and(ands);
-
-                if (counter.isPresent()) {
-                    ands = Arrays.asList(counter.get(), filtered);
-                    bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
-                    counter = Optional.of(bitmaps.and(ands));
-                }
+            if (counter.isPresent()) {
+                bitmaps.inPlaceAnd(counter.get(), filtered);
             }
         }
 
@@ -169,17 +155,16 @@ public class AggregateCounts {
         List<AggregateCount> aggregateCounts = new ArrayList<>();
         BitmapAndLastId<BM> container = new BitmapAndLastId<>();
         if (fieldId >= 0) {
-            IBM unreadIndex = null;
+            IBM unreadAnswer = null;
             if (!MiruStreamId.NULL.equals(streamId)) {
                 container.clear();
                 requestContext.getUnreadTrackingIndex().getUnread(streamId).getIndex(container, stackBuffer);
                 if (container.isSet()) {
-                    unreadIndex = container.getBitmap();
+                    unreadAnswer = bitmaps.and(Arrays.asList(container.getBitmap(), answer));
                 }
             }
 
             long beforeCount = counter.isPresent() ? bitmaps.cardinality(counter.get()) : bitmaps.cardinality(answer);
-            CardinalityAndLastSetBit<BM> answerCollector = null;
             for (MiruValue aggregateTerm : aggregated) {
                 MiruTermId aggregateTermId = termComposer.compose(schema, fieldDefinition, stackBuffer, aggregateTerm.parts);
                 container.clear();
@@ -190,39 +175,59 @@ public class AggregateCounts {
 
                 IBM termIndex = container.getBitmap();
 
-                if (bitmaps.supportsInPlace()) {
-                    answerCollector = bitmaps.inPlaceAndNotWithCardinalityAndLastSetBit(answer, termIndex);
-                } else {
-                    answerCollector = bitmaps.andNotWithCardinalityAndLastSetBit(answer, termIndex);
-                    answer = answerCollector.bitmap;
+                // docs:   aaabbaccaaabbbcbbcbaac
+                // unread: 0000000000000000000000
+                // query:  1111111111111111111111
+                // read a: 0001101100011111111001
+                // docs:                         abcabc
+                // query:  0001101100011111111001111111
+                // read b: 0000001100000010010001101101
+                // a?      000  0  000        00 1  1      any=1, oldest=0, latest=1
+                // b?         00      000 00 0    0  0     any=0, oldest=0, latest=0
+                // c?            11      1  1   1  1  1    any=1, oldest=1, latest=1
+
+                int firstIntersectingBit = bitmaps.firstIntersectingBit(answer, termIndex);
+
+                boolean anyUnread = false;
+                boolean oldestUnread = false;
+                if (unreadAnswer != null) {
+                    anyUnread = bitmaps.intersects(unreadAnswer, termIndex);
+                    oldestUnread = firstIntersectingBit != -1 && bitmaps.isSet(unreadAnswer, firstIntersectingBit);
                 }
+
+                bitmaps.inPlaceAndNot(answer, termIndex);
 
                 long afterCount;
                 if (counter.isPresent()) {
-                    if (bitmaps.supportsInPlace()) {
-                        CardinalityAndLastSetBit counterCollector = bitmaps.inPlaceAndNotWithCardinalityAndLastSetBit(counter.get(), termIndex);
-                        afterCount = counterCollector.cardinality;
-                    } else {
-                        CardinalityAndLastSetBit<BM> counterCollector = bitmaps.andNotWithCardinalityAndLastSetBit(counter.get(), termIndex);
-                        counter = Optional.of(counterCollector.bitmap);
-                        afterCount = counterCollector.cardinality;
-                    }
+                    bitmaps.inPlaceAndNot(counter.get(), termIndex);
+                    afterCount = bitmaps.cardinality(counter.get());
                 } else {
-                    afterCount = answerCollector.cardinality;
+                    afterCount = bitmaps.cardinality(answer);
                 }
 
-                boolean unread = false;
-                if (unreadIndex != null) {
-                    //TODO much more efficient to add a bitmaps.intersects() to test for first bit in common
-                    CardinalityAndLastSetBit<BM> storage = bitmaps.andWithCardinalityAndLastSetBit(Arrays.asList(unreadIndex, termIndex));
-                    if (storage.cardinality > 0) {
-                        unread = true;
-                    }
-                }
+                TimeVersionRealtime oldestTVR = requestContext.getActivityIndex().getTimeVersionRealtime(name, firstIntersectingBit, stackBuffer);
 
-                aggregateCounts.add(new AggregateCount(aggregateTerm, null, beforeCount - afterCount, -1L, unread));
+                //TODO much more efficient to accumulate bits and gather these once at the end
+                MiruValue[][] oldestValues = new MiruValue[gatherFieldDefinitions.length][];
+                for (int i = 0; i < gatherFieldDefinitions.length; i++) {
+                    MiruFieldDefinition gatherFieldDefinition = gatherFieldDefinitions[i];
+                    MiruTermId[] termIds = requestContext.getActivityIndex().get(name, firstIntersectingBit, gatherFieldDefinition, stackBuffer);
+                    oldestValues[i] = termsToValues(stackBuffer, schema, termComposer, gatherFieldDefinition, termIds);
+                }
+                //TODO much more efficient to accumulate bits and gather these once at the end
+
+                aggregateCounts.add(new AggregateCount(aggregateTerm,
+                    null,
+                    oldestValues,
+                    beforeCount - afterCount,
+                    -1L,
+                    oldestTVR.timestamp,
+                    anyUnread,
+                    false,
+                    oldestUnread));
                 beforeCount = afterCount;
             }
+
             for (MiruValue uncollectedTerm : uncollected) {
                 MiruTermId uncollectedTermId = termComposer.compose(schema, fieldDefinition, stackBuffer, uncollectedTerm.parts);
                 container.clear();
@@ -233,23 +238,15 @@ public class AggregateCounts {
 
                 IBM termIndex = container.getBitmap();
 
-                if (bitmaps.supportsInPlace()) {
-                    bitmaps.inPlaceAndNot(answer, termIndex);
-                } else {
-                    answer = bitmaps.andNot(answer, termIndex);
-                }
+                bitmaps.inPlaceAndNot(answer, termIndex);
 
                 if (counter.isPresent()) {
-                    if (bitmaps.supportsInPlace()) {
-                        bitmaps.inPlaceAndNot(counter.get(), termIndex);
-                    } else {
-                        counter = Optional.of(bitmaps.andNot(counter.get(), termIndex));
-                    }
+                    bitmaps.inPlaceAndNot(counter.get(), termIndex);
                 }
             }
 
             while (true) {
-                int lastSetBit = answerCollector == null ? bitmaps.lastSetBit(answer) : answerCollector.lastSetBit;
+                int lastSetBit = bitmaps.lastSetBit(answer);
                 log.trace("lastSetBit={}", lastSetBit);
                 if (lastSetBit < 0) {
                     break;
@@ -260,22 +257,34 @@ public class AggregateCounts {
                     log.trace("fieldValues={}", Arrays.toString(fieldValues));
                 }
                 if (fieldValues == null || fieldValues.length == 0) {
-                    if (bitmaps.supportsInPlace()) {
-                        BM removeUnknownField = bitmaps.createWithBits(lastSetBit);
-                        answerCollector = bitmaps.inPlaceAndNotWithCardinalityAndLastSetBit(answer, removeUnknownField);
-                    } else {
-                        BM removeUnknownField = bitmaps.createWithBits(lastSetBit);
-                        answerCollector = bitmaps.andNotWithCardinalityAndLastSetBit(answer, removeUnknownField);
-                        answer = answerCollector.bitmap;
-                    }
+                    BM removeUnknownField = bitmaps.createWithBits(lastSetBit);
+                    bitmaps.inPlaceAndNot(answer, removeUnknownField);
                     beforeCount--;
 
                 } else {
                     MiruTermId aggregateTermId = fieldValues[0]; // Kinda lame but for now we don't see a need for multi field aggregation.
                     MiruValue aggregateValue = new MiruValue(termComposer.decompose(schema, fieldDefinition, stackBuffer, aggregateTermId));
 
-                    TimeVersionRealtime tvr = requestContext.getActivityIndex().getTimeVersionRealtime(name, lastSetBit, stackBuffer);
-                    boolean collected = contains(collectTimeRange, tvr.monoTimestamp);
+                    container.clear();
+                    fieldIndex.get(name, fieldId, aggregateTermId).getIndex(container, stackBuffer);
+                    checkState(container.isSet(), "Unable to load inverted index for aggregateTermId: %s", aggregateTermId);
+
+                    IBM termIndex = container.getBitmap();
+                    int firstIntersectingBit = bitmaps.firstIntersectingBit(answer, termIndex);
+
+                    TimeVersionRealtime latestTVR, oldestTVR;
+                    if (lastSetBit == firstIntersectingBit) {
+                        latestTVR = requestContext.getActivityIndex().getTimeVersionRealtime(name, lastSetBit, stackBuffer);
+                        oldestTVR = latestTVR;
+                    } else {
+                        TimeVersionRealtime[] tvr = requestContext.getActivityIndex().getAllTimeVersionRealtime(name,
+                            new int[] { lastSetBit, firstIntersectingBit },
+                            stackBuffer);
+                        latestTVR = tvr[0];
+                        oldestTVR = tvr[1];
+                    }
+
+                    boolean collected = contains(collectTimeRange, latestTVR.monoTimestamp);
                     if (collected) {
                         aggregated.add(aggregateValue);
                         collectedDistincts++;
@@ -284,65 +293,57 @@ public class AggregateCounts {
                         skippedDistincts++;
                     }
 
-                    container.clear();
-                    fieldIndex.get(name, fieldId, aggregateTermId).getIndex(container, stackBuffer);
-                    checkState(container.isSet(), "Unable to load inverted index for aggregateTermId: %s", aggregateTermId);
-
-                    IBM termIndex = container.getBitmap();
-
-                    boolean unread = false;
-                    if (collected && collectedDistincts > constraint.startFromDistinctN && unreadIndex != null) {
-                        //TODO much more efficient to add a bitmaps.intersects() to test for first bit in common
-                        CardinalityAndLastSetBit<BM> storage = bitmaps.andWithCardinalityAndLastSetBit(Arrays.asList(answer, unreadIndex, termIndex));
-                        if (storage.cardinality > 0) {
-                            unread = true;
-                        }
+                    boolean anyUnread = false;
+                    boolean latestUnread = false;
+                    boolean oldestUnread = false;
+                    if (collected && collectedDistincts > constraint.startFromDistinctN && unreadAnswer != null) {
+                        anyUnread = bitmaps.intersects(unreadAnswer, termIndex);
+                        latestUnread = lastSetBit != -1 && bitmaps.isSet(unreadAnswer, lastSetBit);
+                        oldestUnread = firstIntersectingBit != -1 && bitmaps.isSet(unreadAnswer, firstIntersectingBit);
                     }
 
-                    if (bitmaps.supportsInPlace()) {
-                        answerCollector = bitmaps.inPlaceAndNotWithCardinalityAndLastSetBit(answer, termIndex);
-                    } else {
-                        answerCollector = bitmaps.andNotWithCardinalityAndLastSetBit(answer, termIndex);
-                        answer = answerCollector.bitmap;
-                    }
+                    bitmaps.inPlaceAndNot(answer, termIndex);
 
                     long afterCount;
                     if (counter.isPresent()) {
-                        if (bitmaps.supportsInPlace()) {
-                            CardinalityAndLastSetBit<BM> counterCollector = bitmaps.inPlaceAndNotWithCardinalityAndLastSetBit(counter.get(), termIndex);
-                            afterCount = counterCollector.cardinality;
-                        } else {
-                            CardinalityAndLastSetBit<BM> counterCollector = bitmaps.andNotWithCardinalityAndLastSetBit(counter.get(), termIndex);
-                            counter = Optional.of(counterCollector.bitmap);
-                            afterCount = counterCollector.cardinality;
-                        }
+                        bitmaps.inPlaceAndNot(counter.get(), termIndex);
+                        afterCount = bitmaps.cardinality(counter.get());
                     } else {
-                        afterCount = answerCollector.cardinality;
+                        afterCount = bitmaps.cardinality(answer);
                     }
 
                     if (collected && collectedDistincts > constraint.startFromDistinctN) {
-                        //TODO much more efficient to accumulate lastSetBits and gather these once at the end
-                        MiruValue[][] gatherValues = new MiruValue[gatherFieldDefinitions.length][];
+                        //TODO much more efficient to accumulate bits and gather these once at the end
+                        MiruValue[][] latestValues = new MiruValue[gatherFieldDefinitions.length][];
+                        MiruValue[][] oldestValues = new MiruValue[gatherFieldDefinitions.length][];
                         for (int i = 0; i < gatherFieldDefinitions.length; i++) {
                             MiruFieldDefinition gatherFieldDefinition = gatherFieldDefinitions[i];
-                            MiruTermId[] termIds = requestContext.getActivityIndex().get(name, lastSetBit, gatherFieldDefinition, stackBuffer);
-                            MiruValue[] gather = new MiruValue[termIds.length];
-                            for (int j = 0; j < gather.length; j++) {
-                                gather[j] = new MiruValue(termComposer.decompose(schema,
+                            if (lastSetBit == firstIntersectingBit) {
+                                MiruTermId[] termIds = requestContext.getActivityIndex().get(name, lastSetBit, gatherFieldDefinition, stackBuffer);
+                                MiruValue[] values = termsToValues(stackBuffer, schema, termComposer, gatherFieldDefinition, termIds);
+                                latestValues[i] = values;
+                                oldestValues[i] = values;
+                            } else {
+                                MiruTermId[][] termIds = requestContext.getActivityIndex().getAll(name,
+                                    new int[] { lastSetBit, firstIntersectingBit },
                                     gatherFieldDefinition,
-                                    stackBuffer,
-                                    termIds[j]));
+                                    stackBuffer);
+                                latestValues[i] = termsToValues(stackBuffer, schema, termComposer, gatherFieldDefinition, termIds[0]);
+                                oldestValues[i] = termsToValues(stackBuffer, schema, termComposer, gatherFieldDefinition, termIds[1]);
                             }
-                            gatherValues[i] = gather;
                         }
-                        //TODO much more efficient to accumulate lastSetBits and gather these once at the end
+                        //TODO much more efficient to accumulate bits and gather these once at the end
 
                         AggregateCount aggregateCount = new AggregateCount(
                             aggregateValue,
-                            gatherValues,
+                            latestValues,
+                            oldestValues,
                             beforeCount - afterCount,
-                            tvr.timestamp,
-                            unread);
+                            latestTVR.timestamp,
+                            oldestTVR.timestamp,
+                            anyUnread,
+                            latestUnread,
+                            oldestUnread);
                         aggregateCounts.add(aggregateCount);
 
                         if (aggregateCounts.size() >= constraint.desiredNumberOfDistincts) {
@@ -354,6 +355,21 @@ public class AggregateCounts {
             }
         }
         return new AggregateCountsAnswerConstraint(aggregateCounts, aggregated, uncollected, skippedDistincts, collectedDistincts);
+    }
+
+    private MiruValue[] termsToValues(StackBuffer stackBuffer,
+        MiruSchema schema,
+        MiruTermComposer termComposer,
+        MiruFieldDefinition gatherFieldDefinition,
+        MiruTermId[] termIds) throws IOException {
+        MiruValue[] values = new MiruValue[termIds.length];
+        for (int j = 0; j < values.length; j++) {
+            values[j] = new MiruValue(termComposer.decompose(schema,
+                gatherFieldDefinition,
+                stackBuffer,
+                termIds[j]));
+        }
+        return values;
     }
 
     private static boolean contains(MiruTimeRange timeRange, long timestamp) {

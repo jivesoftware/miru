@@ -170,11 +170,7 @@ public class CollaborativeFiltering {
         FieldMultiTermTxIndex<BM, IBM> field2MultiTermTxIndex = new FieldMultiTermTxIndex<>(name, primaryFieldIndex, fieldId2, -1);
         field2MultiTermTxIndex.setTermIds(contributorTermIds);
         bitmaps.multiTx(field2MultiTermTxIndex, (index, lastId, contributorActivity) -> {
-            if (bitmaps.supportsInPlace()) {
-                bitmaps.inPlaceAnd(contributorActivity, okActivity);
-            } else {
-                contributorActivity = bitmaps.and(Arrays.asList(contributorActivity, okActivity));
-            }
+            bitmaps.inPlaceAnd(contributorActivity, okActivity);
             contributorBitmaps[index] = contributorActivity;
         }, stackBuffer);
 

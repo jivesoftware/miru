@@ -8,7 +8,6 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruValue;
-import com.jivesoftware.os.miru.plugin.bitmap.CardinalityAndLastSetBit;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
@@ -40,6 +39,9 @@ public class DistinctCount {
 
         log.debug("Get number of distincts for answer={} query={}", answer, request);
 
+        // don't mutate original
+        answer = bitmaps.copy(answer);
+
         int collectedDistincts = 0;
         Set<MiruValue> aggregateTerms;
         if (lastReport.isPresent()) {
@@ -68,12 +70,11 @@ public class DistinctCount {
                 }
 
                 IBM termIndex = container.getBitmap();
-                answer = bitmaps.andNot(answer, termIndex);
+                bitmaps.inPlaceAndNot(answer, termIndex);
             }
 
-            CardinalityAndLastSetBit<BM> answerCollector = null;
             while (true) {
-                int lastSetBit = answerCollector == null ? bitmaps.lastSetBit(answer) : answerCollector.lastSetBit;
+                int lastSetBit = bitmaps.lastSetBit(answer);
                 log.trace("lastSetBit={}", lastSetBit);
                 if (lastSetBit < 0) {
                     break;
@@ -83,8 +84,7 @@ public class DistinctCount {
                 if (fieldValues == null || fieldValues.length == 0) {
                     // could make this a reusable buffer, but this is effectively an error case and would require 3 buffers
                     BM removeUnknownField = bitmaps.createWithBits(lastSetBit);
-                    answerCollector = bitmaps.andNotWithCardinalityAndLastSetBit(answer, removeUnknownField);
-                    answer = answerCollector.bitmap;
+                    bitmaps.inPlaceAndNot(answer, removeUnknownField);
 
                 } else {
                     MiruTermId aggregateTermId = fieldValues[0];
@@ -95,8 +95,7 @@ public class DistinctCount {
                     fieldIndex.get(name, fieldId, aggregateTermId).getIndex(container, stackBuffer);
                     checkState(container.isSet(), "Unable to load inverted index for aggregateTermId: %s", aggregateTermId);
 
-                    answerCollector = bitmaps.andNotWithCardinalityAndLastSetBit(answer, container.getBitmap());
-                    answer = answerCollector.bitmap;
+                    bitmaps.inPlaceAndNot(answer, container.getBitmap());
 
                     collectedDistincts++;
 
