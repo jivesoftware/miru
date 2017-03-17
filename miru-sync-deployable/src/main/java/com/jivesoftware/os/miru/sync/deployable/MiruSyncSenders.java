@@ -5,6 +5,7 @@ import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.jivesoftware.os.amza.api.PartitionClientProvider;
 import com.jivesoftware.os.amza.client.aquarium.AmzaClientAquariumProvider;
+import com.jivesoftware.os.jive.utils.ordered.id.IdPacker;
 import com.jivesoftware.os.jive.utils.ordered.id.TimestampedOrderIdProvider;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.api.activity.schema.MiruSchemaProvider;
@@ -44,6 +45,7 @@ public class MiruSyncSenders<C extends MiruCursor<C, S>, S extends MiruSipCursor
     private final MiruSyncConfig syncConfig;
     private final MiruSyncReceiver<C, S> syncReceiver;
     private final TimestampedOrderIdProvider orderIdProvider;
+    private final IdPacker idPacker;
     private final ScheduledExecutorService executorService;
     private final PartitionClientProvider partitionClientProvider;
     private final AmzaClientAquariumProvider clientAquariumProvider;
@@ -66,6 +68,7 @@ public class MiruSyncSenders<C extends MiruCursor<C, S>, S extends MiruSipCursor
         MiruSyncConfig syncConfig,
         MiruSyncReceiver<C, S> syncReceiver,
         TimestampedOrderIdProvider orderIdProvider,
+        IdPacker idPacker,
         ScheduledExecutorService executorService,
         PartitionClientProvider partitionClientProvider,
         AmzaClientAquariumProvider clientAquariumProvider,
@@ -84,6 +87,7 @@ public class MiruSyncSenders<C extends MiruCursor<C, S>, S extends MiruSipCursor
         this.syncConfig = syncConfig;
         this.syncReceiver = syncReceiver;
         this.orderIdProvider = orderIdProvider;
+        this.idPacker = idPacker;
         this.executorService = executorService;
         this.partitionClientProvider = partitionClientProvider;
         this.clientAquariumProvider = clientAquariumProvider;
@@ -119,6 +123,7 @@ public class MiruSyncSenders<C extends MiruCursor<C, S>, S extends MiruSipCursor
                     new MiruSyncSenderConfig("loopback", true, 10_000L, 60_000L, 10_000, true, null, null, -1, null, null, null, false),
                     clientAquariumProvider,
                     orderIdProvider,
+                    idPacker,
                     syncConfig.getSyncLoopbackRingStripes(),
                     executorService,
                     schemaProvider,
@@ -150,7 +155,7 @@ public class MiruSyncSenders<C extends MiruCursor<C, S>, S extends MiruSipCursor
                                     senderConfig,
                                     clientAquariumProvider,
                                     orderIdProvider,
-                                    syncConfig.getSyncRingStripes(),
+                                    idPacker, syncConfig.getSyncRingStripes(),
                                     executorService,
                                     schemaProvider,
                                     miruWALClient,
