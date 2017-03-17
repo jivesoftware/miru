@@ -73,8 +73,9 @@ public class MiruSyncSenderTest {
         MiruTenantId tenantId = new MiruTenantId("tenant1".getBytes(StandardCharsets.UTF_8));
         RingMember ringMember = new RingMember("member1");
 
+        SnowflakeIdPacker idPacker = new SnowflakeIdPacker();
         TimestampedOrderIdProvider orderIdProvider = new OrderIdProviderImpl(new ConstantWriterIdProvider(1),
-            new SnowflakeIdPacker(),
+            idPacker,
             new JiveEpochTimestampProvider());
         PartitionClientProvider partitionClientProvider = new InMemoryPartitionClientProvider(ringMember, orderIdProvider);
 
@@ -155,7 +156,7 @@ public class MiruSyncSenderTest {
                 true),
             amzaClientAquariumProvider,
             orderIdProvider,
-            1,
+            idPacker, 1,
             Executors.newScheduledThreadPool(1),
             schemaProvider,
             testWALClient,

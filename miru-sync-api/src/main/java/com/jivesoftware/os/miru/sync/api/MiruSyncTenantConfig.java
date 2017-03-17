@@ -25,4 +25,37 @@ public class MiruSyncTenantConfig {
         this.timeShiftMillis = timeShiftMillis;
         this.timeShiftStrategy = timeShiftStrategy;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
+        MiruSyncTenantConfig that = (MiruSyncTenantConfig) o;
+
+        if (startTimestampMillis != that.startTimestampMillis) {
+            return false;
+        }
+        if (stopTimestampMillis != that.stopTimestampMillis) {
+            return false;
+        }
+        if (timeShiftMillis != that.timeShiftMillis) {
+            return false;
+        }
+        return timeShiftStrategy == that.timeShiftStrategy;
+
+    }
+
+    @Override
+    public int hashCode() {
+        int result = (int) (startTimestampMillis ^ (startTimestampMillis >>> 32));
+        result = 31 * result + (int) (stopTimestampMillis ^ (stopTimestampMillis >>> 32));
+        result = 31 * result + (int) (timeShiftMillis ^ (timeShiftMillis >>> 32));
+        result = 31 * result + (timeShiftStrategy != null ? timeShiftStrategy.hashCode() : 0);
+        return result;
+    }
 }

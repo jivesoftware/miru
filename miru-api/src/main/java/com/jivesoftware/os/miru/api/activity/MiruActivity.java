@@ -59,8 +59,8 @@ public class MiruActivity {
         this.propsValues = propsValues;
     }
 
-    public MiruActivity copyToTenantId(MiruTenantId toTenantId) {
-        return new MiruActivity(toTenantId, time, version, realtimeDelivery, authz, fieldsValues, propsValues);
+    public MiruActivity copyTo(MiruTenantId toTenantId, long toTime) {
+        return new MiruActivity(toTenantId, toTime, version, realtimeDelivery, authz, fieldsValues, propsValues);
     }
 
     @Override

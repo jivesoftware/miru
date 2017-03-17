@@ -241,9 +241,10 @@ public class MiruSyncMain {
                 -1,
                 -1);
 
+            SnowflakeIdPacker idPacker = new SnowflakeIdPacker();
             TimestampedOrderIdProvider orderIdProvider = new OrderIdProviderImpl(
                 new ConstantWriterIdProvider(instanceConfig.getInstanceName()),
-                new SnowflakeIdPacker(),
+                idPacker,
                 new JiveEpochTimestampProvider());
             AmzaClientAquariumProvider amzaClientAquariumProvider = new AmzaClientAquariumProvider(new AquariumStats(),
                 instanceConfig.getServiceName(),
@@ -442,7 +443,7 @@ public class MiruSyncMain {
                         syncConfig,
                         rcvsMiruSyncReceiver,
                         orderIdProvider,
-                        executorService,
+                        idPacker, executorService,
                         amzaClientProvider,
                         amzaClientAquariumProvider,
                         mapper,
@@ -500,6 +501,7 @@ public class MiruSyncMain {
                         syncConfig,
                         amzaMiruSyncReceiver,
                         orderIdProvider,
+                        idPacker,
                         executorService,
                         amzaClientProvider,
                         amzaClientAquariumProvider,
