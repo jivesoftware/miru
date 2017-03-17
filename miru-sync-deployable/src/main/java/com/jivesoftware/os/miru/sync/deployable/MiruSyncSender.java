@@ -364,14 +364,6 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         }
     }
 
-    public static void main(String[] args) {
-        SetMultimap<MiruTenantId, MiruTenantId> registeredSchemas = Multimaps.synchronizedSetMultimap(HashMultimap.create());
-        MiruTenantId tenantId1 = new MiruTenantId("tenant1".getBytes());
-        MiruTenantId tenantId2 = new MiruTenantId("tenant2".getBytes());
-        registeredSchemas.put(tenantId1, tenantId2);
-        System.out.println(registeredSchemas.containsEntry(tenantId1, tenantId2));
-    }
-
     private int syncTenant(MiruSyncTenantTuple tenantTuple, MiruSyncTenantConfig tenantConfig, int stripe, ProgressType type) throws Exception {
         TenantProgress progress = getTenantProgress(tenantTuple.from, tenantTuple.to, stripe);
         if (!isElected(stripe)) {
