@@ -23,6 +23,7 @@ public class PartitionBean {
     private String maxClock;
     private String minOrderId;
     private String maxOrderId;
+    private String errorMessage;
 
     public PartitionBean(int partitionId) {
         this.partitionId = partitionId;
@@ -120,4 +121,11 @@ public class PartitionBean {
         this.maxOrderId = maxOrderId;
     }
 
+    public String getErrorMessage() {
+        return errorMessage;
+    }
+
+    public void setErrorMessage(String errorMessage) {
+        this.errorMessage = errorMessage;
+    }
 }
