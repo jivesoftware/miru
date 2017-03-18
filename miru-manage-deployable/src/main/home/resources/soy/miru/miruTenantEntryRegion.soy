@@ -56,6 +56,8 @@
                                 Partition {$p.partitionId}&nbsp;
                                 {if $p.destroyed}
                                     (destroyed)&nbsp;
+                                {elseif $p.errorMessage}
+                                    (error: {$p.errorMessage})
                                 {else}
                                     (size: {$p.activityCount})&nbsp;
                                     {if $p.begins != $p.ends}({$p.begins} / {$p.ends})&nbsp;{/if}

@@ -124,7 +124,7 @@ public class MiruTenantEntryRegion implements MiruRegion<MiruTenantId> {
                                     partitionBean.setEnds(status.ends.size());
                                 }
                             } catch (Exception e) {
-                                throw new RuntimeException(e);
+                                partitionBean.setErrorMessage(e.getMessage());
                             }
                         }
                         return partitionBean;
