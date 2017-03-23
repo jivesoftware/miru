@@ -74,4 +74,7 @@ public interface MiruAmzaServiceConfig extends Config {
 
     @IntDefault(-1)
     int getDeltaMergeThreads();
+
+    @LongDefault(1073741824L)
+    long getRebalanceIfImbalanceGreaterThanNBytes();
 }
