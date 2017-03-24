@@ -57,6 +57,7 @@ public class MiruAmzaServiceInitializer {
         amzaServiceConfig.takeCyaIntervalInMillis = config.getTakeCyaIntervalInMillis();
         amzaServiceConfig.rackDistributionEnabled = config.getRackDistributionEnabled();
         amzaServiceConfig.ackWatersVerboseLogTimeouts = config.getAckWatersVerboseLogTimeouts();
+        amzaServiceConfig.rebalanceIfImbalanceGreaterThanNBytes = config.getRebalanceIfImbalanceGreaterThanNBytes();
 
         LABPointerIndexConfig amzaLabConfig = deployable.config(LABPointerIndexConfig.class);
 
