@@ -394,13 +394,13 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                 }
                 return 0;
             } else if (status.ends.containsAll(status.begins)) {
-                return syncTenantPartition(tenantTuple, tenantConfig, stripe, partitionId, type, status);
+                return syncTenantPartition(tenantTuple, tenantConfig, stripe, partitionId, type, status, progress.reverseTaking);
             } else {
                 LOG.error("Reverse sync encountered open partition from:{} to:{} partition:{}", tenantTuple.from, tenantTuple.to, partitionId);
                 return 0;
             }
         } else {
-            return syncTenantPartition(tenantTuple, tenantConfig, stripe, partitionId, type, status);
+            return syncTenantPartition(tenantTuple, tenantConfig, stripe, partitionId, type, status, progress.forwardTaking);
         }
     }
 
@@ -409,7 +409,8 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         int stripe,
         MiruPartitionId partitionId,
         ProgressType type,
-        MiruActivityWALStatus status) throws Exception {
+        MiruActivityWALStatus status,
+        boolean taking) throws Exception {
 
         C cursor = getTenantPartitionCursor(tenantTuple.from, tenantTuple.to, partitionId);
         if (!isElected(stripe)) {
@@ -522,6 +523,9 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         } else if (took) {
             // took at least one thing and caught up, so set 'taking' back to false
             setTenantProgress(tenantTuple, partitionId, type, false);
+        } else if (taking) {
+            // progress indicated previously taking, so set 'taking' back to false
+            setTenantProgress(tenantTuple, partitionId, type, false);
         }
         return synced;
     }
@@ -604,9 +608,11 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
 
         MiruPartitionId initialPartitionId = progressId[initial.index] == -1 ? null : MiruPartitionId.of(progressId[initial.index]);
         MiruPartitionId reversePartitionId = progressId[reverse.index] == -1 ? null : MiruPartitionId.of(progressId[reverse.index]);
+        boolean reverseTaking = progressTaking[reverse.index] != null && progressTaking[reverse.index];
         MiruPartitionId forwardPartitionId = progressId[forward.index] == -1 ? null : MiruPartitionId.of(progressId[forward.index]);
+        boolean forwardTaking = progressTaking[forward.index] != null && progressTaking[forward.index];
 
-        return new TenantProgress(initialPartitionId, reversePartitionId, forwardPartitionId);
+        return new TenantProgress(initialPartitionId, reversePartitionId, reverseTaking, forwardPartitionId, forwardTaking);
     }
 
     public C getTenantPartitionCursor(MiruTenantId fromTenantId, MiruTenantId toTenantId, MiruPartitionId partitionId) throws Exception {
@@ -756,14 +762,20 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
     private static class TenantProgress {
         private final MiruPartitionId initialPartitionId;
         private final MiruPartitionId reversePartitionId;
+        private final boolean reverseTaking;
         private final MiruPartitionId forwardPartitionId;
+        private final boolean forwardTaking;
 
         public TenantProgress(MiruPartitionId initialPartitionId,
             MiruPartitionId reversePartitionId,
-            MiruPartitionId forwardPartitionId) {
+            boolean reverseTaking,
+            MiruPartitionId forwardPartitionId,
+            boolean forwardTaking) {
             this.initialPartitionId = initialPartitionId;
             this.reversePartitionId = reversePartitionId;
+            this.reverseTaking = reverseTaking;
             this.forwardPartitionId = forwardPartitionId;
+            this.forwardTaking = forwardTaking;
         }
     }
 
