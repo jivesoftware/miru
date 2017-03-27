@@ -95,6 +95,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
     private final Class<C> cursorClass;
 
     private final Set<TenantTuplePartition> maxAgeSet = Collections.newSetFromMap(Maps.newConcurrentMap());
+    private final Set<TenantTuplePartition> forwardClosedSet = Collections.newSetFromMap(Maps.newConcurrentMap());
     private final SetMultimap<MiruTenantId, MiruTenantId> registeredSchemas = Multimaps.synchronizedSetMultimap(HashMultimap.create());
     private final AtomicBoolean running = new AtomicBoolean(false);
 
@@ -375,6 +376,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         }
 
         MiruPartitionId partitionId = type == reverse ? progress.reversePartitionId : progress.forwardPartitionId;
+        TenantTuplePartition tenantTuplePartition = new TenantTuplePartition(tenantTuple, partitionId);
         MiruActivityWALStatus status = fromWALClient.getActivityWALStatusForTenant(tenantTuple.from, partitionId);
         if (!isElected(stripe)) {
             return 0;
@@ -385,7 +387,6 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                 maxClockTimestamp = Math.max(maxClockTimestamp, count.clockTimestamp);
             }
             if (tenantConfig.startTimestampMillis != -1 && (maxClockTimestamp == -1 || maxClockTimestamp < tenantConfig.startTimestampMillis)) {
-                TenantTuplePartition tenantTuplePartition = new TenantTuplePartition(tenantTuple, partitionId);
                 if (!maxAgeSet.contains(tenantTuplePartition)) {
                     LOG.info("Reverse sync reached max age from:{} to:{} partition:{} clock:{}",
                         tenantTuple.from, tenantTuple.to, partitionId, maxClockTimestamp);
@@ -399,6 +400,8 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                 LOG.error("Reverse sync encountered open partition from:{} to:{} partition:{}", tenantTuple.from, tenantTuple.to, partitionId);
                 return 0;
             }
+        } else if (forwardClosedSet.contains(tenantTuplePartition)) {
+            return 0;
         } else {
             return syncTenantPartition(tenantTuple, tenantConfig, stripe, partitionId, type, status, progress.forwardTaking);
         }
@@ -520,12 +523,21 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
             toSyncClient.writeActivity(tenantTuple.to, partitionId, Collections.singletonList(
                 partitionedActivityFactory.end(-1, partitionId, tenantTuple.from, lastIndex)));
             advanceTenantProgress(tenantTuple, partitionId, type);
-        } else if (took) {
-            // took at least one thing and caught up, so set 'taking' back to false
-            setTenantProgress(tenantTuple, partitionId, type, false);
-        } else if (taking) {
-            // progress indicated previously taking, so set 'taking' back to false
-            setTenantProgress(tenantTuple, partitionId, type, false);
+        } else {
+            TenantTuplePartition tenantTuplePartition = new TenantTuplePartition(tenantTuple, partitionId);
+            if (type == forward && tenantConfig.closed && forwardClosedSet.add(tenantTuplePartition)) {
+                LOG.info("Forward sync is closed from:{} to:{} partition:{}", tenantTuple.from, tenantTuple.to, partitionId);
+                // close our fake writerId
+                toSyncClient.writeActivity(tenantTuple.to, partitionId, Collections.singletonList(
+                    partitionedActivityFactory.end(-1, partitionId, tenantTuple.from, lastIndex)));
+                setTenantProgress(tenantTuple, partitionId, type, false);
+            } else if (took) {
+                // took at least one thing and caught up, so set 'taking' back to false
+                setTenantProgress(tenantTuple, partitionId, type, false);
+            } else if (taking) {
+                // progress indicated previously taking, so set 'taking' back to false
+                setTenantProgress(tenantTuple, partitionId, type, false);
+            }
         }
         return synced;
     }
