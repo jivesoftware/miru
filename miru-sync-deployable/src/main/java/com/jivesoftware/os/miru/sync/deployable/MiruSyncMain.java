@@ -430,7 +430,8 @@ public class MiruSyncMain {
                             MiruSyncTenantConfig config = new MiruSyncTenantConfig(System.currentTimeMillis() - loopbackSyncDurationMillis,
                                 Long.MAX_VALUE,
                                 0,
-                                MiruSyncTimeShiftStrategy.none);
+                                MiruSyncTimeShiftStrategy.none,
+                                false);
                             for (MiruTenantId tenantId : tenantIds) {
                                 tenantTupleConfigs.put(new MiruSyncTenantTuple(tenantId, tenantId), config);
                             }
@@ -488,7 +489,8 @@ public class MiruSyncMain {
                             MiruSyncTenantConfig config = new MiruSyncTenantConfig(System.currentTimeMillis() - loopbackSyncDurationMillis,
                                 Long.MAX_VALUE,
                                 0,
-                                MiruSyncTimeShiftStrategy.none);
+                                MiruSyncTimeShiftStrategy.none,
+                                false);
                             for (MiruTenantId tenantId : tenantIds) {
                                 tenantTupleConfigs.put(new MiruSyncTenantTuple(tenantId, tenantId), config);
                             }
