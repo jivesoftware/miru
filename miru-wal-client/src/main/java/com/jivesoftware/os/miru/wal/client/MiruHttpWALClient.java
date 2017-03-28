@@ -105,10 +105,18 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
     }
 
     @Override
-    public HostPort[] getTenantStreamRoutingGroup(RoutingGroupType routingGroupType, MiruTenantId tenantId, MiruStreamId streamId) throws Exception {
+    public HostPort[] getTenantStreamRoutingGroup(RoutingGroupType routingGroupType,
+        MiruTenantId tenantId,
+        MiruStreamId streamId,
+        boolean createIfAbsent) throws Exception {
         return sendRoundRobin("getTenantStreamRoutingGroup", httpClient -> {
             HttpResponse httpResponse = httpClient.get(
-                pathPrefix + "/routing/tenantStream/" + routingGroupType.name() + "/" + tenantId.toString() + "/" + streamId.toString(), null);
+                pathPrefix + "/routing/lazyTenantStream" +
+                    "/" + routingGroupType.name() +
+                    "/" + tenantId.toString() +
+                    "/" + streamId.toString() +
+                    "/" + createIfAbsent,
+                null);
             HostPort[] response = responseMapper.extractResultFromResponse(httpResponse, HostPort[].class, null);
             return new ClientResponse<>(response, true);
         });
@@ -156,7 +164,7 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
             final String jsonActivities = requestMapper.writeValueAsString(partitionedActivities);
             while (true) {
                 try {
-                    String result = sendWithTenantStream(RoutingGroupType.readTracking, tenantId, streamId, "writeReadTracking",
+                    String result = sendWithTenantStream(RoutingGroupType.readTracking, tenantId, streamId, true, "writeReadTracking",
                         client -> extract(client.postJson(pathPrefix + "/write/reads/" + tenantId.toString() + "/" + streamId.toString(), jsonActivities, null),
                             String.class,
                             null));
@@ -301,7 +309,7 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
         long oldestTimestamp,
         int batchSize) throws Exception {
         final String jsonCursor = requestMapper.writeValueAsString(cursor);
-        return sendWithTenantStream(RoutingGroupType.readTracking, tenantId, streamId, "getRead",
+        return sendWithTenantStream(RoutingGroupType.readTracking, tenantId, streamId, false, "getRead",
             client -> extract(
                 client.postJson(pathPrefix + "/read/" + tenantId.toString() + "/" + streamId.toString() + "/" + oldestTimestamp + "/" + batchSize,
                     jsonCursor,
@@ -360,6 +368,7 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
     private <R> R sendWithTenantStream(RoutingGroupType routingGroupType,
         MiruTenantId tenantId,
         MiruStreamId streamId,
+        boolean createIfAbsent,
         String family,
         ClientCall<HttpClient, SendResult<R>, HttpClientException> call) throws Exception {
         TenantRoutingGroup<MiruStreamId> routingGroup = new TenantRoutingGroup<>(routingGroupType, tenantId, streamId);
@@ -367,7 +376,7 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
             while (true) {
                 NextClientStrategy strategy = tenantRoutingCache.get(routingGroup,
                     () -> {
-                        HostPort[] hostPorts = getTenantStreamRoutingGroup(routingGroupType, tenantId, streamId);
+                        HostPort[] hostPorts = getTenantStreamRoutingGroup(routingGroupType, tenantId, streamId, createIfAbsent);
                         if (hostPorts == null || hostPorts.length == 0) {
                             throw new MiruRouteUnavailableException("No route available for tenant " + tenantId + " stream " + streamId);
                         }

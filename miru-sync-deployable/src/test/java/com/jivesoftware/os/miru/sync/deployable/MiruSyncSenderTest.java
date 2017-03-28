@@ -335,7 +335,10 @@ public class MiruSyncSenderTest {
         }
 
         @Override
-        public HostPort[] getTenantStreamRoutingGroup(RoutingGroupType routingGroupType, MiruTenantId tenantId, MiruStreamId streamId) throws Exception {
+        public HostPort[] getTenantStreamRoutingGroup(RoutingGroupType routingGroupType,
+            MiruTenantId tenantId,
+            MiruStreamId streamId,
+            boolean createIfAbsent) throws Exception {
             return new HostPort[0];
         }
 
