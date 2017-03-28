@@ -194,7 +194,7 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
 
     @Override
     public WriterCursor getCursorForWriterId(MiruTenantId tenantId, MiruPartitionId partitionId, int writerId) throws Exception {
-        return sendWithTenantPartition(RoutingGroupType.activity, tenantId, partitionId, false, "getCursorForWriterId",
+        return sendWithTenantPartition(RoutingGroupType.activity, tenantId, partitionId, true, "getCursorForWriterId",
             client -> extract(client.get(pathPrefix + "/cursor/writer/" + tenantId.toString() + "/" + partitionId.getId() + "/" + writerId, null),
                 WriterCursor.class,
                 null));
