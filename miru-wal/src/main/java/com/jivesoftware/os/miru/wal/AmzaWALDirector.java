@@ -187,9 +187,12 @@ public class AmzaWALDirector implements MiruWALClient<AmzaCursor, AmzaSipCursor>
     }
 
     @Override
-    public HostPort[] getTenantPartitionRoutingGroup(RoutingGroupType routingGroupType, MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+    public HostPort[] getTenantPartitionRoutingGroup(RoutingGroupType routingGroupType,
+        MiruTenantId tenantId,
+        MiruPartitionId partitionId,
+        boolean createIfAbsent) throws Exception {
         if (routingGroupType == RoutingGroupType.activity) {
-            return activityWALReader.getRoutingGroup(tenantId, partitionId);
+            return activityWALReader.getRoutingGroup(tenantId, partitionId, createIfAbsent);
         } else {
             throw new IllegalArgumentException("Type does not have tenant-partition routing: " + routingGroupType.name());
         }

@@ -17,7 +17,10 @@ public interface MiruWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
 
     HostPort[] getTenantRoutingGroup(RoutingGroupType routingGroupType, MiruTenantId tenantId) throws Exception;
 
-    HostPort[] getTenantPartitionRoutingGroup(RoutingGroupType routingGroupType, MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
+    HostPort[] getTenantPartitionRoutingGroup(RoutingGroupType routingGroupType,
+        MiruTenantId tenantId,
+        MiruPartitionId partitionId,
+        boolean createIfAbsent) throws Exception;
 
     HostPort[] getTenantStreamRoutingGroup(RoutingGroupType routingGroupType, MiruTenantId tenantId, MiruStreamId streamId) throws Exception;
 

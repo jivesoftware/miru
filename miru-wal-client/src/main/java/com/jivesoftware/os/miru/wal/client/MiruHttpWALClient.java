@@ -20,7 +20,6 @@ import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.health.checkers.SickThreads;
 import com.jivesoftware.os.routing.bird.http.client.ConnectionDescriptorSelectiveStrategy;
 import com.jivesoftware.os.routing.bird.http.client.HttpClient;
-import com.jivesoftware.os.routing.bird.shared.HttpClientException;
 import com.jivesoftware.os.routing.bird.http.client.HttpResponse;
 import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
 import com.jivesoftware.os.routing.bird.http.client.RoundRobinStrategy;
@@ -28,6 +27,7 @@ import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.shared.ClientCall;
 import com.jivesoftware.os.routing.bird.shared.ClientCall.ClientResponse;
 import com.jivesoftware.os.routing.bird.shared.HostPort;
+import com.jivesoftware.os.routing.bird.shared.HttpClientException;
 import com.jivesoftware.os.routing.bird.shared.NextClientStrategy;
 import java.util.Arrays;
 import java.util.List;
@@ -87,10 +87,18 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
     }
 
     @Override
-    public HostPort[] getTenantPartitionRoutingGroup(RoutingGroupType routingGroupType, MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
+    public HostPort[] getTenantPartitionRoutingGroup(RoutingGroupType routingGroupType,
+        MiruTenantId tenantId,
+        MiruPartitionId partitionId,
+        boolean createIfAbsent) throws Exception {
         return sendRoundRobin("getTenantPartitionRoutingGroup", httpClient -> {
             HttpResponse httpResponse = httpClient.get(
-                pathPrefix + "/routing/tenantPartition/" + routingGroupType.name() + "/" + tenantId.toString() + "/" + partitionId.getId(), null);
+                pathPrefix + "/routing/lazyTenantPartition" +
+                    "/" + routingGroupType.name() +
+                    "/" + tenantId.toString() +
+                    "/" + partitionId.getId() +
+                    "/" + createIfAbsent,
+                null);
             HostPort[] response = responseMapper.extractResultFromResponse(httpResponse, HostPort[].class, null);
             return new ClientResponse<>(response, true);
         });
@@ -121,7 +129,7 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
             final String jsonActivities = requestMapper.writeValueAsString(partitionedActivities);
             while (true) {
                 try {
-                    String result = sendWithTenantPartition(RoutingGroupType.activity, tenantId, partitionId, "writeActivity",
+                    String result = sendWithTenantPartition(RoutingGroupType.activity, tenantId, partitionId, true, "writeActivity",
                         client -> extract(
                             client.postJson(pathPrefix + "/write/activities/" + tenantId.toString() + "/" + partitionId.getId(), jsonActivities, null),
                             String.class,
@@ -178,7 +186,7 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
 
     @Override
     public WriterCursor getCursorForWriterId(MiruTenantId tenantId, MiruPartitionId partitionId, int writerId) throws Exception {
-        return sendWithTenantPartition(RoutingGroupType.activity, tenantId, partitionId, "getCursorForWriterId",
+        return sendWithTenantPartition(RoutingGroupType.activity, tenantId, partitionId, false, "getCursorForWriterId",
             client -> extract(client.get(pathPrefix + "/cursor/writer/" + tenantId.toString() + "/" + partitionId.getId() + "/" + writerId, null),
                 WriterCursor.class,
                 null));
@@ -186,7 +194,7 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
 
     @Override
     public MiruActivityWALStatus getActivityWALStatusForTenant(final MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
-        return sendWithTenantPartition(RoutingGroupType.activity, tenantId, partitionId, "getActivityWALStatusForTenant",
+        return sendWithTenantPartition(RoutingGroupType.activity, tenantId, partitionId, false, "getActivityWALStatusForTenant",
             client -> extract(client.get(pathPrefix + "/activity/wal/status/" + tenantId.toString() + "/" + partitionId.getId(), null),
                 MiruActivityWALStatus.class,
                 null));
@@ -194,7 +202,7 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
 
     @Override
     public long oldestActivityClockTimestamp(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
-        Long timestamp = sendWithTenantPartition(RoutingGroupType.activity, tenantId, partitionId, "oldestActivityClockTimestamp",
+        Long timestamp = sendWithTenantPartition(RoutingGroupType.activity, tenantId, partitionId, false, "oldestActivityClockTimestamp",
             client -> extract(client.get(pathPrefix + "/oldest/activity/" + tenantId.toString() + "/" + partitionId.getId(), null),
                 Long.class,
                 null));
@@ -204,7 +212,7 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
     @Override
     public List<MiruVersionedActivityLookupEntry> getVersionedEntries(MiruTenantId tenantId, MiruPartitionId partitionId, Long[] timestamps) throws Exception {
         final String jsonTimestamps = requestMapper.writeValueAsString(timestamps);
-        return sendWithTenantPartition(RoutingGroupType.activity, tenantId, partitionId, "getVersionedEntries",
+        return sendWithTenantPartition(RoutingGroupType.activity, tenantId, partitionId, false, "getVersionedEntries",
             client -> extractToList(
                 client.postJson(pathPrefix + "/versioned/entries/" + tenantId.toString() + "/" + partitionId.getId(), jsonTimestamps, null),
                 MiruVersionedActivityLookupEntry[].class));
@@ -221,7 +229,7 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
             while (true) {
                 try {
                     @SuppressWarnings("unchecked")
-                    StreamBatch<MiruWALEntry, S> response = sendWithTenantPartition(RoutingGroupType.activity, tenantId, partitionId, "sipActivity",
+                    StreamBatch<MiruWALEntry, S> response = sendWithTenantPartition(RoutingGroupType.activity, tenantId, partitionId, false, "sipActivity",
                         client -> extract(
                             client.postJson(pathPrefix + "/sip/activity/" + tenantId.toString() + "/" + partitionId.getId() + "/" + batchSize, jsonCursor,
                                 null),
@@ -257,7 +265,7 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
             while (true) {
                 try {
                     @SuppressWarnings("unchecked")
-                    StreamBatch<MiruWALEntry, C> response = sendWithTenantPartition(RoutingGroupType.activity, tenantId, partitionId, "getActivity",
+                    StreamBatch<MiruWALEntry, C> response = sendWithTenantPartition(RoutingGroupType.activity, tenantId, partitionId, false, "getActivity",
                         client -> {
                             HttpResponse httpResponse = client.postJson(endpoint, jsonCursor, null);
                             if (bytesCount != null && httpResponse.getResponseBody() != null) {
@@ -314,6 +322,7 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
     private <R> R sendWithTenantPartition(RoutingGroupType routingGroupType,
         MiruTenantId tenantId,
         MiruPartitionId partitionId,
+        boolean createIfAbsent,
         String family,
         ClientCall<HttpClient, SendResult<R>, HttpClientException> call) throws Exception {
         TenantRoutingGroup<MiruPartitionId> routingGroup = new TenantRoutingGroup<>(routingGroupType, tenantId, partitionId);
@@ -321,7 +330,7 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
             while (true) {
                 NextClientStrategy strategy = tenantRoutingCache.get(routingGroup,
                     () -> {
-                        HostPort[] hostPorts = getTenantPartitionRoutingGroup(routingGroupType, tenantId, partitionId);
+                        HostPort[] hostPorts = getTenantPartitionRoutingGroup(routingGroupType, tenantId, partitionId, createIfAbsent);
                         if (hostPorts == null || hostPorts.length == 0) {
                             throw new MiruRouteUnavailableException("No route available for tenant " + tenantId + " partition " + partitionId);
                         }

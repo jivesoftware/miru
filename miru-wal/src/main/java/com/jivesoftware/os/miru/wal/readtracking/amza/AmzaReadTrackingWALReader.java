@@ -78,7 +78,7 @@ public class AmzaReadTrackingWALReader implements MiruReadTrackingWALReader<Amza
 
     @Override
     public HostPort[] getRoutingGroup(MiruTenantId tenantId, MiruStreamId streamId) throws Exception {
-        return amzaWALUtil.getReadTrackingRoutingGroup(tenantId, Optional.<PartitionProperties>absent());
+        return amzaWALUtil.getReadTrackingRoutingGroup(tenantId, Optional.absent(), false);
     }
 
     @Override

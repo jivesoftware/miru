@@ -329,7 +329,8 @@ public class MiruSyncSenderTest {
         @Override
         public HostPort[] getTenantPartitionRoutingGroup(RoutingGroupType routingGroupType,
             MiruTenantId tenantId,
-            MiruPartitionId partitionId) throws Exception {
+            MiruPartitionId partitionId,
+            boolean createIfAbsent) throws Exception {
             return new HostPort[0];
         }
 
