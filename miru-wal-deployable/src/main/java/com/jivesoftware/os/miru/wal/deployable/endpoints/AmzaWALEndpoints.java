@@ -98,10 +98,11 @@ public class AmzaWALEndpoints {
             long start = System.currentTimeMillis();
             HostPort[] routingGroup = walDirector.getTenantPartitionRoutingGroup(routingGroupType, new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
                 MiruPartitionId.of(partitionId), createIfAbsent);
-            stats.ingressed("/routing/tenantPartition/" + routingGroupType.name() + "/" + tenantId, 1, System.currentTimeMillis() - start);
+            stats.ingressed("/routing/lazyTenantPartition/" + routingGroupType.name() + "/" + tenantId, 1, System.currentTimeMillis() - start);
             return responseHelper.jsonResponse(routingGroup);
         } catch (Exception x) {
-            log.error("Failed calling getTenantPartitionRoutingGroup({},{},{})", new Object[] { routingGroupType, tenantId, partitionId }, x);
+            log.error("Failed calling getLazyTenantPartitionRoutingGroup({},{},{},{})",
+                new Object[] { routingGroupType, tenantId, partitionId, createIfAbsent }, x);
             return responseHelper.errorResponse("Server error", x);
         }
     }
@@ -115,11 +116,31 @@ public class AmzaWALEndpoints {
         try {
             long start = System.currentTimeMillis();
             HostPort[] routingGroup = walDirector.getTenantStreamRoutingGroup(routingGroupType, new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
-                new MiruStreamId(streamId.getBytes(Charsets.UTF_8)));
+                new MiruStreamId(streamId.getBytes(Charsets.UTF_8)), true);
             stats.ingressed("/routing/tenantStream/" + routingGroupType.name() + "/" + tenantId, 1, System.currentTimeMillis() - start);
             return responseHelper.jsonResponse(routingGroup);
         } catch (Exception x) {
             log.error("Failed calling getTenantStreamRoutingGroup({},{},{})", new Object[] { routingGroupType, tenantId, streamId }, x);
+            return responseHelper.errorResponse("Server error", x);
+        }
+    }
+
+    @GET
+    @Path("/routing/lazyTenantStream/{type}/{tenantId}/{streamId}/{createIfAbsent}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getLazyTenantStreamRoutingGroup(@PathParam("type") RoutingGroupType routingGroupType,
+        @PathParam("tenantId") String tenantId,
+        @PathParam("streamId") String streamId,
+        @PathParam("createIfAbsent") boolean createIfAbsent) {
+        try {
+            long start = System.currentTimeMillis();
+            HostPort[] routingGroup = walDirector.getTenantStreamRoutingGroup(routingGroupType, new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
+                new MiruStreamId(streamId.getBytes(Charsets.UTF_8)), createIfAbsent);
+            stats.ingressed("/routing/lazyTenantStream/" + routingGroupType.name() + "/" + tenantId, 1, System.currentTimeMillis() - start);
+            return responseHelper.jsonResponse(routingGroup);
+        } catch (Exception x) {
+            log.error("Failed calling getLazyTenantStreamRoutingGroup({},{},{},{})",
+                new Object[] { routingGroupType, tenantId, streamId, createIfAbsent }, x);
             return responseHelper.errorResponse("Server error", x);
         }
     }

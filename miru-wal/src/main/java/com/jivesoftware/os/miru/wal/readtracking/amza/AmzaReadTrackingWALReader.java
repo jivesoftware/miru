@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
 import com.jivesoftware.os.amza.api.FailedToAchieveQuorumException;
-import com.jivesoftware.os.amza.api.partition.PartitionProperties;
 import com.jivesoftware.os.amza.api.stream.TxKeyValueStream.TxResult;
 import com.jivesoftware.os.amza.api.take.TakeCursors;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider.EmbeddedClient;
@@ -77,8 +76,8 @@ public class AmzaReadTrackingWALReader implements MiruReadTrackingWALReader<Amza
     }
 
     @Override
-    public HostPort[] getRoutingGroup(MiruTenantId tenantId, MiruStreamId streamId) throws Exception {
-        return amzaWALUtil.getReadTrackingRoutingGroup(tenantId, Optional.absent(), false);
+    public HostPort[] getRoutingGroup(MiruTenantId tenantId, MiruStreamId streamId, boolean createIfAbsent) throws Exception {
+        return amzaWALUtil.getReadTrackingRoutingGroup(tenantId, Optional.absent(), createIfAbsent);
     }
 
     @Override

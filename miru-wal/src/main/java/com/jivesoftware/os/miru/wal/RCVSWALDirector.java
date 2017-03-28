@@ -199,9 +199,12 @@ public class RCVSWALDirector implements MiruWALClient<RCVSCursor, RCVSSipCursor>
     }
 
     @Override
-    public HostPort[] getTenantStreamRoutingGroup(RoutingGroupType routingGroupType, MiruTenantId tenantId, MiruStreamId streamId) throws Exception {
+    public HostPort[] getTenantStreamRoutingGroup(RoutingGroupType routingGroupType,
+        MiruTenantId tenantId,
+        MiruStreamId streamId,
+        boolean createIfAbsent) throws Exception {
         if (routingGroupType == RoutingGroupType.readTracking) {
-            return readTrackingWALReader.getRoutingGroup(tenantId, streamId);
+            return readTrackingWALReader.getRoutingGroup(tenantId, streamId, createIfAbsent);
         } else {
             throw new IllegalArgumentException("Type does not have tenant-stream routing: " + routingGroupType.name());
         }

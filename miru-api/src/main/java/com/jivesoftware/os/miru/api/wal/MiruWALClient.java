@@ -22,7 +22,10 @@ public interface MiruWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
         MiruPartitionId partitionId,
         boolean createIfAbsent) throws Exception;
 
-    HostPort[] getTenantStreamRoutingGroup(RoutingGroupType routingGroupType, MiruTenantId tenantId, MiruStreamId streamId) throws Exception;
+    HostPort[] getTenantStreamRoutingGroup(RoutingGroupType routingGroupType,
+        MiruTenantId tenantId,
+        MiruStreamId streamId,
+        boolean createIfAbsent) throws Exception;
 
     enum RoutingGroupType {
         activity,

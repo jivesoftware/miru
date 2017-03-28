@@ -18,8 +18,8 @@ public class ForkingReadTrackingWALReader<C extends MiruCursor<C, S>, S extends 
     }
 
     @Override
-    public HostPort[] getRoutingGroup(MiruTenantId tenantId, MiruStreamId streamId) throws Exception {
-        return routingWAL.getRoutingGroup(tenantId, streamId);
+    public HostPort[] getRoutingGroup(MiruTenantId tenantId, MiruStreamId streamId, boolean createIfAbsent) throws Exception {
+        return routingWAL.getRoutingGroup(tenantId, streamId, createIfAbsent);
     }
 
     @Override
