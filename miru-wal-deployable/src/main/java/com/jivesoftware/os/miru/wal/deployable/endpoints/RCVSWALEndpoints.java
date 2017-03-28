@@ -78,7 +78,26 @@ public class RCVSWALEndpoints {
         try {
             long start = System.currentTimeMillis();
             HostPort[] routingGroup = walDirector.getTenantPartitionRoutingGroup(routingGroupType, new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
-                MiruPartitionId.of(partitionId));
+                MiruPartitionId.of(partitionId), true);
+            stats.ingressed("/routing/tenantPartition/" + routingGroupType.name() + "/" + tenantId, 1, System.currentTimeMillis() - start);
+            return responseHelper.jsonResponse(routingGroup);
+        } catch (Exception x) {
+            log.error("Failed calling getTenantPartitionRoutingGroup({},{},{})", new Object[] { routingGroupType, tenantId, partitionId }, x);
+            return responseHelper.errorResponse("Server error", x);
+        }
+    }
+
+    @GET
+    @Path("/routing/lazyTenantPartition/{type}/{tenantId}/{partitionId}/{createIfAbsent}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getTenantPartitionRoutingGroup(@PathParam("type") RoutingGroupType routingGroupType,
+        @PathParam("tenantId") String tenantId,
+        @PathParam("partitionId") int partitionId,
+        @PathParam("createIfAbsent") boolean createIfAbsent) {
+        try {
+            long start = System.currentTimeMillis();
+            HostPort[] routingGroup = walDirector.getTenantPartitionRoutingGroup(routingGroupType, new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
+                MiruPartitionId.of(partitionId), createIfAbsent);
             stats.ingressed("/routing/tenantPartition/" + routingGroupType.name() + "/" + tenantId, 1, System.currentTimeMillis() - start);
             return responseHelper.jsonResponse(routingGroup);
         } catch (Exception x) {

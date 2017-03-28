@@ -125,7 +125,7 @@ public class AmzaWALTest {
         AmzaActivityWALWriter activityWALWriter = new AmzaActivityWALWriter(amzaWALUtil, 0, mapper);
         AmzaActivityWALReader activityWALReader = new AmzaActivityWALReader(amzaWALUtil, mapper);
 
-        HostPort[] routingGroup = activityWALReader.getRoutingGroup(tenantId, partitionId);
+        HostPort[] routingGroup = activityWALReader.getRoutingGroup(tenantId, partitionId, true);
         assertNotNull(routingGroup);
 
         MiruPartitionedActivityFactory partitionedActivityFactory = new MiruPartitionedActivityFactory();

@@ -119,8 +119,8 @@ public class AmzaActivityWALReader implements MiruActivityWALReader<AmzaCursor, 
     }
 
     @Override
-    public HostPort[] getRoutingGroup(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
-        return amzaWALUtil.getActivityRoutingGroup(tenantId, partitionId, Optional.<PartitionProperties>absent());
+    public HostPort[] getRoutingGroup(MiruTenantId tenantId, MiruPartitionId partitionId, boolean createIfAbsent) throws Exception {
+        return amzaWALUtil.getActivityRoutingGroup(tenantId, partitionId, Optional.absent(), createIfAbsent);
     }
 
     @Override

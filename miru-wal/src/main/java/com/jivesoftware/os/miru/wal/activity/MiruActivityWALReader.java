@@ -17,7 +17,7 @@ import java.util.Set;
 /** @author jonathan */
 public interface MiruActivityWALReader<C extends MiruCursor<C, S>, S extends MiruSipCursor<S>> {
 
-    HostPort[] getRoutingGroup(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception;
+    HostPort[] getRoutingGroup(MiruTenantId tenantId, MiruPartitionId partitionId, boolean createIfAbsent) throws Exception;
 
     C stream(MiruTenantId tenantId,
         MiruPartitionId partitionId,
