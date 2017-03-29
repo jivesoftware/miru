@@ -183,6 +183,53 @@ public class MiruSyncEndpoints {
         }
     }
 
+    @GET
+    @Path("/tenantStatus/{syncspaceName}/{fromTenantId}/{toTenantId}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getTenantStatus(@PathParam("syncspaceName") String syncspaceName,
+        @PathParam("fromTenantId") String fromTenantId,
+        @PathParam("toTenantId") String toTenantId) {
+        try {
+            MiruSyncSender<?, ?> sender = syncSenders.getSender(syncspaceName);
+            Map<String, MiruSyncStatus> map = Maps.newHashMap();
+            if (sender != null) {
+                MiruSyncTenantTuple[] current = new MiruSyncTenantTuple[1];
+                long[] forwardTimestamp = { -1 };
+                boolean[] forwardTaking = { false };
+                long[] reverseTimestamp = { -1 };
+                boolean[] reverseTaking = { false };
+                sender.streamProgress(new MiruTenantId(fromTenantId.getBytes(StandardCharsets.UTF_8)),
+                    new MiruTenantId(toTenantId.getBytes(StandardCharsets.UTF_8)),
+                    (fromTenantId1, toTenantId1, type, partitionId, timestamp, taking) -> {
+                        if (type == ProgressType.forward || type == ProgressType.reverse) {
+                            MiruSyncTenantTuple tuple = new MiruSyncTenantTuple(fromTenantId1, toTenantId1);
+                            if (current[0] != null && !tuple.equals(current[0])) {
+                                map.put(MiruSyncTenantTuple.toKeyString(current[0]),
+                                    new MiruSyncStatus(forwardTimestamp[0], forwardTaking[0], reverseTimestamp[0], reverseTaking[0]));
+                            }
+                            current[0] = tuple;
+                            if (type == ProgressType.forward) {
+                                forwardTimestamp[0] = timestamp;
+                                forwardTaking[0] = taking;
+                            } else {
+                                reverseTimestamp[0] = timestamp;
+                                reverseTaking[0] = taking;
+                            }
+                        }
+                        return true;
+                    });
+                if (current[0] != null) {
+                    map.put(MiruSyncTenantTuple.toKeyString(current[0]),
+                        new MiruSyncStatus(forwardTimestamp[0], forwardTaking[0], reverseTimestamp[0], reverseTaking[0]));
+                }
+            }
+            return Response.ok(map).build();
+        } catch (Exception e) {
+            LOG.error("Failed to getStatus.", e);
+            return Response.serverError().build();
+        }
+    }
+
     @POST
     @Path("/add/{syncspaceName}/{fromTenantId}/{toTenantId}")
     @Consumes(MediaType.APPLICATION_JSON)
