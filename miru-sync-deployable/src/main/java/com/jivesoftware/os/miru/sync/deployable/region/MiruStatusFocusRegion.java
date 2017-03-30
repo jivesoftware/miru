@@ -63,7 +63,7 @@ public class MiruStatusFocusRegion implements MiruRegion<MiruStatusRegionInput> 
                             .put("partitionId", String.valueOf(partitionId))
                             .put("time", dateFormat.format(new Date(timestamp)))
                             .put("taking", taking)
-                            .put("cursor", mapper.writeValueAsString(cursor))
+                            .put("cursor", cursor == null ? "-" : mapper.writeValueAsString(cursor))
                             .build());
                         return true;
                     });

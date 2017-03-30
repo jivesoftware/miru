@@ -415,7 +415,6 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         MiruActivityWALStatus status,
         boolean taking) throws Exception {
 
-        C cursor = getTenantPartitionCursor(tenantTuple.from, tenantTuple.to, partitionId);
         if (!isElected(stripe)) {
             return 0;
         }
@@ -441,6 +440,13 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
         String readableFromTo = tenantTuple.from.toString() + "/" + tenantTuple.to.toString();
         String statsBytes = "sender/sync/" + readableFromTo + "/bytes";
         String statsCount = "sender/sync/" + readableFromTo + "/count";
+
+        C cursor = getTenantPartitionCursor(tenantTuple.from, tenantTuple.to, partitionId);
+        if (cursor == null) {
+            toSyncClient.writeActivity(tenantTuple.to, partitionId, Collections.singletonList(
+                partitionedActivityFactory.begin(-1, partitionId, tenantTuple.to, 0)));
+            cursor = defaultCursor;
+        }
 
         boolean took = false;
         int synced = 0;
@@ -473,7 +479,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
                         && (tenantConfig.startTimestampMillis == -1 || entry.activity.clockTimestamp > tenantConfig.startTimestampMillis)
                         && (tenantConfig.stopTimestampMillis == -1 || entry.activity.clockTimestamp < tenantConfig.stopTimestampMillis)) {
                         activityTypes++;
-                        // rough estimate of index depth
+                        //TODO rough estimate of index depth, wildly inaccurate if we skip most of a partition
                         lastIndex = Math.max(lastIndex, numWriters * entry.activity.index);
                         // copy to tenantId with time shift, and assign fake writerId
                         MiruActivity fromActivity = entry.activity.activity.get();
@@ -521,7 +527,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
 
             // close our fake writerId
             toSyncClient.writeActivity(tenantTuple.to, partitionId, Collections.singletonList(
-                partitionedActivityFactory.end(-1, partitionId, tenantTuple.from, lastIndex)));
+                partitionedActivityFactory.end(-1, partitionId, tenantTuple.to, lastIndex)));
             advanceTenantProgress(tenantTuple, partitionId, type);
         } else {
             TenantTuplePartition tenantTuplePartition = new TenantTuplePartition(tenantTuple, partitionId);
@@ -643,7 +649,7 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
             abandonLeaderSolutionAfterNMillis,
             abandonSolutionAfterNMillis,
             Optional.empty());
-        return result[0] != null ? (C) result[0] : defaultCursor;
+        return (C) result[0];
     }
 
     private void saveTenantPartitionCursor(MiruSyncTenantTuple tenantTuple, MiruPartitionId partitionId, C cursor) throws Exception {
