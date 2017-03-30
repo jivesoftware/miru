@@ -59,6 +59,7 @@ import com.jivesoftware.os.routing.bird.http.client.HttpClient;
 import com.jivesoftware.os.routing.bird.http.client.HttpDeliveryClientHealthProvider;
 import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelperUtils;
 import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
+import com.jivesoftware.os.routing.bird.http.client.RoundRobinStrategy;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.http.client.TenantRoutingHttpClientInitializer;
 import com.jivesoftware.os.routing.bird.server.util.Resource;
@@ -299,7 +300,7 @@ public class MiruCatwalkMain {
             ExecutorService modelUpdaters = Executors.newFixedThreadPool(numProcs, new ThreadFactoryBuilder().setNameFormat("modelUpdaters-%d").build());
             ExecutorService readRepairers = Executors.newFixedThreadPool(numProcs, new ThreadFactoryBuilder().setNameFormat("readRepairers-%d").build());
 
-            MiruTenantQueryRouting tenantQueryRouting = new MiruTenantQueryRouting();
+            MiruTenantQueryRouting tenantQueryRouting = new MiruTenantQueryRouting(new RoundRobinStrategy()); // TODO tail at scale?
 
             CatwalkModelQueue catwalkModelQueue = new CatwalkModelQueue(amzaLifecycle.amzaService,
                 embeddedClientProvider,

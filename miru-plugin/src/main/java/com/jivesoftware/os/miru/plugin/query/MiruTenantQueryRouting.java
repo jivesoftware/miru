@@ -10,7 +10,6 @@ import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolution;
 import com.jivesoftware.os.routing.bird.http.client.HttpResponse;
 import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
-import com.jivesoftware.os.routing.bird.http.client.RoundRobinStrategy;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.shared.ClientCall;
 import com.jivesoftware.os.routing.bird.shared.ClientHealth;
@@ -21,7 +20,6 @@ import com.jivesoftware.os.routing.bird.shared.IndexedClientStrategy;
 import com.jivesoftware.os.routing.bird.shared.InstanceDescriptor;
 import com.jivesoftware.os.routing.bird.shared.NextClientStrategy;
 import com.jivesoftware.os.routing.bird.shared.ReturnFirstNonFailure;
-
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -31,8 +29,13 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class MiruTenantQueryRouting {
 
-    private final RoundRobinStrategy robinStrategy = new RoundRobinStrategy();
+    private final NextClientStrategy nextClientStrategy;
     private final Map<MiruTenantId, NextClientStrategy> strategyCache = Maps.newConcurrentMap();
+
+
+    public MiruTenantQueryRouting(NextClientStrategy nextClientStrategy) {
+        this.nextClientStrategy = nextClientStrategy;
+    }
 
     public <Q, A, T> MiruResponse<A> query(T routingTenant,
         String family,
@@ -57,7 +60,7 @@ public class MiruTenantQueryRouting {
     }
 
     private NextClientStrategy getTenantStrategy(MiruTenantId tenantId) {
-        return strategyCache.getOrDefault(tenantId, robinStrategy);
+        return strategyCache.getOrDefault(tenantId, nextClientStrategy);
     }
 
     private void recordTenantStrategy(MiruTenantId tenantId, MiruResponse<?> response) {
