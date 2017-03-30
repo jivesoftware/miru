@@ -183,10 +183,10 @@ public class MiruSyncSenderTest {
         Assert.assertEquals(progressIds[forward.index], initialId);
         Assert.assertEquals(reverseSyncedActivity[0], largestPartitionId.get(),
             "Should reverse sync 1 activity each for partitions less than " + largestPartitionId.get());
-        Assert.assertEquals(reverseSyncedBoundary[0], 2 * largestPartitionId.get(),
-            "Should reverse sync 1 boundary each for partitions less than " + largestPartitionId.get());
+        Assert.assertEquals(reverseSyncedBoundary[0], 3 * largestPartitionId.get(),
+            "Should reverse sync 2 boundaries each for partitions less than " + largestPartitionId.get());
         Assert.assertEquals(forwardSyncedActivity[0], 0, "Should not forward sync any activity yet");
-        Assert.assertEquals(forwardSyncedBoundary[0], 0, "Should not forward sync any boundary yet");
+        Assert.assertEquals(forwardSyncedBoundary[0], 1, "Should forward sync 1 boundary");
 
         reverseSyncedActivity[0] = 0;
         reverseSyncedBoundary[0] = 0;
