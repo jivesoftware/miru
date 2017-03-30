@@ -2,7 +2,7 @@ package com.jivesoftware.os.miru.stumptown.deployable.storage;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
-import com.jivesoftware.os.amza.api.BAInterner;
+import com.jivesoftware.os.amza.api.AmzaInterner;
 import com.jivesoftware.os.amza.api.PartitionClient;
 import com.jivesoftware.os.amza.api.filer.UIO;
 import com.jivesoftware.os.amza.api.partition.Consistency;
@@ -19,8 +19,8 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.http.client.HttpClient;
-import com.jivesoftware.os.routing.bird.shared.HttpClientException;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
+import com.jivesoftware.os.routing.bird.shared.HttpClientException;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Collections;
@@ -51,13 +51,13 @@ public class MiruStumptownPayloadsAmza implements MiruStumptownPayloadStorage {
         long awaitLeaderElectionForNMillis) {
 
         this.mapper = mapper;
-        BAInterner interner = new BAInterner();
+        AmzaInterner interner = new AmzaInterner();
 
         payload = new PartitionName(false, "p".getBytes(StandardCharsets.UTF_8), (nameSpace + "-stumptown").getBytes(StandardCharsets.UTF_8));
 
         this.clientProvider = new AmzaClientProvider<>(
-            new HttpPartitionClientFactory(interner),
-            new HttpPartitionHostsProvider(interner, httpClient, mapper),
+            new HttpPartitionClientFactory(),
+            new HttpPartitionHostsProvider(httpClient, mapper),
             new RingHostHttpClientProvider(httpClient),
             Executors.newCachedThreadPool(), //TODO expose to conf?
             awaitLeaderElectionForNMillis,

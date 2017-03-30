@@ -21,7 +21,6 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.jivesoftware.os.amza.api.BAInterner;
 import com.jivesoftware.os.amza.api.partition.Consistency;
 import com.jivesoftware.os.amza.api.partition.Durability;
 import com.jivesoftware.os.amza.api.partition.PartitionProperties;
@@ -231,10 +230,9 @@ public class MiruSyncMain {
                 .socketTimeoutInMillis(10_000)
                 .build(); // TODO expose to conf
 
-            BAInterner interner = new BAInterner();
             AmzaClientProvider<HttpClient, HttpClientException> amzaClientProvider = new AmzaClientProvider<>(
-                new HttpPartitionClientFactory(interner),
-                new HttpPartitionHostsProvider(interner, amzaClient, mapper),
+                new HttpPartitionClientFactory(),
+                new HttpPartitionHostsProvider(amzaClient, mapper),
                 new RingHostHttpClientProvider(amzaClient),
                 Executors.newFixedThreadPool(syncConfig.getAmzaCallerThreadPoolSize()),
                 syncConfig.getAmzaAwaitLeaderElectionForNMillis(),
@@ -277,8 +275,8 @@ public class MiruSyncMain {
                 syncConfig.getUseClientSolutionLog());
 
             AmzaClientProvider clientProvider = new AmzaClientProvider<>(
-                new HttpPartitionClientFactory(interner),
-                new HttpPartitionHostsProvider(interner, amzaClient, mapper),
+                new HttpPartitionClientFactory(),
+                new HttpPartitionHostsProvider(amzaClient, mapper),
                 new RingHostHttpClientProvider(amzaClient),
                 Executors.newCachedThreadPool(), //TODO expose to conf?
                 30_000L, // TODO config
