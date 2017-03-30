@@ -19,7 +19,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.jivesoftware.os.amza.api.BAInterner;
 import com.jivesoftware.os.amza.client.http.AmzaClientProvider;
 import com.jivesoftware.os.amza.client.http.HttpPartitionClientFactory;
 import com.jivesoftware.os.amza.client.http.HttpPartitionHostsProvider;
@@ -57,13 +56,13 @@ import com.jivesoftware.os.routing.bird.health.checkers.SickThreads;
 import com.jivesoftware.os.routing.bird.health.checkers.SickThreadsHealthCheck;
 import com.jivesoftware.os.routing.bird.health.checkers.SystemCpuHealthChecker;
 import com.jivesoftware.os.routing.bird.http.client.HttpClient;
-import com.jivesoftware.os.routing.bird.shared.HttpClientException;
 import com.jivesoftware.os.routing.bird.http.client.HttpDeliveryClientHealthProvider;
 import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelperUtils;
 import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.http.client.TenantRoutingHttpClientInitializer;
 import com.jivesoftware.os.routing.bird.server.util.Resource;
+import com.jivesoftware.os.routing.bird.shared.HttpClientException;
 import com.jivesoftware.os.routing.bird.shared.TenantRoutingProvider;
 import java.io.File;
 import java.util.Arrays;
@@ -279,10 +278,9 @@ public class MiruCatwalkMain {
                 rowsChanged -> {
                 });
 
-            BAInterner baInterner = new BAInterner();
             AmzaClientProvider<HttpClient, HttpClientException> amzaClientProvider = new AmzaClientProvider<>(
-                new HttpPartitionClientFactory(baInterner),
-                new HttpPartitionHostsProvider(baInterner, amzaClient, mapper),
+                new HttpPartitionClientFactory(),
+                new HttpPartitionHostsProvider(amzaClient, mapper),
                 new RingHostHttpClientProvider(amzaClient),
                 Executors.newFixedThreadPool(amzaCatwalkConfig.getAmzaCallerThreadPoolSize()), //TODO expose to conf
                 amzaCatwalkConfig.getAmzaAwaitLeaderElectionForNMillis(),

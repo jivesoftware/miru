@@ -49,11 +49,10 @@ public class WikiMiruGramsAmza {
 
         this.nameSpace = nameSpace;
         this.mapper = mapper;
-        BAInterner interner = new BAInterner();
 
         this.clientProvider = new AmzaClientProvider<>(
-            new HttpPartitionClientFactory(interner),
-            new HttpPartitionHostsProvider(interner, httpClient, mapper),
+            new HttpPartitionClientFactory(),
+            new HttpPartitionHostsProvider(httpClient, mapper),
             new RingHostHttpClientProvider(httpClient),
             Executors.newCachedThreadPool(), //TODO expose to conf?
             awaitLeaderElectionForNMillis,

@@ -1,7 +1,7 @@
 package com.jivesoftware.os.miru.amza;
 
 import com.google.common.collect.Sets;
-import com.jivesoftware.os.amza.api.BAInterner;
+import com.jivesoftware.os.amza.api.AmzaInterner;
 import com.jivesoftware.os.amza.api.ring.RingMember;
 import com.jivesoftware.os.amza.api.scan.RowChanges;
 import com.jivesoftware.os.amza.embed.EmbedAmzaServiceInitializer;
@@ -40,7 +40,7 @@ public class MiruAmzaServiceInitializer {
         JiveEpochTimestampProvider timestampProvider = new JiveEpochTimestampProvider();
 
         AmzaStats amzaStats = new AmzaStats();
-        BAInterner baInterner = new BAInterner();
+        AmzaInterner interner = new AmzaInterner();
 
         AmzaServiceConfig amzaServiceConfig = new AmzaServiceConfig();
         amzaServiceConfig.systemRingSize = systemRingSize;
@@ -86,7 +86,7 @@ public class MiruAmzaServiceInitializer {
             amzaServiceConfig,
             amzaLabConfig,
             amzaStats,
-            baInterner,
+            interner,
             idPacker,
             timestampProvider,
             blacklistRingMembers,
