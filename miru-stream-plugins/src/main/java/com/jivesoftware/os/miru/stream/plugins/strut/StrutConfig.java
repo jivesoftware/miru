@@ -64,4 +64,7 @@ public interface StrutConfig extends Config {
 
     @DoubleDefault(1d)
     double getScoresHashIndexLoadFactor();
+
+    @BooleanDefault(false)
+    boolean getParallelSolverEnabled();
 }

@@ -9,6 +9,12 @@ import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
  */
 public class StrutAnswerEvaluator implements MiruAnswerEvaluator<StrutAnswer> {
 
+    private final boolean parallelSolverEnabled;
+
+    public StrutAnswerEvaluator(boolean parallelSolverEnabled) {
+        this.parallelSolverEnabled = parallelSolverEnabled;
+    }
+
     @Override
     public boolean isDone(StrutAnswer answer, MiruSolutionLog solutionLog) {
         solutionLog.log(MiruSolutionLogLevel.INFO, "Results exhausted = {}", answer.resultsExhausted);
@@ -22,6 +28,6 @@ public class StrutAnswerEvaluator implements MiruAnswerEvaluator<StrutAnswer> {
 
     @Override
     public boolean useParallelSolver() {
-        return true;
+        return parallelSolverEnabled;
     }
 }
