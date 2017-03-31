@@ -10,6 +10,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolution;
 import com.jivesoftware.os.routing.bird.http.client.HttpResponse;
 import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
+import com.jivesoftware.os.routing.bird.http.client.RoundRobinStrategy;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.shared.ClientCall;
 import com.jivesoftware.os.routing.bird.shared.ClientHealth;
@@ -60,7 +61,11 @@ public class MiruTenantQueryRouting {
     }
 
     private NextClientStrategy getTenantStrategy(MiruTenantId tenantId) {
-        return strategyCache.getOrDefault(tenantId, nextClientStrategy);
+        if (nextClientStrategy instanceof RoundRobinStrategy) { // Completely lame will remove once tailAtScale strategy proves to be stable.
+            return strategyCache.getOrDefault(tenantId, nextClientStrategy);
+        } else {
+            return nextClientStrategy;
+        }
     }
 
     private void recordTenantStrategy(MiruTenantId tenantId, MiruResponse<?> response) {
