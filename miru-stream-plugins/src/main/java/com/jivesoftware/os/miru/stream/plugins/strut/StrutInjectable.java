@@ -30,6 +30,7 @@ public class StrutInjectable {
     private final int gatherBatchSize;
     private final boolean gatherParallel;
     private final int scoreConcurrencyLevel;
+    private final boolean parallelSolverEnabled;
     private final ExecutorService gatherExecutorService;
 
     public StrutInjectable(MiruProvider<? extends Miru> provider,
@@ -40,6 +41,7 @@ public class StrutInjectable {
         int gatherBatchSize,
         boolean gatherParallel,
         int scoreConcurrencyLevel,
+        boolean parallelSolverEnabled,
         ExecutorService gatherExecutorService) {
         this.provider = provider;
         this.modelScorer = modelScorer;
@@ -49,6 +51,7 @@ public class StrutInjectable {
         this.gatherBatchSize = gatherBatchSize;
         this.gatherParallel = gatherParallel;
         this.scoreConcurrencyLevel = scoreConcurrencyLevel;
+        this.parallelSolverEnabled = parallelSolverEnabled;
         this.gatherExecutorService = gatherExecutorService;
     }
 
@@ -70,7 +73,7 @@ public class StrutInjectable {
                         gatherParallel,
                         scoreConcurrencyLevel,
                         gatherExecutorService)),
-                new StrutAnswerEvaluator(),
+                new StrutAnswerEvaluator(parallelSolverEnabled),
                 new StrutAnswerMerger(request.query.desiredNumberOfResults),
                 StrutAnswer.EMPTY_RESULTS,
                 miru.getDefaultExecutor(),
