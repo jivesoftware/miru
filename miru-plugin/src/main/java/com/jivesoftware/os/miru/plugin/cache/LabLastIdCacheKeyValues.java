@@ -64,7 +64,7 @@ public class LabLastIdCacheKeyValues implements LastIdCacheKeyValues {
         return true;
     }
 
-    @Override
+    /*@Override
     public boolean rangeScan(byte[] cacheId, byte[] fromInclusive, byte[] toExclusive, LastIdKeyValueStream stream) throws Exception {
         Preconditions.checkArgument(cacheId.length <= Byte.MAX_VALUE, "Max cacheId length is " + Byte.MAX_VALUE);
 
@@ -90,7 +90,7 @@ public class LabLastIdCacheKeyValues implements LastIdCacheKeyValues {
                 return stream.stream(cacheKey, payload == null ? null : payload.asByteBuffer(), (int) timestamp);
             }
         }, true);
-    }
+    }*/
 
     @Override
     public boolean put(byte[] cacheId,

@@ -54,6 +54,16 @@ public class RoaringInspection {
         return extract;
     }
 
+    public static void optimize(RoaringBitmap bitmap, int[] ukeys) {
+        RoaringArray array = bitmap.highLowContainer;
+        short[] keys = intToShortKeys(ukeys);
+        for (int i = 0; i < keys.length; i++) {
+            int index = array.getIndex(keys[i]);
+            Container container = array.getContainerAtIndex(index);
+            array.setContainerAtIndex(index, container.runOptimize());
+        }
+    }
+
     public static int lastSetBit(RoaringBitmap bitmap) {
         int pos = bitmap.highLowContainer.size() - 1;
         int lastSetBit = -1;

@@ -625,6 +625,11 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
     }
 
     @Override
+    public void optimize(ImmutableRoaringBitmap index, int[] keys) {
+        throw new UnsupportedOperationException("Wahhh");
+    }
+
+    @Override
     public int lastIdAtomized(DataInput dataInputs, int key) throws IOException {
         throw new UnsupportedOperationException("Wahhh");
     }

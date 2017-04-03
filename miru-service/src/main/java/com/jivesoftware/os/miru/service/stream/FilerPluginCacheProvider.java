@@ -79,11 +79,6 @@ public class FilerPluginCacheProvider implements MiruPluginCacheProvider {
             }
 
             @Override
-            public boolean rangeScan(byte[] cacheId, byte[] fromInclusive, byte[] toExclusive, LastIdKeyValueStream stream) throws Exception {
-                return true;
-            }
-
-            @Override
             public boolean put(byte[] cacheId,
                 boolean commitOnUpdate,
                 boolean fsyncOnCommit,

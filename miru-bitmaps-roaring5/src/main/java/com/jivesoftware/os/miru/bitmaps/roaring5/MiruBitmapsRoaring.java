@@ -629,6 +629,11 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
     }
 
     @Override
+    public void optimize(RoaringBitmap index, int[] keys) {
+        //TODO RoaringInspection.optimize(index, keys);
+    }
+
+    @Override
     public int lastIdAtomized(DataInput dataInput, int key) throws IOException {
         return RoaringInspection.lastSetBit(key, dataInput);
     }
