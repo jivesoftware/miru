@@ -170,6 +170,8 @@ public interface MiruBitmaps<BM extends IBM, IBM> {
 
     boolean deserializeAtomized(BitmapAndLastId<BM> container, StreamAtoms streamAtoms) throws IOException;
 
+    void optimize(IBM index, int[] keys);
+
     interface StreamAtoms {
         boolean stream(AtomStream atomStream) throws Exception;
     }

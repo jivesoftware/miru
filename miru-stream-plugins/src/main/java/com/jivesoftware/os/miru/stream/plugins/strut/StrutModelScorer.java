@@ -215,12 +215,33 @@ public class StrutModelScorer {
         for (int i = 0; i < length; i++) {
             for (int n = 0; n < numeratorsCount; n++) {
                 scores[i][n] /= sumOfScalars;
+                for (int h = 0; h < HISTO.length; h++) {
+                    if (scores[i][n] <= HISTO[h]) {
+                        LOG.inc("score>numerator>" + n + ">histo>" + h);
+                        break;
+                    }
+                }
             }
             if (!scoredStream.score(offset + i, scores[i], lastIds[i])) {
                 return;
             }
         }
     }
+
+    private static float[] HISTO = new float[] {
+        1f / 32 / 100,
+        1f / 16 / 100,
+        1f / 8 / 100,
+        1f / 4 / 100,
+        1f / 2 / 100,
+        1f / 100,
+        2f / 100,
+        4f / 100,
+        16f / 100,
+        32f / 100,
+        64f / 100,
+        100f / 100
+    };
 
     static void commit(String modelId,
         LastIdCacheKeyValues termScoreCache,

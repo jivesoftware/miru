@@ -52,8 +52,6 @@ public interface MiruPluginCacheProvider {
 
         boolean get(byte[] cacheId, byte[][] keys, LastIdIndexKeyValueStream stream, StackBuffer stackBuffer) throws Exception;
 
-        boolean rangeScan(byte[] cacheId, byte[] fromInclusive, byte[] toExclusive, LastIdKeyValueStream stream) throws Exception;
-
         boolean put(byte[] cacheId,
             boolean commitOnUpdate,
             boolean fsyncOnCommit,

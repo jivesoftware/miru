@@ -333,6 +333,7 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
     }
 
     private void setIndex(int[] keys, IBM index) throws Exception {
+        bitmaps.optimize(index, keys);
         byte[][] bytes = keyBytes(keys, index);
 
         long timestamp = System.currentTimeMillis();
