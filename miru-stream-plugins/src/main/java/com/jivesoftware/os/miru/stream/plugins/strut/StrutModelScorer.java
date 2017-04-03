@@ -217,7 +217,7 @@ public class StrutModelScorer {
                 scores[i][n] /= sumOfScalars;
                 for (int h = 0; h < HISTO.length; h++) {
                     if (scores[i][n] <= HISTO[h]) {
-                        LOG.inc("score>numerator>" + n + ">histo>" + h);
+                        LOG.inc("score>numerator>" + n + ">histo>" + SHITSO[h]);
                         break;
                     }
                 }
@@ -229,6 +229,8 @@ public class StrutModelScorer {
     }
 
     private static float[] HISTO = new float[] {
+        1f / 128 / 100,
+        1f / 64 / 100,
         1f / 32 / 100,
         1f / 16 / 100,
         1f / 8 / 100,
@@ -237,11 +239,20 @@ public class StrutModelScorer {
         1f / 100,
         2f / 100,
         4f / 100,
+        8f / 100,
         16f / 100,
         32f / 100,
         64f / 100,
         100f / 100
     };
+
+    private static String[] SHITSO;
+    static {
+        SHITSO = new String[HISTO.length];
+        for (int i = 0; i < HISTO.length; i++) {
+            SHITSO[i] = String.valueOf(HISTO[i] * 100f);
+        }
+    }
 
     static void commit(String modelId,
         LastIdCacheKeyValues termScoreCache,
