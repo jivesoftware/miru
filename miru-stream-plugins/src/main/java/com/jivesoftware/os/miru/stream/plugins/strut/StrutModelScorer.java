@@ -217,7 +217,7 @@ public class StrutModelScorer {
                 scores[i][n] /= sumOfScalars;
                 for (int h = 0; h < HISTO.length; h++) {
                     if (scores[i][n] <= HISTO[h]) {
-                        LOG.inc("score>numerator>" + n + ">histo>" + SHITSO[h]);
+                        LOG.inc("score>numerator>" + n + ">histo>" + h + ">" + SHITSO[h]);
                         break;
                     }
                 }
@@ -229,6 +229,8 @@ public class StrutModelScorer {
     }
 
     private static float[] HISTO = new float[] {
+        0f,
+        1f / 256 / 100,
         1f / 128 / 100,
         1f / 64 / 100,
         1f / 32 / 100,
