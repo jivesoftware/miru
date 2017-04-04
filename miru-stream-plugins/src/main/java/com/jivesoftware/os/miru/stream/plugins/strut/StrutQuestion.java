@@ -4,6 +4,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MinMaxPriorityQueue;
+import com.google.common.collect.Sets;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruHost;
@@ -24,8 +25,6 @@ import com.jivesoftware.os.miru.plugin.backfill.MiruJustInTimeBackfillerizer;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider;
-import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.CacheKeyBitmaps;
-import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.TimestampedCacheKeyValues;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
@@ -48,6 +47,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -177,26 +177,25 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         ands.add(bitmaps.buildIndexMask(activityIndexLastId, context.getRemovalIndex(), container, stackBuffer));
 
         bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
-        BM eligible = bitmaps.and(ands);
+        BM candidates = bitmaps.and(ands);
 
         int pivotFieldId = schema.getFieldId(request.query.constraintField);
 
         MiruFieldIndex<BM, IBM> primaryIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
 
-        MinMaxPriorityQueue<Scored> scored = MinMaxPriorityQueue
-            .expectedSize(request.query.desiredNumberOfResults)
-            .maximumSize(request.query.desiredNumberOfResults)
-            .create();
-
         String[] modelIds = new String[request.query.modelScalars.size()];
         MiruPluginCacheProvider.LastIdCacheKeyValues[] termScoresCaches = new MiruPluginCacheProvider.LastIdCacheKeyValues[request.query.modelScalars.size()];
         float[] termScoresCacheScalars = new float[request.query.modelScalars.size()];
+        List<IBM> masks = Lists.newArrayList();
         for (int i = 0; i < request.query.modelScalars.size(); i++) {
             StrutModelScalar modelScalar = request.query.modelScalars.get(i);
             modelIds[i] = modelScalar.modelId;
             termScoresCaches[i] = modelScorer.getTermScoreCache(context, modelScalar.catwalkId);
             termScoresCacheScalars[i] = modelScalar.scalar;
+            masks.add(modelScorer.nilBitmap(context, modelScalar.catwalkId, modelScalar.modelId, stackBuffer));
         }
+        IBM nilMask = masks.size() == 1 ? masks.get(0) : bitmaps.and(masks);
+        BM eligible = bitmaps.andNot(candidates, nilMask);
 
         AtomicInteger modelTotalPartitionCount = new AtomicInteger();
 
@@ -253,136 +252,88 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         long totalTimeFetchingScores = 0;
         long totalTimeRescores = 0;
 
-        List<MiruTermId> asyncRescore = Lists.newArrayList();
         float[] maxScore = { 0f };
-        if (request.query.usePartitionModelCache) {
-            long fetchScoresStart = System.currentTimeMillis();
+        long fetchScoresStart = System.currentTimeMillis();
 
-            int[] scorableToLastIds = new int[termIdLastIdCounts.size()];
-            MiruTermId[] nullableMiruTermIds = new MiruTermId[termIdLastIdCounts.size()];
-            MiruTermId[] miruTermIds = new MiruTermId[termIdLastIdCounts.size()];
+        int[] scorableToLastIds = new int[termIdLastIdCounts.size()];
+        MiruTermId[] nullableMiruTermIds = new MiruTermId[termIdLastIdCounts.size()];
+        MiruTermId[] miruTermIds = new MiruTermId[termIdLastIdCounts.size()];
 
-            Arrays.fill(miruTermIds, null);
-            for (int i = 0; i < termIdLastIdCounts.size(); i++) {
-                miruTermIds[i] = termIdLastIdCounts.get(i).termId;
-            }
-
-            System.arraycopy(miruTermIds, 0, nullableMiruTermIds, 0, termIdLastIdCounts.size());
-            Arrays.fill(scorableToLastIds, -1);
-
-            long fetchLastIdsStart = System.currentTimeMillis();
-            primaryIndex.multiGetLastIds("strut", pivotFieldId, nullableMiruTermIds, scorableToLastIds, stackBuffer);
-            totalTimeFetchingLastId += (System.currentTimeMillis() - fetchLastIdsStart);
-
-            @SuppressWarnings("unchecked")
-            MinMaxPriorityQueue<Scored>[] parallelScored = new MinMaxPriorityQueue[scoreConcurrencyLevel];
-            @SuppressWarnings("unchecked")
-            List<MiruTermId>[] parallelAsyncRescore = new List[scoreConcurrencyLevel];
-            for (int i = 0; i < parallelScored.length; i++) {
-                parallelScored[i] = MinMaxPriorityQueue
-                    .expectedSize(request.query.desiredNumberOfResults)
-                    .maximumSize(request.query.desiredNumberOfResults)
-                    .create();
-                parallelAsyncRescore[i] = Lists.newArrayList();
-            }
-
-            StrutModelScorer.scoreParallel(
-                modelIds,
-                request.query.numeratorScalars.length,
-                miruTermIds,
-                scoreConcurrencyLevel,
-                termScoresCaches,
-                termScoresCacheScalars,
-                (bucket, termIndex, scores, scoredToLastId) -> {
-                    boolean needsRescore = scoredToLastId < scorableToLastIds[termIndex];
-                    if (needsRescore) {
-                        LOG.inc("strut>scores>rescoreId");
-                    }
-                    for (int i = 0; i < scores.length; i++) {
-                        boolean isNaN = Float.isNaN(scores[i]);
-                        if (!needsRescore && isNaN) {
-                            LOG.inc("strut>scores>rescoreMissing");
-                        }
-                        needsRescore |= isNaN;
-                        if (!isNaN) {
-                            maxScore[0] = Math.max(maxScore[0], scores[i]);
-                        }
-                    }
-                    TermIdLastIdCount termIdLastIdCount = termIdLastIdCounts.get(termIndex);
-                    if (needsRescore) {
-                        parallelAsyncRescore[bucket].add(termIdLastIdCount.termId);
-                    }
-                    float scaledScore = Strut.scaleScore(scores, request.query.numeratorScalars, request.query.numeratorStrategy);
-                    parallelScored[bucket].add(new Scored(termIdLastIdCount.lastId,
-                        miruTermIds[termIndex],
-                        scoredToLastId,
-                        scaledScore,
-                        scores,
-                        null,
-                        termIdLastIdCount.count));
-                    return true;
-                },
-                gatherExecutorService,
-                stackBuffer);
-
-            for (int i = 0; i < scoreConcurrencyLevel; i++) {
-                scored.addAll(parallelScored[i]);
-                asyncRescore.addAll(parallelAsyncRescore[i]);
-            }
-
-            totalTimeFetchingScores += (System.currentTimeMillis() - fetchScoresStart);
+        Arrays.fill(miruTermIds, null);
+        for (int i = 0; i < termIdLastIdCounts.size(); i++) {
+            miruTermIds[i] = termIdLastIdCounts.get(i).termId;
         }
 
-        if (!request.query.usePartitionModelCache || maxScore[0] == 0f && allowImmediateRescore) {
-            // TODO FIX for now this takes the first ModelScalar
-            StrutModelScalar strutModelScalar = request.query.modelScalars.get(0);
+        System.arraycopy(miruTermIds, 0, nullableMiruTermIds, 0, termIdLastIdCounts.size());
+        Arrays.fill(scorableToLastIds, -1);
 
-            LOG.info("Performing immediate rescore for coord:{} catwalkId:{} modelId:{} pivotFieldId:{}",
-                handle.getCoord(), strutModelScalar.catwalkId, strutModelScalar.modelId, pivotFieldId);
-            LOG.inc("strut>rescore>immediate");
+        long fetchLastIdsStart = System.currentTimeMillis();
+        primaryIndex.multiGetLastIds("strut", pivotFieldId, nullableMiruTermIds, scorableToLastIds, stackBuffer);
+        totalTimeFetchingLastId += (System.currentTimeMillis() - fetchLastIdsStart);
 
-            scored.clear();
-            asyncRescore.clear();
-
-            TimestampedCacheKeyValues termFeaturesCache = modelScorer.getTermFeatureCache(context, strutModelScalar.catwalkId);
-            CacheKeyBitmaps<BM, IBM> nilTermCache = modelScorer.getNilTermCache(context, strutModelScalar.catwalkId);
-
-            BM[] constrainFeature = modelScorer.buildConstrainFeatures(bitmaps,
-                context,
-                strutModelScalar.catwalkQuery,
-                activityIndexLastId,
-                stackBuffer,
-                solutionLog);
-
-            long rescoreStart = System.currentTimeMillis();
-            for (List<TermIdLastIdCount> batch : Lists.partition(termIdLastIdCounts, request.query.batchSize)) {
-                List<Scored> rescored = modelScorer.rescore(strutModelScalar.catwalkId,
-                    strutModelScalar.modelId,
-                    strutModelScalar.catwalkQuery,
-                    request.query.featureScalars,
-                    request.query.featureStrategy,
-                    request.query.includeFeatures,
-                    request.query.numeratorScalars,
-                    request.query.numeratorStrategy,
-                    handle,
-                    batch,
-                    pivotFieldId,
-                    constrainFeature,
-                    termScoresCaches[0],
-                    nilTermCache,
-                    termFeaturesCache,
-                    modelTotalPartitionCount,
-                    solutionLog);
-                scored.addAll(rescored);
-            }
-            totalTimeRescores += (System.currentTimeMillis() - rescoreStart);
-
-        } else if (!asyncRescore.isEmpty()) {
-            LOG.inc("strut>rescore>async");
-            modelScorer.enqueue(handle.getCoord(), request.query, pivotFieldId, asyncRescore);
-        } else {
-            LOG.inc("strut>rescore>none");
+        @SuppressWarnings("unchecked")
+        MinMaxPriorityQueue<Scored>[] parallelScored = new MinMaxPriorityQueue[scoreConcurrencyLevel];
+        @SuppressWarnings("unchecked")
+        List<MiruTermId>[] parallelAsyncRescore = new List[scoreConcurrencyLevel];
+        for (int i = 0; i < parallelScored.length; i++) {
+            parallelScored[i] = MinMaxPriorityQueue
+                .expectedSize(request.query.desiredNumberOfResults)
+                .maximumSize(request.query.desiredNumberOfResults)
+                .create();
+            parallelAsyncRescore[i] = Lists.newArrayList();
         }
+
+        StrutModelScorer.scoreParallel(
+            modelIds,
+            request.query.numeratorScalars.length,
+            miruTermIds,
+            scoreConcurrencyLevel,
+            termScoresCaches,
+            termScoresCacheScalars,
+            (bucket, termIndex, scores, scoredToLastId) -> {
+                boolean needsRescore = scoredToLastId < scorableToLastIds[termIndex];
+                if (needsRescore) {
+                    LOG.inc("strut>scores>rescoreId");
+                }
+                for (int i = 0; i < scores.length; i++) {
+                    boolean isNaN = Float.isNaN(scores[i]);
+                    if (!needsRescore && isNaN) {
+                        LOG.inc("strut>scores>rescoreMissing");
+                    }
+                    needsRescore |= isNaN;
+                    if (!isNaN) {
+                        maxScore[0] = Math.max(maxScore[0], scores[i]);
+                    }
+                }
+                TermIdLastIdCount termIdLastIdCount = termIdLastIdCounts.get(termIndex);
+                if (needsRescore) {
+                    parallelAsyncRescore[bucket].add(termIdLastIdCount.termId);
+                }
+                float scaledScore = Strut.scaleScore(scores, request.query.numeratorScalars, request.query.numeratorStrategy);
+                parallelScored[bucket].add(new Scored(termIdLastIdCount.lastId,
+                    miruTermIds[termIndex],
+                    scoredToLastId,
+                    scaledScore,
+                    scores,
+                    null,
+                    termIdLastIdCount.count));
+                return true;
+            },
+            gatherExecutorService,
+            stackBuffer);
+
+        MinMaxPriorityQueue<Scored> scored = MinMaxPriorityQueue
+            .expectedSize(request.query.desiredNumberOfResults)
+            .maximumSize(request.query.desiredNumberOfResults)
+            .create();
+
+        for (int i = 0; i < scoreConcurrencyLevel; i++) {
+            scored.addAll(parallelScored[i]);
+        }
+
+        totalTimeFetchingScores += (System.currentTimeMillis() - fetchScoresStart);
+
+        modelScorer.enqueue(handle.getCoord(), request.query, pivotFieldId);
 
         MiruFieldDefinition[] gatherFieldDefinitions = null;
         if (request.query.gatherTermsForFields != null && request.query.gatherTermsForFields.length > 0) {
@@ -399,6 +350,56 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         List<HotOrNot> hotOrNots = new ArrayList<>(request.query.desiredNumberOfResults);
 
         Scored[] s = scored.toArray(new Scored[0]);
+        if (scored.size() < request.query.desiredNumberOfResults) {
+            int remaining = request.query.desiredNumberOfResults - scored.size();
+            Set<MiruTermId> gathered = Sets.newHashSet();
+            for (Scored scored1 : scored) {
+                gathered.add(scored1.term);
+            }
+
+            List<TermIdLastIdCount> nils = Lists.newArrayList();
+            BM nilCandidates = bitmaps.and(Arrays.asList(candidates, nilMask));
+            aggregateUtil.gather("strut",
+                bitmaps,
+                context,
+                nilCandidates,
+                pivotFieldId,
+                gatherBatchSize,
+                false,
+                true,
+                counter,
+                solutionLog,
+                (lastId, termId, count) -> {
+                    if (gathered.add(termId)) {
+                        nils.add(new TermIdLastIdCount(termId, lastId, count));
+                    }
+                    if (count <= 0) {
+                        LOG.inc("strut>nilGather>empty");
+                    }
+                    return nils.size() < remaining;
+                },
+                stackBuffer);
+
+            Scored[] scoredArray = s;
+            s = new Scored[scoredArray.length + nils.size()];
+            System.arraycopy(scoredArray, 0, s, 0, scoredArray.length);
+
+            for (int i = 0; i < nils.size(); i++) {
+                TermIdLastIdCount termIdLastIdCount = nils.get(i);
+                s[i + scoredArray.length] = new Scored(termIdLastIdCount.lastId,
+                    termIdLastIdCount.termId,
+                    -1,
+                    0f,
+                    new float[request.query.numeratorScalars.length],
+                    null,
+                    termIdLastIdCount.count);
+            }
+            LOG.inc("strut>nilGather>size>pow>" + FilerIO.chunkPower(nils.size(), 0));
+            LOG.inc("strut>nilGather>count", nils.size());
+        } else {
+            LOG.inc("strut>nilGather>skip");
+        }
+
         int[] scoredLastIds = new int[s.length];
         for (int j = 0; j < s.length; j++) {
             scoredLastIds[j] = s[j].lastId;

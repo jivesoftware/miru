@@ -37,12 +37,15 @@ import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.catwalk.shared.Scored;
 import com.jivesoftware.os.miru.plugin.cache.LabLastIdCacheKeyValues;
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.LastIdCacheKeyValues;
+import com.jivesoftware.os.miru.stream.plugins.strut.StrutModelScorer.CommitResult;
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import org.testng.annotations.Test;
+
+import static org.testng.Assert.assertNotNull;
 
 /**
  * @author jonathan.colt
@@ -163,7 +166,8 @@ public class StrutModelScorerNGTest {
             updates.add(new Scored(-1, new MiruTermId(new byte[] { (byte) 97, (byte) (97 + i) }), 10, 0.5f, new float[] { 0.5f }, null, -1));
         }
 
-        StrutModelScorer.commit(modelId, 0f, cacheKeyValues, updates, stackBuffer);
+        CommitResult commitResult = StrutModelScorer.commit(modelId, 0f, cacheKeyValues, updates, stackBuffer);
+        assertNotNull(commitResult);
 
         System.out.println("-----------");
 

@@ -3,7 +3,6 @@ package com.jivesoftware.os.miru.stream.plugins.strut;
 import com.google.common.base.Optional;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
@@ -35,12 +34,10 @@ import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
@@ -129,6 +126,11 @@ public class StrutModelScorer {
         for (Future<?> future : futures) {
             future.cancel(true);
         }
+    }
+
+    <BM extends IBM, IBM> BM nilBitmap(MiruRequestContext<BM, IBM, ?> context, String catwalkId, String modelId, StackBuffer stackBuffer) throws Exception {
+        CacheKeyBitmaps<BM, IBM> nilTermCache = getNilTermCache(context, catwalkId);
+        return nilTermCache.get(modelId.getBytes(StandardCharsets.UTF_8), stackBuffer);
     }
 
     static void scoreParallel(String[] modelId,
@@ -343,7 +345,7 @@ public class StrutModelScorer {
         }
     }
 
-    void enqueue(MiruPartitionCoord coord, StrutQuery strutQuery, int pivotFieldId, List<MiruTermId> termIds) {
+    void enqueue(MiruPartitionCoord coord, StrutQuery strutQuery, int pivotFieldId) {
 
         for (StrutModelScalar modelScalar : strutQuery.modelScalars) {
 
@@ -356,29 +358,18 @@ public class StrutModelScorer {
 
             StrutQueueKey key = new StrutQueueKey(coord, modelScalar.catwalkId, modelScalar.modelId, pivotFieldId);
             int stripe = Math.abs(key.hashCode() % queues.length);
-            int[] count = { 0 };
             synchronized (queues[stripe]) {
-                queues[stripe].compute(key, (key1, existing) -> {
-                    if (existing == null) {
-                        existing = new Enqueued(Sets.newHashSet(), catwalkDefinition);
-                    }
-                    int beforeCount = existing.termIds.size();
-                    existing.termIds.addAll(termIds);
-                    count[0] += existing.termIds.size() - beforeCount;
-                    return existing;
-                });
+                queues[stripe].computeIfAbsent(key, (key1) -> new Enqueued(catwalkDefinition));
             }
-            pendingUpdates.addAndGet(count[0]);
+            pendingUpdates.incrementAndGet();
         }
     }
 
-    static class Enqueued {
+    private static class Enqueued {
 
-        final Set<MiruTermId> termIds;
         final CatwalkDefinition catwalkDefinition;
 
-        public Enqueued(Set<MiruTermId> termIds, CatwalkDefinition catwalkDefinition) {
-            this.termIds = termIds;
+        public Enqueued(CatwalkDefinition catwalkDefinition) {
             this.catwalkDefinition = catwalkDefinition;
         }
 
@@ -402,7 +393,6 @@ public class StrutModelScorer {
                 LOG.inc("strut>scorer>consumed");
                 StrutModelScorer.StrutQueueKey key = entry.getKey();
                 Enqueued enqueued = entry.getValue();
-                int count = enqueued.termIds.size();
                 try {
                     Optional<? extends MiruQueryablePartition<?, ?>> optionalQueryablePartition = miruProvider.getMiru(key.coord.tenantId)
                         .getQueryablePartition(key.coord);
@@ -411,23 +401,23 @@ public class StrutModelScorer {
 
                         try {
                             process((MiruQueryablePartition) replica, key.catwalkId, key.modelId, key.pivotFieldId, enqueued.catwalkDefinition,
-                                enqueued.termIds, stackBuffer, solutionLog);
-                            LOG.inc("strut>scorer>processed", count);
+                                stackBuffer, solutionLog);
+                            LOG.inc("strut>scorer>processed");
                         } catch (Exception e) {
-                            LOG.inc("strut>scorer>failed", count);
+                            LOG.inc("strut>scorer>failed");
                             if (LOG.isDebugEnabled()) {
-                                LOG.debug("Failed to consume catwalkId:{} modelId:{} pivotFieldId:{} termCount:{}",
-                                    new Object[] { key.catwalkId, key.modelId, key.pivotFieldId, count }, e);
+                                LOG.debug("Failed to consume catwalkId:{} modelId:{} pivotFieldId:{}",
+                                    new Object[] { key.catwalkId, key.modelId, key.pivotFieldId }, e);
                             } else {
-                                LOG.warn("Failed to consume catwalkId:{} modelId:{} pivotFieldId:{} termCount:{} message:{}",
-                                    key.catwalkId, key.modelId, key.pivotFieldId, count, e.getMessage());
+                                LOG.warn("Failed to consume catwalkId:{} modelId:{} pivotFieldId:{} message:{}",
+                                    key.catwalkId, key.modelId, key.pivotFieldId, e.getMessage());
                             }
                         }
                     } else {
-                        LOG.inc("strut>scorer>ignored", count);
+                        LOG.inc("strut>scorer>ignored");
                     }
                 } finally {
-                    pendingUpdates.addAndGet(-count);
+                    pendingUpdates.decrementAndGet();
                 }
             }
         }
@@ -438,47 +428,64 @@ public class StrutModelScorer {
         String modelId,
         int pivotFieldId,
         CatwalkDefinition catwalkDefinition,
-        Collection<MiruTermId> termIds,
         StackBuffer stackBuffer,
         MiruSolutionLog solutionLog) throws Exception {
 
         try (MiruRequestHandle<BM, IBM, ?> handle = replica.acquireQueryHandle()) {
             MiruBitmaps<BM, IBM> bitmaps = handle.getBitmaps();
             MiruRequestContext<BM, IBM, ? extends MiruSipCursor<?>> context = handle.getRequestContext();
-
-            LastIdCacheKeyValues termScoreCache = getTermScoreCache(context, catwalkDefinition.catwalkQuery.catwalkId);
             CacheKeyBitmaps<BM, IBM> nilTermCache = getNilTermCache(context, catwalkDefinition.catwalkQuery.catwalkId);
-            TimestampedCacheKeyValues termFeatureCache = getTermFeatureCache(context, catwalkId);
+
+            byte[] modelIdBytes = modelId.getBytes(StandardCharsets.UTF_8);
+            int cursorId = nilTermCache.getLastId(modelIdBytes);
             int activityIndexLastId = context.getActivityIndex().lastId(stackBuffer);
 
-            List<TermIdLastIdCount> asyncRescore = Lists.newArrayListWithCapacity(termIds.size());
-            for (MiruTermId termId : termIds) {
-                asyncRescore.add(new TermIdLastIdCount(termId, -1, -1));
+            if (activityIndexLastId > cursorId) {
+                TimestampedCacheKeyValues termFeatureCache = getTermFeatureCache(context, catwalkId);
+                LastIdCacheKeyValues termScoreCache = getTermScoreCache(context, catwalkDefinition.catwalkQuery.catwalkId);
+                BM[] asyncConstrainFeature = buildConstrainFeatures(bitmaps,
+                    context,
+                    catwalkDefinition.catwalkQuery,
+                    activityIndexLastId,
+                    stackBuffer,
+                    solutionLog);
+                BM answer = bitmaps.createWithRange(cursorId + 1, activityIndexLastId + 1);
+                List<TermIdLastIdCount> rescorable = Lists.newArrayList();
+                aggregateUtil.gather("strutProcess",
+                    bitmaps,
+                    context,
+                    answer,
+                    pivotFieldId,
+                    100,
+                    false,
+                    false,
+                    Optional.absent(),
+                    solutionLog,
+                    (lastId, termId, count) -> rescorable.add(new TermIdLastIdCount(termId, lastId, count)),
+                    stackBuffer);
+                rescore(catwalkId,
+                    modelId,
+                    catwalkDefinition.catwalkQuery,
+                    catwalkDefinition.featureScalars,
+                    catwalkDefinition.featureStrategy,
+                    false,
+                    catwalkDefinition.numeratorScalars,
+                    catwalkDefinition.numeratorStrategy,
+                    handle,
+                    rescorable,
+                    pivotFieldId,
+                    asyncConstrainFeature,
+                    termScoreCache,
+                    nilTermCache,
+                    termFeatureCache,
+                    new AtomicInteger(),
+                    solutionLog);
+                nilTermCache.setLastId(modelIdBytes, activityIndexLastId);
+                LOG.inc("process>count", rescorable.size());
+                LOG.inc("process>batch>pow>" + FilerIO.chunkPower(rescorable.size(), 0));
+            } else {
+                LOG.inc("process>skip");
             }
-
-            BM[] asyncConstrainFeature = buildConstrainFeatures(bitmaps,
-                context,
-                catwalkDefinition.catwalkQuery,
-                activityIndexLastId,
-                stackBuffer,
-                solutionLog);
-            rescore(catwalkId,
-                modelId,
-                catwalkDefinition.catwalkQuery,
-                catwalkDefinition.featureScalars,
-                catwalkDefinition.featureStrategy,
-                false,
-                catwalkDefinition.numeratorScalars,
-                catwalkDefinition.numeratorStrategy,
-                handle,
-                asyncRescore,
-                pivotFieldId,
-                asyncConstrainFeature,
-                termScoreCache,
-                nilTermCache,
-                termFeatureCache,
-                new AtomicInteger(),
-                solutionLog);
         }
     }
 
@@ -501,7 +508,7 @@ public class StrutModelScorer {
         return context.getCacheProvider().getTimestampedKeyValues("strut-features-" + catwalkId, payloadSize, false, maxHeapPressureInBytes, "cuckoo", 0d);
     }
 
-    <BM extends IBM, IBM> List<Scored> rescore(
+    private <BM extends IBM, IBM> List<Scored> rescore(
         String catwalkId,
         String modelId,
         CatwalkQuery catwalkQuery,
@@ -600,7 +607,7 @@ public class StrutModelScorer {
         return results;
     }
 
-    <BM extends IBM, IBM> BM[] buildConstrainFeatures(MiruBitmaps<BM, IBM> bitmaps,
+    private <BM extends IBM, IBM> BM[] buildConstrainFeatures(MiruBitmaps<BM, IBM> bitmaps,
         MiruRequestContext<BM, IBM, ?> context,
         CatwalkQuery catwalkQuery,
         int activityIndexLastId,

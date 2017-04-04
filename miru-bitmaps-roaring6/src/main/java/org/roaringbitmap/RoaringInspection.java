@@ -431,8 +431,10 @@ public class RoaringInspection {
         short[] keys = intToShortKeys(ukeys);
         for (int i = 0; i < keys.length; i++) {
             int index = array.getIndex(keys[i]);
-            Container container = array.getContainerAtIndex(index);
-            array.setContainerAtIndex(index, container.runOptimize());
+            if (index >= 0) {
+                Container container = array.getContainerAtIndex(index);
+                array.setContainerAtIndex(index, container.runOptimize());
+            }
         }
     }
 

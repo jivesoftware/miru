@@ -155,6 +155,15 @@ public class FilerPluginCacheProvider<BM extends IBM, IBM> implements MiruPlugin
             public boolean andNot(byte[] cacheId, IBM bitmap, StackBuffer stackBuffer) throws Exception {
                 return true;
             }
+
+            @Override
+            public int getLastId(byte[] cacheId) throws Exception {
+                return -1;
+            }
+
+            @Override
+            public void setLastId(byte[] cacheId, int lastId) throws Exception {
+            }
         };
     }
 
