@@ -16,6 +16,24 @@ import static org.testng.Assert.assertEquals;
 public class RoaringInspectionTest {
 
     @Test
+    public void testOptimize() throws Exception {
+        RoaringBitmap bitmap = new RoaringBitmap();
+        Random r = new Random(123);
+        for (int i = 0; i < 3_000_000; i += 65_536) {
+            if (r.nextBoolean()) {
+                for (int j = 0; j < 65_536; j++) {
+                    bitmap.add(i + j);
+                }
+            }
+        }
+
+        int initialSize = bitmap.serializedSizeInBytes();
+        int[] keys = RoaringInspection.keys(bitmap);
+        RoaringInspection.optimize(bitmap, keys);
+        Assert.assertTrue(bitmap.serializedSizeInBytes() < initialSize);
+    }
+
+    @Test
     public void testSplitJoin() throws Exception {
         RoaringBitmap bitmap = new RoaringBitmap();
         Random r = new Random(123);

@@ -32,7 +32,7 @@ public interface MiruRequestContext<BM extends IBM, IBM, S extends MiruSipCursor
 
     MiruSipIndex<S> getSipIndex();
 
-    MiruPluginCacheProvider getCacheProvider();
+    MiruPluginCacheProvider<BM, IBM> getCacheProvider();
 
     MiruAuthzIndex<BM, IBM> getAuthzIndex();
 

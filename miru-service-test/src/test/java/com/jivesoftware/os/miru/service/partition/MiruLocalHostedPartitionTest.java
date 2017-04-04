@@ -11,6 +11,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.jivesoftware.os.amza.embed.EmbedAmzaServiceInitializer.Lifecycle;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider;
 import com.jivesoftware.os.filer.chunk.store.transaction.TxCogs;
+import com.jivesoftware.os.filer.io.ByteArrayStripingLocksProvider;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
@@ -72,7 +73,7 @@ import com.jivesoftware.os.miru.service.index.lab.LabTimeIdIndexInitializer;
 import com.jivesoftware.os.miru.service.locator.MiruTempDirectoryResourceLocator;
 import com.jivesoftware.os.miru.service.partition.PartitionErrorTracker.PartitionErrorTrackerConfig;
 import com.jivesoftware.os.miru.service.realtime.NoOpRealtimeDelivery;
-import com.jivesoftware.os.miru.service.stream.LabPluginCacheProvider;
+import com.jivesoftware.os.miru.service.stream.cache.LabPluginCacheProvider;
 import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
 import com.jivesoftware.os.miru.service.stream.MiruIndexAuthz;
 import com.jivesoftware.os.miru.service.stream.MiruIndexBloom;
@@ -302,6 +303,7 @@ public class MiruLocalHostedPartitionTest {
             cogs,
             timeIdIndexes,
             LabPluginCacheProvider.allocateLocks(64),
+            new ByteArrayStripingLocksProvider(64),
             schemaProvider,
             termComposer,
             activityInternExtern,

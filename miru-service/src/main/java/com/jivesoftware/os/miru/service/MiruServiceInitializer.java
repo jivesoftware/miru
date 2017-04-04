@@ -8,6 +8,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.jivesoftware.os.filer.chunk.store.transaction.KeyToFPCacheFactory;
 import com.jivesoftware.os.filer.chunk.store.transaction.TxCogs;
+import com.jivesoftware.os.filer.io.ByteArrayStripingLocksProvider;
 import com.jivesoftware.os.filer.io.ByteBufferFactory;
 import com.jivesoftware.os.filer.io.DirectByteBufferFactory;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
@@ -64,7 +65,7 @@ import com.jivesoftware.os.miru.service.partition.PartitionErrorTracker;
 import com.jivesoftware.os.miru.service.partition.cluster.MiruClusterExpectedTenants;
 import com.jivesoftware.os.miru.service.solver.MiruLowestLatencySolver;
 import com.jivesoftware.os.miru.service.solver.MiruSolver;
-import com.jivesoftware.os.miru.service.stream.LabPluginCacheProvider;
+import com.jivesoftware.os.miru.service.stream.cache.LabPluginCacheProvider;
 import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
 import com.jivesoftware.os.miru.service.stream.MiruIndexCallbacks;
 import com.jivesoftware.os.miru.service.stream.MiruRebuildDirector;
@@ -287,6 +288,7 @@ public class MiruServiceInitializer {
             transientCogs,
             timeIdIndexes,
             LabPluginCacheProvider.allocateLocks(Short.MAX_VALUE),
+            new ByteArrayStripingLocksProvider(Short.MAX_VALUE),
             schemaProvider,
             termComposer,
             internExtern,

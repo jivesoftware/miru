@@ -12,6 +12,7 @@ import com.jivesoftware.os.filer.chunk.store.transaction.TxCog;
 import com.jivesoftware.os.filer.chunk.store.transaction.TxCogs;
 import com.jivesoftware.os.filer.chunk.store.transaction.TxMapGrower;
 import com.jivesoftware.os.filer.chunk.store.transaction.TxNamedMapOfFiler;
+import com.jivesoftware.os.filer.io.ByteArrayStripingLocksProvider;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.io.api.KeyedFilerStore;
@@ -86,7 +87,9 @@ import com.jivesoftware.os.miru.service.locator.MiruPartitionCoordIdentifier;
 import com.jivesoftware.os.miru.service.locator.MiruResourceLocator;
 import com.jivesoftware.os.miru.service.locator.MiruResourcePartitionIdentifier;
 import com.jivesoftware.os.miru.service.partition.PartitionErrorTracker;
-import com.jivesoftware.os.miru.service.stream.LabPluginCacheProvider.LabPluginCacheProviderLock;
+import com.jivesoftware.os.miru.service.stream.cache.FilerPluginCacheProvider;
+import com.jivesoftware.os.miru.service.stream.cache.LabPluginCacheProvider;
+import com.jivesoftware.os.miru.service.stream.cache.LabPluginCacheProvider.LabPluginCacheProviderLock;
 import com.jivesoftware.os.miru.service.stream.allocator.MiruChunkAllocator;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
@@ -122,6 +125,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
     private final TxCogs transientCogs;
     private final TimeIdIndex[] timeIdIndexes;
     private final LabPluginCacheProvider.LabPluginCacheProviderLock[] labPluginCacheProviderLocks;
+    private final ByteArrayStripingLocksProvider labPluginByteArrayLocks;
     private final MiruSchemaProvider schemaProvider;
     private final MiruTermComposer termComposer;
     private final MiruActivityInternExtern activityInternExtern;
@@ -149,6 +153,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         TxCogs transientCogs,
         TimeIdIndex[] timeIdIndexes,
         LabPluginCacheProviderLock[] labPluginCacheProviderLocks,
+        ByteArrayStripingLocksProvider labPluginByteArrayLocks,
         MiruSchemaProvider schemaProvider,
         MiruTermComposer termComposer,
         MiruActivityInternExtern activityInternExtern,
@@ -176,6 +181,7 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
         this.transientCogs = transientCogs;
         this.timeIdIndexes = timeIdIndexes;
         this.labPluginCacheProviderLocks = labPluginCacheProviderLocks;
+        this.labPluginByteArrayLocks = labPluginByteArrayLocks;
         this.schemaProvider = schemaProvider;
         this.termComposer = termComposer;
         this.activityInternExtern = activityInternExtern;
@@ -743,7 +749,8 @@ public class MiruContextFactory<S extends MiruSipCursor<S>> {
 
         StripingLocksProvider<MiruStreamId> streamLocks = new StripingLocksProvider<>(64);
 
-        LabPluginCacheProvider cacheProvider = new LabPluginCacheProvider(idProvider, labEnvironments, labPluginCacheProviderLocks, hashIndexEnabled);
+        LabPluginCacheProvider<BM, IBM> cacheProvider = new LabPluginCacheProvider<>(idProvider, labEnvironments, labPluginCacheProviderLocks,
+            labPluginByteArrayLocks, bitmaps, trackError, atomized, hashIndexEnabled);
 
         MiruContext<BM, IBM, S> context = new MiruContext<>(version,
             getTimeIdIndex(version),

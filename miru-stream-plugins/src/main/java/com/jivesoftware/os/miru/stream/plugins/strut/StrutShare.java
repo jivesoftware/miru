@@ -18,6 +18,7 @@ public class StrutShare implements Serializable {
     public final MiruPartitionId partitionId;
     public final CatwalkQuery catwalkQuery;
     public final String modelId;
+    public final int pivotFieldId;
     public final List<Scored> updates;
 
     @JsonCreator
@@ -25,11 +26,13 @@ public class StrutShare implements Serializable {
         @JsonProperty("partitionId") MiruPartitionId partitionId,
         @JsonProperty("catwalkQuery") CatwalkQuery catwalkQuery,
         @JsonProperty("modelId") String modelId,
+        @JsonProperty("pivotFieldId") int pivotFieldId,
         @JsonProperty("updates") List<Scored> updates) {
         this.tenantId = tenantId;
         this.partitionId = partitionId;
         this.catwalkQuery = catwalkQuery;
         this.modelId = modelId;
+        this.pivotFieldId = pivotFieldId;
         this.updates = updates;
     }
 }

@@ -1,4 +1,4 @@
-package com.jivesoftware.os.miru.service.stream;
+package com.jivesoftware.os.miru.service.stream.cache;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.Maps;
@@ -18,7 +18,7 @@ import java.util.Map;
 /**
  *
  */
-public class FilerPluginCacheProvider implements MiruPluginCacheProvider {
+public class FilerPluginCacheProvider<BM extends IBM, IBM> implements MiruPluginCacheProvider<BM, IBM> {
 
     private final TxCogs cogs;
     private final int seed;
@@ -125,6 +125,35 @@ public class FilerPluginCacheProvider implements MiruPluginCacheProvider {
             @Override
             public Object lock(byte[] cacheId) {
                 return new Object(); // eat shit and die, filer
+            }
+        };
+    }
+
+    @Override
+    public CacheKeyBitmaps<BM, IBM> getCacheKeyBitmaps(String name,
+        int payloadSize,
+        long maxHeapPressureInBytes,
+        String hashIndexType,
+        double hashIndexLoadFactor) {
+        return new CacheKeyBitmaps<BM, IBM>() {
+            @Override
+            public String name() {
+                return name;
+            }
+
+            @Override
+            public BM get(byte[] cacheId, StackBuffer stackBuffer) throws Exception {
+                return null;
+            }
+
+            @Override
+            public boolean or(byte[] cacheId, IBM bitmap, StackBuffer stackBuffer) throws Exception {
+                return true;
+            }
+
+            @Override
+            public boolean andNot(byte[] cacheId, IBM bitmap, StackBuffer stackBuffer) throws Exception {
+                return true;
             }
         };
     }

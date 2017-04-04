@@ -426,6 +426,16 @@ public class RoaringInspection {
         return new ContainerAndLastSetBit(key, val, lastSetBit);
     }
 
+    public static void optimize(RoaringBitmap bitmap, int[] ukeys) {
+        RoaringArray array = bitmap.highLowContainer;
+        short[] keys = intToShortKeys(ukeys);
+        for (int i = 0; i < keys.length; i++) {
+            int index = array.getIndex(keys[i]);
+            Container container = array.getContainerAtIndex(index);
+            array.setContainerAtIndex(index, container.runOptimize());
+        }
+    }
+
     private static class ContainerAndLastSetBit implements Comparable<ContainerAndLastSetBit> {
         private final short key;
         private final Container container;

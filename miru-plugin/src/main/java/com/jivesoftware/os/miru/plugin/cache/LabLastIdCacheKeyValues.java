@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.plugin.cache;
 
-import com.google.common.base.Preconditions;
 import com.google.common.primitives.Bytes;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
@@ -9,10 +8,6 @@ import com.jivesoftware.os.lab.io.BolBuffer;
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.ConsumeLastIdKeyValueStream;
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.LastIdCacheKeyValues;
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.LastIdIndexKeyValueStream;
-import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.LastIdKeyValueStream;
-import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
-import java.nio.ByteBuffer;
-import java.util.Arrays;
 
 /**
  *
@@ -37,7 +32,7 @@ public class LabLastIdCacheKeyValues implements LastIdCacheKeyValues {
     @Override
     public boolean get(byte[] cacheId, byte[][] keys, LastIdIndexKeyValueStream stream, StackBuffer stackBuffer) throws Exception {
         int stripe = stripe(cacheId);
-        byte[] prefixBytes = {(byte) cacheId.length};
+        byte[] prefixBytes = { (byte) cacheId.length };
 
         byte[][] keyBytes = new byte[keys.length][];
         for (int i = 0; i < keys.length; i++) {
@@ -100,7 +95,7 @@ public class LabLastIdCacheKeyValues implements LastIdCacheKeyValues {
         StackBuffer stackBuffer) throws Exception {
 
         int stripe = stripe(cacheId);
-        byte[] prefixBytes = {(byte) cacheId.length};
+        byte[] prefixBytes = { (byte) cacheId.length };
         BolBuffer entryBuffer = new BolBuffer();
         BolBuffer keyBuffer = new BolBuffer();
         long version = idProvider.nextId();
