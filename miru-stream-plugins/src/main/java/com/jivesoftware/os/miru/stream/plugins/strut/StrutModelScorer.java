@@ -172,7 +172,7 @@ public class StrutModelScorer {
         scoreInternal(modelId, numeratorsCount, termIds, 0, termIds.length, termScoreCaches, termScoreCacheScalars, scoredStream, stackBuffer);
     }
 
-    static <BM extends IBM, IBM> void scoreInternal(String[] modelId,
+    static void scoreInternal(String[] modelId,
         int numeratorsCount,
         MiruTermId[] termIds,
         int offset,

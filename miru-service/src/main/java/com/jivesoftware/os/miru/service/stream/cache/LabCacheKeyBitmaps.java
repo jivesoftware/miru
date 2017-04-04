@@ -52,7 +52,7 @@ public class LabCacheKeyBitmaps<BM extends IBM, IBM> implements CacheKeyBitmaps<
         return new LabInvertedIndex<>(idProvider,
             bitmaps,
             trackError,
-            "unread",
+            name,
             -1,
             atomized,
             bitmapIndexKey(cacheId),
