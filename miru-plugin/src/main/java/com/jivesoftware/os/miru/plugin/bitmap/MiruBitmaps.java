@@ -38,6 +38,8 @@ public interface MiruBitmaps<BM extends IBM, IBM> {
 
     BM createWithBits(int... indexes);
 
+    BM createWithRange(int startInclusive, int lastExclusive);
+
     BM[] createArrayOf(int size);
 
     IBM[] createImmutableArrayOf(int size);

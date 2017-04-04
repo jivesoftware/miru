@@ -279,7 +279,6 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                             featureScalars,
                             input.desiredNumberOfResults,
                             true,
-                            input.usePartitionModelCache,
                             gatherTermsForFieldSplit,
                             input.unreadStreamId.isEmpty() ? MiruStreamId.NULL : new MiruStreamId(input.unreadStreamId.getBytes(StandardCharsets.UTF_8)),
                             null, //TODO this prevents backfill

@@ -140,6 +140,13 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
     }
 
     @Override
+    public MutableRoaringBitmap createWithRange(int startInclusive, int lastExclusive) {
+        MutableRoaringBitmap bitmap = new MutableRoaringBitmap();
+        bitmap.add(startInclusive, lastExclusive);
+        return bitmap;
+    }
+
+    @Override
     public MutableRoaringBitmap[] createArrayOf(int size) {
         return new MutableRoaringBitmap[size];
     }

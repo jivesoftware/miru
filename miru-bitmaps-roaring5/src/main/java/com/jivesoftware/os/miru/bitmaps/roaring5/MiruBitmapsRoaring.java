@@ -137,6 +137,13 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
     }
 
     @Override
+    public RoaringBitmap createWithRange(int startInclusive, int lastExclusive) {
+        RoaringBitmap bitmap = new RoaringBitmap();
+        bitmap.add(startInclusive, lastExclusive);
+        return bitmap;
+    }
+
+    @Override
     public RoaringBitmap[] createArrayOf(int size) {
         return new RoaringBitmap[size];
     }

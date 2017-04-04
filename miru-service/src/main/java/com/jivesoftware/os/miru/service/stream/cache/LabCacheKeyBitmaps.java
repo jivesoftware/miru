@@ -5,6 +5,7 @@ import com.jivesoftware.os.filer.io.ByteArrayStripingLocksProvider;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.lab.api.ValueIndex;
+import com.jivesoftware.os.lab.io.BolBuffer;
 import com.jivesoftware.os.lab.io.api.UIO;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
@@ -18,6 +19,9 @@ import java.util.Arrays;
  *
  */
 public class LabCacheKeyBitmaps<BM extends IBM, IBM> implements CacheKeyBitmaps<BM, IBM> {
+
+    private static final int LAST_ID_PREFIX = 0xFFFF;
+    private static final byte[] LAST_ID_BYTES = new byte[] { -1, -1 };
 
     private final String name;
     private final OrderIdProvider idProvider;
@@ -52,7 +56,7 @@ public class LabCacheKeyBitmaps<BM extends IBM, IBM> implements CacheKeyBitmaps<
         return new LabInvertedIndex<>(idProvider,
             bitmaps,
             trackError,
-            "unread",
+            name,
             -1,
             atomized,
             bitmapIndexKey(cacheId),
@@ -63,6 +67,9 @@ public class LabCacheKeyBitmaps<BM extends IBM, IBM> implements CacheKeyBitmaps<
     }
 
     private byte[] bitmapIndexKey(byte[] cacheId) {
+        if (cacheId.length >= LAST_ID_PREFIX) {
+            throw new IllegalArgumentException("Bad cacheId length");
+        }
         if (atomized) {
             byte[] cacheIdLength = new byte[2];
             UIO.shortBytes((short) (cacheId.length & 0xFFFF), cacheIdLength, 0);
@@ -93,6 +100,28 @@ public class LabCacheKeyBitmaps<BM extends IBM, IBM> implements CacheKeyBitmaps<
     public boolean andNot(byte[] cacheId, IBM bitmap, StackBuffer stackBuffer) throws Exception {
         getIndex(cacheId).andNot(bitmap, stackBuffer);
         return true;
+    }
+
+    @Override
+    public int getLastId(byte[] cacheId) throws Exception {
+        ValueIndex<byte[]> store = getStore(cacheId);
+        int[] lastId = { -1 };
+        store.get(keyStream -> keyStream.key(0, LAST_ID_BYTES, 0, LAST_ID_BYTES.length),
+            (index, key, timestamp, tombstoned, version, payload) -> {
+                lastId[0] = (int) timestamp;
+                return true;
+            },
+            false);
+        return lastId[0];
+    }
+
+    @Override
+    public void setLastId(byte[] cacheId, int lastId) throws Exception {
+        ValueIndex<byte[]> store = getStore(cacheId);
+        store.append(stream -> stream.stream(0, LAST_ID_BYTES, lastId, false, -1, new byte[0]),
+            false,
+            new BolBuffer(),
+            new BolBuffer());
     }
 
     public void commit(boolean fsyncOnCommit) throws Exception {

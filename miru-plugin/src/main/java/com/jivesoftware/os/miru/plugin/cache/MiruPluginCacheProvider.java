@@ -126,5 +126,9 @@ public interface MiruPluginCacheProvider<BM extends IBM, IBM> {
         boolean or(byte[] cacheId, IBM bitmap, StackBuffer stackBuffer) throws Exception;
 
         boolean andNot(byte[] cacheId, IBM bitmap, StackBuffer stackBuffer) throws Exception;
+
+        int getLastId(byte[] cacheId) throws Exception;
+
+        void setLastId(byte[] cacheId, int lastId) throws Exception;
     }
 }

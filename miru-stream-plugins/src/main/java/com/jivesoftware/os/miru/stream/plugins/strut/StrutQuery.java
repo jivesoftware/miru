@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.stream.plugins.strut;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
@@ -13,6 +14,7 @@ import java.util.List;
 /**
  *
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class StrutQuery implements Serializable {
 
     public enum Strategy {
@@ -32,7 +34,6 @@ public class StrutQuery implements Serializable {
     public final float[] featureScalars;
     public final int desiredNumberOfResults;
     public final boolean includeFeatures;
-    public final boolean usePartitionModelCache;
     public final String[] gatherTermsForFields;
     public final MiruStreamId unreadStreamId;
     public final MiruFilter suppressUnreadFilter;
@@ -51,7 +52,6 @@ public class StrutQuery implements Serializable {
         @JsonProperty("featureScalars") float[] featureScalars,
         @JsonProperty("desiredNumberOfResults") int desiredNumberOfResults,
         @JsonProperty("includeFeatures") boolean includeFeatures,
-        @JsonProperty("usePartitionModelCache") boolean usePartitionModelCache,
         @JsonProperty("gatherTermsForFields") String[] gatherTermsForFields,
         @JsonProperty("unreadStreamId") MiruStreamId unreadStreamId, // nullable
         @JsonProperty("suppressUnreadFilter") MiruFilter suppressUnreadFilter, // nullable
@@ -81,7 +81,6 @@ public class StrutQuery implements Serializable {
         Preconditions.checkArgument(desiredNumberOfResults > 0, "Number of results must be at least 1");
         this.desiredNumberOfResults = desiredNumberOfResults;
         this.includeFeatures = includeFeatures;
-        this.usePartitionModelCache = usePartitionModelCache;
         this.gatherTermsForFields = gatherTermsForFields;
         this.unreadStreamId = unreadStreamId;
         this.suppressUnreadFilter = suppressUnreadFilter;
@@ -103,7 +102,6 @@ public class StrutQuery implements Serializable {
             ", featureScalars=" + Arrays.toString(featureScalars) +
             ", desiredNumberOfResults=" + desiredNumberOfResults +
             ", includeFeatures=" + includeFeatures +
-            ", usePartitionModelCache=" + usePartitionModelCache +
             ", gatherTermsForFields=" + Arrays.toString(gatherTermsForFields) +
             ", unreadStreamId=" + unreadStreamId +
             ", suppressUnreadFilter=" + suppressUnreadFilter +
