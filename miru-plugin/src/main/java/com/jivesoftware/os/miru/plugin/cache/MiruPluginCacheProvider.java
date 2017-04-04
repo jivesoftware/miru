@@ -6,7 +6,7 @@ import java.nio.ByteBuffer;
 /**
  * @author jonathan.colt
  */
-public interface MiruPluginCacheProvider {
+public interface MiruPluginCacheProvider<BM extends IBM, IBM> {
 
     CacheKeyValues getKeyValues(String name,
         int payloadSize,
@@ -63,10 +63,6 @@ public interface MiruPluginCacheProvider {
         boolean stream(int index, ByteBuffer value, int lastId) throws Exception;
     }
 
-    interface LastIdKeyValueStream {
-        boolean stream(ByteBuffer key, ByteBuffer value, int lastId) throws Exception;
-    }
-
     interface AppendLastIdKeyValueStream {
         boolean stream(byte[] key, byte[] value, int lastId) throws Exception;
     }
@@ -113,5 +109,22 @@ public interface MiruPluginCacheProvider {
 
     interface ConsumeTimestampedKeyValueStream {
         boolean consume(AppendTimestampedKeyValueStream stream) throws Exception;
+    }
+
+    CacheKeyBitmaps<BM, IBM> getCacheKeyBitmaps(String name,
+        int payloadSize,
+        long maxHeapPressureInBytes,
+        String hashIndexType,
+        double hashIndexLoadFactor);
+
+    interface CacheKeyBitmaps<BM extends IBM, IBM> {
+
+        String name();
+
+        BM get(byte[] cacheId, StackBuffer stackBuffer) throws Exception;
+
+        boolean or(byte[] cacheId, IBM bitmap, StackBuffer stackBuffer) throws Exception;
+
+        boolean andNot(byte[] cacheId, IBM bitmap, StackBuffer stackBuffer) throws Exception;
     }
 }

@@ -163,7 +163,7 @@ public class StrutModelScorerNGTest {
             updates.add(new Scored(-1, new MiruTermId(new byte[] { (byte) 97, (byte) (97 + i) }), 10, 0.5f, new float[] { 0.5f }, null, -1));
         }
 
-        StrutModelScorer.commit(modelId, cacheKeyValues, updates, stackBuffer);
+        StrutModelScorer.commit(modelId, 0f, cacheKeyValues, updates, stackBuffer);
 
         System.out.println("-----------");
 

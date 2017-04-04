@@ -9,6 +9,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.jivesoftware.os.filer.chunk.store.ChunkStoreInitializer;
 import com.jivesoftware.os.filer.chunk.store.transaction.TxCogs;
 import com.jivesoftware.os.filer.chunk.store.transaction.TxNamedMapOfFiler;
+import com.jivesoftware.os.filer.io.ByteArrayStripingLocksProvider;
 import com.jivesoftware.os.filer.io.ByteBufferFactory;
 import com.jivesoftware.os.filer.io.HeapByteBufferFactory;
 import com.jivesoftware.os.filer.io.StripingLocksProvider;
@@ -54,7 +55,7 @@ import com.jivesoftware.os.miru.service.index.lab.LabTimeIdIndexInitializer;
 import com.jivesoftware.os.miru.service.locator.MiruResourceLocator;
 import com.jivesoftware.os.miru.service.locator.MiruTempDirectoryResourceLocator;
 import com.jivesoftware.os.miru.service.partition.PartitionErrorTracker;
-import com.jivesoftware.os.miru.service.stream.LabPluginCacheProvider;
+import com.jivesoftware.os.miru.service.stream.cache.LabPluginCacheProvider;
 import com.jivesoftware.os.miru.service.stream.MiruContext;
 import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
 import com.jivesoftware.os.miru.service.stream.allocator.InMemoryChunkAllocator;
@@ -180,6 +181,7 @@ public class IndexTestUtil {
             cogs,
             timeIdIndexes,
             LabPluginCacheProvider.allocateLocks(64),
+            new ByteArrayStripingLocksProvider(64),
             schemaProvider,
             termComposer,
             activityInternExtern,

@@ -17,9 +17,11 @@ import com.jivesoftware.os.miru.catwalk.shared.StrutModelScalar;
 import com.jivesoftware.os.miru.plugin.Miru;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
+import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.CacheKeyBitmaps;
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.LastIdCacheKeyValues;
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.TimestampedCacheKeyValues;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
+import com.jivesoftware.os.miru.plugin.index.FieldMultiTermTxIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.partition.MiruQueryablePartition;
 import com.jivesoftware.os.miru.plugin.partition.OrderedPartitions;
@@ -73,6 +75,7 @@ public class StrutModelScorer {
     private final long maxHeapPressureInBytes;
     private final double hashIndexLoadFactor;
     private final boolean shareScores;
+    private final float nilScoreThreshold;
 
     private final LinkedHashMap<StrutQueueKey, Enqueued>[] queues;
 
@@ -88,7 +91,8 @@ public class StrutModelScorer {
         long maxHeapPressureInBytes,
         double hashIndexLoadFactor,
         int queueStripeCount,
-        boolean shareScores) {
+        boolean shareScores,
+        float nilScoreThreshold) {
         this.miruProvider = miruProvider;
         this.strut = strut;
         this.strutRemotePartition = strutRemotePartition;
@@ -98,6 +102,7 @@ public class StrutModelScorer {
         this.maxHeapPressureInBytes = maxHeapPressureInBytes;
         this.hashIndexLoadFactor = hashIndexLoadFactor;
         this.shareScores = shareScores;
+        this.nilScoreThreshold = nilScoreThreshold;
 
         this.queues = new LinkedHashMap[queueStripeCount];
         for (int i = 0; i < queueStripeCount; i++) {
@@ -167,12 +172,12 @@ public class StrutModelScorer {
         scoreInternal(modelId, numeratorsCount, termIds, 0, termIds.length, termScoreCaches, termScoreCacheScalars, scoredStream, stackBuffer);
     }
 
-    static void scoreInternal(String[] modelId,
+    static <BM extends IBM, IBM> void scoreInternal(String[] modelId,
         int numeratorsCount,
         MiruTermId[] termIds,
         int offset,
         int length,
-        final LastIdCacheKeyValues[] termScoreCaches,
+        LastIdCacheKeyValues[] termScoreCaches,
         float[] termScoreCacheScalars,
         ScoredStream scoredStream,
         StackBuffer stackBuffer) throws Exception {
@@ -215,12 +220,6 @@ public class StrutModelScorer {
         for (int i = 0; i < length; i++) {
             for (int n = 0; n < numeratorsCount; n++) {
                 scores[i][n] /= sumOfScalars;
-                for (int h = 0; h < HISTO.length; h++) {
-                    if (scores[i][n] <= HISTO[h]) {
-                        LOG.inc("score>numerator>" + n + ">histo>" + h + ">" + SHITSO[h]);
-                        break;
-                    }
-                }
             }
             if (!scoredStream.score(offset + i, scores[i], lastIds[i])) {
                 return;
@@ -228,68 +227,95 @@ public class StrutModelScorer {
         }
     }
 
-    private static float[] HISTO = new float[] {
-        0f,
-        1f / 256 / 100,
-        1f / 128 / 100,
-        1f / 64 / 100,
-        1f / 32 / 100,
-        1f / 16 / 100,
-        1f / 8 / 100,
-        1f / 4 / 100,
-        1f / 2 / 100,
-        1f / 100,
-        2f / 100,
-        4f / 100,
-        8f / 100,
-        16f / 100,
-        32f / 100,
-        64f / 100,
-        100f / 100
-    };
+    private <BM extends IBM, IBM> void commitAndNil(String modelId,
+        MiruBitmaps<BM, IBM> bitmaps,
+        MiruRequestContext<BM, IBM, ?> requestContext,
+        int pivotFieldId,
+        LastIdCacheKeyValues termScoreCache,
+        CacheKeyBitmaps<BM, IBM> nilTermCache,
+        List<Scored> updates,
+        StackBuffer stackBuffer) throws Exception {
 
-    private static String[] SHITSO;
-    static {
-        SHITSO = new String[HISTO.length];
-        for (int i = 0; i < HISTO.length; i++) {
-            SHITSO[i] = String.valueOf(HISTO[i] * 100f);
+        CommitResult commitResult = commit(modelId, nilScoreThreshold, termScoreCache, updates, stackBuffer);
+        List<MiruTermId> hadTermIds = commitResult.hadTermIds;
+        List<MiruTermId> nilTermIds = commitResult.nilTermIds;
+
+        byte[] modelIdBytes = modelId.getBytes(StandardCharsets.UTF_8);
+        MiruFieldIndex<BM, IBM> primaryFieldIndex = requestContext.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
+        FieldMultiTermTxIndex<BM, IBM> multiTermTxIndex = new FieldMultiTermTxIndex<>("strutScoreCommit", primaryFieldIndex, pivotFieldId, -1);
+        if (!hadTermIds.isEmpty()) {
+            multiTermTxIndex.setTermIds(hadTermIds.toArray(new MiruTermId[0]));
+            BM had = bitmaps.orMultiTx(multiTermTxIndex, stackBuffer);
+            nilTermCache.andNot(modelIdBytes, had, stackBuffer);
+        }
+        if (!nilTermIds.isEmpty()) {
+            multiTermTxIndex.setTermIds(nilTermIds.toArray(new MiruTermId[0]));
+            BM nil = bitmaps.orMultiTx(multiTermTxIndex, stackBuffer);
+            nilTermCache.or(modelIdBytes, nil, stackBuffer);
         }
     }
 
-    static void commit(String modelId,
+    static CommitResult commit(String modelId,
+        float nilScoreThreshold,
         LastIdCacheKeyValues termScoreCache,
         List<Scored> updates,
         StackBuffer stackBuffer) throws Exception {
 
-        termScoreCache.put(modelId.getBytes(StandardCharsets.UTF_8),
+        List<MiruTermId> hadTermIds = Lists.newArrayList();
+        List<MiruTermId> nilTermIds = Lists.newArrayList();
+        byte[] modelIdBytes = modelId.getBytes(StandardCharsets.UTF_8);
+        termScoreCache.put(modelIdBytes,
             false,
             false,
             stream -> {
                 for (Scored update : updates) {
-                    byte[] payload = new byte[4 * update.scores.length];
-                    int offset = 0;
+                    float maxScore = 0f;
                     for (int j = 0; j < update.scores.length; j++) {
-                        float score = update.scores[j];
-                        if (Float.isNaN(score)) {
-                            LOG.warn("Encountered NaN score for cache:{} model:{} term:{}", termScoreCache.name(), modelId, update.term);
-                            score = 0f;
-                        }
-                        byte[] scoreBytes = FilerIO.floatBytes(score);
-                        System.arraycopy(scoreBytes, 0, payload, offset, 4);
-                        offset += 4;
+                        maxScore = Math.max(maxScore, update.scores[j]);
                     }
 
-                    byte[] key = update.term.getBytes();
-                    if (!stream.stream(key, payload, update.scoredToLastId)) {
-                        return false;
+                    if (maxScore > nilScoreThreshold) {
+                        hadTermIds.add(update.term);
+                        byte[] payload = new byte[4 * update.scores.length];
+                        int offset = 0;
+                        for (int j = 0; j < update.scores.length; j++) {
+                            float score = update.scores[j];
+                            if (Float.isNaN(score)) {
+                                LOG.warn("Encountered NaN score for cache:{} model:{} term:{}", termScoreCache.name(), modelId, update.term);
+                                score = 0f;
+                            }
+                            byte[] scoreBytes = FilerIO.floatBytes(score);
+                            System.arraycopy(scoreBytes, 0, payload, offset, 4);
+                            offset += 4;
+                        }
+
+                        byte[] key = update.term.getBytes();
+                        if (!stream.stream(key, payload, update.scoredToLastId)) {
+                            return false;
+                        }
+                    } else {
+                        nilTermIds.add(update.term);
+                        return true;
                     }
                 }
                 return true;
             },
             stackBuffer);
+
+        return new CommitResult(hadTermIds, nilTermIds);
     }
 
-    void shareOut(MiruPartitionCoord coord, StrutShare share) throws Exception {
+    public static class CommitResult {
+        public final List<MiruTermId> hadTermIds;
+        public final List<MiruTermId> nilTermIds;
+
+        public CommitResult(List<MiruTermId> hadTermIds, List<MiruTermId> nilTermIds) {
+            this.hadTermIds = hadTermIds;
+            this.nilTermIds = nilTermIds;
+        }
+    }
+
+    private void shareOut(MiruPartitionCoord coord, StrutShare share) throws Exception {
         OrderedPartitions<?, ?> orderedPartitions = miruProvider.getMiru(coord.tenantId).getOrderedPartitions("strut/share", "strutShare", coord);
         strutRemotePartition.shareRemote("strutShare", coord, orderedPartitions, share);
     }
@@ -308,8 +334,10 @@ public class StrutModelScorer {
     private <BM extends IBM, IBM> void shareCommit(MiruQueryablePartition<BM, IBM> replica, MiruPartitionCoord coord, StrutShare share) {
         try (MiruRequestHandle<BM, IBM, ?> handle = replica.acquireQueryHandle()) {
             MiruRequestContext<BM, IBM, ? extends MiruSipCursor<?>> context = handle.getRequestContext();
+            MiruBitmaps<BM, IBM> bitmaps = handle.getBitmaps();
             LastIdCacheKeyValues termScoreCache = getTermScoreCache(context, share.catwalkQuery.catwalkId);
-            commit(share.modelId, termScoreCache, share.updates, new StackBuffer());
+            CacheKeyBitmaps<BM, IBM> nilTermCache = getNilTermCache(context, share.catwalkQuery.catwalkId);
+            commitAndNil(share.modelId, bitmaps, context, share.pivotFieldId, termScoreCache, nilTermCache, share.updates, new StackBuffer());
         } catch (Exception e) {
             LOG.warn("Failed to commit shared strut updates for {}", new Object[] { coord }, e);
         }
@@ -419,6 +447,7 @@ public class StrutModelScorer {
             MiruRequestContext<BM, IBM, ? extends MiruSipCursor<?>> context = handle.getRequestContext();
 
             LastIdCacheKeyValues termScoreCache = getTermScoreCache(context, catwalkDefinition.catwalkQuery.catwalkId);
+            CacheKeyBitmaps<BM, IBM> nilTermCache = getNilTermCache(context, catwalkDefinition.catwalkQuery.catwalkId);
             TimestampedCacheKeyValues termFeatureCache = getTermFeatureCache(context, catwalkId);
             int activityIndexLastId = context.getActivityIndex().lastId(stackBuffer);
 
@@ -446,6 +475,7 @@ public class StrutModelScorer {
                 pivotFieldId,
                 asyncConstrainFeature,
                 termScoreCache,
+                nilTermCache,
                 termFeatureCache,
                 new AtomicInteger(),
                 solutionLog);
@@ -456,6 +486,13 @@ public class StrutModelScorer {
         String catwalkId) {
         int payloadSize = -1; // TODO fix maybe? this is amazing
         return context.getCacheProvider().getLastIdKeyValues("strut-scores-" + catwalkId, payloadSize, false, maxHeapPressureInBytes, "cuckoo",
+            hashIndexLoadFactor);
+    }
+
+    <BM extends IBM, IBM> CacheKeyBitmaps<BM, IBM> getNilTermCache(MiruRequestContext<BM, IBM, ? extends MiruSipCursor<?>> context,
+        String catwalkId) {
+        int payloadSize = -1; // TODO fix maybe? this is amazing
+        return context.getCacheProvider().getCacheKeyBitmaps("strut-nil-" + catwalkId, payloadSize, maxHeapPressureInBytes, "cuckoo",
             hashIndexLoadFactor);
     }
 
@@ -478,6 +515,7 @@ public class StrutModelScorer {
         int pivotFieldId,
         BM[] constrainFeature,
         LastIdCacheKeyValues termScoreCache,
+        CacheKeyBitmaps<BM, IBM> nilTermCache,
         TimestampedCacheKeyValues termFeatureCache,
         AtomicInteger totalPartitionCount,
         MiruSolutionLog solutionLog) throws Exception {
@@ -551,9 +589,9 @@ public class StrutModelScorer {
 
         if (!updates.isEmpty()) {
             long startOfUpdates = System.currentTimeMillis();
-            commit(modelId, termScoreCache, updates, stackBuffer);
+            commitAndNil(modelId, bitmaps, context, pivotFieldId, termScoreCache, nilTermCache, updates, stackBuffer);
             if (shareScores) {
-                shareOut(coord, new StrutShare(coord.tenantId, coord.partitionId, catwalkQuery, modelId, updates));
+                shareOut(coord, new StrutShare(coord.tenantId, coord.partitionId, catwalkQuery, modelId, pivotFieldId, updates));
             }
             long totalTimeScoreUpdates = System.currentTimeMillis() - startOfUpdates;
             LOG.info("Strut score updates {} features in {} ms for {}", updates.size(), totalTimeScoreUpdates, coord);

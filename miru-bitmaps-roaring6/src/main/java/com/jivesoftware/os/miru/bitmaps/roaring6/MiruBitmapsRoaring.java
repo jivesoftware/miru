@@ -628,7 +628,7 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
 
     @Override
     public void optimize(RoaringBitmap index, int[] keys) {
-        //TODO RoaringInspection.optimize(index, keys);
+        RoaringInspection.optimize(index, keys);
     }
 
     @Override
