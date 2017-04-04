@@ -474,22 +474,22 @@ public class MiruSyncSender<C extends MiruCursor<C, S>, S extends MiruSipCursor<
 
                 List<MiruPartitionedActivity> activities = Lists.newArrayListWithCapacity(batch.activities.size());
                 for (MiruWALEntry entry : batch.activities) {
-                    if (entry.activity.type.isActivityType()
-                        && entry.activity.activity.isPresent()
-                        && (tenantConfig.startTimestampMillis == -1 || entry.activity.clockTimestamp > tenantConfig.startTimestampMillis)
-                        && (tenantConfig.stopTimestampMillis == -1 || entry.activity.clockTimestamp < tenantConfig.stopTimestampMillis)) {
+                    if (entry.activity.type.isActivityType() && entry.activity.activity.isPresent()) {
                         activityTypes++;
-                        //TODO rough estimate of index depth, wildly inaccurate if we skip most of a partition
-                        lastIndex = Math.max(lastIndex, numWriters * entry.activity.index);
-                        // copy to tenantId with time shift, and assign fake writerId
-                        MiruActivity fromActivity = entry.activity.activity.get();
-                        MiruActivity toActivity = fromActivity.copyTo(tenantTuple.to, fromActivity.time + timeShift);
-                        // forge clock timestamp
-                        clockTimestamp.set(entry.activity.clockTimestamp + clockShift);
-                        activities.add(partitionedActivityFactory.activity(-1,
-                            partitionId,
-                            lastIndex,
-                            toActivity));
+                        if ((tenantConfig.startTimestampMillis == -1 || entry.activity.clockTimestamp > tenantConfig.startTimestampMillis)
+                            && (tenantConfig.stopTimestampMillis == -1 || entry.activity.clockTimestamp < tenantConfig.stopTimestampMillis)) {
+                            //TODO rough estimate of index depth, wildly inaccurate if we skip most of a partition
+                            lastIndex = Math.max(lastIndex, numWriters * entry.activity.index);
+                            // copy to tenantId with time shift, and assign fake writerId
+                            MiruActivity fromActivity = entry.activity.activity.get();
+                            MiruActivity toActivity = fromActivity.copyTo(tenantTuple.to, fromActivity.time + timeShift);
+                            // forge clock timestamp
+                            clockTimestamp.set(entry.activity.clockTimestamp + clockShift);
+                            activities.add(partitionedActivityFactory.activity(-1,
+                                partitionId,
+                                lastIndex,
+                                toActivity));
+                        }
                     }
                 }
                 if (!activities.isEmpty()) {
