@@ -15,6 +15,7 @@ import com.jivesoftware.os.miru.plugin.solution.MiruRequestAndReport;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolvableFactory;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -31,6 +32,7 @@ public class StrutInjectable {
     private final boolean gatherParallel;
     private final int scoreConcurrencyLevel;
     private final boolean parallelSolverEnabled;
+    private final Set<String> verboseModelIds;
     private final ExecutorService gatherExecutorService;
 
     public StrutInjectable(MiruProvider<? extends Miru> provider,
@@ -42,6 +44,7 @@ public class StrutInjectable {
         boolean gatherParallel,
         int scoreConcurrencyLevel,
         boolean parallelSolverEnabled,
+        Set<String> verboseModelIds,
         ExecutorService gatherExecutorService) {
         this.provider = provider;
         this.modelScorer = modelScorer;
@@ -52,6 +55,7 @@ public class StrutInjectable {
         this.gatherParallel = gatherParallel;
         this.scoreConcurrencyLevel = scoreConcurrencyLevel;
         this.parallelSolverEnabled = parallelSolverEnabled;
+        this.verboseModelIds = verboseModelIds;
         this.gatherExecutorService = gatherExecutorService;
     }
 
@@ -72,6 +76,7 @@ public class StrutInjectable {
                         gatherBatchSize,
                         gatherParallel,
                         scoreConcurrencyLevel,
+                        verboseModelIds,
                         gatherExecutorService)),
                 new StrutAnswerEvaluator(parallelSolverEnabled),
                 new StrutAnswerMerger(request.query.desiredNumberOfResults),
@@ -106,6 +111,7 @@ public class StrutInjectable {
                         gatherBatchSize,
                         gatherParallel,
                         scoreConcurrencyLevel,
+                        verboseModelIds,
                         gatherExecutorService)),
                 Optional.fromNullable(requestAndReport.report),
                 StrutAnswer.EMPTY_RESULTS,
@@ -138,6 +144,7 @@ public class StrutInjectable {
                         gatherBatchSize,
                         gatherParallel,
                         scoreConcurrencyLevel,
+                        verboseModelIds,
                         gatherExecutorService)),
                 new StrutAnswerMerger(request.query.desiredNumberOfResults),
                 StrutAnswer.EMPTY_RESULTS,

@@ -253,11 +253,17 @@ public class StrutModelScorer {
             multiTermTxIndex.setTermIds(hadTermIds.toArray(new MiruTermId[0]));
             BM had = bitmaps.orMultiTx(multiTermTxIndex, stackBuffer);
             nilTermCache.andNot(modelIdBytes, had, stackBuffer);
+            if (verboseModelIds.contains(modelId)) {
+                LOG.info("Commit and nil unmasked modelId:{} bits:{}", modelId, hadTermIds.size(), bitmaps.cardinality(had));
+            }
         }
         if (!nilTermIds.isEmpty()) {
             multiTermTxIndex.setTermIds(nilTermIds.toArray(new MiruTermId[0]));
             BM nil = bitmaps.orMultiTx(multiTermTxIndex, stackBuffer);
             nilTermCache.or(modelIdBytes, nil, stackBuffer);
+            if (verboseModelIds.contains(modelId)) {
+                LOG.info("Commit and nil unmasked modelId:{} count:{} bits:{}", modelId, nilTermIds.size(), bitmaps.cardinality(nil));
+            }
         }
     }
 
