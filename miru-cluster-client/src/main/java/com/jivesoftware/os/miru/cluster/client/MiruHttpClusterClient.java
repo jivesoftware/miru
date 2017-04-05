@@ -22,10 +22,10 @@ import com.jivesoftware.os.routing.bird.http.client.HttpClient;
 import com.jivesoftware.os.routing.bird.shared.HttpClientException;
 import com.jivesoftware.os.routing.bird.http.client.HttpResponse;
 import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
-import com.jivesoftware.os.routing.bird.http.client.RoundRobinStrategy;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.shared.ClientCall;
 import com.jivesoftware.os.routing.bird.shared.ClientCall.ClientResponse;
+import com.jivesoftware.os.routing.bird.shared.NextClientStrategy;
 import java.util.Arrays;
 import java.util.List;
 
@@ -36,28 +36,28 @@ public class MiruHttpClusterClient implements MiruClusterClient {
     private final MiruStats miruStats;
     private final String routingTenantId;
     private final TenantAwareHttpClient<String> clusterClient;
-    private final RoundRobinStrategy roundRobinStrategy;
+    private final NextClientStrategy nextClientStrategy;
     private final ObjectMapper requestMapper;
     private final HttpResponseMapper responseMapper;
 
     public MiruHttpClusterClient(MiruStats miruStats,
         String routingTenantId,
         TenantAwareHttpClient<String> clusterClient,
-        RoundRobinStrategy roundRobinStrategy,
+        NextClientStrategy nextClientStrategy,
         ObjectMapper requestMapper,
         HttpResponseMapper responseMapper) {
 
         this.miruStats = miruStats;
         this.routingTenantId = routingTenantId;
         this.clusterClient = clusterClient;
-        this.roundRobinStrategy = roundRobinStrategy;
+        this.nextClientStrategy = nextClientStrategy;
         this.requestMapper = requestMapper;
         this.responseMapper = responseMapper;
     }
 
     @Override
     public MiruTopologyResponse routingTopology(final MiruTenantId tenantId) throws Exception {
-        return sendRoundRobin("routingTopology", client -> {
+        return send("routingTopology", client -> {
             long start = System.currentTimeMillis();
             HttpResponse response = client.get("/miru/topology/routing/" + tenantId.toString(), null);
             MiruTopologyResponse miruTopologyResponse = responseMapper.extractResultFromResponse(response, MiruTopologyResponse.class, null);
@@ -69,7 +69,7 @@ public class MiruHttpClusterClient implements MiruClusterClient {
     @Override
     public void updateIngress(MiruIngressUpdate ingressUpdate) throws Exception {
         String jsonWarmIngress = requestMapper.writeValueAsString(ingressUpdate);
-        sendRoundRobin("updateIngress", client -> {
+        send("updateIngress", client -> {
             long start = System.currentTimeMillis();
             HttpResponse response = client.postJson("/miru/topology/update/ingress", jsonWarmIngress, null);
             String r = responseMapper.extractResultFromResponse(response, String.class, null);
@@ -80,7 +80,7 @@ public class MiruHttpClusterClient implements MiruClusterClient {
 
     @Override
     public void removeIngress(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
-        sendRoundRobin("removeIngress", client -> {
+        send("removeIngress", client -> {
             long start = System.currentTimeMillis();
             HttpResponse response = client.postJson("/miru/topology/remove/ingress/" + tenantId.toString() + "/" + partitionId.toString(), "null", null);
             String r = responseMapper.extractResultFromResponse(response, String.class, null);
@@ -91,7 +91,7 @@ public class MiruHttpClusterClient implements MiruClusterClient {
 
     @Override
     public void updateLastId(MiruPartitionCoord coord, int lastId) throws Exception {
-        sendRoundRobin("updateLastId", client -> {
+        send("updateLastId", client -> {
             long start = System.currentTimeMillis();
             String endpointPrefix = "/miru/topology/update/lastId" +
                 "/" + coord.tenantId.toString() +
@@ -106,7 +106,7 @@ public class MiruHttpClusterClient implements MiruClusterClient {
 
     @Override
     public void destroyPartition(MiruTenantId tenantId, MiruPartitionId partitionId) throws Exception {
-        sendRoundRobin("destroyPartition", client -> {
+        send("destroyPartition", client -> {
             long start = System.currentTimeMillis();
             HttpResponse response = client.postJson("/miru/topology/destroy/partition/" + tenantId.toString() + "/" + partitionId.toString(), "null", null);
             String r = responseMapper.extractResultFromResponse(response, String.class, null);
@@ -117,7 +117,7 @@ public class MiruHttpClusterClient implements MiruClusterClient {
 
     @Override
     public List<MiruPartitionStatus> getPartitionStatus(MiruTenantId tenantId, MiruPartitionId largestPartitionId) throws Exception {
-        return sendRoundRobin("getPartitionStatus", client -> {
+        return send("getPartitionStatus", client -> {
             long start = System.currentTimeMillis();
             HttpResponse response = client.get("/miru/topology/partition/status/" + tenantId.toString() + "/" + largestPartitionId.toString(), null);
             MiruPartitionStatus[] statuses = responseMapper.extractResultFromResponse(response, MiruPartitionStatus[].class, null);
@@ -130,7 +130,7 @@ public class MiruHttpClusterClient implements MiruClusterClient {
     @Override
     public MiruHeartbeatResponse thumpthump(final MiruHost host, final MiruHeartbeatRequest heartbeatRequest) throws Exception {
         String jsonHeartbeatRequest = requestMapper.writeValueAsString(heartbeatRequest);
-        return sendRoundRobin("thumpthump", client -> {
+        return send("thumpthump", client -> {
             long start = System.currentTimeMillis();
             HttpResponse response = client.postJson("/miru/topology/thumpthump/" + host.getLogicalName(), jsonHeartbeatRequest, null);
             MiruHeartbeatResponse heartbeatResponse = responseMapper.extractResultFromResponse(response, MiruHeartbeatResponse.class, null);
@@ -141,7 +141,7 @@ public class MiruHttpClusterClient implements MiruClusterClient {
 
     @Override
     public List<HostHeartbeat> allhosts() {
-        return sendRoundRobin("allhosts", client -> {
+        return send("allhosts", client -> {
             long start = System.currentTimeMillis();
             HttpResponse response = client.postJson("/miru/topology/allHosts", "null", null);
             HostHeartbeat[] heartbeats = responseMapper.extractResultFromResponse(response, HostHeartbeat[].class, null);
@@ -152,7 +152,7 @@ public class MiruHttpClusterClient implements MiruClusterClient {
 
     @Override
     public MiruTenantConfig tenantConfig(final MiruTenantId tenantId) {
-        return sendRoundRobin("tenantConfig", client -> {
+        return send("tenantConfig", client -> {
             long start = System.currentTimeMillis();
             HttpResponse response = client.get("/miru/topology/tenantConfig/" + tenantId.toString(), null);
             MiruTenantConfig tenantConfig = responseMapper.extractResultFromResponse(response, MiruTenantConfig.class, null);
@@ -163,7 +163,7 @@ public class MiruHttpClusterClient implements MiruClusterClient {
 
     @Override
     public List<MiruPartition> partitions(final MiruTenantId tenantId) {
-        return sendRoundRobin("partitions", client -> {
+        return send("partitions", client -> {
             long start = System.currentTimeMillis();
             HttpResponse response = client.postJson("/miru/topology/partitions/" + tenantId.toString(), "null", null);
             MiruPartition[] partitions = responseMapper.extractResultFromResponse(response, MiruPartition[].class, null);
@@ -174,7 +174,7 @@ public class MiruHttpClusterClient implements MiruClusterClient {
 
     @Override
     public List<PartitionRange> getIngressRanges(MiruTenantId tenantId) throws Exception {
-        return sendRoundRobin("getIngressRanges", client -> {
+        return send("getIngressRanges", client -> {
             long start = System.currentTimeMillis();
             HttpResponse response = client.get("/miru/topology/ingress/ranges/" + tenantId.toString(), null);
             PartitionRange[] partitionRanges = responseMapper.extractResultFromResponse(response, PartitionRange[].class, null);
@@ -185,7 +185,7 @@ public class MiruHttpClusterClient implements MiruClusterClient {
 
     @Override
     public void removeHost(final MiruHost host) {
-        sendRoundRobin("removeHost", client -> {
+        send("removeHost", client -> {
             long start = System.currentTimeMillis();
             HttpResponse response = client.postJson("/miru/topology/remove/" + host.getLogicalName(), "null", null);
             String r = responseMapper.extractResultFromResponse(response, String.class, null);
@@ -197,7 +197,7 @@ public class MiruHttpClusterClient implements MiruClusterClient {
 
     @Override
     public void removeTopology(final MiruHost host, final MiruTenantId tenantId, final MiruPartitionId partitionId) {
-        sendRoundRobin("removeTopology", client -> {
+        send("removeTopology", client -> {
             long start = System.currentTimeMillis();
             HttpResponse response = client.postJson("/miru/topology/remove/"
                 + host.getLogicalName() + "/"
@@ -214,7 +214,7 @@ public class MiruHttpClusterClient implements MiruClusterClient {
 
     @Override
     public MiruSchema getSchema(final MiruTenantId tenantId) {
-        return sendRoundRobin("getSchema", client -> {
+        return send("getSchema", client -> {
             long start = System.currentTimeMillis();
             HttpResponse response = client.get("/miru/topology/schema/" + tenantId.toString(), null);
             MiruSchema schema = responseMapper.extractResultFromResponse(response, MiruSchema.class, null);
@@ -226,7 +226,7 @@ public class MiruHttpClusterClient implements MiruClusterClient {
     @Override
     public void registerSchema(final MiruTenantId tenantId, final MiruSchema schema) throws Exception {
         String jsonSchema = requestMapper.writeValueAsString(schema);
-        sendRoundRobin("registerSchema", client -> {
+        send("registerSchema", client -> {
             long start = System.currentTimeMillis();
             HttpResponse response = client.postJson("/miru/topology/schema/" + tenantId.toString(), jsonSchema, null);
             String r = responseMapper.extractResultFromResponse(response, String.class, null);
@@ -235,9 +235,9 @@ public class MiruHttpClusterClient implements MiruClusterClient {
         });
     }
 
-    private <R> R sendRoundRobin(String family, ClientCall<HttpClient, R, HttpClientException> call) {
+    private <R> R send(String family, ClientCall<HttpClient, R, HttpClientException> call) {
         try {
-            return clusterClient.call(routingTenantId, roundRobinStrategy, family, call);
+            return clusterClient.call(routingTenantId, nextClientStrategy, family, call);
         } catch (Exception x) {
             throw new RuntimeException("Failed to send.", x);
         }

@@ -3,6 +3,7 @@ package com.jivesoftware.os.miru.wal.client;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionedActivity;
 import com.jivesoftware.os.miru.api.activity.TimeAndVersion;
@@ -22,7 +23,7 @@ import com.jivesoftware.os.routing.bird.http.client.ConnectionDescriptorSelectiv
 import com.jivesoftware.os.routing.bird.http.client.HttpClient;
 import com.jivesoftware.os.routing.bird.http.client.HttpResponse;
 import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
-import com.jivesoftware.os.routing.bird.http.client.RoundRobinStrategy;
+import com.jivesoftware.os.routing.bird.http.client.TailAtScaleStrategy;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.shared.ClientCall;
 import com.jivesoftware.os.routing.bird.shared.ClientCall.ClientResponse;
@@ -31,7 +32,9 @@ import com.jivesoftware.os.routing.bird.shared.HttpClientException;
 import com.jivesoftware.os.routing.bird.shared.NextClientStrategy;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang.mutable.MutableLong;
 import org.apache.http.HttpStatus;
@@ -42,7 +45,9 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
 
     private final String routingTenantId;
     private final TenantAwareHttpClient<String> walClient;
-    private final RoundRobinStrategy roundRobinStrategy;
+    private final ExecutorService tasExecutors;
+    private final int tasWindowSize;
+    private final float tasPercentile;
     private final ObjectMapper requestMapper;
     private final HttpResponseMapper responseMapper;
     private final SickThreads sickThreads;
@@ -52,18 +57,26 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
     private final Class<S> sipCursorClass;
     private final Cache<TenantRoutingGroup<?>, NextClientStrategy> tenantRoutingCache;
 
+    private final Map<MiruTenantId, NextClientStrategy> tenantNextClientStrategy = Maps.newConcurrentMap();
+
     public MiruHttpWALClient(String routingTenantId,
         TenantAwareHttpClient<String> walClient,
-        RoundRobinStrategy roundRobinStrategy,
+        ExecutorService tasExecutors,
+        int tasWindowSize,
+        float tasPercentile,
         ObjectMapper requestMapper,
         HttpResponseMapper responseMapper,
         SickThreads sickThreads, long sleepOnFailureMillis,
         String pathPrefix,
         Class<C> cursorClass,
         Class<S> sipCursorClass) {
+
+
         this.routingTenantId = routingTenantId;
         this.walClient = walClient;
-        this.roundRobinStrategy = roundRobinStrategy;
+        this.tasExecutors = tasExecutors;
+        this.tasWindowSize = tasWindowSize;
+        this.tasPercentile = tasPercentile;
         this.requestMapper = requestMapper;
         this.responseMapper = responseMapper;
         this.sickThreads = sickThreads;
@@ -79,7 +92,7 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
 
     @Override
     public HostPort[] getTenantRoutingGroup(RoutingGroupType routingGroupType, MiruTenantId tenantId) throws Exception {
-        return sendRoundRobin("getTenantRoutingGroup", httpClient -> {
+        return send(tenantId, "getTenantRoutingGroup", httpClient -> {
             HttpResponse httpResponse = httpClient.get(pathPrefix + "/routing/tenant/" + routingGroupType.name() + "/" + tenantId.toString(), null);
             HostPort[] response = responseMapper.extractResultFromResponse(httpResponse, HostPort[].class, null);
             return new ClientResponse<>(response, true);
@@ -91,7 +104,7 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
         MiruTenantId tenantId,
         MiruPartitionId partitionId,
         boolean createIfAbsent) throws Exception {
-        return sendRoundRobin("getTenantPartitionRoutingGroup", httpClient -> {
+        return send(tenantId, "getTenantPartitionRoutingGroup", httpClient -> {
             HttpResponse httpResponse = httpClient.get(
                 pathPrefix + "/routing/lazyTenantPartition" +
                     "/" + routingGroupType.name() +
@@ -109,7 +122,7 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
         MiruTenantId tenantId,
         MiruStreamId streamId,
         boolean createIfAbsent) throws Exception {
-        return sendRoundRobin("getTenantStreamRoutingGroup", httpClient -> {
+        return send(tenantId, "getTenantStreamRoutingGroup", httpClient -> {
             HttpResponse httpResponse = httpClient.get(
                 pathPrefix + "/routing/lazyTenantStream" +
                     "/" + routingGroupType.name() +
@@ -124,7 +137,7 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
 
     @Override
     public List<MiruTenantId> getAllTenantIds() throws Exception { //TODO finish this
-        return sendRoundRobin("getAllTenantIds", client -> {
+        return send(new MiruTenantId(new byte[0]), "getAllTenantIds", client -> {
             HttpResponse response = client.get(pathPrefix + "/tenants/all", null);
             MiruTenantId[] result = responseMapper.extractResultFromResponse(response, MiruTenantId[].class, null);
             return new ClientResponse<>(Arrays.asList(result), true);
@@ -186,7 +199,7 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
 
     @Override
     public MiruPartitionId getLargestPartitionId(final MiruTenantId tenantId) throws Exception {
-        return sendRoundRobin("getLargestPartitionId", client -> {
+        return send(tenantId, "getLargestPartitionId", client -> {
             HttpResponse response = client.get(pathPrefix + "/largestPartitionId/" + tenantId.toString(), null);
             return new ClientResponse<>(responseMapper.extractResultFromResponse(response, MiruPartitionId.class, null), true);
         });
@@ -319,9 +332,13 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
                 null));
     }
 
-    private <R> R sendRoundRobin(String family, ClientCall<HttpClient, R, HttpClientException> call) {
+    private <R> R send(MiruTenantId miruTenantId, String family, ClientCall<HttpClient, R, HttpClientException> call) {
         try {
-            return walClient.call(routingTenantId, roundRobinStrategy, family, call);
+
+            NextClientStrategy nextClientStrategy = tenantNextClientStrategy.computeIfAbsent(miruTenantId,
+                (t) -> new TailAtScaleStrategy(tasExecutors, tasWindowSize, tasPercentile));
+
+            return walClient.call(routingTenantId, nextClientStrategy, family, call);
         } catch (Exception x) {
             throw new RuntimeException("Failed to send.", x);
         }

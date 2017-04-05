@@ -102,7 +102,9 @@ public class StrutPlugin implements MiruPlugin<StrutEndpoints, StrutInjectable>,
                 .build();
         }
 
-        StrutModelCache cache = new StrutModelCache(catwalkHttpClient, mapper, responseMapper, modelCache);
+        ExecutorService stas = Executors.newCachedThreadPool(new ThreadFactoryBuilder().setNameFormat("stas-%d").build());
+
+        StrutModelCache cache = new StrutModelCache(catwalkHttpClient, stas, 100, 95, mapper, responseMapper, modelCache);
 
         ScheduledExecutorService asyncExecutorService = Executors.newScheduledThreadPool(config.getAsyncThreadPoolSize(),
             new ThreadFactoryBuilder().setNameFormat("strut-async-%d").build());

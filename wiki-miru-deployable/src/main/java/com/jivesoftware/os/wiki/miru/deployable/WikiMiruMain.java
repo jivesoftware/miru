@@ -18,6 +18,7 @@ package com.jivesoftware.os.wiki.miru.deployable;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
@@ -68,6 +69,8 @@ import java.io.File;
 import java.net.InetAddress;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
@@ -160,7 +163,9 @@ public class WikiMiruMain {
             HttpResponseMapper responseMapper = new HttpResponseMapper(mapper);
 
 
-            MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize(new MiruStats(), "", miruManageClient, mapper);
+            ExecutorService tasExecutors = Executors.newCachedThreadPool(new ThreadFactoryBuilder().setNameFormat("tas-%d").build());
+
+            MiruClusterClient clusterClient = new MiruClusterClientInitializer(tasExecutors, 100, 95).initialize(new MiruStats(), "", miruManageClient, mapper);
             WikiSchemaService wikiSchemaService = new WikiSchemaService(clusterClient);
 
             Settings settings = Settings.builder()
@@ -183,8 +188,6 @@ public class WikiMiruMain {
                 transportClient);
 
             MiruWikiQuerier miruWikiQuerier = new MiruWikiQuerier(readerClient, mapper, responseMapper);
-
-
 
 
             ESWikiQuerier esWikiQuerier = new ESWikiQuerier(transportClient);
