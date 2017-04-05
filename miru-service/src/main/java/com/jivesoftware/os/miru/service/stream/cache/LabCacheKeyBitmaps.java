@@ -102,12 +102,20 @@ public class LabCacheKeyBitmaps<BM extends IBM, IBM> implements CacheKeyBitmaps<
         return true;
     }
 
+    private byte[] lastIdKey(byte[] cacheId) {
+        byte[] key = new byte[LAST_ID_BYTES.length + cacheId.length];
+        System.arraycopy(LAST_ID_BYTES, 0, key, 0, LAST_ID_BYTES.length);
+        System.arraycopy(cacheId, 0, key, LAST_ID_BYTES.length, cacheId.length);
+        return key;
+    }
+
     @Override
     public int getLastId(byte[] cacheId) throws Exception {
         ValueIndex<byte[]> store = getStore(cacheId);
         int[] lastId = { -1 };
-        store.get(keyStream -> keyStream.key(0, LAST_ID_BYTES, 0, LAST_ID_BYTES.length),
-            (index, key, timestamp, tombstoned, version, payload) -> {
+        byte[] key = lastIdKey(cacheId);
+        store.get(keyStream -> keyStream.key(0, key, 0, key.length),
+            (index, key1, timestamp, tombstoned, version, payload) -> {
                 lastId[0] = (int) timestamp;
                 return true;
             },
@@ -118,7 +126,9 @@ public class LabCacheKeyBitmaps<BM extends IBM, IBM> implements CacheKeyBitmaps<
     @Override
     public void setLastId(byte[] cacheId, int lastId) throws Exception {
         ValueIndex<byte[]> store = getStore(cacheId);
-        store.append(stream -> stream.stream(0, LAST_ID_BYTES, lastId, false, -1, new byte[0]),
+        byte[] key = lastIdKey(cacheId);
+        long version = idProvider.nextId();
+        store.append(stream -> stream.stream(0, key, lastId, false, version, new byte[0]),
             false,
             new BolBuffer(),
             new BolBuffer());
