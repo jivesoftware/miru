@@ -259,7 +259,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         }
 
         if (verboseModelId) {
-            LOG.info("Gathered modelId:{} count:{}", termIdLastIdCounts.size());
+            LOG.info("Gathered modelIds:{} count:{}", Arrays.toString(modelIds), termIdLastIdCounts.size());
         }
 
         long elapsed = System.currentTimeMillis() - start;
