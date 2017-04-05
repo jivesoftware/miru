@@ -463,23 +463,25 @@ public class StrutModelScorer {
                     solutionLog,
                     (lastId, termId, count) -> rescorable.add(new TermIdLastIdCount(termId, lastId, count)),
                     stackBuffer);
-                rescore(catwalkId,
-                    modelId,
-                    catwalkDefinition.catwalkQuery,
-                    catwalkDefinition.featureScalars,
-                    catwalkDefinition.featureStrategy,
-                    false,
-                    catwalkDefinition.numeratorScalars,
-                    catwalkDefinition.numeratorStrategy,
-                    handle,
-                    rescorable,
-                    pivotFieldId,
-                    asyncConstrainFeature,
-                    termScoreCache,
-                    nilTermCache,
-                    termFeatureCache,
-                    new AtomicInteger(),
-                    solutionLog);
+                for (List<TermIdLastIdCount> batch : Lists.partition(rescorable, 1000)) {
+                    rescore(catwalkId,
+                        modelId,
+                        catwalkDefinition.catwalkQuery,
+                        catwalkDefinition.featureScalars,
+                        catwalkDefinition.featureStrategy,
+                        false,
+                        catwalkDefinition.numeratorScalars,
+                        catwalkDefinition.numeratorStrategy,
+                        handle,
+                        batch,
+                        pivotFieldId,
+                        asyncConstrainFeature,
+                        termScoreCache,
+                        nilTermCache,
+                        termFeatureCache,
+                        new AtomicInteger(),
+                        solutionLog);
+                }
                 nilTermCache.setLastId(modelIdBytes, activityIndexLastId);
                 LOG.inc("process>count", rescorable.size());
                 LOG.inc("process>batch>pow>" + FilerIO.chunkPower(rescorable.size(), 0));
