@@ -199,6 +199,10 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         }
         IBM nilMask = masks.isEmpty() ? null : masks.size() == 1 ? masks.get(0) : bitmaps.and(masks);
         BM eligible = nilMask == null ? candidates : bitmaps.andNot(candidates, nilMask);
+        if (nilMask != null) {
+            LOG.info("Reduced candidates for:{} from:{} nil:{} to:{}", Lists.transform(request.query.modelScalars, scalar -> scalar.modelId),
+                bitmaps.cardinality(candidates), bitmaps.cardinality(nilMask), bitmaps.cardinality(eligible));
+        }
 
         AtomicInteger modelTotalPartitionCount = new AtomicInteger();
 
@@ -291,22 +295,24 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             termScoresCaches,
             termScoresCacheScalars,
             (bucket, termIndex, scores, scoredToLastId) -> {
-                for (int i = 0; i < scores.length; i++) {
-                    if (Float.isNaN(scores[i])) {
-                        LOG.inc("strut>scores>NaN");
-                    } else {
-                        maxScore[0] = Math.max(maxScore[0], scores[i]);
+                if (scoredToLastId != -1) {
+                    for (int i = 0; i < scores.length; i++) {
+                        if (Float.isNaN(scores[i])) {
+                            LOG.inc("strut>scores>NaN");
+                        } else {
+                            maxScore[0] = Math.max(maxScore[0], scores[i]);
+                        }
                     }
+                    TermIdLastIdCount termIdLastIdCount = termIdLastIdCounts.get(termIndex);
+                    float scaledScore = Strut.scaleScore(scores, request.query.numeratorScalars, request.query.numeratorStrategy);
+                    parallelScored[bucket].add(new Scored(termIdLastIdCount.lastId,
+                        miruTermIds[termIndex],
+                        scoredToLastId,
+                        scaledScore,
+                        scores,
+                        null,
+                        termIdLastIdCount.count));
                 }
-                TermIdLastIdCount termIdLastIdCount = termIdLastIdCounts.get(termIndex);
-                float scaledScore = Strut.scaleScore(scores, request.query.numeratorScalars, request.query.numeratorStrategy);
-                parallelScored[bucket].add(new Scored(termIdLastIdCount.lastId,
-                    miruTermIds[termIndex],
-                    scoredToLastId,
-                    scaledScore,
-                    scores,
-                    null,
-                    termIdLastIdCount.count));
                 return true;
             },
             gatherExecutorService,
