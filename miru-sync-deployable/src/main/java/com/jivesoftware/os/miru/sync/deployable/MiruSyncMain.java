@@ -104,6 +104,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import org.glassfish.jersey.oauth1.signature.OAuth1Request;
@@ -232,8 +233,9 @@ public class MiruSyncMain {
                 .socketTimeoutInMillis(10_000)
                 .build(); // TODO expose to conf
 
+            ExecutorService tasExecutor = Executors.newCachedThreadPool(new ThreadFactoryBuilder().setNameFormat("tas-%d").build());
             TailAtScaleStrategy tailAtScaleStrategy = new TailAtScaleStrategy(
-                Executors.newCachedThreadPool(new ThreadFactoryBuilder().setNameFormat("tas-%d").build()),
+                tasExecutor,
                 100, // TODO config
                 95 // TODO config
             );
@@ -367,7 +369,7 @@ public class MiruSyncMain {
             deployable.addHealthCheck(new SickThreadsHealthCheck(deployable.config(WALClientSickThreadsHealthCheckConfig.class), walClientSickThreads));
 
             MiruStats miruStats = new MiruStats();
-            MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize(miruStats, "", manageHttpClient, mapper);
+            MiruClusterClient clusterClient = new MiruClusterClientInitializer(tasExecutor, 100, 95).initialize(miruStats, "", manageHttpClient, mapper);
 
             ActivityReadEventConverter activityReadEventConverter = syncConfig.getSyncReceiverActivityReadEventConverterClass().newInstance();
 
@@ -380,6 +382,9 @@ public class MiruSyncMain {
             if (syncConfig.getSyncLoopback().equals("rcvs")) {
                 MiruWALClient<RCVSCursor, RCVSSipCursor> rcvsWALClient = new MiruWALClientInitializer().initialize("",
                     walHttpClient,
+                    tasExecutor,
+                    100,
+                    95,
                     mapper,
                     walClientSickThreads,
                     10_000,
@@ -390,8 +395,12 @@ public class MiruSyncMain {
             } else if (syncConfig.getSyncLoopback().equals("amza")) {
                 MiruWALClient<AmzaCursor, AmzaSipCursor> amzaWALClient = new MiruWALClientInitializer().initialize("",
                     walHttpClient,
+                    tasExecutor,
+                    100,
+                    95,
                     mapper,
-                    walClientSickThreads, 10_000,
+                    walClientSickThreads,
+                    10_000,
                     "/miru/wal/amza",
                     AmzaCursor.class,
                     AmzaSipCursor.class);
@@ -401,6 +410,9 @@ public class MiruSyncMain {
             if (walConfig.getActivityWALType().equals("rcvs")) {
                 MiruWALClient<RCVSCursor, RCVSSipCursor> rcvsWALClient = new MiruWALClientInitializer().initialize("",
                     walHttpClient,
+                    tasExecutor,
+                    100,
+                    95,
                     mapper,
                     walClientSickThreads,
                     10_000,
@@ -460,6 +472,9 @@ public class MiruSyncMain {
             } else if (walConfig.getActivityWALType().equals("amza")) {
                 MiruWALClient<AmzaCursor, AmzaSipCursor> amzaWALClient = new MiruWALClientInitializer().initialize("",
                     walHttpClient,
+                    tasExecutor,
+                    100,
+                    95,
                     mapper,
                     walClientSickThreads, 10_000,
                     "/miru/wal/amza",

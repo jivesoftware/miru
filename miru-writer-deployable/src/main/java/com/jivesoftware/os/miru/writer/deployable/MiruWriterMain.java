@@ -19,6 +19,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.collect.Maps;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.jivesoftware.os.amza.api.wal.WALKey;
 import com.jivesoftware.os.amza.embed.EmbedAmzaServiceInitializer.Lifecycle;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider;
@@ -225,15 +226,26 @@ public class MiruWriterMain {
             SickThreads walClientSickThreads = new SickThreads();
             deployable.addHealthCheck(new SickThreadsHealthCheck(deployable.config(WALClientSickThreadsHealthCheckConfig.class), walClientSickThreads));
 
+            ExecutorService tasExecutors = Executors.newCachedThreadPool(new ThreadFactoryBuilder().setNameFormat("tas-%d").build());
+
+
             MiruWALConfig walConfig = deployable.config(MiruWALConfig.class);
             MiruWALClient<?, ?> walClient;
             if (walConfig.getActivityWALType().equals("rcvs") || walConfig.getActivityWALType().equals("rcvs_amza")) {
-                MiruWALClient<RCVSCursor, RCVSSipCursor> rcvsWALClient = new MiruWALClientInitializer().initialize("", walHttpClient, mapper,
+                MiruWALClient<RCVSCursor, RCVSSipCursor> rcvsWALClient = new MiruWALClientInitializer().initialize("", walHttpClient,
+                    tasExecutors,
+                    100,
+                    95,
+                    mapper,
                     walClientSickThreads, 10_000,
                     "/miru/wal/rcvs", RCVSCursor.class, RCVSSipCursor.class);
                 walClient = rcvsWALClient;
             } else if (walConfig.getActivityWALType().equals("amza") || walConfig.getActivityWALType().equals("amza_rcvs")) {
-                MiruWALClient<AmzaCursor, AmzaSipCursor> amzaWALClient = new MiruWALClientInitializer().initialize("", walHttpClient, mapper,
+                MiruWALClient<AmzaCursor, AmzaSipCursor> amzaWALClient = new MiruWALClientInitializer().initialize("", walHttpClient,
+                    tasExecutors,
+                    100,
+                    95,
+                    mapper,
                     walClientSickThreads, 10_000,
                     "/miru/wal/amza", AmzaCursor.class, AmzaSipCursor.class);
                 walClient = amzaWALClient;
@@ -253,7 +265,8 @@ public class MiruWriterMain {
                 walClient);
 
             MiruStats miruStats = new MiruStats();
-            MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize(miruStats, "", manageHttpClient, mapper);
+
+            MiruClusterClient clusterClient = new MiruClusterClientInitializer(tasExecutors, 100, 95).initialize(miruStats, "", manageHttpClient, mapper);
 
             MiruPartitioner miruPartitioner = new MiruPartitioner(instanceConfig.getInstanceName(),
                 amzaPartitionIdProvider,

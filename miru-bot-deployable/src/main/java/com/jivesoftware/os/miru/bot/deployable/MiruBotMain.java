@@ -1,6 +1,7 @@
 package com.jivesoftware.os.miru.bot.deployable;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProviderImpl;
@@ -33,6 +34,8 @@ import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelperUtils;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.http.client.TenantRoutingHttpClientInitializer;
 import java.util.Arrays;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class MiruBotMain {
 
@@ -148,7 +151,9 @@ public class MiruBotMain {
             MiruBotDistinctsConfig miruBotDistinctsConfig = deployable.config(MiruBotDistinctsConfig.class);
             MiruBotUniquesConfig miruBotUniquesConfig = deployable.config(MiruBotUniquesConfig.class);
 
-            MiruClusterClient miruClusterClient = new MiruClusterClientInitializer().initialize(
+            ExecutorService tasExecutors = Executors.newCachedThreadPool(new ThreadFactoryBuilder().setNameFormat("tas-%d").build());
+
+            MiruClusterClient miruClusterClient = new MiruClusterClientInitializer(tasExecutors, 100, 95).initialize(
                 new MiruStats(), "", miruManageClient, new ObjectMapper());
 
             MiruBotSchemaService miruBotSchemaService = new MiruBotSchemaService(miruClusterClient);

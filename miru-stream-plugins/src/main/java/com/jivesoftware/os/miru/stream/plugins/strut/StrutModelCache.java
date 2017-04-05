@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.stream.plugins.strut;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.cache.Cache;
+import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.catwalk.shared.CatwalkModel;
 import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery;
@@ -14,16 +15,18 @@ import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.http.client.HttpResponse;
 import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
 import com.jivesoftware.os.routing.bird.http.client.HttpStreamResponse;
-import com.jivesoftware.os.routing.bird.http.client.RoundRobinStrategy;
+import com.jivesoftware.os.routing.bird.http.client.TailAtScaleStrategy;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.shared.ClientCall;
 import com.jivesoftware.os.routing.bird.shared.ClientCall.ClientResponse;
+import com.jivesoftware.os.routing.bird.shared.NextClientStrategy;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 import org.xerial.snappy.SnappyInputStream;
 
 /**
@@ -33,18 +36,28 @@ public class StrutModelCache {
 
     private static final MetricLogger LOG = MetricLoggerFactory.getLogger();
 
-    private final RoundRobinStrategy robinStrategy = new RoundRobinStrategy();
-
     private final TenantAwareHttpClient<String> catwalkClient;
+    private final ExecutorService tasExecutors;
+    private final int tasWindowSize;
+    private final float tasPercentile;
     private final ObjectMapper requestMapper;
     private final HttpResponseMapper responseMapper;
     private final Cache<String, byte[]> modelCache;
 
+    private final Map<MiruTenantId, NextClientStrategy> tenantNextClientStrategy = Maps.newConcurrentMap();
+
     public StrutModelCache(TenantAwareHttpClient<String> catwalkClient,
+        ExecutorService tasExecutors,
+        int tasWindowSize,
+        float tasPercentile,
         ObjectMapper requestMapper,
         HttpResponseMapper responseMapper,
         Cache<String, byte[]> modelCache) {
+
         this.catwalkClient = catwalkClient;
+        this.tasExecutors = tasExecutors;
+        this.tasWindowSize = tasWindowSize;
+        this.tasPercentile = tasPercentile;
         this.requestMapper = requestMapper;
         this.responseMapper = responseMapper;
         this.modelCache = modelCache;
@@ -63,9 +76,12 @@ public class StrutModelCache {
         int partitionId,
         CatwalkQuery catwalkQuery) throws Exception {
 
+        NextClientStrategy nextClientStrategy = tenantNextClientStrategy.computeIfAbsent(tenantId,
+            (t) -> new TailAtScaleStrategy(tasExecutors, tasWindowSize, tasPercentile));
+
         String key = tenantId.toString() + "/" + catwalkId + "/" + modelId;
         if (modelCache == null) {
-            return convert(catwalkQuery, fetchModel(catwalkQuery, key, partitionId));
+            return convert(catwalkQuery, fetchModel(nextClientStrategy, catwalkQuery, key, partitionId));
         }
 
         StrutModel model = null;
@@ -78,7 +94,7 @@ public class StrutModelCache {
 
         if (model == null) {
             try {
-                modelBytes = modelCache.get(key, () -> fetchModelBytes(catwalkQuery, key, partitionId));
+                modelBytes = modelCache.get(key, () -> fetchModelBytes(nextClientStrategy, catwalkQuery, key, partitionId));
                 SnappyInputStream in = new SnappyInputStream(new BufferedInputStream(new ByteArrayInputStream(modelBytes), 8192));
                 CatwalkModel catwalkModel = requestMapper.readValue(in, CatwalkModel.class);
                 model = convert(catwalkQuery, catwalkModel);
@@ -109,9 +125,10 @@ public class StrutModelCache {
                 }
             }
         } else {
+
             String json = requestMapper.writeValueAsString(catwalkQuery);
             catwalkClient.call("",
-                robinStrategy,
+                nextClientStrategy,
                 "strutModelCacheUpdate",
                 (c) -> new ClientCall.ClientResponse<>(c.postJson("/miru/catwalk/model/update/" + key + "/" + partitionId, json, null), true));
         }
@@ -119,10 +136,11 @@ public class StrutModelCache {
 
     }
 
-    private byte[] fetchModelBytes(CatwalkQuery catwalkQuery, String key, int partitionId) throws Exception {
+    private byte[] fetchModelBytes(NextClientStrategy nextClientStrategy, CatwalkQuery catwalkQuery, String key, int partitionId) throws Exception {
+
         String json = requestMapper.writeValueAsString(catwalkQuery);
         HttpResponse response = catwalkClient.call("",
-            robinStrategy,
+            nextClientStrategy,
             "strutModelCacheGet",
             (c) -> new ClientResponse<>(c.postJson("/miru/catwalk/model/get/" + key + "/" + partitionId, json, null), true));
         if (responseMapper.isSuccessStatusCode(response.getStatusCode())) {
@@ -134,10 +152,11 @@ public class StrutModelCache {
         }
     }
 
-    private CatwalkModel fetchModel(CatwalkQuery catwalkQuery, String key, int partitionId) throws Exception {
+    private CatwalkModel fetchModel(NextClientStrategy nextClientStrategy, CatwalkQuery catwalkQuery, String key, int partitionId) throws Exception {
+
         String json = requestMapper.writeValueAsString(catwalkQuery);
         HttpStreamResponse response = catwalkClient.call("",
-            robinStrategy,
+            nextClientStrategy,
             "strutModelCacheGet",
             (c) -> new ClientResponse<>(c.streamingPost("/miru/catwalk/model/get/" + key + "/" + partitionId, json, null), true));
 

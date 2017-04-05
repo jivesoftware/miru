@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSet.Builder;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.jivesoftware.os.amza.api.partition.Consistency;
 import com.jivesoftware.os.amza.api.partition.Durability;
 import com.jivesoftware.os.amza.api.partition.PartitionProperties;
@@ -108,6 +109,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.commons.lang.StringUtils;
 import org.merlin.config.defaults.LongDefault;
@@ -330,7 +333,10 @@ public class MiruWALMain {
                 .checkDeadEveryNMillis(10_000)
                 .build(); // TODO expose to conf
 
-            MiruClusterClient clusterClient = new MiruClusterClientInitializer().initialize(miruStats, "", manageHttpClient, mapper);
+            ExecutorService tasExecutors = Executors.newCachedThreadPool(new ThreadFactoryBuilder().setNameFormat("tas-%d").build());
+
+
+            MiruClusterClient clusterClient = new MiruClusterClientInitializer(tasExecutors, 100, 95).initialize(miruStats, "", manageHttpClient, mapper);
             SickThreads walClientSickThreads = new SickThreads();
 
             /*
@@ -351,7 +357,11 @@ public class MiruWALMain {
             boolean secondaryAmzaWAL = walConfig.getSecondaryAmzaWAL();
 
             if (primaryRCVSWAL) {
-                MiruWALClient<RCVSCursor, RCVSSipCursor> rcvsWALClient = new MiruWALClientInitializer().initialize("", walHttpClient, mapper,
+                MiruWALClient<RCVSCursor, RCVSSipCursor> rcvsWALClient = new MiruWALClientInitializer().initialize("", walHttpClient,
+                    tasExecutors,
+                    100,
+                    95,
+                    mapper,
                     walClientSickThreads, 10_000,
                     "/miru/wal/rcvs", RCVSCursor.class, RCVSSipCursor.class);
 
@@ -403,7 +413,11 @@ public class MiruWALMain {
             }
 
             if (primaryAmzaWAL || secondaryAmzaWAL) {
-                MiruWALClient<AmzaCursor, AmzaSipCursor> amzaWALClient = new MiruWALClientInitializer().initialize("", walHttpClient, mapper,
+                MiruWALClient<AmzaCursor, AmzaSipCursor> amzaWALClient = new MiruWALClientInitializer().initialize("", walHttpClient,
+                    tasExecutors,
+                    100,
+                    95,
+                    mapper,
                     walClientSickThreads, 10_000,
                     "/miru/wal/amza", AmzaCursor.class, AmzaSipCursor.class);
 

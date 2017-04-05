@@ -3,17 +3,22 @@ package com.jivesoftware.os.miru.service.realtime;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.jivesoftware.os.jive.utils.ordered.id.TimestampedOrderIdProvider;
 import com.jivesoftware.os.miru.api.MiruHost;
 import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruStats;
+import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.realtime.MiruRealtimeDelivery;
 import com.jivesoftware.os.miru.api.realtime.RealtimeUpdate;
 import com.jivesoftware.os.routing.bird.http.client.HttpResponse;
+import com.jivesoftware.os.routing.bird.http.client.TailAtScaleStrategy;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.shared.ClientCall.ClientResponse;
 import com.jivesoftware.os.routing.bird.shared.NextClientStrategy;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
 
 /**
  *
@@ -22,23 +27,33 @@ public class RoutingBirdRealtimeDelivery implements MiruRealtimeDelivery {
 
     private final MiruHost miruHost;
     private final TenantAwareHttpClient<String> deliveryClient;
-    private final NextClientStrategy nextClientStrategy;
+    private final ExecutorService tasExecutors;
+    private final int tasWindowSize;
+    private final float tasPercentile;
     private final String deliveryEndpoint;
     private final ObjectMapper objectMapper;
     private final MiruStats miruStats;
     private final TimestampedOrderIdProvider orderIdProvider;
     private final long dropRealtimeDeliveryOlderThanNMillis;
 
+    private final Map<MiruTenantId, NextClientStrategy> tenantNextClientStrategy = Maps.newConcurrentMap();
+
     public RoutingBirdRealtimeDelivery(MiruHost miruHost,
         TenantAwareHttpClient<String> deliveryClient,
-        NextClientStrategy nextClientStrategy,
         String deliveryEndpoint,
         ObjectMapper objectMapper, MiruStats miruStats,
         TimestampedOrderIdProvider orderIdProvider,
-        long dropRealtimeDeliveryOlderThanNMillis) {
+        long dropRealtimeDeliveryOlderThanNMillis,
+        ExecutorService tasExecutors,
+        int tasWindowSize,
+        float tasPercentile
+    ) {
+
         this.miruHost = miruHost;
         this.deliveryClient = deliveryClient;
-        this.nextClientStrategy = nextClientStrategy;
+        this.tasExecutors = tasExecutors;
+        this.tasWindowSize = tasWindowSize;
+        this.tasPercentile = tasPercentile;
         this.deliveryEndpoint = deliveryEndpoint;
         this.objectMapper = objectMapper;
         this.miruStats = miruStats;
@@ -51,6 +66,9 @@ public class RoutingBirdRealtimeDelivery implements MiruRealtimeDelivery {
         List<Long> deliverables = filter(activityTimes);
         long start = System.currentTimeMillis();
         try {
+            NextClientStrategy nextClientStrategy = tenantNextClientStrategy.computeIfAbsent(coord.tenantId,
+                (key) -> new TailAtScaleStrategy(tasExecutors, tasWindowSize, tasPercentile));
+
             deliveryClient.call("", nextClientStrategy, "deliverRealtime", httpClient -> {
                 String json = null;
                 try {
