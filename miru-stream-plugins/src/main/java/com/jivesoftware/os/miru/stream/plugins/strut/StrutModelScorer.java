@@ -440,6 +440,8 @@ public class StrutModelScorer {
         try (MiruRequestHandle<BM, IBM, ?> handle = replica.acquireQueryHandle()) {
             MiruBitmaps<BM, IBM> bitmaps = handle.getBitmaps();
             MiruRequestContext<BM, IBM, ? extends MiruSipCursor<?>> context = handle.getRequestContext();
+            MiruPartitionCoord coord = handle.getCoord();
+
             CacheKeyBitmaps<BM, IBM> nilTermCache = getNilTermCache(context, catwalkDefinition.catwalkQuery.catwalkId);
 
             byte[] modelIdBytes = modelId.getBytes(StandardCharsets.UTF_8);
@@ -486,10 +488,13 @@ public class StrutModelScorer {
                         false,
                         catwalkDefinition.numeratorScalars,
                         catwalkDefinition.numeratorStrategy,
-                        handle,
+                        bitmaps,
+                        context,
+                        coord,
                         batch,
                         pivotFieldId,
                         asyncConstrainFeature,
+                        true,
                         termScoreCache,
                         nilTermCache,
                         termFeatureCache,
@@ -524,7 +529,7 @@ public class StrutModelScorer {
         return context.getCacheProvider().getTimestampedKeyValues("strut-features-" + catwalkId, payloadSize, false, maxHeapPressureInBytes, "cuckoo", 0d);
     }
 
-    private <BM extends IBM, IBM> List<Scored> rescore(
+    <BM extends IBM, IBM> List<Scored> rescore(
         String catwalkId,
         String modelId,
         CatwalkQuery catwalkQuery,
@@ -533,10 +538,13 @@ public class StrutModelScorer {
         boolean includeFeatures,
         float[] numeratorScalars,
         Strategy numeratorStrategy,
-        MiruRequestHandle<BM, IBM, ?> handle,
+        MiruBitmaps<BM, IBM> bitmaps,
+        MiruRequestContext<BM, IBM, ?> context,
+        MiruPartitionCoord coord,
         List<TermIdLastIdCount> score,
         int pivotFieldId,
         BM[] constrainFeature,
+        boolean cacheScores,
         LastIdCacheKeyValues termScoreCache,
         CacheKeyBitmaps<BM, IBM> nilTermCache,
         TimestampedCacheKeyValues termFeatureCache,
@@ -544,9 +552,6 @@ public class StrutModelScorer {
         MiruSolutionLog solutionLog) throws Exception {
 
         long startStrut = System.currentTimeMillis();
-        MiruBitmaps<BM, IBM> bitmaps = handle.getBitmaps();
-        MiruRequestContext<BM, IBM, ?> context = handle.getRequestContext();
-        MiruPartitionCoord coord = handle.getCoord();
         MiruFieldIndex<BM, IBM> primaryIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
 
         StackBuffer stackBuffer = new StackBuffer();
@@ -601,7 +606,7 @@ public class StrutModelScorer {
             },
             (streamIndex, hotness, cacheable) -> {
                 results.add(hotness);
-                if (cacheable) {
+                if (cacheScores && cacheable) {
                     updates.add(hotness);
                 }
                 return true;
@@ -642,7 +647,7 @@ public class StrutModelScorer {
         return results;
     }
 
-    private <BM extends IBM, IBM> BM[] buildConstrainFeatures(MiruBitmaps<BM, IBM> bitmaps,
+    <BM extends IBM, IBM> BM[] buildConstrainFeatures(MiruBitmaps<BM, IBM> bitmaps,
         MiruRequestContext<BM, IBM, ?> context,
         CatwalkQuery catwalkQuery,
         int activityIndexLastId,

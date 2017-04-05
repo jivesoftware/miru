@@ -8,6 +8,7 @@ import com.google.common.collect.Sets;
 import com.jivesoftware.os.filer.io.FilerIO;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.miru.api.MiruHost;
+import com.jivesoftware.os.miru.api.MiruPartitionCoord;
 import com.jivesoftware.os.miru.api.MiruQueryServiceException;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.activity.schema.MiruFieldDefinition;
@@ -25,6 +26,7 @@ import com.jivesoftware.os.miru.plugin.backfill.MiruJustInTimeBackfillerizer;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider;
+import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.TimestampedCacheKeyValues;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
@@ -107,13 +109,14 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
 
         StackBuffer stackBuffer = new StackBuffer();
         MiruSolutionLog solutionLog = new MiruSolutionLog(request.logLevel);
+        MiruPartitionCoord coord = handle.getCoord();
         MiruRequestContext<BM, IBM, ?> context = handle.getRequestContext();
         MiruBitmaps<BM, IBM> bitmaps = handle.getBitmaps();
 
         MiruTimeRange timeRange = request.query.timeRange;
         if (!context.getTimeIndex().intersects(timeRange)) {
             solutionLog.log(MiruSolutionLogLevel.WARN, "No time index intersection. Partition {}: {} doesn't intersect with {}",
-                handle.getCoord().partitionId, context.getTimeIndex(), timeRange);
+                coord.partitionId, context.getTimeIndex(), timeRange);
             StrutAnswer answer = strut.composeAnswer(context, request, Collections.emptyList(), 0);
             LOG.inc("askLocal>noIntersection");
             return new MiruPartitionResponse<>(answer, solutionLog.asList());
@@ -154,7 +157,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                     context,
                     solutionLog,
                     request.tenantId,
-                    handle.getCoord().partitionId,
+                    coord.partitionId,
                     request.query.unreadStreamId,
                     request.query.suppressUnreadFilter);
                 long elapsed = System.currentTimeMillis() - start;
@@ -211,8 +214,6 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             LOG.info("Reduced candidates for:{} from:{} nil:{} to:{}", Lists.transform(request.query.modelScalars, scalar -> scalar.modelId),
                 bitmaps.cardinality(candidates), bitmaps.cardinality(nilMask), bitmaps.cardinality(eligible));
         }
-
-        AtomicInteger modelTotalPartitionCount = new AtomicInteger();
 
         long start = System.currentTimeMillis();
         List<TermIdLastIdCount> termIdLastIdCounts = Lists.newArrayList();
@@ -351,7 +352,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
 
         totalTimeFetchingScores += (System.currentTimeMillis() - fetchScoresStart);
 
-        modelScorer.enqueue(handle.getCoord(), request.query, pivotFieldId);
+        modelScorer.enqueue(coord, request.query, pivotFieldId);
 
         MiruFieldDefinition[] gatherFieldDefinitions = null;
         if (request.query.gatherTermsForFields != null && request.query.gatherTermsForFields.length > 0) {
@@ -451,6 +452,40 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         System.arraycopy(scoredLastIds, 0, consumeLastIds, 0, scoredLastIds.length);
         TimeVersionRealtime[] timeVersionRealtimes = activityIndex.getAllTimeVersionRealtime("strut", consumeLastIds, stackBuffer);
         long totalTimeAndVersion = System.currentTimeMillis() - timeAndVersionStart;
+
+        AtomicInteger modelTotalPartitionCount = new AtomicInteger();
+        if (request.query.includeFeatures) {
+            StrutModelScalar modelScalar = request.query.modelScalars.get(0);
+            List<TermIdLastIdCount> scorable = Lists.newArrayListWithCapacity(s.length);
+            BM[] constrainFeature = modelScorer.buildConstrainFeatures(bitmaps,
+                context,
+                modelScalar.catwalkQuery,
+                activityIndexLastId,
+                stackBuffer,
+                solutionLog);
+            List<Scored> featureScored = modelScorer.rescore(modelScalar.catwalkId,
+                modelScalar.modelId,
+                modelScalar.catwalkQuery,
+                request.query.featureScalars,
+                request.query.featureStrategy,
+                true,
+                request.query.numeratorScalars,
+                request.query.numeratorStrategy,
+                bitmaps,
+                context,
+                coord,
+                scorable,
+                pivotFieldId,
+                constrainFeature,
+                false,
+                null,
+                null,
+                null,
+                modelTotalPartitionCount,
+                solutionLog);
+
+            s = featureScored.toArray(new Scored[0]);
+        }
 
         for (int j = 0; j < s.length; j++) {
             if (timeVersionRealtimes[j] != null) {

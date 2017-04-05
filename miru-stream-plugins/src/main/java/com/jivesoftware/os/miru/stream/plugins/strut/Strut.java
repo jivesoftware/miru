@@ -226,6 +226,107 @@ public class Strut {
 
     }
 
+    public interface GatherFeatureStream {
+        boolean stream(int streamIndex, List<Hotness>[] scoredFeatures);
+    }
+
+    <BM extends IBM, IBM> void gatherFeatures(String name,
+        MiruPartitionCoord coord,
+        MiruBitmaps<BM, IBM> bitmaps,
+        MiruRequestContext<BM, IBM, ?> requestContext,
+        String catwalkId,
+        String modelId,
+        CatwalkQuery catwalkQuery,
+        float[] numeratorScalars,
+        Strategy numeratorStrategy,
+        int topNValuesPerFeature,
+        TimestampedCacheKeyValues termFeatureCache,
+        StrutStream<BM> strutStream,
+        GatherFeatureStream featureStream,
+        MiruSolutionLog solutionLog,
+        StackBuffer stackBuffer) throws Exception {
+
+        long start = System.currentTimeMillis();
+
+        MiruSchema schema = requestContext.getSchema();
+        MiruActivityIndex activityIndex = requestContext.getActivityIndex();
+        MiruTermComposer termComposer = requestContext.getTermComposer();
+
+        CatwalkFeature[] catwalkFeatures = catwalkQuery.features;
+
+        int[][] featureFieldIds = new int[catwalkFeatures.length][];
+        for (int i = 0; i < catwalkFeatures.length; i++) {
+            String[] featureField = catwalkFeatures[i].featureFields;
+            featureFieldIds[i] = new int[featureField.length];
+            for (int j = 0; j < featureField.length; j++) {
+                featureFieldIds[i][j] = requestContext.getSchema().getFieldId(featureField[j]);
+            }
+        }
+
+        @SuppressWarnings("unchecked")
+        List<Hotness>[] features = new List[catwalkFeatures.length];
+        int[] featureCount = { 0 };
+
+        StrutModel model = cache.get(coord.tenantId, catwalkId, modelId, coord.partitionId.getId(), catwalkQuery);
+        if (model == null) {
+            strutStream.stream((streamIndex, lastId, fieldId, termId, scoredToLastId, answers) -> featureStream.stream(streamIndex, null));
+        } else {
+            aggregateUtil.gatherFeatures(name,
+                coord,
+                bitmaps,
+                schema,
+                activityIndex::getAll,
+                termFeatureCache,
+                streamBitmaps -> strutStream.stream(streamBitmaps::stream),
+                featureFieldIds,
+                topNValuesPerFeature,
+                (streamIndex, lastId, answerFieldId, answerTermId, answerScoredLastId, featureId, termIds, count) -> {
+                    if (featureId == -1) {
+                        @SuppressWarnings("unchecked")
+                        List<Hotness>[] streamFatures = new List[features.length];
+                        System.arraycopy(features, 0, streamFatures, 0, features.length);
+                        Arrays.fill(features, null);
+
+                        return featureStream.stream(streamIndex, streamFatures);
+
+                    } else {
+                        featureCount[0]++;
+                        StrutModelScore modelScore = model.score(featureId, termIds);
+                        if (modelScore != null) {
+                            float[] s = new float[modelScore.numerators.length];
+                            for (int i = 0; i < s.length; i++) {
+                                s[i] = (float) modelScore.numerators[i] / modelScore.denominator;
+                                if (s[i] > 1.0f) {
+                                    LOG.warn("Encountered score {} > 1.0 for answerTermId:{} numerator[{}]:{} denominator:{} featureId:{} termIds:{}",
+                                        s, answerTermId, i, modelScore.numerators[i], modelScore.denominator, featureId, Arrays.toString(termIds));
+                                    s[i] = 1.0f;
+                                } else if (Float.isNaN(s[i])) {
+                                    LOG.warn("Encountered score NaN for answerTermId:{} numerator[{}]:{} denominator:{} featureId:{} termIds:{}",
+                                        answerTermId, i, modelScore.numerators[i], modelScore.denominator, featureId, Arrays.toString(termIds));
+                                    s[i] = 0f;
+                                }
+                            }
+                            if (features[featureId] == null) {
+                                features[featureId] = Lists.newArrayList();
+                            }
+                            MiruValue[] values = new MiruValue[termIds.length];
+                            for (int j = 0; j < termIds.length; j++) {
+                                values[j] = new MiruValue(termComposer.decompose(schema,
+                                    schema.getFieldDefinition(featureFieldIds[featureId][j]), stackBuffer, termIds[j]));
+                            }
+                            features[featureId].add(new Hotness(values, scaleScore(s, numeratorScalars, numeratorStrategy), s));
+                        }
+                    }
+                    return true;
+                },
+                solutionLog,
+                stackBuffer);
+        }
+
+        LOG.info("Strut scored {} features in {} ms for {}", featureCount[0], System.currentTimeMillis() - start, coord);
+        solutionLog.log(MiruSolutionLogLevel.INFO, "Strut scored {} features in {} ms", featureCount[0], System.currentTimeMillis() - start);
+    }
+
     static float score(float current, float update, float scalar, Strategy strategy) {
         if (scalar > 0f) {
             if (strategy == Strategy.UNIT_WEIGHTED || strategy == Strategy.REGRESSION_WEIGHTED || strategy == Strategy.MAX) {
