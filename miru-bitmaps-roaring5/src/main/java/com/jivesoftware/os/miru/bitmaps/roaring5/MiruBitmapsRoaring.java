@@ -118,7 +118,7 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
 
     @Override
     public long cardinality(RoaringBitmap bitmap) {
-        return bitmap.getCardinality();
+        return bitmap == null ? -1 : bitmap.getCardinality();
     }
 
     @Override
