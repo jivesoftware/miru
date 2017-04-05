@@ -343,14 +343,18 @@ public class StrutModelScorer {
     void enqueue(MiruPartitionCoord coord, StrutQuery strutQuery, int pivotFieldId) {
 
         for (StrutModelScalar modelScalar : strutQuery.modelScalars) {
-            CatwalkDefinition catwalkDefinition = new CatwalkDefinition(modelScalar.catwalkId,
-                modelScalar.catwalkQuery,
-                strutQuery.numeratorScalars,
-                strutQuery.numeratorStrategy,
-                strutQuery.featureScalars,
-                strutQuery.featureStrategy);
+            if (modelScalar.catwalkQuery.scorableFilter != null) {
+                CatwalkDefinition catwalkDefinition = new CatwalkDefinition(modelScalar.catwalkId,
+                    modelScalar.catwalkQuery,
+                    strutQuery.numeratorScalars,
+                    strutQuery.numeratorStrategy,
+                    strutQuery.featureScalars,
+                    strutQuery.featureStrategy);
 
-            enqueueInternal(coord, catwalkDefinition, modelScalar.modelId, pivotFieldId);
+                enqueueInternal(coord, catwalkDefinition, modelScalar.modelId, pivotFieldId);
+            } else {
+                LOG.warn("Ignored enqueue without scorable filter for catwalkId:{} modelId:{} coord:{}", modelScalar.catwalkId, modelScalar.modelId, coord);
+            }
         }
     }
 
@@ -452,6 +456,11 @@ public class StrutModelScorer {
                     stackBuffer,
                     solutionLog);
                 BM answer = bitmaps.createWithRange(cursorId + 1, activityIndexLastId + 1);
+                if (!MiruFilter.NO_FILTER.equals(catwalkDefinition.catwalkQuery.scorableFilter)) {
+                    BM scorable = aggregateUtil.filter("strutProcess", bitmaps, context, catwalkDefinition.catwalkQuery.scorableFilter, solutionLog, null,
+                        activityIndexLastId, -1, -1, stackBuffer);
+                    bitmaps.inPlaceAnd(answer, scorable);
+                }
                 List<TermIdLastIdCount> rescorable = Lists.newArrayList();
                 aggregateUtil.gather("strutProcess",
                     bitmaps,

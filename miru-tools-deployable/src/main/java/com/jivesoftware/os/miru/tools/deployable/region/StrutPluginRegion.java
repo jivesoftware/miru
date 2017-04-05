@@ -256,6 +256,7 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                         input.scorableField,
                         numeratorFilters.toArray(new MiruFilter[0]),
                         features.toArray(new CatwalkFeature[0]),
+                        MiruFilter.NO_FILTER,
                         input.desiredModelSize);
 
                     String request = requestMapper.writeValueAsString(new MiruRequest<>("toolsStrut",

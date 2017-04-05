@@ -194,6 +194,7 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
                             input.scorableField,
                             numeratorFilters.toArray(new MiruFilter[0]),
                             features.toArray(new CatwalkFeature[0]),
+                            MiruFilter.NO_FILTER,
                             input.desiredNumberOfResults),
                         MiruSolutionLogLevel.valueOf(input.logLevel)));
                     MiruResponse<CatwalkAnswer> catwalkResponse = readerClient.call("",
