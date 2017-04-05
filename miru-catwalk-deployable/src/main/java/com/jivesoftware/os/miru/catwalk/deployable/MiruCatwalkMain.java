@@ -59,7 +59,7 @@ import com.jivesoftware.os.routing.bird.http.client.HttpClient;
 import com.jivesoftware.os.routing.bird.http.client.HttpDeliveryClientHealthProvider;
 import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelperUtils;
 import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
-import com.jivesoftware.os.routing.bird.http.client.RoundRobinStrategy;
+import com.jivesoftware.os.routing.bird.http.client.TailAtScaleStrategy;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.http.client.TenantRoutingHttpClientInitializer;
 import com.jivesoftware.os.routing.bird.server.util.Resource;
@@ -279,9 +279,15 @@ public class MiruCatwalkMain {
                 rowsChanged -> {
                 });
 
+            TailAtScaleStrategy tailAtScaleStrategy = new TailAtScaleStrategy(
+                Executors.newCachedThreadPool(new ThreadFactoryBuilder().setNameFormat("tas-%d").build()),
+                100, // TODO config
+                95 // TODO config
+            );
+
             AmzaClientProvider<HttpClient, HttpClientException> amzaClientProvider = new AmzaClientProvider<>(
                 new HttpPartitionClientFactory(),
-                new HttpPartitionHostsProvider(amzaClient, mapper),
+                new HttpPartitionHostsProvider(amzaClient, tailAtScaleStrategy, mapper),
                 new RingHostHttpClientProvider(amzaClient),
                 Executors.newFixedThreadPool(amzaCatwalkConfig.getAmzaCallerThreadPoolSize()), //TODO expose to conf
                 amzaCatwalkConfig.getAmzaAwaitLeaderElectionForNMillis(),
@@ -299,8 +305,16 @@ public class MiruCatwalkMain {
                 .build());
             ExecutorService modelUpdaters = Executors.newFixedThreadPool(numProcs, new ThreadFactoryBuilder().setNameFormat("modelUpdaters-%d").build());
             ExecutorService readRepairers = Executors.newFixedThreadPool(numProcs, new ThreadFactoryBuilder().setNameFormat("readRepairers-%d").build());
+            ExecutorService tasExecutors = Executors.newFixedThreadPool(numProcs, new ThreadFactoryBuilder().setNameFormat("tas-%d").build());
 
-            MiruTenantQueryRouting tenantQueryRouting = new MiruTenantQueryRouting(new RoundRobinStrategy()); // TODO tail at scale?
+
+            MiruTenantQueryRouting tenantQueryRouting = new MiruTenantQueryRouting(readerClient,
+                mapper,
+                responseMapper,
+                Executors.newCachedThreadPool(new ThreadFactoryBuilder().setNameFormat("tas-%d").build()),
+                100, // TODO config
+                95 // TODO config
+            );
 
             CatwalkModelQueue catwalkModelQueue = new CatwalkModelQueue(amzaLifecycle.amzaService,
                 embeddedClientProvider,
@@ -318,13 +332,11 @@ public class MiruCatwalkMain {
                 amzaCatwalkConfig.getAdditionalSolverAfterNMillis(),
                 amzaCatwalkConfig.getAbandonLeaderSolutionAfterNMillis(),
                 amzaCatwalkConfig.getAbandonSolutionAfterNMillis());
+
             CatwalkModelUpdater catwalkModelUpdater = new CatwalkModelUpdater(catwalkModelService,
                 catwalkModelQueue,
                 queueConsumers,
                 tenantQueryRouting,
-                readerClient,
-                mapper,
-                responseMapper,
                 modelUpdaters,
                 amzaLifecycle.amzaService,
                 embeddedClientProvider,

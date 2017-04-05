@@ -15,7 +15,6 @@
  */
 package com.jivesoftware.os.miru.catwalk.deployable;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.jivesoftware.os.amza.api.TimestampedValue;
 import com.jivesoftware.os.amza.api.partition.Consistency;
@@ -41,8 +40,6 @@ import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkAnswer;
 import com.jivesoftware.os.miru.stream.plugins.catwalk.CatwalkConstants;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
-import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -69,9 +66,6 @@ public class CatwalkModelUpdater {
     private final CatwalkModelQueue modelQueue;
     private final ScheduledExecutorService queueConsumers;
     private final MiruTenantQueryRouting tenantQueryRouting;
-    private final TenantAwareHttpClient<String> readerClient;
-    private final ObjectMapper requestMapper;
-    private final HttpResponseMapper responseMapper;
     private final ExecutorService modelUpdaters;
     private final AmzaService amzaService;
     private final EmbeddedClientProvider embeddedClientProvider;
@@ -85,9 +79,6 @@ public class CatwalkModelUpdater {
         CatwalkModelQueue modelQueue,
         ScheduledExecutorService queueConsumers,
         MiruTenantQueryRouting tenantQueryRouting,
-        TenantAwareHttpClient<String> readerClient,
-        ObjectMapper requestMapper,
-        HttpResponseMapper responseMapper,
         ExecutorService modelUpdaters,
         AmzaService amzaService,
         EmbeddedClientProvider embeddedClientProvider,
@@ -101,9 +92,6 @@ public class CatwalkModelUpdater {
         this.modelQueue = modelQueue;
         this.queueConsumers = queueConsumers;
         this.tenantQueryRouting = tenantQueryRouting;
-        this.readerClient = readerClient;
-        this.requestMapper = requestMapper;
-        this.responseMapper = responseMapper;
         this.modelUpdaters = modelUpdaters;
         this.amzaService = amzaService;
         this.embeddedClientProvider = embeddedClientProvider;
@@ -252,8 +240,7 @@ public class CatwalkModelUpdater {
 
         String endpoint = CatwalkConstants.CATWALK_PREFIX + CatwalkConstants.PARTITION_QUERY_ENDPOINT + "/" + updateModelRequest.partitionId;
 
-        MiruResponse<CatwalkAnswer> catwalkResponse = tenantQueryRouting.query("", "catwalkModelQueue", readerClient, requestMapper, responseMapper,
-            request, endpoint, CatwalkAnswer.class);
+        MiruResponse<CatwalkAnswer> catwalkResponse = tenantQueryRouting.query("", "catwalkModelQueue", request, endpoint, CatwalkAnswer.class);
 
         if (catwalkResponse != null && catwalkResponse.answer != null) {
             if (catwalkResponse.answer.destroyed) {

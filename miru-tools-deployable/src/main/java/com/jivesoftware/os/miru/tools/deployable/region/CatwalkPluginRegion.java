@@ -17,6 +17,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery;
 import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery.CatwalkFeature;
 import com.jivesoftware.os.miru.catwalk.shared.FeatureScore;
+import com.jivesoftware.os.miru.plugin.query.MiruTenantQueryRouting;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
@@ -27,11 +28,6 @@ import com.jivesoftware.os.miru.ui.MiruPageRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.routing.bird.http.client.HttpResponse;
-import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
-import com.jivesoftware.os.routing.bird.http.client.RoundRobinStrategy;
-import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
-import com.jivesoftware.os.routing.bird.shared.ClientCall.ClientResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -51,21 +47,15 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
 
     private final String template;
     private final MiruSoyRenderer renderer;
-    private final TenantAwareHttpClient<String> readerClient;
-    private final ObjectMapper requestMapper;
-    private final HttpResponseMapper responseMapper;
+    private final MiruTenantQueryRouting miruTenantQueryRouting;
     private final FilterStringUtil filterStringUtil = new FilterStringUtil();
 
     public CatwalkPluginRegion(String template,
         MiruSoyRenderer renderer,
-        TenantAwareHttpClient<String> readerClient,
-        ObjectMapper requestMapper,
-        HttpResponseMapper responseMapper) {
+        MiruTenantQueryRouting miruTenantQueryRouting) {
         this.template = template;
         this.renderer = renderer;
-        this.readerClient = readerClient;
-        this.requestMapper = requestMapper;
-        this.responseMapper = responseMapper;
+        this.miruTenantQueryRouting = miruTenantQueryRouting;
     }
 
     public static class CatwalkPluginRegionInput {
@@ -184,7 +174,7 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
                         }
                     }
                     String endpoint = CatwalkConstants.CATWALK_PREFIX + CatwalkConstants.CUSTOM_QUERY_ENDPOINT;
-                    String request = requestMapper.writeValueAsString(new MiruRequest<>("toolsCatwalk",
+                    MiruRequest<CatwalkQuery> miruRequest = new MiruRequest<>("toolsCatwalk",
                         tenantId,
                         MiruActorId.NOT_PROVIDED,
                         MiruAuthzExpression.NOT_PROVIDED,
@@ -196,19 +186,12 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
                             features.toArray(new CatwalkFeature[0]),
                             MiruFilter.NO_FILTER,
                             input.desiredNumberOfResults),
-                        MiruSolutionLogLevel.valueOf(input.logLevel)));
-                    MiruResponse<CatwalkAnswer> catwalkResponse = readerClient.call("",
-                        new RoundRobinStrategy(),
-                        "catwalkPluginRegion",
-                        httpClient -> {
-                            HttpResponse httpResponse = httpClient.postJson(endpoint, request, null);
-                            @SuppressWarnings("unchecked")
-                            MiruResponse<CatwalkAnswer> extractResponse = responseMapper.extractResultFromResponse(httpResponse,
-                                MiruResponse.class,
-                                new Class<?>[] { CatwalkAnswer.class },
-                                null);
-                            return new ClientResponse<>(extractResponse, true);
-                        });
+                        MiruSolutionLogLevel.valueOf(input.logLevel));
+
+
+                    MiruResponse<CatwalkAnswer> catwalkResponse = miruTenantQueryRouting.query("", "catwalkPluginRegion",
+                        miruRequest, endpoint, CatwalkAnswer.class);
+
                     if (catwalkResponse != null && catwalkResponse.answer != null) {
                         response = catwalkResponse;
                     } else {

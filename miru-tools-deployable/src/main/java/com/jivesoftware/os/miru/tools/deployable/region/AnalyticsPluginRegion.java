@@ -22,6 +22,7 @@ import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFieldFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilterOperation;
+import com.jivesoftware.os.miru.plugin.query.MiruTenantQueryRouting;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
@@ -33,11 +34,6 @@ import com.jivesoftware.os.miru.ui.MiruPageRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.routing.bird.http.client.HttpResponse;
-import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
-import com.jivesoftware.os.routing.bird.http.client.RoundRobinStrategy;
-import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
-import com.jivesoftware.os.routing.bird.shared.ClientCall.ClientResponse;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -54,21 +50,15 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
 
     private final String template;
     private final MiruSoyRenderer renderer;
-    private final TenantAwareHttpClient<String> readerClient;
-    private final ObjectMapper requestMapper;
-    private final HttpResponseMapper responseMapper;
+    private final MiruTenantQueryRouting miruTenantQueryRouting;
     private final FilterStringUtil filterStringUtil = new FilterStringUtil();
 
     public AnalyticsPluginRegion(String template,
         MiruSoyRenderer renderer,
-        TenantAwareHttpClient<String> readerClient,
-        ObjectMapper requestMapper,
-        HttpResponseMapper responseMapper) {
+        MiruTenantQueryRouting miruTenantQueryRouting) {
         this.template = template;
         this.renderer = renderer;
-        this.readerClient = readerClient;
-        this.requestMapper = requestMapper;
-        this.responseMapper = responseMapper;
+        this.miruTenantQueryRouting = miruTenantQueryRouting;
     }
 
     public static class AnalyticsPluginRegionInput {
@@ -200,7 +190,7 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                     ImmutableMap<String, MiruFilter> analyticsFilters = analyticsFiltersBuilder.build();
 
                     String endpoint = AnalyticsConstants.ANALYTICS_PREFIX + AnalyticsConstants.CUSTOM_QUERY_ENDPOINT;
-                    String request = requestMapper.writeValueAsString(new MiruRequest<>("toolsAnalytics",
+                    MiruRequest<AnalyticsQuery> miruRequest = new MiruRequest<>("toolsAnalytics",
                         tenantId,
                         MiruActorId.NOT_PROVIDED,
                         MiruAuthzExpression.NOT_PROVIDED,
@@ -210,19 +200,12 @@ public class AnalyticsPluginRegion implements MiruPageRegion<Optional<AnalyticsP
                                 input.buckets)),
                             constraintsFilter,
                             analyticsFilters),
-                        MiruSolutionLogLevel.valueOf(input.logLevel)));
-                    MiruResponse<AnalyticsAnswer> analyticsResponse = readerClient.call("",
-                        new RoundRobinStrategy(),
-                        "analyticsPluginRegion",
-                        httpClient -> {
-                            HttpResponse httpResponse = httpClient.postJson(endpoint, request, null);
-                            @SuppressWarnings("unchecked")
-                            MiruResponse<AnalyticsAnswer> extractResponse = responseMapper.extractResultFromResponse(httpResponse,
-                                MiruResponse.class,
-                                new Class<?>[] { AnalyticsAnswer.class },
-                                null);
-                            return new ClientResponse<>(extractResponse, true);
-                        });
+                        MiruSolutionLogLevel.valueOf(input.logLevel));
+
+
+                    MiruResponse<AnalyticsAnswer> analyticsResponse = miruTenantQueryRouting.query("", "analyticsPluginRegion",
+                        miruRequest, endpoint, AnalyticsAnswer.class);
+
                     if (analyticsResponse != null && analyticsResponse.answer != null) {
                         response = analyticsResponse;
                     } else {

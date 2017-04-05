@@ -2,6 +2,7 @@ package com.jivesoftware.os.miru.stumptown.deployable.storage;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.jivesoftware.os.amza.api.AmzaInterner;
 import com.jivesoftware.os.amza.api.PartitionClient;
 import com.jivesoftware.os.amza.api.filer.UIO;
@@ -19,6 +20,7 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.routing.bird.http.client.HttpClient;
+import com.jivesoftware.os.routing.bird.http.client.TailAtScaleStrategy;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.shared.HttpClientException;
 import java.nio.charset.StandardCharsets;
@@ -55,9 +57,15 @@ public class MiruStumptownPayloadsAmza implements MiruStumptownPayloadStorage {
 
         payload = new PartitionName(false, "p".getBytes(StandardCharsets.UTF_8), (nameSpace + "-stumptown").getBytes(StandardCharsets.UTF_8));
 
+        TailAtScaleStrategy tailAtScaleStrategy = new TailAtScaleStrategy(
+            Executors.newCachedThreadPool(new ThreadFactoryBuilder().setNameFormat("tas-%d").build()),
+            100, // TODO config
+            95 // TODO config
+        );
+
         this.clientProvider = new AmzaClientProvider<>(
             new HttpPartitionClientFactory(),
-            new HttpPartitionHostsProvider(httpClient, mapper),
+            new HttpPartitionHostsProvider(httpClient, tailAtScaleStrategy, mapper),
             new RingHostHttpClientProvider(httpClient),
             Executors.newCachedThreadPool(), //TODO expose to conf?
             awaitLeaderElectionForNMillis,

@@ -15,6 +15,7 @@ import com.jivesoftware.os.miru.api.query.filter.FilterStringUtil;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruValue;
+import com.jivesoftware.os.miru.plugin.query.MiruTenantQueryRouting;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
@@ -26,11 +27,6 @@ import com.jivesoftware.os.miru.ui.MiruPageRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.routing.bird.http.client.HttpResponse;
-import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
-import com.jivesoftware.os.routing.bird.http.client.RoundRobinStrategy;
-import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
-import com.jivesoftware.os.routing.bird.shared.ClientCall.ClientResponse;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -46,21 +42,15 @@ public class DistinctsPluginRegion implements MiruPageRegion<Optional<DistinctsP
 
     private final String template;
     private final MiruSoyRenderer renderer;
-    private final TenantAwareHttpClient<String> readerClient;
-    private final ObjectMapper requestMapper;
-    private final HttpResponseMapper responseMapper;
+    private final MiruTenantQueryRouting miruTenantQueryRouting;
     private final FilterStringUtil filterStringUtil = new FilterStringUtil();
 
     public DistinctsPluginRegion(String template,
         MiruSoyRenderer renderer,
-        TenantAwareHttpClient<String> readerClient,
-        ObjectMapper requestMapper,
-        HttpResponseMapper responseMapper) {
+        MiruTenantQueryRouting miruTenantQueryRouting) {
         this.template = template;
         this.renderer = renderer;
-        this.readerClient = readerClient;
-        this.requestMapper = requestMapper;
-        this.responseMapper = responseMapper;
+        this.miruTenantQueryRouting = miruTenantQueryRouting;
     }
 
     public static class DistinctsPluginRegionInput {
@@ -131,7 +121,7 @@ public class DistinctsPluginRegion implements MiruPageRegion<Optional<DistinctsP
                 if (!input.tenant.trim().isEmpty()) {
                     MiruTenantId tenantId = new MiruTenantId(input.tenant.trim().getBytes(Charsets.UTF_8));
                     String endpoint = DistinctsConstants.DISTINCTS_PREFIX + DistinctsConstants.CUSTOM_QUERY_ENDPOINT;
-                    String request = requestMapper.writeValueAsString(new MiruRequest<>("toolsDistincts",
+                    MiruRequest<DistinctsQuery> miruRequest = new MiruRequest<>("toolsDistincts",
                         tenantId,
                         MiruActorId.NOT_PROVIDED,
                         MiruAuthzExpression.NOT_PROVIDED,
@@ -141,19 +131,12 @@ public class DistinctsPluginRegion implements MiruPageRegion<Optional<DistinctsP
                             null,
                             constraintsFilter,
                             fieldTypes),
-                        MiruSolutionLogLevel.valueOf(input.logLevel)));
-                    MiruResponse<DistinctsAnswer> distinctsResponse = readerClient.call("",
-                        new RoundRobinStrategy(),
-                        "distinctsPluginRegion",
-                        httpClient -> {
-                            HttpResponse httpResponse = httpClient.postJson(endpoint, request, null);
-                            @SuppressWarnings("unchecked")
-                            MiruResponse<DistinctsAnswer> extractResponse = responseMapper.extractResultFromResponse(httpResponse,
-                                MiruResponse.class,
-                                new Class[] { DistinctsAnswer.class },
-                                null);
-                            return new ClientResponse<>(extractResponse, true);
-                        });
+                        MiruSolutionLogLevel.valueOf(input.logLevel));
+
+
+                    MiruResponse<DistinctsAnswer> distinctsResponse = miruTenantQueryRouting.query("", "distinctsPluginRegion",
+                        miruRequest, endpoint, DistinctsAnswer.class);
+
                     if (distinctsResponse != null && distinctsResponse.answer != null) {
                         response = distinctsResponse;
                     } else {

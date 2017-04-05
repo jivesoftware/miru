@@ -16,6 +16,7 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.FilterStringUtil;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
+import com.jivesoftware.os.miru.plugin.query.MiruTenantQueryRouting;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
@@ -30,11 +31,6 @@ import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.ISO8601DateFormat;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.routing.bird.http.client.HttpResponse;
-import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
-import com.jivesoftware.os.routing.bird.http.client.RoundRobinStrategy;
-import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
-import com.jivesoftware.os.routing.bird.shared.ClientCall.ClientResponse;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -49,21 +45,16 @@ public class AggregateCountsPluginRegion implements MiruPageRegion<Optional<Aggr
 
     private final String template;
     private final MiruSoyRenderer renderer;
-    private final TenantAwareHttpClient<String> readerClient;
-    private final ObjectMapper requestMapper;
-    private final HttpResponseMapper responseMapper;
+    private final MiruTenantQueryRouting miruTenantQueryRouting;
     private final FilterStringUtil filterStringUtil = new FilterStringUtil();
 
     public AggregateCountsPluginRegion(String template,
         MiruSoyRenderer renderer,
-        TenantAwareHttpClient<String> readerClient,
-        ObjectMapper requestMapper,
-        HttpResponseMapper responseMapper) {
+        MiruTenantQueryRouting miruTenantQueryRouting
+    ) {
         this.template = template;
         this.renderer = renderer;
-        this.readerClient = readerClient;
-        this.requestMapper = requestMapper;
-        this.responseMapper = responseMapper;
+        this.miruTenantQueryRouting = miruTenantQueryRouting;
     }
 
     public static class AggregateCountsPluginRegionInput {
@@ -149,7 +140,7 @@ public class AggregateCountsPluginRegion implements MiruPageRegion<Optional<Aggr
                         if (timeRange == null) {
                             break;
                         }
-                        String request = requestMapper.writeValueAsString(new MiruRequest<>("toolsAggregateCounts",
+                        MiruRequest<AggregateCountsQuery> miruRequest = new MiruRequest<>("toolsAggregateCounts",
                             tenantId,
                             MiruActorId.NOT_PROVIDED,
                             MiruAuthzExpression.NOT_PROVIDED,
@@ -167,20 +158,11 @@ public class AggregateCountsPluginRegion implements MiruPageRegion<Optional<Aggr
                                         input.count,
                                         new String[0])),
                                 false),
-                            MiruSolutionLogLevel.valueOf(input.logLevel)));
+                            MiruSolutionLogLevel.valueOf(input.logLevel));
 
-                        MiruResponse<AggregateCountsAnswer> aggregatesResponse = readerClient.call("",
-                            new RoundRobinStrategy(),
-                            "aggregateCountsPluginRegion",
-                            httpClient -> {
-                                HttpResponse httpResponse = httpClient.postJson(endpoint, request, null);
-                                @SuppressWarnings("unchecked")
-                                MiruResponse<AggregateCountsAnswer> response = responseMapper.extractResultFromResponse(httpResponse,
-                                    MiruResponse.class,
-                                    new Class<?>[] { AggregateCountsAnswer.class },
-                                    null);
-                                return new ClientResponse<>(response, true);
-                            });
+                        MiruResponse<AggregateCountsAnswer> aggregatesResponse = miruTenantQueryRouting.query("", "aggregateCountsPluginRegion",
+                            miruRequest, endpoint, AggregateCountsAnswer.class);
+
                         if (aggregatesResponse != null && aggregatesResponse.answer != null) {
                             List<AggregateCount> results = aggregatesResponse.answer.constraints.get(input.field).results;
                             if (results.size() < input.count) {

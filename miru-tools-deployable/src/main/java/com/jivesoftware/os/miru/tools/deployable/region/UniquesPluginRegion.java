@@ -14,6 +14,7 @@ import com.jivesoftware.os.miru.api.query.filter.FilterStringUtil;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruValue;
+import com.jivesoftware.os.miru.plugin.query.MiruTenantQueryRouting;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
@@ -25,12 +26,6 @@ import com.jivesoftware.os.miru.ui.MiruPageRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.routing.bird.http.client.HttpResponse;
-import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
-import com.jivesoftware.os.routing.bird.http.client.RoundRobinStrategy;
-import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
-import com.jivesoftware.os.routing.bird.shared.ClientCall.ClientResponse;
-
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -43,21 +38,15 @@ public class UniquesPluginRegion implements MiruPageRegion<Optional<UniquesPlugi
 
     private final String template;
     private final MiruSoyRenderer renderer;
-    private final TenantAwareHttpClient<String> readerClient;
-    private final ObjectMapper requestMapper;
-    private final HttpResponseMapper responseMapper;
+    private final MiruTenantQueryRouting miruTenantQueryRouting;
     private final FilterStringUtil filterStringUtil = new FilterStringUtil();
 
     public UniquesPluginRegion(String template,
-                               MiruSoyRenderer renderer,
-                               TenantAwareHttpClient<String> readerClient,
-                               ObjectMapper requestMapper,
-                               HttpResponseMapper responseMapper) {
+        MiruSoyRenderer renderer,
+        MiruTenantQueryRouting miruTenantQueryRouting) {
         this.template = template;
         this.renderer = renderer;
-        this.readerClient = readerClient;
-        this.requestMapper = requestMapper;
-        this.responseMapper = responseMapper;
+        this.miruTenantQueryRouting = miruTenantQueryRouting;
     }
 
     public static class UniquesPluginRegionInput {
@@ -71,12 +60,12 @@ public class UniquesPluginRegion implements MiruPageRegion<Optional<UniquesPlugi
         final String logLevel;
 
         public UniquesPluginRegionInput(String tenant,
-                                        int fromHoursAgo,
-                                        int toHoursAgo,
-                                        String field,
-                                        String types,
-                                        String filters,
-                                        String logLevel) {
+            int fromHoursAgo,
+            int toHoursAgo,
+            String field,
+            String types,
+            String filters,
+            String logLevel) {
             this.tenant = tenant;
             this.fromHoursAgo = fromHoursAgo;
             this.toHoursAgo = toHoursAgo;
@@ -120,37 +109,26 @@ public class UniquesPluginRegion implements MiruPageRegion<Optional<UniquesPlugi
 
                     String endpoint = UniquesConstants.UNIQUES_PREFIX + UniquesConstants.CUSTOM_QUERY_ENDPOINT;
 
-                    String request = requestMapper.writeValueAsString(new MiruRequest<>(
-                            "toolsUniques",
-                            tenantId,
-                            MiruActorId.NOT_PROVIDED,
-                            MiruAuthzExpression.NOT_PROVIDED,
-                            new UniquesQuery(
-                                    new MiruTimeRange(fromTime, toTime),
-                                    input.field,
-                                    null,
-                                    constraintsFilter,
-                                    fieldTypes),
-                            MiruSolutionLogLevel.valueOf(input.logLevel)));
+                    MiruRequest<UniquesQuery> miruRequest = new MiruRequest<>(
+                        "toolsUniques",
+                        tenantId,
+                        MiruActorId.NOT_PROVIDED,
+                        MiruAuthzExpression.NOT_PROVIDED,
+                        new UniquesQuery(
+                            new MiruTimeRange(fromTime, toTime),
+                            input.field,
+                            null,
+                            constraintsFilter,
+                            fieldTypes),
+                        MiruSolutionLogLevel.valueOf(input.logLevel));
 
-                    MiruResponse<UniquesAnswer> uniquesResponse = readerClient.call("",
-                            new RoundRobinStrategy(),
-                            "uniquesPluginRegion",
-                            httpClient -> {
-                                HttpResponse httpResponse = httpClient.postJson(endpoint, request, null);
-                                @SuppressWarnings("unchecked")
-                                MiruResponse<UniquesAnswer> extractResponse = responseMapper.extractResultFromResponse(
-                                        httpResponse,
-                                        MiruResponse.class,
-                                        new Class[]{UniquesAnswer.class},
-                                        null);
-                                return new ClientResponse<>(extractResponse, true);
-                            });
+                    MiruResponse<UniquesAnswer> uniquesResponse = miruTenantQueryRouting.query("", "uniquesPluginRegion",
+                        miruRequest, endpoint, UniquesAnswer.class);
 
                     if (uniquesResponse != null && uniquesResponse.answer != null) {
                         response = uniquesResponse;
                         LOG.warn("Uniques answer {} from {}",
-                                uniquesResponse.answer.uniques, tenantId);
+                            uniquesResponse.answer.uniques, tenantId);
                     } else {
                         LOG.warn("Empty uniques response from {}", tenantId);
                     }

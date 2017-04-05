@@ -21,6 +21,7 @@ import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery.CatwalkFeature;
 import com.jivesoftware.os.miru.catwalk.shared.HotOrNot;
 import com.jivesoftware.os.miru.catwalk.shared.HotOrNot.Hotness;
 import com.jivesoftware.os.miru.catwalk.shared.StrutModelScalar;
+import com.jivesoftware.os.miru.plugin.query.MiruTenantQueryRouting;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
@@ -33,11 +34,6 @@ import com.jivesoftware.os.miru.ui.MiruPageRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.routing.bird.http.client.HttpResponse;
-import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
-import com.jivesoftware.os.routing.bird.http.client.RoundRobinStrategy;
-import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
-import com.jivesoftware.os.routing.bird.shared.ClientCall.ClientResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -56,21 +52,15 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
 
     private final String template;
     private final MiruSoyRenderer renderer;
-    private final TenantAwareHttpClient<String> readerClient;
-    private final ObjectMapper requestMapper;
-    private final HttpResponseMapper responseMapper;
+    private final MiruTenantQueryRouting miruTenantQueryRouting;
     private final FilterStringUtil filterStringUtil = new FilterStringUtil();
 
     public StrutPluginRegion(String template,
         MiruSoyRenderer renderer,
-        TenantAwareHttpClient<String> readerClient,
-        ObjectMapper requestMapper,
-        HttpResponseMapper responseMapper) {
+        MiruTenantQueryRouting miruTenantQueryRouting) {
         this.template = template;
         this.renderer = renderer;
-        this.readerClient = readerClient;
-        this.requestMapper = requestMapper;
-        this.responseMapper = responseMapper;
+        this.miruTenantQueryRouting = miruTenantQueryRouting;
     }
 
     public static class StrutPluginRegionInput {
@@ -259,7 +249,7 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                         MiruFilter.NO_FILTER,
                         input.desiredModelSize);
 
-                    String request = requestMapper.writeValueAsString(new MiruRequest<>("toolsStrut",
+                    MiruRequest<StrutQuery> miruRequest = new MiruRequest<>("toolsStrut",
                         tenantId,
                         MiruActorId.NOT_PROVIDED,
                         MiruAuthzExpression.NOT_PROVIDED,
@@ -286,19 +276,11 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                             input.unreadOnly,
                             false,
                             100), // TODO expose to UI??
-                        MiruSolutionLogLevel.valueOf(input.logLevel)));
-                    MiruResponse<StrutAnswer> strutResponse = readerClient.call("",
-                        new RoundRobinStrategy(),
-                        "strutPluginRegion",
-                        httpClient -> {
-                            HttpResponse httpResponse = httpClient.postJson(endpoint, request, null);
-                            @SuppressWarnings("unchecked")
-                            MiruResponse<StrutAnswer> extractResponse = responseMapper.extractResultFromResponse(httpResponse,
-                                MiruResponse.class,
-                                new Class<?>[] { StrutAnswer.class },
-                                null);
-                            return new ClientResponse<>(extractResponse, true);
-                        });
+                        MiruSolutionLogLevel.valueOf(input.logLevel));
+
+                    MiruResponse<StrutAnswer> strutResponse = miruTenantQueryRouting.query("", "strutPluginRegion",
+                        miruRequest, endpoint, StrutAnswer.class);
+
                     if (strutResponse != null && strutResponse.answer != null) {
                         response = strutResponse;
                     } else {
