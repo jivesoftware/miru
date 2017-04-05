@@ -120,7 +120,7 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
 
     @Override
     public long cardinality(ImmutableRoaringBitmap bitmap) {
-        return bitmap.getCardinality();
+        return bitmap == null ? -1 : bitmap.getCardinality();
     }
 
     @Override
