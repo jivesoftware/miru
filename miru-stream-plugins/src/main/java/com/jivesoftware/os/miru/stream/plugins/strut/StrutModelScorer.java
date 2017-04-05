@@ -254,7 +254,9 @@ public class StrutModelScorer {
             BM had = bitmaps.orMultiTx(multiTermTxIndex, stackBuffer);
             nilTermCache.andNot(modelIdBytes, had, stackBuffer);
             if (verboseModelIds.contains(modelId)) {
-                LOG.info("Commit and nil unmasked modelId:{} bits:{}", modelId, hadTermIds.size(), bitmaps.cardinality(had));
+                BM now = nilTermCache.get(modelIdBytes, stackBuffer);
+                LOG.info("Commit and nil unmasked modelId:{} bits:{} now:{}",
+                    modelId, hadTermIds.size(), bitmaps.cardinality(had), bitmaps.cardinality(now));
             }
         }
         if (!nilTermIds.isEmpty()) {
@@ -262,7 +264,9 @@ public class StrutModelScorer {
             BM nil = bitmaps.orMultiTx(multiTermTxIndex, stackBuffer);
             nilTermCache.or(modelIdBytes, nil, stackBuffer);
             if (verboseModelIds.contains(modelId)) {
-                LOG.info("Commit and nil unmasked modelId:{} count:{} bits:{}", modelId, nilTermIds.size(), bitmaps.cardinality(nil));
+                BM now = nilTermCache.get(modelIdBytes, stackBuffer);
+                LOG.info("Commit and nil masked modelId:{} count:{} bits:{} now:{}",
+                    modelId, nilTermIds.size(), bitmaps.cardinality(nil), bitmaps.cardinality(now));
             }
         }
     }
