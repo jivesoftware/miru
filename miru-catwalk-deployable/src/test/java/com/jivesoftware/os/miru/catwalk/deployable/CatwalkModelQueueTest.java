@@ -29,6 +29,7 @@ public class CatwalkModelQueueTest {
             new CatwalkFeature[] {
                 new CatwalkFeature("feature1", new String[] { "abc", "def" }, MiruFilter.NO_FILTER)
             },
+            MiruFilter.NO_FILTER,
             100);
         long timestamp = System.currentTimeMillis();
 
