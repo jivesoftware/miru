@@ -336,32 +336,13 @@ public class StrutModelScorer {
     }
 
     void shareIn(MiruPartitionCoord coord, StrutShare share) throws Exception {
-        Optional<? extends MiruQueryablePartition<?, ?>> optionalQueryablePartition = miruProvider.getMiru(coord.tenantId).getQueryablePartition(coord);
-        if (optionalQueryablePartition.isPresent()) {
-            MiruQueryablePartition<?, ?> replica = optionalQueryablePartition.get();
-            long start = System.currentTimeMillis();
-            shareCommit((MiruQueryablePartition) replica, coord, share);
-            long elapsed = System.currentTimeMillis() - start;
-            LOG.info("Strut recorded shared updates for {} features in {} ms for {}", share.updates.size(), elapsed, coord);
-        }
-    }
-
-    private <BM extends IBM, IBM> void shareCommit(MiruQueryablePartition<BM, IBM> replica, MiruPartitionCoord coord, StrutShare share) {
-        try (MiruRequestHandle<BM, IBM, ?> handle = replica.acquireQueryHandle()) {
-            MiruRequestContext<BM, IBM, ? extends MiruSipCursor<?>> context = handle.getRequestContext();
-            MiruBitmaps<BM, IBM> bitmaps = handle.getBitmaps();
-            LastIdCacheKeyValues termScoreCache = getTermScoreCache(context, share.catwalkQuery.catwalkId);
-            CacheKeyBitmaps<BM, IBM> nilTermCache = getNilTermCache(context, share.catwalkQuery.catwalkId);
-            commitAndNil(share.modelId, bitmaps, context, share.pivotFieldId, termScoreCache, nilTermCache, share.updates, new StackBuffer());
-        } catch (Exception e) {
-            LOG.warn("Failed to commit shared strut updates for {}", new Object[] { coord }, e);
-        }
+        enqueueInternal(coord, share.catwalkDefinition, share.modelId, share.pivotFieldId);
+        LOG.info("Strut enqueued shared update for catwalkId:{} modelId:{} coord:{}", share.catwalkDefinition.catwalkId, share.modelId, coord);
     }
 
     void enqueue(MiruPartitionCoord coord, StrutQuery strutQuery, int pivotFieldId) {
 
         for (StrutModelScalar modelScalar : strutQuery.modelScalars) {
-
             CatwalkDefinition catwalkDefinition = new CatwalkDefinition(modelScalar.catwalkId,
                 modelScalar.catwalkQuery,
                 strutQuery.numeratorScalars,
@@ -369,13 +350,17 @@ public class StrutModelScorer {
                 strutQuery.featureScalars,
                 strutQuery.featureStrategy);
 
-            StrutQueueKey key = new StrutQueueKey(coord, modelScalar.catwalkId, modelScalar.modelId, pivotFieldId);
-            int stripe = Math.abs(key.hashCode() % queues.length);
-            synchronized (queues[stripe]) {
-                queues[stripe].computeIfAbsent(key, (key1) -> new Enqueued(catwalkDefinition));
-            }
-            pendingUpdates.incrementAndGet();
+            enqueueInternal(coord, catwalkDefinition, modelScalar.modelId, pivotFieldId);
         }
+    }
+
+    private void enqueueInternal(MiruPartitionCoord coord, CatwalkDefinition catwalkDefinition, String modelId, int pivotFieldId) {
+        StrutQueueKey key = new StrutQueueKey(coord, catwalkDefinition.catwalkId, modelId, pivotFieldId);
+        int stripe = Math.abs(key.hashCode() % queues.length);
+        synchronized (queues[stripe]) {
+            queues[stripe].computeIfAbsent(key, (key1) -> new Enqueued(catwalkDefinition));
+        }
+        pendingUpdates.incrementAndGet();
     }
 
     private static class Enqueued {
@@ -628,7 +613,18 @@ public class StrutModelScorer {
             long startOfUpdates = System.currentTimeMillis();
             commitAndNil(modelId, bitmaps, context, pivotFieldId, termScoreCache, nilTermCache, updates, stackBuffer);
             if (shareScores) {
-                shareOut(coord, new StrutShare(coord.tenantId, coord.partitionId, catwalkQuery, modelId, pivotFieldId, updates));
+                CatwalkDefinition catwalkDefinition = new CatwalkDefinition(catwalkQuery.catwalkId,
+                    catwalkQuery,
+                    numeratorScalars,
+                    numeratorStrategy,
+                    featureScalars,
+                    featureStrategy);
+                StrutShare share = new StrutShare(coord.tenantId,
+                    coord.partitionId,
+                    catwalkDefinition,
+                    modelId,
+                    pivotFieldId);
+                shareOut(coord, share);
             }
             long totalTimeScoreUpdates = System.currentTimeMillis() - startOfUpdates;
             LOG.info("Strut score updates {} features in {} ms for {}", updates.size(), totalTimeScoreUpdates, coord);
@@ -710,30 +706,6 @@ public class StrutModelScorer {
             result = 31 * result + (modelId != null ? modelId.hashCode() : 0);
             result = 31 * result + pivotFieldId;
             return result;
-        }
-    }
-
-    private static class CatwalkDefinition {
-
-        final String catwalkId;
-        final CatwalkQuery catwalkQuery;
-        final float[] numeratorScalars;
-        final Strategy numeratorStrategy;
-        final float[] featureScalars;
-        final Strategy featureStrategy;
-
-        public CatwalkDefinition(String catwalkId,
-            CatwalkQuery catwalkQuery,
-            float[] numeratorScalars,
-            Strategy numeratorStrategy,
-            float[] featureScalars,
-            Strategy featureStrategy) {
-            this.catwalkId = catwalkId;
-            this.catwalkQuery = catwalkQuery;
-            this.numeratorScalars = numeratorScalars;
-            this.numeratorStrategy = numeratorStrategy;
-            this.featureScalars = featureScalars;
-            this.featureStrategy = featureStrategy;
         }
     }
 

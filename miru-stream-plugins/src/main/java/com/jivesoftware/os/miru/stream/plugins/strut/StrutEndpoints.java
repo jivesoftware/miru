@@ -102,8 +102,9 @@ public class StrutEndpoints {
         } catch (MiruPartitionUnavailableException e) {
             return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("Unavailable " + e.getMessage()).build();
         } catch (Exception e) {
+            String catwalkId = share.catwalkDefinition != null ? share.catwalkDefinition.catwalkId : null;
             log.error("Failed to share strut for tenantId:{} partitionId:{} catwalkId:{} modelId:{}",
-                new Object[] { share.tenantId, share.partitionId, share.catwalkQuery != null ? share.catwalkQuery.catwalkId : null, share.modelId }, e);
+                new Object[] { share.tenantId, share.partitionId, catwalkId, share.modelId }, e);
             return Response.serverError().build();
         }
     }
