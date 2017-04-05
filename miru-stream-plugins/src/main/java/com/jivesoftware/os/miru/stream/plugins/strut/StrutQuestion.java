@@ -68,6 +68,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
     private final int gatherBatchSize;
     private final boolean gatherParallel;
     private final int scoreConcurrencyLevel;
+    private final Set<String> verboseModelIds;
     private final ExecutorService gatherExecutorService;
 
     private final MiruBitmapsDebug bitmapsDebug = new MiruBitmapsDebug();
@@ -83,6 +84,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         int gatherBatchSize,
         boolean gatherParallel,
         int scoreConcurrencyLevel,
+        Set<String> verboseModelIds,
         ExecutorService gatherExecutorService) {
         this.modelScorer = modelScorer;
         this.strut = strut;
@@ -94,6 +96,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         this.gatherBatchSize = gatherBatchSize;
         this.gatherParallel = gatherParallel;
         this.scoreConcurrencyLevel = scoreConcurrencyLevel;
+        this.verboseModelIds = verboseModelIds;
         this.gatherExecutorService = gatherExecutorService;
     }
 
@@ -183,6 +186,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
 
         MiruFieldIndex<BM, IBM> primaryIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
 
+        boolean verboseModelId = false;
         String[] modelIds = new String[request.query.modelScalars.size()];
         MiruPluginCacheProvider.LastIdCacheKeyValues[] termScoresCaches = new MiruPluginCacheProvider.LastIdCacheKeyValues[request.query.modelScalars.size()];
         float[] termScoresCacheScalars = new float[request.query.modelScalars.size()];
@@ -190,11 +194,15 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         for (int i = 0; i < request.query.modelScalars.size(); i++) {
             StrutModelScalar modelScalar = request.query.modelScalars.get(i);
             modelIds[i] = modelScalar.modelId;
+            verboseModelId |= verboseModelIds.contains(modelScalar.modelId);
             termScoresCaches[i] = modelScorer.getTermScoreCache(context, modelScalar.catwalkId);
             termScoresCacheScalars[i] = modelScalar.scalar;
             BM nilBitmap = modelScorer.nilBitmap(context, modelScalar.catwalkId, modelScalar.modelId, stackBuffer);
             if (nilBitmap != null) {
                 masks.add(nilBitmap);
+            }
+            if (verboseModelId) {
+                LOG.info("Added nil mask for modelId:{} bits:{}", modelScalar.modelId, nilBitmap == null ? -1 : bitmaps.cardinality(nilBitmap));
             }
         }
         IBM nilMask = masks.isEmpty() ? null : masks.size() == 1 ? masks.get(0) : bitmaps.and(masks);
@@ -250,6 +258,10 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 stackBuffer);
         }
 
+        if (verboseModelId) {
+            LOG.info("Gathered modelId:{} count:{}", termIdLastIdCounts.size());
+        }
+
         long elapsed = System.currentTimeMillis() - start;
         LOG.inc("askLocal>accumulated>pow>" + FilerIO.chunkPower(elapsed, 0));
         solutionLog.log(MiruSolutionLogLevel.INFO, "Strut accumulated {} terms in {} ms", termIdLastIdCounts.size(), elapsed);
@@ -287,6 +299,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 .create();
         }
 
+        boolean scoreVerboseModelId = verboseModelId;
         StrutModelScorer.scoreParallel(
             modelIds,
             request.query.numeratorScalars.length,
@@ -295,6 +308,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             termScoresCaches,
             termScoresCacheScalars,
             (bucket, termIndex, scores, scoredToLastId) -> {
+                TermIdLastIdCount termIdLastIdCount = termIdLastIdCounts.get(termIndex);
                 if (scoredToLastId != -1) {
                     for (int i = 0; i < scores.length; i++) {
                         if (Float.isNaN(scores[i])) {
@@ -303,7 +317,6 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                             maxScore[0] = Math.max(maxScore[0], scores[i]);
                         }
                     }
-                    TermIdLastIdCount termIdLastIdCount = termIdLastIdCounts.get(termIndex);
                     float scaledScore = Strut.scaleScore(scores, request.query.numeratorScalars, request.query.numeratorStrategy);
                     parallelScored[bucket].add(new Scored(termIdLastIdCount.lastId,
                         miruTermIds[termIndex],
@@ -312,6 +325,15 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                         scores,
                         null,
                         termIdLastIdCount.count));
+                }
+                if (scoreVerboseModelId) {
+                    LOG.info("Retrieved score for modelIds:{} termId:{} scores:{} lastId:{} count:{} scoredToLastId:{}",
+                        Arrays.toString(modelIds),
+                        termIdLastIdCount.termId,
+                        Arrays.toString(scores),
+                        termIdLastIdCount.lastId,
+                        termIdLastIdCount.count,
+                        scoredToLastId);
                 }
                 return true;
             },

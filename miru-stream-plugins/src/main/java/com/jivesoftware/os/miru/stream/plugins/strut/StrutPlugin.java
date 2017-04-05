@@ -148,6 +148,7 @@ public class StrutPlugin implements MiruPlugin<StrutEndpoints, StrutInjectable>,
                 gatherParallel,
                 gatherThreadPoolSize,
                 config.getParallelSolverEnabled(),
+                verboseModelIds,
                 gatherExecutorService)));
     }
 
