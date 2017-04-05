@@ -416,6 +416,10 @@ public class StrutModelScorer {
                             process((MiruQueryablePartition) replica, key.catwalkId, key.modelId, key.pivotFieldId, enqueued.catwalkDefinition,
                                 stackBuffer, solutionLog);
                             LOG.inc("strut>scorer>processed");
+                        } catch (NullPointerException e) {
+                            LOG.inc("strut>scorer>npe");
+                            LOG.error("Failed to consume catwalkId:{} modelId:{} pivotFieldId:{}",
+                                new Object[] { key.catwalkId, key.modelId, key.pivotFieldId }, e);
                         } catch (Exception e) {
                             LOG.inc("strut>scorer>failed");
                             if (LOG.isDebugEnabled()) {
