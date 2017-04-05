@@ -21,6 +21,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.jivesoftware.os.amza.api.partition.Consistency;
 import com.jivesoftware.os.amza.api.partition.Durability;
 import com.jivesoftware.os.amza.api.partition.PartitionProperties;
@@ -87,6 +88,7 @@ import com.jivesoftware.os.routing.bird.health.checkers.SystemCpuHealthChecker;
 import com.jivesoftware.os.routing.bird.http.client.HttpClient;
 import com.jivesoftware.os.routing.bird.http.client.HttpDeliveryClientHealthProvider;
 import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelperUtils;
+import com.jivesoftware.os.routing.bird.http.client.TailAtScaleStrategy;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.http.client.TenantRoutingHttpClientInitializer;
 import com.jivesoftware.os.routing.bird.server.oauth.validator.AuthValidator;
@@ -230,9 +232,15 @@ public class MiruSyncMain {
                 .socketTimeoutInMillis(10_000)
                 .build(); // TODO expose to conf
 
+            TailAtScaleStrategy tailAtScaleStrategy = new TailAtScaleStrategy(
+                Executors.newCachedThreadPool(new ThreadFactoryBuilder().setNameFormat("tas-%d").build()),
+                100, // TODO config
+                95 // TODO config
+            );
+
             AmzaClientProvider<HttpClient, HttpClientException> amzaClientProvider = new AmzaClientProvider<>(
                 new HttpPartitionClientFactory(),
-                new HttpPartitionHostsProvider(amzaClient, mapper),
+                new HttpPartitionHostsProvider(amzaClient, tailAtScaleStrategy, mapper),
                 new RingHostHttpClientProvider(amzaClient),
                 Executors.newFixedThreadPool(syncConfig.getAmzaCallerThreadPoolSize()),
                 syncConfig.getAmzaAwaitLeaderElectionForNMillis(),
@@ -274,16 +282,8 @@ public class MiruSyncMain {
                 10_000L, //TODO config
                 syncConfig.getUseClientSolutionLog());
 
-            AmzaClientProvider clientProvider = new AmzaClientProvider<>(
-                new HttpPartitionClientFactory(),
-                new HttpPartitionHostsProvider(amzaClient, mapper),
-                new RingHostHttpClientProvider(amzaClient),
-                Executors.newCachedThreadPool(), //TODO expose to conf?
-                30_000L, // TODO config
-                -1,
-                -1);
 
-            MiruSyncConfigStorage miruSyncConfigStorage = new MiruSyncConfigStorage(clientProvider,
+            MiruSyncConfigStorage miruSyncConfigStorage = new MiruSyncConfigStorage(amzaClientProvider,
                 "miru-sync-config-",
                 new PartitionProperties(Durability.fsync_async,
                     0, 0, 0, 0, 0, 0, 0, 0,
@@ -323,7 +323,7 @@ public class MiruSyncMain {
             );
 
 
-            MiruSyncSenderConfigStorage miruSyncSenderConfigStorage = new MiruSyncSenderConfigStorage(clientProvider,
+            MiruSyncSenderConfigStorage miruSyncSenderConfigStorage = new MiruSyncSenderConfigStorage(amzaClientProvider,
                 "miru-sync-sender-config",
                 new PartitionProperties(Durability.fsync_async,
                     0, 0, 0, 0, 0, 0, 0, 0,

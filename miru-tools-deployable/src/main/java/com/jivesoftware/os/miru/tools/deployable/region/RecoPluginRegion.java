@@ -15,6 +15,7 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.FilterStringUtil;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
+import com.jivesoftware.os.miru.plugin.query.MiruTenantQueryRouting;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
@@ -28,11 +29,6 @@ import com.jivesoftware.os.miru.ui.MiruPageRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.routing.bird.http.client.HttpResponse;
-import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
-import com.jivesoftware.os.routing.bird.http.client.RoundRobinStrategy;
-import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
-import com.jivesoftware.os.routing.bird.shared.ClientCall.ClientResponse;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -48,21 +44,15 @@ public class RecoPluginRegion implements MiruPageRegion<Optional<RecoPluginRegio
 
     private final String template;
     private final MiruSoyRenderer renderer;
-    private final TenantAwareHttpClient<String> readerClient;
-    private final ObjectMapper requestMapper;
-    private final HttpResponseMapper responseMapper;
+    private final MiruTenantQueryRouting miruTenantQueryRouting;
     private final FilterStringUtil filterStringUtil = new FilterStringUtil();
 
     public RecoPluginRegion(String template,
         MiruSoyRenderer renderer,
-        TenantAwareHttpClient<String> readerClient,
-        ObjectMapper requestMapper,
-        HttpResponseMapper responseMapper) {
+        MiruTenantQueryRouting miruTenantQueryRouting) {
         this.template = template;
         this.renderer = renderer;
-        this.readerClient = readerClient;
-        this.requestMapper = requestMapper;
-        this.responseMapper = responseMapper;
+        this.miruTenantQueryRouting = miruTenantQueryRouting;
     }
 
     public static class RecoPluginRegionInput {
@@ -152,7 +142,7 @@ public class RecoPluginRegion implements MiruPageRegion<Optional<RecoPluginRegio
                 if (!input.tenant.trim().isEmpty()) {
                     MiruTenantId tenantId = new MiruTenantId(input.tenant.trim().getBytes(Charsets.UTF_8));
                     String endpoint = RecoConstants.RECO_PREFIX + RecoConstants.CUSTOM_QUERY_ENDPOINT;
-                    String request = requestMapper.writeValueAsString(new MiruRequest<>("toolsReco",
+                    MiruRequest<RecoQuery> miruRequest = new MiruRequest<>("toolsReco",
                         tenantId,
                         MiruActorId.NOT_PROVIDED,
                         MiruAuthzExpression.NOT_PROVIDED,
@@ -165,19 +155,11 @@ public class RecoPluginRegion implements MiruPageRegion<Optional<RecoPluginRegio
                             input.recommendField,
                             scorableFilter,
                             100),
-                        MiruSolutionLogLevel.valueOf(input.logLevel)));
-                    MiruResponse<RecoAnswer> recoResponse = readerClient.call("",
-                        new RoundRobinStrategy(),
-                        "recoPluginRegion",
-                        httpClient -> {
-                            HttpResponse httpResponse = httpClient.postJson(endpoint, request, null);
-                            @SuppressWarnings("unchecked")
-                            MiruResponse<RecoAnswer> extractResponse = responseMapper.extractResultFromResponse(httpResponse,
-                                MiruResponse.class,
-                                new Class[] { RecoAnswer.class },
-                                null);
-                            return new ClientResponse<>(extractResponse, true);
-                        });
+                        MiruSolutionLogLevel.valueOf(input.logLevel));
+
+                    MiruResponse<RecoAnswer> recoResponse = miruTenantQueryRouting.query("", "recoPluginRegion",
+                        miruRequest, endpoint, RecoAnswer.class);
+
                     if (recoResponse != null && recoResponse.answer != null) {
                         response = recoResponse;
                     } else {

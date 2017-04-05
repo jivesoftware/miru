@@ -13,6 +13,7 @@ import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.FilterStringUtil;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
+import com.jivesoftware.os.miru.plugin.query.MiruTenantQueryRouting;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
 import com.jivesoftware.os.miru.plugin.solution.MiruSolutionLogLevel;
@@ -25,11 +26,6 @@ import com.jivesoftware.os.miru.ui.MiruPageRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
-import com.jivesoftware.os.routing.bird.http.client.HttpResponse;
-import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
-import com.jivesoftware.os.routing.bird.http.client.RoundRobinStrategy;
-import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
-import com.jivesoftware.os.routing.bird.shared.ClientCall.ClientResponse;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -47,21 +43,15 @@ public class FullTextPluginRegion implements MiruPageRegion<Optional<FullTextPlu
 
     private final String template;
     private final MiruSoyRenderer renderer;
-    private final TenantAwareHttpClient<String> readerClient;
-    private final ObjectMapper requestMapper;
-    private final HttpResponseMapper responseMapper;
+    private final MiruTenantQueryRouting miruTenantQueryRouting;
     private final FilterStringUtil filterStringUtil = new FilterStringUtil();
 
     public FullTextPluginRegion(String template,
         MiruSoyRenderer renderer,
-        TenantAwareHttpClient<String> readerClient,
-        ObjectMapper requestMapper,
-        HttpResponseMapper responseMapper) {
+        MiruTenantQueryRouting miruTenantQueryRouting) {
         this.template = template;
         this.renderer = renderer;
-        this.readerClient = readerClient;
-        this.requestMapper = requestMapper;
-        this.responseMapper = responseMapper;
+        this.miruTenantQueryRouting = miruTenantQueryRouting;
     }
 
     public static class FullTextPluginRegionInput {
@@ -140,7 +130,7 @@ public class FullTextPluginRegion implements MiruPageRegion<Optional<FullTextPlu
                     MiruTenantId tenantId = new MiruTenantId(input.tenant.trim().getBytes(Charsets.UTF_8));
                     String[] gatherTermsForFieldSplit = (input.gatherTermsForFields.isEmpty()) ? null : input.gatherTermsForFields.split("\\s*,\\s*");
                     String endpoint = FullTextConstants.FULLTEXT_PREFIX + FullTextConstants.CUSTOM_QUERY_ENDPOINT;
-                    String request = requestMapper.writeValueAsString(new MiruRequest<>("toolsFullText",
+                    MiruRequest<FullTextQuery> miruRequest = new MiruRequest<>("toolsFullText",
                         tenantId,
                         MiruActorId.NOT_PROVIDED,
                         MiruAuthzExpression.NOT_PROVIDED,
@@ -155,19 +145,11 @@ public class FullTextPluginRegion implements MiruPageRegion<Optional<FullTextPlu
                             input.strategy,
                             input.maxCount,
                             gatherTermsForFieldSplit),
-                        MiruSolutionLogLevel.valueOf(input.logLevel)));
-                    MiruResponse<FullTextAnswer> fullTextResponse = readerClient.call("",
-                        new RoundRobinStrategy(),
-                        "fullTextPluginRegion",
-                        httpClient -> {
-                            HttpResponse httpResponse = httpClient.postJson(endpoint, request, null);
-                            @SuppressWarnings("unchecked")
-                            MiruResponse<FullTextAnswer> extractResponse = responseMapper.extractResultFromResponse(httpResponse,
-                                MiruResponse.class,
-                                new Class[] { FullTextAnswer.class },
-                                null);
-                            return new ClientResponse<>(extractResponse, true);
-                        });
+                        MiruSolutionLogLevel.valueOf(input.logLevel));
+
+                    MiruResponse<FullTextAnswer> fullTextResponse = miruTenantQueryRouting.query("", "fullTextPluginRegion",
+                        miruRequest, endpoint, FullTextAnswer.class);
+
                     if (fullTextResponse != null && fullTextResponse.answer != null) {
                         response = fullTextResponse;
                     } else {

@@ -19,11 +19,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer.MiruLogAppenderConfig;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer;
 import com.jivesoftware.os.miru.metric.sampler.MiruMetricSamplerInitializer.MiruMetricSamplerConfig;
+import com.jivesoftware.os.miru.plugin.query.MiruTenantQueryRouting;
 import com.jivesoftware.os.miru.tools.deployable.endpoints.AggregateCountsPluginEndpoints;
 import com.jivesoftware.os.miru.tools.deployable.endpoints.AnalyticsPluginEndpoints;
 import com.jivesoftware.os.miru.tools.deployable.endpoints.CatwalkPluginEndpoints;
@@ -76,6 +78,7 @@ import com.jivesoftware.os.routing.bird.shared.TenantRoutingProvider;
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.Executors;
 
 public class MiruToolsMain {
 
@@ -181,48 +184,57 @@ public class MiruToolsMain {
                 renderer,
                 tenantRoutingProvider);
 
+            MiruTenantQueryRouting miruTenantQueryRouting = new MiruTenantQueryRouting(miruReaderClient,
+                mapper,
+                responseMapper,
+                Executors.newCachedThreadPool(new ThreadFactoryBuilder().setNameFormat("tas-%d").build()),
+                100, // TODO config
+                95 // TODO config
+            );
+
+
             List<MiruToolsPlugin> plugins = Lists.newArrayList(
                 new MiruToolsPlugin("road", "Aggregate Counts",
                     "/ui/tools/aggregate",
                     AggregateCountsPluginEndpoints.class,
-                    new AggregateCountsPluginRegion("soy.miru.page.aggregateCountsPluginRegion", renderer, miruReaderClient, mapper, responseMapper)),
+                    new AggregateCountsPluginRegion("soy.miru.page.aggregateCountsPluginRegion", renderer, miruTenantQueryRouting)),
                 new MiruToolsPlugin("stats", "Analytics",
                     "/ui/tools/analytics",
                     AnalyticsPluginEndpoints.class,
-                    new AnalyticsPluginRegion("soy.miru.page.analyticsPluginRegion", renderer, miruReaderClient, mapper, responseMapper)),
+                    new AnalyticsPluginRegion("soy.miru.page.analyticsPluginRegion", renderer, miruTenantQueryRouting)),
                 new MiruToolsPlugin("education", "Catwalk",
                     "/ui/tools/catwalk",
                     CatwalkPluginEndpoints.class,
-                    new CatwalkPluginRegion("soy.miru.page.catwalkPluginRegion", renderer, miruReaderClient, mapper, responseMapper)),
+                    new CatwalkPluginRegion("soy.miru.page.catwalkPluginRegion", renderer, miruTenantQueryRouting)),
                 new MiruToolsPlugin("fire", "Strut your Stuff",
                     "/ui/tools/strut",
                     StrutPluginEndpoints.class,
-                    new StrutPluginRegion("soy.miru.page.strutPluginRegion", renderer, miruReaderClient, mapper, responseMapper)),
+                    new StrutPluginRegion("soy.miru.page.strutPluginRegion", renderer, miruTenantQueryRouting)),
                 new MiruToolsPlugin("asterisk", "Distincts",
                     "/ui/tools/distincts",
                     DistinctsPluginEndpoints.class,
-                    new DistinctsPluginRegion("soy.miru.page.distinctsPluginRegion", renderer, miruReaderClient, mapper, responseMapper)),
+                    new DistinctsPluginRegion("soy.miru.page.distinctsPluginRegion", renderer, miruTenantQueryRouting)),
                 new MiruToolsPlugin("zoom-in", "Uniques",
                     "/ui/tools/uniques",
                     UniquesPluginEndpoints.class,
-                    new UniquesPluginRegion("soy.miru.page.uniquesPluginRegion", renderer, miruReaderClient, mapper, responseMapper)),
+                    new UniquesPluginRegion("soy.miru.page.uniquesPluginRegion", renderer, miruTenantQueryRouting)),
                 new MiruToolsPlugin("search", "Full Text",
                     "/ui/tools/fulltext",
                     FullTextPluginEndpoints.class,
-                    new FullTextPluginRegion("soy.miru.page.fullTextPluginRegion", renderer, miruReaderClient, mapper, responseMapper)),
+                    new FullTextPluginRegion("soy.miru.page.fullTextPluginRegion", renderer, miruTenantQueryRouting)),
                 new MiruToolsPlugin("flash", "Realwave",
                     "/ui/tools/realwave",
                     RealwavePluginEndpoints.class,
-                    new RealwavePluginRegion("soy.miru.page.realwavePluginRegion", renderer, miruReaderClient, mapper, responseMapper),
+                    new RealwavePluginRegion("soy.miru.page.realwavePluginRegion", renderer, miruTenantQueryRouting),
                     new RealwaveFramePluginRegion("soy.miru.page.realwaveFramePluginRegion", renderer)),
                 new MiruToolsPlugin("thumbs-up", "Reco",
                     "/ui/tools/reco",
                     RecoPluginEndpoints.class,
-                    new RecoPluginRegion("soy.miru.page.recoPluginRegion", renderer, miruReaderClient, mapper, responseMapper)),
+                    new RecoPluginRegion("soy.miru.page.recoPluginRegion", renderer, miruTenantQueryRouting)),
                 new MiruToolsPlugin("list", "Trending",
                     "/ui/tools/trending",
                     TrendingPluginEndpoints.class,
-                    new TrendingPluginRegion("soy.miru.page.trendingPluginRegion", renderer, miruReaderClient, mapper, responseMapper)));
+                    new TrendingPluginRegion("soy.miru.page.trendingPluginRegion", renderer, miruTenantQueryRouting)));
 
             File staticResourceDir = new File(System.getProperty("user.dir"));
             System.out.println("Static resources rooted at " + staticResourceDir.getAbsolutePath());
