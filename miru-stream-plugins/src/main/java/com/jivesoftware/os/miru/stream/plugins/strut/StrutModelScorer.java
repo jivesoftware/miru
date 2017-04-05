@@ -38,6 +38,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
@@ -73,6 +74,7 @@ public class StrutModelScorer {
     private final double hashIndexLoadFactor;
     private final boolean shareScores;
     private final float nilScoreThreshold;
+    private final Set<String> verboseModelIds;
 
     private final LinkedHashMap<StrutQueueKey, Enqueued>[] queues;
 
@@ -89,7 +91,8 @@ public class StrutModelScorer {
         double hashIndexLoadFactor,
         int queueStripeCount,
         boolean shareScores,
-        float nilScoreThreshold) {
+        float nilScoreThreshold,
+        Set<String> verboseModelIds) {
         this.miruProvider = miruProvider;
         this.strut = strut;
         this.strutRemotePartition = strutRemotePartition;
@@ -100,6 +103,7 @@ public class StrutModelScorer {
         this.hashIndexLoadFactor = hashIndexLoadFactor;
         this.shareScores = shareScores;
         this.nilScoreThreshold = nilScoreThreshold;
+        this.verboseModelIds = verboseModelIds;
 
         this.queues = new LinkedHashMap[queueStripeCount];
         for (int i = 0; i < queueStripeCount; i++) {
@@ -463,6 +467,9 @@ public class StrutModelScorer {
                     solutionLog,
                     (lastId, termId, count) -> rescorable.add(new TermIdLastIdCount(termId, lastId, count)),
                     stackBuffer);
+                if (verboseModelIds.contains(modelId)) {
+                    LOG.info("Processing modelId:{} from:{} to:{} count:{}", modelId, cursorId, activityIndexLastId, rescorable.size());
+                }
                 for (List<TermIdLastIdCount> batch : Lists.partition(rescorable, 1000)) {
                     rescore(catwalkId,
                         modelId,
@@ -595,6 +602,14 @@ public class StrutModelScorer {
             totalPartitionCount,
             solutionLog);
         solutionLog.log(MiruSolutionLogLevel.INFO, "Strut rescore took {} ms", System.currentTimeMillis() - startStrut);
+
+        if (verboseModelIds.contains(modelId)) {
+            LOG.info("Rescored modelId:{} results:{} updates:{}", modelId, results.size(), updates.size());
+            for (Scored update : updates) {
+                LOG.info("Scored for modelId:{} term:{} scores:{} count:{} lastId:{} scoredToLastId:{}",
+                    modelId, update.term, Arrays.toString(update.scores), update.count, update.lastId, update.scoredToLastId);
+            }
+        }
 
         if (!updates.isEmpty()) {
             long startOfUpdates = System.currentTimeMillis();

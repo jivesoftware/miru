@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.jivesoftware.os.miru.plugin.Miru;
@@ -23,6 +24,7 @@ import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -115,6 +117,8 @@ public class StrutPlugin implements MiruPlugin<StrutEndpoints, StrutInjectable>,
             false);
         StrutRemotePartition strutRemotePartition = new StrutRemotePartition(remotePartitionReader);
 
+        Set<String> verboseModelIds = Sets.newHashSet(Arrays.asList(config.getVerboseModelIds().split("\\s*,\\s*")));
+
         MiruAggregateUtil aggregateUtil = new MiruAggregateUtil();
         StrutModelScorer modelScorer = new StrutModelScorer(miruProvider,
             strut,
@@ -126,7 +130,8 @@ public class StrutPlugin implements MiruPlugin<StrutEndpoints, StrutInjectable>,
             config.getScoresHashIndexLoadFactor(),
             config.getQueueStripeCount(),
             config.getShareScores(),
-            config.getNilScoreThreshold());
+            config.getNilScoreThreshold(),
+            verboseModelIds);
         modelScorer.start(asyncExecutorService, config.getQueueStripeCount(), config.getQueueConsumeIntervalMillis());
 
 

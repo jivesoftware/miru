@@ -6,6 +6,7 @@ import org.merlin.config.defaults.DoubleDefault;
 import org.merlin.config.defaults.FloatDefault;
 import org.merlin.config.defaults.IntDefault;
 import org.merlin.config.defaults.LongDefault;
+import org.merlin.config.defaults.StringDefault;
 
 /**
  * @author jonathan.colt
@@ -71,4 +72,7 @@ public interface StrutConfig extends Config {
 
     @FloatDefault(0.0001f)
     float getNilScoreThreshold();
+
+    @StringDefault("")
+    String getVerboseModelIds();
 }
