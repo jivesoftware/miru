@@ -311,7 +311,6 @@ public class StrutModelScorer {
                         }
                     } else {
                         nilTermIds.add(update.term);
-                        return true;
                     }
                 }
                 return true;
