@@ -347,55 +347,51 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
 
         Scored[] s = scored.toArray(new Scored[0]);
         if (scored.size() < request.query.desiredNumberOfResults) {
-            if (nilMask != null) {
-                int remaining = request.query.desiredNumberOfResults - scored.size();
-                Set<MiruTermId> gathered = Sets.newHashSet();
-                for (Scored scored1 : scored) {
-                    gathered.add(scored1.term);
-                }
-
-                List<TermIdLastIdCount> nils = Lists.newArrayList();
-                BM nilCandidates = bitmaps.and(Arrays.asList(candidates, nilMask));
-                aggregateUtil.gather("strut",
-                    bitmaps,
-                    context,
-                    nilCandidates,
-                    pivotFieldId,
-                    gatherBatchSize,
-                    false,
-                    true,
-                    counter,
-                    solutionLog,
-                    (lastId, termId, count) -> {
-                        if (gathered.add(termId)) {
-                            nils.add(new TermIdLastIdCount(termId, lastId, count));
-                        }
-                        if (count <= 0) {
-                            LOG.inc("strut>nilGather>empty");
-                        }
-                        return nils.size() < remaining;
-                    },
-                    stackBuffer);
-
-                Scored[] scoredArray = s;
-                s = new Scored[scoredArray.length + nils.size()];
-                System.arraycopy(scoredArray, 0, s, 0, scoredArray.length);
-
-                for (int i = 0; i < nils.size(); i++) {
-                    TermIdLastIdCount termIdLastIdCount = nils.get(i);
-                    s[i + scoredArray.length] = new Scored(termIdLastIdCount.lastId,
-                        termIdLastIdCount.termId,
-                        -1,
-                        0f,
-                        new float[request.query.numeratorScalars.length],
-                        null,
-                        termIdLastIdCount.count);
-                }
-                LOG.inc("strut>nilGather>size>pow>" + FilerIO.chunkPower(nils.size(), 0));
-                LOG.inc("strut>nilGather>count", nils.size());
-            } else {
-                LOG.inc("strut>nilGather>none");
+            int remaining = request.query.desiredNumberOfResults - scored.size();
+            Set<MiruTermId> gathered = Sets.newHashSet();
+            for (Scored scored1 : scored) {
+                gathered.add(scored1.term);
             }
+
+            List<TermIdLastIdCount> nils = Lists.newArrayList();
+            BM nilCandidates = nilMask == null ? candidates : bitmaps.and(Arrays.asList(candidates, nilMask));
+            aggregateUtil.gather("strut",
+                bitmaps,
+                context,
+                nilCandidates,
+                pivotFieldId,
+                gatherBatchSize,
+                true,
+                true,
+                counter,
+                solutionLog,
+                (lastId, termId, count) -> {
+                    if (gathered.add(termId)) {
+                        nils.add(new TermIdLastIdCount(termId, lastId, count));
+                    }
+                    if (count <= 0) {
+                        LOG.inc("strut>nilGather>empty");
+                    }
+                    return nils.size() < remaining;
+                },
+                stackBuffer);
+
+            Scored[] scoredArray = s;
+            s = new Scored[scoredArray.length + nils.size()];
+            System.arraycopy(scoredArray, 0, s, 0, scoredArray.length);
+
+            for (int i = 0; i < nils.size(); i++) {
+                TermIdLastIdCount termIdLastIdCount = nils.get(i);
+                s[i + scoredArray.length] = new Scored(termIdLastIdCount.lastId,
+                    termIdLastIdCount.termId,
+                    -1,
+                    0f,
+                    new float[request.query.numeratorScalars.length],
+                    null,
+                    termIdLastIdCount.count);
+            }
+            LOG.inc("strut>nilGather>size>pow>" + FilerIO.chunkPower(nils.size(), 0));
+            LOG.inc("strut>nilGather>count", nils.size());
         } else {
             LOG.inc("strut>nilGather>skip");
         }
