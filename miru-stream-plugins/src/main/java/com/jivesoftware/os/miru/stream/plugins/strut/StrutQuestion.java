@@ -457,6 +457,9 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         if (request.query.includeFeatures) {
             StrutModelScalar modelScalar = request.query.modelScalars.get(0);
             List<TermIdLastIdCount> scorable = Lists.newArrayListWithCapacity(s.length);
+            for (Scored s1 : s) {
+                scorable.add(new TermIdLastIdCount(s1.term, s1.lastId, s1.count));
+            }
             BM[] constrainFeature = modelScorer.buildConstrainFeatures(bitmaps,
                 context,
                 modelScalar.catwalkQuery,
