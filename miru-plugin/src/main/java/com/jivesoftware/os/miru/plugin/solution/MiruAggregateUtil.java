@@ -2,7 +2,6 @@ package com.jivesoftware.os.miru.plugin.solution;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.HashMultiset;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Multiset;
@@ -31,29 +30,24 @@ import com.jivesoftware.os.miru.plugin.bitmap.MiruIntIterator;
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.TimestampedCacheKeyValues;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.FieldMultiTermTxIndex;
-import com.jivesoftware.os.miru.plugin.index.LastIdAndTermIdStream;
+import com.jivesoftware.os.miru.plugin.index.IdAndTermIdStream;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndex;
 import com.jivesoftware.os.miru.plugin.index.MiruFieldIndexProvider;
 import com.jivesoftware.os.miru.plugin.index.MiruTermComposer;
 import com.jivesoftware.os.miru.plugin.index.MiruTxIndex;
-import com.jivesoftware.os.miru.plugin.index.TermIdLastIdCountStream;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import com.jivesoftware.os.rcvs.marshall.api.UtilLexMarshaller;
 import gnu.trove.iterator.TObjectIntIterator;
 import gnu.trove.map.hash.TObjectIntHashMap;
 import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.nio.channels.ClosedByInterruptException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.lang.mutable.MutableInt;
 import org.apache.commons.lang.mutable.MutableLong;
@@ -861,6 +855,7 @@ public class MiruAggregateUtil {
         LOG.debug("stream: bytesTraversed={}", bytesTraversed.longValue());
     }
 
+    /*TODO forced ascending gather doesn't work with current lastId merging strategy
     public <BM extends IBM, IBM, S extends MiruSipCursor<S>> void gatherParallel(String name,
         MiruBitmaps<BM, IBM> bitmaps,
         MiruRequestContext<BM, IBM, S> requestContext,
@@ -953,7 +948,7 @@ public class MiruAggregateUtil {
             }
             count++;
         }
-    }
+    }*/
 
     public <BM extends IBM, IBM, S extends MiruSipCursor<S>> void gather(String name,
         MiruBitmaps<BM, IBM> bitmaps,
@@ -965,7 +960,7 @@ public class MiruAggregateUtil {
         boolean includeCounts,
         Optional<BM> counter,
         MiruSolutionLog solutionLog,
-        LastIdAndTermIdStream lastIdAndTermIdStream,
+        IdAndTermIdStream idAndTermIdStream,
         StackBuffer stackBuffer) throws Exception {
 
         gatherActivityLookup(name,
@@ -978,7 +973,7 @@ public class MiruAggregateUtil {
             includeCounts,
             counter,
             solutionLog,
-            lastIdAndTermIdStream,
+            idAndTermIdStream,
             stackBuffer);
 
         /*MiruFieldDefinition fieldDefinition = requestContext.getSchema().getFieldDefinition(pivotFieldId);
@@ -1021,7 +1016,7 @@ public class MiruAggregateUtil {
         boolean includeCounts,
         Optional<BM> counter,
         MiruSolutionLog solutionLog,
-        LastIdAndTermIdStream lastIdAndTermIdStream,
+        IdAndTermIdStream idAndTermIdStream,
         StackBuffer stackBuffer) throws Exception {
 
         MiruActivityIndex activityIndex = requestContext.getActivityIndex();
@@ -1070,12 +1065,12 @@ public class MiruAggregateUtil {
             }
 
             MiruTermId[] termIds = new MiruTermId[distincts.size()];
-            int[] lastIds = new int[distincts.size()];
+            int[] foundIds = new int[distincts.size()];
             TObjectIntIterator<MiruTermId> iter = distincts.iterator();
             for (int i = 0; iter.hasNext(); i++) {
                 iter.advance();
                 termIds[i] = iter.key();
-                lastIds[i] = iter.value();
+                foundIds[i] = iter.value();
             }
 
             long[] counts = includeCounts ? new long[distincts.size()] : null;
@@ -1091,7 +1086,7 @@ public class MiruAggregateUtil {
             andNotCost += (System.nanoTime() - start);
 
             for (int i = 0; i < termIds.length; i++) {
-                if (!lastIdAndTermIdStream.stream(lastIds[i], termIds[i], includeCounts ? counts[i] : -1)) {
+                if (!idAndTermIdStream.stream(foundIds[i], termIds[i], includeCounts ? counts[i] : -1)) {
                     break done;
                 }
             }

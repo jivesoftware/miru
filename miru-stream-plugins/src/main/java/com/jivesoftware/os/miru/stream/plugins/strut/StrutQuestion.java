@@ -26,7 +26,6 @@ import com.jivesoftware.os.miru.plugin.backfill.MiruJustInTimeBackfillerizer;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider;
-import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.TimestampedCacheKeyValues;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
@@ -218,46 +217,24 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         long start = System.currentTimeMillis();
         List<TermIdLastIdCount> termIdLastIdCounts = Lists.newArrayList();
         Optional<BM> counter = request.query.countUnread ? unreadIndex.transform(input -> bitmaps.and(Arrays.asList(input, eligible))) : Optional.absent();
-        if (gatherParallel) {
-            aggregateUtil.gatherParallel("strut",
-                bitmaps,
-                context,
-                eligible,
-                pivotFieldId,
-                gatherBatchSize,
-                true,
-                maxTermIdsPerRequest,
-                counter,
-                solutionLog,
-                gatherExecutorService,
-                (termIdLastIdCount) -> {
-                    termIdLastIdCounts.add(termIdLastIdCount);
-                    if (termIdLastIdCount.count <= 0) {
-                        LOG.inc("strut>gather>empty");
-                    }
-                    return maxTermIdsPerRequest <= 0 || termIdLastIdCounts.size() < maxTermIdsPerRequest;
-                },
-                stackBuffer);
-        } else {
-            aggregateUtil.gather("strut",
-                bitmaps,
-                context,
-                eligible,
-                pivotFieldId,
-                gatherBatchSize,
-                false,
-                true,
-                counter,
-                solutionLog,
-                (lastId, termId, count) -> {
-                    termIdLastIdCounts.add(new TermIdLastIdCount(termId, lastId, count));
-                    if (count <= 0) {
-                        LOG.inc("strut>gather>empty");
-                    }
-                    return maxTermIdsPerRequest <= 0 || termIdLastIdCounts.size() < maxTermIdsPerRequest;
-                },
-                stackBuffer);
-        }
+        aggregateUtil.gather("strut",
+            bitmaps,
+            context,
+            eligible,
+            pivotFieldId,
+            gatherBatchSize,
+            true,
+            true,
+            counter,
+            solutionLog,
+            (id, termId, count) -> {
+                termIdLastIdCounts.add(new TermIdLastIdCount(termId, id, count));
+                if (count <= 0) {
+                    LOG.inc("strut>gather>empty");
+                }
+                return maxTermIdsPerRequest <= 0 || termIdLastIdCounts.size() < maxTermIdsPerRequest;
+            },
+            stackBuffer);
 
         if (verboseModelId) {
             LOG.info("Gathered modelIds:{} count:{}", Arrays.toString(modelIds), termIdLastIdCounts.size());
@@ -388,9 +365,9 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 true,
                 counter,
                 solutionLog,
-                (lastId, termId, count) -> {
+                (id, termId, count) -> {
                     if (gathered.add(termId)) {
-                        nils.add(new TermIdLastIdCount(termId, lastId, count));
+                        nils.add(new TermIdLastIdCount(termId, id, count));
                     }
                     if (count <= 0) {
                         LOG.inc("strut>nilGather>empty");
@@ -480,6 +457,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 scorable,
                 pivotFieldId,
                 constrainFeature,
+                false,
                 false,
                 null,
                 null,
