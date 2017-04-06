@@ -98,7 +98,7 @@ public class CollaborativeFiltering {
             false,
             Optional.absent(),
             solutionLog,
-            (lastId, termId, count) -> {
+            (id, termId, count) -> {
                 distinctParents.add(termId);
                 return true;
             },
@@ -188,7 +188,7 @@ public class CollaborativeFiltering {
                     false,
                     Optional.absent(),
                     solutionLog,
-                    (lastId, termId, count) -> {
+                    (id, termId, count) -> {
                         distinctContributorParents.add(termId);
                         return true;
                     },

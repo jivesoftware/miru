@@ -140,7 +140,7 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
                 true,
                 Optional.absent(),
                 solutionLog,
-                (lastId1, termId, count) -> {
+                (id, termId, count) -> {
                     topNTermIds.add(new TermIdAndCount(termId, count));
                     return true;
                 },

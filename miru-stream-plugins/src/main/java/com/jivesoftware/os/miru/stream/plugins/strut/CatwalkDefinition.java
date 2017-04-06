@@ -4,11 +4,12 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery;
 import com.jivesoftware.os.miru.stream.plugins.strut.StrutQuery.Strategy;
+import java.io.Serializable;
 
 /**
  *
  */
-public class CatwalkDefinition {
+public class CatwalkDefinition implements Serializable {
 
     public final String catwalkId;
     public final CatwalkQuery catwalkQuery;

@@ -139,7 +139,7 @@ public class Distincts {
                     false,
                     Optional.absent(),
                     solutionLog,
-                    (lastId1, termId, count) -> {
+                    (id, termId, count) -> {
                         if (prefixesAsBytes.length > 0) {
                             byte[] termBytes = termId.getBytes();
                             for (byte[] prefixAsBytes : prefixesAsBytes) {
