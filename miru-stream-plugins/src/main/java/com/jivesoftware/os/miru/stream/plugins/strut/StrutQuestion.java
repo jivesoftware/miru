@@ -26,6 +26,7 @@ import com.jivesoftware.os.miru.plugin.backfill.MiruJustInTimeBackfillerizer;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider;
+import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.TimestampedCacheKeyValues;
 import com.jivesoftware.os.miru.plugin.context.MiruRequestContext;
 import com.jivesoftware.os.miru.plugin.index.BitmapAndLastId;
 import com.jivesoftware.os.miru.plugin.index.MiruActivityIndex;
@@ -437,6 +438,8 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             for (Scored s1 : s) {
                 scorable.add(new TermIdLastIdCount(s1.term, s1.lastId, s1.count));
             }
+
+            TimestampedCacheKeyValues termFeatureCache = modelScorer.getTermFeatureCache(context, modelScalar.catwalkId);
             BM[] constrainFeature = modelScorer.buildConstrainFeatures(bitmaps,
                 context,
                 modelScalar.catwalkQuery,
@@ -461,7 +464,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 false,
                 null,
                 null,
-                null,
+                termFeatureCache,
                 modelTotalPartitionCount,
                 solutionLog);
 
