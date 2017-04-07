@@ -154,7 +154,7 @@ public class MiruAnomalyMain {
             ExecutorService tasExecutors = new ThreadPoolExecutor(0, 1024,
                 60L, TimeUnit.SECONDS,
                 new SynchronousQueue<>(),
-                new ThreadFactoryBuilder().setNameFormat("tas-%d").build())
+                new ThreadFactoryBuilder().setNameFormat("tas-%d").build());
 
             MiruClusterClient clusterClient = new MiruClusterClientInitializer(tasExecutors, 100, 95, 1000).initialize(new MiruStats(), "", miruManageClient, mapper);
             AnomalySchemaService anomalySchemaService = new AnomalySchemaService(clusterClient);
