@@ -27,13 +27,15 @@ public class MiruTenantQueryRouting {
     private final Executor executor;
     private final int windowSize;
     private final float percentile;
+    private final long initialSLAMillis;
 
     public MiruTenantQueryRouting(TenantAwareHttpClient<String> readerClient,
         ObjectMapper requestMapper,
         HttpResponseMapper responseMapper,
         Executor executor,
         int windowSize,
-        float percentile) {
+        float percentile,
+        long initialSLAMillis) {
         this.readerClient = readerClient;
         this.requestMapper = requestMapper;
         this.responseMapper = responseMapper;
@@ -41,6 +43,7 @@ public class MiruTenantQueryRouting {
         this.executor = executor;
         this.windowSize = windowSize;
         this.percentile = percentile;
+        this.initialSLAMillis = initialSLAMillis;
     }
 
     public <Q, A> MiruResponse<A> query(String routingTenant,
@@ -59,7 +62,7 @@ public class MiruTenantQueryRouting {
     }
 
     private NextClientStrategy getTenantStrategy(MiruTenantId tenantId) {
-        return strategyCache.getOrDefault(tenantId, new TailAtScaleStrategy(executor, windowSize, percentile));
+        return strategyCache.getOrDefault(tenantId, new TailAtScaleStrategy(executor, windowSize, percentile, initialSLAMillis));
     }
 
 }

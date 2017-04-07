@@ -70,7 +70,9 @@ import java.net.InetAddress;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
@@ -163,9 +165,12 @@ public class WikiMiruMain {
             HttpResponseMapper responseMapper = new HttpResponseMapper(mapper);
 
 
-            ExecutorService tasExecutors = Executors.newCachedThreadPool(new ThreadFactoryBuilder().setNameFormat("tas-%d").build());
+            ExecutorService tasExecutors = new ThreadPoolExecutor(0, 1024,
+                60L, TimeUnit.SECONDS,
+                new SynchronousQueue<>(),
+                new ThreadFactoryBuilder().setNameFormat("tas-%d").build());
 
-            MiruClusterClient clusterClient = new MiruClusterClientInitializer(tasExecutors, 100, 95).initialize(new MiruStats(), "", miruManageClient, mapper);
+            MiruClusterClient clusterClient = new MiruClusterClientInitializer(tasExecutors, 100, 95, 1000).initialize(new MiruStats(), "", miruManageClient, mapper);
             WikiSchemaService wikiSchemaService = new WikiSchemaService(clusterClient);
 
             Settings settings = Settings.builder()

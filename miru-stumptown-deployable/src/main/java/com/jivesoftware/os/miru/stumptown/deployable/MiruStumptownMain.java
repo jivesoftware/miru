@@ -68,7 +68,9 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 public class MiruStumptownMain {
 
@@ -165,9 +167,12 @@ public class MiruStumptownMain {
             LogMill logMill = new LogMill(orderIdProvider);
             MiruStumptownIntakeConfig intakeConfig = deployable.config(MiruStumptownIntakeConfig.class);
 
-            ExecutorService tasExecutors = Executors.newCachedThreadPool(new ThreadFactoryBuilder().setNameFormat("tas-%d").build());
+            ExecutorService tasExecutors = new ThreadPoolExecutor(0, 1024,
+                60L, TimeUnit.SECONDS,
+                new SynchronousQueue<>(),
+                new ThreadFactoryBuilder().setNameFormat("tas-%d").build());
 
-            MiruClusterClient clusterClient = new MiruClusterClientInitializer(tasExecutors, 100, 95).initialize(new MiruStats(), "", miruManageClient, mapper);
+            MiruClusterClient clusterClient = new MiruClusterClientInitializer(tasExecutors, 100, 95, 1000).initialize(new MiruStats(), "", miruManageClient, mapper);
             StumptownSchemaService stumptownSchemaService = new StumptownSchemaService(clusterClient);
 
             final MiruStumptownIntakeService inTakeService = new MiruStumptownIntakeInitializer().initialize(

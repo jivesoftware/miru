@@ -26,6 +26,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Executors;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 /**
  *
@@ -52,9 +55,13 @@ public class WikiMiruPayloadsAmza {
         this.mapper = mapper;
 
         TailAtScaleStrategy tailAtScaleStrategy = new TailAtScaleStrategy(
-            Executors.newCachedThreadPool(new ThreadFactoryBuilder().setNameFormat("tas-%d").build()),
+            new ThreadPoolExecutor(0, 1024,
+                60L, TimeUnit.SECONDS,
+                new SynchronousQueue<>(),
+                new ThreadFactoryBuilder().setNameFormat("tas-%d").build()),
             100, // TODO config
-            95 // TODO config
+            95, // TODO config
+            1000
         );
 
 

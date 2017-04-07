@@ -107,6 +107,9 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import org.glassfish.jersey.oauth1.signature.OAuth1Request;
 import org.glassfish.jersey.oauth1.signature.OAuth1Signature;
 
@@ -233,11 +236,15 @@ public class MiruSyncMain {
                 .socketTimeoutInMillis(10_000)
                 .build(); // TODO expose to conf
 
-            ExecutorService tasExecutor = Executors.newCachedThreadPool(new ThreadFactoryBuilder().setNameFormat("tas-%d").build());
+            ExecutorService tasExecutor = new ThreadPoolExecutor(0, 1024,
+                60L, TimeUnit.SECONDS,
+                new SynchronousQueue<>(),
+                new ThreadFactoryBuilder().setNameFormat("tas-%d").build());
             TailAtScaleStrategy tailAtScaleStrategy = new TailAtScaleStrategy(
                 tasExecutor,
                 100, // TODO config
-                95 // TODO config
+                95, // TODO config
+                1000
             );
 
             AmzaClientProvider<HttpClient, HttpClientException> amzaClientProvider = new AmzaClientProvider<>(
@@ -369,7 +376,7 @@ public class MiruSyncMain {
             deployable.addHealthCheck(new SickThreadsHealthCheck(deployable.config(WALClientSickThreadsHealthCheckConfig.class), walClientSickThreads));
 
             MiruStats miruStats = new MiruStats();
-            MiruClusterClient clusterClient = new MiruClusterClientInitializer(tasExecutor, 100, 95).initialize(miruStats, "", manageHttpClient, mapper);
+            MiruClusterClient clusterClient = new MiruClusterClientInitializer(tasExecutor, 100, 95, 1000).initialize(miruStats, "", manageHttpClient, mapper);
 
             ActivityReadEventConverter activityReadEventConverter = syncConfig.getSyncReceiverActivityReadEventConverterClass().newInstance();
 
@@ -385,6 +392,7 @@ public class MiruSyncMain {
                     tasExecutor,
                     100,
                     95,
+                    1000,
                     mapper,
                     walClientSickThreads,
                     10_000,
@@ -398,6 +406,7 @@ public class MiruSyncMain {
                     tasExecutor,
                     100,
                     95,
+                    1000,
                     mapper,
                     walClientSickThreads,
                     10_000,
@@ -413,6 +422,7 @@ public class MiruSyncMain {
                     tasExecutor,
                     100,
                     95,
+                    1000,
                     mapper,
                     walClientSickThreads,
                     10_000,
@@ -475,6 +485,7 @@ public class MiruSyncMain {
                     tasExecutor,
                     100,
                     95,
+                    1000,
                     mapper,
                     walClientSickThreads, 10_000,
                     "/miru/wal/amza",

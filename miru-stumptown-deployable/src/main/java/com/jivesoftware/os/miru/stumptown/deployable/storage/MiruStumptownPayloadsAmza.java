@@ -29,6 +29,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Executors;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -58,9 +60,13 @@ public class MiruStumptownPayloadsAmza implements MiruStumptownPayloadStorage {
         payload = new PartitionName(false, "p".getBytes(StandardCharsets.UTF_8), (nameSpace + "-stumptown").getBytes(StandardCharsets.UTF_8));
 
         TailAtScaleStrategy tailAtScaleStrategy = new TailAtScaleStrategy(
-            Executors.newCachedThreadPool(new ThreadFactoryBuilder().setNameFormat("tas-%d").build()),
+            new ThreadPoolExecutor(0, 1024,
+                60L, TimeUnit.SECONDS,
+                new SynchronousQueue<>(),
+                new ThreadFactoryBuilder().setNameFormat("tas-%d").build()),
             100, // TODO config
-            95 // TODO config
+            95, // TODO config
+            1000
         );
 
         this.clientProvider = new AmzaClientProvider<>(

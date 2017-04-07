@@ -110,7 +110,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.commons.lang.StringUtils;
 import org.merlin.config.defaults.LongDefault;
@@ -333,10 +335,13 @@ public class MiruWALMain {
                 .checkDeadEveryNMillis(10_000)
                 .build(); // TODO expose to conf
 
-            ExecutorService tasExecutors = Executors.newCachedThreadPool(new ThreadFactoryBuilder().setNameFormat("tas-%d").build());
+            ExecutorService tasExecutors = new ThreadPoolExecutor(0, 1024,
+                60L, TimeUnit.SECONDS,
+                new SynchronousQueue<>(),
+                new ThreadFactoryBuilder().setNameFormat("tas-%d").build());
 
 
-            MiruClusterClient clusterClient = new MiruClusterClientInitializer(tasExecutors, 100, 95).initialize(miruStats, "", manageHttpClient, mapper);
+            MiruClusterClient clusterClient = new MiruClusterClientInitializer(tasExecutors, 100, 95, 1000).initialize(miruStats, "", manageHttpClient, mapper);
             SickThreads walClientSickThreads = new SickThreads();
 
             /*
@@ -361,6 +366,7 @@ public class MiruWALMain {
                     tasExecutors,
                     100,
                     95,
+                    1000,
                     mapper,
                     walClientSickThreads, 10_000,
                     "/miru/wal/rcvs", RCVSCursor.class, RCVSSipCursor.class);
@@ -417,6 +423,7 @@ public class MiruWALMain {
                     tasExecutors,
                     100,
                     95,
+                    1000,
                     mapper,
                     walClientSickThreads, 10_000,
                     "/miru/wal/amza", AmzaCursor.class, AmzaSipCursor.class);
