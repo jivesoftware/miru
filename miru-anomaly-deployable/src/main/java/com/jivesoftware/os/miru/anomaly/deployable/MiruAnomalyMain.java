@@ -65,7 +65,9 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 public class MiruAnomalyMain {
 
@@ -149,9 +151,12 @@ public class MiruAnomalyMain {
 
             HttpResponseMapper responseMapper = new HttpResponseMapper(mapper);
 
-            ExecutorService tasExecutors = Executors.newCachedThreadPool(new ThreadFactoryBuilder().setNameFormat("tas-%d").build());
+            ExecutorService tasExecutors = new ThreadPoolExecutor(0, 1024,
+                60L, TimeUnit.SECONDS,
+                new SynchronousQueue<>(),
+                new ThreadFactoryBuilder().setNameFormat("tas-%d").build());
 
-            MiruClusterClient clusterClient = new MiruClusterClientInitializer(tasExecutors, 100, 95).initialize(new MiruStats(), "", miruManageClient, mapper);
+            MiruClusterClient clusterClient = new MiruClusterClientInitializer(tasExecutors, 100, 95, 1000).initialize(new MiruStats(), "", miruManageClient, mapper);
             AnomalySchemaService anomalySchemaService = new AnomalySchemaService(clusterClient);
 
             final MiruAnomalyIntakeService inTakeService = new MiruAnomalyIntakeInitializer().initialize(anomalyServiceConfig.getIngressEnabled(),

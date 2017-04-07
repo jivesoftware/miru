@@ -48,6 +48,7 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
     private final ExecutorService tasExecutors;
     private final int tasWindowSize;
     private final float tasPercentile;
+    private final long tasInitialSLAMillis;
     private final ObjectMapper requestMapper;
     private final HttpResponseMapper responseMapper;
     private final SickThreads sickThreads;
@@ -64,6 +65,7 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
         ExecutorService tasExecutors,
         int tasWindowSize,
         float tasPercentile,
+        long tasInitialSLAMillis,
         ObjectMapper requestMapper,
         HttpResponseMapper responseMapper,
         SickThreads sickThreads, long sleepOnFailureMillis,
@@ -77,6 +79,7 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
         this.tasExecutors = tasExecutors;
         this.tasWindowSize = tasWindowSize;
         this.tasPercentile = tasPercentile;
+        this.tasInitialSLAMillis = tasInitialSLAMillis;
         this.requestMapper = requestMapper;
         this.responseMapper = responseMapper;
         this.sickThreads = sickThreads;
@@ -336,7 +339,7 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
         try {
 
             NextClientStrategy nextClientStrategy = tenantNextClientStrategy.computeIfAbsent(miruTenantId,
-                (t) -> new TailAtScaleStrategy(tasExecutors, tasWindowSize, tasPercentile));
+                (t) -> new TailAtScaleStrategy(tasExecutors, tasWindowSize, tasPercentile, tasInitialSLAMillis));
 
             return walClient.call(routingTenantId, nextClientStrategy, family, call);
         } catch (Exception x) {

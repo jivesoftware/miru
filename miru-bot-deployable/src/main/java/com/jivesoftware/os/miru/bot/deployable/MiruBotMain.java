@@ -153,7 +153,7 @@ public class MiruBotMain {
 
             ExecutorService tasExecutors = Executors.newCachedThreadPool(new ThreadFactoryBuilder().setNameFormat("tas-%d").build());
 
-            MiruClusterClient miruClusterClient = new MiruClusterClientInitializer(tasExecutors, 100, 95).initialize(
+            MiruClusterClient miruClusterClient = new MiruClusterClientInitializer(tasExecutors, 100, 95, 1000).initialize(
                 new MiruStats(), "", miruManageClient, new ObjectMapper());
 
             MiruBotSchemaService miruBotSchemaService = new MiruBotSchemaService(miruClusterClient);

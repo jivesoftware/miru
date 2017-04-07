@@ -30,6 +30,7 @@ public class RoutingBirdRealtimeDelivery implements MiruRealtimeDelivery {
     private final ExecutorService tasExecutors;
     private final int tasWindowSize;
     private final float tasPercentile;
+    private final long tasInitialSLAMillis;
     private final String deliveryEndpoint;
     private final ObjectMapper objectMapper;
     private final MiruStats miruStats;
@@ -46,8 +47,8 @@ public class RoutingBirdRealtimeDelivery implements MiruRealtimeDelivery {
         long dropRealtimeDeliveryOlderThanNMillis,
         ExecutorService tasExecutors,
         int tasWindowSize,
-        float tasPercentile
-    ) {
+        float tasPercentile,
+        long tasInitialSLAMillis) {
 
         this.miruHost = miruHost;
         this.deliveryClient = deliveryClient;
@@ -59,6 +60,7 @@ public class RoutingBirdRealtimeDelivery implements MiruRealtimeDelivery {
         this.miruStats = miruStats;
         this.orderIdProvider = orderIdProvider;
         this.dropRealtimeDeliveryOlderThanNMillis = dropRealtimeDeliveryOlderThanNMillis;
+        this.tasInitialSLAMillis = tasInitialSLAMillis;
     }
 
     @Override
@@ -67,7 +69,7 @@ public class RoutingBirdRealtimeDelivery implements MiruRealtimeDelivery {
         long start = System.currentTimeMillis();
         try {
             NextClientStrategy nextClientStrategy = tenantNextClientStrategy.computeIfAbsent(coord.tenantId,
-                (key) -> new TailAtScaleStrategy(tasExecutors, tasWindowSize, tasPercentile));
+                (key) -> new TailAtScaleStrategy(tasExecutors, tasWindowSize, tasPercentile, tasInitialSLAMillis));
 
             deliveryClient.call("", nextClientStrategy, "deliverRealtime", httpClient -> {
                 String json = null;

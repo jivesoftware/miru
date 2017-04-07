@@ -16,16 +16,19 @@ public class MiruClusterClientInitializer {
     private final Executor executor;
     private final int windowSize;
     private final float percentile;
+    private final long initialSLAMillis;
 
     private final Map<String, TailAtScaleStrategy> tenantNextClientStrategy = Maps.newConcurrentMap();
 
     public MiruClusterClientInitializer(Executor executor,
         int windowSize,
-        float percentile) {
+        float percentile,
+        long initialSLAMillis) {
 
         this.executor = executor;
         this.windowSize = windowSize;
         this.percentile = percentile;
+        this.initialSLAMillis = initialSLAMillis;
     }
 
     public MiruClusterClient initialize(MiruStats miruStats, String routingTenantId, TenantAwareHttpClient<String> client, ObjectMapper mapper)
@@ -33,7 +36,7 @@ public class MiruClusterClientInitializer {
 
 
         TailAtScaleStrategy nextClientStrategy = tenantNextClientStrategy.computeIfAbsent(routingTenantId,
-            (key) -> new TailAtScaleStrategy(executor, windowSize, percentile));
+            (key) -> new TailAtScaleStrategy(executor, windowSize, percentile, initialSLAMillis));
 
         return new MiruHttpClusterClient(miruStats, routingTenantId, client, nextClientStrategy, mapper, new HttpResponseMapper(mapper));
     }

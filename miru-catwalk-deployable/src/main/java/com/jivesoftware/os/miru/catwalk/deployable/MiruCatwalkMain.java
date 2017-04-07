@@ -71,6 +71,9 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import org.merlin.config.defaults.BooleanDefault;
 import org.merlin.config.defaults.FloatDefault;
@@ -280,9 +283,13 @@ public class MiruCatwalkMain {
                 });
 
             TailAtScaleStrategy tailAtScaleStrategy = new TailAtScaleStrategy(
-                Executors.newCachedThreadPool(new ThreadFactoryBuilder().setNameFormat("tas-%d").build()),
+                new ThreadPoolExecutor(0, 1024,
+                    60L, TimeUnit.SECONDS,
+                    new SynchronousQueue<>(),
+                    new ThreadFactoryBuilder().setNameFormat("tas-%d").build()),
                 100, // TODO config
-                95 // TODO config
+                95, // TODO config
+                1000
             );
 
             AmzaClientProvider<HttpClient, HttpClientException> amzaClientProvider = new AmzaClientProvider<>(
@@ -305,15 +312,19 @@ public class MiruCatwalkMain {
                 .build());
             ExecutorService modelUpdaters = Executors.newFixedThreadPool(numProcs, new ThreadFactoryBuilder().setNameFormat("modelUpdaters-%d").build());
             ExecutorService readRepairers = Executors.newFixedThreadPool(numProcs, new ThreadFactoryBuilder().setNameFormat("readRepairers-%d").build());
-            ExecutorService tasExecutors = Executors.newFixedThreadPool(numProcs, new ThreadFactoryBuilder().setNameFormat("tas-%d").build());
+            ExecutorService tasExecutors = new ThreadPoolExecutor(0, 1024,
+                60L, TimeUnit.SECONDS,
+                new SynchronousQueue<>(),
+                new ThreadFactoryBuilder().setNameFormat("tas-%d").build());
 
 
             MiruTenantQueryRouting tenantQueryRouting = new MiruTenantQueryRouting(readerClient,
                 mapper,
                 responseMapper,
-                Executors.newCachedThreadPool(new ThreadFactoryBuilder().setNameFormat("tas-%d").build()),
+                tasExecutors,
                 100, // TODO config
-                95 // TODO config
+                95, // TODO config
+                1000
             );
 
             CatwalkModelQueue catwalkModelQueue = new CatwalkModelQueue(amzaLifecycle.amzaService,

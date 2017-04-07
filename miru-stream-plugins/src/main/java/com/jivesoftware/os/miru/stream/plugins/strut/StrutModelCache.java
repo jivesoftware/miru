@@ -40,6 +40,7 @@ public class StrutModelCache {
     private final ExecutorService tasExecutors;
     private final int tasWindowSize;
     private final float tasPercentile;
+    private final long tasInitialSLAMillis;
     private final ObjectMapper requestMapper;
     private final HttpResponseMapper responseMapper;
     private final Cache<String, byte[]> modelCache;
@@ -50,6 +51,7 @@ public class StrutModelCache {
         ExecutorService tasExecutors,
         int tasWindowSize,
         float tasPercentile,
+        long tasInitialSLAMillis,
         ObjectMapper requestMapper,
         HttpResponseMapper responseMapper,
         Cache<String, byte[]> modelCache) {
@@ -58,6 +60,7 @@ public class StrutModelCache {
         this.tasExecutors = tasExecutors;
         this.tasWindowSize = tasWindowSize;
         this.tasPercentile = tasPercentile;
+        this.tasInitialSLAMillis = tasInitialSLAMillis;
         this.requestMapper = requestMapper;
         this.responseMapper = responseMapper;
         this.modelCache = modelCache;
@@ -77,7 +80,7 @@ public class StrutModelCache {
         CatwalkQuery catwalkQuery) throws Exception {
 
         NextClientStrategy nextClientStrategy = tenantNextClientStrategy.computeIfAbsent(tenantId,
-            (t) -> new TailAtScaleStrategy(tasExecutors, tasWindowSize, tasPercentile));
+            (t) -> new TailAtScaleStrategy(tasExecutors, tasWindowSize, tasPercentile, tasInitialSLAMillis));
 
         String key = tenantId.toString() + "/" + catwalkId + "/" + modelId;
         if (modelCache == null) {

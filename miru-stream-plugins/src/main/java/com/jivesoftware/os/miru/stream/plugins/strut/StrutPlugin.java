@@ -28,6 +28,8 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import org.merlin.config.defaults.DoubleDefault;
@@ -102,9 +104,12 @@ public class StrutPlugin implements MiruPlugin<StrutEndpoints, StrutInjectable>,
                 .build();
         }
 
-        ExecutorService stas = Executors.newCachedThreadPool(new ThreadFactoryBuilder().setNameFormat("stas-%d").build());
+        ExecutorService stas = new ThreadPoolExecutor(0, 1024,
+            60L, TimeUnit.SECONDS,
+            new SynchronousQueue<>(),
+            new ThreadFactoryBuilder().setNameFormat("stas-%d").build());
 
-        StrutModelCache cache = new StrutModelCache(catwalkHttpClient, stas, 100, 95, mapper, responseMapper, modelCache);
+        StrutModelCache cache = new StrutModelCache(catwalkHttpClient, stas, 100, 95, 1000, mapper, responseMapper, modelCache);
 
         ScheduledExecutorService asyncExecutorService = Executors.newScheduledThreadPool(config.getAsyncThreadPoolSize(),
             new ThreadFactoryBuilder().setNameFormat("strut-async-%d").build());
