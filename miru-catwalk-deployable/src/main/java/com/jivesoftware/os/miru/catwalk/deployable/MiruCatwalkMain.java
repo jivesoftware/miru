@@ -324,8 +324,8 @@ public class MiruCatwalkMain {
                 tasExecutors,
                 100, // TODO config
                 95, // TODO config
-                1000
-            );
+                1000,
+                false); // TODO config
 
             CatwalkModelQueue catwalkModelQueue = new CatwalkModelQueue(amzaLifecycle.amzaService,
                 embeddedClientProvider,
