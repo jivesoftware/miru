@@ -21,7 +21,7 @@ public class MiruBackfillerizerInitializer {
             readStreamIdsPropName = null;
         }
 
-        final ExecutorService backfillExecutor = new ThreadPoolExecutor(10 10, // TODO config
+        final ExecutorService backfillExecutor = new ThreadPoolExecutor(10, 10, // TODO config
             60L, TimeUnit.SECONDS,
             new LinkedBlockingQueue<>(),
             new ThreadFactoryBuilder().setNameFormat("backfillerizer-%d").build());
