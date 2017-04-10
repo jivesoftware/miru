@@ -6,6 +6,7 @@ import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.jivesoftware.os.filer.chunk.store.transaction.KeyToFPCacheFactory;
 import com.jivesoftware.os.filer.chunk.store.transaction.TxCogs;
 import com.jivesoftware.os.filer.io.ByteArrayStripingLocksProvider;
@@ -65,13 +66,13 @@ import com.jivesoftware.os.miru.service.partition.PartitionErrorTracker;
 import com.jivesoftware.os.miru.service.partition.cluster.MiruClusterExpectedTenants;
 import com.jivesoftware.os.miru.service.solver.MiruLowestLatencySolver;
 import com.jivesoftware.os.miru.service.solver.MiruSolver;
-import com.jivesoftware.os.miru.service.stream.cache.LabPluginCacheProvider;
 import com.jivesoftware.os.miru.service.stream.MiruContextFactory;
 import com.jivesoftware.os.miru.service.stream.MiruIndexCallbacks;
 import com.jivesoftware.os.miru.service.stream.MiruRebuildDirector;
 import com.jivesoftware.os.miru.service.stream.allocator.InMemoryChunkAllocator;
 import com.jivesoftware.os.miru.service.stream.allocator.MiruChunkAllocator;
 import com.jivesoftware.os.miru.service.stream.allocator.OnDiskChunkAllocator;
+import com.jivesoftware.os.miru.service.stream.cache.LabPluginCacheProvider;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
 import java.io.File;
@@ -80,7 +81,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -119,26 +122,40 @@ public class MiruServiceInitializer {
             new NamedThreadFactory(threadGroup, "service"));
 
         // query solvers
-        final ExecutorService solverExecutor = Executors.newFixedThreadPool(config.getSolverExecutorThreads(),
-            new NamedThreadFactory(threadGroup, "solver"));
+        final ExecutorService solverExecutor = new ThreadPoolExecutor(0, config.getSolverExecutorThreads(),
+            60L, TimeUnit.SECONDS,
+            new LinkedBlockingQueue<>(),
+            new ThreadFactoryBuilder().setNameFormat("solver-%d").build());
 
-        final ExecutorService parallelExecutor = Executors.newFixedThreadPool(config.getParallelSolversExecutorThreads(),
-            new NamedThreadFactory(threadGroup, "parallel_solvers"));
+        final ExecutorService parallelExecutor = new ThreadPoolExecutor(0, config.getParallelSolversExecutorThreads(),
+            60L, TimeUnit.SECONDS,
+            new LinkedBlockingQueue<>(),
+            new ThreadFactoryBuilder().setNameFormat("parallel-solvers-%d").build());
 
-        final ExecutorService rebuildExecutors = Executors.newFixedThreadPool(config.getRebuilderThreads(),
-            new NamedThreadFactory(threadGroup, "rebuild_wal_consumer"));
+        final ExecutorService rebuildExecutors = new ThreadPoolExecutor(0, config.getRebuilderThreads(),
+            60L, TimeUnit.SECONDS,
+            new LinkedBlockingQueue<>(),
+            new ThreadFactoryBuilder().setNameFormat("rebuild-wal-consumer-%d").build());
 
-        final ExecutorService sipIndexExecutor = Executors.newFixedThreadPool(config.getSipIndexerThreads(),
-            new NamedThreadFactory(threadGroup, "sip_index"));
+        final ExecutorService sipIndexExecutor = new ThreadPoolExecutor(0, config.getSipIndexerThreads(),
+            60L, TimeUnit.SECONDS,
+            new LinkedBlockingQueue<>(),
+            new ThreadFactoryBuilder().setNameFormat("sip-index-%d").build());
 
-        final ExecutorService persistentMergeExecutor = Executors.newFixedThreadPool(config.getMergeIndexThreads(),
-            new NamedThreadFactory(threadGroup, "persistent_merge_index"));
+        final ExecutorService persistentMergeExecutor = new ThreadPoolExecutor(0, config.getMergeIndexThreads(),
+            60L, TimeUnit.SECONDS,
+            new LinkedBlockingQueue<>(),
+            new ThreadFactoryBuilder().setNameFormat("persistent-merge-index-%d").build());
 
-        final ExecutorService transientMergeExecutor = Executors.newFixedThreadPool(config.getMergeIndexThreads(),
-            new NamedThreadFactory(threadGroup, "transient_merge_index"));
+        final ExecutorService transientMergeExecutor = new ThreadPoolExecutor(0, config.getMergeIndexThreads(),
+            60L, TimeUnit.SECONDS,
+            new LinkedBlockingQueue<>(),
+            new ThreadFactoryBuilder().setNameFormat("transient-merge-index-%d").build());
 
-        final ExecutorService streamFactoryExecutor = Executors.newFixedThreadPool(config.getStreamFactoryExecutorCount(),
-            new NamedThreadFactory(threadGroup, "stream_factory"));
+        final ExecutorService streamFactoryExecutor = new ThreadPoolExecutor(0, config.getStreamFactoryExecutorCount(),
+            60L, TimeUnit.SECONDS,
+            new LinkedBlockingQueue<>(),
+            new ThreadFactoryBuilder().setNameFormat("stream-factory-%d").build());
 
         MiruHostedPartitionComparison partitionComparison = new MiruHostedPartitionComparison(
             config.getLongTailSolverWindowSize(),
