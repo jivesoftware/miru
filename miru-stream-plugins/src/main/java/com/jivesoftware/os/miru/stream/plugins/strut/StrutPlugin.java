@@ -65,7 +65,7 @@ public class StrutPlugin implements MiruPlugin<StrutEndpoints, StrutInjectable>,
         if (gatherExecutorService == null) {
             StrutConfig config = miruProvider.getConfig(StrutConfig.class);
             int gatherThreadPoolSize = config.getGatherThreadPoolSize();
-            gatherExecutorService = gatherThreadPoolSize <= 1 ? MoreExecutors.sameThreadExecutor() : new ThreadPoolExecutor(0, gatherThreadPoolSize,
+            gatherExecutorService = gatherThreadPoolSize <= 1 ? MoreExecutors.sameThreadExecutor() : new ThreadPoolExecutor(gatherThreadPoolSize, gatherThreadPoolSize,
                 60L, TimeUnit.SECONDS,
                 new LinkedBlockingQueue<>(),
                 new ThreadFactoryBuilder().setNameFormat("gather-%d").build());
@@ -108,7 +108,7 @@ public class StrutPlugin implements MiruPlugin<StrutEndpoints, StrutInjectable>,
                 .build();
         }
 
-        ExecutorService stas = new ThreadPoolExecutor(0, 1024,
+        ExecutorService stas = new ThreadPoolExecutor(1024, 1024,
             60L, TimeUnit.SECONDS,
             new LinkedBlockingQueue<>(),
             new ThreadFactoryBuilder().setNameFormat("stas-%d").build());

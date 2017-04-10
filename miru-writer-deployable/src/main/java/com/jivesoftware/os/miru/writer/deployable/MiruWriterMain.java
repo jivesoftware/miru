@@ -228,7 +228,7 @@ public class MiruWriterMain {
             SickThreads walClientSickThreads = new SickThreads();
             deployable.addHealthCheck(new SickThreadsHealthCheck(deployable.config(WALClientSickThreadsHealthCheckConfig.class), walClientSickThreads));
 
-            ExecutorService tasExecutors = new ThreadPoolExecutor(0, 1024,
+            ExecutorService tasExecutors = new ThreadPoolExecutor(1024, 1024,
                 60L, TimeUnit.SECONDS,
                 new LinkedBlockingQueue<>(),
                 new ThreadFactoryBuilder().setNameFormat("tas-%d").build());
@@ -281,7 +281,7 @@ public class MiruWriterMain {
                 clusterClient,
                 clientConfig.getPartitionMaximumAgeInMillis());
 
-            ExecutorService sendActivitiesExecutorService = new ThreadPoolExecutor(0, clientConfig.getSendActivitiesThreadPoolSize(),
+            ExecutorService sendActivitiesExecutorService = new ThreadPoolExecutor(clientConfig.getSendActivitiesThreadPoolSize(), clientConfig.getSendActivitiesThreadPoolSize(),
                 60L, TimeUnit.SECONDS,
                 new LinkedBlockingQueue<>(),
                 new ThreadFactoryBuilder().setNameFormat("send-activites-%d").build());

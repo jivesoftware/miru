@@ -167,7 +167,7 @@ public class MiruStumptownMain {
             LogMill logMill = new LogMill(orderIdProvider);
             MiruStumptownIntakeConfig intakeConfig = deployable.config(MiruStumptownIntakeConfig.class);
 
-            ExecutorService tasExecutors = new ThreadPoolExecutor(0, 1024,
+            ExecutorService tasExecutors = new ThreadPoolExecutor(1024, 1024,
                 60L, TimeUnit.SECONDS,
                 new LinkedBlockingQueue<>(),
                 new ThreadFactoryBuilder().setNameFormat("tas-%d").build());

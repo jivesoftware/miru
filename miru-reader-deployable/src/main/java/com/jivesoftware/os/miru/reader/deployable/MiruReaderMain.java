@@ -298,7 +298,7 @@ public class MiruReaderMain {
             // TODO add fall back to config
             final MiruStats miruStats = new MiruStats();
 
-            ExecutorService tasExecutors = new ThreadPoolExecutor(0, 1024,
+            ExecutorService tasExecutors = new ThreadPoolExecutor(1024, 1024,
                 60L, TimeUnit.SECONDS,
                 new LinkedBlockingQueue<>(),
                 new ThreadFactoryBuilder().setNameFormat("tas-%d").build());

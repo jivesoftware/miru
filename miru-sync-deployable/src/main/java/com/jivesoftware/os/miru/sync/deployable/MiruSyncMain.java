@@ -236,7 +236,7 @@ public class MiruSyncMain {
                 .socketTimeoutInMillis(10_000)
                 .build(); // TODO expose to conf
 
-            ExecutorService tasExecutor = new ThreadPoolExecutor(0, 1024,
+            ExecutorService tasExecutor = new ThreadPoolExecutor(1024, 1024,
                 60L, TimeUnit.SECONDS,
                 new LinkedBlockingQueue<>(),
                 new ThreadFactoryBuilder().setNameFormat("tas-%d").build());
@@ -251,7 +251,7 @@ public class MiruSyncMain {
                 new HttpPartitionClientFactory(),
                 new HttpPartitionHostsProvider(amzaClient, tailAtScaleStrategy, mapper),
                 new RingHostHttpClientProvider(amzaClient),
-                new ThreadPoolExecutor(0, syncConfig.getAmzaCallerThreadPoolSize(),
+                new ThreadPoolExecutor(syncConfig.getAmzaCallerThreadPoolSize(), syncConfig.getAmzaCallerThreadPoolSize(),
                     60L, TimeUnit.SECONDS,
                     new LinkedBlockingQueue<>(),
                     new ThreadFactoryBuilder().setNameFormat("amza-client-%d").build()),
