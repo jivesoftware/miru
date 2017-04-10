@@ -45,6 +45,7 @@ import com.jivesoftware.os.routing.bird.health.api.HealthCounter;
 import com.jivesoftware.os.routing.bird.health.api.HealthFactory;
 import com.jivesoftware.os.routing.bird.health.api.MinMaxHealthCheckConfig;
 import com.jivesoftware.os.routing.bird.health.api.MinMaxHealthChecker;
+import com.jivesoftware.os.routing.bird.shared.BoundedExecutor;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -914,10 +915,8 @@ public class MiruLocalHostedPartition<BM extends IBM, IBM, C extends MiruCursor<
                 }
             });
 
-            final ExecutorService rebuildIndexExecutor = new ThreadPoolExecutor(rebuildIndexerThreads, rebuildIndexerThreads,
-                60L, TimeUnit.SECONDS,
-                new LinkedBlockingQueue<>(),
-                new ThreadFactoryBuilder().setNameFormat("rebuild-index-" + coord.tenantId + "-" + coord.partitionId + "-%d").build());
+            final ExecutorService rebuildIndexExecutor = BoundedExecutor.newBoundedExecutor(rebuildIndexerThreads,
+                "rebuild-index-" + coord.tenantId + "-" + coord.partitionId);
 
             Exception failure = null;
             try {

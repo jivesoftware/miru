@@ -6,7 +6,6 @@ import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.jivesoftware.os.filer.chunk.store.transaction.KeyToFPCacheFactory;
 import com.jivesoftware.os.filer.chunk.store.transaction.TxCogs;
 import com.jivesoftware.os.filer.io.ByteArrayStripingLocksProvider;
@@ -75,15 +74,14 @@ import com.jivesoftware.os.miru.service.stream.allocator.OnDiskChunkAllocator;
 import com.jivesoftware.os.miru.service.stream.cache.LabPluginCacheProvider;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
 import com.jivesoftware.os.mlogger.core.MetricLoggerFactory;
+import com.jivesoftware.os.routing.bird.shared.BoundedExecutor;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -122,40 +120,19 @@ public class MiruServiceInitializer {
             new NamedThreadFactory(threadGroup, "service"));
 
         // query solvers
-        final ExecutorService solverExecutor = new ThreadPoolExecutor(config.getSolverExecutorThreads(), config.getSolverExecutorThreads(),
-            60L, TimeUnit.SECONDS,
-            new LinkedBlockingQueue<>(),
-            new ThreadFactoryBuilder().setNameFormat("solver-%d").build());
+        final ExecutorService solverExecutor = BoundedExecutor.newBoundedExecutor(config.getSolverExecutorThreads(), "solver");
 
-        final ExecutorService parallelExecutor = new ThreadPoolExecutor(config.getParallelSolversExecutorThreads(), config.getParallelSolversExecutorThreads(),
-            60L, TimeUnit.SECONDS,
-            new LinkedBlockingQueue<>(),
-            new ThreadFactoryBuilder().setNameFormat("parallel-solvers-%d").build());
+        final ExecutorService parallelExecutor = BoundedExecutor.newBoundedExecutor(config.getParallelSolversExecutorThreads(), "parallel-solver");
 
-        final ExecutorService rebuildExecutors = new ThreadPoolExecutor(config.getRebuilderThreads(), config.getRebuilderThreads(),
-            60L, TimeUnit.SECONDS,
-            new LinkedBlockingQueue<>(),
-            new ThreadFactoryBuilder().setNameFormat("rebuild-wal-consumer-%d").build());
+        final ExecutorService rebuildExecutors = BoundedExecutor.newBoundedExecutor(config.getRebuilderThreads(), "rebuild-wal-consumer");
 
-        final ExecutorService sipIndexExecutor = new ThreadPoolExecutor(config.getSipIndexerThreads(), config.getSipIndexerThreads(),
-            60L, TimeUnit.SECONDS,
-            new LinkedBlockingQueue<>(),
-            new ThreadFactoryBuilder().setNameFormat("sip-index-%d").build());
+        final ExecutorService sipIndexExecutor = BoundedExecutor.newBoundedExecutor(config.getSipIndexerThreads(), "sip-index");
 
-        final ExecutorService persistentMergeExecutor = new ThreadPoolExecutor(config.getMergeIndexThreads(), config.getMergeIndexThreads(),
-            60L, TimeUnit.SECONDS,
-            new LinkedBlockingQueue<>(),
-            new ThreadFactoryBuilder().setNameFormat("persistent-merge-index-%d").build());
+        final ExecutorService persistentMergeExecutor = BoundedExecutor.newBoundedExecutor(config.getMergeIndexThreads(), "persistent-merge-index");
 
-        final ExecutorService transientMergeExecutor = new ThreadPoolExecutor(config.getMergeIndexThreads(), config.getMergeIndexThreads(),
-            60L, TimeUnit.SECONDS,
-            new LinkedBlockingQueue<>(),
-            new ThreadFactoryBuilder().setNameFormat("transient-merge-index-%d").build());
+        final ExecutorService transientMergeExecutor = BoundedExecutor.newBoundedExecutor(config.getMergeIndexThreads(), "transient-merge-index");
 
-        final ExecutorService streamFactoryExecutor = new ThreadPoolExecutor(config.getStreamFactoryExecutorCount(), config.getStreamFactoryExecutorCount(),
-            60L, TimeUnit.SECONDS,
-            new LinkedBlockingQueue<>(),
-            new ThreadFactoryBuilder().setNameFormat("stream-factory-%d").build());
+        final ExecutorService streamFactoryExecutor = BoundedExecutor.newBoundedExecutor(config.getStreamFactoryExecutorCount(), "stream-factory");
 
         MiruHostedPartitionComparison partitionComparison = new MiruHostedPartitionComparison(
             config.getLongTailSolverWindowSize(),

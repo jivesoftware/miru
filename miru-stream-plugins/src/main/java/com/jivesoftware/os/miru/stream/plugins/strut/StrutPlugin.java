@@ -21,15 +21,14 @@ import com.jivesoftware.os.routing.bird.health.HealthCheckResponse;
 import com.jivesoftware.os.routing.bird.health.api.HealthCheckConfig;
 import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
+import com.jivesoftware.os.routing.bird.shared.BoundedExecutor;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import org.merlin.config.defaults.DoubleDefault;
@@ -65,10 +64,9 @@ public class StrutPlugin implements MiruPlugin<StrutEndpoints, StrutInjectable>,
         if (gatherExecutorService == null) {
             StrutConfig config = miruProvider.getConfig(StrutConfig.class);
             int gatherThreadPoolSize = config.getGatherThreadPoolSize();
-            gatherExecutorService = gatherThreadPoolSize <= 1 ? MoreExecutors.sameThreadExecutor() : new ThreadPoolExecutor(gatherThreadPoolSize, gatherThreadPoolSize,
-                60L, TimeUnit.SECONDS,
-                new LinkedBlockingQueue<>(),
-                new ThreadFactoryBuilder().setNameFormat("gather-%d").build());
+            gatherExecutorService = gatherThreadPoolSize <= 1
+                ? MoreExecutors.sameThreadExecutor()
+                : BoundedExecutor.newBoundedExecutor(gatherThreadPoolSize, "gather");
 
         }
     }
@@ -108,10 +106,7 @@ public class StrutPlugin implements MiruPlugin<StrutEndpoints, StrutInjectable>,
                 .build();
         }
 
-        ExecutorService stas = new ThreadPoolExecutor(1024, 1024,
-            60L, TimeUnit.SECONDS,
-            new LinkedBlockingQueue<>(),
-            new ThreadFactoryBuilder().setNameFormat("stas-%d").build());
+        ExecutorService stas = BoundedExecutor.newBoundedExecutor(1024, "stas");
 
         StrutModelCache cache = new StrutModelCache(catwalkHttpClient, stas, 100, 95, 1000, mapper, responseMapper, modelCache);
 

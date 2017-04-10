@@ -63,6 +63,7 @@ import com.jivesoftware.os.routing.bird.http.client.TailAtScaleStrategy;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.http.client.TenantRoutingHttpClientInitializer;
 import com.jivesoftware.os.routing.bird.server.util.Resource;
+import com.jivesoftware.os.routing.bird.shared.BoundedExecutor;
 import com.jivesoftware.os.routing.bird.shared.HttpClientException;
 import com.jivesoftware.os.routing.bird.shared.TenantRoutingProvider;
 import java.io.File;
@@ -70,10 +71,7 @@ import java.util.Arrays;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import org.merlin.config.defaults.BooleanDefault;
 import org.merlin.config.defaults.FloatDefault;
@@ -283,10 +281,7 @@ public class MiruCatwalkMain {
                 });
 
             TailAtScaleStrategy tailAtScaleStrategy = new TailAtScaleStrategy(
-                new ThreadPoolExecutor(1024, 1024,
-                    60L, TimeUnit.SECONDS,
-                    new LinkedBlockingQueue<>(),
-                    new ThreadFactoryBuilder().setNameFormat("tas-%d").build()),
+                BoundedExecutor.newBoundedExecutor(1024, "tas"),
                 100, // TODO config
                 95, // TODO config
                 1000
@@ -296,11 +291,7 @@ public class MiruCatwalkMain {
                 new HttpPartitionClientFactory(),
                 new HttpPartitionHostsProvider(amzaClient, tailAtScaleStrategy, mapper),
                 new RingHostHttpClientProvider(amzaClient),
-
-                new ThreadPoolExecutor(amzaCatwalkConfig.getAmzaCallerThreadPoolSize(), amzaCatwalkConfig.getAmzaCallerThreadPoolSize(),
-                    60L, TimeUnit.SECONDS,
-                    new LinkedBlockingQueue<>(),
-                    new ThreadFactoryBuilder().setNameFormat("amza-client-%d").build()),
+                BoundedExecutor.newBoundedExecutor(amzaCatwalkConfig.getAmzaCallerThreadPoolSize(), "amza-client"),
                 amzaCatwalkConfig.getAmzaAwaitLeaderElectionForNMillis(),
                 amzaCatwalkConfig.getAmzaDebugClientCount(),
                 amzaCatwalkConfig.getAmzaDebugClientCountInterval());
@@ -315,21 +306,11 @@ public class MiruCatwalkMain {
             ScheduledExecutorService queueConsumers = Executors.newScheduledThreadPool(numProcs, new ThreadFactoryBuilder().setNameFormat("queueConsumers-%d")
                 .build());
 
-            ExecutorService modelUpdaters = new ThreadPoolExecutor(numProcs, numProcs,
-                60L, TimeUnit.SECONDS,
-                new LinkedBlockingQueue<>(),
-                new ThreadFactoryBuilder().setNameFormat("model-updater-%d").build());
+            ExecutorService modelUpdaters = BoundedExecutor.newBoundedExecutor(numProcs, "model-updater");
 
-            ExecutorService readRepairers = new ThreadPoolExecutor(numProcs, numProcs,
-                60L, TimeUnit.SECONDS,
-                new LinkedBlockingQueue<>(),
-                new ThreadFactoryBuilder().setNameFormat("read-repair-%d").build());
+            ExecutorService readRepairers = BoundedExecutor.newBoundedExecutor(numProcs, "read-repair");
 
-            ExecutorService tasExecutors = new ThreadPoolExecutor(1024, 1024,
-                60L, TimeUnit.SECONDS,
-                new LinkedBlockingQueue<>(),
-                new ThreadFactoryBuilder().setNameFormat("tas-%d").build());
-
+            ExecutorService tasExecutors = BoundedExecutor.newBoundedExecutor(1024, "tas");
 
             MiruTenantQueryRouting tenantQueryRouting = new MiruTenantQueryRouting(readerClient,
                 mapper,

@@ -19,7 +19,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.jivesoftware.os.miru.api.MiruStats;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer;
 import com.jivesoftware.os.miru.logappender.MiruLogAppenderInitializer.MiruLogAppenderConfig;
@@ -74,13 +73,11 @@ import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.http.client.TenantRoutingHttpClientInitializer;
 import com.jivesoftware.os.routing.bird.server.util.Resource;
+import com.jivesoftware.os.routing.bird.shared.BoundedExecutor;
 import com.jivesoftware.os.routing.bird.shared.TenantRoutingProvider;
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
 public class MiruToolsMain {
 
@@ -189,10 +186,7 @@ public class MiruToolsMain {
             MiruTenantQueryRouting miruTenantQueryRouting = new MiruTenantQueryRouting(miruReaderClient,
                 mapper,
                 responseMapper,
-                new ThreadPoolExecutor(1024, 1024,
-                    60L, TimeUnit.SECONDS,
-                    new LinkedBlockingQueue<>(),
-                    new ThreadFactoryBuilder().setNameFormat("tas-%d").build()),
+                BoundedExecutor.newBoundedExecutor(1024, "tas"),
                 100, // TODO config
                 95, // TODO config
                 1000,

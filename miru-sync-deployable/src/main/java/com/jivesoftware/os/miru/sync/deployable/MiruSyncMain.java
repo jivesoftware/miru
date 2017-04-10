@@ -21,7 +21,6 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.jivesoftware.os.amza.api.partition.Consistency;
 import com.jivesoftware.os.amza.api.partition.Durability;
 import com.jivesoftware.os.amza.api.partition.PartitionProperties;
@@ -93,6 +92,7 @@ import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.http.client.TenantRoutingHttpClientInitializer;
 import com.jivesoftware.os.routing.bird.server.oauth.validator.AuthValidator;
 import com.jivesoftware.os.routing.bird.server.util.Resource;
+import com.jivesoftware.os.routing.bird.shared.BoundedExecutor;
 import com.jivesoftware.os.routing.bird.shared.ConnectionDescriptor;
 import com.jivesoftware.os.routing.bird.shared.ConnectionDescriptors;
 import com.jivesoftware.os.routing.bird.shared.HttpClientException;
@@ -106,10 +106,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 import org.glassfish.jersey.oauth1.signature.OAuth1Request;
 import org.glassfish.jersey.oauth1.signature.OAuth1Signature;
 
@@ -236,10 +233,7 @@ public class MiruSyncMain {
                 .socketTimeoutInMillis(10_000)
                 .build(); // TODO expose to conf
 
-            ExecutorService tasExecutor = new ThreadPoolExecutor(1024, 1024,
-                60L, TimeUnit.SECONDS,
-                new LinkedBlockingQueue<>(),
-                new ThreadFactoryBuilder().setNameFormat("tas-%d").build());
+            ExecutorService tasExecutor = BoundedExecutor.newBoundedExecutor(1024, "tas");
             TailAtScaleStrategy tailAtScaleStrategy = new TailAtScaleStrategy(
                 tasExecutor,
                 100, // TODO config
@@ -251,10 +245,7 @@ public class MiruSyncMain {
                 new HttpPartitionClientFactory(),
                 new HttpPartitionHostsProvider(amzaClient, tailAtScaleStrategy, mapper),
                 new RingHostHttpClientProvider(amzaClient),
-                new ThreadPoolExecutor(syncConfig.getAmzaCallerThreadPoolSize(), syncConfig.getAmzaCallerThreadPoolSize(),
-                    60L, TimeUnit.SECONDS,
-                    new LinkedBlockingQueue<>(),
-                    new ThreadFactoryBuilder().setNameFormat("amza-client-%d").build()),
+                BoundedExecutor.newBoundedExecutor(syncConfig.getAmzaCallerThreadPoolSize(), "amza-client"),
                 syncConfig.getAmzaAwaitLeaderElectionForNMillis(),
                 -1,
                 -1);
