@@ -335,7 +335,7 @@ public class MiruWALMain {
                 .checkDeadEveryNMillis(10_000)
                 .build(); // TODO expose to conf
 
-            ExecutorService tasExecutors = new ThreadPoolExecutor(0, 1024,
+            ExecutorService tasExecutors = new ThreadPoolExecutor(1024, 1024,
                 60L, TimeUnit.SECONDS,
                 new LinkedBlockingQueue<>(),
                 new ThreadFactoryBuilder().setNameFormat("tas-%d").build());

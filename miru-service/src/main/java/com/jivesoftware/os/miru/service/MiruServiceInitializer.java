@@ -122,37 +122,37 @@ public class MiruServiceInitializer {
             new NamedThreadFactory(threadGroup, "service"));
 
         // query solvers
-        final ExecutorService solverExecutor = new ThreadPoolExecutor(0, config.getSolverExecutorThreads(),
+        final ExecutorService solverExecutor = new ThreadPoolExecutor(config.getSolverExecutorThreads(), config.getSolverExecutorThreads(),
             60L, TimeUnit.SECONDS,
             new LinkedBlockingQueue<>(),
             new ThreadFactoryBuilder().setNameFormat("solver-%d").build());
 
-        final ExecutorService parallelExecutor = new ThreadPoolExecutor(0, config.getParallelSolversExecutorThreads(),
+        final ExecutorService parallelExecutor = new ThreadPoolExecutor(config.getParallelSolversExecutorThreads(), config.getParallelSolversExecutorThreads(),
             60L, TimeUnit.SECONDS,
             new LinkedBlockingQueue<>(),
             new ThreadFactoryBuilder().setNameFormat("parallel-solvers-%d").build());
 
-        final ExecutorService rebuildExecutors = new ThreadPoolExecutor(0, config.getRebuilderThreads(),
+        final ExecutorService rebuildExecutors = new ThreadPoolExecutor(config.getRebuilderThreads(), config.getRebuilderThreads(),
             60L, TimeUnit.SECONDS,
             new LinkedBlockingQueue<>(),
             new ThreadFactoryBuilder().setNameFormat("rebuild-wal-consumer-%d").build());
 
-        final ExecutorService sipIndexExecutor = new ThreadPoolExecutor(0, config.getSipIndexerThreads(),
+        final ExecutorService sipIndexExecutor = new ThreadPoolExecutor(config.getSipIndexerThreads(), config.getSipIndexerThreads(),
             60L, TimeUnit.SECONDS,
             new LinkedBlockingQueue<>(),
             new ThreadFactoryBuilder().setNameFormat("sip-index-%d").build());
 
-        final ExecutorService persistentMergeExecutor = new ThreadPoolExecutor(0, config.getMergeIndexThreads(),
+        final ExecutorService persistentMergeExecutor = new ThreadPoolExecutor(config.getMergeIndexThreads(), config.getMergeIndexThreads(),
             60L, TimeUnit.SECONDS,
             new LinkedBlockingQueue<>(),
             new ThreadFactoryBuilder().setNameFormat("persistent-merge-index-%d").build());
 
-        final ExecutorService transientMergeExecutor = new ThreadPoolExecutor(0, config.getMergeIndexThreads(),
+        final ExecutorService transientMergeExecutor = new ThreadPoolExecutor(config.getMergeIndexThreads(), config.getMergeIndexThreads(),
             60L, TimeUnit.SECONDS,
             new LinkedBlockingQueue<>(),
             new ThreadFactoryBuilder().setNameFormat("transient-merge-index-%d").build());
 
-        final ExecutorService streamFactoryExecutor = new ThreadPoolExecutor(0, config.getStreamFactoryExecutorCount(),
+        final ExecutorService streamFactoryExecutor = new ThreadPoolExecutor(config.getStreamFactoryExecutorCount(), config.getStreamFactoryExecutorCount(),
             60L, TimeUnit.SECONDS,
             new LinkedBlockingQueue<>(),
             new ThreadFactoryBuilder().setNameFormat("stream-factory-%d").build());

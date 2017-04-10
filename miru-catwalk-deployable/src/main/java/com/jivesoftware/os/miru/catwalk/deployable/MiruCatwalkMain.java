@@ -283,7 +283,7 @@ public class MiruCatwalkMain {
                 });
 
             TailAtScaleStrategy tailAtScaleStrategy = new TailAtScaleStrategy(
-                new ThreadPoolExecutor(0, 1024,
+                new ThreadPoolExecutor(1024, 1024,
                     60L, TimeUnit.SECONDS,
                     new LinkedBlockingQueue<>(),
                     new ThreadFactoryBuilder().setNameFormat("tas-%d").build()),
@@ -297,7 +297,7 @@ public class MiruCatwalkMain {
                 new HttpPartitionHostsProvider(amzaClient, tailAtScaleStrategy, mapper),
                 new RingHostHttpClientProvider(amzaClient),
 
-                new ThreadPoolExecutor(0, amzaCatwalkConfig.getAmzaCallerThreadPoolSize(),
+                new ThreadPoolExecutor(amzaCatwalkConfig.getAmzaCallerThreadPoolSize(), amzaCatwalkConfig.getAmzaCallerThreadPoolSize(),
                     60L, TimeUnit.SECONDS,
                     new LinkedBlockingQueue<>(),
                     new ThreadFactoryBuilder().setNameFormat("amza-client-%d").build()),
@@ -315,17 +315,17 @@ public class MiruCatwalkMain {
             ScheduledExecutorService queueConsumers = Executors.newScheduledThreadPool(numProcs, new ThreadFactoryBuilder().setNameFormat("queueConsumers-%d")
                 .build());
 
-            ExecutorService modelUpdaters = new ThreadPoolExecutor(0, numProcs,
+            ExecutorService modelUpdaters = new ThreadPoolExecutor(numProcs, numProcs,
                 60L, TimeUnit.SECONDS,
                 new LinkedBlockingQueue<>(),
                 new ThreadFactoryBuilder().setNameFormat("model-updater-%d").build());
 
-            ExecutorService readRepairers = new ThreadPoolExecutor(0, numProcs,
+            ExecutorService readRepairers = new ThreadPoolExecutor(numProcs, numProcs,
                 60L, TimeUnit.SECONDS,
                 new LinkedBlockingQueue<>(),
                 new ThreadFactoryBuilder().setNameFormat("read-repair-%d").build());
 
-            ExecutorService tasExecutors = new ThreadPoolExecutor(0, 1024,
+            ExecutorService tasExecutors = new ThreadPoolExecutor(1024, 1024,
                 60L, TimeUnit.SECONDS,
                 new LinkedBlockingQueue<>(),
                 new ThreadFactoryBuilder().setNameFormat("tas-%d").build());

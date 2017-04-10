@@ -59,7 +59,7 @@ public class MiruStumptownPayloadsAmza implements MiruStumptownPayloadStorage {
         payload = new PartitionName(false, "p".getBytes(StandardCharsets.UTF_8), (nameSpace + "-stumptown").getBytes(StandardCharsets.UTF_8));
 
         TailAtScaleStrategy tailAtScaleStrategy = new TailAtScaleStrategy(
-            new ThreadPoolExecutor(0, 1024,
+            new ThreadPoolExecutor(1024, 1024,
                 60L, TimeUnit.SECONDS,
                 new LinkedBlockingQueue<>(),
                 new ThreadFactoryBuilder().setNameFormat("tas-%d").build()),
@@ -72,7 +72,7 @@ public class MiruStumptownPayloadsAmza implements MiruStumptownPayloadStorage {
             new HttpPartitionClientFactory(),
             new HttpPartitionHostsProvider(httpClient, tailAtScaleStrategy, mapper),
             new RingHostHttpClientProvider(httpClient),
-            new ThreadPoolExecutor(0, 1024,
+            new ThreadPoolExecutor(1024, 1024,
                 60L, TimeUnit.SECONDS,
                 new LinkedBlockingQueue<>(),
                 new ThreadFactoryBuilder().setNameFormat("amza-client-%d").build()),

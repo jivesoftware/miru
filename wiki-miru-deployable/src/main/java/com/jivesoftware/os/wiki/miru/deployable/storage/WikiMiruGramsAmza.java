@@ -54,7 +54,7 @@ public class WikiMiruGramsAmza {
         this.mapper = mapper;
 
         TailAtScaleStrategy tailAtScaleStrategy = new TailAtScaleStrategy(
-            new ThreadPoolExecutor(0, 1024,
+            new ThreadPoolExecutor(1024, 1024,
                 60L, TimeUnit.SECONDS,
                 new LinkedBlockingQueue<>(),
                 new ThreadFactoryBuilder().setNameFormat("tas-%d").build()),

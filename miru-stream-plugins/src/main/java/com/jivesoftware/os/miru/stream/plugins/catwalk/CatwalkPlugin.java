@@ -31,7 +31,7 @@ public class CatwalkPlugin implements MiruPlugin<CatwalkEndpoints, CatwalkInject
 
         StrutConfig config = miruProvider.getConfig(StrutConfig.class);
         Catwalk catwalk = new Catwalk(config.getVerboseLogging());
-        Executor catwalkExecutor = new ThreadPoolExecutor(0, config.getCatwalkSolverPoolSize(),
+        Executor catwalkExecutor = new ThreadPoolExecutor(config.getCatwalkSolverPoolSize(), config.getCatwalkSolverPoolSize(),
             60L, TimeUnit.SECONDS,
             new LinkedBlockingQueue<>(),
             new ThreadFactoryBuilder().setNameFormat("catwalk-solver-%d").build());
