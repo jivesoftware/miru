@@ -1,6 +1,5 @@
 package com.jivesoftware.os.miru.stream.plugins.catwalk;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.jivesoftware.os.miru.plugin.Miru;
 import com.jivesoftware.os.miru.plugin.MiruProvider;
 import com.jivesoftware.os.miru.plugin.plugin.MiruEndpointInjectable;
@@ -8,13 +7,11 @@ import com.jivesoftware.os.miru.plugin.plugin.MiruPlugin;
 import com.jivesoftware.os.miru.plugin.solution.FstRemotePartitionReader;
 import com.jivesoftware.os.miru.plugin.solution.MiruRemotePartition;
 import com.jivesoftware.os.miru.stream.plugins.strut.StrutConfig;
+import com.jivesoftware.os.routing.bird.shared.BoundedExecutor;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.concurrent.Executor;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
 /**
  *
@@ -31,10 +28,7 @@ public class CatwalkPlugin implements MiruPlugin<CatwalkEndpoints, CatwalkInject
 
         StrutConfig config = miruProvider.getConfig(StrutConfig.class);
         Catwalk catwalk = new Catwalk(config.getVerboseLogging());
-        Executor catwalkExecutor = new ThreadPoolExecutor(config.getCatwalkSolverPoolSize(), config.getCatwalkSolverPoolSize(),
-            60L, TimeUnit.SECONDS,
-            new LinkedBlockingQueue<>(),
-            new ThreadFactoryBuilder().setNameFormat("catwalk-solver-%d").build());
+        Executor catwalkExecutor = BoundedExecutor.newBoundedExecutor(config.getCatwalkSolverPoolSize(), "catwalk-solver");
 
         return Collections.singletonList(new MiruEndpointInjectable<>(
             CatwalkInjectable.class,

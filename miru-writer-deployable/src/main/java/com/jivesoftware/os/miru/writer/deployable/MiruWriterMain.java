@@ -19,7 +19,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.collect.Maps;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.jivesoftware.os.amza.api.wal.WALKey;
 import com.jivesoftware.os.amza.embed.EmbedAmzaServiceInitializer.Lifecycle;
 import com.jivesoftware.os.amza.service.EmbeddedClientProvider;
@@ -69,15 +68,13 @@ import com.jivesoftware.os.routing.bird.http.client.HttpRequestHelperUtils;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.http.client.TenantRoutingHttpClientInitializer;
 import com.jivesoftware.os.routing.bird.server.util.Resource;
+import com.jivesoftware.os.routing.bird.shared.BoundedExecutor;
 import com.jivesoftware.os.routing.bird.shared.TenantRoutingProvider;
 import java.io.File;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import org.merlin.config.defaults.LongDefault;
 import org.merlin.config.defaults.StringDefault;
@@ -228,11 +225,7 @@ public class MiruWriterMain {
             SickThreads walClientSickThreads = new SickThreads();
             deployable.addHealthCheck(new SickThreadsHealthCheck(deployable.config(WALClientSickThreadsHealthCheckConfig.class), walClientSickThreads));
 
-            ExecutorService tasExecutors = new ThreadPoolExecutor(1024, 1024,
-                60L, TimeUnit.SECONDS,
-                new LinkedBlockingQueue<>(),
-                new ThreadFactoryBuilder().setNameFormat("tas-%d").build());
-
+            ExecutorService tasExecutors = BoundedExecutor.newBoundedExecutor(1024, "tas");
 
             MiruWALConfig walConfig = deployable.config(MiruWALConfig.class);
             MiruWALClient<?, ?> walClient;
@@ -281,10 +274,8 @@ public class MiruWriterMain {
                 clusterClient,
                 clientConfig.getPartitionMaximumAgeInMillis());
 
-            ExecutorService sendActivitiesExecutorService = new ThreadPoolExecutor(clientConfig.getSendActivitiesThreadPoolSize(), clientConfig.getSendActivitiesThreadPoolSize(),
-                60L, TimeUnit.SECONDS,
-                new LinkedBlockingQueue<>(),
-                new ThreadFactoryBuilder().setNameFormat("send-activites-%d").build());
+            ExecutorService sendActivitiesExecutorService = BoundedExecutor.newBoundedExecutor(clientConfig.getSendActivitiesThreadPoolSize(),
+                "send-activities");
 
             MiruActivityIngress activityIngress = new MiruActivityIngress(miruPartitioner, latestAlignmentCache, sendActivitiesExecutorService);
 

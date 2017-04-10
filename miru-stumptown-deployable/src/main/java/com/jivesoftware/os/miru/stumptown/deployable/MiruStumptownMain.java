@@ -18,7 +18,6 @@ package com.jivesoftware.os.miru.stumptown.deployable;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.jivesoftware.os.filer.queue.guaranteed.delivery.DeliveryCallback;
 import com.jivesoftware.os.jive.utils.ordered.id.ConstantWriterIdProvider;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
@@ -64,13 +63,11 @@ import com.jivesoftware.os.routing.bird.http.client.HttpResponseMapper;
 import com.jivesoftware.os.routing.bird.http.client.TenantAwareHttpClient;
 import com.jivesoftware.os.routing.bird.http.client.TenantRoutingHttpClientInitializer;
 import com.jivesoftware.os.routing.bird.server.util.Resource;
+import com.jivesoftware.os.routing.bird.shared.BoundedExecutor;
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
 public class MiruStumptownMain {
 
@@ -167,12 +164,10 @@ public class MiruStumptownMain {
             LogMill logMill = new LogMill(orderIdProvider);
             MiruStumptownIntakeConfig intakeConfig = deployable.config(MiruStumptownIntakeConfig.class);
 
-            ExecutorService tasExecutors = new ThreadPoolExecutor(1024, 1024,
-                60L, TimeUnit.SECONDS,
-                new LinkedBlockingQueue<>(),
-                new ThreadFactoryBuilder().setNameFormat("tas-%d").build());
+            ExecutorService tasExecutors = BoundedExecutor.newBoundedExecutor(1024, "tas");
 
-            MiruClusterClient clusterClient = new MiruClusterClientInitializer(tasExecutors, 100, 95, 1000).initialize(new MiruStats(), "", miruManageClient, mapper);
+            MiruClusterClient clusterClient = new MiruClusterClientInitializer(tasExecutors, 100, 95, 1000).initialize(new MiruStats(), "", miruManageClient,
+                mapper);
             StumptownSchemaService stumptownSchemaService = new StumptownSchemaService(clusterClient);
 
             final MiruStumptownIntakeService inTakeService = new MiruStumptownIntakeInitializer().initialize(
