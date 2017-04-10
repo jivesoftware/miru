@@ -195,8 +195,8 @@ public class MiruToolsMain {
                     new ThreadFactoryBuilder().setNameFormat("tas-%d").build()),
                 100, // TODO config
                 95, // TODO config
-                1000
-            );
+                1000,
+                true);
 
 
             List<MiruToolsPlugin> plugins = Lists.newArrayList(
