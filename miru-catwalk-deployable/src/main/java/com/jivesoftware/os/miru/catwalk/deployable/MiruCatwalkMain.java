@@ -70,8 +70,8 @@ import java.util.Arrays;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -285,7 +285,7 @@ public class MiruCatwalkMain {
             TailAtScaleStrategy tailAtScaleStrategy = new TailAtScaleStrategy(
                 new ThreadPoolExecutor(0, 1024,
                     60L, TimeUnit.SECONDS,
-                    new SynchronousQueue<>(),
+                    new LinkedBlockingQueue<>(),
                     new ThreadFactoryBuilder().setNameFormat("tas-%d").build()),
                 100, // TODO config
                 95, // TODO config
@@ -296,7 +296,11 @@ public class MiruCatwalkMain {
                 new HttpPartitionClientFactory(),
                 new HttpPartitionHostsProvider(amzaClient, tailAtScaleStrategy, mapper),
                 new RingHostHttpClientProvider(amzaClient),
-                Executors.newFixedThreadPool(amzaCatwalkConfig.getAmzaCallerThreadPoolSize()), //TODO expose to conf
+
+                new ThreadPoolExecutor(0, amzaCatwalkConfig.getAmzaCallerThreadPoolSize(),
+                    60L, TimeUnit.SECONDS,
+                    new LinkedBlockingQueue<>(),
+                    new ThreadFactoryBuilder().setNameFormat("amza-client-%d").build()),
                 amzaCatwalkConfig.getAmzaAwaitLeaderElectionForNMillis(),
                 amzaCatwalkConfig.getAmzaDebugClientCount(),
                 amzaCatwalkConfig.getAmzaDebugClientCountInterval());
@@ -310,11 +314,20 @@ public class MiruCatwalkMain {
             int numProcs = Runtime.getRuntime().availableProcessors();
             ScheduledExecutorService queueConsumers = Executors.newScheduledThreadPool(numProcs, new ThreadFactoryBuilder().setNameFormat("queueConsumers-%d")
                 .build());
-            ExecutorService modelUpdaters = Executors.newFixedThreadPool(numProcs, new ThreadFactoryBuilder().setNameFormat("modelUpdaters-%d").build());
-            ExecutorService readRepairers = Executors.newFixedThreadPool(numProcs, new ThreadFactoryBuilder().setNameFormat("readRepairers-%d").build());
+
+            ExecutorService modelUpdaters = new ThreadPoolExecutor(0, numProcs,
+                60L, TimeUnit.SECONDS,
+                new LinkedBlockingQueue<>(),
+                new ThreadFactoryBuilder().setNameFormat("model-updater-%d").build());
+
+            ExecutorService readRepairers = new ThreadPoolExecutor(0, numProcs,
+                60L, TimeUnit.SECONDS,
+                new LinkedBlockingQueue<>(),
+                new ThreadFactoryBuilder().setNameFormat("read-repair-%d").build());
+
             ExecutorService tasExecutors = new ThreadPoolExecutor(0, 1024,
                 60L, TimeUnit.SECONDS,
-                new SynchronousQueue<>(),
+                new LinkedBlockingQueue<>(),
                 new ThreadFactoryBuilder().setNameFormat("tas-%d").build());
 
 

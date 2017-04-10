@@ -78,7 +78,7 @@ import com.jivesoftware.os.routing.bird.shared.TenantRoutingProvider;
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -191,7 +191,7 @@ public class MiruToolsMain {
                 responseMapper,
                 new ThreadPoolExecutor(0, 1024,
                     60L, TimeUnit.SECONDS,
-                    new SynchronousQueue<>(),
+                    new LinkedBlockingQueue<>(),
                     new ThreadFactoryBuilder().setNameFormat("tas-%d").build()),
                 100, // TODO config
                 95, // TODO config

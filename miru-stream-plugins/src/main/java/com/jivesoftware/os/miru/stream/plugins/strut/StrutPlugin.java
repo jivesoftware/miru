@@ -27,8 +27,8 @@ import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -65,7 +65,11 @@ public class StrutPlugin implements MiruPlugin<StrutEndpoints, StrutInjectable>,
         if (gatherExecutorService == null) {
             StrutConfig config = miruProvider.getConfig(StrutConfig.class);
             int gatherThreadPoolSize = config.getGatherThreadPoolSize();
-            gatherExecutorService = gatherThreadPoolSize <= 1 ? MoreExecutors.sameThreadExecutor() : Executors.newFixedThreadPool(gatherThreadPoolSize);
+            gatherExecutorService = gatherThreadPoolSize <= 1 ? MoreExecutors.sameThreadExecutor() : new ThreadPoolExecutor(0, gatherThreadPoolSize,
+                60L, TimeUnit.SECONDS,
+                new LinkedBlockingQueue<>(),
+                new ThreadFactoryBuilder().setNameFormat("gather-%d").build());
+
         }
     }
 
@@ -106,7 +110,7 @@ public class StrutPlugin implements MiruPlugin<StrutEndpoints, StrutInjectable>,
 
         ExecutorService stas = new ThreadPoolExecutor(0, 1024,
             60L, TimeUnit.SECONDS,
-            new SynchronousQueue<>(),
+            new LinkedBlockingQueue<>(),
             new ThreadFactoryBuilder().setNameFormat("stas-%d").build());
 
         StrutModelCache cache = new StrutModelCache(catwalkHttpClient, stas, 100, 95, 1000, mapper, responseMapper, modelCache);
