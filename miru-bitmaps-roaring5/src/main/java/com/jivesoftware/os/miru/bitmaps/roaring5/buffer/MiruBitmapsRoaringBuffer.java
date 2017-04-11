@@ -617,6 +617,11 @@ public class MiruBitmapsRoaringBuffer implements MiruBitmaps<MutableRoaringBitma
     }
 
     @Override
+    public int[] keysNotEqual(ImmutableRoaringBitmap index1, ImmutableRoaringBitmap index2) {
+        throw new UnsupportedOperationException("Wahhh");
+    }
+
+    @Override
     public long[] serializeAtomizedSizeInBytes(ImmutableRoaringBitmap index, int[] keys) {
         throw new UnsupportedOperationException("Wahhh");
     }
