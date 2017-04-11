@@ -60,7 +60,7 @@ public class StrutRemotePartition implements MiruRemotePartition<StrutQuery, Str
             if (!partition.isLocal()) {
                 MiruPartitionCoord remote = partition.getCoord();
                 try {
-                    LOG.info("Sharing update for catwalkId:{} modelId:{} with coord:{}", share.catwalkDefinition.catwalkId, share.modelId, remote);
+                    LOG.info("Sharing update for catwalkId:{} scorables:{} with coord:{}", share.catwalkDefinition.catwalkId, share.scorables.size(), remote);
                     remotePartitionReader.read(queryKey,
                         remote.host,
                         endpoint,

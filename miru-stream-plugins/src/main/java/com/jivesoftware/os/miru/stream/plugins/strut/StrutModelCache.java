@@ -6,6 +6,7 @@ import com.google.common.collect.Maps;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.catwalk.shared.CatwalkModel;
 import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery;
+import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery.CatwalkFeature;
 import com.jivesoftware.os.miru.catwalk.shared.FeatureScore;
 import com.jivesoftware.os.miru.catwalk.shared.StrutModel;
 import com.jivesoftware.os.miru.catwalk.shared.StrutModelKey;
@@ -183,12 +184,13 @@ public class StrutModelCache {
 
     private StrutModel convert(CatwalkQuery catwalkQuery, CatwalkModel model) {
 
+        CatwalkFeature[] features = catwalkQuery.definition.features;
         @SuppressWarnings("unchecked")
-        Map<StrutModelKey, StrutModelScore>[] modelFeatureScore = new Map[catwalkQuery.features.length];
+        Map<StrutModelKey, StrutModelScore>[] modelFeatureScore = new Map[features.length];
         for (int i = 0; i < modelFeatureScore.length; i++) {
             modelFeatureScore[i] = new HashMap<>();
         }
-        for (int i = 0; i < catwalkQuery.features.length; i++) {
+        for (int i = 0; i < features.length; i++) {
             if (model != null && model.featureScores != null && model.featureScores[i] != null) {
                 List<FeatureScore> featureScores = model.featureScores[i];
                 for (FeatureScore featureScore : featureScores) {
@@ -199,10 +201,10 @@ public class StrutModelCache {
             }
         }
         return new StrutModel(modelFeatureScore,
-            model != null ? model.modelCounts : new long[catwalkQuery.features.length],
+            model != null ? model.modelCounts : new long[features.length],
             model != null ? model.totalCount : 0,
-            model != null ? model.numberOfModels : new int[catwalkQuery.features.length],
-            model != null ? model.totalNumPartitions : new int[catwalkQuery.features.length]
+            model != null ? model.numberOfModels : new int[features.length],
+            model != null ? model.totalNumPartitions : new int[features.length]
         );
     }
 

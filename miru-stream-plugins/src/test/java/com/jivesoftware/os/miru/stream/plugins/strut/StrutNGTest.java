@@ -1,5 +1,6 @@
 package com.jivesoftware.os.miru.stream.plugins.strut;
 
+import com.jivesoftware.os.miru.catwalk.shared.Strategy;
 import java.util.Random;
 import org.testng.Assert;
 import org.testng.annotations.Test;
@@ -24,34 +25,34 @@ public class StrutNGTest {
             for (int j = 0; j < 100; j++) {
                 float s = r.nextFloat();
                 max = Math.max(max, s);
-                scores[i] = Strut.score(scores[i], s, 1, StrutQuery.Strategy.MAX);
+                scores[i] = Strut.score(scores[i], s, 1, Strategy.MAX);
                 counts[i]++;
             }
         }
 
-        Assert.assertTrue(max == Strut.finalizeScore(scores, counts, StrutQuery.Strategy.MAX));
+        Assert.assertTrue(max == Strut.finalizeScore(scores, counts, Strategy.MAX));
     }
 
     @Test
     public void testRegessionWeighted() throws Exception {
-        float a = Strut.score(0.0f, 0.1f, 1, StrutQuery.Strategy.REGRESSION_WEIGHTED);
-        float b = Strut.score(0.0f, 0.7f, 1, StrutQuery.Strategy.REGRESSION_WEIGHTED);
-        float c = Strut.score(0.0f, 0.2f, 1, StrutQuery.Strategy.REGRESSION_WEIGHTED);
-        float d = Strut.score(0.0f, 0.5f, 1, StrutQuery.Strategy.REGRESSION_WEIGHTED);
+        float a = Strut.score(0.0f, 0.1f, 1, Strategy.REGRESSION_WEIGHTED);
+        float b = Strut.score(0.0f, 0.7f, 1, Strategy.REGRESSION_WEIGHTED);
+        float c = Strut.score(0.0f, 0.2f, 1, Strategy.REGRESSION_WEIGHTED);
+        float d = Strut.score(0.0f, 0.5f, 1, Strategy.REGRESSION_WEIGHTED);
 
-        float score = Strut.finalizeScore(new float[]{a, b, c, d}, new int[]{1, 1, 1, 1}, StrutQuery.Strategy.REGRESSION_WEIGHTED);
+        float score = Strut.finalizeScore(new float[]{a, b, c, d}, new int[]{1, 1, 1, 1}, Strategy.REGRESSION_WEIGHTED);
 
         Assert.assertTrue(score == (0.1f + 0.7f + 0.2f + 0.5f));
     }
 
     @Test
     public void testUnitWeighted() throws Exception {
-        float a = Strut.score(0.0f, 0.1f, 1, StrutQuery.Strategy.UNIT_WEIGHTED);
-        float b = Strut.score(0.0f, 0.7f, 1, StrutQuery.Strategy.UNIT_WEIGHTED);
-        float c = Strut.score(0.0f, 0.2f, 1, StrutQuery.Strategy.UNIT_WEIGHTED);
-        float d = Strut.score(0.0f, 0.5f, 1, StrutQuery.Strategy.UNIT_WEIGHTED);
+        float a = Strut.score(0.0f, 0.1f, 1, Strategy.UNIT_WEIGHTED);
+        float b = Strut.score(0.0f, 0.7f, 1, Strategy.UNIT_WEIGHTED);
+        float c = Strut.score(0.0f, 0.2f, 1, Strategy.UNIT_WEIGHTED);
+        float d = Strut.score(0.0f, 0.5f, 1, Strategy.UNIT_WEIGHTED);
 
-        float score = Strut.finalizeScore(new float[]{a, b, c, d}, new int[]{1, 1, 1, 1}, StrutQuery.Strategy.UNIT_WEIGHTED);
+        float score = Strut.finalizeScore(new float[]{a, b, c, d}, new int[]{1, 1, 1, 1}, Strategy.UNIT_WEIGHTED);
 
         Assert.assertTrue(score == (0.1f + 0.7f + 0.2f + 0.5f) / 4);
 

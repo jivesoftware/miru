@@ -21,7 +21,7 @@ public class CatwalkModelServiceTest {
         int fromPartitionId = 123;
         int toPartitionId = Integer.MAX_VALUE - 456;
         String featureName = "test";
-        CatwalkFeature[] features = { new CatwalkFeature(featureName, null, null) };
+        CatwalkFeature[] features = { new CatwalkFeature(featureName, null, null, 1f) };
         byte[] keyBytes = CatwalkModelService.modelPartitionKey("catwalkId",
             "modelId",
             featureName,

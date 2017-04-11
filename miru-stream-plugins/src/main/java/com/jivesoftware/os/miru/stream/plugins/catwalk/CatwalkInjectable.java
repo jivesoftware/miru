@@ -56,7 +56,7 @@ public class CatwalkInjectable {
                         topNTermsPerNumerator,
                         maxHeapPressureInBytes)),
                 new CatwalkAnswerEvaluator(),
-                new CatwalkAnswerMerger(request.query.desiredNumberOfResults),
+                new CatwalkAnswerMerger(request.query.modelQuery.desiredNumberOfResults),
                 CatwalkAnswer.EMPTY_RESULTS,
                 miru.getDefaultExecutor(),
                 request.logLevel);
@@ -110,7 +110,7 @@ public class CatwalkInjectable {
                         topNValuesPerFeature,
                         topNTermsPerNumerator,
                         maxHeapPressureInBytes)),
-                new CatwalkAnswerMerger(request.query.desiredNumberOfResults),
+                new CatwalkAnswerMerger(request.query.modelQuery.desiredNumberOfResults),
                 CatwalkAnswer.EMPTY_RESULTS,
                 CatwalkAnswer.DESTROYED_RESULTS,
                 catwalkExecutor,

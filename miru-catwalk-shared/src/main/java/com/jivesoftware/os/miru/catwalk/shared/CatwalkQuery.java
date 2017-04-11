@@ -13,42 +13,61 @@ import java.util.Arrays;
  */
 public class CatwalkQuery implements Serializable {
 
-    public final String catwalkId;
-    public final MiruTimeRange timeRange;
-    public final String gatherField; // "parent"
-    public final MiruFilter[] gatherFilters; // "I viewed"
-    public final CatwalkFeature[] features;
-    public final MiruFilter scorableFilter; // "content types and activity types"
-    public final int desiredNumberOfResults;
+    public final CatwalkDefinition definition;
+    public final CatwalkModelQuery modelQuery;
 
+    @JsonCreator
     public CatwalkQuery(
-        @JsonProperty("catwalkId") String catwalkId,
-        @JsonProperty("timeRange") MiruTimeRange timeRange,
-        @JsonProperty("gatherField") String gatherField,
-        @JsonProperty("gatherFilters") MiruFilter[] gatherFilters,
-        @JsonProperty("features") CatwalkFeature[] features,
-        @JsonProperty("scorableFilter") MiruFilter scorableFilter,
-        @JsonProperty("desiredNumberOfResults") int desiredNumberOfResults) {
-        this.catwalkId = catwalkId;
-        this.timeRange = Preconditions.checkNotNull(timeRange);
-        this.gatherField = Preconditions.checkNotNull(gatherField);
-        this.gatherFilters = Preconditions.checkNotNull(gatherFilters);
-        this.features = Preconditions.checkNotNull(features);
-        this.scorableFilter = scorableFilter;
-        Preconditions.checkArgument(desiredNumberOfResults > 0, "Number of results must be at least 1");
-        this.desiredNumberOfResults = desiredNumberOfResults;
+        @JsonProperty("definition") CatwalkDefinition definition,
+        @JsonProperty("modelQuery") CatwalkModelQuery modelQuery) {
+        Preconditions.checkArgument(definition.numeratorCount == modelQuery.modelFilters.length, "Numerator count must equal model filters length");
+        this.definition = Preconditions.checkNotNull(definition);
+        this.modelQuery = Preconditions.checkNotNull(modelQuery);
     }
 
     @Override
     public String toString() {
-        return "CatwalkQuery{"
-            + "catwalkId=" + catwalkId
-            + ", timeRange=" + timeRange
-            + ", gatherField='" + gatherField + '\''
-            + ", gatherFilters=" + Arrays.toString(gatherFilters)
-            + ", features=" + Arrays.toString(features)
-            + ", desiredNumberOfResults=" + desiredNumberOfResults
-            + '}';
+        return "CatwalkQuery{" +
+            "definition=" + definition +
+            ", modelQuery=" + modelQuery +
+            '}';
+    }
+
+    public static class CatwalkDefinition implements Serializable {
+
+        public final String catwalkId;
+        public final String gatherField; // "parent"
+        public final CatwalkFeature[] features;
+        public final Strategy featureStrategy;
+        public final MiruFilter scorableFilter; // "content types and activity types"
+        public final int numeratorCount;
+
+        @JsonCreator
+        public CatwalkDefinition(@JsonProperty("catwalkId") String catwalkId,
+            @JsonProperty("gatherField") String gatherField,
+            @JsonProperty("features") CatwalkFeature[] features,
+            @JsonProperty("featureStrategy") Strategy featureStrategy,
+            @JsonProperty("scorableFilter") MiruFilter scorableFilter,
+            @JsonProperty("numeratorCount") int numeratorCount) {
+            this.catwalkId = catwalkId;
+            this.gatherField = gatherField;
+            this.features = features;
+            this.featureStrategy = featureStrategy;
+            this.scorableFilter = scorableFilter;
+            this.numeratorCount = numeratorCount;
+        }
+
+        @Override
+        public String toString() {
+            return "CatwalkDefinition{" +
+                "catwalkId='" + catwalkId + '\'' +
+                ", gatherField='" + gatherField + '\'' +
+                ", features=" + Arrays.toString(features) +
+                ", featureStrategy=" + featureStrategy +
+                ", scorableFilter=" + scorableFilter +
+                ", numeratorCount=" + numeratorCount +
+                '}';
+        }
     }
 
     public static class CatwalkFeature implements Serializable {
@@ -60,14 +79,17 @@ public class CatwalkQuery implements Serializable {
          */
         public final String[] featureFields;
         public final MiruFilter featureFilter;
+        public final float featureScalar;
 
         @JsonCreator
         public CatwalkFeature(@JsonProperty("name") String name,
             @JsonProperty("featureFields") String[] featureFields,
-            @JsonProperty("featureFilter") MiruFilter featureFilter) {
+            @JsonProperty("featureFilter") MiruFilter featureFilter,
+            @JsonProperty("featureScalar") float featureScalar) {
             this.name = name;
             this.featureFields = featureFields;
             this.featureFilter = featureFilter;
+            this.featureScalar = featureScalar;
         }
 
         @Override
@@ -76,6 +98,34 @@ public class CatwalkQuery implements Serializable {
                 "name='" + name + '\'' +
                 ", featureFields=" + Arrays.toString(featureFields) +
                 ", featureFilter=" + featureFilter +
+                ", featureScalar=" + featureScalar +
+                '}';
+        }
+    }
+
+    public static class CatwalkModelQuery implements Serializable {
+
+        public final MiruFilter[] modelFilters; // "I viewed"
+        public final MiruTimeRange timeRange;
+        public final int desiredNumberOfResults;
+
+        @JsonCreator
+        public CatwalkModelQuery(
+            @JsonProperty("timeRange") MiruTimeRange timeRange,
+            @JsonProperty("modelFilters") MiruFilter[] modelFilters,
+            @JsonProperty("desiredNumberOfResults") int desiredNumberOfResults) {
+            this.timeRange = Preconditions.checkNotNull(timeRange);
+            this.modelFilters = Preconditions.checkNotNull(modelFilters);
+            Preconditions.checkArgument(desiredNumberOfResults > 0, "Number of results must be at least 1");
+            this.desiredNumberOfResults = desiredNumberOfResults;
+        }
+
+        @Override
+        public String toString() {
+            return "CatwalkModelQuery{" +
+                "modelFilters=" + Arrays.toString(modelFilters) +
+                ", timeRange=" + timeRange +
+                ", desiredNumberOfResults=" + desiredNumberOfResults +
                 '}';
         }
     }

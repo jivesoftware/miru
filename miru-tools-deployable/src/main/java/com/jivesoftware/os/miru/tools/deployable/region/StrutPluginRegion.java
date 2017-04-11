@@ -16,10 +16,12 @@ import com.jivesoftware.os.miru.api.query.filter.FilterStringUtil;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruValue;
-import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery;
+import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery.CatwalkDefinition;
 import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery.CatwalkFeature;
+import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery.CatwalkModelQuery;
 import com.jivesoftware.os.miru.catwalk.shared.HotOrNot;
 import com.jivesoftware.os.miru.catwalk.shared.HotOrNot.Hotness;
+import com.jivesoftware.os.miru.catwalk.shared.Strategy;
 import com.jivesoftware.os.miru.catwalk.shared.StrutModelScalar;
 import com.jivesoftware.os.miru.plugin.query.MiruTenantQueryRouting;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
@@ -29,7 +31,6 @@ import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import com.jivesoftware.os.miru.stream.plugins.strut.StrutAnswer;
 import com.jivesoftware.os.miru.stream.plugins.strut.StrutConstants;
 import com.jivesoftware.os.miru.stream.plugins.strut.StrutQuery;
-import com.jivesoftware.os.miru.stream.plugins.strut.StrutQuery.Strategy;
 import com.jivesoftware.os.miru.ui.MiruPageRegion;
 import com.jivesoftware.os.miru.ui.MiruSoyRenderer;
 import com.jivesoftware.os.mlogger.core.MetricLogger;
@@ -156,7 +157,7 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                         String featureName = featureParts[0].trim();
                         String[] featureFields = featureParts[1].split("\\s*,\\s*");
                         MiruFilter featureFilter = filterStringUtil.parseFilters(featureParts[2]);
-                        features.add(new CatwalkFeature(featureName, featureFields, featureFilter));
+                        features.add(new CatwalkFeature(featureName, featureFields, featureFilter, 1f));
                     }
                 }
 
@@ -171,9 +172,6 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
 
                 float[] numeratorScalars = new float[numeratorFilters.size()];
                 Arrays.fill(numeratorScalars, 1f); //TODO
-
-                float[] featureScalars = new float[features.size()];
-                Arrays.fill(featureScalars, 1f); //TODO
 
                 // "user context, user activityType context, user activityType contextType"
                 /*String[] featuresSplit = input.featureFields.split("\\s*,\\s*");
@@ -240,13 +238,15 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
 
                     String endpoint = StrutConstants.STRUT_PREFIX + StrutConstants.CUSTOM_QUERY_ENDPOINT;
 
-                    CatwalkQuery catwalkQuery = new CatwalkQuery(
-                        input.catwalkId,
-                        MiruTimeRange.ALL_TIME,
+                    CatwalkDefinition catwalkDefinition = new CatwalkDefinition(input.catwalkId,
                         input.scorableField,
-                        numeratorFilters.toArray(new MiruFilter[0]),
                         features.toArray(new CatwalkFeature[0]),
+                        input.featureStrategy,
                         MiruFilter.NO_FILTER,
+                        numeratorFilters.size());
+                    CatwalkModelQuery modelQuery = new CatwalkModelQuery(
+                        MiruTimeRange.ALL_TIME,
+                        numeratorFilters.toArray(new MiruFilter[0]),
                         input.desiredModelSize);
 
                     MiruRequest<StrutQuery> miruRequest = new MiruRequest<>("toolsStrut",
@@ -254,20 +254,12 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                         MiruActorId.NOT_PROVIDED,
                         MiruAuthzExpression.NOT_PROVIDED,
                         new StrutQuery(
-                            Collections.singletonList(
-                                new StrutModelScalar(input.catwalkId,
-                                    input.modelId,
-                                    catwalkQuery,
-                                    1f
-                                )
-                            ),
+                            catwalkDefinition,
+                            Collections.singletonList(new StrutModelScalar(input.modelId, modelQuery, 1f)),
                             new MiruTimeRange(fromTime, toTime),
-                            input.constraintField,
                             constraintFilter,
                             input.numeratorStrategy,
                             numeratorScalars,
-                            input.featureStrategy,
-                            featureScalars,
                             input.desiredNumberOfResults,
                             true,
                             gatherTermsForFieldSplit,

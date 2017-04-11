@@ -75,7 +75,7 @@ public class MiruInspectRegion implements MiruPageRegion<InspectInput> {
 
                 CatwalkFeature[] features = new CatwalkFeature[featureNames.length];
                 for (int i = 0; i < features.length; i++) {
-                    features[i] = new CatwalkFeature(featureNames[i], null, null); //TODO hacky
+                    features[i] = new CatwalkFeature(featureNames[i], null, null, 1f); //TODO hacky
                 }
 
                 TreeSet<Integer> partitionIds = Sets.newTreeSet();

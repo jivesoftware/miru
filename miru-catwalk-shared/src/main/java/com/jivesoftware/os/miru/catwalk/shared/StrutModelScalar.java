@@ -1,34 +1,33 @@
 package com.jivesoftware.os.miru.catwalk.shared;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery.CatwalkModelQuery;
 import java.io.Serializable;
 
 /**
- *
  * @author jonathan.colt
  */
 public class StrutModelScalar implements Serializable {
 
-    public final String catwalkId;
     public final String modelId;
-    public final CatwalkQuery catwalkQuery;
+    public final CatwalkModelQuery catwalkModelQuery;
     public final float scalar;
 
     public StrutModelScalar(
-        @JsonProperty("catwalkId") String catwalkId,
         @JsonProperty("modelId") String modelId,
-        @JsonProperty("catwalkQuery") CatwalkQuery catwalkQuery,
+        @JsonProperty("catwalkModelQuery") CatwalkModelQuery catwalkModelQuery,
         @JsonProperty("scalar") float scalar) {
-        this.catwalkId = catwalkId;
         this.modelId = modelId;
-        this.catwalkQuery = catwalkQuery;
+        this.catwalkModelQuery = catwalkModelQuery;
         this.scalar = scalar;
     }
 
     @Override
     public String toString() {
-        return "StrutConstraint{" + "catwalkId=" + catwalkId + ", modelId=" + modelId + ", catwalkQuery=" + catwalkQuery + ", scalar=" + scalar + '}';
+        return "StrutModelScalar{" +
+            "modelId='" + modelId + '\'' +
+            ", catwalkModelQuery=" + catwalkModelQuery +
+            ", scalar=" + scalar +
+            '}';
     }
-
-
 }

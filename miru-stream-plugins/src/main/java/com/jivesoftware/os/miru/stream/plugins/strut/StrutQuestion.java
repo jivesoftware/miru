@@ -19,6 +19,8 @@ import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.api.query.filter.MiruValue;
+import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery;
+import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery.CatwalkDefinition;
 import com.jivesoftware.os.miru.catwalk.shared.HotOrNot;
 import com.jivesoftware.os.miru.catwalk.shared.Scored;
 import com.jivesoftware.os.miru.catwalk.shared.StrutModelScalar;
@@ -113,6 +115,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         MiruRequestContext<BM, IBM, ?> context = handle.getRequestContext();
         MiruBitmaps<BM, IBM> bitmaps = handle.getBitmaps();
 
+        CatwalkDefinition catwalkDefinition = request.query.catwalkDefinition;
         MiruTimeRange timeRange = request.query.timeRange;
         if (!context.getTimeIndex().intersects(timeRange)) {
             solutionLog.log(MiruSolutionLogLevel.WARN, "No time index intersection. Partition {}: {} doesn't intersect with {}",
@@ -185,7 +188,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
         BM candidates = bitmaps.and(ands);
 
-        int pivotFieldId = schema.getFieldId(request.query.constraintField);
+        int pivotFieldId = schema.getFieldId(catwalkDefinition.gatherField);
 
         MiruFieldIndex<BM, IBM> primaryIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
 
@@ -198,9 +201,9 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
             StrutModelScalar modelScalar = request.query.modelScalars.get(i);
             modelIds[i] = modelScalar.modelId;
             verboseModelId |= verboseModelIds.contains(modelScalar.modelId);
-            termScoresCaches[i] = modelScorer.getTermScoreCache(context, modelScalar.catwalkId);
+            termScoresCaches[i] = modelScorer.getTermScoreCache(context, catwalkDefinition.catwalkId);
             termScoresCacheScalars[i] = modelScalar.scalar;
-            BM nilBitmap = modelScorer.nilBitmap(context, modelScalar.catwalkId, modelScalar.modelId, stackBuffer);
+            BM nilBitmap = modelScorer.nilBitmap(context, catwalkDefinition.catwalkId, modelScalar.modelId, stackBuffer);
             if (nilBitmap != null) {
                 masks.add(nilBitmap);
             }
@@ -330,7 +333,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
 
         totalTimeFetchingScores += (System.currentTimeMillis() - fetchScoresStart);
 
-        modelScorer.enqueue(coord, request.query, pivotFieldId);
+        modelScorer.enqueue(coord, request.query);
 
         MiruFieldDefinition[] gatherFieldDefinitions = null;
         if (request.query.gatherTermsForFields != null && request.query.gatherTermsForFields.length > 0) {
@@ -439,18 +442,19 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 scorable.add(new TermIdLastIdCount(s1.term, s1.lastId, s1.count));
             }
 
-            TimestampedCacheKeyValues termFeatureCache = modelScorer.getTermFeatureCache(context, modelScalar.catwalkId);
+            TimestampedCacheKeyValues termFeatureCache = modelScorer.getTermFeatureCache(context, catwalkDefinition.catwalkId);
             BM[] constrainFeature = modelScorer.buildConstrainFeatures(bitmaps,
                 context,
-                modelScalar.catwalkQuery,
+                catwalkDefinition.features,
                 activityIndexLastId,
                 stackBuffer,
                 solutionLog);
-            List<Scored> featureScored = modelScorer.rescore(modelScalar.catwalkId,
-                modelScalar.modelId,
-                modelScalar.catwalkQuery,
-                request.query.featureScalars,
-                request.query.featureStrategy,
+            List<Scored>[] featureScored = modelScorer.rescore(catwalkDefinition,
+                new String[] { modelScalar.modelId },
+                new int[] { -1 },
+                new CatwalkScorable[] { new CatwalkScorable(modelScalar.catwalkModelQuery, false) },
+                new AtomicInteger[] { modelTotalPartitionCount },
+                new boolean[] { false },
                 true,
                 request.query.numeratorScalars,
                 request.query.numeratorStrategy,
@@ -461,14 +465,12 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
                 pivotFieldId,
                 constrainFeature,
                 false,
-                false,
                 null,
                 null,
                 termFeatureCache,
-                modelTotalPartitionCount,
                 solutionLog);
 
-            s = featureScored.toArray(new Scored[0]);
+            s = featureScored[0].toArray(new Scored[0]);
         }
 
         for (int j = 0; j < s.length; j++) {

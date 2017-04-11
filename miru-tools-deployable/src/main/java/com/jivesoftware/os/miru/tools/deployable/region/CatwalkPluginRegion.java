@@ -15,8 +15,11 @@ import com.jivesoftware.os.miru.api.query.filter.FilterStringUtil;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery;
+import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery.CatwalkDefinition;
 import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery.CatwalkFeature;
+import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery.CatwalkModelQuery;
 import com.jivesoftware.os.miru.catwalk.shared.FeatureScore;
+import com.jivesoftware.os.miru.catwalk.shared.Strategy;
 import com.jivesoftware.os.miru.plugin.query.MiruTenantQueryRouting;
 import com.jivesoftware.os.miru.plugin.solution.MiruRequest;
 import com.jivesoftware.os.miru.plugin.solution.MiruResponse;
@@ -122,7 +125,7 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
                         featureNames[i] = featureParts[0].trim();
                         String[] featureFields = featureParts[1].split("\\s*,\\s*");
                         MiruFilter featureFilter = filterStringUtil.parseFilters(featureParts[2]);
-                        features.add(new CatwalkFeature(featureNames[i], featureFields, featureFilter));
+                        features.add(new CatwalkFeature(featureNames[i], featureFields, featureFilter, 1f));
                     }
                 }
 
@@ -179,13 +182,17 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
                         MiruActorId.NOT_PROVIDED,
                         MiruAuthzExpression.NOT_PROVIDED,
                         new CatwalkQuery(
-                            input.catwalkId,
-                            new MiruTimeRange(fromTime, toTime),
-                            input.scorableField,
-                            numeratorFilters.toArray(new MiruFilter[0]),
-                            features.toArray(new CatwalkFeature[0]),
-                            MiruFilter.NO_FILTER,
-                            input.desiredNumberOfResults),
+                            new CatwalkDefinition(
+                                input.catwalkId,
+                                input.scorableField,
+                                features.toArray(new CatwalkFeature[0]),
+                                Strategy.UNIT_WEIGHTED, //TODO
+                                MiruFilter.NO_FILTER,
+                                numeratorFilters.size()),
+                            new CatwalkModelQuery(
+                                new MiruTimeRange(fromTime, toTime),
+                                numeratorFilters.toArray(new MiruFilter[0]),
+                                input.desiredNumberOfResults)),
                         MiruSolutionLogLevel.valueOf(input.logLevel));
 
 
