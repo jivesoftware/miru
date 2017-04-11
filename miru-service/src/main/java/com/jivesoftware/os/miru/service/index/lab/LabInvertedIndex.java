@@ -503,7 +503,8 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
             int[] keys = bitmaps.keys(mask);
             BM index = getOrCreateIndex(keys);
             BM r = bitmaps.andNot(index, mask);
-            setIndex(keys, r);
+            int[] delta = bitmaps.keysNotEqual(r, index);
+            setIndex(delta, r);
         }
     }
 
@@ -513,7 +514,8 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
             int[] keys = bitmaps.keys(mask);
             BM index = getOrCreateIndex(keys);
             BM r = bitmaps.or(Arrays.asList(index, mask));
-            setIndex(keys, r);
+            int[] delta = bitmaps.keysNotEqual(r, index);
+            setIndex(delta, r);
         }
     }
 
@@ -528,7 +530,8 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
             Arrays.sort(keys);
             BM index = getOrCreateIndex(keys);
             BM andNot = bitmaps.andNotToSourceSize(index, masks);
-            setIndex(keys, andNot);
+            int[] delta = bitmaps.keysNotEqual(andNot, index);
+            setIndex(delta, andNot);
         }
     }
 
@@ -538,7 +541,8 @@ public class LabInvertedIndex<BM extends IBM, IBM> implements MiruInvertedIndex<
             int[] keys = bitmaps.keys(mask);
             BM index = getOrCreateIndex(keys);
             BM or = bitmaps.orToSourceSize(index, mask);
-            setIndex(keys, or);
+            int[] delta = bitmaps.keysNotEqual(or, index);
+            setIndex(delta, or);
         }
     }
 

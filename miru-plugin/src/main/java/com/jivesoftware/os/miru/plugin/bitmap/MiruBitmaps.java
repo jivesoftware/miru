@@ -166,6 +166,8 @@ public interface MiruBitmaps<BM extends IBM, IBM> {
 
     int[] keys(IBM mask);
 
+    int[] keysNotEqual(IBM index1, IBM index2);
+
     long[] serializeAtomizedSizeInBytes(IBM index, int[] keys);
 
     void serializeAtomized(IBM index, int[] keys, DataOutput[] dataOutputs) throws IOException;

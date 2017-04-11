@@ -621,6 +621,11 @@ public class MiruBitmapsRoaring implements MiruBitmaps<RoaringBitmap, RoaringBit
     }
 
     @Override
+    public int[] keysNotEqual(RoaringBitmap index1, RoaringBitmap index2) {
+        return RoaringInspection.keysNotEqual(index1, index2);
+    }
+
+    @Override
     public long[] serializeAtomizedSizeInBytes(RoaringBitmap index, int[] keys) {
         return RoaringInspection.serializeSizeInBytes(index, keys);
     }

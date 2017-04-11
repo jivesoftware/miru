@@ -269,6 +269,59 @@ public class RoaringInspection {
         return copyKeys;
     }
 
+    public static int[] keysNotEqual(RoaringBitmap x1, RoaringBitmap x2) {
+        int length1 = x1.highLowContainer.size();
+        int length2 = x2.highLowContainer.size();
+        int pos1 = 0;
+        int pos2 = 0;
+
+        int[] keys = new int[length1 + length2];
+        int ki = 0;
+        while (pos1 < length1 && pos2 < length2) {
+            short s1 = x1.highLowContainer.getKeyAtIndex(pos1);
+            short s2 = x2.highLowContainer.getKeyAtIndex(pos2);
+            if (s1 == s2) {
+                Container c1 = x1.highLowContainer.getContainerAtIndex(pos1);
+                Container c2 = x2.highLowContainer.getContainerAtIndex(pos2);
+
+                if (!c1.equals(c2)) {
+                    keys[ki++] = Util.toIntUnsigned(s1);
+                }
+
+                ++pos1;
+                ++pos2;
+            } else if (Util.compareUnsigned(s1, s2) < 0) {
+                for (short si = s1; si < s2; si++) {
+                    keys[ki++] = Util.toIntUnsigned(si);
+                }
+                pos1 = x1.highLowContainer.advanceUntil(s2, pos1);
+            } else {
+                for (short si = s2; si < s1; si++) {
+                    keys[ki++] = Util.toIntUnsigned(si);
+                }
+                pos2 = x2.highLowContainer.advanceUntil(s1, pos2);
+            }
+        }
+        while (pos1 < length1) {
+            short s1 = x1.highLowContainer.getKeyAtIndex(pos1);
+            keys[ki++] = Util.toIntUnsigned(s1);
+            ++pos1;
+        }
+        while (pos2 < length2) {
+            short s2 = x2.highLowContainer.getKeyAtIndex(pos2);
+            keys[ki++] = Util.toIntUnsigned(s2);
+            ++pos2;
+        }
+
+        if (ki == keys.length) {
+            return keys;
+        } else {
+            int[] compact = new int[ki];
+            System.arraycopy(keys, 0, compact, 0, ki);
+            return compact;
+        }
+    }
+
     public static int[] userialize(RoaringBitmap bitmap, DataOutput[] outContainers) throws IOException {
         return shortToIntKeys(serialize(bitmap, outContainers));
     }
