@@ -226,8 +226,8 @@ public class CatwalkModelService {
             List<FeatureRange> deletableRanges = Lists.newArrayList();
             TreeSet<Integer> partitionIds = Sets.newTreeSet();
 
-            CatwalkFeature[] features = catwalkQuery.features;
-            int numeratorsCount = catwalkQuery.gatherFilters.length;
+            CatwalkFeature[] features = catwalkQuery.definition.features;
+            int numeratorsCount = catwalkQuery.definition.numeratorCount;
             Map<String, MergedScores> featureNameToMergedScores = gatherModel(tenantId, catwalkId, modelId, features, partitionIds, deletableRanges);
 
             long[] modelCounts = new long[features.length];

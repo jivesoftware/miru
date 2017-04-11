@@ -11,7 +11,9 @@ import com.jivesoftware.os.miru.api.activity.schema.MiruSchema;
 import com.jivesoftware.os.miru.api.base.MiruTermId;
 import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery;
+import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery.CatwalkDefinition;
 import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery.CatwalkFeature;
+import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery.CatwalkModelQuery;
 import com.jivesoftware.os.miru.catwalk.shared.FeatureScore;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider.TimestampedCacheKeyValues;
@@ -83,7 +85,9 @@ public class Catwalk {
         MiruActivityIndex activityIndex = requestContext.getActivityIndex();
         MiruSchema schema = requestContext.getSchema();
 
-        CatwalkFeature[] features = request.query.features;
+        CatwalkDefinition catwalkDefinition = request.query.definition;
+        CatwalkModelQuery modelQuery = request.query.modelQuery;
+        CatwalkFeature[] features = catwalkDefinition.features;
         @SuppressWarnings("unchecked")
         Map<Feature, FeatureBag>[] featureValueSets = new Map[features.length];
         for (int i = 0; i < features.length; i++) {
@@ -164,7 +168,7 @@ public class Catwalk {
                                 " for name:{} tenantId:{} partitionId:{} catwalkId:{} featureId:{} fieldIds:{} terms:{}" +
                                 " from answers:{}",
                             j, Arrays.toString(featureBag.numerators), denominator, name, coord.tenantId, coord.partitionId,
-                            request.query.catwalkId, i, Arrays.toString(fieldIds),
+                            catwalkDefinition.catwalkId, i, Arrays.toString(fieldIds),
                             Arrays.toString(termIds), featureBag.answers);
                         if (verboseLogging) {
                             List<IBM> verboseAnds = Lists.newArrayList();
@@ -194,10 +198,10 @@ public class Catwalk {
         solutionLog.log(MiruSolutionLogLevel.INFO, "Gather cardinalities took {} ms", System.currentTimeMillis() - start);
         if (verboseLogging) {
             LOG.info("Catwalk gathered valid:{} invalid:{} for name:{} tenantId:{} partitionId:{} catwalkId:{}",
-                valid, invalid, name, coord.tenantId, coord.partitionId, request.query.catwalkId);
+                valid, invalid, name, coord.tenantId, coord.partitionId, catwalkDefinition.catwalkId);
         }
 
-        boolean resultsExhausted = request.query.timeRange.smallestTimestamp > requestContext.getTimeIndex().getLargestTimestamp();
+        boolean resultsExhausted = modelQuery.timeRange.smallestTimestamp > requestContext.getTimeIndex().getLargestTimestamp();
         boolean resultsClosed = requestContext.isClosed();
 
         MiruTimeRange timeRange = new MiruTimeRange(

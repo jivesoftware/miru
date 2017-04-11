@@ -14,7 +14,9 @@ import com.jivesoftware.os.miru.api.field.MiruFieldType;
 import com.jivesoftware.os.miru.api.query.filter.MiruAuthzExpression;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery;
+import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery.CatwalkDefinition;
 import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery.CatwalkFeature;
+import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery.CatwalkModelQuery;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmapsDebug;
 import com.jivesoftware.os.miru.plugin.cache.MiruPluginCacheProvider;
@@ -79,7 +81,9 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
         MiruBitmaps<BM, IBM> bitmaps = handle.getBitmaps();
         MiruFieldIndex<BM, IBM> primaryFieldIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
 
-        MiruTimeRange timeRange = request.query.timeRange;
+        CatwalkDefinition catwalkDefinition = request.query.definition;
+        CatwalkModelQuery modelQuery = request.query.modelQuery;
+        MiruTimeRange timeRange = modelQuery.timeRange;
         if (!context.getTimeIndex().intersects(timeRange)) {
             solutionLog.log(MiruSolutionLogLevel.WARN, "No time index intersection. Partition {}: {} doesn't intersect with {}",
                 handle.getCoord().partitionId, context.getTimeIndex(), timeRange);
@@ -98,18 +102,18 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
         }
 
         IBM timeRangeMask = null;
-        if (!MiruTimeRange.ALL_TIME.equals(request.query.timeRange)) {
+        if (!MiruTimeRange.ALL_TIME.equals(modelQuery.timeRange)) {
             timeRangeMask = bitmaps.buildTimeRangeMask(context.getTimeIndex(), timeRange.smallestTimestamp, timeRange.largestTimestamp, stackBuffer);
             ands.add(timeRangeMask);
         }
 
         Set<MiruTermId> termIds = Sets.newHashSet();
-        int pivotFieldId = context.getSchema().getFieldId(request.query.gatherField);
+        int pivotFieldId = context.getSchema().getFieldId(catwalkDefinition.gatherField);
 
         @SuppressWarnings("unchecked")
-        Set<MiruTermId>[] numeratorTermSets = new Set[request.query.gatherFilters.length];
+        Set<MiruTermId>[] numeratorTermSets = new Set[modelQuery.modelFilters.length];
         for (int i = 0; i < numeratorTermSets.length; i++) {
-            MiruFilter gatherFilter = request.query.gatherFilters[i];
+            MiruFilter gatherFilter = modelQuery.modelFilters[i];
             List<IBM> gatherAnds;
             if (MiruFilter.NO_FILTER.equals(gatherFilter)) {
                 gatherAnds = ands;
@@ -150,7 +154,7 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
             termIds.addAll(numeratorTermSets[i]);
         }
 
-        CatwalkFeature[] features = request.query.features;
+        CatwalkFeature[] features = catwalkDefinition.features;
         IBM[] featureMasks = bitmaps.createArrayOf(features.length);
 
         for (int i = 0; i < features.length; i++) {
@@ -172,8 +176,8 @@ public class CatwalkQuestion implements Question<CatwalkQuery, CatwalkAnswer, Ca
 
         //TODO this duplicates StrutModelScorer behavior
         int payloadSize = 4; // this is amazing
-        MiruPluginCacheProvider.TimestampedCacheKeyValues termFeaturesCache = request.query.catwalkId == null ? null
-            : context.getCacheProvider().getTimestampedKeyValues("strut-features-" + request.query.catwalkId, payloadSize, false, maxHeapPressureInBytes,
+        MiruPluginCacheProvider.TimestampedCacheKeyValues termFeaturesCache = catwalkDefinition.catwalkId == null ? null
+            : context.getCacheProvider().getTimestampedKeyValues("strut-features-" + catwalkDefinition.catwalkId, payloadSize, false, maxHeapPressureInBytes,
             "cuckoo", 0d);
 
         List<MiruTermId> uniqueTermIds = Lists.newArrayList(termIds);

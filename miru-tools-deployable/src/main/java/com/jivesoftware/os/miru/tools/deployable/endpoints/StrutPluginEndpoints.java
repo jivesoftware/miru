@@ -1,7 +1,7 @@
 package com.jivesoftware.os.miru.tools.deployable.endpoints;
 
 import com.google.common.base.Optional;
-import com.jivesoftware.os.miru.stream.plugins.strut.StrutQuery.Strategy;
+import com.jivesoftware.os.miru.catwalk.shared.Strategy;
 import com.jivesoftware.os.miru.tools.deployable.MiruToolsService;
 import com.jivesoftware.os.miru.tools.deployable.region.StrutPluginRegion;
 import com.jivesoftware.os.miru.tools.deployable.region.StrutPluginRegion.StrutPluginRegionInput;

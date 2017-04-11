@@ -137,6 +137,7 @@ public class StrutPlugin implements MiruPlugin<StrutEndpoints, StrutInjectable>,
             config.getQueueStripeCount(),
             config.getShareScores(),
             config.getNilScoreThreshold(),
+            config.getProcessScorableBatchSize(),
             verboseModelIds);
         modelScorer.start(asyncExecutorService, config.getQueueStripeCount(), config.getQueueConsumeIntervalMillis());
 

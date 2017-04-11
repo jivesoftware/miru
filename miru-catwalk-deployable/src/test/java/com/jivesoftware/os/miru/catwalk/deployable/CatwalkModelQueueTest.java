@@ -4,7 +4,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
 import com.jivesoftware.os.miru.api.query.filter.MiruFilter;
 import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery;
+import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery.CatwalkDefinition;
 import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery.CatwalkFeature;
+import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery.CatwalkModelQuery;
+import com.jivesoftware.os.miru.catwalk.shared.Strategy;
 import com.jivesoftware.os.miru.plugin.solution.MiruTimeRange;
 import org.testng.annotations.Test;
 
@@ -22,15 +25,18 @@ public class CatwalkModelQueueTest {
         String catwalkId = "catwalkId";
         String modelId = "modelId";
         int partitionId = 1234;
-        CatwalkQuery catwalkQuery = new CatwalkQuery(catwalkId,
-            MiruTimeRange.ALL_TIME,
-            "scorableField",
-            new MiruFilter[] { MiruFilter.NO_FILTER },
-            new CatwalkFeature[] {
-                new CatwalkFeature("feature1", new String[] { "abc", "def" }, MiruFilter.NO_FILTER)
-            },
-            MiruFilter.NO_FILTER,
-            100);
+        CatwalkQuery catwalkQuery = new CatwalkQuery(
+            new CatwalkDefinition(catwalkId,
+                "scorableField",
+                new CatwalkFeature[] {
+                    new CatwalkFeature("feature1", new String[] { "abc", "def" }, MiruFilter.NO_FILTER, 1f)
+                },
+                Strategy.UNIT_WEIGHTED,
+                MiruFilter.NO_FILTER,
+                1),
+            new CatwalkModelQuery(MiruTimeRange.ALL_TIME,
+                new MiruFilter[] { MiruFilter.NO_FILTER },
+                100));
         long timestamp = System.currentTimeMillis();
 
         byte[] keyBytes = CatwalkModelQueue.updateModelKey(tenantId, catwalkId, modelId, partitionId);

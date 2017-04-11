@@ -134,7 +134,7 @@ public class CatwalkModelQueue {
     }
 
     private PartitionName queuePartition(int queueId) {
-        byte[] nameBytes = ("queue-" + queueId).getBytes(StandardCharsets.UTF_8);
+        byte[] nameBytes = ("queue-v2-" + queueId).getBytes(StandardCharsets.UTF_8);
         return new PartitionName(false, nameBytes, nameBytes);
     }
 

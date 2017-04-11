@@ -75,4 +75,7 @@ public interface StrutConfig extends Config {
 
     @StringDefault("")
     String getVerboseModelIds();
+
+    @IntDefault(10)
+    int getProcessScorableBatchSize();
 }

@@ -5,7 +5,9 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.jivesoftware.os.miru.api.activity.MiruPartitionId;
 import com.jivesoftware.os.miru.api.base.MiruTenantId;
+import com.jivesoftware.os.miru.catwalk.shared.CatwalkQuery.CatwalkDefinition;
 import java.io.Serializable;
+import java.util.Map;
 
 /**
  *
@@ -16,19 +18,26 @@ public class StrutShare implements Serializable {
     public final MiruTenantId tenantId;
     public final MiruPartitionId partitionId;
     public final CatwalkDefinition catwalkDefinition;
-    public final String modelId;
-    public final int pivotFieldId;
+    public final Map<String, CatwalkScorable> scorables;
 
     @JsonCreator
     public StrutShare(@JsonProperty("tenantId") MiruTenantId tenantId,
         @JsonProperty("partitionId") MiruPartitionId partitionId,
         @JsonProperty("catwalkDefinition") CatwalkDefinition catwalkDefinition,
-        @JsonProperty("modelId") String modelId,
-        @JsonProperty("pivotFieldId") int pivotFieldId) {
+        @JsonProperty("scorables") Map<String, CatwalkScorable> scorables) {
         this.tenantId = tenantId;
         this.partitionId = partitionId;
-        this.modelId = modelId;
-        this.pivotFieldId = pivotFieldId;
         this.catwalkDefinition = catwalkDefinition;
+        this.scorables = scorables;
+    }
+
+    @Override
+    public String toString() {
+        return "StrutShare{" +
+            "tenantId=" + tenantId +
+            ", partitionId=" + partitionId +
+            ", catwalkDefinition=" + catwalkDefinition +
+            ", scorables=" + scorables +
+            '}';
     }
 }

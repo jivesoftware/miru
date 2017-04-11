@@ -136,7 +136,7 @@ public class CatwalkModelUpdater {
                     for (UpdateModelRequest request : batch) {
                         modelUpdateFutures.add(modelUpdaters.submit(() -> {
                             if (modelQueue.isLeader(queueId)) {
-                                MiruFilter[] gatherFilters = request.catwalkQuery.gatherFilters;
+                                MiruFilter[] gatherFilters = request.catwalkQuery.modelQuery.modelFilters;
                                 if (gatherFilters == null) {
                                     request.markProcessed = false;
                                     request.removeFromQueue = true;
@@ -154,10 +154,10 @@ public class CatwalkModelUpdater {
                                     request.removeFromQueue = false;
                                     request.delayInQueue = true;
                                 } else {
-                                    int numeratorsCount = gatherFilters.length;
-                                    String[] featureNames = new String[request.catwalkQuery.features.length];
+                                    int numeratorsCount = request.catwalkQuery.definition.numeratorCount;
+                                    String[] featureNames = new String[request.catwalkQuery.definition.features.length];
                                     for (int i = 0; i < featureNames.length; i++) {
-                                        featureNames[i] = request.catwalkQuery.features[i].name;
+                                        featureNames[i] = request.catwalkQuery.definition.features[i].name;
                                     }
                                     modelService.saveModel(request.tenantId,
                                         request.catwalkId,
@@ -246,7 +246,7 @@ public class CatwalkModelUpdater {
             if (catwalkResponse.answer.destroyed) {
                 return new FetchedModel(null, false, true);
             } else if (catwalkResponse.answer.results != null) {
-                ModelFeatureScores[] featureScores = new ModelFeatureScores[updateModelRequest.catwalkQuery.features.length];
+                ModelFeatureScores[] featureScores = new ModelFeatureScores[updateModelRequest.catwalkQuery.definition.features.length];
                 for (int i = 0; i < featureScores.length; i++) {
                     featureScores[i] = new ModelFeatureScores(catwalkResponse.answer.resultsClosed,
                         catwalkResponse.answer.modelCounts[i],
