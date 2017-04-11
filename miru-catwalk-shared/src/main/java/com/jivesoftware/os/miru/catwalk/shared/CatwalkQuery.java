@@ -37,6 +37,7 @@ public class CatwalkQuery implements Serializable {
 
         public final String catwalkId;
         public final String gatherField; // "parent"
+        public final String scorableField;
         public final CatwalkFeature[] features;
         public final Strategy featureStrategy;
         public final MiruFilter scorableFilter; // "content types and activity types"
@@ -45,12 +46,14 @@ public class CatwalkQuery implements Serializable {
         @JsonCreator
         public CatwalkDefinition(@JsonProperty("catwalkId") String catwalkId,
             @JsonProperty("gatherField") String gatherField,
+            @JsonProperty("scorableField") String scorableField,
             @JsonProperty("features") CatwalkFeature[] features,
             @JsonProperty("featureStrategy") Strategy featureStrategy,
             @JsonProperty("scorableFilter") MiruFilter scorableFilter,
             @JsonProperty("numeratorCount") int numeratorCount) {
             this.catwalkId = catwalkId;
             this.gatherField = gatherField;
+            this.scorableField = scorableField;
             this.features = features;
             this.featureStrategy = featureStrategy;
             this.scorableFilter = scorableFilter;
@@ -62,6 +65,7 @@ public class CatwalkQuery implements Serializable {
             return "CatwalkDefinition{" +
                 "catwalkId='" + catwalkId + '\'' +
                 ", gatherField='" + gatherField + '\'' +
+                ", scorableField='" + scorableField + '\'' +
                 ", features=" + Arrays.toString(features) +
                 ", featureStrategy=" + featureStrategy +
                 ", scorableFilter=" + scorableFilter +

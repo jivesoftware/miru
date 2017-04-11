@@ -62,7 +62,7 @@ public class CatwalkPluginEndpoints {
                     toTimeAgo,
                     toTimeUnit,
                     catwalkId,
-                    scorableField,
+                    scorableField, //TODO gatherField
                     numeratorFilters.trim(),
                     /*featureFields,
                     featureFilters.trim(),*/

@@ -27,6 +27,7 @@ public class CatwalkModelQueueTest {
         int partitionId = 1234;
         CatwalkQuery catwalkQuery = new CatwalkQuery(
             new CatwalkDefinition(catwalkId,
+                "gatherField",
                 "scorableField",
                 new CatwalkFeature[] {
                     new CatwalkFeature("feature1", new String[] { "abc", "def" }, MiruFilter.NO_FILTER, 1f)

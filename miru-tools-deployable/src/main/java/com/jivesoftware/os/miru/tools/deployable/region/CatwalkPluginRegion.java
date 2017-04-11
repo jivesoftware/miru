@@ -69,7 +69,7 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
         final long toTimeAgo;
         final String toTimeUnit;
         final String catwalkId;
-        final String scorableField;
+        final String gatherField;
         final String numeratorFilters;
         /*final String featureFields;
         final String featureFilters;*/
@@ -83,7 +83,7 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
             long toTimeAgo,
             String toTimeUnit,
             String catwalkId,
-            String scorableField,
+            String gatherField,
             String numeratorFilters,
             /*String featureFields,
             String featureFilters,*/
@@ -96,7 +96,7 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
             this.toTimeAgo = toTimeAgo;
             this.toTimeUnit = toTimeUnit;
             this.catwalkId = catwalkId;
-            this.scorableField = scorableField;
+            this.gatherField = gatherField;
             this.numeratorFilters = numeratorFilters;
             /*this.featureFields = featureFields;
             this.featureFilters = featureFilters;*/
@@ -145,7 +145,7 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
                 data.put("toTimeUnit", String.valueOf(toTimeUnit));
                 data.put("toTimeUnit", String.valueOf(toTimeUnit));
                 data.put("catwalkId", input.catwalkId);
-                data.put("scorableField", input.scorableField);
+                data.put("gatherField", input.gatherField);
                 data.put("numeratorFilters", input.numeratorFilters);
                 /*data.put("featureFields", input.featureFields);
                 data.put("featureFilters", input.featureFilters);*/
@@ -184,7 +184,8 @@ public class CatwalkPluginRegion implements MiruPageRegion<Optional<CatwalkPlugi
                         new CatwalkQuery(
                             new CatwalkDefinition(
                                 input.catwalkId,
-                                input.scorableField,
+                                input.gatherField,
+                                input.gatherField,
                                 features.toArray(new CatwalkFeature[0]),
                                 Strategy.UNIT_WEIGHTED, //TODO
                                 MiruFilter.NO_FILTER,
