@@ -75,13 +75,13 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
         final String modelId;
         final String unreadStreamId;
         final boolean unreadOnly;
-        final String scorableField;
+        final String gatherField;
         final String numeratorFilters;
         final String gatherTermsForFields;
         /*final String featureFields;
         final String featureFilters;*/
         final String features;
-        final String constraintField;
+        final String scorableField;
         final String constraintFilters;
         final Strategy numeratorStrategy;
         final Strategy featureStrategy;
@@ -99,13 +99,13 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
             String modelId,
             String unreadStreamId,
             boolean unreadOnly,
-            String scorableField,
+            String gatherField,
             String numeratorFilters,
             String gatherTermsForFields,
             /*String featureFields,
             String featureFilters,*/
             String features,
-            String constraintField,
+            String scorableField,
             String constraintFilters,
             Strategy numeratorStrategy,
             Strategy featureStrategy,
@@ -122,13 +122,13 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
             this.modelId = modelId;
             this.unreadStreamId = unreadStreamId;
             this.unreadOnly = unreadOnly;
-            this.scorableField = scorableField;
+            this.gatherField = gatherField;
             this.numeratorFilters = numeratorFilters;
             this.gatherTermsForFields = gatherTermsForFields;
             /*this.featureFields = featureFields;
             this.featureFilters = featureFilters;*/
             this.features = features;
-            this.constraintField = constraintField;
+            this.scorableField = scorableField;
             this.constraintFilters = constraintFilters;
             this.numeratorStrategy = numeratorStrategy;
             this.featureStrategy = featureStrategy;
@@ -202,7 +202,7 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                 data.put("toTimeUnit", String.valueOf(toTimeUnit));
                 data.put("catwalkId", input.catwalkId);
                 data.put("modelId", input.modelId);
-                data.put("scorableField", input.scorableField);
+                data.put("gatherField", input.gatherField);
                 data.put("numeratorFilters", input.numeratorFilters);
                 data.put("unreadStreamId", input.unreadStreamId);
                 data.put("unreadOnly", input.unreadOnly);
@@ -210,7 +210,7 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                 /*data.put("featureFields", input.featureFields);
                 data.put("featureFilters", input.featureFilters);*/
                 data.put("features", input.features);
-                data.put("constraintField", input.constraintField);
+                data.put("gatherField", input.scorableField);
                 data.put("constraintFilters", input.constraintFilters);
                 data.put("numeratorStrategy", input.numeratorStrategy.name());
                 data.put("featureStrategy", input.featureStrategy.name());
@@ -239,6 +239,7 @@ public class StrutPluginRegion implements MiruPageRegion<Optional<StrutPluginReg
                     String endpoint = StrutConstants.STRUT_PREFIX + StrutConstants.CUSTOM_QUERY_ENDPOINT;
 
                     CatwalkDefinition catwalkDefinition = new CatwalkDefinition(input.catwalkId,
+                        input.gatherField,
                         input.scorableField,
                         features.toArray(new CatwalkFeature[0]),
                         input.featureStrategy,

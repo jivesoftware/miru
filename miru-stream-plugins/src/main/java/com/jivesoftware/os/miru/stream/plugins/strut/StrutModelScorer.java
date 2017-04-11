@@ -474,7 +474,7 @@ public class StrutModelScorer {
             MiruPartitionCoord coord = handle.getCoord();
             MiruSchema schema = context.getSchema();
 
-            int pivotFieldId = schema.getFieldId(catwalkDefinition.gatherField);
+            int pivotFieldId = schema.getFieldId(catwalkDefinition.scorableField);
             CacheKeyBitmaps<BM, IBM> nilTermCache = getNilTermCache(context, catwalkId);
 
             byte[][] modelIdBytes = new byte[modelIds.length][];

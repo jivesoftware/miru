@@ -188,7 +188,7 @@ public class StrutQuestion implements Question<StrutQuery, StrutAnswer, StrutRep
         bitmapsDebug.debug(solutionLog, bitmaps, "ands", ands);
         BM candidates = bitmaps.and(ands);
 
-        int pivotFieldId = schema.getFieldId(catwalkDefinition.gatherField);
+        int pivotFieldId = schema.getFieldId(catwalkDefinition.scorableField);
 
         MiruFieldIndex<BM, IBM> primaryIndex = context.getFieldIndexProvider().getFieldIndex(MiruFieldType.primary);
 

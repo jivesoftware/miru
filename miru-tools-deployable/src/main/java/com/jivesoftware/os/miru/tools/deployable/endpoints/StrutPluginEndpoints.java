@@ -76,13 +76,13 @@ public class StrutPluginEndpoints {
                     modelId,
                     unreadStreamId,
                     unreadOnly,
-                    scorableField,
+                    scorableField, //TODO gatherField
                     numeratorFilters.trim(),
                     gatherTermsForFields.trim(),
                     /*featureFields,
                     featureFilters.trim(),*/
                     features.trim(),
-                    constraintField,
+                    constraintField, //TODO scorableField
                     constraintFilters.trim(),
                     Strategy.valueOf(numeratorStrategy),
                     Strategy.valueOf(featureStrategy),
