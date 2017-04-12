@@ -49,7 +49,8 @@ public class MiruTenantQueryRouting {
         Executor executor,
         int windowSize,
         float percentile,
-        long initialSLAMillis, boolean tasEnabled) {
+        long initialSLAMillis,
+        boolean tasEnabled) {
 
         this.readerClient = readerClient;
         this.requestMapper = requestMapper;
@@ -62,6 +63,7 @@ public class MiruTenantQueryRouting {
         this.tasEnabled = tasEnabled;
     }
 
+
     public <Q, A> MiruResponse<A> query(String routingTenant,
         String family,
         MiruRequest<Q> request,
@@ -69,18 +71,90 @@ public class MiruTenantQueryRouting {
         Class<A> answerClass) throws Exception {
 
         String json = requestMapper.writeValueAsString(request);
+        NextClientStrategy tenantStrategy = getTenantStrategy(request.tenantId);
+
+        InterceptingNextClientStrategy interceptingNextClientStrategy = null;
+        if (tasEnabled) {
+            interceptingNextClientStrategy = new InterceptingNextClientStrategy((TailAtScaleStrategy) tenantStrategy);
+            tenantStrategy = interceptingNextClientStrategy;
+        }
         HttpResponse httpResponse = readerClient.call(routingTenant,
-            getTenantStrategy(request.tenantId),
+            tenantStrategy,
             family,
             (c) -> new ClientCall.ClientResponse<>(c.postJson(path, json, null), true)
         );
         MiruResponse<A> answer = responseMapper.extractResultFromResponse(httpResponse, MiruResponse.class, new Class[] { answerClass }, null);
-        recordTenantStrategy(request.tenantId, answer);
+        recordTenantStrategy(request.tenantId, interceptingNextClientStrategy, answer);
         return answer;
     }
 
-    private void recordTenantStrategy(MiruTenantId tenantId, MiruResponse<?> response) {
+    private static final class InterceptingNextClientStrategy implements NextClientStrategy {
+        final TailAtScaleStrategy delegate;
+        ConnectionDescriptor[] connectionDescriptors;
+        ConnectionDescriptor favored;
+        long latency;
+
+        private InterceptingNextClientStrategy(TailAtScaleStrategy delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public <C, R> R call(String family,
+            ClientCall<C, R, HttpClientException> httpCall,
+            ConnectionDescriptor[] connectionDescriptors,
+            long connectionDescriptorsVersion,
+            C[] clients,
+            ClientHealth[] clientHealths,
+            int deadAfterNErrors,
+            long checkDeadEveryNMillis,
+            AtomicInteger[] clientsErrors,
+            AtomicLong[] clientsDeathTimestamp) throws HttpClientException {
+
+            this.connectionDescriptors = connectionDescriptors;
+
+            return delegate.call(family, httpCall, connectionDescriptors, connectionDescriptorsVersion, clients, clientHealths, deadAfterNErrors,
+                checkDeadEveryNMillis, clientsErrors, clientsDeathTimestamp, (favored, latency) -> {
+                    this.favored = favored;
+                    this.latency = latency;
+                });
+        }
+    }
+
+    private NextClientStrategy getTenantStrategy(MiruTenantId tenantId) {
+        return strategyCache.getOrDefault(tenantId,
+            tasEnabled
+                ? new TailAtScaleStrategy(executor, windowSize, percentile, initialSLAMillis)
+                : new RoundRobinStrategy()
+        );
+    }
+
+
+    private void recordTenantStrategy(MiruTenantId tenantId, InterceptingNextClientStrategy interceptingNextClientStrategy, MiruResponse<?> response) {
         if (!tasEnabled) {
+
+            if (response != null && response.solutions != null && !response.solutions.isEmpty()) {
+                MiruSolution solution = response.solutions.get(0);
+                MiruHost host = solution.usedPartition.host;
+
+                HostPort hostPort = interceptingNextClientStrategy.favored.getHostPort();
+                InstanceDescriptor instanceDescriptor = interceptingNextClientStrategy.favored.getInstanceDescriptor();
+                if (!MiruHostProvider.checkEquals(host,
+                    instanceDescriptor.instanceName, instanceDescriptor.instanceKey,
+                    hostPort.getHost(), hostPort.getPort())) {
+
+                    for (ConnectionDescriptor connectionDescriptor : interceptingNextClientStrategy.connectionDescriptors) {
+                        hostPort = connectionDescriptor.getHostPort();
+                        instanceDescriptor = connectionDescriptor.getInstanceDescriptor();
+                        if (MiruHostProvider.checkEquals(host,
+                            instanceDescriptor.instanceName, instanceDescriptor.instanceKey,
+                            hostPort.getHost(), hostPort.getPort())) {
+                            interceptingNextClientStrategy.delegate.favor(connectionDescriptor);
+                            break;
+                        }
+                    }
+                }
+            }
+        } else {
             if (response != null && response.solutions != null && !response.solutions.isEmpty()) {
                 MiruSolution solution = response.solutions.get(0);
                 MiruHost host = solution.usedPartition.host;
@@ -93,15 +167,6 @@ public class MiruTenantQueryRouting {
                 });
             }
         }
-    }
-
-
-    private NextClientStrategy getTenantStrategy(MiruTenantId tenantId) {
-        return strategyCache.getOrDefault(tenantId,
-            tasEnabled
-                ? new TailAtScaleStrategy(executor, windowSize, percentile, initialSLAMillis)
-                : new RoundRobinStrategy()
-        );
     }
 
 
