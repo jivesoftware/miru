@@ -136,8 +136,10 @@ public class Strut {
             for (int i = 0; i < catwalkFeatures.length; i++) {
                 for (int j = 0; j < models.length; j++) {
                     StrutModel model = models[j];
-                    totalPartitionCounts[j].set(Math.max(totalPartitionCounts[j].get(), model.totalNumPartitions[i]));
-                    if (model.numberOfModels[i] == 0) {
+                    if (model != null) {
+                        totalPartitionCounts[j].set(Math.max(totalPartitionCounts[j].get(), model.totalNumPartitions[i]));
+                    }
+                    if (model == null || model.numberOfModels[i] == 0) {
                         modelCacheable[j] = false;
                     }
                 }
@@ -211,7 +213,8 @@ public class Strut {
                                             answerTermId, i, modelScore.numerators[i], modelScore.denominator, featureId, Arrays.toString(termIds));
                                         s[i] = 0f;
                                     }
-                                    scores[modelIndex][i][featureId] = score(scores[modelIndex][i][featureId], s[i], featureScalars[featureId], catwalkDefinition.featureStrategy);
+                                    scores[modelIndex][i][featureId] = score(scores[modelIndex][i][featureId], s[i], featureScalars[featureId],
+                                        catwalkDefinition.featureStrategy);
                                     counts[modelIndex][i][featureId]++;
                                 }
 
