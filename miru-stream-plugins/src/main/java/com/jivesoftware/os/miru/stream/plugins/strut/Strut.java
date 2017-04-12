@@ -160,9 +160,9 @@ public class Strut {
                     for (int modelIndex = 0; modelIndex < models.length; modelIndex++) {
                         StrutModel model = models[modelIndex];
                         if (featureId == -1) {
-                            if (model != null) {
+                            if (model == null) {
                                 LOG.inc("yourStuff>feature>noModel");
-                            } else if (cursorIds[modelIndex] <= answerScoredLastId) {
+                            } else if (cursorIds[modelIndex] >= answerScoredLastId) {
                                 LOG.inc("yourStuff>feature>skip");
                             } else {
                                 boolean stopped = false;
