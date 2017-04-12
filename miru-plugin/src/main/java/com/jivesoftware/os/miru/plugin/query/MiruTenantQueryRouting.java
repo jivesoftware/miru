@@ -130,32 +130,31 @@ public class MiruTenantQueryRouting {
 
 
     private void recordTenantStrategy(MiruTenantId tenantId, InterceptingNextClientStrategy interceptingNextClientStrategy, MiruResponse<?> response) {
-        if (!tasEnabled) {
+        if (tasEnabled) {
 
             if (response != null && response.solutions != null && !response.solutions.isEmpty()) {
                 MiruSolution solution = response.solutions.get(0);
                 MiruHost host = solution.usedPartition.host;
 
-                if (interceptingNextClientStrategy != null && interceptingNextClientStrategy.favored != null) {
 
-                    HostPort hostPort = interceptingNextClientStrategy.favored.getHostPort();
-                    InstanceDescriptor instanceDescriptor = interceptingNextClientStrategy.favored.getInstanceDescriptor();
-                    if (!MiruHostProvider.checkEquals(host,
-                        instanceDescriptor.instanceName, instanceDescriptor.instanceKey,
-                        hostPort.getHost(), hostPort.getPort())) {
+                HostPort hostPort = interceptingNextClientStrategy.favored.getHostPort();
+                InstanceDescriptor instanceDescriptor = interceptingNextClientStrategy.favored.getInstanceDescriptor();
+                if (!MiruHostProvider.checkEquals(host,
+                    instanceDescriptor.instanceName, instanceDescriptor.instanceKey,
+                    hostPort.getHost(), hostPort.getPort())) {
 
-                        for (ConnectionDescriptor connectionDescriptor : interceptingNextClientStrategy.connectionDescriptors) {
-                            hostPort = connectionDescriptor.getHostPort();
-                            instanceDescriptor = connectionDescriptor.getInstanceDescriptor();
-                            if (MiruHostProvider.checkEquals(host,
-                                instanceDescriptor.instanceName, instanceDescriptor.instanceKey,
-                                hostPort.getHost(), hostPort.getPort())) {
-                                interceptingNextClientStrategy.delegate.favor(connectionDescriptor);
-                                break;
-                            }
+                    for (ConnectionDescriptor connectionDescriptor : interceptingNextClientStrategy.connectionDescriptors) {
+                        hostPort = connectionDescriptor.getHostPort();
+                        instanceDescriptor = connectionDescriptor.getInstanceDescriptor();
+                        if (MiruHostProvider.checkEquals(host,
+                            instanceDescriptor.instanceName, instanceDescriptor.instanceKey,
+                            hostPort.getHost(), hostPort.getPort())) {
+                            interceptingNextClientStrategy.delegate.favor(connectionDescriptor);
+                            break;
                         }
                     }
                 }
+                
             }
         } else {
             if (response != null && response.solutions != null && !response.solutions.isEmpty()) {
