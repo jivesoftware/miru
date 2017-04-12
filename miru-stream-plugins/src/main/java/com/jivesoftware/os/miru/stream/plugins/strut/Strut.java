@@ -109,7 +109,7 @@ public class Strut {
         }
 
         @SuppressWarnings("unchecked")
-        List<Hotness>[] features = includeFeatures ? new List[catwalkFeatures.length] : null;
+        List<Hotness>[][] features = includeFeatures ? new List[modelIds.length][catwalkFeatures.length] : null;
         int[] featureCount = { 0 };
 
         StrutModel[] models = new StrutModel[modelIds.length];
@@ -143,10 +143,10 @@ public class Strut {
                 }
             }
 
-            float[][] scores = new float[numeratorsCount][catwalkFeatures.length];
-            int[][] counts = new int[numeratorsCount][catwalkFeatures.length];
+            float[][][] scores = new float[modelIds.length][numeratorsCount][catwalkFeatures.length];
+            int[][][] counts = new int[modelIds.length][numeratorsCount][catwalkFeatures.length];
             @SuppressWarnings("unchecked")
-            List<MiruTermId[]>[] featuredTermIds = new List[catwalkFeatures.length];
+            List<MiruTermId[]>[][] featuredTermIds = new List[modelIds.length][catwalkFeatures.length];
             aggregateUtil.gatherFeatures(name,
                 coord,
                 bitmaps,
@@ -168,12 +168,12 @@ public class Strut {
                                 boolean stopped = false;
                                 List<Hotness>[] scoredFeatures = null;
                                 if (includeFeatures) {
-                                    scoredFeatures = new List[features.length];
-                                    System.arraycopy(features, 0, scoredFeatures, 0, features.length);
+                                    scoredFeatures = new List[features[modelIndex].length];
+                                    System.arraycopy(features[modelIndex], 0, scoredFeatures, 0, features[modelIndex].length);
                                 }
                                 float[] termScores = new float[numeratorsCount];
                                 for (int i = 0; i < termScores.length; i++) {
-                                    termScores[i] = finalizeScore(scores[i], counts[i], catwalkDefinition.featureStrategy);
+                                    termScores[i] = finalizeScore(scores[modelIndex][i], counts[modelIndex][i], catwalkDefinition.featureStrategy);
                                 }
                                 float scaledScore = numeratorScalars == null ? 0f : Strut.scaleScore(termScores, numeratorScalars, numeratorStrategy);
                                 Scored scored = new Scored(lastId, answerTermId, answerScoredLastId, scaledScore, termScores, scoredFeatures, count);
@@ -182,13 +182,13 @@ public class Strut {
                                 }
 
                                 for (int i = 0; i < numeratorsCount; i++) {
-                                    Arrays.fill(scores[i], 0.0f);
-                                    Arrays.fill(counts[i], 0);
+                                    Arrays.fill(scores[modelIndex][i], 0.0f);
+                                    Arrays.fill(counts[modelIndex][i], 0);
                                 }
-                                Arrays.fill(featuredTermIds, null);
+                                Arrays.fill(featuredTermIds[modelIndex], null);
 
                                 if (includeFeatures) {
-                                    Arrays.fill(features, null);
+                                    Arrays.fill(features[modelIndex], null);
                                 }
                                 if (stopped) {
                                     return false;
@@ -211,25 +211,25 @@ public class Strut {
                                             answerTermId, i, modelScore.numerators[i], modelScore.denominator, featureId, Arrays.toString(termIds));
                                         s[i] = 0f;
                                     }
-                                    scores[i][featureId] = score(scores[i][featureId], s[i], featureScalars[featureId], catwalkDefinition.featureStrategy);
-                                    counts[i][featureId]++;
+                                    scores[modelIndex][i][featureId] = score(scores[modelIndex][i][featureId], s[i], featureScalars[featureId], catwalkDefinition.featureStrategy);
+                                    counts[modelIndex][i][featureId]++;
                                 }
 
-                                if (featuredTermIds[featureId] == null) {
-                                    featuredTermIds[featureId] = Lists.newArrayList();
+                                if (featuredTermIds[modelIndex][featureId] == null) {
+                                    featuredTermIds[modelIndex][featureId] = Lists.newArrayList();
                                 }
-                                featuredTermIds[featureId].add(termIds);
+                                featuredTermIds[modelIndex][featureId].add(termIds);
 
                                 if (includeFeatures) {
-                                    if (features[featureId] == null) {
-                                        features[featureId] = Lists.newArrayList();
+                                    if (features[modelIndex][featureId] == null) {
+                                        features[modelIndex][featureId] = Lists.newArrayList();
                                     }
                                     MiruValue[] values = new MiruValue[termIds.length];
                                     for (int j = 0; j < termIds.length; j++) {
                                         values[j] = new MiruValue(termComposer.decompose(schema,
                                             schema.getFieldDefinition(featureFieldIds[featureId][j]), stackBuffer, termIds[j]));
                                     }
-                                    features[featureId].add(new Hotness(values,
+                                    features[modelIndex][featureId].add(new Hotness(values,
                                         numeratorScalars == null ? 0f : scaleScore(s, numeratorScalars, numeratorStrategy),
                                         s));
                                 }
