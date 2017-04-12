@@ -100,6 +100,11 @@ public interface MiruWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
         }
     }
 
-    StreamBatch<MiruWALEntry, S> getRead(MiruTenantId tenantId, MiruStreamId streamId, S cursor, long oldestTimestamp, int batchSize) throws Exception;
+    StreamBatch<MiruWALEntry, S> getRead(MiruTenantId tenantId,
+        MiruStreamId streamId,
+        S cursor,
+        long oldestTimestamp,
+        int batchSize,
+        boolean createIfAbsent) throws Exception;
 
 }

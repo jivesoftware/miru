@@ -149,7 +149,7 @@ public class MiruJustInTimeBackfillerizer {
         solutionLog.append(backfillSolutionLog);
     }
 
-    public <BM extends IBM, IBM> void backfill(final MiruBitmaps<BM, IBM> bitmaps,
+    public <BM extends IBM, IBM> void backfillInboxUnread(final MiruBitmaps<BM, IBM> bitmaps,
         final MiruRequestContext<BM, IBM, ?> requestContext,
         final MiruFilter streamFilter,
         final MiruSolutionLog solutionLog,

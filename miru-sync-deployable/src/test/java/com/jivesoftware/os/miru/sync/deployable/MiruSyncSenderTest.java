@@ -383,7 +383,8 @@ public class MiruSyncSenderTest {
             MiruStreamId streamId,
             AmzaSipCursor cursor,
             long oldestTimestamp,
-            int batchSize) throws Exception {
+            int batchSize,
+            boolean createIfAbsent) throws Exception {
             return null;
         }
     }

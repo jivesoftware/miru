@@ -420,7 +420,7 @@ public class RCVSWALEndpoints {
         try {
             long start = System.currentTimeMillis();
             StreamBatch<MiruWALEntry, RCVSSipCursor> read = walDirector.getRead(new MiruTenantId(tenantId.getBytes(Charsets.UTF_8)),
-                new MiruStreamId(streamId.getBytes(Charsets.UTF_8)), cursor, oldestEventId, batchSize);
+                new MiruStreamId(streamId.getBytes(Charsets.UTF_8)), cursor, oldestEventId, batchSize, true);
             stats.ingressed("/read/" + tenantId + "/" + streamId + "/" + batchSize, 1, System.currentTimeMillis() - start);
             return responseHelper.jsonResponse(read);
         } catch (MiruWALNotInitializedException x) {
