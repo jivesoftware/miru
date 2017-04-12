@@ -136,20 +136,23 @@ public class MiruTenantQueryRouting {
                 MiruSolution solution = response.solutions.get(0);
                 MiruHost host = solution.usedPartition.host;
 
-                HostPort hostPort = interceptingNextClientStrategy.favored.getHostPort();
-                InstanceDescriptor instanceDescriptor = interceptingNextClientStrategy.favored.getInstanceDescriptor();
-                if (!MiruHostProvider.checkEquals(host,
-                    instanceDescriptor.instanceName, instanceDescriptor.instanceKey,
-                    hostPort.getHost(), hostPort.getPort())) {
+                if (interceptingNextClientStrategy != null && interceptingNextClientStrategy.favored != null) {
 
-                    for (ConnectionDescriptor connectionDescriptor : interceptingNextClientStrategy.connectionDescriptors) {
-                        hostPort = connectionDescriptor.getHostPort();
-                        instanceDescriptor = connectionDescriptor.getInstanceDescriptor();
-                        if (MiruHostProvider.checkEquals(host,
-                            instanceDescriptor.instanceName, instanceDescriptor.instanceKey,
-                            hostPort.getHost(), hostPort.getPort())) {
-                            interceptingNextClientStrategy.delegate.favor(connectionDescriptor);
-                            break;
+                    HostPort hostPort = interceptingNextClientStrategy.favored.getHostPort();
+                    InstanceDescriptor instanceDescriptor = interceptingNextClientStrategy.favored.getInstanceDescriptor();
+                    if (!MiruHostProvider.checkEquals(host,
+                        instanceDescriptor.instanceName, instanceDescriptor.instanceKey,
+                        hostPort.getHost(), hostPort.getPort())) {
+
+                        for (ConnectionDescriptor connectionDescriptor : interceptingNextClientStrategy.connectionDescriptors) {
+                            hostPort = connectionDescriptor.getHostPort();
+                            instanceDescriptor = connectionDescriptor.getInstanceDescriptor();
+                            if (MiruHostProvider.checkEquals(host,
+                                instanceDescriptor.instanceName, instanceDescriptor.instanceKey,
+                                hostPort.getHost(), hostPort.getPort())) {
+                                interceptingNextClientStrategy.delegate.favor(connectionDescriptor);
+                                break;
+                            }
                         }
                     }
                 }
