@@ -73,6 +73,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
+import org.merlin.config.Config;
 import org.merlin.config.defaults.BooleanDefault;
 import org.merlin.config.defaults.FloatDefault;
 import org.merlin.config.defaults.IntDefault;
@@ -147,6 +148,20 @@ public class MiruCatwalkMain {
 
         @LongDefault(-1)
         long getAmzaDebugClientCountInterval();
+    }
+
+    public interface MiruCatwalkConfig extends Config {
+        @BooleanDefault(false)
+        boolean getTailAtScaleEnabled();
+
+        @IntDefault(64)
+        int getTailAtScaleThreadCount();
+
+        @IntDefault(1_000)
+        int getTailAtScaleWindowSize();
+
+        @FloatDefault(95f)
+        float getTailAtScalePercentile();
     }
 
     void run(String[] args) throws Exception {
@@ -307,19 +322,19 @@ public class MiruCatwalkMain {
                 .build());
 
             ExecutorService modelUpdaters = BoundedExecutor.newBoundedExecutor(numProcs, "model-updater");
-
             ExecutorService readRepairers = BoundedExecutor.newBoundedExecutor(numProcs, "read-repair");
-
             ExecutorService tasExecutors = BoundedExecutor.newBoundedExecutor(1024, "tas");
+
+            MiruCatwalkConfig catwalkConfig = deployable.config(MiruCatwalkConfig.class);
 
             MiruTenantQueryRouting tenantQueryRouting = new MiruTenantQueryRouting(readerClient,
                 mapper,
                 responseMapper,
                 tasExecutors,
-                100, // TODO config
-                95, // TODO config
+                catwalkConfig.getTailAtScaleWindowSize(),
+                catwalkConfig.getTailAtScalePercentile(),
                 1000,
-                false); // TODO config
+                catwalkConfig.getTailAtScaleEnabled());
 
             CatwalkModelQueue catwalkModelQueue = new CatwalkModelQueue(amzaLifecycle.amzaService,
                 embeddedClientProvider,
