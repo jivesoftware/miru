@@ -323,9 +323,10 @@ public class MiruHttpWALClient<C extends MiruCursor<C, S>, S extends MiruSipCurs
         final MiruStreamId streamId,
         S cursor,
         long oldestTimestamp,
-        int batchSize) throws Exception {
+        int batchSize,
+        boolean createIfAbsent) throws Exception {
         final String jsonCursor = requestMapper.writeValueAsString(cursor);
-        return sendWithTenantStream(RoutingGroupType.readTracking, tenantId, streamId, false, "getRead",
+        return sendWithTenantStream(RoutingGroupType.readTracking, tenantId, streamId, createIfAbsent, "getRead",
             client -> extract(
                 client.postJson(pathPrefix + "/read/" + tenantId.toString() + "/" + streamId.toString() + "/" + oldestTimestamp + "/" + batchSize,
                     jsonCursor,

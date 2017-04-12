@@ -313,7 +313,8 @@ public class AmzaWALDirector implements MiruWALClient<AmzaCursor, AmzaSipCursor>
         MiruStreamId streamId,
         AmzaSipCursor sipCursor,
         long oldestTimestamp,
-        int batchSize) throws Exception {
+        int batchSize,
+        boolean createIfAbsent) throws Exception {
 
         long[] minEventId = { -1L };
         int[] count = new int[1];

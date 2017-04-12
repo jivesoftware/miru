@@ -63,7 +63,8 @@ public class RCVSInboxReadTracker implements MiruInboxReadTracker {
             streamId,
             new RCVSSipCursor(MiruPartitionedActivity.Type.ACTIVITY.getSort(), afterTimestamp, 0, false),
             oldestBackfilledTimestamp,
-            1000);
+            1000,
+            true);
         RCVSSipCursor lastCursor = null;
         while (got != null && !got.activities.isEmpty()) {
             lastCursor = got.cursor;
@@ -79,7 +80,7 @@ public class RCVSInboxReadTracker implements MiruInboxReadTracker {
                     readTracker.markAllRead(bitmaps, requestContext, streamId, readEvent.time, stackBuffer);
                 }
             }
-            got = (got.cursor != null) ? walClient.getRead(tenantId, streamId, got.cursor, Long.MAX_VALUE, 1000) : null;
+            got = (got.cursor != null) ? walClient.getRead(tenantId, streamId, got.cursor, Long.MAX_VALUE, 1000, true) : null;
         }
 
         if (lastCursor != null) {

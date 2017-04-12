@@ -64,7 +64,8 @@ public class AmzaInboxReadTracker implements MiruInboxReadTracker {
             streamId,
             new AmzaSipCursor(cursors, false),
             oldestBackfilledTimestamp,
-            1000);
+            1000,
+            true);
         AmzaSipCursor lastCursor = null;
         while (got != null && !got.activities.isEmpty()) {
             lastCursor = got.cursor;
@@ -80,7 +81,7 @@ public class AmzaInboxReadTracker implements MiruInboxReadTracker {
                     readTracker.markAllRead(bitmaps, requestContext, streamId, readEvent.time, stackBuffer);
                 }
             }
-            got = (got.cursor != null) ? walClient.getRead(tenantId, streamId, got.cursor, Long.MAX_VALUE, 1000) : null;
+            got = (got.cursor != null) ? walClient.getRead(tenantId, streamId, got.cursor, Long.MAX_VALUE, 1000, true) : null;
         }
 
         if (lastCursor != null) {
