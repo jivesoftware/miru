@@ -46,6 +46,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * @author jonathan.colt
@@ -132,6 +133,9 @@ public class CatwalkModelUpdater {
                         break;
                     }
 
+                    AtomicLong metricMarked = new AtomicLong(0);
+                    AtomicLong metricRemoved = new AtomicLong(0);
+                    AtomicLong metricDelayed = new AtomicLong(0);
                     List<Future<UpdateModelRequest>> modelUpdateFutures = Lists.newArrayList();
                     for (UpdateModelRequest request : batch) {
                         modelUpdateFutures.add(modelUpdaters.submit(() -> {
@@ -140,7 +144,8 @@ public class CatwalkModelUpdater {
                                 if (gatherFilters == null) {
                                     request.markProcessed = false;
                                     request.removeFromQueue = true;
-                                    request.removeFromQueue = false;
+                                    request.delayInQueue = false;
+                                    metricRemoved.incrementAndGet();
                                     return request;
                                 }
 
@@ -149,10 +154,13 @@ public class CatwalkModelUpdater {
                                     request.markProcessed = true;
                                     request.removeFromQueue = true;
                                     request.delayInQueue = false;
+                                    metricMarked.incrementAndGet();
+                                    metricRemoved.incrementAndGet();
                                 } else if (fetched.unavailable) {
                                     request.markProcessed = false;
                                     request.removeFromQueue = false;
                                     request.delayInQueue = true;
+                                    metricDelayed.incrementAndGet();
                                 } else {
                                     int numeratorsCount = request.catwalkQuery.definition.numeratorCount;
                                     String[] featureNames = new String[request.catwalkQuery.definition.features.length];
@@ -172,6 +180,8 @@ public class CatwalkModelUpdater {
                                     request.markProcessed = true;
                                     request.removeFromQueue = true;
                                     request.delayInQueue = false;
+                                    metricMarked.incrementAndGet();
+                                    metricRemoved.incrementAndGet();
                                 }
                                 return request;
                             }
@@ -206,10 +216,15 @@ public class CatwalkModelUpdater {
                         10_000, // TODO config
                         TimeUnit.MILLISECONDS);
 
+                    LOG.inc("processed>success", batch.size());
+                    LOG.inc("processed>status>marked", metricMarked.get());
+                    LOG.inc("processed>status>removed", metricRemoved.get());
+                    LOG.inc("processed>status>delayed", metricDelayed.get());
                     stats.egressed("processed>success>" + queueId, batch.size(), System.currentTimeMillis() - start);
                 }
             } catch (Exception x) {
                 LOG.error("Unexpected issue while checking queue:{}", new Object[] { queueId }, x);
+                LOG.inc("processed>failure", 1);
                 stats.egressed("processed>failure>" + queueId, 1, System.currentTimeMillis() - start);
             }
         }
