@@ -64,7 +64,7 @@ public class CatwalkModelEndpoints {
             } catch (Exception x) {
                 LOG.error("Failed to update model for {} {} {} {}", new Object[] { tenantId, catwalkId, modelId, partitionId }, x);
             }
-            CatwalkModel model = catwalkModelService.getModel(miruTenantId, catwalkId, modelId, catwalkQuery);
+            CatwalkModel model = catwalkModelService.getModel("get", miruTenantId, catwalkId, modelId, catwalkQuery);
             StreamingOutput stream = os -> {
                 os.flush();
                 BufferedOutputStream bos = new BufferedOutputStream(new SnappyOutputStream(os), 8192); // TODO expose to config
