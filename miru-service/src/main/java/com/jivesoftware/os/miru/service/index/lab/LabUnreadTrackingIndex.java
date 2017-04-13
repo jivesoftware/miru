@@ -5,6 +5,7 @@ import com.jivesoftware.os.filer.io.StripingLocksProvider;
 import com.jivesoftware.os.filer.io.api.StackBuffer;
 import com.jivesoftware.os.jive.utils.ordered.id.OrderIdProvider;
 import com.jivesoftware.os.lab.api.ValueIndex;
+import com.jivesoftware.os.lab.io.BolBuffer;
 import com.jivesoftware.os.lab.io.api.UIO;
 import com.jivesoftware.os.miru.api.base.MiruStreamId;
 import com.jivesoftware.os.miru.plugin.bitmap.MiruBitmaps;
@@ -20,7 +21,8 @@ public class LabUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUnreadTr
     private final OrderIdProvider idProvider;
     private final MiruBitmaps<BM, IBM> bitmaps;
     private final TrackError trackError;
-    private final byte[] prefix;
+    private final byte[] bitmapPrefix;
+    private final byte[] lastActivityIndexPrefix;
     private final boolean atomized;
     private final ValueIndex<byte[]>[] stores;
     private final StripingLocksProvider<MiruStreamId> stripingLocksProvider;
@@ -28,7 +30,8 @@ public class LabUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUnreadTr
     public LabUnreadTrackingIndex(OrderIdProvider idProvider,
         MiruBitmaps<BM, IBM> bitmaps,
         TrackError trackError,
-        byte[] prefix,
+        byte[] bitmapPrefix,
+        byte[] lastActivityIndexPrefix,
         boolean atomized,
         ValueIndex<byte[]>[] stores,
         StripingLocksProvider<MiruStreamId> stripingLocksProvider)
@@ -37,7 +40,8 @@ public class LabUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUnreadTr
         this.idProvider = idProvider;
         this.bitmaps = bitmaps;
         this.trackError = trackError;
-        this.prefix = prefix;
+        this.bitmapPrefix = bitmapPrefix;
+        this.lastActivityIndexPrefix = lastActivityIndexPrefix;
         this.atomized = atomized;
         this.stores = stores;
         this.stripingLocksProvider = stripingLocksProvider;
@@ -60,14 +64,14 @@ public class LabUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUnreadTr
             "unread",
             -1,
             atomized,
-            bitmapIndexKey(streamId.getBytes()),
+            storeKey(bitmapPrefix, streamId.getBytes()),
             getStore(streamId),
             null,
             null,
             stripingLocksProvider.lock(streamId, 0));
     }
 
-    private byte[] bitmapIndexKey(byte[] streamIdBytes) {
+    private byte[] storeKey(byte[] prefix, byte[] streamIdBytes) {
         if (atomized) {
             byte[] streamIdLength = new byte[2];
             UIO.shortBytes((short) (streamIdBytes.length & 0xFFFF), streamIdLength, 0);
@@ -99,7 +103,37 @@ public class LabUnreadTrackingIndex<BM extends IBM, IBM> implements MiruUnreadTr
     }
 
     @Override
+    public void setLastActivityIndex(MiruStreamId streamId, int lastActivityIndex, StackBuffer stackBuffer) throws Exception {
+        ValueIndex<byte[]> store = getStore(streamId);
+        byte[] key = storeKey(lastActivityIndexPrefix, streamId.getBytes());
+        long timestamp = System.currentTimeMillis();
+        long version = idProvider.nextId();
+        store.append(
+            stream -> {
+                return stream.stream(0, key, timestamp, false, version, UIO.intBytes(lastActivityIndex, new byte[4], 0));
+            },
+            false,
+            new BolBuffer(),
+            new BolBuffer());
+    }
+
+    @Override
     public int getLastActivityIndex(MiruStreamId streamId, StackBuffer stackBuffer) throws Exception {
-        return getUnread(streamId).lastId(stackBuffer);
+        ValueIndex<byte[]> store = getStore(streamId);
+        byte[] key = storeKey(lastActivityIndexPrefix, streamId.getBytes());
+        int[] result = { -1 };
+        store.get(keyStream -> keyStream.key(0, key, 0, key.length),
+            (index, key1, timestamp, tombstoned, version, payload) -> {
+                if (!tombstoned && payload != null) {
+                    result[0] = payload.getInt(0);
+                }
+                return true;
+            },
+            true);
+
+        if (result[0] == -1) {
+            result[0] = getUnread(streamId).lastId(stackBuffer);
+        }
+        return result[0];
     }
 }

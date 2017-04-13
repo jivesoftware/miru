@@ -132,6 +132,7 @@ public class MiruJustInTimeBackfillerizer {
                         lastId,
                         oldestBackfilledTimestamp,
                         stackBuffer);
+                    requestContext.getUnreadTrackingIndex().setLastActivityIndex(streamId, lastId, stackBuffer);
 
                     elapsed = System.currentTimeMillis() - start;
                     backfillSolutionLog.log(MiruSolutionLogLevel.INFO, "Applied read tracking in {} ms", elapsed);

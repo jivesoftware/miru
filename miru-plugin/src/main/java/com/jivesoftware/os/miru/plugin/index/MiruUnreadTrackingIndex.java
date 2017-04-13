@@ -9,6 +9,8 @@ import com.jivesoftware.os.miru.api.base.MiruStreamId;
  */
 public interface MiruUnreadTrackingIndex<BM extends IBM, IBM> {
 
+    void setLastActivityIndex(MiruStreamId streamId, int lastActivityIndex, StackBuffer stackBuffer) throws Exception;
+
     /**
      * Returns the id of the last activity that's been recorded in the unread matching the provided streamId. If
      * the user hasn't requested their unread in a while this might not neccesarily return the latest activity that
