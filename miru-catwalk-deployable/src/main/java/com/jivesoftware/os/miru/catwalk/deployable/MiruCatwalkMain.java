@@ -148,6 +148,12 @@ public class MiruCatwalkMain {
 
         @LongDefault(-1)
         long getAmzaDebugClientCountInterval();
+
+        @IntDefault(4)
+        int getModelUpdaterThreadPoolSize();
+
+        @IntDefault(4)
+        int getReadRepairThreadPoolSize();
     }
 
     public interface MiruCatwalkConfig extends Config {
@@ -321,8 +327,8 @@ public class MiruCatwalkMain {
             ScheduledExecutorService queueConsumers = Executors.newScheduledThreadPool(numProcs, new ThreadFactoryBuilder().setNameFormat("queueConsumers-%d")
                 .build());
 
-            ExecutorService modelUpdaters = BoundedExecutor.newBoundedExecutor(numProcs, "model-updater");
-            ExecutorService readRepairers = BoundedExecutor.newBoundedExecutor(numProcs, "read-repair");
+            ExecutorService modelUpdaters = BoundedExecutor.newBoundedExecutor(amzaCatwalkConfig.getModelUpdaterThreadPoolSize(), "model-updater");
+            ExecutorService readRepairers = BoundedExecutor.newBoundedExecutor(amzaCatwalkConfig.getReadRepairThreadPoolSize(), "read-repair");
             ExecutorService tasExecutors = BoundedExecutor.newBoundedExecutor(1024, "tas");
 
             MiruCatwalkConfig catwalkConfig = deployable.config(MiruCatwalkConfig.class);
