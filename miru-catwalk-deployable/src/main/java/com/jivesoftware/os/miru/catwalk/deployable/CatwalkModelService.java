@@ -37,6 +37,7 @@ import java.util.Optional;
 import java.util.TreeSet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  *
@@ -89,7 +90,8 @@ public class CatwalkModelService {
         this.abandonSolutionAfterNMillis = abandonSolutionAfterNMillis;
     }
 
-    public Map<String, MergedScores> gatherModel(MiruTenantId tenantId,
+    public Map<String, MergedScores> gatherModel(String context,
+        MiruTenantId tenantId,
         String catwalkId,
         String modelId,
         CatwalkFeature[] features,
@@ -100,6 +102,8 @@ public class CatwalkModelService {
         FeatureRange[] currentRange = { null };
 
         Map<String, MergedScores> fieldIdsToFeatureScores = new HashMap<>();
+        AtomicLong count = new AtomicLong(0);
+        AtomicLong bytesRead = new AtomicLong(0);
         client.scan(Consistency.leader_quorum,
             useScanCompression,
             prefixedKeyRangeStream -> {
@@ -114,6 +118,13 @@ public class CatwalkModelService {
                 return true;
             },
             (prefix, key, value, timestamp, version) -> {
+                count.incrementAndGet();
+                if (key != null) {
+                    bytesRead.addAndGet(value.length);
+                }
+                if (value != null) {
+                    bytesRead.addAndGet(value.length);
+                }
 
                 FeatureRange range = getFeatureRange(key, features);
                 if (currentRange[0] == null || !currentRange[0].intersects(range)) {
@@ -216,10 +227,13 @@ public class CatwalkModelService {
             abandonSolutionAfterNMillis,
             Optional.<List<String>>empty());
 
+        LOG.inc("gather>" + context + ">calls");
+        LOG.inc("gather>" + context + ">count", count.get());
+        LOG.inc("gather>" + context + ">bytes", bytesRead.get());
         return fieldIdsToFeatureScores;
     }
 
-    public CatwalkModel getModel(MiruTenantId tenantId, String catwalkId, String modelId, CatwalkQuery catwalkQuery) throws Exception {
+    public CatwalkModel getModel(String context, MiruTenantId tenantId, String catwalkId, String modelId, CatwalkQuery catwalkQuery) throws Exception {
         long start = System.currentTimeMillis();
         int modelCount = 0;
         try {
@@ -228,7 +242,7 @@ public class CatwalkModelService {
 
             CatwalkFeature[] features = catwalkQuery.definition.features;
             int numeratorsCount = catwalkQuery.definition.numeratorCount;
-            Map<String, MergedScores> featureNameToMergedScores = gatherModel(tenantId, catwalkId, modelId, features, partitionIds, deletableRanges);
+            Map<String, MergedScores> featureNameToMergedScores = gatherModel(context, tenantId, catwalkId, modelId, features, partitionIds, deletableRanges);
 
             long[] modelCounts = new long[features.length];
             long totalCount = 0;

@@ -80,7 +80,13 @@ public class MiruInspectRegion implements MiruPageRegion<InspectInput> {
 
                 TreeSet<Integer> partitionIds = Sets.newTreeSet();
                 List<FeatureRange> deletableRanges = Lists.newArrayList();
-                Map<String, MergedScores> scores = catwalkModelService.gatherModel(tenantId, catwalkId, modelId, features, partitionIds, deletableRanges);
+                Map<String, MergedScores> scores = catwalkModelService.gatherModel("inspect",
+                    tenantId,
+                    catwalkId,
+                    modelId,
+                    features,
+                    partitionIds,
+                    deletableRanges);
 
                 List<Map<String, Object>> modelFeatures = Lists.newArrayList();
                 for (Entry<String, MergedScores> entry : scores.entrySet()) {
