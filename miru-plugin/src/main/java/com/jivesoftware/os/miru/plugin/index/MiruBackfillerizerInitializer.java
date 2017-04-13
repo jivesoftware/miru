@@ -21,7 +21,7 @@ public class MiruBackfillerizerInitializer {
         final ExecutorService backfillExecutor =  BoundedExecutor.newBoundedExecutor(10, "backfillerizer");
 
         final MiruJustInTimeBackfillerizer backfillerizer = new MiruJustInTimeBackfillerizer(inboxReadTracker,
-            miruHost, Optional.fromNullable(readStreamIdsPropName), backfillExecutor);
+            Optional.fromNullable(readStreamIdsPropName), backfillExecutor, null);
 
         return new MiruLifecyle<MiruJustInTimeBackfillerizer>() {
 
