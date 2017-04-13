@@ -739,6 +739,8 @@ public class StrutModelScorer {
                 long totalTimeScoreUpdates = System.currentTimeMillis() - startOfUpdates;
                 LOG.info("Strut score updates {} features in {} ms for {}", modelUpdates.size(), totalTimeScoreUpdates, coord);
                 solutionLog.log(MiruSolutionLogLevel.INFO, "Strut score updates {} features in {} ms", modelUpdates.size(), totalTimeScoreUpdates);
+
+                LOG.inc("strut>scorer>rescore>updates", modelUpdates.size());
             }
         }
 
