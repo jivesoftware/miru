@@ -275,7 +275,10 @@ public class RoaringInspection {
         int pos1 = 0;
         int pos2 = 0;
 
-        int[] keys = new int[length1 + length2];
+        int lastKey1 = Util.toIntUnsigned(x1.highLowContainer.getKeyAtIndex(length1 - 1));
+        int lastKey2 = Util.toIntUnsigned(x2.highLowContainer.getKeyAtIndex(length2 - 1));
+        int[] keys = new int[Math.max(lastKey1, lastKey2) + 1];
+
         int ki = 0;
         while (pos1 < length1 && pos2 < length2) {
             short s1 = x1.highLowContainer.getKeyAtIndex(pos1);
@@ -291,15 +294,11 @@ public class RoaringInspection {
                 ++pos1;
                 ++pos2;
             } else if (Util.compareUnsigned(s1, s2) < 0) {
-                for (short si = s1; si < s2; si++) {
-                    keys[ki++] = Util.toIntUnsigned(si);
-                }
-                pos1 = x1.highLowContainer.advanceUntil(s2, pos1);
+                keys[ki++] = Util.toIntUnsigned(s1);
+                ++pos1;
             } else {
-                for (short si = s2; si < s1; si++) {
-                    keys[ki++] = Util.toIntUnsigned(si);
-                }
-                pos2 = x2.highLowContainer.advanceUntil(s1, pos2);
+                keys[ki++] = Util.toIntUnsigned(s2);
+                ++pos2;
             }
         }
         while (pos1 < length1) {
